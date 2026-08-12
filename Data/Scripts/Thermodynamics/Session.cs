@@ -19,6 +19,12 @@ namespace Thermodynamics
         /// </summary>
         private const string DumpCommand = "/thermaldump";
 
+        /// <summary>
+        /// Runtime control: <c>/thermal status</c>, <c>/thermal telemetry on|off</c>,
+        /// <c>/thermal stride n</c>, <c>/thermal dump</c>.
+        /// </summary>
+        private const string Command = "/thermal";
+
         private bool _commandRegistered;
         private long _frame;
 
@@ -127,11 +133,95 @@ namespace Thermodynamics
 
         private void OnMessageEntered(string messageText, ref bool sendToOthers)
         {
-            if (messageText == null || !messageText.StartsWith(DumpCommand)) return;
+            if (messageText == null) return;
 
+            string text = messageText.Trim();
+
+            if (text.StartsWith(DumpCommand))
+            {
+                sendToOthers = false;
+                Dump();
+                return;
+            }
+
+            if (!text.StartsWith(Command)) return;
             sendToOthers = false;
+
+            string argument = text.Length > Command.Length ? text.Substring(Command.Length).Trim() : "";
+            RunCommand(argument);
+        }
+
+        /// <summary>
+        /// The whole point of the runtime switch: turn collection on for a test, off again
+        /// afterwards, and take a report at any point, without reloading the world.
+        /// </summary>
+        private void RunCommand(string argument)
+        {
+            string lowered = argument.ToLower();
+
+            if (lowered == "telemetry on")
+            {
+                Telemetry.SetEnabled(true);
+                Reply("telemetry collection ON (stride " + Telemetry.SampleStride + ")");
+                return;
+            }
+
+            if (lowered == "telemetry off")
+            {
+                Telemetry.SetEnabled(false);
+                Reply("telemetry collection OFF");
+                return;
+            }
+
+            if (lowered == "dump")
+            {
+                Dump();
+                return;
+            }
+
+            if (lowered.StartsWith("stride "))
+            {
+                int stride;
+                if (int.TryParse(lowered.Substring(7).Trim(), out stride) && stride > 0)
+                {
+                    Telemetry.SampleStride = stride;
+                    Reply("telemetry sample stride " + stride);
+                }
+                else
+                {
+                    Reply("stride must be a positive whole number");
+                }
+                return;
+            }
+
+            if (lowered == "status" || lowered.Length == 0)
+            {
+                Reply("telemetry " + (Telemetry.Enabled ? "ON" : "OFF")
+                    + ", stride " + Telemetry.SampleStride
+                    + ", grids " + ThermalGrid.LiveGrids.Count
+                    + ", block models " + ThermalBlockCatalog.ModelCount
+                    + ", bridges " + ThermalBridges.Count);
+                return;
+            }
+
+            Reply("commands: status | telemetry on | telemetry off | stride <n> | dump");
+        }
+
+        private void Dump()
+        {
+            if (!Telemetry.Enabled)
+            {
+                Reply("telemetry is off; /thermal telemetry on first");
+                return;
+            }
+
             Telemetry.Finish("manual dump", true);
-            MyAPIGateway.Utilities.ShowMessage(Settings.Name, "telemetry report written to world storage");
+            Reply("telemetry report written to world storage");
+        }
+
+        private static void Reply(string message)
+        {
+            MyAPIGateway.Utilities.ShowMessage(Settings.Name, message);
         }
     }
 }

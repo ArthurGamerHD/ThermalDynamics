@@ -126,6 +126,32 @@ namespace Thermodynamics
         }
 
         /// <summary>
+        /// Turns collection on or off during a session, so a test run does not need a reload and
+        /// so an experiment can be ended before it costs anything further.
+        ///
+        /// Switching on attaches records and stage profilers to grids that already exist;
+        /// switching off detaches them, and every hook in the mod goes back to a single static
+        /// bool read.
+        /// </summary>
+        public static void SetEnabled(bool enabled)
+        {
+            if (!_started) Start();
+            if (Enabled == enabled) return;
+
+            Enabled = enabled;
+            _finished = false;
+
+            IList<ThermalGrid> grids = ThermalGrid.LiveGrids;
+            for (int i = 0; i < grids.Count; i++)
+            {
+                grids[i].RefreshTelemetry();
+            }
+
+            MyLog.Default.Info("[" + Settings.Name + "] [Telemetry] collection "
+                + (enabled ? "enabled" : "disabled") + " at runtime");
+        }
+
+        /// <summary>
         /// Session identity is not reliably available from the component constructor, so it is
         /// captured on the first frame that can see it and kept for the report — by the time
         /// UnloadData runs, most of it is already gone.

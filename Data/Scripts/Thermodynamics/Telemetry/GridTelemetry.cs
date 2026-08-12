@@ -101,6 +101,12 @@ namespace Thermodynamics
 
         // ---- cost -----------------------------------------------------------------------
         public readonly TimingStat SimulationTime = new TimingStat("grid simulation");
+
+        /// <summary>
+        /// Stage timings, filled by the simulation itself. Attached to the simulation only while
+        /// collection is on, so an uninstrumented world runs with no profiler at all.
+        /// </summary>
+        public readonly GridProfiler Profiler = new GridProfiler();
         public readonly TimingStat SolarTime = new TimingStat("solar occlusion");
         public readonly TimingStat SaveTime = new TimingStat("save");
         public readonly TimingStat LoadTime = new TimingStat("load");

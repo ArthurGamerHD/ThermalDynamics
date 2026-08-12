@@ -265,6 +265,10 @@ namespace Thermodynamics
             Section(sb, "Cost");
 
             TimingStat simulation = new TimingStat("grid simulation");
+            TimingStat topology = new TimingStat("  of which topology rebuild");
+            TimingStat mapping = new TimingStat("  of which room mapping");
+            TimingStat exposure = new TimingStat("  of which exposure refresh");
+            TimingStat solver = new TimingStat("  of which solver");
             TimingStat solar = new TimingStat("  of which solar occlusion");
             TimingStat save = new TimingStat("save");
             TimingStat load = new TimingStat("load");
@@ -273,6 +277,10 @@ namespace Thermodynamics
             {
                 GridTelemetry g = Telemetry.Grids[i];
                 simulation.Merge(g.SimulationTime);
+                topology.Merge(g.Profiler.Topology);
+                mapping.Merge(g.Profiler.RoomMapping);
+                exposure.Merge(g.Profiler.Exposure);
+                solver.Merge(g.Profiler.Solver);
                 solar.Merge(g.SolarTime);
                 save.Merge(g.SaveTime);
                 load.Merge(g.LoadTime);
@@ -283,6 +291,10 @@ namespace Thermodynamics
 
             TimingStat.WriteHeader(sb, "path (all grids)");
             simulation.WriteRow(sb);
+            topology.WriteRow(sb);
+            mapping.WriteRow(sb);
+            exposure.WriteRow(sb);
+            solver.WriteRow(sb);
             solar.WriteRow(sb);
             save.WriteRow(sb);
             load.WriteRow(sb);
@@ -301,6 +313,12 @@ namespace Thermodynamics
 
             sb.Append("\n  grid simulation, per call:\n");
             simulation.WriteDistribution(sb, "    ");
+            sb.Append("\n  solver, per call:\n");
+            solver.WriteDistribution(sb, "    ");
+            sb.Append("\n  room mapping, per call:\n");
+            mapping.WriteDistribution(sb, "    ");
+            sb.Append("\n  topology rebuild, per call:\n");
+            topology.WriteDistribution(sb, "    ");
             sb.Append("\n  solar occlusion, per call:\n");
             solar.WriteDistribution(sb, "    ");
         }
@@ -425,6 +443,10 @@ namespace Thermodynamics
                 sb.Append("\n    cost\n");
                 TimingStat.WriteHeader(sb, "  path");
                 g.SimulationTime.WriteRow(sb);
+                g.Profiler.Topology.WriteRow(sb);
+                g.Profiler.RoomMapping.WriteRow(sb);
+                g.Profiler.Exposure.WriteRow(sb);
+                g.Profiler.Solver.WriteRow(sb);
                 g.SolarTime.WriteRow(sb);
                 g.SaveTime.WriteRow(sb);
                 g.LoadTime.WriteRow(sb);
@@ -620,7 +642,7 @@ namespace Thermodynamics
             sb.Append("occluded_fraction,atmosphere_fraction,");
             sb.Append("blocks_added,blocks_removed,blocks_restored,splits,merges,door_changes,surface_refreshes,");
             sb.Append("mapper_passes,loops_created,saves,loads,save_bytes,load_bytes,");
-            sb.Append("sim_ms_total,sim_ms_max,");
+            sb.Append("sim_ms_total,sim_ms_max,topology_ms_total,mapping_ms_total,exposure_ms_total,solver_ms_total,solver_ms_max,");
             sb.Append("solar_ms_total,solar_ms_max,save_ms_total,load_ms_total\n");
 
             List<GridTelemetry> grids = SortedGrids();
@@ -680,6 +702,11 @@ namespace Thermodynamics
 
                 Csv(sb, g.SimulationTime.TotalMilliseconds);
                 Csv(sb, g.SimulationTime.MaxMilliseconds);
+                Csv(sb, g.Profiler.Topology.TotalMilliseconds);
+                Csv(sb, g.Profiler.RoomMapping.TotalMilliseconds);
+                Csv(sb, g.Profiler.Exposure.TotalMilliseconds);
+                Csv(sb, g.Profiler.Solver.TotalMilliseconds);
+                Csv(sb, g.Profiler.Solver.MaxMilliseconds);
                 Csv(sb, g.SolarTime.TotalMilliseconds);
                 Csv(sb, g.SolarTime.MaxMilliseconds);
                 Csv(sb, g.SaveTime.TotalMilliseconds);

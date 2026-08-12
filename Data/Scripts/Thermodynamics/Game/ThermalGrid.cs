@@ -68,6 +68,17 @@ namespace Thermodynamics
         private bool started;
         private bool disabled;
 
+        /// <summary>
+        /// Every live grid component. Kept so telemetry can be switched on mid-session and
+        /// still find the grids that already exist.
+        /// </summary>
+        private static readonly List<ThermalGrid> Live = new List<ThermalGrid>();
+
+        public static IList<ThermalGrid> LiveGrids
+        {
+            get { return Live; }
+        }
+
         public IEnumerable<ThermalBlock> Blocks
         {
             get { return blocks.Values; }
@@ -98,6 +109,9 @@ namespace Thermodynamics
             Simulation = new ThermalSimulation(Settings.Instance.ToCore(), Model);
 
             Stats = Telemetry.RegisterGrid(this);
+            if (Stats != null) Simulation.Profiler = Stats.Profiler;
+
+            Live.Add(this);
 
             if (Entity.Storage == null)
             {
@@ -180,6 +194,8 @@ namespace Thermodynamics
                 block.Detach();
             }
             blocks.Clear();
+
+            Live.Remove(this);
 
             base.Close();
         }
@@ -331,6 +347,24 @@ namespace Thermodynamics
         }
 
         // ---- lookups -----------------------------------------------------------------------
+
+        /// <summary>
+        /// Starts or stops feeding this grid's telemetry record, for the runtime toggle. A grid
+        /// that has never been registered gets a record now, so a session can be switched into
+        /// collection without a reload.
+        /// </summary>
+        public void RefreshTelemetry()
+        {
+            if (!Telemetry.Enabled)
+            {
+                Simulation.Profiler = null;
+                Stats = null;
+                return;
+            }
+
+            if (Stats == null) Stats = Telemetry.RegisterGrid(this);
+            if (Stats != null) Simulation.Profiler = Stats.Profiler;
+        }
 
         /// <summary>The bound block at a grid position, or null.</summary>
         public ThermalBlock Get(Vector3I position)

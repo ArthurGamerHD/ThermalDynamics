@@ -30,6 +30,12 @@ namespace Thermodynamics.Core
         /// <summary>Temperature new blocks start at, K.</summary>
         public float DefaultTemperature = 293.15f;
 
+        /// <summary>
+        /// Optional stage timing. Null means no instrumentation at all, which is what shipping
+        /// worlds run with; the cost of leaving the hooks in is one null check per stage.
+        /// </summary>
+        public ISimulationProfiler Profiler;
+
         public ThermalSimulation(ThermalSettings settings, GridModel grid)
         {
             if (settings == null) throw new ArgumentNullException("settings");
@@ -128,18 +134,34 @@ namespace Thermodynamics.Core
         /// </summary>
         public void RebuildAll()
         {
+            Begin(SimulationPhase.Topology);
             surfaces.Rebuild(grid);
             solver.RebuildLinks();
             RebuildLoops();
+            End(SimulationPhase.Topology);
 
+            Begin(SimulationPhase.RoomMapping);
             rooms.RequestRestart(grid);
             rooms.RunToCompletion();
+            End(SimulationPhase.RoomMapping);
 
+            Begin(SimulationPhase.Exposure);
             solver.RefreshExposure(rooms.Map);
             solver.RefreshHeatGeneration();
+            End(SimulationPhase.Exposure);
 
             topologyDirty = false;
             exposureDirty = false;
+        }
+
+        private void Begin(SimulationPhase phase)
+        {
+            if (Profiler != null) Profiler.Begin(phase);
+        }
+
+        private void End(SimulationPhase phase)
+        {
+            if (Profiler != null) Profiler.End(phase);
         }
 
         private void RebuildLoops()
@@ -170,33 +192,41 @@ namespace Thermodynamics.Core
         {
             if (topologyDirty)
             {
+                Begin(SimulationPhase.Topology);
                 topologyDirty = false;
                 solver.InvalidateLinks();
                 RebuildLoops();
                 rooms.RequestRestart(grid);
+                End(SimulationPhase.Topology);
             }
 
             if (rooms.HasWorkPending)
             {
+                Begin(SimulationPhase.RoomMapping);
                 Vector3I extents = (grid.Max - grid.Min) + Vector3I.One;
                 int volume = Math.Max(1, extents.X * extents.Y * extents.Z);
                 rooms.Step(SimulationScheduler.RoomMappingBudget(volume));
+                End(SimulationPhase.RoomMapping);
             }
 
             if (exposureDirty)
             {
+                Begin(SimulationPhase.Exposure);
                 exposureDirty = false;
                 solver.RefreshExposure(rooms.Map);
+                End(SimulationPhase.Exposure);
             }
 
             int steps = scheduler.StepsDue(frameSeconds);
             if (steps <= 0) return;
 
+            Begin(SimulationPhase.Solver);
             EnvironmentState state = EnvironmentSolver.Solve(settings, planet, sample);
             for (int i = 0; i < steps; i++)
             {
                 solver.Step(settings.StepSeconds, state);
             }
+            End(SimulationPhase.Solver);
         }
 
         /// <summary>
