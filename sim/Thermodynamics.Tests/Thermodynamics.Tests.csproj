@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AssemblyName>Thermodynamics.Tests</AssemblyName>
+    <RootNamespace>Thermodynamics.Tests</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Thermodynamics.Core/Thermodynamics.Core.csproj" />
+    <ProjectReference Include="../Thermodynamics.Harness/Thermodynamics.Harness.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="VRage.Math">
+      <HintPath>$(SEBinPath)/VRage.Math.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

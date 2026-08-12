@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The simulation core. Every source file lives under Data/Scripts/Thermodynamics/Core so that
+    Space Engineers compiles it as part of the mod; this project links the same files so they can
+    be built and tested outside the game.
+
+    LangVersion 6 is deliberate: it is what the in-game script compiler accepts, so anything that
+    builds here will build in game.
+  -->
+
+  <PropertyGroup>
+    <AssemblyName>Thermodynamics.Core</AssemblyName>
+    <RootNamespace>Thermodynamics.Core</RootNamespace>
+    <LangVersion>6</LangVersion>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="$(CoreSourceRoot)**/*.cs" LinkBase="Core" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="VRage.Math">
+      <HintPath>$(SEBinPath)/VRage.Math.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>
