@@ -20,6 +20,7 @@ namespace Thermodynamics
         private const string DumpCommand = "/thermaldump";
 
         private bool _commandRegistered;
+        private long _frame;
 
         public Session()
         {
@@ -37,9 +38,13 @@ namespace Thermodynamics
             NetworkAPI.Init(ModID, Settings.Name);
             NetworkAPI.LogNetworkTraffic = true;
 
+            // The config file is what turns telemetry on for a test session and off again for
+            // ordinary play, so it has to be read before anything reads Settings.Instance.
             if (Settings.Instance == null)
             {
-                Settings.Instance = Settings.GetDefaults();
+                Settings.Instance = MyAPIGateway.Session != null && MyAPIGateway.Session.IsServer
+                    ? Settings.Load()
+                    : Settings.GetDefaults();
             }
 
             Telemetry.Start();
@@ -53,6 +58,12 @@ namespace Thermodynamics
             Telemetry.Finish("world closing");
             Telemetry.Reset();
 
+            // Definition and shape caches are keyed by definition and outlive a single grid, so
+            // they have to be dropped when the session does or a second world inherits them.
+            ThermalBlockCatalog.Clear();
+            ThermalCoolantShapes.Clear();
+            ThermalBridges.Clear();
+
             if (_commandRegistered && MyAPIGateway.Utilities != null)
             {
                 MyAPIGateway.Utilities.MessageEntered -= OnMessageEntered;
@@ -65,20 +76,36 @@ namespace Thermodynamics
 
         public override void Simulate()
         {
+            _frame++;
+
             if (!Telemetry.Enabled)
             {
-                Debug.ShowDebugInfo();
+                Tick();
                 return;
             }
 
             Telemetry.SessionFrameTime.Begin();
 
-            RegisterCommand();
             Telemetry.FrameTick();
-
-            Debug.ShowDebugInfo();
+            Tick();
 
             Telemetry.SessionFrameTime.End();
+        }
+
+        /// <summary>
+        /// The session's own per-frame work. Cross-grid conduction runs on the same ten-frame
+        /// cadence the grids step on, because that is the interval its exchange is scaled to.
+        /// </summary>
+        private void Tick()
+        {
+            RegisterCommand();
+
+            if (_frame % 10 == 0)
+            {
+                ThermalBridges.Update(ThermalGrid.TickSeconds);
+            }
+
+            Debug.ShowDebugInfo();
         }
 
         public override void Draw()

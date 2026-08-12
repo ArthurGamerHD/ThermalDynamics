@@ -58,6 +58,46 @@ namespace Thermodynamics
 		[ProtoMember(14)]
 		public bool EnableDamage;
 
+		/// <summary>
+		/// Aerodynamic heating at speed in atmosphere.
+		/// </summary>
+		[ProtoMember(11)]
+		public bool EnableFriction;
+
+		/// <summary>
+		/// Coolant loop heat transport.
+		/// </summary>
+		[ProtoMember(12)]
+		public bool EnableCoolantLoops;
+
+		/// <summary>
+		/// Limit each conduction exchange to the energy that equalises the pair. Keeps the
+		/// solver bounded at low <see cref="Frequency"/>; turning it off reproduces the
+		/// unbounded behaviour of the original.
+		/// </summary>
+		[ProtoMember(13)]
+		public bool ClampConductionOvershoot;
+
+		/// <summary>
+		/// Apply overheat damage per second rather than per solver step. Per step makes damage
+		/// scale with <see cref="Frequency"/>, which is what the original did.
+		/// </summary>
+		[ProtoMember(18)]
+		public bool DamageIsPerSecond;
+
+		/// <summary>
+		/// Coefficient on the v^3 aerodynamic heating term.
+		/// </summary>
+		[ProtoMember(51)]
+		public float FrictionScale;
+
+		/// <summary>
+		/// Simulation frames between solar occlusion raycasts. The sun moves slowly and a
+		/// raycast is the most expensive thing a grid does, so it is worth reusing.
+		/// </summary>
+		[ProtoMember(52)]
+		public int SolarOcclusionInterval;
+
         /// <summary>
         /// the number of update cycles per second
         /// </summary>
@@ -116,7 +156,7 @@ namespace Thermodynamics
 		public static Settings GetDefaults()
 		{
 			Settings s = new Settings {
-				Version = 1,
+				Version = 2,
 				DebugTextOnScreen = true,
 				DebugTemperatureBlockColors = true,
 				DebugSolarRadiationBlockColors = false,
@@ -128,12 +168,18 @@ namespace Thermodynamics
 				EnableSolarHeat = true,
 				EnablePlanets = true,
 				EnableDamage = true,
+				EnableFriction = true,
+				EnableCoolantLoops = true,
+				ClampConductionOvershoot = true,
+				DamageIsPerSecond = true,
 				Frequency = 4,
 				SimulationSpeed = 1,
 				VacuumTemperature = 2.7f,
                 SolarEnergy = 1000f,
 				FrictionAtSpeedsAbove = 50f,
-				EnableTelemetry = true,
+				FrictionScale = 0.001f,
+				SolarOcclusionInterval = 12,
+				EnableTelemetry = false,
 				TelemetrySampleStride = 4,
             };
 
@@ -146,11 +192,50 @@ namespace Thermodynamics
 			if (Frequency < 1)
 				Frequency = 1;
 
+			if (SimulationSpeed <= 0f)
+				SimulationSpeed = 1f;
+
 			if (TelemetrySampleStride < 1)
 				TelemetrySampleStride = 1;
 
+			if (SolarOcclusionInterval < 1)
+				SolarOcclusionInterval = 1;
+
 			TimeScaleRatio =  1f/Frequency;
 			PerSecond = Frequency * SimulationSpeed;
+
+			_core = null;
+		}
+
+		[XmlIgnore]
+		private Core.ThermalSettings _core;
+
+		/// <summary>
+		/// The same configuration in the form the simulation consumes. Built once and cached,
+		/// because every grid holds a reference to it and the solver reads it every step.
+		/// </summary>
+		public Core.ThermalSettings ToCore()
+		{
+			if (_core != null) return _core;
+
+			Core.ThermalSettings core = new Core.ThermalSettings();
+			core.EnableEnvironment = EnableEnvironment;
+			core.EnableSolarHeat = EnableSolarHeat;
+			core.EnablePlanets = EnablePlanets;
+			core.EnableFriction = EnableFriction;
+			core.EnableDamage = EnableDamage;
+			core.EnableCoolantLoops = EnableCoolantLoops;
+			core.ClampConductionOvershoot = ClampConductionOvershoot;
+			core.DamageIsPerSecond = DamageIsPerSecond;
+			core.Frequency = Frequency;
+			core.SimulationSpeed = SimulationSpeed;
+			core.VacuumTemperature = VacuumTemperature;
+			core.SolarEnergy = SolarEnergy;
+			core.FrictionAtSpeedsAbove = FrictionAtSpeedsAbove;
+			core.FrictionScale = FrictionScale;
+
+			_core = core.Derive();
+			return _core;
 		}
 
 		public static Settings Load()

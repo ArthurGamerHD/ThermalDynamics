@@ -171,9 +171,9 @@ namespace Thermodynamics
             Section(sb, "Session totals");
 
             long added = 0, removed = 0, splits = 0, merges = 0, doorChanges = 0;
-            long crawlRestarts = 0, surfaceRecalcs = 0, saves = 0, loads = 0;
+            long mapperPasses = 0, surfaceRecalcs = 0, saves = 0, loads = 0;
             long saveBytes = 0, loadBytes = 0, damageEvents = 0, simFrames = 0;
-            long loopsCreated = 0, loopsRemoved = 0, coolantCrawls = 0;
+            long loopsCreated = 0, clampedSteps = 0, nodeUpdates = 0;
             double totalDamage = 0;
             long liveGrids = 0;
             int peakCells = 0;
@@ -186,7 +186,7 @@ namespace Thermodynamics
                 splits += g.Splits;
                 merges += g.Merges;
                 doorChanges += g.DoorStateChanges;
-                crawlRestarts += g.CrawlRestarts;
+                mapperPasses += g.MapperCompletions;
                 surfaceRecalcs += g.SurfaceRecalcs;
                 saves += g.Saves;
                 loads += g.Loads;
@@ -194,20 +194,22 @@ namespace Thermodynamics
                 loadBytes += g.LoadBytes;
                 damageEvents += g.DamageEvents;
                 totalDamage += g.TotalDamage;
-                simFrames += g.SimulationFrames;
+                simFrames += g.SimulationSteps;
                 loopsCreated += g.CoolantLoopsCreated;
-                loopsRemoved += g.CoolantLoopsRemoved;
-                coolantCrawls += g.CoolantCrawls;
+                clampedSteps += g.ClampedSteps;
+                nodeUpdates += g.NodeUpdates;
                 if (!g.IsClosed) liveGrids++;
                 if (g.PeakCellCount > peakCells) peakCells = g.PeakCellCount;
             }
 
             Field(sb, "frames observed", Telemetry.FramesObserved.ToString("n0"));
             Field(sb, "grid simulation steps", simFrames.ToString("n0"));
-            Field(sb, "cell updates", Telemetry.CellUpdatesObserved.ToString("n0"));
-            Field(sb, "cell updates / real second", Telemetry.SessionSeconds <= 0
+            Field(sb, "block updates", nodeUpdates.ToString("n0"));
+            Field(sb, "block updates / real second", Telemetry.SessionSeconds <= 0
                 ? "-"
-                : (Telemetry.CellUpdatesObserved / Telemetry.SessionSeconds).ToString("n0"));
+                : (nodeUpdates / Telemetry.SessionSeconds).ToString("n0"));
+            Field(sb, "blocks observed (sampled)", Telemetry.CellUpdatesObserved.ToString("n0"));
+            Field(sb, "steps clamped by substep cap", clampedSteps.ToString("n0"));
             Field(sb, "grids seen", Telemetry.GridsSeen);
             Field(sb, "grids alive at close", liveGrids);
             Field(sb, "largest grid (cells)", peakCells.ToString("n0"));
@@ -217,11 +219,9 @@ namespace Thermodynamics
             Field(sb, "grid splits", splits);
             Field(sb, "grid merges", merges);
             Field(sb, "door state changes", doorChanges.ToString("n0"));
-            Field(sb, "surface recalcs", surfaceRecalcs.ToString("n0"));
-            Field(sb, "room crawl restarts", crawlRestarts.ToString("n0"));
-            Field(sb, "coolant crawls", coolantCrawls.ToString("n0"));
+            Field(sb, "surface refreshes", surfaceRecalcs.ToString("n0"));
+            Field(sb, "room mapper passes", mapperPasses.ToString("n0"));
             Field(sb, "coolant loops created", loopsCreated);
-            Field(sb, "coolant loops removed", loopsRemoved);
             Field(sb, "critical damage events", damageEvents.ToString("n0"));
             Field(sb, "total heat damage", totalDamage.ToString("n1"));
             Field(sb, "saves / bytes", saves + " / " + saveBytes.ToString("n0"));
@@ -265,11 +265,7 @@ namespace Thermodynamics
             Section(sb, "Cost");
 
             TimingStat simulation = new TimingStat("grid simulation");
-            TimingStat mapper = new TimingStat("  of which room mapper");
-            TimingStat surfaces = new TimingStat("surface states");
-            TimingStat environment = new TimingStat("  of which environment");
-            TimingStat solar = new TimingStat("  of which solar");
-            TimingStat coolant = new TimingStat("coolant crawl");
+            TimingStat solar = new TimingStat("  of which solar occlusion");
             TimingStat save = new TimingStat("save");
             TimingStat load = new TimingStat("load");
 
@@ -277,11 +273,7 @@ namespace Thermodynamics
             {
                 GridTelemetry g = Telemetry.Grids[i];
                 simulation.Merge(g.SimulationTime);
-                mapper.Merge(g.MapperTime);
-                surfaces.Merge(g.SurfaceCalcTime);
-                environment.Merge(g.EnvironmentTime);
                 solar.Merge(g.SolarTime);
-                coolant.Merge(g.CoolantTime);
                 save.Merge(g.SaveTime);
                 load.Merge(g.LoadTime);
             }
@@ -291,20 +283,15 @@ namespace Thermodynamics
 
             TimingStat.WriteHeader(sb, "path (all grids)");
             simulation.WriteRow(sb);
-            mapper.WriteRow(sb);
-            environment.WriteRow(sb);
             solar.WriteRow(sb);
-            surfaces.WriteRow(sb);
-            coolant.WriteRow(sb);
             save.WriteRow(sb);
             load.WriteRow(sb);
             Telemetry.SessionFrameTime.WriteRow(sb);
 
-            // Mapper, environment and solar all run inside UpdateBeforeSimulation, so only the
-            // outer measurement and the paths driven by block events are summed.
-            double total = simulation.TotalMilliseconds + surfaces.TotalMilliseconds
-                + coolant.TotalMilliseconds + save.TotalMilliseconds + load.TotalMilliseconds
-                + Telemetry.SessionFrameTime.TotalMilliseconds;
+            // Solar occlusion runs inside the grid simulation call, so only the outer
+            // measurement and the paths driven by events outside it are summed.
+            double total = simulation.TotalMilliseconds + save.TotalMilliseconds
+                + load.TotalMilliseconds + Telemetry.SessionFrameTime.TotalMilliseconds;
 
             sb.Append('\n');
             Field(sb, "total measured", total.ToString("n1") + " ms");
@@ -314,10 +301,6 @@ namespace Thermodynamics
 
             sb.Append("\n  grid simulation, per call:\n");
             simulation.WriteDistribution(sb, "    ");
-            sb.Append("\n  room mapper, per call:\n");
-            mapper.WriteDistribution(sb, "    ");
-            sb.Append("\n  surface states, per call:\n");
-            surfaces.WriteDistribution(sb, "    ");
             sb.Append("\n  solar occlusion, per call:\n");
             solar.WriteDistribution(sb, "    ");
         }
@@ -399,15 +382,15 @@ namespace Thermodynamics
                 Field(sb, "  surface entries", g.SurfaceEntries.Format("n0"));
                 Field(sb, "  coolant loops", g.CoolantLoops.Format("n0"));
                 Field(sb, "  RecentlyRemoved size", g.RecentlyRemovedSize.Format("n0"));
-                Field(sb, "  mapper queue (ext)", g.ExternalQueueDepth.Format("n0"));
-                Field(sb, "  mapper queue (grid)", g.GridQueueDepth.Format("n0"));
+                Field(sb, "  mapper queue", g.MapperQueueDepth.Format("n0"));
 
                 sb.Append("\n    simulation\n");
-                Field(sb, "  simulation steps", g.SimulationFrames.ToString("n0"));
-                Field(sb, "  cell updates", g.CellUpdates.ToString("n0"));
-                Field(sb, "  surface update sweeps", g.SurfaceUpdateSweeps.ToString("n0"));
-                Field(sb, "  cells per frame", g.CellsPerFrame.Format("n2"));
-                Field(sb, "  simulation quota", g.SimulationQuota.Format("n0"));
+                Field(sb, "  simulation steps", g.SimulationSteps.ToString("n0"));
+                Field(sb, "  node updates", g.NodeUpdates.ToString("n0"));
+                Field(sb, "  nodes sampled", g.SampledNodes.ToString("n0"));
+                Field(sb, "  nodes per step", g.NodesPerStep.Format("n0"));
+                Field(sb, "  solver substeps", g.Substeps.Format("n2"));
+                Field(sb, "  steps clamped", g.ClampedSteps.ToString("n0"));
                 Field(sb, "  hottest block T", g.HottestBlockTemperature.Format("n1"));
                 Field(sb, "  peak temperature", FormatPeak(g.PeakTemperature) + "  " + g.PeakTemperatureBlock);
                 Field(sb, "  critical blocks", g.CriticalBlocks.Format("n0"));
@@ -418,7 +401,7 @@ namespace Thermodynamics
                 Field(sb, "  planets visited", g.PlanetList);
                 Field(sb, "  ambient K", g.AmbientTemperature.Format("n1"));
                 Field(sb, "  air density", g.AirDensity.Format("n4"));
-                Field(sb, "  air density curve", g.AirDensityCurve.Format("n4"));
+                Field(sb, "  atmosphere factor", g.AtmosphereFactor.Format("n4"));
                 Field(sb, "  wind speed m/s", g.WindSpeed.Format("n2"));
                 Field(sb, "  convection coeff", g.ConvectionCoefficient.Format("n3"));
                 Field(sb, "  effective solar W", g.EffectiveSolarEnergy.Format("n1"));
@@ -432,25 +415,17 @@ namespace Thermodynamics
                 Field(sb, "  blocks ignored", g.BlocksIgnored.ToString("n0"));
                 Field(sb, "  foreign block events", g.ForeignBlockEvents.ToString("n0"));
                 Field(sb, "  splits / merges", g.Splits + " / " + g.Merges);
-                Field(sb, "  doors tracked", g.DoorsTracked);
                 Field(sb, "  door state changes", g.DoorStateChanges.ToString("n0"));
-                Field(sb, "  surface recalcs", g.SurfaceRecalcs.ToString("n0"));
-                Field(sb, "  crawl restarts", g.CrawlRestarts.ToString("n0"));
-                Field(sb, "  mapper passes", g.MapperPasses.ToString("n0"));
-                Field(sb, "  mapper completions", g.MapperCompletions.ToString("n0"));
-                Field(sb, "  coolant crawls", g.CoolantCrawls.ToString("n0"));
-                Field(sb, "  loops created / removed", g.CoolantLoopsCreated + " / " + g.CoolantLoopsRemoved);
+                Field(sb, "  surface refreshes", g.SurfaceRecalcs.ToString("n0"));
+                Field(sb, "  mapper passes completed", g.MapperCompletions.ToString("n0"));
+                Field(sb, "  blocks restored on load", g.BlocksRestored.ToString("n0"));
                 Field(sb, "  saves / loads", g.Saves + " / " + g.Loads);
                 Field(sb, "  save / load bytes", g.SaveBytes.ToString("n0") + " / " + g.LoadBytes.ToString("n0"));
 
                 sb.Append("\n    cost\n");
                 TimingStat.WriteHeader(sb, "  path");
                 g.SimulationTime.WriteRow(sb);
-                g.MapperTime.WriteRow(sb);
-                g.SurfaceCalcTime.WriteRow(sb);
-                g.EnvironmentTime.WriteRow(sb);
                 g.SolarTime.WriteRow(sb);
-                g.CoolantTime.WriteRow(sb);
                 g.SaveTime.WriteRow(sb);
                 g.LoadTime.WriteRow(sb);
 
@@ -510,7 +485,8 @@ namespace Thermodynamics
 
                 if (t.Definition != null)
                 {
-                    ThermalCellDefinition d = t.Definition;
+                    Core.BlockThermalProperties d = t.Definition;
+                    Field(sb, "  size", t.Size.ToString());
                     Field(sb, "  Conductivity", d.Conductivity);
                     Field(sb, "  SpecificHeat", d.SpecificHeat);
                     Field(sb, "  Emissivity", d.Emissivity);
@@ -525,20 +501,21 @@ namespace Thermodynamics
                     + " (peak " + t.PeakLive + ")");
                 Field(sb, "  updates (all / sampled)", t.TotalUpdates.ToString("n0") + " / " + t.SampledUpdates.ToString("n0"));
                 Field(sb, "  mass kg", t.Mass.Format("n0"));
-                Field(sb, "  neighbours", t.Neighbors.Format("n2"));
+                Field(sb, "  thermal mass J/K", t.ThermalMass.Format("n0"));
                 Field(sb, "  exposed surfaces", t.ExposedSurfaces.Format("n2"));
                 Field(sb, "  exposed area m2", t.ExposedSurfaceArea.Format("n2"));
-                Field(sb, "  sum kA", t.Conductance.Format("n4"));
                 Field(sb, "  temperature K", t.Temperature.Format("n1"));
                 Field(sb, "  peak temperature K", FormatPeak(t.PeakTemperature) + " on grid " + t.PeakTemperatureGrid);
-                Field(sb, "  dT conduction", t.DeltaTemperature.Format("n5"));
-                Field(sb, "  dT radiation", t.DeltaRadiation.Format("n5"));
-                Field(sb, "  dT friction", t.DeltaFriction.Format("n5"));
-                Field(sb, "  heat generation K/step", t.HeatGeneration.Format("n5"));
+                Field(sb, "  dT per step", t.DeltaTemperature.Format("n5"));
+                Field(sb, "  conduction W", t.ConductionWatts.Format("n2"));
+                Field(sb, "  radiation W", t.RadiationWatts.Format("n2"));
+                Field(sb, "  convection W", t.ConvectionWatts.Format("n2"));
+                Field(sb, "  solar W", t.SolarWatts.Format("n2"));
+                Field(sb, "  friction W", t.FrictionWatts.Format("n2"));
+                Field(sb, "  heat generation W", t.HeatGeneration.Format("n2"));
                 Field(sb, "  power produced W", t.EnergyProduction.Format("n0"));
                 Field(sb, "  power consumed W", t.EnergyConsumption.Format("n0"));
                 Field(sb, "  thrust consumed W", t.ThrustConsumption.Format("n0"));
-                Field(sb, "  solar intensity", t.SolarIntensity.Format("n4"));
                 Field(sb, "  critical updates", t.CriticalUpdates.ToString("n0"));
                 Field(sb, "  heat damage dealt", t.TotalDamage.ToString("n1"));
 
@@ -570,17 +547,17 @@ namespace Thermodynamics
             sb.Append("subtype,type,placed,removed,live,peak_live,updates,sampled,");
             sb.Append("conductivity,specific_heat,emissivity,surface_area_scaler,");
             sb.Append("producer_waste,consumer_waste,critical_temperature,critical_scaler,");
-            sb.Append("mass_mean,neighbours_mean,exposed_surfaces_mean,exposed_area_mean,ka_mean,");
+            sb.Append("size_x,size_y,size_z,mass_mean,thermal_mass_mean,exposed_surfaces_mean,exposed_area_mean,");
             sb.Append("temp_min,temp_mean,temp_max,temp_sd,peak_temp,");
-            sb.Append("dt_conduction_mean,dt_radiation_mean,dt_friction_mean,heat_generation_mean,");
-            sb.Append("power_produced_mean,power_consumed_mean,thrust_mean,solar_intensity_mean,");
+            sb.Append("dt_mean,conduction_w_mean,radiation_w_mean,convection_w_mean,solar_w_mean,friction_w_mean,heat_generation_w_mean,");
+            sb.Append("power_produced_mean,power_consumed_mean,thrust_mean,");
             sb.Append("critical_updates,total_damage\n");
 
             List<BlockTypeTelemetry> types = SortedBlockTypes();
             for (int i = 0; i < types.Count; i++)
             {
                 BlockTypeTelemetry t = types[i];
-                ThermalCellDefinition d = t.Definition;
+                Core.BlockThermalProperties d = t.Definition;
 
                 Csv(sb, t.Name);
                 Csv(sb, t.DefinitionId.TypeId.ToString());
@@ -600,11 +577,13 @@ namespace Thermodynamics
                 Csv(sb, d == null ? 0 : d.CriticalTemperature);
                 Csv(sb, d == null ? 0 : d.CriticalTemperatureScaler);
 
+                Csv(sb, t.Size.X);
+                Csv(sb, t.Size.Y);
+                Csv(sb, t.Size.Z);
                 Csv(sb, t.Mass.Mean);
-                Csv(sb, t.Neighbors.Mean);
+                Csv(sb, t.ThermalMass.Mean);
                 Csv(sb, t.ExposedSurfaces.Mean);
                 Csv(sb, t.ExposedSurfaceArea.Mean);
-                Csv(sb, t.Conductance.Mean);
 
                 Csv(sb, t.Temperature.SafeMin);
                 Csv(sb, t.Temperature.Mean);
@@ -613,13 +592,15 @@ namespace Thermodynamics
                 Csv(sb, t.PeakTemperature == float.MinValue ? 0 : t.PeakTemperature);
 
                 Csv(sb, t.DeltaTemperature.Mean);
-                Csv(sb, t.DeltaRadiation.Mean);
-                Csv(sb, t.DeltaFriction.Mean);
+                Csv(sb, t.ConductionWatts.Mean);
+                Csv(sb, t.RadiationWatts.Mean);
+                Csv(sb, t.ConvectionWatts.Mean);
+                Csv(sb, t.SolarWatts.Mean);
+                Csv(sb, t.FrictionWatts.Mean);
                 Csv(sb, t.HeatGeneration.Mean);
                 Csv(sb, t.EnergyProduction.Mean);
                 Csv(sb, t.EnergyConsumption.Mean);
                 Csv(sb, t.ThrustConsumption.Mean);
-                Csv(sb, t.SolarIntensity.Mean);
 
                 Csv(sb, t.CriticalUpdates);
                 CsvLast(sb, t.TotalDamage);
@@ -633,13 +614,13 @@ namespace Thermodynamics
             StringBuilder sb = new StringBuilder(8 * 1024);
             sb.Append("entity_id,name,grid_size,is_static,closed,lifetime_s,");
             sb.Append("peak_cells,mean_cells,peak_links,peak_rooms,peak_loops,");
-            sb.Append("simulation_steps,cell_updates,surface_sweeps,");
+            sb.Append("simulation_steps,node_updates,sampled_nodes,substeps_mean,clamped_steps,");
             sb.Append("peak_temperature,mean_hottest,critical_max,damage_events,total_damage,");
             sb.Append("ambient_min,ambient_mean,ambient_max,air_density_mean,wind_mean,wind_max,speed_max,");
             sb.Append("occluded_fraction,atmosphere_fraction,");
-            sb.Append("blocks_added,blocks_removed,splits,merges,door_changes,surface_recalcs,crawl_restarts,");
-            sb.Append("mapper_passes,coolant_crawls,loops_created,loops_removed,saves,loads,save_bytes,load_bytes,");
-            sb.Append("sim_ms_total,sim_ms_max,mapper_ms_total,mapper_ms_max,surface_ms_total,surface_ms_max,");
+            sb.Append("blocks_added,blocks_removed,blocks_restored,splits,merges,door_changes,surface_refreshes,");
+            sb.Append("mapper_passes,loops_created,saves,loads,save_bytes,load_bytes,");
+            sb.Append("sim_ms_total,sim_ms_max,");
             sb.Append("solar_ms_total,solar_ms_max,save_ms_total,load_ms_total\n");
 
             List<GridTelemetry> grids = SortedGrids();
@@ -660,9 +641,11 @@ namespace Thermodynamics
                 Csv(sb, g.RoomCount.SafeMax);
                 Csv(sb, g.CoolantLoops.SafeMax);
 
-                Csv(sb, g.SimulationFrames);
-                Csv(sb, g.CellUpdates);
-                Csv(sb, g.SurfaceUpdateSweeps);
+                Csv(sb, g.SimulationSteps);
+                Csv(sb, g.NodeUpdates);
+                Csv(sb, g.SampledNodes);
+                Csv(sb, g.Substeps.Mean);
+                Csv(sb, g.ClampedSteps);
 
                 Csv(sb, g.PeakTemperature == float.MinValue ? 0 : g.PeakTemperature);
                 Csv(sb, g.HottestBlockTemperature.Mean);
@@ -683,15 +666,13 @@ namespace Thermodynamics
 
                 Csv(sb, g.BlocksAdded);
                 Csv(sb, g.BlocksRemoved);
+                Csv(sb, g.BlocksRestored);
                 Csv(sb, g.Splits);
                 Csv(sb, g.Merges);
                 Csv(sb, g.DoorStateChanges);
                 Csv(sb, g.SurfaceRecalcs);
-                Csv(sb, g.CrawlRestarts);
-                Csv(sb, g.MapperPasses);
-                Csv(sb, g.CoolantCrawls);
+                Csv(sb, g.MapperCompletions);
                 Csv(sb, g.CoolantLoopsCreated);
-                Csv(sb, g.CoolantLoopsRemoved);
                 Csv(sb, g.Saves);
                 Csv(sb, g.Loads);
                 Csv(sb, g.SaveBytes);
@@ -699,10 +680,6 @@ namespace Thermodynamics
 
                 Csv(sb, g.SimulationTime.TotalMilliseconds);
                 Csv(sb, g.SimulationTime.MaxMilliseconds);
-                Csv(sb, g.MapperTime.TotalMilliseconds);
-                Csv(sb, g.MapperTime.MaxMilliseconds);
-                Csv(sb, g.SurfaceCalcTime.TotalMilliseconds);
-                Csv(sb, g.SurfaceCalcTime.MaxMilliseconds);
                 Csv(sb, g.SolarTime.TotalMilliseconds);
                 Csv(sb, g.SolarTime.MaxMilliseconds);
                 Csv(sb, g.SaveTime.TotalMilliseconds);

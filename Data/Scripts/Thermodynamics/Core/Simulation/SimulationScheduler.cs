@@ -76,6 +76,20 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
+        /// Whether <see cref="StepsDue"/> would return anything for this frame, without
+        /// consuming the credit.
+        ///
+        /// The host uses this to skip building an environment sample on frames that will not
+        /// step: sampling means a planet lookup and possibly a raycast, and it is wasted work if
+        /// nothing is going to integrate.
+        /// </summary>
+        public bool WouldStep(float frameSeconds)
+        {
+            if (frameSeconds <= 0f) return false;
+            return accumulator + (frameSeconds * settings.StepsPerSecond) >= 1f;
+        }
+
+        /// <summary>
         /// Cell budget for the room mapper this frame. Scales with grid size so a big grid is
         /// mapped in roughly constant wall-clock time, with a floor so small grids finish fast.
         /// </summary>

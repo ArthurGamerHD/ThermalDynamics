@@ -1,4 +1,6 @@
+using Thermodynamics.Core;
 using VRage.Game;
+using VRageMath;
 
 namespace Thermodynamics
 {
@@ -7,7 +9,7 @@ namespace Thermodynamics
     ///
     /// This is the balance-facing half of the telemetry: it answers "what temperature does a
     /// battery actually sit at", "which block reaches its critical temperature and how often",
-    /// and "is this definition's SpecificHeat doing anything" — the questions the retune of
+    /// and "is this definition's SpecificHeat doing anything" — the questions a retune of
     /// Cubes.xml needs answered with numbers instead of guesses.
     /// </summary>
     public class BlockTypeTelemetry
@@ -16,46 +18,51 @@ namespace Thermodynamics
         public readonly string Name;
 
         /// <summary>
-        /// The thermal definition in force for this block type, captured from the first cell
+        /// The thermal properties in force for this block type, captured from the first block
         /// created. Written into the report so a run's numbers can be read against the values
         /// that produced them.
         /// </summary>
-        public ThermalCellDefinition Definition;
+        public BlockThermalProperties Definition;
+
+        /// <summary>Size in cells, from the block definition.</summary>
+        public Vector3ITriple Size;
 
         public long Placed;
         public long Removed;
         public long Live;
         public long PeakLive;
 
-        /// <summary>Cell updates that fed the sampled stats below. Strided; see Telemetry.SampleStride.</summary>
+        /// <summary>Node observations that fed the sampled stats below. Strided.</summary>
         public long SampledUpdates;
-        /// <summary>Every cell update, whether sampled or not.</summary>
+
+        /// <summary>Every node observation, whether it fed the wide stats or not.</summary>
         public long TotalUpdates;
 
         public readonly RunningStat Temperature = new RunningStat();
         public readonly RunningStat DeltaTemperature = new RunningStat();
-        public readonly RunningStat DeltaRadiation = new RunningStat();
-        public readonly RunningStat DeltaFriction = new RunningStat();
+        public readonly RunningStat ConductionWatts = new RunningStat();
+        public readonly RunningStat RadiationWatts = new RunningStat();
+        public readonly RunningStat ConvectionWatts = new RunningStat();
+        public readonly RunningStat SolarWatts = new RunningStat();
+        public readonly RunningStat FrictionWatts = new RunningStat();
         public readonly RunningStat HeatGeneration = new RunningStat();
         public readonly RunningStat EnergyProduction = new RunningStat();
         public readonly RunningStat EnergyConsumption = new RunningStat();
         public readonly RunningStat ThrustConsumption = new RunningStat();
-        public readonly RunningStat SolarIntensity = new RunningStat();
 
         public readonly RunningStat Mass = new RunningStat();
-        public readonly RunningStat Neighbors = new RunningStat();
+        public readonly RunningStat ThermalMass = new RunningStat();
         public readonly RunningStat ExposedSurfaces = new RunningStat();
         public readonly RunningStat ExposedSurfaceArea = new RunningStat();
-        public readonly RunningStat Conductance = new RunningStat();
 
-        /// <summary>Final temperature of every live cell of this type, taken in one pass at shutdown.</summary>
+        /// <summary>Final temperature of every live block of this type, in one pass at shutdown.</summary>
         public readonly Histogram FinalTemperatures = new Histogram(Histogram.TemperatureEdges());
         public readonly Histogram SampledTemperatures = new Histogram(Histogram.TemperatureEdges());
 
         public float PeakTemperature = float.MinValue;
         public long PeakTemperatureGrid;
 
-        /// <summary>Cell updates that ran the critical-temperature path, i.e. dealt damage.</summary>
+        /// <summary>Overheat events, i.e. observations that dealt heat damage.</summary>
         public long CriticalUpdates;
         public double TotalDamage;
 
@@ -66,15 +73,20 @@ namespace Thermodynamics
             if (string.IsNullOrEmpty(Name)) Name = id.TypeId.ToString();
         }
 
-        public void OnPlaced(ThermalCell cell)
+        public void OnPlaced(ThermalBlock block)
         {
             Placed++;
             Live++;
             if (Live > PeakLive) PeakLive = Live;
 
-            if (Definition == null) Definition = cell.Definition;
+            if (Definition == null && block.Instance != null)
+            {
+                Definition = block.Instance.Thermal;
+                Vector3I size = block.Instance.Model.Size;
+                Size = new Vector3ITriple(size.X, size.Y, size.Z);
+            }
 
-            Mass.Add(cell.Mass);
+            Mass.Add(block.Instance.Mass);
         }
 
         public void OnRemoved()
@@ -84,45 +96,43 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Cheap per-update path. Runs on every cell update, so it stays to a compare and a
-        /// couple of increments; the wide stat set is behind the stride in <see cref="Sample"/>.
+        /// Cheap per-observation path: a compare and a couple of increments. The wide stat set
+        /// is in <see cref="Sample"/>.
         /// </summary>
-        public void OnUpdate(ThermalCell cell)
+        public void OnUpdate(ThermalNode node, long gridId)
         {
             TotalUpdates++;
 
-            if (cell.Temperature > PeakTemperature)
+            if (node.Temperature > PeakTemperature)
             {
-                PeakTemperature = cell.Temperature;
-                PeakTemperatureGrid = cell.Grid.Grid.EntityId;
+                PeakTemperature = node.Temperature;
+                PeakTemperatureGrid = gridId;
             }
         }
 
-        public void Sample(ThermalCell cell)
+        public void Sample(ThermalNode node)
         {
             SampledUpdates++;
 
-            Temperature.Add(cell.Temperature);
-            SampledTemperatures.Add(cell.Temperature);
-            DeltaTemperature.Add(cell.DeltaTemperature);
-            DeltaRadiation.Add(cell.DeltaRadiation);
-            DeltaFriction.Add(cell.DeltaFriction);
-            HeatGeneration.Add(cell.HeatGeneration);
-            EnergyProduction.Add(cell.EnergyProduction);
-            EnergyConsumption.Add(cell.EnergyConsumption);
-            ThrustConsumption.Add(cell.ThrustEnergyConsumption);
-            SolarIntensity.Add(cell.IntensityDebug);
+            Temperature.Add(node.Temperature);
+            SampledTemperatures.Add(node.Temperature);
+            DeltaTemperature.Add(node.LastDeltaTemperature);
+            ConductionWatts.Add(node.LastConductionWatts);
+            RadiationWatts.Add(node.LastRadiationWatts);
+            ConvectionWatts.Add(node.LastConvectionWatts);
+            SolarWatts.Add(node.LastSolarWatts);
+            FrictionWatts.Add(node.LastFrictionWatts);
+            HeatGeneration.Add(node.HeatGenerationWatts);
 
-            Neighbors.Add(cell.Neighbors.Count);
-            ExposedSurfaces.Add(cell.ExposedSurfaces);
-            ExposedSurfaceArea.Add(cell.ExposedSurfaceArea);
+            BlockInstance block = node.Block;
+            EnergyProduction.Add(block.PowerProducedWatts);
+            EnergyConsumption.Add(block.PowerConsumedWatts);
+            ThrustConsumption.Add(block.ThrustWatts);
+            Mass.Add(block.Mass);
 
-            if (cell.kA != null)
-            {
-                float total = 0;
-                for (int i = 0; i < cell.kA.Length; i++) total += cell.kA[i];
-                Conductance.Add(total);
-            }
+            ThermalMass.Add(node.ThermalMass);
+            ExposedSurfaces.Add(node.TotalExposedFaces);
+            ExposedSurfaceArea.Add(node.ExposedArea);
         }
 
         public void OnCriticalDamage(float damage)
@@ -134,6 +144,29 @@ namespace Thermodynamics
         public void OnFinalTemperature(float temperature)
         {
             FinalTemperatures.Add(temperature);
+        }
+    }
+
+    /// <summary>
+    /// A block size, stored without depending on VRageMath so the report formatting stays in the
+    /// game-free half of the module.
+    /// </summary>
+    public struct Vector3ITriple
+    {
+        public int X;
+        public int Y;
+        public int Z;
+
+        public Vector3ITriple(int x, int y, int z)
+        {
+            X = x;
+            Y = y;
+            Z = z;
+        }
+
+        public override string ToString()
+        {
+            return X + "x" + Y + "x" + Z;
         }
     }
 }

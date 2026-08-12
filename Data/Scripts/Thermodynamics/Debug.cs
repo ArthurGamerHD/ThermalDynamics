@@ -1,81 +1,91 @@
 using Sandbox.Game.Entities;
-using Sandbox.Game.Entities.Cube;
 using Sandbox.ModAPI;
-using System.Text;
+using Thermodynamics.Core;
 using VRage.Game.ModAPI;
 using VRageMath;
 
 namespace Thermodynamics
 {
+    /// <summary>
+    /// The crosshair readout: everything the simulation knows about the block being looked at.
+    ///
+    /// Client only, and behind <see cref="Settings.DebugTextOnScreen"/>. It reads state that
+    /// already exists on the node, so switching it on costs a raycast and some string building
+    /// and changes nothing about the simulation.
+    /// </summary>
     public static class Debug
     {
         public static void ShowDebugInfo()
         {
             if (MyAPIGateway.Utilities.IsDedicated) return;
+            if (Settings.Instance == null || !Settings.Instance.DebugTextOnScreen) return;
 
-            if (Settings.Instance != null && Settings.Instance.DebugTextOnScreen)
-            {
-                MatrixD matrix = MyAPIGateway.Session.Camera.WorldMatrix;
+            MatrixD matrix = MyAPIGateway.Session.Camera.WorldMatrix;
 
-                Vector3D start = matrix.Translation;
-                Vector3D end = start + (matrix.Forward * 15);
+            Vector3D start = matrix.Translation;
+            Vector3D end = start + (matrix.Forward * 15);
 
-                IHitInfo hit;
-                MyAPIGateway.Physics.CastRay(start, end, out hit);
-                MyCubeGrid grid = hit?.HitEntity as MyCubeGrid;
+            IHitInfo hit;
+            MyAPIGateway.Physics.CastRay(start, end, out hit);
+            MyCubeGrid grid = hit == null ? null : hit.HitEntity as MyCubeGrid;
+            if (grid == null) return;
 
-                if (grid == null) return;
+            ThermalGrid thermals = grid.GameLogic.GetAs<ThermalGrid>();
+            if (thermals == null || thermals.Simulation == null) return;
 
-                ThermalGrid g = grid.GameLogic.GetAs<ThermalGrid>();
-                Vector3I position = grid.WorldToGridInteger(hit.Position + (matrix.Forward * 0.005f));
-                Vector3I inside = grid.WorldToGridInteger(matrix.Translation);
-                IMySlimBlock block = grid.GetCubeBlock(position);
+            Vector3I cell = grid.WorldToGridInteger(hit.Position + (matrix.Forward * 0.005f));
+            ThermalBlock bound = thermals.GetAtCell(cell);
+            if (bound == null || bound.Node == null) return;
 
-                if (block == null) return;
+            ThermalNode node = bound.Node;
+            BlockThermalProperties thermal = node.Thermal;
+            ThermalSimulation simulation = thermals.Simulation;
 
-                ThermalCell c = g.Get(block.Position);
+            MyAPIGateway.Utilities.ShowNotification(
+                "[Block] " + node.Block.Name + " " + node.Block.Position +
+                " T: " + node.Temperature.ToString("n3") +
+                " dT: " + node.LastDeltaTemperature.ToString("n4") +
+                " exposed: " + node.TotalExposedFaces +
+                " (" + node.ExposedArea.ToString("n1") + " m2)", 1, "White");
 
-                if (c == null)
-                    return;
+            MyAPIGateway.Utilities.ShowNotification(
+                "[Watts] conduction: " + node.LastConductionWatts.ToString("n1") +
+                " radiation: " + node.LastRadiationWatts.ToString("n1") +
+                " convection: " + node.LastConvectionWatts.ToString("n1") +
+                " solar: " + node.LastSolarWatts.ToString("n1") +
+                " friction: " + node.LastFrictionWatts.ToString("n1") +
+                " generated: " + node.HeatGenerationWatts.ToString("n1"), 1, "White");
 
-                MyAPIGateway.Utilities.ShowNotification(
-                    $"[Cell] {c.Block.Position} " +
-                    $"T: {c.Temperature.ToString("n3")} " +
-                    $"dT: {c.DeltaTemperature.ToString("n3")} " +
-                    $"Gain: {c.HeatGeneration.ToString("n3")} " +
-                    $"dC: {c.DeltaConvection.ToString("n3")} " +
-                    $"dR: {c.DeltaRadiation.ToString("n3")} " +
-                    $"ESA: {c.ExposedSurfaces.ToString("n0")} " +
-                    $"", 1, "White");
+            MyAPIGateway.Utilities.ShowNotification(
+                "[Block calc] mass: " + node.Block.Mass.ToString("n0") +
+                " thermal mass: " + node.ThermalMass.ToString("n0") +
+                " k: " + thermal.Conductivity.ToString("n2") +
+                " sh: " + thermal.SpecificHeat.ToString("n2") +
+                " em: " + thermal.Emissivity.ToString("n3") +
+                " produced: " + node.Block.PowerProducedWatts.ToString("n0") + "W" +
+                " consumed: " + (node.Block.PowerConsumedWatts + node.Block.ThrustWatts).ToString("n0") + "W", 1, "White");
 
-                MyAPIGateway.Utilities.ShowNotification(
-                    $"[Calc] m: {c.Mass.ToString("n0")} " +
-                    $"k: {c.Definition.Conductivity} " +
-                    $"sh {c.Definition.SpecificHeat} " +
-                    $"em {c.Definition.Emissivity} " +
-                    $"pwe: {c.Definition.ProducerWasteEnergy} " +
-                    $"cwe: {c.Definition.ConsumerWasteEnergy} " +
-                    $"tm: {(c.Definition.SpecificHeat * c.Mass).ToString("n0")} " +
-                    $"c: {c.C.ToString("n4")} " +
-                    $"prod: {c.EnergyProduction} " +
-                    $"cons: {(c.EnergyConsumption + c.ThrustEnergyConsumption)} ", 1, "White");
+            EnvironmentState state = thermals.LastState;
+            MyAPIGateway.Utilities.ShowNotification(
+                "[Env] ambient: " + state.AmbientTemperature.ToString("n1") + "K" +
+                " air: " + state.AirDensity.ToString("n3") +
+                " atmos: " + state.AtmosphereFactor.ToString("n3") +
+                " wind: " + state.WindSpeed.ToString("n1") + "m/s" +
+                " solar: " + state.SolarEnergy.ToString("n0") + "W/m2" +
+                (state.IsSolarOccluded ? " (occluded)" : ""), 1, "White");
 
-                MyAPIGateway.Utilities.ShowNotification($"[Solar] Intensity: {c.IntensityDebug.ToString("n4")} Direction: {g.FrameSolarDirection.ToString("n3")}", 1, "White");
+            ThermalSolver solver = simulation.Solver;
+            MyAPIGateway.Utilities.ShowNotification(
+                "[Grid] nodes: " + solver.Nodes.Count +
+                " links: " + solver.Links.Count +
+                " loops: " + solver.Loops.Count +
+                " rooms: " + simulation.Rooms.Map.RoomCount +
+                " mapper queue: " + simulation.Rooms.PendingCells +
+                " substeps: " + solver.LastSubsteps + (solver.LastStepWasClamped ? " (clamped)" : "") +
+                " steps: " + thermals.StepsRun, 1, "White");
 
-                MyAPIGateway.Utilities.ShowNotification($"[Room] eQ {g.ExternalQueue.Count} rQ {g.GridQueue.Count} ex: {g.Rooms[0].Count} nr: {g.Rooms[1].Count} rcnt: {g.Rooms.Count-2}", 1, "White");
-
-                MyAPIGateway.Utilities.ShowNotification($"[Surface] {g.DebugSurfaceStateText(g.Surfaces[position])} ", 1, "White");
-
-                //MyAPIGateway.Utilities.ShowNotification($"[Env] Ambiant: {g.FrameAmbientTemprature.ToString("n3")}", 1, "White");
-
-                // StringBuilder sb = new StringBuilder();
-                // foreach (var loop in g.ThermalLoops)
-                // {
-                //     sb.Append($"{loop.Loop.Length}-{loop.Temperature.ToString("n3")}, ");
-                // }
-
-                //MyAPIGateway.Utilities.ShowNotification($"[Coolant] {sb.ToString()}", 1, "White");
-            }
+            MyAPIGateway.Utilities.ShowNotification(
+                "[Surface] " + CellSurface.Describe(simulation.Surfaces.GetState(cell)), 1, "White");
         }
     }
 }

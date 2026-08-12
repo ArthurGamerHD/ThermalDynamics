@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using Thermodynamics.Core;
 using VRage.Game;
 using VRageMath;
 
@@ -10,6 +12,9 @@ namespace Thermodynamics
     /// A record outlives its grid: when the grid closes, <see cref="Close"/> takes a final
     /// snapshot and drops the reference, but the record stays in the registry so a ship that was
     /// destroyed halfway through a session still appears in the report.
+    ///
+    /// Nothing here is reached at all when telemetry is off — the caller checks
+    /// <see cref="Telemetry.Enabled"/> first, and the record is never even created.
     /// </summary>
     public class GridTelemetry
     {
@@ -22,6 +27,7 @@ namespace Thermodynamics
         public readonly double OpenedAtSeconds;
         public double ClosedAtSeconds = -1;
         public bool IsClosed;
+
         /// <summary>Null once the grid has closed, so the record does not keep the entity alive.</summary>
         public ThermalGrid Grid;
 
@@ -34,27 +40,21 @@ namespace Thermodynamics
         public readonly RunningStat SurfaceEntries = new RunningStat();
         public readonly RunningStat CoolantLoops = new RunningStat();
         public readonly RunningStat RecentlyRemovedSize = new RunningStat();
-        public readonly RunningStat ExternalQueueDepth = new RunningStat();
-        public readonly RunningStat GridQueueDepth = new RunningStat();
+        public readonly RunningStat MapperQueueDepth = new RunningStat();
         public int PeakCellCount;
 
         // ---- lifecycle events -----------------------------------------------------------
         public long BlocksAdded;
         public long BlocksRemoved;
         public long BlocksIgnored;
+        public long BlocksRestored;
         public long ForeignBlockEvents;
         public long Splits;
         public long Merges;
-        public long DoorsTracked;
         public long DoorStateChanges;
         public long SurfaceRecalcs;
-        public long CrawlRestarts;
-        public long MapperPasses;
         public long MapperCompletions;
-        public long SurfaceUpdateSweeps;
-        public long CoolantCrawls;
         public long CoolantLoopsCreated;
-        public long CoolantLoopsRemoved;
 
         // ---- persistence ----------------------------------------------------------------
         public long Saves;
@@ -63,11 +63,21 @@ namespace Thermodynamics
         public long LoadBytes;
 
         // ---- simulation -----------------------------------------------------------------
-        public long SimulationFrames;
-        public long CellUpdates;
-        public long SurfaceUpdates;
-        public readonly RunningStat SimulationQuota = new RunningStat();
-        public readonly RunningStat CellsPerFrame = new RunningStat();
+        public long SimulationSteps;
+        public long NodeUpdates;
+        public long SampledNodes;
+
+        /// <summary>Substeps the solver needed, per step. Above one means a stiff grid.</summary>
+        public readonly RunningStat Substeps = new RunningStat();
+
+        /// <summary>
+        /// Steps that hit the substep cap and had to clamp. The redesign notes call for this
+        /// specifically: it is how you find out whether real grids are stiffer than the explicit
+        /// integrator can follow, rather than arguing about it from arithmetic.
+        /// </summary>
+        public long ClampedSteps;
+
+        public readonly RunningStat NodesPerStep = new RunningStat();
         public readonly RunningStat CriticalBlocks = new RunningStat();
         public long DamageEvents;
         public double TotalDamage;
@@ -79,7 +89,7 @@ namespace Thermodynamics
         // ---- environment ----------------------------------------------------------------
         public readonly RunningStat AmbientTemperature = new RunningStat();
         public readonly RunningStat AirDensity = new RunningStat();
-        public readonly RunningStat AirDensityCurve = new RunningStat();
+        public readonly RunningStat AtmosphereFactor = new RunningStat();
         public readonly RunningStat WindSpeed = new RunningStat();
         public readonly RunningStat ConvectionCoefficient = new RunningStat();
         public readonly RunningStat EffectiveSolarEnergy = new RunningStat();
@@ -91,13 +101,20 @@ namespace Thermodynamics
 
         // ---- cost -----------------------------------------------------------------------
         public readonly TimingStat SimulationTime = new TimingStat("grid simulation");
-        public readonly TimingStat MapperTime = new TimingStat("room mapper");
-        public readonly TimingStat SurfaceCalcTime = new TimingStat("surface states");
-        public readonly TimingStat EnvironmentTime = new TimingStat("environment prep");
         public readonly TimingStat SolarTime = new TimingStat("solar occlusion");
-        public readonly TimingStat CoolantTime = new TimingStat("coolant crawl");
         public readonly TimingStat SaveTime = new TimingStat("save");
         public readonly TimingStat LoadTime = new TimingStat("load");
+
+        /// <summary>
+        /// Steps between structure samples. Structure walks a handful of collection counts and
+        /// changes only when blocks do, so there is nothing to learn from doing it every step.
+        /// </summary>
+        private const int StructureInterval = 8;
+
+        private int stepsSinceStructure = StructureInterval;
+
+        /// <summary>Rotates which slice of nodes the wide per-block sampling looks at.</summary>
+        private int sampleOffset;
 
         public GridTelemetry(ThermalGrid grid)
         {
@@ -118,55 +135,104 @@ namespace Thermodynamics
             GridSize = Grid.Grid.GridSizeEnum == MyCubeSize.Large ? "Large" : "Small";
         }
 
-        /// <summary>
-        /// How many structure samples separate two conduction-link counts. Everything else here
-        /// is a collection's Count; the link count is the one O(cells) walk, so it runs rarely.
-        /// </summary>
-        private const int LinkCountInterval = 16;
-        private int _structureSamples;
+        // ------------------------------------------------------------------------------------
+        // Per-step collection
+        // ------------------------------------------------------------------------------------
 
         /// <summary>
-        /// Called once per simulation step, not once per frame — this walks a few collections and
-        /// is not worth doing 60 times a second.
+        /// Called once per batch of solver steps. This is the whole hot path of the telemetry
+        /// module: solver-level figures every time, structure occasionally, and a rotating slice
+        /// of nodes so that full per-block coverage costs one pass spread over
+        /// <see cref="Telemetry.SampleStride"/> steps rather than a pass every step.
         /// </summary>
-        public void SampleStructure(bool countLinks = false)
+        public void OnSteps(int steps)
         {
-            if (Grid == null || Grid.Grid == null) return;
+            if (Grid == null || Grid.Simulation == null) return;
+
+            ThermalSolver solver = Grid.Simulation.Solver;
+            int nodeCount = solver.Nodes.Count;
+
+            SimulationSteps += steps;
+            NodeUpdates += (long)nodeCount * steps;
+
+            Substeps.Add(solver.LastSubsteps);
+            if (solver.LastStepWasClamped) ClampedSteps++;
+            NodesPerStep.Add(nodeCount);
+            CriticalBlocks.Add(Grid.CriticalBlocks);
+
+            if (Grid.HottestNode != null)
+            {
+                HottestBlockTemperature.Add(Grid.HottestNode.Temperature);
+                NoteTemperature(Grid.HottestNode);
+            }
+
+            stepsSinceStructure += steps;
+            if (stepsSinceStructure >= StructureInterval)
+            {
+                stepsSinceStructure = 0;
+                SampleStructure();
+            }
+
+            SampleNodes(solver);
+        }
+
+        /// <summary>
+        /// Walks one slice of the grid's nodes, feeding the per-definition statistics and the
+        /// anomaly detector. The slice rotates, so every node is seen once per stride.
+        /// </summary>
+        private void SampleNodes(ThermalSolver solver)
+        {
+            int stride = Telemetry.SampleStride;
+            if (stride < 1) stride = 1;
+
+            IList<ThermalNode> nodes = solver.Nodes;
+            sampleOffset = (sampleOffset + 1) % stride;
+
+            for (int i = sampleOffset; i < nodes.Count; i += stride)
+            {
+                ThermalNode node = nodes[i];
+                SampledNodes++;
+
+                ThermalBlock bound = Grid.Get(node.Block.Position);
+                BlockTypeTelemetry type = bound != null ? bound.Stats : null;
+
+                if (type != null)
+                {
+                    type.OnUpdate(node, EntityId);
+                    type.Sample(node);
+                }
+
+                NoteTemperature(node);
+                Telemetry.CheckNode(this, node);
+            }
+        }
+
+        /// <summary>
+        /// The structural shape of the grid. Every figure here is a collection count, except the
+        /// link count, which the solver now maintains — the old code had to walk every cell for
+        /// it.
+        /// </summary>
+        public void SampleStructure()
+        {
+            if (Grid == null || Grid.Grid == null || Grid.Simulation == null) return;
 
             RefreshIdentity();
 
-            int cells = Grid.Thermals.Count;
+            ThermalSimulation simulation = Grid.Simulation;
+
+            int cells = simulation.Solver.Nodes.Count;
             CellCount.Add(cells);
             if (cells > PeakCellCount) PeakCellCount = cells;
 
             BlockCount.Add(Grid.Grid.BlocksCount);
-            SurfaceEntries.Add(Grid.Surfaces.Count);
-            CoolantLoops.Add(Grid.ThermalLoops.Count);
+            NeighborLinks.Add(simulation.Solver.Links.Count);
+            SurfaceEntries.Add(simulation.Surfaces.CellCount);
+            CoolantLoops.Add(simulation.Solver.Loops.Count);
             RecentlyRemovedSize.Add(Grid.RecentlyRemoved.Count);
-            ExternalQueueDepth.Add(Grid.ExternalQueue.Count);
-            GridQueueDepth.Add(Grid.GridQueue.Count);
-
-            // Rooms[0] is the exterior set and Rooms[1] is the non-room set; the rest are sealed
-            // rooms. Matches the accounting the debug HUD uses.
-            RoomCount.Add(Grid.Rooms.Count - 2);
-            ExternalCells.Add(Grid.Rooms[0].Count);
-
-            if (Grid.HottestBlock != null)
-            {
-                HottestBlockTemperature.Add(Grid.HottestBlock.Temperature);
-            }
-
-            if (countLinks || (_structureSamples++ % LinkCountInterval) == 0)
-            {
-                long links = 0;
-                for (int i = 0; i < Grid.Thermals.Count; i++)
-                {
-                    ThermalCell c = Grid.Thermals.Cells[i];
-                    if (c != null) links += c.Neighbors.Count;
-                }
-                // Each joint is held by both ends, so the link count is half the sum of degrees.
-                NeighborLinks.Add(links * 0.5f);
-            }
+            MapperQueueDepth.Add(simulation.Rooms.PendingCells);
+            RoomCount.Add(simulation.Rooms.Map.RoomCount);
+            ExternalCells.Add(simulation.Rooms.Map.ExternalCellCount);
+            MapperCompletions = simulation.Rooms.CompletedPasses;
 
             if (Grid.Grid.Physics != null)
             {
@@ -174,20 +240,23 @@ namespace Thermodynamics
             }
         }
 
-        public void SampleEnvironment()
+        public void SampleEnvironment(ThermalGrid grid)
         {
-            if (Grid == null) return;
+            if (grid == null || grid.Simulation == null) return;
+
+            EnvironmentSample sample = grid.LastSample;
+            EnvironmentState state = grid.LastState;
 
             EnvironmentSamples++;
-            if (Grid.FrameSolarOccluded) OccludedSamples++;
-            if (Grid.FrameAmbientDensity > 0.01f) InAtmosphereSamples++;
+            if (sample.IsSolarOccluded) OccludedSamples++;
+            if (sample.AirDensity > 0.01f) InAtmosphereSamples++;
 
-            AmbientTemperature.Add(Grid.FrameAmbientTemprature);
-            AirDensity.Add(Grid.FrameAmbientDensity);
-            AirDensityCurve.Add(Grid.FrameAirDensityCurve);
-            WindSpeed.Add(Grid.FrameEffectiveWindSpeed);
-            ConvectionCoefficient.Add(Grid.FrameEffectiveConvectionCoefficient);
-            EffectiveSolarEnergy.Add(Grid.FrameEffectiveSolarEnergy);
+            AmbientTemperature.Add(state.AmbientTemperature);
+            AirDensity.Add(sample.AirDensity);
+            AtmosphereFactor.Add(state.AtmosphereFactor);
+            WindSpeed.Add(sample.RelativeWindSpeed);
+            ConvectionCoefficient.Add(state.ConvectionCoefficient);
+            EffectiveSolarEnergy.Add(state.SolarEnergy);
         }
 
         public void NotePlanet(string name)
@@ -196,45 +265,43 @@ namespace Thermodynamics
             if (Planets.Count < 32) Planets.Add(name);
         }
 
-        public void NoteTemperature(ThermalCell cell)
+        public void NoteTemperature(ThermalNode node)
         {
-            if (cell.Temperature <= PeakTemperature) return;
+            if (node == null || node.Temperature <= PeakTemperature) return;
 
-            PeakTemperature = cell.Temperature;
-            PeakTemperatureBlock = cell.Block != null && cell.Block.BlockDefinition != null
-                ? cell.Block.BlockDefinition.Id.SubtypeName + " " + cell.Block.Position
-                : "(unknown)";
+            PeakTemperature = node.Temperature;
+            PeakTemperatureBlock = node.Block.Name + " " + node.Block.Position;
         }
 
         /// <summary>
-        /// Walks every live cell once and records its end state. Called at shutdown, and for a
+        /// Walks every live node once and records its end state. Called at shutdown, and for a
         /// grid that is destroyed mid-session, at the moment it closes.
         /// </summary>
         public void SnapshotFinalState()
         {
-            if (Grid == null || Grid.Thermals == null) return;
+            if (Grid == null || Grid.Simulation == null) return;
 
-            SampleStructure(true);
+            SampleStructure();
 
             // Rebuilt rather than appended to, so a manual mid-session dump does not leave its
             // counts behind for the next report.
             FinalTemperatures.Clear();
 
-            for (int i = 0; i < Grid.Thermals.Count; i++)
+            IList<ThermalNode> nodes = Grid.Simulation.Solver.Nodes;
+            for (int i = 0; i < nodes.Count; i++)
             {
-                ThermalCell c = Grid.Thermals.Cells[i];
-                if (c == null || c.Block == null) continue;
+                ThermalNode node = nodes[i];
+                FinalTemperatures.Add(node.Temperature);
 
-                FinalTemperatures.Add(c.Temperature);
+                ThermalBlock bound = Grid.Get(node.Block.Position);
+                BlockTypeTelemetry type = bound != null ? bound.Stats : null;
+                if (type == null) continue;
 
-                BlockTypeTelemetry type = c.Stats;
-                if (type != null)
-                {
-                    type.OnFinalTemperature(c.Temperature);
-                    // The strided sampler may never have seen a rare block. The final pass
-                    // guarantees at least one full observation of everything on the grid.
-                    type.Sample(c);
-                }
+                type.OnFinalTemperature(node.Temperature);
+
+                // The strided sampler may never have seen a rare block. The final pass
+                // guarantees at least one full observation of everything on the grid.
+                type.Sample(node);
             }
         }
 

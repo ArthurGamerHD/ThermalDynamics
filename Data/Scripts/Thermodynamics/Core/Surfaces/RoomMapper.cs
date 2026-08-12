@@ -70,6 +70,22 @@ namespace Thermodynamics.Core
         public int CompletedPasses { get; private set; }
 
         /// <summary>
+        /// Cells waiting in the flood fill's frontier. Zero when no pass is running. Reported so
+        /// a session can be checked for the pathology the incremental mapper is there to avoid:
+        /// restarts arriving faster than passes complete.
+        /// </summary>
+        public int PendingCells
+        {
+            get { return frontier.Count; }
+        }
+
+        /// <summary>Cells the current pass has already classified.</summary>
+        public int VisitedCells
+        {
+            get { return visited.Count; }
+        }
+
+        /// <summary>
         /// Marks the map stale. Cheap and idempotent: many calls before the next
         /// <see cref="Step"/> collapse into a single restart.
         /// </summary>

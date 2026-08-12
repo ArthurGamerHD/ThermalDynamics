@@ -2,6 +2,7 @@ using Sandbox.ModAPI;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Thermodynamics.Core;
 using VRage.Game;
 using VRage.Utils;
 
@@ -297,51 +298,57 @@ namespace Thermodynamics
         }
 
         // ------------------------------------------------------------------------------------
-        // Per-cell hooks
+        // Simulation hooks
         // ------------------------------------------------------------------------------------
 
         /// <summary>
-        /// The hot path: one call per cell per update, on every grid. Kept to a few increments
-        /// and one strided branch.
+        /// One call per grid per batch of solver steps.
+        ///
+        /// The solver steps a whole grid at once, so this replaces the old per-cell hook: the
+        /// grid-level figures are read from the solver directly, and per-block detail comes from
+        /// a rotating slice of nodes rather than from a callback on every block.
         /// </summary>
-        public static void OnCellUpdated(ThermalCell cell)
+        public static void OnGridStepped(ThermalGrid grid, int steps)
         {
-            if (!Enabled) return;
+            if (!Enabled || grid == null || grid.Stats == null) return;
 
-            CellUpdatesObserved++;
-
-            BlockTypeTelemetry type = cell.Stats;
-            GridTelemetry grid = cell.Grid != null ? cell.Grid.Stats : null;
-
-            if (type != null) type.OnUpdate(cell);
-            if (grid != null)
+            try
             {
-                grid.CellUpdates++;
-                grid.NoteTemperature(cell);
+                SimulationStepsObserved += steps;
+                grid.Stats.OnSteps(steps);
             }
-
-            TelemetryAnomalyKind kind = TelemetryAnomalies.Classify(
-                cell.Temperature, cell.LastTemprature, ImplausibleTemperature);
-
-            if (kind != TelemetryAnomalyKind.None)
+            catch (Exception e)
             {
-                Anomaly(TelemetryAnomalies.Name(kind, ImplausibleTemperature),
-                    Describe(cell) + " T=" + cell.Temperature.ToString("n2")
-                    + " from " + cell.LastTemprature.ToString("n2"));
+                Exception("Telemetry.OnGridStepped", e);
             }
-
-            if (!Gate.Admit()) return;
-
-            if (type != null) type.Sample(cell);
         }
 
-        public static void OnCriticalDamage(ThermalCell cell, float damage)
+        /// <summary>
+        /// Classifies one node's temperature. Called from the sampling walk, so the cost is the
+        /// same rotating fraction of the grid the rest of the sampling pays.
+        /// </summary>
+        public static void CheckNode(GridTelemetry grid, ThermalNode node)
         {
-            if (!Enabled) return;
+            CellUpdatesObserved++;
 
-            if (cell.Stats != null) cell.Stats.OnCriticalDamage(damage);
+            float previous = node.Temperature - node.LastDeltaTemperature;
+            TelemetryAnomalyKind kind = TelemetryAnomalies.Classify(
+                node.Temperature, previous, ImplausibleTemperature);
 
-            GridTelemetry grid = cell.Grid != null ? cell.Grid.Stats : null;
+            if (kind == TelemetryAnomalyKind.None) return;
+
+            Anomaly(TelemetryAnomalies.Name(kind, ImplausibleTemperature),
+                Describe(grid, node) + " T=" + node.Temperature.ToString("n2")
+                + " from " + previous.ToString("n2"));
+        }
+
+        public static void OnCriticalDamage(ThermalBlock block, float damage)
+        {
+            if (!Enabled || block == null) return;
+
+            if (block.Stats != null) block.Stats.OnCriticalDamage(damage);
+
+            GridTelemetry grid = block.Grid != null ? block.Grid.Stats : null;
             if (grid != null)
             {
                 grid.DamageEvents++;
@@ -389,17 +396,14 @@ namespace Thermodynamics
             Anomaly("exception in " + where, e == null ? "(null)" : e.Message);
         }
 
-        private static string Describe(ThermalCell cell)
+        private static string Describe(GridTelemetry grid, ThermalNode node)
         {
             try
             {
-                if (cell == null || cell.Block == null) return "(null cell)";
+                if (node == null) return "(null node)";
 
-                string grid = cell.Grid != null && cell.Grid.Grid != null
-                    ? cell.Grid.Grid.DisplayName
-                    : "(no grid)";
-
-                return grid + " / " + cell.Block.BlockDefinition.Id.SubtypeName + " " + cell.Block.Position;
+                string name = grid != null && grid.Name != null ? grid.Name : "(no grid)";
+                return name + " / " + node.Block.Name + " " + node.Block.Position;
             }
             catch
             {

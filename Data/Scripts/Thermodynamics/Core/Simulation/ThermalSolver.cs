@@ -533,7 +533,7 @@ namespace Thermodynamics.Core
         /// This is what makes the integrator unconditionally bounded: substepping keeps the
         /// result accurate, and this keeps it sane when substepping alone is not enough.
         /// </summary>
-        private static float ClampExchange(float watts, float h, float difference, float massA, float massB)
+        public static float ClampExchange(float watts, float h, float difference, float massA, float massB)
         {
             if (h <= 0f) return watts;
 
