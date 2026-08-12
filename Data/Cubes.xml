@@ -1,4 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+	Thermal properties per block type.
+
+	SpecificHeat is in real J/(kg K) - the same number you would look up for the material, so
+	steel is about 450 and aluminium about 900. A real ship at real heat capacity takes hours to
+	change temperature, so the simulation divides every capacity by the HeatTimeScale setting
+	(default 225) to reach a playable pace. That factor is global: it moves the clock without
+	changing any equilibrium temperature or the balance between block types.
+
+	Conductivity and Emissivity are 0..1 quality values, not physical units.
+-->
 <Definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
 	<CubeBlocks>
 		<Definition>
@@ -10,7 +21,8 @@
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="IgnoreThermals" Value="false" />
 					<Decimal Name="Conductivity" Value="0.60" />
-					<Decimal Name="SpecificHeat" Value="2" />
+					<!--J/(kg K), real units: mild steel, 466 J/(kg K) rounded down: most blocks are steel plate-->
+					<Decimal Name="SpecificHeat" Value="450" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="SurfaceAreaScaler" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0.05" />
@@ -30,7 +42,8 @@
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="IgnoreThermals" Value="false" />
 					<Decimal Name="Conductivity" Value="1" />
-					<Decimal Name="SpecificHeat" Value="2" />
+					<!--J/(kg K), real units: copper-->
+					<Decimal Name="SpecificHeat" Value="385" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="SurfaceAreaScaler" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
@@ -49,7 +62,8 @@
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="IgnoreThermals" Value="false" />
 					<Decimal Name="Conductivity" Value="1" />
-					<Decimal Name="SpecificHeat" Value="2" />
+					<!--J/(kg K), real units: copper-->
+					<Decimal Name="SpecificHeat" Value="385" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="SurfaceAreaScaler" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
@@ -68,7 +82,8 @@
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="IgnoreThermals" Value="false" />
 					<Decimal Name="Conductivity" Value="1" />
-					<Decimal Name="SpecificHeat" Value="2" />
+					<!--J/(kg K), real units: copper-->
+					<Decimal Name="SpecificHeat" Value="385" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="SurfaceAreaScaler" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
@@ -87,7 +102,8 @@
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="IgnoreThermals" Value="false" />
 					<Decimal Name="Conductivity" Value="1" />
-					<Decimal Name="SpecificHeat" Value="2" />
+					<!--J/(kg K), real units: copper-->
+					<Decimal Name="SpecificHeat" Value="385" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="SurfaceAreaScaler" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
@@ -106,7 +122,8 @@
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="IgnoreThermals" Value="false" />
 					<Decimal Name="Conductivity" Value="1" />
-					<Decimal Name="SpecificHeat" Value="2" />
+					<!--J/(kg K), real units: copper-->
+					<Decimal Name="SpecificHeat" Value="385" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="SurfaceAreaScaler" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
@@ -125,7 +142,8 @@
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="IgnoreThermals" Value="false" />
 					<Decimal Name="Conductivity" Value="1" />
-					<Decimal Name="SpecificHeat" Value="2" />
+					<!--J/(kg K), real units: copper-->
+					<Decimal Name="SpecificHeat" Value="385" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="SurfaceAreaScaler" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
@@ -144,7 +162,8 @@
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="IgnoreThermals" Value="false" />
 					<Decimal Name="Conductivity" Value="1" />
-					<Decimal Name="SpecificHeat" Value="2" />
+					<!--J/(kg K), real units: copper-->
+					<Decimal Name="SpecificHeat" Value="385" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="SurfaceAreaScaler" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
@@ -163,7 +182,8 @@
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="IgnoreThermals" Value="false" />
 					<Decimal Name="Conductivity" Value="1" />
-					<Decimal Name="SpecificHeat" Value="2" />
+					<!--J/(kg K), real units: copper-->
+					<Decimal Name="SpecificHeat" Value="385" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="SurfaceAreaScaler" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
@@ -183,7 +203,8 @@
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="IgnoreThermals" Value="false" />
 					<Decimal Name="Conductivity" Value="1" />
-					<Decimal Name="SpecificHeat" Value="2" />
+					<!--J/(kg K), real units: copper-->
+					<Decimal Name="SpecificHeat" Value="385" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="SurfaceAreaScaler" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
@@ -202,7 +223,8 @@
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="IgnoreThermals" Value="false" />
 					<Decimal Name="Conductivity" Value="1" />
-					<Decimal Name="SpecificHeat" Value="2" />
+					<!--J/(kg K), real units: copper-->
+					<Decimal Name="SpecificHeat" Value="385" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="SurfaceAreaScaler" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
@@ -222,7 +244,8 @@
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="IgnoreThermals" Value="false" />
 					<Decimal Name="Conductivity" Value="1" />
-					<Decimal Name="SpecificHeat" Value="2" />
+					<!--J/(kg K), real units: copper-->
+					<Decimal Name="SpecificHeat" Value="385" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="SurfaceAreaScaler" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
@@ -241,7 +264,8 @@
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="IgnoreThermals" Value="false" />
 					<Decimal Name="Conductivity" Value="1" />
-					<Decimal Name="SpecificHeat" Value="2" />
+					<!--J/(kg K), real units: copper-->
+					<Decimal Name="SpecificHeat" Value="385" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="SurfaceAreaScaler" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
@@ -260,7 +284,8 @@
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="IgnoreThermals" Value="false" />
 					<Decimal Name="Conductivity" Value="1" />
-					<Decimal Name="SpecificHeat" Value="2" />
+					<!--J/(kg K), real units: steel casing-->
+					<Decimal Name="SpecificHeat" Value="450" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="SurfaceAreaScaler" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
@@ -279,7 +304,8 @@
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="IgnoreThermals" Value="false" />
 					<Decimal Name="Conductivity" Value="1" />
-					<Decimal Name="SpecificHeat" Value="2" />
+					<!--J/(kg K), real units: steel casing-->
+					<Decimal Name="SpecificHeat" Value="450" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="SurfaceAreaScaler" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
@@ -299,7 +325,8 @@
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="IgnoreThermals" Value="false" />
 					<Decimal Name="Conductivity" Value="1" />
-					<Decimal Name="SpecificHeat" Value="2" />
+					<!--J/(kg K), real units: steel casing-->
+					<Decimal Name="SpecificHeat" Value="450" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="SurfaceAreaScaler" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0.05" />
@@ -318,7 +345,8 @@
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="IgnoreThermals" Value="false" />
 					<Decimal Name="Conductivity" Value="1" />
-					<Decimal Name="SpecificHeat" Value="2" />
+					<!--J/(kg K), real units: steel casing-->
+					<Decimal Name="SpecificHeat" Value="450" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="SurfaceAreaScaler" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0.05" />
@@ -338,7 +366,8 @@
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="IgnoreThermals" Value="false" />
 					<Decimal Name="Conductivity" Value="1" />
-					<Decimal Name="SpecificHeat" Value="1" />
+					<!--J/(kg K), real units: aluminium-->
+					<Decimal Name="SpecificHeat" Value="900" />
 					<Decimal Name="Emissivity" Value="0.35" />
 					<Decimal Name="SurfaceAreaScaler" Value ="1.25" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
@@ -357,7 +386,8 @@
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="IgnoreThermals" Value="false" />
 					<Decimal Name="Conductivity" Value="1" />
-					<Decimal Name="SpecificHeat" Value="1" />
+					<!--J/(kg K), real units: aluminium-->
+					<Decimal Name="SpecificHeat" Value="900" />
 					<Decimal Name="Emissivity" Value="0.35" />
 					<Decimal Name="SurfaceAreaScaler" Value ="1.25" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
@@ -377,7 +407,8 @@
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="IgnoreThermals" Value="false" />
 					<Decimal Name="Conductivity" Value="1" />
-					<Decimal Name="SpecificHeat" Value="3" />
+					<!--J/(kg K), real units: steel and nickel alloy-->
+					<Decimal Name="SpecificHeat" Value="450" />
 					<Decimal Name="Emissivity" Value="0.15" />
 					<Decimal Name="SurfaceAreaScaler" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
@@ -397,7 +428,8 @@
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="IgnoreThermals" Value="false" />
 					<Decimal Name="Conductivity" Value="1" />
-					<Decimal Name="SpecificHeat" Value="6" />
+					<!--J/(kg K), real units: steel with graphite shielding, which is heavier per kelvin-->
+					<Decimal Name="SpecificHeat" Value="600" />
 					<Decimal Name="Emissivity" Value="0.25" />
 					<Decimal Name="SurfaceAreaScaler" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />

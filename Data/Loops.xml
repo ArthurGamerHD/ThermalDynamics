@@ -9,9 +9,11 @@
 			</Id>
 			<ModExtensions>
 				<Group Name="ThermalLoopProperties">
+					<!--kg of coolant in one loop-->
 					<Decimal Name="Mass" Value ="500" />
 					<Decimal Name="Conductivity" Value="1" />
-					<Decimal Name="SpecificHeat" Value="5" />
+					<!--J/(kg K), real units: water-glycol coolant-->
+					<Decimal Name="SpecificHeat" Value="3400" />
 					<Decimal Name="PipeSurfaceAreaScaler" Value ="1" />
 					<Decimal Name="PlateSurfaceAreaScaler" Value ="1" />
 				</Group>

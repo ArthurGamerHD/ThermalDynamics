@@ -112,6 +112,21 @@ namespace Thermodynamics
 		public float SimulationSpeed;
 
 		/// <summary>
+		/// How many times faster than real physics heat moves.
+		///
+		/// SpecificHeat in the block definitions is real J/(kg K), so a ship left alone behaves
+		/// like a real one and takes hours to cool. This is the single number that trades that
+		/// for a playable pace: it divides every heat capacity, which is exactly running thermal
+		/// time faster. Equilibrium temperatures and the balance between conduction, radiation
+		/// and coolant are unchanged — only the clock moves.
+		///
+		/// 1 is fully physical. 225 is the pace this mod shipped with: steel's real 450 J/(kg K)
+		/// divided by 225 is the flat "2" the definitions used to carry.
+		/// </summary>
+		[ProtoMember(17)]
+		public float HeatTimeScale;
+
+		/// <summary>
 		/// the temperature in kelven for space
 		/// </summary>
 		[ProtoMember(30)]
@@ -156,7 +171,7 @@ namespace Thermodynamics
 		public static Settings GetDefaults()
 		{
 			Settings s = new Settings {
-				Version = 2,
+				Version = 3,
 				DebugTextOnScreen = true,
 				DebugTemperatureBlockColors = true,
 				DebugSolarRadiationBlockColors = false,
@@ -174,6 +189,7 @@ namespace Thermodynamics
 				DamageIsPerSecond = true,
 				Frequency = 4,
 				SimulationSpeed = 1,
+				HeatTimeScale = 225f,
 				VacuumTemperature = 2.7f,
                 SolarEnergy = 1000f,
 				FrictionAtSpeedsAbove = 50f,
@@ -194,6 +210,9 @@ namespace Thermodynamics
 
 			if (SimulationSpeed <= 0f)
 				SimulationSpeed = 1f;
+
+			if (HeatTimeScale <= 0f)
+				HeatTimeScale = 1f;
 
 			if (TelemetrySampleStride < 1)
 				TelemetrySampleStride = 1;
@@ -229,6 +248,7 @@ namespace Thermodynamics
 			core.DamageIsPerSecond = DamageIsPerSecond;
 			core.Frequency = Frequency;
 			core.SimulationSpeed = SimulationSpeed;
+			core.HeatTimeScale = HeatTimeScale;
 			core.VacuumTemperature = VacuumTemperature;
 			core.SolarEnergy = SolarEnergy;
 			core.FrictionAtSpeedsAbove = FrictionAtSpeedsAbove;

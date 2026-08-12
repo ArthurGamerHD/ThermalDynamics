@@ -14,8 +14,15 @@ namespace Thermodynamics.Core
         /// <summary>Transfer quality, 0..1.</summary>
         public float Conductivity = 1f;
 
-        /// <summary>Specific heat capacity of the coolant, J/(kg K) game units.</summary>
-        public float SpecificHeat = 5f;
+        /// <summary>
+        /// Specific heat capacity of the coolant, real J/(kg K). Water-glycol is about 3400,
+        /// which is why coolant carries heat so much better than the steel around it.
+        ///
+        /// This is divided by <see cref="ThermalSettings.HeatTimeScale"/> exactly as a block's
+        /// is — the fluid has to run on the same clock as the blocks it exchanges with, or a
+        /// loop moves heat at a different pace from everything it is cooling.
+        /// </summary>
+        public float SpecificHeat = 3400f;
 
         /// <summary>Contact area scaler between the fluid and the pipe block it runs through.</summary>
         public float PipeSurfaceAreaScaler = 1f;

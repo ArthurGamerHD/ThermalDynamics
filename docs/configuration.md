@@ -13,7 +13,7 @@ which every grid's solver holds a reference to.
 
 | Setting | Default | Effect |
 | --- | --- | --- |
-| `Version` | 2 | Config schema version. The file is discarded and regenerated when this does not match. |
+| `Version` | 3 | Config schema version. The file is discarded and regenerated when this does not match. |
 | `EnableEnvironment` | `true` | Master switch for radiation and convection. Off = blocks only exchange heat with each other and their own generation. |
 | `EnableSolarHeat` | `true` | Solar gain and the sun occlusion raycast. |
 | `EnablePlanets` | `true` | Planet climate. Off = ambient is always `VacuumTemperature`, even at sea level. |
@@ -23,7 +23,8 @@ which every grid's solver holds a reference to.
 | `ClampConductionOvershoot` | `true` | Limits each conduction exchange to the energy that equalises the pair, so a node can never overshoot what it is exchanging with. Off reproduces the unbounded behaviour of the original solver. |
 | `DamageIsPerSecond` | `true` | Overheat damage is `(T − critical) × CriticalTemperatureScaler` per second. Off applies it per solver step, which makes damage scale with `Frequency` — the original behaviour. |
 | `Frequency` | 4 | Solver steps per simulated second. The integration step is `1/Frequency`. Clamped to `≥ 1`. |
-| `SimulationSpeed` | 1 | Multiplier on how fast heat evolves relative to real time, applied by running *more* steps rather than by lengthening the step. |
+| `SimulationSpeed` | 1 | Multiplier on how fast heat evolves relative to real time, applied by running *more* steps rather than by lengthening the step. Costs CPU in proportion. |
+| `HeatTimeScale` | 225 | How many times faster than real physics heat moves. `SpecificHeat` in the definitions is real J/(kg·K); this divides every heat capacity, which is exactly running thermal time faster — equilibrium temperatures and every ratio between mechanisms are unchanged. 1 is fully physical (a hull takes hours to cool). Free in CPU terms, but it makes the system stiffer, so very high values cost substeps. |
 | `VacuumTemperature` | 2.7 K | Ambient in space; also the floor for planetary ambient. |
 | `SolarEnergy` | 1000 W/m² | Solar irradiance before atmospheric decay. |
 | `FrictionAtSpeedsAbove` | 50 m/s | Relative airspeed at which aerodynamic heating begins. |
@@ -57,10 +58,21 @@ switched on, in the order above.
 
 ## Time scaling
 
+Three settings affect pace, and they do different things:
+
 ```
 StepSeconds    = 1 / Frequency              // simulated seconds advanced by one solver step
 StepsPerSecond = Frequency × SimulationSpeed
+ThermalMass    = SpecificHeat × Mass / HeatTimeScale
 ```
+
+* `Frequency` is accuracy: how finely a simulated second is integrated.
+* `SimulationSpeed` is how many simulated seconds pass per real second. Honest, and linear in CPU.
+* `HeatTimeScale` is how fast heat moves *within* a simulated second. Free, and the reason the
+  definitions can carry real material values without a ship taking hours to cool. It costs
+  stability margin rather than time: the solver answers a stiffer system with more substeps.
+
+Total acceleration over real physics is `SimulationSpeed × HeatTimeScale`.
 
 `SimulationSpeed` is deliberately not baked into the step length: it increases how many steps are
 scheduled per real second, which keeps each individual step as accurate as it was while making
@@ -76,7 +88,7 @@ accurate. When a grid is stiff enough to hit the substep cap, the telemetry repo
 
 ```xml
 <Settings>
-  <Version>2</Version>
+  <Version>3</Version>
   <DebugTextOnScreen>false</DebugTextOnScreen>
   <DebugTemperatureBlockColors>false</DebugTemperatureBlockColors>
   <DebugSolarRadiationBlockColors>false</DebugSolarRadiationBlockColors>
@@ -94,6 +106,7 @@ accurate. When a grid is stiff enough to hit the substep cap, the telemetry repo
   <DamageIsPerSecond>true</DamageIsPerSecond>
   <Frequency>4</Frequency>
   <SimulationSpeed>1</SimulationSpeed>
+  <HeatTimeScale>225</HeatTimeScale>
   <VacuumTemperature>2.7</VacuumTemperature>
   <SolarEnergy>1000</SolarEnergy>
   <FrictionAtSpeedsAbove>50</FrictionAtSpeedsAbove>

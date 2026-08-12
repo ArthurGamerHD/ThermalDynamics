@@ -24,13 +24,40 @@ Read by `ThermalCellDefinition.GetDefinition`
 | --- | --- | --- | --- |
 | `IgnoreThermals` | Bool | — | `true` excludes the block from the simulation entirely: no cell is created, it conducts nothing and blocks nothing. |
 | `Conductivity` | Decimal | `0 … 1` | Scales heat transfer to neighbours. `1` is a perfect conductor for this model, not a W/(m·K) value. |
-| `SpecificHeat` | Decimal | `≥ 0` | Thermal mass per kg. Higher = slower to heat and to cool. Not J/(kg·K); it is a relative game unit. |
+| `SpecificHeat` | Decimal | `≥ 0` | Heat capacity in **real J/(kg·K)** — look the material up. Steel 450, copper 385, aluminium 900, graphite 710, water 4184. Higher = slower to heat and to cool. See [the note below](#specific-heat-is-real-and-the-clock-is-not). |
 | `Emissivity` | Decimal | `≥ 0` | Fraction of blackbody radiation emitted, and equally the fraction of incident solar energy absorbed. Physically `0 … 1`. |
 | `SurfaceAreaScaler` | Decimal | `≥ 0` | Multiplies the geometric face area. Use `> 1` for finned or folded surfaces (the radiator uses `1.25`). |
 | `ProducerWasteEnergy` | Decimal | `≥ 0` | Fraction of *generated* power converted to heat. |
 | `ConsumerWasteEnergy` | Decimal | `≥ 0` | Fraction of *consumed* power converted to heat. |
 | `CriticalTemperature` | Decimal | `≥ 0` | Kelvin above which the block takes damage. |
 | `CriticalTemperatureScaler` | Decimal | `≥ 0` | Damage per Kelvin of overshoot, per second. |
+
+### Specific heat is real, and the clock is not
+
+`SpecificHeat` is in the units you would find in a materials table, so a definition reads as a
+description of what the block is made of:
+
+| Material | J/(kg·K) | Used by |
+| --- | --- | --- |
+| Copper | 385 | coolant pipes |
+| Steel | 450 | armour, most blocks, pumps, thrusters |
+| Graphite-shielded steel | 600 | reactors |
+| Aluminium | 900 | radiators |
+| Water-glycol | 3400 | the coolant fluid itself |
+
+A real ship at real heat capacity is also a *slow* ship: a hot hull takes hours to cool, which
+is accurate and not much of a game. The pace comes from one global setting,
+`HeatTimeScale` ([configuration.md](configuration.md)), which divides every heat capacity —
+blocks and coolant alike — by the same number. Dividing capacity is exactly running thermal time
+faster: every mechanism is a rate over that capacity, so **equilibrium temperatures, the balance
+between conduction and radiation, and the ratios between block types are all unchanged**. Only
+the clock moves.
+
+That separation is the point. Tune *what a block is* here, in real units, and tune *how fast the
+game feels* there, in one place.
+
+The shipped default is 225, which is what makes steel's 450 J/(kg·K) behave the way the flat
+game value of `2` used to.
 
 ### Lookup and fallback
 
@@ -94,7 +121,7 @@ There is currently one loop definition and every loop uses it:
 | --- | --- | --- | --- |
 | `Mass` | 500 | `≥ 1` | Coolant mass for the whole loop, kg. |
 | `Conductivity` | 1 | `0 … 1` | Transfer scaling for both pipe and plate exchanges. |
-| `SpecificHeat` | 5 | `≥ 0` | Coolant thermal mass per kg. |
+| `SpecificHeat` | 3400 | `≥ 0` | Coolant heat capacity in real J/(kg·K). Water-glycol is about 3400, which is why a loop carries so much more heat than the steel around it. Scaled by `HeatTimeScale` exactly as a block is. |
 | `PipeSurfaceAreaScaler` | 1 | `≥ 0` | Contact area between fluid and the pipe block it runs through. |
 | `PlateSurfaceAreaScaler` | 1 | `≥ 0` | Contact area between fluid and a block pressed against a sink face. |
 
@@ -118,7 +145,7 @@ Dynamics' assembly required:
         <Group Name="ThermalBlockProperties">
           <Bool    Name="IgnoreThermals"           Value="false" />
           <Decimal Name="Conductivity"             Value="0.8"   />
-          <Decimal Name="SpecificHeat"             Value="4"     />
+          <Decimal Name="SpecificHeat"             Value="500"   />
           <Decimal Name="Emissivity"               Value="0.2"   />
           <Decimal Name="SurfaceAreaScaler"        Value="1"     />
           <Decimal Name="ProducerWasteEnergy"      Value="0"     />

@@ -43,9 +43,31 @@ namespace Thermodynamics.Core
 
         /// <summary>
         /// How much faster than real time heat evolves. Applied by running more steps per
-        /// second, not by lengthening the step, so accuracy is unaffected.
+        /// second, not by lengthening the step, so accuracy is unaffected — and so the cost
+        /// rises with it.
         /// </summary>
         public float SimulationSpeed = 1f;
+
+        /// <summary>
+        /// How many times faster than real physics heat moves.
+        ///
+        /// Specific heat in the block definitions is in real J/(kg K) — steel is about 450 —
+        /// which makes a ship behave like a real ship: a hot hull takes hours to cool. That is
+        /// accurate and unplayable, so the simulation divides every heat capacity by this one
+        /// number. Dividing capacity by <em>k</em> is exactly running thermal time at
+        /// <em>k</em>×: every rate scales together, so equilibrium temperatures, the balance
+        /// between conduction and radiation, and every ratio between block types are unchanged.
+        /// Only the clock moves.
+        ///
+        /// This is deliberately the single place the mod trades physics for pace. It is not
+        /// free: coupling per unit capacity rises with it, so the solver takes more substeps,
+        /// and a large value on a grid with very light blocks is what makes a step clamp. The
+        /// telemetry report shows both.
+        ///
+        /// 1 is fully physical. 225 is the pace the mod shipped with: steel's real 450 J/(kg K)
+        /// divided by 225 is the flat "2" the definitions used to carry.
+        /// </summary>
+        public float HeatTimeScale = 225f;
 
         // ---- environment ------------------------------------------------------------------
 
@@ -99,6 +121,7 @@ namespace Thermodynamics.Core
         {
             if (Frequency < 1) Frequency = 1;
             if (SimulationSpeed <= 0f) SimulationSpeed = 1f;
+            if (HeatTimeScale <= 0f) HeatTimeScale = 1f;
             if (VacuumTemperature < 0f) VacuumTemperature = 0f;
             if (SolarEnergy < 0f) SolarEnergy = 0f;
             if (FrictionAtSpeedsAbove < 0f) FrictionAtSpeedsAbove = 0f;
@@ -116,6 +139,8 @@ namespace Thermodynamics.Core
             if (Frequency < 1) problems.Add("Frequency must be at least 1.");
             if (Frequency > 60) problems.Add("Frequency above 60 costs more than one step per render frame.");
             if (SimulationSpeed <= 0f) problems.Add("SimulationSpeed must be positive.");
+            if (HeatTimeScale <= 0f) problems.Add("HeatTimeScale must be positive.");
+            if (HeatTimeScale > 10000f) problems.Add("HeatTimeScale above 10000 will make most grids clamp.");
             if (VacuumTemperature < 0f) problems.Add("VacuumTemperature cannot be negative.");
             return problems;
         }

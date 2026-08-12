@@ -10,6 +10,10 @@ namespace Thermodynamics.Harness
     /// Masses are approximations of the real Space Engineers blocks and thermal properties mirror
     /// Data/Cubes.xml. They exist so scenarios behave plausibly, not so results can be quoted as
     /// exact in-game numbers.
+    ///
+    /// Specific heat is in real J/(kg K), as it is in the definitions: steel 450, copper 385,
+    /// aluminium 900. The playable pace comes from <see cref="ThermalSettings.HeatTimeScale"/>,
+    /// not from writing the capacities small.
     /// </summary>
     public static class Catalog
     {
@@ -23,7 +27,7 @@ namespace Thermodynamics.Harness
             return new BlockThermalProperties
             {
                 Conductivity = 0.60f,
-                SpecificHeat = 2f,
+                SpecificHeat = 450f,       // mild steel
                 Emissivity = 0.125f,
                 SurfaceAreaScaler = 1f,
                 ProducerWasteEnergy = 0.05f,
@@ -37,7 +41,7 @@ namespace Thermodynamics.Harness
         {
             BlockThermalProperties t = DefaultThermal();
             t.Conductivity = 1f;
-            t.SpecificHeat = 6f;
+            t.SpecificHeat = 600f;     // steel with graphite shielding
             t.Emissivity = 0.25f;
             t.ProducerWasteEnergy = 0.25f;
             t.ConsumerWasteEnergy = 0.25f;
@@ -50,7 +54,7 @@ namespace Thermodynamics.Harness
         {
             BlockThermalProperties t = DefaultThermal();
             t.Conductivity = 1f;
-            t.SpecificHeat = 3f;
+            t.SpecificHeat = 450f;     // steel and nickel alloy
             t.Emissivity = 0.15f;
             t.ProducerWasteEnergy = 0f;
             t.ConsumerWasteEnergy = 0.25f;
@@ -63,7 +67,7 @@ namespace Thermodynamics.Harness
         {
             BlockThermalProperties t = DefaultThermal();
             t.Conductivity = 1f;
-            t.SpecificHeat = 1f;
+            t.SpecificHeat = 900f;     // aluminium
             t.Emissivity = 0.35f;
             t.SurfaceAreaScaler = 1.25f;
             t.ProducerWasteEnergy = 0f;
@@ -76,7 +80,7 @@ namespace Thermodynamics.Harness
         {
             BlockThermalProperties t = DefaultThermal();
             t.Conductivity = 1f;
-            t.SpecificHeat = 2f;
+            t.SpecificHeat = 385f;     // copper
             t.ProducerWasteEnergy = 0f;
             t.ConsumerWasteEnergy = 0f;
             t.CriticalTemperature = 1000f;

@@ -8,6 +8,11 @@
 > `sim/Thermodynamics.Tests/LegacyFormulas.cs` holds the old formulas verbatim, and several
 > tests compare the two so the differences stay pinned down rather than remembered.
 > See [model-redesign.md](model-redesign.md) for why each one changed.
+>
+> One unit change is worth stating here, because it changes how the definitions read:
+> `SpecificHeat` is now real J/(kg·K), and the playable pace comes from the `HeatTimeScale`
+> setting, which divides every heat capacity. See
+> [definitions.md](definitions.md#specific-heat-is-real-and-the-clock-is-not).
 
 This is a description of what the code actually computes, not of ideal thermodynamics. Where
 the implementation deviates from textbook physics — deliberately or otherwise — that is

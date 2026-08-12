@@ -48,10 +48,34 @@ namespace Thermodynamics.Core
         /// </summary>
         public long Signature { get; private set; }
 
+        /// <summary>
+        /// Heat capacity is divided by this, exactly as it is for a block. See
+        /// <see cref="ThermalSettings.HeatTimeScale"/>. The coolant has to run on the same clock
+        /// as everything it touches, or a loop would move heat at a different pace from the
+        /// blocks it is cooling.
+        /// </summary>
+        public float HeatTimeScale
+        {
+            get { return heatTimeScale; }
+            set
+            {
+                heatTimeScale = value > 0f ? value : 1f;
+                RefreshThermalMass();
+            }
+        }
+
+        private float heatTimeScale = 1f;
+
         public CoolantLoop(LoopThermalProperties properties, float initialTemperature)
+            : this(properties, initialTemperature, 1f)
+        {
+        }
+
+        public CoolantLoop(LoopThermalProperties properties, float initialTemperature, float heatTimeScale)
         {
             Properties = (properties ?? LoopThermalProperties.Default()).Clone().Clamp();
             Temperature = initialTemperature;
+            this.heatTimeScale = heatTimeScale > 0f ? heatTimeScale : 1f;
             RefreshThermalMass();
         }
 
@@ -62,7 +86,8 @@ namespace Thermodynamics.Core
 
         public void RefreshThermalMass()
         {
-            ThermalMass = Math.Max(ThermalConstants.MinimumThermalMass, Properties.SpecificHeat * Properties.Mass);
+            float capacity = (Properties.SpecificHeat * Properties.Mass) / heatTimeScale;
+            ThermalMass = Math.Max(ThermalConstants.MinimumThermalMass, capacity);
         }
 
         /// <summary>Recomputes <see cref="Signature"/> from the current pipe set.</summary>

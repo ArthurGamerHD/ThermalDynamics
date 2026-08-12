@@ -176,7 +176,7 @@ namespace Thermodynamics.Core
             if (block.Thermal.IgnoreThermals) return null;
             if (nodesByKey.ContainsKey(block.Key)) return nodesByKey[block.Key];
 
-            ThermalNode node = new ThermalNode(block, grid.GridSize, initialTemperature);
+            ThermalNode node = new ThermalNode(block, grid.GridSize, initialTemperature, settings.HeatTimeScale);
             node.Index = nodes.Count;
             nodes.Add(node);
             nodesByKey[block.Key] = node;
@@ -312,6 +312,11 @@ namespace Thermodynamics.Core
                     {
                         loop.Temperature = carried;
                     }
+
+                    // The coolant has to run on the same clock as the blocks it exchanges with,
+                    // so the solver imposes it rather than trusting whoever built the loop.
+                    loop.HeatTimeScale = settings.HeatTimeScale;
+
                     BuildLoopLinks(loop);
                     loops.Add(loop);
                 }

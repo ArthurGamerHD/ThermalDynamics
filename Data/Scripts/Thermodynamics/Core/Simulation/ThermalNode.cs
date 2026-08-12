@@ -62,12 +62,35 @@ namespace Thermodynamics.Core
 
         private readonly float cellFaceArea;
 
+        /// <summary>
+        /// Heat capacity is divided by this. See <see cref="ThermalSettings.HeatTimeScale"/>:
+        /// specific heat is stated in real J/(kg K), and this is what turns real thermal time
+        /// into playable thermal time.
+        /// </summary>
+        public float HeatTimeScale
+        {
+            get { return heatTimeScale; }
+            set
+            {
+                heatTimeScale = value > 0f ? value : 1f;
+                RefreshThermalMass();
+            }
+        }
+
+        private float heatTimeScale = 1f;
+
         public ThermalNode(BlockInstance block, float gridSize, float initialTemperature)
+            : this(block, gridSize, initialTemperature, 1f)
+        {
+        }
+
+        public ThermalNode(BlockInstance block, float gridSize, float initialTemperature, float heatTimeScale)
         {
             if (block == null) throw new ArgumentNullException("block");
 
             Block = block;
             Temperature = initialTemperature;
+            this.heatTimeScale = heatTimeScale > 0f ? heatTimeScale : 1f;
             cellFaceArea = gridSize * gridSize * Math.Max(0f, block.Thermal.SurfaceAreaScaler);
 
             RefreshThermalMass();
@@ -87,7 +110,8 @@ namespace Thermodynamics.Core
         public void RefreshThermalMass()
         {
             float mass = Math.Max(0f, Block.Mass);
-            ThermalMass = Math.Max(ThermalConstants.MinimumThermalMass, Thermal.SpecificHeat * mass);
+            float capacity = (Thermal.SpecificHeat * mass) / heatTimeScale;
+            ThermalMass = Math.Max(ThermalConstants.MinimumThermalMass, capacity);
             StateDirty = true;
         }
 
