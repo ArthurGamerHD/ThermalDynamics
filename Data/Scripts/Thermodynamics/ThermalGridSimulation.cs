@@ -19,10 +19,27 @@ namespace Thermodynamics
     {
         public override void UpdateBeforeSimulation()
         {
+            if (Stats != null) Stats.SimulationTime.Begin();
+
+            UpdateBeforeSimulationInternal();
+
+            if (Stats != null) Stats.SimulationTime.End();
+        }
+
+        private void UpdateBeforeSimulationInternal()
+        {
             FrameCount++;
             //MyAPIGateway.Utilities.ShowNotification($"[Loop] f: {MyAPIGateway.Session.GameplayFrameCounter} fc: {FrameCount} sf: {SimulationFrame} sq: {SimulationQuota}", 1, "White");
 
+            if (Stats != null)
+            {
+                Stats.MapperTime.Begin();
+                Stats.MapperPasses++;
+            }
+
             GridMapperUpdate();
+
+            if (Stats != null) Stats.MapperTime.End();
 
             // if you are done processing the required blocks this second
             // wait for the start of the next second interval
@@ -33,6 +50,8 @@ namespace Thermodynamics
                     SimulationQuota = GetSimulationQuota();
                     FrameCount = 0;
                     FrameQuota = 0;
+
+                    if (Stats != null) Stats.SimulationQuota.Add(SimulationQuota);
                 }
                 else
                 {
@@ -59,6 +78,14 @@ namespace Thermodynamics
 
                     // start a new simulation frame
                     SimulationFrame++;
+
+                    if (Stats != null)
+                    {
+                        Stats.SimulationFrames++;
+                        Telemetry.SimulationStepsObserved++;
+                        if (SurfaceUpdateFrame == SimulationFrame) Stats.SurfaceUpdateSweeps++;
+                    }
+
                     PrepareNextSimulationStep();
 
                     // reverse the index direction
@@ -73,6 +100,8 @@ namespace Thermodynamics
 
                 // Process cells sequentially (parallel processing not available in Space Engineers)
                 ProcessCellsSequentially(cellsToProcess);
+
+                if (Stats != null) Stats.CellsPerFrame.Add(cellsToProcess);
 
                 FrameQuota -= cellsToProcess;
                 SimulationQuota -= cellsToProcess;

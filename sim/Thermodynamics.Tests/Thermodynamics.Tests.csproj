@@ -19,6 +19,18 @@
     <ProjectReference Include="../Thermodynamics.Harness/Thermodynamics.Harness.csproj" />
   </ItemGroup>
 
+  <!--
+    The telemetry module lives outside Core because most of it reads Sandbox.* and VRage.Game
+    types that cannot load here. These three files are the exception: they hold its accumulators,
+    its anomaly classification and its formatting, and reference nothing but System. They are
+    linked rather than duplicated so the tests exercise exactly what the game compiles.
+  -->
+  <ItemGroup>
+    <Compile Include="$(TelemetrySourceRoot)TelemetryStats.cs" LinkBase="Telemetry" />
+    <Compile Include="$(TelemetrySourceRoot)TelemetryAnomalies.cs" LinkBase="Telemetry" />
+    <Compile Include="$(TelemetrySourceRoot)TelemetryFormat.cs" LinkBase="Telemetry" />
+  </ItemGroup>
+
   <ItemGroup>
     <Reference Include="VRage.Math">
       <HintPath>$(SEBinPath)/VRage.Math.dll</HintPath>

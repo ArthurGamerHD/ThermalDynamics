@@ -89,6 +89,20 @@ namespace Thermodynamics
 		[ProtoMember(60)]
 		public bool DebugFrictionColors;
 
+		/// <summary>
+		/// Collect simulation, structure, environment and cost data for the whole session and
+		/// write a report to world storage when the world closes.
+		/// </summary>
+		[ProtoMember(70)]
+		public bool EnableTelemetry;
+
+		/// <summary>
+		/// One cell update in this many feeds the detailed per-block-type statistics. Peak
+		/// temperatures, update counts and damage are always recorded. 1 samples everything.
+		/// </summary>
+		[ProtoMember(71)]
+		public int TelemetrySampleStride;
+
 
         /// <summary>
         /// Used to adjust values that are calculated in seconds, to the current time scale 
@@ -119,6 +133,8 @@ namespace Thermodynamics
 				VacuumTemperature = 2.7f,
                 SolarEnergy = 1000f,
 				FrictionAtSpeedsAbove = 50f,
+				EnableTelemetry = true,
+				TelemetrySampleStride = 4,
             };
 
 			s.Init();
@@ -129,6 +145,9 @@ namespace Thermodynamics
 
 			if (Frequency < 1)
 				Frequency = 1;
+
+			if (TelemetrySampleStride < 1)
+				TelemetrySampleStride = 1;
 
 			TimeScaleRatio =  1f/Frequency;
 			PerSecond = Frequency * SimulationSpeed;

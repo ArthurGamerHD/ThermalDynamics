@@ -78,9 +78,10 @@ namespace Thermodynamics
             if (!CoolantPipeLinkDirections.ContainsKey(cell.Block.BlockDefinition.Id.SubtypeId.ToString())) return;
 
             for (int i = 0; i < ThermalLoops.Count; i++) {
-                if (ThermalLoops[i].Loop.Contains(cell)) 
+                if (ThermalLoops[i].Loop.Contains(cell))
                 {
                     ThermalLoops.RemoveAt(i);
+                    if (Stats != null) Stats.CoolantLoopsRemoved++;
                     break;
                 }
             }
@@ -88,6 +89,24 @@ namespace Thermodynamics
         }
 
         private void StartCoolantCrawl(ThermalCell cell)
+        {
+            if (Stats != null)
+            {
+                Stats.CoolantCrawls++;
+                Stats.CoolantTime.Begin();
+            }
+
+            try
+            {
+                StartCoolantCrawlInternal(cell);
+            }
+            finally
+            {
+                if (Stats != null) Stats.CoolantTime.End();
+            }
+        }
+
+        private void StartCoolantCrawlInternal(ThermalCell cell)
         {
             Matrix m;
             cell.Block.Orientation.GetMatrix(out m);
@@ -126,6 +145,7 @@ namespace Thermodynamics
                 ThermalLoopDefintion def = ThermalLoopDefintion.GetDefinition(ThermalLoopDefintion.DefaultLoopDefinitionId);
                 ThermalLoop thermalLoop = new ThermalLoop(this, def, loop.ToArray());
                 ThermalLoops.Add(thermalLoop);
+                if (Stats != null) Stats.CoolantLoopsCreated++;
             }
         }
 

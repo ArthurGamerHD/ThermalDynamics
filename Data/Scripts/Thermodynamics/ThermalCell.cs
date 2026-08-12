@@ -52,6 +52,13 @@ namespace Thermodynamics
         public IMySlimBlock Block;
         public ThermalCellDefinition Definition;
 
+        /// <summary>
+        /// The data collection bucket for this block's definition, resolved once at construction.
+        /// Keeping the reference here means the per-update path never does a dictionary lookup.
+        /// Null when telemetry is disabled.
+        /// </summary>
+        public BlockTypeTelemetry Stats;
+
         public List<ThermalCell> Neighbors = new List<ThermalCell>();
         public List<int> TouchingSerfacesByNeighbor = new List<int>();
 
@@ -77,6 +84,9 @@ namespace Thermodynamics
 
             PrecalculateVariables();
             UpdateHeat();
+
+            Stats = Telemetry.GetBlockType(b.BlockDefinition.Id);
+            if (Stats != null) Stats.OnPlaced(this);
         }
 
         public void PrecalculateVariables() 
@@ -471,6 +481,8 @@ namespace Thermodynamics
 
             Temperature = Math.Max(0, Temperature);
 
+            Telemetry.OnCellUpdated(this);
+
             HandleCriticalTemperature();
             if (Settings.Instance.DebugTemperatureBlockColors && MyAPIGateway.Session.IsServer)
             {
@@ -543,6 +555,8 @@ namespace Thermodynamics
                     * Definition.CriticalTemperatureScaler
                     * Settings.Instance.TimeScaleRatio;
 
+                Telemetry.OnCriticalDamage(this, damage);
+
                 Block.DoDamage(damage, MyStringHash.GetOrCompute("thermal"), false);
             }
         }
@@ -556,6 +570,8 @@ namespace Thermodynamics
                 surfaces[3] + surfaces[4] + surfaces[5];
 
             UpdateExposedSurfaceArea();
+
+            if (Grid.Stats != null) Grid.Stats.SurfaceUpdates++;
         }
 
         /// <summary>

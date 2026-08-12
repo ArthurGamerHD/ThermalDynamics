@@ -128,8 +128,16 @@ namespace Thermodynamics
         {
             //Stopwatch sw = Stopwatch.StartNew();
 
+            if (Stats != null) Stats.SaveTime.Begin();
+
             string data = Pack();
             string loopdata = PackLoops();
+
+            if (Stats != null)
+            {
+                Stats.Saves++;
+                Stats.SaveBytes += data.Length + loopdata.Length;
+            }
 
 
             MyModStorageComponentBase storage = Entity.Storage;
@@ -151,6 +159,8 @@ namespace Thermodynamics
                 storage.Add(StorageGuidLoops, loopdata);
             }
 
+            if (Stats != null) Stats.SaveTime.End();
+
             //sw.Stop();
             //MyLog.Default.Info($"[{Settings.Name}] [SAVE] {Grid.DisplayName} ({Grid.EntityId}) t-{((float)sw.ElapsedTicks / TimeSpan.TicksPerMillisecond).ToString("n8")}ms, size: {data.Length}");
         }
@@ -159,15 +169,27 @@ namespace Thermodynamics
         {
             //Stopwatch sw = Stopwatch.StartNew();
 
+            if (Stats != null)
+            {
+                Stats.Loads++;
+                Stats.LoadTime.Begin();
+            }
+
             if (Entity.Storage.ContainsKey(StorageGuid))
             {
-                Unpack(Entity.Storage[StorageGuid]);
+                string data = Entity.Storage[StorageGuid];
+                if (Stats != null) Stats.LoadBytes += data.Length;
+                Unpack(data);
             }
 
             if (Entity.Storage.ContainsKey(StorageGuidLoops))
             {
-                UnpackLoops(Entity.Storage[StorageGuidLoops]);
+                string loopdata = Entity.Storage[StorageGuidLoops];
+                if (Stats != null) Stats.LoadBytes += loopdata.Length;
+                UnpackLoops(loopdata);
             }
+
+            if (Stats != null) Stats.LoadTime.End();
 
             //sw.Stop();
             //MyLog.Default.Info($"[{Settings.Name}] [LOAD] {Grid.DisplayName} ({Grid.EntityId}) t-{((float)sw.ElapsedTicks / TimeSpan.TicksPerMillisecond).ToString("n8")}ms");

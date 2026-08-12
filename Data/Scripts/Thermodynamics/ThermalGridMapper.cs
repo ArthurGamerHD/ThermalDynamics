@@ -122,12 +122,26 @@ namespace Thermodynamics
             IMyDoor door = block.FatBlock as IMyDoor;
             if (door != null && !DoorStateHandlers.ContainsKey(door.EntityId))
             {
-                Action<bool> handler = (state) => OnBlockAddOrUpdate(block);
+                Action<bool> handler = (state) =>
+                {
+                    if (Stats != null) Stats.DoorStateChanges++;
+                    OnBlockAddOrUpdate(block);
+                };
                 DoorStateHandlers.Add(door.EntityId, handler);
                 door.DoorStateChanged += handler;
+
+                if (Stats != null) Stats.DoorsTracked++;
+            }
+
+            if (Stats != null)
+            {
+                Stats.SurfaceRecalcs++;
+                Stats.SurfaceCalcTime.Begin();
             }
 
             CalculateBlockSurfaceStates(block);
+
+            if (Stats != null) Stats.SurfaceCalcTime.End();
 
             BeginCrawl();
         }
@@ -437,6 +451,10 @@ namespace Thermodynamics
         /// </summary>
         private void BeginCrawl()
         {
+            // Counted because every one of these throws away a partial flood fill; the ratio of
+            // restarts to completions is the measurement behind P1.
+            if (Stats != null) Stats.CrawlRestarts++;
+
             min = Grid.Min - 1;
             max = Grid.Max + 1;
 

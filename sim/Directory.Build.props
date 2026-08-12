@@ -28,6 +28,7 @@
     <!-- referencing a net472 assembly from net9.0 is intentional here -->
     <NoWarn>$(NoWarn);MSB3277;NU1701;CS1591</NoWarn>
     <CoreSourceRoot>$(MSBuildThisFileDirectory)../Data/Scripts/Thermodynamics/Core/</CoreSourceRoot>
+    <TelemetrySourceRoot>$(MSBuildThisFileDirectory)../Data/Scripts/Thermodynamics/Telemetry/</TelemetrySourceRoot>
   </PropertyGroup>
 
   <Target Name="VerifySEBinPath" BeforeTargets="ResolveAssemblyReferences" Condition="'$(SEBinPath)' == ''">

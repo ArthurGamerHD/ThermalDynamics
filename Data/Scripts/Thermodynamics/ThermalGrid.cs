@@ -20,6 +20,13 @@ namespace Thermodynamics
     {
         
         public MyCubeGrid Grid;
+
+        /// <summary>
+        /// This grid's data collection record. Null when telemetry is disabled, so every use is
+        /// guarded; the record outlives the grid and is owned by <see cref="Telemetry"/>.
+        /// </summary>
+        public GridTelemetry Stats;
+
         public ThermalCellArray Thermals = new ThermalCellArray();
         public Dictionary<int, float> RecentlyRemoved = new Dictionary<int, float>();
         //public ThermalRadiationNode SolarRadiationNode = new ThermalRadiationNode();
@@ -97,6 +104,8 @@ namespace Thermodynamics
 
             Grid = Entity as MyCubeGrid;
 
+            Stats = Telemetry.RegisterGrid(this);
+
             if (Entity.Storage == null)
                 Entity.Storage = new MyModStorageComponent();
 
@@ -109,6 +118,7 @@ namespace Thermodynamics
 
             SurfaceCheckComplete += () => {
                 SurfaceUpdateFrame = SimulationFrame + 1;
+                if (Stats != null) Stats.MapperCompletions++;
             };
 
             NeedsUpdate = MyEntityUpdateEnum.EACH_FRAME | MyEntityUpdateEnum.BEFORE_NEXT_FRAME;
@@ -121,17 +131,39 @@ namespace Thermodynamics
             return base.IsSerialized();
         }
 
+        /// <summary>
+        /// The grid is going away. The telemetry record has to take its final snapshot now, while
+        /// the cells still exist; it stays in the registry so a destroyed ship is still reported.
+        /// </summary>
+        public override void Close()
+        {
+            if (Stats != null)
+            {
+                Stats.Close();
+                Stats = null;
+            }
+
+            base.Close();
+        }
+
         private void BlockAdded(IMySlimBlock b)
         {
             OnBlockAddOrUpdate(b);
             if (Grid.EntityId != b.CubeGrid.EntityId)
             {
+                if (Stats != null) Stats.ForeignBlockEvents++;
                 MyLog.Default.Info($"[{Settings.Name}] Adding Skipped - Grid: {Grid.EntityId} BlockGrid: {b.CubeGrid.EntityId} {b.Position}");
                 return;
             }
 
             ThermalCellDefinition def = ThermalCellDefinition.GetDefinition(b.BlockDefinition.Id);
-            if (def.IgnoreThermals) return;
+            if (def.IgnoreThermals)
+            {
+                if (Stats != null) Stats.BlocksIgnored++;
+                return;
+            }
+
+            if (Stats != null) Stats.BlocksAdded++;
 
             ThermalCell cell = new ThermalCell(this, b, def);
             cell.AddAllNeighbors();
@@ -147,6 +179,7 @@ namespace Thermodynamics
 
             if (Grid.EntityId != b.CubeGrid.EntityId)
             {
+                if (Stats != null) Stats.ForeignBlockEvents++;
                 MyLog.Default.Info($"[{Settings.Name}] Removing Skipped - Grid: {Grid.EntityId} BlockGrid: {b.CubeGrid.EntityId} {b.Position}");
                 return;
             }
@@ -164,6 +197,9 @@ namespace Thermodynamics
 
             if (cell != null)
             {
+                if (Stats != null) Stats.BlocksRemoved++;
+                if (cell.Stats != null) cell.Stats.OnRemoved();
+
                 OnRemoveDoCoolantCheck(cell);
 
                 if (RecentlyRemoved.ContainsKey(cell.Id))
@@ -187,6 +223,9 @@ namespace Thermodynamics
             ThermalGrid tg1 = g1.GameLogic.GetAs<ThermalGrid>();
             ThermalGrid tg2 = g2.GameLogic.GetAs<ThermalGrid>();
 
+            if (tg1.Stats != null) tg1.Stats.Splits++;
+            if (tg2.Stats != null) tg2.Stats.Splits++;
+
             for (int i = 0; i < tg2.Thermals.Count; i++)
             {
                 ThermalCell c = tg2.Thermals.Cells[i];
@@ -208,6 +247,9 @@ namespace Thermodynamics
 
             ThermalGrid tg1 = g1.GameLogic.GetAs<ThermalGrid>();
             ThermalGrid tg2 = g2.GameLogic.GetAs<ThermalGrid>();
+
+            if (tg1.Stats != null) tg1.Stats.Merges++;
+            if (tg2.Stats != null) tg2.Stats.Merges++;
 
             for (int i = 0; i < tg2.Thermals.Count; i++)
             {

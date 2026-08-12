@@ -41,8 +41,32 @@ namespace Thermodynamics
             //CurrentGridHeatGeneration = 0;
 
             Vector3D position = Grid.PositionComp.WorldAABB.Center;
+
+            if (Stats != null)
+            {
+                Stats.CriticalBlocks.Add(CriticalBlocks);
+                Stats.SolarTime.Begin();
+            }
+
             PrepareSolarEnvironment(ref position);
+
+            if (Stats != null)
+            {
+                Stats.SolarTime.End();
+                Stats.EnvironmentTime.Begin();
+            }
+
             PrepareEnvironmentTemprature(ref position);
+
+            if (Stats != null)
+            {
+                Stats.EnvironmentTime.End();
+
+                // One structure and environment sample per simulation step. Doing it per frame
+                // would multiply the cost by the frame-to-step ratio for no extra resolution.
+                Stats.SampleEnvironment();
+                Stats.SampleStructure();
+            }
         }
 
         private void PrepareEnvironmentTemprature(ref Vector3D position)
@@ -62,6 +86,8 @@ namespace Thermodynamics
                 SetFrameAmbiantTemperature(Settings.Instance.VacuumTemperature);
                 return;
             }
+
+            if (Stats != null && planet.Entity != null) Stats.NotePlanet(planet.Entity.StorageName);
 
             PlanetDefinition def = planet.Definition();
             Vector3 local = position - planet.Position;

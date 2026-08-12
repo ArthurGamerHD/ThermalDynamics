@@ -1,0 +1,745 @@
+using Sandbox.ModAPI;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text;
+using VRage.Utils;
+
+namespace Thermodynamics
+{
+    /// <summary>
+    /// Turns the collected telemetry into files in world storage, plus a condensed summary in
+    /// the game log.
+    ///
+    /// Three artefacts are produced:
+    ///   Thermodynamics_Telemetry_&lt;stamp&gt;.log   the full human-readable report
+    ///   Thermodynamics_BlockTypes_&lt;stamp&gt;.csv  one row per block definition
+    ///   Thermodynamics_Grids_&lt;stamp&gt;.csv       one row per grid
+    ///
+    /// The CSVs exist so a session can be diffed against another one, or against the rewritten
+    /// model in sim/, without re-reading prose.
+    /// </summary>
+    public static class TelemetryReport
+    {
+        private const int DetailedGridLimit = 25;
+
+        public static void Write(string reason)
+        {
+            string stamp = Telemetry.StartedUtc.ToString("yyyyMMdd_HHmmss");
+
+            string report = BuildReport(reason);
+
+            // The game log always gets the headline numbers, because world-storage writes are the
+            // part most likely to fail during shutdown.
+            MyLog.Default.Info("[" + Settings.Name + "] [Telemetry] " + BuildLogSummary(reason));
+
+            bool wrote = TryWrite("Thermodynamics_Telemetry_" + stamp + ".log", report);
+            TryWrite("Thermodynamics_BlockTypes_" + stamp + ".csv", BuildBlockTypeCsv());
+            TryWrite("Thermodynamics_Grids_" + stamp + ".csv", BuildGridCsv());
+
+            if (!wrote)
+            {
+                // Nowhere else for it to go. The log takes the whole thing rather than lose it.
+                MyLog.Default.Info("[" + Settings.Name + "] [Telemetry] world storage unavailable, full report follows\n" + report);
+            }
+        }
+
+        private static bool TryWrite(string filename, string content)
+        {
+            try
+            {
+                TextWriter writer = MyAPIGateway.Utilities.WriteFileInWorldStorage(filename, typeof(TelemetryReport));
+                writer.Write(content);
+                writer.Flush();
+                writer.Close();
+
+                MyLog.Default.Info("[" + Settings.Name + "] [Telemetry] wrote " + filename
+                    + " (" + content.Length.ToString("n0") + " chars)");
+                return true;
+            }
+            catch (Exception e)
+            {
+                MyLog.Default.Warning("[" + Settings.Name + "] [Telemetry] could not write " + filename + ": " + e.Message);
+                return false;
+            }
+        }
+
+        private static string BuildLogSummary(string reason)
+        {
+            long liveGrids = 0;
+            for (int i = 0; i < Telemetry.Grids.Count; i++)
+            {
+                if (!Telemetry.Grids[i].IsClosed) liveGrids++;
+            }
+
+            return "session ended (" + reason + ") after " + Telemetry.SessionSeconds.ToString("n1")
+                + "s: " + Telemetry.GridsSeen + " grids (" + liveGrids + " alive at close), "
+                + Telemetry.BlockTypes.Count + " block types, "
+                + Telemetry.CellUpdatesObserved.ToString("n0") + " cell updates, "
+                + Telemetry.Anomalies.Count + " anomaly kinds";
+        }
+
+        // ------------------------------------------------------------------------------------
+        // Text report
+        // ------------------------------------------------------------------------------------
+
+        private static string BuildReport(string reason)
+        {
+            StringBuilder sb = new StringBuilder(64 * 1024);
+
+            WriteHeader(sb, reason);
+            WriteSettings(sb);
+            WriteSessionTotals(sb);
+            WriteAnomalies(sb);
+            WritePerformance(sb);
+            WriteGridTable(sb);
+            WriteGridDetails(sb);
+            WriteBlockTypes(sb);
+
+            sb.Append("\n--- end of report ---\n");
+            return sb.ToString();
+        }
+
+        private static void Section(StringBuilder sb, string title)
+        {
+            sb.Append('\n').Append(title).Append('\n');
+            sb.Append(new string('=', title.Length)).Append('\n');
+        }
+
+        private static void Field(StringBuilder sb, string name, object value)
+        {
+            sb.Append("  ").Append(name.PadRight(30)).Append(value).Append('\n');
+        }
+
+        private static void WriteHeader(StringBuilder sb, string reason)
+        {
+            sb.Append("Thermodynamics telemetry report\n");
+            sb.Append("===============================\n");
+
+            Field(sb, "reason", reason);
+            Field(sb, "started (utc)", Telemetry.StartedUtc.ToString("yyyy-MM-dd HH:mm:ss"));
+            Field(sb, "ended (utc)", DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"));
+            Field(sb, "real duration", Telemetry.SessionSeconds.ToString("n1") + " s ("
+                + (Telemetry.SessionSeconds / 60.0).ToString("n1") + " min)");
+            Field(sb, "in-game start", Telemetry.GameStartDate.ToString("yyyy-MM-dd HH:mm:ss"));
+            Field(sb, "in-game end", Telemetry.GameEndDate.ToString("yyyy-MM-dd HH:mm:ss"));
+            Field(sb, "in-game elapsed", (Telemetry.GameEndDate - Telemetry.GameStartDate).ToString());
+            Field(sb, "world", Telemetry.WorldName);
+            Field(sb, "world path", Telemetry.SessionPath);
+            Field(sb, "online mode", Telemetry.OnlineMode);
+            Field(sb, "max players", Telemetry.MaxPlayers);
+            Field(sb, "server", Telemetry.IsServer);
+            Field(sb, "dedicated", Telemetry.IsDedicated);
+            Field(sb, "multiplayer", Telemetry.IsMultiplayer);
+            Field(sb, "sample stride", "1 in " + Telemetry.SampleStride + " cell updates");
+        }
+
+        private static void WriteSettings(StringBuilder sb)
+        {
+            Section(sb, "Settings in force");
+
+            Settings s = Telemetry.SettingsSnapshot;
+            if (s == null)
+            {
+                sb.Append("  (settings were never captured)\n");
+                return;
+            }
+
+            Field(sb, "Version", s.Version);
+            Field(sb, "Frequency", s.Frequency);
+            Field(sb, "SimulationSpeed", s.SimulationSpeed);
+            Field(sb, "TimeScaleRatio", s.TimeScaleRatio);
+            Field(sb, "PerSecond", s.PerSecond);
+            Field(sb, "VacuumTemperature", s.VacuumTemperature);
+            Field(sb, "SolarEnergy", s.SolarEnergy);
+            Field(sb, "FrictionAtSpeedsAbove", s.FrictionAtSpeedsAbove);
+            Field(sb, "EnableEnvironment", s.EnableEnvironment);
+            Field(sb, "EnableSolarHeat", s.EnableSolarHeat);
+            Field(sb, "EnablePlanets", s.EnablePlanets);
+            Field(sb, "EnableDamage", s.EnableDamage);
+            Field(sb, "DebugTextOnScreen", s.DebugTextOnScreen);
+            Field(sb, "DebugTemperatureBlockColors", s.DebugTemperatureBlockColors);
+            Field(sb, "DebugSolarRadiationBlockColors", s.DebugSolarRadiationBlockColors);
+            Field(sb, "DebugExposedSurfaceBlockColors", s.DebugExposedSurfaceBlockColors);
+            Field(sb, "DebugFrictionColors", s.DebugFrictionColors);
+            Field(sb, "DebugSolarRaycast", s.DebugSolarRaycast);
+            Field(sb, "DebugWindRaycast", s.DebugWindRaycast);
+        }
+
+        private static void WriteSessionTotals(StringBuilder sb)
+        {
+            Section(sb, "Session totals");
+
+            long added = 0, removed = 0, splits = 0, merges = 0, doorChanges = 0;
+            long crawlRestarts = 0, surfaceRecalcs = 0, saves = 0, loads = 0;
+            long saveBytes = 0, loadBytes = 0, damageEvents = 0, simFrames = 0;
+            long loopsCreated = 0, loopsRemoved = 0, coolantCrawls = 0;
+            double totalDamage = 0;
+            long liveGrids = 0;
+            int peakCells = 0;
+
+            for (int i = 0; i < Telemetry.Grids.Count; i++)
+            {
+                GridTelemetry g = Telemetry.Grids[i];
+                added += g.BlocksAdded;
+                removed += g.BlocksRemoved;
+                splits += g.Splits;
+                merges += g.Merges;
+                doorChanges += g.DoorStateChanges;
+                crawlRestarts += g.CrawlRestarts;
+                surfaceRecalcs += g.SurfaceRecalcs;
+                saves += g.Saves;
+                loads += g.Loads;
+                saveBytes += g.SaveBytes;
+                loadBytes += g.LoadBytes;
+                damageEvents += g.DamageEvents;
+                totalDamage += g.TotalDamage;
+                simFrames += g.SimulationFrames;
+                loopsCreated += g.CoolantLoopsCreated;
+                loopsRemoved += g.CoolantLoopsRemoved;
+                coolantCrawls += g.CoolantCrawls;
+                if (!g.IsClosed) liveGrids++;
+                if (g.PeakCellCount > peakCells) peakCells = g.PeakCellCount;
+            }
+
+            Field(sb, "frames observed", Telemetry.FramesObserved.ToString("n0"));
+            Field(sb, "grid simulation steps", simFrames.ToString("n0"));
+            Field(sb, "cell updates", Telemetry.CellUpdatesObserved.ToString("n0"));
+            Field(sb, "cell updates / real second", Telemetry.SessionSeconds <= 0
+                ? "-"
+                : (Telemetry.CellUpdatesObserved / Telemetry.SessionSeconds).ToString("n0"));
+            Field(sb, "grids seen", Telemetry.GridsSeen);
+            Field(sb, "grids alive at close", liveGrids);
+            Field(sb, "largest grid (cells)", peakCells.ToString("n0"));
+            Field(sb, "block types seen", Telemetry.BlockTypes.Count);
+            Field(sb, "blocks added", added.ToString("n0"));
+            Field(sb, "blocks removed", removed.ToString("n0"));
+            Field(sb, "grid splits", splits);
+            Field(sb, "grid merges", merges);
+            Field(sb, "door state changes", doorChanges.ToString("n0"));
+            Field(sb, "surface recalcs", surfaceRecalcs.ToString("n0"));
+            Field(sb, "room crawl restarts", crawlRestarts.ToString("n0"));
+            Field(sb, "coolant crawls", coolantCrawls.ToString("n0"));
+            Field(sb, "coolant loops created", loopsCreated);
+            Field(sb, "coolant loops removed", loopsRemoved);
+            Field(sb, "critical damage events", damageEvents.ToString("n0"));
+            Field(sb, "total heat damage", totalDamage.ToString("n1"));
+            Field(sb, "saves / bytes", saves + " / " + saveBytes.ToString("n0"));
+            Field(sb, "loads / bytes", loads + " / " + loadBytes.ToString("n0"));
+
+            if (Telemetry.GridRecordsDropped > 0)
+                Field(sb, "grid records dropped", Telemetry.GridRecordsDropped + " (cap " + Telemetry.MaxGridRecords + ")");
+            if (Telemetry.BlockTypeRecordsDropped > 0)
+                Field(sb, "block type lookups dropped", Telemetry.BlockTypeRecordsDropped);
+            if (Telemetry.AnomalyKindsDropped > 0)
+                Field(sb, "anomaly kinds dropped", Telemetry.AnomalyKindsDropped);
+        }
+
+        private static void WriteAnomalies(StringBuilder sb)
+        {
+            Section(sb, "Anomalies");
+
+            if (Telemetry.Anomalies.Count == 0)
+            {
+                sb.Append("  none recorded\n");
+                return;
+            }
+
+            List<AnomalyRecord> records = new List<AnomalyRecord>(Telemetry.Anomalies.Values);
+            records.Sort(delegate (AnomalyRecord a, AnomalyRecord b) { return b.Count.CompareTo(a.Count); });
+
+            for (int i = 0; i < records.Count; i++)
+            {
+                AnomalyRecord r = records[i];
+                sb.Append("  ").Append(r.Kind).Append(" x").Append(r.Count.ToString("n0")).Append('\n');
+                sb.Append("      first at ").Append(r.FirstSeconds.ToString("n1")).Append("s: ").Append(r.FirstExample).Append('\n');
+                if (r.Count > 1)
+                {
+                    sb.Append("      last  at ").Append(r.LastSeconds.ToString("n1")).Append("s: ").Append(r.LastExample).Append('\n');
+                }
+            }
+        }
+
+        private static void WritePerformance(StringBuilder sb)
+        {
+            Section(sb, "Cost");
+
+            TimingStat simulation = new TimingStat("grid simulation");
+            TimingStat mapper = new TimingStat("  of which room mapper");
+            TimingStat surfaces = new TimingStat("surface states");
+            TimingStat environment = new TimingStat("  of which environment");
+            TimingStat solar = new TimingStat("  of which solar");
+            TimingStat coolant = new TimingStat("coolant crawl");
+            TimingStat save = new TimingStat("save");
+            TimingStat load = new TimingStat("load");
+
+            for (int i = 0; i < Telemetry.Grids.Count; i++)
+            {
+                GridTelemetry g = Telemetry.Grids[i];
+                simulation.Merge(g.SimulationTime);
+                mapper.Merge(g.MapperTime);
+                surfaces.Merge(g.SurfaceCalcTime);
+                environment.Merge(g.EnvironmentTime);
+                solar.Merge(g.SolarTime);
+                coolant.Merge(g.CoolantTime);
+                save.Merge(g.SaveTime);
+                load.Merge(g.LoadTime);
+            }
+
+            sb.Append("  Rows marked \"of which\" are nested inside grid simulation and are not\n");
+            sb.Append("  added into the total below.\n\n");
+
+            TimingStat.WriteHeader(sb, "path (all grids)");
+            simulation.WriteRow(sb);
+            mapper.WriteRow(sb);
+            environment.WriteRow(sb);
+            solar.WriteRow(sb);
+            surfaces.WriteRow(sb);
+            coolant.WriteRow(sb);
+            save.WriteRow(sb);
+            load.WriteRow(sb);
+            Telemetry.SessionFrameTime.WriteRow(sb);
+
+            // Mapper, environment and solar all run inside UpdateBeforeSimulation, so only the
+            // outer measurement and the paths driven by block events are summed.
+            double total = simulation.TotalMilliseconds + surfaces.TotalMilliseconds
+                + coolant.TotalMilliseconds + save.TotalMilliseconds + load.TotalMilliseconds
+                + Telemetry.SessionFrameTime.TotalMilliseconds;
+
+            sb.Append('\n');
+            Field(sb, "total measured", total.ToString("n1") + " ms");
+            Field(sb, "share of real time", Telemetry.SessionSeconds <= 0
+                ? "-"
+                : (100.0 * total / (Telemetry.SessionSeconds * 1000.0)).ToString("n3") + " %");
+
+            sb.Append("\n  grid simulation, per call:\n");
+            simulation.WriteDistribution(sb, "    ");
+            sb.Append("\n  room mapper, per call:\n");
+            mapper.WriteDistribution(sb, "    ");
+            sb.Append("\n  surface states, per call:\n");
+            surfaces.WriteDistribution(sb, "    ");
+            sb.Append("\n  solar occlusion, per call:\n");
+            solar.WriteDistribution(sb, "    ");
+        }
+
+        private static List<GridTelemetry> SortedGrids()
+        {
+            List<GridTelemetry> grids = new List<GridTelemetry>(Telemetry.Grids);
+            grids.Sort(delegate (GridTelemetry a, GridTelemetry b) { return b.PeakCellCount.CompareTo(a.PeakCellCount); });
+            return grids;
+        }
+
+        private static void WriteGridTable(StringBuilder sb)
+        {
+            Section(sb, "Grids");
+
+            if (Telemetry.Grids.Count == 0)
+            {
+                sb.Append("  none\n");
+                return;
+            }
+
+            sb.Append("  ")
+              .Append("name".PadRight(28))
+              .Append("size".PadRight(7))
+              .Append("cells".PadLeft(8))
+              .Append("links".PadLeft(9))
+              .Append("rooms".PadLeft(7))
+              .Append("peak T".PadLeft(10))
+              .Append("crit".PadLeft(8))
+              .Append("life s".PadLeft(9))
+              .Append("  state\n");
+
+            List<GridTelemetry> grids = SortedGrids();
+            for (int i = 0; i < grids.Count; i++)
+            {
+                GridTelemetry g = grids[i];
+                sb.Append("  ")
+                  .Append(Truncate(g.Name, 27).PadRight(28))
+                  .Append((g.GridSize ?? "-").PadRight(7))
+                  .Append(g.PeakCellCount.ToString("n0").PadLeft(8))
+                  .Append(g.NeighborLinks.SafeMax.ToString("n0").PadLeft(9))
+                  .Append(g.RoomCount.SafeMax.ToString("n0").PadLeft(7))
+                  .Append(FormatPeak(g.PeakTemperature).PadLeft(10))
+                  .Append(g.CriticalBlocks.SafeMax.ToString("n0").PadLeft(8))
+                  .Append(g.LifetimeSeconds.ToString("n0").PadLeft(9))
+                  .Append("  ")
+                  .Append(g.IsClosed ? "closed" : "alive")
+                  .Append('\n');
+            }
+        }
+
+        private static void WriteGridDetails(StringBuilder sb)
+        {
+            List<GridTelemetry> grids = SortedGrids();
+            int limit = Math.Min(grids.Count, DetailedGridLimit);
+
+            if (limit == 0) return;
+
+            Section(sb, "Grid detail (" + limit + " largest of " + grids.Count + ")");
+
+            for (int i = 0; i < limit; i++)
+            {
+                GridTelemetry g = grids[i];
+
+                sb.Append("\n  ").Append(g.Name).Append("  [").Append(g.EntityId).Append("]\n");
+                sb.Append("  ").Append(new string('-', 60)).Append('\n');
+
+                Field(sb, "grid size", g.GridSize + " (" + g.GridSizeMeters.ToString("n2") + " m)");
+                Field(sb, "static", g.IsStatic);
+                Field(sb, "lifetime", g.LifetimeSeconds.ToString("n1") + " s"
+                    + (g.IsClosed ? " (closed at " + g.ClosedAtSeconds.ToString("n1") + "s)" : " (still alive)"));
+
+                sb.Append("\n    structure (min / mean / max)\n");
+                Field(sb, "  thermal cells", g.CellCount.Format("n0"));
+                Field(sb, "  grid blocks", g.BlockCount.Format("n0"));
+                Field(sb, "  conduction links", g.NeighborLinks.Format("n0"));
+                Field(sb, "  sealed rooms", g.RoomCount.Format("n0"));
+                Field(sb, "  exterior cells", g.ExternalCells.Format("n0"));
+                Field(sb, "  surface entries", g.SurfaceEntries.Format("n0"));
+                Field(sb, "  coolant loops", g.CoolantLoops.Format("n0"));
+                Field(sb, "  RecentlyRemoved size", g.RecentlyRemovedSize.Format("n0"));
+                Field(sb, "  mapper queue (ext)", g.ExternalQueueDepth.Format("n0"));
+                Field(sb, "  mapper queue (grid)", g.GridQueueDepth.Format("n0"));
+
+                sb.Append("\n    simulation\n");
+                Field(sb, "  simulation steps", g.SimulationFrames.ToString("n0"));
+                Field(sb, "  cell updates", g.CellUpdates.ToString("n0"));
+                Field(sb, "  surface update sweeps", g.SurfaceUpdateSweeps.ToString("n0"));
+                Field(sb, "  cells per frame", g.CellsPerFrame.Format("n2"));
+                Field(sb, "  simulation quota", g.SimulationQuota.Format("n0"));
+                Field(sb, "  hottest block T", g.HottestBlockTemperature.Format("n1"));
+                Field(sb, "  peak temperature", FormatPeak(g.PeakTemperature) + "  " + g.PeakTemperatureBlock);
+                Field(sb, "  critical blocks", g.CriticalBlocks.Format("n0"));
+                Field(sb, "  damage events", g.DamageEvents.ToString("n0"));
+                Field(sb, "  total damage", g.TotalDamage.ToString("n1"));
+
+                sb.Append("\n    environment\n");
+                Field(sb, "  planets visited", g.PlanetList);
+                Field(sb, "  ambient K", g.AmbientTemperature.Format("n1"));
+                Field(sb, "  air density", g.AirDensity.Format("n4"));
+                Field(sb, "  air density curve", g.AirDensityCurve.Format("n4"));
+                Field(sb, "  wind speed m/s", g.WindSpeed.Format("n2"));
+                Field(sb, "  convection coeff", g.ConvectionCoefficient.Format("n3"));
+                Field(sb, "  effective solar W", g.EffectiveSolarEnergy.Format("n1"));
+                Field(sb, "  grid speed m/s", g.Speed.Format("n2"));
+                Field(sb, "  sun occluded", (100.0 * g.OccludedFraction).ToString("n1") + " % of "
+                    + g.EnvironmentSamples.ToString("n0") + " samples");
+                Field(sb, "  in atmosphere", (100.0 * g.AtmosphereFraction).ToString("n1") + " %");
+
+                sb.Append("\n    events\n");
+                Field(sb, "  blocks added / removed", g.BlocksAdded.ToString("n0") + " / " + g.BlocksRemoved.ToString("n0"));
+                Field(sb, "  blocks ignored", g.BlocksIgnored.ToString("n0"));
+                Field(sb, "  foreign block events", g.ForeignBlockEvents.ToString("n0"));
+                Field(sb, "  splits / merges", g.Splits + " / " + g.Merges);
+                Field(sb, "  doors tracked", g.DoorsTracked);
+                Field(sb, "  door state changes", g.DoorStateChanges.ToString("n0"));
+                Field(sb, "  surface recalcs", g.SurfaceRecalcs.ToString("n0"));
+                Field(sb, "  crawl restarts", g.CrawlRestarts.ToString("n0"));
+                Field(sb, "  mapper passes", g.MapperPasses.ToString("n0"));
+                Field(sb, "  mapper completions", g.MapperCompletions.ToString("n0"));
+                Field(sb, "  coolant crawls", g.CoolantCrawls.ToString("n0"));
+                Field(sb, "  loops created / removed", g.CoolantLoopsCreated + " / " + g.CoolantLoopsRemoved);
+                Field(sb, "  saves / loads", g.Saves + " / " + g.Loads);
+                Field(sb, "  save / load bytes", g.SaveBytes.ToString("n0") + " / " + g.LoadBytes.ToString("n0"));
+
+                sb.Append("\n    cost\n");
+                TimingStat.WriteHeader(sb, "  path");
+                g.SimulationTime.WriteRow(sb);
+                g.MapperTime.WriteRow(sb);
+                g.SurfaceCalcTime.WriteRow(sb);
+                g.EnvironmentTime.WriteRow(sb);
+                g.SolarTime.WriteRow(sb);
+                g.CoolantTime.WriteRow(sb);
+                g.SaveTime.WriteRow(sb);
+                g.LoadTime.WriteRow(sb);
+
+                sb.Append("\n    final temperature distribution\n");
+                g.FinalTemperatures.Write(sb, "      ", "K");
+            }
+        }
+
+        private static void WriteBlockTypes(StringBuilder sb)
+        {
+            Section(sb, "Block types (" + Telemetry.BlockTypes.Count + ")");
+
+            if (Telemetry.BlockTypes.Count == 0)
+            {
+                sb.Append("  none\n");
+                return;
+            }
+
+            List<BlockTypeTelemetry> types = SortedBlockTypes();
+
+            sb.Append("  ")
+              .Append("subtype".PadRight(40))
+              .Append("placed".PadLeft(8))
+              .Append("live".PadLeft(7))
+              .Append("updates".PadLeft(12))
+              .Append("mean T".PadLeft(10))
+              .Append("max T".PadLeft(10))
+              .Append("peak T".PadLeft(10))
+              .Append("crit".PadLeft(9))
+              .Append("damage".PadLeft(11))
+              .Append('\n');
+
+            for (int i = 0; i < types.Count; i++)
+            {
+                BlockTypeTelemetry t = types[i];
+                sb.Append("  ")
+                  .Append(Truncate(t.Name, 39).PadRight(40))
+                  .Append(t.Placed.ToString("n0").PadLeft(8))
+                  .Append(t.Live.ToString("n0").PadLeft(7))
+                  .Append(t.TotalUpdates.ToString("n0").PadLeft(12))
+                  .Append(t.Temperature.Mean.ToString("n1").PadLeft(10))
+                  .Append(t.Temperature.SafeMax.ToString("n1").PadLeft(10))
+                  .Append(FormatPeak(t.PeakTemperature).PadLeft(10))
+                  .Append(t.CriticalUpdates.ToString("n0").PadLeft(9))
+                  .Append(t.TotalDamage.ToString("n1").PadLeft(11))
+                  .Append('\n');
+            }
+
+            Section(sb, "Block type detail");
+
+            for (int i = 0; i < types.Count; i++)
+            {
+                BlockTypeTelemetry t = types[i];
+
+                sb.Append("\n  ").Append(t.Name).Append("   (").Append(t.DefinitionId.TypeId).Append(")\n");
+                sb.Append("  ").Append(new string('-', 60)).Append('\n');
+
+                if (t.Definition != null)
+                {
+                    ThermalCellDefinition d = t.Definition;
+                    Field(sb, "  Conductivity", d.Conductivity);
+                    Field(sb, "  SpecificHeat", d.SpecificHeat);
+                    Field(sb, "  Emissivity", d.Emissivity);
+                    Field(sb, "  SurfaceAreaScaler", d.SurfaceAreaScaler);
+                    Field(sb, "  ProducerWasteEnergy", d.ProducerWasteEnergy);
+                    Field(sb, "  ConsumerWasteEnergy", d.ConsumerWasteEnergy);
+                    Field(sb, "  CriticalTemperature", d.CriticalTemperature);
+                    Field(sb, "  CriticalTemperatureScaler", d.CriticalTemperatureScaler);
+                }
+
+                Field(sb, "  placed / removed / live", t.Placed + " / " + t.Removed + " / " + t.Live
+                    + " (peak " + t.PeakLive + ")");
+                Field(sb, "  updates (all / sampled)", t.TotalUpdates.ToString("n0") + " / " + t.SampledUpdates.ToString("n0"));
+                Field(sb, "  mass kg", t.Mass.Format("n0"));
+                Field(sb, "  neighbours", t.Neighbors.Format("n2"));
+                Field(sb, "  exposed surfaces", t.ExposedSurfaces.Format("n2"));
+                Field(sb, "  exposed area m2", t.ExposedSurfaceArea.Format("n2"));
+                Field(sb, "  sum kA", t.Conductance.Format("n4"));
+                Field(sb, "  temperature K", t.Temperature.Format("n1"));
+                Field(sb, "  peak temperature K", FormatPeak(t.PeakTemperature) + " on grid " + t.PeakTemperatureGrid);
+                Field(sb, "  dT conduction", t.DeltaTemperature.Format("n5"));
+                Field(sb, "  dT radiation", t.DeltaRadiation.Format("n5"));
+                Field(sb, "  dT friction", t.DeltaFriction.Format("n5"));
+                Field(sb, "  heat generation K/step", t.HeatGeneration.Format("n5"));
+                Field(sb, "  power produced W", t.EnergyProduction.Format("n0"));
+                Field(sb, "  power consumed W", t.EnergyConsumption.Format("n0"));
+                Field(sb, "  thrust consumed W", t.ThrustConsumption.Format("n0"));
+                Field(sb, "  solar intensity", t.SolarIntensity.Format("n4"));
+                Field(sb, "  critical updates", t.CriticalUpdates.ToString("n0"));
+                Field(sb, "  heat damage dealt", t.TotalDamage.ToString("n1"));
+
+                sb.Append("\n    sampled temperature distribution\n");
+                t.SampledTemperatures.Write(sb, "      ", "K");
+                sb.Append("    final temperature distribution\n");
+                t.FinalTemperatures.Write(sb, "      ", "K");
+            }
+        }
+
+        private static List<BlockTypeTelemetry> SortedBlockTypes()
+        {
+            List<BlockTypeTelemetry> types = new List<BlockTypeTelemetry>(Telemetry.BlockTypes.Values);
+            types.Sort(delegate (BlockTypeTelemetry a, BlockTypeTelemetry b)
+            {
+                int byUpdates = b.TotalUpdates.CompareTo(a.TotalUpdates);
+                return byUpdates != 0 ? byUpdates : string.Compare(a.Name, b.Name, StringComparison.Ordinal);
+            });
+            return types;
+        }
+
+        // ------------------------------------------------------------------------------------
+        // CSV
+        // ------------------------------------------------------------------------------------
+
+        private static string BuildBlockTypeCsv()
+        {
+            StringBuilder sb = new StringBuilder(16 * 1024);
+            sb.Append("subtype,type,placed,removed,live,peak_live,updates,sampled,");
+            sb.Append("conductivity,specific_heat,emissivity,surface_area_scaler,");
+            sb.Append("producer_waste,consumer_waste,critical_temperature,critical_scaler,");
+            sb.Append("mass_mean,neighbours_mean,exposed_surfaces_mean,exposed_area_mean,ka_mean,");
+            sb.Append("temp_min,temp_mean,temp_max,temp_sd,peak_temp,");
+            sb.Append("dt_conduction_mean,dt_radiation_mean,dt_friction_mean,heat_generation_mean,");
+            sb.Append("power_produced_mean,power_consumed_mean,thrust_mean,solar_intensity_mean,");
+            sb.Append("critical_updates,total_damage\n");
+
+            List<BlockTypeTelemetry> types = SortedBlockTypes();
+            for (int i = 0; i < types.Count; i++)
+            {
+                BlockTypeTelemetry t = types[i];
+                ThermalCellDefinition d = t.Definition;
+
+                Csv(sb, t.Name);
+                Csv(sb, t.DefinitionId.TypeId.ToString());
+                Csv(sb, t.Placed);
+                Csv(sb, t.Removed);
+                Csv(sb, t.Live);
+                Csv(sb, t.PeakLive);
+                Csv(sb, t.TotalUpdates);
+                Csv(sb, t.SampledUpdates);
+
+                Csv(sb, d == null ? 0 : d.Conductivity);
+                Csv(sb, d == null ? 0 : d.SpecificHeat);
+                Csv(sb, d == null ? 0 : d.Emissivity);
+                Csv(sb, d == null ? 0 : d.SurfaceAreaScaler);
+                Csv(sb, d == null ? 0 : d.ProducerWasteEnergy);
+                Csv(sb, d == null ? 0 : d.ConsumerWasteEnergy);
+                Csv(sb, d == null ? 0 : d.CriticalTemperature);
+                Csv(sb, d == null ? 0 : d.CriticalTemperatureScaler);
+
+                Csv(sb, t.Mass.Mean);
+                Csv(sb, t.Neighbors.Mean);
+                Csv(sb, t.ExposedSurfaces.Mean);
+                Csv(sb, t.ExposedSurfaceArea.Mean);
+                Csv(sb, t.Conductance.Mean);
+
+                Csv(sb, t.Temperature.SafeMin);
+                Csv(sb, t.Temperature.Mean);
+                Csv(sb, t.Temperature.SafeMax);
+                Csv(sb, t.Temperature.StdDev);
+                Csv(sb, t.PeakTemperature == float.MinValue ? 0 : t.PeakTemperature);
+
+                Csv(sb, t.DeltaTemperature.Mean);
+                Csv(sb, t.DeltaRadiation.Mean);
+                Csv(sb, t.DeltaFriction.Mean);
+                Csv(sb, t.HeatGeneration.Mean);
+                Csv(sb, t.EnergyProduction.Mean);
+                Csv(sb, t.EnergyConsumption.Mean);
+                Csv(sb, t.ThrustConsumption.Mean);
+                Csv(sb, t.SolarIntensity.Mean);
+
+                Csv(sb, t.CriticalUpdates);
+                CsvLast(sb, t.TotalDamage);
+            }
+
+            return sb.ToString();
+        }
+
+        private static string BuildGridCsv()
+        {
+            StringBuilder sb = new StringBuilder(8 * 1024);
+            sb.Append("entity_id,name,grid_size,is_static,closed,lifetime_s,");
+            sb.Append("peak_cells,mean_cells,peak_links,peak_rooms,peak_loops,");
+            sb.Append("simulation_steps,cell_updates,surface_sweeps,");
+            sb.Append("peak_temperature,mean_hottest,critical_max,damage_events,total_damage,");
+            sb.Append("ambient_min,ambient_mean,ambient_max,air_density_mean,wind_mean,wind_max,speed_max,");
+            sb.Append("occluded_fraction,atmosphere_fraction,");
+            sb.Append("blocks_added,blocks_removed,splits,merges,door_changes,surface_recalcs,crawl_restarts,");
+            sb.Append("mapper_passes,coolant_crawls,loops_created,loops_removed,saves,loads,save_bytes,load_bytes,");
+            sb.Append("sim_ms_total,sim_ms_max,mapper_ms_total,mapper_ms_max,surface_ms_total,surface_ms_max,");
+            sb.Append("solar_ms_total,solar_ms_max,save_ms_total,load_ms_total\n");
+
+            List<GridTelemetry> grids = SortedGrids();
+            for (int i = 0; i < grids.Count; i++)
+            {
+                GridTelemetry g = grids[i];
+
+                Csv(sb, g.EntityId);
+                Csv(sb, g.Name);
+                Csv(sb, g.GridSize);
+                Csv(sb, g.IsStatic ? 1 : 0);
+                Csv(sb, g.IsClosed ? 1 : 0);
+                Csv(sb, g.LifetimeSeconds);
+
+                Csv(sb, g.PeakCellCount);
+                Csv(sb, g.CellCount.Mean);
+                Csv(sb, g.NeighborLinks.SafeMax);
+                Csv(sb, g.RoomCount.SafeMax);
+                Csv(sb, g.CoolantLoops.SafeMax);
+
+                Csv(sb, g.SimulationFrames);
+                Csv(sb, g.CellUpdates);
+                Csv(sb, g.SurfaceUpdateSweeps);
+
+                Csv(sb, g.PeakTemperature == float.MinValue ? 0 : g.PeakTemperature);
+                Csv(sb, g.HottestBlockTemperature.Mean);
+                Csv(sb, g.CriticalBlocks.SafeMax);
+                Csv(sb, g.DamageEvents);
+                Csv(sb, g.TotalDamage);
+
+                Csv(sb, g.AmbientTemperature.SafeMin);
+                Csv(sb, g.AmbientTemperature.Mean);
+                Csv(sb, g.AmbientTemperature.SafeMax);
+                Csv(sb, g.AirDensity.Mean);
+                Csv(sb, g.WindSpeed.Mean);
+                Csv(sb, g.WindSpeed.SafeMax);
+                Csv(sb, g.Speed.SafeMax);
+
+                Csv(sb, g.OccludedFraction);
+                Csv(sb, g.AtmosphereFraction);
+
+                Csv(sb, g.BlocksAdded);
+                Csv(sb, g.BlocksRemoved);
+                Csv(sb, g.Splits);
+                Csv(sb, g.Merges);
+                Csv(sb, g.DoorStateChanges);
+                Csv(sb, g.SurfaceRecalcs);
+                Csv(sb, g.CrawlRestarts);
+                Csv(sb, g.MapperPasses);
+                Csv(sb, g.CoolantCrawls);
+                Csv(sb, g.CoolantLoopsCreated);
+                Csv(sb, g.CoolantLoopsRemoved);
+                Csv(sb, g.Saves);
+                Csv(sb, g.Loads);
+                Csv(sb, g.SaveBytes);
+                Csv(sb, g.LoadBytes);
+
+                Csv(sb, g.SimulationTime.TotalMilliseconds);
+                Csv(sb, g.SimulationTime.MaxMilliseconds);
+                Csv(sb, g.MapperTime.TotalMilliseconds);
+                Csv(sb, g.MapperTime.MaxMilliseconds);
+                Csv(sb, g.SurfaceCalcTime.TotalMilliseconds);
+                Csv(sb, g.SurfaceCalcTime.MaxMilliseconds);
+                Csv(sb, g.SolarTime.TotalMilliseconds);
+                Csv(sb, g.SolarTime.MaxMilliseconds);
+                Csv(sb, g.SaveTime.TotalMilliseconds);
+                CsvLast(sb, g.LoadTime.TotalMilliseconds);
+            }
+
+            return sb.ToString();
+        }
+
+        private static void Csv(StringBuilder sb, string value)
+        {
+            TelemetryFormat.AppendCsv(sb, value);
+        }
+
+        private static void Csv(StringBuilder sb, long value)
+        {
+            TelemetryFormat.AppendCsv(sb, value);
+        }
+
+        private static void Csv(StringBuilder sb, double value)
+        {
+            TelemetryFormat.AppendCsv(sb, value);
+        }
+
+        private static void CsvLast(StringBuilder sb, double value)
+        {
+            TelemetryFormat.AppendCsvLast(sb, value);
+        }
+
+        private static string Truncate(string value, int length)
+        {
+            return TelemetryFormat.Truncate(value, length);
+        }
+
+        private static string FormatPeak(float value)
+        {
+            return TelemetryFormat.Peak(value);
+        }
+    }
+}
