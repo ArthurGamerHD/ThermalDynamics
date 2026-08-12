@@ -37,6 +37,13 @@ namespace Thermodynamics.Core
         /// <summary>Waste heat from power and thrust, W. Recomputed when the host reports a change.</summary>
         public float HeatGenerationWatts { get; private set; }
 
+        /// <summary>
+        /// Set whenever a value the solver mirrors into its own arrays changes. The solver
+        /// clears it when it picks the change up, so a step only re-reads the nodes that
+        /// actually moved rather than all of them.
+        /// </summary>
+        public bool StateDirty = true;
+
         /// <summary>Conduction links to other nodes. Each link appears on both of its nodes.</summary>
         public readonly List<int> LinkIndices = new List<int>();
 
@@ -77,6 +84,7 @@ namespace Thermodynamics.Core
         {
             float mass = Math.Max(0f, Block.Mass);
             ThermalMass = Math.Max(ThermalConstants.MinimumThermalMass, Thermal.SpecificHeat * mass);
+            StateDirty = true;
         }
 
         /// <summary>Recomputes the exposure-derived values from <see cref="ExposedFaces"/>.</summary>
@@ -91,6 +99,7 @@ namespace Thermodynamics.Core
             TotalExposedFaces = total;
             ExposedArea = total * cellFaceArea;
             RadiationCoefficient = Thermal.Emissivity * ThermalConstants.StefanBoltzmann * ExposedArea;
+            StateDirty = true;
         }
 
         /// <summary>
@@ -102,6 +111,7 @@ namespace Thermodynamics.Core
             float consumed = (Math.Max(0f, Block.PowerConsumedWatts) + Math.Max(0f, Block.ThrustWatts))
                 * Thermal.ConsumerWasteEnergy;
             HeatGenerationWatts = produced + consumed;
+            StateDirty = true;
         }
 
         /// <summary>

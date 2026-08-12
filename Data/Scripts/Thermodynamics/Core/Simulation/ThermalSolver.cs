@@ -50,6 +50,41 @@ namespace Thermodynamics.Core
         private float[] nodeConductanceTotal = new float[0];
         private float[] loopWatts = new float[0];
 
+        // Node state the substep loop reads, copied out of the node objects once per step
+        // instead of being chased through them once per node per substep. A step with sixteen
+        // substeps used to walk eight thousand heap objects sixteen times over.
+        private float[] nodeThermalMass = new float[0];
+        private float[] nodeRadiation = new float[0];
+        private float[] nodeGeneration = new float[0];
+        private float[] nodeExposedArea = new float[0];
+        private float[] nodeEmissivity = new float[0];
+        private int[] nodeExposedFaces = new int[0];
+
+        /// <summary>Exposed faces as a fraction of the node's total, six per node.</summary>
+        private float[] nodeFaceWeights = new float[0];
+
+        /// <summary>
+        /// Reduced thermal mass of each link, <c>mA*mB/(mA+mB)</c>. This is the only part of the
+        /// overshoot clamp that depends on anything but the current temperatures, and it changes
+        /// only when a block's mass does, so it is cached rather than divided out per link per
+        /// substep.
+        /// </summary>
+        private float[] linkMassFactor = new float[0];
+        private bool linkMassFactorDirty = true;
+
+        /// <summary>Per-face weights of the sun and the airflow, resolved once per step.</summary>
+        private readonly float[] sunWeights = new float[Face.Count];
+        private readonly float[] windWeights = new float[Face.Count];
+
+        /// <summary>
+        /// Record every mechanism's contribution to every node, for the debug readout and the
+        /// telemetry report.
+        ///
+        /// Off by default. The figures are five floats per node per substep that nothing in the
+        /// simulation itself reads, so a server nobody is watching should not be writing them.
+        /// </summary>
+        public bool CollectDiagnostics;
+
         private readonly List<OverheatEvent> overheats = new List<OverheatEvent>();
         private readonly int[] exposureScratch = new int[Face.Count];
         private readonly List<BlockInstance> neighbourScratch = new List<BlockInstance>();
@@ -57,6 +92,9 @@ namespace Thermodynamics.Core
         private IBlockAdjacency adjacency;
 
         private bool linksDirty = true;
+
+        /// <summary>Set when node indices move, which invalidates every mirrored row.</summary>
+        private bool resyncAll = true;
 
         public ThermalSolver(ThermalSettings settings, GridModel grid, SurfaceMap surfaces)
         {
@@ -143,6 +181,7 @@ namespace Thermodynamics.Core
             nodes.Add(node);
             nodesByKey[block.Key] = node;
             linksDirty = true;
+            resyncAll = true;
             return node;
         }
 
@@ -161,6 +200,7 @@ namespace Thermodynamics.Core
             }
 
             linksDirty = true;
+            resyncAll = true;
             return true;
         }
 
@@ -245,6 +285,7 @@ namespace Thermodynamics.Core
             }
 
             linksDirty = false;
+            linkMassFactorDirty = true;
             EnsureBuffers();
             RecomputeConductanceTotals();
         }
@@ -353,6 +394,8 @@ namespace Thermodynamics.Core
 
             RebuildLinksIfNeeded();
             EnsureBuffers();
+            SyncNodeState();
+            RefreshLinkMassFactors();
 
             Environment = environment;
             overheats.Clear();
@@ -367,18 +410,88 @@ namespace Thermodynamics.Core
                 Substep(h, ref environment);
             }
 
+            // The node objects stay the public face of the simulation, so they are brought back
+            // into agreement with the arrays once per step rather than once per substep.
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                nodes[i].Temperature = nodeTemperatures[i];
+            }
+
             StepCount++;
+        }
+
+        /// <summary>
+        /// Copies the node state the substep loop needs into flat arrays. Everything here is
+        /// constant across a step: it changes when a block is built, damaged, exposed or
+        /// re-powered, never between substeps.
+        /// </summary>
+        private void SyncNodeState()
+        {
+            // A node's index changes when the block list does, which invalidates every row.
+            bool all = resyncAll;
+            resyncAll = false;
+
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                ThermalNode node = nodes[i];
+
+                // Temperature is the one value a host can change from outside a step — loading a
+                // save, a grid split, conduction across a rotor — so it is always re-read.
+                nodeTemperatures[i] = node.Temperature;
+
+                if (!all && !node.StateDirty) continue;
+                node.StateDirty = false;
+                linkMassFactorDirty = true;
+
+                nodeThermalMass[i] = node.ThermalMass;
+                nodeRadiation[i] = node.RadiationCoefficient;
+                nodeGeneration[i] = node.HeatGenerationWatts;
+                nodeExposedArea[i] = node.ExposedArea;
+                nodeEmissivity[i] = node.Thermal.Emissivity;
+
+                int total = node.TotalExposedFaces;
+                nodeExposedFaces[i] = total;
+
+                int b = i * Face.Count;
+                if (total <= 0)
+                {
+                    for (int f = 0; f < Face.Count; f++) nodeFaceWeights[b + f] = 0f;
+                    continue;
+                }
+
+                float inverse = 1f / total;
+                for (int f = 0; f < Face.Count; f++)
+                {
+                    nodeFaceWeights[b + f] = node.ExposedFaces[f] * inverse;
+                }
+            }
+        }
+
+        /// <summary>Recomputes the cached per-link reduced mass after any mass change.</summary>
+        private void RefreshLinkMassFactors()
+        {
+            if (!linkMassFactorDirty) return;
+            linkMassFactorDirty = false;
+
+            if (linkMassFactor.Length < links.Count)
+            {
+                linkMassFactor = new float[Math.Max(16, links.Count * 2)];
+            }
+
+            for (int i = 0; i < links.Count; i++)
+            {
+                float massA = nodeThermalMass[links[i].NodeA];
+                float massB = nodeThermalMass[links[i].NodeB];
+                float combined = massA + massB;
+                linkMassFactor[i] = combined <= 0f ? 0f : (massA * massB) / combined;
+            }
         }
 
         private void Substep(float h, ref EnvironmentState env)
         {
             int nodeCount = nodes.Count;
 
-            for (int i = 0; i < nodeCount; i++)
-            {
-                nodeWatts[i] = 0f;
-                nodeTemperatures[i] = nodes[i].Temperature;
-            }
+            Array.Clear(nodeWatts, 0, nodeCount);
             for (int i = 0; i < loops.Count; i++)
             {
                 loopWatts[i] = 0f;
@@ -391,87 +504,175 @@ namespace Thermodynamics.Core
             ApplyWatts(h);
         }
 
+        /// <summary>
+        /// Resolves a direction into the six per-face weights the exposure maths multiplies by.
+        /// Done once per step for the whole grid, rather than six dot products per node.
+        /// </summary>
+        private static void ResolveDirection(ref Vector3 direction, float[] weights)
+        {
+            for (int f = 0; f < Face.Count; f++)
+            {
+                float dot = Vector3.Dot(Face.Normals[f], direction);
+                weights[f] = dot > 0f ? dot : 0f;
+            }
+        }
+
         private void AccumulateEnvironment(ref EnvironmentState env)
         {
             bool environmentEnabled = settings.EnableEnvironment;
             bool solarEnabled = settings.EnableSolarHeat && !env.IsSolarOccluded && env.SolarEnergy > 0f;
             bool frictionEnabled = env.FrictionActive;
+            bool diagnostics = CollectDiagnostics;
+
+            if (!environmentEnabled && !solarEnabled && !frictionEnabled)
+            {
+                // Nothing but waste heat to add, so the whole exposure pass is skipped.
+                for (int i = 0; i < nodes.Count; i++)
+                {
+                    nodeWatts[i] += nodeGeneration[i];
+                }
+                if (diagnostics) ClearEnvironmentDiagnostics();
+                return;
+            }
+
+            bool convecting = environmentEnabled && env.AtmosphereFactor > 0f && env.ConvectionCoefficient > 0f;
+            bool windy = convecting && env.WindSpeed > 0f;
+
+            float radiationShare = 1f - env.AtmosphereFactor;
+            float airCubed = env.WindSpeed * env.WindSpeed * env.WindSpeed;
+            float frictionScale = settings.FrictionScale * env.AirDensity * airCubed;
+
+            // The two directions a node can be weighted against are the same for the whole grid,
+            // so they are resolved once here rather than per node.
+            if (windy || frictionEnabled)
+            {
+                Vector3 wind = env.WindDirectionLocal;
+                ResolveDirection(ref wind, windWeights);
+            }
+
+            if (solarEnabled)
+            {
+                Vector3 sun = env.SunDirectionLocal;
+                ResolveDirection(ref sun, sunWeights);
+            }
 
             for (int i = 0; i < nodes.Count; i++)
             {
-                ThermalNode node = nodes[i];
+                float generation = nodeGeneration[i];
+
+                if (nodeExposedFaces[i] <= 0)
+                {
+                    nodeWatts[i] += generation;
+                    if (diagnostics) ClearEnvironmentDiagnostics(i);
+                    continue;
+                }
+
                 float temperature = nodeTemperatures[i];
-                float watts = 0f;
+                float area = nodeExposedArea[i];
+                float watts = generation;
 
-                node.LastRadiationWatts = 0f;
-                node.LastConvectionWatts = 0f;
-                node.LastSolarWatts = 0f;
-                node.LastFrictionWatts = 0f;
+                float radiationWatts = 0f;
+                float convectionWatts = 0f;
+                float solarWatts = 0f;
+                float frictionWatts = 0f;
 
-                if (environmentEnabled && node.TotalExposedFaces > 0)
+                if (environmentEnabled)
                 {
                     float squared = temperature * temperature;
-                    float radiation = -node.RadiationCoefficient * ((squared * squared) - env.AmbientTemperaturePow4);
+                    float radiation = -nodeRadiation[i] * ((squared * squared) - env.AmbientTemperaturePow4);
 
                     float convection = 0f;
-                    if (env.AtmosphereFactor > 0f && env.ConvectionCoefficient > 0f)
+                    if (convecting)
                     {
-                        float windFactor = 1f;
-                        if (env.WindSpeed > 0f)
-                        {
-                            Vector3 wind = env.WindDirectionLocal;
-                            // A face in the airflow sheds more heat, but still air convects too.
-                            windFactor = 0.5f + (0.5f * node.DirectionalIntensity(ref wind));
-                        }
+                        // A face in the airflow sheds more heat, but still air convects too.
+                        float windFactor = windy
+                            ? 0.5f + (0.5f * Weighted(i, windWeights))
+                            : 1f;
 
-                        convection = -env.ConvectionCoefficient * node.ExposedArea * windFactor
+                        convection = -env.ConvectionCoefficient * area * windFactor
                             * (temperature - env.AmbientTemperature);
                     }
 
-                    float blended = ((1f - env.AtmosphereFactor) * radiation) + (env.AtmosphereFactor * convection);
-                    node.LastRadiationWatts = (1f - env.AtmosphereFactor) * radiation;
-                    node.LastConvectionWatts = env.AtmosphereFactor * convection;
-                    watts += blended;
+                    radiationWatts = radiationShare * radiation;
+                    convectionWatts = env.AtmosphereFactor * convection;
+                    watts += radiationWatts + convectionWatts;
                 }
 
-                if (solarEnabled && node.TotalExposedFaces > 0)
+                if (solarEnabled)
                 {
-                    Vector3 sun = env.SunDirectionLocal;
-                    float intensity = node.DirectionalIntensity(ref sun);
-                    float solar = env.SolarEnergy * node.Thermal.Emissivity * intensity * node.ExposedArea;
-                    node.LastSolarWatts = solar;
-                    watts += solar;
+                    solarWatts = env.SolarEnergy * nodeEmissivity[i] * Weighted(i, sunWeights) * area;
+                    watts += solarWatts;
                 }
 
-                if (frictionEnabled && node.TotalExposedFaces > 0)
+                if (frictionEnabled)
                 {
-                    Vector3 wind = env.WindDirectionLocal;
-                    float directional = node.DirectionalIntensity(ref wind);
-                    float v = env.WindSpeed;
-                    float friction = settings.FrictionScale * env.AirDensity * (v * v * v)
-                        * node.ExposedArea * directional;
-                    node.LastFrictionWatts = friction;
-                    watts += friction;
+                    frictionWatts = frictionScale * area * Weighted(i, windWeights);
+                    watts += frictionWatts;
                 }
 
-                watts += node.HeatGenerationWatts;
                 nodeWatts[i] += watts;
+
+                if (!diagnostics) continue;
+
+                ThermalNode node = nodes[i];
+                node.LastRadiationWatts = radiationWatts;
+                node.LastConvectionWatts = convectionWatts;
+                node.LastSolarWatts = solarWatts;
+                node.LastFrictionWatts = frictionWatts;
             }
+        }
+
+        /// <summary>Intensity against a direction resolved into an explicit weight array.</summary>
+        private float Weighted(int node, float[] weights)
+        {
+            int b = node * Face.Count;
+            return (nodeFaceWeights[b] * weights[0])
+                + (nodeFaceWeights[b + 1] * weights[1])
+                + (nodeFaceWeights[b + 2] * weights[2])
+                + (nodeFaceWeights[b + 3] * weights[3])
+                + (nodeFaceWeights[b + 4] * weights[4])
+                + (nodeFaceWeights[b + 5] * weights[5]);
+        }
+
+        private void ClearEnvironmentDiagnostics()
+        {
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                ClearEnvironmentDiagnostics(i);
+            }
+        }
+
+        private void ClearEnvironmentDiagnostics(int i)
+        {
+            ThermalNode node = nodes[i];
+            node.LastRadiationWatts = 0f;
+            node.LastConvectionWatts = 0f;
+            node.LastSolarWatts = 0f;
+            node.LastFrictionWatts = 0f;
         }
 
         private void AccumulateConduction(float h)
         {
             bool clamp = settings.ClampConductionOvershoot;
+            bool diagnostics = CollectDiagnostics;
 
-            for (int i = 0; i < nodes.Count; i++)
+            if (diagnostics)
             {
-                nodes[i].LastConductionWatts = 0f;
+                for (int i = 0; i < nodes.Count; i++)
+                {
+                    nodes[i].LastConductionWatts = 0f;
+                }
             }
+
+            float inverseH = h > 0f ? 1f / h : 0f;
 
             for (int i = 0; i < links.Count; i++)
             {
                 ThermalLink link = links[i];
-                float difference = nodeTemperatures[link.NodeB] - nodeTemperatures[link.NodeA];
+                int a = link.NodeA;
+                int b = link.NodeB;
+
+                float difference = nodeTemperatures[b] - nodeTemperatures[a];
                 if (difference == 0f) continue;
 
                 // One conductance, applied equally and oppositely: what leaves A enters B.
@@ -479,17 +680,25 @@ namespace Thermodynamics.Core
 
                 if (clamp)
                 {
-                    watts = ClampExchange(
-                        watts, h, difference,
-                        nodes[link.NodeA].ThermalMass,
-                        nodes[link.NodeB].ThermalMass);
+                    // Cap the exchange at the energy that brings the pair to equilibrium.
+                    float maxWatts = difference * linkMassFactor[i] * inverseH;
+                    if (watts > 0f)
+                    {
+                        if (watts > maxWatts) watts = maxWatts;
+                    }
+                    else if (watts < maxWatts)
+                    {
+                        watts = maxWatts;
+                    }
                 }
 
-                nodeWatts[link.NodeA] += watts;
-                nodeWatts[link.NodeB] -= watts;
+                nodeWatts[a] += watts;
+                nodeWatts[b] -= watts;
 
-                nodes[link.NodeA].LastConductionWatts += watts;
-                nodes[link.NodeB].LastConductionWatts -= watts;
+                if (!diagnostics) continue;
+
+                nodes[a].LastConductionWatts += watts;
+                nodes[b].LastConductionWatts -= watts;
             }
         }
 
@@ -517,7 +726,7 @@ namespace Thermodynamics.Core
                         watts = ClampExchange(
                             watts, h, difference,
                             loop.ThermalMass,
-                            nodes[link.NodeIndex].ThermalMass);
+                            nodeThermalMass[link.NodeIndex]);
                     }
 
                     nodeWatts[link.NodeIndex] += watts;
@@ -552,33 +761,36 @@ namespace Thermodynamics.Core
         {
             bool damageEnabled = settings.EnableDamage;
 
+            bool perSecond = settings.DamageIsPerSecond;
+
             for (int i = 0; i < nodes.Count; i++)
             {
-                ThermalNode node = nodes[i];
-
-                float delta = nodeWatts[i] * h / node.ThermalMass;
-                float updated = node.Temperature + delta;
+                float previous = nodeTemperatures[i];
+                float updated = previous + (nodeWatts[i] * h / nodeThermalMass[i]);
                 if (updated < ThermalConstants.MinimumTemperature)
                 {
                     updated = ThermalConstants.MinimumTemperature;
                 }
 
-                node.LastDeltaTemperature = updated - node.Temperature;
-                node.Temperature = updated;
+                nodeTemperatures[i] = updated;
 
-                if (damageEnabled)
+                // The one node field the rest of the mod reads every step: the anomaly detector
+                // recovers the previous temperature from it, and the HUD shows it.
+                nodes[i].LastDeltaTemperature = updated - previous;
+
+                if (!damageEnabled) continue;
+
+                // Only a node that is actually overheating touches its definition, so the
+                // ordinary case stays inside the arrays.
+                ThermalNode node = nodes[i];
+                float critical = node.Thermal.CriticalTemperature;
+                if (critical <= 0f || updated <= critical) continue;
+
+                float damage = (updated - critical) * node.Thermal.CriticalTemperatureScaler;
+                if (perSecond) damage *= h;
+                if (damage > 0f)
                 {
-                    float critical = node.Thermal.CriticalTemperature;
-                    if (critical > 0f && updated > critical)
-                    {
-                        float overshoot = updated - critical;
-                        float damage = overshoot * node.Thermal.CriticalTemperatureScaler;
-                        if (settings.DamageIsPerSecond) damage *= h;
-                        if (damage > 0f)
-                        {
-                            overheats.Add(new OverheatEvent(node.Block, updated, damage));
-                        }
-                    }
+                    overheats.Add(new OverheatEvent(node.Block, updated, damage));
                 }
             }
 
@@ -603,20 +815,22 @@ namespace Thermodynamics.Core
         {
             float worst = 0f;
 
+            bool environmentEnabled = settings.EnableEnvironment;
+            float convection = Environment.ConvectionCoefficient * Environment.AtmosphereFactor;
+
             for (int i = 0; i < nodes.Count; i++)
             {
-                ThermalNode node = nodes[i];
                 float rate = nodeConductanceTotal[i];
 
                 // Linearised environment coupling: d(radiated watts)/dT = 4 e s A T^3
-                if (settings.EnableEnvironment && node.TotalExposedFaces > 0)
+                if (environmentEnabled && nodeExposedFaces[i] > 0)
                 {
-                    float t = node.Temperature;
-                    rate += 4f * node.RadiationCoefficient * t * t * t;
-                    rate += Environment.ConvectionCoefficient * node.ExposedArea * Environment.AtmosphereFactor;
+                    float t = nodeTemperatures[i];
+                    rate += 4f * nodeRadiation[i] * t * t * t;
+                    rate += convection * nodeExposedArea[i];
                 }
 
-                float perNode = rate / node.ThermalMass;
+                float perNode = rate / nodeThermalMass[i];
                 if (perNode > worst) worst = perNode;
             }
 
@@ -683,6 +897,14 @@ namespace Thermodynamics.Core
                 nodeWatts = new float[size];
                 nodeTemperatures = new float[size];
                 nodeConductanceTotal = new float[size];
+                resyncAll = true;
+                nodeThermalMass = new float[size];
+                nodeRadiation = new float[size];
+                nodeGeneration = new float[size];
+                nodeExposedArea = new float[size];
+                nodeEmissivity = new float[size];
+                nodeExposedFaces = new int[size];
+                nodeFaceWeights = new float[size * Face.Count];
             }
             if (loopWatts.Length < loops.Count)
             {

@@ -147,7 +147,9 @@ namespace Thermodynamics.Tests
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.LightArmor(), Vector3I.Zero);
-            return builder.BuildSimulation(settings, temperature);
+            ThermalSimulation simulation = builder.BuildSimulation(settings, temperature);
+            simulation.Solver.CollectDiagnostics = true;
+            return simulation;
         }
 
         [Fact]
@@ -229,6 +231,8 @@ namespace Thermodynamics.Tests
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.LightArmor(), Vector3I.Zero);
             ThermalSimulation simulation = builder.BuildSimulation(settings, 100f);
+            // The per-mechanism watt figures are diagnostics, and diagnostics are opt-in.
+            simulation.Solver.CollectDiagnostics = true;
             simulation.Planet = PlanetThermalProperties.Default();
 
             simulation.StepExact(100, Worlds.PlanetSurface(1f, 0.5f));
@@ -271,6 +275,8 @@ namespace Thermodynamics.Tests
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.LightArmor(), Vector3I.Zero);
             ThermalSimulation simulation = builder.BuildSimulation(settings, 200f);
+            // The per-mechanism watt figures are diagnostics, and diagnostics are opt-in.
+            simulation.Solver.CollectDiagnostics = true;
 
             simulation.StepExact(1, Worlds.Space(new Vector3(1f, 0f, 0f)));
 
@@ -289,6 +295,8 @@ namespace Thermodynamics.Tests
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.LightArmor(), Vector3I.Zero);
             ThermalSimulation simulation = builder.BuildSimulation(settings, 200f);
+            // The per-mechanism watt figures are diagnostics, and diagnostics are opt-in.
+            simulation.Solver.CollectDiagnostics = true;
 
             simulation.StepExact(1, Worlds.Shadow());
 
@@ -307,6 +315,8 @@ namespace Thermodynamics.Tests
             // a flat plate: much more area facing up than sideways
             builder.Fill(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(3, 1, 3));
             ThermalSimulation simulation = builder.BuildSimulation(settings, 200f);
+            // The per-mechanism watt figures are diagnostics, and diagnostics are opt-in.
+            simulation.Solver.CollectDiagnostics = true;
 
             ThermalNode centre = simulation.Solver.GetNodeAt(new Vector3I(1, 0, 1));
 
@@ -336,6 +346,8 @@ namespace Thermodynamics.Tests
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.HeavyArmor(), Vector3I.Zero);
             ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);
+            // The per-mechanism watt figures are diagnostics, and diagnostics are opt-in.
+            simulation.Solver.CollectDiagnostics = true;
             simulation.Planet = PlanetThermalProperties.Default();
 
             float before = simulation.Solver.Nodes[0].Temperature;
@@ -357,6 +369,8 @@ namespace Thermodynamics.Tests
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.HeavyArmor(), Vector3I.Zero);
             ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);
+            // The per-mechanism watt figures are diagnostics, and diagnostics are opt-in.
+            simulation.Solver.CollectDiagnostics = true;
             simulation.Planet = PlanetThermalProperties.Default();
 
             simulation.StepExact(4, Worlds.Flight(0.8f, 10f));
@@ -384,6 +398,8 @@ namespace Thermodynamics.Tests
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.HeavyArmor(), Vector3I.Zero);
             ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);
+            // The per-mechanism watt figures are diagnostics, and diagnostics are opt-in.
+            simulation.Solver.CollectDiagnostics = true;
             simulation.Planet = PlanetThermalProperties.Default();
 
             simulation.StepExact(1, Worlds.Flight(0.8f, speed));

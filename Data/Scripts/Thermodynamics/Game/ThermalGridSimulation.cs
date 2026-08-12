@@ -42,10 +42,24 @@ namespace Thermodynamics
             UpdateInternal();
         }
 
+        /// <summary>
+        /// Per-mechanism watt figures are only produced for someone who is going to read them:
+        /// the telemetry report, or a client with the crosshair readout switched on. A dedicated
+        /// server in ordinary play writes none of them.
+        /// </summary>
+        private void RefreshDiagnosticsFlag()
+        {
+            bool wanted = Telemetry.Enabled
+                || (Settings.Instance.DebugTextOnScreen && !MyAPIGateway.Utilities.IsDedicated);
+
+            Simulation.Solver.CollectDiagnostics = wanted;
+        }
+
         private void UpdateInternal()
         {
             try
             {
+                RefreshDiagnosticsFlag();
                 bool stepping = Simulation.Scheduler.WouldStep(TickSeconds);
 
                 // Building a sample means a planet lookup and, occasionally, a raycast. On a tick

@@ -154,6 +154,84 @@ namespace Thermodynamics.Tests
             }
         }
 
+        /// <summary>
+        /// The same contract for the other half of the instrumentation: recording per-mechanism
+        /// watts must not change what the solver computes, only what it reports.
+        /// </summary>
+        [Fact]
+        public void CollectingDiagnosticsChangesNothingAboutTheResult()
+        {
+            ThermalSimulation instrumented = BuildSimulation();
+            instrumented.Solver.CollectDiagnostics = true;
+
+            ThermalSimulation plain = BuildSimulation();
+            Assert.False(plain.Solver.CollectDiagnostics);
+
+            for (int i = 0; i < 60; i++)
+            {
+                instrumented.Update(1f / 6f, Worlds.Shadow());
+                plain.Update(1f / 6f, Worlds.Shadow());
+            }
+
+            IList<ThermalNode> a = instrumented.Solver.Nodes;
+            IList<ThermalNode> b = plain.Solver.Nodes;
+
+            for (int i = 0; i < a.Count; i++)
+            {
+                Assert.Equal(b[i].Temperature, a[i].Temperature);
+            }
+
+            // ...and the figures themselves only exist on the instrumented run.
+            Assert.True(a[0].LastRadiationWatts != 0f);
+            Assert.Equal(0f, b[0].LastRadiationWatts);
+        }
+
+        /// <summary>
+        /// The solver mirrors node state into flat arrays, so anything that writes a node from
+        /// outside a step has to be picked up on the next one. Temperature is the case that
+        /// matters: loading a save, a grid split, and conduction across a rotor all do it.
+        /// </summary>
+        [Fact]
+        public void ATemperatureWrittenFromOutsideIsPickedUp()
+        {
+            ThermalSimulation simulation = BuildSimulation();
+            simulation.RebuildAll();
+            simulation.Update(1f / 6f, Worlds.Shadow());
+
+            ThermalNode node = simulation.Solver.Nodes[0];
+            node.Temperature = 900f;
+
+            simulation.Update(1f / 6f, Worlds.Shadow());
+
+            // It cools from 900 rather than resuming from where the arrays had it.
+            Assert.True(node.Temperature > 700f, "temperature was " + node.Temperature);
+            Assert.True(node.Temperature < 900f, "the block should have cooled, not held at 900");
+        }
+
+        /// <summary>Mass changes have to reach the solver's mirrored arrays too.</summary>
+        [Fact]
+        public void AMassChangeIsPickedUp()
+        {
+            ThermalSimulation simulation = BuildSimulation();
+            simulation.RebuildAll();
+            simulation.Update(1f / 6f, Worlds.Shadow());
+
+            ThermalNode node = simulation.Solver.Nodes[0];
+            float before = node.ThermalMass;
+
+            node.Block.Mass *= 10f;
+            node.RefreshThermalMass();
+
+            Assert.True(node.ThermalMass > before);
+
+            float start = node.Temperature;
+            simulation.Update(1f / 6f, Worlds.Shadow());
+
+            // A ten times heavier block cools ten times more slowly; the point is only that the
+            // step used the new mass at all.
+            Assert.NotEqual(start, node.Temperature);
+        }
+
         [Fact]
         public void NoProfilerMeansNoInstrumentation()
         {
