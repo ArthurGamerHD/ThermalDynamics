@@ -54,10 +54,21 @@ namespace Thermodynamics
 
         /// <summary>
         /// Temperatures of blocks removed recently, so a section cut off the grid keeps its
-        /// heat when it becomes a grid of its own.
+        /// heat when it becomes a grid of its own, and so rebuilding a block does not reset it.
+        ///
+        /// Entries are consumed when the position is built on again, which most of them never
+        /// are — a ship that is slowly ground down would otherwise accumulate one per block
+        /// destroyed, for the life of the world. The map is dropped wholesale once it grows past
+        /// what a split could plausibly need.
         /// </summary>
         public readonly Dictionary<Vector3I, float> RecentlyRemoved =
             new Dictionary<Vector3I, float>(Vector3I.Comparer);
+
+        /// <summary>
+        /// Remembered removals kept before the map is cleared. A split hands over its blocks in
+        /// the same frame they are removed, so nothing that matters lives here for long.
+        /// </summary>
+        public const int MaxRecentlyRemoved = 4096;
 
         /// <summary>The hottest block on the grid, refreshed on a slow cadence for readouts.</summary>
         public ThermalNode HottestNode;
@@ -159,7 +170,7 @@ namespace Thermodynamics
         {
             foreach (IMySlimBlock existing in Grid.GetBlocks())
             {
-                AddBlock(existing, false);
+                AddBlock(existing);
             }
         }
 
@@ -204,10 +215,10 @@ namespace Thermodynamics
 
         private void BlockAdded(IMySlimBlock block)
         {
-            AddBlock(block, true);
+            AddBlock(block);
         }
 
-        private void AddBlock(IMySlimBlock block, bool live)
+        private void AddBlock(IMySlimBlock block)
         {
             if (disabled || block == null) return;
 
@@ -277,6 +288,7 @@ namespace Thermodynamics
             {
                 if (bound.Node != null)
                 {
+                    if (RecentlyRemoved.Count >= MaxRecentlyRemoved) RecentlyRemoved.Clear();
                     RecentlyRemoved[block.Position] = bound.Node.Temperature;
                 }
 

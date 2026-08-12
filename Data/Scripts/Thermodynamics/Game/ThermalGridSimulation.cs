@@ -50,7 +50,8 @@ namespace Thermodynamics
         private void RefreshDiagnosticsFlag()
         {
             bool wanted = Telemetry.Enabled
-                || (Settings.Instance.DebugTextOnScreen && !MyAPIGateway.Utilities.IsDedicated);
+                || (Settings.Instance.DebugTextOnScreen
+                    && (MyAPIGateway.Utilities == null || !MyAPIGateway.Utilities.IsDedicated));
 
             Simulation.Solver.CollectDiagnostics = wanted;
         }
@@ -114,7 +115,9 @@ namespace Thermodynamics
         /// </summary>
         private bool NeedsReadouts()
         {
-            return Telemetry.Enabled || !MyAPIGateway.Utilities.IsDedicated;
+            return Telemetry.Enabled
+                || MyAPIGateway.Utilities == null
+                || !MyAPIGateway.Utilities.IsDedicated;
         }
 
         private void ApplyOverheatDamage()

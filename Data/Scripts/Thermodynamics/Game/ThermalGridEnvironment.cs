@@ -62,8 +62,9 @@ namespace Thermodynamics
 
             sample.GridVelocity = Grid.Physics != null ? Grid.Physics.LinearVelocity : Vector3.Zero;
 
-            SamplePlanet(ref sample, ref position);
-            SampleWind(ref sample, ref position, ref worldToLocal);
+            PlanetManager.Planet planet = PlanetManager.GetClosestPlanet(position);
+            SamplePlanet(ref sample, ref position, planet);
+            SampleWind(ref sample, ref position, ref worldToLocal, planet);
             sample.IsSolarOccluded = sample.IsUnderground || IsSolarOccluded(ref position, ref sample);
 
             LastSample = sample;
@@ -86,9 +87,8 @@ namespace Thermodynamics
             return sunDirection;
         }
 
-        private void SamplePlanet(ref EnvironmentSample sample, ref Vector3D position)
+        private void SamplePlanet(ref EnvironmentSample sample, ref Vector3D position, PlanetManager.Planet planet)
         {
-            PlanetManager.Planet planet = PlanetManager.GetClosestPlanet(position);
             if (planet == null || planet.Entity == null)
             {
                 sample.HasPlanet = false;
@@ -124,19 +124,13 @@ namespace Thermodynamics
             return properties;
         }
 
-        private void SampleWind(ref EnvironmentSample sample, ref Vector3D position, ref MatrixD worldToLocal)
+        private void SampleWind(
+            ref EnvironmentSample sample, ref Vector3D position, ref MatrixD worldToLocal, PlanetManager.Planet planet)
         {
-            if (!sample.HasPlanet || sample.AirDensity <= 0f)
+            if (!sample.HasPlanet || planet == null || sample.AirDensity <= 0f)
             {
                 sample.RelativeWindSpeed = 0f;
                 sample.RelativeWindDirectionLocal = Vector3.Zero;
-                return;
-            }
-
-            PlanetManager.Planet planet = PlanetManager.GetClosestPlanet(position);
-            if (planet == null)
-            {
-                sample.RelativeWindSpeed = 0f;
                 return;
             }
 

@@ -214,6 +214,11 @@ namespace Thermodynamics
             Field(sb, "grids alive at close", liveGrids);
             Field(sb, "largest grid (cells)", peakCells.ToString("n0"));
             Field(sb, "block types seen", Telemetry.BlockTypes.Count);
+            Field(sb, "block models built", ThermalBlockCatalog.ModelCount
+                + (ThermalBlockCatalog.MountFallbacks > 0
+                    ? " (" + ThermalBlockCatalog.MountFallbacks + " with no usable mount points)"
+                    : ""));
+            Field(sb, "cross-grid bridges", ThermalBridges.Count);
             Field(sb, "blocks added", added.ToString("n0"));
             Field(sb, "blocks removed", removed.ToString("n0"));
             Field(sb, "grid splits", splits);

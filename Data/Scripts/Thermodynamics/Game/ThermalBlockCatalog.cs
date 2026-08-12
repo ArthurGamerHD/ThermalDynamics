@@ -119,7 +119,31 @@ namespace Thermodynamics
                 return Seals(captured, localCell, face);
             };
 
-            return BlockSurfaceBuilder.BuildSurfaces(definition.Size, airtight, seals, MountScratch);
+            int[] surfaces = BlockSurfaceBuilder.BuildSurfaces(definition.Size, airtight, seals, MountScratch);
+
+            // A block with no mount surface anywhere conducts to nothing, which is a far worse
+            // failure than over-reporting contact. If the definition's mount rectangles produced
+            // nothing at all, fall back to mounting everywhere and count it, so the report says
+            // which definitions the reader could not describe.
+            if (!HasAnyMount(surfaces))
+            {
+                MountFallbacks++;
+                return BlockSurfaceBuilder.BuildFallbackSurfaces(definition.Size, airtight);
+            }
+
+            return surfaces;
+        }
+
+        /// <summary>Definitions whose mount points produced no mount surface at all.</summary>
+        public static int MountFallbacks;
+
+        private static bool HasAnyMount(int[] surfaces)
+        {
+            for (int i = 0; i < surfaces.Length; i++)
+            {
+                if ((surfaces[i] & CellSurface.SelfMountMask) != 0) return true;
+            }
+            return false;
         }
 
         /// <summary>
