@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<Definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <Ammos>
+
+        <Ammo xsi:type="MyObjectBuilder_ProjectileAmmoDefinition">
+            <Id>
+                <TypeId>AmmoDefinition</TypeId>
+                <SubtypeId>Bottle</SubtypeId>
+            </Id>
+            <BasicProperties>
+                <DesiredSpeed>1</DesiredSpeed>
+                <SpeedVariance>0</SpeedVariance>
+                <MaxTrajectory>0</MaxTrajectory>
+                <BackkickForce>0</BackkickForce>
+                <PhysicalMaterial>RifleBullet</PhysicalMaterial>
+                <ExplosiveDamageMultiplier>0</ExplosiveDamageMultiplier>
+                <DeathMessage>CauseOfDeath_LightWeapons</DeathMessage>
+            </BasicProperties>
+            <ProjectileProperties>
+                <ProjectileTrailScale>0</ProjectileTrailScale>
+                <ProjectileHitImpulse>0</ProjectileHitImpulse>
+                <ProjectileMassDamage>0</ProjectileMassDamage>
+                <ProjectileHealthDamage>0</ProjectileHealthDamage>
+                <HeadShot>false</HeadShot>
+                <ProjectileHeadShotDamage>0</ProjectileHeadShotDamage>
+            </ProjectileProperties>
+        </Ammo>
+
+
+    </Ammos>
+</Definitions>

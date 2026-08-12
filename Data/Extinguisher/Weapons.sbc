@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<Definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <Weapons>
+        <Weapon>
+            <Id>
+                <TypeId>WeaponDefinition</TypeId>
+                <SubtypeId>ExtinguisherGun</SubtypeId>
+            </Id>
+            <ProjectileAmmoData RateOfFire="70" ShootSoundName="FireExtinguisher" ShotsInBurst="1"/>
+            <NoAmmoSoundName>WepPlayRifleNoAmmo</NoAmmoSoundName>
+            <ReloadSoundName>WepRifleReloadShort</ReloadSoundName>
+			<ReleaseTimeAfterFire>1000</ReleaseTimeAfterFire>
+			<DeviateShotAngle>0</DeviateShotAngle>
+			<DeviateShotAngleAiming>0</DeviateShotAngleAiming>
+			<MuzzleFlashLifeSpan>0</MuzzleFlashLifeSpan>
+			<Effects>
+				<Effect Action="Shoot" Dummy="muzzle_projectile_1" ParticleForIronsights="MaterialHit_Snow" Particle="MaterialHit_Snow" Loop="true" InstantStop="false"/>
+			</Effects>
+            <AmmoMagazines>
+                <AmmoMagazine Subtype="BottleMag" />
+            </AmmoMagazines>
+
+            <ReloadTime>2000</ReloadTime>
+			
+            <ShootDirectionUpdateTime>0</ShootDirectionUpdateTime>
+            <EquipDuration>1</EquipDuration>
+            <ShakeOnActionPrimary>false</ShakeOnActionPrimary>
+            <ShakeOnActionSecondary>false</ShakeOnActionSecondary>
+            <ShakeOnActionTertiary>false</ShakeOnActionTertiary>
+        </Weapon>
+    </Weapons>
+</Definitions>
