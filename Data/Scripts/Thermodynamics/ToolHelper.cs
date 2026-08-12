@@ -37,20 +37,23 @@ namespace Thermodynamics
             return vector;
         }
 
+        /// <summary>
+        /// Area, in square cells, of the largest face of a box with these cell extents:
+        /// the product of the two largest dimensions.
+        /// </summary>
+        /// <remarks>
+        /// The original seeded both running maxima at 1 and only updated the runner up when a
+        /// new maximum arrived, so 1x5x2 - the shipped radiator - returned 5 instead of 10.
+        /// Ascending inputs like 2x3x4 happened to work, which is why it survived.
+        /// </remarks>
         public static int LargestFace(this Vector3I vector)
         {
-            int s1 = 1;
-            int s2 = 1;
-            for (int i = 0; i < 3; i++)
-            {
-                if (vector[i] >= s1) 
-                {
-                    s2 = s1;
-                    s1 = vector[i];
-                }
-            }
+            int a = Math.Max(1, vector.X);
+            int b = Math.Max(1, vector.Y);
+            int c = Math.Max(1, vector.Z);
 
-            return s1*s2;
+            int smallest = Math.Min(a, Math.Min(b, c));
+            return (a * b * c) / smallest;
         }
 
 

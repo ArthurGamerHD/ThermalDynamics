@@ -47,6 +47,9 @@ namespace Thermodynamics.Core
         private const int LegacyRecordSize = 6;
         private const int LegacyLoopRecordSize = 3;
 
+        private const int Int32Size = 4;
+        private const int RecordSize = 12;   // 8 byte key + 4 byte temperature
+
         // ---- version 2 ---------------------------------------------------------------------
 
         /// <summary>Encodes block and loop temperatures in the current format.</summary>
@@ -115,40 +118,38 @@ namespace Thermodynamics.Core
 
         private static bool TryDecodeVersion2(byte[] bytes, List<StoredTemperature> blocks, List<StoredLoop> loops)
         {
-            try
+            // Every read is bounds checked up front rather than caught afterwards: the in-game
+            // script compiler's whitelist prohibits IndexOutOfRangeException, so a truncated
+            // payload has to be rejected before it is read, not after it throws.
+            int at = 1;
+            while (at < bytes.Length)
             {
-                int at = 1;
-                while (at < bytes.Length)
+                byte section = bytes[at++];
+
+                if (at + Int32Size > bytes.Length) return false;
+                int count = ReadInt32(bytes, ref at);
+                if (count < 0) return false;
+
+                // guards against a corrupt count claiming more records than the payload holds,
+                // and against the multiplication overflowing on an absurd one
+                if (count > (bytes.Length - at) / RecordSize) return false;
+
+                for (int i = 0; i < count; i++)
                 {
-                    byte section = bytes[at++];
-                    int count = ReadInt32(bytes, ref at);
-                    if (count < 0) return false;
+                    long key = ReadInt64(bytes, ref at);
+                    float temperature = ReadSingle(bytes, ref at);
 
-                    for (int i = 0; i < count; i++)
+                    if (section == SectionBlocks)
                     {
-                        long key = ReadInt64(bytes, ref at);
-                        float temperature = ReadSingle(bytes, ref at);
-
-                        if (section == SectionBlocks)
-                        {
-                            if (blocks != null) blocks.Add(new StoredTemperature(GridMath.FromKey(key), temperature));
-                        }
-                        else if (section == SectionLoops)
-                        {
-                            if (loops != null) loops.Add(new StoredLoop(key, temperature));
-                        }
+                        if (blocks != null) blocks.Add(new StoredTemperature(GridMath.FromKey(key), temperature));
+                    }
+                    else if (section == SectionLoops)
+                    {
+                        if (loops != null) loops.Add(new StoredLoop(key, temperature));
                     }
                 }
-                return true;
             }
-            catch (IndexOutOfRangeException)
-            {
-                return false;
-            }
-            catch (ArgumentException)
-            {
-                return false;
-            }
+            return true;
         }
 
         // ---- version 1 (read only) ----------------------------------------------------------

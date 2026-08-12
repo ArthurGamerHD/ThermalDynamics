@@ -1,18 +1,16 @@
-.vs/
-obj/
-Properties/
+*.vs/
+*bin/
+*obj/
+*out/
+*Properties/
 *.csproj
 *.sln
 *.ini
-bin/
+*.props
+*.user
+*.claude/
 
+# the mod and the sim suite are built from these - see docs/development.md
 !*.csproj
 !*.sln
 !*.props
-
-bin/
-obj/
-out/
-*.user
-
-.claude/

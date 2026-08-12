@@ -449,8 +449,10 @@ namespace Thermodynamics
             DeltaRadiation = CalculateRadiation() * ThermalMassInv;
             DeltaFriction = CalculateFriction() * ThermalMassInv;
 
-            DeltaTemperature += DeltaRadiation + DeltaFriction;
-            Temperature += DeltaRadiation;
+            // both are already per update: ThermalMassInv carries TimeScaleRatio.
+            // friction used to be added to DeltaTemperature, which the conduction sum below
+            // overwrites before it is applied, so it never heated anything.
+            Temperature += DeltaRadiation + DeltaFriction;
 
             // heat generation is already updated by UpdateHeat() when power changes occur
             Temperature += HeatGeneration;
@@ -533,7 +535,15 @@ namespace Thermodynamics
             if (Settings.Instance.EnableDamage && Temperature > Definition.CriticalTemperature)
             {
                 Grid.CurrentCriticalBlocks++;
-                Block.DoDamage((Temperature - Definition.CriticalTemperature) * Definition.CriticalTemperatureScaler, MyStringHash.GetOrCompute("thermal"), false);
+
+                // CriticalTemperatureScaler is damage per kelvin of overshoot per second, so the
+                // overshoot has to be scaled by the length of an update. Without this, Frequency
+                // silently sets how fast overheating destroys a block.
+                float damage = (Temperature - Definition.CriticalTemperature)
+                    * Definition.CriticalTemperatureScaler
+                    * Settings.Instance.TimeScaleRatio;
+
+                Block.DoDamage(damage, MyStringHash.GetOrCompute("thermal"), false);
             }
         }
 

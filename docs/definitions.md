@@ -30,7 +30,7 @@ Read by `ThermalCellDefinition.GetDefinition`
 | `ProducerWasteEnergy` | Decimal | `≥ 0` | Fraction of *generated* power converted to heat. |
 | `ConsumerWasteEnergy` | Decimal | `≥ 0` | Fraction of *consumed* power converted to heat. |
 | `CriticalTemperature` | Decimal | `≥ 0` | Kelvin above which the block takes damage. |
-| `CriticalTemperatureScaler` | Decimal | `≥ 0` | Damage per Kelvin of overshoot, per cell update. |
+| `CriticalTemperatureScaler` | Decimal | `≥ 0` | Damage per Kelvin of overshoot, per second. |
 
 ### Lookup and fallback
 

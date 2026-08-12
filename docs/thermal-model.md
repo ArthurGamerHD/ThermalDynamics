@@ -39,7 +39,7 @@ LastTemprature  = Temperature
 DeltaRadiation  = CalculateRadiation() × ThermalMassInv
 DeltaFriction   = CalculateFriction()  × ThermalMassInv
 
-Temperature    += DeltaRadiation
+Temperature    += DeltaRadiation + DeltaFriction
 Temperature    += HeatGeneration
 
 deltaTemperature = Σᵢ kAᵢ × (Tᵢ − Temperature)          over neighbours
@@ -54,9 +54,10 @@ HandleCriticalTemperature()
 simulation frame, otherwise its current `Temperature` — a Gauss–Seidel sweep with the
 direction reversal described in [architecture.md](architecture.md#the-quota-scheduler).
 
-> **Note:** `DeltaFriction` is computed and briefly added to `DeltaTemperature`, but
-> `DeltaTemperature` is overwritten by the conduction result two lines later, so aerodynamic
-> heating currently has **no effect on temperature**. See [known-issues.md](known-issues.md).
+> `DeltaTemperature` holds the conduction term only — that is what the HUD's "Peak dT" and the
+> debug overlay read. Friction used to be accumulated into it and then overwritten by the
+> conduction result, which is why aerodynamic heating had no effect on temperature until it was
+> moved onto the `Temperature` line above.
 
 ## Conduction
 
@@ -243,14 +244,17 @@ along the loop within a single pass.
 
 ```
 if EnableDamage and T > CriticalTemperature:
-    damage = (T − CriticalTemperature) × CriticalTemperatureScaler
+    damage = (T − CriticalTemperature) × CriticalTemperatureScaler × TimeScaleRatio
     Block.DoDamage(damage, "thermal", sync: false)
     Grid.CurrentCriticalBlocks++
 ```
 
-Damage is applied **every cell update**, so at the default `Frequency = 4` a block 10 K over
-critical with a scaler of 1 takes 40 damage per second. `sync: false` means the damage is not
-network-replicated — each machine applies it independently from its own simulation.
+Damage is applied every cell update, but `TimeScaleRatio` (`1 / Frequency`) scales it by the
+length of that update, so a block 10 K over critical with a scaler of 1 takes 10 damage per
+second at any `Frequency`. Before that scaling, `Frequency = 4` destroyed blocks four times
+faster than `Frequency = 1` — a performance setting silently changing difficulty. `sync: false`
+means the damage is not network-replicated — each machine applies it independently from its own
+simulation.
 
 `CriticalBlocks` is the count from the previous completed pass; `CurrentCriticalBlocks`
 accumulates the pass in progress. The two-value swap keeps the HUD readout stable.

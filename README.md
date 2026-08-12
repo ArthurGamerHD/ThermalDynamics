@@ -18,7 +18,7 @@ and — if you let it build up — destroys your ship.
 | Radiation | Every exposed block face radiates to the ambient temperature via the Stefan–Boltzmann law. |
 | Convection | Inside an atmosphere, exposed faces exchange heat with the air; wind speed and grid velocity raise the coefficient. |
 | Solar | Grids raycast to the sun; unoccluded exposed faces absorb energy weighted by their facing angle. |
-| Aerodynamic friction | Fast atmospheric flight heats leading surfaces (currently computed but not applied — see [Known issues](docs/known-issues.md)). |
+| Aerodynamic friction | Fast atmospheric flight heats leading surfaces, scaling with the cube of relative airspeed. |
 | Waste heat | Power producers and consumers convert a configurable share of their throughput into heat; thrusters heat with throttle. |
 | Coolant loops | Closed loops of coolant pipe blocks with at least one pump form a shared thermal reservoir that pulls heat out of adjacent blocks. |
 | Damage | Blocks above their critical temperature take continuous damage. |
@@ -60,7 +60,7 @@ game session. It ships with the mod — Space Engineers compiles it — and the 
 [sim/](sim) link the same files so it can be built, tested and profiled outside the game:
 
 ```bash
-cd sim && dotnet test                                  # 224 tests
+cd sim && dotnet test                                  # 226 tests
 dotnet run --project Thermodynamics.Sim -- run all     # scenario suite
 ```
 

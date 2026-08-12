@@ -49,7 +49,7 @@ lose it.
 symmetric conductance per joint, computed as two conductors in series
 (`G = A / (L₁/k₁ + L₂/k₂)`), applied equally and oppositely.
 
-### M3. Aerodynamic friction never heats anything — **high**
+### M3. Aerodynamic friction never heats anything — **high** — *fixed in the live mod*
 
 [ThermalCell.cs:452](../Data/Scripts/Thermodynamics/ThermalCell.cs#L452):
 
@@ -65,9 +65,13 @@ Temperature      += DeltaTemperature;
 gameplay effect at all; only the debug colouring responds, because it reads the raw watts inside
 `CalculateFriction`.
 
+**Fixed** — friction is applied to `Temperature` alongside radiation, and the dead
+`DeltaTemperature +=` line is gone. `DeltaTemperature` keeps its existing meaning, the
+conduction delta, which is what the HUD's "Peak dT" and the debug overlay already displayed.
+
 *Confirmed by* `ConvectionSolarFrictionTests.FrictionActuallyHeatsTheBlock`.
 
-### M4. Damage scales with the update rate — **high**
+### M4. Damage scales with the update rate — **high** — *fixed in the live mod*
 
 `HandleCriticalTemperature` applies the full overshoot as damage on every cell update, so
 `Frequency = 4` destroys blocks four times faster than `Frequency = 1` at the same temperature.
@@ -75,6 +79,11 @@ A performance setting silently changes the difficulty.
 
 *Confirmed by* `DamageTests.DamagePerSecondDoesNotDependOnStepRate`. The fixed model multiplies
 by the step length; `ThermalSettings.DamageIsPerSecond = false` restores the old behaviour.
+
+**Fixed** — `HandleCriticalTemperature` multiplies the overshoot by `TimeScaleRatio`, the length
+of one update in seconds, so `CriticalTemperatureScaler` now reads as damage per kelvin per
+second. At the default `Frequency = 4` this is a **4× reduction** in damage rate; scale
+`CriticalTemperatureScaler` in `Cubes.xml` if the old pace was the intended one.
 
 ### M5. Specific heat is roughly 250× below physical — **medium**
 
@@ -114,7 +123,7 @@ The rewritten model blends a floor into the directional term
 
 ## Code defects
 
-### C1. `LargestFace` under-reports for most non-cubic blocks — **high**
+### C1. `LargestFace` under-reports for most non-cubic blocks — **high** — *fixed in the live mod*
 
 [ToolHelper.cs:40](../Data/Scripts/Thermodynamics/ToolHelper.cs#L40) seeds both running maxima at
 1 and only updates the runner-up when a new maximum arrives:
@@ -129,7 +138,18 @@ For 1×5×2 — the shipped radiator — it returns 5 instead of 10. Ascending i
 happen to work, which is why it survived. The value is the denominator of `k`, so affected
 blocks conduct roughly twice as fast as intended.
 
+Worse than that: the extents are read in grid space (`(Block.Max + 1) - Block.Min`), so
+**rotating a block changed its conductivity**. A radiator laid out along one axis conducted at
+twice the rate of the same radiator turned 90°.
+
 *Confirmed by* `GridMathTests.LargestFaceAreaFixesTheOriginalOrderDependentResult`.
+
+**Fixed** — `LargestFace` now divides the volume by the smallest dimension, which is
+order independent by construction and matches
+[`GridMath.LargestFaceArea`](../Data/Scripts/Thermodynamics/Core/Util/GridMath.cs) in the
+rewrite. Of the blocks this mod ships only the two radiators (1×5×2) change: they conduct at
+half their previous rate, in every orientation. Vanilla and third-party non-cubic blocks are
+affected wherever their largest dimension precedes their second largest.
 
 ### C2. `RemoveNeighbor` can throw — **high** — *fixed in the live mod*
 
@@ -353,9 +373,11 @@ clamp disabled.
 1. ~~**P2** and **C3**~~ — **done**. The two hot-path log lines are commented out and door
    handlers are now tracked per `EntityId` and detached on removal. **C2** went with them: the
    guard in `RemoveNeighbor` tests `j`.
-2. **C1, M3, M4** — small, self-contained correctness fixes with tests already written. C1 and
-   M4 change balance (conduction rate on non-cubic blocks, damage rate at `Frequency > 1`), so
-   they want a pass over `Cubes.xml` afterwards.
+2. ~~**C1, M3, M4**~~ — **done**. `LargestFace` is order independent, friction is applied to the
+   block, and damage is scaled by the update length. All three shift balance — radiators conduct
+   at half their old rate, fast atmospheric flight now actually heats the leading face, and
+   overheating destroys blocks 4× slower at the default `Frequency = 4` — so the retune of
+   `Cubes.xml` these imply is still outstanding.
 3. **P1** — coalesce room mapping. Largest structural performance win available.
 4. **M1, M2** — adopt the conductance model. This changes balance, so retune
    `Cubes.xml` alongside it.

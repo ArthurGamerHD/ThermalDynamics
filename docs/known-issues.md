@@ -10,22 +10,13 @@ are defects and gaps visible in the source, listed so they are not rediscovered 
 
 ## Defects
 
-### Aerodynamic friction never heats anything
+### ~~Aerodynamic friction never heats anything~~ — fixed
 
 [ThermalCell.cs:443](../Data/Scripts/Thermodynamics/ThermalCell.cs#L443)
 
-```csharp
-DeltaTemperature += DeltaRadiation + DeltaFriction;   // includes friction
-Temperature      += DeltaRadiation;                   // friction not applied
-...
-DeltaTemperature  = (C * deltaTemperature);           // overwrites the line above
-Temperature      += DeltaTemperature;
-```
-
-`DeltaFriction` is computed, added to `DeltaTemperature`, and then `DeltaTemperature` is
-reassigned from the conduction sum before it is used. Friction heating is therefore inert, and
-`FrictionAtSpeedsAbove` has no gameplay effect. `DebugFrictionColors` still works, because it
-colours from the raw Watts inside `CalculateFriction`.
+`DeltaFriction` was added to `DeltaTemperature`, which the conduction sum then reassigned before
+it was used, so friction heating was inert and `FrictionAtSpeedsAbove` had no gameplay effect.
+`Temperature` now takes `DeltaRadiation + DeltaFriction`, and the dead accumulation is gone.
 
 ### ~~`RemoveNeighbor` can throw~~ — fixed
 
@@ -98,7 +89,7 @@ out alongside the other debug logging in that file.
 | --- | --- |
 | **Config file** | `Settings.Load()` / `Save()` are complete but never called; defaults are always used. See [configuration.md](configuration.md). |
 | **Multiplayer** | `SENetworkAPI` is initialised with channel `30323` but no commands or `NetSync` properties are registered. Nothing is replicated; damage is applied with `sync: false` on each machine independently. |
-| **Heat pump** | `Gauge_LG_HeatPump` / `Gauge_SG_HeatPump` have models, icons, definitions and thermal properties, but no C# implementation. |
+| **Heat pump** | `Gauge_LG_HeatPump` / `Gauge_SG_HeatPump` have models, icons, definitions and thermal properties, but no C# implementation. Both also log a `MOD_ERROR` at load: they are `TypeId` `CubeBlock` yet list a `Computer` component, so the game reports that they can be owned but their ownership cannot be changed from a terminal. Resolve it when the block is implemented — most likely by moving them to `TerminalBlock`, which changes their `Id` and so drops any already placed in a save. |
 | **Room air temperature** | The mapper detects sealed rooms (`Rooms[2+]`), but only `Rooms[0]` (external) is consumed. Interior air has no temperature of its own. |
 | **Per-block solar shadowing** | An entire implementation exists, fully commented out, in [ThermalGridSolar.cs](../Data/Scripts/Thermodynamics/ThermalGridSolar.cs). Occlusion today is per grid, all-or-nothing. |
 | **Underground core heating** | `PlanetDefinition.CoreTemperature` and `SealevelDeadzone` are parsed but unused; `PrepareEnvironmentTemprature` ends with `//TODO: implement underground core temparatures`. |

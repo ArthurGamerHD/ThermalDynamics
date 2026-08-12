@@ -26,7 +26,8 @@ namespace Thermodynamics.Core
 
         public GridModel(float gridSize)
         {
-            if (gridSize <= 0f) throw new ArgumentOutOfRangeException("gridSize");
+            // ArgumentOutOfRangeException is not on the in-game script compiler's whitelist
+            if (gridSize <= 0f) throw new ArgumentException("gridSize must be positive", "gridSize");
             GridSize = gridSize;
         }
 

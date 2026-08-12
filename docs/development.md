@@ -43,6 +43,13 @@ Constraints that matter when writing code for this project:
 * Space Engineers' script whitelist applies: no reflection, no file I/O outside
   `MyAPIGateway.Utilities`, no threading. `ProcessCellsSequentially` carries a comment noting
   that parallel processing is not available.
+* **The whitelist covers exception types too**, and this is easy to miss because the local build
+  and `sim/` both accept them — only the in-game compiler rejects them, at world load. Confirmed
+  prohibited: `IndexOutOfRangeException`, `ArgumentOutOfRangeException`. Confirmed allowed:
+  `Exception`, `ArgumentException`, `ArgumentNullException`, `InvalidOperationException`,
+  `FormatException`. Prefer bounds-checking over catching an out-of-range throw — see
+  `ThermalStorageCodec.TryDecodeVersion2`, which validates each record count against the
+  remaining payload rather than reading and catching.
 * Anything that allocates per frame will show up. The existing code pools the raycast result
   lists (`_overlapResultPool`, `_gridPool`) and caches `kA` arrays for this reason.
 
