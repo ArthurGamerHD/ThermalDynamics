@@ -7,6 +7,12 @@ are defects and gaps visible in the source, listed so they are not rediscovered 
 > with model-level and performance findings that only became visible once the code could be run
 > outside the game. See [bugs-and-performance.md](bugs-and-performance.md) for the tested list
 > and a suggested order of work.
+>
+> **Status.** Entries below that name `ThermalCell`, `ThermalGrid*` or `MyFreeList` describe
+> files that no longer exist: the live mod runs `Core/` behind the adapter in `Game/`. They are
+> kept for the history of what went wrong and why, not as a description of the current tree.
+> Two of them are closed by that change on their own: `Settings.Load()` is now called from
+> `Session.Init`, and the per-cell surface logging is gone with the mapper that emitted it.
 
 ## Defects
 

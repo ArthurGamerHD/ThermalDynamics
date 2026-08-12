@@ -44,8 +44,12 @@ namespace Thermodynamics.Core
         /// </summary>
         public bool StateDirty = true;
 
-        /// <summary>Conduction links to other nodes. Each link appears on both of its nodes.</summary>
-        public readonly List<int> LinkIndices = new List<int>();
+        /// <summary>
+        /// How many conduction links touch this node. A count rather than a list of indices:
+        /// the solver walks links, never a node's links, so the list was one heap object per
+        /// block rewritten on every topology change and read by nothing.
+        /// </summary>
+        public int LinkCount;
 
         // ---- last-step diagnostics ---------------------------------------------------------
 

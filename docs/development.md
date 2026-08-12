@@ -112,20 +112,24 @@ Do not hand-edit these; replace them wholesale when the upstream author publishe
   crosshair readout in [Debug.cs](../Data/Scripts/Thermodynamics/Debug.cs) dumps a block's full
   thermal state including raw surface bits.
 * **Logs:** everything logs to the SE log with the `[Thermodynamics]` prefix via
-  `MyLog.Default.Info`. Note that `CalculateBlockSurfaceStates` currently logs **one line per
-  cell per block placement** ([ThermalGridMapper.cs:321](../Data/Scripts/Thermodynamics/ThermalGridMapper.cs#L321)),
-  which is extremely noisy — comment it out before profiling or shipping.
-* **Timing:** `Stopwatch` blocks around the update loop, save and load are present but
-  commented out in `ThermalGridSimulation.cs` and `ThermalGridStorage.cs`.
+  `MyLog.Default.Info`.
+* **Timing:** switch telemetry on with `/thermal telemetry on` and take a report with
+  `/thermal dump`. The cost section breaks the update into topology rebuild, room mapping,
+  exposure refresh and solver, which is the breakdown you want before optimising anything. See
+  [telemetry.md](telemetry.md).
+* **Outside the game:** most questions are faster to answer in [`sim/`](../sim) —
+  `dotnet test`, or `dotnet run --project Thermodynamics.Sim -- run perf` for throughput.
 
 ## Where to start when adding a feature
 
 | Goal | Touch |
 | --- | --- |
-| New thermal property on blocks | `ThermalCellDefinition`, then `Data/Cubes.xml` |
-| New pipe or pump shape | `CoolantPipeLinkDirections` **and** `CoolantPlateDirections` in `ThermalGridLoop.cs`, a new SBC in `Data/CubeBlocks/`, an entry in `Cubes.xml`, and the block variant group |
-| Change how heat moves between blocks | `ThermalCell.CalculatekA` / `FindSurfaceArea` |
-| Change environmental response | `ThermalGridEnvironment.PrepareEnvironmentTemprature` |
-| Change what counts as exposed | `ThermalGridMapper.GetExposedSurfacesByDirection` |
-| Per-block sun shadowing | The commented-out implementation in `ThermalGridSolar.cs` is the starting point |
+| New thermal property on blocks | `ThermalCellDefinition` and `BlockThermalProperties`, the copy in `ThermalBlockCatalog.ToThermalProperties`, then `Data/Cubes.xml` |
+| New pipe or pump shape | `ThermalCoolantShapes`, a new SBC in `Data/CubeBlocks/`, an entry in `Cubes.xml`, and the block variant group. The table is linked into the test project, so add a case to `HostAdapterTests` |
+| Change how heat moves between blocks | `ConductionBuilder` in `Core/Simulation/ThermalLink.cs` |
+| Change environmental response | `EnvironmentSolver`, and `ThermalGrid.Sample` for what the world feeds it |
+| Change what counts as exposed | `SurfaceMap.GetExposedFaces`, and `BlockSurfaceBuilder` for what a block declares |
+| Change what the game tells a block | `ThermalBlock.Attach` |
+| Per-block sun shadowing | `ThermalNode`'s directional weighting is the hook; the solver resolves the sun into six per-face weights once per step |
+| New instrumentation | `ISimulationProfiler` for a stage, `GridTelemetry` for a figure, `TelemetryReport` for a row |
 | Multiplayer sync | `SENetworkAPI` is already initialised in `Session.Init` with channel `30323`; no commands are registered yet |

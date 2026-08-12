@@ -21,8 +21,10 @@ Background research: [se2-research.md](se2-research.md). Current defects and mea
 | 2 | Exposure walks surfaces, not volumes | **done** — `SurfaceMap.GetExposedFaces` |
 | 2 | Block *storage* stops enumerating cells | **not done** — `GridModel.blocksByCell`, `SurfaceMap.states` and `BlockInstance.Cells` are still one entry per occupied cell |
 | 4 | Room mapping off the block lattice | not done |
-| 6 | Struct-of-arrays solver state | not done |
-| 5 | Stiffness / multirate | not done |
+| 6 | Struct-of-arrays solver state | **done for the step** — the substep loop reads flat arrays mirrored from the nodes, refreshed only for nodes that changed. The node objects remain the public face. |
+| 5 | Stiffness / multirate | not done — but now **measured**: `LastStepWasClamped` is reported per grid as "steps clamped by substep cap" |
+| 8.1 | Land `Core/` in the live mod | **done** — the adapter is [`Game/`](../Data/Scripts/Thermodynamics/Game); the legacy per-cell path is deleted |
+| 8.2 | Instrument | **done** — [`ISimulationProfiler`](../Data/Scripts/Thermodynamics/Core/Simulation/SimulationProfiler.cs) times topology, room mapping, exposure and solver; see [telemetry.md](telemetry.md) |
 
 ### Measured effect
 
@@ -180,12 +182,12 @@ SoA arrays**, not four passes — which is what `AccumulateEnvironment` already 
 
 ### Things to delete
 
-* `ThermalNode.LinkIndices` — a `List<int>` per block, written on every rebuild, **never read by
-  the solver**. Only reader is a debug `.Count` in `Scenarios.cs`.
-* `ThermalRadiationNode.cs` — unreferenced in the legacy tree.
-* `MyFreeList<T>` — unused.
-* The alternating sweep direction and `LastTemprature` bookkeeping — already gone in `Core/`,
-  still present in the legacy path.
+* ~~`ThermalNode.LinkIndices`~~ — **done**. It was a `List<int>` per block, written on every
+  rebuild and never read by the solver; it is now a plain `LinkCount`, which is all its one
+  reader wanted.
+* ~~`ThermalRadiationNode.cs`~~, ~~`MyFreeList<T>`~~ and the whole legacy per-cell path —
+  **done**, deleted when the live mod moved onto the model.
+* ~~The alternating sweep direction and `LastTemprature` bookkeeping~~ — **done**, gone with it.
 
 ---
 
@@ -345,11 +347,13 @@ and 24 000 live objects per grid is collection pressure the mod does not need to
 
 ## 8. Order of work
 
-1. **Land `Core/` in SE1 on the main thread, unchanged.** It is written, tested, and referenced by
-   nothing outside itself. This banks the P1/P2/C3 fixes, which are the actual stalls today.
-   Nothing below is worth doing before real in-game numbers exist.
-2. **Instrument.** `LastStepWasClamped`, links per node, room-map pass cost, topology rebuild cost.
-   Decide §5 from data rather than from the arithmetic above.
+1. ~~**Land `Core/` in SE1 on the main thread, unchanged.**~~ **Done.** The live mod runs the
+   model behind an adapter that mirrors block layout in, samples the world once per step, and
+   takes temperatures and overheat events back out. The per-cell path, the frame quota scheduler
+   and the alternating sweep are gone.
+2. ~~**Instrument.**~~ **Done.** Stage costs, substeps, clamped steps, link counts and mapper
+   queue depth are all in the report, and collection is switchable at runtime so a test session
+   costs nothing to a shipped one. §5 is now a question for data rather than arithmetic.
 3. ~~**Boundary-centric geometry (§2).**~~ **Done for conduction and exposure** — see §0. What
    remains is block *storage*: `GridModel` and `SurfaceMap` still key on occupied cells, which is
    fine at SE1 block sizes and is not at SE2's. Replacing them means an interval or octree index
@@ -375,5 +379,6 @@ modding does not exist yet and this should not become a bet on it.
 * **Unit system (M5).** Specific heat is ~250× below physical. Variable block sizes make this
   worse, not better, because thermal mass now varies over four orders of magnitude across one
   grid. Decide the unit question before retuning.
-* **Threading.** Still not the bottleneck. The solver is 0.128 ms for 8 000 blocks; the costs are
-  all topology. Revisit only after step 2.
+* **Threading.** Still not the bottleneck. The solver is about 0.14 ms per step for 8 000 blocks
+  and 22 800 links, against roughly 64 ms to build and map that grid once; the costs are all
+  topology. Revisit only after real in-game numbers exist.

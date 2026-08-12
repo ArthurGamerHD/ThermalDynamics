@@ -2,12 +2,22 @@
 
 Radiation, convection, solar gain and friction all scale with **exposed surface area**. A block
 buried inside a hull must not radiate to space, and a block sealed inside a pressurised room
-must not either. Working that out is the job of
-[ThermalGridMapper.cs](../Data/Scripts/Thermodynamics/ThermalGridMapper.cs).
+must not either.
 
-The mapper runs in two stages: a per-block **surface flag** calculation that happens
-immediately on build/remove, and an incremental **flood fill** that runs a few cells per frame
-until it has classified the whole grid.
+> **Status.** The bit layout below is still exactly what the model uses
+> ([Core/Model/CellSurface.cs](../Data/Scripts/Thermodynamics/Core/Model/CellSurface.cs)), but the
+> code that fills it has moved and changed shape. Surface bits are now built **once per block
+> definition** by
+> [BlockSurfaceBuilder](../Data/Scripts/Thermodynamics/Core/Model/BlockSurfaceBuilder.cs) from the
+> definition's airtightness table and mount points, and rotated into grid space per placement.
+> The grid-wide map is [SurfaceMap](../Data/Scripts/Thermodynamics/Core/Surfaces/SurfaceMap.cs),
+> which derives every neighbour bit rather than writing it twice, and the flood fill is
+> [RoomMapper](../Data/Scripts/Thermodynamics/Core/Surfaces/RoomMapper.cs), which publishes a
+> finished map rather than letting readers see a half-filled one. Exposure is counted per block
+> face by `SurfaceMap.GetExposedFaces`, walking a block's boundary rather than its volume.
+
+The mapper still runs in two stages: per-block **surface flags**, and an incremental **flood
+fill** budgeted per frame until it has classified the whole grid.
 
 ## Direction indices
 

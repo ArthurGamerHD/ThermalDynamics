@@ -247,7 +247,7 @@ namespace Thermodynamics.Core
             links.Clear();
             for (int i = 0; i < nodes.Count; i++)
             {
-                nodes[i].LinkIndices.Clear();
+                nodes[i].LinkCount = 0;
             }
 
             IBlockAdjacency adjacency = Adjacency;
@@ -277,10 +277,9 @@ namespace Thermodynamics.Core
                         grid.GridSize, a.Block, b.Block, contacts, Face.Axis(face));
                     if (conductance <= 0f) continue;
 
-                    int linkIndex = links.Count;
                     links.Add(new ThermalLink(a.Index, b.Index, conductance, contacts));
-                    a.LinkIndices.Add(linkIndex);
-                    b.LinkIndices.Add(linkIndex);
+                    a.LinkCount++;
+                    b.LinkCount++;
                 }
             }
 

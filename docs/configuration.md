@@ -1,101 +1,110 @@
 # Configuration
 
-All runtime settings live in [Settings.cs](../Data/Scripts/Thermodynamics/Settings.cs).
+All runtime settings live in [Settings.cs](../Data/Scripts/Thermodynamics/Settings.cs), and are
+read from `ThermodynamicsConfig.cfg` in world storage on the server at session start. The file
+is written with defaults the first time a world loads, and regenerated when `Version` does not
+match — so an old config is replaced rather than partially applied.
 
-> **Important:** `Settings.Load()` and `Settings.Save()` are implemented but **never called**.
-> The only place `Settings.Instance` is assigned is `ThermalGrid.Init`, which assigns
-> `Settings.GetDefaults()`. The world-storage file `ThermodynamicsConfig.cfg` is therefore
-> never read or written, and editing it has no effect. To change a setting today you edit the
-> defaults in `GetDefaults()` and rebuild. Wiring the loader into `Session.Init` is tracked in
-> [known-issues.md](known-issues.md).
+Settings are converted once into the model's own `ThermalSettings`
+([Core/Settings/ThermalSettings.cs](../Data/Scripts/Thermodynamics/Core/Settings/ThermalSettings.cs)),
+which every grid's solver holds a reference to.
 
 ## Settings reference
 
 | Setting | Default | Effect |
 | --- | --- | --- |
-| `Version` | 1 | Config schema version. `Load()` discards and regenerates the file when this does not match. |
+| `Version` | 2 | Config schema version. The file is discarded and regenerated when this does not match. |
 | `EnableEnvironment` | `true` | Master switch for radiation and convection. Off = blocks only exchange heat with each other and their own generation. |
 | `EnableSolarHeat` | `true` | Solar gain and the sun occlusion raycast. |
 | `EnablePlanets` | `true` | Planet climate. Off = ambient is always `VacuumTemperature`, even at sea level. |
+| `EnableFriction` | `true` | Aerodynamic heating at speed in atmosphere. |
 | `EnableDamage` | `true` | Whether exceeding `CriticalTemperature` damages blocks. |
-| `Frequency` | 4 | Cell updates per simulated second. Also sets `TimeScaleRatio = 1/Frequency`. Clamped to `≥ 1`. |
-| `SimulationSpeed` | 1 | Multiplier on how fast heat evolves relative to real time, applied by running *more* updates rather than by changing the step size. |
+| `EnableCoolantLoops` | `true` | Coolant loop heat transport. |
+| `ClampConductionOvershoot` | `true` | Limits each conduction exchange to the energy that equalises the pair, so a node can never overshoot what it is exchanging with. Off reproduces the unbounded behaviour of the original solver. |
+| `DamageIsPerSecond` | `true` | Overheat damage is `(T − critical) × CriticalTemperatureScaler` per second. Off applies it per solver step, which makes damage scale with `Frequency` — the original behaviour. |
+| `Frequency` | 4 | Solver steps per simulated second. The integration step is `1/Frequency`. Clamped to `≥ 1`. |
+| `SimulationSpeed` | 1 | Multiplier on how fast heat evolves relative to real time, applied by running *more* steps rather than by lengthening the step. |
 | `VacuumTemperature` | 2.7 K | Ambient in space; also the floor for planetary ambient. |
 | `SolarEnergy` | 1000 W/m² | Solar irradiance before atmospheric decay. |
 | `FrictionAtSpeedsAbove` | 50 m/s | Relative airspeed at which aerodynamic heating begins. |
+| `FrictionScale` | 0.001 | Coefficient on the v³ aerodynamic heating term. |
+| `SolarOcclusionInterval` | 12 | Solver steps between solar occlusion raycasts. The raycast is the most expensive thing a grid does and the sun moves slowly, so the answer is reused in between. |
+| `EnableTelemetry` | `false` | Session-long data collection. See [telemetry.md](telemetry.md). |
+| `TelemetrySampleStride` | 4 | Fraction of each grid's blocks sampled per step for the wide per-definition statistics — `1/n`. Every block is still seen once per `n` steps. |
 
 ### Debug toggles
 
 | Setting | Default | Draws |
 | --- | --- | --- |
-| `DebugTextOnScreen` | **`true`** | Notification spam for the block under the crosshair: temperature, deltas, thermal constants, solar intensity, room counts, raw surface bits. Client-side. |
-| `DebugTemperatureBlockColors` | **`true`** | **Recolours every block on every grid by temperature.** Server-side, and it writes real block colours via `ColorBlocks`. |
-| `DebugSolarRadiationBlockColors` | `false` | Recolours blocks by solar intensity (`0 … 3`, blue at 0.5, red at 1.5). |
+| `DebugTextOnScreen` | `true` | The crosshair readout: temperature, per-mechanism watts, block constants, environment, grid totals, raw surface bits. Client-side. Switching it on also makes the solver record per-mechanism watts, which is not free. |
+| `DebugTemperatureBlockColors` | `true` | **Recolours every block on every grid by temperature.** Server-side, and it writes real block colours via `ColorBlocks`. |
+| `DebugSolarRadiationBlockColors` | `false` | Recolours blocks by solar watts. |
 | `DebugExposedSurfaceBlockColors` | `false` | Recolours blocks by exposed face count (`0 … 6`). |
-| `DebugFrictionColors` | `false` | Recolours blocks by friction heating in Watts (`0 … 20000`). |
-| `DebugSolarRaycast` | **`true`** | Draws the sun ray from each grid — white when lit, red when occluded — plus green/blue segments over occluding voxels and grids. Client-side, skipped on dedicated servers. |
-| `DebugWindRaycast` | **`true`** | Draws the relative wind vector from each grid. |
+| `DebugFrictionColors` | `false` | Recolours blocks by friction watts. |
+| `DebugSolarRaycast` | `true` | Draws the sun ray from each grid — white when lit, red when occluded. Client-side, skipped on dedicated servers. |
+| `DebugWindRaycast` | `true` | Retained for the wind vector; the ray itself is drawn from the environment sample. |
 | `DebugTextureColors` | `true` (compile-time `const`) | Unused. |
 
-The block-colouring modes are mutually exclusive in practice — they all write to the same
-`ColorMaskHSV`, and the last one evaluated per update wins.
+The block-colouring modes are mutually exclusive: the colouring pass picks the first one that is
+switched on, in the order above.
 
-> The four toggles defaulting to `true` mean a fresh install is in full debug presentation:
-> coloured grids, on-screen text and drawn rays. For a play session, set
-> `DebugTextOnScreen`, `DebugTemperatureBlockColors`, `DebugSolarRaycast` and
-> `DebugWindRaycast` to `false` in `GetDefaults()`.
+> The toggles defaulting to `true` mean a fresh install is in debug presentation: coloured grids,
+> on-screen text and drawn rays. For a play session set `DebugTextOnScreen`,
+> `DebugTemperatureBlockColors` and `DebugSolarRaycast` to `false`.
 >
 > Be aware that `DebugTemperatureBlockColors` permanently overwrites players' paint jobs — it
 > calls `MyCubeGrid.ColorBlocks`, it is not an overlay.
 
 ## Time scaling
 
-Two values control the relationship between real time and simulated time:
-
 ```
-TimeScaleRatio = 1 / Frequency          // simulated seconds per cell update
-PerSecond      = Frequency × SimulationSpeed
+StepSeconds    = 1 / Frequency              // simulated seconds advanced by one solver step
+StepsPerSecond = Frequency × SimulationSpeed
 ```
 
-`TimeScaleRatio` is baked into `C`, `ThermalMassInv` and the loop constants, so every Watt→Kelvin
-conversion already accounts for the step size. `SimulationSpeed` is deliberately *not* baked
-into the step: it increases the number of updates scheduled per second instead
-(`GetSimulationQuota`), which keeps each individual step stable while making heat evolve faster.
+`SimulationSpeed` is deliberately not baked into the step length: it increases how many steps are
+scheduled per real second, which keeps each individual step as accurate as it was while making
+heat evolve faster.
 
-`PerSecond` is used by the HUD to convert a per-update delta into K/s for the "Peak dT" readout.
+Raising `Frequency` gives a finer integration at higher CPU cost. Lowering it is cheaper, and is
+safe in a way it was not before: the solver picks its own substep count from the stiffest node on
+the grid, and `ClampConductionOvershoot` bounds any exchange that substepping alone cannot make
+accurate. When a grid is stiff enough to hit the substep cap, the telemetry report says so —
+"steps clamped by substep cap".
 
-Raising `Frequency` gives a finer, more accurate integration at higher CPU cost; lowering it is
-cheaper but can overshoot on blocks with very small thermal mass, since the explicit integrator
-has no stability clamp beyond `Temperature = max(0, Temperature)`.
-
-## The (currently inactive) config file
-
-`Load()` expects `ThermodynamicsConfig.cfg` in world storage, serialised as XML from the
-`Settings` class. Should the loader be wired up, the file would look like:
+## The config file
 
 ```xml
 <Settings>
-  <Version>1</Version>
+  <Version>2</Version>
   <DebugTextOnScreen>false</DebugTextOnScreen>
   <DebugTemperatureBlockColors>false</DebugTemperatureBlockColors>
   <DebugSolarRadiationBlockColors>false</DebugSolarRadiationBlockColors>
   <DebugSolarRaycast>false</DebugSolarRaycast>
   <DebugExposedSurfaceBlockColors>false</DebugExposedSurfaceBlockColors>
   <DebugWindRaycast>false</DebugWindRaycast>
+  <DebugFrictionColors>false</DebugFrictionColors>
   <EnableEnvironment>true</EnableEnvironment>
   <EnableSolarHeat>true</EnableSolarHeat>
   <EnablePlanets>true</EnablePlanets>
+  <EnableFriction>true</EnableFriction>
   <EnableDamage>true</EnableDamage>
+  <EnableCoolantLoops>true</EnableCoolantLoops>
+  <ClampConductionOvershoot>true</ClampConductionOvershoot>
+  <DamageIsPerSecond>true</DamageIsPerSecond>
   <Frequency>4</Frequency>
   <SimulationSpeed>1</SimulationSpeed>
   <VacuumTemperature>2.7</VacuumTemperature>
   <SolarEnergy>1000</SolarEnergy>
   <FrictionAtSpeedsAbove>50</FrictionAtSpeedsAbove>
-  <DebugFrictionColors>false</DebugFrictionColors>
+  <FrictionScale>0.001</FrictionScale>
+  <SolarOcclusionInterval>12</SolarOcclusionInterval>
+  <EnableTelemetry>false</EnableTelemetry>
+  <TelemetrySampleStride>4</TelemetrySampleStride>
 </Settings>
 ```
 
-`TimeScaleRatio` and `PerSecond` are `[XmlIgnore]` — they are derived in `Init()` after load.
+`TimeScaleRatio` and `PerSecond` are `[XmlIgnore]` — they are derived after load.
 
 Block tuning (conductivity, specific heat, critical temperatures) is **not** in this file. It
 lives in the definition XML — see [definitions.md](definitions.md).

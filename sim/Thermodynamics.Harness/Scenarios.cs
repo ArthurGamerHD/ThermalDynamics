@@ -242,7 +242,7 @@ namespace Thermodynamics.Harness
             return Result("sealed-room", runner,
                 "2 MW reactor sealed inside a 3x3x3 hull. Reactor exposed faces: "
                 + interior.TotalExposedFaces + " (expected 0), conduction links: "
-                + interior.LinkIndices.Count + ", shell exposed faces: "
+                + interior.LinkCount + ", shell exposed faces: "
                 + shell.TotalExposedFaces + ". Reactor "
                 + C(runner.Final.Tracked["interior-reactor"]) + ", shell "
                 + C(runner.Final.Tracked["shell"]) + ".");

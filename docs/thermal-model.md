@@ -1,5 +1,14 @@
 # The thermal model
 
+> **Status.** This document describes the equations the *legacy* per-cell implementation
+> evaluated, and is kept because it is the only written record of them. The live mod now runs
+> `Data/Scripts/Thermodynamics/Core`, whose equations differ deliberately: one symmetric
+> conductance per joint instead of two disagreeing ones, contact area and path length from block
+> bounds, an order-independent watt accumulation, and substepping chosen from the stiffest node.
+> `sim/Thermodynamics.Tests/LegacyFormulas.cs` holds the old formulas verbatim, and several
+> tests compare the two so the differences stay pinned down rather than remembered.
+> See [model-redesign.md](model-redesign.md) for why each one changed.
+
 This is a description of what the code actually computes, not of ideal thermodynamics. Where
 the implementation deviates from textbook physics — deliberately or otherwise — that is
 called out.
