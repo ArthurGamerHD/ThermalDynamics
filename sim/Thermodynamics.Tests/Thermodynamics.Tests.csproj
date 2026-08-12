@@ -31,6 +31,15 @@
     <Compile Include="$(TelemetrySourceRoot)TelemetryFormat.cs" LinkBase="Telemetry" />
   </ItemGroup>
 
+  <!--
+    Same arrangement for the game adapter: most of it reads Sandbox.* types, but the coolant
+    plumbing table is a pure mapping from subtype name and block size onto a CoolantShape, and
+    it is exactly the sort of table that goes wrong silently. Linked, not copied.
+  -->
+  <ItemGroup>
+    <Compile Include="$(GameSourceRoot)ThermalCoolantShapes.cs" LinkBase="Game" />
+  </ItemGroup>
+
   <ItemGroup>
     <Reference Include="VRage.Math">
       <HintPath>$(SEBinPath)/VRage.Math.dll</HintPath>

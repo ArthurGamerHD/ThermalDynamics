@@ -29,6 +29,7 @@
     <NoWarn>$(NoWarn);MSB3277;NU1701;CS1591</NoWarn>
     <CoreSourceRoot>$(MSBuildThisFileDirectory)../Data/Scripts/Thermodynamics/Core/</CoreSourceRoot>
     <TelemetrySourceRoot>$(MSBuildThisFileDirectory)../Data/Scripts/Thermodynamics/Telemetry/</TelemetrySourceRoot>
+    <GameSourceRoot>$(MSBuildThisFileDirectory)../Data/Scripts/Thermodynamics/Game/</GameSourceRoot>
   </PropertyGroup>
 
   <Target Name="VerifySEBinPath" BeforeTargets="ResolveAssemblyReferences" Condition="'$(SEBinPath)' == ''">
