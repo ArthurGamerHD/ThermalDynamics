@@ -36,7 +36,7 @@ namespace Thermodynamics
         /// The data collection bucket for this block's definition, resolved once at construction
         /// so the per-update path never does a dictionary lookup. Null when telemetry is off.
         /// </summary>
-        public readonly BlockTypeTelemetry Stats;
+        public BlockTypeTelemetry Stats;
 
         private MyResourceSourceComponent source;
         private MyResourceSinkComponent sink;
@@ -68,6 +68,20 @@ namespace Thermodynamics
             Instance.Mass = Math.Max(0f, block.Mass);
 
             Stats = Telemetry.GetBlockType(block.BlockDefinition.Id);
+        }
+
+        /// <summary>
+        /// Re-resolves the per-definition telemetry record. Called when collection is switched
+        /// on or off during a session; a no-op otherwise.
+        /// </summary>
+        public void RefreshStats()
+        {
+            // Records outlive a toggle, so a block that has already introduced itself to one
+            // must not do it again — its placement would be counted once per switch.
+            if (Stats != null) return;
+
+            Stats = Telemetry.GetBlockType(Block.BlockDefinition.Id);
+            if (Stats != null) Stats.OnPlaced(this);
         }
 
         public float Temperature
@@ -281,7 +295,7 @@ namespace Thermodynamics
                 if (Instance.IsSealedByDoorState == sealed_) return;
 
                 Instance.IsSealedByDoorState = sealed_;
-                Grid.RefreshBlock(this);
+                Grid.RefreshBlockSealing(this);
 
                 if (Grid.Stats != null) Grid.Stats.DoorStateChanges++;
             }

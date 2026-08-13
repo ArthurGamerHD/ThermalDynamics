@@ -45,7 +45,7 @@ namespace Thermodynamics
             ThermalGrid topGrid = mechanical.Top.CubeGrid.GameLogic.GetAs<ThermalGrid>();
             if (topGrid == null) return;
 
-            ThermalBlock top = topGrid.Get(mechanical.Top.Position);
+            ThermalBlock top = topGrid.Get(mechanical.Top.SlimBlock.Min);
             if (top == null || top == baseBlock) return;
 
             float lattice = Math.Min(

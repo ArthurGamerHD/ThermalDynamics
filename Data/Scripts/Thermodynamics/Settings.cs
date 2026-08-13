@@ -258,6 +258,41 @@ namespace Thermodynamics
 			return _core;
 		}
 
+		/// <summary>
+		/// The active settings, loading the world's config file on first use.
+		///
+		/// Load order is not something a mod controls: a grid's game logic can initialise before
+		/// the session component does. Whoever asks first triggers the read, so the config file
+		/// cannot be bypassed by a world whose grids happen to load early — which is what
+		/// happened when each caller installed defaults for itself.
+		/// </summary>
+		public static Settings EnsureLoaded()
+		{
+			if (Instance != null) return Instance;
+
+			Instance = CanReadWorldStorage() ? Load() : GetDefaults();
+			return Instance;
+		}
+
+		/// <summary>
+		/// Whether the config file can be read yet. Clients read the server's settings over the
+		/// network rather than their own file, and very early in a session the utilities are not
+		/// there at all.
+		/// </summary>
+		private static bool CanReadWorldStorage()
+		{
+			try
+			{
+				return MyAPIGateway.Utilities != null
+					&& MyAPIGateway.Session != null
+					&& MyAPIGateway.Session.IsServer;
+			}
+			catch
+			{
+				return false;
+			}
+		}
+
 		public static Settings Load()
 		{
 			Settings defaults = GetDefaults();

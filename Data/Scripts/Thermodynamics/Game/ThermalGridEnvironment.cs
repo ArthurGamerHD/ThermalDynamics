@@ -48,6 +48,17 @@ namespace Thermodynamics
             get { return Simulation.Solver.Environment; }
         }
 
+        /// <summary>
+        /// Drops the session-wide environment caches. Planet climate is keyed by entity id and
+        /// the sun by frame number, and neither means anything in the next world.
+        /// </summary>
+        public static void ResetEnvironmentCaches()
+        {
+            PlanetProperties.Clear();
+            OverlapResults.Clear();
+            sunDirectionFrame = -1;
+        }
+
         /// <summary>Reads the world for this grid, once per step.</summary>
         private EnvironmentSample Sample()
         {

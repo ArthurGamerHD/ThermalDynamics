@@ -75,10 +75,35 @@ namespace Thermodynamics.Core
             }
         }
 
-        /// <summary>Blocks damaged by heat during the last solver step.</summary>
+        /// <summary>
+        /// Blocks damaged by heat during the last <see cref="Update"/> or
+        /// <see cref="StepExact"/>, across every step it ran.
+        ///
+        /// The solver clears its own list each step, so a host reading that directly would miss
+        /// the damage from all but the final step of a multi-step update — which is exactly what
+        /// happens whenever the simulation is running faster than the host polls.
+        /// </summary>
         public IList<OverheatEvent> Overheats
         {
-            get { return solver.Overheats; }
+            get { return overheats; }
+        }
+
+        private readonly List<OverheatEvent> overheats = new List<OverheatEvent>();
+
+        private void RunSteps(int steps, ref EnvironmentState state)
+        {
+            overheats.Clear();
+
+            for (int i = 0; i < steps; i++)
+            {
+                solver.Step(settings.StepSeconds, state);
+
+                IList<OverheatEvent> stepOverheats = solver.Overheats;
+                for (int o = 0; o < stepOverheats.Count; o++)
+                {
+                    overheats.Add(stepOverheats[o]);
+                }
+            }
         }
 
         // ---- topology ----------------------------------------------------------------------
@@ -117,6 +142,22 @@ namespace Thermodynamics.Core
             surfaces.RemoveBlock(block);
             surfaces.AddBlock(block);
             MarkTopologyDirty();
+        }
+
+        /// <summary>
+        /// Call after a change that alters only what a block <em>seals</em> — a door opening or
+        /// closing. Conduction and coolant plumbing do not depend on sealing, so this refreshes
+        /// the surface map and restarts the room fill without rebuilding the conduction graph or
+        /// re-tracing the loops.
+        /// </summary>
+        public void RefreshBlockSealing(BlockInstance block)
+        {
+            if (block == null) return;
+
+            block.RefreshSurfaces();
+            surfaces.RemoveBlock(block);
+            surfaces.AddBlock(block);
+            rooms.RequestRestart(grid);
         }
 
         /// <summary>
@@ -222,10 +263,7 @@ namespace Thermodynamics.Core
 
             Begin(SimulationPhase.Solver);
             EnvironmentState state = EnvironmentSolver.Solve(settings, planet, sample);
-            for (int i = 0; i < steps; i++)
-            {
-                solver.Step(settings.StepSeconds, state);
-            }
+            RunSteps(steps, ref state);
             End(SimulationPhase.Solver);
         }
 
@@ -236,10 +274,7 @@ namespace Thermodynamics.Core
         public void StepExact(int steps, EnvironmentSample sample)
         {
             EnvironmentState state = EnvironmentSolver.Solve(settings, planet, sample);
-            for (int i = 0; i < steps; i++)
-            {
-                solver.Step(settings.StepSeconds, state);
-            }
+            RunSteps(steps, ref state);
         }
 
         // ---- persistence -------------------------------------------------------------------

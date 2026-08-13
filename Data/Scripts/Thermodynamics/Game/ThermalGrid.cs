@@ -48,7 +48,14 @@ namespace Thermodynamics
         /// </summary>
         public GridTelemetry Stats;
 
-        /// <summary>Placed blocks by their grid position, one entry per block, not per cell.</summary>
+        /// <summary>
+        /// Placed blocks by their minimum cell, one entry per block, not per cell.
+        ///
+        /// Keyed on <c>Min</c> rather than the game's <c>SlimBlock.Position</c> because that is
+        /// the identity the model uses (<see cref="BlockInstance.Position"/>). The two agree for
+        /// a 1x1x1 block and differ for every larger one, so keying on Position silently loses
+        /// exactly the blocks most likely to overheat.
+        /// </summary>
         private readonly Dictionary<Vector3I, ThermalBlock> blocks =
             new Dictionary<Vector3I, ThermalBlock>(Vector3I.Comparer);
 
@@ -104,10 +111,7 @@ namespace Thermodynamics
         {
             base.Init(objectBuilder);
 
-            if (Settings.Instance == null)
-            {
-                Settings.Instance = Settings.GetDefaults();
-            }
+            Settings.EnsureLoaded();
 
             Grid = Entity as MyCubeGrid;
             if (Grid == null)
@@ -228,7 +232,7 @@ namespace Thermodynamics
                 return;
             }
 
-            if (blocks.ContainsKey(block.Position)) return;
+            if (blocks.ContainsKey(block.Min)) return;
 
             try
             {
@@ -240,10 +244,14 @@ namespace Thermodynamics
                 }
 
                 ThermalBlock bound = new ThermalBlock(this, block, model);
-                blocks.Add(block.Position, bound);
 
-                float temperature = StartingTemperature(block.Position);
+                // The model owns the layout and can refuse a block — a cell already occupied
+                // means the two views have diverged. Registering the binding only after it has
+                // accepted keeps this side from holding a block the simulation does not have.
+                float temperature = StartingTemperature(block.Min);
                 bound.Node = Simulation.AddBlock(bound.Instance, temperature);
+
+                blocks.Add(block.Min, bound);
                 bound.Attach();
 
                 if (Stats != null) Stats.BlocksAdded++;
@@ -282,19 +290,19 @@ namespace Thermodynamics
             }
 
             ThermalBlock bound;
-            if (!blocks.TryGetValue(block.Position, out bound)) return;
+            if (!blocks.TryGetValue(block.Min, out bound)) return;
 
             try
             {
                 if (bound.Node != null)
                 {
                     if (RecentlyRemoved.Count >= MaxRecentlyRemoved) RecentlyRemoved.Clear();
-                    RecentlyRemoved[block.Position] = bound.Node.Temperature;
+                    RecentlyRemoved[block.Min] = bound.Node.Temperature;
                 }
 
                 bound.Detach();
                 Simulation.RemoveBlock(bound.Instance);
-                blocks.Remove(block.Position);
+                blocks.Remove(block.Min);
 
                 if (Stats != null) Stats.BlocksRemoved++;
                 if (bound.Stats != null) bound.Stats.OnRemoved();
@@ -306,8 +314,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Refreshes the simulation's view of a block after something changed about the block
-        /// itself: a door opening, construction finishing, damage taken.
+        /// Refreshes the simulation's view of a block after its geometry or mounting changed.
+        /// Rebuilds the conduction graph and the coolant loops with it.
         /// </summary>
         public void RefreshBlock(ThermalBlock bound)
         {
@@ -317,6 +325,28 @@ namespace Thermodynamics
             if (Stats != null) Stats.SurfaceRecalcs++;
         }
 
+        /// <summary>
+        /// Refreshes a block whose <em>sealing</em> changed and nothing else — a door. Doors
+        /// cycle often, and neither conduction nor coolant plumbing depends on whether a face
+        /// seals, so this deliberately does not touch either.
+        /// </summary>
+        public void RefreshBlockSealing(ThermalBlock bound)
+        {
+            if (bound == null || bound.Instance == null) return;
+
+            Simulation.RefreshBlockSealing(bound.Instance);
+            if (Stats != null) Stats.SurfaceRecalcs++;
+        }
+
+        /// <summary>
+        /// Carries temperatures onto a section that has just been cut off.
+        ///
+        /// The blocks were removed from the parent this frame, so the parent holds their heat in
+        /// <see cref="RecentlyRemoved"/>. Which of the two events the game raises first is not
+        /// something a mod controls, so both orderings are handled: a block the child already
+        /// has is set directly, and one it has not built yet is handed over for
+        /// <see cref="StartingTemperature"/> to pick up when it arrives.
+        /// </summary>
         private void GridSplit(MyCubeGrid parent, MyCubeGrid child)
         {
             ThermalGrid a = parent.GameLogic.GetAs<ThermalGrid>();
@@ -326,18 +356,16 @@ namespace Thermodynamics
             if (a.Stats != null) a.Stats.Splits++;
             if (b.Stats != null) b.Stats.Splits++;
 
-            // The child's blocks were removed from the parent this frame, so the parent still
-            // holds their temperatures.
-            foreach (KeyValuePair<Vector3I, ThermalBlock> entry in b.blocks)
-            {
-                float carried;
-                if (!a.RecentlyRemoved.TryGetValue(entry.Key, out carried)) continue;
-
-                if (entry.Value.Node != null) entry.Value.Node.Temperature = carried;
-                a.RecentlyRemoved.Remove(entry.Key);
-            }
+            a.HandOver(b);
         }
 
+        /// <summary>
+        /// Carries temperatures off a grid that is being absorbed into another.
+        ///
+        /// The two grids have different cell coordinates, so positions are mapped through world
+        /// space rather than assumed to match — they only would if the merge happened to leave
+        /// both origins aligned.
+        /// </summary>
         private void GridMerge(MyCubeGrid survivor, MyCubeGrid absorbed)
         {
             ThermalGrid a = survivor.GameLogic.GetAs<ThermalGrid>();
@@ -350,12 +378,62 @@ namespace Thermodynamics
             foreach (KeyValuePair<Vector3I, ThermalBlock> entry in b.blocks)
             {
                 if (entry.Value.Node == null) continue;
-
-                ThermalBlock target;
-                if (!a.blocks.TryGetValue(entry.Key, out target) || target.Node == null) continue;
-
-                target.Node.Temperature = entry.Value.Node.Temperature;
+                a.Receive(MapCell(absorbed, survivor, entry.Key), entry.Value.Node.Temperature);
             }
+
+            b.HandOver(a);
+        }
+
+        /// <summary>
+        /// Passes this grid's remembered removals to another grid, mapping positions into its
+        /// coordinates. Used by both split and merge; entries that neither grid claims are
+        /// dropped with the rest of the map.
+        /// </summary>
+        private void HandOver(ThermalGrid other)
+        {
+            if (other == null || RecentlyRemoved.Count == 0) return;
+
+            bool sameFrame = Grid == other.Grid;
+
+            List<Vector3I> handled = new List<Vector3I>();
+            foreach (KeyValuePair<Vector3I, float> entry in RecentlyRemoved)
+            {
+                Vector3I target = sameFrame ? entry.Key : MapCell(Grid, other.Grid, entry.Key);
+                if (other.Receive(target, entry.Value)) handled.Add(target);
+            }
+
+            for (int i = 0; i < handled.Count; i++)
+            {
+                RecentlyRemoved.Remove(handled[i]);
+            }
+        }
+
+        /// <summary>
+        /// Applies a carried temperature: onto the block at that position if it exists, or into
+        /// the remembered-removal map for whenever it is built.
+        /// </summary>
+        /// <returns>True when a live block took it.</returns>
+        private bool Receive(Vector3I min, float temperature)
+        {
+            ThermalBlock bound = Get(min);
+            if (bound != null && bound.Node != null)
+            {
+                bound.Node.Temperature = temperature;
+                return true;
+            }
+
+            if (RecentlyRemoved.Count < MaxRecentlyRemoved)
+            {
+                RecentlyRemoved[min] = temperature;
+            }
+            return false;
+        }
+
+        /// <summary>Translates a cell from one grid's coordinates into another's, via world space.</summary>
+        private static Vector3I MapCell(MyCubeGrid from, MyCubeGrid to, Vector3I cell)
+        {
+            if (from == to) return cell;
+            return to.WorldToGridInteger(from.GridIntegerToWorld(cell));
         }
 
         // ---- lookups -----------------------------------------------------------------------
@@ -376,13 +454,28 @@ namespace Thermodynamics
 
             if (Stats == null) Stats = Telemetry.RegisterGrid(this);
             if (Stats != null) Simulation.Profiler = Stats.Profiler;
+
+            // A block resolves its per-definition record once, when it is placed. Blocks placed
+            // while collection was off hold none, so switching it on has to hand them one or the
+            // report silently omits every block that predates the switch.
+            foreach (ThermalBlock bound in blocks.Values)
+            {
+                bound.RefreshStats();
+            }
         }
 
-        /// <summary>The bound block at a grid position, or null.</summary>
-        public ThermalBlock Get(Vector3I position)
+        /// <summary>
+        /// The bound block whose minimum cell is <paramref name="min"/>, or null.
+        ///
+        /// This is the model's own key — <see cref="BlockInstance.Position"/> and
+        /// <see cref="OverheatEvent"/> both speak it. Callers holding a game block should use
+        /// <c>block.Min</c>, and callers holding an arbitrary cell should use
+        /// <see cref="GetAtCell"/>.
+        /// </summary>
+        public ThermalBlock Get(Vector3I min)
         {
             ThermalBlock bound;
-            return blocks.TryGetValue(position, out bound) ? bound : null;
+            return blocks.TryGetValue(min, out bound) ? bound : null;
         }
 
         /// <summary>

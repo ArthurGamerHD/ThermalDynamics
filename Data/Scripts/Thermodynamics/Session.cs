@@ -45,13 +45,9 @@ namespace Thermodynamics
             NetworkAPI.LogNetworkTraffic = true;
 
             // The config file is what turns telemetry on for a test session and off again for
-            // ordinary play, so it has to be read before anything reads Settings.Instance.
-            if (Settings.Instance == null)
-            {
-                Settings.Instance = MyAPIGateway.Session != null && MyAPIGateway.Session.IsServer
-                    ? Settings.Load()
-                    : Settings.GetDefaults();
-            }
+            // ordinary play. Grids may have initialised before this ran, so the load is shared
+            // rather than done here: whoever touches the settings first performs it.
+            Settings.EnsureLoaded();
 
             Telemetry.Start();
 
@@ -69,6 +65,7 @@ namespace Thermodynamics
             ThermalBlockCatalog.Clear();
             ThermalCoolantShapes.Clear();
             ThermalBridges.Clear();
+            ThermalGrid.ResetEnvironmentCaches();
 
             if (_commandRegistered && MyAPIGateway.Utilities != null)
             {
