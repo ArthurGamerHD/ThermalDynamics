@@ -114,6 +114,47 @@ namespace Thermodynamics.Tests
                 "a faster thermal clock must have cooled further: " + shipped + " vs " + physical);
         }
 
+        /// <summary>
+        /// The solver benchmark only means anything while it is measuring the loop it claims to.
+        ///
+        /// Two ways it can quietly stop: the grid settles, so every link joins two cells at the
+        /// same temperature and the conduction loop skips them all — which is what the older
+        /// <c>perf</c> scenario measures — or the grid stops being stiff enough to substep, so
+        /// the per-substep cost never appears. Both leave a plausible-looking number behind.
+        /// </summary>
+        [Fact]
+        public void TheSolverBenchmarkMeasuresConductionAndNotTheSkipPath()
+        {
+            ScenarioResult result = Scenarios.Run("solver");
+            ThermalSimulation simulation = result.Runner.Simulation;
+
+            Assert.Contains("ns per link visit", result.Summary);
+
+            Assert.True(simulation.Solver.Nodes.Count > 30000,
+                "the benchmark has to stay at stress-test scale: " + simulation.Solver.Nodes.Count);
+            Assert.True(simulation.Solver.Links.Count > simulation.Solver.Nodes.Count,
+                "a ship has more joints than blocks");
+
+            // The longer window has to substep, or it is measuring the same thing as the short
+            // one and the two figures carry no information apart.
+            Assert.DoesNotContain("A step six times longer: 0.0000 ms", result.Summary);
+            Assert.Matches(@"A step six times longer: [\d.]+ ms per step at ([2-9]|\d\d)", result.Summary);
+
+            // And the grid is genuinely uneven, so links are not being skipped wholesale.
+            IList<ThermalNode> nodes = simulation.Solver.Nodes;
+            float coldest = float.MaxValue;
+            float hottest = float.MinValue;
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                if (nodes[i].Temperature < coldest) coldest = nodes[i].Temperature;
+                if (nodes[i].Temperature > hottest) hottest = nodes[i].Temperature;
+            }
+
+            Assert.True(hottest - coldest > 10f,
+                "the benchmark grid has settled flat, so it is timing the skip path: "
+                + coldest + " K to " + hottest + " K");
+        }
+
         /// <summary>Pulls the n-th "&lt;number&gt; C" out of a summary line.</summary>
         private static float ExtractCelsius(string summary, int index)
         {

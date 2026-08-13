@@ -111,6 +111,54 @@ namespace Thermodynamics
             sb.Append("  ").Append(name.PadRight(30)).Append(value).Append('\n');
         }
 
+        /// <summary>
+        /// What the room mapper made of the grid, and whether it agrees with the grid.
+        ///
+        /// The counts on their own answer "why is my sealed room not a room": every cell of the
+        /// padded search box is external, structure or room, so a total that leaves block cells on
+        /// the external side names the failure without anyone having to reason about flood fills.
+        /// </summary>
+        private static void WriteRoomMapping(StringBuilder sb, GridTelemetry g)
+        {
+            sb.Append("\n    room mapping (min / mean / max)\n");
+            Field(sb, "  exterior cells", g.ExternalCells.Format("n0"));
+            Field(sb, "  structure cells", g.SolidCells.Format("n0"));
+            Field(sb, "  room cells", g.RoomCells.Format("n0"));
+            Field(sb, "  block cells left outdoors", g.OpenBlockCells.Format("n0"));
+            Field(sb, "  sealed structure read as open", g.LeakedCells.Format("n0"));
+
+            if (!g.HasAudit) return;
+
+            Core.RoomAudit audit = g.LastAudit;
+            Field(sb, "  last pass: search box", audit.SearchVolume.ToString("n0") + " cells");
+            Field(sb, "  last pass: block cells", audit.BlockCells.ToString("n0"));
+            Field(sb, "  last pass: unsealed faces", audit.UnsealedBlockFaces.ToString("n0")
+                + " of " + (audit.BlockCells * Core.Face.Count).ToString("n0"));
+            Field(sb, "  blocks sealing nothing", audit.BlocksSealingNothing.ToString("n0"));
+
+            if (audit.Examples == null || audit.Examples.Count == 0) return;
+
+            sb.Append("\n    block cells the map left outdoors\n");
+            for (int i = 0; i < audit.Examples.Count; i++)
+            {
+                sb.Append("      ").Append(audit.Examples[i]).Append('\n');
+            }
+        }
+
+        /// <summary>Per-face fractions in canonical face order, as "F:1.0 L:1.0 U:0.0 ...".</summary>
+        private static string FaceFractions(float[] byFace)
+        {
+            if (byFace == null) return "-";
+
+            StringBuilder sb = new StringBuilder();
+            for (int face = 0; face < Core.Face.Count && face < byFace.Length; face++)
+            {
+                if (face > 0) sb.Append(' ');
+                sb.Append(Core.Face.Name(face).Substring(0, 1)).Append(':').Append(byFace[face].ToString("n2"));
+            }
+            return sb.ToString();
+        }
+
         private static void WriteHeader(StringBuilder sb, string reason)
         {
             sb.Append("Thermodynamics telemetry report\n");
@@ -401,11 +449,12 @@ namespace Thermodynamics
                 Field(sb, "  grid blocks", g.BlockCount.Format("n0"));
                 Field(sb, "  conduction links", g.NeighborLinks.Format("n0"));
                 Field(sb, "  sealed rooms", g.RoomCount.Format("n0"));
-                Field(sb, "  exterior cells", g.ExternalCells.Format("n0"));
                 Field(sb, "  surface entries", g.SurfaceEntries.Format("n0"));
                 Field(sb, "  coolant loops", g.CoolantLoops.Format("n0"));
                 Field(sb, "  RecentlyRemoved size", g.RecentlyRemovedSize.Format("n0"));
                 Field(sb, "  mapper queue", g.MapperQueueDepth.Format("n0"));
+
+                WriteRoomMapping(sb, g);
 
                 sb.Append("\n    simulation\n");
                 Field(sb, "  simulation steps", g.SimulationSteps.ToString("n0"));
@@ -522,6 +571,13 @@ namespace Thermodynamics
                     Field(sb, "  ConsumerWasteEnergy", d.ConsumerWasteEnergy);
                     Field(sb, "  CriticalTemperature", d.CriticalTemperature);
                     Field(sb, "  CriticalTemperatureScaler", d.CriticalTemperatureScaler);
+                }
+
+                if (t.HasSurfaceProfile)
+                {
+                    Field(sb, "  seals faces", t.FullySealingFaces + " of 6   " + FaceFractions(t.SealFractionByFace));
+                    Field(sb, "  mounts faces", t.MountingFaces + " of 6   " + FaceFractions(t.MountFractionByFace));
+                    Field(sb, "  observed with seal off", t.UnsealedByDoorState.ToString("n0") + " (open door)");
                 }
 
                 Field(sb, "  placed / removed / live", t.Placed + " / " + t.Removed + " / " + t.Live
@@ -641,6 +697,7 @@ namespace Thermodynamics
             StringBuilder sb = new StringBuilder(8 * 1024);
             sb.Append("entity_id,name,grid_size,is_static,closed,lifetime_s,");
             sb.Append("peak_cells,mean_cells,peak_links,peak_rooms,peak_loops,");
+            sb.Append("peak_external_cells,peak_solid_cells,peak_room_cells,max_leaked_cells,max_open_block_cells,");
             sb.Append("simulation_steps,node_updates,sampled_nodes,substeps_mean,clamped_steps,");
             sb.Append("peak_temperature,mean_hottest,critical_max,damage_events,total_damage,");
             sb.Append("ambient_min,ambient_mean,ambient_max,air_density_mean,wind_mean,wind_max,speed_max,");
@@ -667,6 +724,12 @@ namespace Thermodynamics
                 Csv(sb, g.NeighborLinks.SafeMax);
                 Csv(sb, g.RoomCount.SafeMax);
                 Csv(sb, g.CoolantLoops.SafeMax);
+
+                Csv(sb, g.ExternalCells.SafeMax);
+                Csv(sb, g.SolidCells.SafeMax);
+                Csv(sb, g.RoomCells.SafeMax);
+                Csv(sb, g.LeakedCells.SafeMax);
+                Csv(sb, g.OpenBlockCells.SafeMax);
 
                 Csv(sb, g.SimulationSteps);
                 Csv(sb, g.NodeUpdates);

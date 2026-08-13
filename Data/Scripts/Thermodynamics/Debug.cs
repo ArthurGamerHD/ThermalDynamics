@@ -86,6 +86,44 @@ namespace Thermodynamics
 
             MyAPIGateway.Utilities.ShowNotification(
                 "[Surface] " + CellSurface.Describe(simulation.Surfaces.GetState(cell)), 1, "White");
+
+            // Where the room mapper put this cell, and where it put the space on the other side of
+            // each of its faces. A hull block that reads "external" is a cell the flood fill walked
+            // into, which is the whole reason a sealed room can map as no room.
+            RoomMap map = simulation.Rooms.Map;
+            MyAPIGateway.Utilities.ShowNotification(
+                "[Room] cell: " + Classify(map, cell) +
+                " sealed by state: " + (node.Block.IsSealedByDoorState ? "yes" : "no (door open)") +
+                " neighbours: " + Neighbours(map, simulation.Surfaces, cell), 1,
+                map.IsExternal(cell) ? "Red" : "White");
+        }
+
+        /// <summary>How the room map classifies one cell.</summary>
+        private static string Classify(RoomMap map, Vector3I cell)
+        {
+            if (map.IsSolid(cell)) return "structure";
+
+            int room = map.RoomIndexOf(cell);
+            if (room >= 0) return "room " + room;
+
+            return "external";
+        }
+
+        /// <summary>
+        /// The six neighbours, each as face name, classification, and whether the face between
+        /// them seals. An unsealed face out of a hull block is the leak.
+        /// </summary>
+        private static string Neighbours(RoomMap map, SurfaceMap surfaces, Vector3I cell)
+        {
+            string text = "";
+            for (int face = 0; face < Face.Count; face++)
+            {
+                if (text.Length > 0) text += " ";
+                text += Face.Name(face).Substring(0, 1) + ":" +
+                    (surfaces.IsFaceSealed(cell, face) ? "|" : "o") +
+                    Classify(map, cell + Face.Offsets[face]).Substring(0, 1);
+            }
+            return text;
         }
     }
 }

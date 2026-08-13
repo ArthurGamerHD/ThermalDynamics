@@ -31,6 +31,40 @@ namespace Thermodynamics.Core
         /// </summary>
         public int[] LocalSurfaces;
 
+        /// <summary>
+        /// The same bits for a block whose state has stopped it sealing — an open door.
+        ///
+        /// Null for everything else, which is nearly every block: only a block that seals
+        /// differently open than closed needs a second set. A door is not simply "sealed or not":
+        /// the game seals a closed door's walk-through face by door rule, and seals its side
+        /// faces from the definition whether it is open or shut. One flag cannot say that, and a
+        /// flag was what this used to be.
+        /// </summary>
+        public int[] LocalSurfacesWhenOpen;
+
+        /// <summary>
+        /// Surface bits for one local cell in the given sealing state.
+        ///
+        /// A model that describes no open state falls back to sealing nothing while unsealed,
+        /// which is the conservative reading and the one the simulation had before the open set
+        /// existed.
+        /// </summary>
+        public int LocalSurfaceState(Vector3I localCell, bool sealedByState)
+        {
+            int index = LocalCellIndex(localCell);
+
+            if (!sealedByState && LocalSurfacesWhenOpen != null)
+            {
+                return LocalSurfacesWhenOpen[index];
+            }
+
+            int state = LocalSurfaces == null
+                ? (CellSurface.SelfAirtightMask | CellSurface.SelfMountMask)
+                : LocalSurfaces[index];
+
+            return sealedByState ? state : (state & ~CellSurface.SelfAirtightMask);
+        }
+
         /// <summary>Total cells occupied.</summary>
         public int CellCount
         {
@@ -61,12 +95,21 @@ namespace Thermodynamics.Core
             return (localFace >= 0 && localFace < Face.Count) ? localMountFraction[localFace] : 0f;
         }
 
-        /// <summary>Fraction of one local face's cells that seal, 0..1.</summary>
+        /// <summary>Fraction of one local face's cells that seal while the block is sealing, 0..1.</summary>
         public float LocalFaceSealFraction(int localFace)
         {
             EnsureFaceFractions();
             return (localFace >= 0 && localFace < Face.Count) ? localSealFraction[localFace] : 0f;
         }
+
+        /// <summary>The same for the open state — what a door still seals with its side faces.</summary>
+        public float LocalFaceSealFractionWhenOpen(int localFace)
+        {
+            EnsureFaceFractions();
+            return (localFace >= 0 && localFace < Face.Count) ? localOpenSealFraction[localFace] : 0f;
+        }
+
+        private float[] localOpenSealFraction;
 
         private void EnsureFaceFractions()
         {
@@ -74,6 +117,7 @@ namespace Thermodynamics.Core
 
             float[] mount = new float[Face.Count];
             float[] seal = new float[Face.Count];
+            float[] openSeal = new float[Face.Count];
             Vector3I extents = Extents;
 
             for (int face = 0; face < Face.Count; face++)
@@ -81,24 +125,27 @@ namespace Thermodynamics.Core
                 int total = 0;
                 int mounted = 0;
                 int sealed_ = 0;
+                int openSealed = 0;
                 int currentFace = face;
 
                 BoxGeometry.ForEachFaceCell(Vector3I.Zero, extents, face, cell =>
                 {
-                    int state = LocalSurfaces == null
-                        ? (CellSurface.SelfAirtightMask | CellSurface.SelfMountMask)
-                        : LocalSurfaces[LocalCellIndex(cell)];
+                    int state = LocalSurfaceState(cell, true);
+                    int openState = LocalSurfaceState(cell, false);
 
                     total++;
                     if (CellSurface.SelfMount(state, currentFace)) mounted++;
                     if (CellSurface.SelfAirtight(state, currentFace)) sealed_++;
+                    if (CellSurface.SelfAirtight(openState, currentFace)) openSealed++;
                 });
 
                 mount[face] = total == 0 ? 0f : mounted / (float)total;
                 seal[face] = total == 0 ? 0f : sealed_ / (float)total;
+                openSeal[face] = total == 0 ? 0f : openSealed / (float)total;
             }
 
             localSealFraction = seal;
+            localOpenSealFraction = openSeal;
             localMountFraction = mount;   // assigned last: it is the "is cached" flag
         }
 

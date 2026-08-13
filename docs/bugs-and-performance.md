@@ -13,6 +13,117 @@ Severity is about impact on a running game, not on how hard it is to fix.
 
 ---
 
+## Findings from the first field run
+
+Twenty 44,632 cell capital ships plus sixty projections, run to a world close: 741 frames,
+4,802 grid steps, 43.8 million block updates, 12.3 % of real time inside the mod. The report is
+the evidence for everything in this section; the numbers quoted are from it.
+
+The single most useful thing it established is that **block placement is not a main-thread-only
+path**. The game builds pasted and projected grids on worker threads, so everything reachable
+from `ThermalGrid.AddBlock` runs concurrently with itself. Three of the four defects below are
+that one fact, arriving at three different unguarded collections.
+
+### F1. The definition catalog's scratch list was shared across threads — **critical** — *fixed*
+
+442 blocks were lost to `ArgumentOutOfRangeException` thrown out of `List.EnsureCapacity`, inside
+`ThermalBlockCatalog.BuildSurfaces`. That is what a `static List<MountRect>` looks like when two
+worker threads clear and fill it at once. The exception aborted the whole `AddBlock`, so each one
+is a block the simulation never had — silently absent from conduction, radiation and damage for
+the life of the world.
+
+**Fixed** — the mount list is a local, and the model cache is behind a lock: the probe and the
+insert are guarded, the expensive build is not, and a duplicate build races to the same answer
+and discards the loser. Both costs are once per block *type* per session, so neither is on a hot
+path. `BlockSurfaceBuilder.BuildSurfaces` is pure given its own list; *confirmed by*
+`StressFindingsTests.BuildingSurfacesConcurrentlyMatchesTheSingleThreadedAnswer` and
+`BuildingSurfacesDoesNotMutateOrRetainTheCallersMounts`.
+
+### F2. The telemetry registries were shared across threads — **high** — *fixed*
+
+The same cause, twice more. Ten `ArgumentException`s out of `Telemetry.GetBlockType` for a key a
+`TryGetValue` had reported missing one line earlier, and two `NullReferenceException`s raised
+inside `Dictionary.Insert` from `RegisterGrid` — a torn bucket array, not a null key.
+
+**Fixed** — one lock over the grid, block-type and anomaly registries. `Anomaly` is included
+because the adapter's own exception handlers call it from whichever thread threw.
+
+### F3. Reading electric power off a component that has none — **high** — *fixed*
+
+`ThermalBlock.AttachSource` asked every source component for its electricity output. A hydrogen
+tank, an oxygen farm and an ice-fed generator all carry a source component with no electric type
+in it, and the game's by-type accessors index a dictionary rather than probing it, so the call
+threw `KeyNotFoundException` out of `MyResourceSourceComponent.GetTypeIndex`. Being thrown from
+inside `Attach`, it aborted binding — another class of block quietly missing from the simulation.
+
+**Fixed** — `AttachSource` and `AttachSink` check `ResourceTypes` / `AcceptedResources` before
+asking. The subscription is kept either way, because a sink can gain a type after it is built and
+the change event already filters on the resource id.
+
+### F4. A fresh solver's substep estimate was infinity — **medium** — *fixed*
+
+`RequiredSubsteps` is the question a host asks *before* stepping — whether this grid is
+affordable this frame. It read the mirrored node arrays, which only `Step` fills in, so on a
+solver that had never stepped it divided conductance by a thermal mass of zero and answered
+`+Infinity`.
+
+**Fixed** — the public entry point synchronises the state it reads; `Step` calls the private
+form so a step still syncs once. *Confirmed by*
+`StressFindingsTests.SubstepEstimateBeforeTheFirstStepIsUsable`, which previously asserted only
+"not NaN" — the assertion that let this through.
+
+### F5. Cold start reported a 0 K sky — **low** — *fixed*
+
+Every grid reported a minimum ambient of 0.0 K and a minimum solar figure of 0 W, exactly once
+each, on its first sample: the host reads the environment the solver used, and before the first
+step that was a default-constructed state. It dragged the reported mean ambient from 2.700 K to
+2.645 K and made the coldest sky of the session a physical impossibility.
+
+**Fixed** — the solver starts in vacuum at `VacuumTemperature`.
+
+### F6. Rate of change reported one substep instead of the whole step — **medium** — *fixed*
+
+The field ships spent every step at six substeps. `LastDeltaTemperature` was written once per
+*substep*, so it held the last substep's movement, not the step's — while all three of its
+consumers treat it as the step's. The HUD multiplies it by the step rate to display K/s, the
+anomaly classifier recovers the previous temperature by subtracting it, and the per-block-type
+distribution records it. For a decaying exchange the last substep is a fraction of the total, so
+every one of those under-reported by roughly the substep count.
+
+**Fixed** — the temperature at the top of the step is kept, and the reported change is measured
+against it in the same write-back loop that publishes the new temperature. That also removes one
+heap write per node per substep from the innermost loop. *Confirmed by* `SolverReportingTests`.
+
+### F7. Doors never sealed, so no room with one in it was ever a room — **critical** — *fixed*
+
+A field grid of one 3x3x3 armour shell with a single sliding door mapped as **zero sealed rooms**
+for its whole life. Its numbers say why on their own: a padded search box of 150 cells came back
+125 external, and 150 − 125 = 25 is the armour count exactly. The door cell, the reactor and the
+interior were all outdoors.
+
+The cause is that `ThermalBlockCatalog.Seals` read only the definition's pressurisation table.
+That table is derived from mount points that *fully cover* a cell face, and an airtight sliding
+door's mount points along the way through are the 5 % frame either side — so the table marks the
+face not pressurised. The game does not stop there: `MyGridGasSystem.IsAirtightBlock` falls
+through to `IsDoorAirtight`, which seals a closed door by a rule per door family and never
+consults the table. Reading half the rule made every door a hole.
+
+**Fixed** — the adapter now mirrors both halves: the table, then the door rule (sliding doors
+seal local forward, generic airtight doors forward and backward, other doors every face that
+carries no mount point). Two smaller divergences went with it. An explicit `<IsAirTight>false</IsAirTight>`
+now settles the question the way the game settles it, instead of falling through to the table.
+And an open door no longer stops sealing altogether: the model carries a second surface set for
+the open state, so a door keeps the sides it is bolted in by and opens only the way through.
+*Confirmed by* `DoorSealingTests` and `IncrementalRoomTests`, and reproducible offline as the
+`first-room` scenario.
+
+The report gained the diagnostic that would have said this in one line rather than in arithmetic:
+per grid, how the mapper classified every cell of the search box and which blocks it left
+outdoors, and per block definition, how much of each of its six faces seals. See
+[telemetry.md](telemetry.md).
+
+---
+
 ## Model defects
 
 These are wrong physics rather than wrong code. They are the reason a rewrite is worth doing
@@ -288,6 +399,14 @@ Measured on this machine, release build, 8 000 blocks (20×20×20 light armour),
 > three times as many blocks are exposed to the environment. See
 > [scale-design.md §10](scale-design.md#10-grid-shape-changes-the-arithmetic) for the measured
 > table, and `GridShapes` / `GridMetrics` in the harness for reproducing it.
+>
+> **And the solver figure in it is not a measurement of the solver.** The cube is one block type
+> left to settle, so nearly every link joins two cells at the same temperature — and the
+> conduction loop skips a link whose ends agree before doing any arithmetic. It also solves in a
+> single substep. The field run's ships needed six substeps every step with a gradient across
+> almost every joint, which is between six and forty times the work per step that this row
+> implies. The `solver` scenario measures that case instead, and reports **nanoseconds per link
+> visit** so the number survives a change of grid size or substep count.
 
 | Metric | Value |
 | --- | --- |
@@ -385,6 +504,42 @@ The rewritten solver derives the number of substeps from the stiffest node
 `WithoutTheClampAnAbsurdStepBlowsUp`, which shows the same grid diverging past 10⁵ K with the
 clamp disabled.
 
+### P9. The substep loop, measured properly — **done, ~8 %**
+
+Baseline from the `solver` scenario: 40,008 cells, 90,519 links, seeded across 250-750 K, best of
+seven runs.
+
+| | ms per step (3 substeps) | ns per link visit |
+| --- | --- | --- |
+| Before | 2.532 | 10.1 |
+| After | 2.323 | 8.7 |
+
+Three changes, all of them removing work rather than approximating it:
+
+* **The stability estimate was computed twice per step.** `Step` asked `RequiredSubsteps` for the
+  substep count and then asked again to decide whether the cap had bound. It walks every node
+  cubing a temperature; the second walk produced no new information.
+* **The conduction loop read its links out of a `List<ThermalLink>`**, copying a sixteen-byte
+  struct through a bounds-checked indexer to use twelve bytes of it. The three fields the loop
+  needs are mirrored into flat arrays at rebuild time, alongside the node state that was already
+  mirrored. `ContactFaces` is diagnostic and stays in the list.
+* **`LastDeltaTemperature` was written per node per substep** — see F6. Correcting it to describe
+  the whole step also takes the write out of the innermost loop.
+
+**Measured and rejected: partitioning nodes by exposure.** The environment pass tests every node
+for exposed faces once per substep, and it looked worth keeping a dense list of the exposed ones
+so buried blocks are never visited. It measured within noise on both a hollow ship (88 % of cells
+are exposed — a ship is mostly skin) and a solid cube (where the buried path is already two array
+reads and an add). It was reverted: the hottest loop in the mod is the wrong place to keep state
+that does not pay for itself.
+
+**Still open.** At six substeps a 44,632 cell ship costs 23 ms a step, and twenty of them share no
+budget — the fleet is twenty times one ship, which `fleet` confirms is per cell and not per grid.
+Nothing here changes that shape; it is 8 % off a number that needs to come down by more than
+that. The larger wins are structural and are described in
+[scale-design.md](scale-design.md): activity tracking so settled regions stop stepping, lumping,
+and multirate stepping so cold structure steps at a fraction of the rate its hot neighbours do.
+
 ---
 
 ## Suggested order of work
@@ -397,11 +552,21 @@ clamp disabled.
    at half their old rate, fast atmospheric flight now actually heats the leading face, and
    overheating destroys blocks 4× slower at the default `Frequency = 4` — so the retune of
    `Cubes.xml` these imply is still outstanding.
-3. **P1** — coalesce room mapping. Largest structural performance win available.
-4. **M1, M2** — adopt the conductance model. This changes balance, so retune
-   `Cubes.xml` alongside it.
-5. **C4, C5, C6** — move to the v2 save format, keeping the v1 reader.
-6. **C7** — port the coolant crawler to the port model, which also removes the pump name
-   special case.
-7. **C10** — wire up `Settings.Load` and turn the debug defaults off.
-8. **M5** — decide on units, then retune.
+3. ~~**P1**, **M1**, **M2**, **C4**–**C7**, **C10**, **M5**~~ — **done** with the rewrite. Room
+   mapping coalesces, conduction is one symmetric conductance per joint, the v2 save format keeps
+   the fraction and reads v1, loops are keyed by signature, and `Settings.Load` is called from
+   `Session.Init`.
+4. ~~**F1**–**F6**~~ — **done**. The first field run's four crash classes and two reporting
+   defects. F1 and F3 were both losing blocks from the simulation outright, which makes them the
+   most consequential things on this page.
+5. ~~**P9**~~ — **done**, ~8 % off a solver step, and a benchmark that measures the loop rather
+   than the path around it.
+6. **The retune of `Cubes.xml`** that C1, M3 and M4 imply — radiators conduct at half their old
+   rate, fast flight now heats the leading face, and overheating destroys blocks 4× slower at
+   the default `Frequency = 4`. Still outstanding, and it is a balance decision rather than a
+   defect.
+7. **The cost of scale**, which is what the field run actually measured and what nothing here
+   addresses: a 44,632 cell ship at six substeps costs 23 ms a step, one room-mapping call cost
+   162 ms and one topology rebuild 151 ms, and twenty ships cost twenty times one. The one-shot
+   rebuilds want a frame budget; the steady state wants activity tracking and multirate stepping.
+   See [scale-design.md](scale-design.md).

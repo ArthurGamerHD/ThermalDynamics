@@ -135,6 +135,38 @@ namespace Thermodynamics.Harness
             return model;
         }
 
+        /// <summary>
+        /// An airtight sliding door, described the way the game describes the real one.
+        ///
+        /// The sides it is bolted in by seal whatever it is doing; the way through seals only
+        /// while it is closed. That second half comes from the game's door rule and not from the
+        /// definition's pressurisation table, which is exactly the distinction that used to be
+        /// missing — a door that never sealed left every room around it open.
+        /// </summary>
+        public static BlockModel SlideDoor()
+        {
+            BlockModel model = BlockModel.Solid("AirtightSlideDoor", Vector3I.One, 1065f, DefaultThermal());
+
+            int closed = CellSurface.SelfMountMask;
+            int open = CellSurface.SelfMountMask;
+
+            for (int face = 0; face < Face.Count; face++)
+            {
+                // the frame: sealed in both states
+                bool throughWay = face == Face.Forward || face == Face.Backward;
+                if (throughWay) continue;
+
+                closed = CellSurface.WithSelfAirtight(closed, face, true);
+                open = CellSurface.WithSelfAirtight(open, face, true);
+            }
+
+            closed = CellSurface.WithSelfAirtight(closed, Face.Forward, true);
+
+            model.LocalSurfaces = new int[] { closed };
+            model.LocalSurfacesWhenOpen = new int[] { open };
+            return model;
+        }
+
         /// <summary>An open lattice: mounts everywhere, seals nothing.</summary>
         public static BlockModel Grating()
         {

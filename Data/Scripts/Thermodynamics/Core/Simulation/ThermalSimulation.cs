@@ -217,6 +217,15 @@ namespace Thermodynamics.Core
             solver.SetLoops(found);
         }
 
+        /// <summary>
+        /// Checks the published room map against the grid. Diagnostic only: nothing in the
+        /// simulation reads the result, and it is never called unless something is asking.
+        /// </summary>
+        public RoomAudit AuditRooms(int exampleLimit = RoomAuditor.DefaultExampleLimit)
+        {
+            return RoomAuditor.Audit(grid, surfaces, rooms.Map, exampleLimit);
+        }
+
         private void OnRoomsCompleted()
         {
             exposureDirty = true;

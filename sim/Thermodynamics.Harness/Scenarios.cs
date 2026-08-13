@@ -35,9 +35,14 @@ namespace Thermodynamics.Harness
             "airlock",
             "coolant-failure",
             "welding",
+            "first-room",
             "stiff",
             "units",
             "perf",
+            "capital",
+            "fleet",
+            "interior",
+            "solver",
         };
 
         public static ScenarioResult Run(string name)
@@ -56,9 +61,14 @@ namespace Thermodynamics.Harness
                 case "airlock": return Airlock();
                 case "coolant-failure": return CoolantFailure();
                 case "welding": return Welding();
+                case "first-room": return FirstRoom();
                 case "stiff": return Stiff();
                 case "units": return Units();
                 case "perf": return Performance();
+                case "capital": return Capital();
+                case "fleet": return Fleet();
+                case "interior": return Interior();
+                case "solver": return Solver();
                 default:
                     throw new ArgumentException("Unknown scenario: " + name);
             }
@@ -590,6 +600,80 @@ namespace Thermodynamics.Harness
                 + "settles at " + C(runner.Final.Tracked["skeleton"]) + ".");
         }
 
+        /// <summary>
+        /// The shape a player actually builds a first room in: a 3x3x3 armour shell with a door
+        /// in one wall and a reactor bolted to the outside, welded one block at a time rather
+        /// than loaded whole.
+        ///
+        /// It exists because a field report had exactly this grid mapping as zero sealed rooms.
+        /// It runs the audit at the end, so the answer is the classification of every cell rather
+        /// than a room count with nothing behind it.
+        /// </summary>
+        public static ScenarioResult FirstRoom()
+        {
+            GridModel grid = new GridModel(Catalog.LargeGridSize);
+            ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), grid);
+
+            BlockModel armour = Catalog.LightArmor();
+            BlockModel doorModel = Catalog.SlideDoor();
+            BlockInstance door = null;
+
+            for (int z = -1; z <= 1; z++)
+            {
+                for (int y = -1; y <= 1; y++)
+                {
+                    for (int x = -1; x <= 1; x++)
+                    {
+                        if (x == 0 && y == 0 && z == 0) continue;
+
+                        Vector3I cell = new Vector3I(x, y, z);
+                        bool isDoor = cell == new Vector3I(0, 0, -1);
+
+                        BlockInstance block = new BlockInstance(
+                            isDoor ? doorModel : armour, cell, BlockOrientation.Identity);
+                        if (isDoor) door = block;
+
+                        simulation.AddBlock(block);
+
+                        // one welded block per ten-frame tick, as the adapter polls
+                        simulation.Update(10f / 60f, Worlds.Shadow());
+                    }
+                }
+            }
+
+            BlockInstance reactor = new BlockInstance(Catalog.Reactor(), new Vector3I(0, 0, 2), BlockOrientation.Identity);
+            simulation.AddBlock(reactor);
+            reactor.PowerProducedWatts = 0.3f * ThermalConstants.MegawattsToWatts;
+
+            while (simulation.Rooms.HasWorkPending) simulation.Update(10f / 60f, Worlds.Shadow());
+
+            RoomAudit closed = simulation.AuditRooms();
+
+            door.IsSealedByDoorState = false;
+            simulation.RefreshBlockSealing(door);
+            simulation.Rooms.RunToCompletion();
+            RoomAudit opened = simulation.AuditRooms();
+
+            door.IsSealedByDoorState = true;
+            simulation.RefreshBlockSealing(door);
+            simulation.Rooms.RunToCompletion();
+            simulation.Solver.RefreshExposure(simulation.Rooms.Map);
+
+            ScenarioRunner runner = new ScenarioRunner(simulation);
+            runner.Environment = t => Worlds.Shadow();
+            runner.Track("reactor", reactor);
+            runner.Run(300f, 60f);
+
+            return Result("first-room", runner,
+                "A 3x3x3 shell with a door, welded a block at a time, maps as "
+                + closed.RoomCount + " sealed room over " + closed.SearchVolume + " search cells ("
+                + closed.ExternalCells + " external, " + closed.SolidCells + " structure, "
+                + closed.RoomCells + " room, " + closed.OpenBlockCells + " block cells outdoors). "
+                + "Opening the door leaves " + opened.RoomCount + " rooms and puts "
+                + opened.OpenBlockCells + " block cells outdoors. The reactor bolted to the outside ends at "
+                + C(reactor.PowerProducedWatts > 0 ? runner.Final.Tracked["reactor"] : 0f) + ".");
+        }
+
         private static float WeldedRise(float massFraction, float seconds)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -697,6 +781,346 @@ namespace Thermodynamics.Harness
             return Result("units", last,
                 "One heavy armour block at 800 K in shadow, after one hour, at three thermal "
                 + "clocks. Real steel is 450 J/(kg K); HeatTimeScale divides it. " + report);
+        }
+
+        /// <summary>
+        /// A capital ship at the scale the block-count stress test actually ran: tens of
+        /// thousands of cells, hollow, bulkheaded into sealed compartments.
+        ///
+        /// The <see cref="Performance"/> scenario measures a solid cube, which is the cheapest
+        /// possible shape for everything except the solver — no interior surface, one room, no
+        /// exterior to flood fill. The field reports say the expensive stages on a real ship are
+        /// the one-shot ones: a 44,632 cell grid spent 152 ms in a single room-mapping call and
+        /// 151 ms in a single topology rebuild, against 23 ms for a solver step. This is the
+        /// shape that shows that, and the number to watch is the worst single call, not the mean.
+        /// </summary>
+        public static ScenarioResult Capital()
+        {
+            Stopwatch build = Stopwatch.StartNew();
+
+            GridBuilder builder = GridBuilder.Large();
+            builder.PlaceAll(Catalog.HeavyArmor(),
+                GridShapes.Ship(fuselageLength: 180, fuselageWidth: 21, bulkheadSpacing: 6));
+
+            StageTimings timings = new StageTimings();
+            ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), builder.Grid);
+            simulation.Profiler = timings;
+
+            for (int i = 0; i < builder.Placed.Count; i++)
+            {
+                simulation.Solver.AddBlock(builder.Placed[i], 293.15f);
+            }
+
+            simulation.RebuildAll();
+            while (simulation.Rooms.HasWorkPending) simulation.Update(1f / 60f, Worlds.Shadow());
+            build.Stop();
+
+            int cells = simulation.Solver.Nodes.Count;
+            int links = simulation.Solver.Links.Count;
+            int rooms = simulation.Rooms.Map.RoomCount;
+
+            double rebuildWorst =
+                timings.WorstMs(SimulationPhase.Topology)
+                + timings.WorstMs(SimulationPhase.RoomMapping)
+                + timings.WorstMs(SimulationPhase.Exposure);
+
+            // StepExact deliberately skips the profiler, so the solver is timed by hand — the
+            // same way the perf scenario does it.
+            EnvironmentState state = EnvironmentSolver.Solve(
+                simulation.Settings, simulation.Planet, Worlds.Space(new Vector3(0f, 1f, 0f)));
+
+            const int measured = 40;
+            for (int i = 0; i < 5; i++) simulation.Solver.Step(simulation.Settings.StepSeconds, state);
+
+            Stopwatch solve = Stopwatch.StartNew();
+            for (int i = 0; i < measured; i++) simulation.Solver.Step(simulation.Settings.StepSeconds, state);
+            solve.Stop();
+
+            double solverPerStep = solve.Elapsed.TotalMilliseconds / measured;
+
+            ScenarioRunner runner = new ScenarioRunner(simulation);
+            runner.Environment = t => Worlds.Space(new Vector3(0f, 1f, 0f));
+            runner.Track("skin", builder.Placed[0]);
+            runner.Run(60f, 15f);
+
+            return Result("capital", runner,
+                cells.ToString("n0") + " cells, " + links.ToString("n0") + " links, "
+                + rooms + " sealed rooms. Build and first map " + build.ElapsedMilliseconds
+                + " ms. Worst single rebuild " + rebuildWorst.ToString("n1")
+                + " ms against " + solverPerStep.ToString("n2") + " ms per solver step: "
+                + timings.Describe(SimulationPhase.Topology) + ", "
+                + timings.Describe(SimulationPhase.RoomMapping) + ", "
+                + timings.Describe(SimulationPhase.Exposure) + ".");
+        }
+
+        /// <summary>
+        /// Twenty ships in one world, stepped together, which is what the stress test did.
+        ///
+        /// Each grid carries its own solver, its own room map and its own environment sample,
+        /// and nothing shares a frame budget between them. This measures the thing that costs a
+        /// server: the whole fleet's cost in one simulated frame, against one ship's.
+        /// </summary>
+        public static ScenarioResult Fleet()
+        {
+            const int fleetSize = 20;
+
+            ThermalSettings settings = new ThermalSettings();
+            settings.Derive();
+
+            List<ThermalSimulation> fleet = new List<ThermalSimulation>();
+            ScenarioRunner first = null;
+            int cellsEach = 0;
+
+            for (int i = 0; i < fleetSize; i++)
+            {
+                GridBuilder builder = GridBuilder.Large();
+                builder.PlaceAll(Catalog.HeavyArmor(),
+                    GridShapes.Ship(fuselageLength: 40, fuselageWidth: 9, bulkheadSpacing: 6));
+
+                // One hot appliance per ship, so no grid is a trivially uniform solve.
+                Vector3I engineRoom = new Vector3I(4, 4, 6);
+                BlockInstance occupant = builder.Grid.GetAtCell(engineRoom);
+                if (occupant != null)
+                {
+                    builder.Grid.Remove(occupant);
+                    builder.Placed.Remove(occupant);
+                }
+                builder.Place(Catalog.Reactor(), engineRoom)
+                       .Producing(2f * ThermalConstants.MegawattsToWatts);
+
+                ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);
+                while (simulation.Rooms.HasWorkPending) simulation.Update(1f / 60f, Worlds.Shadow());
+
+                cellsEach = simulation.Solver.Nodes.Count;
+                fleet.Add(simulation);
+
+                if (i == 0)
+                {
+                    first = new ScenarioRunner(simulation);
+                    first.Environment = t => Worlds.Shadow();
+                    first.Track("reactor", builder.Last);
+                }
+            }
+
+            EnvironmentState state = EnvironmentSolver.Solve(settings, fleet[0].Planet, Worlds.Shadow());
+
+            // Warm up, then run the same number of solver steps twice: all of them on one ship,
+            // and then spread across the fleet. Equal work either way, so what the comparison
+            // isolates is per-grid overhead rather than per-cell cost.
+            const int frames = 100;
+            int steps = frames * fleetSize;
+            for (int i = 0; i < fleet.Count; i++) fleet[i].Solver.Step(settings.StepSeconds, state);
+
+            Stopwatch one = Stopwatch.StartNew();
+            for (int s = 0; s < steps; s++) fleet[0].Solver.Step(settings.StepSeconds, state);
+            one.Stop();
+
+            Stopwatch all = Stopwatch.StartNew();
+            for (int s = 0; s < frames; s++)
+            {
+                for (int i = 0; i < fleet.Count; i++) fleet[i].Solver.Step(settings.StepSeconds, state);
+            }
+            all.Stop();
+
+            double onePerStep = one.Elapsed.TotalMilliseconds / steps;
+            double fleetPerStep = all.Elapsed.TotalMilliseconds / frames;
+
+            first.Run(60f, 20f);
+
+            return Result("fleet", first,
+                fleetSize + " ships of " + cellsEach.ToString("n0") + " cells. A solver step costs "
+                + onePerStep.ToString("n3") + " ms on one ship and "
+                + (onePerStep <= 0d ? 0d : (fleetPerStep / fleetSize) / onePerStep).ToString("n2")
+                + "x that when the same steps are spread across " + fleetSize
+                + " grids, so the cost is per cell and not per grid. One frame of the whole fleet "
+                + "is " + fleetPerStep.ToString("n3") + " ms, and at "
+                + settings.StepsPerSecond.ToString("n0") + " steps a second that is "
+                + (fleetPerStep * settings.StepsPerSecond).ToString("n1")
+                + " ms of every simulated second.");
+        }
+
+        /// <summary>
+        /// A hot appliance with no exposed face at all, against the same appliance on the skin.
+        ///
+        /// The stress test found whole block types — 5,399 hydrogen thrusters, 1,600 lights —
+        /// reporting a mean exposed area of exactly zero across every instance, which means they
+        /// radiate nothing and see no sun. That is legitimate for a buried block, and this is
+        /// what legitimate looks like: the heat has to leave sideways through conduction, and the
+        /// block has to settle rather than run away.
+        /// </summary>
+        public static ScenarioResult Interior()
+        {
+            GridBuilder builder = GridBuilder.Large();
+            builder.Fill(Catalog.HeavyArmor(), new Vector3I(-3, -3, -3), new Vector3I(4, 4, 4));
+
+            // Swap the centre for the appliance: a 200 kW consumer, which is what a large radio
+            // antenna at full range draws, and the block the field report named as the hottest.
+            BlockInstance centre = builder.Grid.GetAtCell(Vector3I.Zero);
+            builder.Grid.Remove(centre);
+            builder.Placed.Remove(centre);
+            builder.Place(Catalog.Battery(), Vector3I.Zero).Consuming(200000f);
+            BlockInstance buried = builder.Last;
+
+            // The same appliance bolted onto the skin, where it can radiate.
+            builder.Place(Catalog.Battery(), new Vector3I(0, 4, 0)).Consuming(200000f);
+            BlockInstance exposed = builder.Last;
+
+            ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
+            while (simulation.Rooms.HasWorkPending) simulation.Update(1f / 60f, Worlds.Shadow());
+
+            ScenarioRunner runner = new ScenarioRunner(simulation);
+            runner.Environment = t => Worlds.Shadow();
+            runner.Track("buried", buried);
+            runner.Track("skin", exposed);
+            runner.Track("hull", builder.Grid.GetAtCell(new Vector3I(0, 3, 0)));
+            runner.Run(3600f, 600f);
+
+            int buriedFaces = simulation.Solver.GetNode(buried).TotalExposedFaces;
+            int exposedFaces = simulation.Solver.GetNode(exposed).TotalExposedFaces;
+
+            return Result("interior", runner,
+                "A 200 kW consumer at 5% waste heat, buried in heavy armour ("
+                + buriedFaces + " exposed faces) and bolted to the skin (" + exposedFaces
+                + "). Buried ends at " + C(runner.Final.Tracked["buried"]) + ", on the skin "
+                + C(runner.Final.Tracked["skin"]) + ", the hull above it "
+                + C(runner.Final.Tracked["hull"]) + ".");
+        }
+
+        /// <summary>
+        /// What one solver step actually costs, on a grid shaped and loaded like the one the
+        /// stress test ran.
+        ///
+        /// <see cref="Performance"/> does not measure this, and it is worth being explicit about
+        /// why: it steps a solid cube of one block type that has been left to settle, so nearly
+        /// every link joins two cells at the same temperature. The conduction loop's first act is
+        /// to skip a link whose ends agree, which means the headline "ms/step" is largely the
+        /// cost of *not* conducting. The field run's ships were 44,632 cells with reactors and
+        /// thrusters in them and needed six substeps; almost every link there carries a gradient.
+        ///
+        /// So this seeds a real spread of temperatures and reports the number that can be
+        /// compared across grid sizes and substep counts: nanoseconds per link visit.
+        /// </summary>
+        public static ScenarioResult Solver()
+        {
+            GridBuilder builder = GridBuilder.Large();
+
+            // Not one block type. Substeps are set by the stiffest node — the largest ratio of
+            // conductance to thermal mass on the grid — so a ship built entirely of one heavy
+            // block solves in a single substep and never exercises the loop that dominates the
+            // field run. A real ship is armour with light fittings bolted through it, and the
+            // light fitting is the stiff node: grating is a sixteenth of heavy armour's mass at
+            // the same conductivity.
+            BlockModel armour = Catalog.HeavyArmor();
+            BlockModel fitting = Catalog.Grating();
+
+            int index = 0;
+            foreach (Vector3I cell in GridShapes.Ship(
+                fuselageLength: 180, fuselageWidth: 21, bulkheadSpacing: 6))
+            {
+                builder.Place((index++ % 8) == 0 ? fitting : armour, cell);
+            }
+
+            ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
+            while (simulation.Rooms.HasWorkPending) simulation.Update(1f / 60f, Worlds.Shadow());
+
+            int cells = simulation.Solver.Nodes.Count;
+            int links = simulation.Solver.Links.Count;
+
+            // How much of the grid the environment pass has anything to do for. A hollow ship is
+            // mostly skin; a solid station is mostly interior, and the two cost very differently
+            // per cell for the same cell count.
+            int exposed = 0;
+            for (int i = 0; i < cells; i++)
+            {
+                if (simulation.Solver.Nodes[i].TotalExposedFaces > 0) exposed++;
+            }
+
+            float step = simulation.Settings.StepSeconds;
+
+            // Measured twice: at the configured step length, which this grid solves in one
+            // substep, and at a step six times longer, which it does not. Substepping is where
+            // the cost lives — the field run's ships spent every step at six — and the two
+            // figures separate the per-step overhead from the per-substep work.
+            SolverCost single = MeasureSolver(simulation, step, links);
+            SolverCost stiff = MeasureSolver(simulation, step * 6f, links);
+
+            ScenarioRunner runner = new ScenarioRunner(simulation);
+            runner.Environment = t => Worlds.Space(new Vector3(0f, 1f, 0f));
+            runner.Track("skin", builder.Placed[0]);
+            runner.Run(30f, 10f);
+
+            return Result("solver", runner,
+                cells.ToString("n0") + " cells (" + exposed.ToString("n0")
+                + " exposed), " + links.ToString("n0")
+                + " links, seeded across a 250-750 K spread so no link is skipped. "
+                + single.Describe(simulation.Settings.StepsPerSecond) + " A step six times longer: "
+                + stiff.Describe(simulation.Settings.StepsPerSecond / 6f));
+        }
+
+        /// <summary>
+        /// Spreads the grid's temperatures across 250-750 K, deterministically.
+        ///
+        /// Both the spread and its repeatability matter: a link whose ends agree is skipped by
+        /// the conduction loop, so a settled grid measures the wrong thing, and a benchmark that
+        /// starts from a different state each run cannot be compared against its own past. The
+        /// generator is written out rather than taken from <c>Random</c> so the sequence is the
+        /// same on any runtime.
+        /// </summary>
+        private static void SeedSpread(ThermalSimulation simulation)
+        {
+            IList<ThermalNode> nodes = simulation.Solver.Nodes;
+
+            uint state = 2463534242u;
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                state ^= state << 13;
+                state ^= state >> 17;
+                state ^= state << 5;
+                nodes[i].Temperature = 250f + ((state % 100000u) * 0.005f);
+            }
+        }
+
+        /// <summary>One solver benchmark window.</summary>
+        private struct SolverCost
+        {
+            public double PerStepMs;
+            public double PerVisitNs;
+            public double MeanSubsteps;
+
+            public string Describe(float stepsPerSecond)
+            {
+                return PerStepMs.ToString("n4") + " ms per step at " + MeanSubsteps.ToString("n2")
+                    + " substeps, which is " + PerVisitNs.ToString("n2") + " ns per link visit and "
+                    + (PerStepMs * stepsPerSecond).ToString("n2") + " ms per simulated second.";
+            }
+        }
+
+        private static SolverCost MeasureSolver(ThermalSimulation simulation, float step, int links)
+        {
+            EnvironmentState environment = EnvironmentSolver.Solve(
+                simulation.Settings, simulation.Planet, Worlds.Space(new Vector3(0f, 1f, 0f)));
+
+            SeedSpread(simulation);
+            for (int i = 0; i < 5; i++) simulation.Solver.Step(step, environment);
+
+            // Substeps fall as the grid equalises, so the count is read from the measured window
+            // rather than assumed, and the per-visit figure is derived from it.
+            long visits = 0;
+            const int measured = 50;
+
+            Stopwatch run = Stopwatch.StartNew();
+            for (int i = 0; i < measured; i++)
+            {
+                simulation.Solver.Step(step, environment);
+                visits += (long)simulation.Solver.LastSubsteps * links;
+            }
+            run.Stop();
+
+            SolverCost cost = new SolverCost();
+            cost.PerStepMs = run.Elapsed.TotalMilliseconds / measured;
+            cost.PerVisitNs = visits <= 0 ? 0d : (run.Elapsed.TotalMilliseconds * 1e6) / visits;
+            cost.MeanSubsteps = (double)visits / measured / (links <= 0 ? 1 : links);
+            return cost;
         }
 
         private static ScenarioResult Result(string name, ScenarioRunner runner, string summary)

@@ -73,9 +73,22 @@ The probe order is `$SE_BIN`, the default Steam path, then the mod's own
 | `airlock` | Does opening a door actually let a sealed room start radiating? |
 | `coolant-failure` | What happens to a cooled reactor when the pump is destroyed? |
 | `welding` | Does an unfinished block swing further than a finished one? |
+| `first-room` | The shape a player builds first — a shell with a door, welded a block at a time. Does it map as a room? |
 | `stiff` | How many substeps does a very light block bolted to a very heavy one force, and where does it clamp? |
 | `units` | The same block at three thermal clocks: what `HeatTimeScale` actually buys. |
-| `perf` | Throughput, and what coalesced room mapping saves while welding. |
+| `perf` | Throughput on a settled solid cube, and what coalesced room mapping saves while welding. |
+| `capital` | A 40,000 cell bulkheaded ship: what the one-shot rebuilds cost against a step. |
+| `fleet` | Twenty ships stepped together — is the cost per cell or per grid? |
+| `interior` | A hot appliance with no exposed face at all, against the same one on the skin. |
+| `solver` | What a step actually costs when every link carries a gradient and the grid substeps. |
+
+> **`perf` and `solver` are not the same measurement.** `perf` steps a settled cube of one block
+> type, where nearly every link joins two cells at the same temperature — and the conduction
+> loop's first act is to skip a link whose ends agree, so most of its headline figure is the cost
+> of *not* conducting. It also solves in one substep, so it never exercises the loop that
+> dominates a real ship. `solver` seeds a 250-750 K spread across a hollow ship built of two
+> block types and reports **nanoseconds per link visit**, which is comparable across grid sizes
+> and substep counts. Where the two disagree, `solver` is the one describing the game.
 
 Scenarios are deterministic: no clock, no randomness, no dependence on iteration order. The same
 scenario produces byte-identical output on every run, which is what lets them double as

@@ -57,6 +57,9 @@ namespace Thermodynamics
         public const int MaxAnomalyKinds = 64;
         public const int MaxBlockTypes = 4096;
 
+        /// <summary>Stack frames kept with a recorded exception.</summary>
+        public const int ExceptionFrames = 6;
+
         /// <summary>A temperature above this is recorded as an anomaly; the sun is about 5772 K.</summary>
         public const float ImplausibleTemperature = 20000f;
 
@@ -93,6 +96,22 @@ namespace Thermodynamics
 
         public static readonly Dictionary<string, AnomalyRecord> Anomalies = new Dictionary<string, AnomalyRecord>();
         public static long AnomalyKindsDropped;
+
+        /// <summary>
+        /// Guards the three registries above.
+        ///
+        /// Grids and blocks are not created on one thread. The game builds pasted and projected
+        /// grids on workers, so <see cref="RegisterGrid"/>, <see cref="GetBlockType"/> and
+        /// <see cref="Anomaly"/> — which the adapter's own exception handlers call from wherever
+        /// they were thrown — all run concurrently with themselves. A field run recorded exactly
+        /// what that costs: ten <c>ArgumentException</c>s out of <c>GetBlockType</c> for a key
+        /// that a <c>TryGetValue</c> had just reported missing, and two null-reference throws
+        /// from inside <c>Dictionary.Insert</c>, which is a torn bucket array and not a null key.
+        ///
+        /// Registration happens once per grid and once per block type, so the lock is off every
+        /// hot path; the per-record counters underneath it stay lock-free.
+        /// </summary>
+        private static readonly object RegistryLock = new object();
 
         /// <summary>Wall clock spent inside the mod's own per-frame entry points.</summary>
         public static readonly TimingStat SessionFrameTime = new TimingStat("session frame");
@@ -257,10 +276,14 @@ namespace Thermodynamics
             BlockTypeRecordsDropped = 0;
             AnomalyKindsDropped = 0;
 
-            Grids.Clear();
-            GridsById.Clear();
-            BlockTypes.Clear();
-            Anomalies.Clear();
+            lock (RegistryLock)
+            {
+                Grids.Clear();
+                GridsById.Clear();
+                BlockTypes.Clear();
+                Anomalies.Clear();
+            }
+
             SessionClock.Reset();
         }
 
@@ -277,17 +300,22 @@ namespace Thermodynamics
 
             try
             {
-                GridsSeen++;
+                GridTelemetry record = new GridTelemetry(grid);
 
-                if (Grids.Count >= MaxGridRecords)
+                lock (RegistryLock)
                 {
-                    GridRecordsDropped++;
-                    return null;
+                    GridsSeen++;
+
+                    if (Grids.Count >= MaxGridRecords)
+                    {
+                        GridRecordsDropped++;
+                        return null;
+                    }
+
+                    Grids.Add(record);
+                    GridsById[record.EntityId] = record;
                 }
 
-                GridTelemetry record = new GridTelemetry(grid);
-                Grids.Add(record);
-                GridsById[record.EntityId] = record;
                 return record;
             }
             catch (Exception e)
@@ -303,18 +331,21 @@ namespace Thermodynamics
 
             try
             {
-                BlockTypeTelemetry type;
-                if (BlockTypes.TryGetValue(id, out type)) return type;
-
-                if (BlockTypes.Count >= MaxBlockTypes)
+                lock (RegistryLock)
                 {
-                    BlockTypeRecordsDropped++;
-                    return null;
-                }
+                    BlockTypeTelemetry type;
+                    if (BlockTypes.TryGetValue(id, out type)) return type;
 
-                type = new BlockTypeTelemetry(id);
-                BlockTypes.Add(id, type);
-                return type;
+                    if (BlockTypes.Count >= MaxBlockTypes)
+                    {
+                        BlockTypeRecordsDropped++;
+                        return null;
+                    }
+
+                    type = new BlockTypeTelemetry(id);
+                    BlockTypes.Add(id, type);
+                    return type;
+                }
             }
             catch (Exception e)
             {
@@ -368,6 +399,26 @@ namespace Thermodynamics
                 + " from " + previous.ToString("n2"));
         }
 
+        /// <summary>
+        /// Records a room map that disagrees with the grid under it: the flood fill classified a
+        /// cell holding a block as open space, so anything the block was meant to enclose is
+        /// mapped as outdoors. Reported with the first offending block named, because the block
+        /// that fails to seal is the whole answer.
+        /// </summary>
+        public static void NoteRoomLeak(GridTelemetry grid, RoomAudit audit)
+        {
+            string example = (grid == null ? "grid" : grid.Name) +
+                ": " + audit.LeakedCells + " of " + audit.BlockCells + " fully sealed block cells read as open space" +
+                ", rooms=" + audit.RoomCount;
+
+            if (audit.Examples != null && audit.Examples.Count > 0)
+            {
+                example += " | " + audit.Examples[0];
+            }
+
+            Anomaly("room map treats structure as open space", example);
+        }
+
         public static void OnCriticalDamage(ThermalBlock block, float damage)
         {
             if (!Enabled || block == null) return;
@@ -392,34 +443,67 @@ namespace Thermodynamics
 
             try
             {
-                AnomalyRecord record;
-                if (!Anomalies.TryGetValue(kind, out record))
+                lock (RegistryLock)
                 {
-                    if (Anomalies.Count >= MaxAnomalyKinds)
+                    AnomalyRecord record;
+                    if (!Anomalies.TryGetValue(kind, out record))
                     {
-                        AnomalyKindsDropped++;
-                        return;
+                        if (Anomalies.Count >= MaxAnomalyKinds)
+                        {
+                            AnomalyKindsDropped++;
+                            return;
+                        }
+
+                        record = new AnomalyRecord
+                        {
+                            Kind = kind,
+                            FirstSeconds = SessionSeconds,
+                            FirstExample = example
+                        };
+                        Anomalies.Add(kind, record);
                     }
 
-                    record = new AnomalyRecord
-                    {
-                        Kind = kind,
-                        FirstSeconds = SessionSeconds,
-                        FirstExample = example
-                    };
-                    Anomalies.Add(kind, record);
+                    record.Count++;
+                    record.LastSeconds = SessionSeconds;
+                    record.LastExample = example;
                 }
-
-                record.Count++;
-                record.LastSeconds = SessionSeconds;
-                record.LastExample = example;
             }
             catch { }
         }
 
         public static void Exception(string where, Exception e)
         {
-            Anomaly("exception in " + where, e == null ? "(null)" : e.Message);
+            Anomaly("exception in " + where, Describe(e));
+        }
+
+        /// <summary>
+        /// Message plus the top of the stack. The message on its own does not say which call
+        /// threw, and the throw is often inside game code the mod only reaches indirectly —
+        /// two frames are the difference between a guess and a location. Bounded, because only
+        /// the first and last example of each kind are kept and both go into the report.
+        /// </summary>
+        private static string Describe(Exception e)
+        {
+            if (e == null) return "(null)";
+
+            string message = e.GetType().Name + ": " + e.Message;
+
+            try
+            {
+                string trace = e.StackTrace;
+                if (string.IsNullOrEmpty(trace)) return message;
+
+                string[] frames = trace.Split('\n');
+                int take = frames.Length < ExceptionFrames ? frames.Length : ExceptionFrames;
+
+                for (int i = 0; i < take; i++)
+                {
+                    message += "\n        " + frames[i].Trim();
+                }
+            }
+            catch { }
+
+            return message;
         }
 
         private static string Describe(GridTelemetry grid, ThermalNode node)

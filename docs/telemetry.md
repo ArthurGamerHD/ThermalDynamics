@@ -93,7 +93,24 @@ histogram; ambient temperature, air density, atmosphere factor, wind speed, conv
 coefficient, effective solar energy, grid speed, the fraction of time the sun was occluded, the
 fraction of time in atmosphere, and which planets were visited.
 
-**Per block definition** (aggregated across every grid) — the thermal properties in force, block
+**Room mapping, per grid** — how the mapper classified the padded search box: exterior cells,
+structure cells and room cells, which sum to the box exactly, plus the two numbers that explain a
+room that will not seal. *Block cells left outdoors* counts cells holding a block that the map
+treats as open space; that is normal for anything the game does not consider airtight — a
+reactor, a lattice, the way through an open door — and it is the first thing to read when a
+sealed-looking interior maps as no room. *Sealed structure read as open* counts cells that seal on
+all six faces and are still not structure, which nothing can reach and so is always zero unless
+the map and the grid disagree; it raises an anomaly. The last completed pass also reports its
+search volume, its block cell count, how many block cell faces do not seal, how many blocks seal
+on no face at all, and a bounded list naming the blocks left outdoors with their surface bits and
+which of their faces are open.
+
+The audit runs once per completed mapper pass, never while one is in flight — a map that predates
+the grid would report every block placed since as a disagreement it is not.
+
+**Per block definition** (aggregated across every grid) — how much of each of the six faces the
+definition seals and mounts, and how often a block of that type was observed with its sealing
+switched off by an open door; the thermal properties in force, block
 size, placed/removed/live/peak counts, mass, thermal mass, exposed surfaces and area, and
 min/mean/max/sd for temperature, per-step ΔT, conduction, radiation, convection, solar and
 friction watts, heat generation, power produced and consumed and thrust draw; critical updates
@@ -112,6 +129,17 @@ usually not the problem.
 **Anomalies** — NaN, infinite and implausibly high temperatures, temperatures clamped to zero
 from a positive value (the signature of an unstable step), and any exception caught inside the
 module. Each is recorded once per kind with a count and its first and last example.
+
+An exception's example carries its type, its message and the top six stack frames. The message
+alone does not say which call threw, and the throw is often inside game code the mod only reaches
+indirectly — "capacity was less than the current size" is not a diagnosis, but the same line with
+`ThermalBlockCatalog.BuildSurfaces` two frames below it is. The bound is what makes that
+affordable: only the first and last example of each kind are kept, however many times it fires.
+
+Sections of the report are written from whichever thread caught the event. The game builds pasted
+and projected grids on worker threads, so the registries behind grids, block types and anomalies
+are locked; see F1 and F2 in [bugs-and-performance.md](bugs-and-performance.md) for what happened
+before they were.
 
 ## Tests
 

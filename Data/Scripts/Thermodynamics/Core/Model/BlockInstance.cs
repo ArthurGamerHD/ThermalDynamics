@@ -169,7 +169,7 @@ namespace Thermodynamics.Core
                 gridMountFraction[gridFace] = Model.LocalFaceMountFraction(localFace);
                 gridSealFraction[gridFace] = IsSealedByDoorState
                     ? Model.LocalFaceSealFraction(localFace)
-                    : 0f;
+                    : Model.LocalFaceSealFractionWhenOpen(localFace);
             }
         }
 
@@ -185,9 +185,7 @@ namespace Thermodynamics.Core
             foreach (Vector3I local in Model.LocalCells())
             {
                 gridCells[i] = LocalToGrid(local);
-                gridSurfaces[i] = RotateSurface(Model.LocalSurfaces == null
-                    ? (CellSurface.SelfAirtightMask | CellSurface.SelfMountMask)
-                    : Model.LocalSurfaces[Model.LocalCellIndex(local)]);
+                gridSurfaces[i] = RotateSurface(Model.LocalSurfaceState(local, IsSealedByDoorState));
                 i++;
             }
         }
@@ -216,18 +214,14 @@ namespace Thermodynamics.Core
         /// <summary>
         /// Recomputes the cached grid-space surfaces. Call after the host changes door state or
         /// anything else that alters sealing.
+        ///
+        /// The open state comes from the model, not from stripping every seal bit here: a door
+        /// that is open still seals with the sides it is bolted in by, and only stops sealing
+        /// across the way through.
         /// </summary>
         public void RefreshSurfaces()
         {
             BuildGridSurfaces();
-
-            if (IsSealedByDoorState) return;
-
-            // An open door seals nothing.
-            for (int i = 0; i < gridSurfaces.Length; i++)
-            {
-                gridSurfaces[i] &= ~CellSurface.SelfAirtightMask;
-            }
         }
 
         /// <summary>Grid-space coolant link ports, or an empty list for a non-coolant block.</summary>

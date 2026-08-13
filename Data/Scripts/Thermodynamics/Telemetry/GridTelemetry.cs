@@ -37,6 +37,27 @@ namespace Thermodynamics
         public readonly RunningStat NeighborLinks = new RunningStat();
         public readonly RunningStat RoomCount = new RunningStat();
         public readonly RunningStat ExternalCells = new RunningStat();
+        public readonly RunningStat SolidCells = new RunningStat();
+        public readonly RunningStat RoomCells = new RunningStat();
+
+        /// <summary>
+        /// Block cells the room map read as open space. Anything but zero means the flood fill
+        /// walked through structure, which is what turns a sealed room into no room at all.
+        /// </summary>
+        public readonly RunningStat LeakedCells = new RunningStat();
+
+        /// <summary>
+        /// Block cells the map leaves outdoors. Legitimate for anything not airtight, and the
+        /// first number to read when a room that should be sealed is not.
+        /// </summary>
+        public readonly RunningStat OpenBlockCells = new RunningStat();
+
+        /// <summary>The most recent room audit, kept so the report can name what leaked.</summary>
+        public RoomAudit LastAudit;
+        public bool HasAudit;
+
+        /// <summary>Mapper passes completed when the last audit ran; audits follow passes.</summary>
+        private int auditedPass = -1;
         public readonly RunningStat SurfaceEntries = new RunningStat();
         public readonly RunningStat CoolantLoops = new RunningStat();
         public readonly RunningStat RecentlyRemovedSize = new RunningStat();
@@ -238,12 +259,41 @@ namespace Thermodynamics
             MapperQueueDepth.Add(simulation.Rooms.PendingCells);
             RoomCount.Add(simulation.Rooms.Map.RoomCount);
             ExternalCells.Add(simulation.Rooms.Map.ExternalCellCount);
+            SolidCells.Add(simulation.Rooms.Map.SolidCellCount);
+            RoomCells.Add(simulation.Rooms.Map.RoomCellCount);
             MapperCompletions = simulation.Rooms.CompletedPasses;
+
+            AuditRooms(simulation);
 
             if (Grid.Grid.Physics != null)
             {
                 Speed.Add(Grid.Grid.Physics.LinearVelocity.Length());
             }
+        }
+
+        /// <summary>
+        /// Cross-checks the published room map against the blocks that produced it.
+        ///
+        /// The map only changes when a pass completes, so the audit runs once per pass rather
+        /// than once per structure sample: on a grid nobody is building on, this costs one
+        /// integer compare for the rest of the session.
+        /// </summary>
+        private void AuditRooms(ThermalSimulation simulation)
+        {
+            // A pass in flight means the published map predates the grid, and every block placed
+            // since would audit as a disagreement it is not.
+            if (simulation.Rooms.HasWorkPending) return;
+
+            int pass = simulation.Rooms.CompletedPasses;
+            if (pass == auditedPass) return;
+            auditedPass = pass;
+
+            LastAudit = simulation.AuditRooms();
+            HasAudit = true;
+            LeakedCells.Add(LastAudit.LeakedCells);
+            OpenBlockCells.Add(LastAudit.OpenBlockCells);
+
+            if (LastAudit.HasLeak) Telemetry.NoteRoomLeak(this, LastAudit);
         }
 
         public void SampleEnvironment(ThermalGrid grid)

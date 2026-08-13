@@ -60,7 +60,7 @@ game session. It ships with the mod — Space Engineers compiles it — and the 
 [sim/](sim) link the same files so it can be built, tested and profiled outside the game:
 
 ```bash
-cd sim && dotnet test                                  # 226 tests
+cd sim && dotnet test                                  # 370 tests
 dotnet run --project Thermodynamics.Sim -- run all     # scenario suite
 ```
 

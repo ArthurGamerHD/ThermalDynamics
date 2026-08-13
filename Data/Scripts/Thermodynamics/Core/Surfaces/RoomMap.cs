@@ -39,6 +39,12 @@ namespace Thermodynamics.Core
             get { return solid.Count; }
         }
 
+        /// <summary>Cells belonging to some enclosed room, across every room.</summary>
+        public int RoomCellCount
+        {
+            get { return roomIndexByCell.Count; }
+        }
+
         public IList<HashSet<Vector3I>> Rooms
         {
             get { return rooms; }

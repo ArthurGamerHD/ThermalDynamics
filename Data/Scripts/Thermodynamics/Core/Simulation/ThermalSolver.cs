@@ -47,6 +47,13 @@ namespace Thermodynamics.Core
 
         private float[] nodeWatts = new float[0];
         private float[] nodeTemperatures = new float[0];
+
+        /// <summary>
+        /// Temperature at the top of the step, kept so the reported change is the change over the
+        /// whole step rather than over its last substep.
+        /// </summary>
+        private float[] nodeStepStart = new float[0];
+
         private float[] nodeConductanceTotal = new float[0];
         private float[] loopWatts = new float[0];
 
@@ -71,6 +78,16 @@ namespace Thermodynamics.Core
         /// </summary>
         private float[] linkMassFactor = new float[0];
         private bool linkMassFactorDirty = true;
+
+        // The conduction loop mirrored into flat arrays, for the same reason the node state is:
+        // this is the innermost loop in the whole mod. A capital ship in the field run carried
+        // 106,644 links and needed six substeps a step, so every link is visited 640,000 times a
+        // second of simulated time — and reading a link out of a List<ThermalLink> copies a
+        // sixteen-byte struct through a bounds-checked indexer to use twelve bytes of it.
+        // ContactFaces is diagnostic and stays behind in the list.
+        private int[] linkA = new int[0];
+        private int[] linkB = new int[0];
+        private float[] linkConductance = new float[0];
 
         /// <summary>Per-face weights of the sun and the airflow, resolved once per step.</summary>
         private readonly float[] sunWeights = new float[Face.Count];
@@ -105,6 +122,12 @@ namespace Thermodynamics.Core
             this.settings = settings;
             this.grid = grid;
             this.surfaces = surfaces;
+
+            // Until the first step derives one, the environment has to read as empty space and
+            // not as absolute zero. Anything that asks before then — RequiredSubsteps, the HUD,
+            // the telemetry sample the host takes at the top of a step — otherwise sees a 0 K
+            // sky, which is both wrong and the coldest reading the whole session will report.
+            Environment = EnvironmentState.Vacuum(settings.VacuumTemperature);
         }
 
         public ThermalSettings Settings
@@ -285,8 +308,29 @@ namespace Thermodynamics.Core
 
             linksDirty = false;
             linkMassFactorDirty = true;
+            SyncLinkArrays();
             EnsureBuffers();
             RecomputeConductanceTotals();
+        }
+
+        /// <summary>Copies the link fields the substep loop reads into flat arrays.</summary>
+        private void SyncLinkArrays()
+        {
+            if (linkA.Length < links.Count)
+            {
+                int size = Math.Max(16, links.Count * 2);
+                linkA = new int[size];
+                linkB = new int[size];
+                linkConductance = new float[size];
+            }
+
+            for (int i = 0; i < links.Count; i++)
+            {
+                ThermalLink link = links[i];
+                linkA[i] = link.NodeA;
+                linkB[i] = link.NodeB;
+                linkConductance[i] = link.Conductance;
+            }
         }
 
         /// <summary>
@@ -404,9 +448,13 @@ namespace Thermodynamics.Core
             Environment = environment;
             overheats.Clear();
 
-            int substeps = ChooseSubsteps(deltaSeconds);
+            // One estimate, used for both answers. It walks every node cubing a temperature, so
+            // asking twice per step doubled the cost of the cheapest thing the solver does for no
+            // new information.
+            float required = RequiredSubstepsFromState(deltaSeconds);
+            int substeps = ClampSubsteps(required);
             LastSubsteps = substeps;
-            LastStepWasClamped = substeps >= MaxSubsteps && RequiredSubsteps(deltaSeconds) > MaxSubsteps;
+            LastStepWasClamped = required > MaxSubsteps;
 
             float h = deltaSeconds / substeps;
             for (int s = 0; s < substeps; s++)
@@ -416,9 +464,18 @@ namespace Thermodynamics.Core
 
             // The node objects stay the public face of the simulation, so they are brought back
             // into agreement with the arrays once per step rather than once per substep.
+            //
+            // The reported change is measured against the top of the step, not against the last
+            // substep. Everything that reads it — the HUD's rate of change, the anomaly
+            // classifier recovering the previous temperature, the per-type distribution — is
+            // describing one step; a six-substep grid otherwise reports roughly a sixth of the
+            // movement it actually made.
             for (int i = 0; i < nodes.Count; i++)
             {
-                nodes[i].Temperature = nodeTemperatures[i];
+                float updated = nodeTemperatures[i];
+                ThermalNode node = nodes[i];
+                node.Temperature = updated;
+                node.LastDeltaTemperature = updated - nodeStepStart[i];
             }
 
             StepCount++;
@@ -441,7 +498,9 @@ namespace Thermodynamics.Core
 
                 // Temperature is the one value a host can change from outside a step — loading a
                 // save, a grid split, conduction across a rotor — so it is always re-read.
-                nodeTemperatures[i] = node.Temperature;
+                float temperature = node.Temperature;
+                nodeTemperatures[i] = temperature;
+                nodeStepStart[i] = temperature;
 
                 if (!all && !node.StateDirty) continue;
                 node.StateDirty = false;
@@ -670,39 +729,48 @@ namespace Thermodynamics.Core
 
             float inverseH = h > 0f ? 1f / h : 0f;
 
-            for (int i = 0; i < links.Count; i++)
-            {
-                ThermalLink link = links[i];
-                int a = link.NodeA;
-                int b = link.NodeB;
+            // Hoisted so the loop reads locals rather than fields, and so the JIT can see the
+            // lengths are loop-invariant.
+            int count = links.Count;
+            int[] fromIndex = linkA;
+            int[] toIndex = linkB;
+            float[] conductance = linkConductance;
+            float[] massFactor = linkMassFactor;
+            float[] temperatures = nodeTemperatures;
+            float[] watts = nodeWatts;
 
-                float difference = nodeTemperatures[b] - nodeTemperatures[a];
+            for (int i = 0; i < count; i++)
+            {
+                int a = fromIndex[i];
+                int b = toIndex[i];
+
+                float difference = temperatures[b] - temperatures[a];
                 if (difference == 0f) continue;
 
                 // One conductance, applied equally and oppositely: what leaves A enters B.
-                float watts = link.Conductance * difference;
+                float exchange = conductance[i] * difference;
 
                 if (clamp)
                 {
                     // Cap the exchange at the energy that brings the pair to equilibrium.
-                    float maxWatts = difference * linkMassFactor[i] * inverseH;
-                    if (watts > 0f)
+                    float maxWatts = difference * massFactor[i] * inverseH;
+                    if (exchange > 0f)
                     {
-                        if (watts > maxWatts) watts = maxWatts;
+                        if (exchange > maxWatts) exchange = maxWatts;
                     }
-                    else if (watts < maxWatts)
+                    else if (exchange < maxWatts)
                     {
-                        watts = maxWatts;
+                        exchange = maxWatts;
                     }
                 }
 
-                nodeWatts[a] += watts;
-                nodeWatts[b] -= watts;
+                watts[a] += exchange;
+                watts[b] -= exchange;
 
                 if (!diagnostics) continue;
 
-                nodes[a].LastConductionWatts += watts;
-                nodes[b].LastConductionWatts -= watts;
+                nodes[a].LastConductionWatts += exchange;
+                nodes[b].LastConductionWatts -= exchange;
             }
         }
 
@@ -778,10 +846,6 @@ namespace Thermodynamics.Core
 
                 nodeTemperatures[i] = updated;
 
-                // The one node field the rest of the mod reads every step: the anomaly detector
-                // recovers the previous temperature from it, and the HUD shows it.
-                nodes[i].LastDeltaTemperature = updated - previous;
-
                 if (!damageEnabled) continue;
 
                 // Only a node that is actually overheating touches its definition, so the
@@ -814,8 +878,29 @@ namespace Thermodynamics.Core
         /// <summary>
         /// Substeps needed to keep the explicit integrator stable over
         /// <paramref name="deltaSeconds"/>, before the <see cref="MaxSubsteps"/> cap.
+        ///
+        /// <para>
+        /// This is a question a host asks *before* deciding to step — whether the grid is
+        /// affordable this frame, what the scheduler should skip — so it brings the mirrored node
+        /// state up to date itself rather than assuming a step has already done it. Reading it
+        /// straight off a solver that has never stepped divided conductance by a thermal mass of
+        /// zero and answered infinity, which is the one answer a caller cannot act on.
+        /// </para>
         /// </summary>
         public float RequiredSubsteps(float deltaSeconds)
+        {
+            RebuildLinksIfNeeded();
+            EnsureBuffers();
+            SyncNodeState();
+
+            return RequiredSubstepsFromState(deltaSeconds);
+        }
+
+        /// <summary>
+        /// The estimate itself, over state the caller has already synchronised. <see cref="Step"/>
+        /// uses this so that one step does not sync twice.
+        /// </summary>
+        private float RequiredSubstepsFromState(float deltaSeconds)
         {
             float worst = 0f;
 
@@ -854,9 +939,9 @@ namespace Thermodynamics.Core
             return (deltaSeconds * worst) / StabilitySafetyFactor;
         }
 
-        private int ChooseSubsteps(float deltaSeconds)
+        /// <summary>Rounds a substep estimate up into the allowed range.</summary>
+        private int ClampSubsteps(float required)
         {
-            float required = RequiredSubsteps(deltaSeconds);
             if (required <= 1f) return 1;
 
             int substeps = (int)Math.Ceiling(required);
@@ -900,6 +985,7 @@ namespace Thermodynamics.Core
                 int size = Math.Max(16, nodes.Count * 2);
                 nodeWatts = new float[size];
                 nodeTemperatures = new float[size];
+                nodeStepStart = new float[size];
                 nodeConductanceTotal = new float[size];
                 resyncAll = true;
                 nodeThermalMass = new float[size];

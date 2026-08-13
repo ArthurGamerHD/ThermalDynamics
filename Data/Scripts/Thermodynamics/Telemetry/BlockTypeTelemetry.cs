@@ -62,6 +62,56 @@ namespace Thermodynamics
         public float PeakTemperature = float.MinValue;
         public long PeakTemperatureGrid;
 
+        /// <summary>
+        /// How much of each of the definition's six faces seals, read once from the block model.
+        ///
+        /// This is what the room mapper walks, so it is the first thing to look at when a hull
+        /// that is plainly airtight in game maps as open space: a definition the adapter could not
+        /// read the pressurisation of shows up here as zeroes.
+        /// </summary>
+        public float[] SealFractionByFace;
+
+        /// <summary>The same, for mount surfaces, which is what conduction walks.</summary>
+        public float[] MountFractionByFace;
+
+        /// <summary>Observations where the block's own state had suppressed its sealing: an open door.</summary>
+        public long UnsealedByDoorState;
+
+        public bool HasSurfaceProfile
+        {
+            get { return SealFractionByFace != null; }
+        }
+
+        /// <summary>Faces of the definition that seal completely.</summary>
+        public int FullySealingFaces
+        {
+            get
+            {
+                if (SealFractionByFace == null) return 0;
+                int count = 0;
+                for (int i = 0; i < SealFractionByFace.Length; i++)
+                {
+                    if (SealFractionByFace[i] >= 1f) count++;
+                }
+                return count;
+            }
+        }
+
+        /// <summary>Faces of the definition that carry any mount surface at all.</summary>
+        public int MountingFaces
+        {
+            get
+            {
+                if (MountFractionByFace == null) return 0;
+                int count = 0;
+                for (int i = 0; i < MountFractionByFace.Length; i++)
+                {
+                    if (MountFractionByFace[i] > 0f) count++;
+                }
+                return count;
+            }
+        }
+
         /// <summary>Overheat events, i.e. observations that dealt heat damage.</summary>
         public long CriticalUpdates;
         public double TotalDamage;
@@ -84,6 +134,7 @@ namespace Thermodynamics
                 Definition = block.Instance.Thermal;
                 Vector3I size = block.Instance.Model.Size;
                 Size = new Vector3ITriple(size.X, size.Y, size.Z);
+                CaptureSurfaceProfile(block.Instance.Model);
             }
 
             Mass.Add(block.Instance.Mass);
@@ -133,6 +184,29 @@ namespace Thermodynamics
             ThermalMass.Add(node.ThermalMass);
             ExposedSurfaces.Add(node.TotalExposedFaces);
             ExposedSurfaceArea.Add(node.ExposedArea);
+
+            if (!block.IsSealedByDoorState) UnsealedByDoorState++;
+        }
+
+        /// <summary>
+        /// Reads the definition's per-face sealing and mounting out of the shared block model.
+        /// Once per type, from the first block placed: the model is immutable, so a second read
+        /// could only produce the same answer.
+        /// </summary>
+        private void CaptureSurfaceProfile(BlockModel model)
+        {
+            if (model == null) return;
+
+            float[] seal = new float[Face.Count];
+            float[] mount = new float[Face.Count];
+            for (int face = 0; face < Face.Count; face++)
+            {
+                seal[face] = model.LocalFaceSealFraction(face);
+                mount[face] = model.LocalFaceMountFraction(face);
+            }
+
+            MountFractionByFace = mount;
+            SealFractionByFace = seal;
         }
 
         public void OnCriticalDamage(float damage)

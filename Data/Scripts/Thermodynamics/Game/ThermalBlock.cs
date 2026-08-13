@@ -6,6 +6,7 @@ using Sandbox.Game.EntityComponents;
 using Sandbox.ModAPI;
 using SpaceEngineers.Game.ModAPI;
 using Thermodynamics.Core;
+using VRage.Collections;
 using VRage.Game;
 using VRage.Game.Components.Interfaces;
 using VRage.Game.ModAPI;
@@ -191,8 +192,18 @@ namespace Thermodynamics
             outputChanged = OnPowerProduced;
             source.OutputChanged += outputChanged;
 
-            Instance.PowerProducedWatts =
-                source.CurrentOutputByType(MyResourceDistributorComponent.ElectricityId) * Tools.MWtoWatt;
+            // Only ask for electricity if this component actually carries it. A hydrogen tank, an
+            // oxygen farm and an ice-fed generator all have a source component with no electric
+            // type in it, and the by-type accessors index a dictionary rather than probing it —
+            // a field run took a KeyNotFoundException out of the game's own
+            // MyResourceSourceComponent.GetTypeIndex for exactly this, which aborted binding the
+            // block and left it out of the simulation entirely.
+            if (Carries(source.ResourceTypes))
+            {
+                Instance.PowerProducedWatts =
+                    source.CurrentOutputByType(MyResourceDistributorComponent.ElectricityId) * Tools.MWtoWatt;
+            }
+
             RefreshHeat();
         }
 
@@ -204,9 +215,29 @@ namespace Thermodynamics
             inputChanged = OnPowerConsumed;
             sink.CurrentInputChanged += inputChanged;
 
-            Instance.PowerConsumedWatts =
-                sink.CurrentInputByType(MyResourceDistributorComponent.ElectricityId) * Tools.MWtoWatt;
+            if (Carries(sink.AcceptedResources))
+            {
+                Instance.PowerConsumedWatts =
+                    sink.CurrentInputByType(MyResourceDistributorComponent.ElectricityId) * Tools.MWtoWatt;
+            }
+
             RefreshHeat();
+        }
+
+        /// <summary>
+        /// Whether a resource component handles electricity at all.
+        ///
+        /// The subscription is kept either way: a sink can gain a type after it is built
+        /// (<c>AddType</c>), and the change event filters on the resource id, so a component that
+        /// starts out non-electric still reports correctly if it becomes electric later.
+        /// </summary>
+        private static bool Carries(ListReader<MyDefinitionId> resources)
+        {
+            for (int i = 0; i < resources.Count; i++)
+            {
+                if (resources[i] == MyResourceDistributorComponent.ElectricityId) return true;
+            }
+            return false;
         }
 
         private void OnComponentAdded(Type type, IMyEntityComponentBase component)
