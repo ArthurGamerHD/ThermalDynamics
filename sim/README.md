@@ -69,6 +69,12 @@ The probe order is `$SE_BIN`, the default Steam path, then the mod's own
 | `coolant` | Does a pumped ring actually move heat out of a reactor? |
 | `sealed-room` | Do sealed interiors stop radiating? |
 | `meltdown` | When does overheating start doing damage, and how much? |
+| `radiator` | Do panels earn their mass — and what does bolting them flat against the hull cost? |
+| `airlock` | Does opening a door actually let a sealed room start radiating? |
+| `coolant-failure` | What happens to a cooled reactor when the pump is destroyed? |
+| `welding` | Does an unfinished block swing further than a finished one? |
+| `stiff` | How many substeps does a very light block bolted to a very heavy one force, and where does it clamp? |
+| `units` | The same block at three thermal clocks: what `HeatTimeScale` actually buys. |
 | `perf` | Throughput, and what coalesced room mapping saves while welding. |
 
 Scenarios are deterministic: no clock, no randomness, no dependence on iteration order. The same
@@ -104,7 +110,7 @@ PipeFitter.BuildRing(builder, ring);      // pump goes on the first straight run
 
 ## Test coverage
 
-226 tests across:
+354 tests across:
 
 * position keys and block geometry maths
 * face indexing, the colour ramp, occlusion
@@ -119,6 +125,11 @@ PipeFitter.BuildRing(builder, ring);      // pump goes on the first straight run
 * the save format, both current and legacy
 * scheduling, settings and definition clamping
 * end-to-end simulation, save/load, and every scenario
+* the claims each scenario's summary line makes, so a headline conclusion cannot quietly invert
+* real specific heat against the `HeatTimeScale` clock, including that scaling capacity is
+  exactly running time faster
+* block identity by minimum cell, and overheat events surviving a multi-step update
+* the stage-timing hook, and that instrumenting a run does not change its results
 
 Several tests compare against `LegacyFormulas`, a verbatim copy of the original mod's equations,
 to pin down exactly how the rewritten model differs.

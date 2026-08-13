@@ -249,6 +249,12 @@ namespace Thermodynamics.Tests
         [InlineData("coolant")]
         [InlineData("sealed-room")]
         [InlineData("meltdown")]
+        [InlineData("radiator")]
+        [InlineData("airlock")]
+        [InlineData("coolant-failure")]
+        [InlineData("welding")]
+        [InlineData("stiff")]
+        [InlineData("units")]
         public void EveryScenarioRunsAndProducesFiniteResults(string name)
         {
             ScenarioResult result = Scenarios.Run(name);
