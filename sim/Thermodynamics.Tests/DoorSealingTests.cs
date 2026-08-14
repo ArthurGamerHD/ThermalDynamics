@@ -49,17 +49,27 @@ namespace Thermodynamics.Tests
             Assert.True(CellSurface.SelfMount(state, Face.Forward));
         }
 
+        /// <summary>
+        /// A block with no open state is not a door, and the door flag means nothing on it.
+        ///
+        /// This used to quietly strip every seal bit, which let the test harness fake airlocks
+        /// out of armour cubes — and a fake airlock cannot catch a defect in real ones.
+        /// </summary>
         [Fact]
-        public void AModelWithNoOpenStateStillSealsNothingWhileUnsealed()
+        public void ABlockWithNoOpenStateIsNotADoorAndIgnoresTheFlag()
         {
             BlockInstance block = new BlockInstance(Catalog.LightArmor(), Vector3I.Zero, BlockOrientation.Identity);
+
+            Assert.False(block.HasStateDependentSealing);
+
             block.IsSealedByDoorState = false;
             block.RefreshSurfaces();
 
             for (int face = 0; face < Face.Count; face++)
             {
-                Assert.Equal(0f, block.SealFraction(face));
-                Assert.False(CellSurface.SelfAirtight(block.SelfSurfaces[0], face));
+                Assert.Equal(1f, block.SealFraction(face));
+                Assert.True(CellSurface.SelfAirtight(block.SelfSurfaces[0], face));
+                Assert.False(block.IsPortalFace(face));
             }
         }
 
@@ -105,18 +115,23 @@ namespace Thermodynamics.Tests
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings());
 
+            int room = simulation.Rooms.Map.RoomIndexOf(Vector3I.Zero);
+
             door.IsSealedByDoorState = false;
             simulation.RefreshBlockSealing(door);
-            simulation.Rooms.RunToCompletion();
 
-            Assert.Equal(0, simulation.Rooms.Map.RoomCount);
+            // The room did not cease to exist; it stopped holding anything in. No pass was
+            // needed to work that out, which is the point of the portal model.
+            Assert.Equal(1, simulation.Rooms.Map.RoomCount);
+            Assert.Equal(room, simulation.Rooms.Map.RoomIndexOf(Vector3I.Zero));
+            Assert.True(simulation.Rooms.Map.IsVented(room));
             Assert.True(simulation.Rooms.Map.IsExternal(Vector3I.Zero));
 
             door.IsSealedByDoorState = true;
             simulation.RefreshBlockSealing(door);
-            simulation.Rooms.RunToCompletion();
 
             Assert.Equal(1, simulation.Rooms.Map.RoomCount);
+            Assert.False(simulation.Rooms.Map.IsVented(room));
             Assert.False(simulation.Rooms.Map.IsExternal(Vector3I.Zero));
         }
     }

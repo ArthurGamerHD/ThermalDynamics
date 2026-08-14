@@ -43,11 +43,23 @@ namespace Thermodynamics.Core
         public int[] LocalSurfacesWhenOpen;
 
         /// <summary>
-        /// Surface bits for one local cell in the given sealing state.
+        /// True when this block has an open state at all — a door. Nothing else can seal
+        /// differently from one moment to the next, and a block that cannot is not affected by
+        /// <see cref="BlockInstance.IsSealedByDoorState"/> however that flag is set.
         ///
-        /// A model that describes no open state falls back to sealing nothing while unsealed,
-        /// which is the conservative reading and the one the simulation had before the open set
-        /// existed.
+        /// This is deliberately the only way to be a door. The alternative — letting any block be
+        /// held "open" and quietly seal nothing — produced a block whose live surfaces and whose
+        /// structure disagreed with no way to tell which was meant, and a test harness that faked
+        /// airlocks out of armour cubes for long enough that a real defect hid behind it.
+        /// </summary>
+        public bool HasOpenState
+        {
+            get { return LocalSurfacesWhenOpen != null; }
+        }
+
+        /// <summary>
+        /// Surface bits for one local cell in the given sealing state. A block with no open state
+        /// answers the same either way.
         /// </summary>
         public int LocalSurfaceState(Vector3I localCell, bool sealedByState)
         {
@@ -58,11 +70,9 @@ namespace Thermodynamics.Core
                 return LocalSurfacesWhenOpen[index];
             }
 
-            int state = LocalSurfaces == null
+            return LocalSurfaces == null
                 ? (CellSurface.SelfAirtightMask | CellSurface.SelfMountMask)
                 : LocalSurfaces[index];
-
-            return sealedByState ? state : (state & ~CellSurface.SelfAirtightMask);
         }
 
         /// <summary>Total cells occupied.</summary>

@@ -478,8 +478,7 @@ namespace Thermodynamics.Harness
             builder.Grid.Remove(wall);
             builder.Placed.Remove(wall);
 
-            BlockModel doorModel = BlockModel.Solid("Door", Vector3I.One, 400f, Catalog.DefaultThermal());
-            builder.Place(doorModel, new Vector3I(2, 2, 0));
+            builder.Place(Catalog.AirtightDoor(), new Vector3I(2, 2, 0));
             BlockInstance door = builder.Last;
 
             // Standing on the floor of the room, not floating in the middle of it: a block with

@@ -8,8 +8,16 @@ namespace Thermodynamics.Core
     /// The result of a room mapping pass: which cells see open space, which are sealed
     /// structure, and which belong to an enclosed pocket.
     ///
-    /// Immutable from the simulation's point of view — <see cref="RoomMapper"/> builds a fresh
-    /// one and swaps it in only when the pass finishes, so readers never see a half-filled map.
+    /// The pocket boundaries are <em>structural</em> — doors count as shut whatever they are
+    /// doing — so a room is a property of how the ship is built and survives its doors being
+    /// used. What a door does when it opens is recorded as a <see cref="RoomPortal"/>, and
+    /// <see cref="RefreshVenting"/> resolves the portals into which rooms currently reach open
+    /// air. That is a walk over the doors, not over the grid.
+    ///
+    /// The geometry is immutable from the simulation's point of view — <see cref="RoomMapper"/>
+    /// builds a fresh map and swaps it in only when the pass finishes, so readers never see a
+    /// half-filled one. Venting is the one thing that changes in place, because it has to be able
+    /// to change in the same frame a player presses a button.
     /// </summary>
     public class RoomMap
     {
@@ -17,6 +25,20 @@ namespace Thermodynamics.Core
         private readonly HashSet<Vector3I> solid = new HashSet<Vector3I>(Vector3I.Comparer);
         private readonly List<HashSet<Vector3I>> rooms = new List<HashSet<Vector3I>>();
         private readonly Dictionary<Vector3I, int> roomIndexByCell = new Dictionary<Vector3I, int>(Vector3I.Comparer);
+
+        private readonly List<RoomPortal> portals = new List<RoomPortal>();
+
+        /// <summary>Per room: true when it currently reaches open air through open doors.</summary>
+        private bool[] vented = new bool[0];
+
+        /// <summary>Union-find parent per region, reused between refreshes to avoid allocating.</summary>
+        private int[] parent = new int[0];
+
+        /// <summary>Rooms whose venting changed in the last <see cref="RefreshVenting"/>.</summary>
+        private readonly List<int> changedRooms = new List<int>();
+
+        /// <summary>The region index standing for open air, as opposed to a room.</summary>
+        public const int ExternalRegion = -1;
 
         /// <summary>
         /// An empty map treats everything as external, which is the safe default before the
@@ -45,9 +67,73 @@ namespace Thermodynamics.Core
             get { return roomIndexByCell.Count; }
         }
 
+        /// <summary>
+        /// True when nothing has been classified at all — <see cref="AllExternal"/>, or a map
+        /// whose pass has not run. Every query still answers "external", which is the safe
+        /// default, but it is a default and not a measurement, and a reader has to be able to
+        /// tell the two apart.
+        /// </summary>
+        public bool IsEmpty
+        {
+            get { return external.Count == 0 && solid.Count == 0 && roomIndexByCell.Count == 0; }
+        }
+
         public IList<HashSet<Vector3I>> Rooms
         {
             get { return rooms; }
+        }
+
+        /// <summary>Every door that opens onto one of these rooms, or onto open air.</summary>
+        public IList<RoomPortal> Portals
+        {
+            get { return portals; }
+        }
+
+        /// <summary>
+        /// True when the room currently reaches open air — directly through an open door, or
+        /// through a chain of open doors and other rooms.
+        ///
+        /// A vented room is still a room. It is simply not holding anything in, so the surfaces
+        /// facing it see outdoors, which is what <see cref="IsExternal"/> reports.
+        /// </summary>
+        public bool IsVented(int roomIndex)
+        {
+            if (roomIndex < 0 || roomIndex >= vented.Length) return false;
+            return vented[roomIndex];
+        }
+
+        /// <summary>Rooms sealed off from open air right now.</summary>
+        public int AirtightRoomCount
+        {
+            get
+            {
+                int count = 0;
+                for (int i = 0; i < rooms.Count; i++)
+                {
+                    if (!IsVented(i)) count++;
+                }
+                return count;
+            }
+        }
+
+        /// <summary>
+        /// Rooms whose venting changed during the last <see cref="RefreshVenting"/>. Only the
+        /// blocks facing these need their exposure recomputed.
+        /// </summary>
+        public IList<int> ChangedRooms
+        {
+            get { return changedRooms; }
+        }
+
+        /// <summary>
+        /// The region a cell belongs to: a room index, or <see cref="ExternalRegion"/> for open
+        /// air. Solid structure has no region and answers <see cref="ExternalRegion"/> too, so
+        /// callers that care must ask <see cref="IsSolid"/> first.
+        /// </summary>
+        public int RegionOf(Vector3I cell)
+        {
+            int index;
+            return roomIndexByCell.TryGetValue(cell, out index) ? index : ExternalRegion;
         }
 
         /// <summary>
@@ -58,8 +144,14 @@ namespace Thermodynamics.Core
         public bool IsExternal(Vector3I cell)
         {
             if (solid.Contains(cell)) return false;
-            if (roomIndexByCell.ContainsKey(cell)) return false;
-            return true;
+
+            int room;
+            if (!roomIndexByCell.TryGetValue(cell, out room)) return true;
+
+            // A room standing open through a door is not holding anything in, so what faces it
+            // faces outdoors. The room still exists; it is the venting that changed, and that is
+            // a flag rather than a rebuild.
+            return IsVented(room);
         }
 
         /// <summary>Index into <see cref="Rooms"/>, or -1 when the cell is not in a room.</summary>
@@ -94,6 +186,79 @@ namespace Thermodynamics.Core
         {
             rooms[roomIndex].Add(cell);
             roomIndexByCell[cell] = roomIndex;
+        }
+
+        internal void AddPortal(RoomPortal portal)
+        {
+            portals.Add(portal);
+        }
+
+        /// <summary>
+        /// Recomputes which rooms reach open air, from the doors' current states.
+        ///
+        /// Union-find over the rooms and one extra node for open air: every open portal merges
+        /// the two regions it joins, and any room that ends up in open air's set is vented. The
+        /// cost is the number of doors, not the number of cells, which is the entire reason the
+        /// room map is built on structure rather than on what is currently shut.
+        /// </summary>
+        /// <returns>True when any room changed state.</returns>
+        public bool RefreshVenting()
+        {
+            changedRooms.Clear();
+
+            int count = rooms.Count;
+            if (vented.Length != count) vented = new bool[count];
+
+            // one slot per room plus a final slot standing for open air
+            if (parent.Length != count + 1) parent = new int[count + 1];
+            for (int i = 0; i <= count; i++) parent[i] = i;
+
+            for (int p = 0; p < portals.Count; p++)
+            {
+                RoomPortal portal = portals[p];
+                if (!portal.IsOpen) continue;
+
+                Union(Slot(portal.RegionA, count), Slot(portal.RegionB, count));
+            }
+
+            int air = Find(count);
+            bool changed = false;
+
+            for (int i = 0; i < count; i++)
+            {
+                bool now = Find(i) == air;
+                if (now == vented[i]) continue;
+
+                vented[i] = now;
+                changedRooms.Add(i);
+                changed = true;
+            }
+
+            return changed;
+        }
+
+        private static int Slot(int region, int roomCount)
+        {
+            return region == ExternalRegion ? roomCount : region;
+        }
+
+        private int Find(int node)
+        {
+            while (parent[node] != node)
+            {
+                parent[node] = parent[parent[node]];   // path halving
+                node = parent[node];
+            }
+            return node;
+        }
+
+        private void Union(int a, int b)
+        {
+            int rootA = Find(a);
+            int rootB = Find(b);
+            if (rootA == rootB) return;
+
+            parent[rootA] = rootB;
         }
 
         internal bool IsKnown(Vector3I cell)

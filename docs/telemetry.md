@@ -105,8 +105,13 @@ search volume, its block cell count, how many block cell faces do not seal, how 
 on no face at all, and a bounded list naming the blocks left outdoors with their surface bits and
 which of their faces are open.
 
-The audit runs once per completed mapper pass, never while one is in flight — a map that predates
-the grid would report every block placed since as a disagreement it is not.
+The audit runs once per completed mapper pass, never while one is in flight, and never before the
+first pass has finished. Both exclusions are there because both fired. A map that predates the
+grid reports every block placed since as a disagreement it is not; and a grid that closes inside
+its first few seconds — a paste preview, a subgrid — never maps at all, and still holds the
+all-external map the mapper hands out until it has built one. Audited against that, a sound hull
+reported all 27 of its cells as unaccounted for. Such a grid now prints `mapped never (no pass
+completed)` and no figures, rather than zeroes that look like measurements.
 
 **Per block definition** (aggregated across every grid) — how much of each of the six faces the
 definition seals and mounts, and how often a block of that type was observed with its sealing

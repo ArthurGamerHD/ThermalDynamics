@@ -167,6 +167,21 @@ namespace Thermodynamics.Harness
             return model;
         }
 
+        /// <summary>
+        /// A door that is a wall when shut and a hole when open, on every face — the airtight
+        /// hangar door shape, and the simplest thing that is a door at all.
+        ///
+        /// Its cell seals completely while shut, which makes it the case that has to be handled
+        /// specially in the mapper: it would read as solid structure, and a portal needs a region
+        /// on the door's own side to join to.
+        /// </summary>
+        public static BlockModel AirtightDoor()
+        {
+            BlockModel model = BlockModel.Solid("AirtightDoor", Vector3I.One, 400f, DefaultThermal());
+            model.LocalSurfacesWhenOpen = new int[] { CellSurface.SelfMountMask };
+            return model;
+        }
+
         /// <summary>An open lattice: mounts everywhere, seals nothing.</summary>
         public static BlockModel Grating()
         {

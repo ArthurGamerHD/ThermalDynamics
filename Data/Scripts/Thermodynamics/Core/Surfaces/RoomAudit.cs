@@ -18,6 +18,18 @@ namespace Thermodynamics.Core
         public int SearchVolume;
 
         public int RoomCount;
+
+        /// <summary>
+        /// Rooms currently standing open to the outside through a door. Still rooms; simply not
+        /// holding anything in, so what faces them radiates.
+        /// </summary>
+        public int VentedRooms;
+
+        /// <summary>Doors the map knows as a way between two regions.</summary>
+        public int Portals;
+
+        /// <summary>Portals currently open.</summary>
+        public int OpenPortals;
         public int ExternalCells;
         public int SolidCells;
         public int RoomCells;
@@ -48,9 +60,25 @@ namespace Thermodynamics.Core
         public int BlocksSealingNothing;
 
         /// <summary>
+        /// Cell count of each room found, largest first, bounded the same way the examples are.
+        /// A room count says a room exists; this says how much of the ship it is.
+        /// </summary>
+        public List<int> RoomSizes;
+
+        /// <summary>
         /// Human-readable description of the first few block cells left outdoors. Never null.
         /// </summary>
         public List<string> Examples;
+
+        /// <summary>
+        /// False when the map is the empty default rather than the result of a pass.
+        ///
+        /// A grid that closes before its first pass — a paste preview, a subgrid that lasts three
+        /// seconds — still has a published map, because the mapper hands out an all-external one
+        /// until it has built a real one. Comparing a grid against that reports every block it has
+        /// as unaccounted for, which is a statement about the default and not about the grid.
+        /// </summary>
+        public bool MapBuilt;
 
         /// <summary>The map contradicts the grid: sealed structure the fill got into.</summary>
         public bool HasLeak
@@ -74,13 +102,25 @@ namespace Thermodynamics.Core
         {
             RoomAudit audit = new RoomAudit();
             audit.Examples = new List<string>();
+            audit.RoomSizes = new List<int>();
 
             if (map != null)
             {
+                audit.MapBuilt = !map.IsEmpty;
                 audit.RoomCount = map.RoomCount;
+                audit.VentedRooms = map.RoomCount - map.AirtightRoomCount;
+                audit.Portals = map.Portals.Count;
+
+                for (int i = 0; i < map.Portals.Count; i++)
+                {
+                    if (map.Portals[i].IsOpen) audit.OpenPortals++;
+                }
+
                 audit.ExternalCells = map.ExternalCellCount;
                 audit.SolidCells = map.SolidCellCount;
                 audit.RoomCells = map.RoomCellCount;
+
+                CollectRoomSizes(map, audit.RoomSizes, exampleLimit);
             }
 
             if (grid == null || map == null) return audit;
@@ -107,6 +147,7 @@ namespace Thermodynamics.Core
                         else audit.UnsealedBlockFaces++;
                     }
 
+                    if (!audit.MapBuilt) continue;
                     if (map.IsSolid(cells[i])) continue;
 
                     // A cell sealed on every face cannot be reached across any of them, so the
@@ -130,6 +171,24 @@ namespace Thermodynamics.Core
             return audit;
         }
 
+        /// <summary>
+        /// The largest rooms by cell count, at most <paramref name="limit"/> of them. Bounded
+        /// because a ship can have hundreds of compartments and this is a line in a report.
+        /// </summary>
+        private static void CollectRoomSizes(RoomMap map, List<int> sizes, int limit)
+        {
+            IList<HashSet<Vector3I>> rooms = map.Rooms;
+            for (int i = 0; i < rooms.Count; i++)
+            {
+                sizes.Add(rooms[i].Count);
+            }
+
+            sizes.Sort();
+            sizes.Reverse();
+
+            if (limit > 0 && sizes.Count > limit) sizes.RemoveRange(limit, sizes.Count - limit);
+        }
+
         /// <summary>The cell count of the padded box the mapper searches for this grid.</summary>
         public static int SearchVolumeOf(GridModel grid)
         {
@@ -141,8 +200,17 @@ namespace Thermodynamics.Core
 
         private static string Describe(BlockInstance block, Vector3I cell, SurfaceMap surfaces, int selfState)
         {
-            string text = block.Name + " " + cell +
-                " sealed:" + (block.IsSealedByDoorState ? "yes" : "no (door)") +
+            // Most blocks in this list belong there. A reactor, a lattice, a window frame: the
+            // game does not consider them airtight either, and saying so here is the difference
+            // between a report that names a fault and one that reads like an accusation.
+            // Door state first: a block held open is the more specific explanation of why it is
+            // not sealing than the bits it is left with.
+            string verdict;
+            if (!block.IsSealedByDoorState) verdict = " (open door)";
+            else if ((selfState & CellSurface.SelfAirtightMask) == 0) verdict = " (not airtight: expected outdoors)";
+            else verdict = " (partly sealing)";
+
+            string text = block.Name + " " + cell + verdict +
                 " " + CellSurface.Describe(selfState);
 
             if (surfaces == null) return text;

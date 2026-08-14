@@ -257,11 +257,18 @@ namespace Thermodynamics
             CoolantLoops.Add(simulation.Solver.Loops.Count);
             RecentlyRemovedSize.Add(Grid.RecentlyRemoved.Count);
             MapperQueueDepth.Add(simulation.Rooms.PendingCells);
-            RoomCount.Add(simulation.Rooms.Map.RoomCount);
-            ExternalCells.Add(simulation.Rooms.Map.ExternalCellCount);
-            SolidCells.Add(simulation.Rooms.Map.SolidCellCount);
-            RoomCells.Add(simulation.Rooms.Map.RoomCellCount);
             MapperCompletions = simulation.Rooms.CompletedPasses;
+
+            // Only a map a pass actually produced is a measurement. The default one reads as a
+            // grid with nothing anywhere, and averaged in it drags every figure here towards
+            // zero for a grid that simply had not been mapped yet.
+            if (MapperCompletions > 0)
+            {
+                RoomCount.Add(simulation.Rooms.Map.RoomCount);
+                ExternalCells.Add(simulation.Rooms.Map.ExternalCellCount);
+                SolidCells.Add(simulation.Rooms.Map.SolidCellCount);
+                RoomCells.Add(simulation.Rooms.Map.RoomCellCount);
+            }
 
             AuditRooms(simulation);
 
@@ -285,6 +292,13 @@ namespace Thermodynamics
             if (simulation.Rooms.HasWorkPending) return;
 
             int pass = simulation.Rooms.CompletedPasses;
+
+            // Before the first pass there is no map to audit, only the all-external default the
+            // mapper hands out until it has built one. A grid that closes inside its first few
+            // seconds — a paste preview, a subgrid — never gets that far, and auditing it against
+            // the default reported its whole hull as unaccounted for.
+            if (pass == 0) return;
+
             if (pass == auditedPass) return;
             auditedPass = pass;
 

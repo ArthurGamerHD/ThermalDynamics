@@ -20,6 +20,13 @@ namespace Thermodynamics.Core
 
         private readonly List<BlockInstance> blocks = new List<BlockInstance>();
 
+        /// <summary>
+        /// The doors, kept apart from the rest so that the room mapper can find every portal in
+        /// the ship without walking every block. A capital ship has tens of thousands of blocks
+        /// and perhaps thirty doors, and it is the doors that move.
+        /// </summary>
+        private readonly List<BlockInstance> stateDependent = new List<BlockInstance>();
+
         private Vector3I min = Vector3I.MaxValue;
         private Vector3I max = Vector3I.MinValue;
         private bool boundsDirty;
@@ -45,6 +52,15 @@ namespace Thermodynamics.Core
         public IList<BlockInstance> Blocks
         {
             get { return blocks; }
+        }
+
+        /// <summary>
+        /// Blocks whose sealing depends on their own state — doors. Every portal between two
+        /// regions of the grid is one of these.
+        /// </summary>
+        public IList<BlockInstance> StateDependentBlocks
+        {
+            get { return stateDependent; }
         }
 
         /// <summary>Inclusive lower bound over every occupied cell.</summary>
@@ -85,6 +101,7 @@ namespace Thermodynamics.Core
 
             blocksByKey[block.Key] = block;
             blocks.Add(block);
+            if (block.HasStateDependentSealing) stateDependent.Add(block);
             return block;
         }
 
@@ -115,6 +132,7 @@ namespace Thermodynamics.Core
 
             blocksByKey.Remove(block.Key);
             blocks.Remove(block);
+            if (block.HasStateDependentSealing) stateDependent.Remove(block);
             boundsDirty = true;
             return true;
         }

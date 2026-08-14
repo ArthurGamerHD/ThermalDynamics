@@ -15,6 +15,18 @@ namespace Thermodynamics.Core
     {
         private readonly Dictionary<Vector3I, int> states = new Dictionary<Vector3I, int>(Vector3I.Comparer);
 
+        /// <summary>
+        /// The same cells as <see cref="states"/>, with every block read as if its state were
+        /// sealing — a door taken as shut.
+        ///
+        /// Two layers because two callers mean different things. Exposure asks what is sealing
+        /// <em>now</em>, because an open doorway does radiate. The room mapper asks what the grid
+        /// is <em>built</em> like, because a door swinging must not change the shape of the ship
+        /// and force a new flood fill. The pair is kept in step by writing both from the same
+        /// block in the same call, never independently.
+        /// </summary>
+        private readonly Dictionary<Vector3I, int> structure = new Dictionary<Vector3I, int>(Vector3I.Comparer);
+
         public int CellCount
         {
             get { return states.Count; }
@@ -45,9 +57,12 @@ namespace Thermodynamics.Core
             Vector3I[] cells = block.Cells;
             int[] self = block.SelfSurfaces;
 
+            int[] structural = block.StructuralSurfaces;
+
             for (int i = 0; i < cells.Length; i++)
             {
                 states[cells[i]] = CellSurface.SelfOnly(self[i]);
+                structure[cells[i]] = CellSurface.SelfOnly(structural == null ? self[i] : structural[i]);
             }
 
             for (int i = 0; i < cells.Length; i++)
@@ -66,6 +81,7 @@ namespace Thermodynamics.Core
             for (int i = 0; i < cells.Length; i++)
             {
                 states.Remove(cells[i]);
+                structure.Remove(cells[i]);
             }
 
             for (int i = 0; i < cells.Length; i++)
@@ -81,6 +97,7 @@ namespace Thermodynamics.Core
         public void Rebuild(GridModel grid)
         {
             states.Clear();
+            structure.Clear();
             if (grid == null) return;
 
             IList<BlockInstance> blocks = grid.Blocks;
@@ -89,9 +106,11 @@ namespace Thermodynamics.Core
                 BlockInstance block = blocks[b];
                 Vector3I[] cells = block.Cells;
                 int[] self = block.SelfSurfaces;
+                int[] structural = block.StructuralSurfaces;
                 for (int i = 0; i < cells.Length; i++)
                 {
                     states[cells[i]] = CellSurface.SelfOnly(self[i]);
+                    structure[cells[i]] = CellSurface.SelfOnly(structural == null ? self[i] : structural[i]);
                 }
             }
 
@@ -105,19 +124,25 @@ namespace Thermodynamics.Core
         /// <summary>Recomputes the derived neighbour half of one cell.</summary>
         public void RefreshCell(Vector3I cell)
         {
+            Refresh(states, cell);
+            Refresh(structure, cell);
+        }
+
+        private static void Refresh(Dictionary<Vector3I, int> layer, Vector3I cell)
+        {
             int state;
-            if (!states.TryGetValue(cell, out state)) return;
+            if (!layer.TryGetValue(cell, out state)) return;
 
             state = CellSurface.SelfOnly(state);
             for (int face = 0; face < Face.Count; face++)
             {
                 int neighbourState;
-                if (states.TryGetValue(cell + Face.Offsets[face], out neighbourState))
+                if (layer.TryGetValue(cell + Face.Offsets[face], out neighbourState))
                 {
                     state |= CellSurface.NeighbourContribution(neighbourState, face);
                 }
             }
-            states[cell] = state;
+            layer[cell] = state;
         }
 
         private void RefreshNeighboursOf(Vector3I cell)
@@ -145,6 +170,32 @@ namespace Thermodynamics.Core
         public bool IsFullySealed(Vector3I cell)
         {
             return CellSurface.IsFullySealed(GetState(cell));
+        }
+
+        /// <summary>Structural state of a cell — every door read as shut — or 0 when empty.</summary>
+        public int GetStructuralState(Vector3I cell)
+        {
+            int state;
+            return structure.TryGetValue(cell, out state) ? state : 0;
+        }
+
+        /// <summary>
+        /// <see cref="IsFaceSealed"/> against the structure layer. This is the connectivity rule
+        /// the room mapper walks, so that the rooms it finds are a property of how the ship is
+        /// built and not of which doors happen to be open.
+        /// </summary>
+        public bool IsFaceSealedStructurally(Vector3I cell, int face)
+        {
+            int state = GetStructuralState(cell);
+            if (CellSurface.SelfAirtight(state, face)) return true;
+
+            int neighbourState = GetStructuralState(cell + Face.Offsets[face]);
+            return CellSurface.SelfAirtight(neighbourState, Face.Opposite(face));
+        }
+
+        public bool IsFullySealedStructurally(Vector3I cell)
+        {
+            return CellSurface.IsFullySealed(GetStructuralState(cell));
         }
 
         /// <summary>
@@ -225,6 +276,7 @@ namespace Thermodynamics.Core
         public void Clear()
         {
             states.Clear();
+            structure.Clear();
         }
     }
 }

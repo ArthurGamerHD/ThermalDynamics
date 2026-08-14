@@ -48,10 +48,13 @@ namespace Thermodynamics.Core
         public long Key;
 
         private int[] gridSurfaces;
+        private int[] gridStructuralSurfaces;
         private Vector3I[] gridCells;
 
         private readonly float[] gridMountFraction = new float[Face.Count];
         private readonly float[] gridSealFraction = new float[Face.Count];
+        private readonly float[] gridSealFractionClosed = new float[Face.Count];
+        private readonly float[] gridSealFractionOpen = new float[Face.Count];
 
         public BlockInstance(BlockModel model, Vector3I min, BlockOrientation orientation)
         {
@@ -80,6 +83,40 @@ namespace Thermodynamics.Core
         public int[] SelfSurfaces
         {
             get { return gridSurfaces; }
+        }
+
+        /// <summary>
+        /// The same bits with the block's state taken as sealing — a door read as shut.
+        ///
+        /// This is the block's <em>structure</em>: what it would seal if nobody touched it. The
+        /// room mapper walks these rather than the live ones, so a door opening does not change
+        /// the shape of the grid and does not cost a new flood fill. What the door opening does
+        /// change is recorded as a portal between the regions either side of it.
+        /// </summary>
+        public int[] StructuralSurfaces
+        {
+            get { return gridStructuralSurfaces; }
+        }
+
+        /// <summary>
+        /// True when this block seals differently open than shut, i.e. it is a door. These are
+        /// the only blocks that can put a portal in a room's wall.
+        /// </summary>
+        public bool HasStateDependentSealing
+        {
+            get { return Model.HasOpenState; }
+        }
+
+        /// <summary>
+        /// Faces of this block, in grid space, whose sealing depends on its state: shut they
+        /// seal, open they do not. The way through a door, and nothing else.
+        /// </summary>
+        public bool IsPortalFace(int gridFace)
+        {
+            if (!HasStateDependentSealing) return false;
+            if (gridFace < 0 || gridFace >= Face.Count) return false;
+
+            return gridSealFractionClosed[gridFace] > 0f && gridSealFractionOpen[gridFace] <= 0f;
         }
 
         /// <summary>Extents in cells.</summary>
@@ -159,6 +196,8 @@ namespace Thermodynamics.Core
             {
                 gridMountFraction[face] = 0f;
                 gridSealFraction[face] = 0f;
+                gridSealFractionClosed[face] = 0f;
+                gridSealFractionOpen[face] = 0f;
             }
 
             for (int localFace = 0; localFace < Face.Count; localFace++)
@@ -167,9 +206,12 @@ namespace Thermodynamics.Core
                 if (gridFace < 0) continue;
 
                 gridMountFraction[gridFace] = Model.LocalFaceMountFraction(localFace);
+                gridSealFractionClosed[gridFace] = Model.LocalFaceSealFraction(localFace);
+                gridSealFractionOpen[gridFace] = Model.LocalFaceSealFractionWhenOpen(localFace);
+
                 gridSealFraction[gridFace] = IsSealedByDoorState
-                    ? Model.LocalFaceSealFraction(localFace)
-                    : Model.LocalFaceSealFractionWhenOpen(localFace);
+                    ? gridSealFractionClosed[gridFace]
+                    : gridSealFractionOpen[gridFace];
             }
         }
 
@@ -180,12 +222,16 @@ namespace Thermodynamics.Core
             int count = Model.CellCount;
             gridCells = new Vector3I[count];
             gridSurfaces = new int[count];
+            gridStructuralSurfaces = new int[count];
 
             int i = 0;
             foreach (Vector3I local in Model.LocalCells())
             {
                 gridCells[i] = LocalToGrid(local);
-                gridSurfaces[i] = RotateSurface(Model.LocalSurfaceState(local, IsSealedByDoorState));
+                gridStructuralSurfaces[i] = RotateSurface(Model.LocalSurfaceState(local, true));
+                gridSurfaces[i] = IsSealedByDoorState
+                    ? gridStructuralSurfaces[i]
+                    : RotateSurface(Model.LocalSurfaceState(local, false));
                 i++;
             }
         }

@@ -106,9 +106,14 @@ namespace Thermodynamics
             sb.Append(new string('=', title.Length)).Append('\n');
         }
 
+        /// <summary>
+        /// One "name value" line. The name is padded to a column and always followed by at least
+        /// one space: a name that exactly fills the column used to run straight into its value and
+        /// produce lines like "DebugSolarRadiationBlockColorsFalse".
+        /// </summary>
         private static void Field(StringBuilder sb, string name, object value)
         {
-            sb.Append("  ").Append(name.PadRight(30)).Append(value).Append('\n');
+            sb.Append("  ").Append(name.PadRight(30)).Append(name.Length >= 30 ? " " : "").Append(value).Append('\n');
         }
 
         /// <summary>
@@ -121,15 +126,25 @@ namespace Thermodynamics
         private static void WriteRoomMapping(StringBuilder sb, GridTelemetry g)
         {
             sb.Append("\n    room mapping (min / mean / max)\n");
+
+            if (g.MapperCompletions == 0)
+            {
+                // Not a measurement of anything: the grid closed before its first pass.
+                Field(sb, "  mapped", "never (no pass completed)");
+                return;
+            }
+
+            Field(sb, "  sealed rooms", g.RoomCount.Format("n0"));
             Field(sb, "  exterior cells", g.ExternalCells.Format("n0"));
             Field(sb, "  structure cells", g.SolidCells.Format("n0"));
             Field(sb, "  room cells", g.RoomCells.Format("n0"));
-            Field(sb, "  block cells left outdoors", g.OpenBlockCells.Format("n0"));
-            Field(sb, "  sealed structure read as open", g.LeakedCells.Format("n0"));
+            Field(sb, "  cells outdoors w/ block", g.OpenBlockCells.Format("n0"));
+            Field(sb, "  sealed struct. read open", g.LeakedCells.Format("n0"));
 
             if (!g.HasAudit) return;
 
             Core.RoomAudit audit = g.LastAudit;
+            Field(sb, "  last pass: rooms", DescribeRooms(audit));
             Field(sb, "  last pass: search box", audit.SearchVolume.ToString("n0") + " cells");
             Field(sb, "  last pass: block cells", audit.BlockCells.ToString("n0"));
             Field(sb, "  last pass: unsealed faces", audit.UnsealedBlockFaces.ToString("n0")
@@ -143,6 +158,29 @@ namespace Thermodynamics
             {
                 sb.Append("      ").Append(audit.Examples[i]).Append('\n');
             }
+        }
+
+        /// <summary>
+        /// The rooms themselves, as sizes: "1 room, 2 cells". A count with nothing behind it
+        /// leaves a reader unable to tell one enclosed cupboard from a whole sealed deck.
+        /// </summary>
+        private static string DescribeRooms(Core.RoomAudit audit)
+        {
+            if (audit.RoomCount == 0) return "none";
+            if (audit.RoomSizes == null || audit.RoomSizes.Count == 0)
+            {
+                return audit.RoomCount + " (" + audit.RoomCells + " cells)";
+            }
+
+            StringBuilder sb = new StringBuilder();
+            sb.Append(audit.RoomCount).Append(audit.RoomCount == 1 ? " room, cells: " : " rooms, cells: ");
+            for (int i = 0; i < audit.RoomSizes.Count; i++)
+            {
+                if (i > 0) sb.Append(", ");
+                sb.Append(audit.RoomSizes[i]);
+            }
+            if (audit.RoomSizes.Count < audit.RoomCount) sb.Append(", ...");
+            return sb.ToString();
         }
 
         /// <summary>Per-face fractions in canonical face order, as "F:1.0 L:1.0 U:0.0 ...".</summary>

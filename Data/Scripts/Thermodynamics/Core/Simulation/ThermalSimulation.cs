@@ -146,9 +146,15 @@ namespace Thermodynamics.Core
 
         /// <summary>
         /// Call after a change that alters only what a block <em>seals</em> — a door opening or
-        /// closing. Conduction and coolant plumbing do not depend on sealing, so this refreshes
-        /// the surface map and restarts the room fill without rebuilding the conduction graph or
-        /// re-tracing the loops.
+        /// closing.
+        ///
+        /// This does not remap the grid. A door does not move a wall: the rooms either side of it
+        /// are the same rooms whether it is open or shut, and the mapper already knows the door
+        /// as a portal between them. So the work here is to update the live surface bits, resolve
+        /// the portals into which rooms now reach open air, and refresh the exposure of the
+        /// blocks facing the rooms that changed. That is a walk over the doors and a handful of
+        /// blocks, against a flood fill of the whole bounding box and a pass over every node —
+        /// which, on a ship with a busy airlock, is the difference between free and not.
         /// </summary>
         public void RefreshBlockSealing(BlockInstance block)
         {
@@ -157,7 +163,24 @@ namespace Thermodynamics.Core
             block.RefreshSurfaces();
             surfaces.RemoveBlock(block);
             surfaces.AddBlock(block);
-            rooms.RequestRestart(grid);
+
+            // A block the mapper has never seen as a door — one placed since the last pass —
+            // has no portal, so the map cannot answer for it and has to be rebuilt.
+            if (!rooms.Knows(block))
+            {
+                rooms.RequestRestart(grid);
+                return;
+            }
+
+            Begin(SimulationPhase.RoomMapping);
+            bool changed = rooms.Map.RefreshVenting();
+            End(SimulationPhase.RoomMapping);
+
+            if (!changed) return;
+
+            Begin(SimulationPhase.Exposure);
+            solver.RefreshExposureAround(rooms.Map, rooms.Map.ChangedRooms);
+            End(SimulationPhase.Exposure);
         }
 
         /// <summary>

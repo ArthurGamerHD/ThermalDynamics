@@ -71,18 +71,70 @@ namespace Thermodynamics.Tests
             GridBuilder builder = GridBuilder.Large();
             builder.Shell(Catalog.LightArmor(), new Vector3I(-1, -1, -1), new Vector3I(2, 2, 2));
 
+            BlockInstance plug = builder.Grid.GetAtCell(new Vector3I(0, 0, -1));
+            builder.Grid.Remove(plug);
+            builder.Place(Catalog.SlideDoor(), new Vector3I(0, 0, -1));
+            BlockInstance door = builder.Last;
+
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings());
-            BlockInstance door = builder.Grid.GetAtCell(new Vector3I(0, 0, -1));
 
             door.IsSealedByDoorState = false;
             simulation.RefreshBlockSealing(door);
-            simulation.Rooms.RunToCompletion();
 
             RoomAudit audit = simulation.AuditRooms();
 
-            Assert.Equal(0, audit.RoomCount);
-            Assert.Equal(1, audit.OpenBlockCells);
-            Assert.Contains("no (door)", audit.Examples[0]);
+            // the room survives the door opening; it is vented, and the audit says so
+            Assert.Equal(1, audit.RoomCount);
+            Assert.Equal(1, audit.VentedRooms);
+            Assert.False(audit.HasLeak);
+        }
+
+        /// <summary>
+        /// A grid whose mapper has never run holds the all-external default map. Auditing a grid
+        /// against that used to report its whole hull as unaccounted for — and it fired for real,
+        /// on the three-second paste previews a field session is full of.
+        /// </summary>
+        [Fact]
+        public void AGridThatHasNeverBeenMappedIsNotAudited()
+        {
+            GridModel grid = new GridModel(Catalog.LargeGridSize);
+            ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), grid);
+
+            BlockModel armour = Catalog.LightArmor();
+            for (int x = -1; x <= 1; x++)
+            {
+                for (int y = -1; y <= 1; y++)
+                {
+                    for (int z = -1; z <= 1; z++)
+                    {
+                        if (x == 0 && y == 0 && z == 0) continue;
+                        simulation.AddBlock(new BlockInstance(armour, new Vector3I(x, y, z), BlockOrientation.Identity));
+                    }
+                }
+            }
+
+            Assert.Equal(0, simulation.Rooms.CompletedPasses);
+
+            RoomAudit audit = simulation.AuditRooms();
+
+            Assert.False(audit.MapBuilt);
+            Assert.False(audit.HasLeak);
+            Assert.Equal(0, audit.LeakedCells);
+            Assert.Equal(0, audit.OpenBlockCells);
+            Assert.Empty(audit.Examples);
+
+            // the half that does not depend on the map is still worth having
+            Assert.Equal(26, audit.BlockCells);
+            Assert.Equal(0, audit.UnsealedBlockFaces);
+        }
+
+        [Fact]
+        public void OnceAPassHasRunTheSameGridAuditsAsBuilt()
+        {
+            ThermalSimulation simulation = SealedShell();
+
+            Assert.True(simulation.Rooms.CompletedPasses > 0);
+            Assert.True(simulation.AuditRooms().MapBuilt);
         }
 
         [Fact]

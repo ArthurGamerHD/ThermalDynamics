@@ -422,6 +422,57 @@ namespace Thermodynamics.Core
             }
         }
 
+        /// <summary>
+        /// Refreshes only the nodes that face the given rooms.
+        ///
+        /// A door opening changes what one room's walls can see and nothing else, so walking
+        /// every node on a forty-thousand block ship to find the eight that changed is the
+        /// expensive way to do nothing. The rooms carry their own cells, and a block can only be
+        /// affected if it has a face onto one of them.
+        /// </summary>
+        public void RefreshExposureAround(RoomMap rooms, IList<int> roomIndices)
+        {
+            if (rooms == null || roomIndices == null) return;
+
+            if (affected == null) affected = new HashSet<BlockInstance>();
+            affected.Clear();
+
+            for (int r = 0; r < roomIndices.Count; r++)
+            {
+                int index = roomIndices[r];
+                if (index < 0 || index >= rooms.Rooms.Count) continue;
+
+                foreach (Vector3I cell in rooms.Rooms[index])
+                {
+                    for (int face = 0; face < Face.Count; face++)
+                    {
+                        BlockInstance block = grid.GetAtCell(cell + Face.Offsets[face]);
+                        if (block != null) affected.Add(block);
+                    }
+
+                    // The cell itself may hold a block — a door standing in the room.
+                    BlockInstance occupant = grid.GetAtCell(cell);
+                    if (occupant != null) affected.Add(occupant);
+                }
+            }
+
+            foreach (BlockInstance block in affected)
+            {
+                ThermalNode node = GetNode(block);
+                if (node == null) continue;
+
+                surfaces.GetExposedFaces(block, rooms, exposureScratch);
+                for (int f = 0; f < Face.Count; f++)
+                {
+                    node.ExposedFaces[f] = exposureScratch[f];
+                }
+                node.RefreshExposure();
+            }
+        }
+
+        /// <summary>Scratch for <see cref="RefreshExposureAround"/>; kept so it is not reallocated.</summary>
+        private HashSet<BlockInstance> affected;
+
         /// <summary>Recomputes waste-heat generation for every node.</summary>
         public void RefreshHeatGeneration()
         {

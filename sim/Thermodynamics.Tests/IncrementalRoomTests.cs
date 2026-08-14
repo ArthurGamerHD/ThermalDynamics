@@ -115,16 +115,15 @@ namespace Thermodynamics.Tests
 
             door.IsSealedByDoorState = false;
             simulation.RefreshBlockSealing(door);
-            simulation.Rooms.RunToCompletion();
 
-            Assert.Equal(0, simulation.Rooms.Map.RoomCount);
+            Assert.True(simulation.Rooms.Map.IsVented(0));
             Assert.True(simulation.Rooms.Map.IsExternal(Vector3I.Zero));
 
             door.IsSealedByDoorState = true;
             simulation.RefreshBlockSealing(door);
-            simulation.Rooms.RunToCompletion();
 
             Assert.Equal(1, simulation.Rooms.Map.RoomCount);
+            Assert.False(simulation.Rooms.Map.IsExternal(Vector3I.Zero));
         }
 
         /// <summary>

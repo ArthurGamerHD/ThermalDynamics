@@ -152,7 +152,7 @@ namespace Thermodynamics.Tests
         [Fact]
         public void OpeningADoorClearsItsSeal()
         {
-            BlockInstance door = new BlockInstance(Catalog.LightArmor(), Vector3I.Zero, BlockOrientation.Identity);
+            BlockInstance door = new BlockInstance(Catalog.AirtightDoor(), Vector3I.Zero, BlockOrientation.Identity);
             Assert.True(CellSurface.SelfAirtight(door.SelfSurfaces[0], Face.Up));
 
             door.IsSealedByDoorState = false;
@@ -163,6 +163,23 @@ namespace Thermodynamics.Tests
                 Assert.False(CellSurface.SelfAirtight(door.SelfSurfaces[0], face));
                 Assert.True(CellSurface.SelfMount(door.SelfSurfaces[0], face));
             }
+        }
+
+        /// <summary>
+        /// Whatever a door does when it opens, what it is <em>built</em> like does not change.
+        /// The room mapper walks these, and that is what lets a door cycle cost nothing.
+        /// </summary>
+        [Fact]
+        public void StructuralSurfacesDoNotMoveWhenADoorOpens()
+        {
+            BlockInstance door = new BlockInstance(Catalog.AirtightDoor(), Vector3I.Zero, BlockOrientation.Identity);
+            int shut = door.StructuralSurfaces[0];
+
+            door.IsSealedByDoorState = false;
+            door.RefreshSurfaces();
+
+            Assert.Equal(shut, door.StructuralSurfaces[0]);
+            Assert.True(CellSurface.IsFullySealed(door.StructuralSurfaces[0]));
         }
     }
 
