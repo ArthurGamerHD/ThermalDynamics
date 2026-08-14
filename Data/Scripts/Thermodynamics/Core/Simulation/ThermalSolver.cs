@@ -44,6 +44,7 @@ namespace Thermodynamics.Core
         private readonly Dictionary<long, ThermalNode> nodesByKey = new Dictionary<long, ThermalNode>();
         private readonly List<ThermalLink> links = new List<ThermalLink>();
         private readonly List<CoolantLoop> loops = new List<CoolantLoop>();
+        private readonly List<RoomAirNode> roomAir = new List<RoomAirNode>();
 
         private float[] nodeWatts = new float[0];
         private float[] nodeTemperatures = new float[0];
@@ -56,6 +57,7 @@ namespace Thermodynamics.Core
 
         private float[] nodeConductanceTotal = new float[0];
         private float[] loopWatts = new float[0];
+        private float[] roomWatts = new float[0];
 
         // Node state the substep loop reads, copied out of the node objects once per step
         // instead of being chased through them once per node per substep. A step with sixteen
@@ -93,6 +95,9 @@ namespace Thermodynamics.Core
         private readonly float[] sunWeights = new float[Face.Count];
         private readonly float[] windWeights = new float[Face.Count];
 
+        /// <summary>Reused per registered point source, one source at a time.</summary>
+        private readonly float[] sourceWeights = new float[Face.Count];
+
         /// <summary>
         /// Record every mechanism's contribution to every node, for the debug readout and the
         /// telemetry report.
@@ -103,6 +108,9 @@ namespace Thermodynamics.Core
         public bool CollectDiagnostics;
 
         private readonly List<OverheatEvent> overheats = new List<OverheatEvent>();
+
+        private readonly ThermalThresholds thresholds = new ThermalThresholds();
+        private readonly List<ThresholdCrossing> crossings = new List<ThresholdCrossing>();
         private readonly int[] exposureScratch = new int[Face.Count];
         private readonly List<BlockInstance> neighbourScratch = new List<BlockInstance>();
 
@@ -173,10 +181,31 @@ namespace Thermodynamics.Core
             get { return loops; }
         }
 
+        /// <summary>
+        /// The air masses of the grid's sealed rooms. One entry per room that is holding its air
+        /// in; a vented room has none, because what faces it faces outdoors.
+        /// </summary>
+        public IList<RoomAirNode> RoomAir
+        {
+            get { return roomAir; }
+        }
+
         /// <summary>Blocks that took heat damage during the last <see cref="Step"/>.</summary>
         public IList<OverheatEvent> Overheats
         {
             get { return overheats; }
+        }
+
+        /// <summary>Temperatures being watched on this grid. Empty by default.</summary>
+        public ThermalThresholds Thresholds
+        {
+            get { return thresholds; }
+        }
+
+        /// <summary>Threshold crossings during the last <see cref="Step"/>.</summary>
+        public IList<ThresholdCrossing> Crossings
+        {
+            get { return crossings; }
         }
 
         /// <summary>Substeps the last <see cref="Step"/> needed for stability.</summary>
@@ -473,6 +502,199 @@ namespace Thermodynamics.Core
         /// <summary>Scratch for <see cref="RefreshExposureAround"/>; kept so it is not reallocated.</summary>
         private HashSet<BlockInstance> affected;
 
+        // ---- room air ----------------------------------------------------------------------
+
+        /// <summary>Air temperature and pressure of rooms seen before the last rebuild.</summary>
+        private readonly Dictionary<Vector3I, RoomAirNode> rememberedAir =
+            new Dictionary<Vector3I, RoomAirNode>(Vector3I.Comparer);
+
+        private readonly Dictionary<int, int> roomContactScratch = new Dictionary<int, int>();
+
+        /// <summary>
+        /// Rebuilds the air masses of every sealed room from a room map.
+        ///
+        /// A room's air survives a rebuild if the room does: rooms are re-found identically
+        /// whenever the map is remade for a change somewhere else on the ship, so matching on the
+        /// room's lowest cell carries temperature and pressure across. A room whose shape actually
+        /// changed is a different room, and starts at ambient with no air until the host says
+        /// otherwise.
+        /// </summary>
+        public void RebuildRoomAir(RoomMap rooms)
+        {
+            rememberedAir.Clear();
+            for (int i = 0; i < roomAir.Count; i++)
+            {
+                rememberedAir[roomAir[i].Anchor] = roomAir[i];
+            }
+
+            roomAir.Clear();
+
+            if (settings.EnableRoomAir && rooms != null)
+            {
+                float cellVolume = grid.GridSize * grid.GridSize * grid.GridSize;
+
+                for (int r = 0; r < rooms.Rooms.Count; r++)
+                {
+                    if (rooms.IsVented(r)) continue;
+
+                    HashSet<Vector3I> cells = rooms.Rooms[r];
+                    if (cells.Count == 0) continue;
+
+                    RoomAirNode air = new RoomAirNode();
+                    air.RoomIndex = r;
+                    air.Anchor = LowestCell(cells);
+                    air.CellCount = cells.Count;
+                    air.Volume = cells.Count * cellVolume;
+
+                    RoomAirNode previous;
+                    if (rememberedAir.TryGetValue(air.Anchor, out previous))
+                    {
+                        air.Temperature = previous.Temperature;
+                        air.Pressure = previous.Pressure;
+                        air.Initialised = previous.Initialised;
+                    }
+                    else
+                    {
+                        air.Temperature = Environment.AmbientTemperature;
+                        air.Pressure = 0f;
+                    }
+
+                    air.AirDensity = settings.RoomAirDensity;
+                    air.HeatTimeScale = settings.HeatTimeScale;
+
+                    roomAir.Add(air);
+                    BuildRoomLinks(air, rooms);
+                }
+            }
+
+            rememberedAir.Clear();
+            EnsureBuffers();
+            RecomputeConductanceTotals();
+        }
+
+        /// <summary>
+        /// Links one room's air to every block bounding it.
+        ///
+        /// Walked over the room's own cells rather than over the grid's blocks, so the cost is the
+        /// size of the room and not the size of the ship — the same reason
+        /// <see cref="RefreshExposureAround"/> exists.
+        /// </summary>
+        private void BuildRoomLinks(RoomAirNode air, RoomMap rooms)
+        {
+            air.Links.Clear();
+            if (!air.HasAir) return;
+            if (air.RoomIndex < 0 || air.RoomIndex >= rooms.Rooms.Count) return;
+
+            roomContactScratch.Clear();
+
+            foreach (Vector3I cell in rooms.Rooms[air.RoomIndex])
+            {
+                for (int face = 0; face < Face.Count; face++)
+                {
+                    BlockInstance block = grid.GetAtCell(cell + Face.Offsets[face]);
+                    if (block == null) continue;
+
+                    ThermalNode node = GetNode(block);
+                    if (node == null) continue;
+
+                    int faces;
+                    roomContactScratch.TryGetValue(node.Index, out faces);
+                    roomContactScratch[node.Index] = faces + 1;
+                }
+            }
+
+            float surfaceSum = 0f;
+            int surfaceCount = 0;
+
+            foreach (KeyValuePair<int, int> contact in roomContactScratch)
+            {
+                surfaceSum += nodes[contact.Key].Temperature;
+                surfaceCount++;
+
+                float area = contact.Value * nodes[contact.Key].CellFaceArea;
+                float conductance = settings.RoomConvectionCoefficient * area;
+                if (conductance <= 0f) continue;
+
+                air.Links.Add(new RoomLink(contact.Key, conductance));
+            }
+
+            // Air appearing in a room for the first time starts at the temperature of the walls
+            // holding it, which is the only defensible answer: it has been in there with them.
+            if (!air.Initialised && surfaceCount > 0)
+            {
+                air.Temperature = surfaceSum / surfaceCount;
+                air.Initialised = true;
+            }
+        }
+
+        private static Vector3I LowestCell(HashSet<Vector3I> cells)
+        {
+            bool first = true;
+            Vector3I lowest = Vector3I.Zero;
+
+            foreach (Vector3I cell in cells)
+            {
+                if (first)
+                {
+                    lowest = cell;
+                    first = false;
+                    continue;
+                }
+
+                if (cell.Z < lowest.Z
+                    || (cell.Z == lowest.Z && cell.Y < lowest.Y)
+                    || (cell.Z == lowest.Z && cell.Y == lowest.Y && cell.X < lowest.X))
+                {
+                    lowest = cell;
+                }
+            }
+
+            return lowest;
+        }
+
+        /// <summary>The air of the room a cell belongs to, or null when that room holds none.</summary>
+        public RoomAirNode GetRoomAir(RoomMap rooms, Vector3I cell)
+        {
+            if (rooms == null) return null;
+
+            int room = rooms.RoomIndexOf(cell);
+            if (room < 0) return null;
+
+            for (int i = 0; i < roomAir.Count; i++)
+            {
+                if (roomAir[i].RoomIndex == room) return roomAir[i];
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Sets how full of air a room is. The host owns this figure — the simulation has no way
+        /// to know whether a compartment is pressurised — and setting it rebuilds the room's links,
+        /// because a room at zero pressure has none.
+        /// </summary>
+        /// <returns>True when a room took the value.</returns>
+        public bool SetRoomPressure(RoomMap rooms, Vector3I cell, float pressure)
+        {
+            RoomAirNode air = GetRoomAir(rooms, cell);
+            if (air == null) return false;
+
+            if (pressure < 0f) pressure = 0f;
+            if (pressure > 1f) pressure = 1f;
+            if (air.Pressure == pressure) return true;
+
+            bool hadAir = air.HasAir;
+            air.Pressure = pressure;
+            air.RefreshThermalMass();
+
+            if (hadAir != air.HasAir)
+            {
+                BuildRoomLinks(air, rooms);
+                RecomputeConductanceTotals();
+            }
+
+            return true;
+        }
+
         /// <summary>Recomputes waste-heat generation for every node.</summary>
         public void RefreshHeatGeneration()
         {
@@ -498,6 +720,7 @@ namespace Thermodynamics.Core
 
             Environment = environment;
             overheats.Clear();
+            crossings.Clear();
 
             // One estimate, used for both answers. It walks every node cubing a temperature, so
             // asking twice per step doubled the cost of the cheapest thing the solver does for no
@@ -521,12 +744,18 @@ namespace Thermodynamics.Core
             // classifier recovering the previous temperature, the per-type distribution — is
             // describing one step; a six-substep grid otherwise reports roughly a sixth of the
             // movement it actually made.
+            bool watching = thresholds.Count > 0;
+
             for (int i = 0; i < nodes.Count; i++)
             {
                 float updated = nodeTemperatures[i];
                 ThermalNode node = nodes[i];
+                float previous = nodeStepStart[i];
+
                 node.Temperature = updated;
-                node.LastDeltaTemperature = updated - nodeStepStart[i];
+                node.LastDeltaTemperature = updated - previous;
+
+                if (watching) thresholds.Collect(node.Block, previous, updated, crossings);
             }
 
             StepCount++;
@@ -610,10 +839,15 @@ namespace Thermodynamics.Core
             {
                 loopWatts[i] = 0f;
             }
+            for (int i = 0; i < roomAir.Count; i++)
+            {
+                roomWatts[i] = 0f;
+            }
 
             AccumulateEnvironment(ref env);
             AccumulateConduction(h);
             AccumulateLoops(h);
+            AccumulateRoomAir(h);
 
             ApplyWatts(h);
         }
@@ -633,23 +867,33 @@ namespace Thermodynamics.Core
 
         private void AccumulateEnvironment(ref EnvironmentState env)
         {
-            bool environmentEnabled = settings.EnableEnvironment;
+            bool radiating = settings.EnableEnvironment && settings.EnableRadiation;
+            bool environmentEnabled = radiating;
             bool solarEnabled = settings.EnableSolarHeat && !env.IsSolarOccluded && env.SolarEnergy > 0f;
+            bool sourcesEnabled = settings.EnableHeatSources && env.HeatSourceCount > 0;
             bool frictionEnabled = env.FrictionActive;
+            bool generating = settings.EnableWasteHeat;
             bool diagnostics = CollectDiagnostics;
 
-            if (!environmentEnabled && !solarEnabled && !frictionEnabled)
+            bool convecting = settings.EnableEnvironment && settings.EnableConvection
+                && env.AtmosphereFactor > 0f && env.ConvectionCoefficient > 0f;
+
+            if (convecting) environmentEnabled = true;
+
+            if (!environmentEnabled && !solarEnabled && !frictionEnabled && !sourcesEnabled)
             {
                 // Nothing but waste heat to add, so the whole exposure pass is skipped.
-                for (int i = 0; i < nodes.Count; i++)
+                if (generating)
                 {
-                    nodeWatts[i] += nodeGeneration[i];
+                    for (int i = 0; i < nodes.Count; i++)
+                    {
+                        nodeWatts[i] += nodeGeneration[i];
+                    }
                 }
                 if (diagnostics) ClearEnvironmentDiagnostics();
                 return;
             }
 
-            bool convecting = environmentEnabled && env.AtmosphereFactor > 0f && env.ConvectionCoefficient > 0f;
             bool windy = convecting && env.WindSpeed > 0f;
 
             float radiationShare = 1f - env.AtmosphereFactor;
@@ -672,7 +916,7 @@ namespace Thermodynamics.Core
 
             for (int i = 0; i < nodes.Count; i++)
             {
-                float generation = nodeGeneration[i];
+                float generation = generating ? nodeGeneration[i] : 0f;
 
                 if (nodeExposedFaces[i] <= 0)
                 {
@@ -692,8 +936,12 @@ namespace Thermodynamics.Core
 
                 if (environmentEnabled)
                 {
-                    float squared = temperature * temperature;
-                    float radiation = -nodeRadiation[i] * ((squared * squared) - env.AmbientTemperaturePow4);
+                    float radiation = 0f;
+                    if (radiating)
+                    {
+                        float squared = temperature * temperature;
+                        radiation = -nodeRadiation[i] * ((squared * squared) - env.AmbientTemperaturePow4);
+                    }
 
                     float convection = 0f;
                     if (convecting)
@@ -733,6 +981,40 @@ namespace Thermodynamics.Core
                 node.LastConvectionWatts = convectionWatts;
                 node.LastSolarWatts = solarWatts;
                 node.LastFrictionWatts = frictionWatts;
+                node.LastHeatSourceWatts = 0f;
+            }
+
+            if (sourcesEnabled) AccumulateHeatSources(ref env, diagnostics);
+        }
+
+        /// <summary>
+        /// Adds gain from registered point sources.
+        ///
+        /// Looped source-outermost so each source resolves its six face weights once for the whole
+        /// grid, exactly as the sun does. A source costs one pass over the exposed nodes; a grid
+        /// with no sources registered costs one comparison per step.
+        /// </summary>
+        private void AccumulateHeatSources(ref EnvironmentState env, bool diagnostics)
+        {
+            for (int s = 0; s < env.HeatSourceCount; s++)
+            {
+                HeatSourceState source = env.HeatSources[s];
+                if (source.Irradiance <= 0f) continue;
+
+                Vector3 direction = source.DirectionLocal;
+                ResolveDirection(ref direction, sourceWeights);
+
+                for (int i = 0; i < nodes.Count; i++)
+                {
+                    if (nodeExposedFaces[i] <= 0) continue;
+
+                    float watts = source.Irradiance * nodeEmissivity[i]
+                        * Weighted(i, sourceWeights) * nodeExposedArea[i];
+                    if (watts == 0f) continue;
+
+                    nodeWatts[i] += watts;
+                    if (diagnostics) nodes[i].LastHeatSourceWatts += watts;
+                }
             }
         }
 
@@ -763,6 +1045,7 @@ namespace Thermodynamics.Core
             node.LastConvectionWatts = 0f;
             node.LastSolarWatts = 0f;
             node.LastFrictionWatts = 0f;
+            node.LastHeatSourceWatts = 0f;
         }
 
         private void AccumulateConduction(float h)
@@ -777,6 +1060,8 @@ namespace Thermodynamics.Core
                     nodes[i].LastConductionWatts = 0f;
                 }
             }
+
+            if (!settings.EnableConduction) return;
 
             float inverseH = h > 0f ? 1f / h : 0f;
 
@@ -859,6 +1144,60 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
+        /// Exchanges heat between each sealed room's air and the surfaces bounding it.
+        ///
+        /// Identical in form to <see cref="AccumulateLoops"/> — a lumped mass against a set of
+        /// nodes — because that is what it is. What differs is where the mass comes from: a
+        /// coolant loop carries the fluid its definition declares, and a room carries however much
+        /// air fits in it at the pressure the host reports.
+        /// </summary>
+        private void AccumulateRoomAir(float h)
+        {
+            if (!settings.EnableRoomAir) return;
+
+            bool clamp = settings.ClampConductionOvershoot;
+            bool diagnostics = CollectDiagnostics;
+
+            if (diagnostics)
+            {
+                for (int i = 0; i < nodes.Count; i++)
+                {
+                    nodes[i].LastRoomWatts = 0f;
+                }
+            }
+
+            for (int r = 0; r < roomAir.Count; r++)
+            {
+                RoomAirNode air = roomAir[r];
+                if (!air.HasAir) continue;
+
+                float airTemperature = air.Temperature;
+
+                for (int i = 0; i < air.Links.Count; i++)
+                {
+                    RoomLink link = air.Links[i];
+                    if (link.NodeIndex < 0 || link.NodeIndex >= nodes.Count) continue;
+
+                    float difference = airTemperature - nodeTemperatures[link.NodeIndex];
+                    float watts = link.Conductance * difference;
+
+                    if (clamp)
+                    {
+                        watts = ClampExchange(
+                            watts, h, difference,
+                            air.ThermalMass,
+                            nodeThermalMass[link.NodeIndex]);
+                    }
+
+                    nodeWatts[link.NodeIndex] += watts;
+                    roomWatts[r] -= watts;
+
+                    if (diagnostics) nodes[link.NodeIndex].LastRoomWatts += watts;
+                }
+            }
+        }
+
+        /// <summary>
         /// Limits a pairwise exchange to the energy that brings both sides to their shared
         /// equilibrium, so neither can overshoot the other however large the step is.
         ///
@@ -922,6 +1261,17 @@ namespace Thermodynamics.Core
                     ? ThermalConstants.MinimumTemperature
                     : updated;
             }
+
+            for (int r = 0; r < roomAir.Count; r++)
+            {
+                RoomAirNode air = roomAir[r];
+                if (!air.HasAir) continue;
+
+                float updated = air.Temperature + (roomWatts[r] * h / air.ThermalMass);
+                air.Temperature = updated < ThermalConstants.MinimumTemperature
+                    ? ThermalConstants.MinimumTemperature
+                    : updated;
+            }
         }
 
         // ---- stability ---------------------------------------------------------------------
@@ -955,18 +1305,28 @@ namespace Thermodynamics.Core
         {
             float worst = 0f;
 
-            bool environmentEnabled = settings.EnableEnvironment;
-            float convection = Environment.ConvectionCoefficient * Environment.AtmosphereFactor;
+            bool radiating = settings.EnableEnvironment && settings.EnableRadiation;
+            bool convecting = settings.EnableEnvironment && settings.EnableConvection;
+            float convection = convecting
+                ? Environment.ConvectionCoefficient * Environment.AtmosphereFactor
+                : 0f;
+            bool exposed = radiating || convecting;
 
             for (int i = 0; i < nodes.Count; i++)
             {
+                // Conductance totals cover links, coolant loops and room air alike, and are not
+                // reduced when a mechanism is switched off: over-estimating stiffness costs a
+                // substep, under-estimating it costs stability.
                 float rate = nodeConductanceTotal[i];
 
                 // Linearised environment coupling: d(radiated watts)/dT = 4 e s A T^3
-                if (environmentEnabled && nodeExposedFaces[i] > 0)
+                if (exposed && nodeExposedFaces[i] > 0)
                 {
-                    float t = nodeTemperatures[i];
-                    rate += 4f * nodeRadiation[i] * t * t * t;
+                    if (radiating)
+                    {
+                        float t = nodeTemperatures[i];
+                        rate += 4f * nodeRadiation[i] * t * t * t;
+                    }
                     rate += convection * nodeExposedArea[i];
                 }
 
@@ -984,6 +1344,22 @@ namespace Thermodynamics.Core
                 }
                 float perLoop = total / loop.ThermalMass;
                 if (perLoop > worst) worst = perLoop;
+            }
+
+            // Room air is the lightest mass on the grid and touches the most surface, so it is
+            // usually what sets the substep count once a ship is pressurised.
+            for (int r = 0; r < roomAir.Count; r++)
+            {
+                RoomAirNode air = roomAir[r];
+                if (!air.HasAir) continue;
+
+                float total = 0f;
+                for (int i = 0; i < air.Links.Count; i++)
+                {
+                    total += air.Links[i].Conductance;
+                }
+                float perRoom = total / air.ThermalMass;
+                if (perRoom > worst) worst = perRoom;
             }
 
             if (worst <= 0f) return 1f;
@@ -1027,6 +1403,21 @@ namespace Thermodynamics.Core
                     }
                 }
             }
+
+            for (int r = 0; r < roomAir.Count; r++)
+            {
+                RoomAirNode air = roomAir[r];
+                if (!air.HasAir) continue;
+
+                for (int i = 0; i < air.Links.Count; i++)
+                {
+                    RoomLink link = air.Links[i];
+                    if (link.NodeIndex >= 0 && link.NodeIndex < nodeConductanceTotal.Length)
+                    {
+                        nodeConductanceTotal[link.NodeIndex] += link.Conductance;
+                    }
+                }
+            }
         }
 
         private void EnsureBuffers()
@@ -1051,6 +1442,10 @@ namespace Thermodynamics.Core
             {
                 loopWatts = new float[Math.Max(4, loops.Count * 2)];
             }
+            if (roomWatts.Length < roomAir.Count)
+            {
+                roomWatts = new float[Math.Max(4, roomAir.Count * 2)];
+            }
         }
 
         // ---- diagnostics -------------------------------------------------------------------
@@ -1068,6 +1463,10 @@ namespace Thermodynamics.Core
                 for (int i = 0; i < loops.Count; i++)
                 {
                     total += loops[i].Energy;
+                }
+                for (int i = 0; i < roomAir.Count; i++)
+                {
+                    if (roomAir[i].HasAir) total += roomAir[i].Energy;
                 }
                 return total;
             }

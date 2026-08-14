@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Text;
 using Draygo.API;
 using Draygo.BlockExtensionsAPI;
 using Sandbox.ModAPI;
@@ -52,6 +55,13 @@ namespace Thermodynamics
             Telemetry.Start();
 
             ThermalHud.Initialize();
+            ThermalTerminal.Register();
+
+            // The API is published from Init so a mod that loads after this one still finds it:
+            // late consumers ask for the table and get it re-sent.
+            ThermalApi.Register();
+
+            ThermalVision.Active = Settings.Instance.EnableThermalVision;
         }
 
         protected override void UnloadData()
@@ -66,6 +76,9 @@ namespace Thermodynamics
             ThermalCoolantShapes.Clear();
             ThermalBridges.Clear();
             ThermalGrid.ResetEnvironmentCaches();
+            ThermalHeatSources.Clear();
+            ThermalApi.Unregister();
+            ThermalTerminal.Unregister();
 
             if (_commandRegistered && MyAPIGateway.Utilities != null)
             {
@@ -114,6 +127,7 @@ namespace Thermodynamics
         public override void Draw()
         {
             ThermalHud.Draw();
+            ThermalVision.Draw();
         }
 
         /// <summary>
@@ -176,6 +190,40 @@ namespace Thermodynamics
                 return;
             }
 
+            if (lowered == "vision")
+            {
+                ThermalVision.Toggle();
+                Reply("thermal vision " + (ThermalVision.Active ? "ON" : "OFF"));
+                return;
+            }
+
+            if (lowered == "greyscale")
+            {
+                Settings.Instance.ThermalVisionGreyscale = !Settings.Instance.ThermalVisionGreyscale;
+                Reply("thermal vision palette "
+                    + (Settings.Instance.ThermalVisionGreyscale ? "greyscale" : "heat"));
+                return;
+            }
+
+            if (lowered == "settings" || lowered == "list")
+            {
+                ListSettings();
+                return;
+            }
+
+            if (lowered.StartsWith("set "))
+            {
+                RunSet(argument.Substring(4).Trim());
+                return;
+            }
+
+            if (lowered == "save")
+            {
+                Settings.Save(Settings.Instance);
+                Reply("settings written to world storage");
+                return;
+            }
+
             if (lowered.StartsWith("stride "))
             {
                 int stride;
@@ -201,7 +249,88 @@ namespace Thermodynamics
                 return;
             }
 
-            Reply("commands: status | telemetry on | telemetry off | stride <n> | dump");
+            Reply("commands: status | settings | set <name> <value> | save | vision | greyscale"
+                + " | telemetry on | telemetry off | stride <n> | dump");
+        }
+
+        /// <summary>
+        /// Changes one setting for the running session.
+        ///
+        /// Every switch in the mod is live: the value is written into the settings object every
+        /// grid already holds, and the simulation picks it up on its next step. Nothing is written
+        /// to disk unless <c>/thermal save</c> asks for it, so an experiment cannot outlive the
+        /// session by accident.
+        /// </summary>
+        private void RunSet(string argument)
+        {
+            int space = argument.IndexOf(' ');
+            if (space <= 0)
+            {
+                Reply("usage: /thermal set <name> <value>   (switches take 0 or 1)");
+                return;
+            }
+
+            string name = Resolve(argument.Substring(0, space).Trim());
+            string text = argument.Substring(space + 1).Trim().ToLower();
+
+            if (name == null)
+            {
+                Reply("no such setting; /thermal settings lists them");
+                return;
+            }
+
+            float value;
+            if (text == "on" || text == "true") value = 1f;
+            else if (text == "off" || text == "false") value = 0f;
+            else if (!float.TryParse(text, out value))
+            {
+                Reply("could not read '" + text + "' as a number");
+                return;
+            }
+
+            if (!MyAPIGateway.Session.IsServer)
+            {
+                Reply("settings are server side; ask an administrator");
+                return;
+            }
+
+            Settings.Instance.SetValue(name, value);
+            Settings.Instance.Apply();
+
+            Reply(name + " = " + Format(name, Settings.Instance.GetValue(name)) + " (unsaved)");
+        }
+
+        /// <summary>Matches a setting name without regard to case, so players can type it.</summary>
+        private static string Resolve(string name)
+        {
+            List<string> names = Settings.Names();
+            for (int i = 0; i < names.Count; i++)
+            {
+                if (string.Equals(names[i], name, StringComparison.OrdinalIgnoreCase)) return names[i];
+            }
+            return null;
+        }
+
+        private void ListSettings()
+        {
+            List<string> names = Settings.Names();
+            StringBuilder text = new StringBuilder();
+
+            for (int i = 0; i < names.Count; i++)
+            {
+                text.Append(names[i]).Append(" = ")
+                    .Append(Format(names[i], Settings.Instance.GetValue(names[i])))
+                    .Append('\n');
+            }
+
+            MyAPIGateway.Utilities.ShowMissionScreen(
+                Settings.Name, "Settings", "", text.ToString(), null, "Close");
+        }
+
+        private static string Format(string name, float value)
+        {
+            if (Settings.IsFlag(name)) return value != 0f ? "on" : "off";
+            return value.ToString("0.####");
         }
 
         private void Dump()

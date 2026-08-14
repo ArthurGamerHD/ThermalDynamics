@@ -88,11 +88,29 @@ namespace Thermodynamics.Core
             get { return overheats; }
         }
 
+        /// <summary>
+        /// Threshold crossings during the last <see cref="Update"/> or <see cref="StepExact"/>,
+        /// across every step it ran. Accumulated here for the same reason overheats are: the
+        /// solver's own list only survives one step.
+        /// </summary>
+        public IList<ThresholdCrossing> Crossings
+        {
+            get { return crossings; }
+        }
+
+        /// <summary>Temperatures being watched on this grid.</summary>
+        public ThermalThresholds Thresholds
+        {
+            get { return solver.Thresholds; }
+        }
+
         private readonly List<OverheatEvent> overheats = new List<OverheatEvent>();
+        private readonly List<ThresholdCrossing> crossings = new List<ThresholdCrossing>();
 
         private void RunSteps(int steps, ref EnvironmentState state)
         {
             overheats.Clear();
+            crossings.Clear();
 
             for (int i = 0; i < steps; i++)
             {
@@ -102,6 +120,12 @@ namespace Thermodynamics.Core
                 for (int o = 0; o < stepOverheats.Count; o++)
                 {
                     overheats.Add(stepOverheats[o]);
+                }
+
+                IList<ThresholdCrossing> stepCrossings = solver.Crossings;
+                for (int c = 0; c < stepCrossings.Count; c++)
+                {
+                    crossings.Add(stepCrossings[c]);
                 }
             }
         }
@@ -180,7 +204,36 @@ namespace Thermodynamics.Core
 
             Begin(SimulationPhase.Exposure);
             solver.RefreshExposureAround(rooms.Map, rooms.Map.ChangedRooms);
+
+            // A room that has just been opened stops holding air, and one that has just been shut
+            // starts. Both are rebuilds of a room, not of the ship: the work is proportional to
+            // the rooms that changed.
+            solver.RebuildRoomAir(rooms.Map);
             End(SimulationPhase.Exposure);
+        }
+
+        /// <summary>The air masses of the grid's sealed rooms.</summary>
+        public IList<RoomAirNode> RoomAir
+        {
+            get { return solver.RoomAir; }
+        }
+
+        /// <summary>
+        /// Sets how full of air the room containing <paramref name="cell"/> is, 0..1.
+        ///
+        /// The simulation cannot work this out for itself — pressurisation is the host's model,
+        /// not a thermal property — so a room holds no air until something reports that it does.
+        /// </summary>
+        /// <returns>True when a sealed room took the value.</returns>
+        public bool SetRoomPressure(Vector3I cell, float pressure)
+        {
+            return solver.SetRoomPressure(rooms.Map, cell, pressure);
+        }
+
+        /// <summary>The air of the room containing a cell, or null when it holds none.</summary>
+        public RoomAirNode GetRoomAir(Vector3I cell)
+        {
+            return solver.GetRoomAir(rooms.Map, cell);
         }
 
         /// <summary>
@@ -211,12 +264,41 @@ namespace Thermodynamics.Core
 
             Begin(SimulationPhase.Exposure);
             solver.RefreshExposure(rooms.Map);
+            solver.RebuildRoomAir(rooms.Map);
             solver.RefreshHeatGeneration();
             End(SimulationPhase.Exposure);
 
             topologyDirty = false;
             exposureDirty = false;
+            appliedRevision = settings.Revision;
         }
+
+        /// <summary>
+        /// Reapplies settings that were changed after the simulation was built.
+        ///
+        /// Most settings are read straight off the shared object every step and need nothing.
+        /// These three do not: heat capacities are cached per node, coolant loops are built or not
+        /// built according to a switch, and room air is built the same way. Checking a revision
+        /// number costs one integer comparison per update against reading nothing at all, and it
+        /// is what makes every switch a live switch.
+        /// </summary>
+        private void ApplySettingsIfChanged()
+        {
+            if (appliedRevision == settings.Revision) return;
+            appliedRevision = settings.Revision;
+
+            IList<ThermalNode> nodes = solver.Nodes;
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                nodes[i].HeatTimeScale = settings.HeatTimeScale;
+            }
+
+            RebuildLoops();
+            solver.RebuildRoomAir(rooms.Map);
+        }
+
+        /// <summary>The settings revision this simulation has already acted on.</summary>
+        private int appliedRevision = -1;
 
         private void Begin(SimulationPhase phase)
         {
@@ -263,6 +345,8 @@ namespace Thermodynamics.Core
         /// <param name="sample">Environment readings for this grid.</param>
         public void Update(float frameSeconds, EnvironmentSample sample)
         {
+            ApplySettingsIfChanged();
+
             if (topologyDirty)
             {
                 Begin(SimulationPhase.Topology);
@@ -287,6 +371,7 @@ namespace Thermodynamics.Core
                 Begin(SimulationPhase.Exposure);
                 exposureDirty = false;
                 solver.RefreshExposure(rooms.Map);
+                solver.RebuildRoomAir(rooms.Map);
                 End(SimulationPhase.Exposure);
             }
 
@@ -305,6 +390,7 @@ namespace Thermodynamics.Core
         /// </summary>
         public void StepExact(int steps, EnvironmentSample sample)
         {
+            ApplySettingsIfChanged();
             EnvironmentState state = EnvironmentSolver.Solve(settings, planet, sample);
             RunSteps(steps, ref state);
         }

@@ -77,6 +77,22 @@ namespace Thermodynamics
         /// </summary>
         public const int MaxRecentlyRemoved = 4096;
 
+        /// <summary>
+        /// Air vents on this grid. Kept apart from the rest so the pressurisation sweep visits
+        /// the handful of blocks that can answer for a room rather than every block on the ship.
+        /// </summary>
+        private readonly List<ThermalBlock> vents = new List<ThermalBlock>();
+
+        internal void RegisterVent(ThermalBlock bound)
+        {
+            if (bound != null && !vents.Contains(bound)) vents.Add(bound);
+        }
+
+        internal void UnregisterVent(ThermalBlock bound)
+        {
+            vents.Remove(bound);
+        }
+
         /// <summary>The hottest block on the grid, refreshed on a slow cadence for readouts.</summary>
         public ThermalNode HottestNode;
 
@@ -125,6 +141,10 @@ namespace Thermodynamics
 
             Stats = Telemetry.RegisterGrid(this);
             if (Stats != null) Simulation.Profiler = Stats.Profiler;
+
+            // Thresholds are registered against the mod, not against a grid, so a grid built after
+            // a mod registered one still reports it.
+            ThermalApi.ApplyThresholds(Simulation);
 
             Live.Add(this);
 

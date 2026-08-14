@@ -26,6 +26,12 @@ namespace Thermodynamics.Core
         public const float ReferenceConductivity = 200f;
 
         /// <summary>
+        /// Specific heat of air at constant pressure, J/(kg K). Used for room air, which is the
+        /// one mass in the simulation the block definitions do not describe.
+        /// </summary>
+        public const float AirSpecificHeat = 1005f;
+
+        /// <summary>
         /// Absolute floor for any node temperature. Nothing may go below this.
         /// </summary>
         public const float MinimumTemperature = 0f;

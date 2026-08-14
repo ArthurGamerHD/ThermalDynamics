@@ -265,6 +265,71 @@ namespace Thermodynamics.Core
             }
         }
 
+        /// <summary>
+        /// Counts, per room, how many of a block's cell faces look into that room's air.
+        ///
+        /// The test is deliberately different from <see cref="GetExposedFaces"/>. A face is
+        /// exposed when it can radiate to the sky; a face is in contact with room air when there
+        /// is air on the other side of it, sealed or not — the inner skin of a bulkhead seals the
+        /// compartment and warms it at the same time. So this asks only that the neighbouring
+        /// cell hold no block and belong to a room that is currently holding its air in.
+        ///
+        /// The caller owns and clears <paramref name="results"/>. Rooms are few per block — a
+        /// block bounds one or two — so a short list beats a dictionary.
+        /// </summary>
+        public void GetRoomContacts(BlockInstance block, RoomMap rooms, List<RoomContact> results)
+        {
+            if (results == null || block == null || rooms == null) return;
+
+            Vector3I min = block.Min;
+            Vector3I maxExclusive = block.MaxExclusive;
+
+            for (int face = 0; face < Face.Count; face++)
+            {
+                Vector3I offset = Face.Offsets[face];
+                int axis = Face.Axis(face);
+                bool positive = BoxGeometry.Component(offset, axis) > 0;
+
+                int slab = positive
+                    ? BoxGeometry.Component(maxExclusive, axis) - 1
+                    : BoxGeometry.Component(min, axis);
+
+                int u = (axis + 1) % 3;
+                int v = (axis + 2) % 3;
+
+                for (int a = BoxGeometry.Component(min, u); a < BoxGeometry.Component(maxExclusive, u); a++)
+                {
+                    for (int b = BoxGeometry.Component(min, v); b < BoxGeometry.Component(maxExclusive, v); b++)
+                    {
+                        Vector3I cell = BoxGeometry.WithComponent(Vector3I.Zero, axis, slab);
+                        cell = BoxGeometry.WithComponent(cell, u, a);
+                        cell = BoxGeometry.WithComponent(cell, v, b);
+
+                        Vector3I neighbour = cell + offset;
+
+                        // Another block on the far side is a conduction joint, not air.
+                        if (HasCell(neighbour)) continue;
+
+                        int room = rooms.RoomIndexOf(neighbour);
+                        if (room < 0 || rooms.IsVented(room)) continue;
+
+                        Accumulate(results, room);
+                    }
+                }
+            }
+        }
+
+        private static void Accumulate(List<RoomContact> results, int room)
+        {
+            for (int i = 0; i < results.Count; i++)
+            {
+                if (results[i].RoomIndex != room) continue;
+                results[i] = new RoomContact(room, results[i].Faces + 1);
+                return;
+            }
+            results.Add(new RoomContact(room, 1));
+        }
+
         /// <summary>Convenience wrapper allocating the result array.</summary>
         public int[] GetExposedFaces(BlockInstance block, RoomMap rooms)
         {

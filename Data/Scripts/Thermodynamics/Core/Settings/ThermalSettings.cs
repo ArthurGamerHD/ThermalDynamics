@@ -9,17 +9,36 @@ namespace Thermodynamics.Core
     /// </summary>
     public class ThermalSettings
     {
-        public const int CurrentVersion = 2;
+        public const int CurrentVersion = 4;
 
         public int Version = CurrentVersion;
 
         // ---- feature switches -------------------------------------------------------------
+        //
+        // Every mechanism is independently switchable and every switch takes effect on the next
+        // step, so a server can turn one off without a reload. Nothing reads a switch except the
+        // stage it belongs to, so switching one off removes exactly its own cost.
 
-        /// <summary>Radiation and convection against the environment.</summary>
+        /// <summary>Master switch for radiation and convection against the environment.</summary>
         public bool EnableEnvironment = true;
+
+        /// <summary>Conduction between touching blocks.</summary>
+        public bool EnableConduction = true;
+
+        /// <summary>Radiative exchange between exposed faces and the ambient sky.</summary>
+        public bool EnableRadiation = true;
+
+        /// <summary>Convective exchange between exposed faces and the surrounding air.</summary>
+        public bool EnableConvection = true;
 
         /// <summary>Solar gain.</summary>
         public bool EnableSolarHeat = true;
+
+        /// <summary>Gain from mod-registered point heat sources.</summary>
+        public bool EnableHeatSources = true;
+
+        /// <summary>Waste heat from power production, power draw and thrust.</summary>
+        public bool EnableWasteHeat = true;
 
         /// <summary>Planetary climate. When off, ambient is always <see cref="VacuumTemperature"/>.</summary>
         public bool EnablePlanets = true;
@@ -32,6 +51,13 @@ namespace Thermodynamics.Core
 
         /// <summary>Coolant loop heat transport.</summary>
         public bool EnableCoolantLoops = true;
+
+        /// <summary>
+        /// Sealed rooms hold an air mass that carries heat between the surfaces facing it.
+        /// When off, a sealed face simply exchanges nothing, which is the behaviour before room
+        /// air existed.
+        /// </summary>
+        public bool EnableRoomAir = true;
 
         // ---- rates ------------------------------------------------------------------------
 
@@ -83,6 +109,20 @@ namespace Thermodynamics.Core
         /// <summary>Coefficient on the v^3 aerodynamic heating term.</summary>
         public float FrictionScale = 0.001f;
 
+        // ---- room air ---------------------------------------------------------------------
+
+        /// <summary>
+        /// Convective coefficient between a room's air and the surfaces facing it, W/(m^2 K).
+        /// Lower than the planetary figure: room air is still, and still air convects poorly.
+        /// </summary>
+        public float RoomConvectionCoefficient = 8f;
+
+        /// <summary>
+        /// Air density inside a fully pressurised room, kg/m^3. Sea level on Earth is 1.225;
+        /// the game's breathable atmospheres are close enough that one figure serves.
+        /// </summary>
+        public float RoomAirDensity = 1.225f;
+
         // ---- solver -----------------------------------------------------------------------
 
         /// <summary>
@@ -108,14 +148,22 @@ namespace Thermodynamics.Core
         /// <summary>Solver steps executed per real second. Derived.</summary>
         public float StepsPerSecond { get; private set; }
 
+        /// <summary>
+        /// Bumped by every <see cref="Derive"/>. A simulation compares it against the revision it
+        /// last acted on, so a setting changed mid-session is picked up on the next step: heat
+        /// capacities are rescaled, coolant loops are rebuilt or dropped, and room air is
+        /// re-derived. Without it a live edit would apply to some mechanisms and not others.
+        /// </summary>
+        public int Revision { get; private set; }
+
         public ThermalSettings()
         {
             Derive();
         }
 
         /// <summary>
-        /// Clamps out-of-range values and recomputes the derived fields. Must be called after
-        /// loading or mutating settings.
+        /// Clamps out-of-range values, recomputes the derived fields and bumps
+        /// <see cref="Revision"/>. Must be called after loading or mutating settings.
         /// </summary>
         public ThermalSettings Derive()
         {
@@ -126,9 +174,12 @@ namespace Thermodynamics.Core
             if (SolarEnergy < 0f) SolarEnergy = 0f;
             if (FrictionAtSpeedsAbove < 0f) FrictionAtSpeedsAbove = 0f;
             if (FrictionScale < 0f) FrictionScale = 0f;
+            if (RoomConvectionCoefficient < 0f) RoomConvectionCoefficient = 0f;
+            if (RoomAirDensity < 0f) RoomAirDensity = 0f;
 
             StepSeconds = 1f / Frequency;
             StepsPerSecond = Frequency * SimulationSpeed;
+            Revision++;
             return this;
         }
 

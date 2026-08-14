@@ -22,6 +22,7 @@ loading the world, or switch it on in chat during one:
 | `/thermal telemetry on` | Starts collecting. Attaches records and stage profilers to grids that already exist, so no reload is needed. |
 | `/thermal telemetry off` | Stops. Every hook goes back to a single bool read. |
 | `/thermal stride <n>` | Blocks sampled per step is `1/n` of the grid. Default 4. |
+| `/thermal settings` | Every setting and its current value; `set` changes one live. |
 | `/thermal dump` | Writes a report without closing the world. |
 | `/thermaldump` | The same thing; kept from the previous version. |
 
@@ -80,7 +81,9 @@ run is never lost silently.
 ## What is collected
 
 **Session** — world name and path, online mode, server/dedicated/multiplayer, real and in-game
-elapsed time, frame count, and the full `Settings` snapshot that produced the numbers.
+elapsed time, frame count, and every setting that produced the numbers. The settings section is
+generated from the same name table the chat commands and the mod API use, so a setting added to the
+config cannot go missing from the report meant to explain a run.
 
 **Per grid** (kept for the life of the grid, and retained after it is destroyed) — node count,
 block count, conduction links, sealed rooms, exterior cells, surface entries, coolant loops,

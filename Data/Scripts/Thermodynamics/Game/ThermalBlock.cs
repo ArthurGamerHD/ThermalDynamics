@@ -39,6 +39,12 @@ namespace Thermodynamics
         /// </summary>
         public BlockTypeTelemetry Stats;
 
+        /// <summary>
+        /// The air vent this block is, or null. Vents are the only thing the game will tell a mod
+        /// about pressurisation, so they are how a room comes to have air in it.
+        /// </summary>
+        public IMyAirVent Vent;
+
         private MyResourceSourceComponent source;
         private MyResourceSinkComponent sink;
         private IMyThrust thrust;
@@ -128,6 +134,9 @@ namespace Thermodynamics
                 }
             }
 
+            Vent = fat as IMyAirVent;
+            if (Vent != null) Grid.RegisterVent(this);
+
             door = fat as IMyDoor;
             if (door != null)
             {
@@ -173,6 +182,12 @@ namespace Thermodynamics
             {
                 if (componentAdded != null) fat.Components.ComponentAdded -= componentAdded;
                 if (componentRemoved != null) fat.Components.ComponentRemoved -= componentRemoved;
+            }
+
+            if (Vent != null)
+            {
+                Grid.UnregisterVent(this);
+                Vent = null;
             }
 
             thrust = null;

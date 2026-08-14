@@ -58,6 +58,13 @@ namespace Thermodynamics.Core
         public float LastConvectionWatts;
         public float LastSolarWatts;
         public float LastFrictionWatts;
+
+        /// <summary>Watts from mod-registered point heat sources, summed over every source.</summary>
+        public float LastHeatSourceWatts;
+
+        /// <summary>Watts exchanged with the air of the rooms this block faces.</summary>
+        public float LastRoomWatts;
+
         public float LastDeltaTemperature;
 
         private readonly float cellFaceArea;
@@ -101,6 +108,15 @@ namespace Thermodynamics.Core
         public BlockThermalProperties Thermal
         {
             get { return Block.Thermal; }
+        }
+
+        /// <summary>
+        /// Area of one of this block's cell faces, m^2, including the definition's
+        /// <c>SurfaceAreaScaler</c>. The unit every area in the simulation is counted in.
+        /// </summary>
+        public float CellFaceArea
+        {
+            get { return cellFaceArea; }
         }
 
         /// <summary>

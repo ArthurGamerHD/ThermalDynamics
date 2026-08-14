@@ -7,6 +7,25 @@ namespace Thermodynamics.Core
     /// The environment reduced to exactly the numbers the solver consumes. Produced once per
     /// step by <see cref="EnvironmentSolver"/> and shared by every node on the grid.
     /// </summary>
+    /// <summary>
+    /// One directional heat source other than the sun, reduced to what the solver needs: which
+    /// way it is, and how many watts per square metre it delivers to a face pointing at it.
+    /// </summary>
+    public struct HeatSourceState
+    {
+        /// <summary>Unit vector toward the source, in the grid's local frame.</summary>
+        public Vector3 DirectionLocal;
+
+        /// <summary>Irradiance at the grid, W/m^2, after distance falloff and occlusion.</summary>
+        public float Irradiance;
+
+        public HeatSourceState(Vector3 directionLocal, float irradiance)
+        {
+            DirectionLocal = directionLocal;
+            Irradiance = irradiance;
+        }
+    }
+
     public struct EnvironmentState
     {
         /// <summary>Ambient temperature, K.</summary>
@@ -44,6 +63,16 @@ namespace Thermodynamics.Core
 
         /// <summary>True when aerodynamic heating applies at all.</summary>
         public bool FrictionActive;
+
+        /// <summary>
+        /// Point heat sources registered by other mods, already reduced to a direction and an
+        /// irradiance. Null when there are none, which is the ordinary case; the array may be
+        /// longer than <see cref="HeatSourceCount"/> so a host can reuse one buffer.
+        /// </summary>
+        public HeatSourceState[] HeatSources;
+
+        /// <summary>Entries of <see cref="HeatSources"/> that are live this step.</summary>
+        public int HeatSourceCount;
 
         public static EnvironmentState Vacuum(float vacuumTemperature)
         {

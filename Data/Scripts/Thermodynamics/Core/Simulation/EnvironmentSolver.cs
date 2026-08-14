@@ -23,6 +23,15 @@ namespace Thermodynamics.Core
             state.WindDirectionLocal = sample.RelativeWindDirectionLocal;
             state.WindSpeed = Math.Max(0f, sample.RelativeWindSpeed);
 
+            // Point sources pass through untouched: the host has already resolved distance and
+            // occlusion, and nothing here would improve on that. The switch is honoured here so
+            // the solver never has to test it per source per node.
+            if (settings.EnableHeatSources && sample.HeatSources != null)
+            {
+                state.HeatSources = sample.HeatSources;
+                state.HeatSourceCount = Math.Min(sample.HeatSourceCount, sample.HeatSources.Length);
+            }
+
             // ---- solar ---------------------------------------------------------------------
             state.IsSolarOccluded = sample.IsSolarOccluded || !settings.EnableSolarHeat;
 

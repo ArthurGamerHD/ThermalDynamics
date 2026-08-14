@@ -42,6 +42,9 @@ namespace Thermodynamics
         /// <summary>The most recent sample, kept for the HUD and the telemetry report.</summary>
         public EnvironmentSample LastSample;
 
+        /// <summary>Per-grid buffer for registered heat sources, grown on demand and reused.</summary>
+        private HeatSourceState[] heatSourceBuffer;
+
         /// <summary>The environment the solver actually used, derived from the sample.</summary>
         public EnvironmentState LastState
         {
@@ -77,6 +80,11 @@ namespace Thermodynamics
             SamplePlanet(ref sample, ref position, planet);
             SampleWind(ref sample, ref position, ref worldToLocal, planet);
             sample.IsSolarOccluded = sample.IsUnderground || IsSolarOccluded(ref position, ref sample);
+
+            // Heat sources other than the sun. The buffer belongs to this grid and is reused, so
+            // a session with no registered sources allocates nothing and costs one count test.
+            sample.HeatSourceCount = ThermalHeatSources.Sample(position, ref worldToLocal, ref heatSourceBuffer);
+            sample.HeatSources = heatSourceBuffer;
 
             LastSample = sample;
             if (Telemetry.Enabled && Stats != null) Stats.SampleEnvironment(this);

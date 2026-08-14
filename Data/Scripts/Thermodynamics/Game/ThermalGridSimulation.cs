@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Sandbox.ModAPI;
+using SpaceEngineers.Game.ModAPI;
 using Thermodynamics.Core;
 using VRage.Game.Components;
 using VRage.Utils;
@@ -89,12 +90,14 @@ namespace Thermodynamics
         private void AfterSteps(int steps)
         {
             ApplyOverheatDamage();
+            RaiseThresholdCrossings();
 
             stepsSinceMassSweep += steps;
             if (stepsSinceMassSweep >= MassSweepInterval)
             {
                 stepsSinceMassSweep = 0;
                 SweepMass();
+                SweepRoomPressure();
             }
 
             stepsSinceHottest += steps;
@@ -151,6 +154,69 @@ namespace Thermodynamics
             foreach (ThermalBlock bound in blocks.Values)
             {
                 bound.RefreshMass();
+            }
+        }
+
+        /// <summary>
+        /// Tells the simulation how full of air its rooms are.
+        ///
+        /// Pressurisation is the game's model, not a thermal one, and the only place a mod can
+        /// read it is an air vent — which reports the room it is in. So a room is pressurised as
+        /// far as this mod is concerned when a vent in it says so, and holds no air otherwise.
+        /// Grids with no vents skip the sweep entirely.
+        /// </summary>
+        private void SweepRoomPressure()
+        {
+            if (!Settings.Instance.EnableRoomAir || vents.Count == 0) return;
+
+            for (int i = vents.Count - 1; i >= 0; i--)
+            {
+                ThermalBlock bound = vents[i];
+                IMyAirVent vent = bound.Vent;
+
+                if (vent == null || bound.Block.FatBlock == null || bound.Block.FatBlock.Closed)
+                {
+                    vents.RemoveAt(i);
+                    continue;
+                }
+
+                float level = vent.Depressurize ? 0f : vent.GetOxygenLevel();
+
+                // The vent sits in a wall; the room is on whichever side of it has one.
+                Vector3I[] cells = bound.Instance.Cells;
+                for (int c = 0; c < cells.Length; c++)
+                {
+                    bool applied = false;
+                    for (int face = 0; face < Face.Count; face++)
+                    {
+                        if (Simulation.SetRoomPressure(cells[c] + Face.Offsets[face], level))
+                        {
+                            applied = true;
+                            break;
+                        }
+                    }
+                    if (applied) break;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Hands threshold crossings to whoever registered them. Callbacks belong to other mods,
+        /// so each one is isolated: a subscriber that throws is reported and dropped rather than
+        /// taking the grid's update with it.
+        /// </summary>
+        private void RaiseThresholdCrossings()
+        {
+            IList<ThresholdCrossing> crossings = Simulation.Crossings;
+            if (crossings.Count == 0) return;
+
+            for (int i = 0; i < crossings.Count; i++)
+            {
+                ThresholdCrossing crossing = crossings[i];
+                ThermalBlock bound = Get(crossing.Block.Position);
+                if (bound == null) continue;
+
+                ThermalApi.RaiseThreshold(crossing, bound.Block);
             }
         }
     }

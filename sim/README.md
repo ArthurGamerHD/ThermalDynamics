@@ -42,7 +42,7 @@ sufficient. See [development.md](../docs/development.md#repo-conventions) for th
 ```bash
 cd sim
 
-dotnet test                                    # the whole suite
+dotnet test                                    # the whole suite (437 tests)
 dotnet run --project Thermodynamics.Sim -- list
 dotnet run --project Thermodynamics.Sim -- run reactor
 dotnet run --project Thermodynamics.Sim -- run all --csv out/
@@ -123,7 +123,7 @@ PipeFitter.BuildRing(builder, ring);      // pump goes on the first straight run
 
 ## Test coverage
 
-354 tests across:
+437 tests across:
 
 * position keys and block geometry maths
 * face indexing, the colour ramp, occlusion
@@ -141,6 +141,13 @@ PipeFitter.BuildRing(builder, ring);      // pump goes on the first straight run
 * the claims each scenario's summary line makes, so a headline conclusion cannot quietly invert
 * real specific heat against the `HeatTimeScale` clock, including that scaling capacity is
   exactly running time faster
+* every mechanism switched off one at a time, and switches changed mid-session taking effect
+  without a rebuild
+* temperature thresholds: direction, no double reporting on the boundary, survival across a
+  multi-step update
+* registered point heat sources: gain, additivity, buffer bounds, and no gain on a buried block
+* room air: pressurisation, links to the surfaces bounding a room, heat carried between walls that
+  do not touch, energy conservation, and air surviving a map rebuild
 * block identity by minimum cell, and overheat events surviving a multi-step update
 * the stage-timing hook, and that instrumenting a run does not change its results
 

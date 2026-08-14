@@ -57,6 +57,19 @@ namespace Thermodynamics.Core
         /// <summary>Magnitude of wind minus grid velocity, m/s.</summary>
         public float RelativeWindSpeed;
 
+        /// <summary>
+        /// Point heat sources other than the sun, each already reduced by the host to a local
+        /// direction and an irradiance at this grid. Null when there are none.
+        ///
+        /// The host owns the buffer and may reuse it between samples, so the array is allowed to
+        /// be longer than <see cref="HeatSourceCount"/>. Occlusion is the host's business too: a
+        /// source it cannot see is simply left out.
+        /// </summary>
+        public HeatSourceState[] HeatSources;
+
+        /// <summary>Entries of <see cref="HeatSources"/> that are live.</summary>
+        public int HeatSourceCount;
+
         /// <summary>A grid sitting in deep space with the sun overhead.</summary>
         public static EnvironmentSample Vacuum(Vector3 sunDirectionLocal)
         {

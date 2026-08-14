@@ -130,7 +130,7 @@ namespace Thermodynamics
                     .Append('\n');
 
                 // Per second, so the number stays comparable whatever the step rate is.
-                float perSecond = hottest.LastDeltaTemperature * Settings.Instance.PerSecond;
+                float perSecond = hottest.LastDeltaTemperature * Settings.Instance.StepsPerSecond;
                 GridText.Append("Peak dT/s: ").Append(perSecond.ToString("n3")).Append('\n');
             }
 

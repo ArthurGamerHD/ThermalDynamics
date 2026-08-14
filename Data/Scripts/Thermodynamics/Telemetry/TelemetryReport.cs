@@ -231,25 +231,20 @@ namespace Thermodynamics
                 return;
             }
 
+            // Driven off the name table rather than a hand-written list, so a setting added to
+            // the config cannot go missing from the report that is supposed to explain a run.
             Field(sb, "Version", s.Version);
-            Field(sb, "Frequency", s.Frequency);
-            Field(sb, "SimulationSpeed", s.SimulationSpeed);
-            Field(sb, "TimeScaleRatio", s.TimeScaleRatio);
-            Field(sb, "PerSecond", s.PerSecond);
-            Field(sb, "VacuumTemperature", s.VacuumTemperature);
-            Field(sb, "SolarEnergy", s.SolarEnergy);
-            Field(sb, "FrictionAtSpeedsAbove", s.FrictionAtSpeedsAbove);
-            Field(sb, "EnableEnvironment", s.EnableEnvironment);
-            Field(sb, "EnableSolarHeat", s.EnableSolarHeat);
-            Field(sb, "EnablePlanets", s.EnablePlanets);
-            Field(sb, "EnableDamage", s.EnableDamage);
-            Field(sb, "DebugTextOnScreen", s.DebugTextOnScreen);
-            Field(sb, "DebugTemperatureBlockColors", s.DebugTemperatureBlockColors);
-            Field(sb, "DebugSolarRadiationBlockColors", s.DebugSolarRadiationBlockColors);
-            Field(sb, "DebugExposedSurfaceBlockColors", s.DebugExposedSurfaceBlockColors);
-            Field(sb, "DebugFrictionColors", s.DebugFrictionColors);
-            Field(sb, "DebugSolarRaycast", s.DebugSolarRaycast);
-            Field(sb, "DebugWindRaycast", s.DebugWindRaycast);
+            Field(sb, "StepsPerSecond", s.StepsPerSecond);
+
+            List<string> names = Settings.Names();
+            for (int i = 0; i < names.Count; i++)
+            {
+                string name = names[i];
+                float value = s.GetValue(name);
+
+                if (Settings.IsFlag(name)) Field(sb, name, value != 0f);
+                else Field(sb, name, value);
+            }
         }
 
         private static void WriteSessionTotals(StringBuilder sb)

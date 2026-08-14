@@ -41,8 +41,8 @@ Constraints that matter when writing code for this project:
 * **C# 6 only** (`<LangVersion>6</LangVersion>`). No tuples, no `switch` expressions, no
   string interpolation beyond what C# 6 supports, no `out var`.
 * Space Engineers' script whitelist applies: no reflection, no file I/O outside
-  `MyAPIGateway.Utilities`, no threading. `ProcessCellsSequentially` carries a comment noting
-  that parallel processing is not available.
+  `MyAPIGateway.Utilities`, no threading. The solver is order-independent by
+  construction, so it could be parallelised if the whitelist ever allowed it.
 * **The whitelist covers exception types too**, and this is easy to miss because the local build
   and `sim/` both accept them — only the in-game compiler rejects them, at world load. Confirmed
   prohibited: `IndexOutOfRangeException`, `ArgumentOutOfRangeException`. Confirmed allowed:

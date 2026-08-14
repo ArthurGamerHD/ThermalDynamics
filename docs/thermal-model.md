@@ -1,288 +1,269 @@
 # The thermal model
 
-> **Status.** This document describes the equations the *legacy* per-cell implementation
-> evaluated, and is kept because it is the only written record of them. The live mod now runs
-> `Data/Scripts/Thermodynamics/Core`, whose equations differ deliberately: one symmetric
-> conductance per joint instead of two disagreeing ones, contact area and path length from block
-> bounds, an order-independent watt accumulation, and substepping chosen from the stiffest node.
-> `sim/Thermodynamics.Tests/LegacyFormulas.cs` holds the old formulas verbatim, and several
-> tests compare the two so the differences stay pinned down rather than remembered.
-> See [model-redesign.md](model-redesign.md) for why each one changed.
->
-> One unit change is worth stating here, because it changes how the definitions read:
-> `SpecificHeat` is now real J/(kg·K), and the playable pace comes from the `HeatTimeScale`
-> setting, which divides every heat capacity. See
-> [definitions.md](definitions.md#specific-heat-is-real-and-the-clock-is-not).
+Every equation the simulation evaluates, with the file that evaluates it. All temperatures are
+Kelvin, all rates are Watts, all areas are m², all masses are kg.
 
-This is a description of what the code actually computes, not of ideal thermodynamics. Where
-the implementation deviates from textbook physics — deliberately or otherwise — that is
-called out.
+The solver holds one state variable per node — temperature — and derives everything else. A step
+accumulates watts per node from every mechanism, then applies them all at once.
 
-All temperatures are **Kelvin**. All energy rates are **Watts**. Power values coming out of
-the game are megawatts and are converted with `Tools.MWtoWatt`.
+## Nodes
 
-## Per-cell constants
+Three kinds of thermal mass exist. They integrate identically; only their capacity differs.
 
-Computed once in `ThermalCell.PrecalculateVariables()`
-([ThermalCell.cs:82](../Data/Scripts/Thermodynamics/ThermalCell.cs#L82)) and re-derived
-whenever the definition or mass would change:
-
-| Symbol | Code | Definition |
+| Node | Capacity, J/K | Built by |
 | --- | --- | --- |
-| `Mass` | `Block.Mass` | Block mass in kg, from the game. |
-| `Area` | `gridSize² × SurfaceAreaScaler` | Area of one grid face in m². 2.5 m cubes → 6.25 m², 0.5 m cubes → 0.25 m². |
-| `C` | `1 / (SpecificHeat × Mass × gridSize) × TimeScaleRatio` | Conduction coupling constant. |
-| `ThermalMassInv` | `1 / (SpecificHeat × Mass) × TimeScaleRatio` | Converts Watts to a temperature step. |
-| `k` | `Conductivity × (SpecificHeat × Mass × gridSize) / (5 × Area × largestFace)` | Effective conductivity, normalised so that block size and shape do not distort transfer rate. `largestFace` is the product of the block's two largest dimensions in grid units. |
-| `Boltzmann` | `−Emissivity × σ × ExposedSurfaceArea` | Pre-multiplied radiation constant. Negative, so a hot block gets a negative (outgoing) result. σ = `5.670374419e-8`. |
+| Block | `SpecificHeat × Mass / HeatTimeScale` | [ThermalNode](../Data/Scripts/Thermodynamics/Core/Simulation/ThermalNode.cs) |
+| Coolant loop | `SpecificHeat × Mass / HeatTimeScale` | [CoolantLoop](../Data/Scripts/Thermodynamics/Core/Loops/CoolantLoop.cs) |
+| Room air | `Volume × RoomAirDensity × Pressure × 1005 / HeatTimeScale` | [RoomAirNode](../Data/Scripts/Thermodynamics/Core/Surfaces/RoomAir.cs) |
 
-`TimeScaleRatio = 1 / Frequency` — the simulated seconds represented by one cell update. See
-[configuration.md](configuration.md#time-scaling).
+Capacity is floored at `ThermalConstants.MinimumThermalMass` so a zero-mass block cannot divide
+by zero. `SpecificHeat` is in real J/(kg·K); `HeatTimeScale` is the single global divisor that
+turns real thermal time into playable thermal time — see
+[configuration.md](configuration.md#time-and-pace).
 
-`ExposedSurfaceArea = ExposedSurfaces × Area`, where `ExposedSurfaces` is the count of block
-faces the mapper decided are open to vacuum/atmosphere. See
-[surface-mapping.md](surface-mapping.md).
+## Integration
 
-## The per-cell step
-
-`ThermalCell.Update()` ([ThermalCell.cs:443](../Data/Scripts/Thermodynamics/ThermalCell.cs#L443)),
-in order:
+[ThermalSolver.Step](../Data/Scripts/Thermodynamics/Core/Simulation/ThermalSolver.cs) advances
+`deltaSeconds` of simulated time:
 
 ```
-LastTemprature  = Temperature
-DeltaRadiation  = CalculateRadiation() × ThermalMassInv
-DeltaFriction   = CalculateFriction()  × ThermalMassInv
+substeps = ceil(deltaSeconds × maxRate / 0.5)        clamped to [1, MaxSubsteps]
+h        = deltaSeconds / substeps
 
-Temperature    += DeltaRadiation + DeltaFriction
-Temperature    += HeatGeneration
-
-deltaTemperature = Σᵢ kAᵢ × (Tᵢ − Temperature)          over neighbours
-DeltaTemperature = C × deltaTemperature
-Temperature     += DeltaTemperature
-Temperature      = max(0, Temperature)
-
-HandleCriticalTemperature()
+repeat substeps times:
+    watts[] = 0
+    accumulate environment, conduction, coolant loops, room air
+    T[i] += watts[i] × h / capacity[i]
+    T[i]  = max(T[i], 0)
 ```
 
-`Tᵢ` is the neighbour's `LastTemprature` if that neighbour has already been updated this
-simulation frame, otherwise its current `Temperature` — a Gauss–Seidel sweep with the
-direction reversal described in [architecture.md](architecture.md#the-quota-scheduler).
+`maxRate` is the stiffest node on the grid: its total conductance plus its linearised radiative
+and convective coupling, divided by its capacity.
 
-> `DeltaTemperature` holds the conduction term only — that is what the HUD's "Peak dT" and the
-> debug overlay read. Friction used to be accumulated into it and then overwritten by the
-> conduction result, which is why aerodynamic heating had no effect on temperature until it was
-> moved onto the `Temperature` line above.
+```
+rate = Σ G_links + 4 ε σ A T³ + h_conv A_exposed
+```
+
+Three properties follow from this shape and are covered by tests:
+
+* **Order independence.** Every exchange reads the temperatures at the start of the substep and
+  writes into an accumulator, so no node sees another's new value. Iteration order cannot change
+  the result, and the pass could be parallelised without changing it either.
+* **Energy conservation.** Every internal exchange is applied equally and oppositely.
+  `Solver.TotalEnergy` is constant on a closed grid.
+* **Boundedness.** With `ClampConductionOvershoot` on, every pairwise exchange is capped at the
+  energy that brings the pair to their shared equilibrium:
+
+  ```
+  E_max = ΔT × (m_a m_b) / (m_a + m_b)
+  ```
+
+  Substepping keeps the answer accurate; the clamp keeps it sane when substepping alone cannot.
+  Reaching `MaxSubsteps` (16) is reported as `LastStepWasClamped` and appears in the telemetry.
 
 ## Conduction
 
-```
-kAᵢ = k × min(Area, Areaᵢ) × TouchingSurfacesᵢ
-ΔT  = C × Σᵢ kAᵢ × (Tᵢ − T)
-```
-
-`TouchingSurfacesᵢ` is an integer count of shared grid faces, not m². It comes from
-`FindSurfaceArea()` ([ThermalCell.cs:337](../Data/Scripts/Thermodynamics/ThermalCell.cs#L337)),
-which transforms both blocks' mount points into grid space and sums the areas of the
-intersections between enabled mount points. Two blocks that touch on a face with no enabled
-mount points conduct **zero** heat — this is what makes armour skins, doors and offset blocks
-behave differently from a solid slab.
-
-`kA` is cached per neighbour and recomputed by `CalculatekA()` whenever the neighbour list
-changes.
-
-Neighbours come from `IMySlimBlock.GetNeighbours` plus explicit cross-grid links added for
-attached pistons and rotors.
-
-## Radiation and convection
-
-`CalculateRadiation()` ([ThermalCell.cs:484](../Data/Scripts/Thermodynamics/ThermalCell.cs#L484))
-returns Watts and covers three effects.
-
-**Blackbody radiation** (only when `EnableEnvironment`):
+Between two touching blocks, over the area where both carry a mount surface
+([ThermalLink.cs](../Data/Scripts/Thermodynamics/Core/Simulation/ThermalLink.cs)):
 
 ```
-radiation = −ε σ A_exposed × (T⁴ − T_ambient⁴)
+A_contact = cells_shared × coverage_a × coverage_b × gridSize²
+G         = A_contact / (L_a / k_a + L_b / k_b)          W/K
+watts     = G × (T_b − T_a)
 ```
 
-**Convection** into the surrounding air:
+Two conductors in series: centre of A to the interface, interface to centre of B. `L` is each
+block's half-depth along the contact axis, so a long block conducts more slowly end to end than a
+cube does. `k = Conductivity × ReferenceConductivity`, where `Conductivity` is the definition's
+0..1 quality value and the reference is 200 W/(m·K).
+
+Blocks that touch without mount surfaces on both sides conduct **nothing**. This is what makes
+armour skins, offset blocks and open frames behave differently from a solid slab.
+
+Links are rebuilt only when the block layout changes, never per step. Adjacency comes from
+`IBlockAdjacency`, which defaults to the grid's own cell map and can be replaced by a host with a
+better index.
+
+### Across a mechanical joint
+
+Two blocks on either side of a rotor or piston belong to different grids and therefore different
+solvers, so their link lives outside both, in
+[ThermalBridges](../Data/Scripts/Thermodynamics/Game/ThermalBridges.cs). Bridges exchange once per
+ten-frame tick, using the same clamped, energy-conserving rule.
+
+## Radiation
+
+Every exposed face radiates to the ambient sky:
 
 ```
-convection = −h_eff × A_exposed × directionalFactor × (T − T_ambient)
+watts = −ε σ A_exposed × (T⁴ − T_ambient⁴)
 ```
 
-`directionalFactor` is `DirectionalIntensity(windDirection)` — the exposed faces' average dot
-product with the relative wind, so a face pointing into the airflow sheds more heat than one
-in the lee.
+`A_exposed = exposedFaces × gridSize² × SurfaceAreaScaler`, where `exposedFaces` is the count the
+surface mapper produced — see [surface-mapping.md](surface-mapping.md). A block with no exposed
+face neither radiates nor absorbs. σ = 5.670374419e-8.
 
-The two are blended by how thick the atmosphere is:
+Emissivity doubles as absorptivity for incoming radiation. That is the grey-body assumption, and
+it is deliberate.
 
-```
-total = (1 − airDensityCurve) × radiation + airDensityCurve × convection
-```
+## Convection
 
-so a block in vacuum is pure radiation and a block at sea level is pure convection.
-
-**Solar gain** (only when `EnableSolarHeat` and the grid is not occluded):
+Into the surrounding atmosphere:
 
 ```
-total += solarEnergy_eff × ε × intensity × A_exposed
+watts = −h_eff × A_exposed × windFactor × (T − T_ambient)
+h_eff = ConvectionCoefficient × (1 + 0.1 √v_rel)
+windFactor = 0.5 + 0.5 × faceWeight(wind)        (1.0 in still air)
 ```
 
-`intensity = DirectionalIntensity(sunDirection)`, i.e.
+`faceWeight(d)` is the exposure-weighted average of `max(0, faceNormal · d)` over the block's six
+faces, so a face turned into the airflow sheds more than one in the lee.
+
+Radiation and convection are blended by how fluid the atmosphere is:
 
 ```
-Σ over the 6 faces:  max(0, dot(worldFaceNormal, sunDirection)) × exposedCount(face)
-────────────────────────────────────────────────────────────────────────────────────
-                          max(1, totalExposedFaces)
+total = (1 − atmosphereFactor) × radiation + atmosphereFactor × convection
+atmosphereFactor = 1 − (1 − airDensity)⁴
 ```
 
-Face normals are rotated into world space with the grid matrix captured at the start of the
-simulation frame (`Grid.FrameMatrix`), so rotating a ship changes which faces heat up.
+A block in vacuum is pure radiation; a block at sea level is pure convection. The curve saturates
+quickly: at a quarter density the air already behaves 68% like sea level.
 
-> Emissivity is used both as absorptivity for solar gain and as emissivity for radiation, which
-> is physically the grey-body assumption — deliberate.
+## Room air
+
+A sealed room holds one well-mixed air mass that exchanges with every surface bounding it
+([ThermalSolver.AccumulateRoomAir](../Data/Scripts/Thermodynamics/Core/Simulation/ThermalSolver.cs)):
+
+```
+G     = RoomConvectionCoefficient × faces × gridSize² × SurfaceAreaScaler
+watts = G × (T_air − T_block)
+```
+
+This is the only path heat has between two walls of a compartment that do not touch. Air has
+little capacity and a great deal of contact area, so on a pressurised ship it is usually what sets
+the substep count.
+
+A room holds air only when the host reports a pressure for it; at zero pressure it has no mass and
+no links, and costs nothing. In Space Engineers, pressure comes from air vents — the only place the
+game exposes it. Air appearing in a room for the first time starts at the average temperature of
+the surfaces around it, and carries its temperature across map rebuilds that leave the room's shape
+unchanged.
+
+## Solar and point sources
+
+Solar gain, when the grid is not occluded:
+
+```
+watts = solarEnergy × ε × faceWeight(sun) × A_exposed
+solarEnergy = SolarEnergy × (1 − SolarDecay × atmosphereFactor)
+```
+
+Occlusion is resolved per grid, not per block, by a raycast toward the sun repeated every
+`SolarOcclusionInterval` steps. Planets are tested analytically by angular size; voxels and grids
+by a ray against their bounding segment. Being underground forces occlusion.
+
+Point sources registered by other mods use the same equation with their own direction and
+irradiance:
+
+```
+watts = irradiance × ε × faceWeight(source) × A_exposed
+```
+
+The host reduces a source to a direction and an irradiance before the solver sees it. For a source
+of `P` watts at distance `r`, [ThermalHeatSources](../Data/Scripts/Thermodynamics/Game/ThermalHeatSources.cs)
+uses `irradiance = P / (4π r²)`, with `r` floored at 1 m. See [api.md](api.md#heat-sources).
 
 ## Aerodynamic friction
 
-`CalculateFriction()` ([ThermalCell.cs:514](../Data/Scripts/Thermodynamics/ThermalCell.cs#L514)):
-
 ```
-if airDensity > 0.01 and windSpeed > FrictionAtSpeedsAbove:
-    friction = 0.001 × airDensity × windSpeed³ × A_exposed × directionalFactor
+if airDensity > 0.01 and v_rel > FrictionAtSpeedsAbove:
+    watts = FrictionScale × airDensity × v_rel³ × A_exposed × faceWeight(wind)
 ```
 
-A `v³` law, matching the standard convective-heating scaling for hypersonic flow, with an
-arbitrary `0.001` coefficient for game feel. `windSpeed` here is the *relative* speed —
-weather wind minus grid velocity — so a stationary ship in a storm heats the same way a fast
-ship in still air does.
+The v³ law matches the scaling of convective heating in hypersonic flow; `FrictionScale` is a
+game-feel coefficient. `v_rel` is weather wind minus grid velocity, so a stationary ship in a storm
+heats like a fast ship in still air.
 
-## Internal heat generation
+## Waste heat
 
-`UpdateHeat()` ([ThermalCell.cs:428](../Data/Scripts/Thermodynamics/ThermalCell.cs#L428)) is
-event-driven, not recomputed per tick. It runs when a block's power draw, power output or
-thrust changes:
+Recomputed only when the game reports a change, never per step
+([ThermalNode.RefreshHeatGeneration](../Data/Scripts/Thermodynamics/Core/Simulation/ThermalNode.cs)):
 
 ```
-produced  = EnergyProduction    × ProducerWasteEnergy
-consumed  = (EnergyConsumption + ThrustEnergyConsumption) × ConsumerWasteEnergy
-HeatGeneration = (produced + consumed) × ThermalMassInv
+watts = produced × ProducerWasteEnergy + (consumed + thrust) × ConsumerWasteEnergy
 ```
 
-* `EnergyProduction` / `EnergyConsumption` come from `MyResourceSourceComponent.OutputChanged`
-  and `MyResourceSinkComponent.CurrentInputChanged`, in Watts.
-* `ThrustEnergyConsumption = ForceMagnitude × (CurrentThrust / MaxThrust)` — the thruster's
-  force in newtons used directly as a Watt-equivalent. This is a game-balance proxy, not a
-  physical conversion, and it makes large thrusters the dominant heat source on most ships.
-* Because `HeatGeneration` is already scaled by `ThermalMassInv`, it is a **temperature step
-  per cell update**, added directly to `Temperature`.
-
-Components added or removed at runtime are handled by `OnComponentAdded`/`OnComponentRemoved`,
-which re-subscribe the power listeners.
-
-## Environment snapshot
-
-`PrepareEnvironmentTemprature()`
-([ThermalGridEnvironment.cs:48](../Data/Scripts/Thermodynamics/ThermalGridEnvironment.cs#L48))
-runs **once per simulation frame per grid**, at the grid's world AABB centre. Every cell in
-that pass shares the result.
-
-```
-airDensity      = planet.GetAirDensity(position)
-airDensityCurve = 1 − (1 − airDensity)⁴            // saturates quickly with altitude
-
-ambient = underground ? UndergroundTemperature
-                      : NightTemperature + (dot(up, sunDirection) + 1)/2 × (DayTemperature − NightTemperature)
-
-FrameAmbientTemprature = max(VacuumTemperature, ambient × airDensityCurve)
-FrameAmbientTempratureP4 = FrameAmbientTemprature⁴
-
-h_eff = ConvectionCoefficient × (1 + 0.1 × √windSpeed_relative)
-solarEnergy_eff = SolarEnergy × (1 − SolarDecay × airDensityCurve)
-```
-
-* Being underground also forces `FrameSolarOccluded = true`.
-* With no planet nearby, or with `EnablePlanets` off, ambient is `VacuumTemperature` (2.7 K).
-* Wind direction is the cross product of local gravity and the planet's forward vector, scaled
-  by `MyVisualScriptLogicProvider.GetWeatherIntensity` if a weather event is active, otherwise
-  `planet.GetWindSpeed`. Grid velocity is subtracted to get relative wind.
-
-## Solar occlusion
-
-`PrepareSolarEnvironment()`
-([ThermalGridEnvironment.cs:129](../Data/Scripts/Thermodynamics/ThermalGridEnvironment.cs#L129))
-casts a 15 000 km line from the grid toward the sun and walks everything the pruning structure
-reports overlapping it:
-
-| Hit type | Test |
-| --- | --- |
-| `MyPlanet` | Analytic: the planet's angular size versus the sun-direction dot product (`Tools.GetVisualSize` / `Tools.GetLargestOcclusionDotProduct`). No raycast. |
-| `MyVoxelBase` (asteroids) | Physics raycast limited to the voxel's AABB segment. |
-| `MyCubeGrid` (other grids) | `RayCastBlocks` limited to that grid's AABB segment. |
-
-Any hit sets `FrameSolarOccluded` for the whole grid — occlusion is all-or-nothing per grid,
-not per block. Self-shadowing is not modelled; a partially written per-block shadowing pass
-exists but is fully commented out in
-[ThermalGridSolar.cs](../Data/Scripts/Thermodynamics/ThermalGridSolar.cs).
+* `produced` and `consumed` are electrical watts, from `MyResourceSourceComponent.OutputChanged`
+  and `MyResourceSinkComponent.CurrentInputChanged`.
+* `thrust = ForceMagnitude × (CurrentThrust / MaxThrust)` — the thruster's force in newtons used
+  as a watt-equivalent. This is a balance proxy, not a conversion, and it is what makes hydrogen
+  thrusters heat: they draw no electricity, so thrust is the only term that can represent them.
 
 ## Coolant loops
 
-A `ThermalLoop` ([ThermalLoop.cs](../Data/Scripts/Thermodynamics/ThermalLoop.cs)) is one lumped
-mass at a single `Temperature`, updated once per full simulation pass, with two coupling
-constants derived from the loop definition:
+A closed ring of pipe blocks containing at least one pump is one lumped fluid mass
+([CoolantLoopBuilder](../Data/Scripts/Thermodynamics/Core/Loops/CoolantLoopBuilder.cs)). It links
+to the pipe blocks it runs through, and to whatever block sits behind each pipe's sink faces:
 
 ```
-cpart   = SpecificHeat × Mass × gridSize
-C       = 1 / cpart × TimeScaleRatio
-kAPipe  = Conductivity × cpart / (area × PipeSurfaceAreaScaler  × loopLength) × area × PipeSurfaceAreaScaler
-kAPlate = Conductivity × cpart / (area × PlateSurfaceAreaScaler × loopLength) × area × PlateSurfaceAreaScaler
+G_pipe  = Conductivity × ReferenceConductivity × A_pipe  / L
+G_plate = Conductivity × ReferenceConductivity × A_plate / L
+watts   = G × (T_loop − T_block)
 ```
 
-The `loopLength` divisor means a longer loop couples more weakly per segment, so total transfer
-stays roughly constant as you extend the pipe run — the loop's `Mass` is the fluid mass of the
-whole loop, not per segment.
+Both exchanges are clamped and energy-conserving like every other. Rings are traced from the ports
+each block declares, so any block size or orientation works without special cases, and each ring is
+found once whichever pipe the search starts from. A loop keeps its heat across a rebuild through an
+order-independent hash of its members.
 
-Each pass, for every pipe segment in order:
+Radiators are ordinary blocks with high emissivity and a surface-area multiplier. A loop dumps heat
+into space by pressing a sink face against one: the panel takes the loop's heat by conduction and
+sheds it by radiation from its exposed faces.
 
-1. Exchange between the loop fluid and the pipe block itself, using `kAPipe`.
-2. For each **sink face** the segment has ([blocks.md](blocks.md#coolant-loop-rules)), find the
-   neighbouring block behind that face and exchange between the loop fluid and that block using
-   `kAPlate`.
-
-Both exchanges are explicit and applied immediately in both directions, so heat propagates
-along the loop within a single pass.
-
-## Critical temperature damage
-
-`HandleCriticalTemperature()`
-([ThermalCell.cs:531](../Data/Scripts/Thermodynamics/ThermalCell.cs#L531)):
+## Critical temperature and thresholds
 
 ```
-if EnableDamage and T > CriticalTemperature:
-    damage = (T − CriticalTemperature) × CriticalTemperatureScaler × TimeScaleRatio
-    Block.DoDamage(damage, "thermal", sync: false)
-    Grid.CurrentCriticalBlocks++
+if T > CriticalTemperature:
+    damage = (T − CriticalTemperature) × CriticalTemperatureScaler × h
 ```
 
-Damage is applied every cell update, but `TimeScaleRatio` (`1 / Frequency`) scales it by the
-length of that update, so a block 10 K over critical with a scaler of 1 takes 10 damage per
-second at any `Frequency`. Before that scaling, `Frequency = 4` destroyed blocks four times
-faster than `Frequency = 1` — a performance setting silently changing difficulty. `sync: false`
-means the damage is not network-replicated — each machine applies it independently from its own
+With `DamageIsPerSecond` on, damage is per second of simulated time and independent of `Frequency`.
+Damage is applied by the server only, and is not replicated: every machine derives it from its own
 simulation.
 
-`CriticalBlocks` is the count from the previous completed pass; `CurrentCriticalBlocks`
-accumulates the pass in progress. The two-value swap keeps the HUD readout stable.
+Any other temperature can be watched through
+[ThermalThresholds](../Data/Scripts/Thermodynamics/Core/Simulation/ThermalThresholds.cs). A
+crossing is measured against the temperature at the top of the step, so a block that crosses and
+recrosses within one step reports once, in the direction it ended up going. Thresholds are half
+open — a block resting exactly on one cannot report twice. With none registered, the check is a
+single integer comparison per step. See [api.md](api.md#thresholds).
 
-## Temperature colour ramp
+## Environment
 
-`Tools.GetTemperatureColor(temp, max = 1000, low = 267, high = 500)` returns HSV:
+[EnvironmentSolver](../Data/Scripts/Thermodynamics/Core/Simulation/EnvironmentSolver.cs) is a pure
+function from a host sample to the state a step consumes:
 
-| Range | Behaviour |
+```
+ambient   = underground ? UndergroundTemperature
+                        : NightTemperature + (dot(up, sun) + 1)/2 × (DayTemperature − NightTemperature)
+ambient  *= atmosphereFactor
+ambient   = max(VacuumTemperature, ambient)
+```
+
+With no planet nearby, or with planets switched off, ambient is `VacuumTemperature` (2.7 K) and
+there is no convection.
+
+## Where the old model differed
+
+The previous per-cell implementation is preserved verbatim in
+[sim/Thermodynamics.Tests/LegacyFormulas.cs](../sim/Thermodynamics.Tests/LegacyFormulas.cs), and
+several tests compare against it so the differences stay pinned rather than remembered.
+
+| Then | Now |
 | --- | --- |
-| `0 … low` | Hue fixed at blue, value ramps `−1 → 0.5`: black at 0 K, blue at `low`. |
-| `low … high` | Hue sweeps blue → red at full saturation. |
-| `high … max` | Hue fixed red, saturation falls to 0: red → white. |
-
-The same function drives the debug block colouring, the extinguisher billboards and the HUD
-text colour, with different `max/low/high` arguments for the solar, friction and
-exposed-surface debug modes.
+| Two conductances per joint, disagreeing by block size | One symmetric series conductance |
+| Contact counted in whole grid faces | Contact area from block bounds and mount coverage |
+| Gauss–Seidel sweep with alternating direction to hide order dependence | Order-independent accumulation |
+| Fixed step, unbounded exchange | Substepping from the stiffest node, plus an equilibrium clamp |
+| Damage scaled with `Frequency` | Damage per second of simulated time |
+| `SpecificHeat` a flat game number | Real J/(kg·K) with one global clock |

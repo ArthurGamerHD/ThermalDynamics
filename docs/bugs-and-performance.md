@@ -10,6 +10,10 @@ Severity is about impact on a running game, not on how hard it is to fix.
 > these findings raise — how often real grids clamp, what the room mapper costs on a real ship —
 > are answered by switching telemetry on (`/thermal telemetry on`) and reading the cost and
 > substep sections of the report. See [telemetry.md](telemetry.md).
+>
+> This document is a record of an investigation, not a description of the current code. Source
+> links below point at the legacy files the findings were made against; those files no longer
+> exist. For what the simulation does now, read [thermal-model.md](thermal-model.md).
 
 ---
 
