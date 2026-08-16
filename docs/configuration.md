@@ -72,9 +72,15 @@ All client side and all off by default, apart from thermal vision.
 
 | Setting | Default | Draws |
 | --- | --- | --- |
-| `EnableThermalVision` | `true` | Allows the heat overlay. Toggle it in play with `/thermal vision` or the terminal button. |
-| `ThermalVisionGreyscale` | `false` | Draws the overlay in greyscale rather than the heat ramp. |
-| `ThermalVisionRange` | 150 m | How far the overlay draws. |
+| `EnableThermalVision` | `true` | Allows thermal vision. Toggle it in play with `/thermal vision` or the terminal button. |
+| `ThermalVisionGreyscale` | `false` | `false` draws the ironbow palette, `true` white-hot greyscale. |
+| `ThermalVisionRange` | 400 m | How far anything is drawn at all. |
+| `ThermalVisionDetailRange` | 80 m | How far grids are drawn block by block. Past it a grid is one body at its hottest block's temperature. |
+| `ThermalVisionDimming` | 1.0 | How much of the visible-light image is removed, 0..1. At 1 the ordinary view is gone entirely and only what the mod draws is visible. Lower it to make a tinted visor instead of a camera. |
+| `ThermalVisionMinKelvin` | 240 K | Bottom of the sensor's span. Colder clips to black. |
+| `ThermalVisionMaxKelvin` | 500 K | Top of the span. Hotter clips to white. |
+| `ThermalVisionIntensity` | 0.9 | Brightness of drawn bodies. |
+| `ThermalVisionBodyTemperature` | 310 K | Temperature characters are drawn at. Bodies are not simulated. |
 | `DebugTextOnScreen` | `false` | Crosshair readout: temperature, per-mechanism watts, block constants, environment, grid totals, room classification, raw surface bits. Switching it on also makes the solver record per-mechanism watts, which is not free. |
 | `DebugSolarRaycast` | `false` | Draws the sun ray from each grid, white when lit and red when occluded. |
 | `DebugWindRaycast` | `false` | Draws the relative wind vector. |

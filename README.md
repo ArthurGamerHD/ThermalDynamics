@@ -36,7 +36,7 @@ into atmosphere and into the air of sealed rooms, arrives from the sun, and — 
 | Coolant loops | Closed rings of coolant pipe with a pump form a shared fluid mass that pulls heat out of adjacent blocks; radiators shed it to space. |
 | Damage and thresholds | Blocks above their critical temperature take continuous damage. Any other temperature can be watched by another mod. |
 | Airtightness mapping | A per-grid flood fill classifies every cell as external, structure or room, which decides what counts as an exposed surface. Doors are portals, so cycling one costs a walk over the doors rather than a remap. |
-| Readouts | Terminal panel per block, cockpit summary, crosshair readout, and a non-destructive thermal vision overlay in heat or greyscale. |
+| Readouts | Terminal panel per block, cockpit summary, crosshair readout, and thermal vision — the rendered world blacked out and redrawn from billboards as a thermal camera sees it, in ironbow or white-hot. |
 
 ## Required dependencies
 
@@ -108,7 +108,7 @@ ThermalDynamics/
 │   ├── Planets.xml               ModExtensions planet climate properties
 │   ├── Loops.xml                 ModExtensions coolant loop properties
 │   ├── EntityComponents.sbc      Registers the mod-storage GUID used for saving
-│   ├── TransparentMaterials.sbc  The billboard material used for heat overlays
+│   ├── TransparentMaterials.sbc  The billboard material used by the extinguisher overlay
 │   ├── CubeBlocks/               Block definitions (coolant pipes, pumps, radiator, heat pump)
 │   ├── Extinguisher/             Hand tool: weapon, ammo, hand item, audio, decorative block
 │   ├── Localization/             DisplayName/Description strings

@@ -54,6 +54,15 @@ namespace Thermodynamics
         }
 
         /// <summary>
+        /// The live sources, for readouts. Callers must not hold the list across a frame: it is
+        /// the registry's own, and <see cref="Sample"/> removes entries whose entity has gone.
+        /// </summary>
+        public static IList<HeatSource> All
+        {
+            get { return Sources; }
+        }
+
+        /// <summary>
         /// Registers a source that follows an entity. Returns its id, or 0 when the entity is
         /// already gone.
         /// </summary>

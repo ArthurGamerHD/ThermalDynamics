@@ -47,6 +47,17 @@ mod can reach. A sealed compartment with no vent holds no air as far as this mod
 lowest cell. Building inside a compartment gives it a fresh air mass at the temperature of its
 walls.
 
+**Thermal vision redraws the world rather than recolouring it.** There is no shader or frame buffer
+access for mods, so the rendered view is blanked and everything with a temperature is drawn again.
+Three consequences follow. Terrain is a few hundred sampled patches, so its relief is coarse and it
+does not resolve small features. Asteroids are discs at ambient, not shapes. And anything the mod
+does not draw — dropped components, debris, particle effects — is simply absent from the view.
+
+**Thermal vision's depth order depends on the renderer sorting billboards back to front.** Bodies
+are projected into a shallow band that preserves their real depth order, so correct layering follows
+if — and only if — transparent billboards are drawn far to near. That is the ordinary behaviour for
+alpha blending, but it is an assumption about the engine rather than something the mod controls.
+
 **Emissivity is used as absorptivity.** The grey-body assumption. A block cannot be made shiny to
 the sun and black to space.
 

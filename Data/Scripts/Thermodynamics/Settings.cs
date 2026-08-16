@@ -31,7 +31,7 @@ namespace Thermodynamics
         /// Bumped whenever the file's shape changes. A file at a different version is replaced
         /// with defaults rather than partially applied.
         /// </summary>
-        public const int CurrentVersion = 4;
+        public const int CurrentVersion = 5;
 
         public static Settings Instance;
 
@@ -108,13 +108,41 @@ namespace Thermodynamics
         /// <summary>Thermal vision draws in greyscale rather than the heat ramp.</summary>
         [ProtoMember(61)] public bool ThermalVisionGreyscale;
 
-        /// <summary>Metres out to which thermal vision draws.</summary>
+        /// <summary>Metres out to which thermal vision draws anything at all.</summary>
         [ProtoMember(62)] public float ThermalVisionRange;
+
+        /// <summary>
+        /// Metres out to which grids are drawn block by block. Past this a grid is one body at the
+        /// temperature of its hottest block, which is what a distant ship looks like on a real
+        /// sensor and what keeps a fleet from costing a billboard per block.
+        /// </summary>
+        [ProtoMember(63)] public float ThermalVisionDetailRange;
+
+        /// <summary>
+        /// How much of the visible-light image is removed, 0..1.
+        ///
+        /// 1 is a thermal camera: the ordinary view is gone and what is left is only what the mod
+        /// draws. Lower values leave some of it showing through, which makes it a tinted visor
+        /// rather than a sensor — available, but not the intent.
+        /// </summary>
+        [ProtoMember(64)] public float ThermalVisionDimming;
+
+        /// <summary>Bottom of the sensor's span, K. Anything colder clips to black.</summary>
+        [ProtoMember(65)] public float ThermalVisionMinKelvin;
+
+        /// <summary>Top of the sensor's span, K. Anything hotter clips to white.</summary>
+        [ProtoMember(66)] public float ThermalVisionMaxKelvin;
+
+        /// <summary>Brightness of drawn bodies, 0..1.</summary>
+        [ProtoMember(67)] public float ThermalVisionIntensity;
+
+        /// <summary>Temperature a character is drawn at, K. Bodies are not simulated.</summary>
+        [ProtoMember(70)] public float ThermalVisionBodyTemperature;
 
         // ---- telemetry ---------------------------------------------------------------------
 
-        [ProtoMember(70)] public bool EnableTelemetry;
-        [ProtoMember(71)] public int TelemetrySampleStride;
+        [ProtoMember(80)] public bool EnableTelemetry;
+        [ProtoMember(81)] public int TelemetrySampleStride;
 
         public static Settings GetDefaults()
         {
@@ -161,7 +189,13 @@ namespace Thermodynamics
 
                 EnableThermalVision = true,
                 ThermalVisionGreyscale = false,
-                ThermalVisionRange = 150f,
+                ThermalVisionRange = 400f,
+                ThermalVisionDetailRange = 80f,
+                ThermalVisionDimming = 1f,
+                ThermalVisionMinKelvin = 240f,
+                ThermalVisionMaxKelvin = 500f,
+                ThermalVisionIntensity = 0.9f,
+                ThermalVisionBodyTemperature = 310f,
 
                 EnableTelemetry = false,
                 TelemetrySampleStride = 4,
@@ -179,6 +213,15 @@ namespace Thermodynamics
             if (TelemetrySampleStride < 1) TelemetrySampleStride = 1;
             if (SolarOcclusionInterval < 1) SolarOcclusionInterval = 1;
             if (ThermalVisionRange < 1f) ThermalVisionRange = 1f;
+            if (ThermalVisionDetailRange < 1f) ThermalVisionDetailRange = 1f;
+            if (ThermalVisionDetailRange > ThermalVisionRange) ThermalVisionDetailRange = ThermalVisionRange;
+            if (ThermalVisionDimming < 0f) ThermalVisionDimming = 0f;
+            if (ThermalVisionDimming > 1f) ThermalVisionDimming = 1f;
+            if (ThermalVisionIntensity < 0f) ThermalVisionIntensity = 0f;
+            if (ThermalVisionBodyTemperature < 0f) ThermalVisionBodyTemperature = 0f;
+            if (ThermalVisionMinKelvin < 0f) ThermalVisionMinKelvin = 0f;
+            if (ThermalVisionMaxKelvin <= ThermalVisionMinKelvin)
+                ThermalVisionMaxKelvin = ThermalVisionMinKelvin + 1f;
             if (RoomConvectionCoefficient < 0f) RoomConvectionCoefficient = 0f;
             if (RoomAirDensity < 0f) RoomAirDensity = 0f;
         }
@@ -270,6 +313,10 @@ namespace Thermodynamics
                 "DebugTemperatureBlockColors", "DebugSolarRadiationBlockColors",
                 "DebugExposedSurfaceBlockColors", "DebugFrictionColors",
                 "EnableThermalVision", "ThermalVisionGreyscale", "ThermalVisionRange",
+                "ThermalVisionDetailRange", "ThermalVisionDimming",
+                "ThermalVisionMinKelvin", "ThermalVisionMaxKelvin",
+                "ThermalVisionIntensity",
+                "ThermalVisionBodyTemperature",
                 "EnableTelemetry", "TelemetrySampleStride",
             };
         }
@@ -313,6 +360,12 @@ namespace Thermodynamics
                 case "EnableThermalVision": return Flag(EnableThermalVision);
                 case "ThermalVisionGreyscale": return Flag(ThermalVisionGreyscale);
                 case "ThermalVisionRange": return ThermalVisionRange;
+                case "ThermalVisionDetailRange": return ThermalVisionDetailRange;
+                case "ThermalVisionDimming": return ThermalVisionDimming;
+                case "ThermalVisionMinKelvin": return ThermalVisionMinKelvin;
+                case "ThermalVisionMaxKelvin": return ThermalVisionMaxKelvin;
+                case "ThermalVisionIntensity": return ThermalVisionIntensity;
+                case "ThermalVisionBodyTemperature": return ThermalVisionBodyTemperature;
                 case "EnableTelemetry": return Flag(EnableTelemetry);
                 case "TelemetrySampleStride": return TelemetrySampleStride;
                 default: return float.NaN;
@@ -361,6 +414,12 @@ namespace Thermodynamics
                 case "EnableThermalVision": EnableThermalVision = Flag(value); return true;
                 case "ThermalVisionGreyscale": ThermalVisionGreyscale = Flag(value); return true;
                 case "ThermalVisionRange": ThermalVisionRange = value; return true;
+                case "ThermalVisionDetailRange": ThermalVisionDetailRange = value; return true;
+                case "ThermalVisionDimming": ThermalVisionDimming = value; return true;
+                case "ThermalVisionMinKelvin": ThermalVisionMinKelvin = value; return true;
+                case "ThermalVisionMaxKelvin": ThermalVisionMaxKelvin = value; return true;
+                case "ThermalVisionIntensity": ThermalVisionIntensity = value; return true;
+                case "ThermalVisionBodyTemperature": ThermalVisionBodyTemperature = value; return true;
                 case "EnableTelemetry": EnableTelemetry = Flag(value); Telemetry.SetEnabled(EnableTelemetry); return true;
                 case "TelemetrySampleStride": TelemetrySampleStride = (int)value; return true;
                 default: return false;

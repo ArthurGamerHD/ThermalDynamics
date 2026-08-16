@@ -201,7 +201,7 @@ namespace Thermodynamics
             {
                 Settings.Instance.ThermalVisionGreyscale = !Settings.Instance.ThermalVisionGreyscale;
                 Reply("thermal vision palette "
-                    + (Settings.Instance.ThermalVisionGreyscale ? "greyscale" : "heat"));
+                    + (Settings.Instance.ThermalVisionGreyscale ? "white hot" : "ironbow"));
                 return;
             }
 

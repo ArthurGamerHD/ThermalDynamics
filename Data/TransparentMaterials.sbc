@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 <Definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
 	<TransparentMaterials>
+		<!-- The extinguisher tool's heat billboard. Textured, and only that tool uses it. -->
 		<TransparentMaterial>
 			<Id>
 				<TypeId>TransparentMaterialDefinition</TypeId>
@@ -12,6 +13,75 @@
 			<IgnoreDepth>false</IgnoreDepth>
 			<SoftParticleDistanceScale>0.1</SoftParticleDistanceScale>
 			<Texture>Textures\Particles\GaugeThermalTexture.dds</Texture>
+			<UseAtlas>false</UseAtlas>
+		</TransparentMaterial>
+
+		<!--
+			Thermal vision materials.
+
+			All three are untextured or near enough: the colour is the entire signal, exactly as it
+			is on a real thermal camera. They reference stock game textures rather than shipping
+			their own, so there is nothing to download and nothing to keep in sync.
+
+			IgnoreDepth is true on the see-through set because heat does not stop at a bulkhead: a
+			reactor cooking inside a hull is the thing a thermal view exists to show. The depth
+			tested variants are there for the setting that turns that off.
+		-->
+		<TransparentMaterial>
+			<Id>
+				<TypeId>TransparentMaterialDefinition</TypeId>
+				<SubtypeId>GaugeThermalFlat</SubtypeId>
+			</Id>
+			<AlphaMistingEnable>false</AlphaMistingEnable>
+			<AlphaSaturation>1</AlphaSaturation>
+			<CanBeAffectedByOtherLights>false</CanBeAffectedByOtherLights>
+			<IgnoreDepth>false</IgnoreDepth>
+			<SoftParticleDistanceScale>1</SoftParticleDistanceScale>
+			<Texture>Textures\Particles\square_fullcolor.dds</Texture>
+			<UseAtlas>false</UseAtlas>
+		</TransparentMaterial>
+
+		<TransparentMaterial>
+			<Id>
+				<TypeId>TransparentMaterialDefinition</TypeId>
+				<SubtypeId>GaugeThermalFlatThrough</SubtypeId>
+			</Id>
+			<AlphaMistingEnable>false</AlphaMistingEnable>
+			<AlphaSaturation>1</AlphaSaturation>
+			<CanBeAffectedByOtherLights>false</CanBeAffectedByOtherLights>
+			<IgnoreDepth>true</IgnoreDepth>
+			<SoftParticleDistanceScale>1</SoftParticleDistanceScale>
+			<Texture>Textures\Particles\square_fullcolor.dds</Texture>
+			<UseAtlas>false</UseAtlas>
+		</TransparentMaterial>
+
+		<!-- Round, for anything the simulation treats as a body rather than a box. -->
+		<TransparentMaterial>
+			<Id>
+				<TypeId>TransparentMaterialDefinition</TypeId>
+				<SubtypeId>GaugeThermalDisc</SubtypeId>
+			</Id>
+			<AlphaMistingEnable>false</AlphaMistingEnable>
+			<AlphaSaturation>1</AlphaSaturation>
+			<CanBeAffectedByOtherLights>false</CanBeAffectedByOtherLights>
+			<IgnoreDepth>true</IgnoreDepth>
+			<SoftParticleDistanceScale>1</SoftParticleDistanceScale>
+			<Texture>Textures\Particles\circle_white.dds</Texture>
+			<UseAtlas>false</UseAtlas>
+		</TransparentMaterial>
+
+		<!-- Soft falloff, for the bloom a hot body has on a real sensor. -->
+		<TransparentMaterial>
+			<Id>
+				<TypeId>TransparentMaterialDefinition</TypeId>
+				<SubtypeId>GaugeThermalGlow</SubtypeId>
+			</Id>
+			<AlphaMistingEnable>false</AlphaMistingEnable>
+			<AlphaSaturation>1</AlphaSaturation>
+			<CanBeAffectedByOtherLights>false</CanBeAffectedByOtherLights>
+			<IgnoreDepth>true</IgnoreDepth>
+			<SoftParticleDistanceScale>1</SoftParticleDistanceScale>
+			<Texture>Textures\SunGlare\SunBigGlow.dds</Texture>
 			<UseAtlas>false</UseAtlas>
 		</TransparentMaterial>
 	</TransparentMaterials>
