@@ -730,14 +730,15 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Every face of every live block, and why the model calls it exposed or not.
+        /// Every face of every block the session saw, and why the model calls it exposed or not.
         ///
         /// One row per block face — six per block — because the question this file exists to answer
         /// is about a single face on a single block: it looks open to the sky and the model says it
-        /// is not, so which of the three rejection rules fired, and what is the room map's opinion
-        /// of the cell on the other side. Aggregates cannot answer that; only the per-face row can.
+        /// is not, so which of the three rejection rules fired. Aggregates cannot answer that.
         ///
-        /// Written on every dump, which means it is only produced when telemetry is on.
+        /// The rows are read from the telemetry records rather than from the live grids, because
+        /// the report is usually written while the world is closing and by then there are no live
+        /// grids left. Each record captured its own faces at its final snapshot.
         /// </summary>
         private static string BuildSurfaceCsv()
         {
@@ -747,83 +748,46 @@ namespace Thermodynamics
             sb.Append("face,face_cells,exposed,sealed,mounted,interior,");
             sb.Append("sun_dot,sun_lit_fraction,solar_w,temperature_k,exposed_area_m2\n");
 
-            IList<ThermalGrid> live = ThermalGrid.LiveGrids;
-            FaceExposure[] faces = new FaceExposure[Face.Count];
-            int rows = 0;
+            IList<GridTelemetry> grids = Telemetry.Grids;
 
-            for (int g = 0; g < live.Count; g++)
+            for (int g = 0; g < grids.Count; g++)
             {
-                ThermalGrid thermals = live[g];
-                if (thermals == null || thermals.Simulation == null || thermals.Grid == null) continue;
-                if (thermals.Grid.Closed) continue;
+                GridTelemetry record = grids[g];
+                string gridName = Truncate(record.Name, 40);
 
-                SurfaceMap surfaces = thermals.Simulation.Surfaces;
-                RoomMap rooms = thermals.Simulation.Rooms.Map;
-                SunShadowMap shadow = thermals.Simulation.Solver.SunShadow;
-                Vector3 sun = thermals.LastState.SunDirectionLocal;
-
-                string gridName = Truncate(thermals.Grid.DisplayName, 40);
-
-                foreach (ThermalBlock bound in thermals.Blocks)
+                for (int i = 0; i < record.Surfaces.Count; i++)
                 {
-                    ThermalNode node = bound.Node;
-                    if (node == null) continue;
+                    SurfaceRow row = record.Surfaces[i];
 
-                    if (rows >= SurfaceRowLimit)
-                    {
-                        // Never truncate silently: a file that stops early looks like a world with
-                        // fewer blocks in it.
-                        MyLog.Default.Info("[" + Settings.Name + "] [Telemetry] surface dump stopped at "
-                            + SurfaceRowLimit + " rows; raise SurfaceRowLimit to capture the rest");
-                        return sb.ToString();
-                    }
+                    Csv(sb, gridName);
+                    Csv(sb, record.EntityId);
+                    Csv(sb, Truncate(row.Block, 40));
+                    Csv(sb, Truncate(row.Subtype, 40));
 
-                    BlockInstance block = bound.Instance;
-                    SurfaceAudit.Explain(surfaces, block, rooms, faces);
+                    Csv(sb, row.Cell.X);
+                    Csv(sb, row.Cell.Y);
+                    Csv(sb, row.Cell.Z);
+                    Csv(sb, row.Size.X);
+                    Csv(sb, row.Size.Y);
+                    Csv(sb, row.Size.Z);
 
-                    float lit = shadow.LitFraction(block);
-                    Vector3I size = block.Extents;
+                    Csv(sb, Face.Name(row.Face));
+                    Csv(sb, row.Cells);
+                    Csv(sb, row.Exposed);
+                    Csv(sb, row.Sealed);
+                    Csv(sb, row.Mounted);
+                    Csv(sb, row.Interior);
 
-                    for (int face = 0; face < Face.Count; face++)
-                    {
-                        Csv(sb, gridName);
-                        Csv(sb, thermals.Grid.EntityId);
-                        Csv(sb, Truncate(node.Block.Name, 40));
-                        Csv(sb, Truncate(bound.Block.BlockDefinition.Id.SubtypeName, 40));
-
-                        Csv(sb, block.Min.X);
-                        Csv(sb, block.Min.Y);
-                        Csv(sb, block.Min.Z);
-                        Csv(sb, size.X);
-                        Csv(sb, size.Y);
-                        Csv(sb, size.Z);
-
-                        Csv(sb, Face.Name(face));
-                        Csv(sb, faces[face].Cells);
-                        Csv(sb, faces[face].Exposed);
-                        Csv(sb, faces[face].Sealed);
-                        Csv(sb, faces[face].Mounted);
-                        Csv(sb, faces[face].Interior);
-
-                        Csv(sb, Vector3.Dot(Face.Normals[face], sun));
-                        Csv(sb, lit);
-                        Csv(sb, node.LastSolarWatts);
-                        Csv(sb, node.Temperature);
-                        CsvLast(sb, node.ExposedArea);
-
-                        rows++;
-                    }
+                    Csv(sb, row.SunDot);
+                    Csv(sb, row.SunLitFraction);
+                    Csv(sb, row.SolarWatts);
+                    Csv(sb, row.Temperature);
+                    CsvLast(sb, row.ExposedArea);
                 }
             }
 
             return sb.ToString();
         }
-
-        /// <summary>
-        /// Rows the surface dump will write before it gives up. Six per block, so this is a world
-        /// of about forty thousand live blocks.
-        /// </summary>
-        private const int SurfaceRowLimit = 250000;
 
         private static string BuildGridCsv()
         {

@@ -2,10 +2,33 @@ using System;
 using System.Collections.Generic;
 using Thermodynamics.Core;
 using VRage.Game;
+using VRage.Utils;
 using VRageMath;
 
 namespace Thermodynamics
 {
+    /// <summary>
+    /// One block face, and the model's account of whether it is open to the sky.
+    /// </summary>
+    public struct SurfaceRow
+    {
+        public string Block;
+        public string Subtype;
+        public Vector3I Cell;
+        public Vector3I Size;
+        public int Face;
+        public int Cells;
+        public int Exposed;
+        public int Sealed;
+        public int Mounted;
+        public int Interior;
+        public float SunDot;
+        public float SunLitFraction;
+        public float SolarWatts;
+        public float Temperature;
+        public float ExposedArea;
+    }
+
     /// <summary>
     /// Everything observed about one grid, for the life of that grid.
     ///
@@ -353,6 +376,7 @@ namespace Thermodynamics
             if (Grid == null || Grid.Simulation == null) return;
 
             SampleStructure();
+            SnapshotSurfaces();
 
             // Rebuilt rather than appended to, so a manual mid-session dump does not leave its
             // counts behind for the next report.
@@ -385,6 +409,79 @@ namespace Thermodynamics
             ClosedAtSeconds = Telemetry.SessionSeconds;
             Grid = null;
         }
+
+        /// <summary>
+        /// Every face of every block, and why the model calls it exposed or not.
+        ///
+        /// Taken here rather than read at report time because the report is usually written as the
+        /// world closes, by which point the grids are gone: the first version of this dump asked
+        /// the live grid list and produced a file with nothing but a header in it. A telemetry
+        /// record outlives the grid it describes, and this is part of the description.
+        /// </summary>
+        public readonly List<SurfaceRow> Surfaces = new List<SurfaceRow>();
+
+        private void SnapshotSurfaces()
+        {
+            // A re-snapshot replaces this grid's rows, so the session budget gets them back first.
+            Telemetry.SurfaceRowsCaptured -= Surfaces.Count;
+            Surfaces.Clear();
+
+            if (Grid == null || Grid.Simulation == null) return;
+
+            SurfaceMap surfaces = Grid.Simulation.Surfaces;
+            RoomMap rooms = Grid.Simulation.Rooms.Map;
+            SunShadowMap shadow = Grid.Simulation.Solver.SunShadow;
+            Vector3 sun = Grid.LastState.SunDirectionLocal;
+
+            FaceExposure[] faces = new FaceExposure[Face.Count];
+
+            foreach (ThermalBlock bound in Grid.Blocks)
+            {
+                ThermalNode node = bound.Node;
+                if (node == null) continue;
+
+                if (Surfaces.Count >= SurfaceRowLimit
+                    || Telemetry.SurfaceRowsCaptured >= Telemetry.MaxSurfaceRows)
+                {
+                    // Never truncate silently: a short file reads as a small ship.
+                    MyLog.Default.Info("[" + Settings.Name + "] [Telemetry] surface capture for "
+                        + Name + " stopped at " + Surfaces.Count + " rows ("
+                        + Telemetry.SurfaceRowsCaptured + " captured this session)");
+                    return;
+                }
+
+                BlockInstance block = bound.Instance;
+                SurfaceAudit.Explain(surfaces, block, rooms, faces);
+
+                float lit = shadow.LitFraction(block);
+
+                for (int face = 0; face < Face.Count; face++)
+                {
+                    SurfaceRow row = new SurfaceRow();
+                    row.Block = node.Block.Name;
+                    row.Subtype = bound.Block.BlockDefinition.Id.SubtypeName;
+                    row.Cell = block.Min;
+                    row.Size = block.Extents;
+                    row.Face = face;
+                    row.Cells = faces[face].Cells;
+                    row.Exposed = faces[face].Exposed;
+                    row.Sealed = faces[face].Sealed;
+                    row.Mounted = faces[face].Mounted;
+                    row.Interior = faces[face].Interior;
+                    row.SunDot = Vector3.Dot(Face.Normals[face], sun);
+                    row.SunLitFraction = lit;
+                    row.SolarWatts = node.LastSolarWatts;
+                    row.Temperature = node.Temperature;
+                    row.ExposedArea = node.ExposedArea;
+
+                    Surfaces.Add(row);
+                    Telemetry.SurfaceRowsCaptured++;
+                }
+            }
+        }
+
+        /// <summary>Rows one grid may contribute. Six per block, so about eight thousand blocks.</summary>
+        private const int SurfaceRowLimit = 50000;
 
         public double LifetimeSeconds
         {

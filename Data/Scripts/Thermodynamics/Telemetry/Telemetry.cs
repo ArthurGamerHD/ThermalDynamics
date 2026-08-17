@@ -54,6 +54,16 @@ namespace Thermodynamics
 
         /// <summary>Grid records kept in full. Beyond this, grids are counted but not detailed.</summary>
         public const int MaxGridRecords = 2048;
+
+        /// <summary>
+        /// Block faces the session will hold for the surface dump, across every grid. Six per
+        /// block, so about fifty thousand blocks — past that the diagnostic is costing more memory
+        /// than the answer is worth.
+        /// </summary>
+        public const int MaxSurfaceRows = 300000;
+
+        /// <summary>Rows currently held. Records give theirs back when they re-snapshot.</summary>
+        public static int SurfaceRowsCaptured;
         public const int MaxAnomalyKinds = 64;
         public const int MaxBlockTypes = 4096;
 
@@ -273,6 +283,7 @@ namespace Thermodynamics
             CellUpdatesObserved = 0;
             GridsSeen = 0;
             GridRecordsDropped = 0;
+            SurfaceRowsCaptured = 0;
             BlockTypeRecordsDropped = 0;
             AnomalyKindsDropped = 0;
 

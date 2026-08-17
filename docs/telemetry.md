@@ -102,8 +102,13 @@ The three rejection columns are the point of the file. A face that looks open in
 exposure total alone. The same breakdown is on the crosshair readout, per face, for the block being
 looked at — see `DebugTextOnScreen`.
 
-The row limit is 250,000 (about 40,000 live blocks). Hitting it logs a line and stops; it never
-truncates silently.
+Rows are captured per grid at its final snapshot — when it closes, or when the report is written —
+rather than read from the live grids at report time. That is the difference between a full file and
+a header: the report is normally written as the world closes, and by then no grid is live. A record
+outlives its grid, so a ship destroyed mid-session still contributes its faces.
+
+Limits are 50,000 rows per grid and 300,000 for the session, about fifty thousand blocks. Hitting
+either logs a line and stops; it never truncates silently.
 
 ## What is collected
 
