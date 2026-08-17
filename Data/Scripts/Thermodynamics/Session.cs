@@ -140,7 +140,7 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Ctrl+Shift+= cycles the block overlay through its views, and Ctrl+Shift+- opens the
+        /// Ctrl+Shift+= cycles the block overlay through its views, and Ctrl+Shift+S opens the
         /// settings menu.
         ///
         /// Chosen over controls the player can rebind because a mod cannot add one: the game's
@@ -161,7 +161,7 @@ namespace Thermodynamics
                 return;
             }
 
-            if (MyAPIGateway.Input.IsNewKeyPressed(MyKeys.OemMinus))
+            if (MyAPIGateway.Input.IsNewKeyPressed(MyKeys.S))
             {
                 ThermalSettingsMenu.Open();
             }

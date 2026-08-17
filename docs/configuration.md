@@ -17,7 +17,7 @@ to disk unless asked.
 | `/thermal set <name> <value>` | Changes one setting for this session. Switches take `on`/`off` or `1`/`0`. |
 | `/thermal save` | Writes the current values to the config file. |
 | `/thermal overlay` | Cycles the block overlay. Same as Ctrl+Shift+=. |
-| `/thermal menu` | Opens the settings menu. Same as Ctrl+Shift+-. |
+| `/thermal menu` | Opens the settings menu. Same as Ctrl+Shift+S. |
 | `/thermal telemetry on` / `off` | Starts and stops data collection. |
 | `/thermal stride <n>` | Telemetry sample stride. |
 | `/thermal dump` | Writes a telemetry report without closing the world. |
@@ -27,7 +27,7 @@ mods — see [api.md](api.md#settings).
 
 ## The settings menu
 
-**Ctrl+Shift+-** opens it, as does `/thermal menu`. It is built on the [Rich HUD
+**Ctrl+Shift+S** opens it, as does `/thermal menu`. It is built on the [Rich HUD
 Framework](https://github.com/ZachHembree/RichHudFramework.Client) and needs the **Rich HUD Master**
 mod (`1965654081`) to be enabled; without it the keystroke says so and the chat commands remain the
 way in.

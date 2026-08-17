@@ -49,7 +49,7 @@ temperatures, overheat events and threshold crossings.
 | [ThermalTerminal.cs](../Data/Scripts/Thermodynamics/ThermalTerminal.cs) | static | Thermal readout in every block's terminal. |
 | [ThermalHud.cs](../Data/Scripts/Thermodynamics/ThermalHud.cs) | static | Text HUD API readouts and the extinguisher billboard. |
 | [ThermalDebugView.cs](../Data/Scripts/Thermodynamics/ThermalDebugView.cs) | static | The x-ray overlay: a coloured box per block, or per room cell, cycled with Ctrl+Shift+=. |
-| [ThermalSettingsMenu.cs](../Data/Scripts/Thermodynamics/ThermalSettingsMenu.cs) | static | The Rich HUD settings menu, generated from `Settings.Names()`. Opened with Ctrl+Shift+-. |
+| [ThermalSettingsMenu.cs](../Data/Scripts/Thermodynamics/ThermalSettingsMenu.cs) | static | The Rich HUD settings menu, generated from `Settings.Names()`. Opened with Ctrl+Shift+S. |
 | [Debug.cs](../Data/Scripts/Thermodynamics/Debug.cs) | static | The crosshair readout. |
 | [Settings.cs](../Data/Scripts/Thermodynamics/Settings.cs) | class | Config file, defaults, access by name, and the write-through to the model's settings. |
 | [Definitions/](../Data/Scripts/Thermodynamics/Definitions) | classes | Typed readers over Definition Extensions. |
@@ -61,7 +61,7 @@ temperatures, overheat events and threshold crossings.
 ```
 Session.Simulate()                      every frame
   ├─ chat command registration
-  ├─ keybind poll                       client only, Ctrl+Shift+= overlay, Ctrl+Shift+- menu
+  ├─ keybind poll                       client only, Ctrl+Shift+= overlay, Ctrl+Shift+S menu
   ├─ ThermalBridges.Update()            every 10th frame: conduction across rotors and pistons
   └─ Debug.ShowDebugInfo()              client only, behind DebugTextOnScreen
 

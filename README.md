@@ -62,7 +62,7 @@ into atmosphere and into the air of sealed rooms, arrives from the sun, and — 
 6. To cool something below what surrounds it, sandwich a **Heat Pump** between it and a radiator:
    the pump's front face draws heat out, its back face rejects that heat plus the power it took.
 7. Press **Ctrl+Shift+=** to cycle the block overlay through its views, and again to switch it off.
-8. Press **Ctrl+Shift+-** for the settings menu: every value in the config file, with a slider or a
+8. Press **Ctrl+Shift+S** for the settings menu: every value in the config file, with a slider or a
    switch and a description of what it does.
 9. `/thermal settings` lists every switch; `/thermal set <name> <value>` changes one live.
 
