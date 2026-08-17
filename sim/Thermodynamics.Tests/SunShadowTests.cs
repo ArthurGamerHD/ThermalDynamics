@@ -35,8 +35,10 @@ namespace Thermodynamics.Tests
 
             SunShadowMap map = Build(builder.Grid, SunAlongX);
 
-            Assert.True(map.IsLit(Vector3I.Zero));
-            Assert.Equal(0, map.ShadowedCount);
+            // Its sunward face is lit and its far side is not: a block shadows itself, which is
+            // what makes the far side of any hull cold.
+            Assert.True(map.IsFaceLit(Vector3I.Zero, Face.Right));
+            Assert.False(map.IsFaceLit(Vector3I.Zero, Face.Left));
         }
 
         [Fact]
@@ -48,8 +50,9 @@ namespace Thermodynamics.Tests
 
             SunShadowMap map = Build(builder.Grid, SunAlongX);
 
-            Assert.True(map.IsLit(new Vector3I(1, 0, 0)));
-            Assert.False(map.IsLit(Vector3I.Zero));
+            // The sunward face of the block in front is lit; the one hiding behind it is not.
+            Assert.True(map.IsFaceLit(new Vector3I(1, 0, 0), Face.Right));
+            Assert.False(map.IsFaceLit(Vector3I.Zero, Face.Right));
         }
 
         [Fact]
@@ -62,8 +65,8 @@ namespace Thermodynamics.Tests
             // From the other side the shadow is cast the other way.
             SunShadowMap map = Build(builder.Grid, -SunAlongX);
 
-            Assert.True(map.IsLit(Vector3I.Zero));
-            Assert.False(map.IsLit(new Vector3I(1, 0, 0)));
+            Assert.True(map.IsFaceLit(Vector3I.Zero, Face.Left));
+            Assert.False(map.IsFaceLit(new Vector3I(1, 0, 0), Face.Left));
         }
 
         [Fact]
@@ -75,9 +78,9 @@ namespace Thermodynamics.Tests
 
             SunShadowMap map = Build(builder.Grid, SunAlongX);
 
-            Assert.True(map.IsLit(Vector3I.Zero));
-            Assert.True(map.IsLit(new Vector3I(0, 1, 0)));
-            Assert.Equal(0, map.ShadowedCount);
+            // Neither is behind the other, so neither shadows the other.
+            Assert.True(map.IsFaceLit(Vector3I.Zero, Face.Right));
+            Assert.True(map.IsFaceLit(new Vector3I(0, 1, 0), Face.Right));
         }
 
         [Fact]
@@ -100,7 +103,62 @@ namespace Thermodynamics.Tests
 
             Assert.False(map.IsBuilt);
             Assert.True(map.IsLit(Vector3I.Zero));
-            Assert.Equal(1f, map.LitFraction(null), 5);
+            Assert.Equal(1f, map.FaceLitFraction(null, Face.Up), 5);
+        }
+
+        // ---- shadow belongs to a face, not to a block --------------------------------------
+
+        [Fact]
+        public void TheInnerLayerOfAWallIsStillLitOnTheSidesThatFaceOut()
+        {
+            // Two cells thick across the sun, four tall. The back layer cannot see the sun through
+            // the front layer — but its top and side faces are on the outside of the same wall and
+            // are in full sunlight. Asking the question of the cell instead of the face lights a
+            // hull along one row of blocks and calls the rest of it shadowed.
+            GridBuilder builder = GridBuilder.Large();
+            builder.Fill(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(2, 4, 1));
+
+            SunShadowMap map = Build(builder.Grid, SunAlongX);
+
+            BlockInstance back = builder.Grid.GetAtCell(new Vector3I(0, 1, 0));
+
+            Assert.Equal(0f, map.FaceLitFraction(back, Face.Right), 5);    // toward the sun, buried
+            Assert.Equal(1f, map.FaceLitFraction(back, Face.Forward), 5);  // out of the wall's side
+            Assert.Equal(1f, map.FaceLitFraction(back, Face.Backward), 5);
+        }
+
+        [Fact]
+        public void AFaceInsideARecessIsShadowedWhileTheWallAroundItIsLit()
+        {
+            // A slab with a bite out of it, sun coming in over the top at an angle: the floor of
+            // the recess is shadowed by the wall beside it, and the top of that wall is not.
+            GridBuilder builder = GridBuilder.Large();
+            builder.Fill(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(4, 1, 1));
+            builder.Place(Catalog.LightArmor(), new Vector3I(3, 1, 0));
+            builder.Place(Catalog.LightArmor(), new Vector3I(3, 2, 0));
+
+            SunShadowMap map = Build(builder.Grid, Vector3.Normalize(new Vector3(0.83f, 0.55f, 0f)));
+
+            BlockInstance floor = builder.Grid.GetAtCell(new Vector3I(2, 0, 0));
+            BlockInstance tower = builder.Grid.GetAtCell(new Vector3I(3, 2, 0));
+
+            Assert.Equal(0f, map.FaceLitFraction(floor, Face.Up), 5);
+            Assert.Equal(1f, map.FaceLitFraction(tower, Face.Up), 5);
+        }
+
+        [Fact]
+        public void ALongBlockCanHaveOneEndInShadowAndTheOtherInTheOpen()
+        {
+            // A 3-cell bar with a single block standing over its far end.
+            GridBuilder builder = GridBuilder.Large();
+            builder.Place(Catalog.LightArmorBar(3), Vector3I.Zero);
+            BlockInstance bar = builder.Last;
+            builder.Place(Catalog.LightArmor(), new Vector3I(2, 1, 0));
+
+            SunShadowMap map = Build(builder.Grid, Vector3.Normalize(new Vector3(0f, 1f, 0f)));
+
+            // Two of the bar's three top cell faces are open; the third is under the block.
+            Assert.Equal(2f / 3f, map.FaceLitFraction(bar, Face.Up), 3);
         }
 
         [Fact]
@@ -188,6 +246,10 @@ namespace Thermodynamics.Tests
             return exit - enter > Epsilon && exit > Epsilon;
         }
 
+        /// <summary>
+        /// Checks every face of every block against the reference. The map answers for the air just
+        /// outside a face, so that is what the reference is asked about too.
+        /// </summary>
         private static void AssertMatchesReference(GridModel grid, Vector3 sun)
         {
             SunShadowMap map = Build(grid, sun);
@@ -198,7 +260,13 @@ namespace Thermodynamics.Tests
                 Vector3I[] cells = blocks[i].Cells;
                 for (int c = 0; c < cells.Length; c++)
                 {
-                    Assert.Equal(ReferenceLit(grid, cells[c], sun), map.IsLit(cells[c]));
+                    for (int face = 0; face < Face.Count; face++)
+                    {
+                        Vector3I outside = cells[c] + Face.Offsets[face];
+                        if (grid.IsOccupied(outside)) continue;
+
+                        Assert.Equal(ReferenceLit(grid, outside, sun), map.IsFaceLit(cells[c], face));
+                    }
                 }
             }
         }
@@ -278,21 +346,24 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-        public void AnExactlyDiagonalSunShadowsTheCellBehindTheCorner()
+        public void AnExactlyDiagonalSunGrazesPastTheCornerRatherThanBeingStoppedByIt()
         {
-            // 45° puts the ray along the corners between cells, where touching and entering are
-            // the same event. The walk resolves the tie by stepping one axis at a time, so the cell
-            // diagonally behind a block is treated as shadowed. Pinned because it is a choice, not
-            // a fact: for solid hull — the case that matters — shadowing is the useful answer, and
-            // a real sun is never exactly diagonal for more than an instant.
+            // 45° puts the ray exactly along the corners between cells, where touching and entering
+            // are the same event. The walk steps one axis at a time and passes; the analytic
+            // reference agrees, since a ray that enters and leaves a cube at the same point does not
+            // pass through it. Pinned because it is a choice: a real sun is never exactly diagonal
+            // for more than an instant, and either answer is defensible for the instant it is.
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.LightArmor(), new Vector3I(1, 1, 0));
             builder.Place(Catalog.LightArmor(), Vector3I.Zero);
 
-            SunShadowMap map = Build(builder.Grid, Vector3.Normalize(new Vector3(1f, 1f, 0f)));
+            Vector3 sun = Vector3.Normalize(new Vector3(1f, 1f, 0f));
+            SunShadowMap map = Build(builder.Grid, sun);
 
-            Assert.False(map.IsLit(Vector3I.Zero));
-            Assert.True(map.IsLit(new Vector3I(1, 1, 0)));
+            Assert.True(map.IsFaceLit(Vector3I.Zero, Face.Right));
+            Assert.Equal(
+                ReferenceLit(builder.Grid, new Vector3I(1, 0, 0), sun),
+                map.IsFaceLit(Vector3I.Zero, Face.Right));
         }
 
         [Fact]
@@ -307,7 +378,7 @@ namespace Thermodynamics.Tests
 
             SunShadowMap map = Build(builder.Grid, Vector3.Normalize(new Vector3(1f, 1f, 0f)));
 
-            Assert.False(map.IsLit(Vector3I.Zero));
+            Assert.False(map.IsFaceLit(Vector3I.Zero, Face.Right));
         }
 
         // ---- running the walk in slices ----------------------------------------------------
@@ -334,7 +405,12 @@ namespace Thermodynamics.Tests
             IList<BlockInstance> blocks = builder.Grid.Blocks;
             for (int i = 0; i < blocks.Count; i++)
             {
-                Assert.Equal(whole.IsLit(blocks[i].Min), sliced.IsLit(blocks[i].Min));
+                for (int face = 0; face < Face.Count; face++)
+                {
+                    Assert.Equal(
+                        whole.FaceLitFraction(blocks[i], face),
+                        sliced.FaceLitFraction(blocks[i], face));
+                }
             }
         }
 
@@ -346,7 +422,10 @@ namespace Thermodynamics.Tests
             builder.Place(Catalog.LightArmor(), Vector3I.Zero);
 
             SunShadowMap map = Build(builder.Grid, SunAlongX);
-            Assert.False(map.IsLit(Vector3I.Zero));
+
+            // Sun at +X: the near block's +X face is lit, and its -X face is not.
+            Assert.True(map.IsFaceLit(new Vector3I(3, 0, 0), Face.Right));
+            Assert.False(map.IsFaceLit(Vector3I.Zero, Face.Left));
 
             // A pass for the opposite direction begins but does not finish. Until it does, the
             // readable answer is the old one — never a half-built one.
@@ -354,10 +433,11 @@ namespace Thermodynamics.Tests
             map.Step(1);
 
             Assert.True(map.IsRunning);
-            Assert.False(map.IsLit(Vector3I.Zero));
+            Assert.False(map.IsFaceLit(Vector3I.Zero, Face.Left));
 
             map.RunToCompletion();
-            Assert.True(map.IsLit(Vector3I.Zero));
+            Assert.True(map.IsFaceLit(Vector3I.Zero, Face.Left));
+            Assert.False(map.IsFaceLit(new Vector3I(3, 0, 0), Face.Right));
         }
 
         [Fact]

@@ -43,6 +43,7 @@ namespace Thermodynamics.Harness
             "fleet",
             "interior",
             "solver",
+            "self-shadow",
         };
 
         public static ScenarioResult Run(string name)
@@ -69,9 +70,152 @@ namespace Thermodynamics.Harness
                 case "fleet": return Fleet();
                 case "interior": return Interior();
                 case "solver": return Solver();
+                case "self-shadow": return SelfShadow();
                 default:
                     throw new ArgumentException("Unknown scenario: " + name);
             }
+        }
+
+        /// <summary>
+        /// A slab in full sunlight, of the shape that showed the model up: four cells thick, seven
+        /// tall, four deep, with a recess cut into one face.
+        ///
+        /// It answers the question the pictures kept raising — which faces of a solid hull are lit,
+        /// and by how much — three ways at once. The sunward face should be lit whole. The two
+        /// flanks should be lit whole and dimmer, because they are square-on to nothing but still
+        /// out in the open, and a model that treats shadow as a property of a block instead of a
+        /// face lights only the outermost row of them. The recess should be dark, because the wall
+        /// beside it is in the way.
+        ///
+        /// It also states the cost of the two models against each other, since that is what the
+        /// setting is for.
+        /// </summary>
+        public static ScenarioResult SelfShadow()
+        {
+            ThermalSettings settings = new ThermalSettings();
+            settings.SolarSelfShadowing = true;
+
+            GridBuilder builder = Slab();
+            ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);
+            simulation.Solver.CollectDiagnostics = true;
+
+            // Sun over the +X flank and a little above, the angle the test world was standing in.
+            EnvironmentSample sun = Worlds.Space(new Vector3(0.9004f, 0.1619f, -0.4038f));
+
+            ScenarioRunner runner = new ScenarioRunner(simulation);
+            runner.Environment = t => sun;
+            runner.Track("sunward-face", simulation.Solver.GetNodeAt(new Vector3I(3, 3, 1)).Block);
+            runner.Track("recess-floor", simulation.Solver.GetNodeAt(new Vector3I(2, 3, 1)).Block);
+            runner.Track("shaded-flank", simulation.Solver.GetNodeAt(new Vector3I(0, 0, 1)).Block);
+            runner.Run(1800f, 300f);
+
+            SunShadowMap shadow = simulation.Solver.SunShadow;
+
+            float sunward = LitShare(simulation, shadow, Face.Right);
+            float top = LitShare(simulation, shadow, Face.Up);
+            float flank = LitShare(simulation, shadow, Face.Forward);
+
+            // The same grid with self-shadowing off, for the comparison the setting exists to let
+            // people make.
+            ThermalSettings cheap = new ThermalSettings();
+            cheap.SolarSelfShadowing = false;
+
+            ThermalSimulation plain = Slab().BuildSimulation(cheap, 293.15f);
+            plain.Solver.CollectDiagnostics = true;
+
+            ScenarioRunner cheapRunner = new ScenarioRunner(plain);
+            cheapRunner.Environment = t => sun;
+            cheapRunner.Run(1800f, 300f);
+
+            return Result("self-shadow", runner,
+                "Solid slab in sunlight, sun over the +X flank. Exposed faces lit: sunward "
+                + Pct(sunward) + ", top " + Pct(top) + ", flank " + Pct(flank)
+                + ", recess floor " + Pct(RecessShare(simulation, shadow))
+                + ". Shadowed air cells: " + shadow.ShadowedCount
+                + ". Grid solar with self-shadowing " + W(TotalSolar(simulation))
+                + " against " + W(TotalSolar(plain)) + " without. Hottest "
+                + C(runner.Final.HottestTemperature) + " against "
+                + C(cheapRunner.Final.HottestTemperature) + ".");
+        }
+
+        /// <summary>The slab: a four-thick wall with a two-cell recess cut into its shaded side.</summary>
+        private static GridBuilder Slab()
+        {
+            GridBuilder builder = GridBuilder.Large();
+            builder.Fill(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(4, 7, 4));
+
+            // A doorway-sized bite out of the -X face, so some faces are open to the sky and
+            // cannot see the sun.
+            for (int y = 2; y < 5; y++)
+            {
+                for (int z = 1; z < 3; z++)
+                {
+                    builder.Remove(new Vector3I(0, y, z));
+                    builder.Remove(new Vector3I(1, y, z));
+                }
+            }
+
+            return builder;
+        }
+
+        /// <summary>Share of one direction's exposed cell faces that the sun reaches, 0..1.</summary>
+        private static float LitShare(ThermalSimulation simulation, SunShadowMap shadow, int face)
+        {
+            int exposed = 0;
+            float lit = 0f;
+
+            IList<ThermalNode> nodes = simulation.Solver.Nodes;
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                int cells = nodes[i].ExposedFaces[face];
+                if (cells == 0) continue;
+
+                exposed += cells;
+                lit += cells * shadow.FaceLitFraction(nodes[i].Block, face);
+            }
+
+            return exposed == 0 ? 0f : lit / exposed;
+        }
+
+        /// <summary>Share of the recess's inward-looking faces the sun reaches.</summary>
+        private static float RecessShare(ThermalSimulation simulation, SunShadowMap shadow)
+        {
+            int cells = 0;
+            float lit = 0f;
+
+            for (int y = 2; y < 5; y++)
+            {
+                for (int z = 1; z < 3; z++)
+                {
+                    ThermalNode node = simulation.Solver.GetNodeAt(new Vector3I(2, y, z));
+                    if (node == null) continue;
+
+                    cells++;
+                    lit += shadow.FaceLitFraction(node.Block, Face.Left);
+                }
+            }
+
+            return cells == 0 ? 0f : lit / cells;
+        }
+
+        private static float TotalSolar(ThermalSimulation simulation)
+        {
+            float total = 0f;
+            IList<ThermalNode> nodes = simulation.Solver.Nodes;
+            for (int i = 0; i < nodes.Count; i++) total += nodes[i].LastSolarWatts;
+            return total;
+        }
+
+        private static string Pct(float fraction)
+        {
+            return (fraction * 100f).ToString("n0") + "%";
+        }
+
+        private static string W(float watts)
+        {
+            return watts >= 1000f
+                ? (watts / 1000f).ToString("n1") + " kW"
+                : watts.ToString("n0") + " W";
         }
 
         /// <summary>A single hot block radiating into empty space.</summary>

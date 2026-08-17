@@ -164,10 +164,16 @@ voxels and grids by a ray against their bounding segment. Being underground forc
 
 `litFraction` is the grid's shadow on itself, and is 1 for every block when `SolarSelfShadowing` is
 off. When it is on, [SunShadowMap](../Data/Scripts/Thermodynamics/Core/Simulation/SunShadowMap.cs)
-walks from every occupied cell toward the sun, one cell at a time, until it leaves the grid's
-bounding box: cross anything solid and the cell is shadowed. A block's fraction is the share of its
-cells that are lit. It is a standard voxel traversal, so the ray visits every cell it passes through
-and cannot slip diagonally between two blocks that touch.
+walks toward the sun from the air just outside each block face, one cell at a time, until the ray
+leaves the grid's bounding box: cross anything solid and that face is shadowed. It is a standard
+voxel traversal, so the ray visits every cell it passes through and cannot slip diagonally between
+two blocks that touch.
+
+The question is asked of a face, not of a block, and that distinction is the whole model. A wall two
+cells thick has an inner layer that cannot see the sun from its own centre — but the inner layer's
+side faces are on the outside of the same wall, looking out of the same flank of the ship, in full
+sunlight. Ask per block and a solid hull ends up lit along a single row of blocks with the rest of
+it dark, which is wrong in the direction that matters: those flanks are most of the area.
 
 A pass starts only when the sun has moved more than 2° or the grid's blocks have changed — seconds
 apart on a planet — and is spread over ticks in slices of `SunShadowBudget` cells, with the previous
@@ -179,8 +185,11 @@ oblique angle sunlight leaks onto shadowed cells, and the tolerance that closes 
 shadows on cells standing in the open. On a 76-cell test structure at a real planetary sun angle it
 lit 38 cells where 28 are lit — ten of them behind something.
 
-`faceWeight` and `litFraction` answer different questions and both are needed: the first is how
-square a face is to the sun, the second is whether anything of the ship stands in the way.
+`faceWeight` and `litFraction` answer different questions per face and both are needed: the first is
+how square that face is to the sun, the second is whether anything of the ship stands in the way of
+it. The [self-shadow scenario](../sim/Thermodynamics.Harness/Scenarios.cs) measures both on a solid
+slab: the face turned to the sun is lit whole, the flanks around 80%, a recess cut into the hull
+0%.
 
 Point sources registered by other mods use the same equation with their own direction and
 irradiance:

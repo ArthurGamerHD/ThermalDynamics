@@ -94,7 +94,7 @@ rows per live block, on every grid in the world.
 | `mounted` | rejected: two mount surfaces bolted together |
 | `interior` | rejected: the space beyond is a sealed room, not outdoors |
 | `sun_dot` | how square the face is to the sun, −1..1 |
-| `sun_lit_fraction` | the block's share of cells the sun reaches, from the shadow map |
+| `sun_lit_fraction` | the share of *this face* the sun reaches, from the shadow map — per face, since the far layer of a wall is dark toward the sun and lit on the flank |
 | `solar_w`, `temperature_k`, `exposed_area_m2` | what the block is doing with all that |
 
 The three rejection columns are the point of the file. A face that looks open in game and reports

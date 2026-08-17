@@ -74,8 +74,13 @@ namespace Thermodynamics.Core
         private float[] nodeFaceWeights = new float[0];
 
         /// <summary>
-        /// Fraction of each node's cells the sun reaches, 0..1. All ones when self-shadowing is
-        /// off, which is what makes the cheap path free rather than merely cheaper.
+        /// Fraction of each node's <em>face</em> the sun reaches, six per node, 0..1. All ones when
+        /// self-shadowing is off, which is what makes the cheap path free rather than cheaper.
+        ///
+        /// Per face because shadow belongs to a surface. The second layer of a two-cell wall is
+        /// buried from the sun's direction and its side faces are still out in the open, on the
+        /// same flank of the same ship; a per-block figure lights a hull along one row of blocks
+        /// and calls the rest of it shadowed.
         /// </summary>
         private float[] nodeSunLit = new float[0];
 
@@ -1196,10 +1201,9 @@ namespace Thermodynamics.Core
 
                 if (solarEnabled)
                 {
-                    // The face weights say how square this node's exposed faces are to the sun;
-                    // the lit fraction says how much of it the ship is standing in front of.
-                    solarWatts = env.SolarEnergy * nodeEmissivity[i] * Weighted(i, sunWeights)
-                        * area * nodeSunLit[i];
+                    // Per face, and both terms are needed: how square the face is to the sun, and
+                    // whether the ship is standing in front of that face.
+                    solarWatts = env.SolarEnergy * nodeEmissivity[i] * WeightedLit(i, sunWeights) * area;
                     watts += solarWatts;
                 }
 
@@ -1291,13 +1295,18 @@ namespace Thermodynamics.Core
         {
             for (int i = 0; i < nodes.Count; i++)
             {
-                nodeSunLit[i] = sunShadow.LitFraction(nodes[i].Block);
+                int b = i * Face.Count;
+                for (int f = 0; f < Face.Count; f++)
+                {
+                    nodeSunLit[b + f] = sunShadow.FaceLitFraction(nodes[i].Block, f);
+                }
             }
         }
 
         private void FillSunLit(float value)
         {
-            for (int i = 0; i < nodes.Count; i++)
+            int count = nodes.Count * Face.Count;
+            for (int i = 0; i < count; i++)
             {
                 nodeSunLit[i] = value;
             }
@@ -1309,10 +1318,26 @@ namespace Thermodynamics.Core
         /// </summary>
         public SunShadowMap SunShadow { get { return sunShadow; } }
 
-        /// <summary>Fraction of a node's cells the sun reaches, 0..1.</summary>
-        public float SunLitFraction(int node)
+        /// <summary>Fraction of one face of a node the sun reaches, 0..1.</summary>
+        public float SunLitFraction(int node, int face)
         {
-            return node >= 0 && node < nodeSunLit.Length ? nodeSunLit[node] : 1f;
+            int index = (node * Face.Count) + face;
+            return index >= 0 && index < nodeSunLit.Length ? nodeSunLit[index] : 1f;
+        }
+
+        /// <summary>
+        /// <see cref="Weighted"/>, with each face's share scaled by how much of that face the sun
+        /// actually reaches.
+        /// </summary>
+        private float WeightedLit(int node, float[] weights)
+        {
+            int b = node * Face.Count;
+            return (nodeFaceWeights[b] * nodeSunLit[b] * weights[0])
+                + (nodeFaceWeights[b + 1] * nodeSunLit[b + 1] * weights[1])
+                + (nodeFaceWeights[b + 2] * nodeSunLit[b + 2] * weights[2])
+                + (nodeFaceWeights[b + 3] * nodeSunLit[b + 3] * weights[3])
+                + (nodeFaceWeights[b + 4] * nodeSunLit[b + 4] * weights[4])
+                + (nodeFaceWeights[b + 5] * nodeSunLit[b + 5] * weights[5]);
         }
 
         private float Weighted(int node, float[] weights)
@@ -1734,7 +1759,7 @@ namespace Thermodynamics.Core
                 nodeEmissivity = new float[size];
                 nodeExposedFaces = new int[size];
                 nodeFaceWeights = new float[size * Face.Count];
-                nodeSunLit = new float[size];
+                nodeSunLit = new float[size * Face.Count];
             }
             if (loopWatts.Length < loops.Count)
             {

@@ -123,6 +123,24 @@ namespace Thermodynamics.Harness
         /// Wraps the grid in a fully built simulation with every block registered and every
         /// derived structure computed.
         /// </summary>
+        /// <summary>
+        /// Takes a block back out, of the model and of the builder's own list.
+        ///
+        /// Removing straight from <see cref="Grid"/> is not enough and is quietly wrong:
+        /// <see cref="BuildSimulation"/> adds every block this builder has ever placed, so a block
+        /// removed from the model alone comes back as a node with no cells in the grid — and every
+        /// per-block figure computed afterwards silently includes it.
+        /// </summary>
+        public GridBuilder Remove(Vector3I cell)
+        {
+            BlockInstance block = grid.GetAtCell(cell);
+            if (block == null) return this;
+
+            grid.Remove(block);
+            placed.Remove(block);
+            return this;
+        }
+
         public ThermalSimulation BuildSimulation(ThermalSettings settings = null, float initialTemperature = 293.15f)
         {
             ThermalSettings effective = settings ?? new ThermalSettings();

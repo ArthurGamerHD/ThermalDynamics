@@ -12,9 +12,15 @@ namespace Thermodynamics.Core
     /// recess, the sunward face of a block under an overhang, the far side of a hangar: all of them
     /// face the sun and none of them see it.
     ///
-    /// The answer is found by walking, one cell at a time, from each cell toward the sun until the
-    /// grid runs out. If the walk crosses anything solid, that cell is shadowed. Exact at cell
-    /// resolution, which matters more here than it looks.
+    /// The question is asked of a face, not of a block. A wall two cells thick has an outer layer
+    /// and an inner one, and the inner layer's side faces are just as open to the sky as the outer
+    /// layer's — they are on the same wall, looking out of the same side of the ship. Asking
+    /// whether the *cell* can see the sun buries every one of them, and a solid hull ends up lit
+    /// along a single row of blocks. So what is traced is the empty cell just outside each face:
+    /// stand where the face's surface is and look at the sun.
+    ///
+    /// The walk itself goes one cell at a time from there toward the sun until the grid runs out.
+    /// Cross anything solid and that face is shadowed. Exact at cell resolution.
     ///
     /// The obvious cheaper structure — project every cell onto a plane facing the sun, bucket it,
     /// keep whichever is nearest — was built first and then thrown away. Buckets are axis-aligned
@@ -37,10 +43,17 @@ namespace Thermodynamics.Core
         /// <summary>Cells found so far by the pass currently running.</summary>
         private readonly HashSet<Vector3I> building = new HashSet<Vector3I>();
 
-        /// <summary>Cells the running pass has yet to walk.</summary>
+        /// <summary>Air cells the running pass has yet to walk.</summary>
         private readonly List<Vector3I> pending = new List<Vector3I>();
 
+        /// <summary>Air cells already queued, so a cell shared by six faces is walked once.</summary>
+        private readonly HashSet<Vector3I> queued = new HashSet<Vector3I>();
+
         private GridModel grid;
+
+        /// <summary>The grid the completed answer describes, for occupancy questions.</summary>
+        private GridModel resultGrid;
+
         private Vector3 sun;
         private Vector3 passSun;
         private int cursor;
@@ -57,7 +70,7 @@ namespace Thermodynamics.Core
         /// <summary>The direction the completed answer was built for, in grid-local space.</summary>
         public Vector3 SunDirection { get { return sun; } }
 
-        /// <summary>Cells the completed pass found to be in shadow.</summary>
+        /// <summary>Air cells the completed pass found to be in shadow.</summary>
         public int ShadowedCount { get { return shadowed.Count; } }
 
         /// <summary>Cells the running pass has left to walk.</summary>
@@ -82,8 +95,10 @@ namespace Thermodynamics.Core
             shadowed.Clear();
             building.Clear();
             pending.Clear();
+            queued.Clear();
             cursor = 0;
             grid = null;
+            resultGrid = null;
             IsBuilt = false;
         }
 
@@ -95,6 +110,7 @@ namespace Thermodynamics.Core
         {
             building.Clear();
             pending.Clear();
+            queued.Clear();
             cursor = 0;
 
             grid = model;
@@ -102,13 +118,24 @@ namespace Thermodynamics.Core
 
             passSun = Vector3.Normalize(sunLocal);
 
+            // The air on the outside of every block face — the ship's skin, one cell out. Interior
+            // air is in there too, and is shadowed by the hull around it, which is correct: a face
+            // looking into a sealed room sees no sun.
             IList<BlockInstance> blocks = grid.Blocks;
             for (int i = 0; i < blocks.Count; i++)
             {
                 Vector3I[] cells = blocks[i].Cells;
                 for (int c = 0; c < cells.Length; c++)
                 {
-                    pending.Add(cells[c]);
+                    for (int face = 0; face < Face.Count; face++)
+                    {
+                        Vector3I outside = cells[c] + Face.Offsets[face];
+
+                        if (grid.IsOccupied(outside)) continue;
+                        if (!queued.Add(outside)) continue;
+
+                        pending.Add(outside);
+                    }
                 }
             }
         }
@@ -139,9 +166,11 @@ namespace Thermodynamics.Core
 
             building.Clear();
             pending.Clear();
+            queued.Clear();
             cursor = 0;
 
             sun = passSun;
+            resultGrid = grid;
             IsBuilt = true;
             return true;
         }
@@ -153,7 +182,7 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// True when nothing on the grid stands between this cell and the sun.
+        /// True when nothing on the grid stands between this patch of air and the sun.
         ///
         /// A cell no completed pass has seen answers true: an unbuilt map, or a cell built since the
         /// last pass, means "not known to be shadowed", and the cheap model's answer is the one to
@@ -166,21 +195,64 @@ namespace Thermodynamics.Core
             return !IsBuilt || !shadowed.Contains(cell);
         }
 
-        /// <summary>The fraction of a block's cells the sun reaches, 0..1.</summary>
-        public float LitFraction(BlockInstance block)
+        /// <summary>
+        /// True when the sun reaches this face of this cell: the test is made from the air just
+        /// outside it, which is where the surface actually is.
+        ///
+        /// A face with a block pressed against it sees nothing at all — no air to stand in, and no
+        /// sky beyond. The model never asks about those, since they carry no exposed area either,
+        /// but answering "lit" would be a trap for anything that did.
+        /// </summary>
+        public bool IsFaceLit(Vector3I cell, int face)
+        {
+            Vector3I outside = cell + Face.Offsets[face];
+
+            if (resultGrid != null && resultGrid.IsOccupied(outside)) return false;
+            return IsLit(outside);
+        }
+
+        /// <summary>
+        /// The fraction of one side of a block the sun reaches, 0..1.
+        ///
+        /// Per cell face rather than per block, because a long block can have one end in a shadow
+        /// and the other in the open, and because a block is only ever lit on the sides that face
+        /// outward in the first place.
+        /// </summary>
+        public float FaceLitFraction(BlockInstance block, int face)
         {
             if (!IsBuilt || block == null) return 1f;
 
-            Vector3I[] cells = block.Cells;
-            if (cells.Length == 0) return 1f;
+            Vector3I offset = Face.Offsets[face];
+            int axis = Face.Axis(face);
+            bool positive = BoxGeometry.Component(offset, axis) > 0;
 
+            Vector3I min = block.Min;
+            Vector3I maxExclusive = block.MaxExclusive;
+
+            int slab = positive
+                ? BoxGeometry.Component(maxExclusive, axis) - 1
+                : BoxGeometry.Component(min, axis);
+
+            int u = (axis + 1) % 3;
+            int v = (axis + 2) % 3;
+
+            int cells = 0;
             int lit = 0;
-            for (int i = 0; i < cells.Length; i++)
+
+            for (int a = BoxGeometry.Component(min, u); a < BoxGeometry.Component(maxExclusive, u); a++)
             {
-                if (!shadowed.Contains(cells[i])) lit++;
+                for (int b = BoxGeometry.Component(min, v); b < BoxGeometry.Component(maxExclusive, v); b++)
+                {
+                    Vector3I cell = BoxGeometry.WithComponent(Vector3I.Zero, axis, slab);
+                    cell = BoxGeometry.WithComponent(cell, u, a);
+                    cell = BoxGeometry.WithComponent(cell, v, b);
+
+                    cells++;
+                    if (IsFaceLit(cell, face)) lit++;
+                }
             }
 
-            return lit / (float)cells.Length;
+            return cells == 0 ? 1f : lit / (float)cells;
         }
 
         /// <summary>
@@ -196,6 +268,13 @@ namespace Thermodynamics.Core
             Vector3I min = grid.Min;
             Vector3I max = grid.Max;
 
+            // How far the ray stays inside the grid's box. It cannot simply stop the first time it
+            // steps outside: the cells being walked are the air just outside the hull, so most of
+            // them start outside the box already, and one that steps in along a flank would be
+            // called lit before it ever reached the wall standing in its way.
+            float exit = BoxExit(start, min, max);
+            if (exit <= 0f) return false;
+
             int x = start.X, y = start.Y, z = start.Z;
 
             int stepX = Sign(passSun.X), stepY = Sign(passSun.Y), stepZ = Sign(passSun.Z);
@@ -208,37 +287,81 @@ namespace Thermodynamics.Core
             float tDeltaY = Delta(passSun.Y);
             float tDeltaZ = Delta(passSun.Z);
 
-            // The grid is finite, so the walk is: the longest path through it is its box's diagonal
-            // in cells. The bounds check below normally ends the walk long before this does.
-            int limit = (max.X - min.X) + (max.Y - min.Y) + (max.Z - min.Z) + 3;
+            // Bounded twice over: by the distance the ray stays in the box, and by a step count no
+            // sane geometry reaches. Both are needed — the first is the real limit, the second
+            // stops a degenerate direction spinning.
+            int limit = (2 * ((max.X - min.X) + (max.Y - min.Y) + (max.Z - min.Z))) + 8;
 
             for (int i = 0; i < limit; i++)
             {
+                float t;
+
                 if (tMaxX <= tMaxY && tMaxX <= tMaxZ)
                 {
+                    t = tMaxX;
                     x += stepX;
                     tMaxX += tDeltaX;
                 }
                 else if (tMaxY <= tMaxZ)
                 {
+                    t = tMaxY;
                     y += stepY;
                     tMaxY += tDeltaY;
                 }
                 else
                 {
+                    t = tMaxZ;
                     z += stepZ;
                     tMaxZ += tDeltaZ;
                 }
 
-                if (x < min.X || x > max.X || y < min.Y || y > max.Y || z < min.Z || z > max.Z)
-                {
-                    return false;
-                }
+                if (t > exit) return false;
 
                 if (grid.IsOccupied(new Vector3I(x, y, z))) return true;
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// How far along the ray the grid's box is left behind, or 0 when the ray never reaches it.
+        /// The box is the block bounds grown by half a cell, since cells are cubes centred on
+        /// integers.
+        /// </summary>
+        private float BoxExit(Vector3I start, Vector3I min, Vector3I max)
+        {
+            float enter = 0f;
+            float exit = float.MaxValue;
+
+            for (int axis = 0; axis < 3; axis++)
+            {
+                float origin = BoxGeometry.Component(start, axis);
+                float direction = axis == 0 ? passSun.X : axis == 1 ? passSun.Y : passSun.Z;
+
+                float low = BoxGeometry.Component(min, axis) - 0.5f;
+                float high = BoxGeometry.Component(max, axis) + 0.5f;
+
+                if (Math.Abs(direction) < 1e-6f)
+                {
+                    if (origin < low || origin > high) return 0f;
+                    continue;
+                }
+
+                float t1 = (low - origin) / direction;
+                float t2 = (high - origin) / direction;
+
+                if (t1 > t2)
+                {
+                    float swap = t1;
+                    t1 = t2;
+                    t2 = swap;
+                }
+
+                if (t1 > enter) enter = t1;
+                if (t2 < exit) exit = t2;
+            }
+
+            return exit < enter ? 0f : exit;
         }
 
         private static int Sign(float value)

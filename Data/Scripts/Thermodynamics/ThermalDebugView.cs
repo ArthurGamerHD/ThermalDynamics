@@ -296,9 +296,11 @@ namespace Thermodynamics
                     float dot = Vector3.Dot(localNormal, sun);
                     float irradiance = lit && dot > 0f ? state.SolarEnergy * dot : 0f;
 
-                    // What the solver believes, not a second opinion: a block the grid shadows
-                    // itself must look shadowed, or the picture argues with the temperatures.
-                    irradiance *= solver.SunLitFraction(node.Index);
+                    // What the solver believes, not a second opinion: a face the grid shadows must
+                    // look shadowed, or the picture argues with the temperatures. Per face, because
+                    // that is how the model holds it — the far layer of a wall is dark toward the
+                    // sun and lit on the flank, and one number per block cannot say that.
+                    irradiance *= solver.SunLitFraction(node.Index, face);
 
                     // W/m2 rather than watts: this is what the surface is standing in, which is
                     // the figure that belongs to a face. The panel reports the watts.

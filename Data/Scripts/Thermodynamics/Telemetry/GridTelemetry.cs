@@ -453,8 +453,6 @@ namespace Thermodynamics
                 BlockInstance block = bound.Instance;
                 SurfaceAudit.Explain(surfaces, block, rooms, faces);
 
-                float lit = shadow.LitFraction(block);
-
                 for (int face = 0; face < Face.Count; face++)
                 {
                     SurfaceRow row = new SurfaceRow();
@@ -469,7 +467,7 @@ namespace Thermodynamics
                     row.Mounted = faces[face].Mounted;
                     row.Interior = faces[face].Interior;
                     row.SunDot = Vector3.Dot(Face.Normals[face], sun);
-                    row.SunLitFraction = lit;
+                    row.SunLitFraction = shadow.FaceLitFraction(block, face);
                     row.SolarWatts = node.LastSolarWatts;
                     row.Temperature = node.Temperature;
                     row.ExposedArea = node.ExposedArea;
