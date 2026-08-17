@@ -236,6 +236,25 @@ namespace Thermodynamics.Core
             return solver.GetRoomAir(rooms.Map, cell);
         }
 
+        /// <summary>The grid's heat pumps.</summary>
+        public IList<HeatPumpDevice> HeatPumps
+        {
+            get { return solver.HeatPumps; }
+        }
+
+        /// <summary>
+        /// The heat pump a block drives, or null when the block is not one.
+        ///
+        /// The host owns whether a pump runs: it holds the terminal switch and knows whether the
+        /// grid could supply the power. Set <see cref="HeatPumpDevice.Enabled"/> and
+        /// <see cref="HeatPumpDevice.PowerAvailable"/> on the returned device, and read
+        /// <see cref="HeatPumpDevice.LastPowerWatts"/> back to know what to bill for.
+        /// </summary>
+        public HeatPumpDevice GetHeatPump(BlockInstance block)
+        {
+            return solver.GetHeatPump(block);
+        }
+
         /// <summary>
         /// Flags the conduction graph, room map and coolant loops as stale. Repeated calls
         /// before the next update collapse into one rebuild.
@@ -255,6 +274,7 @@ namespace Thermodynamics.Core
             surfaces.Rebuild(grid);
             solver.RebuildLinks();
             RebuildLoops();
+            solver.RebuildHeatPumps();
             End(SimulationPhase.Topology);
 
             Begin(SimulationPhase.RoomMapping);
@@ -353,6 +373,10 @@ namespace Thermodynamics.Core
                 topologyDirty = false;
                 solver.InvalidateLinks();
                 RebuildLoops();
+
+                // A pump is bound to the two nodes either side of it, so whatever changed may
+                // have been one of them.
+                solver.RebuildHeatPumps();
                 rooms.RequestRestart(grid);
                 End(SimulationPhase.Topology);
             }
@@ -397,7 +421,13 @@ namespace Thermodynamics.Core
 
         // ---- persistence -------------------------------------------------------------------
 
-        /// <summary>Encodes every block and loop temperature.</summary>
+        /// <summary>
+        /// How many rooms took a saved air temperature on the last <see cref="Load"/>. Reported
+        /// rather than returned because the return value is a block count the host already logs.
+        /// </summary>
+        public int RoomsRestored { get; private set; }
+
+        /// <summary>Encodes every block, loop and room air temperature.</summary>
         public string Save()
         {
             List<StoredTemperature> blocks = new List<StoredTemperature>(solver.Nodes.Count);
@@ -414,20 +444,39 @@ namespace Thermodynamics.Core
                 loops.Add(new StoredLoop(loop.Signature, loop.Temperature));
             }
 
-            return ThermalStorageCodec.Encode(blocks, loops);
+            // Only air that means something is written. An uninitialised room holds a placeholder
+            // — ambient, standing in until the room is first filled — and saving that would turn a
+            // guess into a remembered fact.
+            IList<RoomAirNode> air = solver.RoomAir;
+            List<StoredRoom> rooms = new List<StoredRoom>(air.Count);
+            for (int i = 0; i < air.Count; i++)
+            {
+                if (!air[i].Initialised) continue;
+                rooms.Add(new StoredRoom(air[i].Anchor, air[i].Temperature));
+            }
+
+            return ThermalStorageCodec.Encode(blocks, loops, rooms);
         }
 
         /// <summary>
         /// Restores temperatures. Unknown positions are ignored, so a blueprint that lost blocks
         /// still loads.
+        ///
+        /// Room air is restored onto the rooms the map already holds, so this has to run after the
+        /// map exists — which is why the host loads immediately after <see cref="RebuildAll"/>. A
+        /// room whose shape changed while the world was closed is a different room and starts from
+        /// its walls, exactly as it would have done mid-session.
         /// </summary>
         /// <returns>Number of blocks restored.</returns>
         public int Load(string data)
         {
+            RoomsRestored = 0;
+
             List<StoredTemperature> blocks = new List<StoredTemperature>();
             List<StoredLoop> storedLoops = new List<StoredLoop>();
+            List<StoredRoom> storedRooms = new List<StoredRoom>();
 
-            if (!ThermalStorageCodec.TryDecode(data, blocks, storedLoops)) return 0;
+            if (!ThermalStorageCodec.TryDecode(data, blocks, storedLoops, storedRooms)) return 0;
 
             int restored = 0;
             for (int i = 0; i < blocks.Count; i++)
@@ -451,6 +500,8 @@ namespace Thermodynamics.Core
                     break;
                 }
             }
+
+            RoomsRestored = solver.RestoreRoomAir(storedRooms);
 
             return restored;
         }

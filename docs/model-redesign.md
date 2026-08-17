@@ -174,7 +174,7 @@ SoA arrays**, not four passes — which is what `AccumulateEnvironment` already 
 | --- | --- | --- | --- | --- |
 | F14 | **Environment sampling** | Ambient, air density, wind, sun, underground | Once per grid per step, already a single struct (`EnvironmentSample`). Sun raycast can be cached across many frames — **P7** | O(1)/grid/step |
 | F15 | **Scheduling** | Fractional step accumulation | Already rate-independent (`SimulationScheduler`). Poll at `EACH_10TH_FRAME` in SE1 | O(1) |
-| F16 | **Persistence** | Temperature per block, per loop | Keyed by position; already v2 with a v1 reader | on save |
+| F16 | **Persistence** | Temperature per block, per loop, per room | Keyed by position, loop signature and room anchor; already v2 with a v1 reader | on save |
 | F17 | **Thermal mass tracking** | Respond to build progress and damage | Event-driven only (`BlockHealthChanged`, `BlockBuildProgressChanged`) — never poll | on change |
 | F18 | **Definitions** | Per-block-type thermal properties | Shared immutable `BlockThermalProperties` per type; never per instance | load time |
 | F19 | **HUD / debug** | Temperature readout and colouring | Client-only, draw-rate not step-rate. Terminal `AppendingCustomInfo` avoids the HUD dependency | per draw |

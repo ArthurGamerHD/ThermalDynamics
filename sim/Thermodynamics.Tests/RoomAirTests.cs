@@ -167,6 +167,102 @@ namespace Thermodynamics.Tests
             Assert.Equal(1f, air.Pressure, 3);
         }
 
+        /// <summary>
+        /// The load path in full: a saved temperature has to survive being restored onto a room
+        /// that is not yet pressurised, because pressure arrives from the vent sweep afterwards and
+        /// filling a room for the first time is what takes its temperature from the walls.
+        /// </summary>
+        [Fact]
+        public void AirTemperatureSurvivesASaveAndLoad()
+        {
+            ThermalSettings settings = new ThermalSettings();
+            settings.EnableEnvironment = false;
+            settings.Derive();
+
+            Vector3I interior;
+            ThermalSimulation saved = SealedBox(settings, out interior);
+            saved.SetRoomPressure(interior, 1f);
+            saved.GetRoomAir(interior).Temperature = 400f;
+
+            string data = saved.Save();
+
+            // a fresh world load: the same ship, built again, before any vent has reported
+            Vector3I reloadedInterior;
+            ThermalSimulation reloaded = SealedBox(settings, out reloadedInterior);
+            Assert.False(reloaded.GetRoomAir(reloadedInterior).Initialised);
+
+            reloaded.Load(data);
+
+            Assert.Equal(1, reloaded.RoomsRestored);
+            Assert.Equal(400f, reloaded.GetRoomAir(reloadedInterior).Temperature, 2);
+
+            // and the first vent report must not throw it away for the average of the walls
+            reloaded.SetRoomPressure(reloadedInterior, 1f);
+            Assert.Equal(400f, reloaded.GetRoomAir(reloadedInterior).Temperature, 2);
+        }
+
+        /// <summary>
+        /// Air that was never filled holds a placeholder, not a measurement. Saving it would turn
+        /// the guess into a remembered fact and stop the room taking its temperature from its walls
+        /// the first time it is actually pressurised.
+        /// </summary>
+        [Fact]
+        public void AirThatWasNeverFilledIsNotSaved()
+        {
+            ThermalSettings settings = new ThermalSettings();
+            settings.EnableEnvironment = false;
+            settings.Derive();
+
+            Vector3I interior;
+            ThermalSimulation saved = SealedBox(settings, out interior);
+            string data = saved.Save();
+
+            Vector3I reloadedInterior;
+            ThermalSimulation reloaded = SealedBox(settings, out reloadedInterior);
+            reloaded.Load(data);
+
+            Assert.Equal(0, reloaded.RoomsRestored);
+
+            // heat the walls after the load, so taking their temperature is distinguishable from
+            // having kept the placeholder the save would have carried
+            reloaded.Solver.SetAllTemperatures(500f);
+            reloaded.SetRoomPressure(reloadedInterior, 1f);
+            Assert.Equal(500f, reloaded.GetRoomAir(reloadedInterior).Temperature, 2);
+        }
+
+        /// <summary>
+        /// A room is matched by its anchor cell, so a compartment that was rebuilt into a different
+        /// shape while the world was closed is a different room. It starts from its walls, exactly
+        /// as it would have done had the change happened mid-session.
+        /// </summary>
+        [Fact]
+        public void ARoomThatChangedShapeDoesNotTakeTheSavedTemperature()
+        {
+            ThermalSettings settings = new ThermalSettings();
+            settings.EnableEnvironment = false;
+            settings.Derive();
+
+            Vector3I interior;
+            ThermalSimulation saved = SealedBox(settings, out interior);
+            saved.SetRoomPressure(interior, 1f);
+            saved.GetRoomAir(interior).Temperature = 400f;
+
+            string data = saved.Save();
+
+            // the same shell, but with the anchor corner of the cavity filled in
+            GridBuilder builder = GridBuilder.Large();
+            builder.Shell(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(5, 5, 5));
+            builder.Place(Catalog.LightArmor(), new Vector3I(1, 1, 1));
+
+            ThermalSimulation reloaded = builder.BuildSimulation(settings, 293.15f);
+            reloaded.Load(data);
+
+            Assert.Equal(0, reloaded.RoomsRestored);
+
+            reloaded.SetRoomPressure(interior, 1f);
+            Assert.Equal(293.15f, reloaded.GetRoomAir(interior).Temperature, 2);
+        }
+
         [Fact]
         public void OpeningADoorTakesTheAirAwayWithTheSeal()
         {

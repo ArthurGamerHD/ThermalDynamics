@@ -19,6 +19,7 @@ environment sample, and results out — and nothing else.
 | Simulation | `ThermalSimulation`, `ThermalSolver`, `ThermalNode`, `ThermalLink`, `SimulationScheduler`, `ThermalThresholds`, `EnvironmentSample` / `EnvironmentState` / `EnvironmentSolver`, `ISimulationProfiler` |
 | Surfaces | `SurfaceMap`, `RoomMapper`, `RoomMap`, `RoomPortal`, `RoomAirNode` |
 | Loops | `CoolantLoop`, `CoolantLoopBuilder` |
+| Devices | `HeatPumpShape`, `HeatPumpDevice` |
 | Definitions | `BlockThermalProperties`, `LoopThermalProperties`, `PlanetThermalProperties`, `ThermalSettings` |
 | Storage | `ThermalStorageCodec` |
 | Maths | `BoxGeometry`, `GridMath`, `Face`, `OcclusionMath`, `TemperatureScale`, `ThermalConstants` |
@@ -41,6 +42,8 @@ temperatures, overheat events and threshold crossings.
 | [Game/ThermalBlock.cs](../Data/Scripts/Thermodynamics/Game/ThermalBlock.cs) | class | One placed block bound to one solver node. Pushes power, thrust, door state and mass into the model by event. |
 | [Game/ThermalBlockCatalog.cs](../Data/Scripts/Thermodynamics/Game/ThermalBlockCatalog.cs) | static | Block definition → `BlockModel`, once per definition per session. |
 | [Game/ThermalCoolantShapes.cs](../Data/Scripts/Thermodynamics/Game/ThermalCoolantShapes.cs) | static | Subtype → coolant plumbing. |
+| [Game/ThermalHeatPumpShapes.cs](../Data/Scripts/Thermodynamics/Game/ThermalHeatPumpShapes.cs) | static | Subtype → heat-pump faces and ratings. |
+| [Game/ThermalHeatPumpBlock.cs](../Data/Scripts/Thermodynamics/Game/ThermalHeatPumpBlock.cs) | `MyGameLogicComponent` | The electrical half of a heat pump: the resource sink it draws through, and the switch that runs it. |
 | [Game/ThermalBridges.cs](../Data/Scripts/Thermodynamics/Game/ThermalBridges.cs) | static | Conduction across a rotor or piston, between two grids. |
 | [Game/ThermalHeatSources.cs](../Data/Scripts/Thermodynamics/Game/ThermalHeatSources.cs) | static | Registered point heat sources, and their irradiance at a grid. |
 | [ThermalApi.cs](../Data/Scripts/Thermodynamics/ThermalApi.cs) | static | The mod-facing delegate table. See [api.md](api.md). |
@@ -69,6 +72,7 @@ per grid, every 10th frame:
 ThermalGrid.UpdateBeforeSimulation10()
   ├─ scheduler.WouldStep()?             no  → skip sampling entirely
   ├─ Sample()                           planet, air, wind, sun, occlusion, heat sources
+  ├─ push heat pump state                switch and available power, before the step spends it
   ├─ Simulation.Update(dt, sample)
   │    ├─ settings revision check       rescale capacities, rebuild loops and room air
   │    ├─ topology rebuild              only after a block change
@@ -78,6 +82,7 @@ ThermalGrid.UpdateBeforeSimulation10()
   └─ AfterSteps()
        ├─ apply overheat damage         server only
        ├─ raise threshold crossings     to registered mods
+       ├─ publish heat pump demand      what each pump wants to draw, into its resource sink
        ├─ mass sweep                    every 8 steps
        ├─ room pressure sweep           every 8 steps, grids with air vents only
        ├─ hottest block                 every 4 steps, and only if something will read it
@@ -95,7 +100,7 @@ between ticks — so polling faster would only add entity update callbacks.
 
 | Event | Effect |
 | --- | --- |
-| `OnBlockAdded` | Resolves the model from the catalogue, builds a `BlockInstance`, adds a node, subscribes to power, thrust, door and attachment events, and registers air vents. |
+| `OnBlockAdded` | Resolves the model from the catalogue, builds a `BlockInstance`, adds a node, subscribes to power, thrust, door and attachment events, registers air vents and heat pumps. |
 | `OnBlockRemoved` | Stores the temperature in `RecentlyRemoved`, unsubscribes, removes the node. |
 | `OnGridSplit` | Copies temperatures out of the parent's `RecentlyRemoved` onto the child's blocks. |
 | `OnGridMerge` | Copies temperatures from the absorbed grid onto matching positions, mapped through world space. |
@@ -117,10 +122,18 @@ progress or damage — so it is swept every eight steps, alongside room pressure
 base64 blob into the grid's `MyModStorageComponent`, under the GUID registered in
 [EntityComponents.sbc](../Data/EntityComponents.sbc). `IsSerialized()` triggers the save.
 
-The codec's v2 format carries block and loop temperatures, keyed by 64-bit position and by the
-loop's own signature rather than by its index, so a rebuilt loop keeps its heat and distant blocks
-cannot alias. It reads v1, so old saves load. Room air temperatures are not persisted; a room's air
-starts from the surfaces around it on load, which they have been sitting with.
+The codec's v2 format carries block, loop and room air temperatures, keyed by 64-bit position, by
+the loop's own signature rather than by its index, and by the room's anchor cell — so a rebuilt loop
+keeps its heat and distant blocks cannot alias. It reads v1, so old saves load, and it grows by
+adding a section rather than by changing its marker, so a save written now still loads on a build
+that predates the section.
+
+Room air loads onto rooms the map already holds, which is why `UpdateOnceBeforeFrame` runs
+`RebuildAll` before `Load`. The restored air is marked initialised: pressurisation arrives later,
+from the vent sweep, and filling a room for the first time is what would otherwise take its
+temperature from the walls. Air that was never filled is not written at all — its figure is a
+placeholder rather than a measurement — and a room whose shape changed while the world was closed
+has a different anchor, so it starts from its surfaces exactly as it would have done mid-session.
 
 ## Definition loading
 

@@ -54,6 +54,7 @@ namespace Thermodynamics
         [ProtoMember(19)] public bool EnableDamage;
         [ProtoMember(20)] public bool EnableCoolantLoops;
         [ProtoMember(21)] public bool EnableRoomAir;
+        [ProtoMember(22)] public bool EnableHeatPumps;
 
         // ---- solver ------------------------------------------------------------------------
 
@@ -74,6 +75,14 @@ namespace Thermodynamics
 
         /// <summary>Solver steps between solar occlusion raycasts.</summary>
         [ProtoMember(46)] public int SolarOcclusionInterval;
+
+        // ---- heat pumps --------------------------------------------------------------------
+
+        /// <summary>How much of the Carnot limit a heat pump achieves, 0..1.</summary>
+        [ProtoMember(47)] public float HeatPumpCarnotFraction;
+
+        /// <summary>Ceiling on a heat pump's coefficient of performance.</summary>
+        [ProtoMember(48)] public float HeatPumpMaxCoefficient;
 
         // ---- presentation ------------------------------------------------------------------
 
@@ -162,6 +171,7 @@ namespace Thermodynamics
                 EnableDamage = true,
                 EnableCoolantLoops = true,
                 EnableRoomAir = true,
+                EnableHeatPumps = true,
 
                 ClampConductionOvershoot = true,
                 DamageIsPerSecond = true,
@@ -176,6 +186,9 @@ namespace Thermodynamics
                 RoomConvectionCoefficient = 8f,
                 RoomAirDensity = 1.225f,
                 SolarOcclusionInterval = 12,
+
+                HeatPumpCarnotFraction = 0.4f,
+                HeatPumpMaxCoefficient = 8f,
 
                 // Presentation defaults to off. A fresh install should look like the game, not
                 // like a debugger: the previous defaults repainted every grid in the world.
@@ -224,6 +237,9 @@ namespace Thermodynamics
                 ThermalVisionMaxKelvin = ThermalVisionMinKelvin + 1f;
             if (RoomConvectionCoefficient < 0f) RoomConvectionCoefficient = 0f;
             if (RoomAirDensity < 0f) RoomAirDensity = 0f;
+            if (HeatPumpCarnotFraction < 0f) HeatPumpCarnotFraction = 0f;
+            if (HeatPumpCarnotFraction > 1f) HeatPumpCarnotFraction = 1f;
+            if (HeatPumpMaxCoefficient < 0f) HeatPumpMaxCoefficient = 0f;
         }
 
         // ---- conversion --------------------------------------------------------------------
@@ -266,6 +282,7 @@ namespace Thermodynamics
             core.EnableDamage = EnableDamage;
             core.EnableCoolantLoops = EnableCoolantLoops;
             core.EnableRoomAir = EnableRoomAir;
+            core.EnableHeatPumps = EnableHeatPumps;
 
             core.ClampConductionOvershoot = ClampConductionOvershoot;
             core.DamageIsPerSecond = DamageIsPerSecond;
@@ -279,6 +296,8 @@ namespace Thermodynamics
             core.FrictionScale = FrictionScale;
             core.RoomConvectionCoefficient = RoomConvectionCoefficient;
             core.RoomAirDensity = RoomAirDensity;
+            core.HeatPumpCarnotFraction = HeatPumpCarnotFraction;
+            core.HeatPumpMaxCoefficient = HeatPumpMaxCoefficient;
 
             core.Derive();
 
@@ -305,10 +324,12 @@ namespace Thermodynamics
                 "EnableEnvironment", "EnableConduction", "EnableRadiation", "EnableConvection",
                 "EnableSolarHeat", "EnableHeatSources", "EnableWasteHeat", "EnablePlanets",
                 "EnableFriction", "EnableDamage", "EnableCoolantLoops", "EnableRoomAir",
+                "EnableHeatPumps",
                 "ClampConductionOvershoot", "DamageIsPerSecond",
                 "Frequency", "SimulationSpeed", "HeatTimeScale",
                 "VacuumTemperature", "SolarEnergy", "FrictionAtSpeedsAbove", "FrictionScale",
                 "RoomConvectionCoefficient", "RoomAirDensity", "SolarOcclusionInterval",
+                "HeatPumpCarnotFraction", "HeatPumpMaxCoefficient",
                 "DebugTextOnScreen", "DebugSolarRaycast", "DebugWindRaycast",
                 "DebugTemperatureBlockColors", "DebugSolarRadiationBlockColors",
                 "DebugExposedSurfaceBlockColors", "DebugFrictionColors",
@@ -338,6 +359,7 @@ namespace Thermodynamics
                 case "EnableDamage": return Flag(EnableDamage);
                 case "EnableCoolantLoops": return Flag(EnableCoolantLoops);
                 case "EnableRoomAir": return Flag(EnableRoomAir);
+                case "EnableHeatPumps": return Flag(EnableHeatPumps);
                 case "ClampConductionOvershoot": return Flag(ClampConductionOvershoot);
                 case "DamageIsPerSecond": return Flag(DamageIsPerSecond);
                 case "Frequency": return Frequency;
@@ -349,6 +371,8 @@ namespace Thermodynamics
                 case "FrictionScale": return FrictionScale;
                 case "RoomConvectionCoefficient": return RoomConvectionCoefficient;
                 case "RoomAirDensity": return RoomAirDensity;
+                case "HeatPumpCarnotFraction": return HeatPumpCarnotFraction;
+                case "HeatPumpMaxCoefficient": return HeatPumpMaxCoefficient;
                 case "SolarOcclusionInterval": return SolarOcclusionInterval;
                 case "DebugTextOnScreen": return Flag(DebugTextOnScreen);
                 case "DebugSolarRaycast": return Flag(DebugSolarRaycast);
@@ -392,6 +416,7 @@ namespace Thermodynamics
                 case "EnableDamage": EnableDamage = Flag(value); return true;
                 case "EnableCoolantLoops": EnableCoolantLoops = Flag(value); return true;
                 case "EnableRoomAir": EnableRoomAir = Flag(value); return true;
+                case "EnableHeatPumps": EnableHeatPumps = Flag(value); return true;
                 case "ClampConductionOvershoot": ClampConductionOvershoot = Flag(value); return true;
                 case "DamageIsPerSecond": DamageIsPerSecond = Flag(value); return true;
                 case "Frequency": Frequency = (int)value; return true;
@@ -403,6 +428,8 @@ namespace Thermodynamics
                 case "FrictionScale": FrictionScale = value; return true;
                 case "RoomConvectionCoefficient": RoomConvectionCoefficient = value; return true;
                 case "RoomAirDensity": RoomAirDensity = value; return true;
+                case "HeatPumpCarnotFraction": HeatPumpCarnotFraction = value; return true;
+                case "HeatPumpMaxCoefficient": HeatPumpMaxCoefficient = value; return true;
                 case "SolarOcclusionInterval": SolarOcclusionInterval = (int)value; return true;
                 case "DebugTextOnScreen": DebugTextOnScreen = Flag(value); return true;
                 case "DebugSolarRaycast": DebugSolarRaycast = Flag(value); return true;

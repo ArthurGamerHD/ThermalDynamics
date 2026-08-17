@@ -89,7 +89,7 @@ config cannot go missing from the report meant to explain a run.
 block count, conduction links, sealed rooms, exterior cells, surface entries, coolant loops,
 `RecentlyRemoved` size and room-mapper queue depth, as min/mean/max; block add/remove/ignore
 counts, splits, merges, door state changes, surface refreshes, mapper passes completed, saves
-and loads with payload sizes and blocks restored; simulation steps, node updates, sampled nodes,
+and loads with payload sizes and blocks and rooms restored; simulation steps, node updates, sampled nodes,
 **solver substeps and steps clamped by the substep cap**, critical block counts, damage events
 and total damage, peak temperature with the block that reached it, and the final temperature
 histogram; ambient temperature, air density, atmosphere factor, wind speed, convection

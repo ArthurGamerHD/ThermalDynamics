@@ -69,6 +69,7 @@ namespace Thermodynamics
         public long BlocksRemoved;
         public long BlocksIgnored;
         public long BlocksRestored;
+        public long RoomsRestored;
         public long ForeignBlockEvents;
         public long Splits;
         public long Merges;

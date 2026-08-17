@@ -5,21 +5,10 @@ thermal vision overlay. Split into defects, unfinished work, and limits that are
 
 ## Unfinished
 
-**The heat pump does nothing.** `Gauge_LG_HeatPump` and `Gauge_SG_HeatPump` have models,
-definitions and thermal properties, but no entry in
-[ThermalCoolantShapes](../Data/Scripts/Thermodynamics/Game/ThermalCoolantShapes.cs) and no
-behaviour anywhere else. They are ordinary blocks with a suggestive name. Moving heat against a
-gradient for a power cost is the feature the block implies; nothing implements it.
-
 **Radiators cannot be inline loop segments.** A radiator sheds heat when a pipe's sink face is
 pressed against it, which works and is what the `radiator` scenario measures. It has no coolant
 ports of its own, so a loop cannot run *through* one. The block is 1×5×2 with mount points only on
 its top and bottom, so adding ports needs the port geometry checked against the model.
-
-**Room air is not saved.** Block and loop temperatures persist; a room's air temperature does not.
-On load a room's air starts at the average temperature of the surfaces around it, which is a good
-estimate but not the value it had. Adding a section to the storage codec is straightforward — rooms
-would need to be keyed by anchor cell, as they are in memory.
 
 **No network replication.** `SENetworkAPI` is initialised on channel `30323` and nothing is
 registered on it. Clients run their own simulation from the same inputs and reach the same answers,
@@ -30,6 +19,15 @@ cosmetic, but it is real.
 **Rich HUD Framework integration.** The readouts use Text HUD API and the terminal. A Rich HUD
 client would give a proper settings menu and a richer overlay, and needs its client half vendored
 into `Data/Scripts` from the framework's repository — the workshop copy ships only the server half.
+
+**The heat pump's electrical hookup is only checkable in game.** The simulation half is under test
+offline. The half that makes it cost anything — a `MyResourceSinkComponent` attached in code during
+`Init`, because an upgrade module has no definition field for one — cannot be exercised without a
+session, so whether the grid's resource distributor picks the sink up is unverified.
+
+**The heat pump changed block type.** It was a `CubeBlock` and is now an `UpgradeModule`, because
+only a functional block has a terminal to switch it from. A grid saved with the old block loses it
+on load. Nothing was lost by doing it: the old block had no behaviour at all.
 
 ## Deliberate limits
 
@@ -45,7 +43,8 @@ mod can reach. A sealed compartment with no vent holds no air as far as this mod
 
 **A room that changes shape loses its air temperature.** Rooms are matched across rebuilds by their
 lowest cell. Building inside a compartment gives it a fresh air mass at the temperature of its
-walls.
+walls. The same key carries air across a save, so a compartment rebuilt while the world was closed
+comes back at the temperature of its walls rather than the one it was saved at.
 
 **Thermal vision redraws the world rather than recolouring it.** There is no shader or frame buffer
 access for mods, so the rendered view is blanked and everything with a temperature is drawn again.

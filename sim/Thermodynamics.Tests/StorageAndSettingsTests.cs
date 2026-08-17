@@ -140,8 +140,13 @@ namespace Thermodynamics.Tests
                 new StoredTemperature(new Vector3I(4, -7, 9), 812.25f),
             };
             List<StoredLoop> sourceLoops = new List<StoredLoop> { new StoredLoop(99887766L, 275.5f) };
+            List<StoredRoom> sourceRooms = new List<StoredRoom>
+            {
+                new StoredRoom(new Vector3I(1, 1, 1), 295.5f),
+                new StoredRoom(new Vector3I(-3, 8, 2), 331.25f),
+            };
 
-            byte[] full = Convert.FromBase64String(ThermalStorageCodec.Encode(source, sourceLoops));
+            byte[] full = Convert.FromBase64String(ThermalStorageCodec.Encode(source, sourceLoops, sourceRooms));
 
             for (int length = 1; length < full.Length; length++)
             {
@@ -150,12 +155,78 @@ namespace Thermodynamics.Tests
 
                 List<StoredTemperature> blocks = new List<StoredTemperature>();
                 List<StoredLoop> loops = new List<StoredLoop>();
+                List<StoredRoom> rooms = new List<StoredRoom>();
 
                 // may decode the sections it did receive in full, but must never throw
-                ThermalStorageCodec.TryDecode(Convert.ToBase64String(cut), blocks, loops);
+                ThermalStorageCodec.TryDecode(Convert.ToBase64String(cut), blocks, loops, rooms);
                 Assert.True(blocks.Count <= source.Count);
                 Assert.True(loops.Count <= sourceLoops.Count);
+                Assert.True(rooms.Count <= sourceRooms.Count);
             }
+        }
+
+        [Fact]
+        public void RoomAirRoundTrips()
+        {
+            List<StoredRoom> rooms = new List<StoredRoom>
+            {
+                new StoredRoom(new Vector3I(2, 2, 2), 293.15f),
+                new StoredRoom(new Vector3I(-40, 17, 2000), 341.75f),
+            };
+
+            string encoded = ThermalStorageCodec.Encode(null, null, rooms);
+
+            List<StoredRoom> decoded = new List<StoredRoom>();
+            Assert.True(ThermalStorageCodec.TryDecode(encoded, null, null, decoded));
+
+            Assert.Equal(rooms.Count, decoded.Count);
+            for (int i = 0; i < rooms.Count; i++)
+            {
+                Assert.Equal(rooms[i].Anchor, decoded[i].Anchor);
+                Assert.Equal(rooms[i].Temperature, decoded[i].Temperature, 4);
+            }
+        }
+
+        /// <summary>
+        /// Rooms were added to version 2 as a new section rather than a new marker, so a reader
+        /// that predates them has to skip past it and still read everything it does know. That is
+        /// what lets a world be opened on an older build after being saved on this one.
+        /// </summary>
+        [Fact]
+        public void AReaderThatDoesNotKnowAboutRoomsStillReadsBlocksAndLoops()
+        {
+            List<StoredTemperature> blocks = new List<StoredTemperature>
+            {
+                new StoredTemperature(new Vector3I(1, 2, 3), 455.5f),
+            };
+            List<StoredLoop> loops = new List<StoredLoop> { new StoredLoop(4242L, 310.25f) };
+            List<StoredRoom> rooms = new List<StoredRoom> { new StoredRoom(Vector3I.Zero, 290f) };
+
+            string encoded = ThermalStorageCodec.Encode(blocks, loops, rooms);
+
+            // the three argument overload is exactly what the older reader was
+            List<StoredTemperature> decodedBlocks = new List<StoredTemperature>();
+            List<StoredLoop> decodedLoops = new List<StoredLoop>();
+            Assert.True(ThermalStorageCodec.TryDecode(encoded, decodedBlocks, decodedLoops));
+
+            Assert.Equal(455.5f, decodedBlocks[0].Temperature, 4);
+            Assert.Equal(310.25f, decodedLoops[0].Temperature, 4);
+        }
+
+        /// <summary>A save from before rooms existed has to load, leaving the room list empty.</summary>
+        [Fact]
+        public void APayloadWithNoRoomSectionDecodesToNoRooms()
+        {
+            List<StoredTemperature> blocks = new List<StoredTemperature>
+            {
+                new StoredTemperature(Vector3I.Zero, 300f),
+            };
+
+            List<StoredRoom> rooms = new List<StoredRoom>();
+            Assert.True(ThermalStorageCodec.TryDecode(
+                ThermalStorageCodec.Encode(blocks, null), null, null, rooms));
+
+            Assert.Empty(rooms);
         }
 
         /// <summary>A record count far larger than the payload must not be trusted.</summary>

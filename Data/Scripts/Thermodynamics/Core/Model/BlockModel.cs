@@ -25,6 +25,9 @@ namespace Thermodynamics.Core
         /// <summary>Coolant plumbing, or null when the block is not part of the coolant system.</summary>
         public CoolantShape Coolant;
 
+        /// <summary>Heat-pump hardware, or null when the block does not pump heat.</summary>
+        public HeatPumpShape HeatPump;
+
         /// <summary>
         /// Per-cell surface bits in block-local space, indexed by
         /// <see cref="LocalCellIndex"/>. Only the "self" half is meaningful here.
@@ -252,6 +255,12 @@ namespace Thermodynamics.Core
         public BlockModel WithCoolant(CoolantShape shape)
         {
             Coolant = shape;
+            return this;
+        }
+
+        public BlockModel WithHeatPump(HeatPumpShape shape)
+        {
+            HeatPump = shape;
             return this;
         }
     }

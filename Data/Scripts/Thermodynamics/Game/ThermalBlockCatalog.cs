@@ -159,6 +159,7 @@ namespace Thermodynamics
             }
 
             model.Coolant = ThermalCoolantShapes.Get(id.SubtypeName, definition.Size);
+            model.HeatPump = ThermalHeatPumpShapes.Get(id.SubtypeName, definition.Size);
 
             return model;
         }

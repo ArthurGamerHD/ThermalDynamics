@@ -166,7 +166,7 @@
     <value>Coolant Pump</value>
   </data>
   <data name="Description_Gauge_HeatPump" xml:space="preserve">
-    <value>Functions similar to a peltia cooler. Consuming power cools one side while heating the other.</value>
+    <value>Functions similar to a peltier cooler. Consuming power, it cools the block on its front face and heats the block behind it by more than it removed. The wider the temperature gap it works across, the more power each watt of cooling costs.</value>
   </data>
   <data name="Description_Gauge_Radiator" xml:space="preserve">
     <value>A block with increased surface area and high emissivity. Use this block to vent extra heat</value>

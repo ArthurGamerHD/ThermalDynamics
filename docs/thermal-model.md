@@ -220,6 +220,34 @@ Radiators are ordinary blocks with high emissivity and a surface-area multiplier
 into space by pressing a sink face against one: the panel takes the loop's heat by conduction and
 sheds it by radiation from its exposed faces.
 
+## Heat pumps
+
+Every other mechanism here moves heat down a gradient. A heat pump moves it up one, and pays an
+energy price to do so ([HeatPump.cs](../Data/Scripts/Thermodynamics/Core/Devices/HeatPump.cs)).
+
+```
+COP   = min(MaxCoefficient, CarnotFraction × T_cold / (T_hot − T_cold))
+lift  = min(RatedWatts, COP × PowerWatts, (T_cold − T_min) × mass_cold / h)
+work  = lift / COP
+watts_cold = −lift
+watts_hot  = +lift + work
+```
+
+The hot side gains the lift **and** the work, which is why a pump concentrates a ship's heat rather
+than reducing it. The work is electricity, so this is the one place energy enters the grid from
+outside it; a host that bills for `LastDemandWatts` is charging for exactly the energy that appeared.
+
+Three limits bind in turn, and Carnot is the interesting one. As the cold side falls, `T_cold /
+(T_hot − T_cold)` falls with it, so each further kelvin costs more power than the last. The block
+runs out of electricity long before its cold side runs out of temperature — which is why nothing
+clamps the cold side at a floor and nothing needs to. The remaining limit, `(T_cold − T_min) ×
+mass / h`, is not a balance decision but a substep guard: it stops a large enough rating from
+taking more heat out of a node in one substep than the node contains.
+
+Reported figures are per step, not per substep: energy is accumulated across the substeps and
+divided by the step length at the end. See the note on `LastDeltaTemperature` in
+[bugs-and-performance.md](bugs-and-performance.md) for what the other convention cost.
+
 ## Critical temperature and thresholds
 
 ```

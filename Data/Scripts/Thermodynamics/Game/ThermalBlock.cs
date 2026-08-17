@@ -45,6 +45,12 @@ namespace Thermodynamics
         /// </summary>
         public IMyAirVent Vent;
 
+        /// <summary>
+        /// The electrical half of this block if it is a heat pump, or null. Holds the resource
+        /// sink and the terminal switch; the heat it moves is the simulation's business.
+        /// </summary>
+        public ThermalHeatPumpBlock HeatPump;
+
         private MyResourceSourceComponent source;
         private MyResourceSinkComponent sink;
         private IMyThrust thrust;
@@ -137,6 +143,15 @@ namespace Thermodynamics
             Vent = fat as IMyAirVent;
             if (Vent != null) Grid.RegisterVent(this);
 
+            // A heat pump is the one block whose behaviour is a two-way conversation with the
+            // game: the simulation says what it wants to draw, the ship's power system says how
+            // much of that it got.
+            if (ThermalHeatPumpShapes.IsHeatPump(Name))
+            {
+                HeatPump = fat.GameLogic == null ? null : fat.GameLogic.GetAs<ThermalHeatPumpBlock>();
+                Grid.RegisterHeatPump(this);
+            }
+
             door = fat as IMyDoor;
             if (door != null)
             {
@@ -188,6 +203,15 @@ namespace Thermodynamics
             {
                 Grid.UnregisterVent(this);
                 Vent = null;
+            }
+
+            // Tested on the subtype rather than on the field: a pump whose game logic could not be
+            // resolved was still registered, and leaving it in the list would keep the block alive
+            // after it was removed.
+            if (ThermalHeatPumpShapes.IsHeatPump(Name))
+            {
+                Grid.UnregisterHeatPump(this);
+                HeatPump = null;
             }
 
             thrust = null;

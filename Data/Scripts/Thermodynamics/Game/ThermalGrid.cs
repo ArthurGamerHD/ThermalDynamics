@@ -93,6 +93,23 @@ namespace Thermodynamics
             vents.Remove(bound);
         }
 
+        /// <summary>
+        /// Heat pumps on this grid. Kept apart for the same reason the vents are: the state they
+        /// exchange with the game — a switch, a power draw — is theirs alone, and a grid with none
+        /// should not walk its blocks looking for them.
+        /// </summary>
+        private readonly List<ThermalBlock> heatPumps = new List<ThermalBlock>();
+
+        internal void RegisterHeatPump(ThermalBlock bound)
+        {
+            if (bound != null && !heatPumps.Contains(bound)) heatPumps.Add(bound);
+        }
+
+        internal void UnregisterHeatPump(ThermalBlock bound)
+        {
+            heatPumps.Remove(bound);
+        }
+
         /// <summary>The hottest block on the grid, refreshed on a slow cadence for readouts.</summary>
         public ThermalNode HottestNode;
 

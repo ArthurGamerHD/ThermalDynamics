@@ -43,6 +43,7 @@ Each switch removes exactly its own mechanism and its own cost.
 | `EnableDamage` | `true` | Damage above a block's critical temperature. |
 | `EnableCoolantLoops` | `true` | Coolant loop heat transport. |
 | `EnableRoomAir` | `true` | Sealed rooms hold an air mass that couples their surfaces. |
+| `EnableHeatPumps` | `true` | Heat pumps move heat against a gradient for an electrical cost. Off makes them ordinary blocks. |
 
 ## Solver
 
@@ -65,6 +66,22 @@ Each switch removes exactly its own mechanism and its own cost.
 | `RoomConvectionCoefficient` | 8 W/(m²·K) | Coupling between a room's air and the surfaces facing it. Lower than the planetary figure because room air is still. |
 | `RoomAirDensity` | 1.225 kg/m³ | Air density in a fully pressurised room. |
 | `SolarOcclusionInterval` | 12 | Solver steps between solar occlusion raycasts. The raycast is the most expensive thing a grid does and the sun moves slowly. |
+
+## Heat pumps
+
+The two ratings a heat pump has — how much heat it can move and how much electricity it can draw —
+belong to the block and live in
+[ThermalHeatPumpShapes](../Data/Scripts/Thermodynamics/Game/ThermalHeatPumpShapes.cs). What is
+tunable here is the physics between them, which is the same for every pump in the world.
+
+| Setting | Default | Effect |
+| --- | --- | --- |
+| `HeatPumpCarnotFraction` | 0.4 | How much of the Carnot limit a pump achieves, 0..1. A real domestic heat pump manages about 0.4; 1 would be a thermodynamically perfect machine. This one number is the whole balance of the block. |
+| `HeatPumpMaxCoefficient` | 8 | Ceiling on the coefficient of performance. Carnot's figure runs to infinity as the two sides converge, and a real machine is limited by its compressor long before that. |
+
+Raising the fraction does not change what a pump can do — the shape of the cost curve is Carnot's
+and is not negotiable — only how far up it the block sits. Lowering the ceiling makes pumps
+predictable near equilibrium at the cost of making cheap, small-gap cooling less rewarding.
 
 ## Presentation
 

@@ -126,6 +126,8 @@ namespace Thermodynamics
 
             Text.Append("Waste heat: ").Append((node.HeatGenerationWatts / 1000f).ToString("n1")).Append(" kW\n");
 
+            AppendHeatPump(bound);
+
             RoomAirNode air = RoomOf(bound);
             if (air != null)
             {
@@ -149,6 +151,44 @@ namespace Thermodynamics
             Text.Append("Sealed rooms: ").Append(grid.Simulation.RoomAir.Count);
 
             return Text;
+        }
+
+        /// <summary>
+        /// What a heat pump is actually achieving. Nothing at all for any other block.
+        ///
+        /// The coefficient is the line worth reading: it is the exchange rate between electricity
+        /// and cooling, it moves with the gap the pump is working across, and it is the reason a
+        /// pump that was keeping up yesterday cannot keep up with a hotter reactor today.
+        /// </summary>
+        private static void AppendHeatPump(ThermalBlock bound)
+        {
+            HeatPumpDevice pump = bound.Grid.Simulation.GetHeatPump(bound.Instance);
+            if (pump == null) return;
+
+            Text.Append('\n');
+
+            if (!pump.IsConnected)
+            {
+                Text.Append("Heat pump: not connected — needs a block on both ends\n");
+                return;
+            }
+
+            if (!pump.Enabled)
+            {
+                Text.Append("Heat pump: off\n");
+                return;
+            }
+
+            Text.Append("Heat pump: moving ")
+                .Append((pump.LastLiftedWatts / 1000f).ToString("n1")).Append(" kW for ")
+                .Append((pump.LastPowerWatts / 1000f).ToString("n1")).Append(" kW drawn\n");
+
+            Text.Append("Coefficient: ").Append(pump.LastCoefficient.ToString("n2"));
+            if (pump.LastWasLimited) Text.Append("  (limited by the gap)");
+            Text.Append('\n');
+
+            Text.Append("Rejecting: ").Append((pump.LastRejectedWatts / 1000f).ToString("n1"))
+                .Append(" kW into the hot side\n");
         }
 
         /// <summary>The air of a room this block bounds, or null when it bounds none.</summary>

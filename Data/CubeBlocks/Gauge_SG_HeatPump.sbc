@@ -1,9 +1,15 @@
 <?xml version="1.0" ?>
 <Definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
 	<CubeBlocks>
-		<Definition>
+		<!--
+			An upgrade module rather than a plain cube block, because a heat pump has to be
+			switchable and has to draw power, and only a functional block has a terminal to switch
+			it from. It carries no upgrades; the resource sink is attached in code, since there is
+			no definition field for one on this type.
+		-->
+		<Definition xsi:type="MyObjectBuilder_UpgradeModuleDefinition">
 			<Id>
-				<TypeId>CubeBlock</TypeId>
+				<TypeId>UpgradeModule</TypeId>
 				<SubtypeId>Gauge_SG_HeatPump</SubtypeId>
 			</Id>
 			<DisplayName>{LOC:DisplayName_Gauge_SG_HeatPump}</DisplayName>

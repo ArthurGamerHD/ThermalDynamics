@@ -329,8 +329,14 @@
 					<Decimal Name="SpecificHeat" Value="450" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="SurfaceAreaScaler" Value ="1" />
-					<Decimal Name="ProducerWasteEnergy" Value="0.05" />
-					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<!--
+						Zero, and deliberately so. Every watt this block draws is already accounted
+						for: the simulation puts the compressor's work into the hot side along with
+						the heat it lifted. Giving it a waste fraction as well would charge the
+						same energy to the grid twice.
+					-->
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
 					<Decimal Name="CriticalTemperatureScaler" Value="1"/>
 				</Group>
@@ -349,8 +355,9 @@
 					<Decimal Name="SpecificHeat" Value="450" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="SurfaceAreaScaler" Value ="1" />
-					<Decimal Name="ProducerWasteEnergy" Value="0.05" />
-					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<!--Zero for the same reason as the large grid pump: the work is already counted.-->
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
 					<Decimal Name="CriticalTemperatureScaler" Value="1"/>
 				</Group>

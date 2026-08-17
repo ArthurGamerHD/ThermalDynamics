@@ -74,6 +74,7 @@ namespace Thermodynamics
             // they have to be dropped when the session does or a second world inherits them.
             ThermalBlockCatalog.Clear();
             ThermalCoolantShapes.Clear();
+            ThermalHeatPumpShapes.Clear();
             ThermalBridges.Clear();
             ThermalGrid.ResetEnvironmentCaches();
             ThermalHeatSources.Clear();

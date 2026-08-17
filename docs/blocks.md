@@ -81,12 +81,43 @@ pipe sink face or directly against a hot block — and keep its faces exposed to
 
 ## Heat pump
 
-`Gauge_LG_HeatPump` / `Gauge_SG_HeatPump` — a plain `CubeBlock`, 1×1×1.
+`Gauge_LG_HeatPump` (1×1×1) / `Gauge_SG_HeatPump` (3×3×1) — an `UpgradeModule`, so it has a
+terminal and an on/off switch. It carries no upgrades; the type is there for the switch.
 
-**Not yet implemented.** The models, icons, localisation, block definitions and thermal
-properties all exist, but no C# references it, so it currently behaves as an ordinary
-conducting block with default-ish properties. It is not in the coolant direction tables and is
-not part of the coolant variant groups.
+The only block that moves heat **against** a gradient. It draws heat out of whatever is bolted to
+its front face and rejects it into whatever is behind it, and pays for the privilege in
+electricity. Placement is the whole of its configuration: put its cold face on what you want cooled
+and its hot face on a radiator, or on a coolant pipe's sink face.
+
+| | Lifts up to | Draws up to |
+| --- | --- | --- |
+| Large grid | 60 kW | 20 kW |
+| Small grid | 12 kW | 4 kW |
+
+Three limits decide what it actually achieves each step, and which one binds is the block's whole
+character:
+
+* **Carnot.** Efficiency is `0.4 × Tcold / (Thot − Tcold)`, capped at 8. Lifting heat across a
+  small gap is nearly free; across a large one it is ruinous.
+* **Its rating.** Against a small gap it runs out of machine before it runs out of efficiency, and
+  draws less than its maximum because it cannot use power it has no capacity to move.
+* **What is there.** It cannot take more heat out of a block than the block has.
+
+Two consequences worth knowing before building around it. The hot side gains **more** than the cold
+side loses — the lift plus the work that lifted it — so a pump does not reduce a ship's heat, it
+concentrates it somewhere you can radiate it away from. And nothing clamps its cold side at a floor:
+the cost of a kelvin simply rises without limit as that side approaches absolute zero, so the
+block's own electrical rating stops it long before the temperature does.
+
+The terminal shows what it is moving, what it is drawing, and the coefficient between them. A pump
+with nothing bolted to one of its faces says so rather than silently doing nothing.
+
+The efficiency fraction and the cap are tuned for the whole mod in
+[configuration.md](configuration.md#heat-pumps); the two ratings are per block and live in
+[ThermalHeatPumpShapes](../Data/Scripts/Thermodynamics/Game/ThermalHeatPumpShapes.cs).
+
+Its waste-energy fractions in `Cubes.xml` are deliberately zero. The simulation already puts every
+watt the block draws into the hot side; a waste fraction on top would charge the same energy twice.
 
 ## Extinguisher (hand tool)
 
@@ -185,5 +216,7 @@ coolant ports: a loop sheds heat through one by pressing a pipe's sink face agai
 panel then radiates from its own exposed faces. Bolting a radiator flat against the hull removes the
 faces it would have radiated from, which is what the `radiator` scenario measures.
 
-`Gauge_LG_HeatPump` / `Gauge_SG_HeatPump` currently have no behaviour beyond being blocks with steel
-properties — see [known-issues.md](known-issues.md#unfinished).
+`Gauge_LG_HeatPump` / `Gauge_SG_HeatPump` move heat from the block on their front face into the
+block behind them, for an electrical cost set by Carnot. They pair naturally with a radiator on the
+hot side: the pump concentrates a ship's heat somewhere it can be shed, which is the one thing
+radiators alone cannot do when the thing you need cooled is already cooler than its surroundings.

@@ -79,6 +79,7 @@ namespace Thermodynamics
                 {
                     Stats.LoadBytes += data.Length;
                     Stats.BlocksRestored += restored;
+                    Stats.RoomsRestored += Simulation.RoomsRestored;
                     Stats.LoadTime.End();
                 }
             }

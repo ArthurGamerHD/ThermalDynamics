@@ -524,6 +524,7 @@ namespace Thermodynamics
                 Field(sb, "  surface refreshes", g.SurfaceRecalcs.ToString("n0"));
                 Field(sb, "  mapper passes completed", g.MapperCompletions.ToString("n0"));
                 Field(sb, "  blocks restored on load", g.BlocksRestored.ToString("n0"));
+                Field(sb, "  rooms restored on load", g.RoomsRestored.ToString("n0"));
                 Field(sb, "  saves / loads", g.Saves + " / " + g.Loads);
                 Field(sb, "  save / load bytes", g.SaveBytes.ToString("n0") + " / " + g.LoadBytes.ToString("n0"));
 
@@ -735,7 +736,7 @@ namespace Thermodynamics
             sb.Append("peak_temperature,mean_hottest,critical_max,damage_events,total_damage,");
             sb.Append("ambient_min,ambient_mean,ambient_max,air_density_mean,wind_mean,wind_max,speed_max,");
             sb.Append("occluded_fraction,atmosphere_fraction,");
-            sb.Append("blocks_added,blocks_removed,blocks_restored,splits,merges,door_changes,surface_refreshes,");
+            sb.Append("blocks_added,blocks_removed,blocks_restored,rooms_restored,splits,merges,door_changes,surface_refreshes,");
             sb.Append("mapper_passes,loops_created,saves,loads,save_bytes,load_bytes,");
             sb.Append("sim_ms_total,sim_ms_max,topology_ms_total,mapping_ms_total,exposure_ms_total,solver_ms_total,solver_ms_max,");
             sb.Append("solar_ms_total,solar_ms_max,save_ms_total,load_ms_total\n");
@@ -790,6 +791,7 @@ namespace Thermodynamics
                 Csv(sb, g.BlocksAdded);
                 Csv(sb, g.BlocksRemoved);
                 Csv(sb, g.BlocksRestored);
+                Csv(sb, g.RoomsRestored);
                 Csv(sb, g.Splits);
                 Csv(sb, g.Merges);
                 Csv(sb, g.DoorStateChanges);

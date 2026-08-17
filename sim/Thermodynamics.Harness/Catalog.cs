@@ -219,5 +219,23 @@ namespace Thermodynamics.Harness
             model.WithCoolant(CoolantShape.Pump(Vector3I.Forward, Vector3I.Backward, 3));
             return model;
         }
+
+        // ---- heat pump --------------------------------------------------------------------
+
+        /// <summary>
+        /// The shipped large-grid heat pump: draws heat from the block on its forward face and
+        /// rejects it, plus the work, into the block behind it.
+        /// </summary>
+        public static BlockModel HeatPump()
+        {
+            return HeatPump(60000f, 20000f);
+        }
+
+        public static BlockModel HeatPump(float ratedWatts, float maxPowerWatts)
+        {
+            BlockModel model = BlockModel.Solid("HeatPump", Vector3I.One, 800f, DefaultThermal());
+            model.WithHeatPump(HeatPumpShape.Along(Vector3I.Forward, ratedWatts, maxPowerWatts));
+            return model;
+        }
     }
 }

@@ -45,6 +45,7 @@ namespace Thermodynamics.Core
         private readonly List<ThermalLink> links = new List<ThermalLink>();
         private readonly List<CoolantLoop> loops = new List<CoolantLoop>();
         private readonly List<RoomAirNode> roomAir = new List<RoomAirNode>();
+        private readonly List<HeatPumpDevice> heatPumps = new List<HeatPumpDevice>();
 
         private float[] nodeWatts = new float[0];
         private float[] nodeTemperatures = new float[0];
@@ -188,6 +189,15 @@ namespace Thermodynamics.Core
         public IList<RoomAirNode> RoomAir
         {
             get { return roomAir; }
+        }
+
+        /// <summary>
+        /// The grid's heat pumps, connected or not. A pump with nothing bolted to one of its faces
+        /// is still listed, so a readout can say that is why it is doing nothing.
+        /// </summary>
+        public IList<HeatPumpDevice> HeatPumps
+        {
+            get { return heatPumps; }
         }
 
         /// <summary>Blocks that took heat damage during the last <see cref="Step"/>.</summary>
@@ -627,6 +637,40 @@ namespace Thermodynamics.Core
             }
         }
 
+        /// <summary>
+        /// Puts saved air temperatures back onto the rooms they were saved from, matched by anchor
+        /// cell — the same key that carries a room's air across a rebuild.
+        ///
+        /// Marking the air initialised is the point of the exercise. A restored room is almost
+        /// always still at zero pressure when this runs, because pressurisation comes from the vent
+        /// sweep and that has not happened yet; without the flag the first sweep would take the
+        /// room's temperature from the average of its walls and throw the saved figure away.
+        /// </summary>
+        /// <returns>Number of rooms that took a saved temperature.</returns>
+        public int RestoreRoomAir(IList<StoredRoom> stored)
+        {
+            if (stored == null || stored.Count == 0 || roomAir.Count == 0) return 0;
+
+            Dictionary<Vector3I, float> byAnchor = new Dictionary<Vector3I, float>(stored.Count, Vector3I.Comparer);
+            for (int i = 0; i < stored.Count; i++)
+            {
+                byAnchor[stored[i].Anchor] = stored[i].Temperature;
+            }
+
+            int restored = 0;
+            for (int i = 0; i < roomAir.Count; i++)
+            {
+                float temperature;
+                if (!byAnchor.TryGetValue(roomAir[i].Anchor, out temperature)) continue;
+
+                roomAir[i].Temperature = Math.Max(ThermalConstants.MinimumTemperature, temperature);
+                roomAir[i].Initialised = true;
+                restored++;
+            }
+
+            return restored;
+        }
+
         private static Vector3I LowestCell(HashSet<Vector3I> cells)
         {
             bool first = true;
@@ -650,6 +694,155 @@ namespace Thermodynamics.Core
             }
 
             return lowest;
+        }
+
+        // ---- heat pumps --------------------------------------------------------------------
+
+        /// <summary>
+        /// Rebuilds the grid's heat pumps from the blocks currently placed.
+        ///
+        /// A pump is bound to the two nodes either side of it, so anything that changes what is
+        /// bolted to its faces has to run this again. The host switch and the power fraction are
+        /// carried across by block key: they belong to the block, not to this table, and a pump
+        /// must not silently switch itself on because a wall was welded somewhere else.
+        /// </summary>
+        public void RebuildHeatPumps()
+        {
+            Dictionary<long, HeatPumpDevice> previous = new Dictionary<long, HeatPumpDevice>();
+            for (int i = 0; i < heatPumps.Count; i++)
+            {
+                if (heatPumps[i].Block == null) continue;
+                previous[heatPumps[i].Block.Key] = heatPumps[i];
+            }
+
+            heatPumps.Clear();
+
+            IList<BlockInstance> blocks = grid.Blocks;
+            for (int i = 0; i < blocks.Count; i++)
+            {
+                BlockInstance block = blocks[i];
+                HeatPumpShape shape = block.Model.HeatPump;
+                if (shape == null) continue;
+
+                Vector3I coldCell, hotCell;
+                if (!block.TryHeatPumpCells(out coldCell, out hotCell)) continue;
+
+                HeatPumpDevice device = new HeatPumpDevice();
+                device.Block = block;
+                device.RatedWatts = shape.RatedWatts;
+                device.MaxPowerWatts = shape.MaxPowerWatts;
+
+                HeatPumpDevice carried;
+                if (previous.TryGetValue(block.Key, out carried))
+                {
+                    device.Enabled = carried.Enabled;
+                    device.PowerAvailable = carried.PowerAvailable;
+                }
+
+                device.ColdNodeIndex = NodeIndexAt(coldCell);
+                device.HotNodeIndex = NodeIndexAt(hotCell);
+
+                heatPumps.Add(device);
+            }
+        }
+
+        /// <summary>Index of the node occupying a cell, or -1 when the cell is empty.</summary>
+        private int NodeIndexAt(Vector3I cell)
+        {
+            BlockInstance block = grid.GetAtCell(cell);
+            if (block == null) return -1;
+
+            ThermalNode node = GetNode(block);
+            return node == null ? -1 : node.Index;
+        }
+
+        /// <summary>The heat pump bound to a block, or null when that block is not one.</summary>
+        public HeatPumpDevice GetHeatPump(BlockInstance block)
+        {
+            if (block == null) return null;
+
+            for (int i = 0; i < heatPumps.Count; i++)
+            {
+                if (heatPumps[i].Block == block) return heatPumps[i];
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Moves heat from each pump's cold side to its hot side, and charges the work to its
+        /// hot side as well.
+        ///
+        /// Three limits apply in turn, and which one binds is the whole behaviour of the block.
+        /// Carnot sets the price of a kelvin; the pump's electrical rating caps what it can pay;
+        /// and the cold node's remaining heat caps what there is to take. Against a small
+        /// difference the rating binds and the pump runs flat out. Against a large one the price
+        /// binds, the pump lifts a trickle, and pushing further costs more than the block can
+        /// draw — which is what makes absolute zero unreachable rather than merely discouraged.
+        /// </summary>
+        private void AccumulateHeatPumps(float h)
+        {
+            if (!settings.EnableHeatPumps) return;
+
+            float fraction = settings.HeatPumpCarnotFraction;
+            float ceiling = settings.HeatPumpMaxCoefficient;
+
+            for (int p = 0; p < heatPumps.Count; p++)
+            {
+                HeatPumpDevice pump = heatPumps[p];
+                if (!pump.Enabled || !pump.IsConnected) continue;
+
+                int cold = pump.ColdNodeIndex;
+                int hot = pump.HotNodeIndex;
+                if (cold >= nodes.Count || hot >= nodes.Count) continue;
+
+                float coldTemperature = nodeTemperatures[cold];
+                float hotTemperature = nodeTemperatures[hot];
+
+                float coefficient = HeatPumpDevice.Coefficient(
+                    coldTemperature, hotTemperature, fraction, ceiling);
+                if (coefficient <= 0f) continue;
+
+                // Never take more heat out of the cold node than it has above absolute zero: the
+                // pump is bounded by what is there, not only by what it can afford.
+                float headroom = (coldTemperature - ThermalConstants.MinimumTemperature)
+                    * nodeThermalMass[cold] / h;
+                if (headroom <= 0f) continue;
+
+                // What it would draw on a healthy grid, recorded whether or not it got it — a
+                // request that shrinks because it was refused never recovers.
+                float wanted = Limit(coefficient * pump.MaxPowerWatts, pump.RatedWatts, headroom);
+                pump.DemandEnergy += (wanted / coefficient) * h;
+
+                float available = pump.MaxPowerWatts * Clamp01(pump.PowerAvailable);
+                if (available <= 0f) continue;
+
+                // What the compressor could pay for, against what the machine is rated to move,
+                // against what there is left to take.
+                float lift = Limit(coefficient * available, pump.RatedWatts, headroom);
+                float work = lift / coefficient;
+
+                nodeWatts[cold] -= lift;
+                nodeWatts[hot] += lift + work;
+
+                pump.LiftedEnergy += lift * h;
+                pump.PowerEnergy += work * h;
+                pump.RejectedEnergy += (lift + work) * h;
+            }
+        }
+
+        private static float Clamp01(float value)
+        {
+            if (value < 0f) return 0f;
+            if (value > 1f) return 1f;
+            return value;
+        }
+
+        /// <summary>The smallest of three limits on what a pump may move this substep.</summary>
+        private static float Limit(float watts, float rating, float headroom)
+        {
+            if (watts > rating) watts = rating;
+            if (watts > headroom) watts = headroom;
+            return watts;
         }
 
         /// <summary>The air of the room a cell belongs to, or null when that room holds none.</summary>
@@ -730,10 +923,20 @@ namespace Thermodynamics.Core
             LastSubsteps = substeps;
             LastStepWasClamped = required > MaxSubsteps;
 
+            for (int p = 0; p < heatPumps.Count; p++)
+            {
+                heatPumps[p].BeginStep();
+            }
+
             float h = deltaSeconds / substeps;
             for (int s = 0; s < substeps; s++)
             {
                 Substep(h, ref environment);
+            }
+
+            for (int p = 0; p < heatPumps.Count; p++)
+            {
+                heatPumps[p].EndStep(deltaSeconds);
             }
 
             // The node objects stay the public face of the simulation, so they are brought back
@@ -848,6 +1051,7 @@ namespace Thermodynamics.Core
             AccumulateConduction(h);
             AccumulateLoops(h);
             AccumulateRoomAir(h);
+            AccumulateHeatPumps(h);
 
             ApplyWatts(h);
         }

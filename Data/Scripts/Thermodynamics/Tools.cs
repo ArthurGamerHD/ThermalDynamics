@@ -12,6 +12,7 @@ namespace Thermodynamics
     {
 
         public const float MWtoWatt = 1000000;
+        public const float WattToMW = 1f / MWtoWatt;
         public const float kWtoWatt = 1000;
         public const float KphToMps = 1000f / 60f / 60f;
         public const float BoltzmannConstant = 0.00000005670374419f;

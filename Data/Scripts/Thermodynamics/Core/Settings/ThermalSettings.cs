@@ -59,6 +59,12 @@ namespace Thermodynamics.Core
         /// </summary>
         public bool EnableRoomAir = true;
 
+        /// <summary>
+        /// Heat pumps move heat against a gradient for an electrical cost. When off they are
+        /// ordinary blocks, which is what they were before the mechanism existed.
+        /// </summary>
+        public bool EnableHeatPumps = true;
+
         // ---- rates ------------------------------------------------------------------------
 
         /// <summary>
@@ -123,6 +129,25 @@ namespace Thermodynamics.Core
         /// </summary>
         public float RoomAirDensity = 1.225f;
 
+        // ---- heat pumps -------------------------------------------------------------------
+
+        /// <summary>
+        /// How much of the Carnot limit a heat pump achieves, 0..1. A real domestic heat pump
+        /// manages about 0.4 of it; 1 would be a thermodynamically perfect machine.
+        ///
+        /// This is the whole balance of the block in one number. It does not change what the pump
+        /// can do — the shape of the cost curve is Carnot's and is not negotiable — only how far
+        /// up it the block sits.
+        /// </summary>
+        public float HeatPumpCarnotFraction = 0.4f;
+
+        /// <summary>
+        /// Ceiling on the coefficient of performance, so a pump working across almost no
+        /// difference cannot lift unbounded heat for nothing. Carnot's figure goes to infinity as
+        /// the two sides converge; a real machine is limited by its compressor long before that.
+        /// </summary>
+        public float HeatPumpMaxCoefficient = 8f;
+
         // ---- solver -----------------------------------------------------------------------
 
         /// <summary>
@@ -176,6 +201,9 @@ namespace Thermodynamics.Core
             if (FrictionScale < 0f) FrictionScale = 0f;
             if (RoomConvectionCoefficient < 0f) RoomConvectionCoefficient = 0f;
             if (RoomAirDensity < 0f) RoomAirDensity = 0f;
+            if (HeatPumpCarnotFraction < 0f) HeatPumpCarnotFraction = 0f;
+            if (HeatPumpCarnotFraction > 1f) HeatPumpCarnotFraction = 1f;
+            if (HeatPumpMaxCoefficient < 0f) HeatPumpMaxCoefficient = 0f;
 
             StepSeconds = 1f / Frequency;
             StepsPerSecond = Frequency * SimulationSpeed;

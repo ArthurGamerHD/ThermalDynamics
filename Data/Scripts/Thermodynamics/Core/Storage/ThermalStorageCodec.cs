@@ -30,6 +30,19 @@ namespace Thermodynamics.Core
         }
     }
 
+    /// <summary>One saved room air temperature, keyed by the room's anchor cell.</summary>
+    public struct StoredRoom
+    {
+        public Vector3I Anchor;
+        public float Temperature;
+
+        public StoredRoom(Vector3I anchor, float temperature)
+        {
+            Anchor = anchor;
+            Temperature = temperature;
+        }
+    }
+
     /// <summary>
     /// Serialises grid temperatures to and from a base64 blob.
     ///
@@ -37,12 +50,17 @@ namespace Thermodynamics.Core
     /// version 2 fixes its three defects: positions are 64-bit so distant blocks cannot alias,
     /// temperatures keep their fractional part, and loops are keyed by a stable signature rather
     /// than by their index in a list that is rebuilt on load.
+    ///
+    /// Version 2 is extended by adding a section, not by changing the marker: every record is the
+    /// same twelve bytes and a reader skips a section it does not recognise. Room air arrived that
+    /// way, so a save written now still loads on the build before it.
     /// </summary>
     public static class ThermalStorageCodec
     {
         private const byte Version2Marker = 0xFD;
         private const byte SectionBlocks = 1;
         private const byte SectionLoops = 2;
+        private const byte SectionRooms = 3;
 
         private const int LegacyRecordSize = 6;
         private const int LegacyLoopRecordSize = 3;
@@ -55,10 +73,25 @@ namespace Thermodynamics.Core
         /// <summary>Encodes block and loop temperatures in the current format.</summary>
         public static string Encode(IList<StoredTemperature> blocks, IList<StoredLoop> loops)
         {
+            return Encode(blocks, loops, null);
+        }
+
+        /// <summary>Encodes block, loop and room air temperatures in the current format.</summary>
+        public static string Encode(IList<StoredTemperature> blocks, IList<StoredLoop> loops, IList<StoredRoom> rooms)
+        {
             int blockCount = blocks == null ? 0 : blocks.Count;
             int loopCount = loops == null ? 0 : loops.Count;
+            int roomCount = rooms == null ? 0 : rooms.Count;
 
-            byte[] bytes = new byte[2 + 4 + (blockCount * 12) + 1 + 4 + (loopCount * 12)];
+            int size = 1
+                + (1 + Int32Size + (blockCount * RecordSize))
+                + (1 + Int32Size + (loopCount * RecordSize));
+
+            // A world with room air switched off writes no section at all rather than an empty
+            // one, so the format costs nothing when the feature is unused.
+            if (roomCount > 0) size += 1 + Int32Size + (roomCount * RecordSize);
+
+            byte[] bytes = new byte[size];
             int at = 0;
 
             bytes[at++] = Version2Marker;
@@ -82,6 +115,19 @@ namespace Thermodynamics.Core
                 WriteSingle(bytes, ref at, entry.Temperature);
             }
 
+            if (roomCount > 0)
+            {
+                bytes[at++] = SectionRooms;
+                WriteInt32(bytes, ref at, roomCount);
+
+                for (int i = 0; i < roomCount; i++)
+                {
+                    StoredRoom entry = rooms[i];
+                    WriteInt64(bytes, ref at, GridMath.Key(entry.Anchor));
+                    WriteSingle(bytes, ref at, entry.Temperature);
+                }
+            }
+
             return Convert.ToBase64String(bytes);
         }
 
@@ -91,8 +137,18 @@ namespace Thermodynamics.Core
         /// </summary>
         public static bool TryDecode(string data, List<StoredTemperature> blocks, List<StoredLoop> loops)
         {
+            return TryDecode(data, blocks, loops, null);
+        }
+
+        /// <summary>
+        /// Decodes either format, including the room air section. A payload written before rooms
+        /// were saved simply leaves <paramref name="rooms"/> empty.
+        /// </summary>
+        public static bool TryDecode(string data, List<StoredTemperature> blocks, List<StoredLoop> loops, List<StoredRoom> rooms)
+        {
             if (blocks != null) blocks.Clear();
             if (loops != null) loops.Clear();
+            if (rooms != null) rooms.Clear();
 
             if (string.IsNullOrEmpty(data)) return false;
 
@@ -110,13 +166,13 @@ namespace Thermodynamics.Core
 
             if (bytes[0] == Version2Marker)
             {
-                return TryDecodeVersion2(bytes, blocks, loops);
+                return TryDecodeVersion2(bytes, blocks, loops, rooms);
             }
 
             return TryDecodeLegacyBlocks(bytes, blocks);
         }
 
-        private static bool TryDecodeVersion2(byte[] bytes, List<StoredTemperature> blocks, List<StoredLoop> loops)
+        private static bool TryDecodeVersion2(byte[] bytes, List<StoredTemperature> blocks, List<StoredLoop> loops, List<StoredRoom> rooms)
         {
             // Every read is bounds checked up front rather than caught afterwards: the in-game
             // script compiler's whitelist prohibits IndexOutOfRangeException, so a truncated
@@ -146,6 +202,10 @@ namespace Thermodynamics.Core
                     else if (section == SectionLoops)
                     {
                         if (loops != null) loops.Add(new StoredLoop(key, temperature));
+                    }
+                    else if (section == SectionRooms)
+                    {
+                        if (rooms != null) rooms.Add(new StoredRoom(GridMath.FromKey(key), temperature));
                     }
                 }
             }

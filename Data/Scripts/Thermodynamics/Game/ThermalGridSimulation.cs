@@ -68,6 +68,10 @@ namespace Thermodynamics
                 // that will not integrate, none of it would be read.
                 EnvironmentSample sample = stepping ? Sample() : default(EnvironmentSample);
 
+                // The pumps have to know whether they are switched on and powered before the step
+                // that spends the power, not after it.
+                if (stepping) PushHeatPumpState();
+
                 long before = Simulation.Scheduler.StepsRun;
                 Simulation.Update(TickSeconds, sample);
                 long stepped = Simulation.Scheduler.StepsRun - before;
@@ -91,6 +95,7 @@ namespace Thermodynamics
         {
             ApplyOverheatDamage();
             RaiseThresholdCrossings();
+            PublishHeatPumpDemand();
 
             stepsSinceMassSweep += steps;
             if (stepsSinceMassSweep >= MassSweepInterval)
@@ -154,6 +159,57 @@ namespace Thermodynamics
             foreach (ThermalBlock bound in blocks.Values)
             {
                 bound.RefreshMass();
+            }
+        }
+
+        /// <summary>
+        /// Hands each heat pump its switch and its power situation before the step.
+        ///
+        /// Nothing here decides anything: whether a pump can do what it is being asked is worked
+        /// out by the solver from the two temperatures either side of it, and the answer comes
+        /// back out as a power demand.
+        /// </summary>
+        private void PushHeatPumpState()
+        {
+            if (heatPumps.Count == 0) return;
+
+            for (int i = 0; i < heatPumps.Count; i++)
+            {
+                ThermalBlock bound = heatPumps[i];
+                HeatPumpDevice device = Simulation.GetHeatPump(bound.Instance);
+                if (device == null) continue;
+
+                ThermalHeatPumpBlock electrical = bound.HeatPump;
+                if (electrical == null)
+                {
+                    // No electrical half means no way to charge for the work, so it does not run.
+                    device.Enabled = false;
+                    device.PowerAvailable = 0f;
+                    continue;
+                }
+
+                device.Enabled = electrical.IsRunning;
+                device.PowerAvailable = electrical.PowerAvailable;
+            }
+        }
+
+        /// <summary>
+        /// Tells each pump's resource sink what the simulation decided it wants to draw.
+        ///
+        /// What it asked for, not what it managed: a pump that lowers its request because its
+        /// request went unmet would never climb back when the power returned.
+        /// </summary>
+        private void PublishHeatPumpDemand()
+        {
+            if (heatPumps.Count == 0) return;
+
+            for (int i = 0; i < heatPumps.Count; i++)
+            {
+                ThermalBlock bound = heatPumps[i];
+                if (bound.HeatPump == null) continue;
+
+                HeatPumpDevice device = Simulation.GetHeatPump(bound.Instance);
+                bound.HeatPump.SetDemandWatts(device == null ? 0f : device.LastDemandWatts);
             }
         }
 

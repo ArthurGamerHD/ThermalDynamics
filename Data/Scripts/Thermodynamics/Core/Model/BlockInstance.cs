@@ -282,6 +282,26 @@ namespace Thermodynamics.Core
             return ToGridPorts(Model.Coolant == null ? null : Model.Coolant.SinkPorts);
         }
 
+        /// <summary>
+        /// The cells this block's heat pump draws from and rejects into, in grid space. Both are
+        /// the cell one step off the named face, which is the cell a neighbouring block occupies.
+        /// </summary>
+        /// <returns>False when the block is not a heat pump.</returns>
+        public bool TryHeatPumpCells(out Vector3I coldCell, out Vector3I hotCell)
+        {
+            HeatPumpShape shape = Model.HeatPump;
+            if (shape == null)
+            {
+                coldCell = Vector3I.Zero;
+                hotCell = Vector3I.Zero;
+                return false;
+            }
+
+            coldCell = LocalToGrid(shape.ColdCell) + LocalDirectionToGrid(shape.ColdDirection);
+            hotCell = LocalToGrid(shape.HotCell) + LocalDirectionToGrid(shape.HotDirection);
+            return true;
+        }
+
         private List<GridPort> ToGridPorts(CoolantPort[] ports)
         {
             List<GridPort> result = new List<GridPort>();
