@@ -17,12 +17,34 @@ to disk unless asked.
 | `/thermal set <name> <value>` | Changes one setting for this session. Switches take `on`/`off` or `1`/`0`. |
 | `/thermal save` | Writes the current values to the config file. |
 | `/thermal overlay` | Cycles the block overlay. Same as Ctrl+Shift+=. |
+| `/thermal menu` | Opens the settings menu. Same as Ctrl+Shift+-. |
 | `/thermal telemetry on` / `off` | Starts and stops data collection. |
 | `/thermal stride <n>` | Telemetry sample stride. |
 | `/thermal dump` | Writes a telemetry report without closing the world. |
 
 Settings are server side; `set` from a client is refused. The same names are reachable from other
 mods — see [api.md](api.md#settings).
+
+## The settings menu
+
+**Ctrl+Shift+-** opens it, as does `/thermal menu`. It is built on the [Rich HUD
+Framework](https://github.com/ZachHembree/RichHudFramework.Client) and needs the **Rich HUD Master**
+mod (`1965654081`) to be enabled; without it the keystroke says so and the chat commands remain the
+way in.
+
+Every value in this file has a control there, grouped the way this page is: mechanisms, solver,
+environment, heat pumps, presentation, telemetry. Switches are checkboxes, numbers are sliders with
+a range chosen for what is worth dragging to, and each control carries the setting's description.
+Changes apply to the running session immediately; **Save to config file** is what makes them
+outlive it, and each category has a reset that puts it back to the shipped defaults.
+
+The menu is generated from the same name list the chat commands and the mod API use, so a setting
+added to the config file appears in it without anyone maintaining a second list. A setting the
+menu's layout table does not describe still gets a control, under **Other**.
+
+On a multiplayer client the simulation controls are visible but disabled, for the same reason
+`set` is refused there: the config is world state and belongs to the server. The four presentation
+switches stay editable, because they only change what that client draws.
 
 ## Mechanisms
 

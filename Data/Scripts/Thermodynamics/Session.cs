@@ -65,6 +65,10 @@ namespace Thermodynamics
             // The overlay is client state, not grid state: the config only says which view a
             // session opens on, and the keybind takes it from there.
             ThermalDebugView.Current = (ThermalDebugView.Mode)Settings.Instance.DebugBlockOverlay;
+
+            // Registration with Rich HUD Master is asynchronous and may never complete, so this
+            // only asks; the menu builds itself when the framework answers.
+            ThermalSettingsMenu.Initialize();
         }
 
         protected override void UnloadData()
@@ -119,7 +123,7 @@ namespace Thermodynamics
         private void Tick()
         {
             RegisterCommand();
-            PollOverlayKey();
+            PollKeys();
 
             if (_frame % 10 == 0)
             {
@@ -136,23 +140,31 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Ctrl+Shift+= cycles the block overlay through its views.
+        /// Ctrl+Shift+= cycles the block overlay through its views, and Ctrl+Shift+- opens the
+        /// settings menu.
         ///
-        /// Chosen over a control the player can rebind because a mod cannot add one: the game's
-        /// binding list is fixed. The chat and terminal typing checks are what keep the keystroke
+        /// Chosen over controls the player can rebind because a mod cannot add one: the game's
+        /// binding list is fixed. The chat and terminal typing checks are what keep the keystrokes
         /// out of a name the player is halfway through entering.
         /// </summary>
-        private void PollOverlayKey()
+        private void PollKeys()
         {
             if (MyAPIGateway.Utilities == null || MyAPIGateway.Utilities.IsDedicated) return;
             if (MyAPIGateway.Input == null || MyAPIGateway.Gui == null) return;
             if (MyAPIGateway.Gui.ChatEntryVisible || MyAPIGateway.Gui.IsCursorVisible) return;
-
-            if (!MyAPIGateway.Input.IsNewKeyPressed(MyKeys.OemPlus)) return;
             if (!MyAPIGateway.Input.IsAnyCtrlKeyPressed()) return;
             if (!MyAPIGateway.Input.IsAnyShiftKeyPressed()) return;
 
-            ThermalDebugView.Cycle();
+            if (MyAPIGateway.Input.IsNewKeyPressed(MyKeys.OemPlus))
+            {
+                ThermalDebugView.Cycle();
+                return;
+            }
+
+            if (MyAPIGateway.Input.IsNewKeyPressed(MyKeys.OemMinus))
+            {
+                ThermalSettingsMenu.Open();
+            }
         }
 
         /// <summary>
@@ -215,6 +227,12 @@ namespace Thermodynamics
                 return;
             }
 
+            if (lowered == "menu")
+            {
+                ThermalSettingsMenu.Open();
+                return;
+            }
+
             if (lowered == "overlay")
             {
                 ThermalDebugView.Cycle();
@@ -266,7 +284,7 @@ namespace Thermodynamics
                 return;
             }
 
-            Reply("commands: status | settings | set <name> <value> | save | overlay"
+            Reply("commands: status | settings | set <name> <value> | save | overlay | menu"
                 + " | telemetry on | telemetry off | stride <n> | dump");
         }
 

@@ -45,10 +45,11 @@ into atmosphere and into the air of sealed rooms, arrives from the sun, and — 
 | --- | --- | --- |
 | **Definition Extensions** (Draygo) | Reads all thermal properties out of `<ModExtensions>` blocks in the definitions. Required — without it block lookups throw. | `2756894170` |
 | **Text HUD API** (Draygo) | The cockpit readout and the extinguisher readout. Degrades quietly if absent. | `573804956` |
+| **Rich HUD Master** (Zach Hembree) | The settings menu. Degrades quietly if absent — the chat commands still work. | `1965654081` |
 
 ## Quick start
 
-1. Subscribe to Definition Extensions and Text HUD API, and enable all three mods.
+1. Subscribe to Definition Extensions, Text HUD API and Rich HUD Master, and enable all four mods.
 2. Load a world and build. Heat simulates immediately; nothing is repainted and nothing is drawn
    until you ask for it.
 3. Sit in a cockpit for ambient, peak temperature, peak rate of change, critical block count and
@@ -61,7 +62,9 @@ into atmosphere and into the air of sealed rooms, arrives from the sun, and — 
 6. To cool something below what surrounds it, sandwich a **Heat Pump** between it and a radiator:
    the pump's front face draws heat out, its back face rejects that heat plus the power it took.
 7. Press **Ctrl+Shift+=** to cycle the block overlay through its views, and again to switch it off.
-8. `/thermal settings` lists every switch; `/thermal set <name> <value>` changes one live.
+8. Press **Ctrl+Shift+-** for the settings menu: every value in the config file, with a slider or a
+   switch and a description of what it does.
+9. `/thermal settings` lists every switch; `/thermal set <name> <value>` changes one live.
 
 ## Documentation
 

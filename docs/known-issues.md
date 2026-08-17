@@ -15,9 +15,10 @@ but nothing reconciles them: a client that joins mid-session starts from saved t
 divergence is never corrected. Damage and settings are server authoritative, so the divergence is
 cosmetic, but it is real.
 
-**Rich HUD Framework integration.** The readouts use Text HUD API and the terminal. A Rich HUD
-client would give a proper settings menu and a richer overlay, and needs its client half vendored
-into `Data/Scripts` from the framework's repository — the workshop copy ships only the server half.
+**The settings menu cannot change anything from a multiplayer client.** The Rich HUD menu edits the
+same server-side config the chat commands do, so on a client every simulation control is disabled
+and only the four presentation switches work. Making them editable means replicating settings, and
+nothing is registered on the network channel yet — see the replication entry above.
 
 **The heat pump's electrical hookup is only checkable in game.** The simulation half is under test
 offline. The half that makes it cost anything — a `MyResourceSinkComponent` attached in code during
