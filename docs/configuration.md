@@ -16,7 +16,7 @@ to disk unless asked.
 | `/thermal settings` | Every setting and its current value. |
 | `/thermal set <name> <value>` | Changes one setting for this session. Switches take `on`/`off` or `1`/`0`. |
 | `/thermal save` | Writes the current values to the config file. |
-| `/thermal overlay` | Cycles the block overlay. Same as Ctrl+Shift+V. |
+| `/thermal overlay` | Cycles the block overlay. Same as Ctrl+Shift+=. |
 | `/thermal telemetry on` / `off` | Starts and stops data collection. |
 | `/thermal stride <n>` | Telemetry sample stride. |
 | `/thermal dump` | Writes a telemetry report without closing the world. |
@@ -95,7 +95,7 @@ All client side and all off by default.
 
 ### The block overlay
 
-**Ctrl+Shift+V** cycles it: off → temperature → solar watts → exposed faces → friction watts → off.
+**Ctrl+Shift+=** cycles it: off → temperature → solar watts → exposed faces → friction watts → off.
 `/thermal overlay` does the same from chat. A mod cannot add a rebindable control, so the chord is
 fixed; it is ignored while the chat box or a menu is open.
 

@@ -98,7 +98,7 @@ namespace Thermodynamics
         /// <summary>
         /// Which value the block overlay starts a session showing, as a
         /// <see cref="ThermalDebugView.Mode"/>: 0 off, 1 temperature, 2 solar watts, 3 exposed
-        /// faces, 4 friction watts. Ctrl+Shift+V cycles it in play, client side.
+        /// faces, 4 friction watts. Ctrl+Shift+= cycles it in play, client side.
         /// </summary>
         [ProtoMember(57)] public int DebugBlockOverlay;
 

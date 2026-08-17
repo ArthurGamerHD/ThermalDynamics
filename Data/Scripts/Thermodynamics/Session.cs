@@ -136,11 +136,11 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Ctrl+Shift+V cycles the block overlay through its views.
+        /// Ctrl+Shift+= cycles the block overlay through its views.
         ///
         /// Chosen over a control the player can rebind because a mod cannot add one: the game's
-        /// binding list is fixed. The chat and terminal typing checks are what keep the V out of a
-        /// name the player is halfway through entering.
+        /// binding list is fixed. The chat and terminal typing checks are what keep the keystroke
+        /// out of a name the player is halfway through entering.
         /// </summary>
         private void PollOverlayKey()
         {
@@ -148,7 +148,7 @@ namespace Thermodynamics
             if (MyAPIGateway.Input == null || MyAPIGateway.Gui == null) return;
             if (MyAPIGateway.Gui.ChatEntryVisible || MyAPIGateway.Gui.IsCursorVisible) return;
 
-            if (!MyAPIGateway.Input.IsNewKeyPressed(MyKeys.V)) return;
+            if (!MyAPIGateway.Input.IsNewKeyPressed(MyKeys.OemPlus)) return;
             if (!MyAPIGateway.Input.IsAnyCtrlKeyPressed()) return;
             if (!MyAPIGateway.Input.IsAnyShiftKeyPressed()) return;
 

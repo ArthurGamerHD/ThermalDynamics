@@ -37,7 +37,7 @@ into atmosphere and into the air of sealed rooms, arrives from the sun, and — 
 | Heat pumps | The one block that moves heat *up* a gradient, for an electrical cost set by Carnot: cheap across a small difference, ruinous across a large one. |
 | Damage and thresholds | Blocks above their critical temperature take continuous damage. Any other temperature can be watched by another mod. |
 | Airtightness mapping | A per-grid flood fill classifies every cell as external, structure or room, which decides what counts as an exposed surface. Doors are portals, so cycling one costs a walk over the doors rather than a remap. |
-| Readouts | Terminal panel per block, cockpit summary, crosshair readout, and an x-ray block overlay — every block of the ship in front of you drawn as a box coloured by temperature, solar watts, exposed faces or friction watts, cycled with Ctrl+Shift+V. |
+| Readouts | Terminal panel per block, cockpit summary, crosshair readout, and an x-ray block overlay — every block of the ship in front of you drawn as a box coloured by temperature, solar watts, exposed faces or friction watts, cycled with Ctrl+Shift+=. |
 
 ## Required dependencies
 
@@ -60,7 +60,7 @@ into atmosphere and into the air of sealed rooms, arrives from the sun, and — 
    gone rather than moved, against a **Radiator** with a clear view of space.
 6. To cool something below what surrounds it, sandwich a **Heat Pump** between it and a radiator:
    the pump's front face draws heat out, its back face rejects that heat plus the power it took.
-7. Press **Ctrl+Shift+V** to cycle the block overlay through its views, and again to switch it off.
+7. Press **Ctrl+Shift+=** to cycle the block overlay through its views, and again to switch it off.
 8. `/thermal settings` lists every switch; `/thermal set <name> <value>` changes one live.
 
 ## Documentation
