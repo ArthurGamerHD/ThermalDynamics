@@ -14,7 +14,9 @@ namespace Thermodynamics
 {
     /// <summary>
     /// The block debug overlay: every block of the grid in front of you drawn as a coloured box,
-    /// seen through the hull. The room view draws the mapped air the same way, a box per cell.
+    /// seen through the hull. Two views draw something else, because their subject is not the
+    /// block: the solar view draws the skin, one quad per exposed face, and the room view draws the
+    /// mapped air, a box per cell.
     ///
     /// This replaces the block-colouring debug modes. Those called <c>ColorBlocks</c>, which is a
     /// real, replicated, permanent change to the ship's paint — they showed heat by destroying the
@@ -54,8 +56,8 @@ namespace Thermodynamics
         /// <summary>Cycled by the keybind, seeded from <see cref="Settings.DebugBlockOverlay"/>.</summary>
         public static Mode Current;
 
-        private static readonly MyStringId Face = MyStringId.GetOrCompute("Square");
-        private static readonly MyStringId Line = MyStringId.GetOrCompute("Square");
+        private static readonly MyStringId FaceMaterial = MyStringId.GetOrCompute("Square");
+        private static readonly MyStringId LineMaterial = MyStringId.GetOrCompute("Square");
 
         /// <summary>Reused every frame so looking at a ship allocates nothing.</summary>
         private static readonly List<ThermalGrid> Targets = new List<ThermalGrid>();
@@ -77,6 +79,12 @@ namespace Thermodynamics
 
         /// <summary>Alpha of a box face. Low, because a hull is many boxes deep.</summary>
         private const float FaceAlpha = 0.22f;
+
+        /// <summary>
+        /// Alpha of a drawn surface. Higher than a box: the solar view draws only the skin, one
+        /// quad deep, so nothing is stacked behind it to see through.
+        /// </summary>
+        private const float SurfaceAlpha = 0.75f;
 
         /// <summary>
         /// True when the selected view reads a per-mechanism watt figure. Those are only written
@@ -188,6 +196,12 @@ namespace Thermodynamics
                 return;
             }
 
+            if (Current == Mode.SolarWatts)
+            {
+                DrawSolarSurfaces(thermals, ref camera, ref eye);
+                return;
+            }
+
             MatrixD gridMatrix = thermals.Grid.WorldMatrix;
             float gridSize = thermals.Grid.GridSize;
 
@@ -220,11 +234,118 @@ namespace Thermodynamics
                     MySimpleObjectRasterizer.SolidAndWireframe,
                     1,
                     (float)(0.02 * BandScale),
-                    Face,
-                    Line,
+                    FaceMaterial,
+                    LineMaterial,
                     false,
                     -1,
                     BlendTypeEnum.PostPP);
+            }
+        }
+
+        /// <summary>
+        /// Sunlight, drawn on the surfaces that take it.
+        ///
+        /// Solar heating is a property of a face, not of a block: a hull plate with one side to the
+        /// sun takes light on that side, and the block's total says nothing about which side or how
+        /// squarely. So this view abandons the box and draws the skin — one quad per exposed face —
+        /// shaded by that face's own irradiance, which is the sun's energy times how square the
+        /// face is to it. A wall gone dark because it turned away is then plainly different from a
+        /// wall gone dark because the ship is in shadow, and both are visible at a glance.
+        ///
+        /// Faces turned away from the camera are dropped: they are the far side of the ship, and
+        /// keeping them only stacks the near skin with colour from a surface nobody is looking at.
+        /// </summary>
+        private static void DrawSolarSurfaces(ThermalGrid thermals, ref MatrixD camera, ref Vector3D eye)
+        {
+            EnvironmentState state = thermals.LastState;
+            MatrixD gridMatrix = thermals.Grid.WorldMatrix;
+            float gridSize = thermals.Grid.GridSize;
+
+            // The same three things the solver asks before it computes a watt.
+            bool lit = Settings.Instance.EnableSolarHeat
+                && !state.IsSolarOccluded
+                && state.SolarEnergy > 0f;
+
+            Vector3 sun = state.SunDirectionLocal;
+
+            foreach (ThermalBlock bound in thermals.Blocks)
+            {
+                ThermalNode node = bound.Node;
+                if (node == null || node.TotalExposedFaces == 0) continue;
+
+                Vector3D centre;
+                bound.Block.ComputeWorldCenter(out centre);
+
+                Vector3D delta = centre - eye;
+                if (Vector3D.Dot(delta, camera.Forward) <= 0) continue;
+
+                Vector3 half = ((Vector3)(bound.Block.Max - bound.Block.Min + Vector3I.One))
+                    * (gridSize * 0.5f);
+
+                for (int face = 0; face < Face.Count; face++)
+                {
+                    if (node.ExposedFaces[face] == 0) continue;
+
+                    Vector3 localNormal = Face.Normals[face];
+                    Vector3D normal = Vector3D.TransformNormal(localNormal, gridMatrix);
+
+                    Vector3D position = centre + (normal * Extent(ref half, ref localNormal));
+                    if (Vector3D.Dot(normal, position - eye) >= 0) continue;
+
+                    float dot = Vector3.Dot(localNormal, sun);
+                    float irradiance = lit && dot > 0f ? state.SolarEnergy * dot : 0f;
+
+                    // W/m2 rather than watts: this is what the surface is standing in, which is
+                    // the figure that belongs to a face. The panel reports the watts.
+                    Color colour = ColorExtensions.HSVtoColor(
+                        Tools.GetTemperatureColor(irradiance, 1400f, 1f, 1000f));
+                    colour.A = (byte)(SurfaceAlpha * 255f);
+
+                    Vector3 localLeft, localUp;
+                    Tangents(face, out localLeft, out localUp);
+
+                    Vector3 left = (Vector3)Vector3D.TransformNormal(localLeft, gridMatrix);
+                    Vector3 up = (Vector3)Vector3D.TransformNormal(localUp, gridMatrix);
+
+                    // Scaled onto the same band as every other view, so the skin cannot z-fight
+                    // with the hull it is drawn over.
+                    MyTransparentGeometry.AddBillboardOriented(
+                        FaceMaterial,
+                        colour,
+                        eye + ((position - eye) * BandScale),
+                        left,
+                        up,
+                        (float)(Extent(ref half, ref localLeft) * BandScale),
+                        (float)(Extent(ref half, ref localUp) * BandScale),
+                        Vector2.Zero,
+                        BlendTypeEnum.PostPP);
+                }
+            }
+        }
+
+        /// <summary>The block's half-extent along a single-axis unit vector.</summary>
+        private static float Extent(ref Vector3 half, ref Vector3 axis)
+        {
+            return (half.X * Math.Abs(axis.X)) + (half.Y * Math.Abs(axis.Y)) + (half.Z * Math.Abs(axis.Z));
+        }
+
+        /// <summary>The two axes spanning a face, in block-local space.</summary>
+        private static void Tangents(int face, out Vector3 left, out Vector3 up)
+        {
+            switch (Face.Axis(face))
+            {
+                case 0:
+                    left = Vector3.Up;
+                    up = Vector3.Backward;
+                    return;
+                case 1:
+                    left = Vector3.Right;
+                    up = Vector3.Backward;
+                    return;
+                default:
+                    left = Vector3.Right;
+                    up = Vector3.Up;
+                    return;
             }
         }
 
@@ -275,8 +396,8 @@ namespace Thermodynamics
                         MySimpleObjectRasterizer.SolidAndWireframe,
                         1,
                         (float)(0.02 * BandScale),
-                        Face,
-                        Line,
+                        FaceMaterial,
+                        LineMaterial,
                         false,
                         -1,
                         BlendTypeEnum.PostPP);

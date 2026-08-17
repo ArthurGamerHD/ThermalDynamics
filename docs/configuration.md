@@ -135,6 +135,13 @@ its speed against the friction threshold, or a table of rooms with their cell co
 temperatures and seal state. It follows whatever grid the overlay is drawing and disappears with it.
 The panel needs Rich HUD Master, the same as the settings menu; the overlay itself does not.
 
+**Solar watts** does not draw boxes. Sunlight lands on a face, not on a block, so it draws the
+grid's skin — one quad per exposed face — shaded by that face's own irradiance: the sun's energy
+scaled by how square the face is to it, and zero when the mechanism is off or the grid is in shadow.
+A wall dark because it turned away from the sun then looks plainly different from a wall dark
+because the ship is eclipsed. Faces pointing away from the camera are dropped, so what you see is
+the near skin rather than both sides at once. The panel still reports the watts.
+
 **Solar watts** and **friction watts** are the per-mechanism figures the solver normally does not
 bother to write down. Selecting either makes it record them for as long as that view is up, the same
 way the crosshair readout does, and stop when you cycle past. Without that they would draw every
