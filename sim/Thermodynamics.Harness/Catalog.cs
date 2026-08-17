@@ -94,6 +94,22 @@ namespace Thermodynamics.Harness
             return BlockModel.Solid("LightArmorBlock", Vector3I.One, 500f, DefaultThermal());
         }
 
+        /// <summary>
+        /// A light armour block stretched along X. Multi-cell blocks are where partial coverage
+        /// happens: a neighbour can cover part of a long face and leave the rest radiating.
+        /// </summary>
+        public static BlockModel LightArmorBar(int length)
+        {
+            return BlockModel.Solid("LightArmorBar", new Vector3I(length, 1, 1), 500f * length, DefaultThermal());
+        }
+
+        /// <summary>A cubic multi-cell armour block, for the interior-faces case.</summary>
+        public static BlockModel LightArmorCube(int size)
+        {
+            return BlockModel.Solid(
+                "LightArmorCube", new Vector3I(size, size, size), 500f * size * size * size, DefaultThermal());
+        }
+
         public static BlockModel HeavyArmor()
         {
             return BlockModel.Solid("HeavyArmorBlock", Vector3I.One, 3300f, DefaultThermal());

@@ -40,6 +40,18 @@ session, so whether the grid's resource distributor picks the sink up is unverif
 only a functional block has a terminal to switch it from. A grid saved with the old block loses it
 on load. Nothing was lost by doing it: the old block had no behaviour at all.
 
+## Suspected defects
+
+**A face bolted to a block that does not seal is counted as buried.** Exposure rejects any cell face
+where two mount surfaces meet, regardless of what the neighbour is. Against a grating, lattice or
+any other non-airtight block that is wrong twice over: the room mapper calls the cell beyond that
+face *external* — air floods through it — and the face still neither radiates nor takes sunlight.
+Pinned by `AFaceAgainstAnOpenLatticeIsRejectedAsMountedNotSealed` in
+[ExposureAuditTests](../sim/Thermodynamics.Tests/ExposureAuditTests.cs), which characterises the
+behaviour rather than endorsing it. The fix is a judgement call about what a mount joint means:
+either exempt neighbours that do not seal, or scale the face by the mounted fraction rather than
+dropping it whole.
+
 ## Deliberate limits
 
 **Solar occlusion against the rest of the world is per grid.** One raycast decides whether the whole

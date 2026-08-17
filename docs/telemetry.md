@@ -78,6 +78,33 @@ A summary line always goes to `SpaceEngineers.log`. If world storage cannot be w
 failure mode most likely during shutdown — the whole report goes to the game log instead, so a
 run is never lost silently.
 
+## Surface dump
+
+`Thermodynamics_Surfaces_<stamp>.csv` is written with every report: **one row per block face**, six
+rows per live block, on every grid in the world.
+
+| Column | Meaning |
+| --- | --- |
+| `grid`, `grid_id`, `block`, `subtype` | which block, on which grid |
+| `cell_x/y/z`, `size_x/y/z` | the block's minimum cell and its extents |
+| `face` | which of the six sides the row is about |
+| `face_cells` | cell faces on that side — the four counts below sum to this |
+| `exposed` | cell faces the model counts as open to the sky |
+| `sealed` | rejected: something airtight on the other side |
+| `mounted` | rejected: two mount surfaces bolted together |
+| `interior` | rejected: the space beyond is a sealed room, not outdoors |
+| `sun_dot` | how square the face is to the sun, −1..1 |
+| `sun_lit_fraction` | the block's share of cells the sun reaches, from the shadow map |
+| `solar_w`, `temperature_k`, `exposed_area_m2` | what the block is doing with all that |
+
+The three rejection columns are the point of the file. A face that looks open in game and reports
+`exposed 0` is answered by whichever of them is non-zero, and they are indistinguishable from the
+exposure total alone. The same breakdown is on the crosshair readout, per face, for the block being
+looked at — see `DebugTextOnScreen`.
+
+The row limit is 250,000 (about 40,000 live blocks). Hitting it logs a line and stops; it never
+truncates silently.
+
 ## What is collected
 
 **Session** — world name and path, online mode, server/dedicated/multiplayer, real and in-game

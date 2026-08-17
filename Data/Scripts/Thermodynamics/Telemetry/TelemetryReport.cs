@@ -3,7 +3,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using Thermodynamics.Core;
 using VRage.Utils;
+using VRageMath;
 
 namespace Thermodynamics
 {
@@ -36,6 +38,7 @@ namespace Thermodynamics
             bool wrote = TryWrite("Thermodynamics_Telemetry_" + stamp + ".log", report);
             TryWrite("Thermodynamics_BlockTypes_" + stamp + ".csv", BuildBlockTypeCsv());
             TryWrite("Thermodynamics_Grids_" + stamp + ".csv", BuildGridCsv());
+            TryWrite("Thermodynamics_Surfaces_" + stamp + ".csv", BuildSurfaceCsv());
 
             if (!wrote)
             {
@@ -725,6 +728,102 @@ namespace Thermodynamics
 
             return sb.ToString();
         }
+
+        /// <summary>
+        /// Every face of every live block, and why the model calls it exposed or not.
+        ///
+        /// One row per block face — six per block — because the question this file exists to answer
+        /// is about a single face on a single block: it looks open to the sky and the model says it
+        /// is not, so which of the three rejection rules fired, and what is the room map's opinion
+        /// of the cell on the other side. Aggregates cannot answer that; only the per-face row can.
+        ///
+        /// Written on every dump, which means it is only produced when telemetry is on.
+        /// </summary>
+        private static string BuildSurfaceCsv()
+        {
+            StringBuilder sb = new StringBuilder();
+
+            sb.Append("grid,grid_id,block,subtype,cell_x,cell_y,cell_z,size_x,size_y,size_z,");
+            sb.Append("face,face_cells,exposed,sealed,mounted,interior,");
+            sb.Append("sun_dot,sun_lit_fraction,solar_w,temperature_k,exposed_area_m2\n");
+
+            IList<ThermalGrid> live = ThermalGrid.LiveGrids;
+            FaceExposure[] faces = new FaceExposure[Face.Count];
+            int rows = 0;
+
+            for (int g = 0; g < live.Count; g++)
+            {
+                ThermalGrid thermals = live[g];
+                if (thermals == null || thermals.Simulation == null || thermals.Grid == null) continue;
+                if (thermals.Grid.Closed) continue;
+
+                SurfaceMap surfaces = thermals.Simulation.Surfaces;
+                RoomMap rooms = thermals.Simulation.Rooms.Map;
+                SunShadowMap shadow = thermals.Simulation.Solver.SunShadow;
+                Vector3 sun = thermals.LastState.SunDirectionLocal;
+
+                string gridName = Truncate(thermals.Grid.DisplayName, 40);
+
+                foreach (ThermalBlock bound in thermals.Blocks)
+                {
+                    ThermalNode node = bound.Node;
+                    if (node == null) continue;
+
+                    if (rows >= SurfaceRowLimit)
+                    {
+                        // Never truncate silently: a file that stops early looks like a world with
+                        // fewer blocks in it.
+                        MyLog.Default.Info("[" + Settings.Name + "] [Telemetry] surface dump stopped at "
+                            + SurfaceRowLimit + " rows; raise SurfaceRowLimit to capture the rest");
+                        return sb.ToString();
+                    }
+
+                    BlockInstance block = bound.Instance;
+                    SurfaceAudit.Explain(surfaces, block, rooms, faces);
+
+                    float lit = shadow.LitFraction(block);
+                    Vector3I size = block.Extents;
+
+                    for (int face = 0; face < Face.Count; face++)
+                    {
+                        Csv(sb, gridName);
+                        Csv(sb, thermals.Grid.EntityId);
+                        Csv(sb, Truncate(node.Block.Name, 40));
+                        Csv(sb, Truncate(bound.Block.BlockDefinition.Id.SubtypeName, 40));
+
+                        Csv(sb, block.Min.X);
+                        Csv(sb, block.Min.Y);
+                        Csv(sb, block.Min.Z);
+                        Csv(sb, size.X);
+                        Csv(sb, size.Y);
+                        Csv(sb, size.Z);
+
+                        Csv(sb, Face.Name(face));
+                        Csv(sb, faces[face].Cells);
+                        Csv(sb, faces[face].Exposed);
+                        Csv(sb, faces[face].Sealed);
+                        Csv(sb, faces[face].Mounted);
+                        Csv(sb, faces[face].Interior);
+
+                        Csv(sb, Vector3.Dot(Face.Normals[face], sun));
+                        Csv(sb, lit);
+                        Csv(sb, node.LastSolarWatts);
+                        Csv(sb, node.Temperature);
+                        CsvLast(sb, node.ExposedArea);
+
+                        rows++;
+                    }
+                }
+            }
+
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Rows the surface dump will write before it gives up. Six per block, so this is a world
+        /// of about forty thousand live blocks.
+        /// </summary>
+        private const int SurfaceRowLimit = 250000;
 
         private static string BuildGridCsv()
         {

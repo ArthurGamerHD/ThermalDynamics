@@ -96,7 +96,42 @@ namespace Thermodynamics
                 " sealed by state: " + (node.Block.IsSealedByDoorState ? "yes" : "no (door open)") +
                 " neighbours: " + Neighbours(map, simulation.Surfaces, cell), 1,
                 map.IsExternal(cell) ? "Red" : "White");
+
+            MyAPIGateway.Utilities.ShowNotification(
+                "[Faces] " + Exposure(simulation, node.Block), 1, "White");
         }
+
+        /// <summary>
+        /// Why each of this block's faces counts as exposed, or does not.
+        ///
+        /// The number the model carries is a total, and the question anyone actually has is about
+        /// one face: it is open to the sky, so why is it not radiating? Three rules can throw a
+        /// cell face away and they are indistinguishable from the total, so each is named here.
+        /// </summary>
+        private static string Exposure(ThermalSimulation simulation, BlockInstance block)
+        {
+            SurfaceAudit.Explain(simulation.Surfaces, block, simulation.Rooms.Map, ExposureScratch);
+
+            string text = "";
+            for (int face = 0; face < Face.Count; face++)
+            {
+                FaceExposure result = ExposureScratch[face];
+                if (result.Cells == 0) continue;
+
+                text += Face.Name(face) + " " + result.Exposed + "/" + result.Cells;
+
+                if (result.Sealed > 0) text += " sealed:" + result.Sealed;
+                if (result.Mounted > 0) text += " bolted:" + result.Mounted;
+                if (result.Interior > 0) text += " indoors:" + result.Interior;
+
+                text += "  ";
+            }
+
+            return text;
+        }
+
+        /// <summary>Reused so the readout allocates one string rather than an array per frame.</summary>
+        private static readonly FaceExposure[] ExposureScratch = new FaceExposure[Face.Count];
 
         /// <summary>How the room map classifies one cell.</summary>
         private static string Classify(RoomMap map, Vector3I cell)
