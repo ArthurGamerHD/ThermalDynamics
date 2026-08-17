@@ -9,79 +9,98 @@ namespace Thermodynamics.Core
     ///
     /// The cheap solar model asks one question per face — how square is it to the sun — and that
     /// question has no answer for a face standing in the ship's own shadow. A wall inside a doorway
-    /// recess, the sunward face of a block buried under a hull plate, the far side of a hangar: all
-    /// of them face the sun and none of them see it.
+    /// recess, the sunward face of a block under an overhang, the far side of a hangar: all of them
+    /// face the sun and none of them see it.
     ///
-    /// This is a shadow map, in the grid's own cell space rather than in pixels. Every occupied
-    /// cell is projected onto the plane perpendicular to the sun and dropped into a bucket one cell
-    /// across; the bucket keeps the depth of whichever cell sits closest to the sun. A cell is lit
-    /// when it is that cell. Everything behind it in the same column is shadowed by it.
+    /// The answer is found by walking, one cell at a time, from each cell toward the sun until the
+    /// grid runs out. If the walk crosses anything solid, that cell is shadowed. Exact at cell
+    /// resolution, which matters more here than it looks.
     ///
-    /// The cost is one pass over the grid's cells to build and a dictionary lookup to query, and
-    /// the build only happens when the sun has actually moved — on a planet, seconds apart. That is
-    /// what makes it affordable at all: the alternative, a ray per face per step, is the same work
-    /// repeated for every face that shares a column.
+    /// The obvious cheaper structure — project every cell onto a plane facing the sun, bucket it,
+    /// keep whichever is nearest — was built first and then thrown away. Buckets are axis-aligned
+    /// and the sun is not, so a column crossing the grid diagonally scatters across neighbouring
+    /// buckets: it leaks sunlight onto shadowed cells, and the tolerance that closes the leak
+    /// invents shadows on cells standing in the open. Measured against a real ship at an oblique
+    /// sun, and against seven test geometries at eight sun angles, every setting of it was wrong in
+    /// both directions at once.
+    ///
+    /// The walk costs more, so it is spread over ticks the way the room mapper spreads its flood
+    /// fill, and the last answer stays readable while the next is being built. A pass only starts
+    /// when the sun has moved enough to matter or the grid's blocks have changed — on a planet,
+    /// seconds apart.
     /// </summary>
     public class SunShadowMap
     {
-        /// <summary>
-        /// How far behind its column's leading cell a cell may still be counted as lit, in cells.
-        ///
-        /// Buckets are axis-aligned and the sun is not, so a column crossing the grid diagonally
-        /// gathers cells whose depths differ by up to half a cell either way through nothing but
-        /// quantisation. Half the diagonal of a cell is the smallest tolerance that does not throw
-        /// away genuinely lit surfaces; the price is a little bleed at glancing angles, which reads
-        /// as a soft shadow edge rather than as a wrong answer.
-        /// </summary>
-        public const float DepthTolerance = 0.87f;
+        /// <summary>Cells found to be in shadow by the last completed pass.</summary>
+        private readonly HashSet<Vector3I> shadowed = new HashSet<Vector3I>();
 
-        private readonly Dictionary<long, float> leading = new Dictionary<long, float>();
+        /// <summary>Cells found so far by the pass currently running.</summary>
+        private readonly HashSet<Vector3I> building = new HashSet<Vector3I>();
 
+        /// <summary>Cells the running pass has yet to walk.</summary>
+        private readonly List<Vector3I> pending = new List<Vector3I>();
+
+        private GridModel grid;
         private Vector3 sun;
-        private Vector3 right;
-        private Vector3 up;
+        private Vector3 passSun;
+        private int cursor;
 
-        /// <summary>True once <see cref="Build"/> has run against a usable sun direction.</summary>
+        /// <summary>True once a pass has completed and there is an answer to read.</summary>
         public bool IsBuilt { get; private set; }
 
-        /// <summary>The direction the map was built for, in grid-local space.</summary>
+        /// <summary>True while a pass is part way through.</summary>
+        public bool IsRunning
+        {
+            get { return cursor < pending.Count; }
+        }
+
+        /// <summary>The direction the completed answer was built for, in grid-local space.</summary>
         public Vector3 SunDirection { get { return sun; } }
 
-        /// <summary>Cells the last build placed in a column.</summary>
-        public int CellCount { get; private set; }
+        /// <summary>Cells the completed pass found to be in shadow.</summary>
+        public int ShadowedCount { get { return shadowed.Count; } }
 
-        /// <summary>Columns the last build found. Roughly the grid's silhouette area, in cells.</summary>
-        public int ColumnCount { get { return leading.Count; } }
+        /// <summary>Cells the running pass has left to walk.</summary>
+        public int PendingCells { get { return Math.Max(0, pending.Count - cursor); } }
 
         /// <summary>
-        /// True when the map is stale for this sun direction. A shadow that lags the sun by a
-        /// fraction of a degree is invisible; rebuilding for one is not.
+        /// True when the answer no longer matches this sun direction. A shadow that lags the sun by
+        /// a fraction of a degree is invisible; rebuilding for one is not.
         /// </summary>
-        public bool NeedsRebuild(ref Vector3 sunLocal, float cosineTolerance)
+        public bool NeedsRestart(ref Vector3 sunLocal, float cosineTolerance)
         {
-            if (!IsBuilt) return true;
-            return Vector3.Dot(sun, sunLocal) < cosineTolerance;
+            if (!IsBuilt && !IsRunning) return true;
+
+            // A pass already running for very nearly this direction is worth finishing rather than
+            // restarting, or a sun that creeps never lets one complete.
+            Vector3 reference = IsRunning ? passSun : sun;
+            return Vector3.Dot(reference, sunLocal) < cosineTolerance;
         }
 
         public void Clear()
         {
-            leading.Clear();
+            shadowed.Clear();
+            building.Clear();
+            pending.Clear();
+            cursor = 0;
+            grid = null;
             IsBuilt = false;
-            CellCount = 0;
         }
 
         /// <summary>
-        /// Rebuilds the map for a sun direction, in grid-local space and pointing at the sun.
+        /// Begins a pass for a sun direction, in grid-local space and pointing at the sun. The
+        /// previous answer stays readable until this one finishes.
         /// </summary>
-        public void Build(GridModel grid, Vector3 sunLocal)
+        public void Restart(GridModel model, Vector3 sunLocal)
         {
-            Clear();
-            if (grid == null) return;
+            building.Clear();
+            pending.Clear();
+            cursor = 0;
 
-            if (sunLocal.LengthSquared() < 1e-6f) return;
+            grid = model;
+            if (grid == null || sunLocal.LengthSquared() < 1e-6f) return;
 
-            sun = Vector3.Normalize(sunLocal);
-            Basis(ref sun, out right, out up);
+            passSun = Vector3.Normalize(sunLocal);
 
             IList<BlockInstance> blocks = grid.Blocks;
             for (int i = 0; i < blocks.Count; i++)
@@ -89,29 +108,62 @@ namespace Thermodynamics.Core
                 Vector3I[] cells = blocks[i].Cells;
                 for (int c = 0; c < cells.Length; c++)
                 {
-                    Insert(cells[c]);
+                    pending.Add(cells[c]);
                 }
             }
+        }
 
+        /// <summary>
+        /// Walks up to <paramref name="budget"/> cells. Returns true on the tick that completes a
+        /// pass, which is the only tick on which the answer changes.
+        /// </summary>
+        public bool Step(int budget)
+        {
+            if (!IsRunning) return false;
+
+            // Guarded against overflow rather than clamped afterwards: RunToCompletion passes
+            // int.MaxValue, and cursor + that wraps negative, which reads as "nothing to do" and
+            // spins forever.
+            int slice = Math.Max(1, budget);
+            int end = slice >= pending.Count - cursor ? pending.Count : cursor + slice;
+
+            for (; cursor < end; cursor++)
+            {
+                if (Blocked(pending[cursor])) building.Add(pending[cursor]);
+            }
+
+            if (IsRunning) return false;
+
+            shadowed.Clear();
+            foreach (Vector3I cell in building) shadowed.Add(cell);
+
+            building.Clear();
+            pending.Clear();
+            cursor = 0;
+
+            sun = passSun;
             IsBuilt = true;
+            return true;
+        }
+
+        /// <summary>Finishes the running pass in one go. For a full rebuild, and for tests.</summary>
+        public void RunToCompletion()
+        {
+            while (IsRunning) Step(int.MaxValue);
         }
 
         /// <summary>
         /// True when nothing on the grid stands between this cell and the sun.
         ///
-        /// A cell the map never saw answers true: an unbuilt map, or a cell added since the last
-        /// build, means "not known to be shadowed", and the cheap model's answer is the one to fall
-        /// back to. Reporting a shadow the grid does not have would cool a block that is standing
-        /// in full sunlight.
+        /// A cell no completed pass has seen answers true: an unbuilt map, or a cell built since the
+        /// last pass, means "not known to be shadowed", and the cheap model's answer is the one to
+        /// fall back to. Inventing a shadow is the worse of the two errors — it cools a block
+        /// standing in full sunlight, which is a temperature nobody can account for, where a missing
+        /// shadow is only the behaviour the setting is switched off for.
         /// </summary>
         public bool IsLit(Vector3I cell)
         {
-            if (!IsBuilt) return true;
-
-            float depth;
-            if (!leading.TryGetValue(Key(cell), out depth)) return true;
-
-            return Depth(cell) >= depth - DepthTolerance;
+            return !IsBuilt || !shadowed.Contains(cell);
         }
 
         /// <summary>The fraction of a block's cells the sun reaches, 0..1.</summary>
@@ -125,53 +177,92 @@ namespace Thermodynamics.Core
             int lit = 0;
             for (int i = 0; i < cells.Length; i++)
             {
-                if (IsLit(cells[i])) lit++;
+                if (!shadowed.Contains(cells[i])) lit++;
             }
 
             return lit / (float)cells.Length;
         }
 
-        private void Insert(Vector3I cell)
+        /// <summary>
+        /// Walks from a cell toward the sun until the grid's bounding box runs out, and reports
+        /// whether anything solid was in the way.
+        ///
+        /// A standard voxel traversal: keep the distance along the ray to the next boundary on each
+        /// axis, and step across whichever is nearest. It visits every cell the ray actually passes
+        /// through and no others, so a ray cannot slip diagonally between two blocks that touch.
+        /// </summary>
+        private bool Blocked(Vector3I start)
         {
-            long key = Key(cell);
-            float depth = Depth(cell);
+            Vector3I min = grid.Min;
+            Vector3I max = grid.Max;
 
-            CellCount++;
+            int x = start.X, y = start.Y, z = start.Z;
 
-            float existing;
-            if (!leading.TryGetValue(key, out existing) || depth > existing)
+            int stepX = Sign(passSun.X), stepY = Sign(passSun.Y), stepZ = Sign(passSun.Z);
+
+            float tMaxX = Boundary(passSun.X);
+            float tMaxY = Boundary(passSun.Y);
+            float tMaxZ = Boundary(passSun.Z);
+
+            float tDeltaX = Delta(passSun.X);
+            float tDeltaY = Delta(passSun.Y);
+            float tDeltaZ = Delta(passSun.Z);
+
+            // The grid is finite, so the walk is: the longest path through it is its box's diagonal
+            // in cells. The bounds check below normally ends the walk long before this does.
+            int limit = (max.X - min.X) + (max.Y - min.Y) + (max.Z - min.Z) + 3;
+
+            for (int i = 0; i < limit; i++)
             {
-                leading[key] = depth;
+                if (tMaxX <= tMaxY && tMaxX <= tMaxZ)
+                {
+                    x += stepX;
+                    tMaxX += tDeltaX;
+                }
+                else if (tMaxY <= tMaxZ)
+                {
+                    y += stepY;
+                    tMaxY += tDeltaY;
+                }
+                else
+                {
+                    z += stepZ;
+                    tMaxZ += tDeltaZ;
+                }
+
+                if (x < min.X || x > max.X || y < min.Y || y > max.Y || z < min.Z || z > max.Z)
+                {
+                    return false;
+                }
+
+                if (grid.IsOccupied(new Vector3I(x, y, z))) return true;
             }
+
+            return false;
         }
 
-        /// <summary>Distance along the sun axis. Larger is closer to the sun.</summary>
-        private float Depth(Vector3I cell)
+        private static int Sign(float value)
         {
-            return (cell.X * sun.X) + (cell.Y * sun.Y) + (cell.Z * sun.Z);
+            if (value > 0f) return 1;
+            if (value < 0f) return -1;
+            return 0;
         }
 
-        /// <summary>The column a cell falls in: its position on the plane facing the sun.</summary>
-        private long Key(Vector3I cell)
+        /// <summary>
+        /// Distance along the ray to the first cell boundary. Cells are unit cubes centred on
+        /// integers, so the ray starts half a cell from the boundary on every axis it moves along.
+        /// An axis it does not move along never comes up for selection.
+        /// </summary>
+        private static float Boundary(float component)
         {
-            float u = (cell.X * right.X) + (cell.Y * right.Y) + (cell.Z * right.Z);
-            float v = (cell.X * up.X) + (cell.Y * up.Y) + (cell.Z * up.Z);
-
-            // Rounding rather than flooring so a cell sits in the column its centre is nearest to,
-            // which keeps a flat wall square to the sun in one column per cell instead of two.
-            long a = (long)Math.Round(u);
-            long b = (long)Math.Round(v);
-
-            return (a << 32) ^ (b & 0xFFFFFFFFL);
+            float magnitude = Math.Abs(component);
+            return magnitude < 1e-6f ? float.MaxValue : 0.5f / magnitude;
         }
 
-        /// <summary>Any two axes perpendicular to the sun. Which two does not matter.</summary>
-        private static void Basis(ref Vector3 direction, out Vector3 right, out Vector3 up)
+        private static float Delta(float component)
         {
-            Vector3 seed = Math.Abs(direction.X) < 0.9f ? Vector3.Right : Vector3.Up;
-
-            right = Vector3.Normalize(Vector3.Cross(seed, direction));
-            up = Vector3.Cross(direction, right);
+            float magnitude = Math.Abs(component);
+            return magnitude < 1e-6f ? float.MaxValue : 1f / magnitude;
         }
     }
 }

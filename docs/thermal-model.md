@@ -164,12 +164,20 @@ voxels and grids by a ray against their bounding segment. Being underground forc
 
 `litFraction` is the grid's shadow on itself, and is 1 for every block when `SolarSelfShadowing` is
 off. When it is on, [SunShadowMap](../Data/Scripts/Thermodynamics/Core/Simulation/SunShadowMap.cs)
-projects every occupied cell onto the plane perpendicular to the sun, buckets it by cell, and keeps
-the depth of the cell nearest the sun in each bucket. A cell is lit when it is that cell — within
-half a cell diagonal, since the buckets are axis-aligned and the sun is not — and a block's fraction
-is the share of its cells that are. The map is rebuilt when the sun has moved more than 2° or the
-grid's blocks have changed, so its cost is one pass over the cells at planetary rotation rates
-rather than anything per step.
+walks from every occupied cell toward the sun, one cell at a time, until it leaves the grid's
+bounding box: cross anything solid and the cell is shadowed. A block's fraction is the share of its
+cells that are lit. It is a standard voxel traversal, so the ray visits every cell it passes through
+and cannot slip diagonally between two blocks that touch.
+
+A pass starts only when the sun has moved more than 2° or the grid's blocks have changed — seconds
+apart on a planet — and is spread over ticks in slices of `SunShadowBudget` cells, with the previous
+answer readable until the new one completes, the same way the room mapper spreads its flood fill.
+
+A projected-and-bucketed shadow map was built first and measured against this. It is far cheaper and
+it is wrong in both directions at once: buckets are axis-aligned and the sun is not, so at an
+oblique angle sunlight leaks onto shadowed cells, and the tolerance that closes the leak invents
+shadows on cells standing in the open. On a 76-cell test structure at a real planetary sun angle it
+lit 38 cells where 28 are lit — ten of them behind something.
 
 `faceWeight` and `litFraction` answer different questions and both are needed: the first is how
 square a face is to the sun, the second is whether anything of the ship stands in the way.

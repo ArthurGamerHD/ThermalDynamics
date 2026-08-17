@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using Thermodynamics.Core;
 using Thermodynamics.Harness;
 using VRageMath;
@@ -16,17 +18,25 @@ namespace Thermodynamics.Tests
     {
         private static readonly Vector3 SunAlongX = new Vector3(1f, 0f, 0f);
 
+        /// <summary>Builds a completed pass in one go.</summary>
+        private static SunShadowMap Build(GridModel grid, Vector3 sun)
+        {
+            SunShadowMap map = new SunShadowMap();
+            map.Restart(grid, sun);
+            map.RunToCompletion();
+            return map;
+        }
+
         [Fact]
         public void ALoneCellIsLit()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.LightArmor(), Vector3I.Zero);
 
-            SunShadowMap map = new SunShadowMap();
-            map.Build(builder.Grid, SunAlongX);
+            SunShadowMap map = Build(builder.Grid, SunAlongX);
 
             Assert.True(map.IsLit(Vector3I.Zero));
-            Assert.Equal(1, map.ColumnCount);
+            Assert.Equal(0, map.ShadowedCount);
         }
 
         [Fact]
@@ -36,8 +46,7 @@ namespace Thermodynamics.Tests
             builder.Place(Catalog.LightArmor(), new Vector3I(1, 0, 0));   // sunward
             builder.Place(Catalog.LightArmor(), Vector3I.Zero);           // behind it
 
-            SunShadowMap map = new SunShadowMap();
-            map.Build(builder.Grid, SunAlongX);
+            SunShadowMap map = Build(builder.Grid, SunAlongX);
 
             Assert.True(map.IsLit(new Vector3I(1, 0, 0)));
             Assert.False(map.IsLit(Vector3I.Zero));
@@ -50,10 +59,8 @@ namespace Thermodynamics.Tests
             builder.Place(Catalog.LightArmor(), new Vector3I(1, 0, 0));
             builder.Place(Catalog.LightArmor(), Vector3I.Zero);
 
-            SunShadowMap map = new SunShadowMap();
-
             // From the other side the shadow is cast the other way.
-            map.Build(builder.Grid, -SunAlongX);
+            SunShadowMap map = Build(builder.Grid, -SunAlongX);
 
             Assert.True(map.IsLit(Vector3I.Zero));
             Assert.False(map.IsLit(new Vector3I(1, 0, 0)));
@@ -66,12 +73,11 @@ namespace Thermodynamics.Tests
             builder.Place(Catalog.LightArmor(), Vector3I.Zero);
             builder.Place(Catalog.LightArmor(), new Vector3I(0, 1, 0));
 
-            SunShadowMap map = new SunShadowMap();
-            map.Build(builder.Grid, SunAlongX);
+            SunShadowMap map = Build(builder.Grid, SunAlongX);
 
             Assert.True(map.IsLit(Vector3I.Zero));
             Assert.True(map.IsLit(new Vector3I(0, 1, 0)));
-            Assert.Equal(2, map.ColumnCount);
+            Assert.Equal(0, map.ShadowedCount);
         }
 
         [Fact]
@@ -80,8 +86,7 @@ namespace Thermodynamics.Tests
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.LightArmor(), Vector3I.Zero);
 
-            SunShadowMap map = new SunShadowMap();
-            map.Build(builder.Grid, SunAlongX);
+            SunShadowMap map = Build(builder.Grid, SunAlongX);
 
             // Not knowing must mean "no shadow found", never "shadowed": the cheap model's answer
             // is the one to fall back to, and a wrong shadow cools a block standing in full sun.
@@ -99,19 +104,278 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-        public void RebuildIsOnlyNeededOnceTheSunHasMovedFarEnough()
+        public void ARestartIsOnlyNeededOnceTheSunHasMovedFarEnough()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.LightArmor(), Vector3I.Zero);
 
-            SunShadowMap map = new SunShadowMap();
-            map.Build(builder.Grid, SunAlongX);
+            SunShadowMap map = Build(builder.Grid, SunAlongX);
 
             Vector3 nudged = Vector3.Normalize(new Vector3(1f, 0.005f, 0f));
             Vector3 moved = Vector3.Normalize(new Vector3(1f, 1f, 0f));
 
-            Assert.False(map.NeedsRebuild(ref nudged, 0.99939f));
-            Assert.True(map.NeedsRebuild(ref moved, 0.99939f));
+            Assert.False(map.NeedsRestart(ref nudged, 0.99939f));
+            Assert.True(map.NeedsRestart(ref moved, 0.99939f));
+        }
+
+        // ---- exactness, against a reference that cannot be wrong ---------------------------
+
+        /// <summary>
+        /// The answer, worked out the slow obvious way: intersect the ray with every other cell's
+        /// cube and see whether it passes through any of them. O(cells) per cell and analytic
+        /// rather than sampled — a sampled walk rounds at cell boundaries and cannot tell a ray
+        /// that passes through a cube from one that grazes its corner, which is precisely the
+        /// distinction under test.
+        ///
+        /// A ray that only touches a cube — entering and leaving at the same point — is not
+        /// blocked by it. Anything else would have a wall of blocks shadow the cells beside it.
+        /// </summary>
+        private static bool ReferenceLit(GridModel grid, Vector3I cell, Vector3 sun)
+        {
+            sun = Vector3.Normalize(sun);
+            Vector3 origin = new Vector3(cell.X, cell.Y, cell.Z);
+
+            IList<BlockInstance> blocks = grid.Blocks;
+            for (int i = 0; i < blocks.Count; i++)
+            {
+                Vector3I[] cells = blocks[i].Cells;
+                for (int c = 0; c < cells.Length; c++)
+                {
+                    if (cells[c] == cell) continue;
+                    if (Penetrates(origin, sun, cells[c])) return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>Slab test: does the ray pass through this cell's cube with length to spare?</summary>
+        private static bool Penetrates(Vector3 origin, Vector3 direction, Vector3I cell)
+        {
+            const float Epsilon = 1e-3f;
+
+            float enter = 0f;
+            float exit = float.MaxValue;
+
+            for (int axis = 0; axis < 3; axis++)
+            {
+                float o = axis == 0 ? origin.X : axis == 1 ? origin.Y : origin.Z;
+                float d = axis == 0 ? direction.X : axis == 1 ? direction.Y : direction.Z;
+                float centre = axis == 0 ? cell.X : axis == 1 ? cell.Y : cell.Z;
+
+                float low = centre - 0.5f;
+                float high = centre + 0.5f;
+
+                if (Math.Abs(d) < 1e-9f)
+                {
+                    if (o < low || o > high) return false;
+                    continue;
+                }
+
+                float t1 = (low - o) / d;
+                float t2 = (high - o) / d;
+                if (t1 > t2)
+                {
+                    float swap = t1;
+                    t1 = t2;
+                    t2 = swap;
+                }
+
+                if (t1 > enter) enter = t1;
+                if (t2 < exit) exit = t2;
+            }
+
+            return exit - enter > Epsilon && exit > Epsilon;
+        }
+
+        private static void AssertMatchesReference(GridModel grid, Vector3 sun)
+        {
+            SunShadowMap map = Build(grid, sun);
+
+            IList<BlockInstance> blocks = grid.Blocks;
+            for (int i = 0; i < blocks.Count; i++)
+            {
+                Vector3I[] cells = blocks[i].Cells;
+                for (int c = 0; c < cells.Length; c++)
+                {
+                    Assert.Equal(ReferenceLit(grid, cells[c], sun), map.IsLit(cells[c]));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Sun directions to check against the reference.
+        ///
+        /// Deliberately none of them exactly diagonal or exactly axis-diagonal. A ray at precisely
+        /// 45° runs along the corners between cells, where "does this ray pass through that cube"
+        /// has no answer worth defending: it touches and does not enter. Those angles get their own
+        /// test below, which pins the choice rather than pretending there is a right one.
+        /// </summary>
+        public static IEnumerable<object[]> ObliqueSuns()
+        {
+            yield return new object[] { new Vector3(1f, 0f, 0f) };
+            yield return new object[] { new Vector3(0.9004f, 0.1619f, -0.4038f) };  // the test world
+            yield return new object[] { new Vector3(0.83f, 0.41f, 0.37f) };
+            yield return new object[] { new Vector3(0.97f, 0.31f, 0.19f) };
+            yield return new object[] { new Vector3(0.51f, 0.86f, 0.23f) };
+            yield return new object[] { new Vector3(0.29f, 0.11f, 0.95f) };
+            yield return new object[] { new Vector3(-0.71f, 0.13f, -0.69f) };
+            yield return new object[] { new Vector3(-0.19f, -0.96f, 0.11f) };
+        }
+
+        [Theory]
+        [MemberData(nameof(ObliqueSuns))]
+        public void ASolidWallMatchesTheReferenceAtAnySunAngle(Vector3 sun)
+        {
+            // The shape from the test world: four cells thick, seven high, four deep.
+            GridBuilder builder = GridBuilder.Large();
+            builder.Fill(Catalog.LightArmor(), new Vector3I(-3, 0, 0), new Vector3I(1, 7, 4));
+
+            AssertMatchesReference(builder.Grid, sun);
+        }
+
+        [Theory]
+        [MemberData(nameof(ObliqueSuns))]
+        public void AStaircaseMatchesTheReferenceAtAnySunAngle(Vector3 sun)
+        {
+            // Diagonal geometry is what the bucketed version could not do: every cell sits in a
+            // different column from its neighbour, which is exactly where buckets alias.
+            GridBuilder builder = GridBuilder.Large();
+            for (int i = 0; i < 6; i++)
+            {
+                builder.Place(Catalog.LightArmor(), new Vector3I(i, i, 0));
+            }
+
+            AssertMatchesReference(builder.Grid, sun);
+        }
+
+        [Theory]
+        [MemberData(nameof(ObliqueSuns))]
+        public void ASparseLatticeMatchesTheReferenceAtAnySunAngle(Vector3 sun)
+        {
+            // Isolated pillars with gaps between them: the case where an over-eager shadow puts a
+            // block that is standing in the open into the dark.
+            GridBuilder builder = GridBuilder.Large();
+            for (int x = 0; x < 4; x++)
+            {
+                for (int y = 0; y < 5; y++)
+                {
+                    builder.Place(Catalog.LightArmor(), new Vector3I(x * 3, y, 0));
+                }
+            }
+
+            AssertMatchesReference(builder.Grid, sun);
+        }
+
+        [Theory]
+        [MemberData(nameof(ObliqueSuns))]
+        public void AHollowBoxMatchesTheReferenceAtAnySunAngle(Vector3 sun)
+        {
+            GridBuilder builder = GridBuilder.Large();
+            builder.Shell(Catalog.LightArmor(), new Vector3I(0, 0, 0), new Vector3I(4, 4, 4));
+
+            AssertMatchesReference(builder.Grid, sun);
+        }
+
+        [Fact]
+        public void AnExactlyDiagonalSunShadowsTheCellBehindTheCorner()
+        {
+            // 45° puts the ray along the corners between cells, where touching and entering are
+            // the same event. The walk resolves the tie by stepping one axis at a time, so the cell
+            // diagonally behind a block is treated as shadowed. Pinned because it is a choice, not
+            // a fact: for solid hull — the case that matters — shadowing is the useful answer, and
+            // a real sun is never exactly diagonal for more than an instant.
+            GridBuilder builder = GridBuilder.Large();
+            builder.Place(Catalog.LightArmor(), new Vector3I(1, 1, 0));
+            builder.Place(Catalog.LightArmor(), Vector3I.Zero);
+
+            SunShadowMap map = Build(builder.Grid, Vector3.Normalize(new Vector3(1f, 1f, 0f)));
+
+            Assert.False(map.IsLit(Vector3I.Zero));
+            Assert.True(map.IsLit(new Vector3I(1, 1, 0)));
+        }
+
+        [Fact]
+        public void ARayCannotSlipBetweenTwoBlocksThatTouchOnlyAlongAnEdge()
+        {
+            // The classic voxel-traversal trap: a diagonal ray through the seam of a staircase.
+            // A sampling walk can step straight over the joint; a proper traversal cannot.
+            GridBuilder builder = GridBuilder.Large();
+            builder.Place(Catalog.LightArmor(), new Vector3I(1, 0, 0));
+            builder.Place(Catalog.LightArmor(), new Vector3I(2, 1, 0));
+            builder.Place(Catalog.LightArmor(), Vector3I.Zero);
+
+            SunShadowMap map = Build(builder.Grid, Vector3.Normalize(new Vector3(1f, 1f, 0f)));
+
+            Assert.False(map.IsLit(Vector3I.Zero));
+        }
+
+        // ---- running the walk in slices ----------------------------------------------------
+
+        [Fact]
+        public void SteppingInSmallBudgetsGivesTheSameAnswerAsRunningItAllAtOnce()
+        {
+            GridBuilder builder = GridBuilder.Large();
+            builder.Fill(Catalog.LightArmor(), new Vector3I(-3, 0, 0), new Vector3I(1, 7, 4));
+
+            Vector3 sun = new Vector3(0.9004f, 0.1619f, -0.4038f);
+
+            SunShadowMap whole = Build(builder.Grid, sun);
+
+            SunShadowMap sliced = new SunShadowMap();
+            sliced.Restart(builder.Grid, sun);
+
+            int guard = 0;
+            while (sliced.IsRunning && guard++ < 1000) sliced.Step(3);
+
+            Assert.False(sliced.IsRunning);
+            Assert.Equal(whole.ShadowedCount, sliced.ShadowedCount);
+
+            IList<BlockInstance> blocks = builder.Grid.Blocks;
+            for (int i = 0; i < blocks.Count; i++)
+            {
+                Assert.Equal(whole.IsLit(blocks[i].Min), sliced.IsLit(blocks[i].Min));
+            }
+        }
+
+        [Fact]
+        public void ThePreviousAnswerStaysReadableWhileANewPassRuns()
+        {
+            GridBuilder builder = GridBuilder.Large();
+            builder.Place(Catalog.LightArmor(), new Vector3I(3, 0, 0));
+            builder.Place(Catalog.LightArmor(), Vector3I.Zero);
+
+            SunShadowMap map = Build(builder.Grid, SunAlongX);
+            Assert.False(map.IsLit(Vector3I.Zero));
+
+            // A pass for the opposite direction begins but does not finish. Until it does, the
+            // readable answer is the old one — never a half-built one.
+            map.Restart(builder.Grid, -SunAlongX);
+            map.Step(1);
+
+            Assert.True(map.IsRunning);
+            Assert.False(map.IsLit(Vector3I.Zero));
+
+            map.RunToCompletion();
+            Assert.True(map.IsLit(Vector3I.Zero));
+        }
+
+        [Fact]
+        public void StepReportsCompletionExactlyOnce()
+        {
+            GridBuilder builder = GridBuilder.Large();
+            builder.Fill(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(3, 3, 1));
+
+            SunShadowMap map = new SunShadowMap();
+            map.Restart(builder.Grid, SunAlongX);
+
+            int completions = 0;
+            for (int i = 0; i < 50; i++)
+            {
+                if (map.Step(2)) completions++;
+            }
+
+            Assert.Equal(1, completions);
         }
     }
 

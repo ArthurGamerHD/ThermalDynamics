@@ -56,7 +56,7 @@ Each switch removes exactly its own mechanism and its own cost.
 | `EnableConduction` | `true` | Heat flow between touching blocks. |
 | `EnableRadiation` | `true` | Radiative exchange with the ambient sky. |
 | `EnableConvection` | `true` | Convective exchange with the surrounding air. |
-| `SolarSelfShadowing` | `true` | A grid shadows itself: a face standing behind the ship's own structure takes no sunlight. Costs one pass over the grid's cells each time the sun moves more than 2°, and nothing between those. Turn it off for the cheap model, which lights any exposed face pointing at the sun. |
+| `SolarSelfShadowing` | `true` | A grid shadows itself: a face standing behind the ship's own structure takes no sunlight. Costs a walk from each cell toward the sun each time the sun moves more than 2°, spread over ticks in slices, and nothing between those. Turn it off for the cheap model, which lights any exposed face pointing at the sun. |
 | `EnableSolarHeat` | `true` | Solar gain and the sun occlusion raycast. |
 | `EnableHeatSources` | `true` | Gain from point sources registered by other mods. |
 | `EnableWasteHeat` | `true` | Heat from power production, power draw and thrust. |

@@ -229,7 +229,14 @@ namespace Thermodynamics
             if (Settings.Instance.SolarSelfShadowing)
             {
                 SunShadowMap shadow = thermals.Simulation.Solver.SunShadow;
-                Text.Append("  (").Append(shadow.ColumnCount).Append(" columns)");
+
+                // Which is worth knowing while a pass is in flight: the figures on screen belong
+                // to the last completed one until it lands.
+                Text.Append("  ").Append(shadow.ShadowedCount).Append(" cells shadowed");
+                if (shadow.IsRunning)
+                {
+                    Text.Append(", ").Append(shadow.PendingCells).Append(" queued");
+                }
             }
 
             Text.Append('\n');

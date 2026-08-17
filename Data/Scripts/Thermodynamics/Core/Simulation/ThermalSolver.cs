@@ -83,11 +83,19 @@ namespace Thermodynamics.Core
         private readonly SunShadowMap sunShadow = new SunShadowMap();
 
         /// <summary>
-        /// How far the sun may move before the shadow map is rebuilt. cos(2°): a shadow edge that
-        /// lags the sun by two degrees is a fraction of a cell on any ship, and rebuilding for less
-        /// spends a pass over the grid on a picture nobody can tell apart.
+        /// How far the sun may move before a new shadow pass starts. cos(2°): a shadow edge that
+        /// lags the sun by two degrees is a fraction of a cell on any ship, and restarting for less
+        /// would spend a walk over the grid on a picture nobody can tell apart — and on a slowly
+        /// creeping sun, would restart the pass forever without ever finishing one.
         /// </summary>
         private const float SunRebuildCosine = 0.99939f;
+
+        /// <summary>
+        /// Cells walked per environment pass. The walk is exact and therefore not free, so it is
+        /// budgeted like the room mapper's flood fill: a slice per tick, with the previous answer
+        /// still readable until the new one is complete.
+        /// </summary>
+        public int SunShadowBudget = 2048;
 
         /// <summary>True when <see cref="nodeSunLit"/> no longer matches the nodes or the map.</summary>
         private bool sunLitDirty = true;
@@ -1258,7 +1266,7 @@ namespace Thermodynamics.Core
         {
             if (!settings.SolarSelfShadowing)
             {
-                if (!sunShadow.IsBuilt && !sunLitDirty) return;
+                if (!sunShadow.IsBuilt && !sunShadow.IsRunning && !sunLitDirty) return;
 
                 sunShadow.Clear();
                 FillSunLit(1f);
@@ -1266,16 +1274,25 @@ namespace Thermodynamics.Core
                 return;
             }
 
-            if (!sunLitDirty && !sunShadow.NeedsRebuild(ref sunLocal, SunRebuildCosine)) return;
+            // A block added or removed invalidates a pass in flight as much as it invalidates the
+            // answer, because the walk reads the grid it started against.
+            if (sunLitDirty || sunShadow.NeedsRestart(ref sunLocal, SunRebuildCosine))
+            {
+                sunShadow.Restart(grid, sunLocal);
+                sunLitDirty = false;
+            }
 
-            sunShadow.Build(grid, sunLocal);
+            // Only a completed pass changes any answer, so the lit fractions are refreshed on the
+            // tick that completes one and left alone on every other.
+            if (sunShadow.Step(SunShadowBudget)) RefreshSunLit();
+        }
 
+        private void RefreshSunLit()
+        {
             for (int i = 0; i < nodes.Count; i++)
             {
                 nodeSunLit[i] = sunShadow.LitFraction(nodes[i].Block);
             }
-
-            sunLitDirty = false;
         }
 
         private void FillSunLit(float value)
