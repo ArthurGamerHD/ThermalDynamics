@@ -45,14 +45,17 @@ namespace Thermodynamics
 
         /// <summary>
         /// Per-mechanism watt figures are only produced for someone who is going to read them:
-        /// the telemetry report, or a client with the crosshair readout switched on. A dedicated
-        /// server in ordinary play writes none of them.
+        /// the telemetry report, a client with the crosshair readout switched on, or the debug
+        /// overlay showing a view built from one of them. A dedicated server in ordinary play
+        /// writes none of them.
         /// </summary>
         private void RefreshDiagnosticsFlag()
         {
+            bool client = MyAPIGateway.Utilities == null || !MyAPIGateway.Utilities.IsDedicated;
+
             bool wanted = Telemetry.Enabled
-                || (Settings.Instance.DebugTextOnScreen
-                    && (MyAPIGateway.Utilities == null || !MyAPIGateway.Utilities.IsDedicated));
+                || (client && Settings.Instance.DebugTextOnScreen)
+                || (client && ThermalDebugView.NeedsWatts);
 
             Simulation.Solver.CollectDiagnostics = wanted;
         }

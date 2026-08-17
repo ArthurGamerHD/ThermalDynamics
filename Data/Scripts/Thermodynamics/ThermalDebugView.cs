@@ -64,13 +64,6 @@ namespace Thermodynamics
         private const double PickRange = 300;
 
         /// <summary>
-        /// Metres out to which an individual block is drawn. A capital ship is thousands of blocks
-        /// and every one of them is a box with six faces and twelve edges, so the pass is bounded
-        /// by what is close enough to read rather than by what is in front of the camera.
-        /// </summary>
-        private const double BlockRange = 120;
-
-        /// <summary>
         /// How far the band the boxes are scaled onto sits from the eye. Small enough that nothing
         /// in the scene can be in front of it, large enough to stay clear of the near plane.
         /// </summary>
@@ -78,6 +71,17 @@ namespace Thermodynamics
 
         /// <summary>Alpha of a box face. Low, because a hull is many boxes deep.</summary>
         private const float FaceAlpha = 0.22f;
+
+        /// <summary>
+        /// True when the selected view reads a per-mechanism watt figure. Those are only written
+        /// when someone is going to read them, so the overlay has to say that it is that someone —
+        /// otherwise the solar and friction views draw a grid that is uniformly zero, which reads
+        /// as "no solar heating" rather than as "not measured".
+        /// </summary>
+        public static bool NeedsWatts
+        {
+            get { return Current == Mode.SolarWatts || Current == Mode.FrictionWatts; }
+        }
 
         public static void Cycle()
         {
@@ -134,7 +138,8 @@ namespace Thermodynamics
         ///
         /// Deliberately not every grid in range. This is a tool for reading the ship in front of
         /// you, and a box per block of every wreck in a battle is how an overlay becomes a frame
-        /// rate problem.
+        /// rate problem. What is drawn of the two it does pick is all of them: a debug view that
+        /// stops at some radius invites the reading that the far end of the ship is cold.
         /// </summary>
         private static void CollectTargets(ref MatrixD camera, ref Vector3D eye)
         {
@@ -183,7 +188,6 @@ namespace Thermodynamics
                 bound.Block.ComputeWorldCenter(out centre);
 
                 Vector3D delta = centre - eye;
-                if (delta.LengthSquared() > BlockRange * BlockRange) continue;
 
                 // Behind the camera: scaling about the eye would fold it in front of the player.
                 if (Vector3D.Dot(delta, camera.Forward) <= 0) continue;
@@ -245,8 +249,6 @@ namespace Thermodynamics
                 {
                     Vector3D centre = thermals.Grid.GridIntegerToWorld(cell);
                     Vector3D delta = centre - eye;
-
-                    if (delta.LengthSquared() > BlockRange * BlockRange) continue;
                     if (Vector3D.Dot(delta, camera.Forward) <= 0) continue;
 
                     MatrixD box = gridMatrix;

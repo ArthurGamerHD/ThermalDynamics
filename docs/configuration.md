@@ -122,10 +122,16 @@ All client side and all off by default.
 `/thermal overlay` does the same from chat. A mod cannot add a rebindable control, so the chord is
 fixed; it is ignored while the chat box or a menu is open.
 
-Every block of the grid you are controlling and the grid you are looking at, out to 120 m, is drawn
-as a translucent box coloured by the selected value, using the same ramp as the HUD and the
-terminal. The boxes are drawn *through* the hull — a reactor buried mid-ship is visible from
+Every block of the grid you are controlling and the grid you are looking at is drawn as a translucent
+box coloured by the selected value, using the same ramp as the HUD and the terminal. The whole grid,
+at any distance: a debug view that faded out at some radius would read as a cold far end rather than
+as an undrawn one. Only those two grids are picked up, which is what keeps the cost bounded. The boxes are drawn *through* the hull — a reactor buried mid-ship is visible from
 outside, which is the point of a debug view and the reason this was a poor thermal camera.
+
+**Solar watts** and **friction watts** are the per-mechanism figures the solver normally does not
+bother to write down. Selecting either makes it record them for as long as that view is up, the same
+way the crosshair readout does, and stop when you cycle past. Without that they would draw every
+grid uniformly at zero, which reads as "no solar heating" rather than as "not measured".
 
 **Rooms** is the one view that draws cells rather than blocks: a box in every cell the mapper put in
 a room, coloured by which room it is, with vented rooms drawn faint. It is how you find out whether
