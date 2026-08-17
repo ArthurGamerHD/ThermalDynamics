@@ -136,6 +136,26 @@ its speed against the friction threshold, or a table of rooms with their cell co
 temperatures and seal state. It follows whatever grid the overlay is drawing and disappears with it.
 The panel needs Rich HUD Master, the same as the settings menu; the overlay itself does not.
 
+### What self-shadowing costs
+
+Measured by the `shadow-cost` scenario, which reports both halves because they are different kinds
+of work:
+
+| | cheap model | self-shadowed |
+| --- | --- | --- |
+| Per tick, 8000-block grid, sun still | 0.010 ms | 0.010 ms |
+| One full pass, 8000-block solid cube | — | 2400 air cells, 2.4 ms |
+| One full pass, 4440-block hull with decks | — | 7848 air cells, 4.3 ms |
+
+Between passes it costs nothing measurable: one extra multiply per face inside the solar term. The
+pass is the cost, and it is spread over ticks in slices of `SunShadowBudget` (2048 cells) — about
+1.1 ms per slice on both grids above, landing on the grid's ten-frame tick.
+
+A pass runs when the sun has moved 2° in the grid's own frame. On a planet that is tens of seconds
+of play. In space it is the *ship's* rotation that moves the sun, so a grid spinning fast rebuilds
+continuously — a sustained ~1 ms per tick on a mid-size ship rather than an occasional one. If that
+ever matters, `SolarSelfShadowing` off is the answer, and it is free.
+
 The three solar settings stack as a choice of cost. `EnableSolarHeat` off is free and models no
 sunlight at all. On with `SolarSelfShadowing` off is the cheap model: a face is lit whenever it
 points at the sun. On with both is the accurate one: the grid shadows itself, for one pass over its

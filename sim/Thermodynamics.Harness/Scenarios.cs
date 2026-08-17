@@ -44,6 +44,7 @@ namespace Thermodynamics.Harness
             "interior",
             "solver",
             "self-shadow",
+            "shadow-cost",
         };
 
         public static ScenarioResult Run(string name)
@@ -71,6 +72,7 @@ namespace Thermodynamics.Harness
                 case "interior": return Interior();
                 case "solver": return Solver();
                 case "self-shadow": return SelfShadow();
+                case "shadow-cost": return ShadowCost();
                 default:
                     throw new ArgumentException("Unknown scenario: " + name);
             }
@@ -136,6 +138,145 @@ namespace Thermodynamics.Harness
                 + " against " + W(TotalSolar(plain)) + " without. Hottest "
                 + C(runner.Final.HottestTemperature) + " against "
                 + C(cheapRunner.Final.HottestTemperature) + ".");
+        }
+
+        /// <summary>
+        /// What self-shadowing costs against the model it replaces.
+        ///
+        /// The two are not the same kind of work, so both halves have to be reported. The cheap
+        /// model costs a dot product per face on every step, forever. This one costs that plus a
+        /// walk over the hull's air cells — but only when the sun has moved, which on a planet is
+        /// seconds of play apart, and the walk is spread over ticks besides. A per-step average
+        /// alone would flatter it; a pass cost alone would damn it.
+        /// </summary>
+        public static ScenarioResult ShadowCost()
+        {
+            const int side = 20;
+
+            GridBuilder builder = GridBuilder.Large();
+            builder.Fill(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(side, side, side));
+
+            Vector3 sun = Vector3.Normalize(new Vector3(0.9004f, 0.1619f, -0.4038f));
+            EnvironmentSample sample = Worlds.Space(sun);
+
+            double cheap = StepCost(builder, false, sample);
+            double shadowed = StepCost(builder, true, sample);
+
+            ThermalSimulation solid = builder.BuildSimulation(Shadowing(true), 293.15f);
+            solid.Update(1f / 60f, sample);
+            PassCost solidPass = MeasurePass(solid, sun);
+
+            // A hull with rooms in it is the harder case, and the realistic one: every interior
+            // cell borders a block, so it is walked too, and its walk ends against the hull rather
+            // than in open space.
+            GridBuilder hull = GridBuilder.Large();
+            hull.Shell(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(30, 20, 20));
+            for (int y = 4; y < 20; y += 6)
+            {
+                hull.Fill(Catalog.LightArmor(), new Vector3I(1, y, 1), new Vector3I(29, y + 1, 19));
+            }
+
+            ThermalSimulation ship = hull.BuildSimulation(Shadowing(true), 293.15f);
+            ship.Update(1f / 60f, sample);
+            PassCost shipPass = MeasurePass(ship, sun);
+
+            int budget = solid.Solver.SunShadowBudget;
+
+            return Result("shadow-cost", new ScenarioRunner(solid),
+                side + "^3 solid grid, " + solid.Solver.Nodes.Count + " blocks: step with "
+                + "self-shadowing off " + Ms(cheap) + ", on " + Ms(shadowed)
+                + " (" + Overhead(cheap, shadowed) + "). One full pass " + solidPass.Cells
+                + " air cells in " + Ms(solidPass.Milliseconds) + ", "
+                + Slices(solidPass, budget) + ". A 30x20x20 hull with decks, "
+                + ship.Solver.Nodes.Count + " blocks: pass " + shipPass.Cells + " air cells in "
+                + Ms(shipPass.Milliseconds) + ", " + Slices(shipPass, budget)
+                + ". A pass runs when the sun moves 2 degrees, and never between.");
+        }
+
+        private struct PassCost
+        {
+            public int Cells;
+            public double Milliseconds;
+        }
+
+        /// <summary>Best of three whole passes, so a stray scheduling hiccup is not the headline.</summary>
+        private static PassCost MeasurePass(ThermalSimulation simulation, Vector3 sun)
+        {
+            SunShadowMap map = simulation.Solver.SunShadow;
+
+            PassCost best = new PassCost();
+            best.Milliseconds = double.MaxValue;
+
+            for (int i = 0; i < 3; i++)
+            {
+                Stopwatch pass = Stopwatch.StartNew();
+                map.Restart(simulation.Grid, sun);
+                int cells = map.PendingCells;
+                map.RunToCompletion();
+                pass.Stop();
+
+                if (pass.Elapsed.TotalMilliseconds < best.Milliseconds)
+                {
+                    best.Milliseconds = pass.Elapsed.TotalMilliseconds;
+                    best.Cells = cells;
+                }
+            }
+
+            return best;
+        }
+
+        private static string Slices(PassCost pass, int budget)
+        {
+            int slices = Math.Max(1, (pass.Cells + budget - 1) / budget);
+            return slices + " slices of " + budget + " at " + Ms(pass.Milliseconds / slices) + " each";
+        }
+
+        private static ThermalSettings Shadowing(bool on)
+        {
+            ThermalSettings settings = new ThermalSettings();
+            settings.SolarSelfShadowing = on;
+            return settings;
+        }
+
+        /// <summary>
+        /// Milliseconds per tick in the steady state — the sun standing still, so no pass is
+        /// running. Best of three runs, because this is a small difference between large numbers
+        /// and a single sample of it is mostly scheduler noise.
+        /// </summary>
+        private static double StepCost(GridBuilder builder, bool shadowing, EnvironmentSample sample)
+        {
+            double best = double.MaxValue;
+
+            for (int attempt = 0; attempt < 3; attempt++)
+            {
+                ThermalSimulation simulation = builder.BuildSimulation(Shadowing(shadowing), 293.15f);
+
+                // Let any pass finish first: this is the steady state, not the first tick.
+                for (int i = 0; i < 60; i++) simulation.Update(1f / 60f, sample);
+
+                const int measured = 400;
+                Stopwatch run = Stopwatch.StartNew();
+                for (int i = 0; i < measured; i++) simulation.Update(1f / 60f, sample);
+                run.Stop();
+
+                double perStep = run.Elapsed.TotalMilliseconds / measured;
+                if (perStep < best) best = perStep;
+            }
+
+            return best;
+        }
+
+        private static string Ms(double milliseconds)
+        {
+            return milliseconds.ToString("n3") + " ms";
+        }
+
+        private static string Overhead(double baseline, double measured)
+        {
+            if (baseline <= 0) return "n/a";
+
+            double percent = ((measured / baseline) - 1d) * 100d;
+            return (percent >= 0 ? "+" : "") + percent.ToString("n1") + "%";
         }
 
         /// <summary>The slab: a four-thick wall with a two-cell recess cut into its shaded side.</summary>

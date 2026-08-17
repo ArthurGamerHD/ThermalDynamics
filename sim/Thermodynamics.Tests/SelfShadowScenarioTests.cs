@@ -120,6 +120,29 @@ namespace Thermodynamics.Tests
                 "self-shadowing should remove solar gain, not add it: " + result.Summary);
         }
 
+        [Fact]
+        public void SelfShadowingCostsNothingPerStepBetweenPasses()
+        {
+            string summary = Scenarios.Run("shadow-cost").Summary;
+
+            float off = Milliseconds(summary, "self-shadowing off ");
+            float on = Milliseconds(summary, ", on ");
+
+            // The walk is a pass, not per-step work: between passes all it adds to a step is one
+            // multiply per face. If this ever starts costing real time per step, something has
+            // moved the walk back onto the stepping path — which is the mistake worth catching.
+            Assert.True(on < (off * 1.5f) + 0.005f,
+                "per-step cost should be near identical between passes: " + summary);
+        }
+
+        private static float Milliseconds(string summary, string after)
+        {
+            int start = summary.IndexOf(after) + after.Length;
+            int end = summary.IndexOf(" ms", start);
+            return float.Parse(summary.Substring(start, end - start),
+                System.Globalization.CultureInfo.InvariantCulture);
+        }
+
         private static float Extract(string summary, string after)
         {
             int start = summary.IndexOf(after) + after.Length;
