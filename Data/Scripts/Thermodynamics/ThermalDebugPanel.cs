@@ -223,6 +223,16 @@ namespace Thermodynamics
                 .Append(Settings.Instance.EnableSolarHeat ? "on" : "OFF").Append('\n');
             Text.Append("occlusion every ")
                 .Append(Settings.Instance.SolarOcclusionInterval).Append(" steps\n");
+            Text.Append("self-shadow ")
+                .Append(Settings.Instance.SolarSelfShadowing ? "on" : "off");
+
+            if (Settings.Instance.SolarSelfShadowing)
+            {
+                SunShadowMap shadow = thermals.Simulation.Solver.SunShadow;
+                Text.Append("  (").Append(shadow.ColumnCount).Append(" columns)");
+            }
+
+            Text.Append('\n');
         }
 
         private static void Exposed(ThermalGrid thermals)

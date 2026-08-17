@@ -56,6 +56,7 @@ Each switch removes exactly its own mechanism and its own cost.
 | `EnableConduction` | `true` | Heat flow between touching blocks. |
 | `EnableRadiation` | `true` | Radiative exchange with the ambient sky. |
 | `EnableConvection` | `true` | Convective exchange with the surrounding air. |
+| `SolarSelfShadowing` | `true` | A grid shadows itself: a face standing behind the ship's own structure takes no sunlight. Costs one pass over the grid's cells each time the sun moves more than 2°, and nothing between those. Turn it off for the cheap model, which lights any exposed face pointing at the sun. |
 | `EnableSolarHeat` | `true` | Solar gain and the sun occlusion raycast. |
 | `EnableHeatSources` | `true` | Gain from point sources registered by other mods. |
 | `EnableWasteHeat` | `true` | Heat from power production, power draw and thrust. |
@@ -134,6 +135,11 @@ it is taking and whether the sun is occluded in the solar view, its exposed face
 its speed against the friction threshold, or a table of rooms with their cell counts, air
 temperatures and seal state. It follows whatever grid the overlay is drawing and disappears with it.
 The panel needs Rich HUD Master, the same as the settings menu; the overlay itself does not.
+
+The three solar settings stack as a choice of cost. `EnableSolarHeat` off is free and models no
+sunlight at all. On with `SolarSelfShadowing` off is the cheap model: a face is lit whenever it
+points at the sun. On with both is the accurate one: the grid shadows itself, for one pass over its
+cells whenever the sun moves.
 
 **Solar watts** does not draw boxes. Sunlight lands on a face, not on a block, so it draws the
 grid's skin — one quad per exposed face — shaded by that face's own irradiance: the sun's energy

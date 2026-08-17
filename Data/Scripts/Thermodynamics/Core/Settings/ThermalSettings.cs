@@ -34,6 +34,20 @@ namespace Thermodynamics.Core
         /// <summary>Solar gain.</summary>
         public bool EnableSolarHeat = true;
 
+        /// <summary>
+        /// Whether a grid shadows itself.
+        ///
+        /// Off, a face is lit whenever it points at the sun, whatever the ship has built in front
+        /// of it — the inside of a doorway recess and a hull plate under an overhang both heat as
+        /// if they were in the open. On, a <see cref="SunShadowMap"/> is kept per grid and a face
+        /// only takes sunlight if nothing of the grid stands between it and the sun.
+        ///
+        /// The cost is one pass over the grid's cells whenever the sun has moved appreciably, so it
+        /// scales with ship size rather than with step rate. Off is the cheap model and stays
+        /// available for anyone who would rather spend nothing.
+        /// </summary>
+        public bool SolarSelfShadowing = true;
+
         /// <summary>Gain from mod-registered point heat sources.</summary>
         public bool EnableHeatSources = true;
 

@@ -47,6 +47,13 @@ namespace Thermodynamics
         [ProtoMember(12)] public bool EnableRadiation;
         [ProtoMember(13)] public bool EnableConvection;
         [ProtoMember(14)] public bool EnableSolarHeat;
+
+        /// <summary>
+        /// Whether a grid shadows itself: a face behind the ship's own structure takes no sunlight.
+        /// Costs a pass over the grid's cells each time the sun moves appreciably. Off is the cheap
+        /// model, which lights any face pointing at the sun.
+        /// </summary>
+        [ProtoMember(58)] public bool SolarSelfShadowing;
         [ProtoMember(15)] public bool EnableHeatSources;
         [ProtoMember(16)] public bool EnableWasteHeat;
         [ProtoMember(17)] public bool EnablePlanets;
@@ -123,6 +130,7 @@ namespace Thermodynamics
                 EnableRadiation = true,
                 EnableConvection = true,
                 EnableSolarHeat = true,
+                SolarSelfShadowing = true,
                 EnableHeatSources = true,
                 EnableWasteHeat = true,
                 EnablePlanets = true,
@@ -214,6 +222,7 @@ namespace Thermodynamics
             core.EnableRadiation = EnableRadiation;
             core.EnableConvection = EnableConvection;
             core.EnableSolarHeat = EnableSolarHeat;
+            core.SolarSelfShadowing = SolarSelfShadowing;
             core.EnableHeatSources = EnableHeatSources;
             core.EnableWasteHeat = EnableWasteHeat;
             core.EnablePlanets = EnablePlanets;
@@ -261,7 +270,8 @@ namespace Thermodynamics
             return new List<string>
             {
                 "EnableEnvironment", "EnableConduction", "EnableRadiation", "EnableConvection",
-                "EnableSolarHeat", "EnableHeatSources", "EnableWasteHeat", "EnablePlanets",
+                "EnableSolarHeat", "SolarSelfShadowing",
+                "EnableHeatSources", "EnableWasteHeat", "EnablePlanets",
                 "EnableFriction", "EnableDamage", "EnableCoolantLoops", "EnableRoomAir",
                 "EnableHeatPumps",
                 "ClampConductionOvershoot", "DamageIsPerSecond",
@@ -285,6 +295,7 @@ namespace Thermodynamics
                 case "EnableRadiation": return Flag(EnableRadiation);
                 case "EnableConvection": return Flag(EnableConvection);
                 case "EnableSolarHeat": return Flag(EnableSolarHeat);
+                case "SolarSelfShadowing": return Flag(SolarSelfShadowing);
                 case "EnableHeatSources": return Flag(EnableHeatSources);
                 case "EnableWasteHeat": return Flag(EnableWasteHeat);
                 case "EnablePlanets": return Flag(EnablePlanets);
@@ -330,6 +341,7 @@ namespace Thermodynamics
                 case "EnableRadiation": EnableRadiation = Flag(value); return true;
                 case "EnableConvection": EnableConvection = Flag(value); return true;
                 case "EnableSolarHeat": EnableSolarHeat = Flag(value); return true;
+                case "SolarSelfShadowing": SolarSelfShadowing = Flag(value); return true;
                 case "EnableHeatSources": EnableHeatSources = Flag(value); return true;
                 case "EnableWasteHeat": EnableWasteHeat = Flag(value); return true;
                 case "EnablePlanets": EnablePlanets = Flag(value); return true;
@@ -370,6 +382,7 @@ namespace Thermodynamics
         {
             return name != null && name != "DebugBlockOverlay"
                 && (name.StartsWith("Enable") || name.StartsWith("Debug")
+                || name == "SolarSelfShadowing"
                 || name == "ClampConductionOvershoot" || name == "DamageIsPerSecond");
         }
 

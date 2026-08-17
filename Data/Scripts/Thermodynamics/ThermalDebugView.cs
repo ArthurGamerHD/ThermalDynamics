@@ -258,6 +258,7 @@ namespace Thermodynamics
         private static void DrawSolarSurfaces(ThermalGrid thermals, ref MatrixD camera, ref Vector3D eye)
         {
             EnvironmentState state = thermals.LastState;
+            ThermalSolver solver = thermals.Simulation.Solver;
             MatrixD gridMatrix = thermals.Grid.WorldMatrix;
             float gridSize = thermals.Grid.GridSize;
 
@@ -294,6 +295,10 @@ namespace Thermodynamics
 
                     float dot = Vector3.Dot(localNormal, sun);
                     float irradiance = lit && dot > 0f ? state.SolarEnergy * dot : 0f;
+
+                    // What the solver believes, not a second opinion: a block the grid shadows
+                    // itself must look shadowed, or the picture argues with the temperatures.
+                    irradiance *= solver.SunLitFraction(node.Index);
 
                     // W/m2 rather than watts: this is what the surface is standing in, which is
                     // the figure that belongs to a face. The panel reports the watts.

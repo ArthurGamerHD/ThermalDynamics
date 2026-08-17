@@ -74,6 +74,25 @@ namespace Thermodynamics.Core
         private float[] nodeFaceWeights = new float[0];
 
         /// <summary>
+        /// Fraction of each node's cells the sun reaches, 0..1. All ones when self-shadowing is
+        /// off, which is what makes the cheap path free rather than merely cheaper.
+        /// </summary>
+        private float[] nodeSunLit = new float[0];
+
+        /// <summary>The grid's own shadow, rebuilt when the sun has moved far enough to matter.</summary>
+        private readonly SunShadowMap sunShadow = new SunShadowMap();
+
+        /// <summary>
+        /// How far the sun may move before the shadow map is rebuilt. cos(2°): a shadow edge that
+        /// lags the sun by two degrees is a fraction of a cell on any ship, and rebuilding for less
+        /// spends a pass over the grid on a picture nobody can tell apart.
+        /// </summary>
+        private const float SunRebuildCosine = 0.99939f;
+
+        /// <summary>True when <see cref="nodeSunLit"/> no longer matches the nodes or the map.</summary>
+        private bool sunLitDirty = true;
+
+        /// <summary>
         /// Reduced thermal mass of each link, <c>mA*mB/(mA+mB)</c>. This is the only part of the
         /// overshoot clamp that depends on anything but the current temperatures, and it changes
         /// only when a block's mass does, so it is cached rather than divided out per link per
@@ -244,6 +263,7 @@ namespace Thermodynamics.Core
             nodesByKey[block.Key] = node;
             linksDirty = true;
             resyncAll = true;
+            sunLitDirty = true;
             return node;
         }
 
@@ -263,6 +283,7 @@ namespace Thermodynamics.Core
 
             linksDirty = true;
             resyncAll = true;
+            sunLitDirty = true;
             return true;
         }
 
@@ -1116,6 +1137,7 @@ namespace Thermodynamics.Core
             {
                 Vector3 sun = env.SunDirectionLocal;
                 ResolveDirection(ref sun, sunWeights);
+                RefreshSunShadow(ref sun);
             }
 
             for (int i = 0; i < nodes.Count; i++)
@@ -1166,7 +1188,10 @@ namespace Thermodynamics.Core
 
                 if (solarEnabled)
                 {
-                    solarWatts = env.SolarEnergy * nodeEmissivity[i] * Weighted(i, sunWeights) * area;
+                    // The face weights say how square this node's exposed faces are to the sun;
+                    // the lit fraction says how much of it the ship is standing in front of.
+                    solarWatts = env.SolarEnergy * nodeEmissivity[i] * Weighted(i, sunWeights)
+                        * area * nodeSunLit[i];
                     watts += solarWatts;
                 }
 
@@ -1223,6 +1248,56 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>Intensity against a direction resolved into an explicit weight array.</summary>
+        /// <summary>
+        /// Keeps the grid's self-shadow current, and the per-node lit fractions with it.
+        ///
+        /// Both are rebuilt on the same trigger, because both depend on the same two things: where
+        /// the sun is, and what the grid is made of. Between triggers this costs one dot product.
+        /// </summary>
+        private void RefreshSunShadow(ref Vector3 sunLocal)
+        {
+            if (!settings.SolarSelfShadowing)
+            {
+                if (!sunShadow.IsBuilt && !sunLitDirty) return;
+
+                sunShadow.Clear();
+                FillSunLit(1f);
+                sunLitDirty = false;
+                return;
+            }
+
+            if (!sunLitDirty && !sunShadow.NeedsRebuild(ref sunLocal, SunRebuildCosine)) return;
+
+            sunShadow.Build(grid, sunLocal);
+
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                nodeSunLit[i] = sunShadow.LitFraction(nodes[i].Block);
+            }
+
+            sunLitDirty = false;
+        }
+
+        private void FillSunLit(float value)
+        {
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                nodeSunLit[i] = value;
+            }
+        }
+
+        /// <summary>
+        /// The grid's self-shadow, for anything that wants to draw it. Empty when the setting is
+        /// off or the sun has never been resolved.
+        /// </summary>
+        public SunShadowMap SunShadow { get { return sunShadow; } }
+
+        /// <summary>Fraction of a node's cells the sun reaches, 0..1.</summary>
+        public float SunLitFraction(int node)
+        {
+            return node >= 0 && node < nodeSunLit.Length ? nodeSunLit[node] : 1f;
+        }
+
         private float Weighted(int node, float[] weights)
         {
             int b = node * Face.Count;
@@ -1634,6 +1709,7 @@ namespace Thermodynamics.Core
                 nodeStepStart = new float[size];
                 nodeConductanceTotal = new float[size];
                 resyncAll = true;
+                sunLitDirty = true;
                 nodeThermalMass = new float[size];
                 nodeRadiation = new float[size];
                 nodeGeneration = new float[size];
@@ -1641,6 +1717,7 @@ namespace Thermodynamics.Core
                 nodeEmissivity = new float[size];
                 nodeExposedFaces = new int[size];
                 nodeFaceWeights = new float[size * Face.Count];
+                nodeSunLit = new float[size];
             }
             if (loopWatts.Length < loops.Count)
             {

@@ -70,6 +70,7 @@ namespace Thermodynamics
             { "EnableRadiation", new Entry(Mechanisms, "Radiation", "Radiative exchange with the sky from exposed faces.", 0, 1) },
             { "EnableConvection", new Entry(Mechanisms, "Convection", "Exchange with atmosphere and with room air.", 0, 1) },
             { "EnableSolarHeat", new Entry(Mechanisms, "Solar heat", "Sunlight on exposed faces, occlusion included.", 0, 1) },
+            { "SolarSelfShadowing", new Entry(Mechanisms, "Solar self-shadowing", "A grid shadows itself: a face behind the ship's own structure takes no sunlight. Costs a pass over the grid's cells whenever the sun moves. Off is the cheap model, which lights any face pointing at the sun.", 0, 1) },
             { "EnableHeatSources", new Entry(Mechanisms, "Point heat sources", "Heat from sources registered through the mod API.", 0, 1) },
             { "EnableWasteHeat", new Entry(Mechanisms, "Waste heat", "Power producers, consumers and thrusters turning throughput into heat.", 0, 1) },
             { "EnablePlanets", new Entry(Mechanisms, "Planets", "Per-planet ambient, air and ground temperatures.", 0, 1) },

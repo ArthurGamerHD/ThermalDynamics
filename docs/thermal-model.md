@@ -154,13 +154,25 @@ unchanged.
 Solar gain, when the grid is not occluded:
 
 ```
-watts = solarEnergy × ε × faceWeight(sun) × A_exposed
+watts = solarEnergy × ε × faceWeight(sun) × A_exposed × litFraction
 solarEnergy = SolarEnergy × (1 − SolarDecay × atmosphereFactor)
 ```
 
-Occlusion is resolved per grid, not per block, by a raycast toward the sun repeated every
-`SolarOcclusionInterval` steps. Planets are tested analytically by angular size; voxels and grids
-by a ray against their bounding segment. Being underground forces occlusion.
+Occlusion against the rest of the world is resolved per grid, not per block, by a raycast toward the
+sun repeated every `SolarOcclusionInterval` steps. Planets are tested analytically by angular size;
+voxels and grids by a ray against their bounding segment. Being underground forces occlusion.
+
+`litFraction` is the grid's shadow on itself, and is 1 for every block when `SolarSelfShadowing` is
+off. When it is on, [SunShadowMap](../Data/Scripts/Thermodynamics/Core/Simulation/SunShadowMap.cs)
+projects every occupied cell onto the plane perpendicular to the sun, buckets it by cell, and keeps
+the depth of the cell nearest the sun in each bucket. A cell is lit when it is that cell — within
+half a cell diagonal, since the buckets are axis-aligned and the sun is not — and a block's fraction
+is the share of its cells that are. The map is rebuilt when the sun has moved more than 2° or the
+grid's blocks have changed, so its cost is one pass over the cells at planetary rotation rates
+rather than anything per step.
+
+`faceWeight` and `litFraction` answer different questions and both are needed: the first is how
+square a face is to the sun, the second is whether anything of the ship stands in the way.
 
 Point sources registered by other mods use the same equation with their own direction and
 irradiance:

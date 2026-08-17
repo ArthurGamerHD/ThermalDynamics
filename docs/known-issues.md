@@ -42,9 +42,10 @@ on load. Nothing was lost by doing it: the old block had no behaviour at all.
 
 ## Deliberate limits
 
-**Solar occlusion is per grid.** One raycast decides whether the whole grid is lit. Self-shadowing
-is not modelled, so a large ship is entirely lit or entirely shaded. Per-block shadowing would cost
-a raycast per block.
+**Solar occlusion against the rest of the world is per grid.** One raycast decides whether the whole
+grid is shaded by a planet or another ship, so a capital ship half in a station's shadow is lit or
+shaded in its entirety. A grid's *own* shadow is modelled — see `SolarSelfShadowing` — but only its
+own: nothing else on the map casts onto it at block resolution.
 
 **Point sources are not occluded.** A registered heat source heats through walls and through other
 ships. Occlusion is left to the host, which can simply not register a source it knows is hidden.
