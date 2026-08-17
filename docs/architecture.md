@@ -38,7 +38,6 @@ temperatures, overheat events and threshold crossings.
 | [Game/ThermalGridSimulation.cs](../Data/Scripts/Thermodynamics/Game/ThermalGridSimulation.cs) | `partial` | The tick: sample, step, apply damage, raise crossings, refresh readouts. |
 | [Game/ThermalGridEnvironment.cs](../Data/Scripts/Thermodynamics/Game/ThermalGridEnvironment.cs) | `partial` | Builds the `EnvironmentSample`: planet, air, wind, sun, occlusion, registered heat sources. |
 | [Game/ThermalGridStorage.cs](../Data/Scripts/Thermodynamics/Game/ThermalGridStorage.cs) | `partial` | Save and load through the model's codec. |
-| [Game/ThermalGridDebug.cs](../Data/Scripts/Thermodynamics/Game/ThermalGridDebug.cs) | `partial` | The destructive block-colouring overlays. |
 | [Game/ThermalBlock.cs](../Data/Scripts/Thermodynamics/Game/ThermalBlock.cs) | class | One placed block bound to one solver node. Pushes power, thrust, door state and mass into the model by event. |
 | [Game/ThermalBlockCatalog.cs](../Data/Scripts/Thermodynamics/Game/ThermalBlockCatalog.cs) | static | Block definition → `BlockModel`, once per definition per session. |
 | [Game/ThermalCoolantShapes.cs](../Data/Scripts/Thermodynamics/Game/ThermalCoolantShapes.cs) | static | Subtype → coolant plumbing. |
@@ -48,8 +47,8 @@ temperatures, overheat events and threshold crossings.
 | [Game/ThermalHeatSources.cs](../Data/Scripts/Thermodynamics/Game/ThermalHeatSources.cs) | static | Registered point heat sources, and their irradiance at a grid. |
 | [ThermalApi.cs](../Data/Scripts/Thermodynamics/ThermalApi.cs) | static | The mod-facing delegate table. See [api.md](api.md). |
 | [ThermalTerminal.cs](../Data/Scripts/Thermodynamics/ThermalTerminal.cs) | static | Thermal readout in every block's terminal. |
-| [ThermalVision.cs](../Data/Scripts/Thermodynamics/ThermalVision.cs) | static | The non-destructive heat overlay. |
 | [ThermalHud.cs](../Data/Scripts/Thermodynamics/ThermalHud.cs) | static | Text HUD API readouts and the extinguisher billboard. |
+| [ThermalDebugView.cs](../Data/Scripts/Thermodynamics/ThermalDebugView.cs) | static | The x-ray block overlay: a coloured box per block, cycled with Ctrl+Shift+V. |
 | [Debug.cs](../Data/Scripts/Thermodynamics/Debug.cs) | static | The crosshair readout. |
 | [Settings.cs](../Data/Scripts/Thermodynamics/Settings.cs) | class | Config file, defaults, access by name, and the write-through to the model's settings. |
 | [Definitions/](../Data/Scripts/Thermodynamics/Definitions) | classes | Typed readers over Definition Extensions. |
@@ -61,12 +60,13 @@ temperatures, overheat events and threshold crossings.
 ```
 Session.Simulate()                      every frame
   ├─ chat command registration
+  ├─ overlay keybind poll               client only, Ctrl+Shift+V
   ├─ ThermalBridges.Update()            every 10th frame: conduction across rotors and pistons
   └─ Debug.ShowDebugInfo()              client only, behind DebugTextOnScreen
 
 Session.Draw()                          client only
   ├─ ThermalHud.Draw()
-  └─ ThermalVision.Draw()
+  └─ ThermalDebugView.Draw()            client only, off unless a mode is selected
 
 per grid, every 10th frame:
 ThermalGrid.UpdateBeforeSimulation10()

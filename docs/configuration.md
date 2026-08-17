@@ -16,8 +16,7 @@ to disk unless asked.
 | `/thermal settings` | Every setting and its current value. |
 | `/thermal set <name> <value>` | Changes one setting for this session. Switches take `on`/`off` or `1`/`0`. |
 | `/thermal save` | Writes the current values to the config file. |
-| `/thermal vision` | Toggles the thermal vision overlay. |
-| `/thermal greyscale` | Switches the overlay between greyscale and the heat ramp. |
+| `/thermal overlay` | Cycles the block overlay. Same as Ctrl+Shift+V. |
 | `/thermal telemetry on` / `off` | Starts and stops data collection. |
 | `/thermal stride <n>` | Telemetry sample stride. |
 | `/thermal dump` | Writes a telemetry report without closing the world. |
@@ -85,34 +84,31 @@ predictable near equilibrium at the cost of making cheap, small-gap cooling less
 
 ## Presentation
 
-All client side and all off by default, apart from thermal vision.
+All client side and all off by default.
 
 | Setting | Default | Draws |
 | --- | --- | --- |
-| `EnableThermalVision` | `true` | Allows thermal vision. Toggle it in play with `/thermal vision` or the terminal button. |
-| `ThermalVisionGreyscale` | `false` | `false` draws the ironbow palette, `true` white-hot greyscale. |
-| `ThermalVisionRange` | 400 m | How far anything is drawn at all. |
-| `ThermalVisionDetailRange` | 80 m | How far grids are drawn block by block. Past it a grid is one body at its hottest block's temperature. |
-| `ThermalVisionDimming` | 1.0 | How much of the visible-light image is removed, 0..1. At 1 the ordinary view is gone entirely and only what the mod draws is visible. Lower it to make a tinted visor instead of a camera. |
-| `ThermalVisionMinKelvin` | 240 K | Bottom of the sensor's span. Colder clips to black. |
-| `ThermalVisionMaxKelvin` | 500 K | Top of the span. Hotter clips to white. |
-| `ThermalVisionIntensity` | 0.9 | Brightness of drawn bodies. |
-| `ThermalVisionBodyTemperature` | 310 K | Temperature characters are drawn at. Bodies are not simulated. |
 | `DebugTextOnScreen` | `false` | Crosshair readout: temperature, per-mechanism watts, block constants, environment, grid totals, room classification, raw surface bits. Switching it on also makes the solver record per-mechanism watts, which is not free. |
 | `DebugSolarRaycast` | `false` | Draws the sun ray from each grid, white when lit and red when occluded. |
 | `DebugWindRaycast` | `false` | Draws the relative wind vector. |
-| `DebugTemperatureBlockColors` | `false` | **Destructive.** Repaints every block by temperature using real block paint. |
-| `DebugSolarRadiationBlockColors` | `false` | The same, by solar watts. |
-| `DebugExposedSurfaceBlockColors` | `false` | The same, by exposed face count. |
-| `DebugFrictionColors` | `false` | The same, by friction watts. |
+| `DebugBlockOverlay` | 0 | Which view the block overlay opens a session on: 0 off, 1 temperature, 2 solar watts, 3 exposed faces, 4 friction watts. |
 
-> The four block-colouring modes call `MyCubeGrid.ColorBlocks`. That is a real, replicated,
-> permanent change to every ship in the world, and switching it off does not undo it. Thermal
-> vision answers the same question by drawing an overlay: client side, per frame, nothing written
-> to the grid. Use the colouring modes only on a world you are willing to repaint.
->
-> The modes are mutually exclusive; the colouring pass takes the first one switched on, in the
-> order above.
+### The block overlay
+
+**Ctrl+Shift+V** cycles it: off → temperature → solar watts → exposed faces → friction watts → off.
+`/thermal overlay` does the same from chat. A mod cannot add a rebindable control, so the chord is
+fixed; it is ignored while the chat box or a menu is open.
+
+Every block of the grid you are controlling and the grid you are looking at, out to 120 m, is drawn
+as a translucent box coloured by the selected value, using the same ramp as the HUD and the
+terminal. The boxes are drawn *through* the hull — a reactor buried mid-ship is visible from
+outside, which is the point of a debug view and the reason this was a poor thermal camera.
+
+Everything about it is client side and per frame: nothing is written to the grid, nothing
+replicates, and switching it off leaves no trace. It replaces the four `Debug*BlockColors` modes,
+which called `MyCubeGrid.ColorBlocks` and showed heat by permanently overwriting every player's
+paint. `DebugBlockOverlay` is a server-side setting like the rest of the file, so it only sets what
+a session starts on — the keybind is how each client drives it.
 
 ## Telemetry
 

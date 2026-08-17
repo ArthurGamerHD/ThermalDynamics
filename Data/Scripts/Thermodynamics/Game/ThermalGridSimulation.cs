@@ -113,8 +113,6 @@ namespace Thermodynamics
             }
 
             if (Telemetry.Enabled) Telemetry.OnGridStepped(this, steps);
-
-            DrawDebugColors();
         }
 
         /// <summary>

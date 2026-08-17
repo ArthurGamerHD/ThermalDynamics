@@ -1,7 +1,6 @@
 # Known issues and limits
 
-Current as of the review that added room air, thresholds, point heat sources, the mod API and the
-thermal vision overlay. Split into defects, unfinished work, and limits that are deliberate.
+Current as of the review that added room air, thresholds, point heat sources and the mod API. Split into defects, unfinished work, and limits that are deliberate.
 
 ## Unfinished
 
@@ -46,16 +45,12 @@ lowest cell. Building inside a compartment gives it a fresh air mass at the temp
 walls. The same key carries air across a save, so a compartment rebuilt while the world was closed
 comes back at the temperature of its walls rather than the one it was saved at.
 
-**Thermal vision redraws the world rather than recolouring it.** There is no shader or frame buffer
-access for mods, so the rendered view is blanked and everything with a temperature is drawn again.
-Three consequences follow. Terrain is a few hundred sampled patches, so its relief is coarse and it
-does not resolve small features. Asteroids are discs at ambient, not shapes. And anything the mod
-does not draw — dropped components, debris, particle effects — is simply absent from the view.
-
-**Thermal vision's depth order depends on the renderer sorting billboards back to front.** Bodies
-are projected into a shallow band that preserves their real depth order, so correct layering follows
-if — and only if — transparent billboards are drawn far to near. That is the ordinary behaviour for
-alpha blending, but it is an assumption about the engine rather than something the mod controls.
+**There is no thermal view.** A heat overlay was built and removed: mods get no shader, no
+post-process and no frame buffer, so the only way to recolour the world is to blank it and redraw
+every body as a billboard. That gives coarse terrain, discs for asteroids, and nothing at all for
+anything the mod does not draw. Seeing temperature is the terminal readout, the cockpit summary, the
+crosshair readout and the x-ray block overlay instead — the overlay keeps the part of that work that
+was worth keeping, since a debug view *wants* to see through the hull.
 
 **Emissivity is used as absorptivity.** The grey-body assumption. A block cannot be made shiny to
 the sun and black to space.
@@ -72,8 +67,8 @@ cell, so it cannot know whether two partial mounts line up.
 
 The test suite covers the model thoroughly and the adapter barely — `HostAdapterTests` exercises
 what can be reached without a session, and the rest of `Game/` is only exercised in the game. In
-particular the vent sweep, the terminal readout, the thermal vision overlay and the mod API's
-delegate table have no automated coverage. The API's *shape* is checkable without a session and is
+particular the vent sweep, the terminal readout and the mod API's delegate table have no automated
+coverage. The API's *shape* is checkable without a session and is
 worth pinning down.
 
 `docs/bugs-and-performance.md` records findings from earlier stress work; entries there that are

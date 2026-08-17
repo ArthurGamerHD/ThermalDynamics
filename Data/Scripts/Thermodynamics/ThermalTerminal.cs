@@ -48,16 +48,6 @@ namespace Thermodynamics
             readout.Getter = Describe;
             readout.Setter = (block, value) => { };
             MyAPIGateway.TerminalControls.AddControl<IMyTerminalBlock>(readout);
-
-            IMyTerminalControlButton vision =
-                MyAPIGateway.TerminalControls.CreateControl<IMyTerminalControlButton, IMyTerminalBlock>(
-                    "Thermodynamics_Vision");
-            vision.Title = MyStringId.GetOrCompute("Toggle thermal vision");
-            vision.Tooltip = MyStringId.GetOrCompute(
-                "Draws a heat overlay over the ship. Client side; changes nothing on the grid.");
-            vision.Visible = HasThermals;
-            vision.Action = block => ThermalVision.Toggle();
-            MyAPIGateway.TerminalControls.AddControl<IMyTerminalBlock>(vision);
         }
 
         public static void Unregister()

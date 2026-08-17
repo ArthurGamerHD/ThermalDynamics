@@ -157,56 +157,8 @@ Coolant Loops:    number of valid loops on the grid
 ```
 
 Both HUD elements require Text HUD API; without it `HudInit` never fires and nothing is drawn. The
-terminal readout ([ThermalTerminal.cs](../Data/Scripts/Thermodynamics/ThermalTerminal.cs)) and the
-thermal vision overlay ([ThermalVision.cs](../Data/Scripts/Thermodynamics/ThermalVision.cs)) have no
+terminal readout ([ThermalTerminal.cs](../Data/Scripts/Thermodynamics/ThermalTerminal.cs)) has no
 such dependency.
-
-## Thermal vision
-
-`/thermal vision`, or the button on any block's terminal, switches the view to a thermal one.
-`/thermal greyscale` switches between the ironbow palette and white-hot.
-
-A mod has no shader, no post-process and no frame buffer, so the ordinary view cannot be
-recoloured. It is replaced: a black billboard at the back of the scene removes the rendered world,
-and every body with a temperature is drawn in front of it as a billboard of its own. Nothing the
-game renders survives, so nothing of it can occlude the thermal image or show through it.
-
-### The projection
-
-Nothing is drawn at its real distance. Each billboard is scaled about the camera onto a shallow
-band 2–502 m deep, keeping its direction and shrinking its size by the same factor. A perspective
-projection is invariant under scaling about the eye, so the image on screen is unchanged — but the
-depth order now belongs to the mod rather than to the scene. Near things land near, far things land
-far, the renderer sorts them among themselves, and the blackout sits behind the whole band where it
-cannot come out in front of what it is hiding.
-
-The mapping is `depth → near + span × d/(d + 300)`: monotonic, so real depth order is preserved, and
-bounded, so nothing can land behind the blackout.
-
-### What is drawn
-
-| Body | As |
-| --- | --- |
-| Ground | Patches laid flat on the surface, sampled in rings out to about half a kilometre. Slopes facing the sun read warm, shadowed slopes cold, so terrain keeps its relief. |
-| Sun | A disc at the back of the band with a wide bloom. |
-| Planets | A disc at surface temperature, from outside the atmosphere. Inside it, the ground is the planet. |
-| Asteroids | A disc at ambient. A voxel body has no shape a mod can draw, and a hole would read as open space. |
-| Grids | The outer skin, one quad per exposed block face. |
-| Characters | A body at `ThermalVisionBodyTemperature`. |
-| Heat sources | A glowing point sized by output. |
-
-**Only surfaces are drawn.** A block face appears when the simulation says that face is exposed —
-the same figure radiation is computed from — and when it is turned toward the camera. A block buried
-in the hull has no exposed face and is never drawn, so there is no x-ray: a solid hull is a solid
-picture. The skin costs only the faces that can be seen, not a draw per block.
-
-`ThermalVisionMinKelvin` and `ThermalVisionMaxKelvin` are the sensor's span. A real camera has no
-absolute colours: it stretches its palette between two temperatures the operator chooses, and
-anything outside clips to black or white. Narrow the span to pull detail out of a cold hull; widen
-it to keep a reactor from washing the frame out.
-
-Everything is client side and per frame. There is no engine state to restore, which is what
-separates it from `DebugTemperatureBlockColors`.
 
 ## Radiators and the heat pump
 

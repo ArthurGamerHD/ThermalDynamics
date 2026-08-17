@@ -31,7 +31,7 @@ namespace Thermodynamics
         /// Bumped whenever the file's shape changes. A file at a different version is replaced
         /// with defaults rather than partially applied.
         /// </summary>
-        public const int CurrentVersion = 5;
+        public const int CurrentVersion = 6;
 
         public static Settings Instance;
 
@@ -96,57 +96,16 @@ namespace Thermodynamics
         [ProtoMember(52)] public bool DebugWindRaycast;
 
         /// <summary>
-        /// Recolours every block by temperature by writing real block paint.
-        ///
-        /// Destructive: it overwrites players' colour schemes permanently and cannot be undone by
-        /// switching it off. Off by default, and the thermal vision overlay does the same job
-        /// without touching the grid.
+        /// Which value the block overlay starts a session showing, as a
+        /// <see cref="ThermalDebugView.Mode"/>: 0 off, 1 temperature, 2 solar watts, 3 exposed
+        /// faces, 4 friction watts. Ctrl+Shift+V cycles it in play, client side.
         /// </summary>
-        [ProtoMember(53)] public bool DebugTemperatureBlockColors;
+        [ProtoMember(57)] public int DebugBlockOverlay;
 
-        [ProtoMember(54)] public bool DebugSolarRadiationBlockColors;
-        [ProtoMember(55)] public bool DebugExposedSurfaceBlockColors;
-        [ProtoMember(56)] public bool DebugFrictionColors;
-
-        /// <summary>
-        /// Thermal vision: a non-destructive heat overlay drawn over whatever the player is
-        /// looking at. See <see cref="ThermalVision"/>.
-        /// </summary>
-        [ProtoMember(60)] public bool EnableThermalVision;
-
-        /// <summary>Thermal vision draws in greyscale rather than the heat ramp.</summary>
-        [ProtoMember(61)] public bool ThermalVisionGreyscale;
-
-        /// <summary>Metres out to which thermal vision draws anything at all.</summary>
-        [ProtoMember(62)] public float ThermalVisionRange;
-
-        /// <summary>
-        /// Metres out to which grids are drawn block by block. Past this a grid is one body at the
-        /// temperature of its hottest block, which is what a distant ship looks like on a real
-        /// sensor and what keeps a fleet from costing a billboard per block.
-        /// </summary>
-        [ProtoMember(63)] public float ThermalVisionDetailRange;
-
-        /// <summary>
-        /// How much of the visible-light image is removed, 0..1.
-        ///
-        /// 1 is a thermal camera: the ordinary view is gone and what is left is only what the mod
-        /// draws. Lower values leave some of it showing through, which makes it a tinted visor
-        /// rather than a sensor — available, but not the intent.
-        /// </summary>
-        [ProtoMember(64)] public float ThermalVisionDimming;
-
-        /// <summary>Bottom of the sensor's span, K. Anything colder clips to black.</summary>
-        [ProtoMember(65)] public float ThermalVisionMinKelvin;
-
-        /// <summary>Top of the sensor's span, K. Anything hotter clips to white.</summary>
-        [ProtoMember(66)] public float ThermalVisionMaxKelvin;
-
-        /// <summary>Brightness of drawn bodies, 0..1.</summary>
-        [ProtoMember(67)] public float ThermalVisionIntensity;
-
-        /// <summary>Temperature a character is drawn at, K. Bodies are not simulated.</summary>
-        [ProtoMember(70)] public float ThermalVisionBodyTemperature;
+        // ProtoMember numbers 53-56 were the block-colouring debug modes, which wrote real block
+        // paint and have been replaced by the overlay above. 60-70 were the thermal vision
+        // overlay. Both stay unused so an older config or an older peer's message does not land on
+        // a different field.
 
         // ---- telemetry ---------------------------------------------------------------------
 
@@ -195,20 +154,7 @@ namespace Thermodynamics
                 DebugTextOnScreen = false,
                 DebugSolarRaycast = false,
                 DebugWindRaycast = false,
-                DebugTemperatureBlockColors = false,
-                DebugSolarRadiationBlockColors = false,
-                DebugExposedSurfaceBlockColors = false,
-                DebugFrictionColors = false,
-
-                EnableThermalVision = true,
-                ThermalVisionGreyscale = false,
-                ThermalVisionRange = 400f,
-                ThermalVisionDetailRange = 80f,
-                ThermalVisionDimming = 1f,
-                ThermalVisionMinKelvin = 240f,
-                ThermalVisionMaxKelvin = 500f,
-                ThermalVisionIntensity = 0.9f,
-                ThermalVisionBodyTemperature = 310f,
+                DebugBlockOverlay = 0,
 
                 EnableTelemetry = false,
                 TelemetrySampleStride = 4,
@@ -225,16 +171,8 @@ namespace Thermodynamics
             if (HeatTimeScale <= 0f) HeatTimeScale = 1f;
             if (TelemetrySampleStride < 1) TelemetrySampleStride = 1;
             if (SolarOcclusionInterval < 1) SolarOcclusionInterval = 1;
-            if (ThermalVisionRange < 1f) ThermalVisionRange = 1f;
-            if (ThermalVisionDetailRange < 1f) ThermalVisionDetailRange = 1f;
-            if (ThermalVisionDetailRange > ThermalVisionRange) ThermalVisionDetailRange = ThermalVisionRange;
-            if (ThermalVisionDimming < 0f) ThermalVisionDimming = 0f;
-            if (ThermalVisionDimming > 1f) ThermalVisionDimming = 1f;
-            if (ThermalVisionIntensity < 0f) ThermalVisionIntensity = 0f;
-            if (ThermalVisionBodyTemperature < 0f) ThermalVisionBodyTemperature = 0f;
-            if (ThermalVisionMinKelvin < 0f) ThermalVisionMinKelvin = 0f;
-            if (ThermalVisionMaxKelvin <= ThermalVisionMinKelvin)
-                ThermalVisionMaxKelvin = ThermalVisionMinKelvin + 1f;
+            if (DebugBlockOverlay < 0) DebugBlockOverlay = 0;
+            if (DebugBlockOverlay > 4) DebugBlockOverlay = 4;
             if (RoomConvectionCoefficient < 0f) RoomConvectionCoefficient = 0f;
             if (RoomAirDensity < 0f) RoomAirDensity = 0f;
             if (HeatPumpCarnotFraction < 0f) HeatPumpCarnotFraction = 0f;
@@ -331,13 +269,7 @@ namespace Thermodynamics
                 "RoomConvectionCoefficient", "RoomAirDensity", "SolarOcclusionInterval",
                 "HeatPumpCarnotFraction", "HeatPumpMaxCoefficient",
                 "DebugTextOnScreen", "DebugSolarRaycast", "DebugWindRaycast",
-                "DebugTemperatureBlockColors", "DebugSolarRadiationBlockColors",
-                "DebugExposedSurfaceBlockColors", "DebugFrictionColors",
-                "EnableThermalVision", "ThermalVisionGreyscale", "ThermalVisionRange",
-                "ThermalVisionDetailRange", "ThermalVisionDimming",
-                "ThermalVisionMinKelvin", "ThermalVisionMaxKelvin",
-                "ThermalVisionIntensity",
-                "ThermalVisionBodyTemperature",
+                "DebugBlockOverlay",
                 "EnableTelemetry", "TelemetrySampleStride",
             };
         }
@@ -377,19 +309,7 @@ namespace Thermodynamics
                 case "DebugTextOnScreen": return Flag(DebugTextOnScreen);
                 case "DebugSolarRaycast": return Flag(DebugSolarRaycast);
                 case "DebugWindRaycast": return Flag(DebugWindRaycast);
-                case "DebugTemperatureBlockColors": return Flag(DebugTemperatureBlockColors);
-                case "DebugSolarRadiationBlockColors": return Flag(DebugSolarRadiationBlockColors);
-                case "DebugExposedSurfaceBlockColors": return Flag(DebugExposedSurfaceBlockColors);
-                case "DebugFrictionColors": return Flag(DebugFrictionColors);
-                case "EnableThermalVision": return Flag(EnableThermalVision);
-                case "ThermalVisionGreyscale": return Flag(ThermalVisionGreyscale);
-                case "ThermalVisionRange": return ThermalVisionRange;
-                case "ThermalVisionDetailRange": return ThermalVisionDetailRange;
-                case "ThermalVisionDimming": return ThermalVisionDimming;
-                case "ThermalVisionMinKelvin": return ThermalVisionMinKelvin;
-                case "ThermalVisionMaxKelvin": return ThermalVisionMaxKelvin;
-                case "ThermalVisionIntensity": return ThermalVisionIntensity;
-                case "ThermalVisionBodyTemperature": return ThermalVisionBodyTemperature;
+                case "DebugBlockOverlay": return DebugBlockOverlay;
                 case "EnableTelemetry": return Flag(EnableTelemetry);
                 case "TelemetrySampleStride": return TelemetrySampleStride;
                 default: return float.NaN;
@@ -434,19 +354,10 @@ namespace Thermodynamics
                 case "DebugTextOnScreen": DebugTextOnScreen = Flag(value); return true;
                 case "DebugSolarRaycast": DebugSolarRaycast = Flag(value); return true;
                 case "DebugWindRaycast": DebugWindRaycast = Flag(value); return true;
-                case "DebugTemperatureBlockColors": DebugTemperatureBlockColors = Flag(value); return true;
-                case "DebugSolarRadiationBlockColors": DebugSolarRadiationBlockColors = Flag(value); return true;
-                case "DebugExposedSurfaceBlockColors": DebugExposedSurfaceBlockColors = Flag(value); return true;
-                case "DebugFrictionColors": DebugFrictionColors = Flag(value); return true;
-                case "EnableThermalVision": EnableThermalVision = Flag(value); return true;
-                case "ThermalVisionGreyscale": ThermalVisionGreyscale = Flag(value); return true;
-                case "ThermalVisionRange": ThermalVisionRange = value; return true;
-                case "ThermalVisionDetailRange": ThermalVisionDetailRange = value; return true;
-                case "ThermalVisionDimming": ThermalVisionDimming = value; return true;
-                case "ThermalVisionMinKelvin": ThermalVisionMinKelvin = value; return true;
-                case "ThermalVisionMaxKelvin": ThermalVisionMaxKelvin = value; return true;
-                case "ThermalVisionIntensity": ThermalVisionIntensity = value; return true;
-                case "ThermalVisionBodyTemperature": ThermalVisionBodyTemperature = value; return true;
+                case "DebugBlockOverlay":
+                    DebugBlockOverlay = (int)value;
+                    ThermalDebugView.Set((ThermalDebugView.Mode)DebugBlockOverlay);
+                    return true;
                 case "EnableTelemetry": EnableTelemetry = Flag(value); Telemetry.SetEnabled(EnableTelemetry); return true;
                 case "TelemetrySampleStride": TelemetrySampleStride = (int)value; return true;
                 default: return false;
@@ -456,9 +367,9 @@ namespace Thermodynamics
         /// <summary>True when the named setting is a switch rather than a number.</summary>
         public static bool IsFlag(string name)
         {
-            return name != null && (name.StartsWith("Enable") || name.StartsWith("Debug")
-                || name == "ClampConductionOvershoot" || name == "DamageIsPerSecond"
-                || name == "ThermalVisionGreyscale");
+            return name != null && name != "DebugBlockOverlay"
+                && (name.StartsWith("Enable") || name.StartsWith("Debug")
+                || name == "ClampConductionOvershoot" || name == "DamageIsPerSecond");
         }
 
         private static float Flag(bool value)

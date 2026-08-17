@@ -7,6 +7,7 @@ using Sandbox.ModAPI;
 using SENetworkAPI;
 using VRage.Game;
 using VRage.Game.Components;
+using VRage.Input;
 using VRage.Utils;
 
 namespace Thermodynamics
@@ -61,7 +62,9 @@ namespace Thermodynamics
             // late consumers ask for the table and get it re-sent.
             ThermalApi.Register();
 
-            ThermalVision.Active = Settings.Instance.EnableThermalVision;
+            // The overlay is client state, not grid state: the config only says which view a
+            // session opens on, and the keybind takes it from there.
+            ThermalDebugView.Current = (ThermalDebugView.Mode)Settings.Instance.DebugBlockOverlay;
         }
 
         protected override void UnloadData()
@@ -116,6 +119,7 @@ namespace Thermodynamics
         private void Tick()
         {
             RegisterCommand();
+            PollOverlayKey();
 
             if (_frame % 10 == 0)
             {
@@ -128,7 +132,27 @@ namespace Thermodynamics
         public override void Draw()
         {
             ThermalHud.Draw();
-            ThermalVision.Draw();
+            ThermalDebugView.Draw();
+        }
+
+        /// <summary>
+        /// Ctrl+Shift+V cycles the block overlay through its views.
+        ///
+        /// Chosen over a control the player can rebind because a mod cannot add one: the game's
+        /// binding list is fixed. The chat and terminal typing checks are what keep the V out of a
+        /// name the player is halfway through entering.
+        /// </summary>
+        private void PollOverlayKey()
+        {
+            if (MyAPIGateway.Utilities == null || MyAPIGateway.Utilities.IsDedicated) return;
+            if (MyAPIGateway.Input == null || MyAPIGateway.Gui == null) return;
+            if (MyAPIGateway.Gui.ChatEntryVisible || MyAPIGateway.Gui.IsCursorVisible) return;
+
+            if (!MyAPIGateway.Input.IsNewKeyPressed(MyKeys.V)) return;
+            if (!MyAPIGateway.Input.IsAnyCtrlKeyPressed()) return;
+            if (!MyAPIGateway.Input.IsAnyShiftKeyPressed()) return;
+
+            ThermalDebugView.Cycle();
         }
 
         /// <summary>
@@ -191,18 +215,10 @@ namespace Thermodynamics
                 return;
             }
 
-            if (lowered == "vision")
+            if (lowered == "overlay")
             {
-                ThermalVision.Toggle();
-                Reply("thermal vision " + (ThermalVision.Active ? "ON" : "OFF"));
-                return;
-            }
-
-            if (lowered == "greyscale")
-            {
-                Settings.Instance.ThermalVisionGreyscale = !Settings.Instance.ThermalVisionGreyscale;
-                Reply("thermal vision palette "
-                    + (Settings.Instance.ThermalVisionGreyscale ? "white hot" : "ironbow"));
+                ThermalDebugView.Cycle();
+                Reply("block overlay: " + ThermalDebugView.Describe(ThermalDebugView.Current));
                 return;
             }
 
@@ -250,7 +266,7 @@ namespace Thermodynamics
                 return;
             }
 
-            Reply("commands: status | settings | set <name> <value> | save | vision | greyscale"
+            Reply("commands: status | settings | set <name> <value> | save | overlay"
                 + " | telemetry on | telemetry off | stride <n> | dump");
         }
 

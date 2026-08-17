@@ -279,9 +279,9 @@ Enough to distinguish a dust storm from rain and give them different convective 
   remains the source of truth.
 * **No generic per-block emissive helper on the mod API.** `SetEmissiveState*` exists on concrete
   `MyCubeBlock` subclasses in `Sandbox.Game`, not on `IMyCubeBlock`. Making hot blocks glow
-  instead of repainting them (the current `ColorBlocks` debug mode overwrites players' paint)
-  needs either the concrete types or a billboard overlay like the extinguisher tool already
-  draws.
+  instead of repainting them needs either the concrete types or a billboard overlay like the
+  extinguisher tool and the block overlay already draw. `ColorBlocks` is no longer used anywhere
+  in the mod: it overwrote players' paint permanently.
 * **`MySessionComponentBase` has no 10th/100th-frame hooks** — only
   `UpdateBeforeSimulation`, `Simulate`, `UpdateAfterSimulation` and `Draw`. The coarser cadences
   are entity-component only, via `MyEntityUpdateEnum`.
