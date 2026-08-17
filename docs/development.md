@@ -5,7 +5,7 @@
 * Space Engineers installed (the project references DLLs from `Bin64/` directly).
 * .NET Framework 4.7.2 targeting pack, or a Mono/MSBuild setup that can target `net472`.
 * The mod's own runtime dependencies for testing in game: Definition Extensions
-  (`2756894170`) and Text HUD API.
+  (`2756894170`) and Rich HUD Master (`1965654081`).
 
 ## Building
 
@@ -101,7 +101,7 @@ Do not hand-edit these; replace them wholesale when the upstream author publishe
 
 | Path | Upstream |
 | --- | --- |
-| [HudAPIv2.cs](../Data/Scripts/Thermodynamics/HudAPIv2.cs) | Draygo's Text HUD API client |
+| [RichHudFramework/](../Data/Scripts/Thermodynamics/RichHudFramework) | Zach Hembree's Rich HUD Framework client module |
 | [DefinitionExtensionsAPI.cs](../Data/Scripts/Thermodynamics/DefinitionExtensionsAPI.cs) | Draygo's Definition Extensions client |
 | [NetworkAPI/](../Data/Scripts/Thermodynamics/NetworkAPI) | SENetworkAPI |
 

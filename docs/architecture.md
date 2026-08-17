@@ -47,7 +47,7 @@ temperatures, overheat events and threshold crossings.
 | [Game/ThermalHeatSources.cs](../Data/Scripts/Thermodynamics/Game/ThermalHeatSources.cs) | static | Registered point heat sources, and their irradiance at a grid. |
 | [ThermalApi.cs](../Data/Scripts/Thermodynamics/ThermalApi.cs) | static | The mod-facing delegate table. See [api.md](api.md). |
 | [ThermalTerminal.cs](../Data/Scripts/Thermodynamics/ThermalTerminal.cs) | static | Thermal readout in every block's terminal. |
-| [ThermalHud.cs](../Data/Scripts/Thermodynamics/ThermalHud.cs) | static | Text HUD API readouts and the extinguisher billboard. |
+| [ThermalHud.cs](../Data/Scripts/Thermodynamics/ThermalHud.cs) | static | Cockpit summary and extinguisher readout, on Rich HUD, plus the extinguisher billboard. |
 | [ThermalDebugView.cs](../Data/Scripts/Thermodynamics/ThermalDebugView.cs) | static | The x-ray overlay: a coloured box per block, or per room cell, cycled with Ctrl+Shift+=. |
 | [ThermalSettingsMenu.cs](../Data/Scripts/Thermodynamics/ThermalSettingsMenu.cs) | static | The Rich HUD settings menu, generated from `Settings.Names()`. Opened with Ctrl+Shift+S. Owns the framework registration. |
 | [ThermalDebugPanel.cs](../Data/Scripts/Thermodynamics/ThermalDebugPanel.cs) | static | The Rich HUD readout beside the overlay: per-view figures for the grid being drawn. |
@@ -55,7 +55,7 @@ temperatures, overheat events and threshold crossings.
 | [Settings.cs](../Data/Scripts/Thermodynamics/Settings.cs) | class | Config file, defaults, access by name, and the write-through to the model's settings. |
 | [Definitions/](../Data/Scripts/Thermodynamics/Definitions) | classes | Typed readers over Definition Extensions. |
 | [Telemetry/](../Data/Scripts/Thermodynamics/Telemetry) | static + records | Data collection. See [telemetry.md](telemetry.md). |
-| [HudAPIv2.cs](../Data/Scripts/Thermodynamics/HudAPIv2.cs), [DefinitionExtensionsAPI.cs](../Data/Scripts/Thermodynamics/DefinitionExtensionsAPI.cs), [NetworkAPI/](../Data/Scripts/Thermodynamics/NetworkAPI), [RichHudFramework/](../Data/Scripts/Thermodynamics/RichHudFramework) | vendored | Third-party API clients. Do not edit; replace wholesale when upstream updates. |
+| [DefinitionExtensionsAPI.cs](../Data/Scripts/Thermodynamics/DefinitionExtensionsAPI.cs), [NetworkAPI/](../Data/Scripts/Thermodynamics/NetworkAPI), [RichHudFramework/](../Data/Scripts/Thermodynamics/RichHudFramework) | vendored | Third-party API clients. Do not edit; replace wholesale when upstream updates. |
 
 ## Update order
 

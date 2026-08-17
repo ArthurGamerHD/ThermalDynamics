@@ -159,12 +159,14 @@ namespace Thermodynamics
 
             Build();
             ThermalDebugPanel.Build();
+            ThermalHud.Build();
         }
 
         private static void OnReset()
         {
             page = null;
             ThermalDebugPanel.Reset();
+            ThermalHud.Reset();
         }
 
         private static void Build()

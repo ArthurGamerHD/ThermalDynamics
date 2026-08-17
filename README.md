@@ -44,12 +44,11 @@ into atmosphere and into the air of sealed rooms, arrives from the sun, and — 
 | Mod | Used for | Workshop ID |
 | --- | --- | --- |
 | **Definition Extensions** (Draygo) | Reads all thermal properties out of `<ModExtensions>` blocks in the definitions. Required — without it block lookups throw. | `2756894170` |
-| **Text HUD API** (Draygo) | The cockpit readout and the extinguisher readout. Degrades quietly if absent. | `573804956` |
-| **Rich HUD Master** (Zach Hembree) | The settings menu and the debug readout panel. Degrades quietly if absent — the chat commands and the overlay still work. | `1965654081` |
+| **Rich HUD Master** (Zach Hembree) | Every piece of text the mod draws on screen: cockpit summary, extinguisher readout, settings menu, debug readout. Degrades quietly if absent — the simulation, the terminal readouts, the chat commands and the overlay all still work. | `1965654081` |
 
 ## Quick start
 
-1. Subscribe to Definition Extensions, Text HUD API and Rich HUD Master, and enable all four mods.
+1. Subscribe to Definition Extensions and Rich HUD Master, and enable all three mods.
 2. Load a world and build. Heat simulates immediately; nothing is repainted and nothing is drawn
    until you ask for it.
 3. Sit in a cockpit for ambient, peak temperature, peak rate of change, critical block count and

@@ -156,9 +156,11 @@ Critical Blocks:  count over critical temperature in the last completed pass
 Coolant Loops:    number of valid loops on the grid
 ```
 
-Both HUD elements require Text HUD API; without it `HudInit` never fires and nothing is drawn. The
-terminal readout ([ThermalTerminal.cs](../Data/Scripts/Thermodynamics/ThermalTerminal.cs)) has no
-such dependency.
+Both HUD elements are drawn by the Rich HUD Framework; without Rich HUD Master the framework never
+registers and no text appears. The extinguisher's temperature billboard is drawn through the mod API
+directly and does not care. The terminal readout
+([ThermalTerminal.cs](../Data/Scripts/Thermodynamics/ThermalTerminal.cs)) has no such dependency
+either.
 
 ## Radiators and the heat pump
 

@@ -229,17 +229,17 @@ does not care how often it is polled.
 
 ## 8. Terminal readout without a HUD dependency
 
-The mod requires Text HUD API for all of its output. Per-block information has a first-party
-route:
+The mod requires Rich HUD Master for all of its on-screen text. Per-block information has a
+first-party route:
 
 ```csharp
 terminalBlock.AppendingCustomInfo += (b, sb) => sb.Append("Temperature: 412 C\n");
 terminalBlock.RefreshCustomInfo();
 ```
 
-That puts temperature in the terminal detail panel for any functional block, with no dependency.
-Text HUD API is still the right tool for the always-on cockpit overlay, but the per-block
-readout does not need it.
+That puts temperature in the terminal detail panel for any functional block, with no dependency —
+which is why the terminal readout works in a world with no HUD framework at all. The framework is
+still the right tool for the always-on cockpit overlay, but the per-block readout does not need it.
 
 `MyAPIGateway.TerminalControls` is also available if you want a per-block thermal limit slider or
 a "vent coolant" action.

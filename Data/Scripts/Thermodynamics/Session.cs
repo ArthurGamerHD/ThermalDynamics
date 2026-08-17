@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Draygo.API;
 using Draygo.BlockExtensionsAPI;
 using Sandbox.ModAPI;
 using SENetworkAPI;
@@ -55,7 +54,6 @@ namespace Thermodynamics
 
             Telemetry.Start();
 
-            ThermalHud.Initialize();
             ThermalTerminal.Register();
 
             // The API is published from Init so a mod that loads after this one still finds it:

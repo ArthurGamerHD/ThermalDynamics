@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.Text;
-using Draygo.API;
+using RichHudFramework.UI;
+using RichHudFramework.UI.Client;
+using RichHudFramework.UI.Rendering;
 using Sandbox.Game.Entities;
 using Sandbox.ModAPI;
 using Sandbox.ModAPI.Weapons;
@@ -19,12 +21,20 @@ namespace Thermodynamics
     ///
     /// Client only, draw rate rather than step rate, and every path starts by finding out
     /// whether it has anything to draw at all.
+    ///
+    /// The text is drawn by the Rich HUD Framework, the same as the settings menu and the debug
+    /// readout. The billboard is not: it is a world-space quad over a block, which is the mod API's
+    /// own job and needs no framework at all — so aiming the extinguisher still shows a
+    /// temperature-coloured block when the framework is missing, it just shows no number.
     /// </summary>
     public static class ThermalHud
     {
-        public static HudAPIv2 hudBase;
-        public static HudAPIv2.HUDMessage hudStatusTool;
-        public static HudAPIv2.HUDMessage hudStatusGrid;
+        /// <summary>Draw calls between text updates.</summary>
+        private const int TextInterval = 6;
+
+        private static Label toolLabel;
+        private static Label gridLabel;
+        private static int sinceText;
 
         private static readonly StringBuilder ToolText = new StringBuilder();
         private static readonly StringBuilder GridText = new StringBuilder();
@@ -32,34 +42,74 @@ namespace Thermodynamics
         /// <summary>Reused by the billboard pass so aiming at a block allocates nothing.</summary>
         private static readonly List<BlockInstance> NeighbourScratch = new List<BlockInstance>();
 
-        public static void Initialize()
+        /// <summary>Built when the framework registers, from <see cref="ThermalSettingsMenu"/>.</summary>
+        public static void Build()
         {
-            hudBase = new HudAPIv2(HudInit);
+            if (toolLabel != null) return;
+
+            // Just off the crosshair, where the block being aimed at is.
+            toolLabel = new Label(HudMain.HighDpiRoot)
+            {
+                ParentAlignment = ParentAlignments.Center,
+                Offset = new Vector2(60f, 30f),
+                Format = new GlyphFormat(Color.White, TextAlignment.Left, 1f),
+                Visible = false,
+            };
+
+            // Right edge, below the middle: clear of the game's own cockpit readouts.
+            gridLabel = new Label(HudMain.HighDpiRoot)
+            {
+                ParentAlignment = ParentAlignments.Right | ParentAlignments.InnerH,
+                Offset = new Vector2(-40f, -160f),
+                BuilderMode = TextBuilderModes.Lined,
+                Format = new GlyphFormat(Color.White, TextAlignment.Left, 1f),
+                Visible = false,
+            };
         }
 
-        private static void HudInit()
+        public static void Reset()
         {
-            hudStatusTool = new HudAPIv2.HUDMessage(ToolText, new Vector2D(-1, 0), null, -1, 1, true, false, null, BlendTypeEnum.PostPP, "white");
-            hudStatusTool.InitialColor = Color.White;
-            hudStatusTool.ShadowColor = Color.White;
-            hudStatusTool.Scale *= 1;
-            hudStatusTool.Origin = new Vector2D(0.02f, 0.015f);
-            hudStatusTool.Visible = true;
-
-            hudStatusGrid = new HudAPIv2.HUDMessage(GridText, new Vector2D(-1, 0), null, -1, 1, true, false, null, BlendTypeEnum.PostPP, "white");
-            hudStatusGrid.InitialColor = Color.White;
-            hudStatusGrid.ShadowColor = Color.White;
-            hudStatusGrid.Scale *= 1;
-            hudStatusGrid.Origin = new Vector2D(0.75f, -0.45f);
-            hudStatusGrid.Visible = true;
+            toolLabel = null;
+            gridLabel = null;
         }
 
         public static void Draw()
         {
             if (MyAPIGateway.Utilities.IsDedicated) return;
 
+            // The billboard follows the aim every frame; the text does not have to. Ten updates a
+            // second is past what anyone reads and saves rebuilding a text board sixty times.
+            sinceText++;
+            bool publish = sinceText >= TextInterval;
+            if (publish) sinceText = 0;
+
             DrawToolHud();
             DrawGridHud();
+
+            if (!publish) return;
+
+            Publish(toolLabel, ToolText);
+            Publish(gridLabel, GridText);
+        }
+
+        /// <summary>
+        /// Pushes a built string onto its label, or does nothing at all when the framework never
+        /// registered. The text is built either way: it is a few appends, and a readout that has to
+        /// be rebuilt from scratch the moment the framework appears is a second code path to get
+        /// wrong.
+        /// </summary>
+        private static void Publish(Label label, StringBuilder text)
+        {
+            if (label == null) return;
+
+            if (text.Length == 0)
+            {
+                label.Visible = false;
+                return;
+            }
+
+            label.Visible = true;
+            label.Text = new RichText(text);
         }
 
         private static void DrawToolHud()
@@ -119,10 +169,13 @@ namespace Thermodynamics
             ThermalNode hottest = thermals.HottestNode;
             if (hottest != null)
             {
-                if (hudStatusGrid != null)
+                if (gridLabel != null)
                 {
-                    hudStatusGrid.InitialColor = ColorExtensions.HSVtoColor(
-                        Tools.GetTemperatureColor(hottest.Temperature));
+                    // The summary is tinted by the hottest block, so the panel itself reads as a
+                    // warning before any of its numbers are read.
+                    gridLabel.Format = new GlyphFormat(
+                        ColorExtensions.HSVtoColor(Tools.GetTemperatureColor(hottest.Temperature)),
+                        TextAlignment.Left, 1f);
                 }
 
                 GridText.Append("Peak T: ")
