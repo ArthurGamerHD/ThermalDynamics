@@ -37,7 +37,7 @@ into atmosphere and into the air of sealed rooms, arrives from the sun, and — 
 | Heat pumps | The one block that moves heat *up* a gradient, for an electrical cost set by Carnot: cheap across a small difference, ruinous across a large one. |
 | Damage and thresholds | Blocks above their critical temperature take continuous damage. Any other temperature can be watched by another mod. |
 | Airtightness mapping | A per-grid flood fill classifies every cell as external, structure or room, which decides what counts as an exposed surface. Doors are portals, so cycling one costs a walk over the doors rather than a remap. |
-| Readouts | Terminal panel per block, cockpit summary, crosshair readout, and an x-ray block overlay — every block of the ship in front of you drawn as a box coloured by temperature, solar watts, exposed faces or friction watts, cycled with Ctrl+Shift+=. |
+| Readouts | Terminal panel per block, cockpit summary, crosshair readout, and an x-ray block overlay — every block of the ship in front of you drawn as a box coloured by temperature, solar watts, exposed faces or friction watts — plus a room view that draws the mapped air itself, cycled with Ctrl+Shift+=. |
 
 ## Required dependencies
 

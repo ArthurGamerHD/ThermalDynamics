@@ -113,11 +113,12 @@ All client side and all off by default.
 | `DebugTextOnScreen` | `false` | Crosshair readout: temperature, per-mechanism watts, block constants, environment, grid totals, room classification, raw surface bits. Switching it on also makes the solver record per-mechanism watts, which is not free. |
 | `DebugSolarRaycast` | `false` | Draws the sun ray from each grid, white when lit and red when occluded. |
 | `DebugWindRaycast` | `false` | Draws the relative wind vector. |
-| `DebugBlockOverlay` | 0 | Which view the block overlay opens a session on: 0 off, 1 temperature, 2 solar watts, 3 exposed faces, 4 friction watts. |
+| `DebugBlockOverlay` | 0 | Which view the block overlay opens a session on: 0 off, 1 temperature, 2 solar watts, 3 exposed faces, 4 friction watts, 5 rooms. |
 
 ### The block overlay
 
-**Ctrl+Shift+=** cycles it: off → temperature → solar watts → exposed faces → friction watts → off.
+**Ctrl+Shift+=** cycles it: off → temperature → solar watts → exposed faces → friction watts → rooms
+→ off.
 `/thermal overlay` does the same from chat. A mod cannot add a rebindable control, so the chord is
 fixed; it is ignored while the chat box or a menu is open.
 
@@ -125,6 +126,12 @@ Every block of the grid you are controlling and the grid you are looking at, out
 as a translucent box coloured by the selected value, using the same ramp as the HUD and the
 terminal. The boxes are drawn *through* the hull — a reactor buried mid-ship is visible from
 outside, which is the point of a debug view and the reason this was a poor thermal camera.
+
+**Rooms** is the one view that draws cells rather than blocks: a box in every cell the mapper put in
+a room, coloured by which room it is, with vented rooms drawn faint. It is how you find out whether
+two compartments you think are separate came back as one room, and where the leak is when a room you
+think is sealed reads as vented — a question no readout answers, because rooms belong to cells and
+readouts belong to blocks.
 
 Everything about it is client side and per frame: nothing is written to the grid, nothing
 replicates, and switching it off leaves no trace. It replaces the four `Debug*BlockColors` modes,

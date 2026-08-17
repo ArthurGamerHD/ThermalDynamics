@@ -98,7 +98,7 @@ namespace Thermodynamics
         /// <summary>
         /// Which value the block overlay starts a session showing, as a
         /// <see cref="ThermalDebugView.Mode"/>: 0 off, 1 temperature, 2 solar watts, 3 exposed
-        /// faces, 4 friction watts. Ctrl+Shift+= cycles it in play, client side.
+        /// faces, 4 friction watts, 5 rooms. Ctrl+Shift+= cycles it in play, client side.
         /// </summary>
         [ProtoMember(57)] public int DebugBlockOverlay;
 
@@ -172,7 +172,8 @@ namespace Thermodynamics
             if (TelemetrySampleStride < 1) TelemetrySampleStride = 1;
             if (SolarOcclusionInterval < 1) SolarOcclusionInterval = 1;
             if (DebugBlockOverlay < 0) DebugBlockOverlay = 0;
-            if (DebugBlockOverlay > 4) DebugBlockOverlay = 4;
+            if (DebugBlockOverlay >= ThermalDebugView.ModeCount)
+                DebugBlockOverlay = ThermalDebugView.ModeCount - 1;
             if (RoomConvectionCoefficient < 0f) RoomConvectionCoefficient = 0f;
             if (RoomAirDensity < 0f) RoomAirDensity = 0f;
             if (HeatPumpCarnotFraction < 0f) HeatPumpCarnotFraction = 0f;

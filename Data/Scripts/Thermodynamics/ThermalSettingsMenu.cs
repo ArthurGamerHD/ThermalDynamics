@@ -98,7 +98,7 @@ namespace Thermodynamics
             { "DebugTextOnScreen", new Entry(Presentation, "Crosshair readout", "Everything the simulation knows about the block being looked at. Also makes the solver record per-mechanism watts, which is not free.", 0, 1) },
             { "DebugSolarRaycast", new Entry(Presentation, "Draw sun ray", "The sun ray from each grid, white when lit and red when occluded.", 0, 1) },
             { "DebugWindRaycast", new Entry(Presentation, "Draw wind vector", "The relative wind vector.", 0, 1) },
-            { "DebugBlockOverlay", new Entry(Presentation, "Block overlay", "The x-ray box overlay. Ctrl+Shift+= cycles it in play.", 0, 4, true) },
+            { "DebugBlockOverlay", new Entry(Presentation, "Block overlay", "The x-ray box overlay. Ctrl+Shift+= cycles it in play.", 0, ThermalDebugView.ModeCount - 1, true) },
 
             { "EnableTelemetry", new Entry(TelemetrySection, "Collect telemetry", "Per-grid and per-block-type data collection. Off for ordinary play.", 0, 1) },
             { "TelemetrySampleStride", new Entry(TelemetrySection, "Sample stride", "Steps between telemetry samples.", 1, 64, true) },
@@ -317,7 +317,7 @@ namespace Thermodynamics
                 Enabled = enabled,
             };
 
-            for (int mode = 0; mode <= 4; mode++)
+            for (int mode = 0; mode < ThermalDebugView.ModeCount; mode++)
             {
                 dropdown.List.Add(
                     new RichText(ThermalDebugView.Describe((ThermalDebugView.Mode)mode)),
