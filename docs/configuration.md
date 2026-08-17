@@ -128,6 +128,13 @@ at any distance: a debug view that faded out at some radius would read as a cold
 as an undrawn one. Only those two grids are picked up, which is what keeps the cost bounded. The boxes are drawn *through* the hull — a reactor buried mid-ship is visible from
 outside, which is the point of a debug view and the reason this was a poor thermal camera.
 
+While a view is up, a readout panel sits at the top left with the figures behind the picture: what
+the grid's coldest, mean and hottest blocks are in the temperature view, how many watts of sunlight
+it is taking and whether the sun is occluded in the solar view, its exposed face count and area,
+its speed against the friction threshold, or a table of rooms with their cell counts, air
+temperatures and seal state. It follows whatever grid the overlay is drawing and disappears with it.
+The panel needs Rich HUD Master, the same as the settings menu; the overlay itself does not.
+
 **Solar watts** and **friction watts** are the per-mechanism figures the solver normally does not
 bother to write down. Selecting either makes it record them for as long as that view is up, the same
 way the crosshair readout does, and stop when you cycle past. Without that they would draw every

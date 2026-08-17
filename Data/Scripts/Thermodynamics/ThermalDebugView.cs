@@ -60,6 +60,12 @@ namespace Thermodynamics
         /// <summary>Reused every frame so looking at a ship allocates nothing.</summary>
         private static readonly List<ThermalGrid> Targets = new List<ThermalGrid>();
 
+        /// <summary>
+        /// The grid the readout describes: the one being looked at, or the one being controlled
+        /// when the camera is pointed at nothing. Null when the overlay is off or has no target.
+        /// </summary>
+        public static ThermalGrid Focus { get; private set; }
+
         /// <summary>Metres out to which a grid is picked up by the aim ray.</summary>
         private const double PickRange = 300;
 
@@ -116,7 +122,12 @@ namespace Thermodynamics
 
         public static void Draw()
         {
-            if (Current == Mode.Off) return;
+            if (Current == Mode.Off)
+            {
+                Focus = null;
+                return;
+            }
+
             if (MyAPIGateway.Utilities == null || MyAPIGateway.Utilities.IsDedicated) return;
             if (MyAPIGateway.Session == null || MyAPIGateway.Session.Camera == null) return;
 
@@ -124,6 +135,7 @@ namespace Thermodynamics
             Vector3D eye = camera.Translation;
 
             CollectTargets(ref camera, ref eye);
+            Focus = Targets.Count > 0 ? Targets[Targets.Count - 1] : null;
 
             for (int i = 0; i < Targets.Count; i++)
             {

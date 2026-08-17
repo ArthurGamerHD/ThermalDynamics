@@ -137,6 +137,7 @@ namespace Thermodynamics
         {
             ThermalHud.Draw();
             ThermalDebugView.Draw();
+            ThermalDebugPanel.Update();
         }
 
         /// <summary>

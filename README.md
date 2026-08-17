@@ -37,7 +37,7 @@ into atmosphere and into the air of sealed rooms, arrives from the sun, and — 
 | Heat pumps | The one block that moves heat *up* a gradient, for an electrical cost set by Carnot: cheap across a small difference, ruinous across a large one. |
 | Damage and thresholds | Blocks above their critical temperature take continuous damage. Any other temperature can be watched by another mod. |
 | Airtightness mapping | A per-grid flood fill classifies every cell as external, structure or room, which decides what counts as an exposed surface. Doors are portals, so cycling one costs a walk over the doors rather than a remap. |
-| Readouts | Terminal panel per block, cockpit summary, crosshair readout, and an x-ray block overlay — every block of the ship in front of you drawn as a box coloured by temperature, solar watts, exposed faces or friction watts — plus a room view that draws the mapped air itself, cycled with Ctrl+Shift+=. |
+| Readouts | Terminal panel per block, cockpit summary, crosshair readout, and an x-ray block overlay — every block of the ship in front of you drawn as a box coloured by temperature, solar watts, exposed faces or friction watts — plus a room view that draws the mapped air itself, cycled with Ctrl+Shift+=, with a readout panel of the figures behind whichever view is up. |
 
 ## Required dependencies
 
@@ -45,7 +45,7 @@ into atmosphere and into the air of sealed rooms, arrives from the sun, and — 
 | --- | --- | --- |
 | **Definition Extensions** (Draygo) | Reads all thermal properties out of `<ModExtensions>` blocks in the definitions. Required — without it block lookups throw. | `2756894170` |
 | **Text HUD API** (Draygo) | The cockpit readout and the extinguisher readout. Degrades quietly if absent. | `573804956` |
-| **Rich HUD Master** (Zach Hembree) | The settings menu. Degrades quietly if absent — the chat commands still work. | `1965654081` |
+| **Rich HUD Master** (Zach Hembree) | The settings menu and the debug readout panel. Degrades quietly if absent — the chat commands and the overlay still work. | `1965654081` |
 
 ## Quick start
 

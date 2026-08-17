@@ -127,7 +127,7 @@ namespace Thermodynamics
             if (MyAPIGateway.Utilities != null && MyAPIGateway.Utilities.IsDedicated) return;
 
             initialised = true;
-            RichHudClient.Init(Settings.Name, Build, Reset);
+            RichHudClient.Init(Settings.Name, OnRegistered, OnReset);
         }
 
         public static void Open()
@@ -143,9 +143,20 @@ namespace Thermodynamics
             else RichHudTerminal.OpenToPage(page);
         }
 
-        private static void Reset()
+        /// <summary>
+        /// One registration serves the whole mod, so the callback fans out to everything built on
+        /// the framework rather than each part registering its own client.
+        /// </summary>
+        private static void OnRegistered()
+        {
+            Build();
+            ThermalDebugPanel.Build();
+        }
+
+        private static void OnReset()
         {
             page = null;
+            ThermalDebugPanel.Reset();
         }
 
         private static void Build()
