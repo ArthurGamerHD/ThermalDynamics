@@ -4,6 +4,7 @@ using RichHudFramework.Client;
 using RichHudFramework.UI;
 using RichHudFramework.UI.Client;
 using Sandbox.ModAPI;
+using VRage.Utils;
 
 namespace Thermodynamics
 {
@@ -127,6 +128,11 @@ namespace Thermodynamics
             if (MyAPIGateway.Utilities != null && MyAPIGateway.Utilities.IsDedicated) return;
 
             initialised = true;
+
+            // Registration is a handshake with a separate mod that may not be installed. It never
+            // reports failure — it just never answers — so the request is logged, and so is the
+            // answer, to tell "no Rich HUD Master" apart from "menu failed to build".
+            MyLog.Default.Info("[" + Settings.Name + "] requesting Rich HUD registration");
             RichHudClient.Init(Settings.Name, OnRegistered, OnReset);
         }
 
@@ -149,6 +155,8 @@ namespace Thermodynamics
         /// </summary>
         private static void OnRegistered()
         {
+            MyLog.Default.Info("[" + Settings.Name + "] Rich HUD registered; building menu and readout");
+
             Build();
             ThermalDebugPanel.Build();
         }

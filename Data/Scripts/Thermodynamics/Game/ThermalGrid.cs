@@ -175,7 +175,14 @@ namespace Thermodynamics
             Grid.OnGridSplit += GridSplit;
             Grid.OnGridMerge += GridMerge;
 
-            NeedsUpdate = MyEntityUpdateEnum.BEFORE_NEXT_FRAME | MyEntityUpdateEnum.EACH_10TH_FRAME;
+            // OR, never assignment. The descriptor asks for entity updates, so this property is
+            // the grid entity's own update flags, not this component's: assigning to it clears
+            // whatever the grid set for itself. MyCubeGrid drives its scheduled work — including
+            // the ship control system's recalculation — off EACH_FRAME, and re-arms that flag only
+            // when its queue goes from empty to non-empty. Clear it once and the queue is never
+            // drained again: the grid stops recalculating who is controlling it, and sitting in a
+            // cockpit reports "Someone else is using this ship!" forever.
+            NeedsUpdate |= MyEntityUpdateEnum.BEFORE_NEXT_FRAME | MyEntityUpdateEnum.EACH_10TH_FRAME;
         }
 
         public override void UpdateOnceBeforeFrame()
@@ -184,8 +191,9 @@ namespace Thermodynamics
 
             if (Grid.Physics == null)
             {
-                // Projections and blueprints have no physics and never simulate.
-                NeedsUpdate = MyEntityUpdateEnum.NONE;
+                // Projections and blueprints have no physics and never simulate. The flag stays as
+                // the grid wants it — `disabled` is what stops this component doing any work, and
+                // taking the grid's update flags away to save a branch is what broke ship control.
                 disabled = true;
                 return;
             }

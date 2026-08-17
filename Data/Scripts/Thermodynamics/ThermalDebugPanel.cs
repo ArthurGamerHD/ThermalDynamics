@@ -33,6 +33,7 @@ namespace Thermodynamics
         private static int sinceRefresh;
         private static ThermalDebugView.Mode lastMode;
         private static long lastGrid;
+        private static bool warned;
         private static readonly StringBuilder Text = new StringBuilder();
 
         /// <summary>Reused by the room view so a big ship does not allocate a list per sweep.</summary>
@@ -70,7 +71,11 @@ namespace Thermodynamics
         /// </summary>
         public static void Update()
         {
-            if (panel == null) return;
+            if (panel == null)
+            {
+                WarnOnce();
+                return;
+            }
 
             ThermalGrid thermals = ThermalDebugView.Focus;
             bool wanted = ThermalDebugView.Current != ThermalDebugView.Mode.Off
@@ -97,6 +102,24 @@ namespace Thermodynamics
 
             Compose(thermals);
             panel.Text = new RichText(Text.ToString());
+        }
+
+        /// <summary>
+        /// Says why there is no panel, once, the first time a view is switched on without it.
+        ///
+        /// Registration with Rich HUD Master fails silently by design — the framework simply never
+        /// calls back — and a debug tool that is quietly absent is worse than one that is missing
+        /// loudly.
+        /// </summary>
+        private static void WarnOnce()
+        {
+            if (warned) return;
+            if (ThermalDebugView.Current == ThermalDebugView.Mode.Off) return;
+            if (MyAPIGateway.Utilities == null || MyAPIGateway.Utilities.IsDedicated) return;
+
+            warned = true;
+            MyAPIGateway.Utilities.ShowNotification(
+                "Thermodynamics: the overlay readout needs the Rich HUD Master mod", 5000, "Red");
         }
 
         private static void Compose(ThermalGrid thermals)

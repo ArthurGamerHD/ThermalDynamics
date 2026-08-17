@@ -2,6 +2,17 @@
 
 Current as of the review that added room air, thresholds, point heat sources and the mod API. Split into defects, unfinished work, and limits that are deliberate.
 
+## Fixed, worth remembering
+
+**Never assign `NeedsUpdate` from a game logic component that asked for entity updates.**
+`[MyEntityComponentDescriptor(typeof(MyObjectBuilder_CubeGrid), true)]` makes the component's
+`NeedsUpdate` property the *grid entity's* update flags. Assigning to it clears whatever the grid
+set for itself, and `MyCubeGrid` re-arms `EACH_FRAME` only when its scheduled-update queue goes from
+empty to non-empty — so clearing it once stops that queue being drained for the rest of the session.
+The visible symptom was ship control: `MyGroupControlSystem` recalculates the controlling cockpit
+from that queue, so sitting down gave "Someone else is using this ship!" forever. Use `|=`, and stop
+work with a flag of your own rather than by taking the entity's updates away.
+
 ## Unfinished
 
 **Radiators cannot be inline loop segments.** A radiator sheds heat when a pipe's sink face is
