@@ -134,6 +134,14 @@ namespace Thermodynamics
         [ProtoMember(33)] public float SimulationSpeed = 1f;
         [ProtoMember(34)] public float HeatTimeScale = 225f;
 
+        /// <summary>
+        /// Most link visits one solver step may make before it is shortened to fit. Zero removes
+        /// the bound. See the core setting of the same name: this is the knob that trades
+        /// simulation rate for smoothness on very large grids, and it does so by advancing less
+        /// simulated time rather than by taking coarser substeps, so no accuracy is lost.
+        /// </summary>
+        [ProtoMember(35)] public int MaxLinkVisitsPerStep = 1000000;
+
         // ---- environment -------------------------------------------------------------------
 
         [ProtoMember(40)] public float VacuumTemperature = 2.7f;
@@ -235,6 +243,7 @@ namespace Thermodynamics
             if (Frequency < 1) Frequency = 1;
             if (SimulationSpeed <= 0f) SimulationSpeed = 1f;
             if (HeatTimeScale <= 0f) HeatTimeScale = 1f;
+            if (MaxLinkVisitsPerStep < 0) MaxLinkVisitsPerStep = 0;
             if (TelemetrySampleStride < 1) TelemetrySampleStride = 1;
             if (SolarOcclusionInterval < 1) SolarOcclusionInterval = 1;
             if (SolarTerrainRange < 0f) SolarTerrainRange = 0f;
@@ -307,6 +316,7 @@ namespace Thermodynamics
             core.Frequency = Frequency;
             core.SimulationSpeed = SimulationSpeed;
             core.HeatTimeScale = HeatTimeScale;
+            core.MaxLinkVisitsPerStep = MaxLinkVisitsPerStep;
 
             core.VacuumTemperature = VacuumTemperature;
             core.SolarEnergy = SolarEnergy;
@@ -348,7 +358,7 @@ namespace Thermodynamics
                 "EnableFriction", "EnableDamage", "EnableCoolantLoops", "EnableRoomAir",
                 "EnableHeatPumps",
                 "ClampConductionOvershoot", "DamageIsPerSecond",
-                "Frequency", "SimulationSpeed", "HeatTimeScale",
+                "Frequency", "SimulationSpeed", "HeatTimeScale", "MaxLinkVisitsPerStep",
                 "VacuumTemperature", "SolarEnergy", "FrictionAtSpeedsAbove", "FrictionScale",
                 "RoomConvectionCoefficient", "RoomAirDensity", "SolarOcclusionInterval",
                 "ClimateGroundInfluence", "ClimateWeatherInfluence",
@@ -389,6 +399,7 @@ namespace Thermodynamics
                 case "Frequency": return Frequency;
                 case "SimulationSpeed": return SimulationSpeed;
                 case "HeatTimeScale": return HeatTimeScale;
+                case "MaxLinkVisitsPerStep": return MaxLinkVisitsPerStep;
                 case "VacuumTemperature": return VacuumTemperature;
                 case "SolarEnergy": return SolarEnergy;
                 case "FrictionAtSpeedsAbove": return FrictionAtSpeedsAbove;
@@ -445,6 +456,7 @@ namespace Thermodynamics
                 case "Frequency": Frequency = (int)value; return true;
                 case "SimulationSpeed": SimulationSpeed = value; return true;
                 case "HeatTimeScale": HeatTimeScale = value; return true;
+                case "MaxLinkVisitsPerStep": MaxLinkVisitsPerStep = (int)value; return true;
                 case "VacuumTemperature": VacuumTemperature = value; return true;
                 case "SolarEnergy": SolarEnergy = value; return true;
                 case "FrictionAtSpeedsAbove": FrictionAtSpeedsAbove = value; return true;

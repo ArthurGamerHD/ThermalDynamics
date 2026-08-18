@@ -173,6 +173,32 @@ namespace Thermodynamics.Core
         public bool ClampConductionOvershoot = true;
 
         /// <summary>
+        /// Most link visits one solver step may make — substeps times links — before the step is
+        /// shortened to fit. Zero removes the bound.
+        ///
+        /// This is the setting that trades simulation rate for smoothness, and it is the one that
+        /// makes a very large grid playable.
+        ///
+        /// A step's cost is not its length but its substep count times its links, and the substep
+        /// count is set by the stiffest node on the grid, which changes as the grid heats. On a
+        /// large ship that produced a step costing fifteen milliseconds most of the time and
+        /// seventy occasionally, from the same grid doing the same thing — a five-fold spike with
+        /// no cause a player could see or avoid.
+        ///
+        /// When a step would exceed this, the step is made <em>shorter</em> rather than its
+        /// substeps coarser. That distinction is the whole point. Coarsening substeps takes steps
+        /// too large for the stiffness and leans on the overshoot clamp to stay bounded, which is
+        /// an accuracy loss. Shortening the step advances less simulated time at exactly the same
+        /// accuracy: heat moves more slowly, and nothing else about it changes. A grid too large
+        /// to simulate at full rate therefore runs at a lower rate smoothly, rather than at full
+        /// rate in lurches.
+        ///
+        /// The default is about one 60 fps frame's worth of link visits at the measured cost per
+        /// visit. Grids below roughly a hundred thousand blocks never reach it and are unaffected.
+        /// </summary>
+        public int MaxLinkVisitsPerStep = 1000000;
+
+        /// <summary>
         /// Damage per second is <c>(T - critical) * CriticalTemperatureScaler</c>. When false,
         /// damage is applied per solver step instead, which makes damage scale with
         /// <see cref="Frequency"/> — the original behaviour.
@@ -218,6 +244,7 @@ namespace Thermodynamics.Core
             if (HeatPumpCarnotFraction < 0f) HeatPumpCarnotFraction = 0f;
             if (HeatPumpCarnotFraction > 1f) HeatPumpCarnotFraction = 1f;
             if (HeatPumpMaxCoefficient < 0f) HeatPumpMaxCoefficient = 0f;
+            if (MaxLinkVisitsPerStep < 0) MaxLinkVisitsPerStep = 0;
 
             StepSeconds = 1f / Frequency;
             StepsPerSecond = Frequency * SimulationSpeed;

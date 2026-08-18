@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using Thermodynamics.Core;
 using Thermodynamics.Harness;
@@ -395,6 +396,85 @@ namespace Thermodynamics.Tests
                 "a run of blocks laid end to end should link to each other");
         }
 
+        /// <summary>
+        /// Grinding a block off must cost the block, not the grid.
+        ///
+        /// The companion to the placement test, and it was the harder direction: a removed block's
+        /// links have to be found before they can be dropped, and its node has to leave a list
+        /// whose indices every link refers to. Before the per-node link index existed, this took
+        /// the global path — 304 ms on a half-million-block hull against a 49 ms median, which
+        /// made grinding and combat damage the largest stall the mod had.
+        /// </summary>
+        [Fact]
+        public void GrindingOneBlockUnpicksTheBlockAndNotTheGrid()
+        {
+            ThermalSimulation simulation = Build(Large);
+            while (simulation.HasPendingWork) simulation.Update(LoadBenchmarks.TickSeconds, Space());
+
+            int blocks = simulation.Solver.Nodes.Count;
+            int links = simulation.Solver.LinkCount;
+
+            simulation.Work.Reset();
+
+            // An interior block, so it is a joint with several neighbours rather than a spur.
+            BlockInstance doomed = null;
+            IList<ThermalNode> nodes = simulation.Solver.Nodes;
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                if (nodes[i].LinkCount < 4) continue;
+                doomed = nodes[i].Block;
+                break;
+            }
+            Assert.NotNull(doomed);
+
+            simulation.RemoveBlock(doomed);
+            simulation.Update(LoadBenchmarks.TickSeconds, Space());
+
+            output.WriteLine("one block ground off " + blocks.ToString("n0") + " blocks: "
+                + simulation.Work.NodesRemoved + " nodes removed, "
+                + simulation.Work.LinksRemoved + " links unpicked, "
+                + simulation.Work.TopologyRebuilds + " global rebuilds, "
+                + simulation.Work.TopologyNodeVisits + " nodes visited.");
+
+            Assert.Equal(0, simulation.Work.TopologyRebuilds);
+            Assert.Equal(1, simulation.Work.NodesRemoved);
+            Assert.True(simulation.Work.LinksRemoved < 16,
+                "unpicking one block dropped " + simulation.Work.LinksRemoved + " links");
+            Assert.Equal(blocks - 1, simulation.Solver.Nodes.Count);
+            Assert.True(simulation.Solver.LinkCount < links,
+                "the block's links should be gone");
+        }
+
+        /// <summary>
+        /// A section shot away is many removals at once, and must still cost the section.
+        /// </summary>
+        [Fact]
+        public void GrindingABurstCostsTheBurstAndNotTheGrid()
+        {
+            ThermalSimulation simulation = Build(Large);
+            while (simulation.HasPendingWork) simulation.Update(LoadBenchmarks.TickSeconds, Space());
+
+            int blocks = simulation.Solver.Nodes.Count;
+            simulation.Work.Reset();
+
+            const int destroyed = 100;
+            for (int i = 0; i < destroyed; i++)
+            {
+                simulation.RemoveBlock(simulation.Solver.Nodes[0].Block);
+            }
+
+            simulation.Update(LoadBenchmarks.TickSeconds, Space());
+
+            output.WriteLine(destroyed + " blocks ground off " + blocks.ToString("n0") + ": "
+                + simulation.Work.NodesRemoved + " nodes removed, "
+                + simulation.Work.LinksRemoved + " links unpicked, "
+                + simulation.Work.TopologyRebuilds + " global rebuilds.");
+
+            Assert.Equal(0, simulation.Work.TopologyRebuilds);
+            Assert.Equal(destroyed, (int)simulation.Work.NodesRemoved);
+            Assert.Equal(blocks - destroyed, simulation.Solver.Nodes.Count);
+        }
+
         // ---- the budgeted stages ------------------------------------------------------------
 
         /// <summary>
@@ -476,6 +556,112 @@ namespace Thermodynamics.Tests
             Assert.True(total >= simulation.Solver.Nodes.Count,
                 "the pass should still have visited every node: " + total + " of "
                 + simulation.Solver.Nodes.Count);
+        }
+
+        // ---- the step's own budget ------------------------------------------------------------
+
+        /// <summary>
+        /// A step must never make more link visits than it is allowed.
+        ///
+        /// A step's cost is its substep count times its links, and the substep count is set by the
+        /// stiffest node, which moves as the grid heats. That produced a 127k hull whose step cost
+        /// fifteen milliseconds most of the time and seventy occasionally, from the same grid
+        /// doing the same thing — a five-fold spike with no visible cause. The budget bounds it.
+        /// </summary>
+        [Fact]
+        public void AStepNeverExceedsItsLinkVisitBudget()
+        {
+            ThermalSimulation simulation = Build(Large);
+            while (simulation.HasPendingWork) simulation.Update(LoadBenchmarks.TickSeconds, Space());
+
+            // Tight enough that this grid has to shorten its steps, so the mechanism is exercised
+            // rather than merely present.
+            simulation.Settings.MaxLinkVisitsPerStep = simulation.Solver.LinkCount * 2;
+            simulation.Settings.Derive();
+
+            LoadBenchmarks.SeedSpread(simulation);
+
+            long worst = 0;
+            for (int tick = 0; tick < 200; tick++)
+            {
+                simulation.Work.Reset();
+                simulation.Update(LoadBenchmarks.TickSeconds, Space());
+
+                long visits = simulation.Work.SolverSubsteps * simulation.Solver.LinkCount;
+                if (visits > worst) worst = visits;
+            }
+
+            output.WriteLine(simulation.Solver.LinkCount.ToString("n0") + " links, budget "
+                + simulation.Settings.MaxLinkVisitsPerStep.ToString("n0")
+                + " visits/step, worst step made " + worst.ToString("n0")
+                + ". Simulation rate " + (100d * simulation.SimulationRate).ToString("n1") + "%.");
+
+            Assert.True(worst <= simulation.Settings.MaxLinkVisitsPerStep,
+                "a step made " + worst + " link visits against a budget of "
+                + simulation.Settings.MaxLinkVisitsPerStep);
+        }
+
+        /// <summary>
+        /// Shortening a step must cost simulated time and nothing else.
+        ///
+        /// This is the distinction the setting rests on. Coarsening substeps would take steps too
+        /// large for the grid's stiffness and lean on the overshoot clamp, which is an accuracy
+        /// loss; shortening the step advances less time at exactly the same accuracy. So a budget
+        /// tight enough to bite must leave the substep count inside its bound and report the time
+        /// it did not advance, rather than clamping.
+        /// </summary>
+        [Fact]
+        public void AShortenedStepLosesTimeAndNotAccuracy()
+        {
+            ThermalSimulation simulation = Build(Small);
+            while (simulation.HasPendingWork) simulation.Update(LoadBenchmarks.TickSeconds, Space());
+
+            LoadBenchmarks.SeedSpread(simulation);
+
+            simulation.Settings.MaxLinkVisitsPerStep = simulation.Solver.LinkCount;
+            simulation.Settings.Derive();
+
+            for (int tick = 0; tick < 60; tick++)
+            {
+                simulation.Update(LoadBenchmarks.TickSeconds, Space());
+            }
+
+            output.WriteLine("budget one substep: " + simulation.Solver.LastSubsteps
+                + " substeps on the last step, clamped " + simulation.Solver.LastStepWasClamped
+                + ", skipped " + simulation.SimulatedSecondsSkipped.ToString("n2")
+                + " s of " + (simulation.SimulatedSecondsRun + simulation.SimulatedSecondsSkipped).ToString("n2")
+                + " (rate " + (100d * simulation.SimulationRate).ToString("n1") + "%).");
+
+            Assert.Equal(1, simulation.Solver.LastSubsteps);
+            Assert.False(simulation.Solver.LastStepWasClamped,
+                "the step should have been shortened to fit, not clamped to fit");
+            Assert.True(simulation.SimulatedSecondsSkipped > 0d,
+                "a budget this tight should have cost simulated time");
+            Assert.True(simulation.SimulationRate < 1d);
+        }
+
+        /// <summary>
+        /// A grid small enough not to reach the budget must be untouched by it — same substeps,
+        /// no time skipped, same simulation rate.
+        /// </summary>
+        [Fact]
+        public void AGridUnderTheBudgetIsUnaffected()
+        {
+            ThermalSimulation simulation = Build(Small);
+            while (simulation.HasPendingWork) simulation.Update(LoadBenchmarks.TickSeconds, Space());
+            LoadBenchmarks.SeedSpread(simulation);
+
+            for (int tick = 0; tick < 60; tick++)
+            {
+                simulation.Update(LoadBenchmarks.TickSeconds, Space());
+            }
+
+            output.WriteLine(simulation.Solver.LinkCount.ToString("n0") + " links against the default "
+                + simulation.Settings.MaxLinkVisitsPerStep.ToString("n0")
+                + " visit budget: rate " + (100d * simulation.SimulationRate).ToString("n1") + "%.");
+
+            Assert.Equal(0d, simulation.SimulatedSecondsSkipped, 6);
+            Assert.Equal(1d, simulation.SimulationRate, 6);
         }
 
         // ---- wall clock, loosely ------------------------------------------------------------

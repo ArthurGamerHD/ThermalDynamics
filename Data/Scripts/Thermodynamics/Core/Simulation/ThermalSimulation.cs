@@ -120,6 +120,62 @@ namespace Thermodynamics.Core
         private readonly List<OverheatEvent> overheats = new List<OverheatEvent>();
         private readonly List<ThresholdCrossing> crossings = new List<ThresholdCrossing>();
 
+        /// <summary>
+        /// Simulated seconds this simulation has chosen not to advance, because advancing them
+        /// would have cost more than one step is allowed.
+        ///
+        /// Reported rather than hidden. A grid running below real time is a legitimate state and
+        /// the one this trade is for, but it is also the difference between a ship that cools in
+        /// a minute and one that takes three, so it has to be visible to anyone reading a report
+        /// and wondering why heat is moving slowly.
+        /// </summary>
+        public double SimulatedSecondsSkipped { get; private set; }
+
+        /// <summary>
+        /// How much of real time this simulation is keeping up with, 0..1. One when nothing has
+        /// been skipped.
+        /// </summary>
+        public double SimulationRate
+        {
+            get
+            {
+                double owed = SimulatedSecondsRun + SimulatedSecondsSkipped;
+                return owed <= 0d ? 1d : SimulatedSecondsRun / owed;
+            }
+        }
+
+        /// <summary>Simulated seconds actually advanced.</summary>
+        public double SimulatedSecondsRun { get; private set; }
+
+        /// <summary>
+        /// The longest step this grid can afford, in simulated seconds, given how many link
+        /// visits a step is allowed and how stiff the grid currently is.
+        ///
+        /// Returns the full step whenever it fits, which on anything below roughly a hundred
+        /// thousand blocks is always.
+        /// </summary>
+        private float AffordableStepSeconds(float seconds)
+        {
+            int budgetVisits = settings.MaxLinkVisitsPerStep;
+            if (budgetVisits <= 0) return seconds;
+
+            int links = solver.LinkCount;
+            if (links <= 0) return seconds;
+
+            // At least one substep, however large the grid: a step that cannot afford a single
+            // pass over its links is a grid that cannot be simulated at all, and running slowly
+            // is better than not running.
+            int substepBudget = budgetVisits / links;
+            if (substepBudget < 1) substepBudget = 1;
+
+            float required = solver.RequiredSubsteps(seconds);
+            if (required <= substepBudget) return seconds;
+
+            // The substep estimate is proportional to the step length, so scaling the length by
+            // the ratio lands exactly on the budget.
+            return seconds * (substepBudget / required);
+        }
+
         private void RunSteps(int steps, ref EnvironmentState state)
         {
             overheats.Clear();
@@ -127,7 +183,15 @@ namespace Thermodynamics.Core
 
             for (int i = 0; i < steps; i++)
             {
-                solver.Step(settings.StepSeconds, state);
+                float seconds = AffordableStepSeconds(settings.StepSeconds);
+
+                if (seconds < settings.StepSeconds)
+                {
+                    SimulatedSecondsSkipped += settings.StepSeconds - seconds;
+                }
+                SimulatedSecondsRun += seconds;
+
+                solver.Step(seconds, state);
 
                 IList<OverheatEvent> stepOverheats = solver.Overheats;
                 for (int o = 0; o < stepOverheats.Count; o++)

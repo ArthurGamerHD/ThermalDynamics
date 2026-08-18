@@ -83,11 +83,31 @@ Each switch removes exactly its own mechanism and its own cost.
 
 ## Solver
 
+`MaxLinkVisitsPerStep` is the one to reach for when a very large grid stutters, and it is worth
+understanding before changing it.
+
+A step's cost is not its length: it is the number of substeps it takes times the number of links
+on the grid. The substep count is set by the stiffest node, which moves as the grid heats — so a
+large ship produced steps costing 15 ms most of the time and 70 ms occasionally, with nothing a
+player could see or avoid changing between them.
+
+When a step would exceed the budget, the step is made **shorter** rather than its substeps
+coarser. Coarsening substeps would take steps too large for the grid's stiffness and lean on
+`ClampConductionOvershoot` to stay bounded, which loses accuracy. Shortening the step advances
+less simulated time at exactly the same accuracy: heat moves more slowly, and nothing else about
+it changes.
+
+So this setting buys **smoothness with simulation rate**. Lower it and a large grid takes smaller,
+more even steps and its heat evolves more slowly; raise it or set it to zero and it runs at full
+rate with the spikes back. Grids below roughly a hundred thousand blocks never reach the default
+and are unaffected either way. The telemetry report says what rate each grid is actually keeping.
+
 | Setting | Default | Effect |
 | --- | --- | --- |
 | `Frequency` | 4 | Solver steps per simulated second. The integration step is `1/Frequency`. |
 | `SimulationSpeed` | 1 | Simulated seconds per real second, applied by running more steps rather than longer ones. Linear in CPU. |
 | `HeatTimeScale` | 225 | How much faster than real physics heat moves. Divides every heat capacity. |
+| `MaxLinkVisitsPerStep` | 1000000 | Most link visits one step may make — substeps times links — before the step is shortened to fit. 0 removes the bound. See below. |
 | `ClampConductionOvershoot` | `true` | Caps each exchange at the energy that equalises the pair. Off reproduces the original unbounded solver. |
 | `DamageIsPerSecond` | `true` | Overheat damage per second of simulated time. Off applies it per step, which makes damage scale with `Frequency`. |
 

@@ -181,6 +181,8 @@ namespace Thermodynamics.Sim
                 + result.BuildMs.ToString("n0") + " ms.");
             if (result.Notes.Length > 0) Console.WriteLine("  " + result.Notes);
             Console.WriteLine("  " + result.Trace.Describe());
+            if (result.SolverTick >= 0) Console.WriteLine("  " + result.DescribeStages());
+            Console.WriteLine("  " + result.DescribeGc());
         }
 
         private static string Option(string[] args, string flag, string fallback)

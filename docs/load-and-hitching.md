@@ -120,20 +120,33 @@ and one ground off half way.
 | hitch | 126,731 | 10.38 | 17.42 | 49.10 | 78.69 | 7.6x | 27 / 300 |
 | hitch | 505,566 | 49.33 | 56.27 | 173.40 | **303.59** | 6.2x | 201 / 300 |
 
-Two things to read here.
-
-**Welding is smooth now, and gets smoother as the grid grows.** A spike ratio of 1.6 on a
+**Welding is smooth, and gets smoother as the grid grows.** A spike ratio of 1.6 on a
 half-million-block grid means sustained construction is essentially flat: the ticks over budget
 are the steady cost being over budget, not stalls. That is the incremental topology working — the
 same run before it would have paid a 200 ms rebuild on every one of the 120 ticks.
 
-**The worst tick in every `hitch` run is the block being removed.** At 500k it is 304 ms against a
-49 ms median. Removal is now the largest spike the mod has, ahead of the solver step, and it is a
-common event: grinding, combat damage, a section breaking off.
+The `hitch` rows above were taken before findings 6 to 8. Afterwards, with the worst tick in each
+run attributed by stage:
+
+| run | blocks | median | p95 | p99 | max | worst tick is |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| hitch | 126,731 | 11.28 | 19.34 | **26.47** | 60.83 | the first step |
+| hitch | 505,566 | 23.96 | 26.36 | **28.71** | 208.68 | the first step |
+
+The tail is what moved. At 500k the p99 went from 173 ms to 29 ms against a median of 24, and the
+median itself halved because a step is now bounded. What is left is a very tight distribution and
+one outlier: **the first step**, which pays for the first touch of every flat array and the first
+fill of every mirrored row. It is a warm-up, it happens once, and it happens immediately after a
+world load that took eleven seconds — so it is the least interesting stall on the page.
+
+The worst call to each stage on those runs is topology 10.5 ms, rooms 10.4 ms, exposure below the
+timer's resolution, and the solver everything else. Nothing but the solver is above ten
+milliseconds on a half-million-block grid, and the solver is doing arithmetic rather than
+bookkeeping.
 
 ---
 
-## The five findings
+## The findings
 
 ### 1. A block placed rebuilt the whole conduction graph — *fixed*
 
@@ -191,6 +204,56 @@ whole every eight steps.
 
 This is the one finding the synthetic benchmarks cannot see — a harness has no game blocks to ask
 — which is why the load numbers are not the whole story and telemetry from a real session is.
+
+### 6. Removing a block rebuilt the whole conduction graph — *fixed*
+
+The companion to finding 1, and the harder direction. A removed block's links have to be *found*
+before they can be dropped, and scanning the link list for them is proportional to the grid. Its
+node also has to leave a list whose indices every link refers to, and taking it out by shifting
+everything after it moves every one of those indices at once.
+
+Both are solved by two decisions. Links are indexed per node as an intrusive chain — three `int`
+arrays, no per-node collections and no managed references, which is the shape
+[scale-design §6](scale-design.md#6-data-structures) asks for — so a node's links are walked in
+time proportional to its degree. And a node leaves by having the last node moved into its place,
+so exactly one index changes and only the links touching that one node are rewritten.
+
+Everything else holding a node index is repaired for that one change: the coolant loops, the heat
+pumps, and the room air. The room air is the one that mattered — it is not rebuilt until a room
+mapping pass completes, which on a large grid is thousands of ticks after the block was removed,
+so a stale index there would have poured a room's heat into whichever block inherited it.
+
+`IncrementalTopologyTests` proves it against the global builder, including a 400-step fuzz run
+that builds and grinds in a generated order and compares the graph against a rebuild after every
+single change.
+
+### 7. A step's cost varied five-fold with nothing visible changing — *fixed*
+
+A step's cost is its substep count times its links, and the substep count is set by the stiffest
+node on the grid, which moves as the grid heats. On a 127k hull that produced a step costing 15 ms
+most of the time and 70 ms occasionally, from the same grid doing the same thing.
+
+`MaxLinkVisitsPerStep` bounds it. When a step would exceed the budget, the step is made
+**shorter** rather than its substeps coarser — and that distinction is the whole point.
+Coarsening substeps takes steps too large for the stiffness and leans on the overshoot clamp,
+which is an accuracy loss. Shortening the step advances less simulated time at exactly the same
+accuracy: heat moves more slowly and nothing else changes.
+
+**This is the setting that trades simulation rate for smoothness**, and it is what makes a grid
+too large to simulate at full rate run at a lower rate smoothly rather than at full rate in
+lurches. `ThermalSimulation.SimulationRate` reports how much of real time a grid is keeping up
+with, so a slow grid says so rather than being mysterious. The default is about one 60 fps
+frame's worth of link visits; grids below roughly a hundred thousand blocks never reach it.
+
+### 8. Publishing the shadow map walked every node — *fixed*
+
+The self-shadow walk was budgeted. Publishing its answer was not: a completed pass called a loop
+over every node on the grid, six faces each — 760,000 shadow lookups on a 127k hull — from inside
+the step. That was the 69 ms step whose conduction loop accounted for a fifth of it.
+
+The same shape of mistake as the room mapper's, and the same fix: the refresh is spread over
+steps. It is advanced inside the pass rather than at the top of a step, so a grid small enough for
+the budget to cover in one go still finishes in the same substep that completed the pass.
 
 ### And one that was not a finding
 

@@ -28,7 +28,7 @@ namespace Thermodynamics.Core
     /// for the alternating sweep direction the original used to hide its order dependence, and
     /// the pass is safe to parallelise later.
     /// </summary>
-    public class ThermalSolver
+    public partial class ThermalSolver
     {
         /// <summary>Fraction of the theoretical stability limit a substep is allowed to use.</summary>
         public const float StabilitySafetyFactor = 0.5f;
@@ -116,6 +116,32 @@ namespace Thermodynamics.Core
         /// still readable until the new one is complete.
         /// </summary>
         public int SunShadowBudget = 2048;
+
+        /// <summary>
+        /// Nodes whose lit fraction is refreshed per step once a shadow pass completes.
+        ///
+        /// The walk itself was budgeted; publishing its answer was not. A completed pass called a
+        /// loop over every node on the grid, six faces each, from inside the step — 760,000 shadow
+        /// lookups on a 127k hull, which measured as a 69 ms step against a 12 ms median with the
+        /// conduction loop accounting for only a fifth of it. That is the same shape of mistake as
+        /// the room mapper publishing its map: the expensive part was not the pass, it was the
+        /// moment the pass finished.
+        ///
+        /// Spreading it leaves some faces reading the previous shadow for a few steps, which is
+        /// what the shadow map already does by design — it is allowed to lag the sun by two
+        /// degrees before a rebuild is worth starting.
+        /// </summary>
+        public int SunLitBudget = 4096;
+
+        /// <summary>Where a lit-fraction refresh has got to, and whether one is running.</summary>
+        private int sunLitCursor;
+        private bool sunLitPending;
+
+        /// <summary>
+        /// Value to fill every face with instead of reading the shadow map, or a negative number
+        /// when the map is the source. Used by the switched-off path, which has no map to read.
+        /// </summary>
+        private float sunLitFill = -1f;
 
         /// <summary>True when <see cref="nodeSunLit"/> no longer matches the nodes or the map.</summary>
         private bool sunLitDirty = true;
@@ -349,6 +375,8 @@ namespace Thermodynamics.Core
             // graph was already due a full rebuild does that stand.
             node.PendingLinks = true;
             pendingLinkNodes.Add(node);
+            EnsureNodeChainCapacity(nodes.Count);
+            nodeFirstLink[node.Index] = -1;
 
             sunLitDirty = true;
             return node;
@@ -362,18 +390,31 @@ namespace Thermodynamics.Core
             if (!nodesByKey.TryGetValue(block.Key, out node)) return false;
 
             nodesByKey.Remove(block.Key);
-            nodes.RemoveAt(node.Index);
-            for (int i = node.Index; i < nodes.Count; i++)
+
+            // A node still waiting to be linked has no links to unpick and no chain entry, so it
+            // is dropped from the queue rather than routed through the removal path.
+            if (node.PendingLinks)
             {
-                nodes[i].Index = i;
+                node.PendingLinks = false;
+                pendingLinkNodes.Remove(node);
             }
 
-            // Every index after the hole has moved, so every link that referred to one of them
-            // now refers to the wrong node. There is no incremental repair for that without a
-            // per-node index of the links touching it, so removal still takes the global path —
-            // see docs/known-issues.md.
-            linksDirty = true;
-            resyncAll = true;
+            if (linksDirty)
+            {
+                // The graph is already due a full rebuild, so unpicking one node's links would be
+                // work thrown away. Take it out the plain way and let the rebuild sort the rest.
+                nodes.RemoveAt(node.Index);
+                for (int i = node.Index; i < nodes.Count; i++)
+                {
+                    nodes[i].Index = i;
+                }
+                resyncAll = true;
+            }
+            else
+            {
+                RemoveNodeIncremental(node);
+            }
+
             sunLitDirty = true;
             return true;
         }
@@ -445,6 +486,8 @@ namespace Thermodynamics.Core
 
             links.Clear();
             syncedLinks = 0;
+            EnsureBuffers();
+            ResetLinkChains();
             for (int i = 0; i < nodes.Count; i++)
             {
                 nodes[i].LinkCount = 0;
@@ -478,6 +521,7 @@ namespace Thermodynamics.Core
                     if (conductance <= 0f) continue;
 
                     links.Add(new ThermalLink(a.Index, b.Index, conductance, contacts));
+                    ChainLink(links.Count - 1);
                     a.LinkCount++;
                     b.LinkCount++;
                 }
@@ -575,6 +619,7 @@ namespace Thermodynamics.Core
                     if (conductance <= 0f) continue;
 
                     links.Add(new ThermalLink(a.Index, b.Index, conductance, contacts));
+                    ChainLink(links.Count - 1);
                     a.LinkCount++;
                     b.LinkCount++;
                 }
@@ -1573,11 +1618,14 @@ namespace Thermodynamics.Core
         {
             if (!settings.SolarSelfShadowing)
             {
-                if (!sunShadow.IsBuilt && !sunShadow.IsRunning && !sunLitDirty) return;
+                if (sunShadow.IsBuilt || sunShadow.IsRunning || sunLitDirty)
+                {
+                    sunShadow.Clear();
+                    BeginSunLit(1f);
+                    sunLitDirty = false;
+                }
 
-                sunShadow.Clear();
-                FillSunLit(1f);
-                sunLitDirty = false;
+                StepSunLit(SunLitBudget);
                 return;
             }
 
@@ -1589,30 +1637,75 @@ namespace Thermodynamics.Core
                 sunLitDirty = false;
             }
 
-            // Only a completed pass changes any answer, so the lit fractions are refreshed on the
-            // tick that completes one and left alone on every other.
-            if (sunShadow.Step(SunShadowBudget)) RefreshSunLit();
+            // Only a completed pass changes any answer, so the lit fractions are refreshed after
+            // one completes and left alone otherwise.
+            if (sunShadow.Step(SunShadowBudget)) BeginSunLit(-1f);
+
+            // A slice here rather than at the top of the step, so a grid small enough for the
+            // budget to cover it in one go finishes inside the same substep that completed the
+            // pass — which is what it did before there was a budget, and what every test of the
+            // shadow model asserts.
+            StepSunLit(SunLitBudget);
         }
 
-        private void RefreshSunLit()
+        /// <summary>Starts a lit-fraction refresh, from the shadow map or from a fixed value.</summary>
+        private void BeginSunLit(float fill)
         {
-            for (int i = 0; i < nodes.Count; i++)
+            sunLitFill = fill;
+            sunLitCursor = 0;
+            sunLitPending = true;
+        }
+
+        /// <summary>
+        /// Advances a lit-fraction refresh by at most <paramref name="nodeBudget"/> nodes.
+        /// </summary>
+        private void StepSunLit(int nodeBudget)
+        {
+            if (!sunLitPending) return;
+
+            if (sunLitCursor >= nodes.Count)
             {
-                int b = i * Face.Count;
-                for (int f = 0; f < Face.Count; f++)
+                sunLitPending = false;
+                return;
+            }
+
+            int end = sunLitCursor + nodeBudget;
+            if (end > nodes.Count) end = nodes.Count;
+
+            if (sunLitFill >= 0f)
+            {
+                for (int i = sunLitCursor; i < end; i++)
                 {
-                    nodeSunLit[b + f] = sunShadow.FaceLitFraction(nodes[i].Block, f);
+                    int b = i * Face.Count;
+                    for (int f = 0; f < Face.Count; f++) nodeSunLit[b + f] = sunLitFill;
                 }
             }
+            else
+            {
+                for (int i = sunLitCursor; i < end; i++)
+                {
+                    int b = i * Face.Count;
+                    for (int f = 0; f < Face.Count; f++)
+                    {
+                        nodeSunLit[b + f] = sunShadow.FaceLitFraction(nodes[i].Block, f);
+                    }
+                }
+            }
+
+            sunLitCursor = end;
+            if (sunLitCursor >= nodes.Count) sunLitPending = false;
         }
 
-        private void FillSunLit(float value)
+        /// <summary>Runs a pending lit-fraction refresh to completion. For tests and one-shot rebuilds.</summary>
+        public void FinishSunLit()
         {
-            int count = nodes.Count * Face.Count;
-            for (int i = 0; i < count; i++)
-            {
-                nodeSunLit[i] = value;
-            }
+            while (sunLitPending) StepSunLit(int.MaxValue);
+        }
+
+        /// <summary>True while a lit-fraction refresh has nodes left to visit.</summary>
+        public bool SunLitRefreshPending
+        {
+            get { return sunLitPending; }
         }
 
         /// <summary>

@@ -226,6 +226,211 @@ namespace Thermodynamics.Tests
             }
         }
 
+        // ---- removal ------------------------------------------------------------------------
+
+        /// <summary>
+        /// A grid built whole and then ground down must end up as the same graph as the same
+        /// blocks built from scratch.
+        ///
+        /// Removal is the hard direction. A block placed adds links and disturbs nothing; a block
+        /// removed has to have its links found and unpicked, and its node taken out of a list
+        /// whose indices every link refers to. Getting that subtly wrong does not throw — it
+        /// leaves a link pointing at the wrong node, which conducts heat between two blocks that
+        /// do not touch and is invisible until someone notices a cold block warming.
+        /// </summary>
+        [Fact]
+        public void GrindingBlocksOffLeavesTheSameGraphAsNeverBuildingThem()
+        {
+            List<Vector3I> cells = Shape();
+
+            // A mixture: an interior cell with many neighbours, a spur end with one, an island
+            // with none, and one either side of the thin joint.
+            Vector3I[] removed =
+            {
+                new Vector3I(1, 1, 1),
+                new Vector3I(4, 1, 1),
+                new Vector3I(-3, 0, 0),
+                new Vector3I(0, 0, 0),
+                new Vector3I(2, 2, 3),
+            };
+
+            ThermalSimulation ground = BuiltAllAtOnce(cells);
+            for (int i = 0; i < removed.Length; i++)
+            {
+                BlockInstance block = ground.Grid.GetAtCell(removed[i]);
+                Assert.NotNull(block);
+                ground.RemoveBlock(block);
+                ground.Update(LoadBenchmarks.TickSeconds, Worlds.Shadow());
+            }
+            while (ground.HasPendingWork) ground.Update(LoadBenchmarks.TickSeconds, Worlds.Shadow());
+
+            List<Vector3I> remaining = new List<Vector3I>();
+            for (int i = 0; i < cells.Count; i++)
+            {
+                bool dropped = false;
+                for (int r = 0; r < removed.Length; r++)
+                {
+                    if (cells[i] == removed[r]) dropped = true;
+                }
+                if (!dropped) remaining.Add(cells[i]);
+            }
+
+            // Rebuilt with the same block models on the same cells, so conductances match.
+            ThermalSimulation fresh = BuiltAllAtOnce(cells);
+            for (int i = 0; i < removed.Length; i++)
+            {
+                BlockInstance block = fresh.Grid.GetAtCell(removed[i]);
+                fresh.Grid.Remove(block);
+                fresh.Solver.RemoveBlock(block);
+                fresh.Surfaces.RemoveBlock(block);
+            }
+            fresh.Solver.RebuildLinks();
+
+            Assert.Equal(remaining.Count, ground.Solver.Nodes.Count);
+            Assert.Equal(LinkSignature(fresh.Solver), LinkSignature(ground.Solver));
+        }
+
+        /// <summary>
+        /// Blocks placed and removed in an arbitrary order, checked against a rebuild after every
+        /// change.
+        ///
+        /// The cases worth catching here are the ones nobody thinks to write by hand: removing
+        /// the node that happens to be last in the list, removing the one that a previous removal
+        /// moved, removing a link that a previous removal moved, and doing all of it while other
+        /// blocks are still queued to be linked. The sequence is generated rather than chosen, and
+        /// written out rather than taken from <c>Random</c>, so a failure reproduces exactly.
+        /// </summary>
+        [Fact]
+        public void ArbitraryBuildingAndGrindingAlwaysMatchesARebuild()
+        {
+            GridModel grid = new GridModel(Catalog.LargeGridSize);
+            ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), grid);
+
+            List<Vector3I> plot = new List<Vector3I>();
+            for (int z = 0; z < 5; z++)
+                for (int y = 0; y < 4; y++)
+                    for (int x = 0; x < 4; x++)
+                        plot.Add(new Vector3I(x, y, z));
+
+            uint state = 0x12345678u;
+            int steps = 400;
+
+            for (int step = 0; step < steps; step++)
+            {
+                state ^= state << 13;
+                state ^= state >> 17;
+                state ^= state << 5;
+
+                Vector3I cell = plot[(int)(state % (uint)plot.Count)];
+                BlockInstance occupant = grid.GetAtCell(cell);
+
+                if (occupant != null)
+                {
+                    simulation.RemoveBlock(occupant);
+                }
+                else
+                {
+                    simulation.AddBlock(
+                        new BlockInstance(Model(step), cell, BlockOrientation.Identity), 293.15f);
+                }
+
+                simulation.Update(LoadBenchmarks.TickSeconds, Worlds.Shadow());
+
+                // Compared against what a rebuild of the very same solver would produce, so the
+                // check is of the incremental bookkeeping alone and not of two different grids.
+                List<string> incremental = LinkSignature(simulation.Solver);
+                simulation.Solver.RebuildLinks();
+                List<string> rebuilt = LinkSignature(simulation.Solver);
+
+                Assert.True(rebuilt.Count == incremental.Count && Same(rebuilt, incremental),
+                    "graph diverged at step " + step + " on cell " + cell
+                    + ": incremental had " + incremental.Count + " links, a rebuild "
+                    + rebuilt.Count);
+            }
+        }
+
+        private static bool Same(List<string> a, List<string> b)
+        {
+            if (a.Count != b.Count) return false;
+            for (int i = 0; i < a.Count; i++)
+            {
+                if (!string.Equals(a[i], b[i], StringComparison.Ordinal)) return false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Every node's link count must agree with the graph after churn. It is what the substep
+        /// estimate and the diagnostics read, and it is maintained by hand on both paths.
+        /// </summary>
+        [Fact]
+        public void LinkCountsPerNodeSurviveChurn()
+        {
+            List<Vector3I> cells = Shape();
+            ThermalSimulation simulation = BuiltAllAtOnce(cells);
+
+            simulation.RemoveBlock(simulation.Grid.GetAtCell(new Vector3I(1, 1, 1)));
+            simulation.RemoveBlock(simulation.Grid.GetAtCell(new Vector3I(4, 1, 1)));
+            simulation.AddBlock(new BlockInstance(Catalog.HeavyArmor(), new Vector3I(1, 1, 1),
+                BlockOrientation.Identity), 293.15f);
+            simulation.Update(LoadBenchmarks.TickSeconds, Worlds.Shadow());
+
+            int[] counted = new int[simulation.Solver.Nodes.Count];
+            IList<ThermalLink> links = simulation.Solver.Links;
+            for (int i = 0; i < links.Count; i++)
+            {
+                counted[links[i].NodeA]++;
+                counted[links[i].NodeB]++;
+            }
+
+            for (int i = 0; i < counted.Length; i++)
+            {
+                Assert.Equal(counted[i], simulation.Solver.Nodes[i].LinkCount);
+            }
+        }
+
+        /// <summary>
+        /// Grinding must not disturb the temperatures of the blocks left standing.
+        ///
+        /// The end-to-end check for removal, and the one that catches a link left pointing at the
+        /// wrong node: a stray link conducts between two blocks that do not touch, which no
+        /// structural comparison of counts would notice.
+        /// </summary>
+        [Fact]
+        public void GrindingDoesNotDisturbWhatIsLeftStanding()
+        {
+            List<Vector3I> cells = Shape();
+            Vector3I doomed = new Vector3I(4, 1, 1);
+
+            ThermalSimulation ground = BuiltAllAtOnce(cells);
+            SeedByPosition(ground);
+            ground.RemoveBlock(ground.Grid.GetAtCell(doomed));
+            ground.Update(LoadBenchmarks.TickSeconds, Worlds.Shadow());
+
+            ThermalSimulation reference = BuiltAllAtOnce(cells);
+            SeedByPosition(reference);
+            BlockInstance block = reference.Grid.GetAtCell(doomed);
+            reference.Grid.Remove(block);
+            reference.Solver.RemoveBlock(block);
+            reference.Surfaces.RemoveBlock(block);
+            reference.Solver.RebuildLinks();
+
+            EnvironmentSample sample = Worlds.Space(new Vector3(0f, 1f, 0f));
+            ground.StepExact(40, sample);
+            reference.StepExact(40, sample);
+
+            for (int i = 0; i < cells.Count; i++)
+            {
+                if (cells[i] == doomed) continue;
+
+                ThermalNode a = ground.Solver.GetNodeAt(cells[i]);
+                ThermalNode b = reference.Solver.GetNodeAt(cells[i]);
+                Assert.NotNull(a);
+                Assert.NotNull(b);
+                Assert.Equal(b.Temperature, a.Temperature, 3);
+            }
+        }
+
         /// <summary>
         /// Seeds a spread that depends only on where a block is, so two grids whose nodes are in
         /// different orders still start from the same physical state.

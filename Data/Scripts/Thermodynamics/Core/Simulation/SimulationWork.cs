@@ -27,6 +27,10 @@ namespace Thermodynamics.Core
         public long TopologyNodeVisits;
         public long LinksBuilt;
 
+        /// <summary>Nodes taken out incrementally, and the links unpicked with them.</summary>
+        public long NodesRemoved;
+        public long LinksRemoved;
+
         /// <summary>Exposure refreshes, and nodes whose exposed faces were recomputed.</summary>
         public long ExposureRefreshes;
         public long ExposureNodeVisits;
@@ -61,6 +65,8 @@ namespace Thermodynamics.Core
             TopologyRebuilds = 0;
             TopologyNodeVisits = 0;
             LinksBuilt = 0;
+            NodesRemoved = 0;
+            LinksRemoved = 0;
             ExposureRefreshes = 0;
             ExposureNodeVisits = 0;
             RoomAirRebuilds = 0;
@@ -83,6 +89,8 @@ namespace Thermodynamics.Core
             copy.TopologyRebuilds = TopologyRebuilds;
             copy.TopologyNodeVisits = TopologyNodeVisits;
             copy.LinksBuilt = LinksBuilt;
+            copy.NodesRemoved = NodesRemoved;
+            copy.LinksRemoved = LinksRemoved;
             copy.ExposureRefreshes = ExposureRefreshes;
             copy.ExposureNodeVisits = ExposureNodeVisits;
             copy.RoomAirRebuilds = RoomAirRebuilds;

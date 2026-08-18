@@ -75,6 +75,44 @@ namespace Thermodynamics.Harness
         public double BuildMs;
         public FrameTrace Trace;
         public string Notes = "";
+
+        /// <summary>
+        /// The worst call to each stage over the run, and the tick it landed on.
+        ///
+        /// A distribution says how bad the tail is; this says what is in it. Without it a p99 of
+        /// four times the median is a fact with no next step — the tail could be the solver
+        /// doing its job on a grid that large, or a stage that is still unbudgeted, and those
+        /// want opposite responses.
+        /// </summary>
+        public double TopologyMs;
+        public double RoomMappingMs;
+        public double ExposureMs;
+        public double SolverMs;
+        public int TopologyTick = -1;
+        public int RoomMappingTick = -1;
+        public int ExposureTick = -1;
+        public int SolverTick = -1;
+
+        /// <summary>Collections during the measured run, and bytes allocated by it.</summary>
+        public int Gen0;
+        public int Gen1;
+        public int Gen2;
+        public double AllocatedMb;
+
+        public string DescribeGc()
+        {
+            return "GC during the run: " + Gen0 + "/" + Gen1 + "/" + Gen2
+                + " collections, " + AllocatedMb.ToString("n0") + " MB allocated.";
+        }
+
+        public string DescribeStages()
+        {
+            return "worst call per stage: topology " + TopologyMs.ToString("n1")
+                + " (tick " + TopologyTick + "), rooms " + RoomMappingMs.ToString("n1")
+                + " (tick " + RoomMappingTick + "), exposure " + ExposureMs.ToString("n1")
+                + " (tick " + ExposureTick + "), solver " + SolverMs.ToString("n1")
+                + " (tick " + SolverTick + ") ms.";
+        }
     }
 
     /// <summary>
@@ -273,6 +311,13 @@ namespace Thermodynamics.Harness
             result.Links = simulation.Solver.Links.Count;
 
             SeedSpread(simulation);
+            SettleMemory();
+            simulation.Work.Reset();
+
+            int gen0 = GC.CollectionCount(0);
+            int gen1 = GC.CollectionCount(1);
+            int gen2 = GC.CollectionCount(2);
+            long allocated = GC.GetTotalAllocatedBytes(false);
 
             FrameTrace trace = new FrameTrace(result.Name);
             EnvironmentSample sample = Worlds.Space(new Vector3(0f, 1f, 0f));
@@ -284,6 +329,9 @@ namespace Thermodynamics.Harness
 
             for (int tick = 0; tick < ticks; tick++)
             {
+                StageTimings timings = new StageTimings();
+                simulation.Profiler = timings;
+
                 string what = "steady";
 
                 // One block welded a quarter of the way in, and one ground off half way. Both
@@ -307,10 +355,15 @@ namespace Thermodynamics.Harness
                 simulation.Update(TickSeconds, sample);
                 watch.Stop();
 
-                trace.Add(watch.Elapsed.TotalMilliseconds, what);
+                trace.Add(watch.Elapsed.TotalMilliseconds,
+                    what + ", " + simulation.Solver.LastSubsteps + " substeps, "
+                    + simulation.Work.SolverSteps + " steps so far");
+                RecordStages(result, timings, tick);
             }
 
+            simulation.Profiler = null;
             result.Trace = trace;
+            RecordGc(result, gen0, gen1, gen2, allocated);
             return result;
         }
 
@@ -334,6 +387,13 @@ namespace Thermodynamics.Harness
             result.Blocks = simulation.Solver.Nodes.Count;
             result.Links = simulation.Solver.Links.Count;
 
+            SettleMemory();
+
+            int gen0 = GC.CollectionCount(0);
+            int gen1 = GC.CollectionCount(1);
+            int gen2 = GC.CollectionCount(2);
+            long allocated = GC.GetTotalAllocatedBytes(false);
+
             FrameTrace trace = new FrameTrace(result.Name);
             EnvironmentSample sample = Worlds.Shadow();
             BlockModel armour = Catalog.HeavyArmor();
@@ -345,6 +405,9 @@ namespace Thermodynamics.Harness
 
             for (int tick = 0; tick < ticks; tick++)
             {
+                StageTimings timings = new StageTimings();
+                simulation.Profiler = timings;
+
                 Vector3I at = start + new Vector3I(0, 0, tick);
                 simulation.AddBlock(new BlockInstance(armour, at, BlockOrientation.Identity), 293.15f);
 
@@ -353,9 +416,12 @@ namespace Thermodynamics.Harness
                 watch.Stop();
 
                 trace.Add(watch.Elapsed.TotalMilliseconds, "block " + tick + " welded");
+                RecordStages(result, timings, tick);
             }
 
+            simulation.Profiler = null;
             result.Trace = trace;
+            RecordGc(result, gen0, gen1, gen2, allocated);
             result.Notes = ticks + " blocks welded, one per tick";
             return result;
         }
@@ -566,6 +632,30 @@ namespace Thermodynamics.Harness
             return report;
         }
 
+        private static void RecordGc(HitchResult result, int gen0, int gen1, int gen2, long allocated)
+        {
+            result.Gen0 = GC.CollectionCount(0) - gen0;
+            result.Gen1 = GC.CollectionCount(1) - gen1;
+            result.Gen2 = GC.CollectionCount(2) - gen2;
+            result.AllocatedMb = (GC.GetTotalAllocatedBytes(false) - allocated) / (1024d * 1024d);
+        }
+
+        /// <summary>Folds one tick's stage timings into a run's per-stage worst calls.</summary>
+        private static void RecordStages(HitchResult result, StageTimings timings, int tick)
+        {
+            double topology = timings.WorstMs(SimulationPhase.Topology);
+            if (topology > result.TopologyMs) { result.TopologyMs = topology; result.TopologyTick = tick; }
+
+            double rooms = timings.WorstMs(SimulationPhase.RoomMapping);
+            if (rooms > result.RoomMappingMs) { result.RoomMappingMs = rooms; result.RoomMappingTick = tick; }
+
+            double exposure = timings.WorstMs(SimulationPhase.Exposure);
+            if (exposure > result.ExposureMs) { result.ExposureMs = exposure; result.ExposureTick = tick; }
+
+            double solver = timings.WorstMs(SimulationPhase.Solver);
+            if (solver > result.SolverMs) { result.SolverMs = solver; result.SolverTick = tick; }
+        }
+
         private static void Record(SpikeReport report, StageTimings timings, SimulationPhase phase, int tick)
         {
             double ms = timings.WorstMs(phase);
@@ -588,6 +678,26 @@ namespace Thermodynamics.Harness
         }
 
         // ---- shared -------------------------------------------------------------------------
+
+        /// <summary>
+        /// Clears the harness's own construction garbage before a measured run.
+        ///
+        /// Building a grid of half a million blocks leaves hundreds of megabytes of dead
+        /// intermediate state — the shape's cell set, the builder's list, the flood fill's
+        /// working map. Collecting it at some arbitrary point during the measured ticks charges
+        /// a two-hundred-millisecond gen-2 collection to whichever tick was running, and it reads
+        /// exactly like a simulation stall. The first run of the hitch benchmark reported one at
+        /// tick 1 and it was this.
+        ///
+        /// Collections the simulation itself causes are still counted and reported, which is the
+        /// distinction worth keeping: the harness's garbage is noise, and the mod's is a finding.
+        /// </summary>
+        private static void SettleMemory()
+        {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+        }
 
         /// <summary>Builds a grid and takes it all the way to a mapped, settled state.</summary>
         public static ThermalSimulation BuildSettled(string shape, int targetCells)
