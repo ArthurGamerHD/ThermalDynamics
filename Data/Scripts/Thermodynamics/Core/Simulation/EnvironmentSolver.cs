@@ -57,43 +57,76 @@ namespace Thermodynamics.Core
             state.AirDensity = density;
             state.AtmosphereFactor = AtmosphereFactor(density);
 
+            // ---- weather -------------------------------------------------------------------
+            // Resolved to what it is worth right now, once, so nothing below has to know about
+            // intensity. Clear air softens to Calm, whose every term is the identity.
+            WeatherResponse.Weather weather = WeatherResponse.Soften(sample.Weather, Clamp01(sample.WeatherIntensity));
+
+            state.WeatherIntensity = Clamp01(sample.WeatherIntensity);
+            state.WeatherTemperatureOffset = weather.TemperatureOffset;
+
             // ---- ambient -------------------------------------------------------------------
-            float ambient;
-            if (sample.IsUnderground)
+            //
+            // Everything that decides what the air should be doing goes into a target, and the
+            // lag is applied to that target exactly once at the end. Scaling the running ambient
+            // instead compounds the scale against the lag every step: 0.977 four times a second
+            // against a 45 second lag settles at 14% of the intended figure, which is how a
+            // snowfield at 5.6 km came to sit at 36 K.
+
+            // Sine of the sun's height above the horizon: negative at night, 1 overhead.
+            float elevation = Vector3.Dot(SafeNormalize(sample.UpDirection), SafeNormalize(sample.SunDirection));
+
+            // A sample from before the ground had a say sends 0, which would flatten the day
+            // to nothing; that reads as "no opinion" and leaves the planet's own swing.
+            float groundSwing = sample.GroundSwing > 0f ? sample.GroundSwing : 1f;
+
+            // Ground and weather both shift the air and both change the size of its day, so they
+            // arrive at the model as one offset and one swing. Overcast is the same fact twice —
+            // the cloud that keeps the sun off by day keeps the heat in at night.
+            float offset = sample.GroundOffset + weather.TemperatureOffset;
+            float swing = groundSwing * WeatherResponse.SwingMultiplier(weather);
+
+            float target = ClimateModel.Target(planet, sample.LatitudeSine, elevation, offset, swing);
+
+            // Colder the higher it is, then faded toward vacuum only where the air actually runs
+            // out. Two separate facts that the single density multiply used to conflate.
+            target = ClimateModel.Lapse(target, sample.Altitude, planet.AmbientLapseRate);
+            target = ClimateModel.Thin(target, density, settings.VacuumTemperature);
+
+            // Underground there is no day, no weather and no sky, only rock and what is under it.
+            if (sample.Depth > 0f)
             {
-                ambient = planet.UndergroundTemperature;
+                target = ClimateModel.Underground(
+                    planet, target, sample.Depth, sample.Radius, sample.MeanRadius);
+            }
+
+            if (sample.IsUnderground || sample.Depth > 0f)
+            {
                 state.IsSolarOccluded = true;
                 state.SolarOcclusion = 1f;
             }
-            else
-            {
-                // Sine of the sun's height above the horizon: negative at night, 1 overhead.
-                float elevation = Vector3.Dot(SafeNormalize(sample.UpDirection), SafeNormalize(sample.SunDirection));
 
-                // A sample from before the ground had a say sends 0, which would flatten the day
-                // to nothing; that reads as "no opinion" and leaves the planet's own swing.
-                float swing = sample.GroundSwing > 0f ? sample.GroundSwing : 1f;
+            // Air chases that rather than being it, so the day's peak lands after noon. A grid
+            // with no history to chase from takes the target and starts there.
+            float ambient = sample.HasPreviousAmbient
+                ? ClimateModel.Follow(
+                    sample.PreviousAmbient, target, sample.SecondsSincePrevious, planet.AmbientLagSeconds)
+                : target;
 
-                ambient = ClimateModel.Target(
-                    planet, sample.LatitudeSine, elevation, sample.GroundOffset, swing);
-
-                // Air chases that rather than being it, so the day's peak lands after noon.
-                ambient = ClimateModel.Follow(
-                    sample.PreviousAmbient, ambient, sample.SecondsSincePrevious, planet.AmbientLagSeconds);
-            }
-
-            // Thin air holds little heat, so ambient tends toward vacuum as density falls.
-            ambient *= state.AtmosphereFactor;
             state.SetAmbient(Math.Max(settings.VacuumTemperature, ambient));
 
             // ---- convection ----------------------------------------------------------------
+            // Wet air strips heat off a hull far faster than dry air of the same speed, and the
+            // wind term alone cannot say so: fog barely moves and still carries heat away.
             float windBonus = 1f + (WindConvectionScale * (float)Math.Sqrt(state.WindSpeed));
-            state.ConvectionCoefficient = planet.ConvectionCoefficient * windBonus;
+            state.ConvectionCoefficient =
+                planet.ConvectionCoefficient * windBonus * Math.Max(0f, weather.ConvectionMultiplier);
 
             // ---- solar through atmosphere --------------------------------------------------
             state.SolarEnergy = settings.SolarEnergy
                 * (1f - state.SolarOcclusion)
-                * (1f - (planet.SolarDecay * state.AtmosphereFactor));
+                * (1f - (planet.SolarDecay * state.AtmosphereFactor))
+                * Math.Max(0f, weather.SolarMultiplier);
             if (state.SolarEnergy < 0f) state.SolarEnergy = 0f;
 
             // ---- friction ------------------------------------------------------------------

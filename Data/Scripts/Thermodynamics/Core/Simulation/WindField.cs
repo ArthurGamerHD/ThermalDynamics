@@ -102,7 +102,21 @@ namespace Thermodynamics.Core
         /// <summary>How hard it blows here, m/s.</summary>
         public static float Speed(float maxSpeed, float weather, float variation)
         {
+            return Speed(maxSpeed, weather, variation, 1f);
+        }
+
+        /// <summary>
+        /// As above, with what this particular weather does to the wind.
+        ///
+        /// Intensity alone cannot say: fog and a sandstorm are both weather at full strength and
+        /// one of them is still. The multiplier is the game's own <c>WindOutputModifier</c> for
+        /// the effect standing over the grid, already faded in with its intensity, so a tenth of a
+        /// gale is a tenth of the way toward one rather than all of it a tenth of the time.
+        /// </summary>
+        public static float Speed(float maxSpeed, float weather, float variation, float weatherWind)
+        {
             if (maxSpeed <= 0f) return 0f;
+            if (weatherWind < 0f) weatherWind = 0f;
 
             weather = Clamp(weather, 0f, 1f);
             variation = Clamp(variation, 0f, 1f);
@@ -111,6 +125,7 @@ namespace Thermodynamics.Core
             // in the same weather are not the same.
             float share = CalmFraction + ((StormFraction - CalmFraction) * weather);
             share *= 0.6f + (0.8f * variation);
+            share *= weatherWind;
 
             return maxSpeed * Clamp(share, 0f, 1f);
         }

@@ -50,15 +50,37 @@ namespace Thermodynamics.Harness
             sample.RelativeWindSpeed = windSpeed;
             sample.RelativeWindDirectionLocal = windSpeed > 0f ? Vector3.Forward : Vector3.Zero;
 
+            // Clear air on an earthlike ball, at sea level. A scenario that cares about altitude,
+            // depth or weather says so; everything else gets a world where none of the three is
+            // doing anything, which is what these fixtures meant before any of them existed.
+            sample.Weather = WeatherResponse.Calm;
+            sample.WeatherIntensity = 0f;
+            sample.MeanRadius = EarthlikeRadius;
+            sample.Radius = EarthlikeRadius;
+            sample.Altitude = 0f;
+            sample.Depth = 0f;
+
             return sample;
         }
 
-        /// <summary>Buried in the ground: no sun, underground ambient.</summary>
-        public static EnvironmentSample Underground(float airDensity = 1f)
+        /// <summary>Metres from centre to sea level on the stand-in planet. An earthlike's radius.</summary>
+        public const float EarthlikeRadius = 60000f;
+
+        /// <summary>
+        /// Buried in the ground: no sun, underground ambient.
+        ///
+        /// Deep enough that the surface's day has damped out entirely and shallow enough to stay
+        /// inside the sea-level deadzone, so this is the flat part of the depth curve — the one
+        /// place ambient is simply the planet's underground figure.
+        /// </summary>
+        public static EnvironmentSample Underground(float airDensity = 1f, float depth = 100f)
         {
             EnvironmentSample sample = PlanetSurface(airDensity, 0.5f);
             sample.IsUnderground = true;
             sample.IsSolarOccluded = true;
+            sample.Depth = depth;
+            sample.Radius = EarthlikeRadius - depth;
+            sample.Altitude = -depth;
             return sample;
         }
 

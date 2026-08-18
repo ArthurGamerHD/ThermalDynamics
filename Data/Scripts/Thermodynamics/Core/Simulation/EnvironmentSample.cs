@@ -22,6 +22,24 @@ namespace Thermodynamics.Core
         public bool IsUnderground;
 
         /// <summary>
+        /// Metres of ground over the grid. Zero or less means open air, and the sign is the whole
+        /// test — <see cref="IsUnderground"/> is the game's own answer and is kept for what it is
+        /// good for, which is knowing the sun cannot get in.
+        /// </summary>
+        public float Depth;
+
+        /// <summary>
+        /// Metres above the planet's mean radius. Negative in a valley below sea level. The air
+        /// cools with this, which is what makes a mountain top colder than the plain.
+        /// </summary>
+        public float Altitude;
+
+        /// <summary>Metres from the planet's centre, and the planet's own sea-level radius.</summary>
+        public float Radius;
+
+        public float MeanRadius;
+
+        /// <summary>
         /// Sine of latitude on the planet: 0 at the equator, ±1 at a pole. Zero when the host does
         /// not say, which reads as the equator and is what the model did before it was asked.
         /// </summary>
@@ -40,12 +58,42 @@ namespace Thermodynamics.Core
         public float GroundSwing;
 
         /// <summary>
+        /// The weather over the grid at full strength, and how much of it is actually blowing.
+        ///
+        /// Split that way because the two come from different places and change at different
+        /// rates: which weather it is comes from a name lookup the host caches, while the
+        /// intensity is a number the game recomputes as the front moves over.
+        ///
+        /// A default-constructed <see cref="WeatherResponse.Weather"/> is <em>not</em> calm — every
+        /// multiplier in it is zero, which would put the sun out. It never matters in practice
+        /// because a sample that names no weather also reports no intensity, and intensity zero
+        /// softens anything to <see cref="WeatherResponse.Calm"/>. A caller setting an intensity by
+        /// hand should set this from <see cref="WeatherResponse.For"/> as well.
+        /// </summary>
+        public WeatherResponse.Weather Weather;
+
+        /// <summary>Weather intensity here, 0..1. Zero is clear air and costs nothing.</summary>
+        public float WeatherIntensity;
+
+        /// <summary>
         /// Ambient at this grid a moment ago, K, and how long ago in seconds of play. The pair the
         /// lag needs: air chases the sun rather than tracking it, and chasing needs a start.
         /// </summary>
         public float PreviousAmbient;
 
         public float SecondsSincePrevious;
+
+        /// <summary>
+        /// Whether <see cref="PreviousAmbient"/> is a climate this grid actually had, rather than
+        /// whatever the field happened to hold.
+        ///
+        /// The lag needs somewhere to start and there is no such place on the step a grid arrives
+        /// at a planet — the state still holds the vacuum it was seeded with, and chasing 300 K
+        /// from 2.7 K at 45 seconds a decade takes three minutes of play during which every block
+        /// on the ship is dragged toward absolute zero. False means take the target and start
+        /// there, which is what a grid that has just arrived should do.
+        /// </summary>
+        public bool HasPreviousAmbient;
 
         /// <summary>
         /// Unit vector from the planet centre to the grid, in world space. Used for the
@@ -121,6 +169,7 @@ namespace Thermodynamics.Core
             s.UpDirection = Vector3.Up;
             s.WindDirection = Vector3.Zero;
             s.RelativeWindDirectionLocal = Vector3.Zero;
+            s.Weather = WeatherResponse.Calm;
             return s;
         }
 

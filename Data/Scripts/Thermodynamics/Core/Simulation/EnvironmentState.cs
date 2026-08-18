@@ -70,6 +70,18 @@ namespace Thermodynamics.Core
         public bool FrictionActive;
 
         /// <summary>
+        /// Weather intensity in force, 0..1, and what it did to the air, K.
+        ///
+        /// Neither is read by the simulation — every effect the weather has is already folded into
+        /// the ambient, the convection coefficient and the solar figure above. They are here so a
+        /// readout can say why a hull is losing heat twice as fast as it did a minute ago, which
+        /// is otherwise invisible.
+        /// </summary>
+        public float WeatherIntensity;
+
+        public float WeatherTemperatureOffset;
+
+        /// <summary>
         /// Point heat sources registered by other mods, already reduced to a direction and an
         /// irradiance. Null when there are none, which is the ordinary case; the array may be
         /// longer than <see cref="HeatSourceCount"/> so a host can reuse one buffer.

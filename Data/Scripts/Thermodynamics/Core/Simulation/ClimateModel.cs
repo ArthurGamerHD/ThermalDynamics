@@ -21,7 +21,18 @@ namespace Thermodynamics.Core
     /// tell us which we are standing on.</item>
     /// <item>Lag, because air takes hours to answer the sun. Without it the hottest moment of the
     /// day is exactly noon, which is wrong everywhere on Earth.</item>
+    /// <item>Altitude, because air cools as it thins and a mountain top is not its valley.</item>
+    /// <item>Depth, because rock does not have weather: a metre down the day is already blunted
+    /// and a kilometre down there is no day at all, only the heat coming up from below.</item>
     /// </list>
+    ///
+    /// Every one of these produces a <em>target</em>. Nothing here integrates and nothing here
+    /// remembers: <see cref="Follow"/> is the only function with a previous value in it, and it is
+    /// applied once, last, to whatever the rest of this class decided the air should be heading
+    /// toward. That ordering is not a style preference. Applying a scale to the running ambient
+    /// instead of to its target compounds the scale against the lag on every step, and a factor of
+    /// 0.977 applied four times a second against a 45 second lag settles at 14% of the intended
+    /// temperature rather than 98% of it.
     /// </summary>
     public static class ClimateModel
     {
@@ -92,6 +103,110 @@ namespace Thermodynamics.Core
 
             float target = night + ((day - night) * insolation) + groundOffset;
             return target < 0f ? 0f : target;
+        }
+
+        /// <summary>
+        /// The same target, cooled for how far above sea level it is.
+        ///
+        /// Air cools as it rises because it expands, at something near 6.5 K per kilometre on
+        /// Earth. This is the term that makes a mountain colder than the plain it stands on, and
+        /// without it the only thing altitude did to the climate was thin the air.
+        /// </summary>
+        /// <param name="target">Ambient at this latitude and hour at sea level, K.</param>
+        /// <param name="altitude">Metres above the planet's mean radius. Negative below it.</param>
+        /// <param name="lapseRatePerKm">How much colder a kilometre up is, K.</param>
+        public static float Lapse(float target, float altitude, float lapseRatePerKm)
+        {
+            if (lapseRatePerKm == 0f || altitude == 0f) return target;
+
+            float cooled = target - (lapseRatePerKm * altitude * 0.001f);
+            return cooled < 0f ? 0f : cooled;
+        }
+
+        /// <summary>
+        /// How much of the climate survives at this air density.
+        ///
+        /// Deliberately blunter than <see cref="EnvironmentSolver.AtmosphereFactor"/>, which is
+        /// the curve convection and solar decay run on. Those two genuinely scale with how much
+        /// air there is. Ambient does not: the top of Earth's troposphere holds a third of sea
+        /// level's air and sits at 217 K, not at a third of 288. What altitude does to the air's
+        /// temperature is <see cref="Lapse"/>; what density does is decide when there stops being
+        /// air to have a temperature at all, and that happens at the edge of space rather than
+        /// gradually all the way up.
+        ///
+        /// 1 - (1 - d)^8: still 99.9% at two thirds density, half gone by a twelfth, and only
+        /// properly vacuum when the air is.
+        /// </summary>
+        public static float AmbientDensityFactor(float airDensity)
+        {
+            float inverse = 1f - Clamp01(airDensity);
+            float squared = inverse * inverse;
+            float fourth = squared * squared;
+            return 1f - (fourth * fourth);
+        }
+
+        /// <summary>
+        /// The target, faded toward vacuum as the air runs out.
+        ///
+        /// Toward <paramref name="vacuum"/> rather than toward zero, because that is where a body
+        /// with nothing around it ends up — the microwave background, not absolute zero.
+        /// </summary>
+        public static float Thin(float target, float airDensity, float vacuum)
+        {
+            float share = AmbientDensityFactor(airDensity);
+            return vacuum + ((target - vacuum) * share);
+        }
+
+        /// <summary>
+        /// Ambient below the surface, K.
+        ///
+        /// Two things happen going down and they happen at very different scales. The first is
+        /// that the day stops: rock is slow, so the further down a tunnel goes the less of the
+        /// surface's day-night swing reaches it, until a few tens of metres in there is no day
+        /// left and the temperature is simply the planet's own underground figure. The second is
+        /// that the planet is hot inside. Below <see cref="PlanetThermalProperties.SealevelDeadzone"/>
+        /// the rock starts warming toward <see cref="PlanetThermalProperties.CoreTemperature"/>,
+        /// reaching it at the centre.
+        ///
+        /// The deadzone is measured from sea level rather than from the surface, which is what
+        /// makes a tunnel bored into a mountainside stay cold however deep it goes: it is a long
+        /// way inside the rock and still a long way above the hot part.
+        /// </summary>
+        /// <param name="planet">The world's own figures.</param>
+        /// <param name="surface">Ambient in the open air directly above, K.</param>
+        /// <param name="depth">Metres below the surface. Zero or less is not underground.</param>
+        /// <param name="radius">Metres from the planet's centre to the point.</param>
+        /// <param name="meanRadius">The planet's mean radius — its sea level.</param>
+        public static float Underground(
+            PlanetThermalProperties planet, float surface, float depth, float radius, float meanRadius)
+        {
+            if (planet == null) return surface;
+            if (depth <= 0f) return surface;
+
+            // ---- the day dies out -----------------------------------------------------------
+            float damping = planet.UndergroundDampingDepth;
+            float buried = damping <= 0f ? 1f : depth / damping;
+            if (buried > 1f) buried = 1f;
+
+            float ambient = surface + ((planet.UndergroundTemperature - surface) * buried);
+
+            // ---- and the planet warms up ----------------------------------------------------
+            float deadzone = meanRadius - planet.SealevelDeadzone;
+            if (deadzone <= 0f || radius >= deadzone) return ambient;
+
+            // Linear in the distance still to fall: nothing at the deadzone floor, all of it at
+            // the centre. A planet that wants a steeper crust says so with a hotter core.
+            float descended = 1f - (radius / deadzone);
+            if (descended > 1f) descended = 1f;
+
+            return ambient + ((planet.CoreTemperature - ambient) * descended);
+        }
+
+        private static float Clamp01(float value)
+        {
+            if (value < 0f) return 0f;
+            if (value > 1f) return 1f;
+            return value;
         }
 
         /// <summary>

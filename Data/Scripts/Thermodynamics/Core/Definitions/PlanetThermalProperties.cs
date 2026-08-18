@@ -31,13 +31,40 @@ namespace Thermodynamics.Core
         /// </summary>
         public float AmbientLagSeconds = 45f;
 
+        /// <summary>
+        /// How much colder a kilometre above sea level is, K.
+        ///
+        /// Earth's is about 6.5. This defaults lower because the ground table already carries some
+        /// of what altitude does — a mountain reads as snow, and snow is already worth -14 K — so
+        /// the two at full strength put a 5.6 km peak near -50 C. Zero switches altitude off and
+        /// gives one temperature from the sea to the stratosphere, which is what the model did
+        /// before it was asked.
+        /// </summary>
+        public float AmbientLapseRate = 4f;
+
         /// <summary>Ambient below the surface, K.</summary>
         public float UndergroundTemperature = 280f;
+
+        /// <summary>
+        /// Metres of rock that blunt the surface's day-night swing to nothing.
+        ///
+        /// Rock is slow. A hand's depth of soil still feels the afternoon; a cellar does not, and
+        /// nothing below a cellar has ever felt one. This is where that ends — above it a buried
+        /// block still sees a fraction of the day, below it only
+        /// <see cref="UndergroundTemperature"/> and whatever the core is sending up.
+        /// </summary>
+        public float UndergroundDampingDepth = 20f;
 
         /// <summary>Temperature at the planet's centre, K.</summary>
         public float CoreTemperature = 3000f;
 
-        /// <summary>Depth below sea level that stays at <see cref="UndergroundTemperature"/>, m.</summary>
+        /// <summary>
+        /// Depth below sea level that stays at <see cref="UndergroundTemperature"/>, m.
+        ///
+        /// Below it the rock warms toward <see cref="CoreTemperature"/>. Measured from sea level
+        /// and not from the surface, so a tunnel driven into a mountain stays cold however far in
+        /// it goes, and a shaft sunk from a beach does not.
+        /// </summary>
         public float SealevelDeadzone = 2000f;
 
         /// <summary>Fraction of solar energy absorbed by a full-density atmosphere, 0..1.</summary>
@@ -58,7 +85,9 @@ namespace Thermodynamics.Core
             p.NightTemperature = 0f;
             p.DayTemperature = 0f;
             p.PoleTemperatureDrop = 0f;
+            p.AmbientLapseRate = 0f;
             p.UndergroundTemperature = 0f;
+            p.CoreTemperature = 0f;
             p.SolarDecay = 0f;
             p.ConvectionCoefficient = 0f;
             return p;
@@ -70,6 +99,8 @@ namespace Thermodynamics.Core
             DayTemperature = Math.Max(0f, DayTemperature);
             UndergroundTemperature = Math.Max(0f, UndergroundTemperature);
             PoleTemperatureDrop = Math.Max(0f, PoleTemperatureDrop);
+            UndergroundDampingDepth = Math.Max(0f, UndergroundDampingDepth);
+            AmbientLapseRate = Math.Max(0f, AmbientLapseRate);
             AmbientLagSeconds = Math.Max(0f, AmbientLagSeconds);
             CoreTemperature = Math.Max(0f, CoreTemperature);
             SealevelDeadzone = Math.Max(0f, SealevelDeadzone);
