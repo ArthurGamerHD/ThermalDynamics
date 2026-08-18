@@ -44,6 +44,11 @@ dotnet run --project Thermodynamics.Sim -- bench hitch --size 125000  # per-tick
 dotnet run --project Thermodynamics.Sim -- bench load  --size 1000000 # what world load costs
 ```
 
+> **The harness runs on .NET 9; the game runs .NET Framework 4.8.** Absolute milliseconds here are
+> optimistic against the game by a factor this project has not measured directly, but which the
+> field data suggests is several. Ratios, counts and shapes of curve carry across; a millisecond
+> figure does not. Treat the tables below as a floor and the telemetry report as the truth.
+
 **These benchmarks run one grid.** A world runs hundreds, and the largest single finding of this
 work — every grid ticking on the same frame — was invisible to all of them and came from a
 telemetry report instead. Benchmarks bound what one grid costs; only the report says what a frame
@@ -341,6 +346,39 @@ That last part is what makes a report actionable. "A 90 ms frame" is a number to
 change.
 
 ---
+
+## Calibrating the step budget against a real world
+
+`MaxLinkVisitsPerStep` bounds a step at a number of link visits, and its default of 1,000,000 was
+chosen as roughly one 60 fps frame at the harness's measured 16 ns per visit. A field report says
+what that actually buys in game.
+
+Three 42,051-block ships, 90,136 links each, in a 203-grid world:
+
+| | |
+| --- | --- |
+| substeps per step | **11.00 / 11.00 / 11.00** (sd 0.00, n 928) |
+| steps clamped | 0 |
+| simulation rate | 35.4 % — 150.3 s of simulated time not advanced |
+| that grid's tick | 85–153 ms |
+
+The budget is working exactly as designed: 1,000,000 ÷ 90,136 = 11, the substep count is pinned
+there with zero variance, nothing clamped, and the step is shortened instead — the grid runs at
+35 % of real time rather than in lurches.
+
+What it also says is that **the default is calibrated against the harness and the harness is
+optimistic**. 991,000 link visits cost 85–150 ms in game against the ~17 ms the harness's rate
+predicts. Some of that is the game's .NET 4.8 runtime against the harness's .NET 9, some is that
+the environment pass is per *node* per substep and the budget only counts links — this grid has
+2.14 links per node, so the node work the budget cannot see is a large share of what a step does.
+
+Practical consequence: **on a world with grids this size, the default is about five times too
+generous.** A value nearer 200,000 would put those ships at 2 substeps and a tick nearer 20 ms, at
+the cost of simulation rate they are already trading away. The right value is a judgement about
+that trade, and it is per world, which is why it is a setting.
+
+The counting itself is worth fixing rather than only documenting — see
+[known-issues.md](known-issues.md).
 
 ## What is still open
 

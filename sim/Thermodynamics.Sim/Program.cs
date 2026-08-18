@@ -112,6 +112,10 @@ namespace Thermodynamics.Sim
             int ticks = OptionInt(args, "--ticks", 0);
             string csvDirectory = Option(args, "--csv", null);
 
+            // Telemetry switches the solver's per-mechanism watt figures on, so a field report
+            // includes the cost of being measured. This makes that comparable.
+            LoadBenchmarks.CollectDiagnostics = Has(args, "--diagnostics");
+
             switch (name)
             {
                 case "scale":
@@ -185,6 +189,15 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  " + result.DescribeGc());
         }
 
+        private static bool Has(string[] args, string flag)
+        {
+            for (int i = 0; i < args.Length; i++)
+            {
+                if (args[i] == flag) return true;
+            }
+            return false;
+        }
+
         private static string Option(string[] args, string flag, string fallback)
         {
             for (int i = 0; i < args.Length - 1; i++)
@@ -228,6 +241,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  bench load  --size N    what building the grid costs before tick one");
             Console.WriteLine("  bench spike --size N    one block placed, split by stage");
             Console.WriteLine("    --shape ship|cube|truss   --max N   --ticks N   --csv <dir>");
+            Console.WriteLine("    --diagnostics             as telemetry runs it: per-node watts on");
         }
     }
 }

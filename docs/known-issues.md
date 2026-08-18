@@ -149,6 +149,14 @@ behaviour rather than endorsing it. The fix is a judgement call about what a mou
 either exempt neighbours that do not seal, or scale the face by the mounted fraction rather than
 dropping it whole.
 
+**The step budget counts link visits but not node visits.** `MaxLinkVisitsPerStep` bounds a step
+by substeps times links, and the environment pass is per node per substep — radiation, convection,
+solar with six face weights each — which the budget cannot see. A grid with few links per node
+therefore gets a more generous budget than one with many, for the same real cost. Measured on a
+field grid with 2.14 links per node: 991,000 budgeted link visits cost 85–150 ms against the
+~17 ms the link count alone predicts. The unit should be links plus nodes, which also means the
+default wants recalibrating against a game runtime rather than against the harness's .NET 9.
+
 **A grid at a million blocks costs 2.5 GB.** The design budget is ~110 MB
 ([scale-design.md §6](scale-design.md#6-data-structures)); the gap is object-per-node and
 object-per-block layout plus the room map's hash sets over the whole bounding volume. This may

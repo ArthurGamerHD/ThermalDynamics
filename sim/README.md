@@ -122,6 +122,12 @@ dotnet run --project Thermodynamics.Sim -- bench load  --size 1000000  # world l
 `--shape ship|cube|truss` picks the shape, `--max N` stops the ladder early, `--ticks N` sets the
 run length, `--csv <dir>` writes the ladder as a table.
 
+**The harness runs on .NET 9 and the game runs .NET Framework 4.8**, so absolute milliseconds here
+are optimistic against the game. Ratios and shapes of curve carry across; a millisecond figure
+does not. `--diagnostics` turns on the per-node watt figures that switching telemetry on turns on
+in a live world, so a benchmark can be compared against a field report that includes the cost of
+being measured — about 2 % on a 42,000-block hull.
+
 **The ship is the default shape on purpose.** A solid cube is the best case on nearly every axis
 the simulation cares about — see [scale-design.md §10](../docs/scale-design.md#10-grid-shape-changes-the-arithmetic).
 

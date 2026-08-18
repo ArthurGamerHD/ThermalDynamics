@@ -325,6 +325,16 @@ namespace Thermodynamics.Harness
         /// the case that was never the problem; what stutters is the frame a block is welded, a
         /// door cycles or a section is shot away.
         /// </summary>
+        /// <summary>
+        /// Whether the benchmarks turn on the solver's per-mechanism watt figures.
+        ///
+        /// Those are five floats per node per substep that nothing in the simulation reads — they
+        /// exist for the telemetry report and the debug overlay. Switching telemetry on in a live
+        /// world switches them on too, so every field measurement includes the cost of being
+        /// measured, and knowing how much matters when reading one.
+        /// </summary>
+        public static bool CollectDiagnostics;
+
         public static HitchResult Hitch(string shape, int targetCells, int ticks = 400)
         {
             HitchResult result = new HitchResult();
@@ -749,6 +759,7 @@ namespace Thermodynamics.Harness
             }
 
             simulation.RebuildAll();
+            simulation.Solver.CollectDiagnostics = CollectDiagnostics;
             return simulation;
         }
 
