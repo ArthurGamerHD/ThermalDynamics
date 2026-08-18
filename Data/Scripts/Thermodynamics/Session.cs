@@ -255,6 +255,36 @@ namespace Thermodynamics
                 return;
             }
 
+            if (lowered == "profile" || lowered == "profiles")
+            {
+                Reply("profiles: " + string.Join(" | ", Core.ThermalProfiles.Names));
+                for (int i = 0; i < Core.ThermalProfiles.Names.Length; i++)
+                {
+                    string name = Core.ThermalProfiles.Names[i];
+                    Reply("  " + name + " — " + Core.ThermalProfiles.Describe(name));
+                }
+                return;
+            }
+
+            if (lowered.StartsWith("profile "))
+            {
+                string wanted = argument.Substring(8).Trim();
+                if (!Settings.Instance.ApplyProfile(wanted))
+                {
+                    Reply("unknown profile '" + wanted + "'. One of: "
+                        + string.Join(" | ", Core.ThermalProfiles.Names));
+                    return;
+                }
+
+                Reply("profile " + wanted.ToLowerInvariant() + " — "
+                    + Core.ThermalProfiles.Describe(wanted));
+                Reply("  Frequency " + Settings.Instance.Frequency
+                    + ", HeatTimeScale " + Settings.Instance.HeatTimeScale.ToString("n0")
+                    + ", MaxSubsteps " + Settings.Instance.MaxSubsteps
+                    + ". /thermal save to keep it.");
+                return;
+            }
+
             if (lowered == "save")
             {
                 Settings.Save(Settings.Instance);
@@ -287,8 +317,8 @@ namespace Thermodynamics
                 return;
             }
 
-            Reply("commands: status | settings | set <name> <value> | save | overlay | menu"
-                + " | telemetry on | telemetry off | stride <n> | dump");
+            Reply("commands: status | settings | set <name> <value> | profile [name] | save"
+                + " | overlay | menu | telemetry on | telemetry off | stride <n> | dump");
         }
 
         /// <summary>

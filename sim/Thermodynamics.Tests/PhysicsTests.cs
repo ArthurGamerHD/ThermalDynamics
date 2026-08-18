@@ -355,7 +355,8 @@ namespace Thermodynamics.Tests
             settings.ClampConductionOvershoot = false;
 
             ThermalSimulation simulation = builder.BuildSimulation(settings);
-            simulation.Solver.MaxSubsteps = 1;
+            simulation.Settings.MaxSubsteps = 1;
+            simulation.Settings.Derive();
             simulation.Solver.GetNodeAt(Vector3I.Zero).Temperature = 1000f;
 
             for (int i = 0; i < 30; i++)

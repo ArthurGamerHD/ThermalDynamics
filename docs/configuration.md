@@ -102,6 +102,69 @@ more even steps and its heat evolves more slowly; raise it or set it to zero and
 rate with the spikes back. Grids below roughly a hundred thousand blocks never reach the default
 and are unaffected either way. The telemetry report says what rate each grid is actually keeping.
 
+## Profiles
+
+Five ready-made bundles, from simulation-first to arcade. `/thermal profile` lists them,
+`/thermal profile arcade` applies one live, `/thermal save` keeps it. They are also templates:
+each is four numbers, and the section below says what happens as you move them.
+
+| Profile | Freq | HeatTimeScale | MaxSubsteps | Heat speed | Cost | For |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| `simulation` | 8 | 225 | 64 | 1x | 952 | Never clamps. The curve between two temperatures is the real one. |
+| `default` | 4 | 225 | 16 | 1x | 476 | As shipped. Slow enough to plan around, cheap enough to ignore. |
+| `responsive` | 4 | 3,600 | 8 | **5x** | 476 | Heat you can watch move, for the same cost as default. |
+| `arcade` | 6 | 20,000 | 1 | **11x** | 714 | Fast, cheap, approximate. Heat rushes. |
+| `minimal` | 2 | 6,000 | 1 | **6x** | 238 | A crowded server. Quicker than default at half its cost. |
+
+*Heat speed is blocks crossed in eight seconds along a held-hot run, relative to default. Cost is
+element visits per real second, machine-independent. `bench profiles` reproduces both.*
+
+**The shipped default is the worst point on this table**, and that is worth saying plainly: it is
+outrun by every other profile including the cheapest one. It spends its budget on accuracy — a low
+`HeatTimeScale` with substeps to spare — and accuracy is not what most of the settings above are
+for. It stays the default because a simulation mod that quietly stops being a simulation is a
+worse surprise than a slow one, but a world that wants heat to *do* something should not be on it.
+
+### Where the extremes lie
+
+Two relationships bound everything, and neither can be tuned around.
+
+**Heat spreads as the square root of the arithmetic you spend on it.** Diffusion is a square-root
+process: a front crosses blocks at a rate proportional to `sqrt(substeps per second)`, while cost
+is proportional to substeps per second outright. Measured, holding everything else: 1 substep/s
+gave 0.5 blocks/s, 4 gave 1.0, 8 gave 1.4, 16 gave 2.0 — square root to two figures. **Doubling
+how responsive a world feels costs four times as much.**
+
+**But where you spend the substeps changes the exchange rate by about three times.** There are two
+ways to move more heat per second. The accurate one raises `HeatTimeScale` and grants the extra
+substeps its stiffness demands. The approximate one raises `HeatTimeScale` *and refuses* the
+substeps with `MaxSubsteps`, letting the overshoot clamps decide how much crosses — which is the
+most a substep can carry, by definition. Measured: the clamped route delivered 0.125 blocks/s per
+substep/s against 0.045 for the accurate one. If the shape of the curve between two temperatures
+does not matter to your world, do not pay for it.
+
+**The far end is a wall, not a slope.** Past roughly `HeatTimeScale / Frequency = 4000` the clamps
+are carrying the entire step and blocks start being driven to the ambient floor. `arcade` sits at
+3,333 deliberately. `Validate()` warns above 4,000, and the settings menu will show it.
+
+### Designing your own
+
+* **`Frequency` sets responsiveness and cost together.** It is the substeps-per-second dial when
+  `MaxSubsteps` is 1. Nothing else moves both as directly.
+* **`HeatTimeScale` sets how much a substep carries.** Raise it until the clamps engage; past that
+  it buys nothing, because the clamp is already moving all it can. `arcade` at 20,000 and the same
+  profile at 1,000,000 reach identically far.
+* **`MaxSubsteps` chooses accuracy or speed.** High means the estimate is always granted and
+  nothing clamps. `1` means every step is deliberately too long and the clamps carry it.
+* **Keep `HeatTimeScale / Frequency` under 4000.** This is the safety rail. Everything else is
+  taste.
+* **`EnableRoomAir` and `SolarSelfShadowing` are the two mechanisms that cost most** for what a
+  player notices; `minimal` turns both off.
+
+Both clamps must stay on for any of this. `ClampConductionOvershoot` and
+`ClampEnvironmentOvershoot` are what make a deliberately-too-long step bounded instead of
+divergent — with them off, `arcade` reaches 10^22 K in twenty seconds.
+
 ### Trading simulation speed for heat transfer
 
 A natural idea, and worth knowing what it does before reaching for it: halve `SimulationSpeed` and

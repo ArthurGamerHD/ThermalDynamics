@@ -125,7 +125,8 @@ namespace Thermodynamics.Tests
         public void ClampingIsReportedExactlyWhenTheCapBinds()
         {
             ThermalSimulation simulation = StiffGrid();
-            simulation.Solver.MaxSubsteps = 1;
+            simulation.Settings.MaxSubsteps = 1;
+            simulation.Settings.Derive();
 
             simulation.StepExact(1, Worlds.Shadow());
 
@@ -141,7 +142,8 @@ namespace Thermodynamics.Tests
 
             // Raised clear of what this fixture asks for, so the cap is present but never binds.
             float required = simulation.Solver.RequiredSubsteps(simulation.Settings.StepSeconds);
-            simulation.Solver.MaxSubsteps = (int)Math.Ceiling(required) + 8;
+            simulation.Settings.MaxSubsteps = (int)Math.Ceiling(required) + 8;
+            simulation.Settings.Derive();
 
             simulation.StepExact(1, Worlds.Shadow());
 

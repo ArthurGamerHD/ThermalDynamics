@@ -301,7 +301,8 @@ namespace Thermodynamics.Core
             int count = stepNodeCount;
             int end = Advance(count, budget);
 
-            AccumulateEnvironmentRange(ref stepEnvironment, ref stepPlan, stageCursor, end);
+            AccumulateEnvironmentRange(ref stepEnvironment, ref stepPlan, substepSeconds,
+                stageCursor, end);
 
             long spent = end - stageCursor;
             stageCursor = end;

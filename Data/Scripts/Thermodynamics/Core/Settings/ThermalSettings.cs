@@ -173,6 +173,48 @@ namespace Thermodynamics.Core
         public bool ClampConductionOvershoot = true;
 
         /// <summary>
+        /// Clamp radiation and convection so a node cannot overshoot the ambient it is exchanging
+        /// with, the same way <see cref="ClampConductionOvershoot"/> does for a pair of blocks.
+        ///
+        /// Without it the integrator is only conditionally stable, and the condition is one the
+        /// substep estimate is trusted to meet. That works while the estimate is granted what it
+        /// asks for — but <see cref="MaxSubsteps"/> exists precisely to refuse it, and a step that
+        /// clamps has an unguarded environment term. Measured: a hull at
+        /// <c>HeatTimeScale 3600</c> with one substep reached 1.5e22 K in twenty seconds, and two
+        /// pairings reached infinity. Conduction was fine throughout, because conduction was the
+        /// half that had a clamp.
+        ///
+        /// The cap is the same idea and the same physics: a node cannot radiate past the
+        /// temperature it is radiating towards within one substep, because that is the point at
+        /// which the exchange reverses. Where the substeps are generous it never binds and changes
+        /// nothing; where they are not, it is the difference between an approximation and a
+        /// number with twenty-two digits.
+        ///
+        /// It is what makes an arcade profile possible — heat turned up and substeps turned down
+        /// is a legitimate thing to want from a game, and it is only safe once both halves of the
+        /// exchange are bounded.
+        /// </summary>
+        public bool ClampEnvironmentOvershoot = true;
+
+        /// <summary>
+        /// Most substeps one solver step may divide itself into.
+        ///
+        /// The stability estimate asks for however many the stiffest node on the grid needs; this
+        /// is the ceiling on granting it. Reaching the ceiling is reported as a clamped step, and
+        /// a clamped step is not wrong so much as approximate — every exchange is still capped at
+        /// the energy that equalises its pair, so the integrator stays bounded and conserves
+        /// energy whatever this is set to. What it loses is the shape of the curve between two
+        /// temperatures, not the temperatures it ends up between.
+        ///
+        /// That is why this is a setting and not a constant. A simulation-first world wants it
+        /// high enough never to bind. An arcade one wants it at one: a single substep per step,
+        /// every link allowed to equalise once, which is the most heat that can be moved for the
+        /// least arithmetic. Both are legitimate and the difference between them is a game design
+        /// decision, not a correctness one.
+        /// </summary>
+        public int MaxSubsteps = 16;
+
+        /// <summary>
         /// Most link visits one solver step may make — substeps times links — before the step is
         /// shortened to fit. Zero removes the bound.
         ///
@@ -245,6 +287,7 @@ namespace Thermodynamics.Core
             if (HeatPumpCarnotFraction > 1f) HeatPumpCarnotFraction = 1f;
             if (HeatPumpMaxCoefficient < 0f) HeatPumpMaxCoefficient = 0f;
             if (MaxLinkVisitsPerStep < 0) MaxLinkVisitsPerStep = 0;
+            if (MaxSubsteps < 1) MaxSubsteps = 1;
 
             StepSeconds = 1f / Frequency;
             StepsPerSecond = Frequency * SimulationSpeed;
@@ -260,7 +303,20 @@ namespace Thermodynamics.Core
             if (Frequency > 60) problems.Add("Frequency above 60 costs more than one step per render frame.");
             if (SimulationSpeed <= 0f) problems.Add("SimulationSpeed must be positive.");
             if (HeatTimeScale <= 0f) problems.Add("HeatTimeScale must be positive.");
-            if (HeatTimeScale > 10000f) problems.Add("HeatTimeScale above 10000 will make most grids clamp.");
+            // Not "above ten thousand clamps", which was the old advice and is no longer a
+            // problem: clamping is what the fast profiles are built on, and both halves of the
+            // exchange are bounded now. What still bites is the substep being long enough that
+            // the clamps have to work hard every step — that is HeatTimeScale divided by
+            // Frequency, and measurement puts the edge near four thousand. Arcade sits at 3,333
+            // and is stable over an hour; the same transfer at Frequency 2 is 10,000 and put
+            // blocks at absolute zero.
+            float perSubstep = Frequency < 1 ? HeatTimeScale : HeatTimeScale / Frequency;
+            if (perSubstep > 4000f)
+            {
+                problems.Add("HeatTimeScale / Frequency is " + perSubstep.ToString("n0")
+                    + "; above about 4000 the overshoot clamps carry the whole step and blocks "
+                    + "can be driven to the ambient floor. Raise Frequency or lower HeatTimeScale.");
+            }
             if (VacuumTemperature < 0f) problems.Add("VacuumTemperature cannot be negative.");
             return problems;
         }

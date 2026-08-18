@@ -68,6 +68,10 @@ into atmosphere and into the air of sealed rooms, arrives from the sun, and — 
 8. Press **Ctrl+Shift+S** for the settings menu: every value in the config file, with a slider or a
    switch and a description of what it does.
 9. `/thermal settings` lists every switch; `/thermal set <name> <value>` changes one live.
+10. `/thermal profile` lists five ready-made bundles from `simulation` to `arcade`;
+    `/thermal profile arcade` applies one live. See
+    [docs/configuration.md](docs/configuration.md#profiles) — the shipped default is the slowest
+    of them, deliberately.
 
 ## Documentation
 
@@ -80,7 +84,7 @@ into atmosphere and into the air of sealed rooms, arrives from the sun, and — 
 | [docs/api.md](docs/api.md) | The mod API: reading, writing, heat sources, thresholds, settings. |
 | [docs/definitions.md](docs/definitions.md) | Block, planet and loop properties, and how to add support for another mod's blocks. |
 | [docs/blocks.md](docs/blocks.md) | The blocks and items this mod ships, and the coolant loop build rules. |
-| [docs/configuration.md](docs/configuration.md) | Every setting, its default, and the runtime commands. |
+| [docs/configuration.md](docs/configuration.md) | Every setting, its default, the profiles, and the runtime commands. |
 | [docs/telemetry.md](docs/telemetry.md) | Session data collection and what the report contains. |
 | [docs/development.md](docs/development.md) | Building, deploying, repo layout, conventions. |
 | [docs/known-issues.md](docs/known-issues.md) | Confirmed defects, unfinished systems and deliberate limits. |

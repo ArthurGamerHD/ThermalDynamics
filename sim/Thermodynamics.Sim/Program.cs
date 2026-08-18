@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Thermodynamics.Core;
 using Thermodynamics.Harness;
 
 namespace Thermodynamics.Sim
@@ -158,6 +159,97 @@ namespace Thermodynamics.Sim
                     PrintHitch(LoadBenchmarks.Load(shape, size));
                     return 0;
 
+                case "reach":
+                {
+                    float seconds = OptionInt(args, "--seconds", 10);
+                    int length = OptionInt(args, "--length", 200);
+
+                    List<LoadBenchmarks.ReachRow> rows = new List<LoadBenchmarks.ReachRow>();
+
+                    // Two sweeps. First the accuracy-first end, raising transfer with enough
+                    // substeps that nothing clamps; then the arcade end, where a single substep
+                    // per step leans on the overshoot clamp to stay bounded.
+                    rows.Add(LoadBenchmarks.Reach("sim f8 h225", 8, 1f, 225f, 64, seconds, length));
+                    rows.Add(LoadBenchmarks.Reach("def f4 h225", 4, 1f, 225f, 16, seconds, length));
+                    rows.Add(LoadBenchmarks.Reach("f4 h3600", 4, 1f, 3600f, 16, seconds, length));
+                    rows.Add(LoadBenchmarks.Reach("f4 h20k", 4, 1f, 20000f, 16, seconds, length));
+                    rows.Add(LoadBenchmarks.Reach("f4 h100k", 4, 1f, 100000f, 16, seconds, length));
+
+                    rows.Add(LoadBenchmarks.Reach("f4 h20k x1", 4, 1f, 20000f, 1, seconds, length));
+                    rows.Add(LoadBenchmarks.Reach("f4 h100k x1", 4, 1f, 100000f, 1, seconds, length));
+                    rows.Add(LoadBenchmarks.Reach("f4 h1M x1", 4, 1f, 1000000f, 1, seconds, length));
+                    rows.Add(LoadBenchmarks.Reach("f8 h1M x1", 8, 1f, 1000000f, 1, seconds, length));
+                    rows.Add(LoadBenchmarks.Reach("f16 h1M x1", 16, 1f, 1000000f, 1, seconds, length));
+                    rows.Add(LoadBenchmarks.Reach("f16 h10M x1", 16, 1f, 10000000f, 1, seconds, length));
+                    rows.Add(LoadBenchmarks.Reach("f1 h1M x1", 1, 1f, 1000000f, 1, seconds, length));
+
+                    Console.WriteLine();
+                    Console.WriteLine("== reach, " + length + " blocks, " + seconds + " real seconds ==");
+                    Console.WriteLine();
+                    Console.WriteLine(LoadBenchmarks.ReachTable(rows));
+                    return 0;
+                }
+
+                case "profiles":
+                {
+                    float seconds = OptionInt(args, "--seconds", 20);
+                    int length = OptionInt(args, "--length", 200);
+
+                    List<LoadBenchmarks.ReachRow> reach = new List<LoadBenchmarks.ReachRow>();
+                    List<LoadBenchmarks.StabilityRow> stable = new List<LoadBenchmarks.StabilityRow>();
+
+                    for (int i = 0; i < ThermalProfiles.Names.Length; i++)
+                    {
+                        string profile = ThermalProfiles.Names[i];
+
+                        ThermalSettings forReach = new ThermalSettings();
+                        ThermalProfiles.Apply(forReach, profile);
+                        reach.Add(LoadBenchmarks.Reach(profile, forReach, seconds, length));
+
+                        ThermalSettings forStability = new ThermalSettings();
+                        ThermalProfiles.Apply(forStability, profile);
+                        forStability.MaxLinkVisitsPerStep = 0;
+                        forStability.Derive();
+                        stable.Add(LoadBenchmarks.Stability(profile, forStability, seconds));
+                    }
+
+                    Console.WriteLine();
+                    Console.WriteLine("== profiles ==");
+                    Console.WriteLine();
+                    for (int i = 0; i < ThermalProfiles.Names.Length; i++)
+                    {
+                        Console.WriteLine("  " + ThermalProfiles.Names[i].PadRight(12)
+                            + ThermalProfiles.Describe(ThermalProfiles.Names[i]));
+                    }
+                    Console.WriteLine();
+                    Console.WriteLine("  how fast heat crosses " + length + " blocks, conduction only:");
+                    Console.WriteLine(LoadBenchmarks.ReachTable(reach));
+                    Console.WriteLine("  and how each behaves with the environment on:");
+                    Console.WriteLine(LoadBenchmarks.StabilityTable(stable));
+                    return 0;
+                }
+
+                case "stability":
+                {
+                    float seconds = OptionInt(args, "--seconds", 20);
+                    List<LoadBenchmarks.StabilityRow> rows = new List<LoadBenchmarks.StabilityRow>();
+
+                    rows.Add(LoadBenchmarks.Stability("default", 4, 225f, 16, seconds));
+                    rows.Add(LoadBenchmarks.Stability("h3600 x16", 4, 3600f, 16, seconds));
+                    rows.Add(LoadBenchmarks.Stability("h3600 x1", 4, 3600f, 1, seconds));
+                    rows.Add(LoadBenchmarks.Stability("h20k x1", 4, 20000f, 1, seconds));
+                    rows.Add(LoadBenchmarks.Stability("h100k x1", 4, 100000f, 1, seconds));
+                    rows.Add(LoadBenchmarks.Stability("h1M x1", 4, 1000000f, 1, seconds));
+                    rows.Add(LoadBenchmarks.Stability("h20k x1 f16", 16, 20000f, 1, seconds));
+                    rows.Add(LoadBenchmarks.Stability("h20k x4", 4, 20000f, 4, seconds));
+
+                    Console.WriteLine();
+                    Console.WriteLine("== stability, environment on, " + seconds + " real seconds ==");
+                    Console.WriteLine();
+                    Console.WriteLine(LoadBenchmarks.StabilityTable(rows));
+                    return 0;
+                }
+
                 case "pace":
                 {
                     float seconds = OptionInt(args, "--seconds", 20);
@@ -253,6 +345,8 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  bench load  --size N    what building the grid costs before tick one");
             Console.WriteLine("  bench spike --size N    one block placed, split by stage");
             Console.WriteLine("  bench pace  --size N    does slowing sim and raising transfer save anything");
+            Console.WriteLine("  bench reach --length N  how fast heat crosses a grid, against what it costs");
+            Console.WriteLine("  bench profiles          the named profiles, measured side by side");
             Console.WriteLine("    --shape ship|cube|truss   --max N   --ticks N   --csv <dir>");
             Console.WriteLine("    --diagnostics             as telemetry runs it: per-node watts on");
         }

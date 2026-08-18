@@ -168,7 +168,8 @@ namespace Thermodynamics.Harness
         /// <summary>The default ladder. Every rung is roughly four times the one below it.</summary>
         public static readonly int[] DefaultSizes = { 8000, 32000, 125000, 500000, 1000000 };
 
-        public static readonly string[] Names = { "scale", "hitch", "weld", "load", "spike", "pace" };
+        public static readonly string[] Names =
+            { "scale", "hitch", "weld", "load", "spike", "pace", "reach" };
 
         // ---- the ladder --------------------------------------------------------------------
 
@@ -515,6 +516,310 @@ namespace Thermodynamics.Harness
             result.Notes = "adding blocks " + addMs.ToString("n0") + " ms, RebuildAll "
                 + watch.Elapsed.TotalMilliseconds.ToString("n0") + " ms";
             return result;
+        }
+
+        /// <summary>What a setting bundle did to a grid that is also radiating to space.</summary>
+        public class StabilityRow
+        {
+            public string Label;
+            public float HeatTimeScale;
+            public int MaxSubsteps;
+
+            public float MinTemperature;
+            public float MaxTemperature;
+            public float FinalSpread;
+            public long ClampedSteps;
+            public long Steps;
+            public bool WentBad;
+        }
+
+        /// <summary>
+        /// Runs a grid with the environment switched on and reports whether it stayed physical.
+        ///
+        /// This is the check that decides how far an arcade profile can be pushed. The overshoot
+        /// clamp caps conduction at the energy that equalises a pair, so conduction is safe at any
+        /// step length — but <b>radiation and convection are not clamped</b>. Their stiffness is in
+        /// the substep estimate, so ordinarily the solver simply takes more substeps; cap the
+        /// substeps and that protection is gone, and a block can be asked to shed more heat in one
+        /// step than it holds.
+        ///
+        /// So "turn the transfer up and the substeps down" has a limit, and it is set by the
+        /// environment rather than by conduction. Finding it is the difference between a profile
+        /// and a guess.
+        /// </summary>
+        public static StabilityRow Stability(string label, int frequency, float heatTimeScale,
+            int maxSubsteps, float realSeconds)
+        {
+            ThermalSettings settings = new ThermalSettings();
+            settings.Frequency = frequency;
+            settings.HeatTimeScale = heatTimeScale;
+            settings.MaxSubsteps = maxSubsteps;
+            settings.MaxLinkVisitsPerStep = 0;
+            settings.Derive();
+            return Stability(label, settings, realSeconds);
+        }
+
+        /// <summary>The same run, driven by a settings bundle a profile has filled in.</summary>
+        public static StabilityRow Stability(string label, ThermalSettings settings, float realSeconds)
+        {
+            float heatTimeScale = settings.HeatTimeScale;
+            int maxSubsteps = settings.MaxSubsteps;
+
+            GridBuilder builder = GridBuilder.Large();
+            int index = 0;
+            foreach (Vector3I cell in GridShapes.Ship(fuselageLength: 20, fuselageWidth: 7, bulkheadSpacing: 6))
+            {
+                builder.Place((index++ % 8) == 0 ? Catalog.Grating() : Catalog.HeavyArmor(), cell);
+            }
+
+            ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);
+            while (simulation.HasPendingWork) simulation.Update(FrameSeconds, Worlds.Shadow());
+
+            // A hot spot and a cold hull, radiating into space: the ordinary case.
+            IList<ThermalNode> nodes = simulation.Solver.Nodes;
+            for (int i = 0; i < nodes.Count; i++) nodes[i].Temperature = 293.15f;
+            nodes[nodes.Count / 2].Temperature = 1200f;
+
+            StabilityRow row = new StabilityRow();
+            row.Label = label;
+            row.HeatTimeScale = heatTimeScale;
+            row.MaxSubsteps = maxSubsteps;
+            row.MinTemperature = float.MaxValue;
+            row.MaxTemperature = float.MinValue;
+
+            EnvironmentSample sample = Worlds.Space(new Vector3(0f, 1f, 0f));
+            int frames = (int)(realSeconds / FrameSeconds);
+
+            for (int f = 0; f < frames; f++)
+            {
+                simulation.Update(FrameSeconds, sample);
+
+                if (simulation.Solver.LastStepWasClamped && simulation.Work.SolverSteps > row.Steps)
+                {
+                    row.ClampedSteps++;
+                }
+                row.Steps = simulation.Work.SolverSteps;
+
+                for (int i = 0; i < nodes.Count; i++)
+                {
+                    float t = nodes[i].Temperature;
+                    if (float.IsNaN(t) || float.IsInfinity(t)) row.WentBad = true;
+                    if (t < row.MinTemperature) row.MinTemperature = t;
+                    if (t > row.MaxTemperature) row.MaxTemperature = t;
+                }
+            }
+
+            float low = float.MaxValue;
+            float high = float.MinValue;
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                float t = nodes[i].Temperature;
+                if (t < low) low = t;
+                if (t > high) high = t;
+            }
+            row.FinalSpread = high - low;
+
+            return row;
+        }
+
+        public static string StabilityTable(IList<StabilityRow> rows)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.Append("case".PadRight(18)).Append("heatScale".PadLeft(11))
+              .Append("maxSub".PadLeft(8)).Append("min K".PadLeft(10))
+              .Append("max K".PadLeft(12)).Append("end spread".PadLeft(12))
+              .Append("clamped".PadLeft(9)).Append("bad".PadLeft(6)).Append('\n');
+
+            for (int i = 0; i < rows.Count; i++)
+            {
+                StabilityRow r = rows[i];
+                sb.Append(r.Label.PadRight(18))
+                  .Append(r.HeatTimeScale.ToString("n0").PadLeft(11))
+                  .Append(r.MaxSubsteps.ToString().PadLeft(8))
+                  .Append(r.MinTemperature.ToString("n1").PadLeft(10))
+                  .Append(r.MaxTemperature.ToString("n1").PadLeft(12))
+                  .Append(r.FinalSpread.ToString("n1").PadLeft(12))
+                  .Append((r.Steps == 0 ? "-" : (100.0 * r.ClampedSteps / r.Steps).ToString("n0") + "%").PadLeft(9))
+                  .Append((r.WentBad ? "YES" : "no").PadLeft(6))
+                  .Append('\n');
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>How far and how fast heat travelled, and what that cost.</summary>
+        public class ReachRow
+        {
+            public string Label;
+            public int Frequency;
+            public float Speed;
+            public float HeatTimeScale;
+            public int MaxSubsteps;
+
+            /// <summary>Blocks the front of the heat had crossed when the run ended.</summary>
+            public int BlocksReached;
+
+            /// <summary>Real seconds the run covered.</summary>
+            public float RealSeconds;
+
+            /// <summary>Blocks per real second — the number a player feels as responsiveness.</summary>
+            public double BlocksPerRealSecond
+            {
+                get { return RealSeconds <= 0f ? 0d : BlocksReached / (double)RealSeconds; }
+            }
+
+            public long Substeps;
+            public double SubstepsPerRealSecond;
+
+            /// <summary>Element visits per real second: the cost, machine-independently.</summary>
+            public double WorkPerRealSecond;
+
+            public double MillisecondsPerRealSecond;
+
+            /// <summary>Steps that wanted more substeps than they were allowed.</summary>
+            public long ClampedSteps;
+            public long Steps;
+        }
+
+        /// <summary>
+        /// How fast heat crosses a grid, and what that speed costs.
+        ///
+        /// <para>
+        /// A run of blocks with one end pinned hot. Heat diffuses along it, and the measurement is
+        /// how many blocks the front has crossed after a fixed number of real seconds — which is
+        /// exactly what a player means by responsiveness, and is comparable across any settings.
+        /// </para>
+        ///
+        /// <para>
+        /// The reason this is the right experiment is the overshoot clamp. Every exchange is capped
+        /// at the energy that would equalise its pair, so <b>one substep can move heat at most one
+        /// block</b> however violent the settings. Propagation speed therefore has a hard ceiling
+        /// of one block per substep, and substeps are precisely what a step costs — so
+        /// responsiveness and cost are not two dials to balance but the same dial seen from two
+        /// sides. Finding where that ceiling actually sits, rather than assuming it, is the point.
+        /// </para>
+        /// </summary>
+        public static ReachRow Reach(string label, int frequency, float speed, float heatTimeScale,
+            int maxSubsteps, float realSeconds, int length)
+        {
+            ThermalSettings settings = new ThermalSettings();
+            settings.Frequency = frequency;
+            settings.SimulationSpeed = speed;
+            settings.HeatTimeScale = heatTimeScale;
+            settings.MaxSubsteps = maxSubsteps;
+            return Reach(label, settings, realSeconds, length);
+        }
+
+        /// <summary>The same measurement, driven by a settings bundle a profile has filled in.</summary>
+        public static ReachRow Reach(string label, ThermalSettings settings, float realSeconds, int length)
+        {
+            int frequency = settings.Frequency;
+            float speed = settings.SimulationSpeed;
+            float heatTimeScale = settings.HeatTimeScale;
+            int maxSubsteps = settings.MaxSubsteps;
+
+            // Conduction alone: radiation and convection would bleed the front away and measure
+            // the environment rather than how fast heat travels through metal.
+            settings.EnableEnvironment = false;
+            settings.EnableRadiation = false;
+            settings.EnableConvection = false;
+            settings.EnableSolarHeat = false;
+            settings.EnableWasteHeat = false;
+            settings.EnableRoomAir = false;
+            settings.MaxLinkVisitsPerStep = 0;
+            settings.Derive();
+
+            GridBuilder builder = GridBuilder.Large();
+            BlockModel armour = Catalog.HeavyArmor();
+            for (int i = 0; i < length; i++)
+            {
+                builder.Place(armour, new Vector3I(0, 0, i));
+            }
+
+            ThermalSimulation simulation = builder.BuildSimulation(settings, 300f);
+            while (simulation.HasPendingWork) simulation.Update(FrameSeconds, Worlds.Shadow());
+
+            ThermalNode[] run = new ThermalNode[length];
+            for (int i = 0; i < length; i++)
+            {
+                run[i] = simulation.Solver.GetNodeAt(new Vector3I(0, 0, i));
+                run[i].Temperature = 300f;
+            }
+
+            ReachRow row = new ReachRow();
+            row.Label = label;
+            row.Frequency = frequency;
+            row.Speed = speed;
+            row.HeatTimeScale = heatTimeScale;
+            row.MaxSubsteps = maxSubsteps;
+            row.RealSeconds = realSeconds;
+
+            simulation.Work.Reset();
+            EnvironmentSample sample = Worlds.Shadow();
+            int frames = (int)(realSeconds / FrameSeconds);
+
+            SettleMemory();
+            Stopwatch watch = Stopwatch.StartNew();
+
+            for (int f = 0; f < frames; f++)
+            {
+                // The source end is held, so the front is fed rather than the whole run drifting
+                // to one average.
+                run[0].Temperature = 1000f;
+                simulation.Update(FrameSeconds, sample);
+                if (simulation.Solver.LastStepWasClamped && simulation.Work.SolverSteps > row.Steps)
+                {
+                    row.ClampedSteps++;
+                }
+                row.Steps = simulation.Work.SolverSteps;
+            }
+
+            watch.Stop();
+
+            // The front is the furthest block that has taken a tenth of the way to the source.
+            for (int i = length - 1; i >= 0; i--)
+            {
+                if (run[i].Temperature < 370f) continue;
+                row.BlocksReached = i;
+                break;
+            }
+
+            row.Substeps = simulation.Work.SolverSubsteps;
+            row.SubstepsPerRealSecond = row.Substeps / (double)realSeconds;
+            row.WorkPerRealSecond = row.Substeps
+                * (double)(simulation.Solver.Nodes.Count + simulation.Solver.LinkCount) / realSeconds;
+            row.MillisecondsPerRealSecond = watch.Elapsed.TotalMilliseconds / realSeconds;
+
+            return row;
+        }
+
+        public static string ReachTable(IList<ReachRow> rows)
+        {
+            StringBuilder sb = new StringBuilder();
+
+            sb.Append("profile".PadRight(14)).Append("freq".PadLeft(6))
+              .Append("speed".PadLeft(7)).Append("heatScale".PadLeft(11))
+              .Append("maxSub".PadLeft(8)).Append("blocks/s".PadLeft(10))
+              .Append("substep/s".PadLeft(11)).Append("work/s".PadLeft(12))
+              .Append("ms/s".PadLeft(8)).Append("clamped".PadLeft(9)).Append('\n');
+
+            for (int i = 0; i < rows.Count; i++)
+            {
+                ReachRow r = rows[i];
+                sb.Append(r.Label.PadRight(14))
+                  .Append(r.Frequency.ToString().PadLeft(6))
+                  .Append(r.Speed.ToString("n2").PadLeft(7))
+                  .Append(r.HeatTimeScale.ToString("n0").PadLeft(11))
+                  .Append(r.MaxSubsteps.ToString().PadLeft(8))
+                  .Append(r.BlocksPerRealSecond.ToString("n1").PadLeft(10))
+                  .Append(r.SubstepsPerRealSecond.ToString("n1").PadLeft(11))
+                  .Append(r.WorkPerRealSecond.ToString("n0").PadLeft(12))
+                  .Append(r.MillisecondsPerRealSecond.ToString("n2").PadLeft(8))
+                  .Append((r.Steps == 0 ? "-" : (100.0 * r.ClampedSteps / r.Steps).ToString("n0") + "%")
+                      .PadLeft(9))
+                  .Append('\n');
+            }
+
+            return sb.ToString();
         }
 
         /// <summary>One setting pairing, and what it cost and achieved over the same real time.</summary>

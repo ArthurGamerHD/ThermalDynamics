@@ -33,8 +33,18 @@ namespace Thermodynamics.Core
         /// <summary>Fraction of the theoretical stability limit a substep is allowed to use.</summary>
         public const float StabilitySafetyFactor = 0.5f;
 
-        /// <summary>Upper bound on substeps per call, so a pathological grid cannot stall a frame.</summary>
-        public int MaxSubsteps = 16;
+        /// <summary>
+        /// Upper bound on substeps per call, so a pathological grid cannot stall a frame.
+        ///
+        /// Read from the settings, so a world can choose where it sits between accuracy and cost;
+        /// see <see cref="ThermalSettings.MaxSubsteps"/>. Kept as a property rather than a field
+        /// because it was a field, and a host or a test that had written to it should stop
+        /// compiling rather than quietly have no effect.
+        /// </summary>
+        public int MaxSubsteps
+        {
+            get { return settings.MaxSubsteps; }
+        }
 
         private readonly ThermalSettings settings;
         private readonly GridModel grid;
@@ -72,6 +82,24 @@ namespace Thermodynamics.Core
 
         /// <summary>Exposed faces as a fraction of the node's total, six per node.</summary>
         private float[] nodeFaceWeights = new float[0];
+
+        /// <summary>
+        /// How much of a node's exchanges it may take this substep, 0..1.
+        ///
+        /// One is the ordinary case and costs a multiply. Below one means the substep is longer
+        /// than this node is stable over — <c>h * conductance &gt; mass</c> — which happens only
+        /// when the substep count the stability estimate asked for was refused.
+        ///
+        /// The per-link clamp is not enough on its own, and that is not obvious. It caps each
+        /// exchange at the energy that equalises <em>that pair</em>, which bounds a node with one
+        /// neighbour perfectly and a node with six not at all: each of the six is separately
+        /// entitled to move it the whole way, so it lands six times past where it should and comes
+        /// back further still. Measured on a hull at <c>HeatTimeScale 3600</c> with one substep,
+        /// that reached 1.5e22 K; the same settings on a stick of blocks, where no node has more
+        /// than two neighbours, stayed perfectly well behaved. The clamp was not wrong, it was
+        /// local.
+        /// </summary>
+        private float[] nodeRelaxation = new float[0];
 
         /// <summary>
         /// Fraction of each node's <em>face</em> the sun reaches, six per node, 0..1. All ones when
@@ -1371,7 +1399,7 @@ namespace Thermodynamics.Core
                 roomWatts[i] = 0f;
             }
 
-            AccumulateEnvironment(ref env);
+            AccumulateEnvironment(ref env, h);
             AccumulateConduction(h);
             AccumulateLoops(h);
             AccumulateRoomAir(h);
@@ -1423,6 +1451,28 @@ namespace Thermodynamics.Core
             public float FrictionScale;
         }
 
+        /// <summary>
+        /// The share of its exchanges a node may take over a substep of <paramref name="h"/>.
+        ///
+        /// A node is stable over a substep when <c>h * conductance &lt;= mass</c> — that is the
+        /// condition the substep estimate is derived from. Where it holds this is one and nothing
+        /// changes. Where it does not, scaling by the ratio is exactly the under-relaxation that
+        /// makes the step behave as if it were short enough.
+        /// </summary>
+        private float RelaxationFactor(int node, float h)
+        {
+            if (!settings.ClampConductionOvershoot || h <= 0f) return 1f;
+
+            float conductance = nodeConductanceTotal[node];
+            if (conductance <= 0f) return 1f;
+
+            float mass = nodeThermalMass[node];
+            if (mass <= 0f) return 1f;
+
+            float stable = mass / (h * conductance);
+            return stable >= 1f ? 1f : stable;
+        }
+
         private EnvironmentPlan PlanEnvironment(ref EnvironmentState env)
         {
             EnvironmentPlan plan = new EnvironmentPlan();
@@ -1471,12 +1521,17 @@ namespace Thermodynamics.Core
 
         /// <summary>Runs the environment pass over nodes <paramref name="from"/> to <paramref name="to"/>.</summary>
         private void AccumulateEnvironmentRange(ref EnvironmentState env, ref EnvironmentPlan plan,
-            int from, int to)
+            float h, int from, int to)
         {
             bool diagnostics = plan.Diagnostics;
 
             if (plan.GenerationOnly)
             {
+                for (int i = from; i < to; i++)
+                {
+                    nodeRelaxation[i] = RelaxationFactor(i, h);
+                }
+
                 if (plan.Generating)
                 {
                     for (int i = from; i < to; i++)
@@ -1492,6 +1547,8 @@ namespace Thermodynamics.Core
             }
 
             bool generating = plan.Generating;
+            bool clampRelaxation = settings.ClampEnvironmentOvershoot && h > 0f;
+            float inverseH = h > 0f ? 1f / h : 0f;
             bool environmentEnabled = plan.EnvironmentEnabled;
             bool radiating = plan.Radiating;
             bool convecting = plan.Convecting;
@@ -1503,6 +1560,12 @@ namespace Thermodynamics.Core
 
             for (int i = from; i < to; i++)
             {
+                // Every node, exposed or buried: conduction needs this and conduction does not
+                // care whether a block can see the sky. Computed here rather than in a pass of its
+                // own because this loop already walks every node once per substep, and the
+                // conduction pass that reads it does not start until this one has finished.
+                nodeRelaxation[i] = RelaxationFactor(i, h);
+
                 float generation = generating ? nodeGeneration[i] : 0f;
 
                 if (nodeExposedFaces[i] <= 0)
@@ -1544,7 +1607,32 @@ namespace Thermodynamics.Core
 
                     radiationWatts = radiationShare * radiation;
                     convectionWatts = env.AtmosphereFactor * convection;
-                    watts += radiationWatts + convectionWatts;
+
+                    float relaxation = radiationWatts + convectionWatts;
+
+                    if (clampRelaxation)
+                    {
+                        // Radiation and convection both drive this node towards ambient, and the
+                        // most they can legitimately do in one substep is arrive there — past it
+                        // the exchange would have reversed. Capping at that is what keeps an
+                        // explicit step bounded when the substep count has been refused; solar,
+                        // friction and waste heat are sources rather than relaxation and are
+                        // deliberately left out of it.
+                        float capped = ClampRelaxation(relaxation,
+                            (env.AmbientTemperature - temperature) * nodeThermalMass[i] * inverseH);
+
+                        if (capped != relaxation)
+                        {
+                            // The per-mechanism figures are a readout of what actually happened,
+                            // so they are scaled rather than left describing the unclamped want.
+                            float scale = relaxation == 0f ? 0f : capped / relaxation;
+                            radiationWatts *= scale;
+                            convectionWatts *= scale;
+                            relaxation = capped;
+                        }
+                    }
+
+                    watts += relaxation;
                 }
 
                 if (solarEnabled)
@@ -1574,10 +1662,10 @@ namespace Thermodynamics.Core
             }
         }
 
-        private void AccumulateEnvironment(ref EnvironmentState env)
+        private void AccumulateEnvironment(ref EnvironmentState env, float h)
         {
             EnvironmentPlan plan = PlanEnvironment(ref env);
-            AccumulateEnvironmentRange(ref env, ref plan, 0, nodes.Count);
+            AccumulateEnvironmentRange(ref env, ref plan, h, 0, nodes.Count);
             if (plan.SourcesEnabled) AccumulateHeatSources(ref env, plan.Diagnostics);
         }
 
@@ -1805,6 +1893,7 @@ namespace Thermodynamics.Core
             float[] massFactor = linkMassFactor;
             float[] temperatures = nodeTemperatures;
             float[] watts = nodeWatts;
+            float[] relaxation = nodeRelaxation;
 
             for (int i = from; i < to; i++)
             {
@@ -1819,6 +1908,12 @@ namespace Thermodynamics.Core
 
                 if (clamp)
                 {
+                    // The stricter of the two ends. Taking the smaller keeps the exchange equal
+                    // and opposite — scaling a node's own total instead would bound it and stop
+                    // conserving energy, which is the worse trade of the two.
+                    float scale = relaxation[a] < relaxation[b] ? relaxation[a] : relaxation[b];
+                    if (scale < 1f) exchange *= scale;
+
                     // Cap the exchange at the energy that brings the pair to equilibrium.
                     float maxWatts = difference * massFactor[i] * inverseH;
                     if (exchange > 0f)
@@ -1935,6 +2030,30 @@ namespace Thermodynamics.Core
         /// This is what makes the integrator unconditionally bounded: substepping keeps the
         /// result accurate, and this keeps it sane when substepping alone is not enough.
         /// </summary>
+        /// <summary>
+        /// Caps a relaxation towards equilibrium at the watts that would exactly reach it.
+        ///
+        /// Both arguments carry their sign, and a cap only applies when the two agree: a node
+        /// being warmed cannot be capped by a cooling limit. Where they disagree the exchange is
+        /// already heading away from the limit and there is nothing to cap.
+        /// </summary>
+        public static float ClampRelaxation(float watts, float wattsToEquilibrium)
+        {
+            if (watts > 0f)
+            {
+                if (wattsToEquilibrium <= 0f) return 0f;
+                return watts > wattsToEquilibrium ? wattsToEquilibrium : watts;
+            }
+
+            if (watts < 0f)
+            {
+                if (wattsToEquilibrium >= 0f) return 0f;
+                return watts < wattsToEquilibrium ? wattsToEquilibrium : watts;
+            }
+
+            return 0f;
+        }
+
         public static float ClampExchange(float watts, float h, float difference, float massA, float massB)
         {
             if (h <= 0f) return watts;
@@ -2221,6 +2340,7 @@ namespace Thermodynamics.Core
                 nodeExposedArea = new float[size];
                 nodeEmissivity = new float[size];
                 nodeExposedFaces = new int[size];
+                nodeRelaxation = new float[size];
                 nodeFaceWeights = new float[size * Face.Count];
                 nodeSunLit = new float[size * Face.Count];
             }

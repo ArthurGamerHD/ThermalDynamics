@@ -129,6 +129,14 @@ namespace Thermodynamics
         // ---- solver ------------------------------------------------------------------------
 
         [ProtoMember(30)] public bool ClampConductionOvershoot = true;
+
+        /// <summary>
+        /// Clamp radiation and convection so a node cannot overshoot ambient in one substep. See
+        /// the core setting of the same name: it is what keeps the integrator bounded when
+        /// <see cref="MaxSubsteps"/> refuses the substeps the stability estimate asked for, and
+        /// therefore what makes a high-transfer, low-substep profile safe.
+        /// </summary>
+        [ProtoMember(37)] public bool ClampEnvironmentOvershoot = true;
         [ProtoMember(31)] public bool DamageIsPerSecond = true;
         [ProtoMember(32)] public int Frequency = 4;
         [ProtoMember(33)] public float SimulationSpeed = 1f;
@@ -141,6 +149,13 @@ namespace Thermodynamics
         /// simulated time rather than by taking coarser substeps, so no accuracy is lost.
         /// </summary>
         [ProtoMember(35)] public int MaxLinkVisitsPerStep = 1000000;
+
+        /// <summary>
+        /// Most substeps one solver step may divide itself into. See the core setting of the same
+        /// name: the ceiling on the stability estimate, and the knob that separates a
+        /// simulation-first world from an arcade one.
+        /// </summary>
+        [ProtoMember(36)] public int MaxSubsteps = 16;
 
         // ---- environment -------------------------------------------------------------------
 
@@ -244,6 +259,7 @@ namespace Thermodynamics
             if (SimulationSpeed <= 0f) SimulationSpeed = 1f;
             if (HeatTimeScale <= 0f) HeatTimeScale = 1f;
             if (MaxLinkVisitsPerStep < 0) MaxLinkVisitsPerStep = 0;
+            if (MaxSubsteps < 1) MaxSubsteps = 1;
             if (TelemetrySampleStride < 1) TelemetrySampleStride = 1;
             if (SolarOcclusionInterval < 1) SolarOcclusionInterval = 1;
             if (SolarTerrainRange < 0f) SolarTerrainRange = 0f;
@@ -288,6 +304,33 @@ namespace Thermodynamics
         }
 
         /// <summary>
+        /// Applies one of the named profiles in <see cref="Core.ThermalProfiles"/>.
+        ///
+        /// The profile is applied to a core settings object and read back, rather than being
+        /// duplicated here. A profile that gained a field would otherwise be silently half-applied
+        /// in game while passing all of its tests, which is the failure this arrangement exists to
+        /// make impossible.
+        /// </summary>
+        /// <returns>False when the name is not a known profile.</returns>
+        public bool ApplyProfile(string name)
+        {
+            Core.ThermalSettings bundle = new Core.ThermalSettings();
+            if (!Core.ThermalProfiles.Apply(bundle, name)) return false;
+
+            Frequency = bundle.Frequency;
+            SimulationSpeed = bundle.SimulationSpeed;
+            HeatTimeScale = bundle.HeatTimeScale;
+            MaxSubsteps = bundle.MaxSubsteps;
+            ClampConductionOvershoot = bundle.ClampConductionOvershoot;
+            ClampEnvironmentOvershoot = bundle.ClampEnvironmentOvershoot;
+            EnableRoomAir = bundle.EnableRoomAir;
+            SolarSelfShadowing = bundle.SolarSelfShadowing;
+
+            Apply();
+            return true;
+        }
+
+        /// <summary>
         /// Pushes the current values into the simulation's settings and derives them, which is
         /// what makes every grid pick the change up on its next step.
         /// </summary>
@@ -312,11 +355,13 @@ namespace Thermodynamics
             core.EnableHeatPumps = EnableHeatPumps;
 
             core.ClampConductionOvershoot = ClampConductionOvershoot;
+            core.ClampEnvironmentOvershoot = ClampEnvironmentOvershoot;
             core.DamageIsPerSecond = DamageIsPerSecond;
             core.Frequency = Frequency;
             core.SimulationSpeed = SimulationSpeed;
             core.HeatTimeScale = HeatTimeScale;
             core.MaxLinkVisitsPerStep = MaxLinkVisitsPerStep;
+            core.MaxSubsteps = MaxSubsteps;
 
             core.VacuumTemperature = VacuumTemperature;
             core.SolarEnergy = SolarEnergy;
@@ -357,8 +402,9 @@ namespace Thermodynamics
                 "EnableHeatSources", "EnableWasteHeat", "EnablePlanets",
                 "EnableFriction", "EnableDamage", "EnableCoolantLoops", "EnableRoomAir",
                 "EnableHeatPumps",
-                "ClampConductionOvershoot", "DamageIsPerSecond",
+                "ClampConductionOvershoot", "ClampEnvironmentOvershoot", "DamageIsPerSecond",
                 "Frequency", "SimulationSpeed", "HeatTimeScale", "MaxLinkVisitsPerStep",
+                "MaxSubsteps",
                 "VacuumTemperature", "SolarEnergy", "FrictionAtSpeedsAbove", "FrictionScale",
                 "RoomConvectionCoefficient", "RoomAirDensity", "SolarOcclusionInterval",
                 "ClimateGroundInfluence", "ClimateWeatherInfluence",
@@ -395,11 +441,13 @@ namespace Thermodynamics
                 case "EnableRoomAir": return Flag(EnableRoomAir);
                 case "EnableHeatPumps": return Flag(EnableHeatPumps);
                 case "ClampConductionOvershoot": return Flag(ClampConductionOvershoot);
+                case "ClampEnvironmentOvershoot": return Flag(ClampEnvironmentOvershoot);
                 case "DamageIsPerSecond": return Flag(DamageIsPerSecond);
                 case "Frequency": return Frequency;
                 case "SimulationSpeed": return SimulationSpeed;
                 case "HeatTimeScale": return HeatTimeScale;
                 case "MaxLinkVisitsPerStep": return MaxLinkVisitsPerStep;
+                case "MaxSubsteps": return MaxSubsteps;
                 case "VacuumTemperature": return VacuumTemperature;
                 case "SolarEnergy": return SolarEnergy;
                 case "FrictionAtSpeedsAbove": return FrictionAtSpeedsAbove;
@@ -452,11 +500,13 @@ namespace Thermodynamics
                 case "EnableRoomAir": EnableRoomAir = Flag(value); return true;
                 case "EnableHeatPumps": EnableHeatPumps = Flag(value); return true;
                 case "ClampConductionOvershoot": ClampConductionOvershoot = Flag(value); return true;
+                case "ClampEnvironmentOvershoot": ClampEnvironmentOvershoot = Flag(value); return true;
                 case "DamageIsPerSecond": DamageIsPerSecond = Flag(value); return true;
                 case "Frequency": Frequency = (int)value; return true;
                 case "SimulationSpeed": SimulationSpeed = value; return true;
                 case "HeatTimeScale": HeatTimeScale = value; return true;
                 case "MaxLinkVisitsPerStep": MaxLinkVisitsPerStep = (int)value; return true;
+                case "MaxSubsteps": MaxSubsteps = (int)value; return true;
                 case "VacuumTemperature": VacuumTemperature = value; return true;
                 case "SolarEnergy": SolarEnergy = value; return true;
                 case "FrictionAtSpeedsAbove": FrictionAtSpeedsAbove = value; return true;
@@ -493,7 +543,8 @@ namespace Thermodynamics
                 || name == "SolarOcclusionTerrain"
                 || name == "SolarOcclusionVoxels"
                 || name == "SolarOcclusionTerrain"
-                || name == "ClampConductionOvershoot" || name == "DamageIsPerSecond");
+                || name == "ClampConductionOvershoot" || name == "ClampEnvironmentOvershoot"
+                || name == "DamageIsPerSecond");
         }
 
         private static float Flag(bool value)
