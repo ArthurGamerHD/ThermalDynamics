@@ -44,6 +44,11 @@ dotnet run --project Thermodynamics.Sim -- bench hitch --size 125000  # per-tick
 dotnet run --project Thermodynamics.Sim -- bench load  --size 1000000 # what world load costs
 ```
 
+**These benchmarks run one grid.** A world runs hundreds, and the largest single finding of this
+work — every grid ticking on the same frame — was invisible to all of them and came from a
+telemetry report instead. Benchmarks bound what one grid costs; only the report says what a frame
+costs.
+
 `bench scale` builds a hull at each rung of a ladder — 8k, 32k, 125k, 500k, 1M blocks — and times
 every stage of an update on its own. The shape is a ship, not a cube, for the reasons in
 [scale-design.md §10](scale-design.md#10-grid-shape-changes-the-arithmetic); `--shape cube` and
@@ -265,14 +270,31 @@ The same shape of mistake as the room mapper's, and the same fix: the refresh is
 steps. It is advanced inside the pass rather than at the top of a step, so a grid small enough for
 the budget to cover in one go still finishes in the same substep that completed the pass.
 
-### And one that was not a finding
+### 9. Every grid in the world ticked on the same frame — *fixed*
 
-A staggering change was nearly written on the assumption that every grid in a world ticks on the
-same frame. The engine already spreads them: `MyEntities` holds ten-frame entities in a
-`MyDistributedTypeUpdater<MyEntity>(10)`, which updates `ceil(count/10)` of them per frame. See
-[engine-api-notes.md](engine-api-notes.md#entity-updates-are-already-staggered-across-frames).
-Worth recording because the wrong fix would have been invisible: it would have done nothing, and
-looked like it was working.
+The one the benchmarks could never have found, because they run a single grid.
+
+A field run of a 203-grid save: of 13,915 frames, **1,392 did any thermal work at all** — one in
+ten, exactly — and each of the worst frames carried **183 grids**. Those frames averaged 117 ms,
+worst 611 ms, and two in three exceeded a 60 fps frame. The session total was 20 % of real time,
+which is a throughput number and a survivable one. Arriving in one lump every tenth frame is what
+made it a stutter.
+
+`ThermalGridScheduler` gives each grid one of ten phases and ticks one phase per frame. The
+interval per grid is unchanged — every grid still ticks once per ten frames — only which ten. The
+phase is chosen by the blocks already on it rather than by grid count, because that world held one
+42,051-block capital ship and two hundred craft of a few hundred blocks each, and balancing by
+count would have left the capital's frame carrying its share of the rest as well.
+
+**This is a correction, not a discovery.** Earlier in the same session this was investigated by
+reading `MyDistributedTypeUpdater<MyEntity>(10)` in the engine assemblies, which computes
+`m_step = ceil(Count / UpdateInterval)` and walks a slice per frame — and concluded, in a
+committed document, that the engine already staggered and there was nothing to do. The reading was
+plausible and the conclusion was wrong. The measurement settled it in one line: 1,392 of 13,915.
+
+The wrong version of that conclusion was the more dangerous kind, too. Had the fix been written on
+the original belief it would have been *invisible* — a stagger applied on top of a stagger that
+was not there would simply have worked, and nobody would have learned that the premise was false.
 
 ---
 

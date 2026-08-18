@@ -232,6 +232,12 @@ namespace Thermodynamics
 
             Load();
             started = true;
+
+            // Onto the emptiest frame of the ten-frame cycle, weighed by block count. Every grid
+            // used to tick on the same frame, because that is what the engine's own scheduling
+            // does with ten-frame entities — see ThermalGridScheduler.
+            weighedBlocks = blocks.Count;
+            ThermalGridScheduler.Register(this, weighedBlocks);
         }
 
         /// <summary>
@@ -279,6 +285,12 @@ namespace Thermodynamics
             blocks.Clear();
             sweepOrder.Clear();
             massSweepCursor = 0;
+
+            // The weighed figure, not blocks.Count: this runs after the block map has been
+            // cleared, so asking the map would release nothing and leave the phase permanently
+            // carrying a ship that no longer exists.
+            ThermalGridScheduler.Unregister(this, weighedBlocks);
+            weighedBlocks = 0;
 
             Live.Remove(this);
 

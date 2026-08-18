@@ -82,6 +82,7 @@ namespace Thermodynamics
             ThermalHeatPumpShapes.Clear();
             ThermalBridges.Clear();
             ThermalGrid.ResetEnvironmentCaches();
+            ThermalGridScheduler.Clear();
             ThermalHeatSources.Clear();
             ThermalApi.Unregister();
             ThermalTerminal.Unregister();
@@ -122,6 +123,11 @@ namespace Thermodynamics
         {
             RegisterCommand();
             PollKeys();
+
+            // The grids whose turn it is. Every grid ticks once per ten frames as it always did;
+            // what changed is that they no longer all tick on the same one — see
+            // ThermalGridScheduler for what that was costing.
+            ThermalGridScheduler.Tick(_frame);
 
             if (_frame % 10 == 0)
             {

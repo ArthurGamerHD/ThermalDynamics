@@ -75,12 +75,12 @@ feels is everything that ran on one frame added together, and the per-grid rows 
 while the frame does not. `FrameCostTracker` adds up what the mod spent on each frame across every
 grid that ran on it, and keeps the **worst sixteen frames of the session in full**.
 
-**A frame carries about a tenth of the world's grids, not all of them.** The engine holds
-ten-frame entities in a `MyDistributedTypeUpdater` and updates `ceil(count/10)` of them per frame,
-so grids are already spread — see
-[engine-api-notes.md](engine-api-notes.md#entity-updates-are-already-staggered-across-frames).
-Twenty ships in a world contribute roughly two grids to any given frame, and the figures here
-should be read that way.
+**A frame carries about a tenth of the world's grids.** That is the mod's own doing, not the
+engine's: `ThermalGridScheduler` holds grids in ten buckets and ticks one bucket per frame,
+because the engine fires every grid's ten-frame update together. The report's **grid spread**
+table says how even the split currently is, and `heaviest over average` is the figure to read —
+1.0 is perfect, 10 is everything on one frame, and about 1.3 is the practical floor. See
+[engine-api-notes.md](engine-api-notes.md#entity-updates-are-not-staggered-across-frames--measured).
 
 The report gives, under `Cost`:
 

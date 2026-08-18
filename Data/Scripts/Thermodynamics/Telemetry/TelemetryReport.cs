@@ -520,6 +520,44 @@ namespace Thermodynamics
         }
 
         /// <summary>
+        /// How evenly the grids are spread across the ten-frame cycle.
+        ///
+        /// The figure to check first if the per-frame costs below look lumpy. Every grid ticks
+        /// once per ten frames; which of the ten is the mod's own choice, and a world where they
+        /// all chose the same one does ten frames' worth of work on one frame and nothing on the
+        /// others. That is what the engine's own scheduling produced before this existed, and a
+        /// 203-grid field run measured it: 1,392 of 13,915 frames did any work, averaging 117 ms.
+        ///
+        /// "Heaviest over average" is the number: 1.0 is perfect, 10 is everything on one frame.
+        /// Around 1.3 is the practical floor, because a grid is assigned when it appears and
+        /// cannot be moved afterwards without skipping or doubling one of its ticks. A figure well
+        /// above that on a world with many grids means one grid is large enough to dominate a
+        /// frame on its own, which no spreading can fix and which the per-grid rows will name.
+        /// </summary>
+        private static void WritePhaseSpread(StringBuilder sb)
+        {
+            UpdatePhases phases = ThermalGridScheduler.Balance;
+
+            sb.Append("\n  grid spread across the ten-frame cycle:\n");
+
+            if (phases.TotalLoad <= 0)
+            {
+                sb.Append("    (no grids assigned)\n");
+                return;
+            }
+
+            for (int i = 0; i < UpdatePhases.Count; i++)
+            {
+                sb.Append("    frame ").Append(i.ToString().PadLeft(2)).Append(": ")
+                  .Append(phases.MembersOf(i).ToString("n0").PadLeft(6)).Append(" grids, ")
+                  .Append(phases.LoadOf(i).ToString("n0").PadLeft(10)).Append(" blocks\n");
+            }
+
+            Field(sb, "heaviest over average", phases.Imbalance.ToString("n2") + "x  (1.0 is even, "
+                + UpdatePhases.Count + " is everything on one frame)");
+        }
+
+        /// <summary>
         /// What the mod cost per frame across every grid, and the worst frames of the session.
         ///
         /// This is the section to read first when someone reports stuttering. Every other cost
@@ -558,6 +596,8 @@ namespace Thermodynamics
             }
 
             FrameCostTracker frames = Telemetry.FrameCost;
+
+            WritePhaseSpread(sb);
 
             sb.Append("\n  per frame, all grids together:\n");
 

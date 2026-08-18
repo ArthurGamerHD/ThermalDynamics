@@ -48,7 +48,47 @@ namespace Thermodynamics
         private int stepsSinceHottest;
         private int stepsSinceMassSweep;
 
+        /// <summary>
+        /// The frame of the ten-frame cycle this grid works on, or -1 before it has claimed one.
+        /// </summary>
+        public int UpdatePhase = -1;
+
+        /// <summary>
+        /// Blocks this grid was counted as when it last weighed in on its phase.
+        ///
+        /// Kept rather than read back from the block map, because the map is cleared before the
+        /// component finishes closing — releasing <c>blocks.Count</c> at that point would release
+        /// nothing and leave the phase permanently carrying a ship that no longer exists.
+        /// </summary>
+        internal int weighedBlocks;
+
+        /// <summary>
+        /// Deliberately empty. The entity's ten-frame callback is not what drives this mod.
+        ///
+        /// The engine calls every grid's ten-frame update on the same frame, so a world of two
+        /// hundred grids did all of its thermal work on one frame in ten and nothing on the other
+        /// nine. Measured on a 203-grid save: 1,392 of 13,915 frames did any work, they averaged
+        /// 117 ms, and two in three exceeded a 60 fps frame — for a total cost of 20 % of real
+        /// time, which spread evenly would have been about twelve milliseconds a frame.
+        ///
+        /// So the cadence is the mod's own now: <see cref="ThermalGridScheduler"/> ticks the grids
+        /// whose phase matches the frame, driven from the session component. The interval per grid
+        /// is unchanged at ten frames — only which ten.
+        ///
+        /// The obvious alternative, asking the entity for a per-frame callback and gating on the
+        /// phase inside it, is not safe: <c>MyCubeGrid</c> clears <c>EACH_FRAME</c> from its own
+        /// update flags whenever its scheduled-work queue empties, so a mod hanging its cadence
+        /// on that flag silently stops running.
+        /// </summary>
         public override void UpdateBeforeSimulation10()
+        {
+        }
+
+        /// <summary>
+        /// One tick of this grid's simulation. Called by <see cref="ThermalGridScheduler"/> on the
+        /// frames belonging to this grid's phase, ten frames apart.
+        /// </summary>
+        public void Tick()
         {
             if (disabled || !started) return;
 
@@ -73,10 +113,30 @@ namespace Thermodynamics
                     work.TopologyNodeVisits - topologyBefore,
                     work.ExposureNodeVisits - exposureBefore,
                     work.RoomCellsVisited - cellsBefore);
+
+                Reweigh();
                 return;
             }
 
             UpdateInternal();
+            Reweigh();
+        }
+
+        /// <summary>
+        /// Tells the scheduler how large this grid has become, so the balance across phases
+        /// reflects the ships as they are rather than as they first appeared.
+        ///
+        /// A projector's output goes from one block to forty thousand without ever re-registering,
+        /// and a ship being ground down goes the other way. Only a change worth acting on is
+        /// reported, so an idle fleet costs one integer comparison per grid per tick.
+        /// </summary>
+        private void Reweigh()
+        {
+            int now = blocks.Count;
+            if (now == weighedBlocks) return;
+
+            ThermalGridScheduler.Reweigh(this, weighedBlocks, now);
+            weighedBlocks = now;
         }
 
         /// <summary>

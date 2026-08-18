@@ -325,33 +325,44 @@ The single most useful habit: before hand-rolling a subsystem, grep the ModAPI n
 (`VRage.Game.ModAPI`, `Sandbox.ModAPI`) for it. The room mapper is 725 lines of code that the
 engine was already computing.
 
-## Entity updates are already staggered across frames
+## Entity updates are NOT staggered across frames — measured
 
-`ThermalGrid` polls on `UpdateBeforeSimulation10`, and the obvious worry at scale is that every
-grid in the world lands on the same frame — a world of twenty ships each costing a tolerable two
-milliseconds being one forty-millisecond frame every ten. That was the assumption a staggering
-change was about to be written against. It is wrong, and the engine assemblies say so.
+`ThermalGrid` polls on `UpdateBeforeSimulation10`, and the question is whether every grid in the
+world lands on the same frame.
 
-`MyEntities` holds ten-frame entities in `MyDistributedTypeUpdater<MyEntity>(10)`
-(`VRage.Library`). Its `ApplyChanges` computes
+**They do.** A field run of a 203-grid save measured it directly: of 13,915 frames, **1,392 did
+any thermal work at all** — one in ten, exactly — and every one of the worst frames reports **183
+grids** on it. Those frames averaged 117 ms with a worst of 611 ms, and two in three exceeded a
+60 fps frame. See the frame cost section of [telemetry.md](telemetry.md#frame-cost-and-hitching)
+for where those numbers come from.
 
+> **An earlier version of this section said the opposite**, on the strength of reading
+> `MyDistributedTypeUpdater<MyEntity>(10)` in `VRage.Library`: it computes
+> `m_step = ceil(Count / UpdateInterval)` and its enumerator walks `[m_updateIndex, m_updateIndex +
+> m_step)`, which is a stagger. Whatever that machinery does in this build, the observable
+> behaviour of `UpdateBeforeSimulation10` on grid entities is that they all fire together, and the
+> measurement is what counts. The reading was plausible and wrong, and it was nearly the basis for
+> deciding no fix was needed.
+
+The mod therefore paces its own grids: see `ThermalGridScheduler`. Grids are held in ten buckets,
+one bucket ticks per frame, and a grid joins the bucket carrying the fewest blocks. The interval
+per grid is unchanged at ten frames — only which ten.
+
+## `MyCubeGrid` clears `EACH_FRAME` from its own update flags
+
+The obvious way to pace a component per frame is to ask the entity for `EACH_FRAME` and gate on a
+phase inside the callback. On a cube grid that does not work:
+
+```csharp
+base.NeedsUpdate &= ~MyEntityUpdateEnum.EACH_FRAME;      // MyCubeGrid, on its own schedule
 ```
-m_step = ceil(Count / UpdateInterval)
-```
 
-and its enumerator walks `[m_updateIndex, m_updateIndex + m_step)`, with `Update()` advancing
-`m_updateIndex` by `m_step` each frame and wrapping after `UpdateInterval` frames. So a tenth of
-the registered entities update on each frame, in type-sorted order, and a mod that asks for
-`EACH_10TH_FRAME` is already spread.
+`MyCubeGrid` drives its scheduled work off `EACH_FRAME` and **clears the flag when its queue
+empties**, re-arming it only when the queue goes from empty to non-empty. A mod hanging its
+cadence on that flag stops running, silently, whenever the grid has nothing of its own to do.
 
-Two things follow.
+This is the same property recorded under "never assign `NeedsUpdate`" in
+[known-issues.md](known-issues.md) — that entry is about not *clearing* the grid's flags, and this
+is the other half: not *depending* on them either. Anything that must happen on a schedule the mod
+controls belongs on the session component's per-frame call, which nothing else edits.
 
-* **There is nothing for a mod to stagger.** Adding a phase offset per grid on top would either
-  do nothing or fight the engine's own distribution.
-* **A per-frame cost figure is a tenth of the world's grids, not all of them** — which is what
-  the frame-cost section of a telemetry report is measuring, and it is worth knowing when
-  reading one. Twenty ships in a world contribute about two grids to any given frame.
-
-The remaining way for many grids to land together is for them to be adjacent in the type-sorted
-list and fall inside one slice, which is a matter of how many other entities exist rather than
-anything the mod controls.
