@@ -416,6 +416,12 @@ namespace Thermodynamics.Core
             }
 
             sunLitDirty = true;
+
+            // The cached hottest index refers to a slot, and a removal moves whoever was last
+            // into some other slot. Forgotten rather than repaired: it is rebuilt by the next
+            // step's write-back anyway, and until then a walk is correct.
+            hottestNode = -1;
+
             return true;
         }
 
@@ -1326,6 +1332,13 @@ namespace Thermodynamics.Core
             // movement it actually made.
             bool watching = thresholds.Count > 0;
 
+            // The hottest block falls out of this loop for one comparison per node, and the
+            // readouts that want it then cost nothing. Asking for it separately was a second pass
+            // over every node on the grid, run every four steps for every client — a million
+            // reads to answer one question the loop below already has the numbers for.
+            int hottest = -1;
+            float peak = float.MinValue;
+
             for (int i = 0; i < nodes.Count; i++)
             {
                 float updated = nodeTemperatures[i];
@@ -1335,8 +1348,16 @@ namespace Thermodynamics.Core
                 node.Temperature = updated;
                 node.LastDeltaTemperature = updated - previous;
 
+                if (updated > peak)
+                {
+                    peak = updated;
+                    hottest = i;
+                }
+
                 if (watching) thresholds.Collect(node.Block, previous, updated, crossings);
             }
+
+            hottestNode = hottest;
 
             StepCount++;
         }
@@ -2203,17 +2224,36 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>The hottest node, or null when the grid has none.</summary>
+        /// <summary>The hottest node as of the last step, kept by the step's own write-back.</summary>
+        private int hottestNode = -1;
+
+        /// <summary>
+        /// The hottest block on the grid, or null when nothing has stepped yet.
+        ///
+        /// Answered from what the last step already worked out rather than by a fresh pass. The
+        /// figure feeds the cockpit summary, the crosshair readout and the telemetry report; it
+        /// was being recomputed every four steps for every client, which on a large grid is a
+        /// walk over every node to answer a question the step had the numbers for.
+        ///
+        /// A host that changes a temperature from outside a step — loading a save, a grid split —
+        /// gets an answer one step out of date, which is what every consumer of it already
+        /// tolerates: it is refreshed on a cadence and displayed to a human.
+        /// </summary>
         public ThermalNode HottestNode()
         {
-            ThermalNode hottest = null;
-            for (int i = 0; i < nodes.Count; i++)
+            if (hottestNode < 0 || hottestNode >= nodes.Count)
             {
-                if (hottest == null || nodes[i].Temperature > hottest.Temperature)
+                // Nothing has stepped, or the node list shrank under it. Fall back to a walk so
+                // the answer is never simply wrong.
+                ThermalNode found = null;
+                for (int i = 0; i < nodes.Count; i++)
                 {
-                    hottest = nodes[i];
+                    if (found == null || nodes[i].Temperature > found.Temperature) found = nodes[i];
                 }
+                return found;
             }
-            return hottest;
+
+            return nodes[hottestNode];
         }
 
         /// <summary>Sets every node to one temperature. Test and load helper.</summary>
