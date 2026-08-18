@@ -94,7 +94,11 @@ namespace Thermodynamics
             sample.HeatSources = heatSourceBuffer;
 
             LastSample = sample;
-            if (Telemetry.Enabled && Stats != null) Stats.SampleEnvironment(this);
+            if (Telemetry.Enabled && Stats != null)
+            {
+                Stats.SampleEnvironment(this);
+                ProfileEnvironment(ref position, ref sample, planet);
+            }
 
             return sample;
         }
@@ -138,6 +142,107 @@ namespace Thermodynamics
 
                 if (Telemetry.Enabled && Stats != null) Stats.NotePlanet(planet.Entity.StorageName);
             }
+        }
+
+        /// <summary>
+        /// Records what the world is doing at this grid, for balancing a planet's climate against.
+        ///
+        /// Everything here is either free or already known, except the two lookups at the bottom —
+        /// the voxel material under the grid and the game's own comfort figure — which is why this
+        /// runs on its own slow cadence rather than per step. It is a diagnostic, and it only runs
+        /// with telemetry on.
+        /// </summary>
+        private void ProfileEnvironment(
+            ref Vector3D position, ref EnvironmentSample sample, PlanetManager.Planet planet)
+        {
+            if (stepsSinceProfile < ProfileInterval)
+            {
+                stepsSinceProfile++;
+                return;
+            }
+
+            stepsSinceProfile = 0;
+
+            EnvironmentRow row = new EnvironmentRow();
+            EnvironmentState state = LastState;
+
+            row.AirDensity = sample.AirDensity;
+            row.AtmosphereFactor = state.AtmosphereFactor;
+            row.AmbientKelvin = state.AmbientTemperature;
+            row.Underground = sample.IsUnderground;
+            row.SolarEnergy = state.SolarEnergy;
+            row.SolarOcclusion = state.SolarOcclusion;
+            row.WindSpeed = state.WindSpeed;
+            row.GridMeanKelvin = MeanTemperature();
+            row.GridPeakKelvin = HottestNode != null ? HottestNode.Temperature : 0f;
+
+            // The sun's height above the horizon says more than a dot product does: the whole
+            // question of a day-night curve is what the temperature is at ten degrees up.
+            Vector3 up = sample.UpDirection;
+            float sunDot = Vector3.Dot(Vector3.Normalize(up), Vector3.Normalize(sample.SunDirection));
+            row.SunElevationDegrees = (float)(Math.Asin(MathHelper.Clamp(sunDot, -1f, 1f)) * 180d / Math.PI);
+
+            if (planet != null && planet.Entity != null)
+            {
+                MyPlanet entity = planet.Entity;
+
+                row.Planet = entity.StorageName;
+
+                Vector3D centre = entity.PositionComp.WorldMatrixRef.Translation;
+                double radius = (position - centre).Length();
+
+                row.AltitudeSealevel = radius - entity.AverageRadius;
+
+                Vector3D surface = entity.GetClosestSurfacePointGlobal(ref position);
+                row.AltitudeSurface = radius - (surface - centre).Length();
+
+                // Latitude against the planet's own axis, so a reading can be placed on the globe:
+                // a pole and an equator are different climates and this is what tells them apart.
+                Vector3D axis = entity.PositionComp.WorldMatrixRef.Up;
+                double axisDot = MathHelper.Clamp(Vector3D.Dot(Vector3D.Normalize(position - centre), axis), -1d, 1d);
+                row.LatitudeDegrees = (float)(Math.Asin(axisDot) * 180d / Math.PI);
+
+                row.WeatherIntensity = MyVisualScriptLogicProvider.GetWeatherIntensity(position);
+                row.GameTemperature = MyVisualScriptLogicProvider.GetTemperatureInPoint(position);
+                row.SurfaceMaterial = MaterialUnder(entity, ref surface);
+            }
+
+            Stats.NoteEnvironmentProfile(row);
+        }
+
+        /// <summary>
+        /// The voxel material at the surface under the grid — snow, sand, grass, ice.
+        ///
+        /// Sampled a little below the surface point, because the surface point itself sits on the
+        /// boundary and a lookup there answers about the air as often as about the ground.
+        /// </summary>
+        private static string MaterialUnder(MyPlanet planet, ref Vector3D surface)
+        {
+            Vector3D centre = planet.PositionComp.WorldMatrixRef.Translation;
+            Vector3D down = Vector3D.Normalize(centre - surface);
+            Vector3D probe = surface + (down * MaterialProbeDepth);
+
+            MyVoxelMaterialDefinition material = planet.GetMaterialAt(ref probe);
+            return material == null ? "" : material.Id.SubtypeName;
+        }
+
+        /// <summary>Metres below the surface the material is read at.</summary>
+        private const double MaterialProbeDepth = 1.5d;
+
+        /// <summary>Steps between environment profile rows. About ten seconds of play.</summary>
+        private const int ProfileInterval = 60;
+
+        private int stepsSinceProfile = ProfileInterval;
+
+        /// <summary>Mean block temperature, for comparing a grid against its own ambient.</summary>
+        private float MeanTemperature()
+        {
+            IList<ThermalNode> nodes = Simulation.Solver.Nodes;
+            if (nodes.Count == 0) return 0f;
+
+            float total = 0f;
+            for (int i = 0; i < nodes.Count; i++) total += nodes[i].Temperature;
+            return total / nodes.Count;
         }
 
         private static PlanetThermalProperties PropertiesOf(PlanetManager.Planet planet)

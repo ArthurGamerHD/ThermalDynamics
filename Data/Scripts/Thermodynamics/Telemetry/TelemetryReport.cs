@@ -39,6 +39,7 @@ namespace Thermodynamics
             TryWrite("Thermodynamics_BlockTypes_" + stamp + ".csv", BuildBlockTypeCsv());
             TryWrite("Thermodynamics_Grids_" + stamp + ".csv", BuildGridCsv());
             TryWrite("Thermodynamics_Surfaces_" + stamp + ".csv", BuildSurfaceCsv());
+            TryWrite("Thermodynamics_Environment_" + stamp + ".csv", BuildEnvironmentCsv());
 
             if (!wrote)
             {
@@ -94,6 +95,7 @@ namespace Thermodynamics
             WriteSettings(sb);
             WriteSessionTotals(sb);
             WriteAnomalies(sb);
+            AppendClimate(sb);
             WritePerformance(sb);
             WriteGridTable(sb);
             WriteGridDetails(sb);
@@ -784,6 +786,174 @@ namespace Thermodynamics
                     Csv(sb, row.SolarWatts);
                     Csv(sb, row.Temperature);
                     CsvLast(sb, row.ExposedArea);
+                }
+            }
+
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// What the world was doing at each grid, over time — the file for balancing a planet.
+        ///
+        /// One row per grid per sampling interval, with position on the globe, the air, the sun,
+        /// what this mod made of them and what the game's own weather thinks. Averages cannot
+        /// answer a climate question: the whole point is the shape of ambient against altitude,
+        /// against latitude, and around a day, and only the raw readings have that in them.
+        /// </summary>
+        /// <summary>
+        /// A climate summary per planet, so the headline is readable without opening the CSV: how
+        /// warm it got, how cold, how thin the air was, and what the ground was made of.
+        /// </summary>
+        private static void AppendClimate(StringBuilder sb)
+        {
+            Dictionary<string, ClimateSummary> planets = new Dictionary<string, ClimateSummary>();
+
+            IList<GridTelemetry> grids = Telemetry.Grids;
+            for (int g = 0; g < grids.Count; g++)
+            {
+                List<EnvironmentRow> rows = grids[g].Environment;
+
+                for (int i = 0; i < rows.Count; i++)
+                {
+                    EnvironmentRow row = rows[i];
+                    string planet = string.IsNullOrEmpty(row.Planet) ? "space" : row.Planet;
+
+                    ClimateSummary summary;
+                    if (!planets.TryGetValue(planet, out summary))
+                    {
+                        summary = new ClimateSummary();
+                        planets[planet] = summary;
+                    }
+
+                    summary.Add(ref row);
+                }
+            }
+
+            if (planets.Count == 0) return;
+
+            Section(sb, "Climate");
+
+            foreach (KeyValuePair<string, ClimateSummary> pair in planets)
+            {
+                sb.Append("  ").Append(pair.Key).Append('\n');
+                pair.Value.Write(sb);
+            }
+        }
+
+        /// <summary>Ranges seen on one planet, over every grid that was on it.</summary>
+        private class ClimateSummary
+        {
+            private readonly RunningStat ambient = new RunningStat();
+            private readonly RunningStat density = new RunningStat();
+            private readonly RunningStat altitude = new RunningStat();
+            private readonly RunningStat solar = new RunningStat();
+            private readonly RunningStat wind = new RunningStat();
+            private readonly RunningStat game = new RunningStat();
+
+            /// <summary>Warmest and coldest readings with the sun above and below the horizon.</summary>
+            private readonly RunningStat day = new RunningStat();
+            private readonly RunningStat night = new RunningStat();
+
+            private readonly Dictionary<string, int> materials = new Dictionary<string, int>();
+
+            public void Add(ref EnvironmentRow row)
+            {
+                ambient.Add(row.AmbientKelvin);
+                density.Add(row.AirDensity);
+                altitude.Add((float)row.AltitudeSurface);
+                solar.Add(row.SolarEnergy);
+                wind.Add(row.WindSpeed);
+                game.Add(row.GameTemperature);
+
+                if (row.SunElevationDegrees > 0f) day.Add(row.AmbientKelvin);
+                else night.Add(row.AmbientKelvin);
+
+                if (string.IsNullOrEmpty(row.SurfaceMaterial)) return;
+
+                int count;
+                materials.TryGetValue(row.SurfaceMaterial, out count);
+                materials[row.SurfaceMaterial] = count + 1;
+            }
+
+            public void Write(StringBuilder sb)
+            {
+                Field(sb, "    ambient C", Celsius(ambient));
+                Field(sb, "    by day C", Celsius(day));
+                Field(sb, "    by night C", Celsius(night));
+                Field(sb, "    air density", density.Format("n4"));
+                Field(sb, "    altitude m", altitude.Format("n0"));
+                Field(sb, "    solar W", solar.Format("n0"));
+                Field(sb, "    wind m/s", wind.Format("n1"));
+                Field(sb, "    game temperature", game.Format("n3"));
+
+                if (materials.Count == 0) return;
+
+                StringBuilder ground = new StringBuilder();
+                foreach (KeyValuePair<string, int> pair in materials)
+                {
+                    if (ground.Length > 0) ground.Append(", ");
+                    ground.Append(pair.Key).Append(' ').Append(pair.Value);
+                }
+
+                Field(sb, "    ground", ground.ToString());
+            }
+
+            private static string Celsius(RunningStat stat)
+            {
+                if (stat.Count == 0) return "-";
+
+                return Tools.KelvinToCelsius(stat.SafeMin).ToString("n1") + " / "
+                    + Tools.KelvinToCelsius((float)stat.Mean).ToString("n1") + " / "
+                    + Tools.KelvinToCelsius(stat.SafeMax).ToString("n1")
+                    + " (n " + stat.Count + ")";
+            }
+        }
+
+        private static string BuildEnvironmentCsv()
+        {
+            StringBuilder sb = new StringBuilder();
+
+            sb.Append("time_s,grid,grid_id,planet,altitude_surface_m,altitude_sealevel_m,latitude_deg,");
+            sb.Append("sun_elevation_deg,air_density,atmosphere_factor,ambient_k,ambient_c,underground,");
+            sb.Append("solar_w,solar_occlusion,wind_speed,weather_intensity,game_temperature,");
+            sb.Append("surface_material,grid_mean_k,grid_peak_k\n");
+
+            IList<GridTelemetry> grids = Telemetry.Grids;
+
+            for (int g = 0; g < grids.Count; g++)
+            {
+                GridTelemetry record = grids[g];
+                string name = Truncate(record.Name, 40);
+
+                for (int i = 0; i < record.Environment.Count; i++)
+                {
+                    EnvironmentRow row = record.Environment[i];
+
+                    Csv(sb, row.Seconds);
+                    Csv(sb, name);
+                    Csv(sb, record.EntityId);
+                    Csv(sb, Truncate(row.Planet ?? "", 40));
+
+                    Csv(sb, row.AltitudeSurface);
+                    Csv(sb, row.AltitudeSealevel);
+                    Csv(sb, row.LatitudeDegrees);
+                    Csv(sb, row.SunElevationDegrees);
+
+                    Csv(sb, row.AirDensity);
+                    Csv(sb, row.AtmosphereFactor);
+                    Csv(sb, row.AmbientKelvin);
+                    Csv(sb, Tools.KelvinToCelsius(row.AmbientKelvin));
+                    Csv(sb, row.Underground ? 1 : 0);
+
+                    Csv(sb, row.SolarEnergy);
+                    Csv(sb, row.SolarOcclusion);
+                    Csv(sb, row.WindSpeed);
+                    Csv(sb, row.WeatherIntensity);
+                    Csv(sb, row.GameTemperature);
+
+                    Csv(sb, Truncate(row.SurfaceMaterial ?? "", 32));
+                    Csv(sb, row.GridMeanKelvin);
+                    CsvLast(sb, row.GridPeakKelvin);
                 }
             }
 

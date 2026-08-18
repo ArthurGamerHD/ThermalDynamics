@@ -30,6 +30,45 @@ namespace Thermodynamics
     }
 
     /// <summary>
+    /// One reading of the world at a grid, for working out what a planet's climate should be.
+    ///
+    /// Deliberately raw. Balancing a planet means comparing what was measured against what it ought
+    /// to be at that altitude, that latitude and that hour, and none of those can be recovered from
+    /// an average. So each row carries where the grid was, what the world said, what this mod made
+    /// of it, and what the game's own weather thinks — enough to plot any of them against any other.
+    /// </summary>
+    public struct EnvironmentRow
+    {
+        public double Seconds;
+
+        public string Planet;
+        public double AltitudeSurface;
+        public double AltitudeSealevel;
+        public float LatitudeDegrees;
+
+        public float SunElevationDegrees;
+        public float AirDensity;
+        public float AtmosphereFactor;
+
+        public float AmbientKelvin;
+        public bool Underground;
+
+        public float SolarEnergy;
+        public float SolarOcclusion;
+
+        public float WindSpeed;
+        public float WeatherIntensity;
+
+        /// <summary>The game's own comfort scale at this point, 0..1. Its model, not this one.</summary>
+        public float GameTemperature;
+
+        public string SurfaceMaterial;
+
+        public float GridMeanKelvin;
+        public float GridPeakKelvin;
+    }
+
+    /// <summary>
     /// Everything observed about one grid, for the life of that grid.
     ///
     /// A record outlives its grid: when the grid closes, <see cref="Close"/> takes a final
@@ -427,6 +466,31 @@ namespace Thermodynamics
         /// record outlives the grid it describes, and this is part of the description.
         /// </summary>
         public readonly List<SurfaceRow> Surfaces = new List<SurfaceRow>();
+
+        /// <summary>Readings of the world at this grid, oldest first.</summary>
+        public readonly List<EnvironmentRow> Environment = new List<EnvironmentRow>();
+
+        /// <summary>
+        /// Records one reading. Called on the sampling cadence the host chooses, not per step: the
+        /// point is a curve over a day, and a row every tick would be a hundred thousand of them
+        /// describing the same minute.
+        /// </summary>
+        public void NoteEnvironmentProfile(EnvironmentRow row)
+        {
+            if (Environment.Count >= MaxEnvironmentRows) return;
+
+            row.Seconds = Telemetry.SessionSeconds;
+            Environment.Add(row);
+
+            if (Environment.Count == MaxEnvironmentRows)
+            {
+                MyLog.Default.Info("[" + Settings.Name + "] [Telemetry] environment log for "
+                    + Name + " full at " + MaxEnvironmentRows + " rows");
+            }
+        }
+
+        /// <summary>Readings kept per grid. At one every ten seconds, about eleven hours of them.</summary>
+        private const int MaxEnvironmentRows = 4000;
 
         private void SnapshotSurfaces()
         {

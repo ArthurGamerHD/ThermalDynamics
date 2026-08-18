@@ -110,6 +110,35 @@ outlives its grid, so a ship destroyed mid-session still contributes its faces.
 Limits are 50,000 rows per grid and 300,000 for the session, about fifty thousand blocks. Hitting
 either logs a line and stops; it never truncates silently.
 
+## Climate dump
+
+`Thermodynamics_Environment_<stamp>.csv` is written with every report: one row per grid every ten
+seconds of play, describing the world at that grid rather than the grid itself. It is the file for
+balancing a planet's climate.
+
+| Column | Meaning |
+| --- | --- |
+| `time_s`, `grid`, `grid_id`, `planet` | when, where, and on what |
+| `altitude_surface_m` | height above the ground directly below |
+| `altitude_sealevel_m` | height above the planet's mean radius |
+| `latitude_deg` | against the planet's own axis: −90 at one pole, +90 at the other |
+| `sun_elevation_deg` | the sun's height above the horizon, negative at night |
+| `air_density`, `atmosphere_factor` | what the game reports, and what this mod makes of it |
+| `ambient_k`, `ambient_c` | the ambient this mod produced |
+| `underground` | 1 when the game says the grid is below the surface |
+| `solar_w`, `solar_occlusion` | irradiance after atmosphere and shadow, and the share shadowed |
+| `wind_speed`, `weather_intensity` | the game's wind speed and weather at that point |
+| `game_temperature` | the game's own comfort figure at that point, 0..1 — its model, for comparison |
+| `surface_material` | the voxel material under the grid: snow, sand, grass, ice |
+| `grid_mean_k`, `grid_peak_k` | what the grid itself did about all of it |
+
+The rows are raw on purpose. A climate question is the *shape* of ambient against altitude, against
+latitude and around a day, and an average has none of that in it. The report also carries a
+**Climate** section summarising each planet — ambient by day and by night, air density, altitude,
+solar, wind, and the ground materials seen — for the headline without opening the file.
+
+Capped at 4000 rows per grid, about eleven hours of play at the default cadence, and logged when hit.
+
 ## What is collected
 
 **Session** — world name and path, online mode, server/dedicated/multiplayer, real and in-game
