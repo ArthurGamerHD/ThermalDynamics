@@ -60,6 +60,20 @@ namespace Thermodynamics
             new Dictionary<Vector3I, ThermalBlock>(Vector3I.Comparer);
 
         /// <summary>
+        /// The same blocks in a list, so the mass sweep can resume where it left off.
+        ///
+        /// A dictionary cannot be walked a slice at a time — enumerating it starts from the
+        /// beginning every time — and the sweep has to be resumable, because the alternative is
+        /// a pass over every block on the grid landing inside one tick. Kept in step with the
+        /// dictionary on every add and remove, with each block remembering its own slot so a
+        /// removal is a swap rather than a search.
+        /// </summary>
+        private readonly List<ThermalBlock> sweepOrder = new List<ThermalBlock>();
+
+        /// <summary>Where the rolling mass sweep is up to in <see cref="sweepOrder"/>.</summary>
+        private int massSweepCursor;
+
+        /// <summary>
         /// Temperatures of blocks removed recently, so a section cut off the grid keeps its
         /// heat when it becomes a grid of its own, and so rebuilding a block does not reset it.
         ///
@@ -263,6 +277,8 @@ namespace Thermodynamics
                 block.Detach();
             }
             blocks.Clear();
+            sweepOrder.Clear();
+            massSweepCursor = 0;
 
             Live.Remove(this);
 
@@ -306,6 +322,8 @@ namespace Thermodynamics
                 bound.Node = Simulation.AddBlock(bound.Instance, temperature);
 
                 blocks.Add(block.Min, bound);
+                bound.SweepSlot = sweepOrder.Count;
+                sweepOrder.Add(bound);
                 bound.Attach();
 
                 if (Stats != null) Stats.BlocksAdded++;
@@ -357,6 +375,7 @@ namespace Thermodynamics
                 bound.Detach();
                 Simulation.RemoveBlock(bound.Instance);
                 blocks.Remove(block.Min);
+                RemoveFromSweepOrder(bound);
 
                 if (Stats != null) Stats.BlocksRemoved++;
                 if (bound.Stats != null) bound.Stats.OnRemoved();
@@ -516,6 +535,42 @@ namespace Thermodynamics
             {
                 bound.RefreshStats();
             }
+        }
+
+        /// <summary>
+        /// Takes a block out of the sweep list by moving the last one into its place.
+        ///
+        /// Nothing depends on the order — it is a rota, not a sequence — so the cheap removal is
+        /// the correct one. The cursor is left where it is: at worst it re-sweeps or skips a
+        /// single block, and the sweep comes round again.
+        /// </summary>
+        private void RemoveFromSweepOrder(ThermalBlock bound)
+        {
+            int slot = bound.SweepSlot;
+            if (slot < 0 || slot >= sweepOrder.Count || sweepOrder[slot] != bound)
+            {
+                // Should not happen; a search is better than a corrupt list.
+                sweepOrder.Remove(bound);
+                bound.SweepSlot = -1;
+                return;
+            }
+
+            int last = sweepOrder.Count - 1;
+            if (slot != last)
+            {
+                ThermalBlock moved = sweepOrder[last];
+                sweepOrder[slot] = moved;
+                moved.SweepSlot = slot;
+            }
+
+            sweepOrder.RemoveAt(last);
+            bound.SweepSlot = -1;
+        }
+
+        /// <summary>Blocks in the mass-sweep rota. Diagnostic; the rota is the grid's own.</summary>
+        public int SweepOrderCount
+        {
+            get { return sweepOrder.Count; }
         }
 
         /// <summary>

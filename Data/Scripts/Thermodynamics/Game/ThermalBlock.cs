@@ -391,6 +391,12 @@ namespace Thermodynamics
         /// Re-reads the block's mass. Build progress and damage both change it, and thermal mass
         /// is the denominator of every temperature change, so it cannot be left stale.
         /// </summary>
+        /// <summary>
+        /// This block's place in its grid's mass-sweep rota, or -1 when it is not in one.
+        /// Maintained by <see cref="ThermalGrid"/>; nothing else should write it.
+        /// </summary>
+        public int SweepSlot = -1;
+
         public void RefreshMass()
         {
             float mass = Math.Max(0f, Block.Mass);

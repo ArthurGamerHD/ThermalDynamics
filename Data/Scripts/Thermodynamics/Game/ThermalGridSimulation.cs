@@ -22,8 +22,28 @@ namespace Thermodynamics
         /// <summary>Solver steps between refreshes of the hottest-block readout.</summary>
         private const int HottestInterval = 4;
 
-        /// <summary>Solver steps between block mass refreshes for damaged or unfinished blocks.</summary>
+        /// <summary>
+        /// Solver steps a full pass of the mass sweep is spread over on a grid small enough for
+        /// that to be affordable. A large grid takes longer, because the slice is capped.
+        /// </summary>
         private const int MassSweepInterval = 8;
+
+        /// <summary>
+        /// Blocks the mass sweep will look at in one tick, at most.
+        ///
+        /// Mass changes with build progress and damage, and the game raises no event a mod can
+        /// hook for either, so the only way to notice is to look. Looking at every block on the
+        /// grid is what it used to do, once every eight steps: free on a fighter and a pass over
+        /// a million game blocks on a station, landing inside a single tick and asking the game
+        /// for each block's mass on the way.
+        ///
+        /// A cap turns that into a rota. A grid under the cap is still swept completely every
+        /// eight steps, exactly as before. A larger one takes proportionally longer to come
+        /// round — a million blocks is about a minute — which is the right trade: a block's
+        /// thermal mass being a minute out of date on a station that size is invisible, and a
+        /// stall every eight steps is not.
+        /// </summary>
+        private const int MassSweepCap = 4096;
 
         private int stepsSinceHottest;
         private int stepsSinceMassSweep;
@@ -116,11 +136,12 @@ namespace Thermodynamics
             RaiseThresholdCrossings();
             PublishHeatPumpDemand();
 
+            SweepMass(steps);
+
             stepsSinceMassSweep += steps;
             if (stepsSinceMassSweep >= MassSweepInterval)
             {
                 stepsSinceMassSweep = 0;
-                SweepMass();
                 SweepRoomPressure();
             }
 
@@ -175,14 +196,25 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Mass changes with build progress and damage. The game raises no event a mod can hook
-        /// for either, so the alternative to a slow sweep is reading every block every step.
+        /// Refreshes a slice of the grid's blocks, resuming where the last tick stopped.
+        ///
+        /// The slice is the share of the grid that keeps a full pass to
+        /// <see cref="MassSweepInterval"/> steps, capped at <see cref="MassSweepCap"/> so no tick
+        /// pays more than its share however large the grid. Every other budgeted stage in the
+        /// simulation works this way; this one was the last pass over the whole grid that did not.
         /// </summary>
-        private void SweepMass()
+        private void SweepMass(int steps)
         {
-            foreach (ThermalBlock bound in blocks.Values)
+            int count = sweepOrder.Count;
+            int share = SimulationScheduler.SweepSlice(count, steps, MassSweepInterval, MassSweepCap);
+            if (share <= 0) return;
+
+            if (massSweepCursor >= count) massSweepCursor = 0;
+
+            for (int i = 0; i < share; i++)
             {
-                bound.RefreshMass();
+                if (massSweepCursor >= count) massSweepCursor = 0;
+                sweepOrder[massSweepCursor++].RefreshMass();
             }
         }
 

@@ -116,6 +116,41 @@ namespace Thermodynamics.Core
             return budget;
         }
 
+        /// <summary>
+        /// How many items a rolling sweep should visit this tick.
+        ///
+        /// A sweep exists where the game raises no event and the only way to notice a change is
+        /// to look — block mass is the case in this mod. Looking at everything on a cadence is
+        /// free on a small grid and a stall on a large one, so the slice is the share that keeps
+        /// a full pass to <paramref name="interval"/> steps, capped so no tick pays more than
+        /// its share however large the grid gets.
+        ///
+        /// Below the cap a full pass still takes exactly <paramref name="interval"/> steps, which
+        /// is what makes this a strict improvement rather than a trade: nothing about a grid
+        /// small enough to sweep whole changes.
+        /// </summary>
+        /// <param name="count">Items in the rota.</param>
+        /// <param name="steps">Solver steps this tick advanced.</param>
+        /// <param name="interval">Steps a full pass should take, when affordable.</param>
+        /// <param name="cap">Most items one tick may visit.</param>
+        public static int SweepSlice(int count, int steps, int interval, int cap)
+        {
+            if (count <= 0 || steps <= 0 || cap <= 0) return 0;
+            if (interval < 1) interval = 1;
+
+            // In long arithmetic: a million blocks times four steps overflows an int before the
+            // division brings it back down.
+            long share = ((long)count * steps) / interval;
+
+            // Never zero while there is anything to sweep, or a grid large enough for the
+            // division to round down to nothing would never be swept at all.
+            if (share < 1) share = 1;
+            if (share > cap) share = cap;
+            if (share > count) share = count;
+
+            return (int)share;
+        }
+
         public void Reset()
         {
             accumulator = 0f;
