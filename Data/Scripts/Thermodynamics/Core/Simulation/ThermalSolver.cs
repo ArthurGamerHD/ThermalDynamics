@@ -2327,7 +2327,12 @@ namespace Thermodynamics.Core
                 // has to be marked for a recompute or every surviving node silently loses the
                 // conductance it sees, and the substep estimate with it.
                 conductanceTotalsDirty = true;
-                int size = Math.Max(16, nodes.Count * 2);
+                // A quarter more, not double. Around fourteen arrays are indexed by node, so
+                // doubling leaves a settled grid carrying a whole spare copy of each — about ten
+                // megabytes on a 127,000-block ship, held for as long as the grid exists.
+                // Doubling is the right policy for something appended to in a tight loop; these
+                // grow when a block is placed, which is not that.
+                int size = Math.Max(16, nodes.Count + (nodes.Count / 4) + 16);
                 nodeWatts = new float[size];
                 nodeTemperatures = new float[size];
                 nodeStepStart = new float[size];

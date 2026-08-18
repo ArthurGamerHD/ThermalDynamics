@@ -442,11 +442,11 @@ which removal is O(degree) like addition. Until then, grinding or combat damage 
 grid costs a full rebuild per burst. It coalesces, so a section shot away is one rebuild rather
 than one per block.
 
-**Memory is 2.5 GB at a million blocks**, against the ~110 MB budgeted in
-[scale-design.md §6](scale-design.md#6-data-structures). The gap is object-per-node and
-object-per-block layout plus the room map's hash sets over the whole bounding volume — the
-structure-of-arrays and blittable-only changes in that section, none of which are built. This may
-well bind before the solver does.
+**Memory is about 1.8 KB a block**, against the ~110 bytes a node budgeted in
+[scale-design.md §6](scale-design.md#6-data-structures). Half of what a grid retains is indexed by
+bounding volume rather than by block. See [memory.md](memory.md), which measures it and ranks the
+changes that would give it back — and corrects the 2.5 GB figure this paragraph used to quote,
+which counted garbage.
 
 **The room map floods the bounding volume**, which is 14 times the block count on a hull and worse
 on a station. It is budgeted now, so it costs ticks rather than a stall — 7,237 of them to

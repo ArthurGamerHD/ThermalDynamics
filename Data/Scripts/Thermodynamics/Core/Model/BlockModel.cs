@@ -222,6 +222,61 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>Enumerates every block-local cell in a stable order.</summary>
+        /// <summary>
+        /// A block's six mount and seal fractions in grid space, for one orientation.
+        ///
+        /// Shared by every instance that has this model in this orientation, because that is all
+        /// they depend on. Each instance used to allocate four <c>float[6]</c> arrays of its own
+        /// and fill them with the same twenty-four numbers as every identically placed block on
+        /// the ship — 192 bytes of the 456 a block cost, to hold something there are at most
+        /// twenty-four distinct copies of per block type.
+        /// </summary>
+        public class FaceFractions
+        {
+            public readonly float[] Mount = new float[Face.Count];
+            public readonly float[] SealClosed = new float[Face.Count];
+            public readonly float[] SealOpen = new float[Face.Count];
+        }
+
+        /// <summary>
+        /// Face fractions by orientation, built on demand. Six forward directions by six up
+        /// directions; only twenty-four of the thirty-six are legal and the rest stay null.
+        /// </summary>
+        private readonly FaceFractions[] fractionsByOrientation = new FaceFractions[36];
+
+        /// <summary>
+        /// The face fractions for one orientation of this model, building them if this is the
+        /// first block placed that way.
+        ///
+        /// Two threads can arrive here at once — the game builds pasted and projected grids on
+        /// workers — and both are allowed to build. They compute the same twenty-four numbers from
+        /// the same inputs, the loser's copy is collected, and the reference is published by a
+        /// single aligned write that a reader either sees or does not. That is cheaper and simpler
+        /// than a lock on a path every block placement takes.
+        /// </summary>
+        public FaceFractions FractionsFor(BlockOrientation orientation)
+        {
+            int index = ((int)orientation.Forward * 6) + (int)orientation.Up;
+            if (index < 0 || index >= fractionsByOrientation.Length) index = 0;
+
+            FaceFractions known = fractionsByOrientation[index];
+            if (known != null) return known;
+
+            FaceFractions built = new FaceFractions();
+            for (int localFace = 0; localFace < Face.Count; localFace++)
+            {
+                int gridFace = orientation.RotateFace(localFace);
+                if (gridFace < 0) continue;
+
+                built.Mount[gridFace] = LocalFaceMountFraction(localFace);
+                built.SealClosed[gridFace] = LocalFaceSealFraction(localFace);
+                built.SealOpen[gridFace] = LocalFaceSealFractionWhenOpen(localFace);
+            }
+
+            fractionsByOrientation[index] = built;
+            return built;
+        }
+
         public IEnumerable<Vector3I> LocalCells()
         {
             for (int z = 0; z < Math.Max(1, Size.Z); z++)

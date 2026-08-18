@@ -51,10 +51,13 @@ namespace Thermodynamics.Core
         private int[] gridStructuralSurfaces;
         private Vector3I[] gridCells;
 
-        private readonly float[] gridMountFraction = new float[Face.Count];
-        private readonly float[] gridSealFraction = new float[Face.Count];
-        private readonly float[] gridSealFractionClosed = new float[Face.Count];
-        private readonly float[] gridSealFractionOpen = new float[Face.Count];
+        /// <summary>
+        /// This block's mount and seal fractions per grid face, shared with every other block of
+        /// the same model in the same orientation. See <see cref="BlockModel.FaceFractions"/>:
+        /// four arrays an instance used to own outright, holding numbers that depend on nothing
+        /// an instance knows.
+        /// </summary>
+        private BlockModel.FaceFractions fractions;
 
         public BlockInstance(BlockModel model, Vector3I min, BlockOrientation orientation)
         {
@@ -116,7 +119,7 @@ namespace Thermodynamics.Core
             if (!HasStateDependentSealing) return false;
             if (gridFace < 0 || gridFace >= Face.Count) return false;
 
-            return gridSealFractionClosed[gridFace] > 0f && gridSealFractionOpen[gridFace] <= 0f;
+            return fractions.SealClosed[gridFace] > 0f && fractions.SealOpen[gridFace] <= 0f;
         }
 
         /// <summary>Extents in cells.</summary>
@@ -134,13 +137,22 @@ namespace Thermodynamics.Core
         /// </summary>
         public float MountFraction(int gridFace)
         {
-            return (gridFace >= 0 && gridFace < Face.Count) ? gridMountFraction[gridFace] : 0f;
+            return (gridFace >= 0 && gridFace < Face.Count) ? fractions.Mount[gridFace] : 0f;
         }
 
         /// <summary>Fraction of a grid-space face that seals, 0..1. Zero for an open door.</summary>
+        /// <summary>
+        /// How much of a face seals, given what the block is currently doing.
+        ///
+        /// Resolved when asked rather than cached, because the only thing that varies between two
+        /// blocks sharing a model and an orientation is whether a door is shut — and that is a
+        /// bool this already holds. It also means a door cycling no longer has to rewrite anything
+        /// to be answered correctly.
+        /// </summary>
         public float SealFraction(int gridFace)
         {
-            return (gridFace >= 0 && gridFace < Face.Count) ? gridSealFraction[gridFace] : 0f;
+            if (gridFace < 0 || gridFace >= Face.Count) return 0f;
+            return IsSealedByDoorState ? fractions.SealClosed[gridFace] : fractions.SealOpen[gridFace];
         }
 
         /// <summary>Area of one grid-space face, in lattice cell faces.</summary>
@@ -192,27 +204,7 @@ namespace Thermodynamics.Core
         /// </summary>
         private void BuildFaceFractions()
         {
-            for (int face = 0; face < Face.Count; face++)
-            {
-                gridMountFraction[face] = 0f;
-                gridSealFraction[face] = 0f;
-                gridSealFractionClosed[face] = 0f;
-                gridSealFractionOpen[face] = 0f;
-            }
-
-            for (int localFace = 0; localFace < Face.Count; localFace++)
-            {
-                int gridFace = Orientation.RotateFace(localFace);
-                if (gridFace < 0) continue;
-
-                gridMountFraction[gridFace] = Model.LocalFaceMountFraction(localFace);
-                gridSealFractionClosed[gridFace] = Model.LocalFaceSealFraction(localFace);
-                gridSealFractionOpen[gridFace] = Model.LocalFaceSealFractionWhenOpen(localFace);
-
-                gridSealFraction[gridFace] = IsSealedByDoorState
-                    ? gridSealFractionClosed[gridFace]
-                    : gridSealFractionOpen[gridFace];
-            }
+            fractions = Model.FractionsFor(Orientation);
         }
 
         private void BuildGridSurfaces()

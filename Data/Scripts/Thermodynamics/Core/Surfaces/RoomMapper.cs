@@ -253,6 +253,7 @@ namespace Thermodynamics.Core
             }
 
             working = new RoomMap();
+            working.SetSearchBounds(searchMin, searchMaxExclusive);
             frontier.Clear();
             visited.Reset(searchMin, searchMaxExclusive);
             CollectDoorCells();

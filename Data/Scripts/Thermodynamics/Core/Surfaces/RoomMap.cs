@@ -21,7 +21,19 @@ namespace Thermodynamics.Core
     /// </summary>
     public class RoomMap
     {
-        private readonly HashSet<Vector3I> external = new HashSet<Vector3I>(Vector3I.Comparer);
+        /// <summary>
+        /// How many cells the pass classified as open air, and the box it classified them in.
+        ///
+        /// The cells themselves are not stored. On a hull nine tenths of the bounding box is open
+        /// air — 1.3 million cells of 1.5 million on a 127,000-block ship — and every one of them
+        /// was held in a hash set at about forty bytes, to record the absence of anything. It is
+        /// the default: a cell inside the box that is neither solid nor in a room is external, by
+        /// definition, so the set was storing what the other two already implied.
+        /// </summary>
+        private int externalCount;
+
+        private Vector3I searchMin;
+        private Vector3I searchMaxExclusive;
         private readonly HashSet<Vector3I> solid = new HashSet<Vector3I>(Vector3I.Comparer);
         private readonly List<HashSet<Vector3I>> rooms = new List<HashSet<Vector3I>>();
         private readonly Dictionary<Vector3I, int> roomIndexByCell = new Dictionary<Vector3I, int>(Vector3I.Comparer);
@@ -53,7 +65,7 @@ namespace Thermodynamics.Core
 
         public int ExternalCellCount
         {
-            get { return external.Count; }
+            get { return externalCount; }
         }
 
         public int SolidCellCount
@@ -75,7 +87,7 @@ namespace Thermodynamics.Core
         /// </summary>
         public bool IsEmpty
         {
-            get { return external.Count == 0 && solid.Count == 0 && roomIndexByCell.Count == 0; }
+            get { return externalCount == 0 && solid.Count == 0 && roomIndexByCell.Count == 0; }
         }
 
         public IList<HashSet<Vector3I>> Rooms
@@ -90,7 +102,7 @@ namespace Thermodynamics.Core
         /// </summary>
         public IEnumerable<Vector3I> ExternalCells
         {
-            get { return external; }
+            get { return EnumerateExternal(); }
         }
 
         /// <summary>Every door that opens onto one of these rooms, or onto open air.</summary>
@@ -178,7 +190,38 @@ namespace Thermodynamics.Core
 
         internal void AddExternal(Vector3I cell)
         {
-            external.Add(cell);
+            externalCount++;
+        }
+
+        /// <summary>Records the box the pass classified, so open air can be enumerated from it.</summary>
+        internal void SetSearchBounds(Vector3I min, Vector3I maxExclusive)
+        {
+            searchMin = min;
+            searchMaxExclusive = maxExclusive;
+        }
+
+        /// <summary>
+        /// The cells classified as open air, walked rather than stored.
+        ///
+        /// Scan order, which is deterministic and repeatable — better for a diagnostic than a hash
+        /// set's ordering was. Only the room-leak audit wants these, it stops at a cell limit, and
+        /// it runs when something is asking.
+        /// </summary>
+        private IEnumerable<Vector3I> EnumerateExternal()
+        {
+            for (int z = searchMin.Z; z < searchMaxExclusive.Z; z++)
+            {
+                for (int y = searchMin.Y; y < searchMaxExclusive.Y; y++)
+                {
+                    for (int x = searchMin.X; x < searchMaxExclusive.X; x++)
+                    {
+                        Vector3I cell = new Vector3I(x, y, z);
+                        if (solid.Contains(cell)) continue;
+                        if (roomIndexByCell.ContainsKey(cell)) continue;
+                        yield return cell;
+                    }
+                }
+            }
         }
 
         internal void AddSolid(Vector3I cell)
@@ -271,9 +314,14 @@ namespace Thermodynamics.Core
             parent[rootA] = rootB;
         }
 
+        /// <summary>
+        /// Whether a completed pass has an answer for this cell — which, once it has run, means
+        /// whether the cell is inside the box it walked.
+        /// </summary>
         internal bool IsKnown(Vector3I cell)
         {
-            return external.Contains(cell) || solid.Contains(cell) || roomIndexByCell.ContainsKey(cell);
+            if (solid.Contains(cell) || roomIndexByCell.ContainsKey(cell)) return true;
+            return GridMath.Contains(searchMin, searchMaxExclusive, cell);
         }
 
         internal void DropEmptyRooms()
