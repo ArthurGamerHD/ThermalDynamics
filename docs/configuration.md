@@ -95,6 +95,7 @@ Each switch removes exactly its own mechanism and its own cost.
 
 | Setting | Default | Effect |
 | --- | --- | --- |
+| `ClimateGroundInfluence` | 1.0 | How much the ground a grid is parked on shifts the air above it, 0..1. At 1, snow is about 14 K colder than the planet's own figure with a flatter day, and sand about 8 K warmer with nearly twice the swing. At 0 the ground is ignored. |
 | `VacuumTemperature` | 2.7 K | Ambient in space, and the floor for planetary ambient. |
 | `SolarEnergy` | 1000 W/m² | Solar irradiance above the atmosphere. |
 | `FrictionAtSpeedsAbove` | 50 m/s | Relative airspeed at which aerodynamic heating starts. |

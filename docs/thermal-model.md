@@ -351,11 +351,31 @@ single integer comparison per step. See [api.md](api.md#thresholds).
 function from a host sample to the state a step consumes:
 
 ```
-ambient   = underground ? UndergroundTemperature
-                        : NightTemperature + (dot(up, sun) + 1)/2 × (DayTemperature − NightTemperature)
+drop      = PoleTemperatureDrop × (1 − cos(latitude))
+mean      = (NightTemperature + DayTemperature)/2 − drop
+half      = (DayTemperature − NightTemperature)/2 × groundSwing
+
+target    = mean − half + 2×half × max(0, sin(sunElevation)) + groundOffset
+ambient   = ambient + (target − ambient) × (1 − e^(−dt / AmbientLagSeconds))
+ambient   = underground ? UndergroundTemperature : ambient
 ambient  *= atmosphereFactor
 ambient   = max(VacuumTemperature, ambient)
 ```
+
+The planet's `DayTemperature` and `NightTemperature` are its **equatorial** figures;
+`PoleTemperatureDrop` is the span from there to its poles, and latitude interpolates on the cosine
+because that is how squarely the sun strikes a band. `groundOffset` and `groundSwing` come from the
+voxel material under the grid via
+[GroundTemperature](../Data/Scripts/Thermodynamics/Core/Definitions/GroundTemperature.cs) — snow
+about 14 K colder and flatter, sand about 8 K warmer and swinging nearly twice as hard, because dry
+ground holds nothing overnight. `ClimateGroundInfluence` scales the whole opinion, 0 for none.
+
+The lag is why the day's peak lands after noon rather than at it. Air chases the sun; without it the
+hottest instant of the day is exactly local noon, which is true nowhere.
+
+Measured against a test world, the three parts together take an equatorial desert from 11..20 °C to
+about 14..33 °C, and a snowfield at 41° from +4..+14 °C to about −12..−4 °C, where before every
+difference between those sites came from air density alone.
 
 With no planet nearby, or with planets switched off, ambient is `VacuumTemperature` (2.7 K) and
 there is no convection.

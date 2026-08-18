@@ -22,6 +22,32 @@ namespace Thermodynamics.Core
         public bool IsUnderground;
 
         /// <summary>
+        /// Sine of latitude on the planet: 0 at the equator, ±1 at a pole. Zero when the host does
+        /// not say, which reads as the equator and is what the model did before it was asked.
+        /// </summary>
+        public float LatitudeSine;
+
+        /// <summary>
+        /// What the ground under the grid is worth, K — snow cold, sand warm. Zero when the host
+        /// does not care or cannot tell.
+        /// </summary>
+        public float GroundOffset;
+
+        /// <summary>
+        /// How much the ground widens or narrows the day-night swing. 1 leaves the planet's own
+        /// figures alone, which is what a host that does not care should send.
+        /// </summary>
+        public float GroundSwing;
+
+        /// <summary>
+        /// Ambient at this grid a moment ago, K, and how long ago in seconds of play. The pair the
+        /// lag needs: air chases the sun rather than tracking it, and chasing needs a start.
+        /// </summary>
+        public float PreviousAmbient;
+
+        public float SecondsSincePrevious;
+
+        /// <summary>
         /// Unit vector from the planet centre to the grid, in world space. Used for the
         /// day/night term. Ignored when <see cref="HasPlanet"/> is false.
         /// </summary>

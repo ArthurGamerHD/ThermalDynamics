@@ -133,6 +133,19 @@ namespace Thermodynamics
             Vector3D up = position - planet.Position;
             sample.UpDirection = up.LengthSquared() > 0 ? Vector3.Normalize(up) : Vector3.Up;
 
+            // Where on the globe: the poles get their sunlight at a glancing angle whatever the
+            // hour, and without this every latitude was the same climate.
+            Vector3 axis = planet.Entity.PositionComp.WorldMatrixRef.Up;
+            sample.LatitudeSine = Vector3.Dot(sample.UpDirection, Vector3.Normalize(axis));
+
+            GroundTemperature.Ground ground = GroundUnder(planet.Entity, ref position);
+            sample.GroundOffset = ground.Offset;
+            sample.GroundSwing = ground.Swing;
+
+            // Where the air is now, so it can chase the sun rather than track it.
+            sample.PreviousAmbient = LastState.AmbientTemperature;
+            sample.SecondsSincePrevious = TickSeconds;
+
             long planetId = planet.Entity.EntityId;
             if (planetId != currentPlanetId)
             {
@@ -272,6 +285,38 @@ namespace Thermodynamics
             for (int i = 0; i < nodes.Count; i++) total += nodes[i].Temperature;
             return total / nodes.Count;
         }
+
+        /// <summary>
+        /// What the ground under this grid is worth, K, scaled by how much the world lets it count.
+        ///
+        /// The material lookup is a voxel read, so it is cached and only refreshed when the grid
+        /// has moved far enough to be standing on something else. A parked base pays for it once.
+        /// </summary>
+        private GroundTemperature.Ground GroundUnder(MyPlanet planet, ref Vector3D position)
+        {
+            float influence = Settings.Instance.ClimateGroundInfluence;
+            if (influence <= 0f) return GroundTemperature.Neutral;
+
+            if (Vector3D.DistanceSquared(position, groundSampledAt) > GroundResampleDistance * GroundResampleDistance)
+            {
+                groundSampledAt = position;
+
+                Vector3D surface = planet.GetClosestSurfacePointGlobal(ref position);
+                ground = GroundTemperature.For(MaterialUnder(planet, ref surface));
+            }
+
+            // Influence dials the whole opinion down toward the planet's own, offset and swing
+            // together: half influence is half the shift and half the extra swing.
+            return new GroundTemperature.Ground(
+                ground.Offset * influence,
+                1f + ((ground.Swing - 1f) * influence));
+        }
+
+        /// <summary>Metres a grid may move before the ground under it is looked at again.</summary>
+        private const double GroundResampleDistance = 40d;
+
+        private Vector3D groundSampledAt = Vector3D.PositiveInfinity;
+        private GroundTemperature.Ground ground = GroundTemperature.Neutral;
 
         private static PlanetThermalProperties PropertiesOf(PlanetManager.Planet planet)
         {

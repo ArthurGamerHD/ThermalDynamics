@@ -67,10 +67,19 @@ namespace Thermodynamics.Core
             }
             else
             {
-                // -1 at the antisolar point, +1 with the sun overhead
-                float dot = Vector3.Dot(SafeNormalize(sample.UpDirection), SafeNormalize(sample.SunDirection));
-                float t = (dot + 1f) * 0.5f;
-                ambient = planet.NightTemperature + (t * (planet.DayTemperature - planet.NightTemperature));
+                // Sine of the sun's height above the horizon: negative at night, 1 overhead.
+                float elevation = Vector3.Dot(SafeNormalize(sample.UpDirection), SafeNormalize(sample.SunDirection));
+
+                // A sample from before the ground had a say sends 0, which would flatten the day
+                // to nothing; that reads as "no opinion" and leaves the planet's own swing.
+                float swing = sample.GroundSwing > 0f ? sample.GroundSwing : 1f;
+
+                ambient = ClimateModel.Target(
+                    planet, sample.LatitudeSine, elevation, sample.GroundOffset, swing);
+
+                // Air chases that rather than being it, so the day's peak lands after noon.
+                ambient = ClimateModel.Follow(
+                    sample.PreviousAmbient, ambient, sample.SecondsSincePrevious, planet.AmbientLagSeconds);
             }
 
             // Thin air holds little heat, so ambient tends toward vacuum as density falls.
