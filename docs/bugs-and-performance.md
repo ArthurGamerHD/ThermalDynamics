@@ -1,5 +1,11 @@
 # Bugs and performance findings
 
+> **Superseded on performance.** This page records an investigation at eight thousand blocks. The
+> same exercise repeated at a million is in [load-and-hitching.md](load-and-hitching.md), which
+> supersedes the performance section below: the "cost of scale" item at the end of the suggested
+> order of work has since been measured, and most of it fixed. The correctness findings here still
+> stand.
+
 Findings from extracting the simulation into [`sim/`](../sim) and putting it under test. Each
 correctness item says whether it is confirmed by a test, and where the fixed behaviour lives.
 
@@ -569,8 +575,10 @@ and multirate stepping so cold structure steps at a fraction of the rate its hot
    rate, fast flight now heats the leading face, and overheating destroys blocks 4× slower at
    the default `Frequency = 4`. Still outstanding, and it is a balance decision rather than a
    defect.
-7. **The cost of scale**, which is what the field run actually measured and what nothing here
-   addresses: a 44,632 cell ship at six substeps costs 23 ms a step, one room-mapping call cost
-   162 ms and one topology rebuild 151 ms, and twenty ships cost twenty times one. The one-shot
-   rebuilds want a frame budget; the steady state wants activity tracking and multirate stepping.
-   See [scale-design.md](scale-design.md).
+7. ~~**The cost of scale**~~ — **mostly done**, and measured properly rather than extrapolated.
+   See [load-and-hitching.md](load-and-hitching.md). The one-shot rebuilds got what this asked
+   for and more: placing and removing a block are now incremental rather than budgeted, the room
+   mapper's scan and the exposure and shadow publishes are budgeted, and a step's substep count is
+   bounded so a large grid runs at a lower rate smoothly instead of at full rate in lurches. What
+   is left of this item is the steady state — activity tracking and multirate stepping, still
+   only designed, in [scale-design.md](scale-design.md).

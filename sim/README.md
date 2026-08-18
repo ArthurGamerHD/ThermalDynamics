@@ -42,7 +42,7 @@ sufficient. See [development.md](../docs/development.md#repo-conventions) for th
 ```bash
 cd sim
 
-dotnet test                                    # the whole suite (635 tests)
+dotnet test                                    # the whole suite (679 tests)
 dotnet run --project Thermodynamics.Sim -- list
 dotnet run --project Thermodynamics.Sim -- run reactor
 dotnet run --project Thermodynamics.Sim -- run all --csv out/
@@ -98,6 +98,40 @@ Scenarios are deterministic: no clock, no randomness, no dependence on iteration
 scenario produces byte-identical output on every run, which is what lets them double as
 regression tests (`ScenarioTests`).
 
+## Load benchmarks
+
+Scenarios answer what the simulation does. The `bench` command answers what it costs, at sizes no
+scenario would sit through — up to a million blocks in one grid.
+
+```bash
+dotnet run --project Thermodynamics.Sim -- bench scale                 # the ladder
+dotnet run --project Thermodynamics.Sim -- bench spike --size 125000   # one block placed, split by stage
+dotnet run --project Thermodynamics.Sim -- bench weld  --size 125000   # a block welded every tick
+dotnet run --project Thermodynamics.Sim -- bench hitch --size 125000   # per-tick distribution
+dotnet run --project Thermodynamics.Sim -- bench load  --size 1000000  # world load, before the first tick
+```
+
+| Benchmark | Question it answers |
+| --- | --- |
+| `scale` | What does each stage cost at 8k, 32k, 125k, 500k and 1M blocks? |
+| `spike` | A block is placed. Which stage stalls, on which tick, and how many things did it touch? |
+| `weld` | A block welded every tick for 120 ticks — sustained construction, which never gets a quiet tick to recover in. |
+| `hitch` | 300 ticks of a settled grid with one block welded and one ground off. Reports median, p95, p99, max and the spike ratio. |
+| `load` | Building the simulation for a grid this size, which a player sees as the loading screen or as a blueprint paste. |
+
+`--shape ship|cube|truss` picks the shape, `--max N` stops the ladder early, `--ticks N` sets the
+run length, `--csv <dir>` writes the ladder as a table.
+
+**The ship is the default shape on purpose.** A solid cube is the best case on nearly every axis
+the simulation cares about — see [scale-design.md §10](../docs/scale-design.md#10-grid-shape-changes-the-arithmetic).
+
+Two figures matter and they are not the same figure. The **steady cost** is what a tick costs when
+nothing changed; it degrades gracefully, because twice the cost is half the simulation rate. The
+**spike cost** is what a tick costs when something did; it degrades catastrophically, because a
+player does not perceive a one-second frame as a slow simulation. What each benchmark measured,
+and what was changed because of it, is in
+[load-and-hitching.md](../docs/load-and-hitching.md).
+
 ## Writing a scenario
 
 ```csharp
@@ -127,7 +161,7 @@ PipeFitter.BuildRing(builder, ring);      // pump goes on the first straight run
 
 ## Test coverage
 
-635 tests across:
+679 tests across:
 
 * position keys and block geometry maths
 * face indexing, the colour ramp, occlusion
@@ -157,6 +191,14 @@ PipeFitter.BuildRing(builder, ring);      // pump goes on the first straight run
   do not touch, energy conservation, and air surviving a map rebuild
 * block identity by minimum cell, and overheat events surviving a multi-step update
 * the stage-timing hook, and that instrumenting a run does not change its results
+* the incremental conduction graph: that building a grid one block at a time, and grinding one
+  down, produce the same graph a full rebuild does — including a 400-step run that builds and
+  grinds in a generated order and compares against a rebuild after every single change
+* what an update costs, asserted on work counters rather than a stopwatch: a settled grid rebuilds
+  nothing, a placed block links the block and not the grid, a removed one unpicks the block and not
+  the grid, every budgeted pass respects its budget, and observing the simulation does not change it
+* the rolling sweep's slice arithmetic, including that it never rounds down to nothing
+* the per-frame cost tracker that finds hitches in a real session
 
 Several tests compare against `LegacyFormulas`, a verbatim copy of the original mod's equations,
 to pin down exactly how the rewritten model differs.

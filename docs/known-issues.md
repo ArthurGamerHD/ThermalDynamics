@@ -149,6 +149,32 @@ behaviour rather than endorsing it. The fix is a judgement call about what a mou
 either exempt neighbours that do not seal, or scale the face by the mounted fraction rather than
 dropping it whole.
 
+**A grid at a million blocks costs 2.5 GB.** The design budget is ~110 MB
+([scale-design.md §6](scale-design.md#6-data-structures)); the gap is object-per-node and
+object-per-block layout plus the room map's hash sets over the whole bounding volume. This may
+bind before the solver does, and none of the structure-of-arrays work that would fix it is built.
+
+**The room map floods the bounding volume, which a hull fills about a fifteenth of.** It is
+budgeted, so the cost is ticks rather than a stall — but at a million blocks it is 7,000 ticks to
+converge, which is twenty minutes on a stale map. Bounded and wrong is better than unbounded and
+wrong; it is still wrong. See [model-redesign.md §4](model-redesign.md).
+
+**A block whose mounting changes still rebuilds the whole conduction graph.** Placement and
+removal are incremental; `RefreshBlock` — a block finishing construction, a block whose surfaces
+changed — is not, because it can invalidate links that already exist rather than only adding or
+dropping a node's own. It is the same repair as removal followed by placement and could take that
+path.
+
+**`SweepRoomPressure` is per room per cadence, unbudgeted**, with two game API calls each. Bounded
+by compartment count rather than block count, so it is small on a ship and unmeasured on a station
+with thousands of rooms. Every other whole-grid pass in the mod is now a rota or a budgeted slice;
+this is the one that is not.
+
+**The first step of a grid's life is several times an ordinary one** — 209 ms against a 24 ms
+median at half a million blocks — from first touch of every flat array and the first fill of every
+mirrored row. It happens once, immediately after a world load that took six seconds, so it is a
+warm-up rather than a stutter. It is still the largest number in the distribution.
+
 ## Deliberate limits
 
 **Planet and asteroid shadow is per grid; only other grids shade individual faces.** A grid's own
@@ -205,5 +231,13 @@ particular the vent sweep, the terminal readout and the mod API's delegate table
 coverage. The API's *shape* is checkable without a session and is
 worth pinning down.
 
-`docs/bugs-and-performance.md` records findings from earlier stress work; entries there that are
-still open are the performance ones, not the correctness ones.
+The load tests in `sim/Thermodynamics.Tests/LoadTests.cs` close part of that gap for cost rather
+than for correctness, and they assert work counters rather than milliseconds so they hold on any
+machine. What they cannot reach is the adapter: the mass sweep asks the game for a block's mass,
+and a harness has no game block to ask, so the rota that bounds it is covered only by arithmetic
+tests on its slice function.
+
+`docs/bugs-and-performance.md` records findings from earlier stress work at eight thousand blocks;
+entries there that are still open are the performance ones, not the correctness ones.
+[load-and-hitching.md](load-and-hitching.md) is the same exercise repeated at a million, and
+supersedes its performance section.
