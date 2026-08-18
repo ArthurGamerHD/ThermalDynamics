@@ -68,18 +68,25 @@ All figures from this machine, release build, single thread, ship shape.
 
 ### The ladder
 
-| blocks | links | bbox | build | topology | rooms | exposure | step | ms/sim s | resident |
-| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 8,904 | 20,779 | 68,800 | 115 ms | 9.8 | 36.6 | 5.4 | 0.56 | 2.2 | 21 MB |
-| 32,800 | 73,787 | 328,640 | 267 ms | 26.1 | 68.6 | 7.6 | 2.56 | 10.2 | 97 MB |
-| 126,731 | 277,967 | 1,499,616 | 828 ms | 48.0 | 335.0 | 25.2 | 14.69 | 58.7 | 373 MB |
-| 505,566 | 1,079,559 | 6,838,104 | 5,232 ms | 213.4 | 3,194.0 | 121.5 | 52.63 | 210.5 | 1,658 MB |
-| 1,000,294 | 2,114,111 | 14,278,796 | 11,090 ms | 443.9 | 6,247.4 | 157.0 | 104.12 | 416.5 | 2,522 MB |
+| blocks | links | bbox | build | topology | rooms | exposure | full step | tick | cap | resident |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 8,904 | 20,779 | 68,800 | 124 ms | 11.8 | 36.1 | 5.1 | 0.56 | 0.57 | 48 | 22 MB |
+| 32,800 | 73,787 | 328,640 | 238 ms | 27.8 | 76.2 | 5.9 | 2.84 | 1.56 | 13 | 98 MB |
+| 126,731 | 277,967 | 1,499,616 | 890 ms | 53.3 | 383.9 | 26.2 | 16.05 | 16.58 | 3 | 345 MB |
+| 505,566 | 1,079,559 | 6,838,104 | 5,552 ms | 220.1 | 3,191.3 | 133.1 | 52.63 | 22.16 | 1 | 1,639 MB |
+| 1,000,294 | 2,114,111 | 14,278,796 | 11,192 ms | 461.0 | 6,212.1 | 150.7 | 102.50 | 42.41 | 1 | 2,545 MB |
 
 The topology, rooms and exposure columns are each stage run **whole**, which is what a one-shot
-rebuild or a load costs. They are not what a tick costs; every one of them is now spread.
+rebuild or a world load costs. They are not what a tick costs; every one of them is now spread.
 
-**The solver scales.** Cost per link visit is 8.9 ns at 8k and 16.4 ns at a million — it doubles
+**`full step` and `tick` are not the same number, and the gap is the point.** `full step` is a
+step of the whole configured length with as many substeps as the grid's stiffness asks for. `tick`
+is what a tick actually pays once `MaxLinkVisitsPerStep` has shortened the step to fit, and `cap`
+is how many substeps that leaves. Below about a hundred thousand blocks the budget never binds and
+the two agree. Above it they diverge, and that divergence is the trade being made: at a million
+blocks a tick pays 42 ms instead of 103, and simulated time advances more slowly to pay for it.
+
+**The solver scales.** Cost per link visit is 9.0 ns at 8k and 16.2 ns at a million — it doubles
 across a working set that grows from half a megabyte to two gigabytes, which is a cache effect
 and not an algorithmic one. Nothing in the conduction pass is superlinear.
 
@@ -89,11 +96,14 @@ Worst tick after a single block is placed:
 
 | blocks | before | after |
 | ---: | ---: | ---: |
-| 8,904 | 9.8 ms | **1.4 ms** |
-| 32,800 | 23.4 ms | **12.7 ms** |
-| 126,731 | 121.0 ms | **31.0 ms** |
-| 505,566 | 387.3 ms | **93.7 ms** |
-| 1,000,294 | **1,086.3 ms** | **181.6 ms** |
+| 8,904 | 9.8 ms | **1.6 ms** |
+| 32,800 | 23.4 ms | **3.9 ms** |
+| 126,731 | 121.0 ms | **13.3 ms** |
+| 505,566 | 387.3 ms | **69.8 ms** |
+| 1,000,294 | **1,086.3 ms** | **156.9 ms** |
+
+What is left in those figures is almost entirely the solver step that happens to share the tick,
+not the placement: the topology stage itself is under a millisecond at every size.
 
 Worst call per stage, on a 127k hull, one block placed:
 
