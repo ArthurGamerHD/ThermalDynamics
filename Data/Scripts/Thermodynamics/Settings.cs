@@ -9,6 +9,21 @@ using VRage.Utils;
 namespace Thermodynamics
 {
     /// <summary>
+    /// How much work another grid's shadow is worth.
+    /// </summary>
+    public enum GridShadowMode
+    {
+        /// <summary>Other grids do not shadow this one at all.</summary>
+        None = 0,
+
+        /// <summary>One ray toward the sun; anything in the way dims the whole grid.</summary>
+        Basic = 1,
+
+        /// <summary>The shadow lands on the faces it covers, and only those.</summary>
+        Full = 2,
+    }
+
+    /// <summary>
     /// The world's configuration file, and the bridge from it to the simulation's own settings.
     ///
     /// This type is the serialised form and nothing else: it owns the XML shape, the defaults and
@@ -82,10 +97,19 @@ namespace Thermodynamics
         [ProtoMember(71)] public bool SolarOcclusionVoxels;
 
         /// <summary>
-        /// Whether other grids can shadow a grid — a station's hull over a docked ship, a fleet in
-        /// formation. Costs a ray against the other grid's blocks per candidate per sample.
+        /// How much work other grids' shadows are worth: none, one ray, or the real geometry.
+        ///
+        /// <see cref="GridShadowMode.Basic"/> is the original test — one ray toward the sun, and if
+        /// another grid is in the way the whole grid dims by a sample's share. It costs a ray
+        /// against that grid's blocks per sample and nothing else.
+        ///
+        /// <see cref="GridShadowMode.Full"/> projects the shadow onto the faces it actually covers,
+        /// so a station overhead darkens the hull beneath it and leaves the rest in the sun. It
+        /// costs a walk through the occluder's blocks per face of this grid, on the shadow pass
+        /// rather than per step, and needs <see cref="SolarSelfShadowing"/> for the pass it rides
+        /// on.
         /// </summary>
-        [ProtoMember(72)] public bool SolarOcclusionGrids;
+        [ProtoMember(77)] public int SolarGridShadows;
 
         /// <summary>
         /// How many points across a grid are tested, 1..9. One is a single ray from the middle,
@@ -148,6 +172,7 @@ namespace Thermodynamics
         /// </summary>
         [ProtoMember(57)] public int DebugBlockOverlay;
 
+        // ProtoMember numbers 72 and 76 were the two switches SolarGridShadows replaced.
         // ProtoMember numbers 53-56 were the block-colouring debug modes, which wrote real block
         // paint and have been replaced by the overlay above. 60-70 were the thermal vision
         // overlay. Both stay unused so an older config or an older peer's message does not land on
@@ -174,7 +199,7 @@ namespace Thermodynamics
                 SolarOcclusionTerrain = true,
                 SolarTerrainRange = 4000f,
                 SolarOcclusionVoxels = true,
-                SolarOcclusionGrids = true,
+                SolarGridShadows = (int)GridShadowMode.Full,
                 SolarOcclusionSamples = 1,
                 EnableHeatSources = true,
                 EnableWasteHeat = true,
@@ -225,6 +250,8 @@ namespace Thermodynamics
             if (TelemetrySampleStride < 1) TelemetrySampleStride = 1;
             if (SolarOcclusionInterval < 1) SolarOcclusionInterval = 1;
             if (SolarTerrainRange < 0f) SolarTerrainRange = 0f;
+            if (SolarGridShadows < 0) SolarGridShadows = 0;
+            if (SolarGridShadows > (int)GridShadowMode.Full) SolarGridShadows = (int)GridShadowMode.Full;
             if (SolarOcclusionSamples < 1) SolarOcclusionSamples = 1;
             if (SolarOcclusionSamples > Core.SolarOcclusionSampler.MaxSamples)
                 SolarOcclusionSamples = Core.SolarOcclusionSampler.MaxSamples;
@@ -321,7 +348,7 @@ namespace Thermodynamics
                 "EnableEnvironment", "EnableConduction", "EnableRadiation", "EnableConvection",
                 "EnableSolarHeat", "SolarSelfShadowing",
                 "SolarOcclusionPlanets", "SolarOcclusionTerrain", "SolarTerrainRange",
-                "SolarOcclusionVoxels", "SolarOcclusionGrids",
+                "SolarOcclusionVoxels", "SolarGridShadows",
                 "SolarOcclusionSamples",
                 "EnableHeatSources", "EnableWasteHeat", "EnablePlanets",
                 "EnableFriction", "EnableDamage", "EnableCoolantLoops", "EnableRoomAir",
@@ -352,7 +379,7 @@ namespace Thermodynamics
                 case "SolarOcclusionTerrain": return Flag(SolarOcclusionTerrain);
                 case "SolarTerrainRange": return SolarTerrainRange;
                 case "SolarOcclusionVoxels": return Flag(SolarOcclusionVoxels);
-                case "SolarOcclusionGrids": return Flag(SolarOcclusionGrids);
+                case "SolarGridShadows": return SolarGridShadows;
                 case "SolarOcclusionSamples": return SolarOcclusionSamples;
                 case "EnableHeatSources": return Flag(EnableHeatSources);
                 case "EnableWasteHeat": return Flag(EnableWasteHeat);
@@ -404,7 +431,7 @@ namespace Thermodynamics
                 case "SolarOcclusionTerrain": SolarOcclusionTerrain = Flag(value); return true;
                 case "SolarTerrainRange": SolarTerrainRange = value; return true;
                 case "SolarOcclusionVoxels": SolarOcclusionVoxels = Flag(value); return true;
-                case "SolarOcclusionGrids": SolarOcclusionGrids = Flag(value); return true;
+                case "SolarGridShadows": SolarGridShadows = (int)value; return true;
                 case "SolarOcclusionSamples": SolarOcclusionSamples = (int)value; return true;
                 case "EnableHeatSources": EnableHeatSources = Flag(value); return true;
                 case "EnableWasteHeat": EnableWasteHeat = Flag(value); return true;
@@ -450,7 +477,7 @@ namespace Thermodynamics
                 || name == "SolarOcclusionPlanets"
                 || name == "SolarOcclusionTerrain"
                 || name == "SolarOcclusionVoxels"
-                || name == "SolarOcclusionGrids"
+                || name == "SolarOcclusionTerrain"
                 || name == "ClampConductionOvershoot" || name == "DamageIsPerSecond");
         }
 

@@ -182,7 +182,13 @@ side faces are on the outside of the same wall, looking out of the same flank of
 sunlight. Ask per block and a solid hull ends up lit along a single row of blocks with the rest of
 it dark, which is wrong in the direction that matters: those flanks are most of the area.
 
-A pass starts only when the sun has moved more than 2° or the grid's blocks have changed — seconds
+At `SolarGridShadows = full`, other grids cast their shadows through the same walk. Each nearby grid is folded into a single
+matrix — this grid's cells to metres, metres to the world, world to the occluder's metres, its metres
+to its cells — and the ray is carried into that frame and walked against its blocks. Two lattices
+that share no axis, origin or scale are then the same problem as one.
+
+A pass starts only when the sun has moved more than 2°, the grid's blocks have changed, or a
+neighbouring grid has moved — seconds
 apart on a planet — and is spread over ticks in slices of `SunShadowBudget` cells, with the previous
 answer readable until the new one completes, the same way the room mapper spreads its flood fill.
 

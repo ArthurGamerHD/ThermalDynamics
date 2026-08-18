@@ -88,6 +88,21 @@ namespace Thermodynamics.Core
         private readonly SunShadowMap sunShadow = new SunShadowMap();
 
         /// <summary>
+        /// Other grids whose shadows fall on this one, filled by the host. Empty in the model's own
+        /// tests, and empty in a world with nothing parked nearby.
+        /// </summary>
+        public readonly List<SunShadowMap.Occluder> SunOccluders = new List<SunShadowMap.Occluder>();
+
+        /// <summary>
+        /// Tells the solver its occluders have moved or changed, so the next pass rebuilds against
+        /// them. The host owns that judgement: only it knows a station has drifted a metre.
+        /// </summary>
+        public void MarkSunOccludersChanged()
+        {
+            sunLitDirty = true;
+        }
+
+        /// <summary>
         /// How far the sun may move before a new shadow pass starts. cos(2°): a shadow edge that
         /// lags the sun by two degrees is a fraction of a cell on any ship, and restarting for less
         /// would spend a walk over the grid on a picture nobody can tell apart — and on a slowly
@@ -1282,7 +1297,7 @@ namespace Thermodynamics.Core
             // answer, because the walk reads the grid it started against.
             if (sunLitDirty || sunShadow.NeedsRestart(ref sunLocal, SunRebuildCosine))
             {
-                sunShadow.Restart(grid, sunLocal);
+                sunShadow.Restart(grid, sunLocal, SunOccluders);
                 sunLitDirty = false;
             }
 

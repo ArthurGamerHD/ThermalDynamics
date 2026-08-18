@@ -85,7 +85,7 @@ namespace Thermodynamics
             { "SolarOcclusionTerrain", new Entry(Occlusion, "Occlusion: terrain", "The planet's own ground can shadow the grid — the mountain to the east at sunrise, the canyon wall. Ground-height lookups, and only near a surface.", 0, 1) },
             { "SolarTerrainRange", new Entry(Occlusion, "Terrain range", "How far along the sun ray the terrain walk looks, in metres. Near ground is what shadows you; far ground almost never does.", 500f, 20000f) },
             { "SolarOcclusionVoxels", new Entry(Occlusion, "Occlusion: asteroids", "Asteroids and other voxels can shadow the grid. Costs a physics raycast per candidate.", 0, 1) },
-            { "SolarOcclusionGrids", new Entry(Occlusion, "Occlusion: other grids", "Other ships and stations can shadow the grid. Costs a ray against their blocks, and a fleet multiplies it.", 0, 1) },
+            { "SolarGridShadows", new Entry(Occlusion, "Grid shadows", "How much work another grid's shadow is worth. None: other grids never shadow this one. Basic: one ray toward the sun, and anything in the way dims the whole grid. Full: the shadow lands on the faces it actually covers, for a walk through the occluder's blocks per face.", 0, 2, true) },
             { "SolarOcclusionSamples", new Entry(Occlusion, "Occlusion samples", "Points across the grid tested for shadow. 1 is a single ray from the middle, all or nothing for the whole ship; more turn a terminator crossing into a ramp and cost their share of the work each.", 1, 9, true) },
             { "EnableHeatSources", new Entry(Systems, "Point heat sources", "Heat from sources registered through the mod API.", 0, 1) },
             { "EnableWasteHeat", new Entry(Systems, "Waste heat", "Power producers, consumers and thrusters turning throughput into heat.", 0, 1) },
@@ -377,6 +377,11 @@ namespace Thermodynamics
 
             if (name == "DebugBlockOverlay") return OverlayDropdown(entry, enabled);
 
+            if (name == "SolarGridShadows")
+            {
+                return Dropdown(name, entry, enabled, GridShadowNames);
+            }
+
             TerminalSlider slider = new TerminalSlider
             {
                 Name = entry.Label,
@@ -397,6 +402,40 @@ namespace Thermodynamics
             };
 
             return slider;
+        }
+
+        /// <summary>Names for the grid shadow modes, in value order.</summary>
+        private static readonly string[] GridShadowNames = { "none", "basic", "full" };
+
+        /// <summary>
+        /// A named choice rather than a slider. A setting whose values are three different
+        /// behaviours reads as nonsense on a scale from 0 to 2, however well the tooltip explains
+        /// it.
+        /// </summary>
+        private static TerminalControlBase Dropdown(string name, Entry entry, bool enabled, string[] labels)
+        {
+            TerminalDropdown<int> dropdown = new TerminalDropdown<int>
+            {
+                Name = entry.Label,
+                ToolTip = Tip(entry.Tip),
+                Enabled = enabled,
+            };
+
+            for (int i = 0; i < labels.Length; i++)
+            {
+                dropdown.List.Add(new RichText(labels[i]), i);
+            }
+
+            dropdown.List.SetSelection((int)Settings.Instance.GetValue(name));
+            dropdown.ControlChangedHandler = (sender, args) =>
+            {
+                EntryData<int> selection = dropdown.Value;
+                if (selection == null) return;
+
+                Write(name, selection.AssocObject);
+            };
+
+            return dropdown;
         }
 
         private static TerminalControlBase OverlayDropdown(Entry entry, bool enabled)

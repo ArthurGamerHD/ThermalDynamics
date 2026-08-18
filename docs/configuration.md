@@ -64,7 +64,7 @@ Each switch removes exactly its own mechanism and its own cost.
 | `SolarOcclusionTerrain` | `true` | The planet's own ground may shadow the grid: the mountain to the east at sunrise, the canyon wall, the cliff a base is parked against. Ground-height lookups along the sun ray, ten of them, and only for grids within 15 km of mean radius. |
 | `SolarTerrainRange` | 4000 m | How far along the sun ray the terrain walk looks. Near ground is what shadows you — the cliff two hundred metres off — and far ground almost never does, so this is short by design. |
 | `SolarOcclusionVoxels` | `true` | Asteroids and other voxels may shadow the grid. Costs a physics raycast per candidate voxel per sample. |
-| `SolarOcclusionGrids` | `true` | Other ships and stations may shadow the grid. Costs a ray against the other grid's blocks per candidate per sample — the dearest of the three, and the one a fleet multiplies. |
+| `SolarGridShadows` | `full` (2) | How much work another grid's shadow is worth. `0` none: other grids never shadow this one. `1` basic: one ray toward the sun per sample, and anything in the way dims the whole grid — the original behaviour. `2` full: the shadow lands on the faces it actually covers, for a walk through the occluder's blocks per face of this grid, on the shadow pass rather than per step. Full needs `SolarSelfShadowing`, whose pass it rides on. |
 | `SolarOcclusionSamples` | 1 | Points across the grid tested for shadow, 1..9. One is a single ray from the middle: the whole ship is lit or dark together, and flips the moment its centre crosses a shadow. More points spread through the hull turn that step into a ramp, at the cost of one full query each. |
 | `SolarSelfShadowing` | `true` | A grid shadows itself: a face standing behind the ship's own structure takes no sunlight. Costs a walk from each cell toward the sun each time the sun moves more than 2°, spread over ticks in slices, and nothing between those. Turn it off for the cheap model, which lights any exposed face pointing at the sun. |
 | `EnableSolarHeat` | `true` | Solar gain and the sun occlusion raycast. |
@@ -176,7 +176,13 @@ tested at all, and each is priced differently:
 | Planet | angle against the planet's radius | arithmetic, no ray |
 | Terrain | ground height sampled along the sun ray | ten height lookups, near a surface only |
 | Voxel | physics raycast against the asteroid | one raycast per candidate |
-| Grid | ray against the other grid's blocks | one block ray per candidate |
+| Grid | one ray, or a walk per face | `SolarGridShadows`: none, one block ray per candidate, or one walk per face |
+
+At `full`, other grids are dropped from the whole-grid ray and answered per face instead: counting
+them twice would shade an entire ship for a shadow across one corner. The
+neighbours are gathered on the occlusion interval, and a new shadow pass only starts when one of
+them has actually moved — more than a cell, or turned more than about two degrees. Two ships docked
+together never move relative to each other and cost nothing after the first pass.
 
 The planet and terrain tests answer different halves of the same question. The planet's is the ball:
 is the sun below the horizon of a smooth world. Terrain's is everything the ball ignores, which is

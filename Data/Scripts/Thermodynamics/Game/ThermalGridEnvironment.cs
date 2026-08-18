@@ -38,6 +38,9 @@ namespace Thermodynamics
         private long currentPlanetId = -1;
         /// <summary>Last measured share of the grid the sun cannot reach, 0..1.</summary>
         private float solarOcclusion;
+
+        /// <summary>True on the steps that actually re-tested, so neighbours are gathered with it.</summary>
+        private bool occlusionTested;
         private int stepsSinceOcclusionTest = int.MaxValue;
 
         /// <summary>The most recent sample, kept for the HUD and the telemetry report.</summary>
@@ -82,6 +85,8 @@ namespace Thermodynamics
             SampleWind(ref sample, ref position, ref worldToLocal, planet);
             sample.SolarOcclusion = sample.IsUnderground ? 1f : SolarOcclusion(ref position, ref sample);
             sample.IsSolarOccluded = sample.SolarOcclusion >= 1f;
+
+            if (occlusionTested) RefreshShadowOccluders(ref position, ref sample);
 
             // Heat sources other than the sun. The buffer belongs to this grid and is reused, so
             // a session with no registered sources allocates nothing and costs one count test.
@@ -184,10 +189,12 @@ namespace Thermodynamics
             if (stepsSinceOcclusionTest < Settings.Instance.SolarOcclusionInterval)
             {
                 stepsSinceOcclusionTest++;
+                occlusionTested = false;
                 return solarOcclusion;
             }
 
             stepsSinceOcclusionTest = 1;
+            occlusionTested = true;
 
             if (Telemetry.Enabled && Stats != null) Stats.SolarTime.Begin();
             try
@@ -296,7 +303,9 @@ namespace Thermodynamics
                 MyCubeGrid other = entity as MyCubeGrid;
                 if (other != null && other.Physics != null && other.EntityId != Grid.EntityId)
                 {
-                    if (!settings.SolarOcclusionGrids) continue;
+                    // Basic is this ray. Full answers per face instead, and counting it here as
+                    // well would shade an entire ship for a shadow across one corner of it.
+                    if (settings.SolarGridShadows != (int)GridShadowMode.Basic) continue;
 
                     LineD segment;
                     other.PositionComp.WorldAABB.Intersect(ref line, out segment);
@@ -315,6 +324,109 @@ namespace Thermodynamics
 
         /// <summary>Reused so a sampled occlusion test allocates nothing.</summary>
         private static readonly List<Vector3D> SamplePoints = new List<Vector3D>();
+
+        /// <summary>
+        /// Finds the grids near enough to cast a shadow on this one and hands them to the solver in
+        /// its own cell space.
+        ///
+        /// Everything about the geometry is folded into one matrix per occluder: the shaded grid's
+        /// cells to metres, its metres to the world, the world to the occluder's metres, and its
+        /// metres to its cells. After that the shadow walk never has to know that two lattices are
+        /// involved at all.
+        ///
+        /// Run on the occlusion interval, not per step, and only when the pose has actually
+        /// changed — two ships docked together never move relative to each other, and rebuilding a
+        /// pass for them every interval would be the whole cost of the feature for nothing.
+        /// </summary>
+        private void RefreshShadowOccluders(ref Vector3D position, ref EnvironmentSample sample)
+        {
+            Settings settings = Settings.Instance;
+
+            List<SunShadowMap.Occluder> occluders = Simulation.Solver.SunOccluders;
+
+            bool wanted = settings.EnableSolarHeat
+                && settings.SolarSelfShadowing
+                && settings.SolarGridShadows == (int)GridShadowMode.Full;
+
+            if (!wanted)
+            {
+                if (occluders.Count > 0)
+                {
+                    occluders.Clear();
+                    Simulation.Solver.MarkSunOccludersChanged();
+                }
+                return;
+            }
+
+            OccluderScratch.Clear();
+
+            LineD line = new LineD(position, position + ((Vector3D)sample.SunDirection * ShadowOccluderRange));
+
+            OverlapResults.Clear();
+            MyGamePruningStructure.GetTopmostEntitiesOverlappingRay(ref line, OverlapResults);
+
+            double shadedSize = Grid.GridSize;
+            MatrixD cellsToWorld = MatrixD.CreateScale(shadedSize) * Grid.WorldMatrix;
+
+            for (int i = 0; i < OverlapResults.Count; i++)
+            {
+                MyCubeGrid other = OverlapResults[i].Element as MyCubeGrid;
+                if (other == null || other.Closed || other.EntityId == Grid.EntityId) continue;
+                if (other.GameLogic == null) continue;
+
+                ThermalGrid thermals = other.GameLogic.GetAs<ThermalGrid>();
+                if (thermals == null || thermals.Simulation == null) continue;
+
+                MatrixD toOccluder = cellsToWorld
+                    * other.PositionComp.WorldMatrixNormalizedInv
+                    * MatrixD.CreateScale(1d / other.GridSize);
+
+                OccluderScratch.Add(new SunShadowMap.Occluder
+                {
+                    Model = thermals.Simulation.Grid,
+                    ToOccluder = toOccluder,
+                    Id = other.EntityId,
+                });
+            }
+
+            if (!OccludersMoved(occluders, OccluderScratch)) return;
+
+            occluders.Clear();
+            for (int i = 0; i < OccluderScratch.Count; i++) occluders.Add(OccluderScratch[i]);
+
+            Simulation.Solver.MarkSunOccludersChanged();
+        }
+
+        /// <summary>
+        /// Whether the occluder set is different enough to be worth a new pass: a grid gained or
+        /// lost, or one that has shifted by more than a cell or turned appreciably. Under that, the
+        /// shadow it casts moves by less than the resolution the shadow has.
+        /// </summary>
+        private static bool OccludersMoved(
+            List<SunShadowMap.Occluder> current, List<SunShadowMap.Occluder> fresh)
+        {
+            if (current.Count != fresh.Count) return true;
+
+            for (int i = 0; i < current.Count; i++)
+            {
+                if (current[i].Id != fresh[i].Id) return true;
+
+                MatrixD was = current[i].ToOccluder;
+                MatrixD now = fresh[i].ToOccluder;
+
+                if (Vector3D.DistanceSquared(was.Translation, now.Translation) > 1d) return true;
+                if (Vector3D.Dot(was.Forward, now.Forward) < 0.9994d) return true;   // ~2 degrees
+                if (Vector3D.Dot(was.Up, now.Up) < 0.9994d) return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>Metres out to which another grid is considered as a shadow caster.</summary>
+        private const double ShadowOccluderRange = 5000d;
+
+        private static readonly List<SunShadowMap.Occluder> OccluderScratch =
+            new List<SunShadowMap.Occluder>();
 
         /// <summary>
         /// Whether the planet's own terrain stands between a point and the sun.

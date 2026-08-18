@@ -49,6 +49,30 @@ namespace Thermodynamics.Core
         /// <summary>Air cells already queued, so a cell shared by six faces is walked once.</summary>
         private readonly HashSet<Vector3I> queued = new HashSet<Vector3I>();
 
+        /// <summary>
+        /// Another grid that may be standing in the way, and how to get into its cell space.
+        ///
+        /// The transform is what makes this tractable. Rather than reasoning about two lattices at
+        /// once, a ray is carried into the occluder's own frame and walked there exactly as the
+        /// grid walks itself — same traversal, same guarantees, a different set of blocks.
+        /// </summary>
+        public struct Occluder
+        {
+            public GridModel Model;
+
+            /// <summary>Maps a point in this grid's cell space into the occluder's.</summary>
+            public MatrixD ToOccluder;
+
+            /// <summary>Identity of the occluding grid, so a changed set can be noticed.</summary>
+            public long Id;
+        }
+
+        /// <summary>Grids the running pass is testing against, beside this one.</summary>
+        private readonly List<Occluder> occluders = new List<Occluder>();
+
+        /// <summary>Sun direction carried into each occluder's frame, one per occluder.</summary>
+        private readonly List<Vector3D> occluderSun = new List<Vector3D>();
+
         private GridModel grid;
 
         /// <summary>The grid the completed answer describes, for occupancy questions.</summary>
@@ -108,15 +132,45 @@ namespace Thermodynamics.Core
         /// </summary>
         public void Restart(GridModel model, Vector3 sunLocal)
         {
+            Restart(model, sunLocal, null);
+        }
+
+        /// <summary>
+        /// Begins a pass that also tests against other grids. Their shadows land on this grid's
+        /// faces the same way its own do, so a station overhead darkens the hull under it and
+        /// nothing else.
+        /// </summary>
+        public void Restart(GridModel model, Vector3 sunLocal, IList<Occluder> others)
+        {
             building.Clear();
             pending.Clear();
             queued.Clear();
+            occluders.Clear();
+            occluderSun.Clear();
             cursor = 0;
 
             grid = model;
             if (grid == null || sunLocal.LengthSquared() < 1e-6f) return;
 
             passSun = Vector3.Normalize(sunLocal);
+
+            if (others != null)
+            {
+                for (int i = 0; i < others.Count; i++)
+                {
+                    Occluder occluder = others[i];
+                    if (occluder.Model == null) continue;
+
+                    // The direction is carried in once per occluder rather than per ray: it is the
+                    // same sun for every face, and a normal transform per face would be most of
+                    // the cost of the walk it feeds.
+                    Vector3D direction = Vector3D.TransformNormal(passSun, occluder.ToOccluder);
+                    if (direction.LengthSquared() < 1e-12) continue;
+
+                    occluders.Add(occluder);
+                    occluderSun.Add(Vector3D.Normalize(direction));
+                }
+            }
 
             // The air on the outside of every block face — the ship's skin, one cell out. Interior
             // air is in there too, and is shadowed by the hull around it, which is correct: a face
@@ -263,7 +317,27 @@ namespace Thermodynamics.Core
         /// axis, and step across whichever is nearest. It visits every cell the ray actually passes
         /// through and no others, so a ray cannot slip diagonally between two blocks that touch.
         /// </summary>
+        /// <summary>Grids other than this one that the running pass is testing against.</summary>
+        public int OccluderCount { get { return occluders.Count; } }
+
         private bool Blocked(Vector3I start)
+        {
+            if (BlockedBySelf(start)) return true;
+
+            Vector3D origin = new Vector3D(start.X, start.Y, start.Z);
+
+            for (int i = 0; i < occluders.Count; i++)
+            {
+                Occluder occluder = occluders[i];
+
+                Vector3D from = Vector3D.Transform(origin, occluder.ToOccluder);
+                if (VoxelWalk.Blocked(occluder.Model, from, occluderSun[i])) return true;
+            }
+
+            return false;
+        }
+
+        private bool BlockedBySelf(Vector3I start)
         {
             Vector3I min = grid.Min;
             Vector3I max = grid.Max;
