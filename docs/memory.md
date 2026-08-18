@@ -54,17 +54,22 @@ to climb, because nothing significant is indexed by bounding volume any more. Th
 retained and peak has all but closed too: there is no longer a transient that dwarfs what the grid
 holds.
 
-Three of those rows scale with something other than block count, and that is the whole story. A
-hull encloses about fifteen times more empty space than it has blocks, so anything indexed by
-bounding volume dominates; and a block that spans many lattice cells multiplies everything indexed
-by cell.
+**Bounding volume used to be the whole story and now is not.** A hull encloses about fifteen times
+more empty space than it has blocks, and two of the structures above were indexed by that space
+rather than by the ship in it; between them they were more than half of everything. Both are gone,
+which is why the per-block figure stopped climbing with grid size.
 
-**For SE1 this is survivable.** A 20,000-block ship retains about 35 MB.
+What is left divides into two kinds. Most of it is per node and per link — the solver's mirrored
+arrays, the node objects, the conduction graph — and that is honest state whose size is the model's
+own shape. The rest is per **cell**: `GridModel.blocksByCell`, `SurfaceMap` and
+`BlockInstance.Cells` still hold one entry for every cell a block occupies.
 
-**For SE2 it is not**, and not because blocks get more numerous. On a 0.25 m lattice a 1 m block
-spans 64 cells and a 5 m block spans 8,000. Every per-cell row above multiplies by that, and the
-bounding volume — already the largest row — multiplies by a thousand for the same ship measured on
-a lattice ten times finer in each axis. Five times the blocks is the least of it.
+**For SE1 that distinction does not matter.** A block occupies one cell, so per-cell is per-block,
+and a 20,000-block ship retains about 19 MB.
+
+**For SE2 it is the only thing that matters.** On a 0.25 m lattice a 1 m block spans 64 cells and a
+5 m block spans 8,000, so those three structures multiply by the volume of every block while
+everything else stays put. Five times the blocks is the least of it — see §8.
 
 ---
 
