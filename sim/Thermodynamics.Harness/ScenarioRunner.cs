@@ -77,6 +77,9 @@ namespace Thermodynamics.Harness
         /// Advances the simulation, recording a sample every
         /// <paramref name="sampleIntervalSeconds"/> of simulated time.
         /// </summary>
+        /// <summary>Whether the solver's ambient is a climate it reached, rather than its seed.</summary>
+        private bool hasAmbientHistory;
+
         public ScenarioRunner Run(float seconds, float sampleIntervalSeconds = 1f)
         {
             float step = simulation.Settings.StepSeconds;
@@ -88,7 +91,18 @@ namespace Thermodynamics.Harness
             for (int i = 1; i <= totalSteps; i++)
             {
                 EnvironmentSample environment = Environment(ElapsedSeconds);
+
+                // The ambient lag needs somewhere to chase from, and a scenario describes a place
+                // rather than a history — so the runner supplies it exactly as the game host does,
+                // out of the state the previous step produced. A scenario whose environment does
+                // not change over time is unaffected: the first step has no history and takes its
+                // target outright, and every step after that is already there.
+                environment.PreviousAmbient = simulation.Solver.Environment.AmbientTemperature;
+                environment.HasPreviousAmbient = hasAmbientHistory;
+                environment.SecondsSincePrevious = step;
+
                 simulation.StepExact(1, environment);
+                hasAmbientHistory = environment.HasPlanet;
                 ElapsedSeconds += step;
 
                 if (AfterStep != null) AfterStep(simulation);

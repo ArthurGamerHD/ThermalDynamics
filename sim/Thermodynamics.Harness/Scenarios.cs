@@ -45,6 +45,8 @@ namespace Thermodynamics.Harness
             "solver",
             "self-shadow",
             "shadow-cost",
+            "weather",
+            "underground",
         };
 
         public static ScenarioResult Run(string name)
@@ -73,6 +75,8 @@ namespace Thermodynamics.Harness
                 case "solver": return Solver();
                 case "self-shadow": return SelfShadow();
                 case "shadow-cost": return ShadowCost();
+                case "weather": return Weather();
+                case "underground": return Underground();
                 default:
                     throw new ArgumentException("Unknown scenario: " + name);
             }
@@ -1405,6 +1409,165 @@ namespace Thermodynamics.Harness
             cost.PerVisitNs = visits <= 0 ? 0d : (run.Elapsed.TotalMilliseconds * 1e6) / visits;
             cost.MeanSubsteps = (double)visits / measured / (links <= 0 ? 1 : links);
             return cost;
+        }
+
+
+        /// <summary>
+        /// A storm rolling over a parked plate, and off again.
+        ///
+        /// The question it answers is whether the weather reaches the temperature model at all.
+        /// Before this round it did not: the game's weather was read, used to pick a point on a
+        /// calm-to-storm scale for the wind, and thrown away, so a blizzard and a clear noon were
+        /// the same climate. Three of the four things a storm does are visible here — the air
+        /// drops, the sun goes out, and the coefficient that strips heat off the hull more than
+        /// doubles — and the fourth, the wind, is the one that already worked.
+        /// </summary>
+        public static ScenarioResult Weather()
+        {
+            GridBuilder builder = GridBuilder.Large();
+            builder.Fill(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(3, 1, 3));
+
+            ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
+
+            // Noon, sea level, clear air. The storm arrives at 300 s, peaks, and has gone by 900.
+            WeatherResponse.Weather storm = WeatherResponse.For("SnowHeavy");
+
+            ScenarioRunner runner = new ScenarioRunner(simulation);
+            runner.Environment = t =>
+            {
+                EnvironmentSample sample = Worlds.PlanetSurface(1f, 0.5f);
+                sample.Weather = storm;
+                sample.WeatherIntensity = Intensity(t, 300f, 600f, 900f);
+                return sample;
+            };
+            runner.Track("plate", builder.Placed[0]);
+            runner.Run(1200f, 60f);
+
+            float clear = runner.Samples[5].AmbientTemperature;      // 300 s, storm just arriving
+            float worst = float.MaxValue;
+            float coldest = float.MaxValue;
+
+            // From 1: the first sample is recorded before any step has run, so its ambient is the
+            // vacuum the solver was seeded with rather than a climate.
+            for (int i = 1; i < runner.Samples.Count; i++)
+            {
+                float ambient = runner.Samples[i].AmbientTemperature;
+                if (ambient < worst) worst = ambient;
+
+                float plate = runner.Samples[i].Tracked["plate"];
+                if (plate < coldest) coldest = plate;
+            }
+
+            EnvironmentState peak = EnvironmentSolver.Solve(
+                simulation.Settings, simulation.Planet, StormAt(storm, 1f));
+            EnvironmentState calm = EnvironmentSolver.Solve(
+                simulation.Settings, simulation.Planet, StormAt(storm, 0f));
+
+            return Result("weather", runner,
+                "3x1x3 plate at noon, heavy snowstorm arriving at 300 s and gone by 900 s. Ambient "
+                + C(clear) + " falling to " + C(worst) + ", plate down to " + C(coldest)
+                + ". At the peak the sun delivers " + peak.SolarEnergy.ToString("n0")
+                + " W/m2 against " + calm.SolarEnergy.ToString("n0")
+                + " in clear air, and convection runs at " + peak.ConvectionCoefficient.ToString("n1")
+                + " against " + calm.ConvectionCoefficient.ToString("n1") + " W/(m2 K).");
+        }
+
+        /// <summary>The same place under a storm of a given strength, for the two-figure comparison.</summary>
+        private static EnvironmentSample StormAt(WeatherResponse.Weather storm, float intensity)
+        {
+            EnvironmentSample sample = Worlds.PlanetSurface(1f, 0.5f);
+            sample.Weather = storm;
+            sample.WeatherIntensity = intensity;
+            return sample;
+        }
+
+        /// <summary>A weather that fades in, peaks and fades out again over a window.</summary>
+        private static float Intensity(float t, float start, float peak, float end)
+        {
+            if (t <= start || t >= end) return 0f;
+            if (t < peak) return (t - start) / (peak - start);
+            return 1f - ((t - peak) / (end - peak));
+        }
+
+        /// <summary>
+        /// The same plate at five depths, over a full day.
+        ///
+        /// Underground used to be one number at any depth on any planet. What should happen is two
+        /// things at very different scales: the day damps out over tens of metres of rock, and then
+        /// the rock itself warms toward the core below the sea-level deadzone. Both are visible in
+        /// one table, and so is the reason the deadzone is measured from sea level — the mountain
+        /// row is a kilometre inside the rock and still cold, because it is four kilometres above
+        /// the level where the heat starts.
+        /// </summary>
+        public static ScenarioResult Underground()
+        {
+            StringBuilder summary = new StringBuilder();
+            summary.Append("3x1x3 plate over one day at five depths. ");
+
+            ScenarioRunner last = null;
+
+            float[] depths = { 0f, 10f, 100f, 5000f, 20000f };
+            string[] labels = { "surface", "10 m", "100 m", "5 km", "20 km" };
+
+            for (int i = 0; i < depths.Length; i++)
+            {
+                float depth = depths[i];
+
+                GridBuilder builder = GridBuilder.Large();
+                builder.Fill(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(3, 1, 3));
+
+                ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
+
+                ScenarioRunner runner = new ScenarioRunner(simulation);
+                float dayLength = 7200f;
+                runner.Environment = t =>
+                {
+                    EnvironmentSample sample = Worlds.PlanetSurface(1f, (t / dayLength) % 1f);
+                    if (depth <= 0f) return sample;
+
+                    sample.IsUnderground = true;
+                    sample.Depth = depth;
+                    sample.Radius = Worlds.EarthlikeRadius - depth;
+                    sample.Altitude = -depth;
+                    return sample;
+                };
+                runner.Track("plate", builder.Placed[0]);
+                runner.Run(dayLength, dayLength / 24f);
+
+                float min = float.MaxValue;
+                float max = float.MinValue;
+                for (int j = 1; j < runner.Samples.Count; j++)
+                {
+                    float ambient = runner.Samples[j].AmbientTemperature;
+                    if (ambient < min) min = ambient;
+                    if (ambient > max) max = ambient;
+                }
+
+                summary.Append(labels[i]).Append(' ').Append(C(min)).Append(" to ").Append(C(max))
+                       .Append(" (swing ").Append((max - min).ToString("n1")).Append(" K)");
+                summary.Append(i == depths.Length - 1 ? ". " : ", ");
+
+                last = runner;
+            }
+
+            // A kilometre into a peak standing 5 km above sea level: deep rock, still above the heat.
+            GridBuilder peak = GridBuilder.Large();
+            peak.Fill(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(3, 1, 3));
+            ThermalSimulation mountain = peak.BuildSimulation(new ThermalSettings(), 293.15f);
+
+            EnvironmentSample inside = Worlds.PlanetSurface(1f, 0.5f);
+            inside.IsUnderground = true;
+            inside.Depth = 1000f;
+            inside.Radius = Worlds.EarthlikeRadius + 4000f;
+            inside.Altitude = 4000f;
+
+            EnvironmentState tunnel = EnvironmentSolver.Solve(mountain.Settings, mountain.Planet, inside);
+
+            summary.Append("A kilometre into a peak 5 km above sea level reads ")
+                   .Append(C(tunnel.AmbientTemperature))
+                   .Append(", because the deadzone is measured from sea level and not from the ground.");
+
+            return Result("underground", last, summary.ToString());
         }
 
         private static ScenarioResult Result(string name, ScenarioRunner runner, string summary)

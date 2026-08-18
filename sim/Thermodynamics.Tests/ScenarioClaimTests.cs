@@ -156,6 +156,77 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>Pulls the n-th "&lt;number&gt; C" out of a summary line.</summary>
+        /// <summary>
+        /// The weather scenario's whole point is that a storm reaches more than the wind. Each of
+        /// the three claims can fail on its own — the ambient offset, the solar multiplier and the
+        /// convection multiplier are separate terms — so each is checked separately.
+        /// </summary>
+        [Fact]
+        public void AStormReachesMoreThanTheWind()
+        {
+            string summary = Scenarios.Run("weather").Summary;
+
+            float clear = ExtractCelsius(summary, 0);
+            float stormy = ExtractCelsius(summary, 1);
+
+            Assert.True(stormy < clear - 10f,
+                "a heavy snowstorm should pull the air well down: " + summary);
+
+            // "delivers 50 W/m2 against 500 in clear air, and convection runs at 110.0 against 50.0"
+            MatchCollection numbers = Regex.Matches(summary, @"(\d+(?:\.\d+)?) W/m2 against (\d+)");
+            Assert.True(numbers.Count > 0, "no solar comparison in: " + summary);
+
+            float stormSolar = Parse(numbers[0].Groups[1].Value);
+            float clearSolar = Parse(numbers[0].Groups[2].Value);
+            Assert.True(stormSolar < clearSolar * 0.25f, "overcast should darken the sun: " + summary);
+
+            MatchCollection convection = Regex.Matches(summary, @"at ([\d.]+) against ([\d.]+) W/\(m2 K\)");
+            Assert.True(convection.Count > 0, "no convection comparison in: " + summary);
+
+            float stormH = Parse(convection[0].Groups[1].Value);
+            float clearH = Parse(convection[0].Groups[2].Value);
+            Assert.True(stormH > clearH * 1.5f, "wet air should strip heat faster: " + summary);
+        }
+
+        /// <summary>
+        /// Depth has to do two separate things, and reporting one of them while the other quietly
+        /// stopped would still read as a working model: the day damps out with depth, and the rock
+        /// warms with it once past the deadzone.
+        /// </summary>
+        [Fact]
+        public void DepthDampsTheDayAndThenWarmsTheRock()
+        {
+            string summary = Scenarios.Run("underground").Summary;
+
+            MatchCollection swings = Regex.Matches(summary, @"swing ([\d.]+) K");
+            Assert.True(swings.Count >= 3, "expected a swing per depth in: " + summary);
+
+            float surface = Parse(swings[0].Groups[1].Value);
+            float shallow = Parse(swings[1].Groups[1].Value);
+            float deep = Parse(swings[2].Groups[1].Value);
+
+            Assert.True(surface > 5f, "the surface should have a day at all: " + summary);
+            Assert.True(shallow < surface, "ten metres of rock should blunt it: " + summary);
+            Assert.True(deep < 0.1f, "a hundred metres down there should be no day: " + summary);
+
+            // Temperatures run surface min/max, 10 m min/max, 100 m min/max, 5 km, 20 km, mountain.
+            float hundredMetres = ExtractCelsius(summary, 4);
+            float fiveKm = ExtractCelsius(summary, 6);
+            float twentyKm = ExtractCelsius(summary, 8);
+            float mountain = ExtractCelsius(summary, 10);
+
+            Assert.True(fiveKm > hundredMetres + 50f, "below the deadzone the rock should warm: " + summary);
+            Assert.True(twentyKm > fiveKm, "and keep warming toward the core: " + summary);
+
+            // The deadzone is measured from sea level, so deep rock high up is still cold rock.
+            Assert.Equal(hundredMetres, mountain, 0);
+        }
+
+        private static float Parse(string value)
+        {
+            return float.Parse(value.Replace(",", ""), CultureInfo.InvariantCulture);
+        }
+
         private static float ExtractCelsius(string summary, int index)
         {
             MatchCollection matches = Regex.Matches(summary, @"(-?[\d,]+(?:\.\d+)?) C");
