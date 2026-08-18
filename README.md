@@ -71,6 +71,7 @@ into atmosphere and into the air of sealed rooms, arrives from the sun, and — 
 | --- | --- |
 | [docs/architecture.md](docs/architecture.md) | Component layout, update order, grid lifecycle, persistence. |
 | [docs/thermal-model.md](docs/thermal-model.md) | Every equation the simulation evaluates, with its source. |
+| [docs/planet-climate.md](docs/planet-climate.md) | How a planet's air is decided, what it measured at, and what is still open. |
 | [docs/surface-mapping.md](docs/surface-mapping.md) | Surface bit format, the room flood fill, portals, and room air. |
 | [docs/api.md](docs/api.md) | The mod API: reading, writing, heat sources, thresholds, settings. |
 | [docs/definitions.md](docs/definitions.md) | Block, planet and loop properties, and how to add support for another mod's blocks. |

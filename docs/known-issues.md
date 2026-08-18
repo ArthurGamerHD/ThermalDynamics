@@ -71,10 +71,12 @@ dropping it whole.
 
 ## Deliberate limits
 
-**Solar occlusion against the rest of the world is per grid.** One raycast decides whether the whole
-grid is shaded by a planet or another ship, so a capital ship half in a station's shadow is lit or
-shaded in its entirety. A grid's *own* shadow is modelled — see `SolarSelfShadowing` — but only its
-own: nothing else on the map casts onto it at block resolution.
+**Planet and asteroid shadow is per grid; only other grids shade individual faces.** A grid's own
+shadow is per face (`SolarSelfShadowing`) and so is another grid's (`SolarGridShadows = full`), but a
+planet's or an asteroid's dims the whole grid by the share of sampled rays that were blocked
+(`SolarOcclusionSamples`). A capital ship crossing a terminator therefore ramps rather than
+switching, but never carries a shadow edge across its own hull. Per-block would need the ray count to
+scale with block count, which is a different order of cost from what is there.
 
 **A room with no air vent holds no air.** The game exposes a room's oxygen level through vents and
 nowhere else, so a sealed compartment that was never piped is indistinguishable from one that cannot
@@ -109,6 +111,11 @@ conduction by a quality, which is not.
 **Mount coverage is combined as independent fractions.** Where both sides of a joint are only partly
 mounted, the bolted area is `coverage_a × coverage_b`. The model records coverage per face, not per
 cell, so it cannot know whether two partial mounts line up.
+
+**The cost of terrain occlusion has never been measured in game.** It is ten height lookups per
+sample per interval for grids near a surface, which should be well under the voxel raycast it sits
+beside, but no dump has confirmed it. The `solar occlusion` timing in a telemetry report is where it
+would show.
 
 ## Testing gaps
 

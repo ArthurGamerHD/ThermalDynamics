@@ -17,10 +17,12 @@ environment sample, and results out — and nothing else.
 | --- | --- |
 | Layout | `GridModel`, `BlockInstance`, `BlockModel`, `BlockOrientation`, `CellSurface`, `BlockSurfaceBuilder`, `CoolantShape`, `IBlockAdjacency` |
 | Simulation | `ThermalSimulation`, `ThermalSolver`, `ThermalNode`, `ThermalLink`, `SimulationScheduler`, `ThermalThresholds`, `EnvironmentSample` / `EnvironmentState` / `EnvironmentSolver`, `ISimulationProfiler` |
-| Surfaces | `SurfaceMap`, `RoomMapper`, `RoomMap`, `RoomPortal`, `RoomAirNode` |
+| Climate | `ClimateModel` (latitude, ground, lag), `WindField` (the wind map the game lacks), `TerrainHorizon` (ground shadowing the sun), `SolarOcclusionSampler` (where to cast occlusion rays from) |
+| Shadow | `SunShadowMap` (a grid's own shadow, and its neighbours'), `VoxelWalk` (ray through a grid's cells, from any point) |
+| Surfaces | `SurfaceMap`, `RoomMapper`, `RoomMap`, `RoomPortal`, `RoomAirNode`, `RoomPressure`, `SurfaceAudit` |
 | Loops | `CoolantLoop`, `CoolantLoopBuilder` |
 | Devices | `HeatPumpShape`, `HeatPumpDevice` |
-| Definitions | `BlockThermalProperties`, `LoopThermalProperties`, `PlanetThermalProperties`, `ThermalSettings` |
+| Definitions | `BlockThermalProperties`, `LoopThermalProperties`, `PlanetThermalProperties`, `GroundTemperature`, `ThermalSettings` |
 | Storage | `ThermalStorageCodec` |
 | Maths | `BoxGeometry`, `GridMath`, `Face`, `OcclusionMath`, `TemperatureScale`, `ThermalConstants` |
 

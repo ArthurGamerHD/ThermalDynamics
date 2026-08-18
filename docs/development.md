@@ -105,6 +105,25 @@ Do not hand-edit these; replace them wholesale when the upstream author publishe
 | [DefinitionExtensionsAPI.cs](../Data/Scripts/Thermodynamics/DefinitionExtensionsAPI.cs) | Draygo's Definition Extensions client |
 | [NetworkAPI/](../Data/Scripts/Thermodynamics/NetworkAPI) | SENetworkAPI |
 
+## Scenarios
+
+The harness in [sim/](../sim) runs the model without the game. `dotnet run --project
+sim/Thermodynamics.Sim -- list` names them; `run <name|all>` runs them, `--csv <dir>` writes the
+full series.
+
+Each one states a conclusion in its summary line, and
+[ScenarioClaimTests](../sim/Thermodynamics.Tests/ScenarioClaimTests.cs) and
+[SelfShadowScenarioTests](../sim/Thermodynamics.Tests/SelfShadowScenarioTests.cs) assert those
+conclusions cannot quietly invert — a scenario whose headline can flip is worse than none, because
+it reads like evidence.
+
+Two are about the sun rather than about heat flow:
+
+| Scenario | Answers |
+| --- | --- |
+| `self-shadow` | Which faces of a solid slab are lit, as a share per direction, with a recess cut into it. Its claim test recomputes the same shares by ray-versus-cube against the same geometry, so the scenario cannot agree with a model that has drifted. |
+| `shadow-cost` | What self-shadowing costs: the per-tick cost with the walk idle, and the cost of a whole pass, best of three each. Its claim test fails if the walk ever migrates onto the stepping path. |
+
 ## Debugging
 
 * **In game:** the debug toggles in [configuration.md](configuration.md#debug-toggles) cover
