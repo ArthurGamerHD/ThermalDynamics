@@ -478,6 +478,60 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// After a burst of placements grows the node buffers, every surviving node must still
+        /// see the conductance it actually has.
+        ///
+        /// Growing the buffers reallocates, and the total conductance per node is the one node
+        /// array accumulated across calls rather than rewritten every step — so a growth zeroes it
+        /// and nothing else puts it back. The symptom would not be a crash or a wrong temperature:
+        /// it is the substep estimate reading zero, deciding one substep is enough for a grid that
+        /// needs six, and integrating too coarsely from then on.
+        ///
+        /// Driven through the solver rather than through <c>ThermalSimulation.Update</c> on
+        /// purpose. An update happens to rebuild the coolant loops on every topology change, and
+        /// that marks the totals stale as a side effect — so the same sequence through the update
+        /// path is masked, and a test written that way passes with the defect present. The masking
+        /// is real but incidental, and a host driving the solver directly does not get it.
+        /// </summary>
+        [Fact]
+        public void ConductanceTotalsSurviveTheBuffersGrowing()
+        {
+            GridModel grid = new GridModel(Catalog.LargeGridSize);
+            ThermalSolver solver = new ThermalSolver(new ThermalSettings(), grid, new SurfaceMap());
+
+            for (int i = 0; i < 40; i++)
+            {
+                BlockInstance block = new BlockInstance(Model(i), new Vector3I(0, 0, i),
+                    BlockOrientation.Identity);
+                grid.Add(block);
+                solver.AddBlock(block, 293.15f);
+            }
+            solver.RebuildLinks();
+
+            // Past the buffers' doubled size, so linking these reallocates them.
+            for (int i = 40; i < 700; i++)
+            {
+                BlockInstance block = new BlockInstance(Model(i), new Vector3I(0, 0, i),
+                    BlockOrientation.Identity);
+                grid.Add(block);
+                solver.AddBlock(block, 293.15f);
+            }
+
+            solver.BuildLinksIfNeeded();
+
+            float step = solver.Settings.StepSeconds;
+            float incremental = solver.RequiredSubsteps(step);
+
+            solver.RebuildLinks();
+            float rebuilt = solver.RequiredSubsteps(step);
+
+            float difference = Math.Abs(incremental - rebuilt) / Math.Max(1e-6f, Math.Abs(rebuilt));
+            Assert.True(difference < 1e-4f,
+                "substep estimate after the buffers grew was " + incremental
+                + ", a rebuild says " + rebuilt);
+        }
+
+        /// <summary>
         /// The same, but stepping between so the links really exist before they are unpicked.
         /// </summary>
         [Fact]

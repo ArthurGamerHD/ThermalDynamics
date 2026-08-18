@@ -641,16 +641,9 @@ namespace Thermodynamics.Core
 
             SyncLinkArrays();
 
-            if (buffersGrew)
-            {
-                // Growing the buffers reallocates the conductance totals, so there is nothing
-                // left to add to. Rare — the arrays double — and correct, which matters more.
-                RecomputeConductanceTotals();
-            }
-            else
-            {
-                AddConductanceOfNewLinks(firstNewLink);
-            }
+            // Growing the buffers zeroed the totals and marked them for a recompute, so adding to
+            // them would be adding to something about to be thrown away.
+            if (!buffersGrew) AddConductanceOfNewLinks(firstNewLink);
 
             // Marked, not filled: the reduced mass of a link is computed from the mirrored node
             // masses, and the new node's row is not copied in until later in the same step.
@@ -2193,6 +2186,13 @@ namespace Thermodynamics.Core
             if (nodeWatts.Length < nodes.Count)
             {
                 grew = true;
+
+                // Growing reallocates, which zeroes the conductance totals — the one node array
+                // that is accumulated across calls rather than rewritten every step. Everything
+                // else here is refilled from the nodes by the resync below; this is not, so it
+                // has to be marked for a recompute or every surviving node silently loses the
+                // conductance it sees, and the substep estimate with it.
+                conductanceTotalsDirty = true;
                 int size = Math.Max(16, nodes.Count * 2);
                 nodeWatts = new float[size];
                 nodeTemperatures = new float[size];
