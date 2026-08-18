@@ -53,6 +53,12 @@ namespace Thermodynamics
         public float AmbientKelvin;
         public bool Underground;
 
+        /// <summary>Metres of ground over the grid. Zero or less is open air.</summary>
+        public float Depth;
+
+        /// <summary>Convective coefficient in force, W/(m^2 K) — wind and weather already in it.</summary>
+        public float ConvectionCoefficient;
+
         public float SolarEnergy;
         public float SolarOcclusion;
 
@@ -65,6 +71,12 @@ namespace Thermodynamics
         public float WindCeiling;
 
         public float WeatherIntensity;
+
+        /// <summary>The game's name for the weather standing over the grid, empty in clear air.</summary>
+        public string Weather;
+
+        /// <summary>What that weather did to the air, K. The column that says the model reacted.</summary>
+        public float WeatherAmbientOffset;
 
         /// <summary>The game's own comfort scale at this point, 0..1. Its model, not this one.</summary>
         public float GameTemperature;

@@ -849,6 +849,15 @@ namespace Thermodynamics
             private readonly RunningStat solar = new RunningStat();
             private readonly RunningStat wind = new RunningStat();
             private readonly RunningStat game = new RunningStat();
+            private readonly RunningStat convection = new RunningStat();
+
+            /// <summary>Depth, over the rows that were actually underground.</summary>
+            private readonly RunningStat depth = new RunningStat();
+
+            /// <summary>Ambient with weather in force, and what the weather was worth.</summary>
+            private readonly RunningStat weatherOffset = new RunningStat();
+
+            private readonly Dictionary<string, int> weathers = new Dictionary<string, int>();
 
             /// <summary>Warmest and coldest readings with the sun above and below the horizon.</summary>
             private readonly RunningStat day = new RunningStat();
@@ -864,9 +873,23 @@ namespace Thermodynamics
                 solar.Add(row.SolarEnergy);
                 wind.Add(row.WindSpeed);
                 game.Add(row.GameTemperature);
+                convection.Add(row.ConvectionCoefficient);
 
                 if (row.SunElevationDegrees > 0f) day.Add(row.AmbientKelvin);
                 else night.Add(row.AmbientKelvin);
+
+                // Only the rows it happened on. Averaging a storm against the clear days either
+                // side of it reports a drizzle that never fell.
+                if (row.Depth > 0f) depth.Add(row.Depth);
+
+                if (!string.IsNullOrEmpty(row.Weather) && row.WeatherIntensity > 0f)
+                {
+                    weatherOffset.Add(row.WeatherAmbientOffset);
+
+                    int seen;
+                    weathers.TryGetValue(row.Weather, out seen);
+                    weathers[row.Weather] = seen + 1;
+                }
 
                 if (string.IsNullOrEmpty(row.SurfaceMaterial)) return;
 
@@ -884,18 +907,36 @@ namespace Thermodynamics
                 Field(sb, "    altitude m", altitude.Format("n0"));
                 Field(sb, "    solar W", solar.Format("n0"));
                 Field(sb, "    wind m/s", wind.Format("n1"));
+                Field(sb, "    convection W/m2K", convection.Format("n1"));
                 Field(sb, "    game temperature", game.Format("n3"));
+
+                if (depth.Count > 0)
+                {
+                    Field(sb, "    depth m", depth.Format("n0"));
+                }
+
+                if (weathers.Count > 0)
+                {
+                    Field(sb, "    weather ambient K", weatherOffset.Format("n1"));
+                    Field(sb, "    weather", Counted(weathers));
+                }
 
                 if (materials.Count == 0) return;
 
-                StringBuilder ground = new StringBuilder();
-                foreach (KeyValuePair<string, int> pair in materials)
+                Field(sb, "    ground", Counted(materials));
+            }
+
+            /// <summary>"Snow 56, Sand_02 56" — what was seen and how often.</summary>
+            private static string Counted(Dictionary<string, int> counts)
+            {
+                StringBuilder seen = new StringBuilder();
+                foreach (KeyValuePair<string, int> pair in counts)
                 {
-                    if (ground.Length > 0) ground.Append(", ");
-                    ground.Append(pair.Key).Append(' ').Append(pair.Value);
+                    if (seen.Length > 0) seen.Append(", ");
+                    seen.Append(pair.Key).Append(' ').Append(pair.Value);
                 }
 
-                Field(sb, "    ground", ground.ToString());
+                return seen.ToString();
             }
 
             private static string Celsius(RunningStat stat)
@@ -914,8 +955,9 @@ namespace Thermodynamics
             StringBuilder sb = new StringBuilder();
 
             sb.Append("time_s,grid,grid_id,planet,altitude_surface_m,altitude_sealevel_m,latitude_deg,");
-            sb.Append("sun_elevation_deg,air_density,atmosphere_factor,ambient_k,ambient_c,underground,");
-            sb.Append("solar_w,solar_occlusion,wind_speed,wind_bearing_deg,wind_ceiling,weather_intensity,game_temperature,");
+            sb.Append("sun_elevation_deg,air_density,atmosphere_factor,ambient_k,ambient_c,underground,depth_m,");
+            sb.Append("solar_w,solar_occlusion,convection_coeff,wind_speed,wind_bearing_deg,wind_ceiling,");
+            sb.Append("weather,weather_intensity,weather_ambient_k,game_temperature,");
             sb.Append("surface_material,grid_mean_k,grid_peak_k\n");
 
             IList<GridTelemetry> grids = Telemetry.Grids;
@@ -944,13 +986,18 @@ namespace Thermodynamics
                     Csv(sb, row.AmbientKelvin);
                     Csv(sb, Tools.KelvinToCelsius(row.AmbientKelvin));
                     Csv(sb, row.Underground ? 1 : 0);
+                    Csv(sb, row.Depth);
 
                     Csv(sb, row.SolarEnergy);
                     Csv(sb, row.SolarOcclusion);
+                    Csv(sb, row.ConvectionCoefficient);
                     Csv(sb, row.WindSpeed);
                     Csv(sb, row.WindBearingDegrees);
                     Csv(sb, row.WindCeiling);
+
+                    Csv(sb, Truncate(row.Weather ?? "", 32));
                     Csv(sb, row.WeatherIntensity);
+                    Csv(sb, row.WeatherAmbientOffset);
                     Csv(sb, row.GameTemperature);
 
                     Csv(sb, Truncate(row.SurfaceMaterial ?? "", 32));
