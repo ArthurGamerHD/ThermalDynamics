@@ -92,5 +92,15 @@ namespace Thermodynamics
         {
             sb.Append(Number(value)).Append('\n');
         }
+
+        /// <summary>A quoted string as the last column of a row.</summary>
+        public static void AppendCsvLast(StringBuilder sb, string value)
+        {
+            AppendCsv(sb, value);
+
+            // AppendCsv leaves the separator behind; the last column ends the line instead.
+            sb.Length--;
+            sb.Append('\n');
+        }
     }
 }

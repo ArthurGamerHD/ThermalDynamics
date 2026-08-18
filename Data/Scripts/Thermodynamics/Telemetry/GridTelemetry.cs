@@ -10,6 +10,79 @@ namespace Thermodynamics
     /// <summary>
     /// One block face, and the model's account of whether it is open to the sky.
     /// </summary>
+    /// <summary>
+    /// One compartment, as either half of the model sees it.
+    ///
+    /// Rooms this model found and compartments only the game has are the same row deliberately.
+    /// The question a reader has is "what rooms does this ship have and which of them work", and
+    /// answering it out of two tables that have to be joined by hand is how a whole ship's worth
+    /// of empty compartments went unnoticed.
+    ///
+    /// Every figure here is copied from <see cref="ThermalGrid.RoomVerdict"/> and
+    /// <see cref="ThermalGrid.LostRoom"/>. Nothing in this file asks the game anything: the room
+    /// scan does that once, and this formats what it decided.
+    /// </summary>
+    public struct RoomRow
+    {
+        /// <summary>"mapped" when this model found it, "lost" when only the game holds it.</summary>
+        public string Kind;
+
+        /// <summary>Index within its own kind. Stable while the grid's shape is.</summary>
+        public int Index;
+
+        public int AnchorX;
+        public int AnchorY;
+        public int AnchorZ;
+
+        public int CellCount;
+        public float Volume;
+
+        /// <summary>Mapped rooms only: standing open to the sky through a door.</summary>
+        public bool Vented;
+
+        /// <summary>What the simulation is actually running with.</summary>
+        public float Pressure;
+        public float AirMass;
+        public float TemperatureKelvin;
+
+        /// <summary>
+        /// Blocks the air is coupled to. Zero beside a non-zero <see cref="AirMass"/> is the shape
+        /// of a room given air and linked to nothing, which is how room air came to be inert in
+        /// game while every test of it passed.
+        /// </summary>
+        public int LinkCount;
+
+        /// <summary>The game's own verdict at the anchor cell: sealed, which is not the same as full.</summary>
+        public bool GameAirtight;
+
+        /// <summary>
+        /// The game's own oxygen level in the room, 0..1, or -1 when it could not be asked. Read
+        /// from the grid's gas system, independently of this model's map and of any vent.
+        /// </summary>
+        public float GameOxygen;
+
+        /// <summary>Air vents standing on it, by terminal name.</summary>
+        public string Vents;
+
+        /// <summary>Whether a vent on it reports the game considers its room pressurised.</summary>
+        public bool VentPressurised;
+
+        /// <summary>The highest level any vent on it reports, or -1 when none did.</summary>
+        public float OxygenLevel;
+
+        /// <summary>
+        /// The game has air in this room and this model runs none. Oxygen, not airtightness — a
+        /// sealed empty compartment is correct in both models and is not flagged.
+        /// </summary>
+        public bool Disagreement;
+
+        /// <summary>Lost rooms only: faces this model leaves open that the game seals.</summary>
+        public int LeakCount;
+
+        /// <summary>Lost rooms only: the block subtypes across those faces, worst first.</summary>
+        public string LeakingBlocks;
+    }
+
     public struct SurfaceRow
     {
         public string Block;
@@ -443,6 +516,7 @@ namespace Thermodynamics
 
             SampleStructure();
             SnapshotSurfaces();
+            SnapshotRooms();
 
             // Rebuilt rather than appended to, so a manual mid-session dump does not leave its
             // counts behind for the next report.
@@ -486,6 +560,15 @@ namespace Thermodynamics
         /// </summary>
         public readonly List<SurfaceRow> Surfaces = new List<SurfaceRow>();
 
+        /// <summary>Every compartment on the grid, found or lost, at the last snapshot.</summary>
+        public readonly List<RoomRow> Rooms = new List<RoomRow>();
+
+        /// <summary>True when the lost-room scan gave up on its cell limit rather than finishing.</summary>
+        public bool RoomScanTruncated;
+
+        /// <summary>False until a scan has run, so a reader can tell "none" from "never looked".</summary>
+        public bool RoomScanRan;
+
         /// <summary>Readings of the world at this grid, oldest first.</summary>
         public readonly List<EnvironmentRow> Environment = new List<EnvironmentRow>();
 
@@ -510,6 +593,104 @@ namespace Thermodynamics
 
         /// <summary>Readings kept per grid. At one every ten seconds, about eleven hours of them.</summary>
         private const int MaxEnvironmentRows = 4000;
+
+        /// <summary>
+        /// Every compartment on the grid: the ones this model found, and the ones only the game
+        /// has.
+        ///
+        /// The scan is forced rather than read from whatever the slow cadence last left behind,
+        /// because a dump written moments after a wall was welded should describe the ship as it
+        /// is. It is also the only thing here that talks to the game — everything below copies.
+        /// </summary>
+        private void SnapshotRooms()
+        {
+            Rooms.Clear();
+            RoomScanRan = false;
+
+            if (Grid == null || Grid.Simulation == null) return;
+
+            Grid.ScanLostRooms();
+
+            RoomScanTruncated = Grid.LostRoomScanTruncated;
+            RoomScanRan = Grid.HasLostRoomScan;
+
+            float cellVolume = Grid.Grid.GridSize * Grid.Grid.GridSize * Grid.Grid.GridSize;
+
+            IList<ThermalGrid.RoomVerdict> verdicts = Grid.RoomVerdicts;
+            for (int i = 0; i < verdicts.Count; i++)
+            {
+                ThermalGrid.RoomVerdict verdict = verdicts[i];
+
+                RoomRow row = new RoomRow();
+                row.Kind = "mapped";
+                row.Index = i;
+
+                row.AnchorX = verdict.Anchor.X;
+                row.AnchorY = verdict.Anchor.Y;
+                row.AnchorZ = verdict.Anchor.Z;
+
+                row.CellCount = verdict.CellCount;
+                row.Volume = verdict.CellCount * cellVolume;
+                row.Vented = verdict.Vented;
+
+                RoomAirNode air = AirOf(i);
+                if (air != null)
+                {
+                    row.Pressure = air.Pressure;
+                    row.AirMass = air.AirMass;
+                    row.TemperatureKelvin = air.Temperature;
+                    row.LinkCount = air.Links.Count;
+                }
+
+                row.GameAirtight = verdict.GameAirtight;
+                row.GameOxygen = verdict.GameOxygen;
+                row.Vents = verdict.Vents;
+                row.VentPressurised = verdict.VentPressurised;
+                row.OxygenLevel = verdict.VentOxygen;
+                row.Disagreement = verdict.IsDisagreement;
+
+                Rooms.Add(row);
+            }
+
+            IList<ThermalGrid.LostRoom> lost = Grid.LostRooms;
+            for (int i = 0; i < lost.Count; i++)
+            {
+                ThermalGrid.LostRoom room = lost[i];
+
+                RoomRow row = new RoomRow();
+                row.Kind = "lost";
+                row.Index = room.Index;
+
+                row.AnchorX = room.Anchor.X;
+                row.AnchorY = room.Anchor.Y;
+                row.AnchorZ = room.Anchor.Z;
+
+                row.CellCount = room.CellCount;
+                row.Volume = room.Volume;
+
+                // By construction: every cell in it is one the game called airtight.
+                row.GameAirtight = true;
+                row.GameOxygen = room.OxygenLevel;
+                row.Vents = room.Vents;
+                row.VentPressurised = room.VentSaysPressurised;
+                row.OxygenLevel = room.OxygenLevel;
+                row.LeakCount = room.LeakCount;
+                row.LeakingBlocks = room.LeakingBlocks;
+
+                Rooms.Add(row);
+            }
+        }
+
+        /// <summary>The air of one mapped room, or null when the solver has none for it.</summary>
+        private RoomAirNode AirOf(int roomIndex)
+        {
+            IList<RoomAirNode> air = Grid.Simulation.RoomAir;
+            for (int i = 0; i < air.Count; i++)
+            {
+                if (air[i].RoomIndex == roomIndex) return air[i];
+            }
+            return null;
+        }
 
         private void SnapshotSurfaces()
         {

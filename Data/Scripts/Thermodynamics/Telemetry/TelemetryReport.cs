@@ -39,6 +39,7 @@ namespace Thermodynamics
             TryWrite("Thermodynamics_BlockTypes_" + stamp + ".csv", BuildBlockTypeCsv());
             TryWrite("Thermodynamics_Grids_" + stamp + ".csv", BuildGridCsv());
             TryWrite("Thermodynamics_Surfaces_" + stamp + ".csv", BuildSurfaceCsv());
+            TryWrite("Thermodynamics_Rooms_" + stamp + ".csv", BuildRoomCsv());
             TryWrite("Thermodynamics_Environment_" + stamp + ".csv", BuildEnvironmentCsv());
 
             if (!wrote)
@@ -156,14 +157,116 @@ namespace Thermodynamics
                 + " of " + (audit.BlockCells * Core.Face.Count).ToString("n0"));
             Field(sb, "  blocks sealing nothing", audit.BlocksSealingNothing.ToString("n0"));
 
-            if (audit.Examples == null || audit.Examples.Count == 0) return;
-
-            sb.Append("\n    block cells the map left outdoors\n");
-            for (int i = 0; i < audit.Examples.Count; i++)
+            if (audit.Examples != null && audit.Examples.Count > 0)
             {
-                sb.Append("      ").Append(audit.Examples[i]).Append('\n');
+                sb.Append("\n    block cells the map left outdoors\n");
+                for (int i = 0; i < audit.Examples.Count; i++)
+                {
+                    sb.Append("      ").Append(audit.Examples[i]).Append('\n');
+                }
+            }
+
+            WriteRooms(sb, g);
+        }
+
+        /// <summary>
+        /// Every compartment on the grid: the ones this model found, and the ones only the game
+        /// has.
+        ///
+        /// The second list is the one worth reading. A room in it is sealed as far as the game is
+        /// concerned — its vent will say pressurised and a player will be standing in air — while
+        /// this model believes the cells are outdoors, runs no air in them, and draws nothing in
+        /// the room overlay. Each is named by the vent standing in it, because that is the only
+        /// identity a player can read off a terminal, and by the block subtypes across the faces
+        /// this model leaves open, because those are what has to be fixed.
+        /// </summary>
+        private static void WriteRooms(StringBuilder sb, GridTelemetry g)
+        {
+            if (!g.RoomScanRan && g.Rooms.Count == 0) return;
+
+            int mapped = 0;
+            int lost = 0;
+            int lostWithVent = 0;
+            int dry = 0;
+
+            for (int i = 0; i < g.Rooms.Count; i++)
+            {
+                if (g.Rooms[i].Kind == "lost")
+                {
+                    lost++;
+                    if (g.Rooms[i].VentPressurised) lostWithVent++;
+                }
+                else
+                {
+                    mapped++;
+                    if (g.Rooms[i].Disagreement) dry++;
+                }
+            }
+
+            sb.Append("\n    compartments\n");
+            Field(sb, "  found by this model", mapped.ToString("n0"));
+            Field(sb, "  held only by the game", lost.ToString("n0")
+                + (lostWithVent > 0 ? "  (" + lostWithVent + " with a vent reporting pressurised)" : ""));
+
+            // The row that matters when the map is right and the air is missing anyway: a
+            // compartment found, left dry, and sealed as far as the game is concerned.
+            Field(sb, "  found, dry, air in game", dry.ToString("n0")
+                + (dry > 0 ? "  <-- the game has air in these and this model runs none" : ""));
+
+            if (g.RoomScanTruncated)
+            {
+                Field(sb, "  scan", "TRUNCATED at the cell limit - the list below is partial");
+            }
+
+            if (g.Rooms.Count == 0)
+            {
+                Field(sb, "  rooms", "none");
+                return;
+            }
+
+            sb.Append("\n      kind   idx  cells      volume  press   air kg      K links  seal  gameO2  vent  O2   leaks\n");
+
+            for (int i = 0; i < g.Rooms.Count && i < MaxRoomsReported; i++)
+            {
+                RoomRow row = g.Rooms[i];
+
+                sb.Append("      ");
+                sb.Append(row.Kind.PadRight(7));
+                sb.Append(row.Index.ToString().PadLeft(3));
+                sb.Append(row.CellCount.ToString("n0").PadLeft(7));
+                sb.Append(row.Volume.ToString("n1").PadLeft(12));
+                sb.Append(row.Pressure.ToString("n2").PadLeft(7));
+                sb.Append(row.AirMass.ToString("n1").PadLeft(9));
+                sb.Append(row.TemperatureKelvin.ToString("n1").PadLeft(7));
+                sb.Append(row.LinkCount.ToString("n0").PadLeft(6));
+                sb.Append((row.GameAirtight ? "  yes" : "   no").PadLeft(6));
+                sb.Append((row.GameOxygen < 0f ? "   -" : row.GameOxygen.ToString("n2")).PadLeft(8));
+                sb.Append((row.VentPressurised ? "  yes" : (string.IsNullOrEmpty(row.Vents) ? "    -" : "   no")).PadLeft(6));
+                sb.Append((row.OxygenLevel < 0f ? "   -" : row.OxygenLevel.ToString("n2")).PadLeft(6));
+                sb.Append(row.LeakCount.ToString("n0").PadLeft(7));
+                if (row.Disagreement) sb.Append("  <-- the game has air here and this model does not");
+                sb.Append('\n');
+
+                if (!string.IsNullOrEmpty(row.Vents))
+                {
+                    sb.Append("               vents: ").Append(row.Vents).Append('\n');
+                }
+
+                if (!string.IsNullOrEmpty(row.LeakingBlocks))
+                {
+                    sb.Append("               leaking through: ").Append(row.LeakingBlocks).Append('\n');
+                }
+            }
+
+            if (g.Rooms.Count > MaxRoomsReported)
+            {
+                Field(sb, "  not listed",
+                    (g.Rooms.Count - MaxRoomsReported).ToString("n0") + " more, see the rooms CSV");
             }
         }
+
+        /// <summary>Rooms printed per grid before the report defers to the CSV.</summary>
+        private const int MaxRoomsReported = 60;
 
         /// <summary>
         /// The rooms themselves, as sizes: "1 room, 2 cells". A count with nothing behind it
@@ -743,6 +846,64 @@ namespace Thermodynamics
         /// the report is usually written while the world is closing and by then there are no live
         /// grids left. Each record captured its own faces at its final snapshot.
         /// </summary>
+        /// <summary>
+        /// One row per compartment per grid, found or lost.
+        ///
+        /// The columns that matter are the last four: what the game says about the same cells,
+        /// what a vent in the room says, and — for a room only the game has — which block subtypes
+        /// stand across the faces this model leaves open. That last column is the fix list.
+        /// </summary>
+        private static string BuildRoomCsv()
+        {
+            StringBuilder sb = new StringBuilder();
+
+            sb.Append("grid,grid_id,kind,index,anchor_x,anchor_y,anchor_z,cells,volume_m3,");
+            sb.Append("vented,pressure,air_kg,temperature_k,links,game_airtight,game_oxygen,disagreement,");
+            sb.Append("vents,vent_pressurised,oxygen_level,leak_faces,leaking_blocks\n");
+
+            IList<GridTelemetry> grids = Telemetry.Grids;
+
+            for (int g = 0; g < grids.Count; g++)
+            {
+                GridTelemetry record = grids[g];
+                string name = Truncate(record.Name, 40);
+
+                for (int i = 0; i < record.Rooms.Count; i++)
+                {
+                    RoomRow row = record.Rooms[i];
+
+                    Csv(sb, name);
+                    Csv(sb, record.EntityId);
+                    Csv(sb, row.Kind);
+                    Csv(sb, row.Index);
+
+                    Csv(sb, row.AnchorX);
+                    Csv(sb, row.AnchorY);
+                    Csv(sb, row.AnchorZ);
+
+                    Csv(sb, row.CellCount);
+                    Csv(sb, row.Volume);
+
+                    Csv(sb, row.Vented ? 1 : 0);
+                    Csv(sb, row.Pressure);
+                    Csv(sb, row.AirMass);
+                    Csv(sb, row.TemperatureKelvin);
+                    Csv(sb, row.LinkCount);
+                    Csv(sb, row.GameAirtight ? 1 : 0);
+                    Csv(sb, row.GameOxygen);
+                    Csv(sb, row.Disagreement ? 1 : 0);
+
+                    Csv(sb, Truncate(row.Vents ?? "", 120));
+                    Csv(sb, row.VentPressurised ? 1 : 0);
+                    Csv(sb, row.OxygenLevel);
+                    Csv(sb, row.LeakCount);
+                    CsvLast(sb, Truncate(row.LeakingBlocks ?? "", 200));
+                }
+            }
+
+            return sb.ToString();
+        }
+
         private static string BuildSurfaceCsv()
         {
             StringBuilder sb = new StringBuilder();
@@ -1118,6 +1279,11 @@ namespace Thermodynamics
         }
 
         private static void CsvLast(StringBuilder sb, double value)
+        {
+            TelemetryFormat.AppendCsvLast(sb, value);
+        }
+
+        private static void CsvLast(StringBuilder sb, string value)
         {
             TelemetryFormat.AppendCsvLast(sb, value);
         }
