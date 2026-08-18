@@ -187,6 +187,110 @@ namespace Thermodynamics.Tests
             Assert.Equal(1, simulation.Work.HeatPumpRebuilds);
         }
 
+        /// <summary>
+        /// A grid with no plumbing and no pumps on it must not walk its blocks looking for them.
+        ///
+        /// Both searches ask a question that almost every block answers no to, and they run on
+        /// every topology change. On a ship the size this session is aiming at, that is two
+        /// passes over a million blocks to discover there is nothing to find.
+        /// </summary>
+        [Fact]
+        public void SearchesForPlumbingSkipAGridThatHasNone()
+        {
+            ThermalSimulation simulation = Build(Small);
+            while (simulation.Rooms.HasWorkPending) simulation.Update(LoadBenchmarks.TickSeconds, Space());
+
+            Assert.Equal(0, simulation.Grid.CoolantBlockCount);
+            Assert.Equal(0, simulation.Grid.HeatPumpBlockCount);
+
+            simulation.Work.Reset();
+
+            simulation.AddBlock(
+                new BlockInstance(Catalog.HeavyArmor(), simulation.Grid.Min - new Vector3I(2, 0, 0),
+                    BlockOrientation.Identity),
+                293.15f);
+
+            simulation.Update(LoadBenchmarks.TickSeconds, Space());
+
+            output.WriteLine(simulation.Solver.Nodes.Count.ToString("n0")
+                + " blocks with no plumbing, one block placed: "
+                + simulation.Work.LoopSearches + " loop searches visiting "
+                + simulation.Work.LoopSearchCells + " cells, "
+                + simulation.Work.HeatPumpRebuilds + " heat pump rebuilds visiting "
+                + simulation.Work.HeatPumpNodeVisits + " nodes.");
+
+            Assert.True(simulation.Work.LoopSearches > 0, "the search should still have been asked for");
+            Assert.Equal(0, simulation.Work.LoopSearchCells);
+            Assert.Equal(0, simulation.Work.HeatPumpNodeVisits);
+        }
+
+        /// <summary>
+        /// The conduction rebuild must be billed to the topology stage, not to the solver.
+        ///
+        /// It used to be left as a dirty flag for the solver to notice, so a report of a
+        /// stalling ship showed a solver stage with a huge worst call and a topology stage of
+        /// nearly nothing — which is exactly backwards, and would send anyone reading it to
+        /// optimise the wrong loop.
+        /// </summary>
+        [Fact]
+        public void ARebuildIsBilledToTopologyAndNotToTheSolver()
+        {
+            ThermalSimulation simulation = Build(Small);
+            while (simulation.Rooms.HasWorkPending) simulation.Update(LoadBenchmarks.TickSeconds, Space());
+
+            StageTimings timings = new StageTimings();
+            simulation.Profiler = timings;
+
+            simulation.Work.Reset();
+            simulation.AddBlock(
+                new BlockInstance(Catalog.HeavyArmor(), simulation.Grid.Min - new Vector3I(2, 0, 0),
+                    BlockOrientation.Identity),
+                293.15f);
+
+            int topologyCallsBefore = timings.Calls(SimulationPhase.Topology);
+            simulation.Update(LoadBenchmarks.TickSeconds, Space());
+
+            output.WriteLine("one block placed: " + simulation.Work.TopologyRebuilds
+                + " topology rebuilds during " + (timings.Calls(SimulationPhase.Topology) - topologyCallsBefore)
+                + " topology stages, worst " + timings.WorstMs(SimulationPhase.Topology).ToString("n2")
+                + " ms; solver worst " + timings.WorstMs(SimulationPhase.Solver).ToString("n2") + " ms.");
+
+            Assert.Equal(1, simulation.Work.TopologyRebuilds);
+            Assert.True(timings.Calls(SimulationPhase.Topology) > topologyCallsBefore,
+                "the rebuild should have happened inside a topology stage");
+        }
+
+        /// <summary>
+        /// Reading the link count must not rebuild the graph.
+        ///
+        /// <c>Solver.Links</c> rebuilds a stale graph before answering, which is right for a
+        /// caller that needs the graph and wrong for one that needs an integer. The telemetry
+        /// sample wanted the integer, so switching collection on made a welding ship pay for an
+        /// extra full rebuild per sample — untimed, because no stage bracket was open around it,
+        /// and therefore invisible in the very report it was being collected for.
+        /// </summary>
+        [Fact]
+        public void ReadingTheLinkCountDoesNotRebuildTheGraph()
+        {
+            ThermalSimulation simulation = Build(Small);
+            while (simulation.Rooms.HasWorkPending) simulation.Update(LoadBenchmarks.TickSeconds, Space());
+
+            simulation.AddBlock(
+                new BlockInstance(Catalog.HeavyArmor(), simulation.Grid.Min - new Vector3I(2, 0, 0),
+                    BlockOrientation.Identity),
+                293.15f);
+
+            simulation.Work.Reset();
+
+            int count = simulation.Solver.LinkCount;
+
+            output.WriteLine("link count read on a dirty graph: " + count.ToString("n0")
+                + " links, " + simulation.Work.TopologyRebuilds + " rebuilds caused.");
+
+            Assert.True(count > 0);
+            Assert.Equal(0, simulation.Work.TopologyRebuilds);
+        }
+
         // ---- the budgeted stages ------------------------------------------------------------
 
         /// <summary>

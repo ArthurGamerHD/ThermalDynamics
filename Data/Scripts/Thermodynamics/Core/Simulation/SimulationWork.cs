@@ -76,6 +76,29 @@ namespace Thermodynamics.Core
             SolverSubsteps = 0;
         }
 
+        /// <summary>A copy of the current counts, so a caller can keep one window's figures.</summary>
+        public SimulationWork Snapshot()
+        {
+            SimulationWork copy = new SimulationWork();
+            copy.TopologyRebuilds = TopologyRebuilds;
+            copy.TopologyNodeVisits = TopologyNodeVisits;
+            copy.LinksBuilt = LinksBuilt;
+            copy.ExposureRefreshes = ExposureRefreshes;
+            copy.ExposureNodeVisits = ExposureNodeVisits;
+            copy.RoomAirRebuilds = RoomAirRebuilds;
+            copy.RoomAirRoomVisits = RoomAirRoomVisits;
+            copy.LoopSearches = LoopSearches;
+            copy.LoopSearchCells = LoopSearchCells;
+            copy.HeatPumpRebuilds = HeatPumpRebuilds;
+            copy.HeatPumpNodeVisits = HeatPumpNodeVisits;
+            copy.RoomPassesBegun = RoomPassesBegun;
+            copy.RoomPassesCompleted = RoomPassesCompleted;
+            copy.RoomCellsVisited = RoomCellsVisited;
+            copy.SolverSteps = SolverSteps;
+            copy.SolverSubsteps = SolverSubsteps;
+            return copy;
+        }
+
         /// <summary>
         /// Everything a rebuild touched, as one figure. The stages are separate because they are
         /// fixed separately, but what lands in a single frame is their sum.

@@ -414,7 +414,7 @@ namespace Thermodynamics
             if (cells > PeakCellCount) PeakCellCount = cells;
 
             BlockCount.Add(Grid.Grid.BlocksCount);
-            NeighborLinks.Add(simulation.Solver.Links.Count);
+            NeighborLinks.Add(simulation.Solver.LinkCount);
             SurfaceEntries.Add(simulation.Surfaces.CellCount);
             CoolantLoops.Add(simulation.Solver.Loops.Count);
             RecentlyRemovedSize.Add(Grid.RecentlyRemoved.Count);

@@ -105,7 +105,7 @@ namespace Thermodynamics.Harness
         /// <summary>The default ladder. Every rung is roughly four times the one below it.</summary>
         public static readonly int[] DefaultSizes = { 8000, 32000, 125000, 500000, 1000000 };
 
-        public static readonly string[] Names = { "scale", "hitch", "weld", "load" };
+        public static readonly string[] Names = { "scale", "hitch", "weld", "load", "spike" };
 
         // ---- the ladder --------------------------------------------------------------------
 
@@ -399,6 +399,127 @@ namespace Thermodynamics.Harness
             result.Notes = "adding blocks " + addMs.ToString("n0") + " ms, RebuildAll "
                 + watch.Elapsed.TotalMilliseconds.ToString("n0") + " ms";
             return result;
+        }
+
+        // ---- attribution --------------------------------------------------------------------
+
+        /// <summary>
+        /// What the ticks after a single block placement cost, per stage.
+        ///
+        /// Per stage worst rather than one worst tick, because the stages do not land together:
+        /// the conduction rebuild goes on the tick after the placement, the room map converges
+        /// hundreds of ticks later, and the exposure pass rides on the tick that publishes it.
+        /// Reporting only the worst tick therefore hides two of the three stalls behind whichever
+        /// one happened to be largest.
+        /// </summary>
+        public class SpikeReport
+        {
+            public int Blocks;
+            public int Links;
+
+            /// <summary>Worst single tick over the whole settle, and its stage split.</summary>
+            public double WorstTickMs;
+
+            /// <summary>The worst single call to each stage, anywhere in the settle.</summary>
+            public double TopologyMs;
+            public double RoomMappingMs;
+            public double ExposureMs;
+            public double SolverMs;
+
+            public int Ticks;
+            public SimulationWork Work = new SimulationWork();
+
+            /// <summary>
+            /// The largest thing that lands in one tick. This is the stall a player sees, and
+            /// the figure the whole exercise is trying to drive down.
+            /// </summary>
+            public double WorstStageMs
+            {
+                get
+                {
+                    double worst = TopologyMs;
+                    if (RoomMappingMs > worst) worst = RoomMappingMs;
+                    if (ExposureMs > worst) worst = ExposureMs;
+                    if (SolverMs > worst) worst = SolverMs;
+                    return worst;
+                }
+            }
+
+            public string Describe()
+            {
+                return "worst tick " + WorstTickMs.ToString("n1") + " ms over " + Ticks
+                    + " ticks to settle. Worst call per stage: topology "
+                    + TopologyMs.ToString("n1") + ", rooms " + RoomMappingMs.ToString("n1")
+                    + ", exposure " + ExposureMs.ToString("n1")
+                    + ", solver " + SolverMs.ToString("n1") + " ms."
+                    + " Ran: " + Work.TopologyRebuilds + " topology rebuilds, "
+                    + Work.ExposureRefreshes + " exposure refreshes, "
+                    + Work.RoomPassesBegun + " room passes, "
+                    + Work.SolverSteps + " solver steps."
+                    + " Touched: " + Work.TopologyNodeVisits.ToString("n0") + " nodes for topology, "
+                    + Work.ExposureNodeVisits.ToString("n0") + " for exposure, "
+                    + Work.LoopSearchCells.ToString("n0") + " for coolant loops, "
+                    + Work.HeatPumpNodeVisits.ToString("n0") + " for heat pumps, "
+                    + Work.RoomCellsVisited.ToString("n0") + " cells flooded.";
+            }
+        }
+
+        /// <summary>
+        /// Places one block on a settled grid and reports what the ticks after it spent, stage
+        /// by stage and count by count.
+        ///
+        /// The ladder says the spike is large; this says which stage it is, which is the
+        /// difference between a number to worry about and a line to change.
+        /// </summary>
+        public static SpikeReport Spike(string shape, int targetCells)
+        {
+            ThermalSimulation simulation = BuildSettled(shape, targetCells);
+            while (simulation.Rooms.HasWorkPending)
+            {
+                simulation.Update(TickSeconds, Worlds.Shadow());
+            }
+
+            SeedSpread(simulation);
+
+            StageTimings timings = new StageTimings();
+            simulation.Profiler = timings;
+            simulation.Work.Reset();
+
+            SpikeReport report = new SpikeReport();
+
+            // Read before the placement, and through LinkCount rather than Links. The Links
+            // getter rebuilds a stale graph, so a benchmark that reads it after placing a block
+            // measures its own instrumentation: the first run of this reported two topology
+            // rebuilds for one placement, and one of them was this line.
+            report.Blocks = simulation.Solver.Nodes.Count;
+            report.Links = simulation.Solver.LinkCount;
+
+            BlockModel armour = Catalog.HeavyArmor();
+            Vector3I at = simulation.Grid.Max + new Vector3I(0, 0, 2);
+            simulation.AddBlock(new BlockInstance(armour, at, BlockOrientation.Identity), 293.15f);
+
+            Stopwatch watch = new Stopwatch();
+
+            do
+            {
+                watch.Restart();
+                simulation.Update(TickSeconds, Worlds.Shadow());
+                watch.Stop();
+
+                double ms = watch.Elapsed.TotalMilliseconds;
+                if (ms > report.WorstTickMs) report.WorstTickMs = ms;
+                report.Ticks++;
+            }
+            while (simulation.Rooms.HasWorkPending && report.Ticks < 100000);
+
+            report.TopologyMs = timings.WorstMs(SimulationPhase.Topology);
+            report.RoomMappingMs = timings.WorstMs(SimulationPhase.RoomMapping);
+            report.ExposureMs = timings.WorstMs(SimulationPhase.Exposure);
+            report.SolverMs = timings.WorstMs(SimulationPhase.Solver);
+            report.Work = simulation.Work.Snapshot();
+
+            simulation.Profiler = null;
+            return report;
         }
 
         // ---- shared -------------------------------------------------------------------------

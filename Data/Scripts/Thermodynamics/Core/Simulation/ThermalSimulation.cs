@@ -385,7 +385,17 @@ namespace Thermodynamics.Core
             {
                 Begin(SimulationPhase.Topology);
                 topologyDirty = false;
-                solver.InvalidateLinks();
+
+                // Rebuilt here rather than left dirty for the solver to notice.
+                //
+                // The graph has to exist before the next step either way, so deferring it saved
+                // nothing — it only moved the cost onto a tick that was also going to integrate,
+                // and billed it to the solver stage. A report then blamed the solver for a stall
+                // that was a topology rebuild, which is the opposite of what stage timings are
+                // for. Doing it here also puts the rebuild on the earliest tick after the change
+                // rather than on the next stepping one, so the two costs land separately more
+                // often than not.
+                solver.RebuildLinks();
                 RebuildLoops();
 
                 // A pump is bound to the two nodes either side of it, so whatever changed may

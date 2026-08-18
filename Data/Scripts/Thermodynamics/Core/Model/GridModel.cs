@@ -21,6 +21,25 @@ namespace Thermodynamics.Core
         private readonly List<BlockInstance> blocks = new List<BlockInstance>();
 
         /// <summary>
+        /// Where each block sits in <see cref="blocks"/>, so removal does not have to search for
+        /// it. <c>List.Remove</c> is a linear scan and then a shift of everything after the hole:
+        /// grinding a block off a million-block grid walked the list twice for one block, and a
+        /// section being shot away did it once per block destroyed.
+        /// </summary>
+        private readonly Dictionary<long, int> blockSlots = new Dictionary<long, int>();
+
+        /// <summary>
+        /// Blocks that carry coolant plumbing, and blocks that are heat pumps.
+        ///
+        /// Both searches used to walk every block on the grid asking a question almost every
+        /// block answers no to. Counting them as they are placed turns "does this ship have any
+        /// plumbing" from a pass over a million blocks into an integer test, and the overwhelming
+        /// majority of grids have none of either.
+        /// </summary>
+        private int coolantBlocks;
+        private int heatPumpBlocks;
+
+        /// <summary>
         /// The doors, kept apart from the rest so that the room mapper can find every portal in
         /// the ship without walking every block. A capital ship has tens of thousands of blocks
         /// and perhaps thirty doors, and it is the doors that move.
@@ -100,8 +119,11 @@ namespace Thermodynamics.Core
             }
 
             blocksByKey[block.Key] = block;
+            blockSlots[block.Key] = blocks.Count;
             blocks.Add(block);
             if (block.HasStateDependentSealing) stateDependent.Add(block);
+            if (block.Model.Coolant != null) coolantBlocks++;
+            if (block.Model.HeatPump != null) heatPumpBlocks++;
             return block;
         }
 
@@ -131,10 +153,55 @@ namespace Thermodynamics.Core
             }
 
             blocksByKey.Remove(block.Key);
-            blocks.Remove(block);
+            RemoveSlot(block);
             if (block.HasStateDependentSealing) stateDependent.Remove(block);
+            if (block.Model.Coolant != null) coolantBlocks--;
+            if (block.Model.HeatPump != null) heatPumpBlocks--;
             boundsDirty = true;
             return true;
+        }
+
+        /// <summary>
+        /// Takes a block out of the flat list by moving the last one into its place.
+        ///
+        /// Nothing reads this list in order — the loop search, the heat pump search and the
+        /// solver's own registration all treat it as a set — so the cheap removal is the correct
+        /// one. What it must not do is leave a stale slot behind, which is why the moved block's
+        /// entry is rewritten before the list shrinks.
+        /// </summary>
+        private void RemoveSlot(BlockInstance block)
+        {
+            int slot;
+            if (!blockSlots.TryGetValue(block.Key, out slot))
+            {
+                // Should not happen, but a linear fallback is better than a corrupt list.
+                blocks.Remove(block);
+                return;
+            }
+
+            blockSlots.Remove(block.Key);
+
+            int last = blocks.Count - 1;
+            if (slot != last)
+            {
+                BlockInstance moved = blocks[last];
+                blocks[slot] = moved;
+                blockSlots[moved.Key] = slot;
+            }
+
+            blocks.RemoveAt(last);
+        }
+
+        /// <summary>Blocks on this grid carrying coolant plumbing. Zero on almost every grid.</summary>
+        public int CoolantBlockCount
+        {
+            get { return coolantBlocks; }
+        }
+
+        /// <summary>Heat pumps on this grid.</summary>
+        public int HeatPumpBlockCount
+        {
+            get { return heatPumpBlocks; }
         }
 
         public BlockInstance GetAtCell(Vector3I cell)

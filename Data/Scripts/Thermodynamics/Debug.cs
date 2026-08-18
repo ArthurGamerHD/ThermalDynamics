@@ -77,7 +77,7 @@ namespace Thermodynamics
             ThermalSolver solver = simulation.Solver;
             MyAPIGateway.Utilities.ShowNotification(
                 "[Grid] nodes: " + solver.Nodes.Count +
-                " links: " + solver.Links.Count +
+                " links: " + solver.LinkCount +
                 " loops: " + solver.Loops.Count +
                 " rooms: " + simulation.Rooms.Map.RoomCount +
                 " mapper queue: " + simulation.Rooms.PendingCells +

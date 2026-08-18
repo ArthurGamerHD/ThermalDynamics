@@ -154,6 +154,17 @@ namespace Thermodynamics.Sim
                     PrintHitch(LoadBenchmarks.Load(shape, size));
                     return 0;
 
+                case "spike":
+                {
+                    LoadBenchmarks.SpikeReport report = LoadBenchmarks.Spike(shape, size);
+                    Console.WriteLine();
+                    Console.WriteLine("== spike " + shape + " " + size.ToString("n0") + " ==");
+                    Console.WriteLine("  " + report.Blocks.ToString("n0") + " blocks, "
+                        + report.Links.ToString("n0") + " links, one block placed.");
+                    Console.WriteLine("  " + report.Describe());
+                    return 0;
+                }
+
                 default:
                     Console.Error.WriteLine("Unknown benchmark: " + name);
                     Console.Error.WriteLine("  one of: " + string.Join(", ", LoadBenchmarks.Names));
@@ -213,6 +224,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  bench hitch --size N    per-tick cost, with a block welded mid-run");
             Console.WriteLine("  bench weld  --size N    a block welded on every tick");
             Console.WriteLine("  bench load  --size N    what building the grid costs before tick one");
+            Console.WriteLine("  bench spike --size N    one block placed, split by stage");
             Console.WriteLine("    --shape ship|cube|truss   --max N   --ticks N   --csv <dir>");
         }
     }

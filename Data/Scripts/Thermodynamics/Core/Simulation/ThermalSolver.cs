@@ -226,9 +226,29 @@ namespace Thermodynamics.Core
             get { return nodes; }
         }
 
+        /// <summary>
+        /// The conduction graph, rebuilt first if the layout has changed since it was last
+        /// built. Use this when the answer has to be current.
+        /// </summary>
         public IList<ThermalLink> Links
         {
             get { RebuildLinksIfNeeded(); return links; }
+        }
+
+        /// <summary>
+        /// How many links the graph holds <em>now</em>, without rebuilding it.
+        ///
+        /// The distinction matters more than it looks. Reading <see cref="Links"/> on a grid
+        /// whose layout has changed runs a full rebuild, outside any stage bracket and on
+        /// whatever thread asked — so a telemetry sample taken while a ship was being welded
+        /// spent a rebuild's worth of a million nodes to report an integer, and reported it as
+        /// nothing at all because no stage was timing it. An observer must not change what it
+        /// observes; a diagnostic wants a count, not a graph, and is content with the count from
+        /// before the change.
+        /// </summary>
+        public int LinkCount
+        {
+            get { return links.Count; }
         }
 
         public IList<CoolantLoop> Loops
@@ -779,6 +799,17 @@ namespace Thermodynamics.Core
         public void RebuildHeatPumps()
         {
             Work.HeatPumpRebuilds++;
+
+            // Same reasoning as the coolant search: a grid with no pumps on it should not walk
+            // its blocks to find that out. The early return has to come after the list is
+            // cleared, because the last pump on a grid being ground off is exactly the case
+            // where the count reaches zero and the device must go with it.
+            if (grid.HeatPumpBlockCount == 0)
+            {
+                heatPumps.Clear();
+                return;
+            }
+
             Work.HeatPumpNodeVisits += grid.Blocks.Count;
 
             Dictionary<long, HeatPumpDevice> previous = new Dictionary<long, HeatPumpDevice>();

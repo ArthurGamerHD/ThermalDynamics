@@ -34,11 +34,17 @@ namespace Thermodynamics.Core
             List<CoolantLoop> loops = new List<CoolantLoop>();
             if (grid == null) return loops;
 
-            if (work != null)
-            {
-                work.LoopSearches++;
-                work.LoopSearchCells += grid.Blocks.Count;
-            }
+            // The call is counted either way — it was asked for — but the cells are only counted
+            // when the search actually walks them, so the two figures separate "how often" from
+            // "how much", which is the split that says whether a stage is worth attention.
+            if (work != null) work.LoopSearches++;
+
+            // A ring needs pipe, and the overwhelming majority of grids have none. Asking the
+            // grid how many coolant blocks it holds costs one integer read against a pass over
+            // every block on the ship asking each of them the same question.
+            if (grid.CoolantBlockCount == 0) return loops;
+
+            if (work != null) work.LoopSearchCells += grid.Blocks.Count;
 
             HashSet<long> claimed = new HashSet<long>();
 
