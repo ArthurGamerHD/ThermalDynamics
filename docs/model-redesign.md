@@ -19,7 +19,7 @@ Background research: [se2-research.md](se2-research.md). Current defects and mea
 | 2 | Sealing and mounting as a per-face fraction | **done** — `BlockModel.LocalFaceMountFraction`, `BlockInstance.MountFraction` |
 | 6 | Adjacency behind a host port | **done** — [`IBlockAdjacency`](../Data/Scripts/Thermodynamics/Core/Model/IBlockAdjacency.cs), `ThermalSolver.Adjacency` |
 | 2 | Exposure walks surfaces, not volumes | **done** — `SurfaceMap.GetExposedFaces` |
-| 2 | Block *storage* stops enumerating cells | **not done** — `GridModel.blocksByCell`, `SurfaceMap.states` and `BlockInstance.Cells` are still one entry per occupied cell |
+| 2 | Block *storage* stops enumerating cells | **not done** — `GridModel.blocksByCell`, `SurfaceMap.states` and `BlockInstance.Cells` are still one entry per occupied cell. This is the one thing between the model and an SE2 grid; the maths above is already there. `Se2LatticeTests` marks the line between them. |
 | 4 | Room mapping off the block lattice | not done |
 | 6 | Struct-of-arrays solver state | **done for the step** — the substep loop reads flat arrays mirrored from the nodes, refreshed only for nodes that changed. The node objects remain the public face. |
 | 5 | Stiffness / multirate | not done — but now **measured**: `LastStepWasClamped` is reported per grid as "steps clamped by substep cap" |

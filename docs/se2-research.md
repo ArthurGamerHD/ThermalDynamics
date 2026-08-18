@@ -223,6 +223,37 @@ and buys SE2 for free.
 
 ---
 
+## 5a. What is tested today
+
+`Se2LatticeTests` and `CoreIsolationTests` hold the SE2-facing properties, so a change that breaks
+them fails the build rather than being discovered when an adapter is written.
+
+| Test | Property |
+| --- | --- |
+| `TheCoreReferencesNothingButMathsAndTheFramework` | the simulation depends on `VRage.Math` and the framework, nothing else |
+| `NoPublicApiInTheCoreSpeaksAGameType` | and no game type reaches its public surface indirectly either |
+| `AHostCanDriveTheSimulationThroughTheCoreAlone` | layout in, sample in, temperatures out — written the way an adapter would write it |
+| `GeometryIsAnsweredFromBoundsAndNotFromCells` | contact, face, surface and depth for a pair of 64-million-cell boxes, exact and in under a millisecond |
+| `ContactBetweenDifferentSizesIsTheOverlapAndIsSymmetric` | a 0.5 m block on a 5 m face shares four cells, both ways round |
+| `EveryBlockSizeSe2ShipsCoexistsOnOneLattice` | all eight shipped sizes on one 0.25 m grid, linked and simulated |
+| `AJointBetweenTheSmallestAndLargestBlockConservesEnergy` | the 1-cell to 20-cell joint, which is the asymmetry the old model leaked at |
+| `TheSubstepEstimateRespondsToTheBlockSizeRatio` | the 1/size² stiffness reaches the integrator |
+| `OverALongStepTheSmallBlockForcesMoreSubstepsThanTheLargeOne` | and turns into substeps rather than staying a number |
+| `TheStiffestPairingOnTheLatticeStaysBounded` | 400 steps of the worst pairing without diverging |
+| `IncrementalTopologyHoldsOnAMixedSizeLattice` | placing blocks one at a time builds the same graph as building whole |
+| `GrindingAMixedSizeLatticeLeavesTheSameGraphAsARebuild` | and removing them unpicks it correctly |
+| `ASpreadStepIsIdenticalOnAMixedSizeLattice` | a step spread across frames is bit-identical on mixed sizes |
+
+The last three exist because the solver was rebuilt around incremental topology and frame-spread
+stepping while this document was open, and neither change had been exercised on anything but
+one-cell blocks.
+
+**What none of them claim is that SE2 is supported.** They cover the *model*: the geometry, the
+integrator and the graph all work from integer AABBs and are indifferent to a block's volume. The
+*storage* is not there — `GridModel`, `SurfaceMap` and `BlockInstance` still hold one entry per
+occupied cell, so one 5 m block costs 16,000 dictionary entries and an 8,000-element array. That is
+§2 of [model-redesign.md](model-redesign.md) and it is the whole remaining distance.
+
 ## 6. Reproducing this survey
 
 ```bash

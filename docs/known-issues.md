@@ -162,6 +162,13 @@ default wants recalibrating against a game runtime rather than against the harne
 object-per-block layout plus the room map's hash sets over the whole bounding volume. This may
 bind before the solver does, and none of the structure-of-arrays work that would fix it is built.
 
+**Block storage is still per cell, which is what stands between the model and SE2.** The geometry,
+the conduction graph and the integrator all work from integer AABBs and cost the same whatever a
+block's volume — `Se2LatticeTests` pins that. `GridModel.blocksByCell`, `SurfaceMap.states` and
+`BlockInstance.Cells` do not: they are one entry per occupied cell, so a 5 m block on SE2's 0.25 m
+lattice would cost 16,000 dictionary entries and an 8,000-element array. See
+[model-redesign.md §2](model-redesign.md).
+
 **The room map floods the bounding volume, which a hull fills about a fifteenth of.** It is
 budgeted, so the cost is ticks rather than a stall — but at a million blocks it is 7,000 ticks to
 converge, which is twenty minutes on a stale map. Bounded and wrong is better than unbounded and
