@@ -127,7 +127,18 @@ namespace Thermodynamics.Core
         /// substep.
         /// </summary>
         private float[] linkMassFactor = new float[0];
-        private bool linkMassFactorDirty = true;
+
+        /// <summary>
+        /// First link whose cached reduced mass is stale. <see cref="int.MaxValue"/> when none
+        /// are.
+        ///
+        /// An index rather than a flag because the two things that make a factor stale are not
+        /// the same size of event. A block's mass changing — welding progress, damage — could be
+        /// any link on the grid, so it invalidates from zero. Links being appended for a block
+        /// just placed invalidates only the appended rows, and that is the case this needs to
+        /// stay cheap.
+        /// </summary>
+        private int linkMassFactorFrom;
 
         // The conduction loop mirrored into flat arrays, for the same reason the node state is:
         // this is the innermost loop in the whole mod. A capital ship in the field run carried
@@ -172,6 +183,22 @@ namespace Thermodynamics.Core
         public SimulationWork Work = new SimulationWork();
 
         private bool linksDirty = true;
+
+        /// <summary>
+        /// Nodes placed since the graph was last built, whose links have not been made yet.
+        ///
+        /// A block arriving is the one topology change that needs no demolition: nothing links
+        /// to a block that was not there, so its links can simply be appended and every existing
+        /// link left exactly as it was. That is what makes welding, pasting a blueprint and a
+        /// projector building a ship cost the block rather than the grid.
+        ///
+        /// Anything else — a block removed, a block whose mounting changed, a new adjacency
+        /// source — can invalidate links that already exist, and takes the global path.
+        /// </summary>
+        private readonly List<ThermalNode> pendingLinkNodes = new List<ThermalNode>();
+
+        /// <summary>How many links have been mirrored into the flat arrays.</summary>
+        private int syncedLinks;
 
         /// <summary>Set when node indices move, which invalidates every mirrored row.</summary>
         private bool resyncAll = true;
@@ -316,8 +343,13 @@ namespace Thermodynamics.Core
             node.Index = nodes.Count;
             nodes.Add(node);
             nodesByKey[block.Key] = node;
-            linksDirty = true;
-            resyncAll = true;
+
+            // Appended, so no existing index moved and no existing link became wrong. The node
+            // is queued for linking rather than the whole graph being thrown away; only if the
+            // graph was already due a full rebuild does that stand.
+            node.PendingLinks = true;
+            pendingLinkNodes.Add(node);
+
             sunLitDirty = true;
             return node;
         }
@@ -336,6 +368,10 @@ namespace Thermodynamics.Core
                 nodes[i].Index = i;
             }
 
+            // Every index after the hole has moved, so every link that referred to one of them
+            // now refers to the wrong node. There is no incremental repair for that without a
+            // per-node index of the links touching it, so removal still takes the global path —
+            // see docs/known-issues.md.
             linksDirty = true;
             resyncAll = true;
             sunLitDirty = true;
@@ -370,10 +406,28 @@ namespace Thermodynamics.Core
             linksDirty = true;
         }
 
+        /// <summary>
+        /// Brings the conduction graph up to date by whichever route is valid: the incremental
+        /// one when only blocks have been placed, the global one otherwise. Does nothing when
+        /// the graph already matches the layout.
+        ///
+        /// Public so the host can do it inside its topology stage rather than leaving it to be
+        /// discovered by the first step, which billed it to the solver.
+        /// </summary>
+        public void BuildLinksIfNeeded()
+        {
+            RebuildLinksIfNeeded();
+        }
+
         private void RebuildLinksIfNeeded()
         {
-            if (!linksDirty) return;
-            RebuildLinks();
+            if (linksDirty)
+            {
+                RebuildLinks();
+                return;
+            }
+
+            if (pendingLinkNodes.Count > 0) LinkPendingNodes();
         }
 
         /// <summary>
@@ -385,7 +439,12 @@ namespace Thermodynamics.Core
             Work.TopologyRebuilds++;
             Work.TopologyNodeVisits += nodes.Count;
 
+            // A global build makes every link, including the ones the queue was holding.
+            for (int i = 0; i < pendingLinkNodes.Count; i++) pendingLinkNodes[i].PendingLinks = false;
+            pendingLinkNodes.Clear();
+
             links.Clear();
+            syncedLinks = 0;
             for (int i = 0; i < nodes.Count; i++)
             {
                 nodes[i].LinkCount = 0;
@@ -427,29 +486,141 @@ namespace Thermodynamics.Core
             Work.LinksBuilt += links.Count;
 
             linksDirty = false;
-            linkMassFactorDirty = true;
+            linkMassFactorFrom = 0;
             SyncLinkArrays();
             EnsureBuffers();
             RecomputeConductanceTotals();
         }
 
-        /// <summary>Copies the link fields the substep loop reads into flat arrays.</summary>
+        /// <summary>
+        /// Copies the link fields the substep loop reads into flat arrays.
+        ///
+        /// Only the rows that are not already mirrored are written. A global rebuild resets the
+        /// mark and copies everything; an incremental one appends, which is what keeps the cost
+        /// of placing a block proportional to the block. The arrays grow by doubling and keep
+        /// what they held, because the rows below the new ones are still correct.
+        /// </summary>
         private void SyncLinkArrays()
         {
             if (linkA.Length < links.Count)
             {
                 int size = Math.Max(16, links.Count * 2);
-                linkA = new int[size];
-                linkB = new int[size];
-                linkConductance = new float[size];
+                Array.Resize(ref linkA, size);
+                Array.Resize(ref linkB, size);
+                Array.Resize(ref linkConductance, size);
             }
 
-            for (int i = 0; i < links.Count; i++)
+            for (int i = syncedLinks; i < links.Count; i++)
             {
                 ThermalLink link = links[i];
                 linkA[i] = link.NodeA;
                 linkB[i] = link.NodeB;
                 linkConductance[i] = link.Conductance;
+            }
+
+            syncedLinks = links.Count;
+        }
+
+        /// <summary>
+        /// Builds the links for blocks placed since the last build, and nothing else.
+        ///
+        /// The whole saving rests on one fact: a block that has just arrived has no links, and
+        /// nothing that already exists links to it. So there is nothing to demolish — every
+        /// existing link, every mirrored row and every conductance total below the new ones is
+        /// still exactly right, and the work is the new block's own six faces.
+        ///
+        /// Two placed blocks that touch each other are the case worth being careful about. Each
+        /// finds the other as a neighbour, so the pair is added by whichever of them has the
+        /// lower index and skipped by the other — the same rule the global build uses, and the
+        /// reason both loops test the index rather than a visited set.
+        /// </summary>
+        private void LinkPendingNodes()
+        {
+            Work.TopologyRebuilds++;
+            Work.TopologyNodeVisits += pendingLinkNodes.Count;
+
+            bool buffersGrew = EnsureBuffers();
+
+            IBlockAdjacency adjacency = Adjacency;
+            int firstNewLink = links.Count;
+
+            for (int p = 0; p < pendingLinkNodes.Count; p++)
+            {
+                ThermalNode a = pendingLinkNodes[p];
+
+                // A node placed and then taken away again before anything stepped.
+                if (a.Index < 0 || a.Index >= nodes.Count || nodes[a.Index] != a) continue;
+
+                neighbourScratch.Clear();
+                adjacency.GetNeighbours(a.Block, neighbourScratch);
+
+                for (int n = 0; n < neighbourScratch.Count; n++)
+                {
+                    ThermalNode b = GetNode(neighbourScratch[n]);
+                    if (b == null) continue;
+
+                    // The pair belongs to whichever end is also pending and lower, so a pair of
+                    // new neighbours is added once. A neighbour that was already on the grid is
+                    // never pending, so the test can only skip a pair both ends of which are.
+                    if (b.PendingLinks && b.Index <= a.Index) continue;
+
+                    int face = ConductionBuilder.ContactFace(a.Block, b.Block);
+                    if (face < 0) continue;
+
+                    int contacts = ConductionBuilder.CountContactFaces(a.Block, b.Block);
+                    if (contacts <= 0) continue;
+
+                    float conductance = ConductionBuilder.Conductance(
+                        grid.GridSize, a.Block, b.Block, contacts, Face.Axis(face));
+                    if (conductance <= 0f) continue;
+
+                    links.Add(new ThermalLink(a.Index, b.Index, conductance, contacts));
+                    a.LinkCount++;
+                    b.LinkCount++;
+                }
+            }
+
+            for (int p = 0; p < pendingLinkNodes.Count; p++)
+            {
+                pendingLinkNodes[p].PendingLinks = false;
+            }
+            pendingLinkNodes.Clear();
+
+            Work.LinksBuilt += links.Count - firstNewLink;
+
+            SyncLinkArrays();
+
+            if (buffersGrew)
+            {
+                // Growing the buffers reallocates the conductance totals, so there is nothing
+                // left to add to. Rare — the arrays double — and correct, which matters more.
+                RecomputeConductanceTotals();
+            }
+            else
+            {
+                AddConductanceOfNewLinks(firstNewLink);
+            }
+
+            // Marked, not filled: the reduced mass of a link is computed from the mirrored node
+            // masses, and the new node's row is not copied in until later in the same step.
+            if (firstNewLink < linkMassFactorFrom) linkMassFactorFrom = firstNewLink;
+        }
+
+        /// <summary>
+        /// Adds the conductance of newly built links to their endpoints' totals.
+        ///
+        /// The totals are what the substep estimate divides by thermal mass, and they also carry
+        /// contributions from coolant loops and room air. Adding to them is therefore the correct
+        /// incremental operation; recomputing them would mean walking every link, every loop and
+        /// every room to learn what a handful of new links changed.
+        /// </summary>
+        private void AddConductanceOfNewLinks(int firstNewLink)
+        {
+            for (int i = firstNewLink; i < links.Count; i++)
+            {
+                ThermalLink link = links[i];
+                nodeConductanceTotal[link.NodeA] += link.Conductance;
+                nodeConductanceTotal[link.NodeB] += link.Conductance;
             }
         }
 
@@ -1094,7 +1265,11 @@ namespace Thermodynamics.Core
 
                 if (!all && !node.StateDirty) continue;
                 node.StateDirty = false;
-                linkMassFactorDirty = true;
+
+                // Only a change of mass makes a cached reduced mass wrong, and only that forces
+                // the pass over every link. A block that merely became exposed, or started
+                // producing heat, leaves every factor on the grid correct.
+                if (nodeThermalMass[i] != node.ThermalMass) linkMassFactorFrom = 0;
 
                 nodeThermalMass[i] = node.ThermalMass;
                 nodeRadiation[i] = node.RadiationCoefficient;
@@ -1120,18 +1295,19 @@ namespace Thermodynamics.Core
             }
         }
 
-        /// <summary>Recomputes the cached per-link reduced mass after any mass change.</summary>
+        /// <summary>Recomputes the cached per-link reduced mass from the first stale row on.</summary>
         private void RefreshLinkMassFactors()
         {
-            if (!linkMassFactorDirty) return;
-            linkMassFactorDirty = false;
+            int from = linkMassFactorFrom;
+            if (from >= links.Count) return;
+            linkMassFactorFrom = int.MaxValue;
 
             if (linkMassFactor.Length < links.Count)
             {
-                linkMassFactor = new float[Math.Max(16, links.Count * 2)];
+                Array.Resize(ref linkMassFactor, Math.Max(16, links.Count * 2));
             }
 
-            for (int i = 0; i < links.Count; i++)
+            for (int i = from; i < links.Count; i++)
             {
                 float massA = nodeThermalMass[links[i].NodeA];
                 float massB = nodeThermalMass[links[i].NodeB];
@@ -1814,10 +1990,19 @@ namespace Thermodynamics.Core
             }
         }
 
-        private void EnsureBuffers()
+        /// <returns>
+        /// True when the node buffers were reallocated, which throws away anything accumulated
+        /// in them. Only <see cref="nodeConductanceTotal"/> is accumulated rather than rewritten
+        /// each step, so only that has to be rebuilt — but it has to be, and silently returning
+        /// void made an incremental caller unable to know.
+        /// </returns>
+        private bool EnsureBuffers()
         {
+            bool grew = false;
+
             if (nodeWatts.Length < nodes.Count)
             {
+                grew = true;
                 int size = Math.Max(16, nodes.Count * 2);
                 nodeWatts = new float[size];
                 nodeTemperatures = new float[size];
@@ -1842,6 +2027,8 @@ namespace Thermodynamics.Core
             {
                 roomWatts = new float[Math.Max(4, roomAir.Count * 2)];
             }
+
+            return grew;
         }
 
         // ---- diagnostics -------------------------------------------------------------------

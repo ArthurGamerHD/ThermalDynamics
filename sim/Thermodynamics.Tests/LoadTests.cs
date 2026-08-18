@@ -25,6 +25,19 @@ namespace Thermodynamics.Tests
     /// performance report — which is the point of having them here rather than in a benchmark
     /// nobody runs.
     /// </summary>
+    /// <summary>
+    /// Keeps the timed tests off the same cores as the rest of the suite.
+    ///
+    /// xUnit runs collections in parallel, and a stopwatch reading taken while thirty other
+    /// tests are saturating the machine measures the machine, not the code. The first run of
+    /// these reported the cost per link visit growing 1.7x across four times the blocks and then
+    /// 3.2x on the next run, from the same binary — all of the difference was scheduling. A
+    /// collection that disables parallelisation runs alone, which is what a measurement needs.
+    /// </summary>
+    [CollectionDefinition("load", DisableParallelization = true)]
+    public class LoadCollection { }
+
+    [Collection("load")]
     public class LoadTests
     {
         /// <summary>Grid sizes the suite can afford. The benchmarks go to a million.</summary>
@@ -100,8 +113,8 @@ namespace Thermodynamics.Tests
         [Fact]
         public void SolverCostPerLinkStaysProportional()
         {
-            double small = NanosecondsPerLinkVisit(Small);
-            double large = NanosecondsPerLinkVisit(Large);
+            double small = BestNanosecondsPerLinkVisit(Small);
+            double large = BestNanosecondsPerLinkVisit(Large);
 
             double ratio = small <= 0d ? 0d : large / small;
             output.WriteLine(Small.ToString("n0") + " blocks: " + small.ToString("n2")
@@ -111,6 +124,24 @@ namespace Thermodynamics.Tests
             Assert.True(ratio < 3d,
                 "cost per link visit grew " + ratio.ToString("n2") + "x over four times the blocks; "
                 + "the conduction pass should be close to linear in link count");
+        }
+
+        /// <summary>
+        /// The best of three runs, not the mean of them.
+        ///
+        /// Interference only ever makes a measurement slower — a cache eviction, a context
+        /// switch, a collection — so the fastest run is the one least contaminated by things
+        /// that are not the code. Averaging folds the noise in and then reports it as signal.
+        /// </summary>
+        private static double BestNanosecondsPerLinkVisit(int blocks)
+        {
+            double best = double.MaxValue;
+            for (int i = 0; i < 3; i++)
+            {
+                double sample = NanosecondsPerLinkVisit(blocks);
+                if (sample > 0d && sample < best) best = sample;
+            }
+            return best == double.MaxValue ? 0d : best;
         }
 
         private static double NanosecondsPerLinkVisit(int blocks)
@@ -289,6 +320,79 @@ namespace Thermodynamics.Tests
 
             Assert.True(count > 0);
             Assert.Equal(0, simulation.Work.TopologyRebuilds);
+        }
+
+        /// <summary>
+        /// Placing a block must cost the block, not the grid.
+        ///
+        /// This is the assertion the whole session is about. It is written against the node-visit
+        /// counter rather than a stopwatch because that is what makes it a claim about the
+        /// algorithm: before the incremental path existed, one block placed on a 33k ship visited
+        /// 32,801 nodes and stalled the tick for 22 ms, and on a million-block grid it was 456 ms.
+        /// A handful of visits is the block and its neighbours; anything proportional to the grid
+        /// is the old behaviour come back.
+        /// </summary>
+        [Fact]
+        public void PlacingOneBlockLinksTheBlockAndNotTheGrid()
+        {
+            ThermalSimulation simulation = Build(Large);
+            while (simulation.Rooms.HasWorkPending) simulation.Update(LoadBenchmarks.TickSeconds, Space());
+
+            int blocks = simulation.Solver.Nodes.Count;
+            simulation.Work.Reset();
+
+            simulation.AddBlock(
+                new BlockInstance(Catalog.HeavyArmor(), simulation.Grid.Min - new Vector3I(2, 0, 0),
+                    BlockOrientation.Identity),
+                293.15f);
+            simulation.Update(LoadBenchmarks.TickSeconds, Space());
+
+            output.WriteLine("one block placed on " + blocks.ToString("n0") + " blocks: "
+                + simulation.Work.TopologyNodeVisits + " nodes visited for topology, "
+                + simulation.Work.LinksBuilt + " links built.");
+
+            Assert.Equal(1, simulation.Work.TopologyRebuilds);
+            Assert.True(simulation.Work.TopologyNodeVisits < 16,
+                "linking one block visited " + simulation.Work.TopologyNodeVisits
+                + " nodes on a grid of " + blocks + "; it should visit the block and its neighbours");
+        }
+
+        /// <summary>
+        /// A hundred blocks welded in one burst must still cost the hundred, not the grid.
+        ///
+        /// The batch is the case where the incremental builder has to get the pairing right —
+        /// two new blocks placed against each other are both looking at each other — so it is
+        /// worth asserting separately from the single placement above.
+        /// </summary>
+        [Fact]
+        public void WeldingABurstCostsTheBurstAndNotTheGrid()
+        {
+            ThermalSimulation simulation = Build(Large);
+            while (simulation.Rooms.HasWorkPending) simulation.Update(LoadBenchmarks.TickSeconds, Space());
+
+            int blocks = simulation.Solver.Nodes.Count;
+            simulation.Work.Reset();
+
+            BlockModel armour = Catalog.HeavyArmor();
+            Vector3I start = simulation.Grid.Min - new Vector3I(2, 0, 0);
+
+            const int placed = 100;
+            for (int i = 0; i < placed; i++)
+            {
+                simulation.AddBlock(
+                    new BlockInstance(armour, start + new Vector3I(0, 0, i), BlockOrientation.Identity),
+                    293.15f);
+            }
+
+            simulation.Update(LoadBenchmarks.TickSeconds, Space());
+
+            output.WriteLine(placed + " blocks welded onto " + blocks.ToString("n0") + ": "
+                + simulation.Work.TopologyNodeVisits + " nodes visited, "
+                + simulation.Work.LinksBuilt + " links built.");
+
+            Assert.Equal(placed, (int)simulation.Work.TopologyNodeVisits);
+            Assert.True(simulation.Work.LinksBuilt >= placed - 1,
+                "a run of blocks laid end to end should link to each other");
         }
 
         // ---- the budgeted stages ------------------------------------------------------------

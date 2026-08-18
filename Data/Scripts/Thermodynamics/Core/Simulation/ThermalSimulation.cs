@@ -395,7 +395,9 @@ namespace Thermodynamics.Core
                 // for. Doing it here also puts the rebuild on the earliest tick after the change
                 // rather than on the next stepping one, so the two costs land separately more
                 // often than not.
-                solver.RebuildLinks();
+                // Whichever route is valid: blocks placed are linked in place, anything that
+                // could have invalidated an existing link rebuilds the graph.
+                solver.BuildLinksIfNeeded();
                 RebuildLoops();
 
                 // A pump is bound to the two nodes either side of it, so whatever changed may

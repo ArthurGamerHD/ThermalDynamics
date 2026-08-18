@@ -45,6 +45,15 @@ namespace Thermodynamics.Core
         public bool StateDirty = true;
 
         /// <summary>
+        /// True while this node is waiting for its conduction links to be built.
+        ///
+        /// Read only by the incremental builder, and only to settle which end of a pair of
+        /// newly placed neighbours adds the link between them. Both ends see each other as a
+        /// neighbour, so without it the pair is added twice and the joint conducts double.
+        /// </summary>
+        public bool PendingLinks;
+
+        /// <summary>
         /// How many conduction links touch this node. A count rather than a list of indices:
         /// the solver walks links, never a node's links, so the list was one heap object per
         /// block rewritten on every topology change and read by nothing.
