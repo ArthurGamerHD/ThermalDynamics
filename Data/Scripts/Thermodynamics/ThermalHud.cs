@@ -33,11 +33,10 @@ namespace Thermodynamics
         private const int TextInterval = 6;
 
         private static Label toolLabel;
-        private static Label gridLabel;
+        private static LabelBox gridPanel;
         private static int sinceText;
 
         private static readonly StringBuilder ToolText = new StringBuilder();
-        private static readonly StringBuilder GridText = new StringBuilder();
 
         /// <summary>Reused by the billboard pass so aiming at a block allocates nothing.</summary>
         private static readonly List<BlockInstance> NeighbourScratch = new List<BlockInstance>();
@@ -47,30 +46,46 @@ namespace Thermodynamics
         {
             if (toolLabel != null) return;
 
-            // Just off the crosshair, where the block being aimed at is.
+            // Just off the crosshair, where the block being aimed at is. A bare label rather than a
+            // panel: it is one short line sitting over the middle of the screen, and a box there
+            // would be in the way of the thing being aimed at.
             toolLabel = new Label(HudMain.HighDpiRoot)
             {
                 ParentAlignment = ParentAlignments.Center,
                 Offset = new Vector2(60f, 30f),
-                Format = new GlyphFormat(Color.White, TextAlignment.Left, 1f),
+                Format = new GlyphFormat(Color.White, TextAlignment.Left, 1.05f),
                 Visible = false,
             };
 
-            // Right edge, below the middle: clear of the game's own cockpit readouts.
-            gridLabel = new Label(HudMain.HighDpiRoot)
+            // Top right, over the world rather than over the game's own cockpit readouts, and on a
+            // background: five lines of unbacked text over a planet is the thing that is hard to
+            // read, whatever drew it.
+            gridPanel = new LabelBox(HudMain.HighDpiRoot)
             {
-                ParentAlignment = ParentAlignments.Right | ParentAlignments.InnerH,
-                Offset = new Vector2(-40f, -160f),
+                ParentAlignment = ParentAlignments.Top | ParentAlignments.Right
+                    | ParentAlignments.InnerV | ParentAlignments.InnerH,
+                Offset = new Vector2(-20f, -120f),
                 BuilderMode = TextBuilderModes.Lined,
-                Format = new GlyphFormat(Color.White, TextAlignment.Left, 1f),
+                AutoResize = true,
+                TextPadding = new Vector2(18f, 14f),
+                Color = new Color(20, 24, 28, 190),
+                Format = Body,
                 Visible = false,
             };
         }
 
+        /// <summary>Ordinary text: the same blueish the framework's own panels use.</summary>
+        private static readonly GlyphFormat Body =
+            new GlyphFormat(new Color(220, 235, 242), TextAlignment.Left, 0.95f);
+
+        /// <summary>Labels, dimmer than their values so the numbers are what the eye lands on.</summary>
+        private static readonly GlyphFormat Muted =
+            new GlyphFormat(new Color(140, 158, 168), TextAlignment.Left, 0.95f);
+
         public static void Reset()
         {
             toolLabel = null;
-            gridLabel = null;
+            gridPanel = null;
         }
 
         public static void Draw()
@@ -83,13 +98,19 @@ namespace Thermodynamics
             bool publish = sinceText >= TextInterval;
             if (publish) sinceText = 0;
 
+            // The billboard is drawn inside the tool pass, so that runs every frame. The summary
+            // is text and nothing else, so it is only built on the frames that publish it.
             DrawToolHud();
-            DrawGridHud();
-
             if (!publish) return;
 
+            DrawGridHud();
             Publish(toolLabel, ToolText);
-            Publish(gridLabel, GridText);
+
+            if (gridPanel != null)
+            {
+                gridPanel.Visible = GridPanelText != null;
+                if (GridPanelText != null) gridPanel.Text = GridPanelText;
+            }
         }
 
         /// <summary>
@@ -149,7 +170,7 @@ namespace Thermodynamics
 
         private static void DrawGridHud()
         {
-            GridText.Clear();
+            GridPanelText = null;
 
             IMyCubeBlock controlledBlock = MyAPIGateway.Session == null || MyAPIGateway.Session.Player == null
                 ? null
@@ -162,34 +183,45 @@ namespace Thermodynamics
             ThermalGrid thermals = grid.GameLogic.GetAs<ThermalGrid>();
             if (thermals == null || thermals.Simulation == null) return;
 
-            GridText.Append("Ambient: ")
-                .Append(Tools.KelvinToCelsiusString(thermals.LastState.AmbientTemperature))
-                .Append('\n');
+            RichText text = new RichText();
+
+            Row(text, "ambient", Tools.KelvinToCelsiusString(thermals.LastState.AmbientTemperature));
 
             ThermalNode hottest = thermals.HottestNode;
             if (hottest != null)
             {
-                if (gridLabel != null)
-                {
-                    // The summary is tinted by the hottest block, so the panel itself reads as a
-                    // warning before any of its numbers are read.
-                    gridLabel.Format = new GlyphFormat(
+                // The peak is the line worth colouring, and only that line: a whole panel tinted
+                // orange says "warm" about the coolant loop count as well, which means nothing.
+                Row(text, "peak", Tools.KelvinToCelsiusString(hottest.Temperature),
+                    new GlyphFormat(
                         ColorExtensions.HSVtoColor(Tools.GetTemperatureColor(hottest.Temperature)),
-                        TextAlignment.Left, 1f);
-                }
-
-                GridText.Append("Peak T: ")
-                    .Append(Tools.KelvinToCelsiusString(hottest.Temperature))
-                    .Append('\n');
+                        TextAlignment.Left, 0.95f));
 
                 // Per second, so the number stays comparable whatever the step rate is.
                 float perSecond = hottest.LastDeltaTemperature * Settings.Instance.StepsPerSecond;
-                GridText.Append("Peak dT/s: ").Append(perSecond.ToString("n3")).Append('\n');
+                Row(text, "rate", perSecond.ToString("n2") + " K/s");
             }
 
-            GridText.Append("Critical Blocks: ").Append(thermals.CriticalBlocks).Append('\n');
-            GridText.Append("Coolant Loops: ").Append(thermals.Simulation.Solver.Loops.Count).Append('\n');
+            int critical = thermals.CriticalBlocks;
+            Row(text, "critical", critical.ToString(),
+                critical > 0
+                    ? new GlyphFormat(new Color(226, 92, 80), TextAlignment.Left, 0.95f)
+                    : (GlyphFormat?)null);
+
+            Row(text, "loops", thermals.Simulation.Solver.Loops.Count.ToString());
+
+            GridPanelText = text;
         }
+
+        /// <summary>Label and value, the label dimmed and the column width fixed.</summary>
+        private static void Row(RichText text, string label, string value, GlyphFormat? format = null)
+        {
+            text.Add(label.PadRight(9), Muted);
+            text.Add(value + "\n", format ?? Body);
+        }
+
+        /// <summary>The panel's contents, or null when there is nothing to show.</summary>
+        private static RichText GridPanelText;
 
         private static bool UsingExtinguisherTool()
         {

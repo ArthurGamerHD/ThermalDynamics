@@ -149,12 +149,17 @@ thermal neighbours using the `GaugeThermalTexture` transparent material
 shows, whenever the player controls a cube block:
 
 ```
-Ambient:          current grid ambient temperature (°C)
-Peak T:           hottest block on the grid (°C), text tinted by the heat ramp
-Peak dT/s:        that block's temperature change over the last step × StepsPerSecond, K/s
-Critical Blocks:  count over critical temperature in the last completed pass
-Coolant Loops:    number of valid loops on the grid
+ambient    current grid ambient temperature (°C)
+peak       hottest block on the grid (°C), tinted by the heat ramp
+rate       that block's change over the last step × StepsPerSecond, K/s
+critical   count over critical temperature in the last completed pass, red when above zero
+loops      number of valid loops on the grid
 ```
+
+It is a Rich HUD panel at the top right: a background behind the text, because five lines of bare
+text over a planet is unreadable whatever drew them, and the label column dimmed so the numbers are
+what the eye lands on. Only the two lines that can mean trouble carry colour — the peak temperature
+and a non-zero critical count.
 
 Both HUD elements are drawn by the Rich HUD Framework; without Rich HUD Master the framework never
 registers and no text appears. The extinguisher's temperature billboard is drawn through the mod API
