@@ -148,13 +148,35 @@ namespace Thermodynamics.Core
         public double SimulatedSecondsRun { get; private set; }
 
         /// <summary>
+        /// Substeps a step is currently allowed, from <c>MaxLinkVisitsPerStep</c> and the size of
+        /// the conduction graph. <see cref="int.MaxValue"/> when the bound is switched off.
+        /// </summary>
+        public int SubstepBudget
+        {
+            get
+            {
+                int budgetVisits = settings.MaxLinkVisitsPerStep;
+                if (budgetVisits <= 0) return int.MaxValue;
+
+                int links = solver.LinkCount;
+                if (links <= 0) return int.MaxValue;
+
+                int budget = budgetVisits / links;
+                return budget < 1 ? 1 : budget;
+            }
+        }
+
+        /// <summary>
         /// The longest step this grid can afford, in simulated seconds, given how many link
         /// visits a step is allowed and how stiff the grid currently is.
         ///
         /// Returns the full step whenever it fits, which on anything below roughly a hundred
         /// thousand blocks is always.
+        ///
+        /// Public so a benchmark can measure what a tick actually pays rather than what an
+        /// unbounded step would cost — the two diverge on exactly the grids the budget is for.
         /// </summary>
-        private float AffordableStepSeconds(float seconds)
+        public float AffordableStepSeconds(float seconds)
         {
             int budgetVisits = settings.MaxLinkVisitsPerStep;
             if (budgetVisits <= 0) return seconds;

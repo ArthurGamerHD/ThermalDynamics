@@ -709,7 +709,7 @@ namespace Thermodynamics.Core
             }
 
             EnsureBuffers();
-            RecomputeConductanceTotals();
+            conductanceTotalsDirty = true;
         }
 
         private void BuildLoopLinks(CoolantLoop loop)
@@ -945,7 +945,7 @@ namespace Thermodynamics.Core
 
             rememberedAir.Clear();
             EnsureBuffers();
-            RecomputeConductanceTotals();
+            conductanceTotalsDirty = true;
         }
 
         /// <summary>
@@ -1262,7 +1262,7 @@ namespace Thermodynamics.Core
             if (hadAir != air.HasAir)
             {
                 BuildRoomLinks(air, rooms);
-                RecomputeConductanceTotals();
+                conductanceTotalsDirty = true;
             }
 
             return true;
@@ -1290,6 +1290,7 @@ namespace Thermodynamics.Core
             EnsureBuffers();
             SyncNodeState();
             RefreshLinkMassFactors();
+            RecomputeConductanceTotalsIfNeeded();
 
             Environment = environment;
             overheats.Clear();
@@ -2031,6 +2032,7 @@ namespace Thermodynamics.Core
             RebuildLinksIfNeeded();
             EnsureBuffers();
             SyncNodeState();
+            RecomputeConductanceTotalsIfNeeded();
 
             return RequiredSubstepsFromState(deltaSeconds);
         }
@@ -2114,8 +2116,28 @@ namespace Thermodynamics.Core
             return substeps;
         }
 
+        /// <summary>
+        /// Set when something structural changed the conductance a node sees, so the totals are
+        /// recomputed once before they are next read rather than once per change.
+        ///
+        /// The distinction matters because the changes arrive in bursts. A ship pressurising is
+        /// every room gaining air within a second or two, and each one used to drive its own pass
+        /// over every link, every coolant loop and every room on the grid — so a station with two
+        /// thousand compartments paid two thousand passes over two million links to learn what one
+        /// pass would have told it.
+        /// </summary>
+        private bool conductanceTotalsDirty = true;
+
+        private void RecomputeConductanceTotalsIfNeeded()
+        {
+            if (!conductanceTotalsDirty) return;
+            RecomputeConductanceTotals();
+        }
+
         private void RecomputeConductanceTotals()
         {
+            Work.ConductanceRecomputes++;
+            conductanceTotalsDirty = false;
             EnsureBuffers();
             for (int i = 0; i < nodes.Count; i++)
             {

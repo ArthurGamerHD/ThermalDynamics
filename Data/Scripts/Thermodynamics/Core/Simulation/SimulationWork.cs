@@ -35,6 +35,13 @@ namespace Thermodynamics.Core
         public long ExposureRefreshes;
         public long ExposureNodeVisits;
 
+        /// <summary>
+        /// Passes over every link recomputing what conductance each node sees. Structural changes
+        /// mark it stale and it is recomputed once before it is next read, so this should stay
+        /// far below the number of changes that dirtied it.
+        /// </summary>
+        public long ConductanceRecomputes;
+
         /// <summary>Room air rebuilds, and rooms walked by them.</summary>
         public long RoomAirRebuilds;
         public long RoomAirRoomVisits;
@@ -69,6 +76,7 @@ namespace Thermodynamics.Core
             LinksRemoved = 0;
             ExposureRefreshes = 0;
             ExposureNodeVisits = 0;
+            ConductanceRecomputes = 0;
             RoomAirRebuilds = 0;
             RoomAirRoomVisits = 0;
             LoopSearches = 0;
@@ -93,6 +101,7 @@ namespace Thermodynamics.Core
             copy.LinksRemoved = LinksRemoved;
             copy.ExposureRefreshes = ExposureRefreshes;
             copy.ExposureNodeVisits = ExposureNodeVisits;
+            copy.ConductanceRecomputes = ConductanceRecomputes;
             copy.RoomAirRebuilds = RoomAirRebuilds;
             copy.RoomAirRoomVisits = RoomAirRoomVisits;
             copy.LoopSearches = LoopSearches;

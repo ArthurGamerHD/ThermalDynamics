@@ -29,8 +29,22 @@ namespace Thermodynamics.Harness
         /// <summary>One pass over every node recomputing its exposed faces.</summary>
         public double ExposureMs;
 
-        /// <summary>One solver step at the configured frequency.</summary>
+        /// <summary>
+        /// One solver step of the full configured length, with as many substeps as the grid's
+        /// stiffness asks for and no work budget applied.
+        ///
+        /// This is the cost of a full step of simulated time, which is the right figure for
+        /// comparing sizes — but on a grid large enough for <c>MaxLinkVisitsPerStep</c> to bite it
+        /// is <em>not</em> what a tick pays, because the step is shortened to fit. See
+        /// <see cref="BoundedStepMs"/>, and the hitch benchmark for the distribution.
+        /// </summary>
         public double SolverStepMs;
+
+        /// <summary>What a step costs once the work budget has shortened it — what a tick pays.</summary>
+        public double BoundedStepMs;
+
+        /// <summary>Substeps the budget allows at this size.</summary>
+        public int SubstepBudget;
 
         public int Substeps;
         public double ResidentMb;
@@ -253,6 +267,20 @@ namespace Thermodynamics.Harness
             row.SolverStepMs = watch.Elapsed.TotalMilliseconds / measured;
             row.Substeps = simulation.Solver.LastSubsteps;
             row.MsPerSimulatedSecond = row.SolverStepMs * simulation.Settings.StepsPerSecond;
+
+            // And again through the step length the work budget actually allows, which on a large
+            // grid is a fraction of the full one. Same total work per simulated second; the point
+            // is that it arrives in even pieces instead of in lurches.
+            row.SubstepBudget = simulation.SubstepBudget;
+
+            float affordable = simulation.AffordableStepSeconds(step);
+            for (int i = 0; i < 2; i++) simulation.Solver.Step(affordable, state);
+
+            watch.Restart();
+            for (int i = 0; i < measured; i++) simulation.Solver.Step(affordable, state);
+            watch.Stop();
+
+            row.BoundedStepMs = watch.Elapsed.TotalMilliseconds / measured;
 
             // ---- what one block placed costs ----
             //
@@ -763,6 +791,8 @@ namespace Thermodynamics.Harness
               .Append("expos ms".PadLeft(10))
               .Append("step ms".PadLeft(9))
               .Append("sub".PadLeft(5))
+              .Append("tick ms".PadLeft(9))
+              .Append("cap".PadLeft(5))
               .Append("ns/link".PadLeft(9))
               .Append("ms/simsec".PadLeft(11))
               .Append("+1 spike ms".PadLeft(13))
@@ -784,6 +814,8 @@ namespace Thermodynamics.Harness
                   .Append(r.ExposureMs.ToString("n1").PadLeft(10))
                   .Append(r.SolverStepMs.ToString("n2").PadLeft(9))
                   .Append(r.Substeps.ToString().PadLeft(5))
+                  .Append(r.BoundedStepMs.ToString("n2").PadLeft(9))
+                  .Append((r.SubstepBudget == int.MaxValue ? "-" : r.SubstepBudget.ToString()).PadLeft(5))
                   .Append(r.NsPerLinkVisit.ToString("n1").PadLeft(9))
                   .Append(r.MsPerSimulatedSecond.ToString("n1").PadLeft(11))
                   .Append(r.SpikeAfterOneBlockMs.ToString("n1").PadLeft(13))
@@ -805,7 +837,8 @@ namespace Thermodynamics.Harness
         {
             StringBuilder sb = new StringBuilder();
             sb.Append("shape,blocks,links,boundingVolume,exposed,buildMs,topologyMs,roomMapMs,")
-              .Append("exposureMs,solverStepMs,substeps,nsPerLinkVisit,msPerSimulatedSecond,")
+              .Append("exposureMs,solverStepMs,substeps,boundedStepMs,substepBudget,")
+              .Append("nsPerLinkVisit,msPerSimulatedSecond,")
               .Append("spikeAfterOneBlockMs,settleTicks,settleTotalMs,residentMb\n");
 
             for (int i = 0; i < rows.Count; i++)
@@ -822,6 +855,8 @@ namespace Thermodynamics.Harness
                   .Append(r.ExposureMs.ToString("f3")).Append(',')
                   .Append(r.SolverStepMs.ToString("f4")).Append(',')
                   .Append(r.Substeps).Append(',')
+                  .Append(r.BoundedStepMs.ToString("f4")).Append(',')
+                  .Append(r.SubstepBudget == int.MaxValue ? -1 : r.SubstepBudget).Append(',')
                   .Append(r.NsPerLinkVisit.ToString("f3")).Append(',')
                   .Append(r.MsPerSimulatedSecond.ToString("f3")).Append(',')
                   .Append(r.SpikeAfterOneBlockMs.ToString("f3")).Append(',')

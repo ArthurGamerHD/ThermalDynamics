@@ -475,6 +475,44 @@ namespace Thermodynamics.Tests
             Assert.Equal(blocks - destroyed, simulation.Solver.Nodes.Count);
         }
 
+        /// <summary>
+        /// A ship pressurising must cost one pass over its links, not one per compartment.
+        ///
+        /// Every node's total conductance is what the substep estimate divides by thermal mass,
+        /// and a room gaining or losing air changes it. Recomputing on the spot meant a pass over
+        /// every link, every coolant loop and every room — and the changes arrive in bursts, since
+        /// a ship pressurising is every compartment filling within a second or two. A station with
+        /// two thousand of them paid two thousand passes over two million links to learn what one
+        /// pass would have said.
+        /// </summary>
+        [Fact]
+        public void PressurisingEveryRoomCostsOnePassNotOnePerRoom()
+        {
+            ThermalSimulation simulation = Build(Large);
+            while (simulation.HasPendingWork) simulation.Update(LoadBenchmarks.TickSeconds, Space());
+
+            IList<RoomAirNode> air = simulation.RoomAir;
+            Assert.True(air.Count > 4, "the hull should have mapped several compartments, got " + air.Count);
+
+            simulation.Work.Reset();
+
+            for (int i = 0; i < air.Count; i++)
+            {
+                simulation.SetRoomPressure(air[i].Anchor, 1f);
+            }
+
+            // Read through a step, which is what forces the totals to be current.
+            simulation.Update(LoadBenchmarks.TickSeconds, Space());
+            simulation.Update(LoadBenchmarks.TickSeconds, Space());
+
+            output.WriteLine(air.Count + " rooms pressurised: "
+                + simulation.Work.ConductanceRecomputes + " passes over the links.");
+
+            Assert.True(simulation.Work.ConductanceRecomputes <= 2,
+                air.Count + " rooms pressurised caused "
+                + simulation.Work.ConductanceRecomputes + " passes over every link");
+        }
+
         // ---- the budgeted stages ------------------------------------------------------------
 
         /// <summary>
