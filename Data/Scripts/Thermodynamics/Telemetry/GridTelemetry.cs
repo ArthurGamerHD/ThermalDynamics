@@ -57,6 +57,13 @@ namespace Thermodynamics
         public float SolarOcclusion;
 
         public float WindSpeed;
+
+        /// <summary>Where the wind is going, in degrees east of the planet's north.</summary>
+        public float WindBearingDegrees;
+
+        /// <summary>The game's own wind figure at this point: the ceiling the field scales.</summary>
+        public float WindCeiling;
+
         public float WeatherIntensity;
 
         /// <summary>The game's own comfort scale at this point, 0..1. Its model, not this one.</summary>

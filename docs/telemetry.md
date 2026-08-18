@@ -127,7 +127,9 @@ balancing a planet's climate.
 | `ambient_k`, `ambient_c` | the ambient this mod produced |
 | `underground` | 1 when the game says the grid is below the surface |
 | `solar_w`, `solar_occlusion` | irradiance after atmosphere and shadow, and the share shadowed |
-| `wind_speed`, `weather_intensity` | the game's wind speed and weather at that point |
+| `wind_speed`, `wind_bearing_deg` | the wind the model uses, and where it is going: 0 north, 90 east |
+| `wind_ceiling` | the game's own figure, which is the maximum the field scales |
+| `weather_intensity` | the game's weather at that point |
 | `game_temperature` | the game's own comfort figure at that point, 0..1 — its model, for comparison |
 | `surface_material` | the voxel material under the grid: snow, sand, grass, ice |
 | `grid_mean_k`, `grid_peak_k` | what the grid itself did about all of it |

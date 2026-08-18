@@ -245,6 +245,20 @@ if airDensity > 0.01 and v_rel > FrictionAtSpeedsAbove:
     watts = FrictionScale × airDensity × v_rel³ × A_exposed × faceWeight(wind)
 ```
 
+`v_rel` is the wind minus the grid's own velocity, and the wind comes from
+[WindField](../Data/Scripts/Thermodynamics/Core/Simulation/WindField.cs) rather than straight from
+the game. `MyPlanet.GetWindSpeed` is the planet definition's *maximum* wind scaled by air density —
+80 m/s everywhere on an earthlike world at sea level, identical at the pole and the equator, with no
+direction at all. Read as a wind it puts every parked ship in a permanent hurricane: over the
+friction threshold, heating standing still, at nearly double the still-air convection.
+
+So that figure is treated as the ceiling it is, and the field decides how much of it blows and which
+way: Earth's bands — trades blowing west out to 30°, westerlies to 60°, polar easterlies beyond —
+as a bearing that turns smoothly through the calms, times a fraction of the ceiling that runs from
+about an eighth in fair weather to a half in the worst the game reports, times a steady per-place
+variation so one valley is windier than the next. None of it is a simulation of anything; it is a
+map that is steady, cheap, and recognisable when you fly across it.
+
 The v³ law matches the scaling of convective heating in hypersonic flow; `FrictionScale` is a
 game-feel coefficient. `v_rel` is weather wind minus grid velocity, so a stationary ship in a storm
 heats like a fast ship in still air.

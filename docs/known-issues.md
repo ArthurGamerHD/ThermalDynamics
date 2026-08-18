@@ -50,6 +50,13 @@ room overlay span of one kelvin while its owner had changed none of them. Bumpin
 would only have papered over it, and thrown away real customisation each time. The defaults now
 live on the field declarations, where a reader that finds nothing leaves them alone.
 
+**The game has no wind field, and its wind speed is a rating.** `MyPlanet.GetWindSpeed` returns the
+planet definition's maximum wind scaled by air density — a constant per altitude, the same at every
+latitude and longitude, with no direction. It is what wind turbines are balanced against. Used as a
+wind it read 80 m/s over a parked ship on an earthlike world, which tripped friction heating and
+doubled convection; the mod now treats it as a ceiling and supplies its own field. Nothing in the
+API exposes a real local wind, so the field is invented rather than read.
+
 ## Suspected defects
 
 **A face bolted to a block that does not seal is counted as buried.** Exposure rejects any cell face

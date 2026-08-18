@@ -217,6 +217,20 @@ namespace Thermodynamics
                 row.LatitudeDegrees = (float)(Math.Asin(axisDot) * 180d / Math.PI);
 
                 row.WeatherIntensity = MyVisualScriptLogicProvider.GetWeatherIntensity(position);
+                row.WindCeiling = entity.GetWindSpeed(position);
+
+                // Where the wind is going, as a bearing, so the map can be read off the dump:
+                // 0 is due north over the planet's own pole, 90 due east.
+                Vector3 east = Vector3.Cross(axis, up);
+                if (east.LengthSquared() > 1e-6f)
+                {
+                    east = Vector3.Normalize(east);
+                    Vector3 north = Vector3.Normalize(Vector3.Cross(up, east));
+                    Vector3 wind = sample.WindDirection;
+
+                    row.WindBearingDegrees = (float)(Math.Atan2(
+                        Vector3.Dot(wind, east), Vector3.Dot(wind, north)) * 180d / Math.PI);
+                }
                 row.GameTemperature = MyVisualScriptLogicProvider.GetTemperatureInPoint(position);
                 row.SurfaceMaterial = MaterialUnder(entity, ref surface);
             }
@@ -279,14 +293,20 @@ namespace Thermodynamics
                 return;
             }
 
-            float speed = MyVisualScriptLogicProvider.GetWeatherIntensity(position);
-            if (speed == 0f) speed = planet.Entity.GetWindSpeed(position);
+            // The game's figure is a ceiling, not a wind: the planet definition's maximum scaled
+            // by air density, identical at the pole and the equator. Taken literally it puts a
+            // parked ship in a permanent 80 m/s gale — tripping friction heating and doubling
+            // convection — so it sets the scale and the field decides the rest.
+            float ceiling = planet.Entity.GetWindSpeed(position);
+            float weather = MyVisualScriptLogicProvider.GetWeatherIntensity(position);
 
-            Vector3 gravity = planet.GravityComponent.GetWorldGravityNormalized(position);
-            Vector3 direction = Vector3.Cross(gravity, planet.Entity.WorldMatrix.Forward);
-            if (direction.LengthSquared() > 0f) direction = Vector3.Normalize(direction);
+            Vector3 up = sample.UpDirection;
+            Vector3 axis = planet.Entity.PositionComp.WorldMatrixRef.Up;
 
-            sample.WindSpeed = speed;
+            Vector3 direction = WindField.Direction(up, axis);
+            float speed = WindField.Speed(ceiling, weather, WindField.Variation(position));
+
+            sample.WindSpeed = direction.LengthSquared() > 0f ? speed : 0f;
             sample.WindDirection = direction;
 
             Vector3 relative = (direction * speed) - sample.GridVelocity;

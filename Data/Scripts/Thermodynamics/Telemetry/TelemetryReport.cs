@@ -915,7 +915,7 @@ namespace Thermodynamics
 
             sb.Append("time_s,grid,grid_id,planet,altitude_surface_m,altitude_sealevel_m,latitude_deg,");
             sb.Append("sun_elevation_deg,air_density,atmosphere_factor,ambient_k,ambient_c,underground,");
-            sb.Append("solar_w,solar_occlusion,wind_speed,weather_intensity,game_temperature,");
+            sb.Append("solar_w,solar_occlusion,wind_speed,wind_bearing_deg,wind_ceiling,weather_intensity,game_temperature,");
             sb.Append("surface_material,grid_mean_k,grid_peak_k\n");
 
             IList<GridTelemetry> grids = Telemetry.Grids;
@@ -948,6 +948,8 @@ namespace Thermodynamics
                     Csv(sb, row.SolarEnergy);
                     Csv(sb, row.SolarOcclusion);
                     Csv(sb, row.WindSpeed);
+                    Csv(sb, row.WindBearingDegrees);
+                    Csv(sb, row.WindCeiling);
                     Csv(sb, row.WeatherIntensity);
                     Csv(sb, row.GameTemperature);
 
