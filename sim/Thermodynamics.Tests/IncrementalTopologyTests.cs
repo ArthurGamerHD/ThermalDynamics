@@ -432,6 +432,84 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// Enough blocks placed and taken away without a step in between to grow the node buffers
+        /// past their starting size.
+        ///
+        /// A placement does not size the buffers — the step that drains the queue does — so the
+        /// arrays a removal walks can be shorter than the node list. Reading past one throws
+        /// IndexOutOfRangeException, which the game's script whitelist prohibits, so it is not
+        /// even catchable: it would take the grid's update down for the rest of the session. The
+        /// small shapes elsewhere in this file never reach the first growth and would never have
+        /// found it.
+        /// </summary>
+        [Fact]
+        public void PlacingAndRemovingManyBlocksWithoutSteppingStaysInBounds()
+        {
+            GridModel grid = new GridModel(Catalog.LargeGridSize);
+            ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), grid);
+
+            // One step first, so the graph is clean and removal takes the incremental path
+            // rather than the plain one a dirty graph falls back to.
+            simulation.AddBlock(new BlockInstance(Catalog.HeavyArmor(), Vector3I.Zero,
+                BlockOrientation.Identity), 293.15f);
+            simulation.Update(LoadBenchmarks.TickSeconds, Worlds.Shadow());
+
+            List<BlockInstance> placed = new List<BlockInstance>();
+            for (int i = 1; i < 600; i++)
+            {
+                BlockInstance block = new BlockInstance(Catalog.HeavyArmor(),
+                    new Vector3I(0, 0, i), BlockOrientation.Identity);
+                simulation.AddBlock(block, 293.15f);
+                placed.Add(block);
+            }
+
+            // Forwards, not backwards. Removing the last node in the list is the one case that
+            // never moves another node into the hole, so a run that grinds from the end exercises
+            // none of the index repair and would pass with the bounds problem still there.
+            for (int i = 0; i < placed.Count; i++)
+            {
+                simulation.RemoveBlock(placed[i]);
+            }
+
+            simulation.Update(LoadBenchmarks.TickSeconds, Worlds.Shadow());
+
+            Assert.Single(simulation.Solver.Nodes);
+            Assert.Empty(simulation.Solver.Links);
+        }
+
+        /// <summary>
+        /// The same, but stepping between so the links really exist before they are unpicked.
+        /// </summary>
+        [Fact]
+        public void GrindingDownALongRunThatWasFullyLinkedLeavesNothingBehind()
+        {
+            GridModel grid = new GridModel(Catalog.LargeGridSize);
+            ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), grid);
+
+            List<BlockInstance> placed = new List<BlockInstance>();
+            for (int i = 0; i < 600; i++)
+            {
+                BlockInstance block = new BlockInstance(Catalog.HeavyArmor(),
+                    new Vector3I(0, 0, i), BlockOrientation.Identity);
+                simulation.AddBlock(block, 293.15f);
+                placed.Add(block);
+            }
+
+            simulation.Update(LoadBenchmarks.TickSeconds, Worlds.Shadow());
+            simulation.Update(LoadBenchmarks.TickSeconds, Worlds.Shadow());
+            Assert.Equal(599, simulation.Solver.Links.Count);
+
+            for (int i = 0; i < placed.Count; i++)
+            {
+                simulation.RemoveBlock(placed[i]);
+                simulation.Update(LoadBenchmarks.TickSeconds, Worlds.Shadow());
+            }
+
+            Assert.Empty(simulation.Solver.Nodes);
+            Assert.Empty(simulation.Solver.Links);
+        }
+
+        /// <summary>
         /// Seeds a spread that depends only on where a block is, so two grids whose nodes are in
         /// different orders still start from the same physical state.
         /// </summary>

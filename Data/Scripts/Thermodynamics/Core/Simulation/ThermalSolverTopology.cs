@@ -215,6 +215,14 @@ namespace Thermodynamics.Core
 
             Work.NodesRemoved++;
 
+            // Blocks can be placed and taken away again without a step in between, and a
+            // placement does not size the buffers — the step that drains the queue does. So the
+            // node arrays this walks may be shorter than the node list. Reading past one of them
+            // throws IndexOutOfRangeException, which the game's script whitelist prohibits, so it
+            // would not even be catchable: it would take the grid's update down for the session.
+            EnsureBuffers();
+            EnsureNodeChainCapacity(nodes.Count);
+
             doomedLinks.Clear();
             for (int link = nodeFirstLink[index]; link != -1; link = NextLink(link, index))
             {
