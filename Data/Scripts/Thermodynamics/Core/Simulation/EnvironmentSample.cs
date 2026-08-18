@@ -39,6 +39,20 @@ namespace Thermodynamics.Core
         /// <summary>True when something blocks the line to the sun.</summary>
         public bool IsSolarOccluded;
 
+        /// <summary>
+        /// How much of the grid the sun cannot reach, 0..1, from whatever stands between it and the
+        /// sun: a planet, an asteroid, another ship.
+        ///
+        /// A fraction rather than a flag because a ship is not a point. A kilometre of hull crossing
+        /// a terminator, or drifting out from behind an asteroid, is partly lit for as long as it
+        /// takes to cross — and a flag makes that a step change from full sun to none, which reads
+        /// as a bug in the shadow rather than as the crude answer it is.
+        ///
+        /// <see cref="IsSolarOccluded"/> is the fully-shadowed case, kept because most of the model
+        /// only cares whether there is any sun at all.
+        /// </summary>
+        public float SolarOcclusion;
+
         /// <summary>Weather or planetary wind speed at the grid, m/s.</summary>
         public float WindSpeed;
 
@@ -89,6 +103,7 @@ namespace Thermodynamics.Core
         {
             EnvironmentSample s = Vacuum(Vector3.Zero);
             s.IsSolarOccluded = true;
+            s.SolarOcclusion = 1f;
             return s;
         }
     }

@@ -155,12 +155,17 @@ Solar gain, when the grid is not occluded:
 
 ```
 watts = solarEnergy × ε × faceWeight(sun) × A_exposed × litFraction
-solarEnergy = SolarEnergy × (1 − SolarDecay × atmosphereFactor)
+solarEnergy = SolarEnergy × (1 − occludedShare) × (1 − SolarDecay × atmosphereFactor)
 ```
 
-Occlusion against the rest of the world is resolved per grid, not per block, by a raycast toward the
-sun repeated every `SolarOcclusionInterval` steps. Planets are tested analytically by angular size;
-voxels and grids by a ray against their bounding segment. Being underground forces occlusion.
+Occlusion against the rest of the world is resolved per grid, not per block, every
+`SolarOcclusionInterval` steps. Planets are tested analytically by angular size; voxels by a physics
+raycast; other grids by a ray against their blocks. Each of the three is a separate switch, because
+each costs a different amount. Being underground forces full occlusion.
+
+The result is a fraction, not a flag: `SolarOcclusionSamples` points spread through the hull are each
+tested, and `solarEnergy` is scaled by the share that reached the sun. One sample — the default — is
+a single ray from the grid's centre and gives 0 or 1, which is what the model did before.
 
 `litFraction` is the grid's shadow on itself, and is 1 for every block when `SolarSelfShadowing` is
 off. When it is on, [SunShadowMap](../Data/Scripts/Thermodynamics/Core/Simulation/SunShadowMap.cs)

@@ -54,6 +54,31 @@ namespace Thermodynamics
         /// model, which lights any face pointing at the sun.
         /// </summary>
         [ProtoMember(58)] public bool SolarSelfShadowing;
+
+        /// <summary>
+        /// Whether a planet can shadow a grid — night, and the shadow of a world seen from orbit.
+        /// Analytic: an angle against the planet's radius, no raycast, so it is the cheap one.
+        /// </summary>
+        [ProtoMember(59)] public bool SolarOcclusionPlanets;
+
+        /// <summary>
+        /// Whether asteroids and other voxels can shadow a grid. Costs a physics raycast per
+        /// candidate voxel per sample.
+        /// </summary>
+        [ProtoMember(71)] public bool SolarOcclusionVoxels;
+
+        /// <summary>
+        /// Whether other grids can shadow a grid — a station's hull over a docked ship, a fleet in
+        /// formation. Costs a ray against the other grid's blocks per candidate per sample.
+        /// </summary>
+        [ProtoMember(72)] public bool SolarOcclusionGrids;
+
+        /// <summary>
+        /// How many points across a grid are tested, 1..9. One is a single ray from the middle,
+        /// which is all or nothing for the whole ship. More points spread through the hull turn a
+        /// terminator crossing into a ramp, and cost their own share of the work each.
+        /// </summary>
+        [ProtoMember(73)] public int SolarOcclusionSamples;
         [ProtoMember(15)] public bool EnableHeatSources;
         [ProtoMember(16)] public bool EnableWasteHeat;
         [ProtoMember(17)] public bool EnablePlanets;
@@ -131,6 +156,10 @@ namespace Thermodynamics
                 EnableConvection = true,
                 EnableSolarHeat = true,
                 SolarSelfShadowing = true,
+                SolarOcclusionPlanets = true,
+                SolarOcclusionVoxels = true,
+                SolarOcclusionGrids = true,
+                SolarOcclusionSamples = 1,
                 EnableHeatSources = true,
                 EnableWasteHeat = true,
                 EnablePlanets = true,
@@ -179,6 +208,9 @@ namespace Thermodynamics
             if (HeatTimeScale <= 0f) HeatTimeScale = 1f;
             if (TelemetrySampleStride < 1) TelemetrySampleStride = 1;
             if (SolarOcclusionInterval < 1) SolarOcclusionInterval = 1;
+            if (SolarOcclusionSamples < 1) SolarOcclusionSamples = 1;
+            if (SolarOcclusionSamples > Core.SolarOcclusionSampler.MaxSamples)
+                SolarOcclusionSamples = Core.SolarOcclusionSampler.MaxSamples;
             if (DebugBlockOverlay < 0) DebugBlockOverlay = 0;
             if (DebugBlockOverlay >= ThermalDebugView.ModeCount)
                 DebugBlockOverlay = ThermalDebugView.ModeCount - 1;
@@ -271,6 +303,8 @@ namespace Thermodynamics
             {
                 "EnableEnvironment", "EnableConduction", "EnableRadiation", "EnableConvection",
                 "EnableSolarHeat", "SolarSelfShadowing",
+                "SolarOcclusionPlanets", "SolarOcclusionVoxels", "SolarOcclusionGrids",
+                "SolarOcclusionSamples",
                 "EnableHeatSources", "EnableWasteHeat", "EnablePlanets",
                 "EnableFriction", "EnableDamage", "EnableCoolantLoops", "EnableRoomAir",
                 "EnableHeatPumps",
@@ -296,6 +330,10 @@ namespace Thermodynamics
                 case "EnableConvection": return Flag(EnableConvection);
                 case "EnableSolarHeat": return Flag(EnableSolarHeat);
                 case "SolarSelfShadowing": return Flag(SolarSelfShadowing);
+                case "SolarOcclusionPlanets": return Flag(SolarOcclusionPlanets);
+                case "SolarOcclusionVoxels": return Flag(SolarOcclusionVoxels);
+                case "SolarOcclusionGrids": return Flag(SolarOcclusionGrids);
+                case "SolarOcclusionSamples": return SolarOcclusionSamples;
                 case "EnableHeatSources": return Flag(EnableHeatSources);
                 case "EnableWasteHeat": return Flag(EnableWasteHeat);
                 case "EnablePlanets": return Flag(EnablePlanets);
@@ -342,6 +380,10 @@ namespace Thermodynamics
                 case "EnableConvection": EnableConvection = Flag(value); return true;
                 case "EnableSolarHeat": EnableSolarHeat = Flag(value); return true;
                 case "SolarSelfShadowing": SolarSelfShadowing = Flag(value); return true;
+                case "SolarOcclusionPlanets": SolarOcclusionPlanets = Flag(value); return true;
+                case "SolarOcclusionVoxels": SolarOcclusionVoxels = Flag(value); return true;
+                case "SolarOcclusionGrids": SolarOcclusionGrids = Flag(value); return true;
+                case "SolarOcclusionSamples": SolarOcclusionSamples = (int)value; return true;
                 case "EnableHeatSources": EnableHeatSources = Flag(value); return true;
                 case "EnableWasteHeat": EnableWasteHeat = Flag(value); return true;
                 case "EnablePlanets": EnablePlanets = Flag(value); return true;
@@ -383,6 +425,9 @@ namespace Thermodynamics
             return name != null && name != "DebugBlockOverlay"
                 && (name.StartsWith("Enable") || name.StartsWith("Debug")
                 || name == "SolarSelfShadowing"
+                || name == "SolarOcclusionPlanets"
+                || name == "SolarOcclusionVoxels"
+                || name == "SolarOcclusionGrids"
                 || name == "ClampConductionOvershoot" || name == "DamageIsPerSecond");
         }
 

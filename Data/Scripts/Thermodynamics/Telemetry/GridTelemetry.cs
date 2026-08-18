@@ -138,6 +138,13 @@ namespace Thermodynamics
         public readonly RunningStat WindSpeed = new RunningStat();
         public readonly RunningStat ConvectionCoefficient = new RunningStat();
         public readonly RunningStat EffectiveSolarEnergy = new RunningStat();
+
+        /// <summary>
+        /// Share of the grid in shadow per sample, 0..1. Distinct from
+        /// <see cref="OccludedSamples"/>, which counts only the samples where none of it was lit:
+        /// a fleet flying through a station's shadow spends most of its time between the two.
+        /// </summary>
+        public readonly RunningStat OccludedShare = new RunningStat();
         public readonly RunningStat Speed = new RunningStat();
         public long EnvironmentSamples;
         public long OccludedSamples;
@@ -343,6 +350,7 @@ namespace Thermodynamics
 
             EnvironmentSamples++;
             if (sample.IsSolarOccluded) OccludedSamples++;
+            OccludedShare.Add(sample.SolarOcclusion);
             if (sample.AirDensity > 0.01f) InAtmosphereSamples++;
 
             AmbientTemperature.Add(state.AmbientTemperature);

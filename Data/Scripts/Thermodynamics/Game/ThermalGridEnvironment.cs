@@ -36,7 +36,8 @@ namespace Thermodynamics
             new Dictionary<long, PlanetThermalProperties>();
 
         private long currentPlanetId = -1;
-        private bool solarOccluded;
+        /// <summary>Last measured share of the grid the sun cannot reach, 0..1.</summary>
+        private float solarOcclusion;
         private int stepsSinceOcclusionTest = int.MaxValue;
 
         /// <summary>The most recent sample, kept for the HUD and the telemetry report.</summary>
@@ -79,7 +80,8 @@ namespace Thermodynamics
             PlanetManager.Planet planet = PlanetManager.GetClosestPlanet(position);
             SamplePlanet(ref sample, ref position, planet);
             SampleWind(ref sample, ref position, ref worldToLocal, planet);
-            sample.IsSolarOccluded = sample.IsUnderground || IsSolarOccluded(ref position, ref sample);
+            sample.SolarOcclusion = sample.IsUnderground ? 1f : SolarOcclusion(ref position, ref sample);
+            sample.IsSolarOccluded = sample.SolarOcclusion >= 1f;
 
             // Heat sources other than the sun. The buffer belongs to this grid and is reused, so
             // a session with no registered sources allocates nothing and costs one count test.
@@ -171,18 +173,18 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Whether anything stands between the grid and the sun. Re-tested every
-        /// <see cref="Settings.SolarOcclusionInterval"/> steps and cached in between: the
-        /// geometry it walks changes over seconds, not over a sixtieth of one.
+        /// How much of the grid the sun cannot reach, 0..1. Re-tested every
+        /// <see cref="Settings.SolarOcclusionInterval"/> steps and cached in between: the geometry
+        /// it walks changes over seconds, not over a sixtieth of one.
         /// </summary>
-        private bool IsSolarOccluded(ref Vector3D position, ref EnvironmentSample sample)
+        private float SolarOcclusion(ref Vector3D position, ref EnvironmentSample sample)
         {
-            if (!Settings.Instance.EnableSolarHeat) return true;
+            if (!Settings.Instance.EnableSolarHeat) return 1f;
 
             if (stepsSinceOcclusionTest < Settings.Instance.SolarOcclusionInterval)
             {
                 stepsSinceOcclusionTest++;
-                return solarOccluded;
+                return solarOcclusion;
             }
 
             stepsSinceOcclusionTest = 1;
@@ -190,22 +192,59 @@ namespace Thermodynamics
             if (Telemetry.Enabled && Stats != null) Stats.SolarTime.Begin();
             try
             {
-                solarOccluded = RaycastSun(ref position, ref sample);
+                solarOcclusion = MeasureOcclusion(ref position, ref sample);
             }
             catch (Exception e)
             {
-                Telemetry.Exception("ThermalGrid.IsSolarOccluded", e);
+                Telemetry.Exception("ThermalGrid.SolarOcclusion", e);
             }
             finally
             {
                 if (Telemetry.Enabled && Stats != null) Stats.SolarTime.End();
             }
 
-            return solarOccluded;
+            return solarOcclusion;
         }
 
+        /// <summary>
+        /// Casts from a few points spread through the grid and reports the share of them that
+        /// cannot see the sun.
+        ///
+        /// Each sample is a full query: the candidates along one ray are not the candidates along
+        /// another, and reusing one list would miss the asteroid that covers the bow and not the
+        /// stern — which is the whole reason for sampling more than once. So the cost is linear in
+        /// the sample count, which is why it is a setting and why it defaults to one.
+        /// </summary>
+        private float MeasureOcclusion(ref Vector3D position, ref EnvironmentSample sample)
+        {
+            Settings settings = Settings.Instance;
+
+            BoundingBoxD bounds = Grid.PositionComp.WorldAABB;
+            SolarOcclusionSampler.Points(bounds, settings.SolarOcclusionSamples, SamplePoints);
+
+            int occluded = 0;
+
+            for (int i = 0; i < SamplePoints.Count; i++)
+            {
+                Vector3D origin = SamplePoints[i];
+                if (RaycastSun(ref origin, ref sample)) occluded++;
+            }
+
+            return SamplePoints.Count == 0 ? 0f : occluded / (float)SamplePoints.Count;
+        }
+
+        /// <summary>
+        /// Whether anything stands between one point and the sun.
+        ///
+        /// Each kind of occluder is its own switch, because each costs a different amount. A planet
+        /// is an angle against a radius and costs nothing worth measuring. A voxel is a physics
+        /// raycast. Another grid is a ray against its blocks, which is the dearest of the three and
+        /// the one a fleet multiplies.
+        /// </summary>
         private bool RaycastSun(ref Vector3D position, ref EnvironmentSample sample)
         {
+            Settings settings = Settings.Instance;
+
             LineD line = new LineD(position, position + ((Vector3D)sample.SunDirection * 15000000d));
 
             OverlapResults.Clear();
@@ -220,6 +259,8 @@ namespace Thermodynamics
                 MyPlanet planet = entity as MyPlanet;
                 if (planet != null)
                 {
+                    if (!settings.SolarOcclusionPlanets) continue;
+
                     Vector3D toGrid = position - planet.PositionComp.WorldMatrixRef.Translation;
                     double distance = toGrid.Length();
                     if (distance <= 0) continue;
@@ -235,6 +276,7 @@ namespace Thermodynamics
                 MyVoxelBase voxel = entity as MyVoxelBase;
                 if (voxel != null)
                 {
+                    if (!settings.SolarOcclusionVoxels) continue;
                     if (voxel.RootVoxel is MyPlanet) continue;
 
                     LineD segment;
@@ -249,13 +291,15 @@ namespace Thermodynamics
                 MyCubeGrid other = entity as MyCubeGrid;
                 if (other != null && other.Physics != null && other.EntityId != Grid.EntityId)
                 {
+                    if (!settings.SolarOcclusionGrids) continue;
+
                     LineD segment;
                     other.PositionComp.WorldAABB.Intersect(ref line, out segment);
                     occluded = other.RayCastBlocks(segment.From, segment.To).HasValue;
                 }
             }
 
-            if (Settings.Instance.DebugSolarRaycast && !MyAPIGateway.Utilities.IsDedicated)
+            if (settings.DebugSolarRaycast && !MyAPIGateway.Utilities.IsDedicated)
             {
                 Vector4 color = (occluded ? Color.Red : Color.White).ToVector4();
                 MySimpleObjectDraw.DrawLine(line.From, line.To, MyStringId.GetOrCompute("Square"), ref color, 0.1f);
@@ -263,5 +307,8 @@ namespace Thermodynamics
 
             return occluded;
         }
+
+        /// <summary>Reused so a sampled occlusion test allocates nothing.</summary>
+        private static readonly List<Vector3D> SamplePoints = new List<Vector3D>();
     }
 }

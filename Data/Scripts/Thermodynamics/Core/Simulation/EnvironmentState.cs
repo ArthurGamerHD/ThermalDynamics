@@ -55,6 +55,11 @@ namespace Thermodynamics.Core
         /// <summary>True when no solar energy reaches the grid.</summary>
         public bool IsSolarOccluded;
 
+        /// <summary>
+        /// How much of the grid the sun cannot reach, 0..1. Solar gain is scaled by what is left.
+        /// </summary>
+        public float SolarOcclusion;
+
         /// <summary>Relative airflow direction in the grid's local frame.</summary>
         public Vector3 WindDirectionLocal;
 

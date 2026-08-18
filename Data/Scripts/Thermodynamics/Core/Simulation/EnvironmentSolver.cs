@@ -33,7 +33,12 @@ namespace Thermodynamics.Core
             }
 
             // ---- solar ---------------------------------------------------------------------
-            state.IsSolarOccluded = sample.IsSolarOccluded || !settings.EnableSolarHeat;
+            // The flag and the fraction have to agree in both directions: a caller that only set
+            // the flag — every scenario written before the fraction existed — still means "no sun".
+            state.SolarOcclusion = Clamp01(sample.SolarOcclusion);
+            if (sample.IsSolarOccluded || !settings.EnableSolarHeat) state.SolarOcclusion = 1f;
+
+            state.IsSolarOccluded = state.SolarOcclusion >= 1f;
 
             // ---- no planet, or planets disabled --------------------------------------------
             bool usePlanet = settings.EnablePlanets && sample.HasPlanet && planet != null;
@@ -43,7 +48,7 @@ namespace Thermodynamics.Core
                 state.AirDensity = 0f;
                 state.AtmosphereFactor = 0f;
                 state.ConvectionCoefficient = 0f;
-                state.SolarEnergy = state.IsSolarOccluded ? 0f : settings.SolarEnergy;
+                state.SolarEnergy = settings.SolarEnergy * (1f - state.SolarOcclusion);
                 state.FrictionActive = false;
                 return state;
             }
@@ -58,6 +63,7 @@ namespace Thermodynamics.Core
             {
                 ambient = planet.UndergroundTemperature;
                 state.IsSolarOccluded = true;
+                state.SolarOcclusion = 1f;
             }
             else
             {
@@ -76,9 +82,9 @@ namespace Thermodynamics.Core
             state.ConvectionCoefficient = planet.ConvectionCoefficient * windBonus;
 
             // ---- solar through atmosphere --------------------------------------------------
-            state.SolarEnergy = state.IsSolarOccluded
-                ? 0f
-                : settings.SolarEnergy * (1f - (planet.SolarDecay * state.AtmosphereFactor));
+            state.SolarEnergy = settings.SolarEnergy
+                * (1f - state.SolarOcclusion)
+                * (1f - (planet.SolarDecay * state.AtmosphereFactor));
             if (state.SolarEnergy < 0f) state.SolarEnergy = 0f;
 
             // ---- friction ------------------------------------------------------------------

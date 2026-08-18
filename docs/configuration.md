@@ -56,6 +56,10 @@ Each switch removes exactly its own mechanism and its own cost.
 | `EnableConduction` | `true` | Heat flow between touching blocks. |
 | `EnableRadiation` | `true` | Radiative exchange with the ambient sky. |
 | `EnableConvection` | `true` | Convective exchange with the surrounding air. |
+| `SolarOcclusionPlanets` | `true` | A planet may shadow the grid: night, and a world's shadow from orbit. Analytic — an angle against the planet's radius, no raycast — so it is nearly free. |
+| `SolarOcclusionVoxels` | `true` | Asteroids and other voxels may shadow the grid. Costs a physics raycast per candidate voxel per sample. |
+| `SolarOcclusionGrids` | `true` | Other ships and stations may shadow the grid. Costs a ray against the other grid's blocks per candidate per sample — the dearest of the three, and the one a fleet multiplies. |
+| `SolarOcclusionSamples` | 1 | Points across the grid tested for shadow, 1..9. One is a single ray from the middle: the whole ship is lit or dark together, and flips the moment its centre crosses a shadow. More points spread through the hull turn that step into a ramp, at the cost of one full query each. |
 | `SolarSelfShadowing` | `true` | A grid shadows itself: a face standing behind the ship's own structure takes no sunlight. Costs a walk from each cell toward the sun each time the sun moves more than 2°, spread over ticks in slices, and nothing between those. Turn it off for the cheap model, which lights any exposed face pointing at the sun. |
 | `EnableSolarHeat` | `true` | Solar gain and the sun occlusion raycast. |
 | `EnableHeatSources` | `true` | Gain from point sources registered by other mods. |
@@ -155,6 +159,22 @@ A pass runs when the sun has moved 2° in the grid's own frame. On a planet that
 of play. In space it is the *ship's* rotation that moves the sun, so a grid spinning fast rebuilds
 continuously — a sustained ~1 ms per tick on a mid-size ship rather than an occasional one. If that
 ever matters, `SolarSelfShadowing` off is the answer, and it is free.
+
+### External shadow
+
+`SolarOcclusionInterval` decides how often any of it is re-tested; the three switches decide what is
+tested at all, and each is priced differently:
+
+| Occluder | How it is tested | Cost |
+| --- | --- | --- |
+| Planet | angle against the planet's radius | arithmetic, no ray |
+| Voxel | physics raycast against the asteroid | one raycast per candidate |
+| Grid | ray against the other grid's blocks | one block ray per candidate |
+
+Shadow is now a fraction rather than a flag: `SolarOcclusionSamples` points are cast from inside the
+hull, and solar gain is scaled by the share that reached the sun. At the default of one sample that
+share is 0 or 1 and behaves exactly as before. Raise it and a kilometre-long ship crossing a
+terminator dims over the crossing instead of switching off when its centre passes.
 
 The three solar settings stack as a choice of cost. `EnableSolarHeat` off is free and models no
 sunlight at all. On with `SolarSelfShadowing` off is the cheap model: a face is lit whenever it

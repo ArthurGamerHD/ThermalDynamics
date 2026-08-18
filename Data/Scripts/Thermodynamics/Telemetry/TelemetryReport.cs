@@ -513,6 +513,7 @@ namespace Thermodynamics
                 Field(sb, "  wind speed m/s", g.WindSpeed.Format("n2"));
                 Field(sb, "  convection coeff", g.ConvectionCoefficient.Format("n3"));
                 Field(sb, "  effective solar W", g.EffectiveSolarEnergy.Format("n1"));
+                Field(sb, "  occluded share", g.OccludedShare.Format("n3"));
                 Field(sb, "  grid speed m/s", g.Speed.Format("n2"));
                 Field(sb, "  sun occluded", (100.0 * g.OccludedFraction).ToString("n1") + " % of "
                     + g.EnvironmentSamples.ToString("n0") + " samples");
