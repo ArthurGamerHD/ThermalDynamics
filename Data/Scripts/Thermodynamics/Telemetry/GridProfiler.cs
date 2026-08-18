@@ -24,7 +24,12 @@ namespace Thermodynamics
 
         public void End(SimulationPhase phase)
         {
-            Stat(phase).End();
+            TimingStat stat = Stat(phase);
+            stat.End();
+
+            // Also into the frame's total, so a stall can be split by stage across every grid
+            // that ran on it rather than only within the grid that happened to be worst.
+            Telemetry.FrameCost.AddStage((int)phase, stat.LastMilliseconds);
         }
 
         public TimingStat Stat(SimulationPhase phase)

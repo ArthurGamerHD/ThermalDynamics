@@ -38,6 +38,7 @@ to.
 | Block placed / removed | one test (`GetBlockType` returns null and the record is never made) |
 | Overheat damage | one test |
 | Simulation stages | `Profiler` is null; one null check per stage per update |
+| Per-frame cost | nothing is accumulated and no frame is closed; one test |
 | Per-mechanism watts | `CollectDiagnostics` is false, so the solver does not compute or store them |
 
 The last row is the one that used to be unavoidable. Radiation, convection, solar and friction
@@ -54,6 +55,8 @@ per grid:
 * a **rotating slice** of nodes, `1/stride` of the grid, feeding the per-definition statistics
   and the anomaly detector. Every node is seen once per `stride` steps, so full per-block
   coverage costs one pass spread over four steps rather than a pass every step;
+* the frame's running total — one add per grid per tick, and one closed frame per rendered
+  frame, into a histogram and a list of sixteen structs;
 * structure — link, room, loop and queue counts — once in eight steps. Every figure there is a
   collection count; the link count in particular is now maintained by the solver, where the old
   code had to walk every cell for it.
@@ -62,6 +65,61 @@ Memory is bounded by construction. There are no sample buffers and no per-block 
 figure is a streaming count, sum, sum of squares, min and max, or a fixed-bucket histogram. The
 dictionaries are bounded by the number of block definitions (4096), grids that have existed
 (2048) and anomaly kinds (64); overruns are counted and reported rather than allowed to grow.
+
+## Frame cost and hitching
+
+The section to read first when someone reports stuttering.
+
+Every other cost figure in the report is per grid, and a stutter is not per grid. Grids tick on
+the ten-frame cadence and the engine calls them all on the same frame, so twenty ships each
+taking a tolerable two milliseconds are a forty-millisecond frame — and every per-grid row still
+looks fine. `FrameCostTracker` adds up what the mod spent on each frame across every grid, and
+keeps the **worst sixteen frames of the session in full**.
+
+The report gives, under `Cost`:
+
+| Figure | What it says |
+| --- | --- |
+| `frames with work` | frames on which any grid updated |
+| `mean` / `worst` | the mod's cost per frame, all grids together |
+| `over a 60 fps frame` | frames where the mod alone exceeded 16.7 ms, and what share that is |
+| `worst over mean` | how spiky the session was — see below |
+| distribution | the same fixed-bucket histogram the other timings use |
+| worst frames | sixteen samples, worst first |
+
+Each worst-frame sample names the frame, when in the session it happened, the total, the split
+across topology, room mapping, exposure and solver, how many grids ran, which single grid was
+worst and how large it is — and **what the one-shot stages touched**: nodes visited for topology,
+nodes refreshed for exposure, cells flooded. Those counts are what turns "a 90 ms frame" into "a
+300,000-block station rebuilt its whole conduction graph", which is a line to change rather than
+a number to worry about.
+
+**`worst over mean` is the number to quote about smoothness.** A mod that is uniformly expensive
+has a ratio near one and costs frame rate, which players tolerate; one that is cheap on average
+and occasionally enormous has a ratio in the hundreds and costs a stutter, which they do not. The
+two want completely different fixes, and a mean alone cannot tell them apart.
+
+Frames costing under 4 ms are never considered for the list. Without that floor a quiet session
+reports its sixteen most ordinary frames as though they were hitches.
+
+The frame is closed at the top of the *next* frame rather than at the end of its own, because the
+order the engine runs session components and entity components in is not something a mod
+controls, and a frame closed before its grids have run records nothing.
+
+## Work counters
+
+Alongside the millisecond figures, the simulation counts what its one-shot stages *touched*:
+rebuilds, node visits, links built, cells flooded, loop searches, substeps. See
+`SimulationWork` in the core.
+
+The two kinds of number answer different questions, and the counts are the ones that travel. A
+topology stage with a worst call of 90 ms and a node-visit count equal to the grid size is a
+global rebuild — an algorithm problem, reproducible anywhere. The same stage with a count of
+forty is a slow machine. Milliseconds alone cannot distinguish them, which is why a report that
+carried only timings could say a session stuttered without saying why.
+
+They are also what the load tests in `sim/` assert against, so a claim proved on a benchmark and
+a claim observed in a real world are the same claim.
 
 ## Output
 

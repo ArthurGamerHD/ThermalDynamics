@@ -21,14 +21,16 @@
 
   <!--
     The telemetry module lives outside Core because most of it reads Sandbox.* and VRage.Game
-    types that cannot load here. These three files are the exception: they hold its accumulators,
-    its anomaly classification and its formatting, and reference nothing but System. They are
-    linked rather than duplicated so the tests exercise exactly what the game compiles.
+    types that cannot load here. These four files are the exception: they hold its accumulators,
+    its anomaly classification, its formatting and its per-frame cost tracker, and reference
+    nothing but System. They are linked rather than duplicated so the tests exercise exactly what
+    the game compiles.
   -->
   <ItemGroup>
     <Compile Include="$(TelemetrySourceRoot)TelemetryStats.cs" LinkBase="Telemetry" />
     <Compile Include="$(TelemetrySourceRoot)TelemetryAnomalies.cs" LinkBase="Telemetry" />
     <Compile Include="$(TelemetrySourceRoot)TelemetryFormat.cs" LinkBase="Telemetry" />
+    <Compile Include="$(TelemetrySourceRoot)FrameCost.cs" LinkBase="Telemetry" />
   </ItemGroup>
 
   <!--

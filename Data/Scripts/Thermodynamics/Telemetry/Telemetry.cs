@@ -126,6 +126,16 @@ namespace Thermodynamics
         /// <summary>Wall clock spent inside the mod's own per-frame entry points.</summary>
         public static readonly TimingStat SessionFrameTime = new TimingStat("session frame");
 
+        /// <summary>
+        /// What the mod costs per frame across every grid, and the worst frames of the session.
+        ///
+        /// Every other cost figure here is per grid, and a stutter is not per grid: twenty ships
+        /// each taking a tolerable two milliseconds on the same frame is forty milliseconds of
+        /// one frame. Grids tick on the ten-frame cadence and the engine calls them together, so
+        /// that is the default shape of the cost rather than a corner case.
+        /// </summary>
+        public static readonly FrameCostTracker FrameCost = new FrameCostTracker();
+
         public static double SessionSeconds
         {
             get { return SessionClock.Elapsed.TotalSeconds; }
@@ -216,6 +226,11 @@ namespace Thermodynamics
         public static void FrameTick()
         {
             if (!Enabled) return;
+
+            // The frame being closed is the previous one. Which order the engine runs session
+            // components and entity components in is not something a mod controls, and a frame
+            // closed before its grids have run records nothing at all.
+            FrameCost.EndFrame(FramesObserved, SessionSeconds);
 
             FramesObserved++;
             CaptureIdentity();

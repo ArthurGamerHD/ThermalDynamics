@@ -191,6 +191,9 @@ namespace Thermodynamics
         public double TotalMilliseconds;
         public double MaxMilliseconds;
 
+        /// <summary>The most recent call, so a caller can forward it somewhere else too.</summary>
+        public double LastMilliseconds;
+
         private readonly Stopwatch _watch = new Stopwatch();
         private readonly Histogram _distribution = new Histogram(Histogram.MillisecondEdges());
 
@@ -213,6 +216,7 @@ namespace Thermodynamics
 
         public void Record(double milliseconds)
         {
+            LastMilliseconds = milliseconds;
             Calls++;
             TotalMilliseconds += milliseconds;
             if (milliseconds > MaxMilliseconds) MaxMilliseconds = milliseconds;

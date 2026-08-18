@@ -505,6 +505,8 @@ namespace Thermodynamics
                 ? "-"
                 : (100.0 * total / (Telemetry.SessionSeconds * 1000.0)).ToString("n3") + " %");
 
+            WriteFrames(sb);
+
             sb.Append("\n  grid simulation, per call:\n");
             simulation.WriteDistribution(sb, "    ");
             sb.Append("\n  solver, per call:\n");
@@ -515,6 +517,55 @@ namespace Thermodynamics
             topology.WriteDistribution(sb, "    ");
             sb.Append("\n  solar occlusion, per call:\n");
             solar.WriteDistribution(sb, "    ");
+        }
+
+        /// <summary>
+        /// What the mod cost per frame across every grid, and the worst frames of the session.
+        ///
+        /// This is the section to read first when someone reports stuttering. Every other cost
+        /// figure is per grid and a stutter is not per grid: twenty ships each taking two
+        /// tolerable milliseconds on the same frame is a forty-millisecond frame, and the
+        /// per-grid rows all look fine. The worst frames are printed in full because a stutter
+        /// is a particular event with a cause, and the counts of what its stages touched say
+        /// which cause it was.
+        /// </summary>
+        private static void WriteFrames(StringBuilder sb)
+        {
+            FrameCostTracker frames = Telemetry.FrameCost;
+
+            sb.Append("\n  per frame, all grids together:\n");
+
+            if (frames.Frame.Calls == 0)
+            {
+                sb.Append("    (no frame did any work)\n");
+                return;
+            }
+
+            Field(sb, "frames with work", frames.FramesWithWork.ToString("n0"));
+            Field(sb, "mean", frames.Frame.MeanMilliseconds.ToString("n3") + " ms");
+            Field(sb, "worst", frames.Frame.MaxMilliseconds.ToString("n3") + " ms");
+            Field(sb, "over a 60 fps frame", frames.FramesOverBudget.ToString("n0") + " frames ("
+                + (frames.FramesWithWork == 0
+                    ? "-"
+                    : (100.0 * frames.FramesOverBudget / frames.FramesWithWork).ToString("n2") + " %")
+                + ")");
+
+            // The one number worth quoting about smoothness. Near one is a mod that is uniformly
+            // expensive, which costs frame rate; in the hundreds is one that is cheap on average
+            // and occasionally enormous, which costs a stutter. They want different fixes.
+            Field(sb, "worst over mean", frames.SpikeRatio.ToString("n1") + "x");
+
+            sb.Append("\n    distribution:\n");
+            frames.Frame.WriteDistribution(sb, "      ");
+
+            IList<FrameSample> worst = frames.Worst;
+            if (worst.Count == 0) return;
+
+            sb.Append("\n    worst frames:\n");
+            for (int i = 0; i < worst.Count; i++)
+            {
+                sb.Append("      ").Append(worst[i].Describe()).Append('\n');
+            }
         }
 
         private static List<GridTelemetry> SortedGrids()

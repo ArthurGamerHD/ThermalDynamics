@@ -35,9 +35,24 @@ namespace Thermodynamics
             // Stats is null when telemetry is off, and also when the grid record cap was hit.
             if (Telemetry.Enabled && Stats != null)
             {
+                SimulationWork work = Simulation.Work;
+                long topologyBefore = work.TopologyNodeVisits;
+                long exposureBefore = work.ExposureNodeVisits;
+                long cellsBefore = work.RoomCellsVisited;
+
                 Stats.SimulationTime.Begin();
                 UpdateInternal();
                 Stats.SimulationTime.End();
+
+                Telemetry.FrameCost.AddGrid(
+                    Grid == null ? "(grid)" : Grid.DisplayName,
+                    Stats.SimulationTime.LastMilliseconds,
+                    blocks.Count);
+
+                Telemetry.FrameCost.AddWork(
+                    work.TopologyNodeVisits - topologyBefore,
+                    work.ExposureNodeVisits - exposureBefore,
+                    work.RoomCellsVisited - cellsBefore);
                 return;
             }
 
