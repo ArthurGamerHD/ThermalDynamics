@@ -20,6 +20,12 @@ namespace Thermodynamics
     /// Editing follows the same rule as <c>/thermal set</c>: the config is server side, so on a
     /// multiplayer client every simulation control is disabled and only the client-side
     /// presentation switches can be touched. Nothing here writes to disk until Save is pressed.
+    ///
+    /// The page is one column read from the top: Save and Reset first, then short titled groups of
+    /// three controls each. That shape is forced by the framework as much as chosen — a tile is a
+    /// fixed 300x250 box that masks whatever does not fit inside it, and a group is a fixed-height
+    /// row that scrolls sideways through its tiles. One tile per group, three controls per tile, is
+    /// the only arrangement in which everything is both visible and in one vertical line.
     /// </summary>
     public static class ThermalSettingsMenu
     {
@@ -44,18 +50,22 @@ namespace Thermodynamics
             }
         }
 
-        private const string Mechanisms = "Mechanisms";
+        private const string Transfer = "Heat transfer";
+        private const string Solar = "Solar";
+        private const string Occlusion = "Solar occlusion";
+        private const string Systems = "Ship systems";
+        private const string HeatPumps = "Heat pumps";
         private const string Solver = "Solver";
         private const string Environment = "Environment";
-        private const string HeatPumps = "Heat pumps";
         private const string Presentation = "Presentation";
         private const string TelemetrySection = "Telemetry";
         private const string Other = "Other";
 
-        /// <summary>Categories in the order they are laid out.</summary>
+        /// <summary>Sections in the order the page reads, top to bottom.</summary>
         private static readonly string[] Order =
         {
-            Mechanisms, Solver, Environment, HeatPumps, Presentation, TelemetrySection, Other,
+            Transfer, Solar, Occlusion, Systems, HeatPumps, Solver, Environment,
+            Presentation, TelemetrySection, Other,
         };
 
         /// <summary>
@@ -65,26 +75,26 @@ namespace Thermodynamics
         /// </summary>
         private static readonly Dictionary<string, Entry> Layout = new Dictionary<string, Entry>
         {
-            { "EnableEnvironment", new Entry(Mechanisms, "Environment", "Ambient exchange with air, ground and space. Off leaves only internal heat flow.", 0, 1) },
-            { "EnableConduction", new Entry(Mechanisms, "Conduction", "Heat flow between touching blocks.", 0, 1) },
-            { "EnableRadiation", new Entry(Mechanisms, "Radiation", "Radiative exchange with the sky from exposed faces.", 0, 1) },
-            { "EnableConvection", new Entry(Mechanisms, "Convection", "Exchange with atmosphere and with room air.", 0, 1) },
-            { "EnableSolarHeat", new Entry(Mechanisms, "Solar heat", "Sunlight on exposed faces, occlusion included.", 0, 1) },
-            { "SolarSelfShadowing", new Entry(Mechanisms, "Solar self-shadowing", "A grid shadows itself: a face behind the ship's own structure takes no sunlight. Costs a pass over the grid's cells whenever the sun moves. Off is the cheap model, which lights any face pointing at the sun.", 0, 1) },
-            { "SolarOcclusionPlanets", new Entry(Mechanisms, "Occlusion: planets", "A planet can shadow the grid — night, and a world's shadow seen from orbit. Analytic, and the cheapest of the three.", 0, 1) },
-            { "SolarOcclusionTerrain", new Entry(Mechanisms, "Occlusion: terrain", "The planet's own ground can shadow the grid — the mountain to the east at sunrise, the canyon wall. Ground-height lookups, and only near a surface.", 0, 1) },
-            { "SolarTerrainRange", new Entry(Mechanisms, "Terrain range", "How far along the sun ray the terrain walk looks, in metres. Near ground is what shadows you; far ground almost never does.", 500f, 20000f) },
-            { "SolarOcclusionVoxels", new Entry(Mechanisms, "Occlusion: asteroids", "Asteroids and other voxels can shadow the grid. Costs a physics raycast per candidate.", 0, 1) },
-            { "SolarOcclusionGrids", new Entry(Mechanisms, "Occlusion: other grids", "Other ships and stations can shadow the grid. Costs a ray against their blocks, and a fleet multiplies it.", 0, 1) },
-            { "SolarOcclusionSamples", new Entry(Mechanisms, "Occlusion samples", "Points across the grid tested for shadow. 1 is a single ray from the middle, all or nothing for the whole ship; more turn a terminator crossing into a ramp and cost their share of the work each.", 1, 9, true) },
-            { "EnableHeatSources", new Entry(Mechanisms, "Point heat sources", "Heat from sources registered through the mod API.", 0, 1) },
-            { "EnableWasteHeat", new Entry(Mechanisms, "Waste heat", "Power producers, consumers and thrusters turning throughput into heat.", 0, 1) },
-            { "EnablePlanets", new Entry(Mechanisms, "Planets", "Per-planet ambient, air and ground temperatures.", 0, 1) },
-            { "EnableFriction", new Entry(Mechanisms, "Friction", "Atmospheric heating above the speed threshold.", 0, 1) },
-            { "EnableDamage", new Entry(Mechanisms, "Overheat damage", "Blocks above their critical temperature take damage.", 0, 1) },
-            { "EnableCoolantLoops", new Entry(Mechanisms, "Coolant loops", "Closed pipe rings acting as one fluid mass.", 0, 1) },
-            { "EnableRoomAir", new Entry(Mechanisms, "Room air", "Sealed rooms hold an air mass that carries heat.", 0, 1) },
-            { "EnableHeatPumps", new Entry(Mechanisms, "Heat pumps", "The block that moves heat up a gradient for an electrical cost.", 0, 1) },
+            { "EnableEnvironment", new Entry(Transfer, "Environment", "Ambient exchange with air, ground and space. Off leaves only internal heat flow.", 0, 1) },
+            { "EnableConduction", new Entry(Transfer, "Conduction", "Heat flow between touching blocks.", 0, 1) },
+            { "EnableRadiation", new Entry(Transfer, "Radiation", "Radiative exchange with the sky from exposed faces.", 0, 1) },
+            { "EnableConvection", new Entry(Transfer, "Convection", "Exchange with atmosphere and with room air.", 0, 1) },
+            { "EnableSolarHeat", new Entry(Solar, "Solar heat", "Sunlight on exposed faces, occlusion included.", 0, 1) },
+            { "SolarSelfShadowing", new Entry(Solar, "Solar self-shadowing", "A grid shadows itself: a face behind the ship's own structure takes no sunlight. Costs a pass over the grid's cells whenever the sun moves. Off is the cheap model, which lights any face pointing at the sun.", 0, 1) },
+            { "SolarOcclusionPlanets", new Entry(Occlusion, "Occlusion: planets", "A planet can shadow the grid — night, and a world's shadow seen from orbit. Analytic, and the cheapest of the three.", 0, 1) },
+            { "SolarOcclusionTerrain", new Entry(Occlusion, "Occlusion: terrain", "The planet's own ground can shadow the grid — the mountain to the east at sunrise, the canyon wall. Ground-height lookups, and only near a surface.", 0, 1) },
+            { "SolarTerrainRange", new Entry(Occlusion, "Terrain range", "How far along the sun ray the terrain walk looks, in metres. Near ground is what shadows you; far ground almost never does.", 500f, 20000f) },
+            { "SolarOcclusionVoxels", new Entry(Occlusion, "Occlusion: asteroids", "Asteroids and other voxels can shadow the grid. Costs a physics raycast per candidate.", 0, 1) },
+            { "SolarOcclusionGrids", new Entry(Occlusion, "Occlusion: other grids", "Other ships and stations can shadow the grid. Costs a ray against their blocks, and a fleet multiplies it.", 0, 1) },
+            { "SolarOcclusionSamples", new Entry(Occlusion, "Occlusion samples", "Points across the grid tested for shadow. 1 is a single ray from the middle, all or nothing for the whole ship; more turn a terminator crossing into a ramp and cost their share of the work each.", 1, 9, true) },
+            { "EnableHeatSources", new Entry(Systems, "Point heat sources", "Heat from sources registered through the mod API.", 0, 1) },
+            { "EnableWasteHeat", new Entry(Systems, "Waste heat", "Power producers, consumers and thrusters turning throughput into heat.", 0, 1) },
+            { "EnablePlanets", new Entry(Systems, "Planets", "Per-planet ambient, air and ground temperatures.", 0, 1) },
+            { "EnableFriction", new Entry(Systems, "Friction", "Atmospheric heating above the speed threshold.", 0, 1) },
+            { "EnableDamage", new Entry(Systems, "Overheat damage", "Blocks above their critical temperature take damage.", 0, 1) },
+            { "EnableCoolantLoops", new Entry(Systems, "Coolant loops", "Closed pipe rings acting as one fluid mass.", 0, 1) },
+            { "EnableRoomAir", new Entry(Systems, "Room air", "Sealed rooms hold an air mass that carries heat.", 0, 1) },
+            { "EnableHeatPumps", new Entry(Systems, "Heat pumps", "The block that moves heat up a gradient for an electrical cost.", 0, 1) },
 
             { "ClampConductionOvershoot", new Entry(Solver, "Clamp conduction overshoot", "Stops a step from pushing two blocks past each other's temperature. Leave on.", 0, 1) },
             { "DamageIsPerSecond", new Entry(Solver, "Damage is per second", "Overheat damage scaled to real time rather than to the step.", 0, 1) },
@@ -93,12 +103,12 @@ namespace Thermodynamics
             { "HeatTimeScale", new Entry(Solver, "Heat time scale", "Seconds of physical time per second of play. The dial that makes heat happen on a human scale.", 1f, 1000f) },
 
             { "VacuumTemperature", new Entry(Environment, "Vacuum temperature", "Sky temperature in space, K. 2.7 is the real background.", 0f, 300f) },
-            { "SolarEnergy", new Entry(Environment, "Solar energy", "Irradiance at the planet, W/m2.", 0f, 5000f) },
+            { "SolarEnergy", new Entry(Solar, "Solar energy", "Irradiance at the planet, W/m2.", 0f, 5000f) },
             { "FrictionAtSpeedsAbove", new Entry(Environment, "Friction above", "Speed at which atmospheric friction starts, m/s.", 0f, 300f) },
             { "FrictionScale", new Entry(Environment, "Friction scale", "Multiplier on friction heating.", 0f, 0.01f) },
             { "RoomConvectionCoefficient", new Entry(Environment, "Room convection", "Convective coefficient between a block and room air, W/(m2 K).", 0f, 50f) },
             { "RoomAirDensity", new Entry(Environment, "Room air density", "Density of room air, kg/m3. 1.225 is sea level.", 0f, 5f) },
-            { "SolarOcclusionInterval", new Entry(Environment, "Occlusion interval", "Solver steps between sun occlusion raycasts.", 1, 60, true) },
+            { "SolarOcclusionInterval", new Entry(Occlusion, "Occlusion interval", "Solver steps between sun occlusion raycasts.", 1, 60, true) },
 
             { "HeatPumpCarnotFraction", new Entry(HeatPumps, "Carnot fraction", "How much of the Carnot limit a pump achieves, 0..1.", 0f, 1f) },
             { "HeatPumpMaxCoefficient", new Entry(HeatPumps, "Max coefficient", "Ceiling on the coefficient of performance.", 0f, 20f) },
@@ -185,69 +195,104 @@ namespace Thermodynamics
             RichHudTerminal.Root.Enabled = true;
             RichHudTerminal.Root.Add(page);
 
+            // Save and reset first, at the top, so they are found without reading the page. There
+            // is one of each for the whole file: a Save per section invites the question of what
+            // the other Saves did, and the answer was always "the same thing".
+            page.Add(Actions(editable));
+
             List<string> names = Settings.Names();
+            List<string> section = new List<string>();
 
             for (int i = 0; i < Order.Length; i++)
             {
-                string category = Order[i];
-
-                ControlCategory group = new ControlCategory
-                {
-                    HeaderText = category,
-                    SubheaderText = Subheader(category, editable),
-                };
-
-                ControlTile tile = new ControlTile();
-                int inTile = 0;
-                bool any = false;
+                section.Clear();
 
                 for (int n = 0; n < names.Count; n++)
                 {
-                    string name = names[n];
-                    if (CategoryOf(name) != category) continue;
-
-                    // A tile is a column. Splitting keeps a long category readable rather than
-                    // running one column off the bottom of the page.
-                    if (inTile == TileSize)
-                    {
-                        group.Add(tile);
-                        tile = new ControlTile();
-                        inTile = 0;
-                    }
-
-                    tile.Add(Control(name, editable));
-                    inTile++;
-                    any = true;
+                    if (SectionOf(names[n]) == Order[i]) section.Add(names[n]);
                 }
 
-                if (!any) continue;
+                AddSection(Order[i], section, editable);
+            }
+        }
+
+        /// <summary>
+        /// Lays one section out as however many single-column groups it needs.
+        ///
+        /// A tile is 300x250 and masks what does not fit, and a group is a fixed-height row that
+        /// scrolls sideways through its tiles — so the only layout that reads straight down the
+        /// page is one tile per group, holding no more than a tile can show. Long sections
+        /// therefore continue into another group rather than overflowing one, which is what the
+        /// previous seven-per-tile layout did: the controls past the fourth were drawn and then
+        /// masked out of existence.
+        /// </summary>
+        private static void AddSection(string name, List<string> members, bool editable)
+        {
+            for (int start = 0; start < members.Count; start += ControlsPerTile)
+            {
+                ControlTile tile = new ControlTile();
+
+                int end = Math.Min(members.Count, start + ControlsPerTile);
+                for (int i = start; i < end; i++)
+                {
+                    tile.Add(Control(members[i], editable));
+                }
+
+                ControlCategory group = new ControlCategory
+                {
+                    HeaderText = start == 0 ? name : name + " (cont.)",
+                    SubheaderText = start == 0 ? Subheader(name, editable) : "",
+                };
 
                 group.Add(tile);
-                group.Add(Actions(category, editable));
                 page.Add(group);
             }
         }
 
-        /// <summary>Controls per column.</summary>
-        private const int TileSize = 7;
+        /// <summary>
+        /// Controls per tile. The tile is 250 high with 54 of padding at each end, and a control is
+        /// about 40 with 12 of spacing, so three fit and a fourth is masked away.
+        /// </summary>
+        private const int ControlsPerTile = 3;
 
-        private static string Subheader(string category, bool editable)
+        private static string Subheader(string section, bool editable)
         {
             if (!editable)
             {
-                return category == Presentation
-                    ? "Client side; yours to change."
-                    : "Server side; read only from a client.";
+                return section == Presentation
+                    ? "Client side; yours to change"
+                    : "Server side; read only from a client";
             }
 
-            return "Changes apply immediately. Save writes them to the config file.";
+            return SectionNotes.ContainsKey(section) ? SectionNotes[section] : "";
         }
 
         /// <summary>
-        /// Save and defaults, repeated on every category so neither is ever a scroll away from the
-        /// control that was just changed.
+        /// What each section is for, in one line. The controls carry their own descriptions, so
+        /// this only has to say what kind of thing is below it.
         /// </summary>
-        private static ControlTile Actions(string category, bool editable)
+        private static readonly Dictionary<string, string> SectionNotes = new Dictionary<string, string>
+        {
+            { Transfer, "How heat moves, and whether it moves at all" },
+            { Solar, "Sunlight, and the shadow a grid casts on itself" },
+            { Occlusion, "What else can stand between a grid and the sun, and what each costs" },
+            { Systems, "The parts of the ship that make or move heat" },
+            { HeatPumps, "How hard a pump can work, and what it pays" },
+            { Solver, "Pace and stability of the integration" },
+            { Environment, "The world the grid sits in" },
+            { Presentation, "What is drawn on your screen. Client side." },
+            { TelemetrySection, "Data collection, for testing rather than for play" },
+            { Other, "Settings this menu has no description for yet" },
+        };
+
+        /// <summary>
+        /// One Save and one Reset, for the whole file.
+        ///
+        /// Nothing here writes to disk until Save is pressed, so a session can be experimented with
+        /// and abandoned by not pressing it — which is also why Reset does not save: it puts the
+        /// values back and leaves the file alone until you say otherwise.
+        /// </summary>
+        private static ControlCategory Actions(bool editable)
         {
             ControlTile tile = new ControlTile();
 
@@ -266,31 +311,49 @@ namespace Thermodynamics
 
             TerminalButton defaults = new TerminalButton
             {
-                Name = "Reset " + category.ToLower() + " to defaults",
-                ToolTip = Tip("Puts this category back to the values a fresh install ships with. Not saved until you press Save."),
-                Enabled = editable || category == Presentation,
+                Name = "Reset everything to defaults",
+                ToolTip = Tip("Puts every setting back to what a fresh install ships with. Applies at once; not written to the config file until you press Save."),
+                Enabled = true,
             };
-            defaults.ControlChangedHandler = (sender, args) => ResetCategory(category);
+            defaults.ControlChangedHandler = (sender, args) => ResetAll();
             tile.Add(defaults);
 
-            return tile;
+            ControlCategory group = new ControlCategory
+            {
+                HeaderText = "Thermodynamics",
+                SubheaderText = editable
+                    ? "Changes apply immediately. Save writes them to the config file."
+                    : "Server side; a client may change only the presentation settings below.",
+            };
+
+            group.Add(tile);
+            return group;
         }
 
-        private static void ResetCategory(string category)
+        /// <summary>
+        /// Puts back every setting the player is allowed to change — which on a client is the
+        /// presentation switches and nothing else, so a reset there cannot quietly ask the server
+        /// for a world it has no say over.
+        /// </summary>
+        private static void ResetAll()
         {
             Settings fresh = Settings.GetDefaults();
             List<string> names = Settings.Names();
 
+            int changed = 0;
             for (int i = 0; i < names.Count; i++)
             {
                 string name = names[i];
-                if (CategoryOf(name) != category) continue;
                 if (!CanEdit(name)) continue;
 
                 Settings.Instance.SetValue(name, fresh.GetValue(name));
+                changed++;
             }
 
             Settings.Instance.Apply();
+
+            MyAPIGateway.Utilities.ShowNotification(
+                "Thermodynamics: " + changed + " settings back to defaults (unsaved)", 3000, "White");
         }
 
         private static TerminalControlBase Control(string name, bool editable)
@@ -394,7 +457,7 @@ namespace Thermodynamics
             return new ToolTip { text = new RichText(text) };
         }
 
-        private static string CategoryOf(string name)
+        private static string SectionOf(string name)
         {
             Entry entry;
             return Layout.TryGetValue(name, out entry) ? entry.Category : Other;
