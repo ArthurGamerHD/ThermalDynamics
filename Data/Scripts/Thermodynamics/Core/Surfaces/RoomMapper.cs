@@ -25,7 +25,16 @@ namespace Thermodynamics.Core
         private readonly SurfaceMap surfaces;
 
         private readonly Queue<Vector3I> frontier = new Queue<Vector3I>();
-        private readonly HashSet<Vector3I> visited = new HashSet<Vector3I>(Vector3I.Comparer);
+        /// <summary>
+        /// Cells this pass has already classified, one bit each over the search box.
+        ///
+        /// A hash set was the obvious structure and the wrong one. By the end of a pass this holds
+        /// every cell of the bounding box — that is what a flood fill does — and at thirty-one
+        /// bytes a cell it was the high-water mark of the whole mod: 121 MB of a 400 MB peak on a
+        /// 127,000-block ship, scaling with the box rather than with the ship, so a hull that is
+        /// nine tenths empty paid for the emptiness.
+        /// </summary>
+        private readonly CellBitset visited = new CellBitset();
 
         /// <summary>
         /// Cells belonging to a door. These are never classified as solid structure even when
@@ -245,7 +254,7 @@ namespace Thermodynamics.Core
 
             working = new RoomMap();
             frontier.Clear();
-            visited.Clear();
+            visited.Reset(searchMin, searchMaxExclusive);
             CollectDoorCells();
 
             if (searchMaxExclusive.X <= searchMin.X ||

@@ -169,7 +169,7 @@ namespace Thermodynamics.Harness
         public static readonly int[] DefaultSizes = { 8000, 32000, 125000, 500000, 1000000 };
 
         public static readonly string[] Names =
-            { "scale", "hitch", "weld", "load", "spike", "pace", "reach" };
+            { "scale", "hitch", "weld", "load", "spike", "pace", "reach", "memory" };
 
         // ---- the ladder --------------------------------------------------------------------
 
@@ -951,6 +951,162 @@ namespace Thermodynamics.Harness
                   .Append('\n');
             }
 
+            return sb.ToString();
+        }
+
+        /// <summary>What one stage of building a grid cost in memory.</summary>
+        public class MemoryRow
+        {
+            public string Stage;
+            public double Megabytes;
+            public long Entries;
+            public string Note = "";
+
+            public double BytesPerBlock;
+        }
+
+        /// <summary>
+        /// Where a grid's memory goes, attributed to the structure that took it.
+        ///
+        /// Measured by building the grid in stages and reading the managed heap between them,
+        /// rather than by adding up what the type layouts ought to cost. The two disagree: a
+        /// dictionary keyed on a twelve-byte vector spends about forty bytes an entry once its
+        /// buckets, hash codes and load factor are counted, and a hash set over a bounding volume
+        /// spends that for every cell of empty space inside a ship's envelope.
+        ///
+        /// Collected before each reading so what is reported is what is retained rather than what
+        /// happened to be uncollected.
+        /// </summary>
+        public static List<MemoryRow> Memory(string shape, int targetCells)
+        {
+            List<MemoryRow> rows = new List<MemoryRow>();
+
+            HashSet<Vector3I> cells = LoadShapes.Build(shape, targetCells);
+            BlockModel armour = Catalog.HeavyArmor();
+            BlockModel fitting = Catalog.Grating();
+
+            long baseline = Settled();
+
+            // 1. the block instances themselves
+            GridBuilder builder = GridBuilder.Large();
+            List<BlockInstance> instances = new List<BlockInstance>();
+            int index = 0;
+            foreach (Vector3I cell in cells)
+            {
+                BlockInstance block = new BlockInstance(
+                    (index++ % 8) == 0 ? fitting : armour, cell, BlockOrientation.Identity);
+                instances.Add(block);
+            }
+
+            long afterInstances = Settled();
+            int blocks = instances.Count;
+            rows.Add(Row("BlockInstance", afterInstances - baseline, blocks, blocks,
+                "one object per block, plus its cell and surface arrays"));
+
+            // 2. the grid's own indexes
+            GridModel grid = builder.Grid;
+            for (int i = 0; i < instances.Count; i++) grid.Add(instances[i]);
+
+            long afterGrid = Settled();
+            rows.Add(Row("GridModel indexes", afterGrid - afterInstances, blocks, blocks,
+                "by cell, by key, by slot, and the flat list"));
+
+            // 3. surfaces
+            ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), grid);
+            simulation.Surfaces.Rebuild(grid);
+
+            long afterSurfaces = Settled();
+            rows.Add(Row("SurfaceMap", afterSurfaces - afterGrid, simulation.Surfaces.CellCount, blocks,
+                "two dictionaries, one entry per occupied cell each"));
+
+            // 4. solver nodes and the conduction graph
+            for (int i = 0; i < instances.Count; i++)
+            {
+                simulation.Solver.AddBlock(instances[i], 293.15f);
+            }
+            simulation.Solver.RebuildLinks();
+
+            long afterSolver = Settled();
+            rows.Add(Row("Solver", afterSolver - afterSurfaces, simulation.Solver.LinkCount, blocks,
+                "nodes, mirrored arrays, links and their chains"));
+
+            // 5. the room map, which floods the whole bounding volume.
+            //
+            // Two figures, because they differ by an order of magnitude and only one of them is
+            // usually quoted. What the finished map retains is modest. What the pass needs while
+            // it runs is a visited set over every cell of the bounding box, and that is live for
+            // the whole pass — on a large grid it is the high-water mark of the entire mod.
+            Vector3I extents = (grid.Max - grid.Min) + Vector3I.One;
+            long volume = (long)extents.X * extents.Y * extents.Z;
+
+            simulation.Rooms.RequestRestart(grid);
+
+            long peak = afterSolver;
+            while (simulation.Rooms.HasWorkPending)
+            {
+                simulation.Rooms.Step(65536);
+                long now = GC.GetTotalMemory(false);
+                if (now > peak) peak = now;
+            }
+
+            long afterRooms = Settled();
+
+            rows.Add(Row("RoomMap retained", afterRooms - afterSolver, volume, blocks,
+                "the published map: solid, external and per-room cell sets"));
+            rows.Add(Row("RoomMapper peak", peak - afterSolver, volume, blocks,
+                "high-water mark while a pass runs — a visited set over the whole bounding box"));
+
+            rows.Add(Row("TOTAL retained", afterRooms - baseline, blocks, blocks, ""));
+            rows.Add(Row("TOTAL peak", peak - baseline, blocks, blocks,
+                "what the process actually has to hold"));
+
+            // Without this the readings above are nonsense, and quietly so. Nothing uses these
+            // after the last stage, so the collection inside the final measurement is entitled to
+            // reclaim the entire grid — which reported the retained total as zero and the room map
+            // as having freed 142 MB it never held.
+            GC.KeepAlive(simulation);
+            GC.KeepAlive(instances);
+            GC.KeepAlive(grid);
+            GC.KeepAlive(cells);
+
+            return rows;
+        }
+
+        private static MemoryRow Row(string stage, long bytes, long entries, int blocks, string note)
+        {
+            MemoryRow row = new MemoryRow();
+            row.Stage = stage;
+            row.Megabytes = bytes / (1024d * 1024d);
+            row.Entries = entries;
+            row.Note = note;
+            row.BytesPerBlock = blocks == 0 ? 0d : bytes / (double)blocks;
+            return row;
+        }
+
+        private static long Settled()
+        {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+            return GC.GetTotalMemory(true);
+        }
+
+        public static string MemoryTable(IList<MemoryRow> rows)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.Append("stage".PadRight(24)).Append("MB".PadLeft(10))
+              .Append("B/block".PadLeft(10)).Append("entries".PadLeft(14))
+              .Append("  what holds it").Append('\n');
+
+            for (int i = 0; i < rows.Count; i++)
+            {
+                MemoryRow r = rows[i];
+                sb.Append(r.Stage.PadRight(24))
+                  .Append(r.Megabytes.ToString("n1").PadLeft(10))
+                  .Append(r.BytesPerBlock.ToString("n0").PadLeft(10))
+                  .Append(r.Entries.ToString("n0").PadLeft(14))
+                  .Append("  ").Append(r.Note).Append('\n');
+            }
             return sb.ToString();
         }
 

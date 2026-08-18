@@ -190,6 +190,15 @@ namespace Thermodynamics.Sim
                     return 0;
                 }
 
+                case "memory":
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("== memory, " + shape + " " + size.ToString("n0") + " ==");
+                    Console.WriteLine();
+                    Console.WriteLine(LoadBenchmarks.MemoryTable(LoadBenchmarks.Memory(shape, size)));
+                    return 0;
+                }
+
                 case "profiles":
                 {
                     float seconds = OptionInt(args, "--seconds", 20);
@@ -347,6 +356,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  bench pace  --size N    does slowing sim and raising transfer save anything");
             Console.WriteLine("  bench reach --length N  how fast heat crosses a grid, against what it costs");
             Console.WriteLine("  bench profiles          the named profiles, measured side by side");
+            Console.WriteLine("  bench memory --size N   where a grid's memory goes, by structure");
             Console.WriteLine("    --shape ship|cube|truss   --max N   --ticks N   --csv <dir>");
             Console.WriteLine("    --diagnostics             as telemetry runs it: per-node watts on");
         }

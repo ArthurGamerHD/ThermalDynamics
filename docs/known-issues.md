@@ -157,10 +157,14 @@ field grid with 2.14 links per node: 991,000 budgeted link visits cost 85–150 
 ~17 ms the link count alone predicts. The unit should be links plus nodes, which also means the
 default wants recalibrating against a game runtime rather than against the harness's .NET 9.
 
-**A grid at a million blocks costs 2.5 GB.** The design budget is ~110 MB
-([scale-design.md §6](scale-design.md#6-data-structures)); the gap is object-per-node and
-object-per-block layout plus the room map's hash sets over the whole bounding volume. This may
-bind before the solver does, and none of the structure-of-arrays work that would fix it is built.
+**A grid holds about 1.8 KB a block, against a design budget of ~110 bytes a node**
+([scale-design.md §6](scale-design.md#6-data-structures)). Measured at 126,731 blocks: 213 MB
+retained, 278 MB peak. Half of the retained figure is indexed by *bounding volume* rather than by
+block, so a hull pays for the empty space it encloses. The earlier figure quoted here — 2.5 GB at a
+million blocks — was `GetTotalMemory` without a collection and counted garbage; the peak was real,
+the retained figure was not. [memory.md](memory.md) has the breakdown and six local changes that
+roughly halve it, none of which help SE2, where the problem is that three structures are indexed
+per cell rather than per block.
 
 **Block storage is still per cell, which is what stands between the model and SE2.** The geometry,
 the conduction graph and the integrator all work from integer AABBs and cost the same whatever a
