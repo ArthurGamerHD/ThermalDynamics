@@ -701,19 +701,73 @@ namespace Thermodynamics.Core
         /// </summary>
         public void RefreshExposure(RoomMap rooms)
         {
-            Work.ExposureRefreshes++;
-            Work.ExposureNodeVisits += nodes.Count;
+            BeginExposureRefresh(rooms);
+            while (StepExposureRefresh(int.MaxValue)) { }
+        }
 
-            for (int i = 0; i < nodes.Count; i++)
+        /// <summary>The map the current exposure pass is reading, or null when none is running.</summary>
+        private RoomMap exposureMap;
+        private int exposureCursor;
+
+        /// <summary>True while an exposure pass has nodes left to visit.</summary>
+        public bool ExposureRefreshPending
+        {
+            get { return exposureMap != null; }
+        }
+
+        /// <summary>
+        /// Starts a pass that recomputes every node's exposed faces against a room map.
+        ///
+        /// Resumable for the same reason the flood fill is: it is proportional to the grid and
+        /// it lands in one tick. A room pass completing on a 127k ship cost 30 ms here, all of
+        /// it on the tick that published the map — on top of that tick's room stage, which is
+        /// how a single tick came to cost a hundred milliseconds.
+        ///
+        /// Running it in slices leaves some nodes reading the previous map for a few ticks. That
+        /// is not a new inaccuracy: the map they were reading is the one they had been reading
+        /// for the hundreds of ticks the pass took to build, and a wall's exposure changing a
+        /// fraction of a second late is invisible against a thermal clock measured in minutes.
+        /// A stutter is not.
+        /// </summary>
+        public void BeginExposureRefresh(RoomMap rooms)
+        {
+            Work.ExposureRefreshes++;
+            exposureMap = rooms;
+            exposureCursor = 0;
+        }
+
+        /// <summary>
+        /// Advances a pass by at most <paramref name="nodeBudget"/> nodes.
+        /// </summary>
+        /// <returns>True while the pass still has nodes left.</returns>
+        public bool StepExposureRefresh(int nodeBudget)
+        {
+            if (exposureMap == null) return false;
+            if (nodeBudget <= 0) return true;
+
+            int end = exposureCursor + nodeBudget;
+            if (end > nodes.Count) end = nodes.Count;
+
+            Work.ExposureNodeVisits += end - exposureCursor;
+
+            for (int i = exposureCursor; i < end; i++)
             {
                 ThermalNode node = nodes[i];
-                surfaces.GetExposedFaces(node.Block, rooms, exposureScratch);
+                surfaces.GetExposedFaces(node.Block, exposureMap, exposureScratch);
                 for (int f = 0; f < Face.Count; f++)
                 {
                     node.ExposedFaces[f] = exposureScratch[f];
                 }
                 node.RefreshExposure();
             }
+
+            exposureCursor = end;
+
+            if (exposureCursor < nodes.Count) return true;
+
+            exposureMap = null;
+            exposureCursor = 0;
+            return false;
         }
 
         /// <summary>

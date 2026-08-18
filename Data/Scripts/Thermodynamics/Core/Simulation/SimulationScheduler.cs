@@ -101,6 +101,21 @@ namespace Thermodynamics.Core
             return budget;
         }
 
+        /// <summary>
+        /// Node budget for one slice of an exposure pass.
+        ///
+        /// Scaled off the grid the same way the mapping budget is, so a large ship spreads the
+        /// pass over more ticks rather than paying for it in one, with a floor that lets a small
+        /// grid finish inside a single tick.
+        /// </summary>
+        public static int ExposureBudget(int nodeCount)
+        {
+            int budget = nodeCount / 40;
+            if (budget < 256) budget = 256;
+            if (budget > 4096) budget = 4096;
+            return budget;
+        }
+
         public void Reset()
         {
             accumulator = 0f;

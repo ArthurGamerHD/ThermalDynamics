@@ -111,7 +111,7 @@ namespace Thermodynamics.Tests
                 simulation.Update(LoadBenchmarks.TickSeconds, Worlds.Shadow());
             }
 
-            while (simulation.Rooms.HasWorkPending)
+            while (simulation.HasPendingWork)
             {
                 simulation.Update(LoadBenchmarks.TickSeconds, Worlds.Shadow());
             }

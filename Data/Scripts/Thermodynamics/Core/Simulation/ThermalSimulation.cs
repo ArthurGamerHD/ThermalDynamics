@@ -225,6 +225,20 @@ namespace Thermodynamics.Core
             End(SimulationPhase.Exposure);
         }
 
+        /// <summary>
+        /// True while some budgeted pass still has work left — the room flood fill, or the
+        /// exposure refresh that follows it.
+        ///
+        /// Worth having as one question rather than two. Now that both stages are spread over
+        /// ticks, a caller that waits on only the mapper stops one stage early, and everything
+        /// that waits for a grid to settle — the benchmarks, the load tests, the scenario runner
+        /// — was written when the mapper was the only budgeted thing there was.
+        /// </summary>
+        public bool HasPendingWork
+        {
+            get { return rooms.HasWorkPending || solver.ExposureRefreshPending; }
+        }
+
         /// <summary>The air masses of the grid's sealed rooms.</summary>
         public IList<RoomAirNode> RoomAir
         {
@@ -418,10 +432,21 @@ namespace Thermodynamics.Core
 
             if (exposureDirty)
             {
-                Begin(SimulationPhase.Exposure);
                 exposureDirty = false;
-                solver.RefreshExposure(rooms.Map);
-                solver.RebuildRoomAir(rooms.Map);
+                solver.BeginExposureRefresh(rooms.Map);
+            }
+
+            if (solver.ExposureRefreshPending)
+            {
+                Begin(SimulationPhase.Exposure);
+
+                bool more = solver.StepExposureRefresh(
+                    SimulationScheduler.ExposureBudget(solver.Nodes.Count));
+
+                // The air of a room is built from the blocks bounding it, so it is rebuilt once
+                // the exposure they carry is current — not part way through.
+                if (!more) solver.RebuildRoomAir(rooms.Map);
+
                 End(SimulationPhase.Exposure);
             }
 

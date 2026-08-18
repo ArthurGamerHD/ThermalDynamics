@@ -636,7 +636,7 @@ namespace Thermodynamics.Harness
                 coalescedSim.AddBlock(new BlockInstance(Catalog.LightArmor(), CellFor(i), BlockOrientation.Identity));
             }
             coalescedSim.Update(1f / 60f, Worlds.Shadow());
-            while (coalescedSim.Rooms.HasWorkPending) coalescedSim.Update(1f / 60f, Worlds.Shadow());
+            while (coalescedSim.HasPendingWork) coalescedSim.Update(1f / 60f, Worlds.Shadow());
             coalesced.Stop();
 
             Stopwatch perBlock = Stopwatch.StartNew();
@@ -933,7 +933,7 @@ namespace Thermodynamics.Harness
             simulation.AddBlock(reactor);
             reactor.PowerProducedWatts = 0.3f * ThermalConstants.MegawattsToWatts;
 
-            while (simulation.Rooms.HasWorkPending) simulation.Update(10f / 60f, Worlds.Shadow());
+            while (simulation.HasPendingWork) simulation.Update(10f / 60f, Worlds.Shadow());
 
             RoomAudit closed = simulation.AuditRooms();
 
@@ -1100,7 +1100,7 @@ namespace Thermodynamics.Harness
             }
 
             simulation.RebuildAll();
-            while (simulation.Rooms.HasWorkPending) simulation.Update(1f / 60f, Worlds.Shadow());
+            while (simulation.HasPendingWork) simulation.Update(1f / 60f, Worlds.Shadow());
             build.Stop();
 
             int cells = simulation.Solver.Nodes.Count;
@@ -1177,7 +1177,7 @@ namespace Thermodynamics.Harness
                        .Producing(2f * ThermalConstants.MegawattsToWatts);
 
                 ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);
-                while (simulation.Rooms.HasWorkPending) simulation.Update(1f / 60f, Worlds.Shadow());
+                while (simulation.HasPendingWork) simulation.Update(1f / 60f, Worlds.Shadow());
 
                 cellsEach = simulation.Solver.Nodes.Count;
                 fleet.Add(simulation);
@@ -1254,7 +1254,7 @@ namespace Thermodynamics.Harness
             BlockInstance exposed = builder.Last;
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
-            while (simulation.Rooms.HasWorkPending) simulation.Update(1f / 60f, Worlds.Shadow());
+            while (simulation.HasPendingWork) simulation.Update(1f / 60f, Worlds.Shadow());
 
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
@@ -1309,7 +1309,7 @@ namespace Thermodynamics.Harness
             }
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
-            while (simulation.Rooms.HasWorkPending) simulation.Update(1f / 60f, Worlds.Shadow());
+            while (simulation.HasPendingWork) simulation.Update(1f / 60f, Worlds.Shadow());
 
             int cells = simulation.Solver.Nodes.Count;
             int links = simulation.Solver.Links.Count;

@@ -240,7 +240,7 @@ namespace Thermodynamics.Harness
                 total += ms;
                 settleTicks++;
             }
-            while (simulation.Rooms.HasWorkPending && settleTicks < 100000);
+            while (simulation.HasPendingWork && settleTicks < 100000);
 
             row.SpikeAfterOneBlockMs = worst;
             row.SettleTicks = settleTicks;
@@ -426,8 +426,34 @@ namespace Thermodynamics.Harness
             public double ExposureMs;
             public double SolverMs;
 
+            /// <summary>
+            /// Which tick each stage's worst call landed on. A stage whose worst call is on the
+            /// first tick is doing setup work; one whose worst is on the last is doing teardown;
+            /// one whose worst is in the middle is doing its actual job badly. Three different
+            /// problems that a single millisecond figure cannot tell apart.
+            /// </summary>
+            public int TopologyTick = -1;
+            public int RoomMappingTick = -1;
+            public int ExposureTick = -1;
+            public int SolverTick = -1;
+
             public int Ticks;
             public SimulationWork Work = new SimulationWork();
+
+            /// <summary>
+            /// Collections and bytes allocated over the settle.
+            ///
+            /// Worth reporting next to the stage timings because a stall is not always the code
+            /// the stopwatch was wrapped around. A pass that replaces a map of the whole bounding
+            /// volume makes the old one garbage all at once, and the collection that follows is
+            /// charged to whichever stage happened to be running — so a room stage with a large
+            /// worst call and a gen-2 collection against it is a memory problem wearing a
+            /// mapping problem's clothes.
+            /// </summary>
+            public int Gen0;
+            public int Gen1;
+            public int Gen2;
+            public double AllocatedMb;
 
             /// <summary>
             /// The largest thing that lands in one tick. This is the stall a player sees, and
@@ -449,9 +475,12 @@ namespace Thermodynamics.Harness
             {
                 return "worst tick " + WorstTickMs.ToString("n1") + " ms over " + Ticks
                     + " ticks to settle. Worst call per stage: topology "
-                    + TopologyMs.ToString("n1") + ", rooms " + RoomMappingMs.ToString("n1")
-                    + ", exposure " + ExposureMs.ToString("n1")
-                    + ", solver " + SolverMs.ToString("n1") + " ms."
+                    + TopologyMs.ToString("n1") + " (tick " + TopologyTick + "), rooms "
+                    + RoomMappingMs.ToString("n1") + " (tick " + RoomMappingTick + "), exposure "
+                    + ExposureMs.ToString("n1") + " (tick " + ExposureTick + "), solver "
+                    + SolverMs.ToString("n1") + " (tick " + SolverTick + ") ms."
+                    + " GC: " + Gen0 + "/" + Gen1 + "/" + Gen2 + " collections, "
+                    + AllocatedMb.ToString("n0") + " MB allocated."
                     + " Ran: " + Work.TopologyRebuilds + " topology rebuilds, "
                     + Work.ExposureRefreshes + " exposure refreshes, "
                     + Work.RoomPassesBegun + " room passes, "
@@ -474,15 +503,14 @@ namespace Thermodynamics.Harness
         public static SpikeReport Spike(string shape, int targetCells)
         {
             ThermalSimulation simulation = BuildSettled(shape, targetCells);
-            while (simulation.Rooms.HasWorkPending)
+            while (simulation.HasPendingWork)
             {
                 simulation.Update(TickSeconds, Worlds.Shadow());
             }
 
             SeedSpread(simulation);
 
-            StageTimings timings = new StageTimings();
-            simulation.Profiler = timings;
+            StageTimings timings = null;
             simulation.Work.Reset();
 
             SpikeReport report = new SpikeReport();
@@ -498,28 +526,65 @@ namespace Thermodynamics.Harness
             Vector3I at = simulation.Grid.Max + new Vector3I(0, 0, 2);
             simulation.AddBlock(new BlockInstance(armour, at, BlockOrientation.Identity), 293.15f);
 
+            int gen0 = GC.CollectionCount(0);
+            int gen1 = GC.CollectionCount(1);
+            int gen2 = GC.CollectionCount(2);
+            long allocated = GC.GetTotalAllocatedBytes(false);
+
             Stopwatch watch = new Stopwatch();
 
             do
             {
+                // A fresh set of timings per tick, so a stage's worst call can be attributed to
+                // the tick it happened on rather than only to the stage.
+                timings = new StageTimings();
+                simulation.Profiler = timings;
+
                 watch.Restart();
                 simulation.Update(TickSeconds, Worlds.Shadow());
                 watch.Stop();
 
                 double ms = watch.Elapsed.TotalMilliseconds;
                 if (ms > report.WorstTickMs) report.WorstTickMs = ms;
+
+                Record(report, timings, SimulationPhase.Topology, report.Ticks);
+                Record(report, timings, SimulationPhase.RoomMapping, report.Ticks);
+                Record(report, timings, SimulationPhase.Exposure, report.Ticks);
+                Record(report, timings, SimulationPhase.Solver, report.Ticks);
+
                 report.Ticks++;
             }
-            while (simulation.Rooms.HasWorkPending && report.Ticks < 100000);
+            while (simulation.HasPendingWork && report.Ticks < 100000);
 
-            report.TopologyMs = timings.WorstMs(SimulationPhase.Topology);
-            report.RoomMappingMs = timings.WorstMs(SimulationPhase.RoomMapping);
-            report.ExposureMs = timings.WorstMs(SimulationPhase.Exposure);
-            report.SolverMs = timings.WorstMs(SimulationPhase.Solver);
             report.Work = simulation.Work.Snapshot();
+            report.Gen0 = GC.CollectionCount(0) - gen0;
+            report.Gen1 = GC.CollectionCount(1) - gen1;
+            report.Gen2 = GC.CollectionCount(2) - gen2;
+            report.AllocatedMb = (GC.GetTotalAllocatedBytes(false) - allocated) / (1024d * 1024d);
 
             simulation.Profiler = null;
             return report;
+        }
+
+        private static void Record(SpikeReport report, StageTimings timings, SimulationPhase phase, int tick)
+        {
+            double ms = timings.WorstMs(phase);
+
+            switch (phase)
+            {
+                case SimulationPhase.Topology:
+                    if (ms > report.TopologyMs) { report.TopologyMs = ms; report.TopologyTick = tick; }
+                    break;
+                case SimulationPhase.RoomMapping:
+                    if (ms > report.RoomMappingMs) { report.RoomMappingMs = ms; report.RoomMappingTick = tick; }
+                    break;
+                case SimulationPhase.Exposure:
+                    if (ms > report.ExposureMs) { report.ExposureMs = ms; report.ExposureTick = tick; }
+                    break;
+                default:
+                    if (ms > report.SolverMs) { report.SolverMs = ms; report.SolverTick = tick; }
+                    break;
+            }
         }
 
         // ---- shared -------------------------------------------------------------------------

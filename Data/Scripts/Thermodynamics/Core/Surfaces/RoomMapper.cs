@@ -213,14 +213,14 @@ namespace Thermodynamics.Core
                         continue;
                     }
 
-                    if (!AdvanceScanToNextUnvisited())
+                    ScanResult result = AdvanceScanToNextUnvisited(ref spent, cellBudget);
+                    if (result == ScanResult.Exhausted)
                     {
                         Publish();
                         completed = true;
                         break;
                     }
-                    spent++;
-                    Work.RoomCellsVisited++;
+                    if (result == ScanResult.BudgetSpent) break;
                 }
                 else
                 {
@@ -310,14 +310,44 @@ namespace Thermodynamics.Core
             }
         }
 
-        private bool AdvanceScanToNextUnvisited()
+        /// <summary>How a slice of the interior scan ended.</summary>
+        private enum ScanResult
+        {
+            /// <summary>A cell nothing had reached yet; a new room starts there.</summary>
+            Found,
+
+            /// <summary>The cursor reached the end of the search box. The pass is complete.</summary>
+            Exhausted,
+
+            /// <summary>This tick's budget ran out mid-scan. The cursor stays where it is.</summary>
+            BudgetSpent
+        }
+
+        /// <summary>
+        /// Walks the scan cursor forward to the next cell no pass has classified.
+        ///
+        /// The walk is charged against the tick's budget cell by cell, which it was not before.
+        /// Every cell it passes over is a hash lookup, and it passes over every cell of the
+        /// bounding box across a pass — but the whole walk between two rooms counted as a single
+        /// unit of budget, so one tick could absorb an unbounded sweep. On a 127k ship the tick
+        /// that finished the pass swept the tail of a 1.5-million-cell box in one go and cost
+        /// 77 ms, inside a mapper whose entire purpose is that no tick costs more than its share.
+        ///
+        /// Counting it honestly makes a pass take more ticks and every one of them bounded, which
+        /// is the trade the budget exists to make.
+        /// </summary>
+        private ScanResult AdvanceScanToNextUnvisited(ref int spent, int budget)
         {
             while (true)
             {
-                if (scanCursor.Z >= searchMaxExclusive.Z) return false;
+                if (scanCursor.Z >= searchMaxExclusive.Z) return ScanResult.Exhausted;
+                if (spent >= budget) return ScanResult.BudgetSpent;
 
                 Vector3I cell = scanCursor;
                 AdvanceCursor();
+
+                spent++;
+                Work.RoomCellsVisited++;
 
                 if (visited.Contains(cell)) continue;
 
@@ -332,7 +362,7 @@ namespace Thermodynamics.Core
                 currentRoom = working.BeginRoom();
                 working.AddToRoom(currentRoom, cell);
                 frontier.Enqueue(cell);
-                return true;
+                return ScanResult.Found;
             }
         }
 

@@ -76,7 +76,7 @@ namespace Thermodynamics.Tests
             ThermalSimulation simulation = Build(Small);
 
             // Let the map converge first — a fresh grid legitimately has work to do.
-            while (simulation.Rooms.HasWorkPending) simulation.Update(LoadBenchmarks.TickSeconds, Space());
+            while (simulation.HasPendingWork) simulation.Update(LoadBenchmarks.TickSeconds, Space());
 
             simulation.Work.Reset();
 
@@ -179,7 +179,7 @@ namespace Thermodynamics.Tests
         public void ManyPlacementsInOneTickCoalesceIntoOneRebuild()
         {
             ThermalSimulation simulation = Build(Small);
-            while (simulation.Rooms.HasWorkPending) simulation.Update(LoadBenchmarks.TickSeconds, Space());
+            while (simulation.HasPendingWork) simulation.Update(LoadBenchmarks.TickSeconds, Space());
 
             simulation.Work.Reset();
 
@@ -204,7 +204,7 @@ namespace Thermodynamics.Tests
                 simulation.Update(LoadBenchmarks.TickSeconds, Space());
                 ticks++;
             }
-            while ((simulation.Rooms.HasWorkPending || simulation.Work.TopologyRebuilds == 0)
+            while ((simulation.HasPendingWork || simulation.Work.TopologyRebuilds == 0)
                 && ticks < 10000);
 
             output.WriteLine(placed + " blocks placed, settled over " + ticks + " ticks: "
@@ -229,7 +229,7 @@ namespace Thermodynamics.Tests
         public void SearchesForPlumbingSkipAGridThatHasNone()
         {
             ThermalSimulation simulation = Build(Small);
-            while (simulation.Rooms.HasWorkPending) simulation.Update(LoadBenchmarks.TickSeconds, Space());
+            while (simulation.HasPendingWork) simulation.Update(LoadBenchmarks.TickSeconds, Space());
 
             Assert.Equal(0, simulation.Grid.CoolantBlockCount);
             Assert.Equal(0, simulation.Grid.HeatPumpBlockCount);
@@ -267,7 +267,7 @@ namespace Thermodynamics.Tests
         public void ARebuildIsBilledToTopologyAndNotToTheSolver()
         {
             ThermalSimulation simulation = Build(Small);
-            while (simulation.Rooms.HasWorkPending) simulation.Update(LoadBenchmarks.TickSeconds, Space());
+            while (simulation.HasPendingWork) simulation.Update(LoadBenchmarks.TickSeconds, Space());
 
             StageTimings timings = new StageTimings();
             simulation.Profiler = timings;
@@ -304,7 +304,7 @@ namespace Thermodynamics.Tests
         public void ReadingTheLinkCountDoesNotRebuildTheGraph()
         {
             ThermalSimulation simulation = Build(Small);
-            while (simulation.Rooms.HasWorkPending) simulation.Update(LoadBenchmarks.TickSeconds, Space());
+            while (simulation.HasPendingWork) simulation.Update(LoadBenchmarks.TickSeconds, Space());
 
             simulation.AddBlock(
                 new BlockInstance(Catalog.HeavyArmor(), simulation.Grid.Min - new Vector3I(2, 0, 0),
@@ -336,7 +336,7 @@ namespace Thermodynamics.Tests
         public void PlacingOneBlockLinksTheBlockAndNotTheGrid()
         {
             ThermalSimulation simulation = Build(Large);
-            while (simulation.Rooms.HasWorkPending) simulation.Update(LoadBenchmarks.TickSeconds, Space());
+            while (simulation.HasPendingWork) simulation.Update(LoadBenchmarks.TickSeconds, Space());
 
             int blocks = simulation.Solver.Nodes.Count;
             simulation.Work.Reset();
@@ -368,7 +368,7 @@ namespace Thermodynamics.Tests
         public void WeldingABurstCostsTheBurstAndNotTheGrid()
         {
             ThermalSimulation simulation = Build(Large);
-            while (simulation.Rooms.HasWorkPending) simulation.Update(LoadBenchmarks.TickSeconds, Space());
+            while (simulation.HasPendingWork) simulation.Update(LoadBenchmarks.TickSeconds, Space());
 
             int blocks = simulation.Solver.Nodes.Count;
             simulation.Work.Reset();
@@ -426,7 +426,7 @@ namespace Thermodynamics.Tests
                 if (simulation.Work.RoomCellsVisited > worst) worst = simulation.Work.RoomCellsVisited;
                 ticks++;
             }
-            while (simulation.Rooms.HasWorkPending && ticks < 100000);
+            while (simulation.HasPendingWork && ticks < 100000);
 
             output.WriteLine("bounding volume " + volume.ToString("n0") + ", budget " + budget
                 + " cells/tick, worst tick visited " + worst.ToString("n0")
@@ -434,6 +434,48 @@ namespace Thermodynamics.Tests
 
             Assert.True(worst <= budget,
                 "one tick flooded " + worst + " cells against a budget of " + budget);
+        }
+
+        /// <summary>
+        /// The exposure refresh must respect a budget too, however large the grid.
+        ///
+        /// It used to run whole on the tick a room pass published, which put it on the same tick
+        /// as the mapper's own worst call. On a 127k ship those two together were a hundred
+        /// milliseconds in one tick, on a grid whose steady cost is twenty.
+        /// </summary>
+        [Fact]
+        public void ExposureRefreshNeverExceedsItsBudgetInOneTick()
+        {
+            ThermalSimulation simulation = Build(Large);
+            while (simulation.HasPendingWork) simulation.Update(LoadBenchmarks.TickSeconds, Space());
+
+            int budget = SimulationScheduler.ExposureBudget(simulation.Solver.Nodes.Count);
+
+            simulation.MarkTopologyDirty();
+
+            long worst = 0;
+            long total = 0;
+            int ticks = 0;
+
+            do
+            {
+                simulation.Work.Reset();
+                simulation.Update(LoadBenchmarks.TickSeconds, Space());
+                if (simulation.Work.ExposureNodeVisits > worst) worst = simulation.Work.ExposureNodeVisits;
+                total += simulation.Work.ExposureNodeVisits;
+                ticks++;
+            }
+            while (simulation.HasPendingWork && ticks < 100000);
+
+            output.WriteLine(simulation.Solver.Nodes.Count.ToString("n0") + " blocks, budget "
+                + budget + " nodes/tick, worst tick refreshed " + worst.ToString("n0")
+                + ", " + total.ToString("n0") + " over " + ticks + " ticks.");
+
+            Assert.True(worst <= budget,
+                "one tick refreshed " + worst + " nodes against a budget of " + budget);
+            Assert.True(total >= simulation.Solver.Nodes.Count,
+                "the pass should still have visited every node: " + total + " of "
+                + simulation.Solver.Nodes.Count);
         }
 
         // ---- wall clock, loosely ------------------------------------------------------------
@@ -450,7 +492,7 @@ namespace Thermodynamics.Tests
         public void ASettledTickFitsInAFrame()
         {
             ThermalSimulation simulation = Build(Large);
-            while (simulation.Rooms.HasWorkPending) simulation.Update(LoadBenchmarks.TickSeconds, Space());
+            while (simulation.HasPendingWork) simulation.Update(LoadBenchmarks.TickSeconds, Space());
             LoadBenchmarks.SeedSpread(simulation);
 
             FrameTrace trace = new FrameTrace("settled " + Large.ToString("n0"));
