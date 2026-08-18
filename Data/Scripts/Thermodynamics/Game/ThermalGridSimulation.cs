@@ -116,7 +116,11 @@ namespace Thermodynamics
                 if (NeedsReadouts()) HottestNode = Simulation.Solver.HottestNode();
             }
 
-            if (Telemetry.Enabled) Telemetry.OnGridStepped(this, steps);
+            if (Telemetry.Enabled)
+            {
+                Telemetry.OnGridStepped(this, steps);
+                ProfileEnvironment();
+            }
         }
 
         /// <summary>

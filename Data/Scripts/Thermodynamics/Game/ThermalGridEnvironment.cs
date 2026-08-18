@@ -94,11 +94,10 @@ namespace Thermodynamics
             sample.HeatSources = heatSourceBuffer;
 
             LastSample = sample;
-            if (Telemetry.Enabled && Stats != null)
-            {
-                Stats.SampleEnvironment(this);
-                ProfileEnvironment(ref position, ref sample, planet);
-            }
+            profilePosition = position;
+            profilePlanet = planet;
+
+            if (Telemetry.Enabled && Stats != null) Stats.SampleEnvironment(this);
 
             return sample;
         }
@@ -152,9 +151,23 @@ namespace Thermodynamics
         /// runs on its own slow cadence rather than per step. It is a diagnostic, and it only runs
         /// with telemetry on.
         /// </summary>
-        private void ProfileEnvironment(
-            ref Vector3D position, ref EnvironmentSample sample, PlanetManager.Planet planet)
+        /// <summary>
+        /// Where the last sample was taken, kept so the profile can be written after the step that
+        /// turns it into a state — the sample and the state it produced belong in the same row, and
+        /// reading the state at sampling time gives the previous step's answer, or on the first
+        /// step, no answer at all.
+        /// </summary>
+        private Vector3D profilePosition;
+        private PlanetManager.Planet profilePlanet;
+
+        public void ProfileEnvironment()
         {
+            if (!Telemetry.Enabled || Stats == null) return;
+
+            Vector3D position = profilePosition;
+            EnvironmentSample sample = LastSample;
+            PlanetManager.Planet planet = profilePlanet;
+
             if (stepsSinceProfile < ProfileInterval)
             {
                 stepsSinceProfile++;
@@ -162,6 +175,7 @@ namespace Thermodynamics
             }
 
             stepsSinceProfile = 0;
+
 
             EnvironmentRow row = new EnvironmentRow();
             EnvironmentState state = LastState;

@@ -57,24 +57,24 @@ namespace Thermodynamics
 
         // ---- mechanisms --------------------------------------------------------------------
 
-        [ProtoMember(10)] public bool EnableEnvironment;
-        [ProtoMember(11)] public bool EnableConduction;
-        [ProtoMember(12)] public bool EnableRadiation;
-        [ProtoMember(13)] public bool EnableConvection;
-        [ProtoMember(14)] public bool EnableSolarHeat;
+        [ProtoMember(10)] public bool EnableEnvironment = true;
+        [ProtoMember(11)] public bool EnableConduction = true;
+        [ProtoMember(12)] public bool EnableRadiation = true;
+        [ProtoMember(13)] public bool EnableConvection = true;
+        [ProtoMember(14)] public bool EnableSolarHeat = true;
 
         /// <summary>
         /// Whether a grid shadows itself: a face behind the ship's own structure takes no sunlight.
         /// Costs a pass over the grid's cells each time the sun moves appreciably. Off is the cheap
         /// model, which lights any face pointing at the sun.
         /// </summary>
-        [ProtoMember(58)] public bool SolarSelfShadowing;
+        [ProtoMember(58)] public bool SolarSelfShadowing = true;
 
         /// <summary>
         /// Whether a planet can shadow a grid — night, and the shadow of a world seen from orbit.
         /// Analytic: an angle against the planet's radius, no raycast, so it is the cheap one.
         /// </summary>
-        [ProtoMember(59)] public bool SolarOcclusionPlanets;
+        [ProtoMember(59)] public bool SolarOcclusionPlanets = true;
 
         /// <summary>
         /// Whether asteroids and other voxels can shadow a grid. Costs a physics raycast per
@@ -85,16 +85,16 @@ namespace Thermodynamics
         /// the canyon wall, the cliff a base is parked against. Costs a short walk of ground-height
         /// lookups, and only for grids near a surface.
         /// </summary>
-        [ProtoMember(74)] public bool SolarOcclusionTerrain;
+        [ProtoMember(74)] public bool SolarOcclusionTerrain = true;
 
         /// <summary>
         /// How far the terrain walk looks along the sun ray, in metres. Far ground shadows almost
         /// nothing — the cliff two hundred metres away is what matters — so this is short by
         /// design, and every metre of it costs lookups.
         /// </summary>
-        [ProtoMember(75)] public float SolarTerrainRange;
+        [ProtoMember(75)] public float SolarTerrainRange = 4000f;
 
-        [ProtoMember(71)] public bool SolarOcclusionVoxels;
+        [ProtoMember(71)] public bool SolarOcclusionVoxels = true;
 
         /// <summary>
         /// How much work other grids' shadows are worth: none, one ray, or the real geometry.
@@ -109,78 +109,78 @@ namespace Thermodynamics
         /// rather than per step, and needs <see cref="SolarSelfShadowing"/> for the pass it rides
         /// on.
         /// </summary>
-        [ProtoMember(77)] public int SolarGridShadows;
+        [ProtoMember(77)] public int SolarGridShadows = (int)GridShadowMode.Full;
 
         /// <summary>
         /// How many points across a grid are tested, 1..9. One is a single ray from the middle,
         /// which is all or nothing for the whole ship. More points spread through the hull turn a
         /// terminator crossing into a ramp, and cost their own share of the work each.
         /// </summary>
-        [ProtoMember(73)] public int SolarOcclusionSamples;
-        [ProtoMember(15)] public bool EnableHeatSources;
-        [ProtoMember(16)] public bool EnableWasteHeat;
-        [ProtoMember(17)] public bool EnablePlanets;
-        [ProtoMember(18)] public bool EnableFriction;
-        [ProtoMember(19)] public bool EnableDamage;
-        [ProtoMember(20)] public bool EnableCoolantLoops;
-        [ProtoMember(21)] public bool EnableRoomAir;
-        [ProtoMember(22)] public bool EnableHeatPumps;
+        [ProtoMember(73)] public int SolarOcclusionSamples = 1;
+        [ProtoMember(15)] public bool EnableHeatSources = true;
+        [ProtoMember(16)] public bool EnableWasteHeat = true;
+        [ProtoMember(17)] public bool EnablePlanets = true;
+        [ProtoMember(18)] public bool EnableFriction = true;
+        [ProtoMember(19)] public bool EnableDamage = true;
+        [ProtoMember(20)] public bool EnableCoolantLoops = true;
+        [ProtoMember(21)] public bool EnableRoomAir = true;
+        [ProtoMember(22)] public bool EnableHeatPumps = true;
 
         // ---- solver ------------------------------------------------------------------------
 
-        [ProtoMember(30)] public bool ClampConductionOvershoot;
-        [ProtoMember(31)] public bool DamageIsPerSecond;
-        [ProtoMember(32)] public int Frequency;
-        [ProtoMember(33)] public float SimulationSpeed;
-        [ProtoMember(34)] public float HeatTimeScale;
+        [ProtoMember(30)] public bool ClampConductionOvershoot = true;
+        [ProtoMember(31)] public bool DamageIsPerSecond = true;
+        [ProtoMember(32)] public int Frequency = 4;
+        [ProtoMember(33)] public float SimulationSpeed = 1f;
+        [ProtoMember(34)] public float HeatTimeScale = 225f;
 
         // ---- environment -------------------------------------------------------------------
 
-        [ProtoMember(40)] public float VacuumTemperature;
-        [ProtoMember(41)] public float SolarEnergy;
-        [ProtoMember(42)] public float FrictionAtSpeedsAbove;
-        [ProtoMember(43)] public float FrictionScale;
-        [ProtoMember(44)] public float RoomConvectionCoefficient;
-        [ProtoMember(45)] public float RoomAirDensity;
+        [ProtoMember(40)] public float VacuumTemperature = 2.7f;
+        [ProtoMember(41)] public float SolarEnergy = 1000f;
+        [ProtoMember(42)] public float FrictionAtSpeedsAbove = 50f;
+        [ProtoMember(43)] public float FrictionScale = 0.001f;
+        [ProtoMember(44)] public float RoomConvectionCoefficient = 8f;
+        [ProtoMember(45)] public float RoomAirDensity = 1.225f;
 
         /// <summary>Solver steps between solar occlusion raycasts.</summary>
-        [ProtoMember(46)] public int SolarOcclusionInterval;
+        [ProtoMember(46)] public int SolarOcclusionInterval = 12;
 
         // ---- heat pumps --------------------------------------------------------------------
 
         /// <summary>How much of the Carnot limit a heat pump achieves, 0..1.</summary>
-        [ProtoMember(47)] public float HeatPumpCarnotFraction;
+        [ProtoMember(47)] public float HeatPumpCarnotFraction = 0.4f;
 
         /// <summary>Ceiling on a heat pump's coefficient of performance.</summary>
-        [ProtoMember(48)] public float HeatPumpMaxCoefficient;
+        [ProtoMember(48)] public float HeatPumpMaxCoefficient = 8f;
 
         // ---- presentation ------------------------------------------------------------------
 
         /// <summary>Crosshair readout for the block being looked at. Client side.</summary>
-        [ProtoMember(50)] public bool DebugTextOnScreen;
+        [ProtoMember(50)] public bool DebugTextOnScreen = false;
 
         /// <summary>Draws the sun ray from each grid, white when lit and red when occluded.</summary>
-        [ProtoMember(51)] public bool DebugSolarRaycast;
+        [ProtoMember(51)] public bool DebugSolarRaycast = false;
 
         /// <summary>Draws the relative wind vector.</summary>
-        [ProtoMember(52)] public bool DebugWindRaycast;
+        [ProtoMember(52)] public bool DebugWindRaycast = false;
 
         /// <summary>
         /// Which value the block overlay starts a session showing, as a
         /// <see cref="ThermalDebugView.Mode"/>: 0 off, 1 temperature, 2 solar watts, 3 exposed
         /// faces, 4 friction watts, 5 rooms. Ctrl+Shift+= cycles it in play, client side.
         /// </summary>
-        [ProtoMember(57)] public int DebugBlockOverlay;
+        [ProtoMember(57)] public int DebugBlockOverlay = 0;
 
         /// <summary>
         /// Bottom of the room overlay's colour span, K. Room air lives inside a few tens of degrees
         /// of comfortable, so it gets its own span: on the block ramp every room on a ship is the
         /// same shade.
         /// </summary>
-        [ProtoMember(78)] public float RoomOverlayMinKelvin;
+        [ProtoMember(78)] public float RoomOverlayMinKelvin = 253.15f;   // -20 C
 
         /// <summary>Top of the room overlay's colour span, K.</summary>
-        [ProtoMember(79)] public float RoomOverlayMaxKelvin;
+        [ProtoMember(79)] public float RoomOverlayMaxKelvin = 323.15f;   //  50 C
 
         // ProtoMember numbers 72 and 76 were the two switches SolarGridShadows replaced.
         // ProtoMember numbers 53-56 were the block-colouring debug modes, which wrote real block
@@ -190,66 +190,22 @@ namespace Thermodynamics
 
         // ---- telemetry ---------------------------------------------------------------------
 
-        [ProtoMember(80)] public bool EnableTelemetry;
-        [ProtoMember(81)] public int TelemetrySampleStride;
+        [ProtoMember(80)] public bool EnableTelemetry = false;
+        [ProtoMember(81)] public int TelemetrySampleStride = 4;
 
+        /// <summary>
+        /// A fresh configuration.
+        ///
+        /// The values themselves live on the fields, which is not a style choice: a config file
+        /// written before a setting existed has no element for it, and the XML reader leaves what
+        /// it finds. With the defaults here instead, every setting added after a world's file was
+        /// written loaded as false or zero in that world — silently, and with no way to tell it
+        /// apart from someone having switched it off.
+        /// </summary>
         public static Settings GetDefaults()
         {
-            Settings s = new Settings
-            {
-                Version = CurrentVersion,
-
-                EnableEnvironment = true,
-                EnableConduction = true,
-                EnableRadiation = true,
-                EnableConvection = true,
-                EnableSolarHeat = true,
-                SolarSelfShadowing = true,
-                SolarOcclusionPlanets = true,
-                SolarOcclusionTerrain = true,
-                SolarTerrainRange = 4000f,
-                SolarOcclusionVoxels = true,
-                SolarGridShadows = (int)GridShadowMode.Full,
-                SolarOcclusionSamples = 1,
-                EnableHeatSources = true,
-                EnableWasteHeat = true,
-                EnablePlanets = true,
-                EnableFriction = true,
-                EnableDamage = true,
-                EnableCoolantLoops = true,
-                EnableRoomAir = true,
-                EnableHeatPumps = true,
-
-                ClampConductionOvershoot = true,
-                DamageIsPerSecond = true,
-                Frequency = 4,
-                SimulationSpeed = 1f,
-                HeatTimeScale = 225f,
-
-                VacuumTemperature = 2.7f,
-                SolarEnergy = 1000f,
-                FrictionAtSpeedsAbove = 50f,
-                FrictionScale = 0.001f,
-                RoomConvectionCoefficient = 8f,
-                RoomAirDensity = 1.225f,
-                SolarOcclusionInterval = 12,
-
-                HeatPumpCarnotFraction = 0.4f,
-                HeatPumpMaxCoefficient = 8f,
-
-                // Presentation defaults to off. A fresh install should look like the game, not
-                // like a debugger: the previous defaults repainted every grid in the world.
-                DebugTextOnScreen = false,
-                DebugSolarRaycast = false,
-                DebugWindRaycast = false,
-                DebugBlockOverlay = 0,
-                RoomOverlayMinKelvin = 253.15f,   // -20 C
-                RoomOverlayMaxKelvin = 323.15f,   //  50 C
-
-                EnableTelemetry = false,
-                TelemetrySampleStride = 4,
-            };
-
+            Settings s = new Settings();
+            s.Version = CurrentVersion;
             s.Clamp();
             return s;
         }

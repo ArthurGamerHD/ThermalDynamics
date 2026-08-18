@@ -40,6 +40,16 @@ session, so whether the grid's resource distributor picks the sink up is unverif
 only a functional block has a terminal to switch it from. A grid saved with the old block loses it
 on load. Nothing was lost by doing it: the old block had no behaviour at all.
 
+## Fixed, worth remembering
+
+**Config defaults belong on the fields, not in a factory method.** A world's config file has no
+element for a setting added after that file was written, and the XML reader leaves such fields at
+`default(T)` — so every setting added since a world was first loaded ran as `false` or `0` in that
+world, silently. A test world reported `SolarOcclusionPlanets False`, `SolarTerrainRange 0` and a
+room overlay span of one kelvin while its owner had changed none of them. Bumping the file version
+would only have papered over it, and thrown away real customisation each time. The defaults now
+live on the field declarations, where a reader that finds nothing leaves them alone.
+
 ## Suspected defects
 
 **A face bolted to a block that does not seal is counted as buried.** Exposure rejects any cell face
