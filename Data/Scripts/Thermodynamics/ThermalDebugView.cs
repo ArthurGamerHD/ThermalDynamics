@@ -391,9 +391,15 @@ namespace Thermodynamics
                 RoomAirNode air = AirOf(thermals, room);
 
                 bool hasAir = air != null && air.HasAir;
+
+                // Found and dry while the game has air in it. Oxygen, not airtightness: a sealed
+                // cupboard nobody piped air into is empty in both models and is not a fault, and
+                // painting every one of those magenta buries the compartment that is.
+                bool disagrees = Disagrees(thermals, room);
+
                 Color fill = hasAir
                     ? Fill(air.Temperature, min, max)
-                    : new Color(0, 0, 0, 0);
+                    : DryFill(disagrees);
 
                 Color edge = RoomColour(room, map.IsVented(room));
 
@@ -409,13 +415,15 @@ namespace Thermodynamics
 
                     BoundingBoxD local = new BoundingBoxD(-half * BandScale, half * BandScale);
 
-                    // Solid where there is air to colour, outline only where there is not.
+                    // Solid where there is air to colour. Where there is none the box is still
+                    // drawn — filled, faintly, when the game says the room should have had air,
+                    // and as a bare outline when it agrees the room is empty.
                     MySimpleObjectDraw.DrawTransparentBox(
                         ref box,
                         ref local,
                         ref fill,
-                        hasAir
-                            ? MySimpleObjectRasterizer.Solid
+                        hasAir || disagrees
+                            ? MySimpleObjectRasterizer.SolidAndWireframe
                             : MySimpleObjectRasterizer.Wireframe,
                         1,
                         (float)(0.02 * BandScale),
@@ -425,7 +433,28 @@ namespace Thermodynamics
                         -1,
                         BlendTypeEnum.PostPP);
 
-                    if (!hasAir) continue;
+                    if (!hasAir)
+                    {
+                        // A dry room still carries its identity, so it can be counted off against
+                        // the report's list exactly as a working one can.
+                        Color dryEdge = edge;
+                        dryEdge.A = (byte)(disagrees ? 255 : 90);
+
+                        MySimpleObjectDraw.DrawTransparentBox(
+                            ref box,
+                            ref local,
+                            ref dryEdge,
+                            MySimpleObjectRasterizer.Wireframe,
+                            1,
+                            (float)((disagrees ? 0.04 : 0.02) * BandScale),
+                            FaceMaterial,
+                            LineMaterial,
+                            false,
+                            -1,
+                            BlendTypeEnum.PostPP);
+
+                        continue;
+                    }
 
                     // The edges carry the room's identity over the top of its temperature.
                     MySimpleObjectDraw.DrawTransparentBox(
@@ -442,7 +471,119 @@ namespace Thermodynamics
                         BlendTypeEnum.PostPP);
                 }
             }
+
+            DrawLostRooms(thermals, ref camera, ref eye, gridMatrix, half);
         }
+
+        /// <summary>
+        /// The compartments the game seals and this model does not.
+        ///
+        /// The reason this view existed and still showed nothing: a room the fill walked into
+        /// from outside is not in the map, so there was nothing to draw and no way to tell that
+        /// apart from a room correctly found to be open. These are drawn as what they are — space
+        /// the game holds air in and this model believes is outdoors — in a colour nothing else in
+        /// the view uses, so a hole in the model reads as a hole rather than as an absence.
+        ///
+        /// Each one keeps its own hue as well, taken from its index in the same list the report
+        /// prints, so a player can look at one, count which it is, and name it in a dump.
+        /// </summary>
+        private static void DrawLostRooms(
+            ThermalGrid thermals, ref MatrixD camera, ref Vector3D eye, MatrixD gridMatrix, Vector3D half)
+        {
+            IList<ThermalGrid.LostRoom> lost = thermals.LostRooms;
+            if (lost.Count == 0) return;
+
+            for (int i = 0; i < lost.Count; i++)
+            {
+                ThermalGrid.LostRoom room = lost[i];
+                if (room.Cells == null) continue;
+
+                Color fill = LostRoomColour(room.Index, room.VentSaysPressurised);
+
+                foreach (Vector3I cell in room.Cells)
+                {
+                    Vector3D centre = thermals.Grid.GridIntegerToWorld(cell);
+                    Vector3D delta = centre - eye;
+
+                    if (Vector3D.Dot(delta, camera.Forward) <= 0) continue;
+
+                    MatrixD box = gridMatrix;
+                    box.Translation = eye + (delta * BandScale);
+
+                    BoundingBoxD local = new BoundingBoxD(-half * BandScale, half * BandScale);
+
+                    MySimpleObjectDraw.DrawTransparentBox(
+                        ref box,
+                        ref local,
+                        ref fill,
+                        MySimpleObjectRasterizer.SolidAndWireframe,
+                        1,
+                        (float)(0.04 * BandScale),
+                        FaceMaterial,
+                        LineMaterial,
+                        false,
+                        -1,
+                        BlendTypeEnum.PostPP);
+                }
+            }
+        }
+
+        /// <summary>
+        /// A lost compartment's colour: red where the model is losing a room the game has, and
+        /// each one shifted round the wheel by its index so two that touch can be told apart and
+        /// counted off against the report's list.
+        ///
+        /// Kept in the reds and oranges — well away from the blue-to-white ramp room air uses —
+        /// because the one thing this must never look like is a cold room.
+        /// </summary>
+        private static Color LostRoomColour(int index, bool ventSaysPressurised)
+        {
+            // A sixth of the wheel, from red to yellow, so every one of them still reads as a fault.
+            float hue = ((index * 0.61803399f) % 1f) * 0.13f;
+
+            Color colour = ColorExtensions.HSVtoColor(
+                new Vector3(hue, 1f, ventSaysPressurised ? 1f : 0.55f));
+
+            colour.A = (byte)(LostRoomFillAlpha * 255f);
+            return colour;
+        }
+
+        /// <summary>Alpha of a lost compartment. Fainter than air: it is a fault, not a reading.</summary>
+        private const float LostRoomFillAlpha = 0.25f;
+
+        /// <summary>
+        /// Whether this room is one the model found, left dry, and the game has air in.
+        ///
+        /// False when the verdicts have not been scanned yet, which is the honest answer: the scan
+        /// runs on its own cadence and an unmeasured room must not be painted as a fault.
+        /// </summary>
+        private static bool Disagrees(ThermalGrid thermals, int room)
+        {
+            IList<ThermalGrid.RoomVerdict> verdicts = thermals.RoomVerdicts;
+            if (room < 0 || room >= verdicts.Count) return false;
+
+            return verdicts[room].IsDisagreement;
+        }
+
+        /// <summary>
+        /// A room with no air in it.
+        ///
+        /// Magenta where the game has air in it and this model does not — a colour nothing else
+        /// in this view uses, and deliberately off the temperature ramp, because the one thing it
+        /// must never read as is cold air. Barely-there grey where the room is genuinely empty,
+        /// which is most of them on any ship and is not a fault.
+        /// </summary>
+        private static Color DryFill(bool disagrees)
+        {
+            if (!disagrees) return new Color(90, 90, 90, 25);
+
+            Color colour = new Color(255, 0, 200);
+            colour.A = (byte)(DisagreementFillAlpha * 255f);
+            return colour;
+        }
+
+        /// <summary>Alpha of a room the game holds air in and this model does not.</summary>
+        private const float DisagreementFillAlpha = 0.3f;
 
         /// <summary>The air of one room, or null when the solver has none for it.</summary>
         private static RoomAirNode AirOf(ThermalGrid thermals, int room)
