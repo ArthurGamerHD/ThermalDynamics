@@ -88,6 +88,7 @@ into atmosphere and into the air of sealed rooms, arrives from the sun, and — 
 | [docs/se2-research.md](docs/se2-research.md) | What the Space Engineers 2 assemblies contain, and what an SE2 adapter would bind to. |
 | [docs/model-redesign.md](docs/model-redesign.md) | Feature inventory and the data-structure changes behind the current model. |
 | [docs/scale-design.md](docs/scale-design.md) | Design for grids up to a million blocks. |
+| [docs/load-and-hitching.md](docs/load-and-hitching.md) | What a grid costs as it grows, what was making it stutter, and what still does. |
 | [sim/README.md](sim/README.md) | The isolated simulation environment: running the tests and scenarios. |
 
 ## Building and testing

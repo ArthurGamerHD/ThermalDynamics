@@ -1,0 +1,288 @@
+# Load and hitching
+
+What the simulation costs as a grid grows, measured rather than extrapolated, and what was
+changed to stop a large grid stuttering.
+
+Companion to [scale-design.md](scale-design.md), which is the design for a million blocks and
+still mostly unbuilt, and to [bugs-and-performance.md](bugs-and-performance.md), which is the
+record of an earlier investigation at eight thousand.
+
+---
+
+## The distinction the whole exercise rests on
+
+Two costs, and confusing them is how a performance problem gets fixed in the wrong place.
+
+**Steady cost** is what a tick costs when nothing has changed. It sets how much of a frame the
+mod takes. It degrades *gracefully*: twice the cost is half the simulation rate, which a player
+experiences as heat moving more slowly, and a server operator can trade away with `Frequency`.
+
+**Spike cost** is what a tick costs when something *has* changed — a block welded, a section
+shot away, a door cycled, a blueprint pasted. It sets whether the game stutters. It degrades
+*catastrophically*: a player does not perceive a one-second frame as a slow simulation, they
+perceive it as the game breaking.
+
+A million-block grid that costs 100 ms every tick is playable at a low simulation rate. The same
+grid stalling for one second when a block is placed is not, and no amount of lowering the rate
+helps, because the stall is not the rate.
+
+So the target for this work was never "make it fast". It was: **make the spike proportional to
+what changed, and let the steady cost be whatever the arithmetic says it is.**
+
+---
+
+## Measuring it
+
+Three tools, in `sim/`, described in [sim/README.md](../sim/README.md).
+
+```bash
+cd sim
+dotnet run --project Thermodynamics.Sim -- bench scale                 # the ladder
+dotnet run --project Thermodynamics.Sim -- bench spike --size 125000  # one block placed, split by stage
+dotnet run --project Thermodynamics.Sim -- bench weld  --size 125000  # a block every tick
+dotnet run --project Thermodynamics.Sim -- bench hitch --size 125000  # per-tick distribution
+dotnet run --project Thermodynamics.Sim -- bench load  --size 1000000 # what world load costs
+```
+
+`bench scale` builds a hull at each rung of a ladder — 8k, 32k, 125k, 500k, 1M blocks — and times
+every stage of an update on its own. The shape is a ship, not a cube, for the reasons in
+[scale-design.md §10](scale-design.md#10-grid-shape-changes-the-arithmetic); `--shape cube` and
+`--shape truss` are there to compare against.
+
+`bench spike` is the one that says what to change. It places a single block on a settled grid and
+reports the **worst call to each stage** across every tick until the grid settles, with the tick
+each landed on, and the counts of what each touched. The stages do not land together — the
+conduction rebuild is the tick after the placement, the room map converges hundreds of ticks
+later, the exposure pass rides on the tick that publishes it — so a single "worst tick" figure
+hides two of the three stalls behind whichever happened to be largest.
+
+Everything is deterministic. The temperature spread the benchmarks seed is written out rather than
+taken from `Random`, so two runs on the same machine are comparable and two machines differ only
+by their speed.
+
+---
+
+## What it measured, and what changed
+
+All figures from this machine, release build, single thread, ship shape.
+
+### The ladder
+
+| blocks | links | bbox | build | topology | rooms | exposure | step | ms/sim s | resident |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 8,904 | 20,779 | 68,800 | 115 ms | 9.8 | 36.6 | 5.4 | 0.56 | 2.2 | 21 MB |
+| 32,800 | 73,787 | 328,640 | 267 ms | 26.1 | 68.6 | 7.6 | 2.56 | 10.2 | 97 MB |
+| 126,731 | 277,967 | 1,499,616 | 828 ms | 48.0 | 335.0 | 25.2 | 14.69 | 58.7 | 373 MB |
+| 505,566 | 1,079,559 | 6,838,104 | 5,232 ms | 213.4 | 3,194.0 | 121.5 | 52.63 | 210.5 | 1,658 MB |
+| 1,000,294 | 2,114,111 | 14,278,796 | 11,090 ms | 443.9 | 6,247.4 | 157.0 | 104.12 | 416.5 | 2,522 MB |
+
+The topology, rooms and exposure columns are each stage run **whole**, which is what a one-shot
+rebuild or a load costs. They are not what a tick costs; every one of them is now spread.
+
+**The solver scales.** Cost per link visit is 8.9 ns at 8k and 16.4 ns at a million — it doubles
+across a working set that grows from half a megabyte to two gigabytes, which is a cache effect
+and not an algorithmic one. Nothing in the conduction pass is superlinear.
+
+### The spike, before and after
+
+Worst tick after a single block is placed:
+
+| blocks | before | after |
+| ---: | ---: | ---: |
+| 8,904 | 9.8 ms | **1.4 ms** |
+| 32,800 | 23.4 ms | **12.7 ms** |
+| 126,731 | 121.0 ms | **31.0 ms** |
+| 505,566 | 387.3 ms | **93.7 ms** |
+| 1,000,294 | **1,086.3 ms** | **181.6 ms** |
+
+Worst call per stage, on a 127k hull, one block placed:
+
+| stage | before | after | why |
+| --- | ---: | ---: | --- |
+| topology | 90.5 ms | **0.6 ms** | a placed block is linked, not the grid |
+| rooms | 77.2 ms | **12.2 ms** | the interior scan is charged against the budget |
+| exposure | 29.7 ms | **2.6 ms** | the pass is resumable |
+| solver | 22.5 ms | 22.5 ms | the steady cost, unchanged and now the largest thing left |
+
+### Per-tick distributions
+
+`bench weld` places a block on every tick for 120 ticks — sustained construction, the worst
+realistic case for the rebuild path, and the one that never gets a quiet tick to recover in.
+`bench hitch` ticks a settled grid for 300 ticks with one block welded a quarter of the way in
+and one ground off half way.
+
+| run | blocks | median | p95 | p99 | max | spike | over budget |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| weld | 32,800 | 1.73 | 3.08 | 7.62 | 11.97 | 6.9x | 0 / 120 |
+| weld | 126,731 | 7.25 | 8.47 | 16.97 | 20.93 | 2.9x | 2 / 120 |
+| weld | 505,566 | 34.27 | 36.71 | 44.53 | 55.47 | **1.6x** | 80 / 120 |
+| hitch | 32,800 | 1.97 | 5.70 | 22.28 | 30.33 | 15.4x | 6 / 300 |
+| hitch | 126,731 | 10.38 | 17.42 | 49.10 | 78.69 | 7.6x | 27 / 300 |
+| hitch | 505,566 | 49.33 | 56.27 | 173.40 | **303.59** | 6.2x | 201 / 300 |
+
+Two things to read here.
+
+**Welding is smooth now, and gets smoother as the grid grows.** A spike ratio of 1.6 on a
+half-million-block grid means sustained construction is essentially flat: the ticks over budget
+are the steady cost being over budget, not stalls. That is the incremental topology working — the
+same run before it would have paid a 200 ms rebuild on every one of the 120 ticks.
+
+**The worst tick in every `hitch` run is the block being removed.** At 500k it is 304 ms against a
+49 ms median. Removal is now the largest spike the mod has, ahead of the solver step, and it is a
+common event: grinding, combat damage, a section breaking off.
+
+---
+
+## The five findings
+
+### 1. A block placed rebuilt the whole conduction graph — *fixed*
+
+Placing one block marked the graph stale and the next tick rebuilt every link on the ship. On a
+million blocks that is 456 ms for one block.
+
+A block arriving is the one topology change that needs no demolition: nothing links to a block
+that was not there, so its links can be appended and every existing link left as it was. Placed
+blocks are queued and the queue is drained by linking each new block's own six faces.
+
+The parts that were proportional to the grid had to go with it — the flat arrays the substep loop
+reads are appended to rather than rewritten, and conductance totals are added to rather than
+recomputed. See `ThermalSolver.LinkPendingNodes`, and `IncrementalTopologyTests` for the proof
+that the graph it builds is the same graph a full rebuild produces.
+
+**Still global:** anything that can invalidate a link that already exists — a block *removed*, a
+block whose mounting changed, a new adjacency source. Removal is the one that matters and is
+listed under [what is still open](#what-is-still-open).
+
+### 2. The room mapper's budget did not bound its scan — *fixed*
+
+The flood fill is budgeted so no tick pays for the whole grid. The walk between one room and the
+next was not: it counted as a single unit of budget however far it went, and across a pass that
+walk covers the whole bounding box. The tick that finished a pass on a 127k ship swept the tail of
+a 1.5-million-cell box in one call and cost 77 ms.
+
+The scan is charged cell by cell now. A pass takes about twice as many ticks and every one of them
+is bounded.
+
+The load test asserting the budget was respected passed throughout, because it read the counter
+that was not counting the scan. **A budget test is only as good as what it counts.**
+
+### 3. The exposure refresh had no budget at all — *fixed*
+
+It walked every node on the grid on the tick a room pass published — the same tick as the
+mapper's own worst call, which is how one tick came to cost 109 ms on a grid whose steady cost is
+twenty. It is resumable now, in slices scaled off the node count.
+
+Some nodes read the previous map for a few ticks. That is not a new inaccuracy: it is the map they
+had been reading for the several hundred ticks the pass took to build.
+
+### 4. Two searches walked the grid to find nothing — *fixed*
+
+The coolant loop search and the heat pump rebuild each walked every block asking a question almost
+every block answers no to, on every topology change. The grid counts them as they are placed, so a
+ship with no plumbing — nearly every ship — skips two passes over a million blocks for an integer
+test.
+
+### 5. The mass sweep walked every block every eight steps — *fixed*
+
+Block mass changes with build progress and damage and the game raises no event for either, so the
+only way to notice is to look. It looked at every block on the grid, every eight steps, asking the
+game for each block's mass. It is a rota now, capped per tick; a grid under the cap is still swept
+whole every eight steps.
+
+This is the one finding the synthetic benchmarks cannot see — a harness has no game blocks to ask
+— which is why the load numbers are not the whole story and telemetry from a real session is.
+
+### And one that was not a finding
+
+A staggering change was nearly written on the assumption that every grid in a world ticks on the
+same frame. The engine already spreads them: `MyEntities` holds ten-frame entities in a
+`MyDistributedTypeUpdater<MyEntity>(10)`, which updates `ceil(count/10)` of them per frame. See
+[engine-api-notes.md](engine-api-notes.md#entity-updates-are-already-staggered-across-frames).
+Worth recording because the wrong fix would have been invisible: it would have done nothing, and
+looked like it was working.
+
+---
+
+## Catching it again
+
+The load tests in `sim/Thermodynamics.Tests/LoadTests.cs` run with the ordinary suite and assert
+these properties rather than leaving them to a benchmark nobody runs. Almost every assertion is
+on a `SimulationWork` counter rather than a stopwatch, because a millisecond threshold is a claim
+about the machine that ran it and a claim that placing one block must not visit every node is a
+claim about the algorithm.
+
+| Test | Property |
+| --- | --- |
+| `ASettledGridRebuildsNothing` | an unchanged grid pays for no rebuild of any kind |
+| `PlacingOneBlockLinksTheBlockAndNotTheGrid` | fewer than sixteen node visits, whatever the grid size |
+| `WeldingABurstCostsTheBurstAndNotTheGrid` | a hundred placed blocks visit a hundred nodes |
+| `ManyPlacementsInOneTickCoalesceIntoOneRebuild` | one rebuild per burst, not one per block |
+| `SearchesForPlumbingSkipAGridThatHasNone` | no cells scanned for loops or pumps |
+| `RoomMappingNeverExceedsItsBudgetInOneTick` | the flood fill respects its budget |
+| `ExposureRefreshNeverExceedsItsBudgetInOneTick` | the exposure pass respects its budget, and still covers every node |
+| `ARebuildIsBilledToTopologyAndNotToTheSolver` | stage attribution is honest |
+| `ReadingTheLinkCountDoesNotRebuildTheGraph` | observing does not change what is observed |
+| `SolverCostPerLinkStaysProportional` | nothing quadratic crept into the conduction pass |
+| `ASettledTickFitsInAFrame` | a wall-clock tripwire, loose on purpose |
+
+The timed ones run in a collection that disables parallelisation and take the best of three runs.
+They were reporting 1.7x and then 3.2x for the same binary before that, and all of the difference
+was thirty other tests on the same cores.
+
+Every test writes its figures to the test output, so a suite run is also a performance report.
+
+---
+
+## From a real session
+
+Benchmarks measure a synthetic hull with no game blocks behind it. What a real world does is a
+telemetry question, and the report now has a **frame cost** section: what the mod spends per
+frame across every grid, the share of frames where it alone exceeded 16.7 ms, how spiky the
+session was, and the worst sixteen frames in full — each with its stage split and the counts of
+what those stages touched. See [telemetry.md](telemetry.md#frame-cost-and-hitching).
+
+That last part is what makes a report actionable. "A 90 ms frame" is a number to worry about; "a
+300,000-block station rebuilding its conduction graph, 300,000 nodes visited" is a line to
+change.
+
+---
+
+## What is still open
+
+Roughly in order of how much a million-block grid would notice.
+
+**A solver step is atomic, and at a million blocks it is 104 ms.** This is now the largest single
+thing that lands in one tick, and unlike everything above it is not an accounting mistake — a step
+must touch every node, and 16 ns per link visit is near the memory-bandwidth floor. Lowering
+`Frequency` makes the spike *less frequent* without making it smaller, so it does not help. Making
+it smaller means not touching every node: activity tracking, chunking and multirate stepping, all
+designed in [scale-design.md](scale-design.md) and none of it built.
+
+**Removing a block still rebuilds the whole graph, and it is now the largest spike there is.**
+304 ms against a 49 ms median on a half-million-block hull, and it is a common event: grinding,
+combat damage, a section breaking off. Additions are incremental; removals are not, because every
+node index after the hole moves and every link referring to one of them becomes wrong. Repairing that incrementally needs a per-node index of the links touching a node — the
+intrusive adjacency chains in [scale-design.md §6](scale-design.md#6-data-structures) — after
+which removal is O(degree) like addition. Until then, grinding or combat damage on a very large
+grid costs a full rebuild per burst. It coalesces, so a section shot away is one rebuild rather
+than one per block.
+
+**Memory is 2.5 GB at a million blocks**, against the ~110 MB budgeted in
+[scale-design.md §6](scale-design.md#6-data-structures). The gap is object-per-node and
+object-per-block layout plus the room map's hash sets over the whole bounding volume — the
+structure-of-arrays and blittable-only changes in that section, none of which are built. This may
+well bind before the solver does.
+
+**The room map floods the bounding volume**, which is 14 times the block count on a hull and worse
+on a station. It is budgeted now, so it costs ticks rather than a stall — 7,237 of them to
+converge at a million blocks, which is twenty minutes of a stale map. Bounded and wrong is better
+than unbounded, but it is still wrong.
+
+**World load is 11 seconds at a million blocks**, in one call, before the first tick. `RebuildAll`
+is deliberately one-shot because it is far cheaper than replaying the incremental path per block,
+and a loading screen is a better place for a stall than a session — but a blueprint pasted
+mid-session takes the same path.
+
+**`SweepRoomPressure` is still per room per cadence**, with two game API calls each. Bounded by
+compartment count rather than block count, so it is small on a ship and unmeasured on a station
+with thousands of rooms.
