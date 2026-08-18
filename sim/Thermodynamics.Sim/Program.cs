@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using Thermodynamics.Harness;
 
@@ -29,6 +30,9 @@ namespace Thermodynamics.Sim
 
                 case "run":
                     return RunCommand(args);
+
+                case "bench":
+                    return BenchCommand(args);
 
                 default:
                     Console.Error.WriteLine("Unknown command: " + args[0]);
@@ -87,6 +91,103 @@ namespace Thermodynamics.Sim
             return 0;
         }
 
+        /// <summary>
+        /// The load benchmarks. Separate from <c>run</c> because they answer a different
+        /// question — not what the simulation does, but what it costs at sizes no scenario
+        /// would sit through.
+        ///
+        ///   bench scale                       the ladder, ship shape, up to 10^6 blocks
+        ///   bench scale --shape truss         the same ladder on a station spine
+        ///   bench scale --max 125000          stop the ladder early
+        ///   bench hitch --size 250000         per-tick cost with a block welded mid-run
+        ///   bench weld  --size 250000         a block welded on every tick
+        ///   bench load  --size 1000000        what building the grid costs before tick one
+        /// </summary>
+        private static int BenchCommand(string[] args)
+        {
+            string name = args.Length > 1 ? args[1] : "scale";
+            string shape = Option(args, "--shape", "ship");
+            int size = OptionInt(args, "--size", 125000);
+            int max = OptionInt(args, "--max", int.MaxValue);
+            int ticks = OptionInt(args, "--ticks", 0);
+            string csvDirectory = Option(args, "--csv", null);
+
+            switch (name)
+            {
+                case "scale":
+                {
+                    List<int> sizes = new List<int>();
+                    foreach (int rung in LoadBenchmarks.DefaultSizes)
+                    {
+                        if (rung <= max) sizes.Add(rung);
+                    }
+                    if (sizes.Count == 0) sizes.Add(max);
+
+                    Console.WriteLine("Scale ladder, " + shape + " shape. Building "
+                        + sizes[sizes.Count - 1].ToString("n0") + " blocks takes a while.");
+                    Console.WriteLine();
+
+                    List<ScaleRow> rows = LoadBenchmarks.Scale(
+                        shape, sizes, message => Console.Error.WriteLine("  " + message));
+
+                    Console.WriteLine(LoadBenchmarks.Table(rows));
+
+                    if (csvDirectory != null)
+                    {
+                        Directory.CreateDirectory(csvDirectory);
+                        string path = Path.Combine(csvDirectory, "scale-" + shape + ".csv");
+                        File.WriteAllText(path, LoadBenchmarks.Csv(rows));
+                        Console.WriteLine("csv -> " + path);
+                    }
+                    return 0;
+                }
+
+                case "hitch":
+                    PrintHitch(LoadBenchmarks.Hitch(shape, size, ticks > 0 ? ticks : 400));
+                    return 0;
+
+                case "weld":
+                    PrintHitch(LoadBenchmarks.Weld(shape, size, ticks > 0 ? ticks : 120));
+                    return 0;
+
+                case "load":
+                    PrintHitch(LoadBenchmarks.Load(shape, size));
+                    return 0;
+
+                default:
+                    Console.Error.WriteLine("Unknown benchmark: " + name);
+                    Console.Error.WriteLine("  one of: " + string.Join(", ", LoadBenchmarks.Names));
+                    return 1;
+            }
+        }
+
+        private static void PrintHitch(HitchResult result)
+        {
+            Console.WriteLine();
+            Console.WriteLine("== " + result.Name + " ==");
+            Console.WriteLine("  " + result.Blocks.ToString("n0") + " blocks, "
+                + result.Links.ToString("n0") + " links, built in "
+                + result.BuildMs.ToString("n0") + " ms.");
+            if (result.Notes.Length > 0) Console.WriteLine("  " + result.Notes);
+            Console.WriteLine("  " + result.Trace.Describe());
+        }
+
+        private static string Option(string[] args, string flag, string fallback)
+        {
+            for (int i = 0; i < args.Length - 1; i++)
+            {
+                if (args[i] == flag) return args[i + 1];
+            }
+            return fallback;
+        }
+
+        private static int OptionInt(string[] args, string flag, int fallback)
+        {
+            string raw = Option(args, flag, null);
+            int value;
+            return raw != null && int.TryParse(raw, out value) ? value : fallback;
+        }
+
         private static void PrintTable(ScenarioResult result)
         {
             string[] lines = result.Csv.Split('\n');
@@ -107,6 +208,12 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  list                    show available scenarios");
             Console.WriteLine("  run <name|all>          run a scenario");
             Console.WriteLine("  run <name> --csv <dir>  also write full results as CSV");
+            Console.WriteLine();
+            Console.WriteLine("  bench scale             cost per stage as the grid grows");
+            Console.WriteLine("  bench hitch --size N    per-tick cost, with a block welded mid-run");
+            Console.WriteLine("  bench weld  --size N    a block welded on every tick");
+            Console.WriteLine("  bench load  --size N    what building the grid costs before tick one");
+            Console.WriteLine("    --shape ship|cube|truss   --max N   --ticks N   --csv <dir>");
         }
     }
 }
