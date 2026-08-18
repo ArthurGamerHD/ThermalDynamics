@@ -158,6 +158,18 @@ namespace Thermodynamics.Sim
                     PrintHitch(LoadBenchmarks.Load(shape, size));
                     return 0;
 
+                case "pace":
+                {
+                    float seconds = OptionInt(args, "--seconds", 20);
+                    Console.WriteLine();
+                    Console.WriteLine("== pace " + shape + " " + size.ToString("n0") + " ==");
+                    Console.WriteLine("  Constant SimulationSpeed x HeatTimeScale, then Frequency alone.");
+                    Console.WriteLine();
+                    Console.WriteLine(LoadBenchmarks.PaceTable(
+                        LoadBenchmarks.Pace(shape, size, seconds), seconds));
+                    return 0;
+                }
+
                 case "spike":
                 {
                     LoadBenchmarks.SpikeReport report = LoadBenchmarks.Spike(shape, size);
@@ -240,6 +252,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  bench weld  --size N    a block welded on every tick");
             Console.WriteLine("  bench load  --size N    what building the grid costs before tick one");
             Console.WriteLine("  bench spike --size N    one block placed, split by stage");
+            Console.WriteLine("  bench pace  --size N    does slowing sim and raising transfer save anything");
             Console.WriteLine("    --shape ship|cube|truss   --max N   --ticks N   --csv <dir>");
             Console.WriteLine("    --diagnostics             as telemetry runs it: per-node watts on");
         }

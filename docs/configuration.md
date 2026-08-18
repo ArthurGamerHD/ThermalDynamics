@@ -102,9 +102,52 @@ more even steps and its heat evolves more slowly; raise it or set it to zero and
 rate with the spikes back. Grids below roughly a hundred thousand blocks never reach the default
 and are unaffected either way. The telemetry report says what rate each grid is actually keeping.
 
+### Trading simulation speed for heat transfer
+
+A natural idea, and worth knowing what it does before reaching for it: halve `SimulationSpeed` and
+double `HeatTimeScale`, so half as many steps run each second but heat moves twice as fast in
+each, and a ship still cools at the same rate a player watching it would see.
+
+**The pace half is exactly true.** `HeatTimeScale` divides every heat capacity, which is precisely
+equivalent to running the clock faster, so any pairing with the same
+`SimulationSpeed x HeatTimeScale` produces the same temperatures against the wall clock —
+measured at 0.02 % apart across quarter speed, half speed and double speed
+(`PaceEquivalenceTests`).
+
+**The saving half mostly is not.** A step costs its substeps, and the substeps a grid needs are
+proportional to the step length times the stiffness — which is what `HeatTimeScale` is. Buying
+half the steps with twice the stiffness leaves the substeps roughly where they were. Measured on a
+hull, quartering the speed and quadrupling the transfer took the substep count from 72 to 60.
+
+What saving there is comes from somewhere else: **fewer, longer steps**, which amortise the passes
+that run once per step whatever its length — mirroring node state, estimating the substep count,
+publishing the result. That is worth having, and there is a simpler way to ask for it.
+
+| speed | heatScale | freq | steps | substeps | ms / real s | cooled |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1.00 | 225 | 4 | 80 | 240 | 75.6 | 46.37 K |
+| 0.50 | 450 | 4 | 40 | 200 | 58.7 | 46.44 K |
+| 0.25 | 900 | 4 | 20 | 200 | 57.0 | 46.56 K |
+| **1.00** | **225** | **1** | 20 | 200 | **57.5** | **46.56 K** |
+| 1.00 | 225 | 16 | 320 | 320 | 106.2 | 46.30 K |
+
+*127,000 blocks, 20 real seconds, work budget off so the effect is not hidden. `bench pace`.*
+
+**Lowering `Frequency` alone reaches the same place** — the fourth row is the third row's cost and
+the third row's answer, with `SimulationSpeed` and `HeatTimeScale` left alone. It is one knob
+instead of two, it does not move the world's clock, and it leaves `SimulationSpeed` meaning what a
+player expects. Going the other way costs: `Frequency 16` is nearly twice `Frequency 1` for a
+result 0.5 % different.
+
+Two things to watch when lowering it. A longer step needs more substeps, so a stiff grid can reach
+`MaxSubsteps` and start clamping — the report's **steps clamped by substep cap** is where that
+shows, and it should stay at zero. And on a grid large enough for `MaxLinkVisitsPerStep` to bind,
+that budget is already shortening steps and is the constraint that matters; lowering `Frequency`
+will not move it much.
+
 | Setting | Default | Effect |
 | --- | --- | --- |
-| `Frequency` | 4 | Solver steps per simulated second. The integration step is `1/Frequency`. |
+| `Frequency` | 4 | Solver steps per simulated second. The integration step is `1/Frequency`. Lowering it is the cheapest way to cut cost — see above. |
 | `SimulationSpeed` | 1 | Simulated seconds per real second, applied by running more steps rather than longer ones. Linear in CPU. |
 | `HeatTimeScale` | 225 | How much faster than real physics heat moves. Divides every heat capacity. |
 | `MaxLinkVisitsPerStep` | 1000000 | Most link visits one step may make — substeps times links — before the step is shortened to fit. 0 removes the bound. See below. |

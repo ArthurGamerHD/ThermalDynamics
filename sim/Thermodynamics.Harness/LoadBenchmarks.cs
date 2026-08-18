@@ -168,7 +168,7 @@ namespace Thermodynamics.Harness
         /// <summary>The default ladder. Every rung is roughly four times the one below it.</summary>
         public static readonly int[] DefaultSizes = { 8000, 32000, 125000, 500000, 1000000 };
 
-        public static readonly string[] Names = { "scale", "hitch", "weld", "load", "spike" };
+        public static readonly string[] Names = { "scale", "hitch", "weld", "load", "spike", "pace" };
 
         // ---- the ladder --------------------------------------------------------------------
 
@@ -515,6 +515,138 @@ namespace Thermodynamics.Harness
             result.Notes = "adding blocks " + addMs.ToString("n0") + " ms, RebuildAll "
                 + watch.Elapsed.TotalMilliseconds.ToString("n0") + " ms";
             return result;
+        }
+
+        /// <summary>One setting pairing, and what it cost and achieved over the same real time.</summary>
+        public class PaceRow
+        {
+            public float Speed;
+            public float HeatTimeScale;
+            public int Frequency;
+
+            public long Steps;
+            public long Substeps;
+            public long WorkUnits;
+            public double Milliseconds;
+
+            /// <summary>Simulated seconds advanced per real second.</summary>
+            public double SimulatedPerReal;
+
+            /// <summary>How far the tracked block moved over the run, in kelvin.</summary>
+            public float TemperatureChange;
+        }
+
+        /// <summary>
+        /// Whether slowing the simulation and speeding up heat transfer buys anything.
+        ///
+        /// The proposal is to halve <c>SimulationSpeed</c> and double <c>HeatTimeScale</c> so heat
+        /// keeps the same pace against the wall clock for half the cost. The arithmetic says the
+        /// two cancel: a step costs its substeps, the substep count a grid needs is proportional to
+        /// the step length times the stiffness, and <c>HeatTimeScale</c> <em>is</em> the stiffness —
+        /// so substeps per real second come to <c>SimulationSpeed x HeatTimeScale</c> and
+        /// <c>Frequency</c> drops out entirely.
+        ///
+        /// That only holds while a grid is substep-limited. One that already solves in a single
+        /// substep cannot be given fewer, so for that grid the trade is real and the saving is the
+        /// whole factor. Which case a world is in is a measurement, not an opinion, so this runs
+        /// the pairings and reports both the cost and what the heat actually did.
+        /// </summary>
+        public static List<PaceRow> Pace(string shape, int targetCells, float realSeconds)
+        {
+            List<PaceRow> rows = new List<PaceRow>();
+
+            // Constant product: the same thermal pace against the wall clock, if the theory holds.
+            float[] speeds = { 1f, 0.5f, 0.25f };
+            float[] scales = { 225f, 450f, 900f };
+
+            for (int i = 0; i < speeds.Length; i++)
+            {
+                rows.Add(MeasurePace(shape, targetCells, realSeconds, speeds[i], scales[i], 4));
+            }
+
+            // And one that changes only Frequency, to show it cancelling out.
+            rows.Add(MeasurePace(shape, targetCells, realSeconds, 1f, 225f, 1));
+            rows.Add(MeasurePace(shape, targetCells, realSeconds, 1f, 225f, 16));
+
+            return rows;
+        }
+
+        private static PaceRow MeasurePace(string shape, int targetCells, float realSeconds,
+            float speed, float heatTimeScale, int frequency)
+        {
+            PaceRow row = new PaceRow();
+            row.Speed = speed;
+            row.HeatTimeScale = heatTimeScale;
+            row.Frequency = frequency;
+
+            ThermalSimulation simulation = BuildSettled(shape, targetCells);
+            while (simulation.HasPendingWork) simulation.Update(TickSeconds, Worlds.Shadow());
+
+            ThermalSettings settings = simulation.Settings;
+            settings.SimulationSpeed = speed;
+            settings.HeatTimeScale = heatTimeScale;
+            settings.Frequency = frequency;
+
+            // The budget would bound the substep count and hide the very effect being measured.
+            settings.MaxLinkVisitsPerStep = 0;
+            settings.Derive();
+
+            SeedSpread(simulation);
+
+            // One block watched all the way through, so "did the heat keep pace" is a number.
+            ThermalNode tracked = simulation.Solver.Nodes[simulation.Solver.Nodes.Count / 2];
+            float before = tracked.Temperature;
+
+            EnvironmentSample sample = Worlds.Space(new Vector3(0f, 1f, 0f));
+            int frames = (int)(realSeconds / FrameSeconds);
+
+            simulation.Work.Reset();
+            SettleMemory();
+
+            Stopwatch watch = Stopwatch.StartNew();
+            for (int f = 0; f < frames; f++)
+            {
+                simulation.Update(FrameSeconds, sample);
+            }
+            watch.Stop();
+
+            row.Milliseconds = watch.Elapsed.TotalMilliseconds;
+            row.Steps = simulation.Work.SolverSteps;
+            row.Substeps = simulation.Work.SolverSubsteps;
+            row.WorkUnits = simulation.Work.SolverSubsteps
+                * (simulation.Solver.Nodes.Count + simulation.Solver.LinkCount);
+            row.SimulatedPerReal = simulation.SimulatedSecondsRun / realSeconds;
+            row.TemperatureChange = tracked.Temperature - before;
+
+            return row;
+        }
+
+        public static string PaceTable(IList<PaceRow> rows, float realSeconds)
+        {
+            StringBuilder sb = new StringBuilder();
+
+            sb.Append("speed".PadLeft(7)).Append("heatScale".PadLeft(11))
+              .Append("freq".PadLeft(6)).Append("steps".PadLeft(8))
+              .Append("substeps".PadLeft(10)).Append("work/s".PadLeft(14))
+              .Append("ms/real s".PadLeft(11)).Append("sim s/real s".PadLeft(14))
+              .Append("dT over run".PadLeft(13)).Append('\n');
+
+            for (int i = 0; i < rows.Count; i++)
+            {
+                PaceRow r = rows[i];
+                sb.Append(r.Speed.ToString("n2").PadLeft(7))
+                  .Append(r.HeatTimeScale.ToString("n0").PadLeft(11))
+                  .Append(r.Frequency.ToString().PadLeft(6))
+                  .Append(r.Steps.ToString("n0").PadLeft(8))
+                  .Append(r.Substeps.ToString("n0").PadLeft(10))
+                  .Append((r.WorkUnits / realSeconds).ToString("n0").PadLeft(14))
+                  .Append((r.Milliseconds / realSeconds).ToString("n1").PadLeft(11))
+                  .Append(r.SimulatedPerReal.ToString("n2").PadLeft(14))
+                  .Append(r.TemperatureChange.ToString("n2").PadLeft(13))
+                  .Append('\n');
+            }
+
+            return sb.ToString();
         }
 
         // ---- attribution --------------------------------------------------------------------
