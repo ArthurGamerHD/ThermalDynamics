@@ -20,6 +20,7 @@ namespace Thermodynamics.Core
         private readonly RoomMapper rooms;
         private readonly ThermalSolver solver;
         private readonly SimulationScheduler scheduler;
+        private readonly SimulationWork work = new SimulationWork();
 
         private LoopThermalProperties loopProperties = LoopThermalProperties.Default();
         private PlanetThermalProperties planet = PlanetThermalProperties.Default();
@@ -49,8 +50,20 @@ namespace Thermodynamics.Core
             solver = new ThermalSolver(settings, grid, surfaces);
             scheduler = new SimulationScheduler(settings);
 
+            // One instance shared by both, so a caller reads one set of counters for the whole
+            // update rather than adding up two objects' and hoping it caught them all.
+            solver.Work = work;
+            rooms.Work = work;
+
             rooms.Completed += OnRoomsCompleted;
         }
+
+        /// <summary>
+        /// How much work this simulation's one-shot stages have done. Counted, not timed — see
+        /// <see cref="SimulationWork"/> for why a load test wants counts and a stutter wants
+        /// milliseconds.
+        /// </summary>
+        public SimulationWork Work { get { return work; } }
 
         public ThermalSettings Settings { get { return settings; } }
         public GridModel Grid { get { return grid; } }
@@ -338,7 +351,8 @@ namespace Thermodynamics.Core
                 return;
             }
 
-            List<CoolantLoop> found = CoolantLoopBuilder.FindLoops(grid, loopProperties, DefaultTemperature);
+            List<CoolantLoop> found = CoolantLoopBuilder.FindLoops(
+                grid, loopProperties, DefaultTemperature, work);
             solver.SetLoops(found);
         }
 

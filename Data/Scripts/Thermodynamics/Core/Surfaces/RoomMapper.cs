@@ -59,6 +59,13 @@ namespace Thermodynamics.Core
         /// <summary>Raised each time a pass completes and a new map is published.</summary>
         public event Action Completed;
 
+        /// <summary>
+        /// Shared work counters. The mapper and the solver write to the same instance so a test
+        /// or a report can read one figure for what an update touched, rather than adding up
+        /// numbers from two objects and hoping it caught them all.
+        /// </summary>
+        public SimulationWork Work = new SimulationWork();
+
         public RoomMapper(SurfaceMap surfaces)
         {
             if (surfaces == null) throw new ArgumentNullException("surfaces");
@@ -194,6 +201,7 @@ namespace Thermodynamics.Core
                     }
                     StepExternal();
                     spent++;
+                    Work.RoomCellsVisited++;
                 }
                 else if (phase == Phase.Interior)
                 {
@@ -201,6 +209,7 @@ namespace Thermodynamics.Core
                     {
                         StepInterior();
                         spent++;
+                        Work.RoomCellsVisited++;
                         continue;
                     }
 
@@ -211,6 +220,7 @@ namespace Thermodynamics.Core
                         break;
                     }
                     spent++;
+                    Work.RoomCellsVisited++;
                 }
                 else
                 {
@@ -223,6 +233,7 @@ namespace Thermodynamics.Core
 
         private void BeginPass()
         {
+            Work.RoomPassesBegun++;
             restartRequested = false;
 
             if (hasPendingBounds)
@@ -371,6 +382,7 @@ namespace Thermodynamics.Core
 
         private void Publish()
         {
+            Work.RoomPassesCompleted++;
             working.DropEmptyRooms();
 
             // After the renumbering, so a portal's region indices are the ones that survive.

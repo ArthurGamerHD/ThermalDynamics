@@ -164,6 +164,13 @@ namespace Thermodynamics.Core
 
         private IBlockAdjacency adjacency;
 
+        /// <summary>
+        /// How much work the one-shot stages did. Never null, so no call site needs a guard;
+        /// the host replaces it with its own instance when it wants to read the same counters
+        /// the room mapper writes to.
+        /// </summary>
+        public SimulationWork Work = new SimulationWork();
+
         private bool linksDirty = true;
 
         /// <summary>Set when node indices move, which invalidates every mirrored row.</summary>
@@ -355,6 +362,9 @@ namespace Thermodynamics.Core
         /// </summary>
         public void RebuildLinks()
         {
+            Work.TopologyRebuilds++;
+            Work.TopologyNodeVisits += nodes.Count;
+
             links.Clear();
             for (int i = 0; i < nodes.Count; i++)
             {
@@ -393,6 +403,8 @@ namespace Thermodynamics.Core
                     b.LinkCount++;
                 }
             }
+
+            Work.LinksBuilt += links.Count;
 
             linksDirty = false;
             linkMassFactorDirty = true;
@@ -498,6 +510,9 @@ namespace Thermodynamics.Core
         /// </summary>
         public void RefreshExposure(RoomMap rooms)
         {
+            Work.ExposureRefreshes++;
+            Work.ExposureNodeVisits += nodes.Count;
+
             for (int i = 0; i < nodes.Count; i++)
             {
                 ThermalNode node = nodes[i];
@@ -544,6 +559,9 @@ namespace Thermodynamics.Core
                 }
             }
 
+            Work.ExposureRefreshes++;
+            Work.ExposureNodeVisits += affected.Count;
+
             foreach (BlockInstance block in affected)
             {
                 ThermalNode node = GetNode(block);
@@ -580,6 +598,9 @@ namespace Thermodynamics.Core
         /// </summary>
         public void RebuildRoomAir(RoomMap rooms)
         {
+            Work.RoomAirRebuilds++;
+            if (rooms != null) Work.RoomAirRoomVisits += rooms.Rooms.Count;
+
             rememberedAir.Clear();
             for (int i = 0; i < roomAir.Count; i++)
             {
@@ -757,6 +778,9 @@ namespace Thermodynamics.Core
         /// </summary>
         public void RebuildHeatPumps()
         {
+            Work.HeatPumpRebuilds++;
+            Work.HeatPumpNodeVisits += grid.Blocks.Count;
+
             Dictionary<long, HeatPumpDevice> previous = new Dictionary<long, HeatPumpDevice>();
             for (int i = 0; i < heatPumps.Count; i++)
             {
@@ -976,6 +1000,9 @@ namespace Thermodynamics.Core
             {
                 heatPumps[p].BeginStep();
             }
+
+            Work.SolverSteps++;
+            Work.SolverSubsteps += substeps;
 
             float h = deltaSeconds / substeps;
             for (int s = 0; s < substeps; s++)

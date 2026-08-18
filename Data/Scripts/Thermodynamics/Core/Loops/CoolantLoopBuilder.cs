@@ -19,8 +19,26 @@ namespace Thermodynamics.Core
         /// </summary>
         public static List<CoolantLoop> FindLoops(GridModel grid, LoopThermalProperties properties, float initialTemperature)
         {
+            return FindLoops(grid, properties, initialTemperature, null);
+        }
+
+        /// <param name="work">
+        /// Optional work counters. The search walks every block on the grid looking for the
+        /// handful that carry coolant ports, so what it costs is a function of grid size and not
+        /// of how much plumbing there is — which is exactly the sort of thing a load test needs
+        /// to be able to assert about.
+        /// </param>
+        public static List<CoolantLoop> FindLoops(GridModel grid, LoopThermalProperties properties,
+            float initialTemperature, SimulationWork work)
+        {
             List<CoolantLoop> loops = new List<CoolantLoop>();
             if (grid == null) return loops;
+
+            if (work != null)
+            {
+                work.LoopSearches++;
+                work.LoopSearchCells += grid.Blocks.Count;
+            }
 
             HashSet<long> claimed = new HashSet<long>();
 
