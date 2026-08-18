@@ -18,6 +18,10 @@ namespace Thermodynamics
         private static readonly MyStringId UndergroundTemperatureId = MyStringId.GetOrCompute("UndergroundTemperature");
         private static readonly MyStringId CoreTemperatureId = MyStringId.GetOrCompute("CoreTemperature");
         private static readonly MyStringId SealevelDeadzoneId = MyStringId.GetOrCompute("SealevelDeadzone");
+        private static readonly MyStringId PoleTemperatureDropId = MyStringId.GetOrCompute("PoleTemperatureDrop");
+        private static readonly MyStringId AmbientLagSecondsId = MyStringId.GetOrCompute("AmbientLagSeconds");
+        private static readonly MyStringId AmbientLapseRateId = MyStringId.GetOrCompute("AmbientLapseRate");
+        private static readonly MyStringId UndergroundDampingDepthId = MyStringId.GetOrCompute("UndergroundDampingDepth");
         private static readonly MyStringId SolarDecayId = MyStringId.GetOrCompute("SolarDecay");
         private static readonly MyStringId ConvectionCoefficientId = MyStringId.GetOrCompute("ConvectionCoefficient");
 
@@ -50,6 +54,29 @@ namespace Thermodynamics
         /// </summary>
         [ProtoMember(25)]
         public float SealevelDeadzone;
+
+        /// <summary>
+        /// How much colder a pole is than the equator, K.
+        ///
+        /// Unlike the fields above, the four that follow carry the model's own defaults rather
+        /// than zero. They were added after the definitions were written, and zero is a real
+        /// setting for every one of them — no latitude, no lag, no lapse, no damping — so a
+        /// planet file that predates them would silently ask for all four to be switched off.
+        /// </summary>
+        [ProtoMember(27)]
+        public float PoleTemperatureDrop = 40f;
+
+        /// <summary>How long the air takes to answer the sun, in seconds of play.</summary>
+        [ProtoMember(28)]
+        public float AmbientLagSeconds = 45f;
+
+        /// <summary>How much colder a kilometre above sea level is, K.</summary>
+        [ProtoMember(29)]
+        public float AmbientLapseRate = 4f;
+
+        /// <summary>Metres of rock that blunt the surface's day-night swing to nothing.</summary>
+        [ProtoMember(31)]
+        public float UndergroundDampingDepth = 20f;
 
         /// <summary>
         /// A value between 0 and 1
@@ -92,6 +119,18 @@ namespace Thermodynamics
 
             if (lookup.TryGetDouble(defId, GroupId, SealevelDeadzoneId, out dvalue))
                 def.SealevelDeadzone = (float)dvalue;
+
+            if (lookup.TryGetDouble(defId, GroupId, PoleTemperatureDropId, out dvalue))
+                def.PoleTemperatureDrop = (float)dvalue;
+
+            if (lookup.TryGetDouble(defId, GroupId, AmbientLagSecondsId, out dvalue))
+                def.AmbientLagSeconds = (float)dvalue;
+
+            if (lookup.TryGetDouble(defId, GroupId, AmbientLapseRateId, out dvalue))
+                def.AmbientLapseRate = (float)dvalue;
+
+            if (lookup.TryGetDouble(defId, GroupId, UndergroundDampingDepthId, out dvalue))
+                def.UndergroundDampingDepth = (float)dvalue;
 
             if (lookup.TryGetDouble(defId, GroupId, SolarDecayId, out dvalue))
                 def.SolarDecay = (float)dvalue;

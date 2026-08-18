@@ -350,6 +350,10 @@ namespace Thermodynamics
             properties.UndergroundTemperature = definition.UndergroundTemperature;
             properties.CoreTemperature = definition.CoreTemperature;
             properties.SealevelDeadzone = definition.SealevelDeadzone;
+            properties.PoleTemperatureDrop = definition.PoleTemperatureDrop;
+            properties.AmbientLagSeconds = definition.AmbientLagSeconds;
+            properties.AmbientLapseRate = definition.AmbientLapseRate;
+            properties.UndergroundDampingDepth = definition.UndergroundDampingDepth;
             properties.SolarDecay = definition.SolarDecay;
             properties.ConvectionCoefficient = definition.ConvectionCoefficient;
 

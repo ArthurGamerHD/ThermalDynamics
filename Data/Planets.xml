@@ -13,8 +13,30 @@
 					<Decimal Name="NightTemperature" Value="283.15" />
 					<!--The ambiant temperature when the sun is directly overhead-->
 					<Decimal Name="DayTemperature" Value="294.261" />
+					<!--
+					How much colder a pole is than the equator, K.
+					Day and Night above are the planet's EQUATORIAL figures; this is the span from
+					there to its poles. Earth's is about 40. Zero gives one climate for a whole world.
+					-->
+					<Decimal Name="PoleTemperatureDrop" Value="40" />
+					<!--
+					How long the air takes to answer the sun, in seconds of play.
+					Without it the hottest moment of the day is exactly noon, which is true nowhere.
+					Worth raising on a world with a long day and lowering on a short one.
+					-->
+					<Decimal Name="AmbientLagSeconds" Value="45" />
+					<!--
+					How much colder a kilometre above sea level is, K. Earth's is 6.5; this is lower
+					because the ground table already makes mountains snowy. Zero switches altitude off.
+					-->
+					<Decimal Name="AmbientLapseRate" Value="4" />
 					<!--The ambiant temperature when underground-->
 					<Decimal Name="UndergroundTemperature" Value="280" />
+					<!--
+					Metres of rock that blunt the surface's day-night swing to nothing. Above this
+					depth a buried block still feels some of the day; below it, none.
+					-->
+					<Decimal Name="UndergroundDampingDepth" Value="20" />
 					<!--The temperature at the center of the planet-->
 					<Decimal Name="CoreTemperature" Value="3000" />
 					<!--The distance below sealevel that remains underground temperatures-->
