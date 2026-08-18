@@ -531,6 +531,32 @@ namespace Thermodynamics
         /// </summary>
         private static void WriteFrames(StringBuilder sb)
         {
+            // Grids running below real time, which is the work budget doing its job rather than
+            // a fault — but it is also why heat might be moving slowly, so it is said out loud.
+            int throttled = 0;
+            double worstRate = 1d;
+            for (int i = 0; i < Telemetry.Grids.Count; i++)
+            {
+                GridTelemetry g = Telemetry.Grids[i];
+                if (g.SimulationRate.Count == 0) continue;
+
+                double rate = g.SimulationRate.Mean;
+                if (rate >= 0.999d) continue;
+
+                throttled++;
+                if (rate < worstRate) worstRate = rate;
+            }
+
+            if (throttled > 0)
+            {
+                sb.Append('\n');
+                Field(sb, "grids below real time", throttled.ToString("n0")
+                    + ", slowest at " + (100.0 * worstRate).ToString("n1") + " %");
+                sb.Append("  A grid below real time is too large to simulate at full rate and is\n");
+                sb.Append("  taking shorter steps rather than coarser ones — MaxLinkVisitsPerStep.\n");
+                sb.Append("  Heat moves more slowly on it; nothing else about it is different.\n");
+            }
+
             FrameCostTracker frames = Telemetry.FrameCost;
 
             sb.Append("\n  per frame, all grids together:\n");
@@ -655,6 +681,10 @@ namespace Thermodynamics
                 Field(sb, "  nodes per step", g.NodesPerStep.Format("n0"));
                 Field(sb, "  solver substeps", g.Substeps.Format("n2"));
                 Field(sb, "  steps clamped", g.ClampedSteps.ToString("n0"));
+                Field(sb, "  simulation rate", g.SimulationRate.Count == 0
+                    ? "-"
+                    : (100.0 * g.SimulationRate.Mean).ToString("n1") + " % ("
+                        + g.SimulatedSecondsSkipped.ToString("n1") + " s not advanced)");
                 Field(sb, "  hottest block T", g.HottestBlockTemperature.Format("n1"));
                 Field(sb, "  peak temperature", FormatPeak(g.PeakTemperature) + "  " + g.PeakTemperatureBlock);
                 Field(sb, "  critical blocks", g.CriticalBlocks.Format("n0"));

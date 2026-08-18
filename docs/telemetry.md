@@ -112,6 +112,21 @@ The frame is closed at the top of the *next* frame rather than at the end of its
 order the engine runs session components and entity components in is not something a mod
 controls, and a frame closed before its grids have run records nothing.
 
+## Grids running below real time
+
+`MaxLinkVisitsPerStep` bounds what one solver step may cost, and a grid large enough to reach it
+takes **shorter steps rather than coarser ones** — advancing less simulated time at exactly the
+same accuracy. See [configuration.md](configuration.md#solver).
+
+That is a legitimate state and the one the setting exists for, but it is also the difference
+between a ship that cools in a minute and one that takes three, so the report says so rather than
+leaving it to be discovered. Per grid, under `simulation rate`: the share of real time it is
+keeping up with, and the simulated seconds it chose not to advance. The `Cost` section then names
+how many grids are below real time and which is slowest, with a line saying what that means, so
+nobody reads a slow-cooling ship as a physics bug.
+
+A grid at 100 % has never hit the budget, which below roughly a hundred thousand blocks is always.
+
 ## Work counters
 
 Alongside the millisecond figures, the simulation counts what its one-shot stages *touched*:

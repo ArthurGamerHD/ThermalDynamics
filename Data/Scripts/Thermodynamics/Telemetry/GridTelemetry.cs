@@ -253,6 +253,19 @@ namespace Thermodynamics
         /// </summary>
         public long ClampedSteps;
 
+        /// <summary>
+        /// How much of real time this grid's simulation is keeping up with, 0..1, and the
+        /// simulated seconds it chose not to advance.
+        ///
+        /// A grid below one is running on the work budget: it is too large to simulate at full
+        /// rate and is taking shorter steps rather than coarser ones, which is a legitimate state
+        /// and the one that trade exists for. But it is also the difference between a ship that
+        /// cools in a minute and one that takes three, so it has to be visible to anyone reading
+        /// a report and wondering why heat is moving slowly.
+        /// </summary>
+        public readonly RunningStat SimulationRate = new RunningStat();
+        public double SimulatedSecondsSkipped;
+
         public readonly RunningStat NodesPerStep = new RunningStat();
         public readonly RunningStat CriticalBlocks = new RunningStat();
         public long DamageEvents;
@@ -346,6 +359,9 @@ namespace Thermodynamics
 
             Substeps.Add(solver.LastSubsteps);
             if (solver.LastStepWasClamped) ClampedSteps++;
+
+            SimulationRate.Add((float)Grid.Simulation.SimulationRate);
+            SimulatedSecondsSkipped = Grid.Simulation.SimulatedSecondsSkipped;
             NodesPerStep.Add(nodeCount);
             CriticalBlocks.Add(Grid.CriticalBlocks);
 
