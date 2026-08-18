@@ -70,11 +70,17 @@ dictionaries are bounded by the number of block definitions (4096), grids that h
 
 The section to read first when someone reports stuttering.
 
-Every other cost figure in the report is per grid, and a stutter is not per grid. Grids tick on
-the ten-frame cadence and the engine calls them all on the same frame, so twenty ships each
-taking a tolerable two milliseconds are a forty-millisecond frame — and every per-grid row still
-looks fine. `FrameCostTracker` adds up what the mod spent on each frame across every grid, and
-keeps the **worst sixteen frames of the session in full**.
+Every other cost figure in the report is per grid, and a stutter is not per grid: what a player
+feels is everything that ran on one frame added together, and the per-grid rows can all look fine
+while the frame does not. `FrameCostTracker` adds up what the mod spent on each frame across every
+grid that ran on it, and keeps the **worst sixteen frames of the session in full**.
+
+**A frame carries about a tenth of the world's grids, not all of them.** The engine holds
+ten-frame entities in a `MyDistributedTypeUpdater` and updates `ceil(count/10)` of them per frame,
+so grids are already spread — see
+[engine-api-notes.md](engine-api-notes.md#entity-updates-are-already-staggered-across-frames).
+Twenty ships in a world contribute roughly two grids to any given frame, and the figures here
+should be read that way.
 
 The report gives, under `Cost`:
 

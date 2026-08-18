@@ -324,3 +324,34 @@ most of the same ground if you would rather read than reflect.
 The single most useful habit: before hand-rolling a subsystem, grep the ModAPI namespaces
 (`VRage.Game.ModAPI`, `Sandbox.ModAPI`) for it. The room mapper is 725 lines of code that the
 engine was already computing.
+
+## Entity updates are already staggered across frames
+
+`ThermalGrid` polls on `UpdateBeforeSimulation10`, and the obvious worry at scale is that every
+grid in the world lands on the same frame — a world of twenty ships each costing a tolerable two
+milliseconds being one forty-millisecond frame every ten. That was the assumption a staggering
+change was about to be written against. It is wrong, and the engine assemblies say so.
+
+`MyEntities` holds ten-frame entities in `MyDistributedTypeUpdater<MyEntity>(10)`
+(`VRage.Library`). Its `ApplyChanges` computes
+
+```
+m_step = ceil(Count / UpdateInterval)
+```
+
+and its enumerator walks `[m_updateIndex, m_updateIndex + m_step)`, with `Update()` advancing
+`m_updateIndex` by `m_step` each frame and wrapping after `UpdateInterval` frames. So a tenth of
+the registered entities update on each frame, in type-sorted order, and a mod that asks for
+`EACH_10TH_FRAME` is already spread.
+
+Two things follow.
+
+* **There is nothing for a mod to stagger.** Adding a phase offset per grid on top would either
+  do nothing or fight the engine's own distribution.
+* **A per-frame cost figure is a tenth of the world's grids, not all of them** — which is what
+  the frame-cost section of a telemetry report is measuring, and it is worth knowing when
+  reading one. Twenty ships in a world contribute about two grids to any given frame.
+
+The remaining way for many grids to land together is for them to be adjacent in the type-sorted
+list and fall inside one slice, which is a matter of how many other entities exist rather than
+anything the mod controls.
