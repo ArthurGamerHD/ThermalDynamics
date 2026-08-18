@@ -83,7 +83,11 @@ namespace Thermodynamics
             PlanetManager.Planet planet = PlanetManager.GetClosestPlanet(position);
             SamplePlanet(ref sample, ref position, planet);
             SampleWind(ref sample, ref position, ref worldToLocal, planet);
-            sample.SolarOcclusion = sample.IsUnderground ? 1f : SolarOcclusion(ref position, ref sample);
+            // Buried is buried: no sun reaches it, and the raycast that would say so is the most
+            // expensive thing a grid does. Depth is the mod's own answer and the game's flag is
+            // its answer, and either one being sure is enough to skip the ray.
+            bool buried = sample.IsUnderground || sample.Depth > 0f;
+            sample.SolarOcclusion = buried ? 1f : SolarOcclusion(ref position, ref sample);
             sample.IsSolarOccluded = sample.SolarOcclusion >= 1f;
 
             if (occlusionTested) RefreshShadowOccluders(ref position, ref sample);
@@ -122,7 +126,9 @@ namespace Thermodynamics
             {
                 sample.HasPlanet = false;
                 sample.UpDirection = Vector3.Up;
+                sample.Weather = WeatherResponse.Calm;
                 currentPlanetId = -1;
+                hasAmbientHistory = false;
                 return;
             }
 
@@ -142,18 +148,82 @@ namespace Thermodynamics
             sample.GroundOffset = ground.Offset;
             sample.GroundSwing = ground.Swing;
 
-            // Where the air is now, so it can chase the sun rather than track it.
-            sample.PreviousAmbient = LastState.AmbientTemperature;
-            sample.SecondsSincePrevious = TickSeconds;
+            // How high, and how deep. Both fall out of one radius and the surface height cached
+            // beside the ground material, so neither costs a lookup of its own.
+            float radius = (float)up.Length();
+            sample.Radius = radius;
+            sample.MeanRadius = planet.Entity.AverageRadius;
+            sample.Altitude = radius - sample.MeanRadius;
+            sample.Depth = groundSurfaceRadius > 0f ? groundSurfaceRadius - radius : 0f;
+
+            sample.Weather = WeatherOver(ref position);
+            sample.WeatherIntensity = MyVisualScriptLogicProvider.GetWeatherIntensity(position);
 
             long planetId = planet.Entity.EntityId;
-            if (planetId != currentPlanetId)
+            bool samePlanet = planetId == currentPlanetId;
+
+            // Where the air is now, so it can chase the sun rather than track it — but only when
+            // there is an air to chase from. A grid that has just arrived, or has just crossed
+            // from one planet to another, is holding the previous world's answer or the vacuum it
+            // was seeded with, and chasing 290 K up from 2.7 K at 45 seconds a decade freezes
+            // every block on it for the first three minutes of the session.
+            sample.PreviousAmbient = LastState.AmbientTemperature;
+            sample.HasPreviousAmbient = hasAmbientHistory && samePlanet;
+            sample.SecondsSincePrevious = TickSeconds;
+            hasAmbientHistory = true;
+
+            if (!samePlanet)
             {
                 currentPlanetId = planetId;
                 Simulation.Planet = PropertiesOf(planet);
 
                 if (Telemetry.Enabled && Stats != null) Stats.NotePlanet(planet.Entity.StorageName);
             }
+        }
+
+        /// <summary>
+        /// Whether the ambient in <see cref="LastState"/> is a climate this grid actually reached,
+        /// rather than the vacuum every state starts out holding.
+        /// </summary>
+        private bool hasAmbientHistory;
+
+        /// <summary>
+        /// The weather standing over this point, as what it is worth thermally.
+        ///
+        /// The game answers with a name — <c>RainHeavy</c>, <c>SandStormLight</c> — and the name
+        /// is what the table is keyed on, so the lookup is a string compare against at most
+        /// thirteen words. Cached anyway, because the answer only changes when a front moves over
+        /// and the alternative is that compare four times a second forever.
+        /// </summary>
+        private WeatherResponse.Weather WeatherOver(ref Vector3D position)
+        {
+            float influence = Settings.Instance.ClimateWeatherInfluence;
+            if (influence <= 0f)
+            {
+                weatherName = null;
+                return WeatherResponse.Calm;
+            }
+
+            string weather = MyVisualScriptLogicProvider.GetWeather(position);
+            if (weather != weatherName || influence != weatherInfluence)
+            {
+                weatherName = weather;
+                weatherInfluence = influence;
+                weatherResponse = WeatherResponse.Soften(WeatherResponse.For(weather), influence);
+            }
+
+            return weatherResponse;
+        }
+
+        /// <summary>The weather last looked up, and what the table made of it.</summary>
+        private string weatherName;
+        private float weatherInfluence = 1f;
+        private WeatherResponse.Weather weatherResponse = WeatherResponse.Calm;
+
+        /// <summary>The weather's own name, for the readouts and the climate dump.</summary>
+        public string WeatherName
+        {
+            get { return string.IsNullOrEmpty(weatherName) ? "" : weatherName; }
         }
 
         /// <summary>
@@ -197,6 +267,9 @@ namespace Thermodynamics
             row.AtmosphereFactor = state.AtmosphereFactor;
             row.AmbientKelvin = state.AmbientTemperature;
             row.Underground = sample.IsUnderground;
+            row.Depth = sample.Depth;
+            row.WeatherAmbientOffset = state.WeatherTemperatureOffset;
+            row.ConvectionCoefficient = state.ConvectionCoefficient;
             row.SolarEnergy = state.SolarEnergy;
             row.SolarOcclusion = state.SolarOcclusion;
             row.WindSpeed = state.WindSpeed;
@@ -229,7 +302,8 @@ namespace Thermodynamics
                 double axisDot = MathHelper.Clamp(Vector3D.Dot(Vector3D.Normalize(position - centre), axis), -1d, 1d);
                 row.LatitudeDegrees = (float)(Math.Asin(axisDot) * 180d / Math.PI);
 
-                row.WeatherIntensity = MyVisualScriptLogicProvider.GetWeatherIntensity(position);
+                row.WeatherIntensity = sample.WeatherIntensity;
+                row.Weather = WeatherName;
                 row.WindCeiling = entity.GetWindSpeed(position);
 
                 // Where the wind is going, as a bearing, so the map can be read off the dump:
@@ -294,16 +368,10 @@ namespace Thermodynamics
         /// </summary>
         private GroundTemperature.Ground GroundUnder(MyPlanet planet, ref Vector3D position)
         {
+            RefreshSurface(planet, ref position);
+
             float influence = Settings.Instance.ClimateGroundInfluence;
             if (influence <= 0f) return GroundTemperature.Neutral;
-
-            if (Vector3D.DistanceSquared(position, groundSampledAt) > GroundResampleDistance * GroundResampleDistance)
-            {
-                groundSampledAt = position;
-
-                Vector3D surface = planet.GetClosestSurfacePointGlobal(ref position);
-                ground = GroundTemperature.For(MaterialUnder(planet, ref surface));
-            }
 
             // Influence dials the whole opinion down toward the planet's own, offset and swing
             // together: half influence is half the shift and half the extra swing.
@@ -312,11 +380,42 @@ namespace Thermodynamics
                 1f + ((ground.Swing - 1f) * influence));
         }
 
+        /// <summary>
+        /// Looks up where the ground is and what it is made of, and caches both.
+        ///
+        /// One voxel query answers two questions — which material the air above is sitting on, and
+        /// how far the surface is from the planet's centre — so they share a lookup and a cache.
+        /// The second is what makes depth free: between refreshes the grid's own radius has moved
+        /// and the ground has not, so how deep it is buried is a subtraction. A shaft sunk
+        /// straight down is exact, and anything that moves far enough sideways for it not to be
+        /// has already tripped the resample.
+        ///
+        /// Refreshed regardless of <c>ClimateGroundInfluence</c>, unlike the material's opinion:
+        /// a world that does not care what the ground is made of still has a surface, and
+        /// underground temperature is not the ground table's to switch off.
+        /// </summary>
+        private void RefreshSurface(MyPlanet planet, ref Vector3D position)
+        {
+            if (Vector3D.DistanceSquared(position, groundSampledAt) <= GroundResampleDistance * GroundResampleDistance)
+                return;
+
+            groundSampledAt = position;
+
+            Vector3D surface = planet.GetClosestSurfacePointGlobal(ref position);
+            Vector3D centre = planet.PositionComp.WorldMatrixRef.Translation;
+
+            groundSurfaceRadius = (float)(surface - centre).Length();
+            ground = GroundTemperature.For(MaterialUnder(planet, ref surface));
+        }
+
         /// <summary>Metres a grid may move before the ground under it is looked at again.</summary>
         private const double GroundResampleDistance = 40d;
 
         private Vector3D groundSampledAt = Vector3D.PositiveInfinity;
         private GroundTemperature.Ground ground = GroundTemperature.Neutral;
+
+        /// <summary>Distance from the planet's centre to the ground under the grid, m. 0 until sampled.</summary>
+        private float groundSurfaceRadius;
 
         private static PlanetThermalProperties PropertiesOf(PlanetManager.Planet planet)
         {
@@ -343,13 +442,19 @@ namespace Thermodynamics
             // parked ship in a permanent 80 m/s gale — tripping friction heating and doubling
             // convection — so it sets the scale and the field decides the rest.
             float ceiling = planet.Entity.GetWindSpeed(position);
-            float weather = MyVisualScriptLogicProvider.GetWeatherIntensity(position);
+
+            // Both halves of the weather matter and they say different things. The intensity
+            // decides how far up the calm-to-storm scale this place is; the effect's own wind
+            // modifier decides whether this particular weather is a gale or a fog, which sits
+            // still. Already sampled for the climate, so neither costs a second lookup.
+            float weather = sample.WeatherIntensity;
+            float weatherWind = WeatherResponse.Soften(sample.Weather, weather).WindMultiplier;
 
             Vector3 up = sample.UpDirection;
             Vector3 axis = planet.Entity.PositionComp.WorldMatrixRef.Up;
 
             Vector3 direction = WindField.Direction(up, axis);
-            float speed = WindField.Speed(ceiling, weather, WindField.Variation(position));
+            float speed = WindField.Speed(ceiling, weather, WindField.Variation(position), weatherWind);
 
             sample.WindSpeed = direction.LengthSquared() > 0f ? speed : 0f;
             sample.WindDirection = direction;

@@ -155,6 +155,17 @@ namespace Thermodynamics
         /// </summary>
         [ProtoMember(82)] public float ClimateGroundInfluence = 1f;
 
+        /// <summary>
+        /// How much the weather standing over a grid changes the air around it, 0..1.
+        ///
+        /// 1 applies the game's own authored figures in full — a heavy snowstorm about 18 K colder
+        /// with a tenth of the sun and twice the wind, a sandstorm 12 K warmer. 0 ignores the
+        /// weather entirely and costs one float compare per grid per step, which is what the model
+        /// did before it looked: the weather was read, used to scale the wind, and otherwise
+        /// thrown away.
+        /// </summary>
+        [ProtoMember(83)] public float ClimateWeatherInfluence = 1f;
+
         // ---- heat pumps --------------------------------------------------------------------
 
         /// <summary>How much of the Carnot limit a heat pump achieves, 0..1.</summary>
@@ -229,6 +240,8 @@ namespace Thermodynamics
             if (SolarTerrainRange < 0f) SolarTerrainRange = 0f;
             if (ClimateGroundInfluence < 0f) ClimateGroundInfluence = 0f;
             if (ClimateGroundInfluence > 1f) ClimateGroundInfluence = 1f;
+            if (ClimateWeatherInfluence < 0f) ClimateWeatherInfluence = 0f;
+            if (ClimateWeatherInfluence > 1f) ClimateWeatherInfluence = 1f;
             if (SolarGridShadows < 0) SolarGridShadows = 0;
             if (SolarGridShadows > (int)GridShadowMode.Full) SolarGridShadows = (int)GridShadowMode.Full;
             if (SolarOcclusionSamples < 1) SolarOcclusionSamples = 1;
@@ -338,7 +351,7 @@ namespace Thermodynamics
                 "Frequency", "SimulationSpeed", "HeatTimeScale",
                 "VacuumTemperature", "SolarEnergy", "FrictionAtSpeedsAbove", "FrictionScale",
                 "RoomConvectionCoefficient", "RoomAirDensity", "SolarOcclusionInterval",
-                "ClimateGroundInfluence",
+                "ClimateGroundInfluence", "ClimateWeatherInfluence",
                 "HeatPumpCarnotFraction", "HeatPumpMaxCoefficient",
                 "DebugTextOnScreen", "DebugSolarRaycast", "DebugWindRaycast",
                 "DebugBlockOverlay", "RoomOverlayMinKelvin", "RoomOverlayMaxKelvin",
@@ -386,6 +399,7 @@ namespace Thermodynamics
                 case "HeatPumpMaxCoefficient": return HeatPumpMaxCoefficient;
                 case "SolarOcclusionInterval": return SolarOcclusionInterval;
                 case "ClimateGroundInfluence": return ClimateGroundInfluence;
+                case "ClimateWeatherInfluence": return ClimateWeatherInfluence;
                 case "DebugTextOnScreen": return Flag(DebugTextOnScreen);
                 case "DebugSolarRaycast": return Flag(DebugSolarRaycast);
                 case "DebugWindRaycast": return Flag(DebugWindRaycast);
@@ -441,6 +455,7 @@ namespace Thermodynamics
                 case "HeatPumpMaxCoefficient": HeatPumpMaxCoefficient = value; return true;
                 case "SolarOcclusionInterval": SolarOcclusionInterval = (int)value; return true;
                 case "ClimateGroundInfluence": ClimateGroundInfluence = value; return true;
+                case "ClimateWeatherInfluence": ClimateWeatherInfluence = value; return true;
                 case "DebugTextOnScreen": DebugTextOnScreen = Flag(value); return true;
                 case "DebugSolarRaycast": DebugSolarRaycast = Flag(value); return true;
                 case "DebugWindRaycast": DebugWindRaycast = Flag(value); return true;
