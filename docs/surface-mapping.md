@@ -120,9 +120,29 @@ ship.
 
 `Pressure` starts at zero and stays there until the host reports otherwise — the simulation has no
 way to know whether a compartment is pressurised, and a room at zero pressure has no mass, no links
-and no cost. In Space Engineers the figure comes from air vents, the only place the game exposes it:
-every eight steps each vent's oxygen level is written to the room it sits in. A sealed room with no
-vent holds no air.
+and no cost.
+
+In Space Engineers the figure comes from **the game's own gas system**, per room:
+
+```csharp
+IMyOxygenRoom room = grid.GasSystem.GetOxygenRoomForCubeGridPosition(ref cell);
+float level = room.OxygenLevel(grid.GridSize);
+```
+
+This used to read the air vents instead, on the belief that a vent was the only place a mod could
+read a room's oxygen level. It is not, and the belief cost a great deal. **The game's rooms are the
+whole connected volume; this model's are pieces of it**, because the game's sealing test is finer
+than a cell and splits nothing where this splits often. Giving air only to the pieces a vent
+physically touched left every other piece of the same compartment in vacuum. Measured on one ship:
+twelve mapped rooms, of which the game held air in nine, and only two had a vent against them —
+seven compartments in hard vacuum with the doors open onto a pressurised cabin.
+
+Reading it per room also makes the vent's own position irrelevant, which is the correct model: a
+cabin with no vent of its own, joined through a doorway to one that has, is full.
+
+The vents remain as a fallback for a world whose gas system cannot be read, and only run when
+something goes unanswered. There the old limit still applies — a sealed compartment nobody ever
+piped air into is indistinguishable from one nobody can measure.
 
 Continuity across rebuilds is by anchor: a room is identified by its lexicographically lowest cell,
 which is stable while the room's shape is, so building elsewhere on the ship does not cost the
@@ -142,3 +162,67 @@ reads it, and it is never called unless something is asking.
 `DebugTextOnScreen` reports, for the cell under the crosshair, its classification, its six
 neighbours' classifications, whether each face between them seals, and the raw surface bits. A hull
 block that reads "external" on an inside face is the leak.
+
+### Where the audit was not enough
+
+Both of the above check this model against itself, and the failure that got reported from the field
+is one neither could see. This model decides sealing from each definition's pressurisation table,
+cell by cell; the game decides it from its own test, which knows the real shape of a sloped block
+where this knows a cell. When the two disagree the fill walks in from outside and a whole
+compartment stops existing — no room, no air, nothing drawn in the room overlay, and no complaint
+anywhere, because **pressurisation is only ever asked about rooms this model already found**. A
+player stood in a sealed room with a vent reading full and there was no figure in any report that
+said so.
+
+The measured case: 12 rooms totalling 61 cells on a 1,293-block ship, 1,298 of 1,749 block cells
+classified as outdoors, and only 24 of 8,702 block faces bounding a room at all. Every one of those
+numbers was already in the report and none of them said what mattered.
+
+**When the comparison was finally run, the map was right.** Twelve compartments found, **zero held
+only by the game**, and eleven of the twelve agreeing with `IsRoomAtPositionAirtight`. The rooms
+were being found and then given no air, for two reasons that had nothing to do with sealing — see
+[known-issues.md](known-issues.md). That is the argument for measuring before fixing: the sealing
+test looked guilty from the counts alone and was not.
+
+[UnmappedRooms](../Data/Scripts/Thermodynamics/Core/Surfaces/UnmappedRooms.cs) closes it by asking
+the other model. Every cell the map calls external is offered to
+`MyCubeGrid.IsRoomAtPositionAirtight`, and the cells it calls airtight are grouped into connected
+regions — each one a compartment this model lost. Per region it reports the air vents standing in
+it and whether they say `IsPressurized`, which is the identity a player can quote, and the block
+subtypes across the faces this model leaves open, which is the list the fix is made from. A face
+leaving a region that this model *does* seal is not reported: there the two agree and the region
+simply ends.
+
+### Three states, not two
+
+The room view used to draw a room with air and nothing else. A room with no air was drawn as a
+wireframe box in a fully transparent colour and then skipped before its edge pass, so it rendered
+as nothing — identical to a room that had never been found. That is why "is my room detected"
+could not be answered by looking at it. There are three states and they are now distinct:
+
+| State | Drawn as |
+| --- | --- |
+| Air in it | Solid, on the temperature ramp, edged in the room's own colour |
+| Dry, and the game has no air in it either | Faint grey outline, the room's colour at low alpha |
+| **Dry, and the game has air in it** | **Magenta, filled, heavy edge** |
+| Not found at all, and the game calls it sealed | Red, filled — see above |
+
+The third row is the one with no diagnostic before this. It is not a mapping failure — the
+compartment was found — and not a working room either, and it is what a player sees when the map is
+right and the air never arrives.
+
+**The test is oxygen, not airtightness**, and the first version of this got that wrong. Both
+`IsRoomAtPositionAirtight` and `IMyAirVent.IsPressurized` mean *sealed*; neither means *full*. A
+cupboard nobody ever piped air into, on a ship in vacuum, is airtight and empty and both models are
+right about it. Flagging those painted eight correct compartments as faults. The level comes from
+the grid's own gas system — `IMyCubeGrid.GasSystem.GetOxygenRoomForCubeGridPosition` then
+`IMyOxygenRoom.OxygenLevel` — which answers for every compartment including the ones with no vent
+to ask, and falls back to a vent's reading if the gas system is unavailable. The report counts
+these under **found, dry, air in game**.
+
+Magenta is deliberately off the temperature ramp. The one thing a room the model failed to fill
+must never look like is a cold room.
+
+It is a diagnostic and drives nothing. Pressurisation still comes from the map, deliberately — the
+fix belongs in the surface bits, and this is the measurement that says which blocks to fix and by
+how much. See [telemetry.md](telemetry.md#room-dump) for the columns and the overlay.

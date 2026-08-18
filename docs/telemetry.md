@@ -73,6 +73,7 @@ Three files land in the world's storage folder
 | `Thermodynamics_Telemetry_<stamp>.log` | the full report |
 | `Thermodynamics_BlockTypes_<stamp>.csv` | one row per block definition |
 | `Thermodynamics_Grids_<stamp>.csv` | one row per grid |
+| `Thermodynamics_Rooms_<stamp>.csv` | one row per compartment — see [Room dump](#room-dump) |
 
 A summary line always goes to `SpaceEngineers.log`. If world storage cannot be written — the
 failure mode most likely during shutdown — the whole report goes to the game log instead, so a
@@ -110,6 +111,62 @@ outlives its grid, so a ship destroyed mid-session still contributes its faces.
 Limits are 50,000 rows per grid and 300,000 for the session, about fifty thousand blocks. Hitting
 either logs a line and stops; it never truncates silently.
 
+## Room dump
+
+`Thermodynamics_Rooms_<stamp>.csv` is written with every report: **one row per compartment per
+grid**, both the rooms this model found and the ones only the game has.
+
+Both kinds are in one table on purpose. The question a reader has is "what rooms does this ship
+have and which of them work", and answering it out of two tables that have to be joined by hand is
+how this went unnoticed in the first place.
+
+| Column | Meaning |
+| --- | --- |
+| `grid`, `grid_id` | which grid |
+| `kind` | `mapped` when this model found the room, `lost` when only the game holds it |
+| `index` | index within its kind, ordered by anchor, stable while the grid's shape is |
+| `anchor_x/y/z` | the lexicographically smallest cell, which is the room's name in grid space |
+| `cells`, `volume_m3` | how big it is |
+| `vented` | mapped rooms: standing open to the sky through a door |
+| `pressure`, `air_kg`, `temperature_k` | what the simulation is actually running with |
+| `links` | blocks the air is coupled to. **Zero beside a non-zero `air_kg` means the air is inert** — it has mass and touches nothing |
+| `game_airtight` | `MyCubeGrid.IsRoomAtPositionAirtight` at the anchor — the game's own verdict |
+| `vents` | the air vents opening onto it, by terminal name |
+| `vent_pressurised` | whether a vent in it reports `IsPressurized` — the game's answer about its own room |
+| `oxygen_level` | the highest level any vent in it reports, or −1 when none did |
+| `game_oxygen` | the game's own oxygen level in the room, 0..1, or −1 when it could not be asked. Read from the grid's gas system, independently of our map and of any vent |
+| `disagreement` | mapped rooms: **the game has air in it and this model runs none** — a compartment detected and not filled, which is a different failure from one not detected at all. Note `game_airtight` means *sealed*, not *full*: a sealed empty cupboard is correct in both models and is not flagged |
+| `leak_faces` | lost rooms: faces this model leaves open that the game seals |
+| `leaking_blocks` | lost rooms: the block subtypes across those faces, worst first |
+
+**`leaking_blocks` is the fix list.** A compartment losing forty faces to one subtype names that
+definition's surface bits as the thing to correct, where a cell coordinate would only say that
+something somewhere does not seal.
+
+**`vents` is the identity.** A player reports a room by the vent whose terminal says pressurised
+while the overlay shows nothing, not by its coordinates, so that is what the row is named by.
+
+The report carries the same table per grid under **compartments**, capped at 60 rooms before it
+defers to the CSV, with a headline count of how many compartments the game holds that this model
+does not — and how many of those have a vent reporting pressurised.
+
+### What produces the `lost` rows
+
+Every cell the room map calls external is offered to `IsRoomAtPositionAirtight`, and the ones the
+game calls airtight are grouped into connected regions
+([UnmappedRooms](../Data/Scripts/Thermodynamics/Core/Surfaces/UnmappedRooms.cs)). Each region is a
+compartment this model lost: the flood fill walked in from outside, no room was created, and
+because pressurisation is only ever asked about rooms the map already found, nothing ever compared
+the two.
+
+The scan costs one call into the game per external cell. It runs only when the room overlay is up
+or telemetry is on, on a 240-step cadence, and is forced once at dump time so a report written
+moments after a wall was welded describes the ship as it is. It is capped at 200,000 cells and says
+so in the report when it hits that rather than truncating silently.
+
+The same regions are drawn by the room overlay in red, one hue per region, brightest where a vent
+in them reports pressurised — so a hole in the model reads as a hole rather than as an absence.
+
 ## Climate dump
 
 `Thermodynamics_Environment_<stamp>.csv` is written with every report: one row per grid every ten
@@ -126,10 +183,14 @@ balancing a planet's climate.
 | `air_density`, `atmosphere_factor` | what the game reports, and what this mod makes of it |
 | `ambient_k`, `ambient_c` | the ambient this mod produced |
 | `underground` | 1 when the game says the grid is below the surface |
-| `solar_w`, `solar_occlusion` | irradiance after atmosphere and shadow, and the share shadowed |
+| `depth_m` | metres of ground over the grid — the figure the underground model actually uses. Zero or less is open air |
+| `solar_w`, `solar_occlusion` | irradiance after atmosphere, weather and shadow, and the share shadowed |
+| `convection_coeff` | the coefficient in force, W/(m²·K), with the wind and weather terms already in it |
 | `wind_speed`, `wind_bearing_deg` | the wind the model uses, and where it is going: 0 north, 90 east |
 | `wind_ceiling` | the game's own figure, which is the maximum the field scales |
-| `weather_intensity` | the game's weather at that point |
+| `weather` | the game's name for the weather standing over the grid — `RainHeavy`, `SnowLight` — empty in clear air |
+| `weather_intensity` | the game's weather intensity at that point |
+| `weather_ambient_k` | what that weather did to the air, K. The column that says the model reacted to it at all |
 | `game_temperature` | the game's own comfort figure at that point, 0..1 — its model, for comparison |
 | `surface_material` | the voxel material under the grid: snow, sand, grass, ice |
 | `grid_mean_k`, `grid_peak_k` | what the grid itself did about all of it |
@@ -137,7 +198,12 @@ balancing a planet's climate.
 The rows are raw on purpose. A climate question is the *shape* of ambient against altitude, against
 latitude and around a day, and an average has none of that in it. The report also carries a
 **Climate** section summarising each planet — ambient by day and by night, air density, altitude,
-solar, wind, and the ground materials seen — for the headline without opening the file.
+solar, wind, convection, depth where anything was underground, the weathers seen and what they were
+worth, and the ground materials — for the headline without opening the file.
+
+Depth and weather are summarised only over the rows they happened on. Averaging a storm against the
+clear days either side of it reports a drizzle that never fell, and averaging a mine shaft against
+the surface reports a hole nobody dug.
 
 Capped at 4000 rows per grid, about eleven hours of play at the default cadence, and logged when hit.
 

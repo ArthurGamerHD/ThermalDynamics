@@ -42,7 +42,7 @@ sufficient. See [development.md](../docs/development.md#repo-conventions) for th
 ```bash
 cd sim
 
-dotnet test                                    # the whole suite (437 tests)
+dotnet test                                    # the whole suite (635 tests)
 dotnet run --project Thermodynamics.Sim -- list
 dotnet run --project Thermodynamics.Sim -- run reactor
 dotnet run --project Thermodynamics.Sim -- run all --csv out/
@@ -81,6 +81,10 @@ The probe order is `$SE_BIN`, the default Steam path, then the mod's own
 | `fleet` | Twenty ships stepped together — is the cost per cell or per grid? |
 | `interior` | A hot appliance with no exposed face at all, against the same one on the skin. |
 | `solver` | What a step actually costs when every link carries a gradient and the grid substeps. |
+| `self-shadow` | Which faces of a solid hull are lit, and by how much, when the grid shadows itself. |
+| `shadow-cost` | What keeping a self-shadow map costs on a large grid, and how often a pass runs. |
+| `weather` | Does a storm reach the temperature model — the air, the sun and the convection, not just the wind? |
+| `underground` | How far down does the day survive, and where does the rock start warming toward the core? |
 
 > **`perf` and `solver` are not the same measurement.** `perf` steps a settled cube of one block
 > type, where nearly every link joins two cells at the same temperature — and the conduction
@@ -123,7 +127,7 @@ PipeFitter.BuildRing(builder, ring);      // pump goes on the first straight run
 
 ## Test coverage
 
-437 tests across:
+635 tests across:
 
 * position keys and block geometry maths
 * face indexing, the colour ramp, occlusion
@@ -139,6 +143,9 @@ PipeFitter.BuildRing(builder, ring);      // pump goes on the first straight run
 * scheduling, settings and definition clamping
 * end-to-end simulation, save/load, and every scenario
 * the claims each scenario's summary line makes, so a headline conclusion cannot quietly invert
+* the climate: latitude, ground, lag, altitude, thin air, weather and depth
+* room air coupling — that a pressurised room gains links and takes the temperature of its walls
+* the compartments the game seals and this model does not
 * real specific heat against the `HeatTimeScale` clock, including that scaling capacity is
   exactly running time faster
 * every mechanism switched off one at a time, and switches changed mid-session taking effect

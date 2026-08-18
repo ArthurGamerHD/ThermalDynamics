@@ -17,7 +17,7 @@ into atmosphere and into the air of sealed rooms, arrives from the sun, and — 
 * **Isolated.** Every mechanism has its own switch, and switching one off removes exactly its own
   cost. Switches take effect on the next step, with no reload.
 * **Tested.** The simulation is a pure library with no dependency on the game session, built and
-  tested outside it — 437 tests and 20 deterministic scenarios.
+  tested outside it — 635 tests and 24 deterministic scenarios.
 * **Open.** Everything the simulation knows is readable and everything it does is drivable from
   another mod, through a delegate table passed by mod message. See [docs/api.md](docs/api.md).
 
@@ -30,6 +30,9 @@ into atmosphere and into the air of sealed rooms, arrives from the sun, and — 
 | Convection | Exposed faces exchange with the surrounding air; wind and grid velocity raise the coefficient. |
 | Room air | Sealed rooms hold an air mass that couples every surface bounding them — the only path between two walls that do not touch. Pressure comes from air vents. |
 | Solar | Grids raycast to the sun; unoccluded faces absorb energy weighted by facing angle. |
+| Climate | Ambient follows latitude, the ground underfoot, the hour, and how far above sea level it is, chasing its target with a lag so the day peaks after noon. |
+| Weather | Rain, snow, storms and fog cool or warm the air, dim the sun, drive the wind and strip heat off a hull faster — read from the game's own authored figures per weather type. |
+| Underground | Depth blunts the day out over tens of metres, then the rock warms toward the planet's core below the sea-level deadzone. |
 | Point sources | Other mods register heat sources bound to an entity or a position; they radiate like small suns. |
 | Aerodynamic friction | Fast atmospheric flight heats leading surfaces with the cube of relative airspeed. |
 | Waste heat | Power producers and consumers convert a configurable share of throughput into heat; thrusters heat with throttle, which is what makes hydrogen thrusters run hot. |
@@ -95,7 +98,7 @@ game compiles it. The projects under [sim/](sim) link the same files so it can b
 profiled outside the game:
 
 ```bash
-cd sim && dotnet test                                  # 437 tests
+cd sim && dotnet test                                  # 635 tests
 dotnet run --project Thermodynamics.Sim -- run all     # scenario suite
 ```
 

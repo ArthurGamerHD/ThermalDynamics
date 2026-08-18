@@ -168,9 +168,19 @@ only whether a cell's faces seal. The room map still decides the *geometry* — 
 room, and which surfaces face indoors — since that is what exposure needs, and it is unaffected by
 whether the world models oxygen.
 
-A room with no vent reports nothing and holds no air. That is a limit rather than a judgement: a
-vent is the only place a mod can read a room's oxygen level, so a sealed compartment nobody piped
-air into cannot be told apart from one nobody can measure.
+How full a room is comes from the game's own gas system, per room:
+
+```csharp
+IMyOxygenRoom room = grid.GasSystem.GetOxygenRoomForCubeGridPosition(ref cell);
+float level = room.OxygenLevel(grid.GridSize);
+```
+
+Not from the air vents, which is what this used to read. A vent can only speak for the room it
+stands in, and **the game's rooms are the whole connected volume where this model's are pieces of
+it** — so giving air only to the pieces a vent physically touched left the rest of the same
+compartment in vacuum. The vents remain as a fallback for a world whose gas system cannot be read,
+and only run when something goes unanswered; there the old limit applies, and a sealed compartment
+nobody ever piped air into cannot be told apart from one nobody can measure.
 
 ## Solar and point sources
 
@@ -351,21 +361,47 @@ single integer comparison per step. See [api.md](api.md#thresholds).
 function from a host sample to the state a step consumes:
 
 ```
+weather   = weatherAtFullStrength faded by weatherIntensity
+offset    = groundOffset + weather.temperature
+swing     = groundSwing × (0.5 + 0.5 × weather.solar)
+
 drop      = PoleTemperatureDrop × (1 − cos(latitude))
 mean      = (NightTemperature + DayTemperature)/2 − drop
-half      = (DayTemperature − NightTemperature)/2 × groundSwing
+half      = (DayTemperature − NightTemperature)/2 × swing
 
-target    = mean − half + 2×half × max(0, sin(sunElevation)) + groundOffset
-ambient   = ambient + (target − ambient) × (1 − e^(−dt / AmbientLagSeconds))
-ambient   = underground ? UndergroundTemperature : ambient
-ambient  *= atmosphereFactor
+target    = mean − half + 2×half × max(0, sin(sunElevation)) + offset
+target    = target − AmbientLapseRate × altitude/1000
+target    = VacuumTemperature + (target − VacuumTemperature) × (1 − (1 − density)⁸)
+target    = depth > 0 ? underground(target, depth, radius) : target
+
+ambient   = hasHistory
+              ? ambient + (target − ambient) × (1 − e^(−dt / AmbientLagSeconds))
+              : target
 ambient   = max(VacuumTemperature, ambient)
 ```
 
-The planet's `DayTemperature` and `NightTemperature` are its **equatorial** figures;
-`PoleTemperatureDrop` is the span from there to its poles, and latitude interpolates on the cosine
-because that is how squarely the sun strikes a band. `groundOffset` and `groundSwing` come from the
-voxel material under the grid via
+**Everything is a target, and the lag is applied to it exactly once, last.** That ordering is
+load-bearing rather than stylistic. Scaling the *running* ambient instead — which is what the model
+did until a test world with a four-minute day made it visible — compounds the scale against the lag
+on every step. A factor of 0.977 applied four times a second against a 45-second lag settles at
+
+```
+f·k / (1 − f + f·k)   where k = 1 − e^(−dt/τ)
+```
+
+which is 14% of the intended temperature, not 98% of it. A snowfield at 5.6 km, where air density
+is 0.61, reported 36 K for an entire session, and every block on the grid froze to match. See
+[planet-climate.md](planet-climate.md#what-the-four-minute-day-measured).
+
+`hasHistory` is false on the step a grid arrives at a planet, when the only "previous ambient"
+available is the vacuum every state is seeded with. Chasing a 290 K climate up from 2.7 K at 45
+seconds a decade takes three minutes of play, during which every block on the ship is dragged
+toward absolute zero — measured at 103 K on a grid that loaded at 257 K.
+
+The planet's `DayTemperature` and `NightTemperature` are its **equatorial sea-level** figures.
+`PoleTemperatureDrop` is the span from there to its poles, interpolated on the cosine because that
+is how squarely the sun strikes a band. `groundOffset` and `groundSwing` come from the voxel
+material under the grid via
 [GroundTemperature](../Data/Scripts/Thermodynamics/Core/Definitions/GroundTemperature.cs) — snow
 about 14 K colder and flatter, sand about 8 K warmer and swinging nearly twice as hard, because dry
 ground holds nothing overnight. `ClimateGroundInfluence` scales the whole opinion, 0 for none.
@@ -373,9 +409,78 @@ ground holds nothing overnight. `ClimateGroundInfluence` scales the whole opinio
 The lag is why the day's peak lands after noon rather than at it. Air chases the sun; without it the
 hottest instant of the day is exactly local noon, which is true nowhere.
 
-Measured against a test world, the three parts together take an equatorial desert from 11..20 °C to
-about 14..33 °C, and a snowfield at 41° from +4..+14 °C to about −12..−4 °C, where before every
-difference between those sites came from air density alone.
+### Altitude, and why density is not it
+
+Two separate facts used to be one multiply. **`AmbientLapseRate`** is the one that does the work of
+altitude: air cools as it rises because it expands, at 6.5 K/km on Earth and a default 4 K/km here,
+because the ground table already makes mountains snowy and the two at full strength put a 5.6 km
+peak near −50 °C.
+
+**Density** decides something else entirely — when there stops being air to have a temperature at
+all. That happens at the edge of space, not gradually all the way up, so ambient runs on
+`1 − (1 − d)⁸` rather than the `1 − (1 − d)⁴` `atmosphereFactor` that convection and solar decay
+use. At two thirds density it is still 99.9%; half is gone by a twelfth. The top of Earth's
+troposphere holds a third of sea level's air and sits at 217 K, not at a third of 288.
+
+### Weather
+
+The game names the weather over a point and reports its intensity, and every effect in
+`WeatherEffects.sbc` carries a `TemperatureModifier`, a `SolarOutputModifier` and a
+`WindOutputModifier` authored per effect.
+[WeatherResponse](../Data/Scripts/Thermodynamics/Core/Definitions/WeatherResponse.cs) is those
+numbers, converted: the multipliers pass through, and `TemperatureModifier` — a factor on the
+game's 0..1 comfort figure — becomes kelvin as `clamp(m − 1, −3, 3) × 6 K`.
+
+| | heavy snow | heavy rain | sandstorm | fog | heat wave |
+| --- | --- | --- | --- | --- | --- |
+| ambient | −18 K | −3.6 K | +12 K | −4.2 K | +6 K |
+| solar | ×0.10 | ×0.30 | ×0.10 | ×0.15 | ×1.75 |
+| wind | ×2.00 | ×1.45 | ×2.25 | ×0.10 | ×0.10 |
+| convection | ×2.2 | ×2.5 | ×1.4 | ×1.3 | ×1.0 |
+
+Matched on the kind word rather than the exact subtype — there are 33 weathers in the base game,
+most of them the same handful of kinds with a prefix — and a name carrying `light` gets half the
+departure from calm, which is about what Keen's own light/heavy pairs differ by. Intensity fades
+the whole response in from calm, so a weather at a tenth of strength is a tenth of the way toward
+itself rather than all of it a tenth of the time.
+
+Convection is the one column with no source: nothing in the definitions records that rain is wet,
+and wet air pulls heat off a hull far faster than dry air of the same speed. Those figures are
+opinions in the way the ground table is, and `ClimateWeatherInfluence` scales the lot.
+
+The swing term is not a column at all. Cloud that keeps the sun off by day keeps the heat in at
+night — one fact — so the day-night swing follows the solar multiplier: half of it at full
+overcast, none of it removed in clear air.
+
+### Underground
+
+```
+buried    = min(1, depth / UndergroundDampingDepth)
+ambient   = surface + (UndergroundTemperature − surface) × buried
+
+deadzone  = meanRadius − SealevelDeadzone
+descended = max(0, 1 − radius / deadzone)
+ambient   = ambient + (CoreTemperature − ambient) × descended
+```
+
+Two things happen going down, at very different scales. The first is that **the day stops**: rock
+is slow, so the further down a tunnel goes the less of the surface's swing reaches it, until a few
+tens of metres in there is no day left. A cold night and a hot noon converge on the same rock,
+which is the point of it — weather and sun both damp out with the same term, for free.
+
+The second is that **the planet is hot inside**. Below `SealevelDeadzone` the rock warms linearly
+toward `CoreTemperature`, reaching it at the centre. On an earthlike's 60 km radius with the
+shipped 3000 K core that is about 47 K/km, roughly twice Earth's crustal gradient.
+
+The deadzone is measured from **sea level**, not from the surface. That is what makes a tunnel
+bored a kilometre into a mountainside stay cold however far in it goes — it is deep in the rock and
+still a long way above the hot part — while a shaft sunk from a beach reaches the same depth and
+starts warming.
+
+Depth comes free. The surface height under a grid is already looked up for the ground material and
+cached on the same 40 m movement rule, so between refreshes how deep a grid is buried is the
+difference of two radii: a subtraction, exact for a shaft sunk straight down, and anything that
+moves far enough sideways for it not to be has already tripped the resample.
 
 With no planet nearby, or with planets switched off, ambient is `VacuumTemperature` (2.7 K) and
 there is no convection.

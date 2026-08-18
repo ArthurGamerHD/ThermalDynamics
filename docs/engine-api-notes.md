@@ -261,16 +261,39 @@ dependency currently means a missing Definition Extensions install throws inside
 
 ## 10. Richer weather data
 
-The mod uses `MyVisualScriptLogicProvider.GetWeatherIntensity`. The underlying component gives
-more:
+**Partly taken up.** The mod now uses `MyVisualScriptLogicProvider.GetWeather(position)`, which
+returns the effect's subtype name and is on the same whitelisted class as the intensity call it
+already used. That is enough to distinguish a dust storm from rain, and
+[WeatherResponse](../Data/Scripts/Thermodynamics/Core/Definitions/WeatherResponse.cs) turns the name
+into a temperature offset, a solar multiplier, a wind multiplier and a convective multiplier.
+
+The response table's figures are **transcribed** from Keen's `WeatherEffects.sbc`, not read from it.
+The definition type is there —
 
 ```csharp
-MySectorWeatherComponent.GetWeather(position);                        // name
-MySectorWeatherComponent.GetWeather(position, out weatherEffectOb);   // full object builder
-MySectorWeatherComponent.GetWeatherIntensity(position, weatherEffectOb);
+Sandbox.Definitions.MyWeatherEffectDefinition   // Sandbox.Game.dll
+  .WindOutputModifier / .SolarOutputModifier / .TemperatureModifier / .OxygenLevelModifier
 ```
 
-Enough to distinguish a dust storm from rain and give them different convective behaviour.
+— and reading it through `MyDefinitionManager` would pick up modded weathers' own authored numbers
+instead of falling back on a word match. It was not done because a whitelist rejection is a
+*compile* failure at world load rather than a catchable exception, so there is no way to try it and
+degrade gracefully. Worth confirming in a throwaway mod before adopting.
+
+`MySectorWeatherComponent` has more still, including the game's own resolved multipliers and the
+sun's rotation period:
+
+```csharp
+MySectorWeatherComponent.GetSolarMultiplier(position);        // instance
+MySectorWeatherComponent.GetTemperatureMultiplier(position);  // instance
+MySectorWeatherComponent.GetWindMultiplier(position);         // instance
+MySectorWeatherComponent.RotationInterval                     // the sun's period
+```
+
+All instance members on a session component in `Sandbox.Game.SessionComponents`, with the same
+whitelist question. `RotationInterval` is the interesting one: it would let `AmbientLagSeconds` be
+expressed as a share of a day rather than as absolute seconds, which is the outstanding defect in
+[planet-climate.md](planet-climate.md#open).
 
 ---
 

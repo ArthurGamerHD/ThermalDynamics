@@ -96,6 +96,7 @@ Each switch removes exactly its own mechanism and its own cost.
 | Setting | Default | Effect |
 | --- | --- | --- |
 | `ClimateGroundInfluence` | 1.0 | How much the ground a grid is parked on shifts the air above it, 0..1. At 1, snow is about 14 K colder than the planet's own figure with a flatter day, and sand about 8 K warmer with nearly twice the swing. At 0 the ground is ignored. |
+| `ClimateWeatherInfluence` | 1.0 | How much the weather standing over a grid changes the air around it, 0..1. At 1 the game's own authored figures apply in full — a heavy snowstorm about 18 K colder with a tenth of the sun and twice the wind, a sandstorm 12 K warmer. At 0 the weather affects nothing but the wind, which is what it did before. |
 | `VacuumTemperature` | 2.7 K | Ambient in space, and the floor for planetary ambient. |
 | `SolarEnergy` | 1000 W/m² | Solar irradiance above the atmosphere. |
 | `FrictionAtSpeedsAbove` | 50 m/s | Relative airspeed at which aerodynamic heating starts. |

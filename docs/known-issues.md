@@ -15,6 +15,69 @@ work with a flag of your own rather than by taking the entity's updates away.
 
 ## Unfinished
 
+**A mechanism tested only through the door nobody uses is untested.** Room air was correct
+everywhere it was exercised and inert everywhere it ran. Every test and the mod API set a room's
+pressure through `ThermalSimulation.SetRoomPressure`, which rebuilds the room's links to the blocks
+bounding it, seeds air appearing for the first time from the temperature of those walls, and
+recomputes the conductance totals. The game's own sweep assigned `room.Pressure` directly and called
+`RefreshThermalMass` by hand — the only caller in the codebase that did — so in a live world a
+pressurised room got its air mass, **no links at all**, and whatever temperature the last rebuild
+left behind, which for a ship in vacuum is 2.7 K. The whole suite passed over a feature that did nothing in game.
+The sweep now goes through the solver, and `RoomAirCouplingTests` pins the two properties that
+differed. The room dump reports a `links` column so air with mass and no coupling says so.
+
+**A vent reported to one room and it was not always the right one.** `ReadVents` stopped at the
+first room found on the first cell of the vent, so a vent in a bulkhead between two compartments
+gave one of them air and the other nothing — decided by the order the six faces are indexed in.
+Measured on a ship with two vents in the same bulkhead: an eight-cell space took the air and the
+thirty-cell cabin, with both vents on it and the game reporting it sealed and 99% full, ran at zero
+pressure. A vent now reports to every room it touches. That over-reports where a vent serves only
+one side and the game exposes no way to ask which room a vent is on; it is bounded by each room
+still being tested against `IsRoomAtPositionAirtight` on its own.
+
+**A vent can only speak for the room it stands in, and this model's rooms are smaller than the
+game's.** Pressurisation read the air vents and gave air to the compartments a vent physically
+touched. The game's rooms are the whole connected volume — its sealing test is finer than a cell and
+splits nothing where this splits often — so a cabin joined through an open doorway to a vented one
+is full in the game and was in hard vacuum here. Measured: twelve mapped rooms on one ship, the game
+holding air in nine of them, two with a vent against them, seven left empty. The level now comes
+from `IMyCubeGrid.GasSystem.GetOxygenRoomForCubeGridPosition` per room, which answers for every
+compartment whether or not anything is bolted to it; the vents are the fallback when the gas system
+cannot be read.
+
+**Sealed is not full, and a diagnostic that confuses the two is worse than none.** The first
+version of the dry-room flag asked `IsRoomAtPositionAirtight` and `IMyAirVent.IsPressurized`, both
+of which answer *is this room sealed*, and treated the answer as *should this room have air*. On a
+ship in vacuum every sealed cupboard nobody had piped air into came back airtight and empty —
+correct in both models — so eight of twelve compartments were flagged as faults and painted magenta
+in the overlay, burying the one that mattered. The test is now the game's own oxygen level, read
+per room from `IMyCubeGrid.GasSystem`, and lives in `RoomPressure.Disagrees` with tests on it
+rather than inline in a struct property.
+
+**This model and the game can disagree about what is sealed, and losing that argument is silent.**
+Sealing here comes from each definition's pressurisation table read cell by cell; the game's test
+knows the real shape of a sloped block. Where they differ the flood fill walks in from outside, the
+compartment stops existing, and because pressurisation is only ever asked about rooms the map
+already found, nothing notices. **Measured, and on the ship that prompted it the map was right** —
+12 compartments found, zero held only by the game, 11 of 12 agreeing with
+`IsRoomAtPositionAirtight`. The comparison is now run every dump and reported per compartment, so
+the next disagreement is a number rather than a guess. See
+[surface-mapping.md](surface-mapping.md#where-the-audit-was-not-enough).
+
+**The ambient lag is in absolute seconds and a day is not.** `AmbientLagSeconds` is 45 seconds of
+play. Against a four-minute sun rotation that attenuates the day-night swing to 46% of its intended
+size; against the default two-hour rotation it does almost nothing. It is physically a fraction of a
+day. `MySectorWeatherComponent.RotationInterval` is the sun's period and would let it be expressed
+that way, if that type proves reachable under the mod whitelist — see
+[engine-api-notes.md](engine-api-notes.md). Until then it is a per-planet figure in
+[Planets.xml](../Data/Planets.xml) that a short-day world has to know to change.
+
+**The underground core gradient is out of reach in ordinary play.** Below `SealevelDeadzone` the
+rock warms toward `CoreTemperature`, and the shipped deadzone is 2 km below sea level — deeper than
+SE's voxels go. The model is right and the tuning lever is documented, but as shipped, every
+reachable depth reads a flat `UndergroundTemperature`. Whether the default deadzone should be a few
+hundred metres instead is an open balance question, not a code one.
+
 **Radiators cannot be inline loop segments.** A radiator sheds heat when a pipe's sink face is
 pressed against it, which works and is what the `radiator` scenario measures. It has no coolant
 ports of its own, so a loop cannot run *through* one. The block is 1×5×2 with mount points only on
@@ -49,6 +112,23 @@ world, silently. A test world reported `SolarOcclusionPlanets False`, `SolarTerr
 room overlay span of one kelvin while its owner had changed none of them. Bumping the file version
 would only have papered over it, and thrown away real customisation each time. The defaults now
 live on the field declarations, where a reader that finds nothing leaves them alone.
+
+**A scale applied to a lagged value compounds against the lag.** Ambient chased its target with a
+45-second first-order lag and was then multiplied by an air-density factor — but the *scaled* value
+was what the next step chased from, so the factor reapplied every step. The steady state is
+`f·k / (1 − f + f·k)` with `k = 1 − e^(−dt/τ)`, which at `f = 0.977`, `dt = 1/6 s` and `τ = 45 s` is
+14% of the intended temperature rather than 98%. A snowfield 5.6 km up reported 36 K for an entire
+session while two sea-level sites nearby were correct to a tenth of a kelvin, because their density
+rounded `f` to 1.0000 and hid it. Everything that decides a temperature now produces a *target*, and
+the lag is applied to that target exactly once, last. Pinned by
+`ThinAirDoesNotCompoundAgainstTheLag`.
+
+**A lag needs to know it has no history.** The same ambient started each session at the
+`VacuumTemperature` its state was seeded with and took three minutes of play to reach the real
+climate, dragging every block on every grid with it — one measured grid fell from 257 K to 103 K in
+nineteen seconds. `ClimateModel.Follow` guarded against this with `if (current <= 0f) return
+target`, which never fired, because 2.7 is not zero. A guard against an uninitialised value has to
+test whether the value was initialised, not whether it looks unreasonable.
 
 **The game has no wind field, and its wind speed is a rating.** `MyPlanet.GetWindSpeed` returns the
 planet definition's maximum wind scaled by air density — a constant per altitude, the same at every

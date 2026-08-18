@@ -98,13 +98,28 @@ keyed on a `PlanetGeneratorDefinition` id, falling back to
 
 | Property | Default | Meaning |
 | --- | --- | --- |
-| `NightTemperature` | 283.15 K | Ambient with the sun on the far side. |
-| `DayTemperature` | 294.261 K | Ambient with the sun directly overhead. |
-| `UndergroundTemperature` | 280 K | Ambient below the surface; also forces solar occlusion. |
-| `CoreTemperature` | 3000 K | **Not yet used.** Reserved for depth-based heating. |
-| `SealevelDeadzone` | 2000 | **Not yet used.** Reserved for the depth at which core heating starts. |
+| `NightTemperature` | 283.15 K | Ambient with the sun on the far side. **Equatorial, at sea level.** |
+| `DayTemperature` | 294.261 K | Ambient with the sun directly overhead. **Equatorial, at sea level.** |
+| `PoleTemperatureDrop` | 40 K | How much colder a pole is than the equator. Earth's is about 40. 0 gives one climate for a whole world. |
+| `AmbientLagSeconds` | 45 s | How long the air takes to answer the sun. Without it the day's peak is exactly noon. Worth raising on a world with a long day and lowering on a short one. |
+| `AmbientLapseRate` | 4 K/km | How much colder a kilometre above sea level is. Earth's is 6.5; lower here because the ground table already makes mountains snowy. 0 switches altitude off. |
+| `UndergroundTemperature` | 280 K | Ambient deep enough underground that the surface's day no longer reaches; also forces solar occlusion. |
+| `UndergroundDampingDepth` | 20 m | Metres of rock that blunt the surface's day-night swing to nothing. Above it a buried block still feels part of the day; below it, none. |
+| `CoreTemperature` | 3000 K | Temperature at the planet's centre. The rock warms toward it below `SealevelDeadzone`. |
+| `SealevelDeadzone` | 2000 m | Depth **below sea level** at which core heating starts. Measured from sea level, so a tunnel into a mountain stays cold however deep it goes. Lower it to make reachable mining depths hot. |
 | `SolarDecay` | 0.5 | Fraction of solar energy lost in a full-density atmosphere. |
 | `ConvectionCoefficient` | 50 | W/(m²·K) base heat transfer into the air. |
+
+The last five rows carry the model's own defaults rather than zero when the definition omits them,
+unlike the rows above. They were added after the planet definitions were written, and zero is a
+real setting for every one of them — no latitude, no lag, no lapse, no damping, no core — so a
+planet file predating them would otherwise silently ask for all five to be switched off.
+
+Weather is **not** in this group. The mod reads the weather's name from the game and looks it up in
+[WeatherResponse](../Data/Scripts/Thermodynamics/Core/Definitions/WeatherResponse.cs), whose figures
+are derived from Keen's own `WeatherEffects.sbc`, so a mod adding a weather called `RainHeavier`
+gets rain behaviour without annotating anything. See
+[thermal-model.md](thermal-model.md#weather).
 
 Per-planet values are set by adding a definition with that planet's `SubtypeId`. The shipped
 [Data/Planets.xml](../Data/Planets.xml) only defines the fallback, so **every** planet currently
