@@ -83,6 +83,15 @@ namespace Thermodynamics
         /// </summary>
         private readonly List<ThermalBlock> vents = new List<ThermalBlock>();
 
+        /// <summary>
+        /// The air vents on this grid. Read by the diagnostics, which name a compartment by the
+        /// vent standing in it — the only identity a player can read off a terminal and quote.
+        /// </summary>
+        public IList<ThermalBlock> Vents
+        {
+            get { return vents; }
+        }
+
         internal void RegisterVent(ThermalBlock bound)
         {
             if (bound != null && !vents.Contains(bound)) vents.Add(bound);

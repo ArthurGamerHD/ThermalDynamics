@@ -44,5 +44,38 @@ namespace Thermodynamics.Core
 
         /// <summary>The value <see cref="Level"/> takes to mean "nothing reported this".</summary>
         public const float NotReported = -1f;
+
+        /// <summary>Oxygen at or below this reads as none.</summary>
+        public const float OxygenPresent = 0.001f;
+
+        /// <summary>
+        /// Whether a room is one the game has air in and this model does not — the only shape of
+        /// room-air failure worth showing a player.
+        /// </summary>
+        /// <param name="hasAir">Whether this model is running air in the room.</param>
+        /// <param name="vented">
+        /// Whether the room stands open through a door. An open room is empty on purpose.
+        /// </param>
+        /// <param name="gameOxygen">
+        /// The game's own oxygen level in the room, 0..1, or negative when it could not be asked.
+        /// Unmeasured is not a fault: a diagnostic that cannot see has nothing to report.
+        /// </param>
+        /// <remarks>
+        /// <b>Oxygen, not airtightness.</b> This is stated twice because the first version of this
+        /// test used airtightness and was wrong in a way that looked right. Both
+        /// <c>IsRoomAtPositionAirtight</c> and <c>IMyAirVent.IsPressurized</c> answer <em>is this
+        /// room sealed</em>, not <em>does this room have air in it</em>. A cupboard nobody ever
+        /// piped air into, on a ship in vacuum, is sealed and empty — and both models are right
+        /// about it. Testing sealing flagged eight such compartments on one ship as faults and
+        /// painted them all over the overlay, which is worse than reporting nothing: it buries the
+        /// one room that is actually wrong among eight that are not.
+        /// </remarks>
+        public static bool Disagrees(bool hasAir, bool vented, float gameOxygen)
+        {
+            if (hasAir) return false;
+            if (vented) return false;
+
+            return gameOxygen > OxygenPresent;
+        }
     }
 }

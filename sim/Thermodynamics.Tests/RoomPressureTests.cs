@@ -95,5 +95,53 @@ namespace Thermodynamics.Tests
             Assert.Equal(full.AirMass * 0.5f, half.AirMass, 3);
             Assert.Equal(full.ThermalMass * 0.5f, half.ThermalMass, 3);
         }
-    }
+    
+        // ---- what counts as a disagreement --------------------------------------------------
+
+        /// <summary>
+        /// The distinction the first version of the room diagnostic got wrong, and the reason it
+        /// is a tested function rather than an inline condition.
+        ///
+        /// Sealed is not full. A cupboard nobody ever piped air into, on a ship in vacuum, is
+        /// airtight and empty and both models are right about it. Testing airtightness instead of
+        /// oxygen flagged eight such compartments on one ship and painted them all magenta in the
+        /// overlay — burying the one room that was genuinely wrong among eight that were not.
+        /// </summary>
+        [Fact]
+        public void ASealedEmptyRoomIsNotADisagreement()
+        {
+            Assert.False(RoomPressure.Disagrees(false, false, 0f));
+            Assert.False(RoomPressure.Disagrees(false, false, RoomPressure.OxygenPresent));
+        }
+
+        [Fact]
+        public void AirInTheGameAndNoneHereIsADisagreement()
+        {
+            Assert.True(RoomPressure.Disagrees(false, false, 1f));
+            Assert.True(RoomPressure.Disagrees(false, false, 0.5f));
+        }
+
+        [Fact]
+        public void ARoomThisModelHasFilledIsNeverADisagreement()
+        {
+            Assert.False(RoomPressure.Disagrees(true, false, 1f));
+        }
+
+        [Fact]
+        public void AVentedRoomIsEmptyOnPurpose()
+        {
+            // Standing open through a door. Empty is the right answer, whatever the game reports
+            // in the instant before its own fill catches up.
+            Assert.False(RoomPressure.Disagrees(false, true, 1f));
+        }
+
+        [Fact]
+        public void WhatCouldNotBeMeasuredIsNotAFault()
+        {
+            // Negative means the gas system could not be asked and no vent could answer either.
+            // A diagnostic that cannot see has nothing to report.
+            Assert.False(RoomPressure.Disagrees(false, false, RoomPressure.NotReported));
+            Assert.False(RoomPressure.Disagrees(false, false, -1f));
+        }
+}
 }

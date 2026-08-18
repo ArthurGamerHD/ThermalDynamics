@@ -83,6 +83,16 @@ namespace Thermodynamics.Core
             get { return rooms; }
         }
 
+        /// <summary>
+        /// Every cell the pass reached from outside. Exposed for
+        /// <see cref="UnmappedRooms"/>, which offers each one to the game to find the
+        /// compartments this map lost — a diagnostic, and the only thing that reads it.
+        /// </summary>
+        public IEnumerable<Vector3I> ExternalCells
+        {
+            get { return external; }
+        }
+
         /// <summary>Every door that opens onto one of these rooms, or onto open air.</summary>
         public IList<RoomPortal> Portals
         {
