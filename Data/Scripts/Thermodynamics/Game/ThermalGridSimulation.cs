@@ -109,6 +109,9 @@ namespace Thermodynamics
                 SweepRoomPressure();
             }
 
+            // Off unless the room overlay is up or telemetry is on; one bool test otherwise.
+            RefreshLostRooms();
+
             stepsSinceHottest += steps;
             if (stepsSinceHottest >= HottestInterval)
             {
@@ -225,12 +228,21 @@ namespace Thermodynamics
         /// Three things can empty a room and none of them belong to this mod. The world can have
         /// oxygen or pressurisation switched off, in which case nothing anywhere holds air. The
         /// game's sealing test can disagree with this model's — it knows the real shape of a sloped
-        /// block where this knows a cell — and it wins. And a vent in the room reports how full it
-        /// actually is.
+        /// block where this knows a cell — and it wins. And the room can simply be empty.
         ///
-        /// A room with no vent reports nothing and holds no air. That is a limit rather than a
-        /// judgement: a vent is the only place a mod can read a room's oxygen level, so a sealed
-        /// compartment nobody ever piped air into is indistinguishable from one nobody can measure.
+        /// How full it is comes from the game's own gas system, per room, through
+        /// <see cref="ThermalGrid.GameOxygenAt"/>. That is not what this used to do: it read the
+        /// air vents and gave air only to compartments a vent physically touched, on the belief
+        /// that "a vent is the only place a mod can read a room's oxygen level". It is not.
+        /// <c>IMyCubeGrid.GasSystem</c> answers for every room the game has, and the game's rooms
+        /// are the whole connected volume rather than this model's pieces of it — so a cabin with
+        /// no vent of its own, joined through a doorway to one that has, is full, and this now
+        /// says so. Measured on one ship: seven of twelve compartments held air in the game and
+        /// none here, every one of them for want of a vent against that particular piece.
+        ///
+        /// The vents remain as the fallback for a world whose gas system cannot be read, where the
+        /// old limit still applies — a compartment nobody ever piped air into is indistinguishable
+        /// from one nobody can measure.
         /// </summary>
         private void SweepRoomPressure()
         {
@@ -241,29 +253,65 @@ namespace Thermodynamics
 
             bool worldPressurised = WorldPressurised();
 
-            // Everything starts at "nobody said", so a room whose vent was removed empties rather
-            // than keeping the last figure that vent ever gave it.
+            // The game's own gas system first: it knows how full each of its rooms is, and its
+            // rooms are the connected volumes rather than this model's pieces of them. A
+            // compartment with no vent in it but joined through a doorway to one that has is full
+            // in the game, and this is the only way to find that out.
+            GasLevels.Clear();
+            bool anyUnanswered = false;
+
             for (int i = 0; i < air.Count; i++)
             {
-                VentLevels[air[i].RoomIndex] = RoomPressure.NotReported;
+                float level = worldPressurised
+                    ? GameOxygenAt(air[i].Anchor)
+                    : RoomPressure.NotReported;
+
+                GasLevels.Add(level);
+                if (level < 0f) anyUnanswered = true;
             }
 
-            ReadVents();
+            // Only when something went unanswered — a world whose gas system cannot be read, or a
+            // compartment the game has no room for. Reading nine vents to answer questions already
+            // answered is exactly the kind of cost this mod is supposed not to pay.
+            if (anyUnanswered)
+            {
+                // Everything starts at "nobody said", so a room whose vent was removed empties
+                // rather than keeping the last figure that vent ever gave it.
+                for (int i = 0; i < air.Count; i++)
+                {
+                    VentLevels[air[i].RoomIndex] = RoomPressure.NotReported;
+                }
+
+                ReadVents();
+            }
 
             for (int i = 0; i < air.Count; i++)
             {
                 RoomAirNode room = air[i];
 
-                float reported;
-                if (!VentLevels.TryGetValue(room.RoomIndex, out reported))
+                float reported = GasLevels[i];
+
+                if (reported < 0f && !VentLevels.TryGetValue(room.RoomIndex, out reported))
                 {
                     reported = RoomPressure.NotReported;
                 }
 
                 bool sealedByGame = worldPressurised && Grid.IsRoomAtPositionAirtight(room.Anchor);
 
-                room.Pressure = RoomPressure.Level(worldPressurised, sealedByGame, reported);
-                room.RefreshThermalMass();
+                float level = RoomPressure.Level(worldPressurised, sealedByGame, reported);
+
+                // Through the solver, not onto the field. Pressure is what decides whether a room
+                // has any links at all, so setting it is a structural change: the solver rebuilds
+                // the room's links to the blocks bounding it, seeds air appearing for the first
+                // time from the temperature of those walls, and recomputes the conductance totals
+                // the integrator sizes its substeps from.
+                //
+                // Writing the field and refreshing the mass by hand did none of those. It gave the
+                // room a hundred and fifty kilograms of air, linked to nothing, at whatever
+                // temperature the rebuild happened to leave behind — 2.7 K for a ship in vacuum.
+                // Every test and the mod API went through the solver, so the mechanism was sound
+                // everywhere except the one path that runs in the game.
+                Simulation.SetRoomPressure(room.Anchor, level);
             }
         }
 
@@ -282,10 +330,24 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Collects what each vent says about the room it opens into, by room index.
+        /// Collects what each vent says about the rooms it opens into, by room index.
         ///
         /// A vent sits in a wall, so the room is on whichever side of it has one — and a vent set
         /// to depressurise is emptying its room, whatever it currently reads.
+        ///
+        /// <b>Every</b> room it touches, which is the correction. This used to stop at the first
+        /// room found on the first cell, so a vent in a bulkhead between two compartments gave one
+        /// of them air and the other nothing — and which one it was came down to the order the six
+        /// faces happen to be indexed in. Measured on a ship with two vents in the same bulkhead:
+        /// an eight-cell space got the air, and the thirty-cell cabin the player was standing in,
+        /// with both vents on it and the game reporting it sealed and 99% full, got zero.
+        ///
+        /// Reporting to all of them over-reports where a vent serves only one side, and the game
+        /// exposes no way to ask which room a vent is actually on. It is bounded: every room is
+        /// still tested against <c>IsRoomAtPositionAirtight</c> on its own before it is given
+        /// anything, so what this can do is give air to a compartment the game also calls sealed
+        /// and that has a working vent against it. Denying the main cabin its air was the worse
+        /// mistake of the two.
         /// </summary>
         private void ReadVents()
         {
@@ -305,8 +367,6 @@ namespace Thermodynamics
                 Vector3I[] cells = bound.Instance.Cells;
                 for (int c = 0; c < cells.Length; c++)
                 {
-                    bool found = false;
-
                     for (int face = 0; face < Face.Count; face++)
                     {
                         int room = Simulation.Rooms.Map.RoomIndexOf(cells[c] + Face.Offsets[face]);
@@ -320,18 +380,16 @@ namespace Thermodynamics
                         {
                             VentLevels[room] = level;
                         }
-
-                        found = true;
-                        break;
                     }
-
-                    if (found) break;
                 }
             }
         }
 
         /// <summary>Vent readings by room index, reused so a sweep allocates nothing.</summary>
         private readonly Dictionary<int, float> VentLevels = new Dictionary<int, float>();
+
+        /// <summary>The gas system's answer per room, in the order the air nodes are held.</summary>
+        private readonly List<float> GasLevels = new List<float>();
 
         /// <summary>
         /// Hands threshold crossings to whoever registered them. Callbacks belong to other mods,
