@@ -92,7 +92,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-        public void AnIdleUpdateDoesNotReportTheSolver()
+        public void EveryUpdateReportsTheSolver()
         {
             ThermalSimulation simulation = BuildSimulation();
             simulation.RebuildAll();
@@ -100,10 +100,21 @@ namespace Thermodynamics.Tests
             RecordingProfiler profiler = new RecordingProfiler();
             simulation.Profiler = profiler;
 
-            // Far too short a frame to owe a step at the default four per second.
+            // A frame far too short to owe a whole step at four steps a second. It still owes a
+            // share of one, and doing that share is the point: a step is spread across the frames
+            // of its window rather than landing whole on one of them.
+            //
+            // This test used to assert the opposite — that a short frame reported no solver at
+            // all — which was true when an update either ran a whole step or none.
             simulation.Update(0.001f, Worlds.Shadow());
 
-            Assert.Equal(0, profiler.Count("begin " + SimulationPhase.Solver));
+            Assert.Equal(1, profiler.Count("begin " + SimulationPhase.Solver));
+            Assert.Equal(1, profiler.Count("end " + SimulationPhase.Solver));
+
+            // And it must not have finished one on a frame worth a two-hundred-and-fiftieth of a
+            // step, or the spreading is not spreading.
+            Assert.Equal(0, simulation.Solver.StepCount);
+            Assert.True(simulation.StepInFlight);
         }
 
         [Fact]

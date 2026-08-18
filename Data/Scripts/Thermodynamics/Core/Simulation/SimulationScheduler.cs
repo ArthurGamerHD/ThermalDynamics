@@ -151,6 +151,16 @@ namespace Thermodynamics.Core
             return (int)share;
         }
 
+        /// <summary>
+        /// Records that a step completed. The step pacing itself is the simulation's now — it
+        /// spreads one step over the frames of its window rather than deciding which frames get a
+        /// whole one — so this keeps the running count a host reads without also owning the clock.
+        /// </summary>
+        public void CountStep()
+        {
+            StepsRun++;
+        }
+
         public void Reset()
         {
             accumulator = 0f;

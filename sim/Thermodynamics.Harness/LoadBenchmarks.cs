@@ -151,7 +151,18 @@ namespace Thermodynamics.Harness
     /// </summary>
     public static class LoadBenchmarks
     {
-        /// <summary>Real seconds between host ticks — <c>ThermalGrid.UpdateBeforeSimulation10</c>.</summary>
+        /// <summary>
+        /// Real seconds in one rendered frame. The host now updates every grid every frame, each
+        /// doing its share of the step it is part way through, so this is the interval the
+        /// frame-paced benchmarks measure.
+        /// </summary>
+        public const float FrameSeconds = 1f / 60f;
+
+        /// <summary>
+        /// A coarser interval, used only to settle a grid quickly before measuring it. Advancing a
+        /// fixture at a sixtieth of a second would take ten times as many calls to reach the same
+        /// state and measure nothing extra.
+        /// </summary>
         public const float TickSeconds = 10f / 60f;
 
         /// <summary>The default ladder. Every rung is roughly four times the one below it.</summary>
@@ -362,6 +373,7 @@ namespace Thermodynamics.Harness
 
             BlockModel armour = Catalog.HeavyArmor();
             Vector3I weldAt = simulation.Grid.Max + new Vector3I(0, 0, 2);
+            const float frame = FrameSeconds;
 
             Stopwatch watch = new Stopwatch();
 
@@ -390,7 +402,7 @@ namespace Thermodynamics.Harness
                 }
 
                 watch.Restart();
-                simulation.Update(TickSeconds, sample);
+                simulation.Update(frame, sample);
                 watch.Stop();
 
                 trace.Add(watch.Elapsed.TotalMilliseconds,
@@ -450,7 +462,7 @@ namespace Thermodynamics.Harness
                 simulation.AddBlock(new BlockInstance(armour, at, BlockOrientation.Identity), 293.15f);
 
                 watch.Restart();
-                simulation.Update(TickSeconds, sample);
+                simulation.Update(FrameSeconds, sample);
                 watch.Stop();
 
                 trace.Add(watch.Elapsed.TotalMilliseconds, "block " + tick + " welded");

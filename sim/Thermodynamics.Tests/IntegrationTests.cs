@@ -111,6 +111,11 @@ namespace Thermodynamics.Tests
                 simulation.Update(1f / 60f, Worlds.Shadow());
             }
 
+            // Exactly the configured rate: sixty frames of a sixtieth of a second is one second,
+            // and Frequency 4 with SimulationSpeed 1 is four steps a second. The step is spread
+            // across the fifteen frames of its window, so this also pins that the spreading
+            // neither loses nor invents work — an under-estimate of a step's cost would show up
+            // here as three.
             Assert.Equal(before + 4, simulation.Solver.StepCount);
             Assert.False(simulation.Rooms.HasWorkPending);
         }

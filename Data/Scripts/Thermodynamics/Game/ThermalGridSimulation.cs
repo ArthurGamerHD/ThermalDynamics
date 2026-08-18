@@ -49,20 +49,6 @@ namespace Thermodynamics
         private int stepsSinceMassSweep;
 
         /// <summary>
-        /// The frame of the ten-frame cycle this grid works on, or -1 before it has claimed one.
-        /// </summary>
-        public int UpdatePhase = -1;
-
-        /// <summary>
-        /// Blocks this grid was counted as when it last weighed in on its phase.
-        ///
-        /// Kept rather than read back from the block map, because the map is cleared before the
-        /// component finishes closing — releasing <c>blocks.Count</c> at that point would release
-        /// nothing and leave the phase permanently carrying a ship that no longer exists.
-        /// </summary>
-        internal int weighedBlocks;
-
-        /// <summary>
         /// Deliberately empty. The entity's ten-frame callback is not what drives this mod.
         ///
         /// The engine calls every grid's ten-frame update on the same frame, so a world of two
@@ -71,26 +57,28 @@ namespace Thermodynamics
         /// 117 ms, and two in three exceeded a 60 fps frame — for a total cost of 20 % of real
         /// time, which spread evenly would have been about twelve milliseconds a frame.
         ///
-        /// So the cadence is the mod's own now: <see cref="ThermalGridScheduler"/> ticks the grids
-        /// whose phase matches the frame, driven from the session component. The interval per grid
-        /// is unchanged at ten frames — only which ten.
+        /// So the cadence is the mod's own now: <see cref="ThermalGridScheduler"/> gives every
+        /// grid a share of every frame, driven from the session component, and each grid spreads
+        /// its solver step across the frames of its simulation window.
         ///
-        /// The obvious alternative, asking the entity for a per-frame callback and gating on the
-        /// phase inside it, is not safe: <c>MyCubeGrid</c> clears <c>EACH_FRAME</c> from its own
-        /// update flags whenever its scheduled-work queue empties, so a mod hanging its cadence
-        /// on that flag silently stops running.
+        /// Asking the entity for a per-frame callback instead is not safe: <c>MyCubeGrid</c>
+        /// clears <c>EACH_FRAME</c> from its own update flags whenever its scheduled-work queue
+        /// empties, so a mod hanging its cadence on that flag silently stops running.
         /// </summary>
         public override void UpdateBeforeSimulation10()
         {
         }
 
         /// <summary>
-        /// One tick of this grid's simulation. Called by <see cref="ThermalGridScheduler"/> on the
-        /// frames belonging to this grid's phase, ten frames apart.
+        /// This grid's share of one frame. Called by <see cref="ThermalGridScheduler"/> on every
+        /// frame; how much of a step that share is comes from <c>Frequency</c> and
+        /// <c>SimulationSpeed</c>.
         /// </summary>
-        public void Tick()
+        public void Tick(float frameSeconds)
         {
             if (disabled || !started) return;
+
+            this.frameSeconds = frameSeconds;
 
             // Stats is null when telemetry is off, and also when the grid record cap was hit.
             if (Telemetry.Enabled && Stats != null)
@@ -114,30 +102,14 @@ namespace Thermodynamics
                     work.ExposureNodeVisits - exposureBefore,
                     work.RoomCellsVisited - cellsBefore);
 
-                Reweigh();
                 return;
             }
 
             UpdateInternal();
-            Reweigh();
         }
 
-        /// <summary>
-        /// Tells the scheduler how large this grid has become, so the balance across phases
-        /// reflects the ships as they are rather than as they first appeared.
-        ///
-        /// A projector's output goes from one block to forty thousand without ever re-registering,
-        /// and a ship being ground down goes the other way. Only a change worth acting on is
-        /// reported, so an idle fleet costs one integer comparison per grid per tick.
-        /// </summary>
-        private void Reweigh()
-        {
-            int now = blocks.Count;
-            if (now == weighedBlocks) return;
-
-            ThermalGridScheduler.Reweigh(this, weighedBlocks, now);
-            weighedBlocks = now;
-        }
+        /// <summary>Length of the frame being served, set by the scheduler before each tick.</summary>
+        private float frameSeconds = ThermalGridScheduler.FrameSeconds;
 
         /// <summary>
         /// Per-mechanism watt figures are only produced for someone who is going to read them:
@@ -161,18 +133,20 @@ namespace Thermodynamics
             try
             {
                 RefreshDiagnosticsFlag();
-                bool stepping = Simulation.Scheduler.WouldStep(TickSeconds);
 
-                // Building a sample means a planet lookup and, occasionally, a raycast. On a tick
-                // that will not integrate, none of it would be read.
-                EnvironmentSample sample = stepping ? Sample() : default(EnvironmentSample);
+                // A sample is a planet lookup and, occasionally, a raycast, and it is read once
+                // when a step begins rather than on every frame the step spans. Asking on all
+                // fifteen of them would multiply the most expensive thing the adapter does by
+                // fifteen for an answer that is used once.
+                bool starting = Simulation.NeedsEnvironmentSample;
+                EnvironmentSample sample = starting ? Sample() : default(EnvironmentSample);
 
                 // The pumps have to know whether they are switched on and powered before the step
                 // that spends the power, not after it.
-                if (stepping) PushHeatPumpState();
+                if (starting) PushHeatPumpState();
 
                 long before = Simulation.Scheduler.StepsRun;
-                Simulation.Update(TickSeconds, sample);
+                Simulation.Update(frameSeconds, sample);
                 long stepped = Simulation.Scheduler.StepsRun - before;
 
                 if (stepped <= 0) return;

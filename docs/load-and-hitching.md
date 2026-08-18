@@ -275,6 +275,48 @@ The same shape of mistake as the room mapper's, and the same fix: the refresh is
 steps. It is advanced inside the pass rather than at the top of a step, so a grid small enough for
 the budget to cover in one go still finishes in the same substep that completed the pass.
 
+### 10. A step landed whole on one frame instead of being spread over its window — *fixed*
+
+The one the earlier findings kept circling without naming.
+
+A grid advances one solver step every `1 / StepsPerSecond` of a second — fifteen frames at the
+default `Frequency 4`. All of that step ran on one of those fifteen frames, and nothing ran on the
+other fourteen. Every fix above made the lump smaller; none of them made it stop being a lump.
+
+The step is now spread across the frames of its own window. Each frame is given the fraction of
+the step that its length is of the window — `frameSeconds x StepsPerSecond` of it — which is where
+`Frequency` and `SimulationSpeed` enter, since `StepsPerSecond` is what they make. Turning either
+up now makes every frame do proportionally more, rather than making the lumps arrive closer
+together.
+
+**This is what the original mod did, and it was right to.** The rewrite replaced it with atomic
+stepping and justified that by the solver having become order-independent — but order-independence
+*permits* stepping all at once, it does not require it. It is precisely the property that makes
+stepping in pieces safe, and the rewrite dropped the spreading on the strength of the thing that
+had just made it correct.
+
+The difference from the original is what is spread. That one advanced **different blocks on
+different frames**, so a block's neighbours could be a frame ahead of or behind it; the result
+depended on iteration order, which is why it alternated sweep direction to keep the bias fair.
+This spreads the **arithmetic of one substep**, which is a sum — every exchange computed from the
+temperatures at the start of the substep, accumulated into a watts buffer, and applied to every
+node together at the end. A sum has the same value however many pieces it is computed in, so the
+answer is *bit-identical* to computing it in one go, and `SpreadStepTests` asserts exactly that at
+slice sizes of 1, 7, 64 and 1000 elements and over thirty consecutive steps.
+
+Per frame at half a million blocks, 900 frames:
+
+| | before (per 1/6 s tick) | after (per 1/60 s frame) |
+| --- | ---: | ---: |
+| median | 23.96 ms | **1.33 ms** |
+| p95 | 26.36 ms | **9.45 ms** |
+| p99 | 28.71 ms | **12.05 ms** |
+| frames over a 60 fps budget | — | **3 of 900** |
+
+The two columns are different units on purpose: before, a tick was the only thing that happened
+and it happened every ten frames. What is comparable is that ten frames' worth of the new figure
+is about 13 ms against 24 ms of the old, and none of it arrives in a lump.
+
 ### 9. Every grid in the world ticked on the same frame — *fixed*
 
 The one the benchmarks could never have found, because they run a single grid.
@@ -285,11 +327,11 @@ worst 611 ms, and two in three exceeded a 60 fps frame. The session total was 20
 which is a throughput number and a survivable one. Arriving in one lump every tenth frame is what
 made it a stutter.
 
-`ThermalGridScheduler` gives each grid one of ten phases and ticks one phase per frame. The
-interval per grid is unchanged — every grid still ticks once per ten frames — only which ten. The
-phase is chosen by the blocks already on it rather than by grid count, because that world held one
-42,051-block capital ship and two hundred craft of a few hundred blocks each, and balancing by
-count would have left the capital's frame carrying its share of the rest as well.
+The first fix for this gave each grid one of ten phases and ticked one phase per frame, balanced by
+block count. It helped and it was the wrong shape: it spread *grids*, and what needed spreading was
+the work inside each of them — one 42,051-block ship on its own frame is a stutter no arrangement
+of the other two hundred can fix. Finding 10 replaced it, and `ThermalGridScheduler` now simply
+gives every grid a share of every frame.
 
 **This is a correction, not a discovery.** Earlier in the same session this was investigated by
 reading `MyDistributedTypeUpdater<MyEntity>(10)` in the engine assemblies, which computes

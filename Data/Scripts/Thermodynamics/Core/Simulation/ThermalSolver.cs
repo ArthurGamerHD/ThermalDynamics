@@ -389,6 +389,10 @@ namespace Thermodynamics.Core
             ThermalNode node;
             if (!nodesByKey.TryGetValue(block.Key, out node)) return false;
 
+            // A removal moves another node into the hole, so a step part way through would be
+            // summing watts for blocks that are no longer where its buffers say they are.
+            AbandonStep();
+
             nodesByKey.Remove(block.Key);
 
             // A node still waiting to be linked has no links to unpick and no chain entry, so it
@@ -483,6 +487,10 @@ namespace Thermodynamics.Core
         /// </summary>
         public void RebuildLinks()
         {
+            // Every link index changes, so nothing a step in flight has accumulated still means
+            // what it meant.
+            AbandonStep();
+
             Work.TopologyRebuilds++;
             Work.TopologyNodeVisits += nodes.Count;
 
@@ -1275,87 +1283,6 @@ namespace Thermodynamics.Core
         /// <summary>
         /// Advances the whole grid by <paramref name="deltaSeconds"/> of simulated time.
         /// </summary>
-        public void Step(float deltaSeconds, EnvironmentState environment)
-        {
-            if (deltaSeconds <= 0f) return;
-
-            RebuildLinksIfNeeded();
-            EnsureBuffers();
-            SyncNodeState();
-            RefreshLinkMassFactors();
-            RecomputeConductanceTotalsIfNeeded();
-
-            Environment = environment;
-            overheats.Clear();
-            crossings.Clear();
-
-            // One estimate, used for both answers. It walks every node cubing a temperature, so
-            // asking twice per step doubled the cost of the cheapest thing the solver does for no
-            // new information.
-            float required = RequiredSubstepsFromState(deltaSeconds);
-            int substeps = ClampSubsteps(required);
-            LastSubsteps = substeps;
-            LastStepWasClamped = required > MaxSubsteps;
-
-            for (int p = 0; p < heatPumps.Count; p++)
-            {
-                heatPumps[p].BeginStep();
-            }
-
-            Work.SolverSteps++;
-            Work.SolverSubsteps += substeps;
-
-            float h = deltaSeconds / substeps;
-            for (int s = 0; s < substeps; s++)
-            {
-                Substep(h, ref environment);
-            }
-
-            for (int p = 0; p < heatPumps.Count; p++)
-            {
-                heatPumps[p].EndStep(deltaSeconds);
-            }
-
-            // The node objects stay the public face of the simulation, so they are brought back
-            // into agreement with the arrays once per step rather than once per substep.
-            //
-            // The reported change is measured against the top of the step, not against the last
-            // substep. Everything that reads it — the HUD's rate of change, the anomaly
-            // classifier recovering the previous temperature, the per-type distribution — is
-            // describing one step; a six-substep grid otherwise reports roughly a sixth of the
-            // movement it actually made.
-            bool watching = thresholds.Count > 0;
-
-            // The hottest block falls out of this loop for one comparison per node, and the
-            // readouts that want it then cost nothing. Asking for it separately was a second pass
-            // over every node on the grid, run every four steps for every client — a million
-            // reads to answer one question the loop below already has the numbers for.
-            int hottest = -1;
-            float peak = float.MinValue;
-
-            for (int i = 0; i < nodes.Count; i++)
-            {
-                float updated = nodeTemperatures[i];
-                ThermalNode node = nodes[i];
-                float previous = nodeStepStart[i];
-
-                node.Temperature = updated;
-                node.LastDeltaTemperature = updated - previous;
-
-                if (updated > peak)
-                {
-                    peak = updated;
-                    hottest = i;
-                }
-
-                if (watching) thresholds.Collect(node.Block, previous, updated, crossings);
-            }
-
-            hottestNode = hottest;
-
-            StepCount++;
-        }
-
         /// <summary>
         /// Copies the node state the substep loop needs into flat arrays. Everything here is
         /// constant across a step: it changes when a block is built, damaged, exposed or
@@ -1466,57 +1393,115 @@ namespace Thermodynamics.Core
             }
         }
 
-        private void AccumulateEnvironment(ref EnvironmentState env)
+        /// <summary>
+        /// Everything about an environment pass that is the same for every node: which mechanisms
+        /// are switched on, the scalars they need, and the two directions resolved into per-face
+        /// weights.
+        ///
+        /// Separated from the per-node work because the pass is no longer run in one go. A step is
+        /// spread across the frames of its simulation window, so the node loop is entered many
+        /// times per substep and this must be computed once per substep rather than once per
+        /// slice — both for the cost and because <see cref="RefreshSunShadow"/> advances a budget
+        /// of its own and would run many times faster than intended.
+        /// </summary>
+        private struct EnvironmentPlan
         {
-            bool radiating = settings.EnableEnvironment && settings.EnableRadiation;
-            bool environmentEnabled = radiating;
-            bool solarEnabled = settings.EnableSolarHeat && !env.IsSolarOccluded && env.SolarEnergy > 0f;
-            bool sourcesEnabled = settings.EnableHeatSources && env.HeatSourceCount > 0;
-            bool frictionEnabled = env.FrictionActive;
-            bool generating = settings.EnableWasteHeat;
-            bool diagnostics = CollectDiagnostics;
+            public bool EnvironmentEnabled;
+            public bool Radiating;
+            public bool Convecting;
+            public bool Windy;
+            public bool SolarEnabled;
+            public bool FrictionEnabled;
+            public bool SourcesEnabled;
+            public bool Generating;
+            public bool Diagnostics;
 
-            bool convecting = settings.EnableEnvironment && settings.EnableConvection
+            /// <summary>True when nothing but waste heat has anything to add.</summary>
+            public bool GenerationOnly;
+
+            public float RadiationShare;
+            public float FrictionScale;
+        }
+
+        private EnvironmentPlan PlanEnvironment(ref EnvironmentState env)
+        {
+            EnvironmentPlan plan = new EnvironmentPlan();
+
+            plan.Radiating = settings.EnableEnvironment && settings.EnableRadiation;
+            plan.EnvironmentEnabled = plan.Radiating;
+            plan.SolarEnabled = settings.EnableSolarHeat && !env.IsSolarOccluded && env.SolarEnergy > 0f;
+            plan.SourcesEnabled = settings.EnableHeatSources && env.HeatSourceCount > 0;
+            plan.FrictionEnabled = env.FrictionActive;
+            plan.Generating = settings.EnableWasteHeat;
+            plan.Diagnostics = CollectDiagnostics;
+
+            plan.Convecting = settings.EnableEnvironment && settings.EnableConvection
                 && env.AtmosphereFactor > 0f && env.ConvectionCoefficient > 0f;
 
-            if (convecting) environmentEnabled = true;
+            if (plan.Convecting) plan.EnvironmentEnabled = true;
 
-            if (!environmentEnabled && !solarEnabled && !frictionEnabled && !sourcesEnabled)
-            {
-                // Nothing but waste heat to add, so the whole exposure pass is skipped.
-                if (generating)
-                {
-                    for (int i = 0; i < nodes.Count; i++)
-                    {
-                        nodeWatts[i] += nodeGeneration[i];
-                    }
-                }
-                if (diagnostics) ClearEnvironmentDiagnostics();
-                return;
-            }
+            plan.GenerationOnly = !plan.EnvironmentEnabled && !plan.SolarEnabled
+                && !plan.FrictionEnabled && !plan.SourcesEnabled;
 
-            bool windy = convecting && env.WindSpeed > 0f;
+            if (plan.GenerationOnly) return plan;
 
-            float radiationShare = 1f - env.AtmosphereFactor;
+            plan.Windy = plan.Convecting && env.WindSpeed > 0f;
+            plan.RadiationShare = 1f - env.AtmosphereFactor;
+
             float airCubed = env.WindSpeed * env.WindSpeed * env.WindSpeed;
-            float frictionScale = settings.FrictionScale * env.AirDensity * airCubed;
+            plan.FrictionScale = settings.FrictionScale * env.AirDensity * airCubed;
 
             // The two directions a node can be weighted against are the same for the whole grid,
             // so they are resolved once here rather than per node.
-            if (windy || frictionEnabled)
+            if (plan.Windy || plan.FrictionEnabled)
             {
                 Vector3 wind = env.WindDirectionLocal;
                 ResolveDirection(ref wind, windWeights);
             }
 
-            if (solarEnabled)
+            if (plan.SolarEnabled)
             {
                 Vector3 sun = env.SunDirectionLocal;
                 ResolveDirection(ref sun, sunWeights);
                 RefreshSunShadow(ref sun);
             }
 
-            for (int i = 0; i < nodes.Count; i++)
+            return plan;
+        }
+
+        /// <summary>Runs the environment pass over nodes <paramref name="from"/> to <paramref name="to"/>.</summary>
+        private void AccumulateEnvironmentRange(ref EnvironmentState env, ref EnvironmentPlan plan,
+            int from, int to)
+        {
+            bool diagnostics = plan.Diagnostics;
+
+            if (plan.GenerationOnly)
+            {
+                if (plan.Generating)
+                {
+                    for (int i = from; i < to; i++)
+                    {
+                        nodeWatts[i] += nodeGeneration[i];
+                    }
+                }
+                if (diagnostics)
+                {
+                    for (int i = from; i < to; i++) ClearEnvironmentDiagnostics(i);
+                }
+                return;
+            }
+
+            bool generating = plan.Generating;
+            bool environmentEnabled = plan.EnvironmentEnabled;
+            bool radiating = plan.Radiating;
+            bool convecting = plan.Convecting;
+            bool windy = plan.Windy;
+            bool solarEnabled = plan.SolarEnabled;
+            bool frictionEnabled = plan.FrictionEnabled;
+            float radiationShare = plan.RadiationShare;
+            float frictionScale = plan.FrictionScale;
+
+            for (int i = from; i < to; i++)
             {
                 float generation = generating ? nodeGeneration[i] : 0f;
 
@@ -1587,17 +1572,15 @@ namespace Thermodynamics.Core
                 node.LastFrictionWatts = frictionWatts;
                 node.LastHeatSourceWatts = 0f;
             }
-
-            if (sourcesEnabled) AccumulateHeatSources(ref env, diagnostics);
         }
 
-        /// <summary>
-        /// Adds gain from registered point sources.
-        ///
-        /// Looped source-outermost so each source resolves its six face weights once for the whole
-        /// grid, exactly as the sun does. A source costs one pass over the exposed nodes; a grid
-        /// with no sources registered costs one comparison per step.
-        /// </summary>
+        private void AccumulateEnvironment(ref EnvironmentState env)
+        {
+            EnvironmentPlan plan = PlanEnvironment(ref env);
+            AccumulateEnvironmentRange(ref env, ref plan, 0, nodes.Count);
+            if (plan.SourcesEnabled) AccumulateHeatSources(ref env, plan.Diagnostics);
+        }
+
         private void AccumulateHeatSources(ref EnvironmentState env, bool diagnostics)
         {
             for (int s = 0; s < env.HeatSourceCount; s++)
@@ -1782,16 +1765,32 @@ namespace Thermodynamics.Core
 
         private void AccumulateConduction(float h)
         {
+            ClearConductionDiagnostics();
+            AccumulateConductionRange(h, 0, links.Count);
+        }
+
+        /// <summary>
+        /// Zeroes the per-node conduction figure before a substep accumulates into it.
+        ///
+        /// Hoisted out of the pass itself because the pass is now entered many times per substep,
+        /// once per slice — clearing inside it would wipe what earlier slices had added and leave
+        /// the readout showing only the last slice's links.
+        /// </summary>
+        private void ClearConductionDiagnostics()
+        {
+            if (!CollectDiagnostics) return;
+
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                nodes[i].LastConductionWatts = 0f;
+            }
+        }
+
+        /// <summary>Runs the conduction pass over links <paramref name="from"/> to <paramref name="to"/>.</summary>
+        private void AccumulateConductionRange(float h, int from, int to)
+        {
             bool clamp = settings.ClampConductionOvershoot;
             bool diagnostics = CollectDiagnostics;
-
-            if (diagnostics)
-            {
-                for (int i = 0; i < nodes.Count; i++)
-                {
-                    nodes[i].LastConductionWatts = 0f;
-                }
-            }
 
             if (!settings.EnableConduction) return;
 
@@ -1799,7 +1798,7 @@ namespace Thermodynamics.Core
 
             // Hoisted so the loop reads locals rather than fields, and so the JIT can see the
             // lengths are loop-invariant.
-            int count = links.Count;
+            if (to > links.Count) to = links.Count;
             int[] fromIndex = linkA;
             int[] toIndex = linkB;
             float[] conductance = linkConductance;
@@ -1807,7 +1806,7 @@ namespace Thermodynamics.Core
             float[] temperatures = nodeTemperatures;
             float[] watts = nodeWatts;
 
-            for (int i = 0; i < count; i++)
+            for (int i = from; i < to; i++)
             {
                 int a = fromIndex[i];
                 int b = toIndex[i];
@@ -1953,11 +1952,18 @@ namespace Thermodynamics.Core
 
         private void ApplyWatts(float h)
         {
+            ApplyNodeWattsRange(h, 0, nodes.Count);
+            ApplyCoupledWatts(h);
+        }
+
+        /// <summary>Applies accumulated watts to nodes <paramref name="from"/> to <paramref name="to"/>.</summary>
+        private void ApplyNodeWattsRange(float h, int from, int to)
+        {
             bool damageEnabled = settings.EnableDamage;
 
             bool perSecond = settings.DamageIsPerSecond;
 
-            for (int i = 0; i < nodes.Count; i++)
+            for (int i = from; i < to; i++)
             {
                 float previous = nodeTemperatures[i];
                 float updated = previous + (nodeWatts[i] * h / nodeThermalMass[i]);
@@ -1983,7 +1989,16 @@ namespace Thermodynamics.Core
                     overheats.Add(new OverheatEvent(node.Block, updated, damage));
                 }
             }
+        }
 
+        /// <summary>
+        /// Applies accumulated watts to the coolant loops and the room air.
+        ///
+        /// Kept whole rather than sliced: there are a handful of each against tens of thousands of
+        /// nodes, so slicing them would cost more bookkeeping than the work it spread.
+        /// </summary>
+        private void ApplyCoupledWatts(float h)
+        {
             for (int l = 0; l < loops.Count; l++)
             {
                 CoolantLoop loop = loops[l];

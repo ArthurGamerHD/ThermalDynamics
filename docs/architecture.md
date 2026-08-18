@@ -74,7 +74,7 @@ Session.Draw()                          client only
   └─ ThermalDebugPanel.Update()         the readout beside it; sweeps the grid a few times a second
 
 per grid, every 10th frame:
-ThermalGrid.UpdateBeforeSimulation10()
+ThermalGridScheduler.Tick()   — every frame, every grid
   ├─ scheduler.WouldStep()?             no  → skip sampling entirely
   ├─ Sample()                           planet, air, wind, sun, occlusion, heat sources
   ├─ push heat pump state                switch and available power, before the step spends it

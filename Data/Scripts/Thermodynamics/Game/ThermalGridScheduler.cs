@@ -1,118 +1,59 @@
 using System.Collections.Generic;
-using Thermodynamics.Core;
 
 namespace Thermodynamics
 {
     /// <summary>
-    /// Decides which frame each grid does its thermal work on, and drives them.
+    /// Runs every grid on every frame, each doing its share of the step it is part way through.
     ///
     /// <para>
-    /// A grid ticks once every ten rendered frames, and until this existed all of them ticked on
-    /// the <em>same</em> ten. That is not something the mod chose: the engine calls every entity's
-    /// ten-frame update together, so a world of two hundred grids did all of its thermal work on
-    /// one frame and none on the other nine.
+    /// A grid advances by one solver step every <c>1 / StepsPerSecond</c> of a second — fifteen
+    /// frames at the default <c>Frequency 4</c>. What matters is not which frame a grid works on
+    /// but that it works on all of them: a fifteenth of the step per frame costs the same in total
+    /// as the whole step on one frame and is felt as a steady frame rate rather than as a stutter
+    /// fifteen frames wide. <c>Frequency</c> and <c>SimulationSpeed</c> set the size of that
+    /// share, through <c>StepsPerSecond</c>, so turning either up makes every frame do
+    /// proportionally more instead of making the lumps arrive closer together.
     /// </para>
     ///
     /// <para>
-    /// A field run of a 203-grid save measured what that costs. Of 13,915 frames, 1,392 did any
-    /// work at all — one in ten, exactly — and those averaged 117 ms with a worst of 611 ms, with
-    /// two frames in three exceeding a 60 fps frame. The total was 20 % of real time, which is a
-    /// throughput problem; arriving in one lump every tenth frame is a stutter problem, and they
-    /// are not the same problem. Spread evenly the same work is about twelve milliseconds a frame.
+    /// The engine's own ten-frame callback cannot do this: it fires every grid together, so a
+    /// 203-grid world did all of its thermal work on one frame in ten and none on the other nine —
+    /// 1,392 of 13,915 frames doing anything, averaging 117 ms, two in three over a 60 fps frame.
+    /// An earlier attempt gave each grid one of ten phases so the fleet was at least spread across
+    /// the cycle. That helped and was still the wrong shape: it spread grids, and what needed
+    /// spreading was the work inside each of them. One large ship on its own frame is a stutter no
+    /// arrangement of the others can fix.
     /// </para>
     ///
     /// <para>
-    /// So the cadence is the mod's own. Grids are held in ten buckets, each frame ticks one
-    /// bucket, and a grid joins the bucket carrying the least work — measured in blocks, because
-    /// grids differ in size by three orders of magnitude and balancing by count would leave a
-    /// capital ship sharing a frame with two hundred fighters.
-    /// </para>
-    ///
-    /// <para>
-    /// Driven from the session component rather than from the grid entity. The entity route would
-    /// mean asking for a per-frame callback and gating on the phase inside it, and
+    /// Driven from the session component rather than from the grid entity, because
     /// <c>MyCubeGrid</c> clears <c>EACH_FRAME</c> from its own update flags whenever its
-    /// scheduled-work queue empties — so a mod hanging its cadence on that flag would silently
-    /// stop running. The session's own per-frame call belongs to this mod and nothing else edits
-    /// it.
+    /// scheduled-work queue empties — a mod hanging its cadence on that flag stops running,
+    /// silently.
     /// </para>
     /// </summary>
     public static class ThermalGridScheduler
     {
-        private static readonly List<ThermalGrid>[] Buckets = CreateBuckets();
-
-        private static readonly UpdatePhases Phases = new UpdatePhases();
-
-        private static List<ThermalGrid>[] CreateBuckets()
-        {
-            List<ThermalGrid>[] buckets = new List<ThermalGrid>[UpdatePhases.Count];
-            for (int i = 0; i < buckets.Length; i++) buckets[i] = new List<ThermalGrid>();
-            return buckets;
-        }
-
-        /// <summary>The load balance across phases, for the telemetry report.</summary>
-        public static UpdatePhases Balance
-        {
-            get { return Phases; }
-        }
-
         /// <summary>
-        /// Puts a grid on the emptiest phase. Called once, when the grid starts simulating.
+        /// Real seconds a frame is assumed to be. Space Engineers simulates at a fixed sixty
+        /// frames a second, and this is the interval a grid divides its step across.
         /// </summary>
-        public static void Register(ThermalGrid grid, int blocks)
-        {
-            if (grid == null || grid.UpdatePhase >= 0) return;
-
-            int phase = Phases.Claim(blocks);
-            grid.UpdatePhase = phase;
-            Buckets[phase].Add(grid);
-        }
-
-        public static void Unregister(ThermalGrid grid, int blocks)
-        {
-            if (grid == null) return;
-
-            int phase = grid.UpdatePhase;
-            if (phase < 0 || phase >= UpdatePhases.Count) return;
-
-            Buckets[phase].Remove(grid);
-            Phases.Release(phase, blocks);
-            grid.UpdatePhase = -1;
-        }
-
-        /// <summary>Corrects a phase's recorded load after a grid has grown or shrunk.</summary>
-        public static void Reweigh(ThermalGrid grid, int previousBlocks, int currentBlocks)
-        {
-            if (grid == null) return;
-            Phases.Reweigh(grid.UpdatePhase, previousBlocks, currentBlocks);
-        }
+        public const float FrameSeconds = 1f / 60f;
 
         /// <summary>
-        /// Ticks the grids belonging to this frame's phase.
+        /// Gives every grid its share of this frame.
         ///
-        /// One bucket per frame, so the cost of choosing is the length of that bucket rather than
-        /// the length of the world. A grid removed from the bucket while it is being walked is the
-        /// case to be careful about — a ship destroyed by its own overheating does exactly that —
-        /// so the walk runs backwards, where a removal cannot move an element the loop has not
-        /// reached yet.
+        /// Walked backwards because a grid can be closed by what its own update does — a ship
+        /// destroyed by its own overheating — and a removal must not move an element the loop has
+        /// not reached yet.
         /// </summary>
-        public static void Tick(long frame)
+        public static void Tick()
         {
-            int phase = (int)(frame % UpdatePhases.Count);
-            if (phase < 0) phase += UpdatePhases.Count;
-
-            List<ThermalGrid> bucket = Buckets[phase];
-            for (int i = bucket.Count - 1; i >= 0; i--)
+            IList<ThermalGrid> grids = ThermalGrid.LiveGrids;
+            for (int i = grids.Count - 1; i >= 0; i--)
             {
-                bucket[i].Tick();
+                grids[i].Tick(FrameSeconds);
             }
-        }
-
-        /// <summary>Drops everything. Called when the session unloads.</summary>
-        public static void Clear()
-        {
-            for (int i = 0; i < Buckets.Length; i++) Buckets[i].Clear();
-            Phases.Clear();
         }
     }
 }

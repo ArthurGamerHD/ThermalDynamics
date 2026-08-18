@@ -198,6 +198,66 @@ namespace Thermodynamics.Core
             return seconds * (substepBudget / required);
         }
 
+        /// <summary>
+        /// Fractional work credit carried between frames, in element visits.
+        ///
+        /// A frame is owed <c>frameSeconds x StepsPerSecond</c> of a step. On a large grid that is
+        /// thousands of element visits and the fraction is noise; on a small one it is less than a
+        /// single visit, and dropping it would mean a small grid never advancing at all.
+        /// </summary>
+        private double workCredit;
+
+        /// <summary>
+        /// The call interval the budgeted passes were sized against: the ten-frame tick the host
+        /// used to poll on.
+        ///
+        /// Their budgets are per call, and the host now calls every frame instead of every tenth,
+        /// so taking them at face value would run the room mapper and the exposure refresh ten
+        /// times faster — and cost ten times as much per second — for no reason anyone asked for.
+        /// Scaling by how long the caller's frame actually was keeps the rate what it always was
+        /// and makes it independent of how often the host chooses to call.
+        /// </summary>
+        private const float BudgetReferenceSeconds = 10f / 60f;
+
+        private double roomCredit;
+        private double exposureCredit;
+
+        /// <summary>A frame's share of a budget that was expressed per tick.</summary>
+        private static int Share(ref double credit, int perTick, float frameSeconds)
+        {
+            credit += perTick * (frameSeconds / (double)BudgetReferenceSeconds);
+
+            // Never bank more than one tick's worth: a long frame or a resumed session must not
+            // buy a burst of flood fill.
+            if (credit > perTick) credit = perTick;
+
+            int slice = (int)credit;
+            credit -= slice;
+            return slice;
+        }
+
+        /// <summary>Solver steps this simulation has completed.</summary>
+        public long StepsCompleted { get; private set; }
+
+        /// <summary>
+        /// True when the next call will begin a step and therefore wants a fresh environment
+        /// sample.
+        ///
+        /// The host builds a sample from a planet lookup and, occasionally, a raycast. Now that
+        /// the simulation is advanced every frame rather than every tenth, sampling every call
+        /// would multiply that by ten for readings that only change between steps.
+        /// </summary>
+        public bool NeedsEnvironmentSample
+        {
+            get { return !solver.StepInFlight; }
+        }
+
+        /// <summary>True while a step is part way through its window.</summary>
+        public bool StepInFlight
+        {
+            get { return solver.StepInFlight; }
+        }
+
         private void RunSteps(int steps, ref EnvironmentState state)
         {
             overheats.Clear();
@@ -512,7 +572,9 @@ namespace Thermodynamics.Core
                 Begin(SimulationPhase.RoomMapping);
                 Vector3I extents = (grid.Max - grid.Min) + Vector3I.One;
                 int volume = Math.Max(1, extents.X * extents.Y * extents.Z);
-                rooms.Step(SimulationScheduler.RoomMappingBudget(volume));
+                int cells = Share(ref roomCredit,
+                    SimulationScheduler.RoomMappingBudget(volume), frameSeconds);
+                if (cells > 0) rooms.Step(cells);
                 End(SimulationPhase.RoomMapping);
             }
 
@@ -526,8 +588,8 @@ namespace Thermodynamics.Core
             {
                 Begin(SimulationPhase.Exposure);
 
-                bool more = solver.StepExposureRefresh(
-                    SimulationScheduler.ExposureBudget(solver.Nodes.Count));
+                bool more = solver.StepExposureRefresh(Share(ref exposureCredit,
+                    SimulationScheduler.ExposureBudget(solver.Nodes.Count), frameSeconds));
 
                 // The air of a room is built from the blocks bounding it, so it is rebuilt once
                 // the exposure they carry is current — not part way through.
@@ -536,13 +598,83 @@ namespace Thermodynamics.Core
                 End(SimulationPhase.Exposure);
             }
 
-            int steps = scheduler.StepsDue(frameSeconds);
-            if (steps <= 0) return;
-
             Begin(SimulationPhase.Solver);
-            EnvironmentState state = EnvironmentSolver.Solve(settings, planet, sample);
-            RunSteps(steps, ref state);
+            AdvanceSolver(frameSeconds, sample);
             End(SimulationPhase.Solver);
+        }
+
+        /// <summary>
+        /// Does this frame's share of the current step, and starts the next one when it finishes.
+        ///
+        /// The share is the whole point. A step covers <c>1 / StepsPerSecond</c> of a second — at
+        /// the default settings, fifteen frames — and the simulation used to do all of it on one
+        /// of those frames and nothing on the other fourteen. The work is the same either way;
+        /// arriving in a lump is what a player feels. So each frame is given the fraction of the
+        /// step that its own length is of the window: <c>frameSeconds x StepsPerSecond</c> of it.
+        ///
+        /// That expression is where <c>Frequency</c> and <c>SimulationSpeed</c> enter — they are
+        /// what <c>StepsPerSecond</c> is made of — so raising either makes every frame do
+        /// proportionally more, rather than making the lumps arrive closer together.
+        /// </summary>
+        private void AdvanceSolver(float frameSeconds, EnvironmentSample sample)
+        {
+            if (frameSeconds <= 0f) return;
+
+            if (!solver.StepInFlight)
+            {
+                float seconds = AffordableStepSeconds(settings.StepSeconds);
+
+                if (seconds < settings.StepSeconds)
+                {
+                    SimulatedSecondsSkipped += settings.StepSeconds - seconds;
+                }
+                SimulatedSecondsRun += seconds;
+
+                EnvironmentState state = EnvironmentSolver.Solve(settings, planet, sample);
+                if (!solver.BeginStep(seconds, state)) return;
+
+                overheats.Clear();
+                crossings.Clear();
+            }
+
+            workCredit += solver.StepWorkUnits * (double)frameSeconds * settings.StepsPerSecond;
+
+            // A frame that ran long, or a session that was paused, must not be allowed to bank
+            // enough credit to do several steps at once — that is the lump this exists to avoid.
+            double ceiling = solver.StepWorkUnits;
+            if (workCredit > ceiling) workCredit = ceiling;
+
+            long budget = (long)workCredit;
+            if (budget <= 0) return;
+
+            workCredit -= budget;
+
+            if (!solver.AdvanceStep(budget))
+            {
+                workCredit += budget - solver.LastAdvanceWork;
+                return;
+            }
+
+            // What the step did not need goes back into the credit rather than being discarded,
+            // or the grid runs a little below the rate it was configured for — the estimate a
+            // budget is sized from is proportional, not exact.
+            workCredit += budget - solver.LastAdvanceWork;
+
+            // The next step starts on the next frame, so a completion never drags a second step
+            // in behind it. That is the rule that keeps a frame's cost bounded.
+            CollectStepOutput();
+        }
+
+        private void CollectStepOutput()
+        {
+            StepsCompleted++;
+            scheduler.CountStep();
+
+            IList<OverheatEvent> stepOverheats = solver.Overheats;
+            for (int o = 0; o < stepOverheats.Count; o++) overheats.Add(stepOverheats[o]);
+
+            IList<ThresholdCrossing> stepCrossings = solver.Crossings;
+            for (int c = 0; c < stepCrossings.Count; c++) crossings.Add(stepCrossings[c]);
         }
 
         /// <summary>
@@ -552,6 +684,14 @@ namespace Thermodynamics.Core
         public void StepExact(int steps, EnvironmentSample sample)
         {
             ApplySettingsIfChanged();
+
+            // "Exactly this many steps from here" cannot mean "finish whatever the frame pacing
+            // had half done first, using an environment from some earlier moment". A caller that
+            // mixes the two — a scenario taking over a simulation the host had been updating — is
+            // otherwise offset by a fraction of a step, which is enough to make two runs of the
+            // same scenario disagree.
+            solver.AbandonStep();
+            workCredit = 0d;
             EnvironmentState state = EnvironmentSolver.Solve(settings, planet, sample);
             RunSteps(steps, ref state);
         }
