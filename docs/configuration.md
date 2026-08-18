@@ -128,6 +128,8 @@ All client side and all off by default.
 | `DebugTextOnScreen` | `false` | Crosshair readout: temperature, per-mechanism watts, block constants, environment, grid totals, room classification, raw surface bits. Switching it on also makes the solver record per-mechanism watts, which is not free. |
 | `DebugSolarRaycast` | `false` | Draws the sun ray from each grid, white when lit and red when occluded. |
 | `DebugWindRaycast` | `false` | Draws the relative wind vector. |
+| `RoomOverlayMinKelvin` | 253.15 K | Bottom of the room view's colour span, −20 °C. |
+| `RoomOverlayMaxKelvin` | 323.15 K | Top of the room view's colour span, 50 °C. |
 | `DebugBlockOverlay` | 0 | Which view the block overlay opens a session on: 0 off, 1 temperature, 2 solar watts, 3 exposed faces, 4 friction watts, 5 rooms. |
 
 ### The block overlay
@@ -216,10 +218,16 @@ way the crosshair readout does, and stop when you cycle past. Without that they 
 grid uniformly at zero, which reads as "no solar heating" rather than as "not measured".
 
 **Rooms** is the one view that draws cells rather than blocks: a box in every cell the mapper put in
-a room, coloured by which room it is, with vented rooms drawn faint. It is how you find out whether
+a room, **coloured by that room's air temperature** on a tighter span than blocks use
+(`RoomOverlayMinKelvin`/`RoomOverlayMaxKelvin`, −20 °C to 50 °C by default), because room air lives
+in a narrow band where the block ramp makes every compartment the same shade. Which room is which
+rides on the wireframe instead — a colour per room, faint when vented — so identity never costs the
+temperature its clarity.
+
+A room holding no air is drawn as an empty outline: there is no temperature to show, and an
+unpressurised compartment is usually the thing being hunted for. It is also how you find out whether
 two compartments you think are separate came back as one room, and where the leak is when a room you
-think is sealed reads as vented — a question no readout answers, because rooms belong to cells and
-readouts belong to blocks.
+think is sealed reads as vented.
 
 Everything about it is client side and per frame: nothing is written to the grid, nothing
 replicates, and switching it off leaves no trace. It replaces the four `Debug*BlockColors` modes,

@@ -144,10 +144,33 @@ little capacity and a great deal of contact area, so on a pressurised ship it is
 the substep count.
 
 A room holds air only when the host reports a pressure for it; at zero pressure it has no mass and
-no links, and costs nothing. In Space Engineers, pressure comes from air vents — the only place the
-game exposes it. Air appearing in a room for the first time starts at the average temperature of
-the surfaces around it, and carries its temperature across map rebuilds that leave the room's shape
-unchanged.
+no links, and costs nothing. Air appearing in a room for the first time starts at the average
+temperature of the surfaces around it, and carries its temperature across map rebuilds that leave
+the room's shape unchanged.
+
+Pressure is the game's answer, not this model's, and
+[RoomPressure](../Data/Scripts/Thermodynamics/Core/Surfaces/RoomPressure.cs) is the rule for reading
+it. Three things can empty a room and each of them can veto air on its own:
+
+| Source | Question | Answer when it says no |
+| --- | --- | --- |
+| `SessionSettings.EnableOxygen` and `EnableOxygenPressurization` | does this world pressurise at all | no room anywhere holds air |
+| `IMyCubeGrid.IsRoomAtPositionAirtight` | does the game call this room sealed | that room holds nothing |
+| `IMyAirVent.GetOxygenLevel`, or `Depressurize` | how full is it | that much, or nothing |
+
+None of them can insist on air, only refuse it, because the two mistakes are not equal: air is heat
+capacity, so a room wrongly given it warms and cools like a room with a tonne of gas in it and drags
+every bounding surface along, where a room wrongly denied it only loses a little inertia.
+
+The game's sealing test is consulted rather than this model's own room map because the two disagree,
+and the game is right: it knows the real shape of a sloped or half block where the room mapper knows
+only whether a cell's faces seal. The room map still decides the *geometry* — which cells are one
+room, and which surfaces face indoors — since that is what exposure needs, and it is unaffected by
+whether the world models oxygen.
+
+A room with no vent reports nothing and holds no air. That is a limit rather than a judgement: a
+vent is the only place a mod can read a room's oxygen level, so a sealed compartment nobody piped
+air into cannot be told apart from one nobody can measure.
 
 ## Solar and point sources
 

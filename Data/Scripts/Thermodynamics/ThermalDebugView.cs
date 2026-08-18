@@ -357,15 +357,17 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// The room map, drawn as the air itself: one box per cell the mapper put in a room,
-        /// coloured by which room it is.
+        /// The rooms, drawn as the air itself, coloured by how warm that air is.
         ///
-        /// Rooms are a property of cells rather than of blocks, so this is the one view that does
-        /// not iterate blocks. It answers the question the room map exists to answer and that no
-        /// readout can — whether two compartments the player thinks are separate came back as one
-        /// room, and where the leak is when a room the player thinks is sealed reads as vented.
-        /// Vented rooms are drawn faint, so a compartment losing its seal stands out from one
-        /// holding it.
+        /// Temperature is the question — it is the same ramp as every other view, so a cold
+        /// compartment reads cold here exactly as a cold block does there. Which room is which is
+        /// worth knowing too, for the sealing questions the map exists to answer, but not at the
+        /// price of the temperature: identity goes on the wireframe, where it names the boundary
+        /// without touching the colour of the air inside it.
+        ///
+        /// A room holding no air has no temperature to show, so it is drawn as an empty outline.
+        /// That is the honest picture and a useful one: unpressurised compartments are exactly what
+        /// someone looking at this view is usually hunting for.
         /// </summary>
         private static void DrawRooms(ThermalGrid thermals, ref MatrixD camera, ref Vector3D eye)
         {
@@ -379,16 +381,27 @@ namespace Thermodynamics
             // than a single unbroken block of colour.
             Vector3D half = new Vector3D(gridSize * 0.45);
 
+            float min = Settings.Instance.RoomOverlayMinKelvin;
+            float max = Settings.Instance.RoomOverlayMaxKelvin;
+
             IList<HashSet<Vector3I>> rooms = map.Rooms;
 
             for (int room = 0; room < rooms.Count; room++)
             {
-                Color colour = RoomColour(room, map.IsVented(room));
+                RoomAirNode air = AirOf(thermals, room);
+
+                bool hasAir = air != null && air.HasAir;
+                Color fill = hasAir
+                    ? Fill(air.Temperature, min, max)
+                    : new Color(0, 0, 0, 0);
+
+                Color edge = RoomColour(room, map.IsVented(room));
 
                 foreach (Vector3I cell in rooms[room])
                 {
                     Vector3D centre = thermals.Grid.GridIntegerToWorld(cell);
                     Vector3D delta = centre - eye;
+
                     if (Vector3D.Dot(delta, camera.Forward) <= 0) continue;
 
                     MatrixD box = gridMatrix;
@@ -396,11 +409,30 @@ namespace Thermodynamics
 
                     BoundingBoxD local = new BoundingBoxD(-half * BandScale, half * BandScale);
 
+                    // Solid where there is air to colour, outline only where there is not.
                     MySimpleObjectDraw.DrawTransparentBox(
                         ref box,
                         ref local,
-                        ref colour,
-                        MySimpleObjectRasterizer.SolidAndWireframe,
+                        ref fill,
+                        hasAir
+                            ? MySimpleObjectRasterizer.Solid
+                            : MySimpleObjectRasterizer.Wireframe,
+                        1,
+                        (float)(0.02 * BandScale),
+                        FaceMaterial,
+                        LineMaterial,
+                        false,
+                        -1,
+                        BlendTypeEnum.PostPP);
+
+                    if (!hasAir) continue;
+
+                    // The edges carry the room's identity over the top of its temperature.
+                    MySimpleObjectDraw.DrawTransparentBox(
+                        ref box,
+                        ref local,
+                        ref edge,
+                        MySimpleObjectRasterizer.Wireframe,
                         1,
                         (float)(0.02 * BandScale),
                         FaceMaterial,
@@ -412,6 +444,40 @@ namespace Thermodynamics
             }
         }
 
+        /// <summary>The air of one room, or null when the solver has none for it.</summary>
+        private static RoomAirNode AirOf(ThermalGrid thermals, int room)
+        {
+            IList<RoomAirNode> air = thermals.Simulation.RoomAir;
+            for (int i = 0; i < air.Count; i++)
+            {
+                if (air[i].RoomIndex == room) return air[i];
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Room air on the mod's usual heat ramp, over a span tighter than a block's.
+        ///
+        /// Air in a compartment lives inside a few tens of degrees of comfortable, where hull can
+        /// be anywhere from the shadow of a moon to red heat. On the block ramp every room on a
+        /// ship is the same shade; on this one, a compartment three degrees colder than the one
+        /// next door is visibly colder.
+        /// </summary>
+        private static Color Fill(float kelvin, float min, float max)
+        {
+            if (max <= min) max = min + 1f;
+
+            float span = max - min;
+            Color colour = ColorExtensions.HSVtoColor(
+                Tools.GetTemperatureColor(kelvin - min, span, span * 0.05f, span * 0.9f));
+
+            colour.A = (byte)(RoomFillAlpha * 255f);
+            return colour;
+        }
+
+        /// <summary>Alpha of room air. Higher than a block box: air is one layer, not many.</summary>
+        private const float RoomFillAlpha = 0.35f;
+
         /// <summary>
         /// A colour per room index. Neighbouring indices have to be told apart at a glance, so the
         /// hue is stepped by a large irrational-ish fraction of the circle rather than by index:
@@ -421,9 +487,9 @@ namespace Thermodynamics
         private static Color RoomColour(int room, bool vented)
         {
             float hue = (room * 0.61803399f) % 1f;
-            Color colour = ColorExtensions.HSVtoColor(new Vector3(hue, vented ? 0.35f : 1f, 0.6f));
+            Color colour = ColorExtensions.HSVtoColor(new Vector3(hue, vented ? 0.3f : 0.9f, 1f));
 
-            colour.A = (byte)(FaceAlpha * 255f * (vented ? 0.45f : 1f));
+            colour.A = (byte)(255f * (vented ? 0.35f : 0.8f));
             return colour;
         }
 

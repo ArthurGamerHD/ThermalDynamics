@@ -324,6 +324,19 @@ namespace Thermodynamics
                 return;
             }
 
+            // Why every room reads empty, when it does. The answer is usually the world's own
+            // oxygen settings, and nothing about this mod can be read off the rooms until it is
+            // known which of the two is talking.
+            bool pressurised = MyAPIGateway.Session != null
+                && MyAPIGateway.Session.SessionSettings != null
+                && MyAPIGateway.Session.SessionSettings.EnableOxygen
+                && MyAPIGateway.Session.SessionSettings.EnableOxygenPressurization;
+
+            if (!pressurised)
+            {
+                Text.Append("world pressurisation OFF — no room holds air\n");
+            }
+
             // Biggest first: on a ship with twenty compartments the ones worth reading are the ones
             // holding most of the air, and the list has to stop somewhere.
             RoomOrder.Clear();
@@ -331,7 +344,7 @@ namespace Thermodynamics
             RoomOrder.Sort((a, b) => air[b].CellCount.CompareTo(air[a].CellCount));
 
             int shown = Math.Min(RoomOrder.Count, 8);
-            Text.Append("room  cells   air      seal\n");
+            Text.Append("room  cells   air        fill  seal\n");
 
             for (int i = 0; i < shown; i++)
             {
@@ -339,7 +352,10 @@ namespace Thermodynamics
 
                 Text.Append(room.RoomIndex.ToString().PadRight(6))
                     .Append(room.CellCount.ToString().PadRight(8))
-                    .Append(Tools.KelvinToCelsiusString(room.Temperature).PadRight(9))
+                    .Append((room.HasAir
+                        ? Tools.KelvinToCelsiusString(room.Temperature)
+                        : "—").PadRight(11))
+                    .Append(((room.Pressure * 100f).ToString("n0") + "%").PadRight(6))
                     .Append(map.IsVented(room.RoomIndex) ? "vented" : "sealed")
                     .Append('\n');
             }

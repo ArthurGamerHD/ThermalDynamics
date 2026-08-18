@@ -172,6 +172,16 @@ namespace Thermodynamics
         /// </summary>
         [ProtoMember(57)] public int DebugBlockOverlay;
 
+        /// <summary>
+        /// Bottom of the room overlay's colour span, K. Room air lives inside a few tens of degrees
+        /// of comfortable, so it gets its own span: on the block ramp every room on a ship is the
+        /// same shade.
+        /// </summary>
+        [ProtoMember(78)] public float RoomOverlayMinKelvin;
+
+        /// <summary>Top of the room overlay's colour span, K.</summary>
+        [ProtoMember(79)] public float RoomOverlayMaxKelvin;
+
         // ProtoMember numbers 72 and 76 were the two switches SolarGridShadows replaced.
         // ProtoMember numbers 53-56 were the block-colouring debug modes, which wrote real block
         // paint and have been replaced by the overlay above. 60-70 were the thermal vision
@@ -233,6 +243,8 @@ namespace Thermodynamics
                 DebugSolarRaycast = false,
                 DebugWindRaycast = false,
                 DebugBlockOverlay = 0,
+                RoomOverlayMinKelvin = 253.15f,   // -20 C
+                RoomOverlayMaxKelvin = 323.15f,   //  50 C
 
                 EnableTelemetry = false,
                 TelemetrySampleStride = 4,
@@ -255,6 +267,8 @@ namespace Thermodynamics
             if (SolarOcclusionSamples < 1) SolarOcclusionSamples = 1;
             if (SolarOcclusionSamples > Core.SolarOcclusionSampler.MaxSamples)
                 SolarOcclusionSamples = Core.SolarOcclusionSampler.MaxSamples;
+            if (RoomOverlayMaxKelvin <= RoomOverlayMinKelvin)
+                RoomOverlayMaxKelvin = RoomOverlayMinKelvin + 1f;
             if (DebugBlockOverlay < 0) DebugBlockOverlay = 0;
             if (DebugBlockOverlay >= ThermalDebugView.ModeCount)
                 DebugBlockOverlay = ThermalDebugView.ModeCount - 1;
@@ -359,7 +373,7 @@ namespace Thermodynamics
                 "RoomConvectionCoefficient", "RoomAirDensity", "SolarOcclusionInterval",
                 "HeatPumpCarnotFraction", "HeatPumpMaxCoefficient",
                 "DebugTextOnScreen", "DebugSolarRaycast", "DebugWindRaycast",
-                "DebugBlockOverlay",
+                "DebugBlockOverlay", "RoomOverlayMinKelvin", "RoomOverlayMaxKelvin",
                 "EnableTelemetry", "TelemetrySampleStride",
             };
         }
@@ -407,6 +421,8 @@ namespace Thermodynamics
                 case "DebugSolarRaycast": return Flag(DebugSolarRaycast);
                 case "DebugWindRaycast": return Flag(DebugWindRaycast);
                 case "DebugBlockOverlay": return DebugBlockOverlay;
+                case "RoomOverlayMinKelvin": return RoomOverlayMinKelvin;
+                case "RoomOverlayMaxKelvin": return RoomOverlayMaxKelvin;
                 case "EnableTelemetry": return Flag(EnableTelemetry);
                 case "TelemetrySampleStride": return TelemetrySampleStride;
                 default: return float.NaN;
@@ -458,6 +474,8 @@ namespace Thermodynamics
                 case "DebugTextOnScreen": DebugTextOnScreen = Flag(value); return true;
                 case "DebugSolarRaycast": DebugSolarRaycast = Flag(value); return true;
                 case "DebugWindRaycast": DebugWindRaycast = Flag(value); return true;
+                case "RoomOverlayMinKelvin": RoomOverlayMinKelvin = value; return true;
+                case "RoomOverlayMaxKelvin": RoomOverlayMaxKelvin = value; return true;
                 case "DebugBlockOverlay":
                     DebugBlockOverlay = (int)value;
                     ThermalDebugView.Set((ThermalDebugView.Mode)DebugBlockOverlay);

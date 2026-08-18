@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Sandbox.ModAPI;
 using SpaceEngineers.Game.ModAPI;
 using Thermodynamics.Core;
+using VRage.Game;
 using VRage.Game.Components;
 using VRage.Utils;
 using VRageMath;
@@ -215,17 +216,75 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Tells the simulation how full of air its rooms are.
+        /// Tells the simulation how full of air its rooms are, from the game's own answers.
         ///
-        /// Pressurisation is the game's model, not a thermal one, and the only place a mod can
-        /// read it is an air vent — which reports the room it is in. So a room is pressurised as
-        /// far as this mod is concerned when a vent in it says so, and holds no air otherwise.
-        /// Grids with no vents skip the sweep entirely.
+        /// Three things can empty a room and none of them belong to this mod. The world can have
+        /// oxygen or pressurisation switched off, in which case nothing anywhere holds air. The
+        /// game's sealing test can disagree with this model's — it knows the real shape of a sloped
+        /// block where this knows a cell — and it wins. And a vent in the room reports how full it
+        /// actually is.
+        ///
+        /// A room with no vent reports nothing and holds no air. That is a limit rather than a
+        /// judgement: a vent is the only place a mod can read a room's oxygen level, so a sealed
+        /// compartment nobody ever piped air into is indistinguishable from one nobody can measure.
         /// </summary>
         private void SweepRoomPressure()
         {
-            if (!Settings.Instance.EnableRoomAir || vents.Count == 0) return;
+            if (!Settings.Instance.EnableRoomAir) return;
 
+            IList<RoomAirNode> air = Simulation.RoomAir;
+            if (air.Count == 0) return;
+
+            bool worldPressurised = WorldPressurised();
+
+            // Everything starts at "nobody said", so a room whose vent was removed empties rather
+            // than keeping the last figure that vent ever gave it.
+            for (int i = 0; i < air.Count; i++)
+            {
+                VentLevels[air[i].RoomIndex] = RoomPressure.NotReported;
+            }
+
+            ReadVents();
+
+            for (int i = 0; i < air.Count; i++)
+            {
+                RoomAirNode room = air[i];
+
+                float reported;
+                if (!VentLevels.TryGetValue(room.RoomIndex, out reported))
+                {
+                    reported = RoomPressure.NotReported;
+                }
+
+                bool sealedByGame = worldPressurised && Grid.IsRoomAtPositionAirtight(room.Anchor);
+
+                room.Pressure = RoomPressure.Level(worldPressurised, sealedByGame, reported);
+                room.RefreshThermalMass();
+            }
+        }
+
+        /// <summary>
+        /// Whether this world models pressurisation at all. Both switches matter: pressurisation
+        /// without oxygen is not a state the game has.
+        /// </summary>
+        private static bool WorldPressurised()
+        {
+            if (MyAPIGateway.Session == null) return false;
+
+            MyObjectBuilder_SessionSettings settings = MyAPIGateway.Session.SessionSettings;
+            if (settings == null) return false;
+
+            return settings.EnableOxygen && settings.EnableOxygenPressurization;
+        }
+
+        /// <summary>
+        /// Collects what each vent says about the room it opens into, by room index.
+        ///
+        /// A vent sits in a wall, so the room is on whichever side of it has one — and a vent set
+        /// to depressurise is emptying its room, whatever it currently reads.
+        /// </summary>
+        private void ReadVents()
+        {
             for (int i = vents.Count - 1; i >= 0; i--)
             {
                 ThermalBlock bound = vents[i];
@@ -239,23 +298,36 @@ namespace Thermodynamics
 
                 float level = vent.Depressurize ? 0f : vent.GetOxygenLevel();
 
-                // The vent sits in a wall; the room is on whichever side of it has one.
                 Vector3I[] cells = bound.Instance.Cells;
                 for (int c = 0; c < cells.Length; c++)
                 {
-                    bool applied = false;
+                    bool found = false;
+
                     for (int face = 0; face < Face.Count; face++)
                     {
-                        if (Simulation.SetRoomPressure(cells[c] + Face.Offsets[face], level))
+                        int room = Simulation.Rooms.Map.RoomIndexOf(cells[c] + Face.Offsets[face]);
+                        if (room < 0) continue;
+
+                        // The lowest reading wins where two vents share a room: one of them
+                        // emptying it is the fact that matters.
+                        float existing;
+                        if (!VentLevels.TryGetValue(room, out existing) || level < existing
+                            || existing <= RoomPressure.NotReported)
                         {
-                            applied = true;
-                            break;
+                            VentLevels[room] = level;
                         }
+
+                        found = true;
+                        break;
                     }
-                    if (applied) break;
+
+                    if (found) break;
                 }
             }
         }
+
+        /// <summary>Vent readings by room index, reused so a sweep allocates nothing.</summary>
+        private readonly Dictionary<int, float> VentLevels = new Dictionary<int, float>();
 
         /// <summary>
         /// Hands threshold crossings to whoever registered them. Callbacks belong to other mods,

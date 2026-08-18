@@ -59,6 +59,11 @@ grid is shaded by a planet or another ship, so a capital ship half in a station'
 shaded in its entirety. A grid's *own* shadow is modelled — see `SolarSelfShadowing` — but only its
 own: nothing else on the map casts onto it at block resolution.
 
+**A room with no air vent holds no air.** The game exposes a room's oxygen level through vents and
+nowhere else, so a sealed compartment that was never piped is indistinguishable from one that cannot
+be measured, and is treated as empty. It costs that compartment the heat capacity of its air; the
+walls still conduct and radiate as they should.
+
 **Point sources are not occluded.** A registered heat source heats through walls and through other
 ships. Occlusion is left to the host, which can simply not register a source it knows is hidden.
 
