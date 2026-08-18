@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 using Sandbox.Game.Entities;
 using Sandbox.ModAPI;
@@ -13,18 +14,29 @@ namespace Thermodynamics
     /// <summary>
     /// Thermal readouts in the terminal.
     ///
-    /// Every functional block gains a read-only panel giving its own temperature and what is
-    /// happening to it, and the grid it belongs to. This is the one readout that needs no third
-    /// party HUD library and no key held down: it is where a player already goes to ask what a
-    /// block is doing.
+    /// Every functional block reports its own temperature and what is happening to it, and the
+    /// grid it belongs to, in the terminal's detail info panel. This is the one readout that needs
+    /// no third party HUD library and no key held down: it is where a player already goes to ask
+    /// what a block is doing.
     ///
-    /// Controls are registered once for <see cref="IMyTerminalBlock"/>, and the visibility rule
-    /// keeps them off blocks the simulation does not model.
+    /// The detail panel rather than a control, because this is a paragraph and the terminal's
+    /// controls are not. A text box is a one-line editable field: it took the fifteen lines it was
+    /// given, showed one and a half of them, and clipped the rest — which is what "thermals in the
+    /// terminal are broken" looked like.
     /// </summary>
     public static class ThermalTerminal
     {
         private static bool registered;
         private static readonly StringBuilder Text = new StringBuilder();
+
+        /// <summary>Blocks whose detail panel this has already hooked.</summary>
+        private static readonly HashSet<long> Hooked = new HashSet<long>();
+
+        /// <summary>The block whose panel is on screen.</summary>
+        private static IMyTerminalBlock shown;
+
+        /// <summary>True while this class is the one asking, rather than the game.</summary>
+        private static bool refreshing;
 
         public static void Register()
         {
@@ -32,22 +44,6 @@ namespace Thermodynamics
             registered = true;
 
             MyAPIGateway.TerminalControls.CustomControlGetter += OnCustomControlGetter;
-
-            IMyTerminalControlLabel heading =
-                MyAPIGateway.TerminalControls.CreateControl<IMyTerminalControlLabel, IMyTerminalBlock>(
-                    "Thermodynamics_Heading");
-            heading.Label = MyStringId.GetOrCompute("Thermal");
-            heading.Visible = HasThermals;
-            MyAPIGateway.TerminalControls.AddControl<IMyTerminalBlock>(heading);
-
-            IMyTerminalControlTextbox readout =
-                MyAPIGateway.TerminalControls.CreateControl<IMyTerminalControlTextbox, IMyTerminalBlock>(
-                    "Thermodynamics_Readout");
-            readout.Visible = HasThermals;
-            readout.Enabled = block => false;
-            readout.Getter = Describe;
-            readout.Setter = (block, value) => { };
-            MyAPIGateway.TerminalControls.AddControl<IMyTerminalBlock>(readout);
         }
 
         public static void Unregister()
@@ -56,17 +52,66 @@ namespace Thermodynamics
             registered = false;
 
             MyAPIGateway.TerminalControls.CustomControlGetter -= OnCustomControlGetter;
+
+            Hooked.Clear();
+            shown = null;
         }
 
         /// <summary>
-        /// The terminal caches control values, so a panel left open would show the temperature the
-        /// block had when it was opened. Touching the block's custom info on every getter is what
-        /// keeps the figure live.
+        /// Hooks a block's detail panel the first time its terminal is opened.
+        ///
+        /// Lazily, rather than hooking every block on every grid when it is built: a station has
+        /// thousands of blocks and a player looks at one at a time.
         /// </summary>
-        private static void OnCustomControlGetter(IMyTerminalBlock block, System.Collections.Generic.List<IMyTerminalControl> controls)
+        private static void OnCustomControlGetter(IMyTerminalBlock block, List<IMyTerminalControl> controls)
         {
             if (!HasThermals(block)) return;
+
+            if (Hooked.Add(block.EntityId))
+            {
+                block.AppendingCustomInfo += AppendCustomInfo;
+            }
+
             block.RefreshCustomInfo();
+        }
+
+        /// <summary>
+        /// Keeps the open panel live.
+        ///
+        /// The game asks for detail info when the panel is drawn and not again, so a panel left
+        /// open would otherwise show the temperature the block had when it was opened. Only the
+        /// block on screen is refreshed, and only while the control panel is the screen: it is a
+        /// string every ten frames for one block.
+        /// </summary>
+        public static void Update()
+        {
+            if (shown == null) return;
+
+            if (shown.Closed || MyAPIGateway.Gui.GetCurrentScreen != MyTerminalPageEnum.ControlPanel)
+            {
+                shown = null;
+                return;
+            }
+
+            // Marked, because the refresh calls straight back into the appender, and a handler that
+            // could not tell the two apart would treat this mod's own question as the game showing
+            // a panel — and then keep answering it forever after the terminal closed.
+            refreshing = true;
+            try
+            {
+                shown.RefreshCustomInfo();
+            }
+            finally
+            {
+                refreshing = false;
+            }
+        }
+
+        private static void AppendCustomInfo(IMyTerminalBlock block, StringBuilder info)
+        {
+            if (!refreshing) shown = block;
+
+            info.Append(Describe(block));
         }
 
         private static bool HasThermals(IMyTerminalBlock block)

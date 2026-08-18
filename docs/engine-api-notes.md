@@ -238,7 +238,9 @@ terminalBlock.RefreshCustomInfo();
 ```
 
 That puts temperature in the terminal detail panel for any functional block, with no dependency —
-which is why the terminal readout works in a world with no HUD framework at all. The framework is
+which is why the terminal readout works in a world with no HUD framework at all. It is also the only
+route that takes a paragraph: `IMyTerminalControlTextbox` is a one-line editable field and clips
+anything longer, whatever its content. The framework is
 still the right tool for the always-on cockpit overlay, but the per-block readout does not need it.
 
 `MyAPIGateway.TerminalControls` is also available if you want a per-block thermal limit slider or

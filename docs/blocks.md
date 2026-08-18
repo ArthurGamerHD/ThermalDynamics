@@ -163,9 +163,19 @@ and a non-zero critical count.
 
 Both HUD elements are drawn by the Rich HUD Framework; without Rich HUD Master the framework never
 registers and no text appears. The extinguisher's temperature billboard is drawn through the mod API
-directly and does not care. The terminal readout
-([ThermalTerminal.cs](../Data/Scripts/Thermodynamics/ThermalTerminal.cs)) has no such dependency
-either.
+directly and does not care.
+
+## The terminal readout
+
+Selecting any simulated block in the terminal fills its **detail info** panel — the pane under the
+block's name — with that block's temperature, rate of change, critical point, exposed faces and
+area, waste heat, the room it bounds, what its heat pump is achieving if it has one, and a short
+summary of the grid. It refreshes while the panel is open.
+
+It goes there rather than into a terminal control because the terminal's controls are single-line
+fields: a text box handed fifteen lines shows one and a half and clips the rest.
+[ThermalTerminal.cs](../Data/Scripts/Thermodynamics/ThermalTerminal.cs) needs no HUD framework at
+all, so it is the readout that works in any world.
 
 ## Radiators and the heat pump
 

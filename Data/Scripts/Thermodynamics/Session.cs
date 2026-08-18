@@ -126,6 +126,7 @@ namespace Thermodynamics
             if (_frame % 10 == 0)
             {
                 ThermalBridges.Update(ThermalGrid.TickSeconds);
+                ThermalTerminal.Update();
             }
 
             Debug.ShowDebugInfo();
