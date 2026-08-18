@@ -57,6 +57,8 @@ Each switch removes exactly its own mechanism and its own cost.
 | `EnableRadiation` | `true` | Radiative exchange with the ambient sky. |
 | `EnableConvection` | `true` | Convective exchange with the surrounding air. |
 | `SolarOcclusionPlanets` | `true` | A planet may shadow the grid: night, and a world's shadow from orbit. Analytic — an angle against the planet's radius, no raycast — so it is nearly free. |
+| `SolarOcclusionTerrain` | `true` | The planet's own ground may shadow the grid: the mountain to the east at sunrise, the canyon wall, the cliff a base is parked against. Ground-height lookups along the sun ray, ten of them, and only for grids within 15 km of mean radius. |
+| `SolarTerrainRange` | 4000 m | How far along the sun ray the terrain walk looks. Near ground is what shadows you — the cliff two hundred metres off — and far ground almost never does, so this is short by design. |
 | `SolarOcclusionVoxels` | `true` | Asteroids and other voxels may shadow the grid. Costs a physics raycast per candidate voxel per sample. |
 | `SolarOcclusionGrids` | `true` | Other ships and stations may shadow the grid. Costs a ray against the other grid's blocks per candidate per sample — the dearest of the three, and the one a fleet multiplies. |
 | `SolarOcclusionSamples` | 1 | Points across the grid tested for shadow, 1..9. One is a single ray from the middle: the whole ship is lit or dark together, and flips the moment its centre crosses a shadow. More points spread through the hull turn that step into a ramp, at the cost of one full query each. |
@@ -168,8 +170,14 @@ tested at all, and each is priced differently:
 | Occluder | How it is tested | Cost |
 | --- | --- | --- |
 | Planet | angle against the planet's radius | arithmetic, no ray |
+| Terrain | ground height sampled along the sun ray | ten height lookups, near a surface only |
 | Voxel | physics raycast against the asteroid | one raycast per candidate |
 | Grid | ray against the other grid's blocks | one block ray per candidate |
+
+The planet and terrain tests answer different halves of the same question. The planet's is the ball:
+is the sun below the horizon of a smooth world. Terrain's is everything the ball ignores, which is
+what a player on the ground can see — a base in a canyon stays cold for an hour after the ball says
+dawn. The walk runs only when the ball says the sun is up, so night costs nothing extra.
 
 Shadow is now a fraction rather than a flag: `SolarOcclusionSamples` points are cast from inside the
 hull, and solar gain is scaled by the share that reached the sun. At the default of one sample that

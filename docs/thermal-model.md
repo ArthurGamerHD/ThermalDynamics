@@ -159,7 +159,9 @@ solarEnergy = SolarEnergy × (1 − occludedShare) × (1 − SolarDecay × atmos
 ```
 
 Occlusion against the rest of the world is resolved per grid, not per block, every
-`SolarOcclusionInterval` steps. Planets are tested analytically by angular size; voxels by a physics
+`SolarOcclusionInterval` steps. Planets are tested analytically by angular size; terrain by walking ground heights along the sun ray
+([TerrainHorizon](../Data/Scripts/Thermodynamics/Core/Simulation/TerrainHorizon.cs)), for grids near
+a surface and only once the planet's own horizon test says the sun is up; voxels by a physics
 raycast; other grids by a ray against their blocks. Each of the three is a separate switch, because
 each costs a different amount. Being underground forces full occlusion.
 

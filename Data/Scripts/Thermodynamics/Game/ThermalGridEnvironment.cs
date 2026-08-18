@@ -259,17 +259,22 @@ namespace Thermodynamics
                 MyPlanet planet = entity as MyPlanet;
                 if (planet != null)
                 {
-                    if (!settings.SolarOcclusionPlanets) continue;
+                    if (settings.SolarOcclusionPlanets)
+                    {
+                        Vector3D toGrid = position - planet.PositionComp.WorldMatrixRef.Translation;
+                        double distance = toGrid.Length();
+                        if (distance <= 0) continue;
 
-                    Vector3D toGrid = position - planet.PositionComp.WorldMatrixRef.Translation;
-                    double distance = toGrid.Length();
-                    if (distance <= 0) continue;
+                        double dot = Vector3D.Dot(toGrid / distance, sample.SunDirection);
+                        double horizon = Tools.GetLargestOcclusionDotProduct(
+                            Tools.GetVisualSize(distance, planet.AverageRadius));
 
-                    double dot = Vector3D.Dot(toGrid / distance, sample.SunDirection);
-                    double horizon = Tools.GetLargestOcclusionDotProduct(
-                        Tools.GetVisualSize(distance, planet.AverageRadius));
+                        occluded = dot < horizon;
+                        if (occluded) continue;
+                    }
 
-                    occluded = dot < horizon;
+                    // The ball says the sun is up. The ground may still disagree.
+                    occluded = TerrainOccluded(planet, ref position, ref sample);
                     continue;
                 }
 
@@ -310,5 +315,58 @@ namespace Thermodynamics
 
         /// <summary>Reused so a sampled occlusion test allocates nothing.</summary>
         private static readonly List<Vector3D> SamplePoints = new List<Vector3D>();
+
+        /// <summary>
+        /// Whether the planet's own terrain stands between a point and the sun.
+        ///
+        /// Only asked of grids near a surface. A ship in orbit has nothing but curvature between it
+        /// and the horizon, which the ball test already answered, and walking the ground for it
+        /// would spend lookups to be told what is already known.
+        /// </summary>
+        private bool TerrainOccluded(MyPlanet planet, ref Vector3D position, ref EnvironmentSample sample)
+        {
+            Settings settings = Settings.Instance;
+            if (!settings.SolarOcclusionTerrain || settings.SolarTerrainRange <= 0f) return false;
+
+            Vector3D centre = planet.PositionComp.WorldMatrixRef.Translation;
+            double altitude = (position - centre).Length() - planet.AverageRadius;
+
+            // Above the tallest mountain by a good margin, nothing local can reach the ray.
+            if (altitude > MaxTerrainAltitude) return false;
+
+            terrainPlanet = planet;
+
+            return TerrainHorizon.Occluded(
+                position,
+                sample.SunDirection,
+                centre,
+                settings.SolarTerrainRange,
+                TerrainSamples,
+                surfaceRadius ?? (surfaceRadius = SurfaceRadiusAt));
+        }
+
+        /// <summary>Metres above mean radius past which terrain cannot be in the way.</summary>
+        private const double MaxTerrainAltitude = 15000d;
+
+        /// <summary>Ground-height lookups per walk. Geometrically spaced, so this reaches far.</summary>
+        private const int TerrainSamples = 10;
+
+        /// <summary>
+        /// Distance from the planet's centre to the ground under a point.
+        ///
+        /// Held as a field, with the planet beside it, so the walk gets a delegate that is
+        /// allocated once for the life of the grid rather than one per test.
+        /// </summary>
+        private Func<Vector3D, double> surfaceRadius;
+        private MyPlanet terrainPlanet;
+
+        private double SurfaceRadiusAt(Vector3D point)
+        {
+            MyPlanet planet = terrainPlanet;
+            if (planet == null) return 0d;
+
+            Vector3D surface = planet.GetClosestSurfacePointGlobal(ref point);
+            return (surface - planet.PositionComp.WorldMatrixRef.Translation).Length();
+        }
     }
 }

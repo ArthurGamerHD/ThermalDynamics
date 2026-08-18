@@ -65,6 +65,20 @@ namespace Thermodynamics
         /// Whether asteroids and other voxels can shadow a grid. Costs a physics raycast per
         /// candidate voxel per sample.
         /// </summary>
+        /// <summary>
+        /// Whether the planet's own terrain can shadow a grid: the mountain to the east at sunrise,
+        /// the canyon wall, the cliff a base is parked against. Costs a short walk of ground-height
+        /// lookups, and only for grids near a surface.
+        /// </summary>
+        [ProtoMember(74)] public bool SolarOcclusionTerrain;
+
+        /// <summary>
+        /// How far the terrain walk looks along the sun ray, in metres. Far ground shadows almost
+        /// nothing — the cliff two hundred metres away is what matters — so this is short by
+        /// design, and every metre of it costs lookups.
+        /// </summary>
+        [ProtoMember(75)] public float SolarTerrainRange;
+
         [ProtoMember(71)] public bool SolarOcclusionVoxels;
 
         /// <summary>
@@ -157,6 +171,8 @@ namespace Thermodynamics
                 EnableSolarHeat = true,
                 SolarSelfShadowing = true,
                 SolarOcclusionPlanets = true,
+                SolarOcclusionTerrain = true,
+                SolarTerrainRange = 4000f,
                 SolarOcclusionVoxels = true,
                 SolarOcclusionGrids = true,
                 SolarOcclusionSamples = 1,
@@ -208,6 +224,7 @@ namespace Thermodynamics
             if (HeatTimeScale <= 0f) HeatTimeScale = 1f;
             if (TelemetrySampleStride < 1) TelemetrySampleStride = 1;
             if (SolarOcclusionInterval < 1) SolarOcclusionInterval = 1;
+            if (SolarTerrainRange < 0f) SolarTerrainRange = 0f;
             if (SolarOcclusionSamples < 1) SolarOcclusionSamples = 1;
             if (SolarOcclusionSamples > Core.SolarOcclusionSampler.MaxSamples)
                 SolarOcclusionSamples = Core.SolarOcclusionSampler.MaxSamples;
@@ -303,7 +320,8 @@ namespace Thermodynamics
             {
                 "EnableEnvironment", "EnableConduction", "EnableRadiation", "EnableConvection",
                 "EnableSolarHeat", "SolarSelfShadowing",
-                "SolarOcclusionPlanets", "SolarOcclusionVoxels", "SolarOcclusionGrids",
+                "SolarOcclusionPlanets", "SolarOcclusionTerrain", "SolarTerrainRange",
+                "SolarOcclusionVoxels", "SolarOcclusionGrids",
                 "SolarOcclusionSamples",
                 "EnableHeatSources", "EnableWasteHeat", "EnablePlanets",
                 "EnableFriction", "EnableDamage", "EnableCoolantLoops", "EnableRoomAir",
@@ -331,6 +349,8 @@ namespace Thermodynamics
                 case "EnableSolarHeat": return Flag(EnableSolarHeat);
                 case "SolarSelfShadowing": return Flag(SolarSelfShadowing);
                 case "SolarOcclusionPlanets": return Flag(SolarOcclusionPlanets);
+                case "SolarOcclusionTerrain": return Flag(SolarOcclusionTerrain);
+                case "SolarTerrainRange": return SolarTerrainRange;
                 case "SolarOcclusionVoxels": return Flag(SolarOcclusionVoxels);
                 case "SolarOcclusionGrids": return Flag(SolarOcclusionGrids);
                 case "SolarOcclusionSamples": return SolarOcclusionSamples;
@@ -381,6 +401,8 @@ namespace Thermodynamics
                 case "EnableSolarHeat": EnableSolarHeat = Flag(value); return true;
                 case "SolarSelfShadowing": SolarSelfShadowing = Flag(value); return true;
                 case "SolarOcclusionPlanets": SolarOcclusionPlanets = Flag(value); return true;
+                case "SolarOcclusionTerrain": SolarOcclusionTerrain = Flag(value); return true;
+                case "SolarTerrainRange": SolarTerrainRange = value; return true;
                 case "SolarOcclusionVoxels": SolarOcclusionVoxels = Flag(value); return true;
                 case "SolarOcclusionGrids": SolarOcclusionGrids = Flag(value); return true;
                 case "SolarOcclusionSamples": SolarOcclusionSamples = (int)value; return true;
@@ -426,6 +448,7 @@ namespace Thermodynamics
                 && (name.StartsWith("Enable") || name.StartsWith("Debug")
                 || name == "SolarSelfShadowing"
                 || name == "SolarOcclusionPlanets"
+                || name == "SolarOcclusionTerrain"
                 || name == "SolarOcclusionVoxels"
                 || name == "SolarOcclusionGrids"
                 || name == "ClampConductionOvershoot" || name == "DamageIsPerSecond");
