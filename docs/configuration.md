@@ -32,11 +32,15 @@ Framework](https://github.com/ZachHembree/RichHudFramework.Client) and needs the
 mod (`1965654081`) to be enabled; without it the keystroke says so and the chat commands remain the
 way in.
 
-It reads as one column from the top: **Save to config file** and **Reset everything to defaults**
-first, then short titled groups — heat transfer, solar, solar occlusion, ship systems, heat pumps,
-solver, environment, presentation, telemetry. Every value in the config file has a control, and each
-control carries that setting's description. Switches are checkboxes, numbers are sliders with a
-range chosen for what is worth dragging to.
+**Save to config file** and **Reset everything to defaults** sit at the top, one of each for the
+whole file. Below them are titled rows — heat transfer, solar, solar occlusion, ship systems, solver,
+environment, display — each holding its settings in two columns. Every value in the config file has a
+control and carries that setting's description; switches are checkboxes, numbers are sliders with a
+range chosen for what is worth dragging to, and a setting that picks between behaviours is a named
+dropdown.
+
+Two columns because that is what the page is wide enough for: the framework's tiles are a fixed
+300x250, so a third column would have to be scrolled to sideways.
 
 Changes apply to the running session as you make them. Nothing is written to the config file until
 Save, so a session can be experimented with and abandoned by not pressing it — and Reset puts the

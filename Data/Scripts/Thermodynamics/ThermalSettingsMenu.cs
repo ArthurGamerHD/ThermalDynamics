@@ -54,18 +54,15 @@ namespace Thermodynamics
         private const string Solar = "Solar";
         private const string Occlusion = "Solar occlusion";
         private const string Systems = "Ship systems";
-        private const string HeatPumps = "Heat pumps";
         private const string Solver = "Solver";
         private const string Environment = "Environment";
-        private const string Presentation = "Presentation";
-        private const string TelemetrySection = "Telemetry";
+        private const string Display = "Display";
         private const string Other = "Other";
 
         /// <summary>Sections in the order the page reads, top to bottom.</summary>
         private static readonly string[] Order =
         {
-            Transfer, Solar, Occlusion, Systems, HeatPumps, Solver, Environment,
-            Presentation, TelemetrySection, Other,
+            Transfer, Solar, Occlusion, Systems, Solver, Environment, Display, Other,
         };
 
         /// <summary>
@@ -110,16 +107,16 @@ namespace Thermodynamics
             { "RoomAirDensity", new Entry(Environment, "Room air density", "Density of room air, kg/m3. 1.225 is sea level.", 0f, 5f) },
             { "SolarOcclusionInterval", new Entry(Occlusion, "Occlusion interval", "Solver steps between sun occlusion raycasts.", 1, 60, true) },
 
-            { "HeatPumpCarnotFraction", new Entry(HeatPumps, "Carnot fraction", "How much of the Carnot limit a pump achieves, 0..1.", 0f, 1f) },
-            { "HeatPumpMaxCoefficient", new Entry(HeatPumps, "Max coefficient", "Ceiling on the coefficient of performance.", 0f, 20f) },
+            { "HeatPumpCarnotFraction", new Entry(Systems, "Carnot fraction", "How much of the Carnot limit a pump achieves, 0..1.", 0f, 1f) },
+            { "HeatPumpMaxCoefficient", new Entry(Systems, "Max coefficient", "Ceiling on the coefficient of performance.", 0f, 20f) },
 
-            { "DebugTextOnScreen", new Entry(Presentation, "Crosshair readout", "Everything the simulation knows about the block being looked at. Also makes the solver record per-mechanism watts, which is not free.", 0, 1) },
-            { "DebugSolarRaycast", new Entry(Presentation, "Draw sun ray", "The sun ray from each grid, white when lit and red when occluded.", 0, 1) },
-            { "DebugWindRaycast", new Entry(Presentation, "Draw wind vector", "The relative wind vector.", 0, 1) },
-            { "DebugBlockOverlay", new Entry(Presentation, "Block overlay", "The x-ray box overlay. Ctrl+Shift+= cycles it in play.", 0, ThermalDebugView.ModeCount - 1, true) },
+            { "DebugTextOnScreen", new Entry(Display, "Crosshair readout", "Everything the simulation knows about the block being looked at. Also makes the solver record per-mechanism watts, which is not free.", 0, 1) },
+            { "DebugSolarRaycast", new Entry(Display, "Draw sun ray", "The sun ray from each grid, white when lit and red when occluded.", 0, 1) },
+            { "DebugWindRaycast", new Entry(Display, "Draw wind vector", "The relative wind vector.", 0, 1) },
+            { "DebugBlockOverlay", new Entry(Display, "Block overlay", "The x-ray box overlay. Ctrl+Shift+= cycles it in play.", 0, ThermalDebugView.ModeCount - 1, true) },
 
-            { "EnableTelemetry", new Entry(TelemetrySection, "Collect telemetry", "Per-grid and per-block-type data collection. Off for ordinary play.", 0, 1) },
-            { "TelemetrySampleStride", new Entry(TelemetrySection, "Sample stride", "Steps between telemetry samples.", 1, 64, true) },
+            { "EnableTelemetry", new Entry(Display, "Collect telemetry", "Per-grid and per-block-type data collection. Off for ordinary play.", 0, 1) },
+            { "TelemetrySampleStride", new Entry(Display, "Sample stride", "Steps between telemetry samples.", 1, 64, true) },
         };
 
         /// <summary>
@@ -217,34 +214,39 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Lays one section out as however many single-column groups it needs.
+        /// Lays one section out: its controls in columns of three, side by side across the page.
         ///
-        /// A tile is 300x250 and masks what does not fit, and a group is a fixed-height row that
-        /// scrolls sideways through its tiles — so the only layout that reads straight down the
-        /// page is one tile per group, holding no more than a tile can show. Long sections
-        /// therefore continue into another group rather than overflowing one, which is what the
-        /// previous seven-per-tile layout did: the controls past the fourth were drawn and then
-        /// masked out of existence.
+        /// The framework's sizes decide this. A tile is a fixed 300x250 box that masks whatever does
+        /// not fit, so three controls is a column; a group is a fixed-height row that holds tiles
+        /// across the page's width, which is about three of them. One column per row wastes two
+        /// thirds of the width and turns forty settings into a very long scroll, which is what the
+        /// last arrangement did.
         /// </summary>
         private static void AddSection(string name, List<string> members, bool editable)
         {
-            for (int start = 0; start < members.Count; start += ControlsPerTile)
+            for (int start = 0; start < members.Count; start += ControlsPerGroup)
             {
-                ControlTile tile = new ControlTile();
-
-                int end = Math.Min(members.Count, start + ControlsPerTile);
-                for (int i = start; i < end; i++)
-                {
-                    tile.Add(Control(members[i], editable));
-                }
-
                 ControlCategory group = new ControlCategory
                 {
                     HeaderText = start == 0 ? name : name + " (cont.)",
                     SubheaderText = start == 0 ? Subheader(name, editable) : "",
                 };
 
-                group.Add(tile);
+                int groupEnd = Math.Min(members.Count, start + ControlsPerGroup);
+
+                for (int tileStart = start; tileStart < groupEnd; tileStart += ControlsPerTile)
+                {
+                    ControlTile tile = new ControlTile();
+
+                    int tileEnd = Math.Min(groupEnd, tileStart + ControlsPerTile);
+                    for (int i = tileStart; i < tileEnd; i++)
+                    {
+                        tile.Add(Control(members[i], editable));
+                    }
+
+                    group.Add(tile);
+                }
+
                 page.Add(group);
             }
         }
@@ -255,13 +257,20 @@ namespace Thermodynamics
         /// </summary>
         private const int ControlsPerTile = 3;
 
+        /// <summary>
+        /// Controls per group: two columns, which is what the page is wide enough to show. A third
+        /// would be 936 across a page of about 840 and would have to be scrolled to sideways, which
+        /// is worse than another row. A section with more than six continues in another group.
+        /// </summary>
+        private const int ControlsPerGroup = ControlsPerTile * 2;
+
         private static string Subheader(string section, bool editable)
         {
             if (!editable)
             {
-                return section == Presentation
+                return section == Display
                     ? "Client side; yours to change"
-                    : "Server side; read only from a client";
+                    : "Server side; read only here";
             }
 
             return SectionNotes.ContainsKey(section) ? SectionNotes[section] : "";
@@ -273,16 +282,14 @@ namespace Thermodynamics
         /// </summary>
         private static readonly Dictionary<string, string> SectionNotes = new Dictionary<string, string>
         {
-            { Transfer, "How heat moves, and whether it moves at all" },
-            { Solar, "Sunlight, and the shadow a grid casts on itself" },
-            { Occlusion, "What else can stand between a grid and the sun, and what each costs" },
-            { Systems, "The parts of the ship that make or move heat" },
-            { HeatPumps, "How hard a pump can work, and what it pays" },
-            { Solver, "Pace and stability of the integration" },
+            { Transfer, "How heat moves" },
+            { Solar, "Sunlight, and self-shadowing" },
+            { Occlusion, "What stands between a grid and the sun" },
+            { Systems, "Ship parts that make, move or resist heat" },
+            { Solver, "Pace and stability" },
             { Environment, "The world the grid sits in" },
-            { Presentation, "What is drawn on your screen. Client side." },
-            { TelemetrySection, "Data collection, for testing rather than for play" },
-            { Other, "Settings this menu has no description for yet" },
+            { Display, "What is drawn on your screen, and what is recorded" },
+            { Other, "Not yet described" },
         };
 
         /// <summary>
@@ -322,8 +329,8 @@ namespace Thermodynamics
             {
                 HeaderText = "Thermodynamics",
                 SubheaderText = editable
-                    ? "Changes apply immediately. Save writes them to the config file."
-                    : "Server side; a client may change only the presentation settings below.",
+                    ? "Changes apply at once. Save writes them to the config file."
+                    : "Server side; a client may change presentation only.",
             };
 
             group.Add(tile);
