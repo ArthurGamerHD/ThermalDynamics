@@ -18,9 +18,9 @@ namespace Thermodynamics
     /// Reads the world into an <see cref="EnvironmentSample"/>: ambient conditions, the sun, the
     /// wind, and whether anything is in the way of the light.
     ///
-    /// The sun direction is one value for the whole session, and occlusion changes slowly, so
-    /// both are cached rather than recomputed per grid per step. The raycast behind occlusion is
-    /// the single most expensive thing a grid does.
+    /// The sun direction is one value for the whole session and occlusion changes slowly, so both
+    /// are cached rather than recomputed per grid per step. The raycast behind occlusion is the
+    /// most expensive operation a grid performs.
     /// </summary>
     public partial class ThermalGrid
     {
@@ -39,7 +39,7 @@ namespace Thermodynamics
         /// <summary>Last measured share of the grid the sun cannot reach, 0..1.</summary>
         private float solarOcclusion;
 
-        /// <summary>True on the steps that actually re-tested, so neighbours are gathered with it.</summary>
+        /// <summary>True on steps that re-tested occlusion, so neighbours are gathered alongside.</summary>
         private bool occlusionTested;
         private int stepsSinceOcclusionTest = int.MaxValue;
 
@@ -49,15 +49,15 @@ namespace Thermodynamics
         /// <summary>Per-grid buffer for registered heat sources, grown on demand and reused.</summary>
         private HeatSourceState[] heatSourceBuffer;
 
-        /// <summary>The environment the solver actually used, derived from the sample.</summary>
+        /// <summary>The environment the solver used, derived from the sample.</summary>
         public EnvironmentState LastState
         {
             get { return Simulation.Solver.Environment; }
         }
 
         /// <summary>
-        /// Drops the session-wide environment caches. Planet climate is keyed by entity id and
-        /// the sun by frame number, and neither means anything in the next world.
+        /// Drops the session-wide environment caches. Planet climate is keyed by entity id and the
+        /// sun by frame number, neither of which carries over to another world.
         /// </summary>
         public static void ResetEnvironmentCaches()
         {
@@ -83,17 +83,16 @@ namespace Thermodynamics
             PlanetManager.Planet planet = PlanetManager.GetClosestPlanet(position);
             SamplePlanet(ref sample, ref position, planet);
             SampleWind(ref sample, ref position, ref worldToLocal, planet);
-            // Buried is buried: no sun reaches it, and the raycast that would say so is the most
-            // expensive thing a grid does. Depth is the mod's own answer and the game's flag is
-            // its answer, and either one being sure is enough to skip the ray.
+            // A buried grid takes no sunlight, so the raycast is skipped. Either source of truth
+            // suffices: this model's own depth figure or the game's underground flag.
             bool buried = sample.IsUnderground || sample.Depth > 0f;
             sample.SolarOcclusion = buried ? 1f : SolarOcclusion(ref position, ref sample);
             sample.IsSolarOccluded = sample.SolarOcclusion >= 1f;
 
             if (occlusionTested) RefreshShadowOccluders(ref position, ref sample);
 
-            // Heat sources other than the sun. The buffer belongs to this grid and is reused, so
-            // a session with no registered sources allocates nothing and costs one count test.
+            // Heat sources other than the sun. The buffer belongs to this grid and is reused, so a
+            // session with no registered sources allocates nothing and costs one count test.
             sample.HeatSourceCount = ThermalHeatSources.Sample(position, ref worldToLocal, ref heatSourceBuffer);
             sample.HeatSources = heatSourceBuffer;
 
@@ -107,8 +106,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// The sun moves for the whole world at once, so every grid in a frame gets the same
-        /// answer and only the first one pays for it.
+        /// Sun direction for this frame. The sun is world-wide, so it is computed by the first grid
+        /// of a frame and read by the rest.
         /// </summary>
         private static Vector3 SunDirection()
         {
@@ -139,8 +138,8 @@ namespace Thermodynamics
             Vector3D up = position - planet.Position;
             sample.UpDirection = up.LengthSquared() > 0 ? Vector3.Normalize(up) : Vector3.Up;
 
-            // Where on the globe: the poles get their sunlight at a glancing angle whatever the
-            // hour, and without this every latitude was the same climate.
+            // Position on the globe. The poles receive sunlight at a glancing angle at every hour,
+            // so without this every latitude would share one climate.
             Vector3 axis = planet.Entity.PositionComp.WorldMatrixRef.Up;
             sample.LatitudeSine = Vector3.Dot(sample.UpDirection, Vector3.Normalize(axis));
 
@@ -148,8 +147,8 @@ namespace Thermodynamics
             sample.GroundOffset = ground.Offset;
             sample.GroundSwing = ground.Swing;
 
-            // How high, and how deep. Both fall out of one radius and the surface height cached
-            // beside the ground material, so neither costs a lookup of its own.
+            // Altitude and depth. Both derive from one radius and the surface height cached beside
+            // the ground material, so neither costs its own lookup.
             float radius = (float)up.Length();
             sample.Radius = radius;
             sample.MeanRadius = planet.Entity.AverageRadius;
@@ -162,11 +161,11 @@ namespace Thermodynamics
             long planetId = planet.Entity.EntityId;
             bool samePlanet = planetId == currentPlanetId;
 
-            // Where the air is now, so it can chase the sun rather than track it — but only when
-            // there is an air to chase from. A grid that has just arrived, or has just crossed
-            // from one planet to another, is holding the previous world's answer or the vacuum it
-            // was seeded with, and chasing 290 K up from 2.7 K at 45 seconds a decade freezes
-            // every block on it for the first three minutes of the session.
+            // The current air temperature, so ambient lags the sun rather than tracking it exactly.
+            // Only supplied when a previous ambient exists for this planet: a grid that has just
+            // arrived, or crossed between planets, still holds the previous world's figure or the
+            // vacuum it was seeded with, and lagging up from 2.7 K would freeze every block on it
+            // for minutes.
             sample.PreviousAmbient = LastState.AmbientTemperature;
             sample.HasPreviousAmbient = hasAmbientHistory && samePlanet;
             sample.SecondsSincePrevious = TickSeconds;
@@ -182,18 +181,17 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Whether the ambient in <see cref="LastState"/> is a climate this grid actually reached,
-        /// rather than the vacuum every state starts out holding.
+        /// True when the ambient in <see cref="LastState"/> is a climate this grid reached, rather
+        /// than the vacuum every state starts at.
         /// </summary>
         private bool hasAmbientHistory;
 
         /// <summary>
-        /// The weather standing over this point, as what it is worth thermally.
+        /// The weather over this point, resolved to its thermal effect.
         ///
-        /// The game answers with a name — <c>RainHeavy</c>, <c>SandStormLight</c> — and the name
-        /// is what the table is keyed on, so the lookup is a string compare against at most
-        /// thirteen words. Cached anyway, because the answer only changes when a front moves over
-        /// and the alternative is that compare four times a second forever.
+        /// The game identifies weather by name — <c>RainHeavy</c>, <c>SandStormLight</c> — which is
+        /// what the table is keyed on, so a lookup is a string compare against at most thirteen
+        /// entries. Cached because the result changes only when a front moves over.
         /// </summary>
         private WeatherResponse.Weather WeatherOver(ref Vector3D position)
         {
@@ -215,34 +213,33 @@ namespace Thermodynamics
             return weatherResponse;
         }
 
-        /// <summary>The weather last looked up, and what the table made of it.</summary>
+        /// <summary>The weather last looked up, and the table's response to it.</summary>
         private string weatherName;
         private float weatherInfluence = 1f;
         private WeatherResponse.Weather weatherResponse = WeatherResponse.Calm;
 
-        /// <summary>The weather's own name, for the readouts and the climate dump.</summary>
+        /// <summary>The weather's name, for the readouts and the climate dump.</summary>
         public string WeatherName
         {
             get { return string.IsNullOrEmpty(weatherName) ? "" : weatherName; }
         }
 
         /// <summary>
-        /// Records what the world is doing at this grid, for balancing a planet's climate against.
-        ///
-        /// Everything here is either free or already known, except the two lookups at the bottom —
-        /// the voxel material under the grid and the game's own comfort figure — which is why this
-        /// runs on its own slow cadence rather than per step. It is a diagnostic, and it only runs
-        /// with telemetry on.
-        /// </summary>
-        /// <summary>
         /// Where the last sample was taken, kept so the profile can be written after the step that
-        /// turns it into a state — the sample and the state it produced belong in the same row, and
-        /// reading the state at sampling time gives the previous step's answer, or on the first
-        /// step, no answer at all.
+        /// turns it into a state. The sample and the resulting state belong in the same row, and
+        /// reading the state at sampling time would give the previous step's, or none at all on
+        /// the first step.
         /// </summary>
         private Vector3D profilePosition;
         private PlanetManager.Planet profilePlanet;
 
+        /// <summary>
+        /// Records what the world is doing at this grid, for balancing a planet's climate.
+        ///
+        /// Every figure here is free or already known except the voxel material under the grid and
+        /// the game's comfort figure, which is why this runs on its own slow cadence rather than
+        /// per step. Diagnostic only, and only with telemetry on.
+        /// </summary>
         public void ProfileEnvironment()
         {
             if (!Telemetry.Enabled || Stats == null) return;
@@ -276,8 +273,8 @@ namespace Thermodynamics
             row.GridMeanKelvin = MeanTemperature();
             row.GridPeakKelvin = HottestNode != null ? HottestNode.Temperature : 0f;
 
-            // The sun's height above the horizon says more than a dot product does: the whole
-            // question of a day-night curve is what the temperature is at ten degrees up.
+            // Recorded as an elevation angle rather than a dot product, since a day-night curve is
+            // read against the sun's height above the horizon.
             Vector3 up = sample.UpDirection;
             float sunDot = Vector3.Dot(Vector3.Normalize(up), Vector3.Normalize(sample.SunDirection));
             row.SunElevationDegrees = (float)(Math.Asin(MathHelper.Clamp(sunDot, -1f, 1f)) * 180d / Math.PI);
@@ -296,8 +293,7 @@ namespace Thermodynamics
                 Vector3D surface = entity.GetClosestSurfacePointGlobal(ref position);
                 row.AltitudeSurface = radius - (surface - centre).Length();
 
-                // Latitude against the planet's own axis, so a reading can be placed on the globe:
-                // a pole and an equator are different climates and this is what tells them apart.
+                // Latitude against the planet's own axis, so a reading can be placed on the globe.
                 Vector3D axis = entity.PositionComp.WorldMatrixRef.Up;
                 double axisDot = MathHelper.Clamp(Vector3D.Dot(Vector3D.Normalize(position - centre), axis), -1d, 1d);
                 row.LatitudeDegrees = (float)(Math.Asin(axisDot) * 180d / Math.PI);
@@ -306,8 +302,7 @@ namespace Thermodynamics
                 row.Weather = WeatherName;
                 row.WindCeiling = entity.GetWindSpeed(position);
 
-                // Where the wind is going, as a bearing, so the map can be read off the dump:
-                // 0 is due north over the planet's own pole, 90 due east.
+                // Wind direction as a bearing: 0 is due north over the planet's own pole, 90 east.
                 Vector3 east = Vector3.Cross(axis, up);
                 if (east.LengthSquared() > 1e-6f)
                 {
@@ -326,10 +321,10 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// The voxel material at the surface under the grid — snow, sand, grass, ice.
+        /// The voxel material at the surface under the grid: snow, sand, grass, ice.
         ///
-        /// Sampled a little below the surface point, because the surface point itself sits on the
-        /// boundary and a lookup there answers about the air as often as about the ground.
+        /// Sampled slightly below the surface point, since the surface point lies on the boundary
+        /// and a lookup there returns air as often as ground.
         /// </summary>
         private static string MaterialUnder(MyPlanet planet, ref Vector3D surface)
         {
@@ -344,7 +339,7 @@ namespace Thermodynamics
         /// <summary>Metres below the surface the material is read at.</summary>
         private const double MaterialProbeDepth = 1.5d;
 
-        /// <summary>Steps between environment profile rows. About ten seconds of play.</summary>
+        /// <summary>Steps between environment profile rows, roughly ten seconds of play.</summary>
         private const int ProfileInterval = 60;
 
         private int stepsSinceProfile = ProfileInterval;
@@ -361,10 +356,11 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// What the ground under this grid is worth, K, scaled by how much the world lets it count.
+        /// Temperature offset contributed by the ground under this grid, K, scaled by
+        /// <c>ClimateGroundInfluence</c>.
         ///
-        /// The material lookup is a voxel read, so it is cached and only refreshed when the grid
-        /// has moved far enough to be standing on something else. A parked base pays for it once.
+        /// The material lookup is a voxel read, so it is cached and refreshed only when the grid has
+        /// moved far enough to be over different ground.
         /// </summary>
         private GroundTemperature.Ground GroundUnder(MyPlanet planet, ref Vector3D position)
         {
@@ -373,8 +369,8 @@ namespace Thermodynamics
             float influence = Settings.Instance.ClimateGroundInfluence;
             if (influence <= 0f) return GroundTemperature.Neutral;
 
-            // Influence dials the whole opinion down toward the planet's own, offset and swing
-            // together: half influence is half the shift and half the extra swing.
+            // Influence scales the whole contribution towards the planet's own figure, offset and
+            // swing together.
             return new GroundTemperature.Ground(
                 ground.Offset * influence,
                 1f + ((ground.Swing - 1f) * influence));
@@ -383,16 +379,13 @@ namespace Thermodynamics
         /// <summary>
         /// Looks up where the ground is and what it is made of, and caches both.
         ///
-        /// One voxel query answers two questions — which material the air above is sitting on, and
-        /// how far the surface is from the planet's centre — so they share a lookup and a cache.
-        /// The second is what makes depth free: between refreshes the grid's own radius has moved
-        /// and the ground has not, so how deep it is buried is a subtraction. A shaft sunk
-        /// straight down is exact, and anything that moves far enough sideways for it not to be
-        /// has already tripped the resample.
+        /// One voxel query answers both questions — the surface material and the surface's distance
+        /// from the planet's centre — so they share a lookup and a cache. Caching the second makes
+        /// depth a subtraction between refreshes: the grid's radius moves and the ground does not,
+        /// and any movement large enough to invalidate that has already triggered a resample.
         ///
-        /// Refreshed regardless of <c>ClimateGroundInfluence</c>, unlike the material's opinion:
-        /// a world that does not care what the ground is made of still has a surface, and
-        /// underground temperature is not the ground table's to switch off.
+        /// Refreshed regardless of <c>ClimateGroundInfluence</c>, which scales only the material's
+        /// temperature offset; underground temperature depends on the surface height alone.
         /// </summary>
         private void RefreshSurface(MyPlanet planet, ref Vector3D position)
         {
@@ -408,7 +401,7 @@ namespace Thermodynamics
             ground = GroundTemperature.For(MaterialUnder(planet, ref surface));
         }
 
-        /// <summary>Metres a grid may move before the ground under it is looked at again.</summary>
+        /// <summary>Metres a grid may move before the ground under it is resampled.</summary>
         private const double GroundResampleDistance = 40d;
 
         private Vector3D groundSampledAt = Vector3D.PositiveInfinity;
@@ -437,16 +430,15 @@ namespace Thermodynamics
                 return;
             }
 
-            // The game's figure is a ceiling, not a wind: the planet definition's maximum scaled
-            // by air density, identical at the pole and the equator. Taken literally it puts a
-            // parked ship in a permanent 80 m/s gale — tripping friction heating and doubling
-            // convection — so it sets the scale and the field decides the rest.
+            // The game's figure is a ceiling rather than a wind speed: the planet definition's
+            // maximum scaled by air density, identical at pole and equator. Used directly it would
+            // place every parked grid in a permanent 80 m/s gale, tripping friction heating and
+            // doubling convection, so it sets the scale and the wind field supplies the rest.
             float ceiling = planet.Entity.GetWindSpeed(position);
 
-            // Both halves of the weather matter and they say different things. The intensity
-            // decides how far up the calm-to-storm scale this place is; the effect's own wind
-            // modifier decides whether this particular weather is a gale or a fog, which sits
-            // still. Already sampled for the climate, so neither costs a second lookup.
+            // Intensity places this point on the calm-to-storm scale; the effect's own wind
+            // modifier distinguishes a gale from a still fog. Both were sampled for the climate, so
+            // neither costs a second lookup.
             float weather = sample.WeatherIntensity;
             float weatherWind = WeatherResponse.Soften(sample.Weather, weather).WindMultiplier;
 
@@ -467,9 +459,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// How much of the grid the sun cannot reach, 0..1. Re-tested every
-        /// <see cref="Settings.SolarOcclusionInterval"/> steps and cached in between: the geometry
-        /// it walks changes over seconds, not over a sixtieth of one.
+        /// Share of the grid the sun cannot reach, 0..1. Re-tested every
+        /// <see cref="Settings.SolarOcclusionInterval"/> steps and cached in between, since the
+        /// geometry it walks changes over seconds.
         /// </summary>
         private float SolarOcclusion(ref Vector3D position, ref EnvironmentSample sample)
         {
@@ -503,13 +495,12 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Casts from a few points spread through the grid and reports the share of them that
-        /// cannot see the sun.
+        /// Casts from several points spread through the grid and returns the share that cannot see
+        /// the sun.
         ///
-        /// Each sample is a full query: the candidates along one ray are not the candidates along
-        /// another, and reusing one list would miss the asteroid that covers the bow and not the
-        /// stern — which is the whole reason for sampling more than once. So the cost is linear in
-        /// the sample count, which is why it is a setting and why it defaults to one.
+        /// Each sample is a full query: candidates along one ray are not candidates along another,
+        /// and reusing one list would miss an occluder covering part of the grid, which is the
+        /// reason for sampling more than once. Cost is linear in the sample count.
         /// </summary>
         private float MeasureOcclusion(ref Vector3D position, ref EnvironmentSample sample)
         {
@@ -532,10 +523,9 @@ namespace Thermodynamics
         /// <summary>
         /// Whether anything stands between one point and the sun.
         ///
-        /// Each kind of occluder is its own switch, because each costs a different amount. A planet
-        /// is an angle against a radius and costs nothing worth measuring. A voxel is a physics
-        /// raycast. Another grid is a ray against its blocks, which is the dearest of the three and
-        /// the one a fleet multiplies.
+        /// Each kind of occluder has its own switch because each costs differently: a planet is an
+        /// angle against a radius, a voxel is a physics raycast, and another grid is a ray against
+        /// its blocks — the most expensive of the three, and the one a fleet multiplies.
         /// </summary>
         private bool RaycastSun(ref Vector3D position, ref EnvironmentSample sample)
         {
@@ -569,7 +559,7 @@ namespace Thermodynamics
                         if (occluded) continue;
                     }
 
-                    // The ball says the sun is up. The ground may still disagree.
+                    // The planet sphere test says the sun is up; terrain may still block it.
                     occluded = TerrainOccluded(planet, ref position, ref sample);
                     continue;
                 }
@@ -592,8 +582,8 @@ namespace Thermodynamics
                 MyCubeGrid other = entity as MyCubeGrid;
                 if (other != null && other.Physics != null && other.EntityId != Grid.EntityId)
                 {
-                    // Basic is this ray. Full answers per face instead, and counting it here as
-                    // well would shade an entire ship for a shadow across one corner of it.
+                    // Basic mode is this ray. Full mode resolves shadows per face, and counting it
+                    // here as well would shade a whole grid for a shadow across one corner.
                     if (settings.SolarGridShadows != (int)GridShadowMode.Basic) continue;
 
                     LineD segment;
@@ -615,17 +605,15 @@ namespace Thermodynamics
         private static readonly List<Vector3D> SamplePoints = new List<Vector3D>();
 
         /// <summary>
-        /// Finds the grids near enough to cast a shadow on this one and hands them to the solver in
-        /// its own cell space.
+        /// Finds the grids near enough to shadow this one and passes them to the solver in this
+        /// grid's cell space.
         ///
-        /// Everything about the geometry is folded into one matrix per occluder: the shaded grid's
-        /// cells to metres, its metres to the world, the world to the occluder's metres, and its
-        /// metres to its cells. After that the shadow walk never has to know that two lattices are
-        /// involved at all.
+        /// The geometry is folded into one matrix per occluder — this grid's cells to metres, its
+        /// metres to world, world to the occluder's metres, and its metres to its cells — so the
+        /// shadow walk never handles two lattices.
         ///
-        /// Run on the occlusion interval, not per step, and only when the pose has actually
-        /// changed — two ships docked together never move relative to each other, and rebuilding a
-        /// pass for them every interval would be the whole cost of the feature for nothing.
+        /// Runs on the occlusion interval rather than per step, and only when the relative pose has
+        /// changed; docked grids never move relative to each other.
         /// </summary>
         private void RefreshShadowOccluders(ref Vector3D position, ref EnvironmentSample sample)
         {
@@ -687,9 +675,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Whether the occluder set is different enough to be worth a new pass: a grid gained or
-        /// lost, or one that has shifted by more than a cell or turned appreciably. Under that, the
-        /// shadow it casts moves by less than the resolution the shadow has.
+        /// Whether the occluder set has changed enough to justify a new pass: a grid gained or lost,
+        /// or one that has moved by more than a cell or rotated appreciably. Below that the shadow
+        /// moves by less than its own resolution.
         /// </summary>
         private static bool OccludersMoved(
             List<SunShadowMap.Occluder> current, List<SunShadowMap.Occluder> fresh)
@@ -718,11 +706,10 @@ namespace Thermodynamics
             new List<SunShadowMap.Occluder>();
 
         /// <summary>
-        /// Whether the planet's own terrain stands between a point and the sun.
+        /// Whether planetary terrain stands between a point and the sun.
         ///
-        /// Only asked of grids near a surface. A ship in orbit has nothing but curvature between it
-        /// and the horizon, which the ball test already answered, and walking the ground for it
-        /// would spend lookups to be told what is already known.
+        /// Tested only for grids near a surface: for a grid in orbit the only obstruction is the
+        /// planet's curvature, which the sphere test already covers.
         /// </summary>
         private bool TerrainOccluded(MyPlanet planet, ref Vector3D position, ref EnvironmentSample sample)
         {
@@ -732,7 +719,7 @@ namespace Thermodynamics
             Vector3D centre = planet.PositionComp.WorldMatrixRef.Translation;
             double altitude = (position - centre).Length() - planet.AverageRadius;
 
-            // Above the tallest mountain by a good margin, nothing local can reach the ray.
+            // Well above the tallest terrain, so no local ground can intersect the ray.
             if (altitude > MaxTerrainAltitude) return false;
 
             terrainPlanet = planet;
@@ -749,14 +736,14 @@ namespace Thermodynamics
         /// <summary>Metres above mean radius past which terrain cannot be in the way.</summary>
         private const double MaxTerrainAltitude = 15000d;
 
-        /// <summary>Ground-height lookups per walk. Geometrically spaced, so this reaches far.</summary>
+        /// <summary>Ground-height lookups per walk. Geometrically spaced, so few reach far.</summary>
         private const int TerrainSamples = 10;
 
         /// <summary>
         /// Distance from the planet's centre to the ground under a point.
         ///
-        /// Held as a field, with the planet beside it, so the walk gets a delegate that is
-        /// allocated once for the life of the grid rather than one per test.
+        /// Held as a field alongside the planet so the walk receives a delegate allocated once for
+        /// the life of the grid rather than one per test.
         /// </summary>
         private Func<Vector3D, double> surfaceRadius;
         private MyPlanet terrainPlanet;

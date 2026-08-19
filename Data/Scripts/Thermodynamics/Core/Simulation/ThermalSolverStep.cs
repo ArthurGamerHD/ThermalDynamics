@@ -3,34 +3,22 @@ using System;
 namespace Thermodynamics.Core
 {
     /// <summary>
-    /// The step, spread across the frames of its simulation window.
+    /// One solver step, spread across the frames of its simulation window.
     ///
     /// <para>
-    /// A grid advances by one solver step every <c>1 / StepsPerSecond</c> of a second — a window
-    /// of about fifteen rendered frames at the default settings. Running the whole step on one of
-    /// those frames and nothing on the other fourteen is what a player feels as a stutter, and it
-    /// is what the simulation did: the cost of a ship arrived in a single lump, fifteen frames
-    /// apart. Spreading the same work evenly over the window costs the same total and is felt as
-    /// a steady frame rate instead.
+    /// A grid advances by one step every <c>1 / StepsPerSecond</c> of a second, about fifteen
+    /// rendered frames at the default settings. Running the whole step on one of those frames costs
+    /// the same total as spreading it evenly but arrives as a stutter, so the work is divided
+    /// across the window.
     /// </para>
     ///
     /// <para>
-    /// This is safe here in a way it was not in the original mod, and for exactly the reason the
-    /// original's version of it was a defect. That one advanced <em>different blocks on different
-    /// frames</em>, so a block's neighbours could be a frame ahead of or behind it; the result
-    /// depended on iteration order, which is why it had to alternate sweep direction to keep the
-    /// bias fair. This does not move any block ahead of any other. A substep is an accumulation —
-    /// every exchange computed from the temperatures at the start of the substep, summed into a
-    /// watts buffer, and applied to every node together at the end — and a sum can be computed in
-    /// any order, in any number of pieces, without changing its value. What is spread is the
-    /// arithmetic, not the simulation: the answer is identical to computing it all at once, and
-    /// <c>SpreadStepTests</c> asserts exactly that.
-    /// </para>
-    ///
-    /// <para>
-    /// The order-independence the rewrite introduced is therefore not a reason the whole grid
-    /// <em>must</em> step at once, as the scheduler used to claim. It is the property that makes
-    /// stepping it in pieces correct.
+    /// Spreading is exact rather than approximate, and does not advance any block ahead of any
+    /// other. A substep is an accumulation: every exchange is computed from the temperatures at the
+    /// start of the substep, summed into a watts buffer, and applied to all nodes together at the
+    /// end. A sum may be computed in any order and in any number of pieces without changing its
+    /// value, so only the arithmetic is divided. <c>SpreadStepTests</c> asserts the result is
+    /// identical to computing the step in one call.
     /// </para>
     /// </summary>
     public partial class ThermalSolver
@@ -50,7 +38,7 @@ namespace Thermodynamics.Core
             /// <summary>Conduction, per link.</summary>
             Conduction,
 
-            /// <summary>Coolant loops, room air and heat pumps — small, so run whole.</summary>
+            /// <summary>Coolant loops, room air and heat pumps. Few enough to run whole.</summary>
             Coupled,
 
             /// <summary>Turn accumulated watts into temperatures, per node.</summary>
@@ -73,16 +61,16 @@ namespace Thermodynamics.Core
         private float publishPeak;
 
         /// <summary>
-        /// Nodes and links as they were when the step began.
+        /// Node and link counts as they were when the step began.
         ///
-        /// A step spans many frames, and a block can be placed during one of them. The passes walk
-        /// the counts they started with, so a node appended mid-step simply is not in this step —
-        /// its row has not been synced and its thermal mass is still zero, and dividing by that is
-        /// how a temperature becomes NaN. It joins the next step, one sixtieth of a second later.
+        /// A step spans many frames and a block may be placed during one of them. The passes walk
+        /// the counts they started with, so a node appended mid-step is excluded from this step —
+        /// its mirrored row is unsynced and its thermal mass is zero, which would produce NaN — and
+        /// joins the next one.
         ///
-        /// Anything that <em>moves</em> an index rather than appending — a block removed, a graph
-        /// rebuilt — abandons the step instead, because no snapshot can rescue a buffer whose
-        /// entries now refer to different blocks.
+        /// A change that moves an index rather than appending, such as a removal or a graph
+        /// rebuild, abandons the step instead: no snapshot can repair a buffer whose entries now
+        /// refer to different blocks.
         /// </summary>
         private int stepNodeCount;
         private int stepLinkCount;
@@ -94,19 +82,15 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Element visits one whole step will make, from the substep count and the size of the
-        /// grid. This is the figure a host divides by the frames in its window to decide how much
-        /// of the step to do on each of them.
+        /// Element visits one whole step will make, from the substep count and the size of the grid.
+        /// A host divides this by the frames in its window to size each frame's slice.
         ///
-        /// This is not an approximation of the work: it is exactly the number the stages will
-        /// charge, summed ahead of time. It has to be, because a host paces the step by dividing
-        /// it across the frames of the window — an estimate 12 % under what the step really costs
-        /// makes every step take 12 % longer than its window, and a grid configured for four
-        /// steps a second quietly runs at three.
+        /// Exact rather than approximate: it is the number the stages will charge, summed ahead of
+        /// time. An estimate below the real figure would make every step overrun its window by the
+        /// same proportion, so a grid configured for four steps a second would run slower.
         ///
-        /// It is still not a <em>cost</em> model. A link visit and a node visit are not the same
-        /// price in nanoseconds, and nothing here pretends otherwise; what matters is that the
-        /// units the budget is spent in are the units it was measured in, so the pacing divides
+        /// It is not a cost model. A link visit and a node visit differ in real cost; what matters
+        /// is that the budget is spent in the units it was measured in, so the pacing divides
         /// evenly.
         /// </summary>
         public long StepWorkUnits { get; private set; }
@@ -115,13 +99,11 @@ namespace Thermodynamics.Core
         public long StepWorkRemaining { get; private set; }
 
         /// <summary>
-        /// What the last <see cref="AdvanceStep"/> actually spent of the budget it was given.
+        /// Budget the last <see cref="AdvanceStep"/> spent of what it was given.
         ///
-        /// A step finishes on whichever slice crosses its last element, which is rarely the exact
-        /// budget that slice was handed — the work estimate is proportional rather than exact. A
-        /// host that discards the difference loses a little of every step and ends up running
-        /// slower than the frequency it was configured with; one that carries it forward keeps
-        /// the rate exact.
+        /// A step finishes on whichever slice crosses its last element, rarely spending that
+        /// slice's budget exactly. A host that discards the remainder loses part of every step and
+        /// runs below its configured frequency; one that carries it forward holds the rate exact.
         /// </summary>
         public long LastAdvanceWork { get; private set; }
 
@@ -150,11 +132,10 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Advances the whole grid by <paramref name="deltaSeconds"/> of simulated time, in one
-        /// go.
+        /// Advances the whole grid by <paramref name="deltaSeconds"/> of simulated time in one call.
         ///
-        /// The direct route, kept because tests and scenarios want reproducible time rather than
-        /// frame pacing, and because it is the definition the spread version is checked against.
+        /// Used by tests and scenarios, which need reproducible time rather than frame pacing. Also
+        /// the reference the spread implementation is checked against.
         /// </summary>
         public void Step(float deltaSeconds, EnvironmentState environment)
         {
@@ -170,18 +151,16 @@ namespace Thermodynamics.Core
         {
             if (deltaSeconds <= 0f) return false;
 
-            // A step already running is finished before another begins. A host that asks for one
-            // while one is in flight has lost track, and silently discarding the part-finished
-            // step would lose the energy it had already accumulated.
+            // Any step already in flight is finished before another begins; discarding it would
+            // lose the energy it had accumulated.
             if (StepInFlight) return true;
 
             RebuildLinksIfNeeded();
             EnsureBuffers();
             SyncNodeState();
 
-            // Totals first, then the floor that reads them, then the link factors the floor
-            // invalidates. Ordering these the other way round left every link's reduced mass
-            // describing capacities the step no longer used.
+            // Order matters: the conductance totals, then the mass floor that reads them, then the
+            // link factors the floor invalidates.
             RecomputeConductanceTotalsIfNeeded();
             ApplyThermalMassFloor();
             RefreshLinkMassFactors();
@@ -190,27 +169,24 @@ namespace Thermodynamics.Core
             stepEnvironment = environment;
             stepDeltaSeconds = deltaSeconds;
 
-            // A new step is a new environment sample and a new substep length, so everything the
-            // substeps were allowed to reuse from the last one has to be recomputed.
+            // A new step brings a new environment sample and a new substep length, so everything
+            // the previous step's substeps cached must be recomputed.
             InvalidateEnvironmentRows();
 
             overheats.Clear();
             crossings.Clear();
 
-            // One estimate, used for both answers. It walks every node cubing a temperature, so
-            // asking twice per step doubled the cost of the cheapest thing the solver does for no
-            // new information.
+            // One estimate serves both figures. It walks every node cubing a temperature, so asking
+            // twice per step would double its cost for no new information.
             float required = RequiredSubstepsFromState(deltaSeconds);
             int substeps = ClampSubsteps(required);
             LastSubsteps = substeps;
             LastStepWasClamped = required > MaxSubsteps;
 
-            // Reported against a *full* step, not against the shortened one this call was handed.
-            // The estimate is proportional to the step, so a step already cut down to fit the
-            // visit budget asks for about what it was granted, by construction — recording that
-            // produced a "required" column identical to the "granted" one and said nothing. What
-            // is wanted is how much the grid would ask for if it were allowed to run at its
-            // configured rate, which is the figure that keeps moving after the budget has bound.
+            // Reported against a full step rather than the shortened one this call was handed. The
+            // estimate is proportional to step length, so a step already cut to fit the visit budget
+            // demands roughly what it was granted by construction. The useful figure is what the
+            // grid would demand at its configured rate, which keeps moving after the budget binds.
             LastRequiredSubsteps = deltaSeconds > 0f
                 ? required * (settings.StepSeconds / deltaSeconds)
                 : required;
@@ -302,16 +278,16 @@ namespace Thermodynamics.Core
 
             ClearConductionDiagnostics();
 
-            // Once per substep, not once per slice: it resolves the sun and wind into per-face
-            // weights and advances the shadow map's own budget, and doing either per slice would
-            // run them many times faster than intended.
+            // Once per substep rather than once per slice: it resolves the sun and wind into
+            // per-face weights and advances the shadow map's budget, both of which would otherwise
+            // run many times faster than intended.
             stepPlan = PlanEnvironment(ref stepEnvironment);
 
             stage = StepStage.Environment;
             stageCursor = 0;
 
-            // The clearing is a memset over the same nodes the passes walk; charging it as a
-            // fraction of them keeps the budget honest without pretending it is free.
+            // Clearing is a memset over the same nodes the passes walk, so it is charged as a
+            // fraction of a node visit rather than as free.
             return nodeCount / 8;
         }
 
@@ -328,9 +304,9 @@ namespace Thermodynamics.Core
 
             if (stageCursor >= count)
             {
-                // Registered point sources are per source per node, and there is normally not one
-                // in a world. Run whole rather than sliced: slicing would need a cursor over two
-                // dimensions to spread something that is usually zero work.
+                // Registered point sources cost one visit per source per node, and a world normally
+                // has none. Run whole rather than sliced: slicing would need a two-dimensional
+                // cursor to spread work that is usually zero.
                 if (stepPlan.SourcesEnabled)
                 {
                     AccumulateHeatSources(ref stepEnvironment, stepPlan.Diagnostics);
@@ -410,16 +386,14 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Copies the step's results onto the node objects, which are the simulation's public
-        /// face.
+        /// Copies the step's results onto the node objects, which are the simulation's public face.
         ///
-        /// The reported change is measured against the top of the step, not against the last
-        /// substep. Everything that reads it — the HUD's rate of change, the anomaly classifier
-        /// recovering the previous temperature, the per-type distribution — is describing one
-        /// step; a six-substep grid otherwise reports roughly a sixth of the movement it made.
+        /// The reported change is measured against the start of the step rather than the last
+        /// substep, since every consumer — the HUD's rate of change, the anomaly classifier, the
+        /// per-type distribution — describes one step. Measured per substep, a six-substep grid
+        /// would report about a sixth of the movement it made.
         ///
-        /// The hottest block falls out of the same loop for one comparison per node, so the
-        /// readouts that want it cost nothing.
+        /// The hottest node is found in the same loop for one comparison per node.
         /// </summary>
         private long AdvancePublish(long budget)
         {
@@ -434,15 +408,13 @@ namespace Thermodynamics.Core
                 ThermalNode node = nodes[i];
                 float previous = nodeStepStart[i];
 
-                // A step now spans many frames, so a host can write a temperature part way
-                // through one — loading a save, a grid split, another mod through the API. It
-                // used to be impossible to lose such a write, because a step began and ended
-                // inside one call; now overwriting would silently discard it.
+                // The step's change is applied on top of the node's current temperature rather than
+                // overwriting it. A step spans many frames, so a host can write a temperature
+                // mid-step — a save load, a grid split, another mod through the API — and
+                // overwriting would discard that write.
                 //
-                // Where nothing wrote, the node still holds exactly the float the step started
-                // from and the result is the step's own answer, bit for bit. Where something did,
-                // the step's change is applied on top of what it wrote, which is what a step
-                // means: an amount to move by.
+                // Where nothing wrote, the node still holds the float the step started from and the
+                // result is the step's own answer bit for bit.
                 if (node.Temperature == previous)
                 {
                     node.Temperature = updated;
@@ -479,15 +451,13 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// How far a cursor may move given a budget, clamped to what is left of the collection.
+        /// How far a cursor may advance under a budget, clamped to the elements remaining.
         ///
-        /// Written as "take the smaller of the budget and the room remaining" rather than as
-        /// <c>cursor + budget</c> clamped afterwards, because the budget can legitimately be
-        /// <see cref="long.MaxValue"/> — that is what <see cref="Step"/> passes to run a step in
-        /// one go — and adding a non-zero cursor to it overflows to a negative index. The cursor
-        /// is only non-zero on that path when an unbounded call is finishing a step that a paced
-        /// one left part way through a stage, which is exactly what the harness does when a
-        /// scenario takes over a simulation the host had been updating.
+        /// Computed as the smaller of the budget and the remaining room rather than as
+        /// <c>cursor + budget</c> clamped afterwards: the budget may be <see cref="long.MaxValue"/>,
+        /// which <see cref="Step"/> passes to run a step in one call, and adding a non-zero cursor
+        /// to that overflows to a negative index. The cursor is non-zero on that path when an
+        /// unbounded call finishes a step a paced one left part way through a stage.
         /// </summary>
         private int Advance(int count, long budget)
         {
@@ -502,11 +472,10 @@ namespace Thermodynamics.Core
         /// <summary>
         /// Abandons a step in flight, discarding whatever it had accumulated.
         ///
-        /// Nothing is lost by doing so: a substep's watts are applied all at once at its end, so
-        /// a step abandoned part way leaves every temperature exactly where the last completed
-        /// substep left it. The host calls this when the grid changes shape underneath a step —
-        /// node indices move, links appear and vanish, and the half-summed buffer refers to a grid
-        /// that no longer exists.
+        /// No temperature is lost: a substep's watts are applied together at its end, so an
+        /// abandoned step leaves every temperature where the last completed substep left it. Called
+        /// when the grid changes shape under a step, which moves node indices and invalidates the
+        /// half-summed buffers.
         /// </summary>
         public void AbandonStep()
         {
