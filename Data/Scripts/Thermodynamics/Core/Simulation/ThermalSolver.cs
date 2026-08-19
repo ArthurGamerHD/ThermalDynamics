@@ -1329,12 +1329,15 @@ namespace Thermodynamics.Core
                     * nodeThermalMass[cold] / h;
                 if (headroom <= 0f) continue;
 
-                // Demand is recorded at full power regardless of what the grid supplied, so a
-                // request never shrinks merely because it was refused.
-                float wanted = Limit(coefficient * pump.MaxPowerWatts, pump.RatedWatts, headroom);
+                // Demand is recorded at the setting the player chose regardless of what the grid
+                // supplied, so a request never shrinks merely because it was refused.
+                float settable = pump.SettablePowerWatts;
+                if (settable <= 0f) continue;
+
+                float wanted = Limit(coefficient * settable, pump.RatedWatts, headroom);
                 pump.DemandEnergy += (wanted / coefficient) * h;
 
-                float available = pump.MaxPowerWatts * Clamp01(pump.PowerAvailable);
+                float available = settable * Clamp01(pump.PowerAvailable);
                 if (available <= 0f) continue;
 
                 // The smallest of: what the available power can pay for, the pump's rating, and

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Thermodynamics.Core;
 using Thermodynamics.Harness;
 using VRageMath;
@@ -450,6 +451,225 @@ namespace Thermodynamics.Tests
 
             ThermalNode left = simulation.Solver.GetNodeAt(new Vector3I(-1, 0, 0));
             Assert.Equal(left.Index, pump.ColdNodeIndex);
+        }
+    
+        // ---- the throttle -------------------------------------------------------------------
+
+        /// <summary>
+        /// The slider caps what the pump may draw, and it lifts what that buys at the current gap.
+        ///
+        /// Distinct from a browned-out grid: this is what the block was told to want, not what could
+        /// be supplied. A player who only needs cooling sometimes should not be paying for it always.
+        /// </summary>
+        [Theory]
+        [InlineData(1f)]
+        [InlineData(0.5f)]
+        [InlineData(0.25f)]
+        public void TheThrottleCapsWhatThePumpDraws(float setting)
+        {
+            GridBuilder builder = GridBuilder.Large();
+            builder.Place(Catalog.HeavyArmor(), Vector3I.Zero);
+            BlockInstance cold = builder.Last;
+            builder.Place(Catalog.HeatPump(), new Vector3I(0, 0, 1),
+                new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));
+            BlockInstance pumpBlock = builder.Last;
+            builder.Place(Catalog.HeavyArmor(), new Vector3I(0, 0, 2));
+            BlockInstance hot = builder.Last;
+
+            ThermalSettings settings = new ThermalSettings();
+            settings.EnableEnvironment = false;
+            settings.EnableDamage = false;
+            settings.Derive();
+
+            ThermalSimulation simulation = builder.BuildSimulation(settings, 300f);
+            HeatPumpDevice pump = simulation.Solver.GetHeatPump(pumpBlock);
+            pump.Enabled = true;
+            pump.PowerAvailable = 1f;
+            pump.PowerSetting = setting;
+
+            Assert.Equal(pump.MaxPowerWatts * setting, pump.SettablePowerWatts, 2);
+
+            // A wide gap, so the Carnot cost binds and the draw is the throttle rather than the rating.
+            ThermalNode hotNode = simulation.Solver.GetNode(hot);
+            ThermalNode coldNode = simulation.Solver.GetNode(cold);
+
+            for (int i = 0; i < 40; i++)
+            {
+                hotNode.Temperature = 900f;
+                coldNode.Temperature = 300f;
+                simulation.StepExact(1, Worlds.Shadow());
+            }
+
+            Assert.True(pump.LastPowerWatts <= (pump.MaxPowerWatts * setting) + 1f,
+                "drew " + pump.LastPowerWatts + " W against a " + setting + " throttle on "
+                + pump.MaxPowerWatts + " W");
+            Assert.True(pump.LastPowerWatts > 0f, "a throttled pump should still run");
+        }
+
+        /// <summary>A throttle of zero is off, and costs nothing.</summary>
+        [Fact]
+        public void AThrottleOfZeroMovesNothingAndDrawsNothing()
+        {
+            GridBuilder builder = GridBuilder.Large();
+            builder.Place(Catalog.HeavyArmor(), Vector3I.Zero);
+            builder.Place(Catalog.HeatPump(), new Vector3I(0, 0, 1),
+                new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));
+            BlockInstance pumpBlock = builder.Last;
+            builder.Place(Catalog.HeavyArmor(), new Vector3I(0, 0, 2));
+
+            ThermalSettings settings = new ThermalSettings();
+            settings.EnableEnvironment = false;
+            settings.Derive();
+
+            ThermalSimulation simulation = builder.BuildSimulation(settings, 300f);
+            HeatPumpDevice pump = simulation.Solver.GetHeatPump(pumpBlock);
+            pump.Enabled = true;
+            pump.PowerAvailable = 1f;
+            pump.PowerSetting = 0f;
+
+            simulation.Solver.GetNode(pumpBlock).Temperature = 300f;
+            simulation.StepExact(20, Worlds.Shadow());
+
+            Assert.Equal(0f, pump.LastLiftedWatts, 3);
+            Assert.Equal(0f, pump.LastPowerWatts, 3);
+            Assert.Equal(0f, pump.LastDemandWatts, 3);
+        }
+
+        // ---- the two ways a player will misuse it -------------------------------------------
+
+        /// <summary>
+        /// A pump whose hot side is colder than its cold side runs at the coefficient cap, and that is
+        /// deliberate: the Carnot relation has nothing to say about pumping downhill, so it saturates
+        /// rather than dividing by a negative.
+        ///
+        /// The consequence is a trap rather than an exploit, and worth pinning as such. Such a pump
+        /// reports the best numbers the block can show — a measured 60 kW moved for 7.5 kW, a
+        /// coefficient of 8.00 — while ordinary conduction between the same two blocks was already
+        /// carrying 90 kW in that direction for nothing, and the pump's own draw is added to the grid
+        /// as heat on top. It looks like the ideal installation and achieves a rounding error.
+        /// </summary>
+        [Fact]
+        public void APumpRunningDownhillSaturatesItsCoefficientAndAchievesLittle()
+        {
+            GridBuilder builder = GridBuilder.Large();
+            builder.Place(Catalog.HeavyArmor(), Vector3I.Zero);
+            BlockInstance hotBlock = builder.Last;
+
+            // Cold face on the HOT block: the wrong way round.
+            builder.Place(Catalog.HeatPump(), new Vector3I(0, 0, 1),
+                new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));
+            BlockInstance pumpBlock = builder.Last;
+            builder.Place(Catalog.HeavyArmor(), new Vector3I(0, 0, 2));
+            BlockInstance coldBlock = builder.Last;
+
+            ThermalSettings settings = new ThermalSettings();
+            settings.EnableEnvironment = false;
+            settings.EnableDamage = false;
+            settings.Derive();
+
+            ThermalSimulation simulation = builder.BuildSimulation(settings, 300f);
+            simulation.Solver.CollectDiagnostics = true;
+
+            HeatPumpDevice pump = simulation.Solver.GetHeatPump(pumpBlock);
+            pump.Enabled = true;
+            pump.PowerAvailable = 1f;
+
+            ThermalNode hotNode = simulation.Solver.GetNode(hotBlock);
+            ThermalNode coldNode = simulation.Solver.GetNode(coldBlock);
+
+            for (int i = 0; i < 40; i++)
+            {
+                hotNode.Temperature = 900f;
+                coldNode.Temperature = 300f;
+                simulation.StepExact(1, Worlds.Shadow());
+            }
+
+            // It saturates rather than misbehaving.
+            Assert.Equal(8f, pump.LastCoefficient, 2);
+            Assert.True(pump.LastLiftedWatts > 50000f, "it does move heat: " + pump.LastLiftedWatts);
+
+            // And conduction is already moving considerably more, in the same direction, for nothing.
+            Assert.True(Math.Abs(coldNode.LastConductionWatts) > pump.LastLiftedWatts,
+                "conduction " + coldNode.LastConductionWatts + " W should dominate the pump's "
+                + pump.LastLiftedWatts + " W, which is what makes this pointless rather than strong");
+        }
+
+        /// <summary>
+        /// Cascading pumps across a gap beats one pump across the whole of it, and the advantage is
+        /// bounded — which is what makes it engineering rather than an exploit.
+        ///
+        /// Measured on a fixed 320 K gap: one stage reaches the single-stage Carnot figure of 0.38,
+        /// two stages 0.37, four 0.51 and eight 0.54. It plateaus, because each stage has to lift the
+        /// work of every stage below it as well, and that compounding eats the efficiency a narrower
+        /// gap buys. Eight stages is eight blocks and five and a half times the power draw — all of
+        /// which still has to be radiated — for about 1.4 times the heat moved.
+        /// </summary>
+        [Fact]
+        public void CascadingPumpsHelpsByABoundedAmount()
+        {
+            float one = CascadeCoefficient(1);
+            float four = CascadeCoefficient(4);
+            float eight = CascadeCoefficient(8);
+
+            // A cascade beats a single stage across the same gap.
+            Assert.True(four > one, "four stages " + four + " should beat one stage " + one);
+
+            // But it plateaus rather than running away: doubling again buys very little.
+            Assert.True(eight < four * 1.5f,
+                "eight stages " + eight + " against four " + four + " is not a plateau");
+            Assert.True(eight < 1f,
+                "no arrangement should lift more heat than the work it spends across a gap this wide");
+        }
+
+        /// <summary>Heat the first stage lifts per watt the whole chain draws, across a fixed 320 K.</summary>
+        private static float CascadeCoefficient(int stages)
+        {
+            GridBuilder builder = GridBuilder.Large();
+            List<BlockInstance> blocks = new List<BlockInstance>();
+
+            builder.Place(Catalog.HeavyArmor(), Vector3I.Zero);
+            blocks.Add(builder.Last);
+
+            for (int i = 0; i < stages; i++)
+            {
+                int z = (i * 2) + 1;
+                builder.Place(Catalog.HeatPump(), new Vector3I(0, 0, z),
+                    new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));
+                builder.Place(Catalog.HeavyArmor(), new Vector3I(0, 0, z + 1));
+                blocks.Add(builder.Last);
+            }
+
+            ThermalSettings settings = new ThermalSettings();
+            settings.EnableEnvironment = false;
+            settings.EnableDamage = false;
+            settings.MaxSubsteps = 64;
+            settings.MaxSubstepsPerBlock = 0;
+            settings.MaxLinkVisitsPerStep = 0;
+            settings.Derive();
+
+            ThermalSimulation simulation = builder.BuildSimulation(settings, 300f);
+
+            IList<HeatPumpDevice> devices = simulation.Solver.HeatPumps;
+            for (int i = 0; i < devices.Count; i++)
+            {
+                devices[i].Enabled = true;
+                devices[i].PowerAvailable = 1f;
+            }
+
+            ThermalNode coldEnd = simulation.Solver.GetNode(blocks[0]);
+            ThermalNode hotEnd = simulation.Solver.GetNode(blocks[blocks.Count - 1]);
+
+            for (int i = 0; i < 120; i++)
+            {
+                coldEnd.Temperature = 300f;
+                hotEnd.Temperature = 620f;
+                simulation.StepExact(1, Worlds.Shadow());
+            }
+
+            float draw = 0f;
+            for (int i = 0; i < devices.Count; i++) draw += devices[i].LastPowerWatts;
+
+            return draw <= 0f ? 0f : devices[0].LastLiftedWatts / draw;
         }
     }
 }

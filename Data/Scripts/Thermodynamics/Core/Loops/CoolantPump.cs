@@ -54,23 +54,25 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Electricity this pump wants at its current setting, W.
+        /// Electricity this pump wants at its current setting, W. Linear in speed.
         ///
-        /// The affinity law: a centrifugal pump's shaft power goes with the cube of its speed, so half
-        /// speed costs an eighth. That is real pump behaviour and it is the most interesting number on
-        /// the block — because flow only goes as the square root of combined pumping, two pumps at
-        /// half speed move about 1.4 times one pump's flow for a quarter of its power. A player who
-        /// over-builds their plumbing and throttles it back is rewarded for it, and a player who
-        /// runs one pump flat out to cool a big ship pays the worst rate available.
+        /// A real centrifugal pump follows the affinity law — shaft power with the cube of speed — and
+        /// this was written that way first. Combined with flow going as the square root of combined
+        /// pumping it produced an exploit rather than a trade: getting a given flow from N pumps costs
+        /// <c>maxPower x K^3 / N^2</c>, so ten pumps idling at a tenth each cost a hundredth of one
+        /// pump working, and the optimal build was always "more pumps, all barely on".
+        ///
+        /// Linear closes it exactly. Flow F needs <c>sum of speeds = (F/base)^2</c>, so the bill is
+        /// <c>maxPower x (F/base)^2</c> — a function of the flow alone, with the pump count cancelled
+        /// out. Doubling flow costs four times the power however it is arranged, and a second pump
+        /// buys redundancy and headroom rather than a discount.
         /// </summary>
         public float DemandWatts
         {
             get
             {
                 if (!Enabled) return 0f;
-
-                float speed = Clamp01(Speed);
-                return MaxPowerWatts * speed * speed * speed;
+                return MaxPowerWatts * Clamp01(Speed);
             }
         }
 

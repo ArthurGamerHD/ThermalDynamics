@@ -326,7 +326,16 @@ rather than an artefact of the scheme.
 
 Flow going as the square root of combined pump demand is real parallel-pump behaviour against a fixed
 circuit, where turbulent pressure loss rises with the square of flow: four pumps carry twice one
-pump's flow. A pump's own draw follows the affinity law, the cube of its speed.
+pump's flow, not four times.
+
+A pump's own draw is **linear** in its speed, which is what stops pump count being a discount. The
+affinity law — power with the cube of speed, which is what a real centrifugal pump does — was tried
+first and is an exploit here rather than a trade: a given flow from N pumps needs each at speed `K/N`,
+and cubed power makes the bill fall as `1/N²`, so ten pumps idling cost a hundredth of one pump
+working. Linear closes it exactly, because flow `F` needs `Σ speed = (F/base)²` and the bill is then
+`maxPower × (F/base)²` — a function of the flow alone, with the pump count cancelled out. Doubling
+flow costs four times the power however it is arranged, and a second pump buys redundancy and headroom
+rather than a discount.
 
 With no pump running, `parcels/s` is zero and nothing is carried. The ring still holds its coolant and
 still exchanges with what it touches, so the coolant beside a reactor saturates while the coolant at

@@ -113,6 +113,32 @@ namespace Thermodynamics.Core
         /// </summary>
         public float PowerAvailable = 1f;
 
+        /// <summary>
+        /// Share of its rating the player has asked this pump to draw, 0..1. The terminal's slider.
+        ///
+        /// Distinct from <see cref="PowerAvailable"/>, which is what the grid could supply: this is
+        /// what the block was told to want. A pump throttled to a quarter draws a quarter and lifts
+        /// what a quarter buys at the current gap, which is the lever a player has for spending power
+        /// on cooling only when cooling is what they need.
+        ///
+        /// Defaults to full so a pump works the moment it is built and a harness needs no host.
+        /// </summary>
+        public float PowerSetting = 1f;
+
+        /// <summary>
+        /// Electricity this pump may draw at its current setting, W: its rating times the slider.
+        /// </summary>
+        public float SettablePowerWatts
+        {
+            get
+            {
+                float setting = PowerSetting;
+                if (setting < 0f) setting = 0f;
+                if (setting > 1f) setting = 1f;
+                return MaxPowerWatts * setting;
+            }
+        }
+
         /// <summary>Heat taken out of the cold side over the last step, W.</summary>
         public float LastLiftedWatts;
 

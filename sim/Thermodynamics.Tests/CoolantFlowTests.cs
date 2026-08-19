@@ -383,5 +383,99 @@ namespace Thermodynamics.Tests
             simulation.StepExact(300, Worlds.Shadow());
             return loop.HottestSegment - loop.ColdestSegment;
         }
+    
+        // ---- what the pumps cost ------------------------------------------------------------
+
+        /// <summary>
+        /// A pump's draw is linear in its speed, and that is what stops pump count being a discount.
+        ///
+        /// The affinity law — power with the cube of speed, which is what a real centrifugal pump does
+        /// — was tried first and is an exploit here rather than a trade. Flow goes as the square root
+        /// of combined pumping, so a given flow from N pumps needs each at speed K/N, and cubed power
+        /// makes the bill fall as 1/N squared: ten pumps idling cost a hundredth of one pump working,
+        /// and the best build is always "more pumps, all barely on".
+        /// </summary>
+        [Fact]
+        public void PumpPowerIsLinearInSpeed()
+        {
+            CoolantPump pump = new CoolantPump();
+            pump.MaxPowerWatts = 20000f;
+
+            pump.Speed = 1f;
+            Assert.Equal(20000f, pump.DemandWatts, 2);
+
+            pump.Speed = 0.5f;
+            Assert.Equal(10000f, pump.DemandWatts, 2);
+
+            pump.Speed = 0.25f;
+            Assert.Equal(5000f, pump.DemandWatts, 2);
+
+            // Off is off, whatever the slider says.
+            pump.Enabled = false;
+            Assert.Equal(0f, pump.DemandWatts);
+        }
+
+        /// <summary>
+        /// The property linear power buys: the bill for a given flow is the same however many pumps
+        /// deliver it. A second pump is redundancy and headroom, not a cheaper way to move the fluid.
+        /// </summary>
+        [Theory]
+        [InlineData(1)]
+        [InlineData(2)]
+        [InlineData(4)]
+        [InlineData(9)]
+        public void TheBillForAGivenFlowDoesNotDependOnHowManyPumpsDeliverIt(int pumpCount)
+        {
+            CoolantLoop loop;
+            Ring(9, 9, 4f, out loop);
+
+            // Reuse the ring's own pump entry as a template, then stand in the pumps by hand: what is
+            // being checked is the arithmetic relating flow to the bill, not the ring's plumbing.
+            loop.Pumps.Clear();
+
+            // Each pump at the speed that lands the same total demand, so the same flow.
+            const float totalDemand = 1f;
+            for (int i = 0; i < pumpCount; i++)
+            {
+                CoolantPump pump = new CoolantPump();
+                pump.MaxPowerWatts = 20000f;
+                pump.Speed = totalDemand / pumpCount;
+                loop.Pumps.Add(pump);
+            }
+
+            loop.RefreshFlow();
+
+            float bill = 0f;
+            for (int i = 0; i < loop.Pumps.Count; i++) bill += loop.Pumps[i].DemandWatts;
+
+            // Same flow...
+            Assert.Equal(loop.Properties.SegmentsPerSecondAtFullFlow, loop.FlowSegmentsPerSecond, 3);
+
+            // ...for the same money, whatever the pump count.
+            Assert.Equal(20000f, bill, 1);
+        }
+
+        /// <summary>
+        /// Flow rises with the square root of combined pumping: four pumps carry twice one pump's
+        /// flow, not four times. Real parallel-pump behaviour against a fixed circuit, and honest
+        /// diminishing returns on redundancy.
+        /// </summary>
+        [Fact]
+        public void FlowRisesWithTheSquareRootOfCombinedPumping()
+        {
+            CoolantLoop loop;
+            Ring(9, 9, 10f, out loop);
+
+            loop.Pumps.Clear();
+            for (int i = 0; i < 4; i++)
+            {
+                CoolantPump pump = new CoolantPump();
+                pump.MaxPowerWatts = 20000f;
+                loop.Pumps.Add(pump);
+
+                loop.RefreshFlow();
+                Assert.Equal(10f * (float)Math.Sqrt(i + 1), loop.FlowSegmentsPerSecond, 3);
+            }
+        }
     }
 }
