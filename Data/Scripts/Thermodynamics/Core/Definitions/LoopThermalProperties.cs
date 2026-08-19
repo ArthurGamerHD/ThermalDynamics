@@ -40,7 +40,8 @@ namespace Thermodynamics.Core
         public float SinkContactMultiplier = 1f;
 
         /// <summary>
-        /// How fast the coolant moves with one pump at full power, **metres per second**.
+        /// How fast the coolant moves on a **large grid** with one pump at full power, metres per
+        /// second.
         ///
         /// The advection rate, and the reason a stopped pump stops cooling rather than slowing it:
         /// coolant only reaches a radiator on the far side of the ring if something carries it there.
@@ -49,11 +50,38 @@ namespace Thermodynamics.Core
         ///
         /// In metres per second because that is the unit the terminal reports and the only one
         /// anybody has intuition for. The solver works in parcels — one pipe block of fluid — and
-        /// <see cref="CoolantLoop.RefreshFlow"/> converts by dividing by the cell size. Storing the
-        /// parcel figure instead made the same definition mean five different speeds on the two grid
-        /// sizes: 4 parcels/s read as 10 m/s on large grid and 2 m/s on small.
+        /// <see cref="CoolantLoop.RefreshFlow"/> converts by dividing by the cell size.
         /// </summary>
-        public float FlowRate = 10f;
+        public float LargeGridFlowRate = 10f;
+
+        /// <summary>
+        /// The same, for a **small grid**.
+        ///
+        /// Split from the large-grid figure because it is a balance dial rather than a physical
+        /// constant: a small-grid pump is a much smaller machine driving a much shorter ring, and
+        /// whether it should push its coolant as fast as a capital ship's is a judgement, not a
+        /// measurement. One number for both took that choice away from whoever is tuning.
+        ///
+        /// Note what the shared parcel model does with a difference here. A small-grid pipe is a
+        /// fifth as long, so the same metres per second is five times the parcel rate — the ring
+        /// laps far more often, and approaches a well-mixed loop sooner.
+        /// </summary>
+        public float SmallGridFlowRate = 10f;
+
+        /// <summary>
+        /// The flow rate for a ring built at this cell size, m/s.
+        ///
+        /// Space Engineers has exactly two cell sizes, 2.5 m and 0.5 m, with nothing between them,
+        /// so a single threshold separates them safely. It lives here rather than at each call site
+        /// so there is one answer to "which grid is this".
+        /// </summary>
+        public float FlowRateFor(float cellSizeMetres)
+        {
+            return cellSizeMetres < LargeGridCellThresholdMetres ? SmallGridFlowRate : LargeGridFlowRate;
+        }
+
+        /// <summary>Cell sizes below this count as small grid. Between SE's 0.5 m and 2.5 m.</summary>
+        public const float LargeGridCellThresholdMetres = 1f;
 
         /// <summary>
         /// Fraction of full transfer that survives with no circulation at all, 0..1.
@@ -71,7 +99,8 @@ namespace Thermodynamics.Core
         public LoopThermalProperties Clamp()
         {
             CoolantMassPerPipe = Math.Max(1f, CoolantMassPerPipe);
-            FlowRate = Math.Max(0f, FlowRate);
+            LargeGridFlowRate = Math.Max(0f, LargeGridFlowRate);
+            SmallGridFlowRate = Math.Max(0f, SmallGridFlowRate);
             StagnantTransferFraction = Math.Max(0f, Math.Min(1f, StagnantTransferFraction));
             Conductivity = Math.Max(0f, Math.Min(1f, Conductivity));
             SpecificHeat = Math.Max(ThermalConstants.MinimumThermalMass, SpecificHeat);

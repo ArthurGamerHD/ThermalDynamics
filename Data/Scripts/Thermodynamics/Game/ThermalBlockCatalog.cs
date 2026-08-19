@@ -329,7 +329,8 @@ namespace Thermodynamics
             properties.SpecificHeat = definition.SpecificHeat;
             properties.PipeContactMultiplier = definition.PipeContactMultiplier;
             properties.SinkContactMultiplier = definition.SinkContactMultiplier;
-            properties.FlowRate = definition.FlowRate;
+            properties.LargeGridFlowRate = definition.LargeGridFlowRate;
+            properties.SmallGridFlowRate = definition.SmallGridFlowRate;
             properties.StagnantTransferFraction = definition.StagnantTransferFraction;
 
             return properties.Clamp();

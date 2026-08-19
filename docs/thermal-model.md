@@ -304,7 +304,8 @@ Each parcel exchanges only with its own pipe and the blocks on that pipe's sink 
 reaches the far side of the ring only by being carried there:
 
 ```
-parcels/s = (FlowRate / cellSize) x sqrt(sum of pump speed x power supplied)
+parcels/s = (flowRate / cellSize) x sqrt(sum of pump speed x power supplied)
+flowRate  = LargeGridFlowRate or SmallGridFlowRate, m/s, by the grid the ring is on
 pipe i reads parcel (i - round(parcels carried)) mod N
 ```
 

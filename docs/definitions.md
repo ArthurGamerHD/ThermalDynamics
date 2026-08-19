@@ -47,6 +47,7 @@ the shipped defaults with no error and no log line.
 | `PlateSurfaceAreaScaler` | `SinkContactMultiplier` | Nothing else in the mod calls a sink face a plate |
 | `PipeSurfaceAreaScaler` | `PipeContactMultiplier` | Pairs with the above; the two are siblings and now look it |
 | `MassPerPipe` | `CoolantMassPerPipe` | Mass of what, in a file full of blocks |
+| `SegmentsPerSecondAtFullFlow` | `LargeGridFlowRate` / `SmallGridFlowRate` | Parcels per second is the solver's unit, not a player's; and one parcel is one pipe block, so a single figure meant 10 m/s on a large grid and 2 m/s on a small one. Converted on read, per grid. |
 
 New definitions should use the current names. The old ones are not planned for removal.
 
@@ -159,11 +160,14 @@ There is currently one loop definition and every loop uses it:
 
 | Property | Default | Clamp | Meaning |
 | --- | --- | --- | --- |
-| `Mass` | 500 | `≥ 1` | Coolant mass for the whole loop, kg. |
-| `Conductivity` | 1 | `0 … 1` | Transfer scaling for both pipe and plate exchanges. |
+| `CoolantMassPerPipe` | 50 | `≥ 1` | Coolant in each pipe block, kg, so a ring's charge scales with its length. |
+| `Conductivity` | 1 | `0 … 1` | Transfer scaling for both the pipe and the sink-face exchange. **Not** the real W/(m·K) that a block's `Conductivity` now takes — the fluid-to-wall path is convective, and its honest dial would be a heat transfer coefficient in W/(m²·K). Unchanged for now. |
 | `SpecificHeat` | 3400 | `≥ 0` | Coolant heat capacity in real J/(kg·K). Water-glycol is about 3400, which is why a loop carries so much more heat than the steel around it. Scaled by `HeatTimeScale` exactly as a block is. |
 | `PipeContactMultiplier` | 1 | `≥ 0` | Contact area between fluid and the pipe block it runs through. |
 | `SinkContactMultiplier` | 1 | `≥ 0` | Contact area between fluid and a block pressed against a sink face. |
+| `LargeGridFlowRate` | 10 | `≥ 0` | How fast the coolant moves on a large grid with one pump at full power, **m/s** — the unit the terminal reports. Flow rises with the square root of combined pumping, so four pumps carry twice this, not four times. |
+| `SmallGridFlowRate` | 10 | `≥ 0` | The same for a small grid. Split because it is a balance dial, not a physical constant: a small-grid pump is a much smaller machine driving a much shorter ring. Shipped equal. A small-grid pipe is a fifth as long, so the same speed is five times the parcel rate and the ring levels out sooner. |
+| `StagnantTransferFraction` | 1 | `0 … 1` | Fraction of transfer that survives with nothing circulating. A stagnant pipe still conducts into the coolant touching it; it just cannot carry that heat anywhere. |
 
 ## Adding thermal properties for another mod's blocks
 

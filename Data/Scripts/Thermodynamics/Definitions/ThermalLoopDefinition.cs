@@ -18,7 +18,8 @@ namespace Thermodynamics
         // per-pipe charge — ten times the fluid it asked for. An unrecognised name falls to the field
         // default below instead, which is the safe outcome.
         private static readonly MyStringId CoolantMassPerPipeId = MyStringId.GetOrCompute("CoolantMassPerPipe");
-        private static readonly MyStringId FlowRateId = MyStringId.GetOrCompute("FlowRate");
+        private static readonly MyStringId LargeGridFlowRateId = MyStringId.GetOrCompute("LargeGridFlowRate");
+        private static readonly MyStringId SmallGridFlowRateId = MyStringId.GetOrCompute("SmallGridFlowRate");
         private static readonly MyStringId StagnantTransferId = MyStringId.GetOrCompute("StagnantTransferFraction");
         private static readonly MyStringId ConductivityId = MyStringId.GetOrCompute("Conductivity");
         private static readonly MyStringId SpecificHeatId = MyStringId.GetOrCompute("SpecificHeat");
@@ -31,13 +32,15 @@ namespace Thermodynamics
         /// the note on <c>ThermalCellDefinition</c>: Definition Extensions matches on the string,
         /// so dropping the old name would silently revert third-party loop definitions to defaults.
         /// </summary>
-        private static readonly MyStringId LegacyFlowRateId = MyStringId.GetOrCompute("SegmentsPerSecondAtFullFlow");
+        private static readonly MyStringId LegacyParcelRateId = MyStringId.GetOrCompute("SegmentsPerSecondAtFullFlow");
+        private static readonly MyStringId LegacyFlowRateId = MyStringId.GetOrCompute("FlowRate");
         private static readonly MyStringId LegacyMassPerPipeId = MyStringId.GetOrCompute("MassPerPipe");
         private static readonly MyStringId LegacyPipeContactId = MyStringId.GetOrCompute("PipeSurfaceAreaScaler");
         private static readonly MyStringId LegacySinkContactId = MyStringId.GetOrCompute("PlateSurfaceAreaScaler");
 
-        /// <summary>Large-grid cell size, used only to convert the retired parcels-per-second name.</summary>
-        private const float LegacyParcelLengthMetres = 2.5f;
+        /// <summary>Space Engineers' two cell sizes, used to convert the retired parcel-rate name.</summary>
+        private const float LargeGridCellMetres = 2.5f;
+        private const float SmallGridCellMetres = 0.5f;
 
         public static readonly MyDefinitionId DefaultLoopDefinitionId = new MyDefinitionId(typeof(MyObjectBuilder_EnvironmentDefinition), Settings.DefaultLoopSubtypeId);
 
@@ -74,7 +77,9 @@ namespace Thermodynamics
 
         /// <summary>Coolant parcels a full-flow pump pushes past a point each second.</summary>
         [ProtoMember(25)]
-        public float FlowRate = 10f;
+        public float LargeGridFlowRate = 10f;
+
+        public float SmallGridFlowRate = 10f;
 
         /// <summary>Share of transfer that survives with no circulation, 0..1.</summary>
         [ProtoMember(30)]
@@ -117,17 +122,35 @@ namespace Thermodynamics
                 || lookup.TryGetDouble(defId, GroupId, LegacySinkContactId, out dvalue))
                 def.SinkContactMultiplier = (float)dvalue;
 
-            if (lookup.TryGetDouble(defId, GroupId, FlowRateId, out dvalue))
+            // Flow, newest name first. Both retired spellings are still read, and neither means
+            // quite the same thing, so each converts rather than being copied across.
+            if (lookup.TryGetDouble(defId, GroupId, LargeGridFlowRateId, out dvalue))
             {
-                def.FlowRate = (float)dvalue;
+                def.LargeGridFlowRate = (float)dvalue;
             }
             else if (lookup.TryGetDouble(defId, GroupId, LegacyFlowRateId, out dvalue))
             {
-                // The retired name carried parcels per second, which is a different quantity: one
-                // parcel is one pipe block. Converting on the large-grid cell size is exact for the
-                // grid size such a definition was almost certainly written against, and keeps a
-                // small-grid ring at the speed that definition used to give it there.
-                def.FlowRate = (float)dvalue * LegacyParcelLengthMetres;
+                // One rate for both grids, which is what the single dial meant.
+                def.LargeGridFlowRate = (float)dvalue;
+            }
+            else if (lookup.TryGetDouble(defId, GroupId, LegacyParcelRateId, out dvalue))
+            {
+                // Parcels per second: one parcel is one pipe block, so the speed a definition
+                // written this way actually produced depended on the grid it was built on.
+                def.LargeGridFlowRate = (float)dvalue * LargeGridCellMetres;
+            }
+
+            if (lookup.TryGetDouble(defId, GroupId, SmallGridFlowRateId, out dvalue))
+            {
+                def.SmallGridFlowRate = (float)dvalue;
+            }
+            else if (lookup.TryGetDouble(defId, GroupId, LegacyFlowRateId, out dvalue))
+            {
+                def.SmallGridFlowRate = (float)dvalue;
+            }
+            else if (lookup.TryGetDouble(defId, GroupId, LegacyParcelRateId, out dvalue))
+            {
+                def.SmallGridFlowRate = (float)dvalue * SmallGridCellMetres;
             }
 
             if (lookup.TryGetDouble(defId, GroupId, StagnantTransferId, out dvalue))
@@ -136,7 +159,8 @@ namespace Thermodynamics
 
             def.CoolantMassPerPipe = Math.Max(1, def.CoolantMassPerPipe);
 
-            def.FlowRate = Math.Max(0, def.FlowRate);
+            def.LargeGridFlowRate = Math.Max(0, def.LargeGridFlowRate);
+            def.SmallGridFlowRate = Math.Max(0, def.SmallGridFlowRate);
 
             def.StagnantTransferFraction = Math.Min(1, Math.Max(0, def.StagnantTransferFraction));
 

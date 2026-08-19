@@ -268,7 +268,7 @@ namespace Thermodynamics.Core
             // long. Dividing here rather than storing parcels is what makes one definition mean the
             // same speed on both grid sizes.
             float parcelLength = ParcelLengthMetres > 0f ? ParcelLengthMetres : 1f;
-            float parcelsAtFullFlow = Properties.FlowRate / parcelLength;
+            float parcelsAtFullFlow = Properties.FlowRateFor(parcelLength) / parcelLength;
 
             float magnitude = parcelsAtFullFlow * (float)Math.Sqrt(Math.Abs(demand));
             FlowSegmentsPerSecond = demand < 0f ? -magnitude : magnitude;

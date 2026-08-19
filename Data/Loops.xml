@@ -29,8 +29,18 @@
 
 						Flow rises with the square root of combined pumping, so four pumps carry
 						twice this, not four times.
+
+						Split by grid size because it is a balance dial, not a physical constant: a
+						small-grid pump is a much smaller machine driving a much shorter ring, and
+						whether it should move its coolant as fast as a capital ship's is a
+						judgement. Shipped equal, so the two grids behave alike until someone
+						decides they should not.
+
+						A small-grid pipe is a fifth as long, so the same speed is five times the
+						parcel rate: the ring laps far more often and levels out sooner.
 					-->
-					<Decimal Name="FlowRate" Value ="10" />
+					<Decimal Name="LargeGridFlowRate" Value ="10" />
+					<Decimal Name="SmallGridFlowRate" Value ="10" />
 					<!--
 						What survives with nothing circulating. A stagnant pipe still conducts into the
 						coolant touching it; it just cannot carry that heat anywhere, which the

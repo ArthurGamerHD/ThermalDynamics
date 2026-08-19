@@ -39,40 +39,46 @@ namespace Thermodynamics.Tests
             ThermalSimulation simulation = builder.BuildSimulation(Isolated(), 300f);
             loop = simulation.Solver.Loops[0];
 
-            loop.Properties.FlowRate = segmentsPerSecond * loop.ParcelLengthMetres;
+            loop.Properties.LargeGridFlowRate = segmentsPerSecond * loop.ParcelLengthMetres;
+            loop.Properties.SmallGridFlowRate = loop.Properties.LargeGridFlowRate;
             loop.RefreshFlow();
             return simulation;
         }
 
         /// <summary>
-        /// One <c>FlowRate</c> means one speed, on both grid sizes.
+        /// Each grid size has its own flow dial, and equal dials mean equal speed.
         ///
-        /// The dial used to be parcels per second, and a parcel is one pipe block — so the same
-        /// definition drove a large-grid ring at 10 m/s and a small-grid ring at 2 m/s, because the
-        /// pipe is a fifth as long. Nothing said so, and the terminal reported both honestly, which
-        /// made it look like small-grid pumps were simply worse.
+        /// The dial used to be parcels per second, and a parcel is one pipe block — so one number
+        /// drove a large-grid ring at 10 m/s and a small-grid ring at 2 m/s. Nothing said so, and
+        /// the terminal reported both honestly, which made small-grid pumps look simply worse.
         ///
-        /// Stating the dial in metres per second and converting at the ring is what removes that.
-        /// The parcel rate is still five times higher on a small grid — the parcels are shorter —
-        /// and that is the correct consequence rather than the bug.
+        /// Stating it in metres per second removed the accident; splitting it in two puts the
+        /// choice back, deliberately. Shipped equal, so the grids behave alike until someone
+        /// decides they should not.
         /// </summary>
         [Fact]
-        public void OneFlowRateIsOneSpeedOnBothGridSizes()
+        public void EachGridSizeHasItsOwnFlowRate()
         {
             CoolantLoop large = RingOfSize(Catalog.LargeGridSize);
             CoolantLoop small = RingOfSize(Catalog.SmallGridSize);
 
-            Assert.Equal(10f, large.Properties.FlowRate, 3);
-            Assert.Equal(10f, small.Properties.FlowRate, 3);
-
-            // Magnitudes: the sign is which way round the ring the pump drives it, and a ring
-            // driven backwards circulates just as well.
-            Assert.Equal(Math.Abs(large.FlowMetresPerSecond), Math.Abs(small.FlowMetresPerSecond), 3);
+            // Shipped equal: the same speed on both, and the sign is only which way round the ring
+            // the pump drives it.
             Assert.Equal(10f, Math.Abs(large.FlowMetresPerSecond), 3);
+            Assert.Equal(10f, Math.Abs(small.FlowMetresPerSecond), 3);
 
             // Same speed, shorter parcels: five times the rotation rate on the small grid.
             Assert.Equal(4f, Math.Abs(large.FlowSegmentsPerSecond), 3);
             Assert.Equal(20f, Math.Abs(small.FlowSegmentsPerSecond), 3);
+
+            // And they are genuinely independent: moving one leaves the other where it was.
+            small.Properties.SmallGridFlowRate = 2f;
+            large.Properties.SmallGridFlowRate = 2f;
+            small.RefreshFlow();
+            large.RefreshFlow();
+
+            Assert.Equal(2f, Math.Abs(small.FlowMetresPerSecond), 3);
+            Assert.Equal(10f, Math.Abs(large.FlowMetresPerSecond), 3);
         }
 
         private static CoolantLoop RingOfSize(float gridSize)
@@ -419,7 +425,8 @@ namespace Thermodynamics.Tests
 
             ThermalSimulation simulation = builder.BuildSimulation(settings, 300f);
             CoolantLoop loop = simulation.Solver.Loops[0];
-            loop.Properties.FlowRate = segmentsPerSecond * loop.ParcelLengthMetres;
+            loop.Properties.LargeGridFlowRate = segmentsPerSecond * loop.ParcelLengthMetres;
+            loop.Properties.SmallGridFlowRate = loop.Properties.LargeGridFlowRate;
             loop.RefreshFlow();
 
             simulation.StepExact(300, Worlds.Shadow());
@@ -491,7 +498,8 @@ namespace Thermodynamics.Tests
             for (int i = 0; i < loop.Pumps.Count; i++) bill += loop.Pumps[i].DemandWatts;
 
             // Same flow...
-            Assert.Equal(loop.Properties.FlowRate / loop.ParcelLengthMetres, loop.FlowSegmentsPerSecond, 3);
+            Assert.Equal(loop.Properties.FlowRateFor(loop.ParcelLengthMetres) / loop.ParcelLengthMetres,
+                loop.FlowSegmentsPerSecond, 3);
 
             // ...for the same money, whatever the pump count.
             Assert.Equal(20000f, bill, 1);

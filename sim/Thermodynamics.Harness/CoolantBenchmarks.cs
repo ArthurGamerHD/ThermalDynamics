@@ -179,7 +179,8 @@ namespace Thermodynamics.Harness
                 loop.Temperature = 300f + (i * 11);
 
                 if (flowOverride <= 0f) continue;
-                loop.Properties.FlowRate = flowOverride * loop.ParcelLengthMetres;
+                loop.Properties.LargeGridFlowRate = flowOverride * loop.ParcelLengthMetres;
+                loop.Properties.SmallGridFlowRate = loop.Properties.LargeGridFlowRate;
                 loop.RefreshFlow();
             }
 
