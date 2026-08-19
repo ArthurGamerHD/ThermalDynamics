@@ -43,8 +43,19 @@ namespace Thermodynamics.Sim
                     return 0;
 
                 case "sweep":
+                {
                     Console.Write(ProfileSweep.Report());
+                    string directory = ValueAfter(args, "--csv");
+                    if (directory != null)
+                    {
+                        Directory.CreateDirectory(directory);
+                        string path = Path.Combine(directory, "profile-sweep.csv");
+                        File.WriteAllText(path, ProfileSweep.Csv());
+                        Console.WriteLine();
+                        Console.WriteLine("wrote " + path);
+                    }
                     return 0;
+                }
 
                 default:
                     Console.Error.WriteLine("Unknown command: " + args[0]);
@@ -496,7 +507,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  balance                 every block costed and measured against vanilla");
             Console.WriteLine("  balance --csv <dir>     also write the block table as CSV");
             Console.WriteLine("  profiles                realism against arcade: what each buys and costs");
-            Console.WriteLine("  sweep                   every scenario under every profile");
+            Console.WriteLine("  sweep [--csv <dir>]     every scenario and worst case, every profile");
             Console.WriteLine();
             Console.WriteLine("  bench scale             cost per stage as the grid grows");
             Console.WriteLine("  bench hitch --size N    per-tick cost, with a block welded mid-run");
