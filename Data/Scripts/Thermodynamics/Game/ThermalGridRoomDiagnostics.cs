@@ -11,23 +11,19 @@ using VRageMath;
 namespace Thermodynamics
 {
     /// <summary>
-    /// Measures this model's room map against the game's own sealing test.
+    /// Compares this model's room map against the game's own sealing test.
     ///
-    /// The two decide sealing differently and are allowed to: this model reads each definition's
-    /// pressurisation table cell by cell, and the game knows the real shape of a sloped block
-    /// where this knows a cell. What is not allowed is losing a compartment silently, which is
-    /// what happens today — the fill walks in from outside, no room is created, and because
-    /// pressurisation is only ever asked about rooms this model already found, nothing notices
-    /// that the game has the room sealed and a vent in it reporting full.
+    /// The two may legitimately disagree: this model reads each definition's pressurisation table
+    /// cell by cell, while the game knows the true shape of a sloped block. The failure mode this
+    /// detects is a compartment lost silently — the flood fill walks in from outside, no room is
+    /// created, and since pressurisation is only queried for rooms this model already found,
+    /// nothing observes that the game has the room sealed and a vent in it reporting full.
     ///
-    /// So the disagreement is measured rather than assumed. Every cell the map calls external is
-    /// offered to the game, and each connected group it calls airtight is a room the model lost.
-    /// Each one is named by the air vent standing in it, because that is how a player reports it:
-    /// not by coordinates, but by the vent whose terminal says pressurised while the overlay
-    /// shows nothing.
+    /// Every cell the map calls external is offered to the game, and each connected group the game
+    /// calls airtight is a room this model lost. Each is identified by the air vent standing in it,
+    /// which is the name a player can quote from a terminal.
     ///
-    /// None of it runs unless the room overlay is up or telemetry is on, and it runs on its own
-    /// slow cadence when it does.
+    /// Runs only when the room overlay is up or telemetry is on, and then on its own slow cadence.
     /// </summary>
     public partial class ThermalGrid
     {
@@ -47,75 +43,70 @@ namespace Thermodynamics
             public HashSet<Vector3I> Cells;
 
             /// <summary>
-            /// The air vents standing in or against this compartment, by terminal name, and what
-            /// they say. This is the identity a player can actually use.
+            /// Air vents standing in or against this compartment, by terminal name, with their
+            /// readings. The identity a player can quote.
             /// </summary>
             public string Vents;
 
             /// <summary>True when a vent in it reports the game considers the room airtight.</summary>
             public bool VentSaysPressurised;
 
-            /// <summary>Highest oxygen level any vent in it reports, or -1 when none did.</summary>
+            /// <summary>Highest oxygen level any vent in it reports, or -1 when none reported.</summary>
             public float OxygenLevel = -1f;
 
             /// <summary>Faces where this model lets air in and the game does not.</summary>
             public int LeakCount;
 
-            /// <summary>The block subtypes across those faces, worst first.</summary>
+            /// <summary>Block subtypes across those faces, most frequent first.</summary>
             public string LeakingBlocks;
         }
 
         /// <summary>
-        /// What the two models make of one room this map did find.
+        /// What both models make of one room this map did find.
         ///
-        /// The interesting row is a room this model found, gave no air, and the game calls
-        /// airtight. That is not a missing room and not a working one, and until now it looked
-        /// exactly like both: the overlay drew a dry room as a fully transparent box, so a
-        /// compartment the model had detected and failed to fill was indistinguishable from one it
-        /// had never seen.
+        /// The diagnostic case is a room this model found, gave no air, and the game calls airtight:
+        /// neither a missing room nor a working one, and indistinguishable from both in the overlay,
+        /// which draws a dry room as a transparent box.
         /// </summary>
         public struct RoomVerdict
         {
-            /// <summary>Lexicographically smallest cell, and how big the room is.</summary>
+            /// <summary>Lexicographically smallest cell, and the room's size.</summary>
             public Vector3I Anchor;
 
             public int CellCount;
 
-            /// <summary>The game's own answer at the room's anchor cell.</summary>
+            /// <summary>The game's airtightness verdict at the room's anchor cell.</summary>
             public bool GameAirtight;
 
             /// <summary>The air vents opening onto it, by terminal name.</summary>
             public string Vents;
 
-            /// <summary>A vent on it reports the game considers its room pressurised.</summary>
+            /// <summary>True when a vent on it reports the game considers its room pressurised.</summary>
             public bool VentPressurised;
 
-            /// <summary>The highest level any vent on it reports, or -1 when none did.</summary>
+            /// <summary>Highest oxygen level any vent on it reports, or -1 when none reported.</summary>
             public float VentOxygen;
 
             /// <summary>
-            /// How much oxygen the game has in this room, 0..1, or -1 when it could not be asked.
+            /// Oxygen the game has in this room, 0..1, or -1 when it could not be asked.
             ///
-            /// This is the figure that decides whether a dry room is a fault, and getting that
-            /// wrong is what the first version of this did. <see cref="GameAirtight"/> and
-            /// <see cref="VentPressurised"/> both mean <em>sealed</em> — neither means <em>full</em>.
-            /// A cupboard nobody ever piped air into, on a ship in vacuum, is airtight and empty,
-            /// and both models are right about it.
+            /// This is what decides whether a dry room is a fault. <see cref="GameAirtight"/> and
+            /// <see cref="VentPressurised"/> both mean sealed rather than full: an enclosed space
+            /// nobody piped air into, on a grid in vacuum, is airtight and empty in both models.
             /// </summary>
             public float GameOxygen;
 
-            /// <summary>This model is running air in it.</summary>
+            /// <summary>True when this model is running air in it.</summary>
             public bool HasAir;
 
-            /// <summary>Standing open to the sky through a door, so having no air is correct.</summary>
+            /// <summary>True when it stands open to the sky through a door, so holding no air is correct.</summary>
             public bool Vented;
 
             /// <summary>
-            /// The game has air in this room and this model does not.
+            /// True when the game has oxygen in this room and this model does not.
             ///
-            /// Oxygen, not airtightness. A sealed empty room is not a disagreement however sealed
-            /// it is, and flagging one is worse than useless: it paints eight correct compartments
-            /// as faults and buries the one that is not.
+            /// Compares oxygen rather than airtightness: a sealed empty room is not a disagreement,
+            /// and flagging one would bury the real cases among correct compartments.
             /// </summary>
             public bool IsDisagreement
             {
@@ -139,10 +130,10 @@ namespace Thermodynamics
 
         private readonly List<LostRoom> lostRooms = new List<LostRoom>();
 
-        /// <summary>True when the last scan gave up on the cell limit rather than finishing.</summary>
+        /// <summary>True when the last scan stopped at the cell limit rather than finishing.</summary>
         public bool LostRoomScanTruncated { get; private set; }
 
-        /// <summary>Whether a scan has ever completed, so a reader can tell zero from unmeasured.</summary>
+        /// <summary>Whether a scan has ever completed, distinguishing zero from unmeasured.</summary>
         public bool HasLostRoomScan { get; private set; }
 
         private readonly List<UnmappedRooms.Region> regionScratch = new List<UnmappedRooms.Region>();
@@ -150,15 +141,14 @@ namespace Thermodynamics
         private int stepsSinceLostRoomScan = int.MaxValue;
 
         /// <summary>
-        /// Steps between scans. The scan costs one call into the game per external cell, so it is
-        /// deliberately rare: a compartment that has been lost stays lost until somebody rebuilds
-        /// the wall, and a reading a minute old is as good as a fresh one.
+        /// Steps between scans. A scan costs one call into the game per external cell, and a lost
+        /// compartment stays lost until the grid is rebuilt, so the cadence is deliberately slow.
         /// </summary>
         private const int LostRoomScanInterval = 240;
 
         /// <summary>
-        /// Rescans if anything is reading and enough steps have passed. Called from the grid's
-        /// update; one bool test and one integer compare when nothing is reading.
+        /// Rescans when something is reading and enough steps have passed. Called from the grid's
+        /// update; costs one bool test and one integer compare when nothing is reading.
         /// </summary>
         public void RefreshLostRooms()
         {
@@ -180,8 +170,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Whether anything is looking. The room overlay and the telemetry report are the only
-        /// two readers, and neither is on in ordinary play.
+        /// Whether anything reads these results. The room overlay and the telemetry report are the
+        /// only readers, neither of which is active in ordinary play.
         /// </summary>
         private static bool WantsLostRooms()
         {
@@ -192,9 +182,8 @@ namespace Thermodynamics
         /// <summary>
         /// Runs the comparison and republishes <see cref="LostRooms"/>.
         ///
-        /// Public so the telemetry report can force one at dump time rather than reporting
-        /// whatever the last cadence happened to leave behind — a dump written seconds after a
-        /// wall was welded should describe the ship as it is.
+        /// Public so the telemetry report can force a scan at dump time rather than reporting the
+        /// last cadence's result, which may predate a recent build change.
         /// </summary>
         public void ScanLostRooms()
         {
@@ -246,12 +235,11 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Asks the game about each room this model already found.
+        /// Queries the game about each room this model already found.
         ///
-        /// One call per room rather than per cell, so this is the cheap half of the scan — twelve
-        /// calls on the ship that prompted it — and it is the half that catches a room being found
-        /// and then not filled, which is a different failure from a room not being found at all
-        /// and had no diagnostic of its own.
+        /// One call per room rather than per cell, so this is the cheap half of the scan. It catches
+        /// a room that was found and then not filled, which is a distinct failure from a room never
+        /// found at all.
         /// </summary>
         private void ScanRoomVerdicts(RoomMap map)
         {
@@ -309,7 +297,7 @@ namespace Thermodynamics
             return a.Z < b.Z;
         }
 
-        /// <summary>What the vents standing on one compartment say about it.</summary>
+        /// <summary>What the vents standing on one compartment report about it.</summary>
         private struct VentReading
         {
             public string Names;
@@ -318,11 +306,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Walks the vents once and answers everything anything wants to know about them.
-        ///
-        /// Once, rather than once per question. The names, the pressurised flag and the oxygen
-        /// level had become three separate walks over the same list, asking the same blocks the
-        /// same things, in two different files.
+        /// Walks the vents once and returns every figure any caller needs: names, the pressurised
+        /// flag and the oxygen level, which would otherwise be three separate walks over the same
+        /// list.
         /// </summary>
         private VentReading ReadVentsOn(HashSet<Vector3I> cells)
         {
@@ -360,13 +346,11 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// How much oxygen the game has in a room, 0..1, or -1 when it cannot be asked.
+        /// Oxygen the game has in a room, 0..1, or -1 when it cannot be asked.
         ///
-        /// Straight from the game's own gas system, which knows its rooms by its own sealing test
-        /// and does not care what this model made of the same cells. That independence is the
-        /// point: a vent can only answer for the room it is in, so a compartment with no vent —
-        /// most of them — had no measurement at all, and the first version of this diagnostic
-        /// filled that gap by assuming sealed meant full. It does not.
+        /// Read from the game's gas system, which knows its rooms by its own sealing test
+        /// independently of what this model made of the same cells. A vent can answer only for the
+        /// room it stands in, so most compartments have no vent measurement available.
         /// </summary>
         private float GameOxygenIn(HashSet<Vector3I> cells)
         {
@@ -378,19 +362,18 @@ namespace Thermodynamics
                 if (level > best) best = level;
             }
 
-            // Nothing in the gas system answered for any cell. A vent standing on the compartment
-            // is the only other thing that can, and it can only answer for its own room.
+            // The gas system answered for no cell. A vent standing on the compartment is the only
+            // remaining source, and it can answer only for its own room.
             return best >= 0f ? best : VentOxygenAround(cells);
         }
 
         /// <summary>
-        /// The game's oxygen level in whatever room it has at this cell, 0..1, or -1 when it has
-        /// none there or cannot be asked.
+        /// The game's oxygen level in whatever room it holds at this cell, 0..1, or -1 when it holds
+        /// none there or cannot be asked. This is the call the pressurisation sweep makes per room.
         ///
-        /// One call, and the one the pressurisation sweep runs per room. The game's rooms are its
-        /// own — coarser than this model's, because its sealing test is finer than a cell — so a
-        /// compartment this model has split into six pieces gets the same answer for all six,
-        /// which is the correct answer and the one a vent could never have given.
+        /// The game's rooms are coarser than this model's, since its sealing test is finer than a
+        /// cell, so a compartment this model split into several pieces returns the same level for
+        /// all of them.
         /// </summary>
         public float GameOxygenAt(Vector3I cell)
         {
@@ -408,8 +391,8 @@ namespace Thermodynamics
             }
             catch (Exception e)
             {
-                // Once, not every room every sweep. If the gas system cannot be read at all, the
-                // vents are the fallback and there is no point paying for the failure repeatedly.
+                // Recorded once rather than retried per room per sweep: if the gas system cannot be
+                // read at all, the vents are the fallback for the rest of the session.
                 gasSystemFailed = true;
                 Telemetry.Exception("ThermalGrid.GameOxygenAt", e);
                 return -1f;
@@ -419,7 +402,7 @@ namespace Thermodynamics
         /// <summary>Set when the gas system throws, so the fallback is taken without retrying.</summary>
         private bool gasSystemFailed;
 
-        /// <summary>The highest oxygen level any vent on these cells reports, or -1 when none does.</summary>
+        /// <summary>Highest oxygen level any vent on these cells reports, or -1 when none does.</summary>
         private float VentOxygenAround(HashSet<Vector3I> cells)
         {
             float best = -1f;
@@ -445,7 +428,7 @@ namespace Thermodynamics
             return best;
         }
 
-        /// <summary>Whether any vent opening onto these cells calls its own room pressurised.</summary>
+        /// <summary>True when any vent opening onto these cells calls its own room pressurised.</summary>
         private bool VentSaysPressurised(HashSet<Vector3I> cells)
         {
             for (int i = 0; i < vents.Count; i++)
@@ -468,18 +451,17 @@ namespace Thermodynamics
             return false;
         }
 
-        /// <summary>The game's own answer at one cell.</summary>
+        /// <summary>The game's airtightness verdict at one cell.</summary>
         private bool IsAirtightByGame(Vector3I cell)
         {
             return Grid.IsRoomAtPositionAirtight(cell);
         }
 
         /// <summary>
-        /// Which block subtypes stand across the faces this model leaves open, worst first.
+        /// Block subtypes standing across the faces this model leaves open, most frequent first.
         ///
-        /// This is the list the fix is made from. A compartment losing forty faces to one subtype
-        /// names that definition's surface bits as the thing to correct, where the cell
-        /// coordinates alone would only say that something, somewhere, does not seal.
+        /// Identifies which definition's surface bits to correct; cell coordinates alone would only
+        /// establish that something does not seal.
         /// </summary>
         private void DescribeLeaks(UnmappedRooms.Region region, LostRoom lost)
         {
@@ -489,9 +471,9 @@ namespace Thermodynamics
             {
                 UnmappedRooms.Leak leak = region.Leaks[i];
 
-                // Whatever should have sealed is one of the two blocks either side of the face.
-                // The neighbour is named first because it is the one standing in the way; where
-                // there is nothing there, the region's own cell holds the block that failed.
+                // Whatever should have sealed is one of the two blocks either side of the face. The
+                // neighbour is named first as the block standing in the way; where the neighbour
+                // cell is empty, the region's own cell holds the block that failed.
                 BlockInstance block = Simulation.Grid.GetAtCell(leak.Neighbour)
                     ?? Simulation.Grid.GetAtCell(leak.Cell);
 
@@ -522,12 +504,11 @@ namespace Thermodynamics
         private const int MaxLeakingBlocksReported = 6;
 
         /// <summary>
-        /// The vents standing in this compartment, and what the game tells them about it.
+        /// The vents standing in this compartment, and what the game reports to them about it.
         ///
-        /// <c>IsPressurized</c> is the game's verdict on the vent's own room, which is precisely
-        /// the answer this model never gets to hear for a compartment it did not find. It drives
-        /// nothing — pressurisation still comes from the map, deliberately — but it is what turns
-        /// "the overlay shows nothing" into "the game holds this room and we do not".
+        /// <c>IsPressurized</c> is the game's verdict on the vent's own room, which is the answer
+        /// this model cannot otherwise obtain for a compartment it did not find. Diagnostic only:
+        /// pressurisation still comes from the map.
         /// </summary>
         private void DescribeVents(LostRoom lost)
         {
@@ -538,7 +519,7 @@ namespace Thermodynamics
             lost.OxygenLevel = reading.Oxygen;
         }
 
-        /// <summary>Whether any face of any of the vent's cells opens onto the region.</summary>
+        /// <summary>True when any face of any of the vent's cells opens onto the region.</summary>
         private static bool TouchesRegion(ThermalBlock bound, HashSet<Vector3I> cells)
         {
             Vector3I[] ventCells = bound.Instance.Cells;

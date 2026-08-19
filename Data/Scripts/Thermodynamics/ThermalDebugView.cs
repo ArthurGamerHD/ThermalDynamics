@@ -18,22 +18,16 @@ namespace Thermodynamics
     /// block: the solar view draws the skin, one quad per exposed face, and the room view draws the
     /// mapped air, a box per cell.
     ///
-    /// This replaces the block-colouring debug modes. Those called <c>ColorBlocks</c>, which is a
-    /// real, replicated, permanent change to the ship's paint — they showed heat by destroying the
-    /// player's colour scheme, on the server, for everyone, and switching them off did not undo it.
-    /// This draws transparent boxes instead: client side, per frame, nothing written to the grid.
+    /// Everything is drawn client side, per frame, as transparent geometry; nothing is written to
+    /// the grid. The replaced block-colouring modes called <c>ColorBlocks</c>, which is a real,
+    /// replicated and permanent change to a grid's paint.
     ///
-    /// The x-ray is the point. A debugger wants the reactor buried in the middle of the ship, not
-    /// the hull plate in front of it, so every block is drawn whether or not anything is between it
-    /// and the camera. That is achieved by scaling each box about the eye onto a shallow band just
-    /// in front of the near plane: a perspective projection is invariant under scaling about the
-    /// eye, so the image on screen is exactly where the block is, but nothing in the scene can be
-    /// in front of it. Relative depth order between boxes survives, because they are all scaled by
-    /// the same factor.
-    ///
-    /// The same trick made thermal vision unreadable — a ship becomes a pile of overlapping
-    /// translucent boxes, which is the opposite of what a camera shows. For reading state off a
-    /// grid it is exactly right.
+    /// Every block is drawn whether or not something stands between it and the camera, since the
+    /// blocks worth inspecting are usually buried. This is done by scaling each box about the eye
+    /// onto a shallow band just in front of the near plane: a perspective projection is invariant
+    /// under scaling about the eye, so each box appears exactly where the block is while nothing in
+    /// the scene can occlude it. Relative depth order between boxes is preserved because they all
+    /// take the same scale factor.
     /// </summary>
     public static class ThermalDebugView
     {
@@ -48,8 +42,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Number of views, including off. Everything that has to know the range — the cycle, the
-        /// config clamp, the menu's dropdown — takes it from here rather than repeating the count.
+        /// Number of views, including off. Read by the keybind cycle, the config clamp and the menu
+        /// dropdown rather than each repeating the count.
         /// </summary>
         public const int ModeCount = (int)Mode.Rooms + 1;
 
@@ -63,8 +57,8 @@ namespace Thermodynamics
         private static readonly List<ThermalGrid> Targets = new List<ThermalGrid>();
 
         /// <summary>
-        /// The grid the readout describes: the one being looked at, or the one being controlled
-        /// when the camera is pointed at nothing. Null when the overlay is off or has no target.
+        /// The grid the readout describes: the one being looked at, or the one being controlled when
+        /// the camera points at nothing. Null when the overlay is off or has no target.
         /// </summary>
         public static ThermalGrid Focus { get; private set; }
 
@@ -72,25 +66,24 @@ namespace Thermodynamics
         private const double PickRange = 300;
 
         /// <summary>
-        /// How far the band the boxes are scaled onto sits from the eye. Small enough that nothing
-        /// in the scene can be in front of it, large enough to stay clear of the near plane.
+        /// Distance from the eye to the band the boxes are scaled onto. Small enough that nothing in
+        /// the scene can be in front of it, large enough to clear the near plane.
         /// </summary>
         private const double BandScale = 0.02;
 
-        /// <summary>Alpha of a box face. Low, because a hull is many boxes deep.</summary>
+        /// <summary>Alpha of a box face. Low because a hull is many boxes deep.</summary>
         private const float FaceAlpha = 0.22f;
 
         /// <summary>
-        /// Alpha of a drawn surface. Higher than a box: the solar view draws only the skin, one
-        /// quad deep, so nothing is stacked behind it to see through.
+        /// Alpha of a drawn surface. Higher than a box because the solar view draws only the skin,
+        /// one quad deep, with nothing stacked behind it.
         /// </summary>
         private const float SurfaceAlpha = 0.75f;
 
         /// <summary>
-        /// True when the selected view reads a per-mechanism watt figure. Those are only written
-        /// when someone is going to read them, so the overlay has to say that it is that someone —
-        /// otherwise the solar and friction views draw a grid that is uniformly zero, which reads
-        /// as "no solar heating" rather than as "not measured".
+        /// True when the selected view reads a per-mechanism watt figure. Those figures are recorded
+        /// only when something reads them, so the overlay must declare itself a reader; otherwise
+        /// the solar and friction views would draw a uniformly zero grid.
         /// </summary>
         public static bool NeedsWatts
         {
@@ -154,12 +147,11 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// The grids worth drawing: the one being controlled, and the one being looked at.
+        /// The grids to draw: the one being controlled, and the one being looked at.
         ///
-        /// Deliberately not every grid in range. This is a tool for reading the ship in front of
-        /// you, and a box per block of every wreck in a battle is how an overlay becomes a frame
-        /// rate problem. What is drawn of the two it does pick is all of them: a debug view that
-        /// stops at some radius invites the reading that the far end of the ship is cold.
+        /// Limited to those two rather than every grid in range, since a box per block across many
+        /// grids is a frame rate cost. Both chosen grids are drawn in full, with no radius cutoff,
+        /// which would otherwise read as the far end of a grid being cold.
         /// </summary>
         private static void CollectTargets(ref MatrixD camera, ref Vector3D eye)
         {
@@ -243,17 +235,15 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Sunlight, drawn on the surfaces that take it.
+        /// Sunlight, drawn on the surfaces that receive it.
         ///
-        /// Solar heating is a property of a face, not of a block: a hull plate with one side to the
-        /// sun takes light on that side, and the block's total says nothing about which side or how
-        /// squarely. So this view abandons the box and draws the skin — one quad per exposed face —
-        /// shaded by that face's own irradiance, which is the sun's energy times how square the
-        /// face is to it. A wall gone dark because it turned away is then plainly different from a
-        /// wall gone dark because the ship is in shadow, and both are visible at a glance.
+        /// Solar heating is a property of a face rather than a block, so this view draws the skin —
+        /// one quad per exposed face — shaded by that face's own irradiance: the sun's energy times
+        /// the face's incidence against it. A face dark from turning away is then distinguishable
+        /// from a face dark from being shadowed.
         ///
-        /// Faces turned away from the camera are dropped: they are the far side of the ship, and
-        /// keeping them only stacks the near skin with colour from a surface nobody is looking at.
+        /// Faces turned away from the camera are dropped, since they are on the far side of the
+        /// grid and would only stack colour behind the near skin.
         /// </summary>
         private static void DrawSolarSurfaces(ThermalGrid thermals, ref MatrixD camera, ref Vector3D eye)
         {
@@ -262,7 +252,7 @@ namespace Thermodynamics
             MatrixD gridMatrix = thermals.Grid.WorldMatrix;
             float gridSize = thermals.Grid.GridSize;
 
-            // The same three things the solver asks before it computes a watt.
+            // The same three conditions the solver tests before computing a solar watt.
             bool lit = Settings.Instance.EnableSolarHeat
                 && !state.IsSolarOccluded
                 && state.SolarEnergy > 0f;
@@ -296,14 +286,14 @@ namespace Thermodynamics
                     float dot = Vector3.Dot(localNormal, sun);
                     float irradiance = lit && dot > 0f ? state.SolarEnergy * dot : 0f;
 
-                    // What the solver believes, not a second opinion: a face the grid shadows must
-                    // look shadowed, or the picture argues with the temperatures. Per face, because
-                    // that is how the model holds it — the far layer of a wall is dark toward the
-                    // sun and lit on the flank, and one number per block cannot say that.
+                    // Read from the solver rather than recomputed, so a face the grid shadows looks
+                    // shadowed and the overlay agrees with the temperatures. Per face, as the model
+                    // holds it: the far layer of a wall is dark towards the sun and lit on its
+                    // flank, which one figure per block cannot express.
                     irradiance *= solver.SunLitFraction(node.Index, face);
 
-                    // W/m2 rather than watts: this is what the surface is standing in, which is
-                    // the figure that belongs to a face. The panel reports the watts.
+                    // W/m2 rather than watts: irradiance is the per-face quantity. The panel
+                    // reports total watts.
                     Color colour = ColorExtensions.HSVtoColor(
                         Tools.GetTemperatureColor(irradiance, 1400f, 1f, 1000f));
                     colour.A = (byte)(SurfaceAlpha * 255f);
@@ -314,8 +304,8 @@ namespace Thermodynamics
                     Vector3 left = (Vector3)Vector3D.TransformNormal(localLeft, gridMatrix);
                     Vector3 up = (Vector3)Vector3D.TransformNormal(localUp, gridMatrix);
 
-                    // Scaled onto the same band as every other view, so the skin cannot z-fight
-                    // with the hull it is drawn over.
+                    // Scaled onto the same band as every other view, so the skin cannot z-fight with
+                    // the hull it is drawn over.
                     MyTransparentGeometry.AddBillboardOriented(
                         FaceMaterial,
                         colour,
@@ -357,17 +347,13 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// The rooms, drawn as the air itself, coloured by how warm that air is.
+        /// The rooms, drawn as the air itself and coloured by its temperature.
         ///
-        /// Temperature is the question — it is the same ramp as every other view, so a cold
-        /// compartment reads cold here exactly as a cold block does there. Which room is which is
-        /// worth knowing too, for the sealing questions the map exists to answer, but not at the
-        /// price of the temperature: identity goes on the wireframe, where it names the boundary
-        /// without touching the colour of the air inside it.
+        /// Uses the same ramp as every other view, so a cold compartment reads the same as a cold
+        /// block. Room identity goes on the wireframe instead, which marks the boundary without
+        /// altering the colour of the air inside it.
         ///
-        /// A room holding no air has no temperature to show, so it is drawn as an empty outline.
-        /// That is the honest picture and a useful one: unpressurised compartments are exactly what
-        /// someone looking at this view is usually hunting for.
+        /// A room holding no air has no temperature and is drawn as an empty outline.
         /// </summary>
         private static void DrawRooms(ThermalGrid thermals, ref MatrixD camera, ref Vector3D eye)
         {
@@ -377,8 +363,7 @@ namespace Thermodynamics
             MatrixD gridMatrix = thermals.Grid.WorldMatrix;
             float gridSize = thermals.Grid.GridSize;
 
-            // Shy of the full cell, so the boundary between two cells stays a visible seam rather
-            // than a single unbroken block of colour.
+            // Slightly under a full cell, so the boundary between two cells stays a visible seam.
             Vector3D half = new Vector3D(gridSize * 0.45);
 
             float min = Settings.Instance.RoomOverlayMinKelvin;
@@ -392,9 +377,9 @@ namespace Thermodynamics
 
                 bool hasAir = air != null && air.HasAir;
 
-                // Found and dry while the game has air in it. Oxygen, not airtightness: a sealed
-                // cupboard nobody piped air into is empty in both models and is not a fault, and
-                // painting every one of those magenta buries the compartment that is.
+                // Mapped and dry while the game has oxygen in it. Compares oxygen rather than
+                // airtightness: a sealed space nobody piped air into is empty in both models and is
+                // not a fault.
                 bool disagrees = Disagrees(thermals, room);
 
                 Color fill = hasAir
@@ -416,8 +401,8 @@ namespace Thermodynamics
                     BoundingBoxD local = new BoundingBoxD(-half * BandScale, half * BandScale);
 
                     // Solid where there is air to colour. Where there is none the box is still
-                    // drawn — filled, faintly, when the game says the room should have had air,
-                    // and as a bare outline when it agrees the room is empty.
+                    // drawn: faintly filled when the game reports air the model lacks, and as a bare
+                    // outline when both agree the room is empty.
                     MySimpleObjectDraw.DrawTransparentBox(
                         ref box,
                         ref local,
@@ -435,8 +420,8 @@ namespace Thermodynamics
 
                     if (!hasAir)
                     {
-                        // A dry room still carries its identity, so it can be counted off against
-                        // the report's list exactly as a working one can.
+                        // A dry room still carries its identity, so it can be matched against the
+                        // report's list as a filled one can.
                         Color dryEdge = edge;
                         dryEdge.A = (byte)(disagrees ? 255 : 90);
 
@@ -456,7 +441,7 @@ namespace Thermodynamics
                         continue;
                     }
 
-                    // The edges carry the room's identity over the top of its temperature.
+                    // The edges carry the room's identity over its temperature colour.
                     MySimpleObjectDraw.DrawTransparentBox(
                         ref box,
                         ref local,
@@ -478,14 +463,13 @@ namespace Thermodynamics
         /// <summary>
         /// The compartments the game seals and this model does not.
         ///
-        /// The reason this view existed and still showed nothing: a room the fill walked into
-        /// from outside is not in the map, so there was nothing to draw and no way to tell that
-        /// apart from a room correctly found to be open. These are drawn as what they are — space
-        /// the game holds air in and this model believes is outdoors — in a colour nothing else in
-        /// the view uses, so a hole in the model reads as a hole rather than as an absence.
+        /// A room the flood fill walked into from outside is absent from the map, so without this
+        /// there is nothing drawn and no way to distinguish it from a room correctly found to be
+        /// open. Drawn in a colour no other part of the view uses, so a gap in the model reads as a
+        /// fault rather than an absence.
         ///
-        /// Each one keeps its own hue as well, taken from its index in the same list the report
-        /// prints, so a player can look at one, count which it is, and name it in a dump.
+        /// Each keeps its own hue, derived from its index in the list the report prints, so one can
+        /// be identified on screen and matched to a dump.
         /// </summary>
         private static void DrawLostRooms(
             ThermalGrid thermals, ref MatrixD camera, ref Vector3D eye, MatrixD gridMatrix, Vector3D half)
@@ -529,16 +513,15 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// A lost compartment's colour: red where the model is losing a room the game has, and
-        /// each one shifted round the wheel by its index so two that touch can be told apart and
-        /// counted off against the report's list.
+        /// Colour for a lost compartment, shifted round the wheel by its index so two adjacent ones
+        /// are distinguishable and each can be matched to the report's list.
         ///
-        /// Kept in the reds and oranges — well away from the blue-to-white ramp room air uses —
-        /// because the one thing this must never look like is a cold room.
+        /// Restricted to reds and oranges, away from the blue-to-white ramp room air uses, so a
+        /// lost compartment cannot be mistaken for a cold room.
         /// </summary>
         private static Color LostRoomColour(int index, bool ventSaysPressurised)
         {
-            // A sixth of the wheel, from red to yellow, so every one of them still reads as a fault.
+            // A sixth of the wheel, red to yellow, so every one still reads as a fault.
             float hue = ((index * 0.61803399f) % 1f) * 0.13f;
 
             Color colour = ColorExtensions.HSVtoColor(
@@ -548,14 +531,14 @@ namespace Thermodynamics
             return colour;
         }
 
-        /// <summary>Alpha of a lost compartment. Fainter than air: it is a fault, not a reading.</summary>
+        /// <summary>Alpha of a lost compartment. Fainter than air, since it marks a fault rather than a reading.</summary>
         private const float LostRoomFillAlpha = 0.25f;
 
         /// <summary>
-        /// Whether this room is one the model found, left dry, and the game has air in.
+        /// Whether this is a room the model found, left dry, and the game holds air in.
         ///
-        /// False when the verdicts have not been scanned yet, which is the honest answer: the scan
-        /// runs on its own cadence and an unmeasured room must not be painted as a fault.
+        /// False when the verdicts have not been scanned yet: the scan runs on its own cadence, and
+        /// an unmeasured room must not be drawn as a fault.
         /// </summary>
         private static bool Disagrees(ThermalGrid thermals, int room)
         {
@@ -566,12 +549,11 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// A room with no air in it.
+        /// Colour for a room with no air.
         ///
-        /// Magenta where the game has air in it and this model does not — a colour nothing else
-        /// in this view uses, and deliberately off the temperature ramp, because the one thing it
-        /// must never read as is cold air. Barely-there grey where the room is genuinely empty,
-        /// which is most of them on any ship and is not a fault.
+        /// Magenta where the game holds air and this model does not: a colour no other part of this
+        /// view uses, and off the temperature ramp so it cannot read as cold air. Faint grey where
+        /// the room is genuinely empty, which is the common case and not a fault.
         /// </summary>
         private static Color DryFill(bool disagrees)
         {
@@ -585,7 +567,7 @@ namespace Thermodynamics
         /// <summary>Alpha of a room the game holds air in and this model does not.</summary>
         private const float DisagreementFillAlpha = 0.3f;
 
-        /// <summary>The air of one room, or null when the solver has none for it.</summary>
+        /// <summary>Air node of one room, or null when the solver holds none for it.</summary>
         private static RoomAirNode AirOf(ThermalGrid thermals, int room)
         {
             IList<RoomAirNode> air = thermals.Simulation.RoomAir;
@@ -597,12 +579,10 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Room air on the mod's usual heat ramp, over a span tighter than a block's.
+        /// Room air on the mod's usual heat ramp, over a narrower span than a block's.
         ///
-        /// Air in a compartment lives inside a few tens of degrees of comfortable, where hull can
-        /// be anywhere from the shadow of a moon to red heat. On the block ramp every room on a
-        /// ship is the same shade; on this one, a compartment three degrees colder than the one
-        /// next door is visibly colder.
+        /// Room air spans a few tens of degrees where hull spans hundreds, so the block ramp would
+        /// render every room the same shade.
         /// </summary>
         private static Color Fill(float kelvin, float min, float max)
         {
@@ -616,14 +596,13 @@ namespace Thermodynamics
             return colour;
         }
 
-        /// <summary>Alpha of room air. Higher than a block box: air is one layer, not many.</summary>
+        /// <summary>Alpha of room air. Higher than a block box because air is one layer deep.</summary>
         private const float RoomFillAlpha = 0.35f;
 
         /// <summary>
-        /// A colour per room index. Neighbouring indices have to be told apart at a glance, so the
-        /// hue is stepped by a large irrational-ish fraction of the circle rather than by index:
-        /// consecutive rooms land far apart on the wheel and the sequence does not repeat until it
-        /// has to.
+        /// A colour per room index. The hue advances by a large irrational fraction of the circle
+        /// rather than by index, so consecutive rooms land far apart on the wheel and the sequence
+        /// repeats as late as possible.
         /// </summary>
         private static Color RoomColour(int room, bool vented)
         {
@@ -635,9 +614,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// The value being shown, mapped through the same ramp the HUD and the terminal use, so a
-        /// colour means the same thing everywhere in the mod. The ranges are the ones the old
-        /// block-colouring modes used.
+        /// The displayed value mapped through the same ramp the HUD and terminal use, so a colour
+        /// means the same thing throughout the mod.
         /// </summary>
         private static Color Colour(ThermalNode node)
         {

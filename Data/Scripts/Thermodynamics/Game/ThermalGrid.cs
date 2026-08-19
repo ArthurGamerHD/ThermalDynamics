@@ -17,14 +17,14 @@ namespace Thermodynamics
     /// <summary>
     /// The adapter between one Space Engineers grid and one <see cref="ThermalSimulation"/>.
     ///
-    /// The simulation knows nothing about the game: it is fed a block layout, an environment
-    /// sample and a frame length, and hands back temperatures and overheat events. Everything on
-    /// this side of that line — definitions, entity events, raycasts, damage, storage — lives
-    /// here and in the partials next to it.
+    /// The simulation knows nothing about the game: it takes a block layout, an environment sample
+    /// and a frame length, and returns temperatures and overheat events. Everything on the game
+    /// side of that boundary — definitions, entity events, raycasts, damage, storage — lives here
+    /// and in the partials beside it.
     ///
-    /// The component polls on the ten-frame tick rather than every frame. Step pacing is the
-    /// simulation's own business (<see cref="SimulationScheduler"/>), so polling faster only
-    /// costs entity update callbacks.
+    /// The component polls on the ten-frame tick rather than every frame. Step pacing belongs to
+    /// the simulation (<see cref="SimulationScheduler"/>), so polling faster would only add entity
+    /// update callbacks.
     /// </summary>
     [MyEntityComponentDescriptor(typeof(MyObjectBuilder_CubeGrid), true)]
     public partial class ThermalGrid : MyGameLogicComponent
@@ -49,24 +49,22 @@ namespace Thermodynamics
         public GridTelemetry Stats;
 
         /// <summary>
-        /// Placed blocks by their minimum cell, one entry per block, not per cell.
+        /// Placed blocks by their minimum cell, one entry per block rather than per cell.
         ///
-        /// Keyed on <c>Min</c> rather than the game's <c>SlimBlock.Position</c> because that is
-        /// the identity the model uses (<see cref="BlockInstance.Position"/>). The two agree for
-        /// a 1x1x1 block and differ for every larger one, so keying on Position silently loses
-        /// exactly the blocks most likely to overheat.
+        /// Keyed on <c>Min</c> rather than the game's <c>SlimBlock.Position</c> because that is the
+        /// identity the model uses (<see cref="BlockInstance.Position"/>). The two agree for a
+        /// 1x1x1 block and differ for every larger one.
         /// </summary>
         private readonly Dictionary<Vector3I, ThermalBlock> blocks =
             new Dictionary<Vector3I, ThermalBlock>(Vector3I.Comparer);
 
         /// <summary>
-        /// The same blocks in a list, so the mass sweep can resume where it left off.
+        /// The same blocks in a list, so the mass sweep can resume where it stopped.
         ///
-        /// A dictionary cannot be walked a slice at a time — enumerating it starts from the
-        /// beginning every time — and the sweep has to be resumable, because the alternative is
-        /// a pass over every block on the grid landing inside one tick. Kept in step with the
-        /// dictionary on every add and remove, with each block remembering its own slot so a
-        /// removal is a swap rather than a search.
+        /// A dictionary cannot be walked a slice at a time, and the sweep must be resumable to
+        /// avoid a pass over every block landing inside one tick. Kept in step with the dictionary
+        /// on every add and remove, with each block holding its own slot so a removal is a swap
+        /// rather than a search.
         /// </summary>
         private readonly List<ThermalBlock> sweepOrder = new List<ThermalBlock>();
 
@@ -74,32 +72,32 @@ namespace Thermodynamics
         private int massSweepCursor;
 
         /// <summary>
-        /// Temperatures of blocks removed recently, so a section cut off the grid keeps its
-        /// heat when it becomes a grid of its own, and so rebuilding a block does not reset it.
+        /// Temperatures of recently removed blocks, so a section cut off the grid keeps its heat
+        /// when it becomes its own grid, and rebuilding a block does not reset it.
         ///
-        /// Entries are consumed when the position is built on again, which most of them never
-        /// are — a ship that is slowly ground down would otherwise accumulate one per block
-        /// destroyed, for the life of the world. The map is dropped wholesale once it grows past
-        /// what a split could plausibly need.
+        /// An entry is consumed when its position is built on again. Most never are, so the map is
+        /// dropped wholesale once it exceeds what a split could plausibly need; otherwise a grid
+        /// being ground down would accumulate one entry per destroyed block for the life of the
+        /// world.
         /// </summary>
         public readonly Dictionary<Vector3I, float> RecentlyRemoved =
             new Dictionary<Vector3I, float>(Vector3I.Comparer);
 
         /// <summary>
-        /// Remembered removals kept before the map is cleared. A split hands over its blocks in
-        /// the same frame they are removed, so nothing that matters lives here for long.
+        /// Remembered removals retained before the map is cleared. A split hands over its blocks in
+        /// the same frame they are removed, so no entry needs to survive long.
         /// </summary>
         public const int MaxRecentlyRemoved = 4096;
 
         /// <summary>
-        /// Air vents on this grid. Kept apart from the rest so the pressurisation sweep visits
-        /// the handful of blocks that can answer for a room rather than every block on the ship.
+        /// Air vents on this grid, held separately so the pressurisation sweep visits only the blocks
+        /// that can report on a room rather than every block on the grid.
         /// </summary>
         private readonly List<ThermalBlock> vents = new List<ThermalBlock>();
 
         /// <summary>
-        /// The air vents on this grid. Read by the diagnostics, which name a compartment by the
-        /// vent standing in it — the only identity a player can read off a terminal and quote.
+        /// The air vents on this grid. Read by the diagnostics, which identify a compartment by the
+        /// vent standing in it — the only name a player can read from a terminal.
         /// </summary>
         public IList<ThermalBlock> Vents
         {
@@ -117,9 +115,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Heat pumps on this grid. Kept apart for the same reason the vents are: the state they
-        /// exchange with the game — a switch, a power draw — is theirs alone, and a grid with none
-        /// should not walk its blocks looking for them.
+        /// Heat pumps on this grid, held separately for the same reason as the vents: the state they
+        /// exchange with the game is theirs alone, and a grid with none should not scan its blocks.
         /// </summary>
         private readonly List<ThermalBlock> heatPumps = new List<ThermalBlock>();
 
@@ -143,8 +140,8 @@ namespace Thermodynamics
         private bool disabled;
 
         /// <summary>
-        /// Every live grid component. Kept so telemetry can be switched on mid-session and
-        /// still find the grids that already exist.
+        /// Every live grid component, so telemetry switched on mid-session can still find grids that
+        /// already exist.
         /// </summary>
         private static readonly List<ThermalGrid> Live = new List<ThermalGrid>();
 
@@ -182,8 +179,8 @@ namespace Thermodynamics
             Stats = Telemetry.RegisterGrid(this);
             if (Stats != null) Simulation.Profiler = Stats.Profiler;
 
-            // Thresholds are registered against the mod, not against a grid, so a grid built after
-            // a mod registered one still reports it.
+            // Thresholds are registered against the mod rather than a grid, so a grid created after
+            // a registration still reports it.
             ThermalApi.ApplyThresholds(Simulation);
 
             Live.Add(this);
@@ -198,13 +195,12 @@ namespace Thermodynamics
             Grid.OnGridSplit += GridSplit;
             Grid.OnGridMerge += GridMerge;
 
-            // OR, never assignment. The descriptor asks for entity updates, so this property is
-            // the grid entity's own update flags, not this component's: assigning to it clears
-            // whatever the grid set for itself. MyCubeGrid drives its scheduled work — including
-            // the ship control system's recalculation — off EACH_FRAME, and re-arms that flag only
-            // when its queue goes from empty to non-empty. Clear it once and the queue is never
-            // drained again: the grid stops recalculating who is controlling it, and sitting in a
-            // cockpit reports "Someone else is using this ship!" forever.
+            // OR into these flags, never assign. The descriptor requests entity updates, so this
+            // property is the grid entity's own update flags rather than this component's, and
+            // assigning clears what the grid set for itself. MyCubeGrid drives its scheduled work,
+            // including the ship control system's recalculation, off EACH_FRAME and re-arms that
+            // flag only when its queue goes from empty to non-empty. Clearing it once leaves the
+            // queue permanently undrained, so the grid stops recalculating who controls it.
             NeedsUpdate |= MyEntityUpdateEnum.BEFORE_NEXT_FRAME | MyEntityUpdateEnum.EACH_10TH_FRAME;
         }
 
@@ -214,9 +210,8 @@ namespace Thermodynamics
 
             if (Grid.Physics == null)
             {
-                // Projections and blueprints have no physics and never simulate. The flag stays as
-                // the grid wants it — `disabled` is what stops this component doing any work, and
-                // taking the grid's update flags away to save a branch is what broke ship control.
+                // Projections and blueprints have no physics and never simulate. The grid's update
+                // flags are left as they are; `disabled` is what stops this component working.
                 disabled = true;
                 return;
             }
@@ -226,8 +221,8 @@ namespace Thermodynamics
 
             AddExistingBlocks();
 
-            // One full build is far cheaper than the incremental path replayed once per block,
-            // and it leaves the room map complete before the first step instead of after it.
+            // One full build is cheaper than the incremental path replayed per block, and leaves
+            // the room map complete before the first step rather than after it.
             Simulation.RebuildAll();
 
             Load();
@@ -236,7 +231,7 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Picks up blocks that already existed when the component attached. Grid load order does
+        /// Registers blocks that already existed when the component attached. Grid load order does
         /// not guarantee <see cref="BlockAdded"/> fires for them.
         /// </summary>
         private void AddExistingBlocks()
@@ -254,8 +249,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// The grid is going away. The telemetry record takes its final snapshot now, while the
-        /// nodes still exist; it stays in the registry so a destroyed ship is still reported.
+        /// Handles grid closure. The telemetry record takes its final snapshot while the nodes still
+        /// exist and stays in the registry, so a destroyed grid is still reported.
         /// </summary>
         public override void Close()
         {
@@ -316,9 +311,9 @@ namespace Thermodynamics
 
                 ThermalBlock bound = new ThermalBlock(this, block, model);
 
-                // The model owns the layout and can refuse a block — a cell already occupied
-                // means the two views have diverged. Registering the binding only after it has
-                // accepted keeps this side from holding a block the simulation does not have.
+                // The model owns the layout and can refuse a block; an already-occupied cell means
+                // the two views have diverged. The binding is registered only after acceptance, so
+                // this side never holds a block the simulation does not.
                 float temperature = StartingTemperature(block.Min);
                 bound.Node = Simulation.AddBlock(bound.Instance, temperature);
 
@@ -337,9 +332,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// A block placed where one was just removed inherits its heat; anything else starts at
-        /// the grid's default. This is what carries temperature across a grid split, where the
-        /// same position is removed from one grid and added to another in the same frame.
+        /// Starting temperature for a newly placed block: the heat of a block just removed from the
+        /// same position, or the grid's default. This carries temperature across a grid split, where
+        /// a position is removed from one grid and added to another in the same frame.
         /// </summary>
         private float StartingTemperature(Vector3I position)
         {
@@ -400,9 +395,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Refreshes a block whose <em>sealing</em> changed and nothing else — a door. Doors
-        /// cycle often, and neither conduction nor coolant plumbing depends on whether a face
-        /// seals, so this deliberately does not touch either.
+        /// Refreshes a block whose sealing changed and nothing else, such as a door. Doors cycle
+        /// often, and neither conduction nor coolant plumbing depends on whether a face seals, so
+        /// neither is rebuilt.
         /// </summary>
         public void RefreshBlockSealing(ThermalBlock bound)
         {
@@ -413,13 +408,12 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Carries temperatures onto a section that has just been cut off.
+        /// Carries temperatures onto a section that has just split off.
         ///
         /// The blocks were removed from the parent this frame, so the parent holds their heat in
-        /// <see cref="RecentlyRemoved"/>. Which of the two events the game raises first is not
-        /// something a mod controls, so both orderings are handled: a block the child already
-        /// has is set directly, and one it has not built yet is handed over for
-        /// <see cref="StartingTemperature"/> to pick up when it arrives.
+        /// <see cref="RecentlyRemoved"/>. Event order is not under a mod's control, so both
+        /// orderings are handled: a block the child already holds is set directly, and one it has
+        /// not built yet is handed over for <see cref="StartingTemperature"/> to apply on arrival.
         /// </summary>
         private void GridSplit(MyCubeGrid parent, MyCubeGrid child)
         {
@@ -434,11 +428,10 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Carries temperatures off a grid that is being absorbed into another.
+        /// Carries temperatures off a grid being absorbed into another.
         ///
         /// The two grids have different cell coordinates, so positions are mapped through world
-        /// space rather than assumed to match — they only would if the merge happened to leave
-        /// both origins aligned.
+        /// space rather than assumed to match.
         /// </summary>
         private void GridMerge(MyCubeGrid survivor, MyCubeGrid absorbed)
         {
@@ -513,9 +506,8 @@ namespace Thermodynamics
         // ---- lookups -----------------------------------------------------------------------
 
         /// <summary>
-        /// Starts or stops feeding this grid's telemetry record, for the runtime toggle. A grid
-        /// that has never been registered gets a record now, so a session can be switched into
-        /// collection without a reload.
+        /// Starts or stops feeding this grid's telemetry record, for the runtime toggle. A grid never
+        /// registered is given a record here, so collection can be switched on without a reload.
         /// </summary>
         public void RefreshTelemetry()
         {
@@ -529,9 +521,9 @@ namespace Thermodynamics
             if (Stats == null) Stats = Telemetry.RegisterGrid(this);
             if (Stats != null) Simulation.Profiler = Stats.Profiler;
 
-            // A block resolves its per-definition record once, when it is placed. Blocks placed
-            // while collection was off hold none, so switching it on has to hand them one or the
-            // report silently omits every block that predates the switch.
+            // A block resolves its per-definition record once, when placed. Blocks placed while
+            // collection was off hold none, so switching it on must assign them one or the report
+            // omits every block predating the switch.
             foreach (ThermalBlock bound in blocks.Values)
             {
                 bound.RefreshStats();
@@ -539,18 +531,17 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Takes a block out of the sweep list by moving the last one into its place.
+        /// Removes a block from the sweep list by moving the last entry into its slot.
         ///
-        /// Nothing depends on the order — it is a rota, not a sequence — so the cheap removal is
-        /// the correct one. The cursor is left where it is: at worst it re-sweeps or skips a
-        /// single block, and the sweep comes round again.
+        /// The list is a rota rather than a sequence, so order does not matter. The cursor is left
+        /// where it is; at worst one block is re-swept or skipped for one pass.
         /// </summary>
         private void RemoveFromSweepOrder(ThermalBlock bound)
         {
             int slot = bound.SweepSlot;
             if (slot < 0 || slot >= sweepOrder.Count || sweepOrder[slot] != bound)
             {
-                // Should not happen; a search is better than a corrupt list.
+                // Should not occur, but a linear search is preferable to a corrupt list.
                 sweepOrder.Remove(bound);
                 bound.SweepSlot = -1;
                 return;
@@ -568,7 +559,7 @@ namespace Thermodynamics
             bound.SweepSlot = -1;
         }
 
-        /// <summary>Blocks in the mass-sweep rota. Diagnostic; the rota is the grid's own.</summary>
+        /// <summary>Blocks in the mass-sweep rota. Diagnostic only.</summary>
         public int SweepOrderCount
         {
             get { return sweepOrder.Count; }
@@ -577,10 +568,9 @@ namespace Thermodynamics
         /// <summary>
         /// The bound block whose minimum cell is <paramref name="min"/>, or null.
         ///
-        /// This is the model's own key — <see cref="BlockInstance.Position"/> and
-        /// <see cref="OverheatEvent"/> both speak it. Callers holding a game block should use
-        /// <c>block.Min</c>, and callers holding an arbitrary cell should use
-        /// <see cref="GetAtCell"/>.
+        /// This is the model's key, shared by <see cref="BlockInstance.Position"/> and
+        /// <see cref="OverheatEvent"/>. Callers holding a game block should pass <c>block.Min</c>;
+        /// callers holding an arbitrary cell should use <see cref="GetAtCell"/>.
         /// </summary>
         public ThermalBlock Get(Vector3I min)
         {
@@ -589,8 +579,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// The bound block occupying a cell, which for a multi-cell block is not the same as the
-        /// block's own position.
+        /// The bound block occupying a cell. For a multi-cell block this differs from the block's own
+        /// position.
         /// </summary>
         public ThermalBlock GetAtCell(Vector3I cell)
         {
