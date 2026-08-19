@@ -4,27 +4,26 @@ using VRageMath;
 namespace Thermodynamics.Core
 {
     /// <summary>
-    /// Where to look from, when asking whether the sun reaches a grid.
+    /// Points to cast from when testing whether the sun reaches a grid.
     ///
-    /// One ray from the middle of a ship answers for a point, and a ship is not a point: a
-    /// kilometre of hull crossing a planet's terminator is either fully lit or fully dark according
-    /// to that one ray, and it flips the moment the centre crosses. Sampling a handful of points
-    /// spread through the ship turns that step into a ramp, at a cost of one ray each.
+    /// One ray from the grid's centre answers for a point. A large grid crossing a planet's
+    /// terminator is then fully lit or fully dark according to that ray alone, flipping the moment
+    /// the centre crosses. Sampling several points spread through the grid turns that step into a
+    /// ramp at a cost of one ray each.
     ///
-    /// The points are the centre first, then the corners of a box inset inside the grid's bounds.
-    /// Centre first because it is the one everybody gets: a sample count of one has to behave
-    /// exactly as the single-ray version did. Inset because a ray from the exact corner of the
-    /// bounding box starts in empty space beside the ship, where an occluder that shadows the whole
-    /// hull can be missed by a metre.
+    /// The centre comes first, so a sample count of one behaves exactly as a single centre ray. The
+    /// remaining points are the corners of a box inset inside the grid's bounds; a ray from the
+    /// exact corner of the bounding box would start in empty space beside the grid, where an
+    /// occluder shadowing the whole hull can be missed.
     /// </summary>
     public static class SolarOcclusionSampler
     {
-        /// <summary>Most points anyone can ask for: the centre and eight corners.</summary>
+        /// <summary>Maximum points that can be requested: the centre and eight corners.</summary>
         public const int MaxSamples = 9;
 
         /// <summary>
-        /// How far out the corner samples sit, as a share of the half-extent. Well inside the hull
-        /// rather than at its skin, so a sample stands in the ship rather than beside it.
+        /// How far out the corner samples sit, as a fraction of the half-extent. Inside the hull
+        /// rather than at its surface, so a sample is within the grid rather than beside it.
         /// </summary>
         public const double CornerInset = 0.6;
 
@@ -41,12 +40,11 @@ namespace Thermodynamics.Core
         };
 
         /// <summary>
-        /// Fills <paramref name="results"/> with up to <paramref name="samples"/> points to cast
-        /// from. Always returns at least the centre.
+        /// Fills <paramref name="results"/> with up to <paramref name="samples"/> points to cast from.
+        /// Always returns at least the centre.
         ///
         /// Opposite corners are paired in order, so any even count straddles the box rather than
-        /// clustering down one side of it — four samples that all sit on the same end of a ship
-        /// would be worse than one in the middle.
+        /// clustering at one end of the grid.
         /// </summary>
         public static void Points(BoundingBoxD bounds, int samples, List<Vector3D> results)
         {

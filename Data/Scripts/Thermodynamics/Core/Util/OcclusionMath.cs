@@ -20,9 +20,8 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// The dot product between "direction to body" and "direction to sun" below which the
-        /// body eclipses the sun. Fitted curve from the original mod, retained because it
-        /// produces a believable terminator width.
+        /// The dot product between the direction to the body and the direction to the sun below which
+        /// the body eclipses the sun. A fitted curve, chosen for the terminator width it produces.
         /// </summary>
         public static double OcclusionThreshold(double visualSize)
         {

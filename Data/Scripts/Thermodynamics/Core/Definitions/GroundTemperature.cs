@@ -3,28 +3,27 @@ using System.Collections.Generic;
 namespace Thermodynamics.Core
 {
     /// <summary>
-    /// What the ground underfoot is worth to the air above it, K.
+    /// Temperature offset the surface material contributes to the air above it, K.
     ///
-    /// A snowfield is not the same climate as a dune at the same latitude, and the game will say
-    /// which one a grid is parked on. This is the table that turns that name into a number: snow
-    /// and ice cold, sand hot, rock and grass close to whatever the planet already said.
+    /// The game reports which voxel material a grid is parked on; this table maps that name to a
+    /// temperature offset and a day-night swing multiplier. Snow and ice are cold, sand is hot, and
+    /// rock and grass are close to the planet's own figures.
     ///
-    /// Matched on the name containing a word rather than on the exact subtype, because every world
-    /// and every mod spells its materials differently — Sand_02, SandDesert, Desert_Sand — and the
-    /// alternative is a table that silently stops working on somebody else's planet.
+    /// Matched on the name containing a keyword rather than on the exact subtype, since worlds and
+    /// mods name their materials differently (Sand_02, SandDesert, Desert_Sand). An exact match
+    /// would silently stop working on a third-party planet.
     ///
-    /// These are opinions about feel, not measurements, which is why the whole table is scaled by
-    /// one setting and can be turned off with it.
+    /// These values are balance choices rather than measurements, which is why the whole table is
+    /// scaled by one setting and can be disabled with it.
     /// </summary>
     public static class GroundTemperature
     {
         /// <summary>
-        /// What a ground does to the air: how much warmer or colder than the planet's own figure,
-        /// and how much more or less the day-night swing.
+        /// One material's effect on the air: an offset from the planet's own figure, and a multiplier
+        /// on the day-night swing.
         ///
-        /// The swing is the half of this people notice. A desert is not merely hot — it is hot by
-        /// day and cold by night, because dry sand holds nothing overnight. Snow and water are the
-        /// other way about: they hold what they have, and their days are flat.
+        /// Dry ground retains little heat overnight, so a desert is both hotter by day and colder by
+        /// night; snow and water damp the swing instead.
         /// </summary>
         public struct Ground
         {
@@ -62,8 +61,8 @@ namespace Thermodynamics.Core
         };
 
         /// <summary>
-        /// What this ground is worth. Neutral for anything the table has no opinion about, which
-        /// is the right answer for a material nobody has thought about yet.
+        /// The entry for a material name, or <see cref="Neutral"/> for any material the table does
+        /// not cover.
         /// </summary>
         public static Ground For(string material)
         {
@@ -79,10 +78,10 @@ namespace Thermodynamics.Core
             return Neutral;
         }
 
-        /// <summary>Ground the table has nothing to say about: the planet's own climate, unchanged.</summary>
+        /// <summary>An uncovered material: the planet's own climate, unchanged.</summary>
         public static readonly Ground Neutral = new Ground(0f, 1f);
 
-        /// <summary>The offset alone, for callers that only want the shift.</summary>
+        /// <summary>The offset alone, for callers that do not need the swing multiplier.</summary>
         public static float OffsetFor(string material)
         {
             return For(material).Offset;

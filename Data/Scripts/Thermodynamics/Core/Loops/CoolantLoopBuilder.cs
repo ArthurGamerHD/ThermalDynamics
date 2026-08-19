@@ -8,25 +8,21 @@ namespace Thermodynamics.Core
     /// Finds closed coolant rings in a grid.
     ///
     /// The walk is driven entirely by the ports declared on each block's
-    /// <see cref="CoolantShape"/>, so blocks of any size or orientation work without the
-    /// subtype-name special cases the original crawler needed. Every ring is discovered once,
-    /// no matter which pipe the search starts from, because rings are keyed by their member set.
+    /// <see cref="CoolantShape"/>, so blocks of any size or orientation work without subtype-name
+    /// special cases. Every ring is discovered once whichever pipe the search starts from, because
+    /// rings are keyed by their member set.
     /// </summary>
     public static class CoolantLoopBuilder
     {
-        /// <summary>
-        /// Finds every closed ring containing at least one pump.
-        /// </summary>
+        /// <summary>Finds every closed ring containing at least one pump.</summary>
         public static List<CoolantLoop> FindLoops(GridModel grid, LoopThermalProperties properties, float initialTemperature)
         {
             return FindLoops(grid, properties, initialTemperature, null);
         }
 
         /// <param name="work">
-        /// Optional work counters. The search walks every block on the grid looking for the
-        /// handful that carry coolant ports, so what it costs is a function of grid size and not
-        /// of how much plumbing there is — which is exactly the sort of thing a load test needs
-        /// to be able to assert about.
+        /// Optional work counters. The search walks every block on the grid to find the few carrying
+        /// coolant ports, so its cost scales with grid size rather than with the amount of plumbing.
         /// </param>
         public static List<CoolantLoop> FindLoops(GridModel grid, LoopThermalProperties properties,
             float initialTemperature, SimulationWork work)
@@ -34,14 +30,12 @@ namespace Thermodynamics.Core
             List<CoolantLoop> loops = new List<CoolantLoop>();
             if (grid == null) return loops;
 
-            // The call is counted either way — it was asked for — but the cells are only counted
-            // when the search actually walks them, so the two figures separate "how often" from
-            // "how much", which is the split that says whether a stage is worth attention.
+            // The call is counted unconditionally but the cells only when the search walks them, so
+            // the two counters separate how often the search runs from how much it costs.
             if (work != null) work.LoopSearches++;
 
-            // A ring needs pipe, and the overwhelming majority of grids have none. Asking the
-            // grid how many coolant blocks it holds costs one integer read against a pass over
-            // every block on the ship asking each of them the same question.
+            // A ring needs pipe and most grids have none. The grid's coolant block count is one
+            // integer read, against a pass over every block on the grid.
             if (grid.CoolantBlockCount == 0) return loops;
 
             if (work != null) work.LoopSearchCells += grid.Blocks.Count;
@@ -119,7 +113,7 @@ namespace Thermodynamics.Core
 
                 if (next == start)
                 {
-                    // Closed the ring, but only if we came back in through a different port.
+                    // The ring closes only if the walk re-entered through a different port.
                     return SamePort(entry, startPorts[0]) ? null : ring;
                 }
 

@@ -6,15 +6,14 @@ namespace Thermodynamics.Core
     /// <summary>
     /// Analytic geometry on integer, axis-aligned block bounds.
     ///
-    /// Every function here is O(1) in the size of the blocks involved. That is the whole point:
-    /// the previous implementation answered these questions by enumerating a block's occupied
-    /// cells, which is affordable while a block is one or two cells and is not affordable at all
-    /// once blocks span tens of cells on a side.
+    /// Every function here is O(1) in the size of the blocks involved. Answering these questions by
+    /// enumerating a block's occupied cells is affordable for one- and two-cell blocks and not for
+    /// blocks spanning tens of cells on a side.
     ///
     /// Bounds are half-open — <c>min</c> inclusive, <c>maxExclusive</c> exclusive — matching
-    /// <see cref="BlockInstance.Min"/> and <see cref="BlockInstance.MaxExclusive"/>. All areas are
-    /// counted in lattice cell faces, so they stay correct when one grid mixes block sizes:
-    /// a block twice as wide simply covers four times as many cell faces.
+    /// <see cref="BlockInstance.Min"/> and <see cref="BlockInstance.MaxExclusive"/>. Areas are
+    /// counted in lattice cell faces, so they remain correct when one grid mixes block sizes: a
+    /// block twice as wide covers four times as many cell faces.
     /// </summary>
     public static class BoxGeometry
     {
@@ -35,9 +34,7 @@ namespace Thermodynamics.Core
             }
         }
 
-        /// <summary>
-        /// Length of the overlap of two half-open intervals, or 0 when they do not overlap.
-        /// </summary>
+        /// <summary>Length of the overlap of two half-open intervals, or 0 when they do not overlap.</summary>
         public static int Overlap(int minA, int maxExclusiveA, int minB, int maxExclusiveB)
         {
             int low = Math.Max(minA, minB);
@@ -163,7 +160,7 @@ namespace Thermodynamics.Core
             int axis = Face.Axis(face);
             bool positive = Face.Offsets[face].X + Face.Offsets[face].Y + Face.Offsets[face].Z > 0;
 
-            // the slab of cells on this side of the box
+            // The slab of cells on this side of the box.
             int fixedValue = positive
                 ? Component(maxExclusive, axis) - 1
                 : Component(min, axis);

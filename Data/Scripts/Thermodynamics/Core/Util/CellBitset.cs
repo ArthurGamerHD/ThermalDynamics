@@ -7,27 +7,22 @@ namespace Thermodynamics.Core
     /// One bit per cell of a box, for membership over a dense region.
     ///
     /// <para>
-    /// A <c>HashSet&lt;Vector3I&gt;</c> spends about thirty-one bytes on each cell it holds — a
-    /// bucket, a hash code, a next pointer, the twelve-byte vector, and the slack a load factor
-    /// leaves. That is the right shape for a sparse set of cells scattered anywhere in space. It is
-    /// the wrong shape for "every cell of this bounding box, visited or not", which is what a flood
-    /// fill accumulates: by the end it holds the whole volume, and the volume is where a grid's
-    /// memory goes.
+    /// A <c>HashSet&lt;Vector3I&gt;</c> costs about thirty-one bytes per cell — a bucket, a hash
+    /// code, a next pointer, the twelve-byte vector, and load-factor slack. That suits a sparse set
+    /// scattered through space, but a flood fill accumulates every cell of its bounding box, so by
+    /// the end it holds the whole volume.
     /// </para>
     ///
     /// <para>
-    /// Two hundred and forty-eight times smaller, measured against the set it replaces, and the
-    /// difference is not academic — the room mapper's visited set was the high-water mark of the
-    /// entire mod. On a 127,000-block ship it was 121 MB of a 400 MB peak, and it scales with the
-    /// bounding box rather than with the ship, so a hull that is nine tenths empty pays for the
-    /// emptiness.
+    /// This is 248 times smaller than the set it replaces. The room mapper's visited set was the
+    /// mod's peak allocation: 121 MB of a 400 MB peak on a 127,000-block grid, scaling with the
+    /// bounding box rather than the grid, so a mostly empty hull paid for the empty space.
     /// </para>
     ///
     /// <para>
-    /// The trade is that the region must be known in advance and indexable, which for a flood fill
-    /// over a padded bounding box it is. Cells outside it are simply not members; callers already
-    /// bounds-check before asking, because a flood fill that wandered outside its box would never
-    /// terminate.
+    /// The constraint is that the region must be known in advance and indexable, which a flood fill
+    /// over a padded bounding box satisfies. Cells outside it are not members; callers already
+    /// bounds-check before asking, since a fill that wandered outside its box would not terminate.
     /// </para>
     /// </summary>
     public class CellBitset
@@ -49,11 +44,9 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Points the set at a box and clears it.
-        ///
-        /// The backing array is kept when it is already big enough, because a room mapping pass
-        /// restarts every time a block is placed and reallocating a megabyte each time would be a
-        /// different kind of waste.
+        /// Points the set at a box and clears it. The backing array is retained when already large
+        /// enough: a room mapping pass restarts on every block placement, and reallocating a
+        /// megabyte each time would be its own cost.
         /// </summary>
         public void Reset(Vector3I boxMin, Vector3I boxMaxExclusive)
         {
@@ -67,8 +60,8 @@ namespace Thermodynamics.Core
 
             if (needed > words.Length)
             {
-                // int.MaxValue bits is 268 million cells, far past any grid; a box larger than
-                // that is a bug elsewhere and clamping is better than an overflowed length.
+                // int.MaxValue bits is 268 million cells, far beyond any grid. A larger box
+                // indicates a fault elsewhere, and clamping is preferable to an overflowed length.
                 if (needed > int.MaxValue) needed = int.MaxValue;
                 words = new long[needed];
             }
@@ -111,7 +104,7 @@ namespace Thermodynamics.Core
             return (words[word] & (1L << (int)(index & 63))) != 0L;
         }
 
-        /// <summary>Adds a cell. Returns false when it was already there, like a set would.</summary>
+        /// <summary>Adds a cell. Returns false when it was already present, as a set would.</summary>
         public bool Add(Vector3I cell)
         {
             long index = IndexOf(cell);

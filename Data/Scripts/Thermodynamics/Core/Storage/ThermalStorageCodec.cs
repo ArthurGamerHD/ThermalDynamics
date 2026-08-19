@@ -46,14 +46,14 @@ namespace Thermodynamics.Core
     /// <summary>
     /// Serialises grid temperatures to and from a base64 blob.
     ///
-    /// Two formats are supported. Version 1 is the original layout, kept so existing saves load;
-    /// version 2 fixes its three defects: positions are 64-bit so distant blocks cannot alias,
-    /// temperatures keep their fractional part, and loops are keyed by a stable signature rather
-    /// than by their index in a list that is rebuilt on load.
+    /// Two formats are supported. Version 1 is the legacy layout, retained so existing saves load.
+    /// Version 2 corrects three of its limitations: positions are 64-bit so distant blocks cannot
+    /// alias, temperatures keep their fractional part, and loops are keyed by a stable signature
+    /// rather than by their index in a list rebuilt on load.
     ///
-    /// Version 2 is extended by adding a section, not by changing the marker: every record is the
-    /// same twelve bytes and a reader skips a section it does not recognise. Room air arrived that
-    /// way, so a save written now still loads on the build before it.
+    /// Version 2 is extended by adding a section rather than by changing the marker: every record is
+    /// twelve bytes and a reader skips a section it does not recognise, so a save written by a newer
+    /// build still loads on an older one.
     /// </summary>
     public static class ThermalStorageCodec
     {
@@ -87,8 +87,8 @@ namespace Thermodynamics.Core
                 + (1 + Int32Size + (blockCount * RecordSize))
                 + (1 + Int32Size + (loopCount * RecordSize));
 
-            // A world with room air switched off writes no section at all rather than an empty
-            // one, so the format costs nothing when the feature is unused.
+            // A world with room air disabled writes no section rather than an empty one, so the
+            // format costs nothing when the feature is unused.
             if (roomCount > 0) size += 1 + Int32Size + (roomCount * RecordSize);
 
             byte[] bytes = new byte[size];
@@ -141,8 +141,8 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Decodes either format, including the room air section. A payload written before rooms
-        /// were saved simply leaves <paramref name="rooms"/> empty.
+        /// Decodes either format, including the room air section. A payload written before rooms were
+        /// saved leaves <paramref name="rooms"/> empty.
         /// </summary>
         public static bool TryDecode(string data, List<StoredTemperature> blocks, List<StoredLoop> loops, List<StoredRoom> rooms)
         {
@@ -175,8 +175,8 @@ namespace Thermodynamics.Core
         private static bool TryDecodeVersion2(byte[] bytes, List<StoredTemperature> blocks, List<StoredLoop> loops, List<StoredRoom> rooms)
         {
             // Every read is bounds checked up front rather than caught afterwards: the in-game
-            // script compiler's whitelist prohibits IndexOutOfRangeException, so a truncated
-            // payload has to be rejected before it is read, not after it throws.
+            // script compiler's whitelist prohibits IndexOutOfRangeException, so a truncated payload
+            // must be rejected before it is read.
             int at = 1;
             while (at < bytes.Length)
             {
@@ -186,8 +186,8 @@ namespace Thermodynamics.Core
                 int count = ReadInt32(bytes, ref at);
                 if (count < 0) return false;
 
-                // guards against a corrupt count claiming more records than the payload holds,
-                // and against the multiplication overflowing on an absurd one
+                // Guards against a corrupt count claiming more records than the payload holds, and
+                // against the multiplication overflowing on an extreme one.
                 if (count > (bytes.Length - at) / RecordSize) return false;
 
                 for (int i = 0; i < count; i++)
@@ -215,8 +215,8 @@ namespace Thermodynamics.Core
         // ---- version 1 (read only) ----------------------------------------------------------
 
         /// <summary>
-        /// Encodes in the original format. Kept so the change can be rolled back, and so tests
-        /// can prove the reader handles real historical data.
+        /// Encodes in the version 1 format. Retained so tests can verify the reader against data in
+        /// the legacy layout.
         /// </summary>
         public static string EncodeLegacyBlocks(IList<StoredTemperature> blocks)
         {
@@ -279,7 +279,7 @@ namespace Thermodynamics.Core
             return true;
         }
 
-        /// <summary>Decodes the original loop blob, which is keyed by list index.</summary>
+        /// <summary>Decodes the version 1 loop blob, which is keyed by list index.</summary>
         public static bool TryDecodeLegacyLoops(string data, List<float> temperaturesByIndex)
         {
             if (temperaturesByIndex != null) temperaturesByIndex.Clear();

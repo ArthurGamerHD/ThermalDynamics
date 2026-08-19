@@ -26,9 +26,8 @@ namespace Thermodynamics.Core
         private const long WideMask = WideStride - 1;
 
         /// <summary>
-        /// The legacy 32-bit position key, bit-compatible with the original mod's
-        /// <c>Vector3I.Flatten()</c> so that existing save data keeps working.
-        /// Prefer <see cref="Key"/> for anything new.
+        /// The legacy 32-bit position key, bit-compatible with <c>Vector3I.Flatten()</c> so existing
+        /// save data keeps working. Prefer <see cref="Key"/> for anything new.
         /// </summary>
         public static int LegacyFlatten(Vector3I v)
         {
@@ -47,8 +46,8 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Inverse of <see cref="LegacyFlatten"/>. Correct for negative coordinates, which the
-        /// original implementation was not — it used truncating division.
+        /// Inverse of <see cref="LegacyFlatten"/>. Uses floor division, so it is correct for negative
+        /// coordinates where truncating division is not.
         /// </summary>
         public static Vector3I LegacyUnflatten(int key)
         {
@@ -96,8 +95,9 @@ namespace Thermodynamics.Core
         /// That is the product of the two largest dimensions.
         /// </summary>
         /// <remarks>
-        /// The original implementation seeded both running maxima at 1 and only updated the
-        /// second when a new maximum appeared, so a shape like 1x5x2 returned 5 instead of 10.
+        /// Both running maxima are seeded from the extents rather than from 1, and the second is
+        /// updated independently of the first; seeding at 1 and only updating the second on a new
+        /// maximum returns 5 instead of 10 for a 1x5x2 shape.
         /// </remarks>
         public static int LargestFaceArea(Vector3I extents)
         {
@@ -109,9 +109,7 @@ namespace Thermodynamics.Core
             return (a * b * c) / smallest;
         }
 
-        /// <summary>
-        /// Extent of a box in cells, given an inclusive minimum and an exclusive maximum.
-        /// </summary>
+        /// <summary>Extent of a box in cells, from an inclusive minimum and an exclusive maximum.</summary>
         public static Vector3I Extents(Vector3I min, Vector3I maxExclusive)
         {
             return maxExclusive - min;

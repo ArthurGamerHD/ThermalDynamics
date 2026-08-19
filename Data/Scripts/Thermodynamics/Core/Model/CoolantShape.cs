@@ -30,20 +30,15 @@ namespace Thermodynamics.Core
     }
 
     /// <summary>
-    /// The coolant plumbing a block type provides.
-    ///
-    /// Replaces the original's pair of subtype-name dictionaries plus the hard-coded "multiply
-    /// the offset by three for the small grid pump" rule: a port carries the cell it lives on,
-    /// so a block of any size works without special cases.
+    /// The coolant plumbing a block type provides. Each port carries the block-local cell it sits
+    /// on, so a block of any size works without subtype-name special cases.
     /// </summary>
     public class CoolantShape
     {
         /// <summary>Where the loop enters and leaves. A valid pipe has exactly two.</summary>
         public CoolantPort[] LinkPorts = new CoolantPort[0];
 
-        /// <summary>
-        /// Faces that exchange heat with whatever block is mounted against them.
-        /// </summary>
+        /// <summary>Faces that exchange heat with whatever block is mounted against them.</summary>
         public CoolantPort[] SinkPorts = new CoolantPort[0];
 
         /// <summary>A loop needs at least one pump to circulate.</summary>

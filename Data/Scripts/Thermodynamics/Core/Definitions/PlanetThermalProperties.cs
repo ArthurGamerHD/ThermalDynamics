@@ -16,29 +16,28 @@ namespace Thermodynamics.Core
         /// <summary>
         /// How much colder a pole is than the equator, K.
         ///
-        /// <see cref="DayTemperature"/> and <see cref="NightTemperature"/> are the world's
-        /// equatorial figures; this is the span from there to its poles. Earth's is about 40 K.
-        /// Zero gives the old behaviour, which was one climate for a whole planet.
+        /// <see cref="DayTemperature"/> and <see cref="NightTemperature"/> are the world's equatorial
+        /// figures; this is the span from there to its poles. Earth's is about 40 K. Zero gives one
+        /// climate for the whole planet.
         /// </summary>
         public float PoleTemperatureDrop = 40f;
 
         /// <summary>
-        /// How long the air takes to answer the sun, in seconds of play.
+        /// Time constant for the air's response to the sun, in seconds of play.
         ///
-        /// Without it the hottest moment of the day is exactly noon and the coldest is midnight,
-        /// which is true nowhere: air lags by hours, so the peak lands mid-afternoon and the low
-        /// just before dawn. Zero switches the lag off.
+        /// Without it the hottest moment of the day falls exactly at noon and the coldest at
+        /// midnight. Real air lags by hours, placing the peak mid-afternoon and the low just before
+        /// dawn. Zero disables the lag.
         /// </summary>
         public float AmbientLagSeconds = 45f;
 
         /// <summary>
-        /// How much colder a kilometre above sea level is, K.
+        /// Lapse rate: how much colder a kilometre above sea level is, K.
         ///
-        /// Earth's is about 6.5. This defaults lower because the ground table already carries some
-        /// of what altitude does — a mountain reads as snow, and snow is already worth -14 K — so
-        /// the two at full strength put a 5.6 km peak near -50 C. Zero switches altitude off and
-        /// gives one temperature from the sea to the stratosphere, which is what the model did
-        /// before it was asked.
+        /// Earth's is about 6.5. The default here is lower because the ground table already accounts
+        /// for part of the same effect — a mountain reads as snow, itself worth -14 K — and both at
+        /// full strength put a 5.6 km peak near -50 C. Zero disables the lapse and gives one
+        /// temperature from sea level to the stratosphere.
         /// </summary>
         public float AmbientLapseRate = 4f;
 
@@ -46,12 +45,10 @@ namespace Thermodynamics.Core
         public float UndergroundTemperature = 280f;
 
         /// <summary>
-        /// Metres of rock that blunt the surface's day-night swing to nothing.
+        /// Depth of rock over which the surface's day-night swing is damped to nothing, m.
         ///
-        /// Rock is slow. A hand's depth of soil still feels the afternoon; a cellar does not, and
-        /// nothing below a cellar has ever felt one. This is where that ends — above it a buried
-        /// block still sees a fraction of the day, below it only
-        /// <see cref="UndergroundTemperature"/> and whatever the core is sending up.
+        /// Above this depth a buried block still sees a fraction of the day; below it only
+        /// <see cref="UndergroundTemperature"/> and the heat rising from the core.
         /// </summary>
         public float UndergroundDampingDepth = 20f;
 
@@ -61,9 +58,9 @@ namespace Thermodynamics.Core
         /// <summary>
         /// Depth below sea level that stays at <see cref="UndergroundTemperature"/>, m.
         ///
-        /// Below it the rock warms toward <see cref="CoreTemperature"/>. Measured from sea level
-        /// and not from the surface, so a tunnel driven into a mountain stays cold however far in
-        /// it goes, and a shaft sunk from a beach does not.
+        /// Below it the rock warms towards <see cref="CoreTemperature"/>. Measured from sea level
+        /// rather than from the surface, so a tunnel driven into a mountain stays cold however far it
+        /// goes while a shaft sunk from a beach does not.
         /// </summary>
         public float SealevelDeadzone = 2000f;
 

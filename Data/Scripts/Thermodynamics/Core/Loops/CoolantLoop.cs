@@ -41,18 +41,17 @@ namespace Thermodynamics.Core
         public bool HasPump;
 
         /// <summary>
-        /// Stable identity across saves: an order-independent hash of every pipe position in the
-        /// ring. A reload cannot swap two loops' temperatures the way an index-based key can,
-        /// and unlike "smallest key in the ring" it cannot collide with the empty-loop value
-        /// just because a ring happens to include the grid origin.
+        /// Identity stable across saves: an order-independent hash of every pipe position in the
+        /// ring. An index-based key would let a reload swap two loops' temperatures, and using the
+        /// smallest key in the ring would collide with the empty-loop value for a ring including the
+        /// grid origin.
         /// </summary>
         public long Signature { get; private set; }
 
         /// <summary>
-        /// Heat capacity is divided by this, exactly as it is for a block. See
-        /// <see cref="ThermalSettings.HeatTimeScale"/>. The coolant has to run on the same clock
-        /// as everything it touches, or a loop would move heat at a different pace from the
-        /// blocks it is cooling.
+        /// Divisor applied to heat capacity, as for a block. See
+        /// <see cref="ThermalSettings.HeatTimeScale"/>. The coolant must run on the same clock as
+        /// the blocks it is cooling.
         /// </summary>
         public float HeatTimeScale
         {
@@ -116,7 +115,7 @@ namespace Thermodynamics.Core
             }
         }
 
-        /// <summary>A 64-bit finaliser, so nearby positions do not produce nearby hashes.</summary>
+        /// <summary>A 64-bit mixing finaliser, so nearby positions do not produce nearby hashes.</summary>
         private static long Mix(long value)
         {
             unchecked
