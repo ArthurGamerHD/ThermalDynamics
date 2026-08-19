@@ -18,17 +18,15 @@ namespace Thermodynamics.Core
     }
 
     /// <summary>
-    /// The air inside one sealed room, treated as a single well-mixed mass — the same lumped
-    /// model a coolant loop uses, with the room's volume in place of the fluid's.
+    /// The air inside one sealed room as a single well-mixed mass: the same lumped model a coolant
+    /// loop uses, with the room's volume in place of the fluid's.
     ///
-    /// Air is a poor conductor with very little mass, so it does not store much heat; what it
-    /// does is couple every surface bounding the room to every other one. A reactor in a sealed
-    /// compartment warms the compartment, and the compartment warms the far bulkhead, without
-    /// any conduction path between them.
+    /// Air has low conductivity and little mass, so it stores little heat; its effect is to couple
+    /// every surface bounding the room to every other, with no conduction path between them.
     ///
-    /// A room only holds air if something says it does: <see cref="Pressure"/> starts at zero and
-    /// the host sets it from whatever it uses to track pressurisation. A room at zero pressure
-    /// has no air mass and no links, and costs nothing.
+    /// A room holds air only when the host says so: <see cref="Pressure"/> starts at zero and the
+    /// host sets it from its own pressurisation model. A room at zero pressure has no air mass, no
+    /// links, and no cost.
     /// </summary>
     public class RoomAirNode
     {
@@ -36,9 +34,8 @@ namespace Thermodynamics.Core
         public int RoomIndex;
 
         /// <summary>
-        /// Lexicographically smallest cell of the room. Stable while the room's shape is, which
-        /// is what carries a room's temperature across the map rebuilds that ordinary building
-        /// triggers elsewhere on the grid.
+        /// Lexicographically smallest cell of the room. Stable while the room's shape is, which is
+        /// what carries a room's temperature across map rebuilds triggered elsewhere on the grid.
         /// </summary>
         public Vector3I Anchor;
 
@@ -52,8 +49,8 @@ namespace Thermodynamics.Core
         public float Temperature;
 
         /// <summary>
-        /// How full of air the room is, 0..1. Set by the host; 0 means vacuum, and a vacuum
-        /// exchanges nothing.
+        /// How full of air the room is, 0..1. Set by the host. Zero is vacuum, which exchanges
+        /// nothing.
         /// </summary>
         public float Pressure;
 
@@ -64,19 +61,18 @@ namespace Thermodynamics.Core
         public readonly List<RoomLink> Links = new List<RoomLink>();
 
         /// <summary>
-        /// True once this air has a temperature that means something — carried over from the room
-        /// as it was before a rebuild, or taken from the surfaces around it the first time it was
-        /// filled. Until then the figure is a placeholder, and a placeholder must not be allowed
-        /// to become a heat sink: a compartment that materialises at the vacuum default would
-        /// drain the ship it appeared in.
+        /// True once this air holds a meaningful temperature: carried over from the room before a
+        /// rebuild, or taken from the surrounding surfaces the first time it was filled. Until then
+        /// the value is a placeholder, and a compartment appearing at the vacuum default would act
+        /// as a heat sink on the grid around it.
         /// </summary>
         public bool Initialised;
 
         private float heatTimeScale = 1f;
 
         /// <summary>
-        /// Divides heat capacity, exactly as it does for a block and for coolant. The air has to
-        /// run on the same clock as the walls it touches.
+        /// Divisor applied to heat capacity, as for a block and for coolant, so the air runs on the
+        /// same clock as the walls it touches.
         /// </summary>
         public float HeatTimeScale
         {

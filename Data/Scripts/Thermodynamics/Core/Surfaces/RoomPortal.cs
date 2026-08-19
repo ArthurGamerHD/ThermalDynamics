@@ -4,14 +4,13 @@ namespace Thermodynamics.Core
     /// A door in a wall: one face of one block that seals when the block is shut and does not
     /// when it is open, together with the two regions it joins.
     ///
-    /// A portal is a property of how the ship is built, so it is found once, when the room map is
-    /// built. Whether it is currently open is a property of the door, read live. That split is
-    /// the whole point: a door cycling costs a walk over the portals, not a new flood fill of the
-    /// grid's bounding box.
+    /// A portal is a property of how the grid is built, so it is found once when the room map is
+    /// built, while whether it is currently open is read live from the door. This split makes a
+    /// door cycling cost a walk over the portals rather than a new flood fill of the bounding box.
     /// </summary>
     public struct RoomPortal
     {
-        /// <summary>The door.</summary>
+        /// <summary>The door block this portal belongs to.</summary>
         public BlockInstance Block;
 
         /// <summary>The grid-space face of <see cref="Block"/> that opens.</summary>
@@ -39,7 +38,7 @@ namespace Thermodynamics.Core
             get { return Block != null && !Block.IsSealedByDoorState; }
         }
 
-        /// <summary>A portal between two different regions is the only kind that can vent one.</summary>
+        /// <summary>True when the portal joins two different regions, which is what can vent one.</summary>
         public bool JoinsDistinctRegions
         {
             get { return RegionA != RegionB; }

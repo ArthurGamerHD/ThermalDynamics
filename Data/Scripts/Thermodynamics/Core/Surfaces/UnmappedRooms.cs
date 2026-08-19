@@ -7,20 +7,17 @@ namespace Thermodynamics.Core
     /// <summary>
     /// Rooms the game holds and this map does not.
     ///
-    /// The room mapper decides what is sealed from the surface bits, which come from each block
+    /// The room mapper decides sealing from the surface bits, which come from each block
     /// definition's pressurisation table read cell by cell. The game decides it from its own
-    /// sealing test, which knows the real shape of a sloped block where this knows a cell. When
-    /// the two disagree the mod loses a whole compartment: the flood fill walks in from outside,
-    /// the cells come out external, no room is created, and nothing ever asks the game about a
-    /// room that was never found. A player standing in an obviously sealed room with a vent
-    /// reading full sees no room, no air and no overlay, and there is nothing in any report that
-    /// says why.
+    /// sealing test, which knows the true shape of a sloped block where this knows only a cell.
+    /// Where the two disagree the model loses a compartment: the flood fill walks in from outside,
+    /// the cells classify as external, no room is created, and nothing queries the game about a room
+    /// that was never found — so the compartment appears in no overlay and no report.
     ///
-    /// This finds them. Every cell the map calls external is offered to the game; the ones it
-    /// calls airtight are grouped into connected regions, and each region is a compartment the
-    /// model has lost. It is a diagnostic and nothing reads it but the report and the overlay:
-    /// the fix belongs in the surface bits, and until those agree, this is the measurement that
-    /// says which blocks to fix and by how much.
+    /// This locates them. Every cell the map calls external is offered to the game, the airtight
+    /// ones are grouped into connected regions, and each region is a compartment the model lost.
+    /// Diagnostic only: it is read by the report and the overlay, and the fix belongs in the
+    /// surface bits.
     /// </summary>
     public static class UnmappedRooms
     {
@@ -28,18 +25,16 @@ namespace Thermodynamics.Core
         public class Region
         {
             /// <summary>
-            /// Lexicographically smallest cell, matching <see cref="RoomAirNode.Anchor"/>. Regions
-            /// are ordered by it, so a region keeps the same index between two dumps of an
-            /// unchanged grid and can be named in one and looked up in the other.
+            /// Lexicographically smallest cell, matching <see cref="RoomAirNode.Anchor"/>. Regions are
+            /// ordered by it, so a region keeps the same index across two dumps of an unchanged grid.
             /// </summary>
             public Vector3I Anchor;
 
             public readonly HashSet<Vector3I> Cells = new HashSet<Vector3I>(Vector3I.Comparer);
 
             /// <summary>
-            /// Where the map thinks air gets in: boundary faces this model does not seal, leading
-            /// out of the region. These are exactly the faces the game seals and this does not,
-            /// which makes the blocks across them the ones worth fixing.
+            /// Boundary faces leading out of the region that this model does not seal. These are the
+            /// faces the game seals and this does not, so the blocks across them are the ones to fix.
             /// </summary>
             public readonly List<Leak> Leaks = new List<Leak>();
 
@@ -57,7 +52,7 @@ namespace Thermodynamics.Core
 
             public int Face;
 
-            /// <summary>The cell on the other side — whatever is failing to seal is there or here.</summary>
+            /// <summary>The cell on the other side. The block failing to seal is in one of the two.</summary>
             public Vector3I Neighbour;
 
             public Leak(Vector3I cell, int face, Vector3I neighbour)
@@ -68,20 +63,17 @@ namespace Thermodynamics.Core
             }
         }
 
-        /// <summary>
-        /// Finds every compartment the game seals and <paramref name="map"/> does not.
-        /// </summary>
+        /// <summary>Finds every compartment the game seals and <paramref name="map"/> does not.</summary>
         /// <param name="map">The published room map, whose external cells are the candidates.</param>
-        /// <param name="surfaces">The surface bits, for deciding where this model thinks air flows.</param>
+        /// <param name="surfaces">The surface bits, used to decide where this model lets air flow.</param>
         /// <param name="airtightHere">
-        /// The game's own verdict at a cell. One call per external cell, so this runs on a dump or
-        /// when the room overlay is up, and never on a step.
+        /// The game's verdict at a cell. Called once per external cell, so this runs on a dump or
+        /// when the room overlay is up, never during a step.
         /// </param>
         /// <param name="results">Cleared and filled, ordered by anchor.</param>
         /// <param name="cellLimit">
-        /// Ceiling on cells examined, so a diagnostic can never become the expensive thing on a
-        /// capital ship. Returns false when it was hit, and a partial answer that says so beats a
-        /// stall.
+        /// Ceiling on cells examined, bounding the cost on a large grid. The method returns false
+        /// when the limit was reached, so a partial result is reported as partial.
         /// </param>
         public static bool Find(
             RoomMap map,
@@ -96,8 +88,8 @@ namespace Thermodynamics.Core
             if (map == null || surfaces == null || airtightHere == null) return true;
             if (map.IsEmpty) return true;
 
-            // Sorted, so the grouping below is deterministic and so region indices are stable
-            // between two runs over the same grid. A diagnostic nobody can cite twice is no use.
+            // Sorted, so the grouping below is deterministic and region indices are stable between
+            // two runs over the same grid.
             List<Vector3I> candidates = new List<Vector3I>();
             IEnumerable<Vector3I> external = map.ExternalCells;
 
@@ -156,7 +148,7 @@ namespace Thermodynamics.Core
                 results.Add(region);
             }
 
-            // By anchor, so region 0 is the same region next time.
+            // Ordered by anchor, so region 0 is the same region on the next run.
             results.Sort(CompareRegions);
             return complete;
         }
@@ -164,9 +156,9 @@ namespace Thermodynamics.Core
         /// <summary>
         /// The faces where this region ends and the model does not seal.
         ///
-        /// A face leaving the region that this model calls sealed is not a leak — the game and
-        /// this agree there, and the region simply ends. A face leaving it that this model leaves
-        /// open is the disagreement, and the whole point of the exercise.
+        /// A face leaving the region that this model calls sealed is not a leak: both models agree
+        /// and the region simply ends there. A face leaving it that this model leaves open is the
+        /// disagreement being measured.
         /// </summary>
         private static void CollectLeaks(Region region, SurfaceMap surfaces)
         {
@@ -183,7 +175,7 @@ namespace Thermodynamics.Core
             }
         }
 
-        /// <summary>Cells examined before a scan gives up. About a large ship's bounding box.</summary>
+        /// <summary>Cells examined before a scan gives up, roughly a large grid's bounding box.</summary>
         public const int DefaultCellLimit = 200000;
 
         private static int CompareRegions(Region a, Region b)

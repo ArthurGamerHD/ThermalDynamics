@@ -8,8 +8,8 @@ namespace Thermodynamics.Core
     /// Per-cell surface state for a grid: which faces seal and which carry mount surfaces, for
     /// the cell itself and for whatever sits next to it.
     ///
-    /// Neighbour bits are always derived, never authored, so the map cannot drift out of sync
-    /// with itself the way two independently-written halves can.
+    /// Neighbour bits are always derived, never authored, so the two halves cannot drift out of
+    /// sync with each other.
     /// </summary>
     public class SurfaceMap
     {
@@ -17,13 +17,12 @@ namespace Thermodynamics.Core
 
         /// <summary>
         /// The same cells as <see cref="states"/>, with every block read as if its state were
-        /// sealing — a door taken as shut.
+        /// sealing, so a door is taken as shut.
         ///
-        /// Two layers because two callers mean different things. Exposure asks what is sealing
-        /// <em>now</em>, because an open doorway does radiate. The room mapper asks what the grid
-        /// is <em>built</em> like, because a door swinging must not change the shape of the ship
-        /// and force a new flood fill. The pair is kept in step by writing both from the same
-        /// block in the same call, never independently.
+        /// Two layers because two callers ask different questions. Exposure asks what is sealing
+        /// now, since an open doorway radiates. The room mapper asks how the grid is built, since a
+        /// door cycling must not change the grid's shape and force a new flood fill. Both layers are
+        /// written from the same block in the same call, never independently.
         /// </summary>
         private readonly Dictionary<Vector3I, int> structure = new Dictionary<Vector3I, int>(Vector3I.Comparer);
 
@@ -154,8 +153,7 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// True when nothing can pass between two adjacent cells: either side sealing is enough.
-        /// This is the connectivity rule the room mapper walks.
+        /// True when nothing can pass between two adjacent cells. Either side sealing is sufficient.
         /// </summary>
         public bool IsFaceSealed(Vector3I cell, int face)
         {
@@ -166,13 +164,13 @@ namespace Thermodynamics.Core
             return CellSurface.SelfAirtight(neighbourState, Face.Opposite(face));
         }
 
-        /// <summary>True when every face of the cell seals — solid structure, not a gap.</summary>
+        /// <summary>True when every face of the cell seals, meaning solid structure rather than a gap.</summary>
         public bool IsFullySealed(Vector3I cell)
         {
             return CellSurface.IsFullySealed(GetState(cell));
         }
 
-        /// <summary>Structural state of a cell — every door read as shut — or 0 when empty.</summary>
+        /// <summary>Structural state of a cell, with every door read as shut, or 0 when empty.</summary>
         public int GetStructuralState(Vector3I cell)
         {
             int state;
@@ -180,9 +178,9 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// <see cref="IsFaceSealed"/> against the structure layer. This is the connectivity rule
-        /// the room mapper walks, so that the rooms it finds are a property of how the ship is
-        /// built and not of which doors happen to be open.
+        /// <see cref="IsFaceSealed"/> against the structure layer. This is the connectivity rule the
+        /// room mapper walks, so the rooms it finds depend on how the grid is built rather than on
+        /// which doors are open.
         /// </summary>
         public bool IsFaceSealedStructurally(Vector3I cell, int face)
         {
@@ -201,9 +199,9 @@ namespace Thermodynamics.Core
         /// <summary>
         /// Counts, per face direction, how many of a block's cell faces are open to the outside.
         ///
-        /// A face counts when it is on the block's boundary, the space beyond is external, the
-        /// neighbour does not seal against it, and it is not a mount-to-mount contact with
-        /// another block.
+        /// A face counts when it lies on the block's boundary, the space beyond is external, the
+        /// neighbour does not seal against it, and it is not a mount-to-mount contact with another
+        /// block.
         /// </summary>
         public void GetExposedFaces(BlockInstance block, RoomMap rooms, int[] resultsByFace)
         {
@@ -218,10 +216,9 @@ namespace Thermodynamics.Core
             Vector3I min = block.Min;
             Vector3I maxExclusive = block.MaxExclusive;
 
-            // Only the block's boundary is walked. A face that radiates has to be on the
-            // outside, so the interior cells of a multi-cell block cannot contribute one — the
-            // old volume walk visited them only to reject them, at a cost that grows as the
-            // cube of block size rather than the square.
+            // Only the block's boundary is walked. A radiating face must be on the outside, so the
+            // interior cells of a multi-cell block cannot contribute one; walking the volume would
+            // cost the cube of block size rather than the square.
             for (int face = 0; face < Face.Count; face++)
             {
                 Vector3I offset = Face.Offsets[face];
@@ -248,13 +245,13 @@ namespace Thermodynamics.Core
                         int state = GetState(cell);
                         Vector3I neighbour = cell + offset;
 
-                        // something on the other side seals this face off
+                        // Something on the other side seals this face off.
                         if (CellSurface.NeighbourAirtight(state, face)) continue;
 
-                        // two mount surfaces pressed together: bolted on, not exposed
+                        // Two mount surfaces pressed together: a joint, not an exposed face.
                         if (CellSurface.NeighbourMount(state, face) && CellSurface.SelfMount(state, face)) continue;
 
-                        // must actually reach the outside world
+                        // The space beyond must reach the outside.
                         if (rooms != null && !rooms.IsExternal(neighbour)) continue;
 
                         count++;
@@ -268,14 +265,14 @@ namespace Thermodynamics.Core
         /// <summary>
         /// Counts, per room, how many of a block's cell faces look into that room's air.
         ///
-        /// The test is deliberately different from <see cref="GetExposedFaces"/>. A face is
-        /// exposed when it can radiate to the sky; a face is in contact with room air when there
-        /// is air on the other side of it, sealed or not — the inner skin of a bulkhead seals the
-        /// compartment and warms it at the same time. So this asks only that the neighbouring
-        /// cell hold no block and belong to a room that is currently holding its air in.
+        /// A different test from <see cref="GetExposedFaces"/>: a face is exposed when it can
+        /// radiate to the sky, but it contacts room air whenever there is air on the other side,
+        /// sealed or not — the inner skin of a bulkhead both seals the compartment and warms it. So
+        /// this requires only that the neighbouring cell hold no block and belong to a room
+        /// currently holding air.
         ///
-        /// The caller owns and clears <paramref name="results"/>. Rooms are few per block — a
-        /// block bounds one or two — so a short list beats a dictionary.
+        /// The caller owns and clears <paramref name="results"/>. A block bounds one or two rooms,
+        /// so a short list is used rather than a dictionary.
         /// </summary>
         public void GetRoomContacts(BlockInstance block, RoomMap rooms, List<RoomContact> results)
         {

@@ -6,11 +6,9 @@ namespace Thermodynamics.Core
     /// <summary>
     /// Why a block face counts as exposed, or does not.
     ///
-    /// <see cref="SurfaceMap.GetExposedFaces"/> returns a number, and a number cannot answer the
-    /// only question anyone asks of it — "that face is open to the sky, why does the model say it
-    /// is not?". Three separate rules can reject a cell face, and from the outside all three look
-    /// identical. This records which one did it, per cell face, so the answer is read rather than
-    /// guessed at.
+    /// <see cref="SurfaceMap.GetExposedFaces"/> returns only a count, which cannot say why a face
+    /// that looks open to the sky was not counted. Three separate rules can reject a cell face and
+    /// all three produce the same count. This records which rule applied, per cell face.
     /// </summary>
     public struct FaceExposure
     {
@@ -23,7 +21,7 @@ namespace Thermodynamics.Core
         /// <summary>Rejected because something on the other side is airtight against this face.</summary>
         public int Sealed;
 
-        /// <summary>Rejected because two mount surfaces are pressed together — bolted on.</summary>
+        /// <summary>Rejected because two mount surfaces are pressed together, forming a joint.</summary>
         public int Mounted;
 
         /// <summary>Rejected because the space beyond is inside the ship rather than outdoors.</summary>
@@ -39,9 +37,8 @@ namespace Thermodynamics.Core
     /// <summary>
     /// A block's six faces, explained.
     ///
-    /// Deliberately a separate walk from the one the simulation uses rather than a flag threaded
-    /// through it: the hot path stays a counting loop with no diagnostic branches, and this is only
-    /// ever run by someone who has asked a question.
+    /// A separate walk from the simulation's rather than a flag threaded through it, so the hot path
+    /// stays a counting loop with no diagnostic branches and this runs only when something asks.
     /// </summary>
     public static class SurfaceAudit
     {
@@ -92,9 +89,9 @@ namespace Thermodynamics.Core
                         int state = surfaces.GetState(cell);
                         Vector3I neighbour = cell + offset;
 
-                        // The order matters and mirrors GetExposedFaces exactly: a cell face
-                        // rejected by two rules is reported against the first, so the counts sum
-                        // to the number of cell faces rather than double-counting.
+                        // The order mirrors GetExposedFaces exactly: a cell face rejected by two
+                        // rules is reported against the first, so the counts sum to the number of
+                        // cell faces rather than double-counting.
                         if (CellSurface.NeighbourAirtight(state, face))
                         {
                             result.Sealed++;
@@ -122,8 +119,8 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Explains every block on a grid, in model order. Allocates, and is meant for a report
-        /// rather than for a step.
+        /// Explains every block on a grid, in model order. Allocates; intended for a report rather
+        /// than a step.
         /// </summary>
         public static List<BlockExposure> ExplainAll(
             SurfaceMap surfaces, GridModel grid, RoomMap rooms, int limit = int.MaxValue)

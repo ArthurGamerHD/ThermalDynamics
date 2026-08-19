@@ -7,10 +7,10 @@ namespace Thermodynamics.Core
     /// <summary>
     /// A cross-check of one completed room mapping pass against the grid that produced it.
     ///
-    /// The mapper's own counters say what it decided; they cannot say whether the decision was
-    /// right. This does: it walks the placed blocks and asks the published map what it made of
-    /// each of their cells. A cell holding a block should be structure. One the flood fill walked
-    /// into instead is a leak, and a leak is why an obviously sealed room maps as no room at all.
+    /// The mapper's counters report what it decided but not whether the decision was correct. This
+    /// walks the placed blocks and asks the published map how it classified each of their cells. A
+    /// cell holding a block should be structure; one the flood fill walked into is a leak, which is
+    /// why an apparently sealed room can map as no room at all.
     /// </summary>
     public struct RoomAudit
     {
@@ -20,8 +20,8 @@ namespace Thermodynamics.Core
         public int RoomCount;
 
         /// <summary>
-        /// Rooms currently standing open to the outside through a door. Still rooms; simply not
-        /// holding anything in, so what faces them radiates.
+        /// Rooms currently standing open to the outside through a door. Still rooms, but holding no
+        /// air, so surfaces facing them radiate.
         /// </summary>
         public int VentedRooms;
 
@@ -44,15 +44,15 @@ namespace Thermodynamics.Core
         public int LeakedCells;
 
         /// <summary>
-        /// Block cells the map treats as open space. Not a fault on its own — a reactor, a
-        /// lattice and the way through a door are all open in the game too — but it is the number
-        /// that explains a room that will not seal, and the examples name which blocks they are.
+        /// Block cells the map treats as open space. Not a fault in itself — a reactor, a lattice and
+        /// the way through a door are all open in the game too — but this is the figure that
+        /// explains a room that will not seal, and the examples name the blocks responsible.
         /// </summary>
         public int OpenBlockCells;
 
         /// <summary>
-        /// Faces of block cells that do not seal, counting only faces the block itself owns.
-        /// A hull of armour is zero; every open door and lattice adds to it.
+        /// Faces of block cells that do not seal, counting only faces the block itself owns. Zero for
+        /// a hull of solid armour; every open door and lattice adds to it.
         /// </summary>
         public int UnsealedBlockFaces;
 
@@ -60,8 +60,8 @@ namespace Thermodynamics.Core
         public int BlocksSealingNothing;
 
         /// <summary>
-        /// Cell count of each room found, largest first, bounded the same way the examples are.
-        /// A room count says a room exists; this says how much of the ship it is.
+        /// Cell count of each room found, largest first, bounded as the examples are. A room count
+        /// establishes that a room exists; this gives its size.
         /// </summary>
         public List<int> RoomSizes;
 
@@ -73,14 +73,13 @@ namespace Thermodynamics.Core
         /// <summary>
         /// False when the map is the empty default rather than the result of a pass.
         ///
-        /// A grid that closes before its first pass — a paste preview, a subgrid that lasts three
-        /// seconds — still has a published map, because the mapper hands out an all-external one
-        /// until it has built a real one. Comparing a grid against that reports every block it has
-        /// as unaccounted for, which is a statement about the default and not about the grid.
+        /// A grid that closes before its first pass — a paste preview, a short-lived subgrid — still
+        /// has a published map, since the mapper serves an all-external one until it has built a
+        /// real one. Auditing against that reports every block as unaccounted for.
         /// </summary>
         public bool MapBuilt;
 
-        /// <summary>The map contradicts the grid: sealed structure the fill got into.</summary>
+        /// <summary>True when the map contradicts the grid: the fill reached sealed structure.</summary>
         public bool HasLeak
         {
             get { return LeakedCells > 0; }
@@ -91,12 +90,10 @@ namespace Thermodynamics.Core
     {
         public const int DefaultExampleLimit = 8;
 
-        /// <summary>
-        /// Audits a published map against the grid it was built from.
-        /// </summary>
+        /// <summary>Audits a published map against the grid it was built from.</summary>
         /// <param name="exampleLimit">
-        /// How many leaking cells to describe. Descriptions build strings, so this is what keeps
-        /// a grid that has gone badly wrong from writing a line per cell.
+        /// How many leaking cells to describe. Descriptions build strings, so this bounds the output
+        /// for a grid where many cells leak.
         /// </param>
         public static RoomAudit Audit(GridModel grid, SurfaceMap surfaces, RoomMap map, int exampleLimit = DefaultExampleLimit)
         {
@@ -150,12 +147,12 @@ namespace Thermodynamics.Core
                     if (!audit.MapBuilt) continue;
                     if (map.IsSolid(cells[i])) continue;
 
-                    // A cell sealed on every face cannot be reached across any of them, so the
-                    // fill can only have got in if the map is not the map of this grid.
+                    // A cell sealed on every face cannot be reached across any of them, so the fill
+                    // could only have entered if the map does not describe this grid.
                     if (CellSurface.IsFullySealed(state)) audit.LeakedCells++;
 
-                    // A cell inside a room is open space, but it is open space the mapper
-                    // accounted for. The interesting ones are those left outdoors.
+                    // A cell inside a room is open space the mapper accounted for. The reportable
+                    // cases are those left outdoors.
                     if (map.RoomIndexOf(cells[i]) >= 0) continue;
 
                     audit.OpenBlockCells++;
@@ -172,8 +169,8 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// The largest rooms by cell count, at most <paramref name="limit"/> of them. Bounded
-        /// because a ship can have hundreds of compartments and this is a line in a report.
+        /// The largest rooms by cell count, at most <paramref name="limit"/> of them. Bounded because
+        /// a grid can have hundreds of compartments and this becomes one line of a report.
         /// </summary>
         private static void CollectRoomSizes(RoomMap map, List<int> sizes, int limit)
         {
@@ -200,11 +197,11 @@ namespace Thermodynamics.Core
 
         private static string Describe(BlockInstance block, Vector3I cell, SurfaceMap surfaces, int selfState)
         {
-            // Most blocks in this list belong there. A reactor, a lattice, a window frame: the
-            // game does not consider them airtight either, and saying so here is the difference
-            // between a report that names a fault and one that reads like an accusation.
-            // Door state first: a block held open is the more specific explanation of why it is
-            // not sealing than the bits it is left with.
+            // Most blocks in this list belong there: a reactor, a lattice or a window frame is not
+            // airtight in the game either, so the description states that rather than implying a
+            // fault.
+            // Door state first: a block held open is a more specific explanation than the surface
+            // bits it is left with.
             string verdict;
             if (!block.IsSealedByDoorState) verdict = " (open door)";
             else if ((selfState & CellSurface.SelfAirtightMask) == 0) verdict = " (not airtight: expected outdoors)";
@@ -215,8 +212,8 @@ namespace Thermodynamics.Core
 
             if (surfaces == null) return text;
 
-            // Which way the fill came in. A cell can only be reached across a face neither side
-            // seals, so naming those faces points straight at the block that is not sealing.
+            // Which faces the fill entered through. A cell can only be reached across a face neither
+            // side seals, so naming those faces identifies the block that is not sealing.
             string open = "";
             for (int face = 0; face < Face.Count; face++)
             {
