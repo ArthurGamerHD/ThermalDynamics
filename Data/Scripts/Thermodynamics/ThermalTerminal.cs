@@ -210,55 +210,40 @@ namespace Thermodynamics
             Text.Append('\n');
             Row("Pump");
 
-            // How much of the machine is in use, drawn rather than described. A full bar is a pump
-            // that has run out of machine; a part-full one has run out of something else, and the
-            // coefficient beside it says what — a low figure is a gap too wide to be worth lifting
-            // across. Two states that used to take a sentence each now take no words at all.
+            // Two words at most, and only for the three states where nothing is happening at all —
+            // they want three different fixes and no symbol tells them apart.
             if (!pump.IsConnected)
             {
-                Bar(0f);
-                Text.Append(" no block on one face\n");
+                Text.Append("no block on one face\n");
                 return;
             }
             if (!pump.Enabled)
             {
-                Bar(0f);
-                Text.Append(" off\n");
+                Text.Append("off\n");
                 return;
             }
             if (pump.PowerAvailable <= 0f)
             {
-                Bar(0f);
-                Text.Append(" unpowered\n");
+                Text.Append("unpowered\n");
                 return;
             }
 
-            Bar(pump.RatedWatts > 0f ? pump.LastLiftedWatts / pump.RatedWatts : 0f);
-            Text.Append(' ').Append((pump.LastLiftedWatts / 1000f).ToString("n1")).Append(" kW  x")
+            Text.Append((pump.LastLiftedWatts / 1000f).ToString("n1")).Append(" kW for ")
+                .Append((pump.LastPowerWatts / 1000f).ToString("n1")).Append(" kW   x")
                 .Append(pump.LastCoefficient.ToString("n2")).Append('\n');
 
-            Row("Draw");
-            Text.Append((pump.LastPowerWatts / 1000f).ToString("n1")).Append(" kW");
+            // The actionable figure: how much gap the pump has left before it stops reaching its
+            // rating, or how much it is over. A player can read a fix straight off it — move either
+            // side by that much — where "at its rating" or "limited by the gap" only named a state.
+            Row("Optimal");
+            float margin = pump.LastOptimalMarginKelvin;
+            Text.Append(margin >= 0f ? "+" : "").Append(margin.ToString("n0")).Append("°C");
+
             if (pump.PowerSetting < 1f)
             {
-                Text.Append("  of ").Append((pump.SettablePowerWatts / 1000f).ToString("n1")).Append(" kW set");
+                Text.Append("   throttled ").Append((pump.PowerSetting * 100f).ToString("n0")).Append('%');
             }
             Text.Append('\n');
-        }
-
-        /// <summary>Ten-segment fill bar, 0..1. ASCII so it renders in any font the terminal uses.</summary>
-        private const int BarSegments = 10;
-
-        private static void Bar(float fraction)
-        {
-            if (fraction < 0f) fraction = 0f;
-            if (fraction > 1f) fraction = 1f;
-
-            int filled = (int)((fraction * BarSegments) + 0.5f);
-
-            Text.Append('[');
-            for (int i = 0; i < BarSegments; i++) Text.Append(i < filled ? '#' : '.');
-            Text.Append(']');
         }
 
         /// <summary>

@@ -1332,6 +1332,15 @@ namespace Thermodynamics.Core
                 // Demand is recorded at the setting the player chose regardless of what the grid
                 // supplied, so a request never shrinks merely because it was refused.
                 float settable = pump.SettablePowerWatts;
+
+                // How far the gap is from the widest one this pump could still saturate at. Recorded
+                // before the early exits so a throttled or starved pump still reports what its
+                // conditions would allow.
+                pump.LastOptimalMarginKelvin = pump.RatedWatts > 0f
+                    ? ((fraction * coldTemperature * settable) / pump.RatedWatts)
+                        - (hotTemperature - coldTemperature)
+                    : 0f;
+
                 if (settable <= 0f) continue;
 
                 float wanted = Limit(coefficient * settable, pump.RatedWatts, headroom);

@@ -245,18 +245,28 @@ Flow     -10.0m/s
 Transfer 142.9 kW in  142.9 kW out
 ```
 
-A heat pump reports how much of its machine is in use as a bar, rather than in a sentence:
+A heat pump reports how far its conditions are from letting it reach full output:
 
 ```
-Pump     [####......] 23.1 kW  x1.15
-Draw     20.0 kW
+Pump     23.1 kW for 20.0 kW   x1.15
+Optimal  -48°C
 ```
 
-A **full bar** is a pump that has run out of machine — a narrower gap would gain it nothing. A
-**part-full bar** is a pump that has run out of something else, and the coefficient beside it says
-what: `x1.15` is a gap wide enough to cost more than it moves. An **empty bar** is a pump achieving
-nothing, with one word for which of the three reasons applies — no block on one face, off, or
-unpowered.
+**`Optimal` is the gap this pump has left before it stops reaching its rating**, and it goes negative
+once the gap is past that. `-48°C` means the two sides are forty-eight degrees further apart than they
+need to be — bring either one that far toward the other and the pump reaches its rating. A positive
+figure is headroom: how much further apart they could drift before output starts falling.
+
+The pump saturates while `coefficient × power ≥ rating`, and the coefficient is
+`fraction × Tcold / gap`, so the widest gap that still saturates it is
+`fraction × Tcold × power / rating` — 40 K at a 300 K cold side on the shipped figures. Throttling the
+pump narrows that allowance in proportion, and the line follows.
+
+It replaced a sentence naming which limit was binding. That only named a state; this one can be acted
+on, which is the difference between a readout and a diagnosis.
+
+An idle pump carries one word for which of three reasons applies — `no block on one face`, `off` or
+`unpowered` — because those want three different fixes and no figure separates them.
 
 Coolant is given as a mean with the **range across the ring** in brackets, because with the fluid
 carried round in parcels a loop is not one temperature. A wide spread with the pump running means the

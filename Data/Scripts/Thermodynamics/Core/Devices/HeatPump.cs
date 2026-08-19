@@ -163,6 +163,21 @@ namespace Thermodynamics.Core
         /// <summary>True when the pump ran but could not reach its rated lift.</summary>
         public bool LastWasLimited;
 
+        /// <summary>
+        /// How much wider the gap between the two sides could be and still let the pump reach its full
+        /// rated output, K. Negative when the gap is already too wide for that.
+        ///
+        /// The pump reaches its rating while <c>coefficient x power &gt;= rating</c>, and the
+        /// coefficient is <c>fraction x Tcold / gap</c>, so the widest gap that still saturates it is
+        /// <c>fraction x Tcold x power / rating</c>. This is that figure minus the gap actually being
+        /// worked across.
+        ///
+        /// It is the one number that tells a player what to change. A pump at half output is not
+        /// obviously fixable from "half output"; a pump reading −48 K is forty-eight degrees of gap
+        /// away from full output, and either side can be moved to close it.
+        /// </summary>
+        public float LastOptimalMarginKelvin;
+
         /// <summary>True when both faces resolve to a node. A pump missing a side does nothing.</summary>
         public bool IsConnected
         {

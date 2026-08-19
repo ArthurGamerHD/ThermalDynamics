@@ -671,5 +671,94 @@ namespace Thermodynamics.Tests
 
             return draw <= 0f ? 0f : devices[0].LastLiftedWatts / draw;
         }
+    
+        /// <summary>
+        /// The margin says how much gap is left before the pump stops reaching its rating, and it is
+        /// negative once the gap is past that. It is the figure a player can act on: move either side
+        /// by that much.
+        ///
+        /// The pump saturates while coefficient x power >= rating, and the coefficient is
+        /// fraction x Tcold / gap, so the widest gap that still saturates it is
+        /// fraction x Tcold x power / rating — 0.4 x 300 x 20000 / 60000 = 40 K at a 300 K cold side.
+        /// </summary>
+        [Theory]
+        [InlineData(310f, 30f)]     // a 10 K gap against a 40 K allowance: 30 K spare
+        [InlineData(340f, 0f)]      // exactly at the limit
+        [InlineData(400f, -60f)]    // 100 K gap: sixty degrees too wide
+        public void TheOptimalMarginSaysHowFarTheGapIsFromFullOutput(float hotSide, float expected)
+        {
+            GridBuilder builder = GridBuilder.Large();
+            builder.Place(Catalog.HeavyArmor(), Vector3I.Zero);
+            BlockInstance cold = builder.Last;
+            builder.Place(Catalog.HeatPump(), new Vector3I(0, 0, 1),
+                new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));
+            BlockInstance pumpBlock = builder.Last;
+            builder.Place(Catalog.HeavyArmor(), new Vector3I(0, 0, 2));
+            BlockInstance hot = builder.Last;
+
+            ThermalSettings settings = new ThermalSettings();
+            settings.EnableEnvironment = false;
+            settings.EnableDamage = false;
+            settings.Derive();
+
+            ThermalSimulation simulation = builder.BuildSimulation(settings, 300f);
+            HeatPumpDevice pump = simulation.Solver.GetHeatPump(pumpBlock);
+            pump.Enabled = true;
+            pump.PowerAvailable = 1f;
+
+            ThermalNode coldNode = simulation.Solver.GetNode(cold);
+            ThermalNode hotNode = simulation.Solver.GetNode(hot);
+
+            for (int i = 0; i < 30; i++)
+            {
+                coldNode.Temperature = 300f;
+                hotNode.Temperature = hotSide;
+                simulation.StepExact(1, Worlds.Shadow());
+            }
+
+            Assert.Equal(expected, pump.LastOptimalMarginKelvin, 0);
+
+            // A margin at or above zero is a pump reaching its rating; below it, one that is not.
+            if (expected >= 0f) Assert.Equal(pump.RatedWatts, pump.LastLiftedWatts, 0);
+            else Assert.True(pump.LastLiftedWatts < pump.RatedWatts);
+        }
+
+        /// <summary>Throttling narrows the gap the pump can still saturate across, and the margin says so.</summary>
+        [Fact]
+        public void ThrottlingShrinksTheOptimalMargin()
+        {
+            GridBuilder builder = GridBuilder.Large();
+            builder.Place(Catalog.HeavyArmor(), Vector3I.Zero);
+            BlockInstance cold = builder.Last;
+            builder.Place(Catalog.HeatPump(), new Vector3I(0, 0, 1),
+                new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));
+            BlockInstance pumpBlock = builder.Last;
+            builder.Place(Catalog.HeavyArmor(), new Vector3I(0, 0, 2));
+            BlockInstance hot = builder.Last;
+
+            ThermalSettings settings = new ThermalSettings();
+            settings.EnableEnvironment = false;
+            settings.EnableDamage = false;
+            settings.Derive();
+
+            ThermalSimulation simulation = builder.BuildSimulation(settings, 300f);
+            HeatPumpDevice pump = simulation.Solver.GetHeatPump(pumpBlock);
+            pump.Enabled = true;
+            pump.PowerAvailable = 1f;
+            pump.PowerSetting = 0.5f;
+
+            ThermalNode coldNode = simulation.Solver.GetNode(cold);
+            ThermalNode hotNode = simulation.Solver.GetNode(hot);
+
+            for (int i = 0; i < 30; i++)
+            {
+                coldNode.Temperature = 300f;
+                hotNode.Temperature = 310f;
+                simulation.StepExact(1, Worlds.Shadow());
+            }
+
+            // Half the power saturates half the gap: 20 K rather than 40 K, so 10 K spare at a 10 K gap.
+            Assert.Equal(10f, pump.LastOptimalMarginKelvin, 0);
+        }
     }
 }
