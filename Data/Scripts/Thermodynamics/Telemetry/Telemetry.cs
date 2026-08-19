@@ -24,21 +24,20 @@ namespace Thermodynamics
     /// <summary>
     /// Session-wide data collection for the live mod.
     ///
-    /// Everything the simulation does is funnelled through the hooks on this class, aggregated
-    /// into streaming statistics, and written to a report when the world closes. Nothing here
-    /// changes simulation behaviour; every entry point is a no-op when <see cref="Enabled"/> is
-    /// false, and every entry point swallows its own exceptions, because a telemetry fault must
-    /// never take the mod down with it.
+    /// The simulation reports through the hooks on this class, which aggregate into streaming
+    /// statistics and are written to a report when the world closes. Nothing here changes
+    /// simulation behaviour: every entry point is a no-op when <see cref="Enabled"/> is false, and
+    /// every entry point swallows its own exceptions so a telemetry fault cannot fail the mod.
     ///
-    /// The design constraint is a session that runs for hours: no sample buffers, no per-cell
-    /// history, no unbounded dictionaries. Memory is bounded by the number of block definitions
-    /// and the number of grids that have existed.
+    /// Sized for a session running for hours: no sample buffers, no per-cell history, no unbounded
+    /// dictionaries. Memory is bounded by the number of block definitions and the number of grids
+    /// that have existed.
     /// </summary>
     public static class Telemetry
     {
         /// <summary>
-        /// Read on the hottest path in the mod, so it is a plain static field rather than a
-        /// property or a Settings lookup.
+        /// Whether collection is running. A plain static field rather than a property or settings
+        /// lookup, since it is read on the mod's hottest path.
         /// </summary>
         public static bool Enabled;
 
@@ -56,13 +55,12 @@ namespace Thermodynamics
         public const int MaxGridRecords = 2048;
 
         /// <summary>
-        /// Block faces the session will hold for the surface dump, across every grid. Six per
-        /// block, so about fifty thousand blocks — past that the diagnostic is costing more memory
-        /// than the answer is worth.
+        /// Block faces the session holds for the surface dump, across every grid. Six per block, so
+        /// roughly fifty thousand blocks.
         /// </summary>
         public const int MaxSurfaceRows = 300000;
 
-        /// <summary>Rows currently held. Records give theirs back when they re-snapshot.</summary>
+        /// <summary>Rows currently held. A record returns its rows to this budget when it re-snapshots.</summary>
         public static int SurfaceRowsCaptured;
         public const int MaxAnomalyKinds = 64;
         public const int MaxBlockTypes = 4096;
@@ -70,7 +68,7 @@ namespace Thermodynamics
         /// <summary>Stack frames kept with a recorded exception.</summary>
         public const int ExceptionFrames = 6;
 
-        /// <summary>A temperature above this is recorded as an anomaly; the sun is about 5772 K.</summary>
+        /// <summary>Temperature above which a reading is recorded as an anomaly. The sun is about 5772 K.</summary>
         public const float ImplausibleTemperature = 20000f;
 
         // ---- session identity -------------------------------------------------------------
@@ -110,16 +108,15 @@ namespace Thermodynamics
         /// <summary>
         /// Guards the three registries above.
         ///
-        /// Grids and blocks are not created on one thread. The game builds pasted and projected
+        /// Grids and blocks are not created on one thread: the game builds pasted and projected
         /// grids on workers, so <see cref="RegisterGrid"/>, <see cref="GetBlockType"/> and
-        /// <see cref="Anomaly"/> — which the adapter's own exception handlers call from wherever
-        /// they were thrown — all run concurrently with themselves. A field run recorded exactly
-        /// what that costs: ten <c>ArgumentException</c>s out of <c>GetBlockType</c> for a key
-        /// that a <c>TryGetValue</c> had just reported missing, and two null-reference throws
-        /// from inside <c>Dictionary.Insert</c>, which is a torn bucket array and not a null key.
+        /// <see cref="Anomaly"/> — the last called from wherever an adapter exception was thrown —
+        /// can each run concurrently with themselves. Unsynchronised, this produced
+        /// <c>ArgumentException</c> from <c>GetBlockType</c> for keys a <c>TryGetValue</c> had just
+        /// reported missing, and null-reference throws from inside <c>Dictionary.Insert</c>.
         ///
-        /// Registration happens once per grid and once per block type, so the lock is off every
-        /// hot path; the per-record counters underneath it stay lock-free.
+        /// Registration happens once per grid and once per block type, so the lock is off every hot
+        /// path; the per-record counters beneath it remain lock-free.
         /// </summary>
         private static readonly object RegistryLock = new object();
 
@@ -127,12 +124,12 @@ namespace Thermodynamics
         public static readonly TimingStat SessionFrameTime = new TimingStat("session frame");
 
         /// <summary>
-        /// What the mod costs per frame across every grid, and the worst frames of the session.
+        /// Cost per frame across every grid, and the worst frames of the session.
         ///
-        /// Every other cost figure here is per grid, and a stutter is not per grid: twenty ships
-        /// each taking a tolerable two milliseconds on the same frame is forty milliseconds of
-        /// one frame. Grids tick on the ten-frame cadence and the engine calls them together, so
-        /// that is the default shape of the cost rather than a corner case.
+        /// Every other cost figure is per grid, while a stutter is per frame: twenty grids each
+        /// costing an acceptable two milliseconds on the same frame produce a forty-millisecond
+        /// frame. Grids tick on the ten-frame cadence and the engine calls them together, so this is
+        /// the usual shape of the cost rather than a corner case.
         /// </summary>
         public static readonly FrameCostTracker FrameCost = new FrameCostTracker();
 
@@ -165,12 +162,10 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Turns collection on or off during a session, so a test run does not need a reload and
-        /// so an experiment can be ended before it costs anything further.
+        /// Turns collection on or off during a session, without a reload.
         ///
-        /// Switching on attaches records and stage profilers to grids that already exist;
-        /// switching off detaches them, and every hook in the mod goes back to a single static
-        /// bool read.
+        /// Switching on attaches records and stage profilers to grids that already exist; switching
+        /// off detaches them, after which every hook in the mod costs one static bool read.
         /// </summary>
         public static void SetEnabled(bool enabled)
         {
@@ -191,9 +186,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Session identity is not reliably available from the component constructor, so it is
-        /// captured on the first frame that can see it and kept for the report — by the time
-        /// UnloadData runs, most of it is already gone.
+        /// Captures session identity for the report. Not reliably available from the component
+        /// constructor, and mostly gone by the time <c>UnloadData</c> runs, so it is taken on the
+        /// first frame that can see it.
         /// </summary>
         private static void CaptureIdentity()
         {
@@ -227,9 +222,9 @@ namespace Thermodynamics
         {
             if (!Enabled) return;
 
-            // The frame being closed is the previous one. Which order the engine runs session
-            // components and entity components in is not something a mod controls, and a frame
-            // closed before its grids have run records nothing at all.
+            // The frame being closed is the previous one. A mod cannot control the order in which
+            // the engine runs session and entity components, and a frame closed before its grids
+            // have run would record nothing.
             FrameCost.EndFrame(FramesObserved, SessionSeconds);
 
             FramesObserved++;
@@ -256,14 +251,14 @@ namespace Thermodynamics
             {
                 SessionClock.Stop();
 
-                // The final-state histograms are rebuilt from scratch, so that a manual dump
-                // taken mid-session does not leave its counts behind for the next one.
+                // The final-state histograms are rebuilt from scratch, so a manual mid-session dump
+                // does not carry its counts into the next report.
                 foreach (BlockTypeTelemetry type in BlockTypes.Values)
                 {
                     type.FinalTemperatures.Clear();
                 }
 
-                // A grid that is still alive has never had its final state read.
+                // A grid that is still alive has not yet had its final state read.
                 for (int i = 0; i < Grids.Count; i++)
                 {
                     GridTelemetry g = Grids[i];
@@ -283,7 +278,7 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>Clears everything. Used when a session ends so a second world starts clean.</summary>
+        /// <summary>Clears everything, so a second world in the same process starts clean.</summary>
         public static void Reset()
         {
             Enabled = false;
@@ -312,12 +307,11 @@ namespace Thermodynamics
 
             SessionClock.Reset();
 
-            // Clearing the registry is not enough on its own: every live grid still holds the
-            // record it was handed, and a record that is no longer in the list goes on being
-            // written to. Its cost, its steps and its node updates then exist but are in no
-            // aggregate, and its opened-at is a reading from a stopwatch that has just been set
-            // back to zero — which is how a grid comes to report a lifetime longer than the
-            // session it lived in. Take the references away with the list.
+            // Clearing the registry alone is insufficient: every live grid still holds the record
+            // it was handed and keeps writing to it. Its cost, steps and node updates would then be
+            // recorded but absent from every aggregate, and its opened-at would be read from a
+            // stopwatch just reset to zero, producing a grid lifetime longer than its session. The
+            // references are cleared along with the list.
             IList<ThermalGrid> live = ThermalGrid.LiveGrids;
             for (int i = 0; i < live.Count; i++)
             {
@@ -332,7 +326,7 @@ namespace Thermodynamics
         public static GridTelemetry RegisterGrid(ThermalGrid grid)
         {
             // A grid can be created before the session component's Init has run, so registration
-            // is also what starts collection if nothing else has.
+            // also starts collection if nothing else has.
             if (!_started) Start();
             if (!Enabled || grid == null) return null;
 
@@ -399,9 +393,9 @@ namespace Thermodynamics
         /// <summary>
         /// One call per grid per batch of solver steps.
         ///
-        /// The solver steps a whole grid at once, so this replaces the old per-cell hook: the
-        /// grid-level figures are read from the solver directly, and per-block detail comes from
-        /// a rotating slice of nodes rather than from a callback on every block.
+        /// The solver steps a whole grid at once, so grid-level figures are read from it directly
+        /// and per-block detail comes from a rotating slice of nodes rather than a per-block
+        /// callback.
         /// </summary>
         public static void OnGridStepped(ThermalGrid grid, int steps)
         {
@@ -438,10 +432,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Records a room map that disagrees with the grid under it: the flood fill classified a
-        /// cell holding a block as open space, so anything the block was meant to enclose is
-        /// mapped as outdoors. Reported with the first offending block named, because the block
-        /// that fails to seal is the whole answer.
+        /// Records a room map that disagrees with the grid under it: the flood fill classified a cell
+        /// holding a block as open space, so anything that block was meant to enclose is mapped as
+        /// outdoors. Names the first offending block, which identifies the definition to correct.
         /// </summary>
         public static void NoteRoomLeak(GridTelemetry grid, RoomAudit audit)
         {
@@ -515,10 +508,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Message plus the top of the stack. The message on its own does not say which call
-        /// threw, and the throw is often inside game code the mod only reaches indirectly —
-        /// two frames are the difference between a guess and a location. Bounded, because only
-        /// the first and last example of each kind are kept and both go into the report.
+        /// Message plus the top frames of the stack. The message alone does not identify the call
+        /// that threw, and throws often originate inside game code the mod reaches indirectly.
+        /// Bounded: only the first and last example of each kind are kept, and both are reported.
         /// </summary>
         private static string Describe(Exception e)
         {

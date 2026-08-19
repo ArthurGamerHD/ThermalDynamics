@@ -28,19 +28,18 @@ namespace Thermodynamics.Core
         /// <summary>
         /// Cells this pass has already classified, one bit each over the search box.
         ///
-        /// A hash set was the obvious structure and the wrong one. By the end of a pass this holds
-        /// every cell of the bounding box — that is what a flood fill does — and at thirty-one
-        /// bytes a cell it was the high-water mark of the whole mod: 121 MB of a 400 MB peak on a
-        /// 127,000-block ship, scaling with the box rather than with the ship, so a hull that is
-        /// nine tenths empty paid for the emptiness.
+        /// A bitset rather than a hash set: by the end of a pass this holds every cell of the
+        /// bounding box, and at about thirty-one bytes per cell a hash set was the mod's peak
+        /// allocation — 121 MB of a 400 MB peak on a 127,000-block grid. It also scales with the
+        /// box rather than the grid, so a mostly empty hull pays for the empty space.
         /// </summary>
         private readonly CellBitset visited = new CellBitset();
 
         /// <summary>
-        /// Cells belonging to a door. These are never classified as solid structure even when
-        /// they seal on all six faces, because a door is a volume that can be opened, and a
-        /// portal has to have a region on the door's own side to join to. A shut airtight hangar
-        /// door is a room of one cell; opening it merges that cell with what is either side.
+        /// Cells belonging to a door. Never classified as solid structure even when they seal on all
+        /// six faces: a door is an openable volume, and a portal needs a region on the door's own
+        /// side to join to. A shut airtight hangar door is a room of one cell, which merges with the
+        /// regions either side when it opens.
         /// </summary>
         private readonly HashSet<Vector3I> doorCells = new HashSet<Vector3I>(Vector3I.Comparer);
 
@@ -59,9 +58,9 @@ namespace Thermodynamics.Core
         private bool hasPendingBounds;
 
         /// <summary>
-        /// The grid the pending pass is for, so that when the pass finishes the doors can be
-        /// turned into portals. Held only between a restart request and the publish that answers
-        /// it; the mapper does not otherwise know what a block is.
+        /// The grid the pending pass is for, so its doors can be resolved into portals when the pass
+        /// finishes. Held only between a restart request and the publish that answers it; the mapper
+        /// otherwise has no knowledge of blocks.
         /// </summary>
         private GridModel pendingGrid;
 
@@ -69,9 +68,8 @@ namespace Thermodynamics.Core
         public event Action Completed;
 
         /// <summary>
-        /// Shared work counters. The mapper and the solver write to the same instance so a test
-        /// or a report can read one figure for what an update touched, rather than adding up
-        /// numbers from two objects and hoping it caught them all.
+        /// Shared work counters. The mapper and the solver write to the same instance, so a test or
+        /// report reads one figure for what an update touched rather than summing two.
         /// </summary>
         public SimulationWork Work = new SimulationWork();
 
@@ -101,9 +99,9 @@ namespace Thermodynamics.Core
         public int CompletedPasses { get; private set; }
 
         /// <summary>
-        /// True when the published map already accounts for this door, so its state can be
-        /// resolved through the portals instead of by remapping. False for a door welded on since
-        /// the last pass, and for any block that is not a door.
+        /// True when the published map already accounts for this door, so its state can be resolved
+        /// through the portals rather than by remapping. False for a door placed since the last
+        /// pass, and for any block that is not a door.
         /// </summary>
         public bool Knows(BlockInstance block)
         {
@@ -116,9 +114,8 @@ namespace Thermodynamics.Core
                 if (portals[i].Block == block) return true;
             }
 
-            // A door with no portal at all is one the last pass found bricked up or opening onto
-            // nothing. Its state changes nothing, so the map still answers for it — but only if
-            // the pass actually saw it.
+            // A door with no portal is one the last pass found sealed off or opening onto nothing.
+            // Its state changes nothing, so the map still answers for it, provided the pass saw it.
             return knownDoors.Contains(block);
         }
 
@@ -126,9 +123,8 @@ namespace Thermodynamics.Core
         private readonly HashSet<BlockInstance> knownDoors = new HashSet<BlockInstance>();
 
         /// <summary>
-        /// Cells waiting in the flood fill's frontier. Zero when no pass is running. Reported so
-        /// a session can be checked for the pathology the incremental mapper is there to avoid:
-        /// restarts arriving faster than passes complete.
+        /// Cells waiting in the flood fill's frontier; zero when no pass is running. Reported so a
+        /// session can be checked for restarts arriving faster than passes complete.
         /// </summary>
         public int PendingCells
         {
@@ -169,8 +165,8 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Runs the whole pass to completion. Convenient for tests and for load-time mapping;
-        /// gameplay code should use the budgeted <see cref="Step"/>.
+        /// Runs the whole pass to completion. For tests and load-time mapping; gameplay code should
+        /// use the budgeted <see cref="Step"/>.
         /// </summary>
         public void RunToCompletion(int safetyLimit = 20000000)
         {
@@ -267,7 +263,7 @@ namespace Thermodynamics.Core
                 return;
             }
 
-            // The corner of the padded bounding box is guaranteed to be outside the grid.
+            // The corner of the padded bounding box is guaranteed to lie outside the grid.
             Vector3I seed = searchMin;
             visited.Add(seed);
             working.AddExternal(seed);
@@ -323,7 +319,7 @@ namespace Thermodynamics.Core
         /// <summary>How a slice of the interior scan ended.</summary>
         private enum ScanResult
         {
-            /// <summary>A cell nothing had reached yet; a new room starts there.</summary>
+            /// <summary>A cell no fill had reached; a new room starts there.</summary>
             Found,
 
             /// <summary>The cursor reached the end of the search box. The pass is complete.</summary>
@@ -334,17 +330,13 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Walks the scan cursor forward to the next cell no pass has classified.
+        /// Advances the scan cursor to the next cell no pass has classified.
         ///
-        /// The walk is charged against the tick's budget cell by cell, which it was not before.
-        /// Every cell it passes over is a hash lookup, and it passes over every cell of the
-        /// bounding box across a pass — but the whole walk between two rooms counted as a single
-        /// unit of budget, so one tick could absorb an unbounded sweep. On a 127k ship the tick
-        /// that finished the pass swept the tail of a 1.5-million-cell box in one go and cost
-        /// 77 ms, inside a mapper whose entire purpose is that no tick costs more than its share.
-        ///
-        /// Counting it honestly makes a pass take more ticks and every one of them bounded, which
-        /// is the trade the budget exists to make.
+        /// Charged against the tick's budget cell by cell. The walk crosses every cell of the
+        /// bounding box over the course of a pass, so charging a whole walk between two rooms as one
+        /// unit lets a single tick absorb an unbounded sweep — on a 127k grid, the tick finishing
+        /// the pass swept the tail of a 1.5-million-cell box in one go for 77 ms. Charging per cell
+        /// makes a pass take more ticks, each of them bounded.
         /// </summary>
         private ScanResult AdvanceScanToNextUnvisited(ref int spent, int budget)
         {
@@ -376,9 +368,7 @@ namespace Thermodynamics.Core
             }
         }
 
-        /// <summary>
-        /// True when a cell is solid structure: sealed on every face and not part of a door.
-        /// </summary>
+        /// <summary>True when a cell is solid structure: sealed on every face and not part of a door.</summary>
         private bool IsStructure(Vector3I cell)
         {
             if (!surfaces.IsFullySealedStructurally(cell)) return false;
@@ -425,7 +415,7 @@ namespace Thermodynamics.Core
             Work.RoomPassesCompleted++;
             working.DropEmptyRooms();
 
-            // After the renumbering, so a portal's region indices are the ones that survive.
+            // Run after the renumbering, so a portal's region indices are the surviving ones.
             FindPortals(working);
             working.RefreshVenting();
 
@@ -445,10 +435,8 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Records every face of every door that opens, with the region either side of it.
-        ///
-        /// Walked over the grid's doors rather than its blocks: a ship with forty thousand blocks
-        /// and thirty doors pays for thirty.
+        /// Records every face of every door that opens, with the region either side of it. Walks the
+        /// grid's doors rather than its blocks, so the cost is the door count.
         /// </summary>
         private void FindPortals(RoomMap map)
         {
@@ -476,7 +464,7 @@ namespace Thermodynamics.Core
                         int outer = RegionAt(map, outside);
                         if (inner == outer) continue;
 
-                        // Bricked up on one side: the door opens onto structure and joins nothing.
+                        // Sealed on one side: the door opens onto structure and joins nothing.
                         if (inner == SolidRegion || outer == SolidRegion) continue;
 
                         map.AddPortal(new RoomPortal(door, face, inner, outer));
@@ -486,8 +474,8 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// The region of a cell for portal purposes. Solid structure is not a region a door can
-        /// open into — a door bricked up on one side joins nothing.
+        /// The region of a cell for portal purposes. Solid structure is not a region a door can open
+        /// into, so a door sealed on one side joins nothing.
         /// </summary>
         private static int RegionAt(RoomMap map, Vector3I cell)
         {
@@ -495,7 +483,7 @@ namespace Thermodynamics.Core
             return map.RegionOf(cell);
         }
 
-        /// <summary>Stands for "walled off", which is neither a room nor open air.</summary>
+        /// <summary>Sentinel region for solid structure, which is neither a room nor open air.</summary>
         private const int SolidRegion = -2;
     }
 }

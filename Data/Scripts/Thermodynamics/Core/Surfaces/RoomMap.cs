@@ -8,27 +8,24 @@ namespace Thermodynamics.Core
     /// The result of a room mapping pass: which cells see open space, which are sealed
     /// structure, and which belong to an enclosed pocket.
     ///
-    /// The pocket boundaries are <em>structural</em> — doors count as shut whatever they are
-    /// doing — so a room is a property of how the ship is built and survives its doors being
-    /// used. What a door does when it opens is recorded as a <see cref="RoomPortal"/>, and
-    /// <see cref="RefreshVenting"/> resolves the portals into which rooms currently reach open
-    /// air. That is a walk over the doors, not over the grid.
+    /// Pocket boundaries are structural: doors count as shut whatever their state, so a room is a
+    /// property of how the grid is built and survives its doors being used. A door's open state is
+    /// recorded as a <see cref="RoomPortal"/>, and <see cref="RefreshVenting"/> resolves the
+    /// portals into which rooms currently reach open air — a walk over the doors, not the grid.
     ///
-    /// The geometry is immutable from the simulation's point of view — <see cref="RoomMapper"/>
-    /// builds a fresh map and swaps it in only when the pass finishes, so readers never see a
-    /// half-filled one. Venting is the one thing that changes in place, because it has to be able
-    /// to change in the same frame a player presses a button.
+    /// The geometry is immutable to the simulation: <see cref="RoomMapper"/> builds a fresh map and
+    /// swaps it in only when a pass completes, so readers never see a partial one. Venting is the
+    /// one field that changes in place, since it must respond within the frame a door is operated.
     /// </summary>
     public class RoomMap
     {
         /// <summary>
-        /// How many cells the pass classified as open air, and the box it classified them in.
+        /// Count of cells the pass classified as open air, and the box it classified them in.
         ///
-        /// The cells themselves are not stored. On a hull nine tenths of the bounding box is open
-        /// air — 1.3 million cells of 1.5 million on a 127,000-block ship — and every one of them
-        /// was held in a hash set at about forty bytes, to record the absence of anything. It is
-        /// the default: a cell inside the box that is neither solid nor in a room is external, by
-        /// definition, so the set was storing what the other two already implied.
+        /// The cells themselves are not stored. Most of a grid's bounding box is open air — 1.3 of
+        /// 1.5 million cells on a 127,000-block grid — and a cell inside the box that is neither
+        /// solid nor in a room is external by definition, so storing them duplicates the other two
+        /// sets at about forty bytes each.
         /// </summary>
         private int externalCount;
 
@@ -53,8 +50,8 @@ namespace Thermodynamics.Core
         public const int ExternalRegion = -1;
 
         /// <summary>
-        /// An empty map treats everything as external, which is the safe default before the
-        /// first pass completes: blocks radiate rather than silently cooking.
+        /// An empty map, treating every cell as external. The safe default before the first pass
+        /// completes: blocks radiate rather than accumulating heat unnoticed.
         /// </summary>
         public static readonly RoomMap AllExternal = new RoomMap();
 
@@ -80,10 +77,9 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// True when nothing has been classified at all — <see cref="AllExternal"/>, or a map
-        /// whose pass has not run. Every query still answers "external", which is the safe
-        /// default, but it is a default and not a measurement, and a reader has to be able to
-        /// tell the two apart.
+        /// True when nothing has been classified: <see cref="AllExternal"/>, or a map whose pass has
+        /// not run. Queries still answer external, but as a default rather than a measurement, which
+        /// readers must be able to distinguish.
         /// </summary>
         public bool IsEmpty
         {
@@ -96,9 +92,8 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Every cell the pass reached from outside. Exposed for
-        /// <see cref="UnmappedRooms"/>, which offers each one to the game to find the
-        /// compartments this map lost — a diagnostic, and the only thing that reads it.
+        /// Every cell the pass reached from outside. Read only by <see cref="UnmappedRooms"/>, which
+        /// offers each to the game to find compartments this map lost.
         /// </summary>
         public IEnumerable<Vector3I> ExternalCells
         {
@@ -112,11 +107,11 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// True when the room currently reaches open air — directly through an open door, or
-        /// through a chain of open doors and other rooms.
+        /// True when the room currently reaches open air, directly through an open door or through a
+        /// chain of open doors and other rooms.
         ///
-        /// A vented room is still a room. It is simply not holding anything in, so the surfaces
-        /// facing it see outdoors, which is what <see cref="IsExternal"/> reports.
+        /// A vented room is still a room; it simply holds no air, so the surfaces facing it see
+        /// outdoors, which <see cref="IsExternal"/> reports.
         /// </summary>
         public bool IsVented(int roomIndex)
         {
@@ -124,7 +119,7 @@ namespace Thermodynamics.Core
             return vented[roomIndex];
         }
 
-        /// <summary>Rooms sealed off from open air right now.</summary>
+        /// <summary>Rooms currently sealed off from open air.</summary>
         public int AirtightRoomCount
         {
             get
@@ -148,9 +143,9 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// The region a cell belongs to: a room index, or <see cref="ExternalRegion"/> for open
-        /// air. Solid structure has no region and answers <see cref="ExternalRegion"/> too, so
-        /// callers that care must ask <see cref="IsSolid"/> first.
+        /// The region a cell belongs to: a room index, or <see cref="ExternalRegion"/> for open air.
+        /// Solid structure has no region and also returns <see cref="ExternalRegion"/>, so callers
+        /// that need to distinguish it must test <see cref="IsSolid"/> first.
         /// </summary>
         public int RegionOf(Vector3I cell)
         {
@@ -159,9 +154,9 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// True when the cell can reach open space without crossing a seal. Cells the pass
-        /// never visited — anything outside the grid's bounding box — are external by
-        /// definition, so this answers by exclusion rather than by lookup.
+        /// True when the cell can reach open space without crossing a seal. Cells the pass never
+        /// visited, meaning anything outside the grid's bounding box, are external by definition, so
+        /// this answers by exclusion rather than by lookup.
         /// </summary>
         public bool IsExternal(Vector3I cell)
         {
@@ -170,9 +165,8 @@ namespace Thermodynamics.Core
             int room;
             if (!roomIndexByCell.TryGetValue(cell, out room)) return true;
 
-            // A room standing open through a door is not holding anything in, so what faces it
-            // faces outdoors. The room still exists; it is the venting that changed, and that is
-            // a flag rather than a rebuild.
+            // A room standing open through a door holds no air, so what faces it faces outdoors. The
+            // room still exists: only its venting flag changed, not the map.
             return IsVented(room);
         }
 
@@ -201,11 +195,10 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// The cells classified as open air, walked rather than stored.
+        /// The cells classified as open air, enumerated rather than stored.
         ///
-        /// Scan order, which is deterministic and repeatable — better for a diagnostic than a hash
-        /// set's ordering was. Only the room-leak audit wants these, it stops at a cell limit, and
-        /// it runs when something is asking.
+        /// Yielded in scan order, which is deterministic and repeatable. Read only by the room-leak
+        /// audit, which stops at a cell limit and runs only when something is reading it.
         /// </summary>
         private IEnumerable<Vector3I> EnumerateExternal()
         {
@@ -247,12 +240,12 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Recomputes which rooms reach open air, from the doors' current states.
+        /// Recomputes which rooms reach open air from the doors' current states.
         ///
-        /// Union-find over the rooms and one extra node for open air: every open portal merges
-        /// the two regions it joins, and any room that ends up in open air's set is vented. The
-        /// cost is the number of doors, not the number of cells, which is the entire reason the
-        /// room map is built on structure rather than on what is currently shut.
+        /// Union-find over the rooms plus one node for open air: every open portal merges the two
+        /// regions it joins, and any room in open air's set is vented. Cost is the number of doors
+        /// rather than the number of cells, which is why the map is built on structure rather than
+        /// on current door state.
         /// </summary>
         /// <returns>True when any room changed state.</returns>
         public bool RefreshVenting()
@@ -262,7 +255,7 @@ namespace Thermodynamics.Core
             int count = rooms.Count;
             if (vented.Length != count) vented = new bool[count];
 
-            // one slot per room plus a final slot standing for open air
+            // One slot per room, plus a final slot representing open air.
             if (parent.Length != count + 1) parent = new int[count + 1];
             for (int i = 0; i <= count; i++) parent[i] = i;
 
@@ -315,8 +308,8 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Whether a completed pass has an answer for this cell — which, once it has run, means
-        /// whether the cell is inside the box it walked.
+        /// Whether a completed pass has an answer for this cell, which after a pass means whether the
+        /// cell lies inside the box it walked.
         /// </summary>
         internal bool IsKnown(Vector3I cell)
         {
