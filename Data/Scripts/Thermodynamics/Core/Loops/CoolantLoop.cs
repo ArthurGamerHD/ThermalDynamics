@@ -464,22 +464,81 @@ namespace Thermodynamics.Core
 
         private bool wellMixed;
 
-        /// <summary>Carries the coolant round the ring for <paramref name="h"/> seconds.</summary>
+        /// <summary>
+        /// Carries the coolant round the ring for <paramref name="h"/> seconds.
+        ///
+        /// Below one parcel per substep this is a pure rotation: a parcel moves less than a pipe's
+        /// length, so it exchanges with the pipe it is in and that pipe changes at most once. Above
+        /// one parcel per substep it cannot be, and the reason is subtle enough to be worth stating.
+        ///
+        /// A rotation advancing by a constant <c>k</c> parcels per substep means pipe <c>i</c> only
+        /// ever reads parcels in the subgroup <c>k</c> generates modulo N. Whenever <c>gcd(k, N) &gt; 1</c>
+        /// the ring silently splits into that many disjoint sets: with eight parcels moving two per
+        /// substep, even pipes only ever meet even parcels, so heat from a sink on one could never
+        /// reach a radiator on the other. Measured at a one second step, a pipe saw four of eight
+        /// parcels at two per substep, two of eight at four, and **one of eight at eight** — the ring
+        /// frozen solid at maximum pump speed, while every figure about it looked healthy.
+        ///
+        /// The fix comes from asking what fast flow physically means at a coarse step. If the fluid
+        /// laps the ring several times between samples, the step cannot resolve where any of it is —
+        /// and a ring circulating far faster than it is observed *is* well mixed on that timescale. So
+        /// the correct limit as flow rises is the well-mixed model, not an aliased one. Mixing toward
+        /// the ring's mean with strength <c>1 - 1/parcels</c> gives exactly that: nothing at one parcel
+        /// per substep, half at two, and complete as the rate runs away. It also destroys the aliasing
+        /// outright, because mixing couples every parcel to every other.
+        /// </summary>
         public void Advect(float h)
         {
-            // One parcel has nowhere to be carried to, which is what the well-mixed model reduces to.
             if (segmentCount < 2 || FlowSegmentsPerSecond <= 0f) return;
 
-            // One add and, occasionally, an integer step. No pass over the ring, and no upper bound on
-            // the rate: rotating by five parcels in a substep is as exact as rotating by a fifth.
-            travelled += FlowSegmentsPerSecond * h;
+            float parcels = FlowSegmentsPerSecond * h;
+            if (parcels <= 0f) return;
+
+            travelled += parcels;
 
             int whole = (int)travelled;
-            if (whole == 0) return;
+            if (whole != 0)
+            {
+                travelled -= whole;
+                shift = (shift + whole) % segmentCount;
+                if (shift < 0) shift += segmentCount;
+            }
 
-            travelled -= whole;
-            shift = (shift + whole) % segmentCount;
-            if (shift < 0) shift += segmentCount;
+            // Faster than the step can see: converge on well mixed rather than alias.
+            if (parcels > 1f) MixToward(1f - (1f / parcels));
+        }
+
+        /// <summary>
+        /// Blends every parcel toward the ring's mean by <paramref name="fraction"/>, 0..1.
+        ///
+        /// Exactly conservative: the parcels have equal capacity, so moving each of them the same
+        /// fraction of the way to their own mean leaves the sum untouched.
+        /// </summary>
+        private void MixToward(float fraction)
+        {
+            if (segmentCount < 2) return;
+            if (fraction <= 0f) return;
+            if (fraction > 1f) fraction = 1f;
+
+            float total = 0f;
+            for (int i = 0; i < segmentCount; i++) total += segments[i];
+
+            float mean = total / segmentCount;
+            for (int i = 0; i < segmentCount; i++)
+            {
+                segments[i] += fraction * (mean - segments[i]);
+            }
+        }
+
+        /// <summary>
+        /// How much of a substep's transport is being served by mixing rather than by carrying, 0..1,
+        /// at the given substep length. Above zero means the flow is faster than the step resolves.
+        /// </summary>
+        public float MixingFraction(float substepSeconds)
+        {
+            float parcels = FlowSegmentsPerSecond * substepSeconds;
+            if (parcels <= 1f) return 0f;
+            return 1f - (1f / parcels);
         }
 
         // ---- what the loop moved, per step -------------------------------------------------

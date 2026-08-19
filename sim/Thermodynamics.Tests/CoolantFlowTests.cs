@@ -265,5 +265,123 @@ namespace Thermodynamics.Tests
             Assert.Equal(segmented.ThermalMass, mixed.ThermalMass, 2);
             Assert.Equal(segmented.Energy, mixed.Energy, 1);
         }
+    
+        // ---- flow faster than the step can resolve -----------------------------------------
+        //
+        // A rotation advancing by a constant k parcels per substep means pipe i only ever reads
+        // parcels in the subgroup k generates modulo N. Whenever gcd(k, N) > 1 the ring splits into
+        // that many disjoint sets and heat cannot cross between them. Measured on an eight parcel
+        // ring at a one second step, a pipe saw four of eight parcels at two per substep, two at
+        // four, and one at eight — the ring frozen at maximum pump speed with every figure about it
+        // looking healthy. These pin the behaviour that replaced it.
+
+        /// <summary>
+        /// A ring that is short of parcels for its flow rate must not transport *less* than a slower
+        /// one. Before mixing was added the spread across a heated ring went 49.5 K at one parcel per
+        /// substep, then 89, 202 and 583 K as the flow rose — faster circulation making the ring less
+        /// even, which is the exact inversion of what a pump does.
+        /// </summary>
+        [Theory]
+        [InlineData(2f)]
+        [InlineData(4f)]
+        [InlineData(8f)]
+        [InlineData(64f)]
+        public void FasterFlowNeverEvensTheRingOutLessThanSlowFlow(float fastRate)
+        {
+            float slow = SpreadAcrossAHeatedRing(1f);
+            float fast = SpreadAcrossAHeatedRing(fastRate);
+
+            Assert.True(fast <= slow,
+                "at " + fastRate + " parcels per second the ring's spread was " + fast
+                + " K against " + slow + " K at one; faster flow is transporting less");
+        }
+
+        /// <summary>
+        /// As the flow outruns the step the ring converges on well mixed, which is what a ring
+        /// circulating far faster than it is observed physically is.
+        /// </summary>
+        [Fact]
+        public void VeryFastFlowConvergesOnAWellMixedRing()
+        {
+            float spread = SpreadAcrossAHeatedRing(64f);
+
+            Assert.True(spread < 5f,
+                "a ring lapping 64 times a second should be near uniform, spread was " + spread + " K");
+        }
+
+        /// <summary>The mixing that replaces carrying is reported, so the regime is visible.</summary>
+        [Fact]
+        public void MixingReportsWhenFlowOutrunsTheStep()
+        {
+            CoolantLoop loop;
+            Ring(3, 3, 4f, out loop);
+
+            // Below a parcel per substep nothing is mixed: this is plug flow.
+            Assert.Equal(0f, loop.MixingFraction(0.25f));
+
+            // At two parcels per substep, half of the transport is mixing.
+            Assert.Equal(0.5f, loop.MixingFraction(0.5f), 3);
+
+            // And it approaches one rather than exceeding it.
+            Assert.True(loop.MixingFraction(100f) < 1f);
+            Assert.True(loop.MixingFraction(100f) > 0.99f);
+        }
+
+        /// <summary>
+        /// Mixing conserves heat, because the parcels have equal capacity: moving each of them the same
+        /// fraction of the way to their own mean cannot change the sum.
+        ///
+        /// Asserted as a ratio rather than as an absolute figure. It is exact in exact arithmetic; in
+        /// single precision, 200 rounds of it on a ring holding 7.9 MJ leave half a joule behind, which
+        /// is the last representable bit at that magnitude rather than a leak.
+        /// </summary>
+        [Fact]
+        public void MixingConservesHeat()
+        {
+            CoolantLoop loop;
+            Ring(5, 5, 1000f, out loop);
+
+            for (int i = 0; i < loop.PipeCount; i++)
+            {
+                loop.SetSegmentTemperature(i, 200f + (i * 60f));
+            }
+
+            float before = loop.Energy;
+            for (int i = 0; i < 200; i++) loop.Advect(1f / 4f);
+
+            Assert.Equal(1f, loop.Energy / before, 5);
+        }
+
+        /// <summary>
+        /// The spread across parcels of a ring heated at one point, after it has settled. A ring that
+        /// transports evens out; one that aliases does not.
+        /// </summary>
+        private static float SpreadAcrossAHeatedRing(float segmentsPerSecond)
+        {
+            ThermalSettings settings = new ThermalSettings();
+            settings.Frequency = 1;                  // a one second step
+            settings.EnableEnvironment = false;
+            settings.EnableDamage = false;
+            settings.MaxSubsteps = 1;                // one substep, so the whole second is one h
+            settings.MaxSubstepsPerBlock = 0;
+            settings.MaxLinkVisitsPerStep = 0;
+            settings.Derive();
+
+            Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
+            sinks[2] = Vector3I.Down;
+
+            GridBuilder builder = GridBuilder.Large();
+            List<Vector3I> cells = PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3);
+            PipeFitter.BuildRing(builder, cells, -1, sinks);
+            builder.Place(Catalog.Reactor(), cells[2] + Vector3I.Down).Producing(300000f);
+
+            ThermalSimulation simulation = builder.BuildSimulation(settings, 300f);
+            CoolantLoop loop = simulation.Solver.Loops[0];
+            loop.Properties.SegmentsPerSecondAtFullFlow = segmentsPerSecond;
+            loop.RefreshFlow();
+
+            simulation.StepExact(300, Worlds.Shadow());
+            return loop.HottestSegment - loop.ColdestSegment;
+        }
     }
 }

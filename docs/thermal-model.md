@@ -311,8 +311,16 @@ pipe i reads parcel (i - round(parcels carried)) mod N
 Carrying the fluid is a rotation of the ring's origin rather than a shuffle of its contents. Because
 a pipe's index is a whole number, the rounded offset collapses to one integer shift shared by every
 pipe, which makes the mapping a bijection at any speed: no parcel is read twice and none is skipped.
-It is therefore exactly conservative and has **no stability limit on flow rate at all**, so a fast
-pump costs no substeps. It is also plug flow with no numerical diffusion — a hot parcel arrives at the
+It is therefore exactly conservative and costs no substeps however fast the pump runs.
+
+It does have a resolution limit, which is not the same thing. A rotation advancing by a constant `k`
+parcels per substep means pipe `i` only ever reads parcels in the subgroup `k` generates modulo `N`, so
+whenever `gcd(k, N) > 1` the ring silently splits into that many disjoint sets and heat cannot cross
+between them. Above one parcel per substep the fluid is therefore also mixed toward the ring's mean by
+`1 - 1/parcels`: nothing at one parcel per substep, half at two, and complete as the rate runs away.
+That is the physically right limit — a ring lapping far faster than it is observed *is* well mixed on
+that timescale — and it removes the aliasing outright, because mixing couples every parcel to every
+other. It is also plug flow with no numerical diffusion — a hot parcel arrives at the
 radiator still hot, smoothed only by the pipes it passed through, which is the physical mechanism
 rather than an artefact of the scheme.
 
