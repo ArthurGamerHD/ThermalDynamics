@@ -35,6 +35,9 @@ namespace Thermodynamics.Harness
             public float SegmentedSubsteps;
             public float MixedSubsteps;
 
+            /// <summary>Share of transport served by mixing rather than carrying, 0..1.</summary>
+            public float Mixing;
+
             public double Ratio
             {
                 get { return MixedMsPerStep <= 0d ? 0d : SegmentedMsPerStep / MixedMsPerStep; }
@@ -50,11 +53,21 @@ namespace Thermodynamics.Harness
         /// </summary>
         public static Row Measure(int hullSize, int rings, int steps)
         {
+            return Measure(hullSize, rings, steps, 0f);
+        }
+
+        /// <param name="flowOverride">
+        /// Parcels per second at full flow, or zero for the shipped figure. Set it high to force the
+        /// mixing path, which only runs once the flow outruns the substep and so is absent from a
+        /// default measurement entirely.
+        /// </param>
+        public static Row Measure(int hullSize, int rings, int steps, float flowOverride)
+        {
             Row row = new Row();
             row.Rings = rings;
 
-            ThermalSimulation segmented = Build(hullSize, rings, false);
-            ThermalSimulation mixed = Build(hullSize, rings, true);
+            ThermalSimulation segmented = Build(hullSize, rings, false, flowOverride);
+            ThermalSimulation mixed = Build(hullSize, rings, true, flowOverride);
 
             row.Blocks = segmented.Solver.Nodes.Count;
             row.Links = segmented.Solver.LinkCount;
@@ -71,6 +84,13 @@ namespace Thermodynamics.Harness
             // machine's background noise as a difference between them, and the first attempt at this
             // did exactly that: it timed a four-ring grid as faster than a one-ring grid, which is
             // impossible. The minimum is the closest thing to the work actually required.
+            if (segmented.Solver.Loops.Count > 0)
+            {
+                CoolantLoop first = segmented.Solver.Loops[0];
+                row.Mixing = first.MixingFraction(
+                    segmented.Settings.StepSeconds / Math.Max(1, segmented.Solver.LastSubsteps));
+            }
+
             row.SegmentedMsPerStep = double.MaxValue;
             row.MixedMsPerStep = double.MaxValue;
 
@@ -93,7 +113,7 @@ namespace Thermodynamics.Harness
         /// <summary>Passes per model per row. The best of them is reported.</summary>
         public const int Repeats = 5;
 
-        private static ThermalSimulation Build(int hullSize, int rings, bool wellMixed)
+        private static ThermalSimulation Build(int hullSize, int rings, bool wellMixed, float flowOverride)
         {
             ThermalSettings settings = new ThermalSettings();
             settings.WellMixedCoolant = wellMixed;
@@ -155,7 +175,12 @@ namespace Thermodynamics.Harness
             }
             for (int i = 0; i < simulation.Solver.Loops.Count; i++)
             {
-                simulation.Solver.Loops[i].Temperature = 300f + (i * 11);
+                CoolantLoop loop = simulation.Solver.Loops[i];
+                loop.Temperature = 300f + (i * 11);
+
+                if (flowOverride <= 0f) continue;
+                loop.Properties.SegmentsPerSecondAtFullFlow = flowOverride;
+                loop.RefreshFlow();
             }
 
             return simulation;
@@ -179,8 +204,8 @@ namespace Thermodynamics.Harness
         public static string Table(IList<Row> rows)
         {
             StringBuilder sb = new StringBuilder();
-            sb.Append("  rings  pipes  loops   blocks    links   segmented   well-mixed   ratio  substeps\n");
-            sb.Append("  -----  -----  -----   ------    -----   ---------   ----------   -----  --------\n");
+            sb.Append("  rings  pipes  loops   blocks    links   segmented   well-mixed   ratio  substeps   mixing\n");
+            sb.Append("  -----  -----  -----   ------    -----   ---------   ----------   -----  --------   ------\n");
 
             for (int i = 0; i < rows.Count; i++)
             {
@@ -194,6 +219,7 @@ namespace Thermodynamics.Harness
                   .Append("   ").Append(row.MixedMsPerStep.ToString("n4").PadLeft(10))
                   .Append("   ").Append(row.Ratio.ToString("n2").PadLeft(5))
                   .Append("  ").Append((row.SegmentedSubsteps + " / " + row.MixedSubsteps).PadLeft(8))
+                  .Append("   ").Append(row.Mixing.ToString("n2").PadLeft(6))
                   .Append('\n');
             }
 

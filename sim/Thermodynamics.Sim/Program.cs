@@ -158,6 +158,7 @@ namespace Thermodynamics.Sim
                     int[] ringCounts = new int[] { 1, 4, 16, 48 };
                     int hull = size > 0 ? size : 8000;
                     int runSteps = ticks > 0 ? ticks : 200;
+                    float flow = float.Parse(Option(args, "--flow", "0"), System.Globalization.CultureInfo.InvariantCulture);
 
                     Console.WriteLine("Coolant model comparison on a " + hull.ToString("n0")
                         + " block ship, " + runSteps + " steps per reading.");
@@ -167,7 +168,7 @@ namespace Thermodynamics.Sim
                     for (int i = 0; i < ringCounts.Length; i++)
                     {
                         Console.Error.WriteLine("  " + ringCounts[i] + " rings...");
-                        rows.Add(CoolantBenchmarks.Measure(hull, ringCounts[i], runSteps));
+                        rows.Add(CoolantBenchmarks.Measure(hull, ringCounts[i], runSteps, flow));
                     }
 
                     Console.WriteLine(CoolantBenchmarks.Table(rows));
