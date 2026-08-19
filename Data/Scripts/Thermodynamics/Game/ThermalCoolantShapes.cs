@@ -41,6 +41,22 @@ namespace Thermodynamics
         private static readonly Dictionary<string, CoolantShape> Cache = new Dictionary<string, CoolantShape>();
 
         /// <summary>
+        /// Guards <see cref="Cache"/>.
+        ///
+        /// <see cref="ThermalBlockCatalog"/> already learned this lesson and locks its own model
+        /// dictionary — but it deliberately calls <c>Build</c> <em>outside</em> that lock, so as
+        /// not to serialise every worker thread the game is pasting with, and <c>Build</c> is
+        /// what calls in here. The one unguarded dictionary left on the path is the one that
+        /// tore: a field run logged three <c>NullReferenceException</c>s out of
+        /// <c>Dictionary.Insert</c> inside the first tenth of a second of a world load, which is
+        /// what two threads writing the same bucket looks like from the far side. Every block of
+        /// those types silently failed to become a node.
+        ///
+        /// A lock here costs a dictionary probe once per block type per session.
+        /// </summary>
+        private static readonly object CacheLock = new object();
+
+        /// <summary>
         /// The plumbing for a subtype, or null when the block is not part of the coolant system.
         /// </summary>
         /// <param name="subtype">Full subtype name, e.g. <c>Gauge_LG_CoolantPump</c>.</param>
@@ -49,17 +65,33 @@ namespace Thermodynamics
         {
             if (string.IsNullOrEmpty(subtype)) return null;
 
-            CoolantShape cached;
-            if (Cache.TryGetValue(subtype, out cached)) return cached;
+            lock (CacheLock)
+            {
+                CoolantShape cached;
+                if (Cache.TryGetValue(subtype, out cached)) return cached;
+            }
 
+            // Built outside the lock for the same reason the catalogue builds its models outside
+            // its own: two threads racing on one subtype build the same shape twice and one is
+            // discarded, which costs a duplicate build and nothing else.
             CoolantShape shape = Build(subtype, size);
-            Cache[subtype] = shape;
-            return shape;
+
+            lock (CacheLock)
+            {
+                CoolantShape existing;
+                if (Cache.TryGetValue(subtype, out existing)) return existing;
+
+                Cache[subtype] = shape;
+                return shape;
+            }
         }
 
         public static void Clear()
         {
-            Cache.Clear();
+            lock (CacheLock)
+            {
+                Cache.Clear();
+            }
         }
 
         private static CoolantShape Build(string subtype, Vector3I size)

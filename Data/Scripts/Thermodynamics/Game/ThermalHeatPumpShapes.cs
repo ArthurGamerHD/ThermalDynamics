@@ -36,6 +36,14 @@ namespace Thermodynamics
         private static readonly Dictionary<string, HeatPumpShape> Cache = new Dictionary<string, HeatPumpShape>();
 
         /// <summary>
+        /// Guards <see cref="Cache"/>. See the note on <c>ThermalCoolantShapes.CacheLock</c>:
+        /// this dictionary is written from <c>ThermalBlockCatalog.Build</c>, which runs outside
+        /// the catalogue's own lock and therefore concurrently with itself on the worker threads
+        /// the game pastes grids on.
+        /// </summary>
+        private static readonly object CacheLock = new object();
+
+        /// <summary>
         /// The heat-pump hardware for a subtype, or null when the block does not pump heat.
         ///
         /// Cold face is the block's forward, hot face its backward — the same axis the coolant
@@ -49,16 +57,19 @@ namespace Thermodynamics
         {
             if (string.IsNullOrEmpty(subtype)) return null;
 
-            HeatPumpShape cached;
-            if (Cache.TryGetValue(subtype, out cached)) return cached;
+            lock (CacheLock)
+            {
+                HeatPumpShape cached;
+                if (Cache.TryGetValue(subtype, out cached)) return cached;
 
-            Rating rating;
-            HeatPumpShape shape = Ratings.TryGetValue(subtype, out rating)
-                ? HeatPumpShape.Centred(Vector3I.Forward, size, rating.Watts, rating.Power)
-                : null;
+                Rating rating;
+                HeatPumpShape shape = Ratings.TryGetValue(subtype, out rating)
+                    ? HeatPumpShape.Centred(Vector3I.Forward, size, rating.Watts, rating.Power)
+                    : null;
 
-            Cache[subtype] = shape;
-            return shape;
+                Cache[subtype] = shape;
+                return shape;
+            }
         }
 
         /// <summary>
@@ -83,7 +94,10 @@ namespace Thermodynamics
 
         public static void Clear()
         {
-            Cache.Clear();
+            lock (CacheLock)
+            {
+                Cache.Clear();
+            }
         }
     }
 }

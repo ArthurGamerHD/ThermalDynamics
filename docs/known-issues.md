@@ -137,6 +137,15 @@ wind it read 80 m/s over a parked ship on an earthlike world, which tripped fric
 doubled convection; the mod now treats it as a ceiling and supplies its own field. Nothing in the
 API exposes a real local wind, so the field is invented rather than read.
 
+**Two shape caches on the block-placement path were unguarded.** `ThermalBlockCatalog` locks its
+model dictionary and deliberately builds outside that lock, so as not to serialise the worker
+threads the game pastes grids on — and what it builds calls into `ThermalCoolantShapes.Get` and
+`ThermalHeatPumpShapes.Get`, both of which wrote to a plain `Dictionary` with no lock at all. A
+field dump logged three `NullReferenceException`s out of `Dictionary.Insert` in the first tenth of
+a second of a world load, which is what two threads writing one bucket looks like from the far
+side; every block of those types silently failed to become a node. Both caches now take a lock on
+the same discipline as the catalogue: probe under the lock, build outside it, publish under it.
+
 ## Suspected defects
 
 **A face bolted to a block that does not seal is counted as buried.** Exposure rejects any cell face
