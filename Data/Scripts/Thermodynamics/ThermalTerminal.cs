@@ -159,7 +159,6 @@ namespace Thermodynamics
             }
 
             ThermalNode node = bound.Node;
-            ThermalGrid grid = bound.Grid;
 
             // Temperature and where it is heading, on one line: neither means much without the other.
             float perSecond = node.LastDeltaTemperature * Settings.Instance.StepsPerSecond;
@@ -193,30 +192,6 @@ namespace Thermodynamics
             AppendHeatPump(bound);
             AppendCoolant(bound);
 
-            // Two lines for the whole ship, because the block in front of you is the subject.
-            Text.Append('\n');
-            Row("Grid");
-            Text.Append(T(grid.LastState.AmbientTemperature)).Append(" ambient");
-            if (grid.HottestNode != null)
-            {
-                Text.Append("  peak ").Append(T(grid.HottestNode.Temperature));
-            }
-            if (grid.CriticalBlocks > 0)
-            {
-                Text.Append("  ").Append(grid.CriticalBlocks).Append(" CRITICAL");
-            }
-            Text.Append('\n');
-
-            int loops = grid.Simulation.Solver.Loops.Count;
-            int rooms = grid.Simulation.RoomAir.Count;
-            if (loops > 0 || rooms > 0)
-            {
-                Row("");
-                if (loops > 0) Text.Append(loops).Append(loops == 1 ? " loop" : " loops");
-                if (loops > 0 && rooms > 0) Text.Append("  ");
-                if (rooms > 0) Text.Append(rooms).Append(rooms == 1 ? " room" : " rooms");
-            }
-
             return Text;
         }
 
@@ -235,39 +210,55 @@ namespace Thermodynamics
             Text.Append('\n');
             Row("Pump");
 
+            // How much of the machine is in use, drawn rather than described. A full bar is a pump
+            // that has run out of machine; a part-full one has run out of something else, and the
+            // coefficient beside it says what — a low figure is a gap too wide to be worth lifting
+            // across. Two states that used to take a sentence each now take no words at all.
             if (!pump.IsConnected)
             {
-                Text.Append("idle - needs a block on both ends\n");
+                Bar(0f);
+                Text.Append(" no block on one face\n");
                 return;
             }
             if (!pump.Enabled)
             {
-                Text.Append("off\n");
+                Bar(0f);
+                Text.Append(" off\n");
                 return;
             }
-
-            // A different line from "off", because the fix is the ship's power budget rather than
-            // this block's switch.
             if (pump.PowerAvailable <= 0f)
             {
-                Text.Append("on, but the grid supplies it nothing\n");
+                Bar(0f);
+                Text.Append(" unpowered\n");
                 return;
             }
 
-            Text.Append((pump.LastLiftedWatts / 1000f).ToString("n1")).Append(" kW for ")
-                .Append((pump.LastPowerWatts / 1000f).ToString("n1")).Append(" kW   cop ")
+            Bar(pump.RatedWatts > 0f ? pump.LastLiftedWatts / pump.RatedWatts : 0f);
+            Text.Append(' ').Append((pump.LastLiftedWatts / 1000f).ToString("n1")).Append(" kW  x")
                 .Append(pump.LastCoefficient.ToString("n2")).Append('\n');
 
-            Row("");
-            if (pump.LastLiftedWatts >= pump.RatedWatts - 1f) Text.Append("at its rating");
-            else if (pump.LastWasLimited) Text.Append("limited by the gap");
-            else Text.Append("running");
-
+            Row("Draw");
+            Text.Append((pump.LastPowerWatts / 1000f).ToString("n1")).Append(" kW");
             if (pump.PowerSetting < 1f)
             {
-                Text.Append("   throttled to ").Append((pump.PowerSetting * 100f).ToString("n0")).Append('%');
+                Text.Append("  of ").Append((pump.SettablePowerWatts / 1000f).ToString("n1")).Append(" kW set");
             }
             Text.Append('\n');
+        }
+
+        /// <summary>Ten-segment fill bar, 0..1. ASCII so it renders in any font the terminal uses.</summary>
+        private const int BarSegments = 10;
+
+        private static void Bar(float fraction)
+        {
+            if (fraction < 0f) fraction = 0f;
+            if (fraction > 1f) fraction = 1f;
+
+            int filled = (int)((fraction * BarSegments) + 0.5f);
+
+            Text.Append('[');
+            for (int i = 0; i < BarSegments; i++) Text.Append(i < filled ? '#' : '.');
+            Text.Append(']');
         }
 
         /// <summary>

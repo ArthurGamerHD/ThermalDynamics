@@ -232,9 +232,6 @@ A reactor:
 Temp     584°C  +0.00 K/s
 Critical 927°C
 Waste    500.0 kW
-
-Grid     -270°C ambient  peak 584°C
-         1 loop  12 rooms
 ```
 
 A coolant pump, which adds its loop's flow rate and coolant temperatures:
@@ -247,6 +244,19 @@ Coolant  133°C  (109 - 157)
 Flow     -10.0m/s
 Transfer 142.9 kW in  142.9 kW out
 ```
+
+A heat pump reports how much of its machine is in use as a bar, rather than in a sentence:
+
+```
+Pump     [####......] 23.1 kW  x1.15
+Draw     20.0 kW
+```
+
+A **full bar** is a pump that has run out of machine — a narrower gap would gain it nothing. A
+**part-full bar** is a pump that has run out of something else, and the coefficient beside it says
+what: `x1.15` is a gap wide enough to cost more than it moves. An **empty bar** is a pump achieving
+nothing, with one word for which of the three reasons applies — no block on one face, off, or
+unpowered.
 
 Coolant is given as a mean with the **range across the ring** in brackets, because with the fluid
 carried round in parcels a loop is not one temperature. A wide spread with the pump running means the
