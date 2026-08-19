@@ -27,6 +27,17 @@ namespace Thermodynamics.Core
         public static List<CoolantLoop> FindLoops(GridModel grid, LoopThermalProperties properties,
             float initialTemperature, SimulationWork work)
         {
+            return FindLoops(grid, properties, initialTemperature, work, null);
+        }
+
+        /// <param name="diagnostics">
+        /// Optional. When supplied, records why each coolant block that ended up in no loop did not.
+        /// Costs one extra walk per unclaimed run and nothing at all when null, so an ordinary
+        /// rebuild does not pay for a readout nobody opened.
+        /// </param>
+        public static List<CoolantLoop> FindLoops(GridModel grid, LoopThermalProperties properties,
+            float initialTemperature, SimulationWork work, CoolantLoopDiagnostics diagnostics)
+        {
             List<CoolantLoop> loops = new List<CoolantLoop>();
             if (grid == null) return loops;
 
@@ -75,7 +86,40 @@ namespace Thermodynamics.Core
                 loops.Add(loop);
             }
 
+            if (diagnostics != null) Diagnose(grid, claimed, loops, diagnostics);
+
             return loops;
+        }
+
+        /// <summary>
+        /// Names the fault on every coolant block no loop claimed.
+        ///
+        /// A closed pumpless ring is reported against every block in it, because the fix — add a
+        /// pump — applies to the ring rather than to one cell. The walk is repeated here rather than
+        /// remembered from the search above so that the search stays free when nothing is asking.
+        /// </summary>
+        private static void Diagnose(GridModel grid, HashSet<long> claimed,
+            List<CoolantLoop> loops, CoolantLoopDiagnostics diagnostics)
+        {
+            diagnostics.Loops = loops.Count;
+            diagnostics.PipesInLoops = claimed.Count;
+
+            IList<BlockInstance> blocks = grid.Blocks;
+            for (int i = 0; i < blocks.Count; i++)
+            {
+                BlockInstance block = blocks[i];
+                if (block.Model.Coolant == null) continue;
+                if (claimed.Contains(block.Key)) continue;
+
+                CoolantFault fault;
+                List<BlockInstance> ring = TraceRing(grid, block, out fault);
+
+                // A ring that traces cleanly but was skipped above has no pump in it — that is the
+                // only reason the search rejects a closed run.
+                if (ring != null) fault = CoolantFault.NoPump;
+
+                diagnostics.Record(block, fault);
+            }
         }
 
         /// <summary>
@@ -85,10 +129,28 @@ namespace Thermodynamics.Core
         /// <returns>The ring's blocks in walk order, or null when the run is not closed.</returns>
         public static List<BlockInstance> TraceRing(GridModel grid, BlockInstance start)
         {
+            CoolantFault fault;
+            return TraceRing(grid, start, out fault);
+        }
+
+        /// <summary>
+        /// As <see cref="TraceRing(GridModel,BlockInstance)"/>, and reports why a run is not closed.
+        ///
+        /// The reason is what a player needs and the loop list cannot carry: the symptom of a broken
+        /// ring is that it is absent. Every early return below names the fault it returns on rather
+        /// than collapsing them all into null.
+        /// </summary>
+        public static List<BlockInstance> TraceRing(GridModel grid, BlockInstance start, out CoolantFault fault)
+        {
+            fault = CoolantFault.None;
             if (grid == null || start == null || start.Model.Coolant == null) return null;
 
             List<GridPort> startPorts = start.CoolantLinkPorts();
-            if (startPorts.Count < 2) return null;
+            if (startPorts.Count < 2)
+            {
+                fault = CoolantFault.OpenEnd;
+                return null;
+            }
 
             List<BlockInstance> ring = new List<BlockInstance>();
             HashSet<long> visited = new HashSet<long>();
@@ -105,22 +167,45 @@ namespace Thermodynamics.Core
             while (guard-- > 0)
             {
                 BlockInstance next = grid.GetAtCell(exit.Target);
-                if (next == null) return null;
-                if (next.Model.Coolant == null) return null;
+                if (next == null)
+                {
+                    fault = CoolantFault.OpenEnd;
+                    return null;
+                }
+                if (next.Model.Coolant == null)
+                {
+                    fault = CoolantFault.BlockedByNonCoolant;
+                    return null;
+                }
 
                 GridPort entry;
-                if (!TryFindPortFacing(next, exit.Target, -exit.Direction, out entry)) return null;
+                if (!TryFindPortFacing(next, exit.Target, -exit.Direction, out entry))
+                {
+                    fault = CoolantFault.PortsDoNotMeet;
+                    return null;
+                }
 
                 if (next == start)
                 {
                     // The ring closes only if the walk re-entered through a different port.
-                    return SamePort(entry, startPorts[0]) ? null : ring;
+                    if (!SamePort(entry, startPorts[0])) return ring;
+
+                    fault = CoolantFault.DoubledBack;
+                    return null;
                 }
 
-                if (visited.Contains(next.Key)) return null;
+                if (visited.Contains(next.Key))
+                {
+                    fault = CoolantFault.BranchOrCrossing;
+                    return null;
+                }
 
                 GridPort onward;
-                if (!TryFindOtherPort(next, entry, out onward)) return null;
+                if (!TryFindOtherPort(next, entry, out onward))
+                {
+                    fault = CoolantFault.OpenEnd;
+                    return null;
+                }
 
                 ring.Add(next);
                 visited.Add(next.Key);
@@ -129,6 +214,7 @@ namespace Thermodynamics.Core
                 exit = onward;
             }
 
+            fault = CoolantFault.BranchOrCrossing;
             return null;
         }
 

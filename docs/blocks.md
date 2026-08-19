@@ -69,6 +69,25 @@ Practical build advice:
 * A loop's temperature is saved and restored by member hash, so reloading cannot swap two loops'
   heat and rebuilding a ring does not reset it.
 
+### When a ring does not become a loop
+
+A broken ring's only symptom is that no loop appears, which is the one thing the loop list cannot
+report. `ThermalSimulation.DiagnoseLoops` re-runs the search and names the reason for every coolant
+block that ended up in no loop:
+
+| Reason | What to look for |
+| --- | --- |
+| open end | A port faces empty space. The run has a free end. |
+| a port faces a block with no plumbing | The run walks into armour or a conveyor. |
+| pipes touch but their ports do not line up | The hardest one to see: the run looks continuous and carries nothing. Rotate one of the two blocks. |
+| closed ring with no pump | Reported against every block in the ring, because the fix is to the ring. |
+| a branch or crossing, not a ring | Three pipes meeting, or a figure of eight. A loop is a simple cycle. |
+| the run doubles back on itself | The walk returned to its start through the port it left by. |
+
+It is opt-in and costs one extra walk per unclaimed run, so an ordinary rebuild does not pay for a
+readout nobody opened. Each reason carries up to four example cells, capped so a grid of broken
+plumbing cannot flood a readout while the counts stay exact.
+
 ## Radiator
 
 `Gauge_LG_Radiator` / `Gauge_SG_Radiator` — a plain `CubeBlock`, 1×5×2 (LG), mounting only on

@@ -504,6 +504,21 @@ namespace Thermodynamics.Core
             return RoomAuditor.Audit(grid, surfaces, rooms.Map, exampleLimit);
         }
 
+        /// <summary>
+        /// Re-runs the loop search collecting the reason every unclaimed coolant block is unclaimed.
+        ///
+        /// Diagnostic only, on the same terms as <see cref="AuditRooms"/>: nothing in the simulation
+        /// reads it and it is never called unless a readout or a report asks. It answers the one
+        /// question the loop list cannot, because a broken ring's symptom is that it is missing.
+        /// </summary>
+        public CoolantLoopDiagnostics DiagnoseLoops(
+            int exampleLimit = CoolantLoopDiagnostics.DefaultExampleLimit)
+        {
+            CoolantLoopDiagnostics diagnostics = new CoolantLoopDiagnostics(exampleLimit);
+            CoolantLoopBuilder.FindLoops(grid, loopProperties, DefaultTemperature, null, diagnostics);
+            return diagnostics;
+        }
+
         private void OnRoomsCompleted()
         {
             exposureDirty = true;
