@@ -149,6 +149,13 @@ namespace Thermodynamics.Harness
         /// sweep run all of them without editing any: set it, run, clear it. Null by default, so
         /// an ordinary scenario run is byte-identical to what it was.
         /// </summary>
+        /// <remarks>
+        /// Thread-local. xUnit runs test classes in parallel, and a plain static here
+        /// leaked one test's profile into every other test running at that moment —
+        /// sixty-six unrelated failures, none of them reproducible alone. The sweep is
+        /// single-threaded, so it is unaffected.
+        /// </remarks>
+        [ThreadStatic]
         public static Func<ThermalSettings, ThermalSettings> SettingsOverride;
 
         public ThermalSimulation BuildSimulation(ThermalSettings settings = null, float initialTemperature = 293.15f)

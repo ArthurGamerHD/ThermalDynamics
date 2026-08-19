@@ -30,6 +30,13 @@ namespace Thermodynamics.Harness
         /// changes the conduction pace has to move both or it is only half applied. Null by
         /// default.
         /// </summary>
+        /// <remarks>
+        /// Thread-local. xUnit runs test classes in parallel, and a plain static here
+        /// leaked one test's profile into every other test running at that moment —
+        /// sixty-six unrelated failures, none of them reproducible alone. The sweep is
+        /// single-threaded, so it is unaffected.
+        /// </remarks>
+        [ThreadStatic]
         public static Func<BlockThermalProperties, BlockThermalProperties> MaterialOverride;
 
         private static BlockThermalProperties Apply(BlockThermalProperties properties)

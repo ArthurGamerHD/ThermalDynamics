@@ -42,6 +42,10 @@ namespace Thermodynamics.Sim
                     Console.Write(ProfileLab.Report());
                     return 0;
 
+                case "features":
+                    Console.Write(FeatureMatrix.Report());
+                    return 0;
+
                 case "sweep":
                 {
                     Console.Write(ProfileSweep.Report());
@@ -508,6 +512,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  balance --csv <dir>     also write the block table as CSV");
             Console.WriteLine("  profiles                realism against arcade: what each buys and costs");
             Console.WriteLine("  sweep [--csv <dir>]     every scenario and worst case, every profile");
+            Console.WriteLine("  features                mechanism switches in combination, per profile");
             Console.WriteLine();
             Console.WriteLine("  bench scale             cost per stage as the grid grows");
             Console.WriteLine("  bench hitch --size N    per-tick cost, with a block welded mid-run");
