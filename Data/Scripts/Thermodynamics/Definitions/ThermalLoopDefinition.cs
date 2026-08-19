@@ -17,13 +17,27 @@ namespace Thermodynamics
         // kilograms per pipe, so a world still carrying the old element must not have 500 read as a
         // per-pipe charge — ten times the fluid it asked for. An unrecognised name falls to the field
         // default below instead, which is the safe outcome.
-        private static readonly MyStringId MassPerPipeId = MyStringId.GetOrCompute("MassPerPipe");
-        private static readonly MyStringId SegmentsPerSecondId = MyStringId.GetOrCompute("SegmentsPerSecondAtFullFlow");
+        private static readonly MyStringId CoolantMassPerPipeId = MyStringId.GetOrCompute("CoolantMassPerPipe");
+        private static readonly MyStringId FlowRateId = MyStringId.GetOrCompute("FlowRate");
         private static readonly MyStringId StagnantTransferId = MyStringId.GetOrCompute("StagnantTransferFraction");
         private static readonly MyStringId ConductivityId = MyStringId.GetOrCompute("Conductivity");
         private static readonly MyStringId SpecificHeatId = MyStringId.GetOrCompute("SpecificHeat");
-        private static readonly MyStringId PipeSurfaceAreaScalerId = MyStringId.GetOrCompute("PipeSurfaceAreaScaler");
-        private static readonly MyStringId PlateSurfaceAreaScalerId = MyStringId.GetOrCompute("PlateSurfaceAreaScaler");
+        private static readonly MyStringId PipeContactMultiplierId = MyStringId.GetOrCompute("PipeContactMultiplier");
+        private static readonly MyStringId SinkContactMultiplierId = MyStringId.GetOrCompute("SinkContactMultiplier");
+
+
+        /// <summary>
+        /// Names these properties used to carry, still read when the current name is absent. See
+        /// the note on <c>ThermalCellDefinition</c>: Definition Extensions matches on the string,
+        /// so dropping the old name would silently revert third-party loop definitions to defaults.
+        /// </summary>
+        private static readonly MyStringId LegacyFlowRateId = MyStringId.GetOrCompute("SegmentsPerSecondAtFullFlow");
+        private static readonly MyStringId LegacyMassPerPipeId = MyStringId.GetOrCompute("MassPerPipe");
+        private static readonly MyStringId LegacyPipeContactId = MyStringId.GetOrCompute("PipeSurfaceAreaScaler");
+        private static readonly MyStringId LegacySinkContactId = MyStringId.GetOrCompute("PlateSurfaceAreaScaler");
+
+        /// <summary>Large-grid cell size, used only to convert the retired parcels-per-second name.</summary>
+        private const float LegacyParcelLengthMetres = 2.5f;
 
         public static readonly MyDefinitionId DefaultLoopDefinitionId = new MyDefinitionId(typeof(MyObjectBuilder_EnvironmentDefinition), Settings.DefaultLoopSubtypeId);
 
@@ -34,7 +48,7 @@ namespace Thermodynamics
         /// silently give that world almost no coolant.
         /// </summary>
         [ProtoMember(1)]
-        public float MassPerPipe = 50f;
+        public float CoolantMassPerPipe = 50f;
 
         /// <summary>
         /// Thermal conductivity of the coolant, W/(m K). Reference values:
@@ -52,15 +66,15 @@ namespace Thermodynamics
 
         /// <summary>Contact area scaler between the coolant and a pipe segment.</summary>
         [ProtoMember(15)]
-        public float PipeSurfaceAreaScaler = 1f;
+        public float PipeContactMultiplier = 1f;
 
         /// <summary>Contact area scaler between the coolant and a block on a sink face.</summary>
         [ProtoMember(20)]
-        public float PlateSurfaceAreaScaler = 1f;
+        public float SinkContactMultiplier = 1f;
 
         /// <summary>Coolant parcels a full-flow pump pushes past a point each second.</summary>
         [ProtoMember(25)]
-        public float SegmentsPerSecondAtFullFlow = 4f;
+        public float FlowRate = 10f;
 
         /// <summary>Share of transfer that survives with no circulation, 0..1.</summary>
         [ProtoMember(30)]
@@ -72,7 +86,10 @@ namespace Thermodynamics
             DefinitionExtensionsAPI lookup = Session.Definitions;
 
             double dvalue;
-            if (!lookup.DefinitionIdExists(defId) || !lookup.TryGetDouble(defId, GroupId, PipeSurfaceAreaScalerId, out dvalue))
+            bool carriesGroup = lookup.TryGetDouble(defId, GroupId, PipeContactMultiplierId, out dvalue)
+                || lookup.TryGetDouble(defId, GroupId, LegacyPipeContactId, out dvalue);
+
+            if (!lookup.DefinitionIdExists(defId) || !carriesGroup)
             {
                 defId = new MyDefinitionId(defId.TypeId, Settings.DefaultSubtypeId);
 
@@ -82,8 +99,9 @@ namespace Thermodynamics
                 }
             }
 
-            if (lookup.TryGetDouble(defId, GroupId, MassPerPipeId, out dvalue))
-                def.MassPerPipe = (float)dvalue;
+            if (lookup.TryGetDouble(defId, GroupId, CoolantMassPerPipeId, out dvalue)
+                || lookup.TryGetDouble(defId, GroupId, LegacyMassPerPipeId, out dvalue))
+                def.CoolantMassPerPipe = (float)dvalue;
 
             if (lookup.TryGetDouble(defId, GroupId, ConductivityId, out dvalue))
                 def.Conductivity = (float)dvalue;
@@ -91,22 +109,34 @@ namespace Thermodynamics
             if (lookup.TryGetDouble(defId, GroupId, SpecificHeatId, out dvalue))
                 def.SpecificHeat = (float)dvalue;
 
-            if (lookup.TryGetDouble(defId, GroupId, PipeSurfaceAreaScalerId, out dvalue))
-                def.PipeSurfaceAreaScaler = (float)dvalue;
+            if (lookup.TryGetDouble(defId, GroupId, PipeContactMultiplierId, out dvalue)
+                || lookup.TryGetDouble(defId, GroupId, LegacyPipeContactId, out dvalue))
+                def.PipeContactMultiplier = (float)dvalue;
 
-            if (lookup.TryGetDouble(defId, GroupId, PlateSurfaceAreaScalerId, out dvalue))
-                def.PlateSurfaceAreaScaler = (float)dvalue;
+            if (lookup.TryGetDouble(defId, GroupId, SinkContactMultiplierId, out dvalue)
+                || lookup.TryGetDouble(defId, GroupId, LegacySinkContactId, out dvalue))
+                def.SinkContactMultiplier = (float)dvalue;
 
-            if (lookup.TryGetDouble(defId, GroupId, SegmentsPerSecondId, out dvalue))
-                def.SegmentsPerSecondAtFullFlow = (float)dvalue;
+            if (lookup.TryGetDouble(defId, GroupId, FlowRateId, out dvalue))
+            {
+                def.FlowRate = (float)dvalue;
+            }
+            else if (lookup.TryGetDouble(defId, GroupId, LegacyFlowRateId, out dvalue))
+            {
+                // The retired name carried parcels per second, which is a different quantity: one
+                // parcel is one pipe block. Converting on the large-grid cell size is exact for the
+                // grid size such a definition was almost certainly written against, and keeps a
+                // small-grid ring at the speed that definition used to give it there.
+                def.FlowRate = (float)dvalue * LegacyParcelLengthMetres;
+            }
 
             if (lookup.TryGetDouble(defId, GroupId, StagnantTransferId, out dvalue))
                 def.StagnantTransferFraction = (float)dvalue;
 
 
-            def.MassPerPipe = Math.Max(1, def.MassPerPipe);
+            def.CoolantMassPerPipe = Math.Max(1, def.CoolantMassPerPipe);
 
-            def.SegmentsPerSecondAtFullFlow = Math.Max(0, def.SegmentsPerSecondAtFullFlow);
+            def.FlowRate = Math.Max(0, def.FlowRate);
 
             def.StagnantTransferFraction = Math.Min(1, Math.Max(0, def.StagnantTransferFraction));
 
@@ -114,9 +144,9 @@ namespace Thermodynamics
 
             def.SpecificHeat = Math.Max(0, def.SpecificHeat);
 
-            def.PipeSurfaceAreaScaler = Math.Max(0, def.PipeSurfaceAreaScaler);
+            def.PipeContactMultiplier = Math.Max(0, def.PipeContactMultiplier);
 
-            def.PlateSurfaceAreaScaler = Math.Max(0, def.PlateSurfaceAreaScaler);
+            def.SinkContactMultiplier = Math.Max(0, def.SinkContactMultiplier);
 
             return def;
         }

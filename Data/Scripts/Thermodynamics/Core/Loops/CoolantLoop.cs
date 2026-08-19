@@ -264,7 +264,13 @@ namespace Thermodynamics.Core
                 return;
             }
 
-            float magnitude = Properties.SegmentsPerSecondAtFullFlow * (float)Math.Sqrt(Math.Abs(demand));
+            // The definition is in metres per second; the solver carries parcels, one pipe block
+            // long. Dividing here rather than storing parcels is what makes one definition mean the
+            // same speed on both grid sizes.
+            float parcelLength = ParcelLengthMetres > 0f ? ParcelLengthMetres : 1f;
+            float parcelsAtFullFlow = Properties.FlowRate / parcelLength;
+
+            float magnitude = parcelsAtFullFlow * (float)Math.Sqrt(Math.Abs(demand));
             FlowSegmentsPerSecond = demand < 0f ? -magnitude : magnitude;
         }
 
@@ -334,7 +340,7 @@ namespace Thermodynamics.Core
         /// </summary>
         public void RefreshThermalMass()
         {
-            float perSegment = (Properties.SpecificHeat * Properties.MassPerPipe) / heatTimeScale;
+            float perSegment = (Properties.SpecificHeat * Properties.CoolantMassPerPipe) / heatTimeScale;
             SegmentThermalMass = Math.Max(ThermalConstants.MinimumThermalMass, perSegment);
 
             // The well-mixed model is a ring carrying exactly one parcel. Expressing it that way rather
