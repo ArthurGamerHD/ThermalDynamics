@@ -262,7 +262,7 @@ namespace Thermodynamics.Core
         public int MaxSubstepsPerBlock = 0;
 
         /// <summary>
-        /// When true, damage per second is <c>(T - critical) * CriticalTemperatureScaler</c>. When
+        /// When true, damage per second is <c>(T - critical) * OverheatDamagePerKelvin</c>. When
         /// false, that figure is applied per solver step, making total damage scale with
         /// <see cref="Frequency"/>.
         /// </summary>

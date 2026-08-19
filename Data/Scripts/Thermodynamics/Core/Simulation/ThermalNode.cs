@@ -106,7 +106,7 @@ namespace Thermodynamics.Core
             Block = block;
             Temperature = initialTemperature;
             this.heatTimeScale = heatTimeScale > 0f ? heatTimeScale : 1f;
-            cellFaceArea = gridSize * gridSize * Math.Max(0f, block.Thermal.SurfaceAreaScaler);
+            cellFaceArea = gridSize * gridSize * Math.Max(0f, block.Thermal.ExposedSurfaceMultiplier);
 
             RefreshThermalMass();
             RefreshExposure();
@@ -120,7 +120,7 @@ namespace Thermodynamics.Core
 
         /// <summary>
         /// Area of one of this block's cell faces, m^2, including the definition's
-        /// <c>SurfaceAreaScaler</c>. The unit every area in the simulation is measured in.
+        /// <c>ExposedSurfaceMultiplier</c>. The unit every area in the simulation is measured in.
         /// </summary>
         public float CellFaceArea
         {

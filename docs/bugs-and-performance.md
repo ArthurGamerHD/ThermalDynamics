@@ -208,9 +208,9 @@ A performance setting silently changes the difficulty.
 by the step length; `ThermalSettings.DamageIsPerSecond = false` restores the old behaviour.
 
 **Fixed** — `HandleCriticalTemperature` multiplies the overshoot by `TimeScaleRatio`, the length
-of one update in seconds, so `CriticalTemperatureScaler` now reads as damage per kelvin per
+of one update in seconds, so `OverheatDamagePerKelvin` now reads as damage per kelvin per
 second. At the default `Frequency = 4` this is a **4× reduction** in damage rate; scale
-`CriticalTemperatureScaler` in `Cubes.xml` if the old pace was the intended one.
+`OverheatDamagePerKelvin` in `Cubes.xml` if the old pace was the intended one.
 
 ### M5. Specific heat is roughly 250× below physical — **medium** — *fixed in the live mod*
 

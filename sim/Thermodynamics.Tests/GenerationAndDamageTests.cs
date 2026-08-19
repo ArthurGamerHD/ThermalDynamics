@@ -202,7 +202,7 @@ namespace Thermodynamics.Tests
         {
             BlockThermalProperties thermal = Catalog.DefaultThermal();
             thermal.CriticalTemperature = 500f;
-            thermal.CriticalTemperatureScaler = 2f;
+            thermal.OverheatDamagePerKelvin = 2f;
 
             GridBuilder builder = GridBuilder.Large();
             builder.Place(BlockModel.Solid("Fragile", Vector3I.One, 500f, thermal), Vector3I.Zero);

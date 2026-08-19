@@ -505,7 +505,7 @@ namespace Thermodynamics.Tests
             LoopThermalProperties properties = LoopThermalProperties.Default();
             float baseline = CoolantLoopBuilder.PipeConductance(grid, pipe, properties);
 
-            properties.PipeSurfaceAreaScaler = 2f;
+            properties.PipeContactMultiplier = 2f;
             float doubled = CoolantLoopBuilder.PipeConductance(grid, pipe, properties);
 
             Assert.Equal(baseline * 2f, doubled, 2);

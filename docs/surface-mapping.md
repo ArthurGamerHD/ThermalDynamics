@@ -52,7 +52,7 @@ outside. A face counts when:
 Only the block's six boundary slabs are walked, never its interior: the cost is a block's surface,
 not its volume.
 
-`ExposedArea = exposedFaces × gridSize² × SurfaceAreaScaler`, and that area is what radiation,
+`ExposedArea = exposedFaces × gridSize² × ExposedSurfaceMultiplier`, and that area is what radiation,
 convection, solar gain, point sources and friction all multiply.
 
 ## The room map

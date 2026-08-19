@@ -19,7 +19,7 @@ namespace Thermodynamics.Tests
         {
             BlockThermalProperties t = Catalog.DefaultThermal();
             t.CriticalTemperature = 400f;
-            t.CriticalTemperatureScaler = 1f;
+            t.OverheatDamagePerKelvin = 1f;
             return t;
         }
 

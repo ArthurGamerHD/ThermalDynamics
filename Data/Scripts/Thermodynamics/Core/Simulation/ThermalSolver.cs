@@ -428,12 +428,12 @@ namespace Thermodynamics.Core
 
         /// <summary>
         /// Registers a block and returns its node, or null if the block is marked
-        /// <c>IgnoreThermals</c>. Returns the existing node if the block is already registered.
+        /// <c>ExcludeFromSimulation</c>. Returns the existing node if the block is already registered.
         /// </summary>
         public ThermalNode AddBlock(BlockInstance block, float initialTemperature)
         {
             if (block == null) throw new ArgumentNullException("block");
-            if (block.Thermal.IgnoreThermals) return null;
+            if (block.Thermal.ExcludeFromSimulation) return null;
             if (nodesByKey.ContainsKey(block.Key)) return nodesByKey[block.Key];
 
             ThermalNode node = new ThermalNode(block, grid.GridSize, initialTemperature, settings.HeatTimeScale);
@@ -2274,7 +2274,7 @@ namespace Thermodynamics.Core
                 float critical = node.Thermal.CriticalTemperature;
                 if (critical <= 0f || updated <= critical) continue;
 
-                float damage = (updated - critical) * node.Thermal.CriticalTemperatureScaler;
+                float damage = (updated - critical) * node.Thermal.OverheatDamagePerKelvin;
                 if (perSecond) damage *= h;
                 if (damage > 0f)
                 {

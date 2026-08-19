@@ -50,7 +50,7 @@ Unregister the handler in `UnloadData`.
 | `GetGridSummary` | `Func<IMyCubeGrid, MyTuple<float,float,int,int>>` | Hottest block K, ambient K, blocks over critical, coolant loops. |
 | `GetRoom` | `Func<IMyCubeGrid, Vector3I, MyTuple<bool,float,float,float>>` | Is a sealed room, air temperature K, pressure 0..1, volume m³. |
 
-A block that is not simulated — excluded by `IgnoreThermals`, on a grid without physics, or not yet
+A block that is not simulated — excluded by `ExcludeFromSimulation`, on a grid without physics, or not yet
 registered — reads as zero rather than throwing.
 
 ## Writing

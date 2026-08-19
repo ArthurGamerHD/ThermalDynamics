@@ -139,7 +139,7 @@ namespace Thermodynamics.Tests
         {
             LoopThermalProperties properties = LoopThermalProperties.Default();
             properties.SpecificHeat = 3400f;
-            properties.MassPerPipe = 500f;
+            properties.CoolantMassPerPipe = 500f;
 
             CoolantLoop physical = new CoolantLoop(properties, 300f, 1f);
             CoolantLoop accelerated = new CoolantLoop(properties, 300f, 225f);

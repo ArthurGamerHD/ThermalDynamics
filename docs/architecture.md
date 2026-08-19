@@ -115,7 +115,7 @@ blueprints), adds any blocks that already existed, runs one full `RebuildAll`, a
 temperatures. Building everything once is cheaper than replaying the incremental path per block, and
 it leaves the room map complete before the first step rather than after it.
 
-Blocks whose definition sets `IgnoreThermals` never become nodes.
+Blocks whose definition sets `ExcludeFromSimulation` never become nodes.
 
 A block only tells the simulation something when it changes: power, thrust, door state and
 attachment are all events. Mass is the exception — the game raises nothing a mod can hook for build

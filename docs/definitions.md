@@ -22,15 +22,40 @@ Read by `ThermalCellDefinition.GetDefinition`
 
 | Property | Type | Clamp | Meaning |
 | --- | --- | --- | --- |
-| `IgnoreThermals` | Bool | — | `true` excludes the block from the simulation entirely: no cell is created, it conducts nothing and blocks nothing. |
+| `ExcludeFromSimulation` | Bool | — | `true` excludes the block from the simulation entirely: no cell is created, it conducts nothing and blocks nothing. |
 | `Conductivity` | Decimal | `0 … 1` | Scales heat transfer to neighbours. `1` is a perfect conductor for this model, not a W/(m·K) value. |
 | `SpecificHeat` | Decimal | `≥ 0` | Heat capacity in **real J/(kg·K)** — look the material up. Steel 450, copper 385, aluminium 900, graphite 710, water 4184. Higher = slower to heat and to cool. See [the note below](#specific-heat-is-real-and-the-clock-is-not). |
 | `Emissivity` | Decimal | `≥ 0` | Fraction of blackbody radiation emitted, and equally the fraction of incident solar energy absorbed. Physically `0 … 1`. |
-| `SurfaceAreaScaler` | Decimal | `≥ 0` | Multiplies the geometric face area. Use `> 1` for finned or folded surfaces (the radiator uses `1.25`). |
+| `ExposedSurfaceMultiplier` | Decimal | `≥ 0` | Multiplies the geometric face area. Use `> 1` for finned or folded surfaces (the radiator uses `1.25`). It scales **every** external path, so a large value also multiplies solar gain and reentry friction — and it buys much less than it looks: see [balance.md](balance.md). |
 | `ProducerWasteEnergy` | Decimal | `≥ 0` | Fraction of *generated* power converted to heat. |
 | `ConsumerWasteEnergy` | Decimal | `≥ 0` | Fraction of *consumed* power converted to heat. |
 | `CriticalTemperature` | Decimal | `≥ 0` | Kelvin above which the block takes damage. |
-| `CriticalTemperatureScaler` | Decimal | `≥ 0` | Damage per Kelvin of overshoot, per second. |
+| `OverheatDamagePerKelvin` | Decimal | `≥ 0` | Damage per Kelvin of overshoot, per second. |
+
+### Retired property names
+
+These were renamed because they said the wrong thing. **Both spellings are read**, current name
+first, so a definition written before the rename still means what it said — Definition Extensions
+matches on the string, and dropping the old name would silently revert third-party definitions to
+the shipped defaults with no error and no log line.
+
+| Retired | Current | Why |
+| --- | --- | --- |
+| `CriticalTemperatureScaler` | `OverheatDamagePerKelvin` | Read as "multiply the critical temperature", which is not remotely what it does |
+| `SurfaceAreaScaler` | `ExposedSurfaceMultiplier` | Said what it multiplied but not that the scope is the *outside* faces only |
+| `IgnoreThermals` | `ExcludeFromSimulation` | Read as "ignores heat damage" rather than "is not simulated at all" |
+| `PlateSurfaceAreaScaler` | `SinkContactMultiplier` | Nothing else in the mod calls a sink face a plate |
+| `PipeSurfaceAreaScaler` | `PipeContactMultiplier` | Pairs with the above; the two are siblings and now look it |
+| `MassPerPipe` | `CoolantMassPerPipe` | Mass of what, in a file full of blocks |
+
+New definitions should use the current names. The old ones are not planned for removal.
+
+### `Conductivity` is not in W/(m·K)
+
+Worth stating plainly, because the name says otherwise: the value is clamped to **0…1** and
+multiplied by a 200 W/(m·K) reference at the point of use. A tabulated figure typed in here —
+steel's 50, copper's 400 — clamps to 1 and quietly means "the best there is". `1` is a very good
+conductor, `0.6` is the default for most blocks, `0` conducts nothing.
 
 ### Specific heat is real, and the clock is not
 
@@ -69,7 +94,7 @@ For a block with definition id `TypeId/SubtypeId`, `GetDefinition` resolves in t
 3. `EnvironmentDefinition/DefaultThermodynamics` — the global fallback.
 
 The probe for steps 1 and 2 is whether the definition id is indexed **and** exposes
-`IgnoreThermals`, so a partial group without `IgnoreThermals` falls through to the next level
+`ExcludeFromSimulation`, so a partial group without `ExcludeFromSimulation` falls through to the next level
 rather than being read with zeros.
 
 ### Shipped values ([Data/Cubes.xml](../Data/Cubes.xml))
@@ -137,8 +162,8 @@ There is currently one loop definition and every loop uses it:
 | `Mass` | 500 | `≥ 1` | Coolant mass for the whole loop, kg. |
 | `Conductivity` | 1 | `0 … 1` | Transfer scaling for both pipe and plate exchanges. |
 | `SpecificHeat` | 3400 | `≥ 0` | Coolant heat capacity in real J/(kg·K). Water-glycol is about 3400, which is why a loop carries so much more heat than the steel around it. Scaled by `HeatTimeScale` exactly as a block is. |
-| `PipeSurfaceAreaScaler` | 1 | `≥ 0` | Contact area between fluid and the pipe block it runs through. |
-| `PlateSurfaceAreaScaler` | 1 | `≥ 0` | Contact area between fluid and a block pressed against a sink face. |
+| `PipeContactMultiplier` | 1 | `≥ 0` | Contact area between fluid and the pipe block it runs through. |
+| `SinkContactMultiplier` | 1 | `≥ 0` | Contact area between fluid and a block pressed against a sink face. |
 
 ## Adding thermal properties for another mod's blocks
 
@@ -158,15 +183,15 @@ Dynamics' assembly required:
       </Id>
       <ModExtensions>
         <Group Name="ThermalBlockProperties">
-          <Bool    Name="IgnoreThermals"           Value="false" />
+          <Bool    Name="ExcludeFromSimulation"           Value="false" />
           <Decimal Name="Conductivity"             Value="0.8"   />
           <Decimal Name="SpecificHeat"             Value="500"   />
           <Decimal Name="Emissivity"               Value="0.2"   />
-          <Decimal Name="SurfaceAreaScaler"        Value="1"     />
+          <Decimal Name="ExposedSurfaceMultiplier"        Value="1"     />
           <Decimal Name="ProducerWasteEnergy"      Value="0"     />
           <Decimal Name="ConsumerWasteEnergy"      Value="0.35"  />
           <Decimal Name="CriticalTemperature"      Value="1100"  />
-          <Decimal Name="CriticalTemperatureScaler" Value="0.5"  />
+          <Decimal Name="OverheatDamagePerKelvin" Value="0.5"  />
         </Group>
       </ModExtensions>
     </Definition>
@@ -180,6 +205,6 @@ Tuning guidance:
   `SpecificHeat` of 0 produces a divide-by-zero in the cell constants.
 * `SpecificHeat` × block mass is the real knob for thermal inertia. Heavy blocks are already
   slow; do not double-count by also raising specific heat.
-* Set `IgnoreThermals` to `true` for decorative, zero-mass or projector-only blocks.
+* Set `ExcludeFromSimulation` to `true` for decorative, zero-mass or projector-only blocks.
 * Waste-energy fractions above ~0.3 make a block a serious heat source; the vanilla default is
   0.05.

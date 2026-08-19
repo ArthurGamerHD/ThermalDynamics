@@ -19,7 +19,7 @@ namespace Thermodynamics.Core
         /// the contact area both scale together: a longer ring is a bigger thermal buffer rather than
         /// a better cooler, and its solver cost per pipe is constant.
         /// </summary>
-        public float MassPerPipe = 50f;
+        public float CoolantMassPerPipe = 50f;
 
         /// <summary>Transfer quality, 0..1.</summary>
         public float Conductivity = 1f;
@@ -34,20 +34,26 @@ namespace Thermodynamics.Core
         public float SpecificHeat = 3400f;
 
         /// <summary>Contact area scaler between the fluid and the pipe block it runs through.</summary>
-        public float PipeSurfaceAreaScaler = 1f;
+        public float PipeContactMultiplier = 1f;
 
         /// <summary>Contact area scaler between the fluid and a block on a sink face.</summary>
-        public float PlateSurfaceAreaScaler = 1f;
+        public float SinkContactMultiplier = 1f;
 
         /// <summary>
-        /// Coolant parcels a pump at full speed pushes past a point each second, per unit of flow.
+        /// How fast the coolant moves with one pump at full power, **metres per second**.
         ///
-        /// The advection rate, and the reason a stopped pump stops cooling rather than slowing it: a
-        /// segment only reaches a radiator on the far side of the ring if something carries it there.
-        /// Expressed per segment rather than per ring, so the rate — and the substeps it demands — do
-        /// not depend on how much pipe a player laid.
+        /// The advection rate, and the reason a stopped pump stops cooling rather than slowing it:
+        /// coolant only reaches a radiator on the far side of the ring if something carries it there.
+        /// Independent of how much pipe a player laid, so the rate — and the substeps it demands —
+        /// do not grow with the plumbing.
+        ///
+        /// In metres per second because that is the unit the terminal reports and the only one
+        /// anybody has intuition for. The solver works in parcels — one pipe block of fluid — and
+        /// <see cref="CoolantLoop.RefreshFlow"/> converts by dividing by the cell size. Storing the
+        /// parcel figure instead made the same definition mean five different speeds on the two grid
+        /// sizes: 4 parcels/s read as 10 m/s on large grid and 2 m/s on small.
         /// </summary>
-        public float SegmentsPerSecondAtFullFlow = 4f;
+        public float FlowRate = 10f;
 
         /// <summary>
         /// Fraction of full transfer that survives with no circulation at all, 0..1.
@@ -64,13 +70,13 @@ namespace Thermodynamics.Core
 
         public LoopThermalProperties Clamp()
         {
-            MassPerPipe = Math.Max(1f, MassPerPipe);
-            SegmentsPerSecondAtFullFlow = Math.Max(0f, SegmentsPerSecondAtFullFlow);
+            CoolantMassPerPipe = Math.Max(1f, CoolantMassPerPipe);
+            FlowRate = Math.Max(0f, FlowRate);
             StagnantTransferFraction = Math.Max(0f, Math.Min(1f, StagnantTransferFraction));
             Conductivity = Math.Max(0f, Math.Min(1f, Conductivity));
             SpecificHeat = Math.Max(ThermalConstants.MinimumThermalMass, SpecificHeat);
-            PipeSurfaceAreaScaler = Math.Max(0f, PipeSurfaceAreaScaler);
-            PlateSurfaceAreaScaler = Math.Max(0f, PlateSurfaceAreaScaler);
+            PipeContactMultiplier = Math.Max(0f, PipeContactMultiplier);
+            SinkContactMultiplier = Math.Max(0f, SinkContactMultiplier);
             return this;
         }
 

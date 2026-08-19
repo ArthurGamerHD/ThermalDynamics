@@ -35,13 +35,13 @@ namespace Thermodynamics.Tests
             public float SpecificHeat;
             public float Mass;
             public float GridSize;
-            public float SurfaceAreaScaler = 1f;
+            public float ExposedSurfaceMultiplier = 1f;
             public Vector3I Extents = Vector3I.One;
             public float Temperature;
 
             public float Area
             {
-                get { return GridSize * GridSize * SurfaceAreaScaler; }
+                get { return GridSize * GridSize * ExposedSurfaceMultiplier; }
             }
 
             /// <summary>C = 1 / (SpecificHeat * Mass * GridSize) * TimeScaleRatio</summary>
