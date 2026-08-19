@@ -157,6 +157,16 @@ namespace Thermodynamics
         /// </summary>
         [ProtoMember(36)] public int MaxSubsteps = 16;
 
+        /// <summary>
+        /// Most substeps any single block may demand of the whole grid before it is treated as
+        /// heavier than it is. Zero leaves every block's own heat capacity alone.
+        ///
+        /// See the core setting of the same name. On a real capital ship a few dozen light
+        /// fittings set the substep count for forty thousand blocks; this is the knob that stops
+        /// them, at the cost of their own transient and nothing else.
+        /// </summary>
+        [ProtoMember(84)] public int MaxSubstepsPerBlock = 0;
+
         // ---- environment -------------------------------------------------------------------
 
         [ProtoMember(40)] public float VacuumTemperature = 2.7f;
@@ -260,6 +270,7 @@ namespace Thermodynamics
             if (HeatTimeScale <= 0f) HeatTimeScale = 1f;
             if (MaxLinkVisitsPerStep < 0) MaxLinkVisitsPerStep = 0;
             if (MaxSubsteps < 1) MaxSubsteps = 1;
+            if (MaxSubstepsPerBlock < 0) MaxSubstepsPerBlock = 0;
             if (TelemetrySampleStride < 1) TelemetrySampleStride = 1;
             if (SolarOcclusionInterval < 1) SolarOcclusionInterval = 1;
             if (SolarTerrainRange < 0f) SolarTerrainRange = 0f;
@@ -321,6 +332,7 @@ namespace Thermodynamics
             SimulationSpeed = bundle.SimulationSpeed;
             HeatTimeScale = bundle.HeatTimeScale;
             MaxSubsteps = bundle.MaxSubsteps;
+            MaxSubstepsPerBlock = bundle.MaxSubstepsPerBlock;
             ClampConductionOvershoot = bundle.ClampConductionOvershoot;
             ClampEnvironmentOvershoot = bundle.ClampEnvironmentOvershoot;
             EnableRoomAir = bundle.EnableRoomAir;
@@ -362,6 +374,7 @@ namespace Thermodynamics
             core.HeatTimeScale = HeatTimeScale;
             core.MaxLinkVisitsPerStep = MaxLinkVisitsPerStep;
             core.MaxSubsteps = MaxSubsteps;
+            core.MaxSubstepsPerBlock = MaxSubstepsPerBlock;
 
             core.VacuumTemperature = VacuumTemperature;
             core.SolarEnergy = SolarEnergy;
@@ -404,7 +417,7 @@ namespace Thermodynamics
                 "EnableHeatPumps",
                 "ClampConductionOvershoot", "ClampEnvironmentOvershoot", "DamageIsPerSecond",
                 "Frequency", "SimulationSpeed", "HeatTimeScale", "MaxLinkVisitsPerStep",
-                "MaxSubsteps",
+                "MaxSubsteps", "MaxSubstepsPerBlock",
                 "VacuumTemperature", "SolarEnergy", "FrictionAtSpeedsAbove", "FrictionScale",
                 "RoomConvectionCoefficient", "RoomAirDensity", "SolarOcclusionInterval",
                 "ClimateGroundInfluence", "ClimateWeatherInfluence",
@@ -448,6 +461,7 @@ namespace Thermodynamics
                 case "HeatTimeScale": return HeatTimeScale;
                 case "MaxLinkVisitsPerStep": return MaxLinkVisitsPerStep;
                 case "MaxSubsteps": return MaxSubsteps;
+                case "MaxSubstepsPerBlock": return MaxSubstepsPerBlock;
                 case "VacuumTemperature": return VacuumTemperature;
                 case "SolarEnergy": return SolarEnergy;
                 case "FrictionAtSpeedsAbove": return FrictionAtSpeedsAbove;
@@ -507,6 +521,7 @@ namespace Thermodynamics
                 case "HeatTimeScale": HeatTimeScale = value; return true;
                 case "MaxLinkVisitsPerStep": MaxLinkVisitsPerStep = (int)value; return true;
                 case "MaxSubsteps": MaxSubsteps = (int)value; return true;
+                case "MaxSubstepsPerBlock": MaxSubstepsPerBlock = (int)value; return true;
                 case "VacuumTemperature": VacuumTemperature = value; return true;
                 case "SolarEnergy": SolarEnergy = value; return true;
                 case "FrictionAtSpeedsAbove": FrictionAtSpeedsAbove = value; return true;

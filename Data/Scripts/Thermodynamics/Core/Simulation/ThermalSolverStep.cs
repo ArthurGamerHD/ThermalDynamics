@@ -178,8 +178,13 @@ namespace Thermodynamics.Core
             RebuildLinksIfNeeded();
             EnsureBuffers();
             SyncNodeState();
-            RefreshLinkMassFactors();
+
+            // Totals first, then the floor that reads them, then the link factors the floor
+            // invalidates. Ordering these the other way round left every link's reduced mass
+            // describing capacities the step no longer used.
             RecomputeConductanceTotalsIfNeeded();
+            ApplyThermalMassFloor();
+            RefreshLinkMassFactors();
 
             Environment = environment;
             stepEnvironment = environment;
@@ -200,6 +205,16 @@ namespace Thermodynamics.Core
             {
                 heatPumps[p].BeginStep();
             }
+            // Reported against a *full* step, not against the shortened one this call was handed.
+            // The estimate is proportional to the step, so a step already cut down to fit the
+            // visit budget asks for about what it was granted, by construction — recording that
+            // produced a "required" column identical to the "granted" one and said nothing. What
+            // is wanted is how much the grid would ask for if it were allowed to run at its
+            // configured rate, which is the figure that keeps moving after the budget has bound.
+            LastRequiredSubsteps = deltaSeconds > 0f
+                ? required * (settings.StepSeconds / deltaSeconds)
+                : required;
+
 
             Work.SolverSteps++;
             Work.SolverSubsteps += substeps;

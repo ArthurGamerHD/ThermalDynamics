@@ -241,6 +241,48 @@ namespace Thermodynamics.Core
         public int MaxLinkVisitsPerStep = 1000000;
 
         /// <summary>
+        /// Most substeps any single block may demand of the whole grid before it is treated as
+        /// heavier than it is. Zero leaves every block's own heat capacity alone.
+        ///
+        /// <para>
+        /// A step is divided into as many substeps as the <em>stiffest</em> node on the grid
+        /// needs, and every other node pays for them. On a real capital ship that is a very small
+        /// minority: measured on a 42,051-block hull, forty-three 16 kg light fittings at a heat
+        /// capacity of 32 J/K asked for twenty-eight substeps, while the armour around them —
+        /// five hundred kilograms of it — asked for one. Half a percent of the blocks set the
+        /// cost of the other ninety-nine and a half, and the ship ran at 35 % of real time to
+        /// pay for it.
+        /// </para>
+        ///
+        /// <para>
+        /// What that stiffness means physically is that such a block reaches its neighbour's
+        /// temperature in about eighteen milliseconds. At a quarter-second step it is not an
+        /// independent temperature at all — it is a reading off the block it is bolted to, and
+        /// resolving its approach to that reading is arithmetic nobody can observe. This raises
+        /// its heat capacity to the least that keeps its demand inside the cap, which is the same
+        /// statement: a block too light to hold heat for as long as a step is treated as part of
+        /// what holds it.
+        /// </para>
+        ///
+        /// <para>
+        /// <strong>What is given up</strong> is that block's own transient, and only its own: it
+        /// warms and cools more slowly than a 16 kg object would. Its steady state does not move,
+        /// because steady state is where the watts cancel and has nothing to do with capacity, and
+        /// nothing else on the grid changes at all. What is bought is every other block's substep
+        /// count. The floor applies to conduction stiffness only — a block's exchange with the
+        /// environment can still ask for more, and is left alone, because that one is a real
+        /// response to a real gradient rather than an artefact of a block being small.
+        /// </para>
+        ///
+        /// <para>
+        /// Expressed in substeps rather than in kilograms so that it keeps its meaning when
+        /// <see cref="Frequency"/> changes: the step gets shorter, the floor gets lighter, and
+        /// the cap stays where it was put.
+        /// </para>
+        /// </summary>
+        public int MaxSubstepsPerBlock = 0;
+
+        /// <summary>
         /// Damage per second is <c>(T - critical) * CriticalTemperatureScaler</c>. When false,
         /// damage is applied per solver step instead, which makes damage scale with
         /// <see cref="Frequency"/> — the original behaviour.
@@ -288,6 +330,7 @@ namespace Thermodynamics.Core
             if (HeatPumpMaxCoefficient < 0f) HeatPumpMaxCoefficient = 0f;
             if (MaxLinkVisitsPerStep < 0) MaxLinkVisitsPerStep = 0;
             if (MaxSubsteps < 1) MaxSubsteps = 1;
+            if (MaxSubstepsPerBlock < 0) MaxSubstepsPerBlock = 0;
 
             StepSeconds = 1f / Frequency;
             StepsPerSecond = Frequency * SimulationSpeed;

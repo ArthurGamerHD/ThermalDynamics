@@ -70,6 +70,19 @@ namespace Thermodynamics.Core
         private float[] loopWatts = new float[0];
         private float[] roomWatts = new float[0];
 
+        /// <summary>
+        /// Heat capacities the integrator uses for the coupled elements, which are the real ones
+        /// unless <c>MaxSubstepsPerBlock</c> has raised them.
+        ///
+        /// Room air is the lightest thing on a ship and touches the most surface, so a small
+        /// pressurised compartment is routinely stiffer than any block bolted around it — a field
+        /// dump found a capital ship still needing two substeps after every one of its blocks had
+        /// been capped at one, because a two-cell room demanded 1.75 on its own. Capping the
+        /// blocks and not the air would leave the setting unable to reach the value it advertises.
+        /// </summary>
+        private float[] loopEffectiveMass = new float[0];
+        private float[] roomEffectiveMass = new float[0];
+
         // Node state the substep loop reads, copied out of the node objects once per step
         // instead of being chased through them once per node per substep. A step with sixteen
         // substeps used to walk eight thousand heap objects sixteen times over.
@@ -100,6 +113,7 @@ namespace Thermodynamics.Core
         /// local.
         /// </summary>
         private float[] nodeRelaxation = new float[0];
+
 
         /// <summary>
         /// Fraction of each node's <em>face</em> the sun reaches, six per node, 0..1. All ones when
@@ -375,6 +389,44 @@ namespace Thermodynamics.Core
 
         /// <summary>Substeps the last <see cref="Step"/> needed for stability.</summary>
         public int LastSubsteps { get; private set; }
+
+        /// <summary>
+        /// Substeps a <em>full</em> step would have needed, before <see cref="MaxSubsteps"/>
+        /// refused any of them and before the rounding up to a whole number.
+        ///
+        /// Reported separately from <see cref="LastSubsteps"/> because the two answer different
+        /// questions. What was granted says what the step cost; what was asked for says how far
+        /// the grid is from affording its own stiffness, and it is the only one of the pair that
+        /// keeps moving once the budget has bound.
+        ///
+        /// Scaled up to a full step for exactly that reason. The estimate is proportional to the
+        /// step length, so a step already shortened to fit <c>MaxLinkVisitsPerStep</c> asks for
+        /// about what it was granted — measuring that gives a column identical to the granted one
+        /// and answers nothing.
+        /// </summary>
+        public float LastRequiredSubsteps { get; private set; }
+
+        /// <summary>
+        /// Substeps one element alone would need for a full step, from its real heat capacity.
+        ///
+        /// The per-node figure behind <see cref="LastRequiredSubsteps"/>, which is its maximum.
+        /// Public so per-block-type telemetry can attribute the substep count to the definitions
+        /// responsible for it rather than leaving it as a per-grid total.
+        /// </summary>
+        public float NodeSubstepDemand(int index)
+        {
+            if (index < 0 || index >= nodes.Count) return 0f;
+
+            // Same guard as the profile: a node appended during a step has no mirrored row yet.
+            if (index >= nodeConductanceTotal.Length) return 0f;
+
+            float capacity = nodes[index].ThermalMass;
+            if (capacity <= 0f) return 0f;
+
+            StabilityTerms terms = StabilityEnvironment();
+            return (NodeStabilityRate(index, ref terms) / capacity)
+                * (settings.StepSeconds / StabilitySafetyFactor);
+        }
 
         /// <summary>True when the last step hit <see cref="MaxSubsteps"/> and had to clamp.</summary>
         public bool LastStepWasClamped { get; private set; }
@@ -1513,6 +1565,7 @@ namespace Thermodynamics.Core
             {
                 Vector3 sun = env.SunDirectionLocal;
                 ResolveDirection(ref sun, sunWeights);
+
                 RefreshSunShadow(ref sun);
             }
 
@@ -1543,6 +1596,7 @@ namespace Thermodynamics.Core
                 {
                     for (int i = from; i < to; i++) ClearEnvironmentDiagnostics(i);
                 }
+
                 return;
             }
 
@@ -1660,6 +1714,7 @@ namespace Thermodynamics.Core
                 node.LastFrictionWatts = frictionWatts;
                 node.LastHeatSourceWatts = 0f;
             }
+
         }
 
         private void AccumulateEnvironment(ref EnvironmentState env, float h)
@@ -2121,7 +2176,7 @@ namespace Thermodynamics.Core
             for (int l = 0; l < loops.Count; l++)
             {
                 CoolantLoop loop = loops[l];
-                float delta = loopWatts[l] * h / loop.ThermalMass;
+                float delta = loopWatts[l] * h / EffectiveLoopMass(l);
                 float updated = loop.Temperature + delta;
                 loop.Temperature = updated < ThermalConstants.MinimumTemperature
                     ? ThermalConstants.MinimumTemperature
@@ -2133,7 +2188,7 @@ namespace Thermodynamics.Core
                 RoomAirNode air = roomAir[r];
                 if (!air.HasAir) continue;
 
-                float updated = air.Temperature + (roomWatts[r] * h / air.ThermalMass);
+                float updated = air.Temperature + (roomWatts[r] * h / EffectiveRoomMass(r));
                 air.Temperature = updated < ThermalConstants.MinimumTemperature
                     ? ThermalConstants.MinimumTemperature
                     : updated;
@@ -2160,6 +2215,7 @@ namespace Thermodynamics.Core
             EnsureBuffers();
             SyncNodeState();
             RecomputeConductanceTotalsIfNeeded();
+            ApplyThermalMassFloor();
 
             return RequiredSubstepsFromState(deltaSeconds);
         }
@@ -2168,48 +2224,73 @@ namespace Thermodynamics.Core
         /// The estimate itself, over state the caller has already synchronised. <see cref="Step"/>
         /// uses this so that one step does not sync twice.
         /// </summary>
+        /// <summary>
+        /// The environment half of a node's stability demand, resolved once for the whole grid.
+        ///
+        /// Split out because three things now need it and they must not drift: the substep
+        /// estimate, the thermal mass floor that bounds what that estimate can ask for, and the
+        /// profile the telemetry reports. A floor computed from a different rate than the estimate
+        /// reads would cap a number nobody is looking at.
+        /// </summary>
+        private struct StabilityTerms
+        {
+            public bool Exposed;
+            public bool Radiating;
+            public float Convection;
+        }
+
+        private StabilityTerms StabilityEnvironment()
+        {
+            StabilityTerms terms = new StabilityTerms();
+
+            terms.Radiating = settings.EnableEnvironment && settings.EnableRadiation;
+            bool convecting = settings.EnableEnvironment && settings.EnableConvection;
+            terms.Convection = convecting
+                ? Environment.ConvectionCoefficient * Environment.AtmosphereFactor
+                : 0f;
+            terms.Exposed = terms.Radiating || convecting;
+            return terms;
+        }
+
+        /// <summary>
+        /// Conductance a node sees per second, in W/K: links, coolant loops and room air, plus the
+        /// linearised environment coupling. Divided by heat capacity this is <c>1/tau</c>, and
+        /// <c>tau</c> is what the step has to stay inside.
+        /// </summary>
+        private float NodeStabilityRate(int i, ref StabilityTerms terms)
+        {
+            // Conductance totals cover links, coolant loops and room air alike, and are not
+            // reduced when a mechanism is switched off: over-estimating stiffness costs a
+            // substep, under-estimating it costs stability.
+            float rate = nodeConductanceTotal[i];
+
+            if (!terms.Exposed || nodeExposedFaces[i] <= 0) return rate;
+
+            // Linearised environment coupling: d(radiated watts)/dT = 4 e s A T^3
+            if (terms.Radiating)
+            {
+                float t = nodeTemperatures[i];
+                rate += 4f * nodeRadiation[i] * t * t * t;
+            }
+
+            return rate + (terms.Convection * nodeExposedArea[i]);
+        }
+
         private float RequiredSubstepsFromState(float deltaSeconds)
         {
             float worst = 0f;
 
-            bool radiating = settings.EnableEnvironment && settings.EnableRadiation;
-            bool convecting = settings.EnableEnvironment && settings.EnableConvection;
-            float convection = convecting
-                ? Environment.ConvectionCoefficient * Environment.AtmosphereFactor
-                : 0f;
-            bool exposed = radiating || convecting;
+            StabilityTerms terms = StabilityEnvironment();
 
             for (int i = 0; i < nodes.Count; i++)
             {
-                // Conductance totals cover links, coolant loops and room air alike, and are not
-                // reduced when a mechanism is switched off: over-estimating stiffness costs a
-                // substep, under-estimating it costs stability.
-                float rate = nodeConductanceTotal[i];
-
-                // Linearised environment coupling: d(radiated watts)/dT = 4 e s A T^3
-                if (exposed && nodeExposedFaces[i] > 0)
-                {
-                    if (radiating)
-                    {
-                        float t = nodeTemperatures[i];
-                        rate += 4f * nodeRadiation[i] * t * t * t;
-                    }
-                    rate += convection * nodeExposedArea[i];
-                }
-
-                float perNode = rate / nodeThermalMass[i];
+                float perNode = NodeStabilityRate(i, ref terms) / nodeThermalMass[i];
                 if (perNode > worst) worst = perNode;
             }
 
             for (int l = 0; l < loops.Count; l++)
             {
-                CoolantLoop loop = loops[l];
-                float total = 0f;
-                for (int i = 0; i < loop.Links.Count; i++)
-                {
-                    total += loop.Links[i].Conductance;
-                }
-                float perLoop = total / loop.ThermalMass;
+                float perLoop = LoopConductance(l) / EffectiveLoopMass(l);
                 if (perLoop > worst) worst = perLoop;
             }
 
@@ -2217,20 +2298,209 @@ namespace Thermodynamics.Core
             // usually what sets the substep count once a ship is pressurised.
             for (int r = 0; r < roomAir.Count; r++)
             {
-                RoomAirNode air = roomAir[r];
-                if (!air.HasAir) continue;
+                if (!roomAir[r].HasAir) continue;
 
-                float total = 0f;
-                for (int i = 0; i < air.Links.Count; i++)
-                {
-                    total += air.Links[i].Conductance;
-                }
-                float perRoom = total / air.ThermalMass;
+                float perRoom = RoomConductance(r) / EffectiveRoomMass(r);
                 if (perRoom > worst) worst = perRoom;
             }
 
             if (worst <= 0f) return 1f;
             return (deltaSeconds * worst) / StabilitySafetyFactor;
+        }
+
+        /// <summary>
+        /// Everything about a grid's substep demand that a report might want, taken in one walk.
+        ///
+        /// <para>
+        /// The substep count is a maximum over every element, so the single number the solver acts
+        /// on says nothing about <em>why</em>. This says why: which element sets it, what the
+        /// distribution behind it looks like, and what capping the demand at each of several
+        /// values would do to both. It is the measurement that turns "set it to four" from a guess
+        /// into a reading.
+        /// </para>
+        ///
+        /// <para>
+        /// Every demand here is computed from the block's <em>real</em> heat capacity, not from the
+        /// floored one the solver may be integrating with, so a profile describes the grid rather
+        /// than the settings in force and two configurations can be compared against each other.
+        /// </para>
+        ///
+        /// <para>
+        /// O(nodes), so it is meant for a report or a diagnostic rather than for a step.
+        /// </para>
+        /// </summary>
+        public class SubstepProfile
+        {
+            /// <summary>Demand thresholds the node histogram counts against.</summary>
+            public static readonly float[] DemandEdges =
+                { 0.5f, 1f, 2f, 4f, 8f, 16f, 32f, 64f, 128f, 256f };
+
+            /// <summary>
+            /// Caps the projection evaluates.
+            ///
+            /// Dense at the bottom because that is where the decision is. Cost is linear in the
+            /// cap, so every step down the list is worth as much again — but the population it
+            /// reaches is not linear at all: on a field ship 4 raised six per cent of the blocks
+            /// and 2 raised twenty-four, so the interesting question is which value sits on the
+            /// knee, and it cannot be answered by a list that jumps over it.
+            /// </summary>
+            public static readonly int[] ProjectedCaps = { 32, 16, 8, 6, 4, 3, 2, 1 };
+
+            public float StepSeconds;
+            public int Nodes;
+            public int Links;
+
+            /// <summary>Substeps a full step would need, from real capacities and no cap.</summary>
+            public float RequiredSubsteps;
+
+            /// <summary>Substeps a full step needs as things actually stand, cap included.</summary>
+            public float RequiredSubstepsInForce;
+
+            public float WorstNodeDemand;
+            public int WorstNodeIndex = -1;
+
+            /// <summary>Share of the worst node's stability rate that is conduction rather than environment.</summary>
+            public float WorstNodeConductionShare;
+
+            /// <summary>The stiffest room air and coolant loop, which the block cap cannot reach.</summary>
+            public float WorstRoomAirDemand;
+            public int WorstRoomAirIndex = -1;
+            public float WorstLoopDemand;
+            public int WorstLoopIndex = -1;
+
+            /// <summary>Nodes per demand bucket, one longer than the edges for the overflow.</summary>
+            public readonly long[] Buckets = new long[DemandEdges.Length + 1];
+
+            /// <summary>Per projected cap: nodes it would raise, and what the estimate would become.</summary>
+            public readonly long[] CapNodesFloored = new long[ProjectedCaps.Length];
+            public readonly float[] CapRequiredSubsteps = new float[ProjectedCaps.Length];
+
+            /// <summary>Nodes whose demand is entirely environment, which a conduction-only floor would miss.</summary>
+            public long EnvironmentDominatedNodes;
+        }
+
+        /// <summary>
+        /// Walks every node, room and loop once and reports what sets the substep count.
+        /// </summary>
+        public SubstepProfile ProfileSubsteps()
+        {
+            // Bringing the mirrored state up to date is exactly what must not happen while a step
+            // is part way through one: a step spans many frames now, and SyncNodeState rewrites
+            // the row the publish stage measures its change against. Observing the simulation has
+            // to leave it where it found it, so mid-step the profile reads what the step is
+            // already using rather than refreshing it.
+            if (!StepInFlight)
+            {
+                RebuildLinksIfNeeded();
+                EnsureBuffers();
+                SyncNodeState();
+                RecomputeConductanceTotalsIfNeeded();
+                ApplyThermalMassFloor();
+            }
+
+            SubstepProfile profile = new SubstepProfile();
+            profile.StepSeconds = settings.StepSeconds;
+            profile.Links = links.Count;
+
+            float scale = settings.StepSeconds / StabilitySafetyFactor;
+            StabilityTerms terms = StabilityEnvironment();
+
+            float[] edges = SubstepProfile.DemandEdges;
+            int[] caps = SubstepProfile.ProjectedCaps;
+
+            // The floor cannot reach room air or coolant loops, so whatever they demand is a
+            // floor under every projection below.
+            for (int l = 0; l < loops.Count; l++)
+            {
+                CoolantLoop loop = loops[l];
+                float demand = loop.ThermalMass <= 0f
+                    ? 0f
+                    : (LoopConductance(l) / loop.ThermalMass) * scale;
+
+                if (demand > profile.WorstLoopDemand)
+                {
+                    profile.WorstLoopDemand = demand;
+                    profile.WorstLoopIndex = l;
+                }
+            }
+
+            for (int r = 0; r < roomAir.Count; r++)
+            {
+                RoomAirNode air = roomAir[r];
+                if (!air.HasAir) continue;
+
+                float demand = air.ThermalMass <= 0f
+                    ? 0f
+                    : (RoomConductance(r) / air.ThermalMass) * scale;
+
+                if (demand > profile.WorstRoomAirDemand)
+                {
+                    profile.WorstRoomAirDemand = demand;
+                    profile.WorstRoomAirIndex = r;
+                }
+            }
+
+            float coupled = profile.WorstLoopDemand > profile.WorstRoomAirDemand
+                ? profile.WorstLoopDemand
+                : profile.WorstRoomAirDemand;
+
+            for (int c = 0; c < caps.Length; c++)
+            {
+                profile.CapNodesFloored[c] = 0;
+                profile.CapRequiredSubsteps[c] = coupled > caps[c] ? caps[c] : coupled;
+            }
+
+            // A node appended during a step in flight has no mirrored row yet — it joins the next
+            // step. Walking past the arrays for it would read another block's conductance.
+            int count = nodes.Count;
+            if (count > nodeConductanceTotal.Length) count = nodeConductanceTotal.Length;
+            profile.Nodes = count;
+
+            for (int i = 0; i < count; i++)
+            {
+                float rate = NodeStabilityRate(i, ref terms);
+                float conduction = nodeConductanceTotal[i];
+
+                // The block's own capacity, not the one the solver may be integrating with, so
+                // the profile describes the ship rather than the settings.
+                float capacity = nodes[i].ThermalMass;
+                float demand = capacity <= 0f ? 0f : (rate / capacity) * scale;
+
+                if (demand > profile.WorstNodeDemand)
+                {
+                    profile.WorstNodeDemand = demand;
+                    profile.WorstNodeIndex = i;
+                    profile.WorstNodeConductionShare = rate <= 0f ? 0f : conduction / rate;
+                }
+
+                if (rate > 0f && conduction < rate * 0.5f && demand > 1f)
+                {
+                    profile.EnvironmentDominatedNodes++;
+                }
+
+                int bucket = edges.Length;
+                for (int e = 0; e < edges.Length; e++)
+                {
+                    if (demand < edges[e]) { bucket = e; break; }
+                }
+                profile.Buckets[bucket]++;
+
+                for (int c = 0; c < caps.Length; c++)
+                {
+                    float capped = demand > caps[c] ? caps[c] : demand;
+                    if (demand > caps[c]) profile.CapNodesFloored[c]++;
+                    if (capped > profile.CapRequiredSubsteps[c]) profile.CapRequiredSubsteps[c] = capped;
+                }
+            }
+
+            float worst = profile.WorstNodeDemand > coupled ? profile.WorstNodeDemand : coupled;
+            profile.RequiredSubsteps = worst <= 0f ? 1f : worst;
+
+            // The private estimate, not the public one: the public entry point synchronises first,
+            // which is the thing this method must not do mid-step.
+            profile.RequiredSubstepsInForce = RequiredSubstepsFromState(settings.StepSeconds);
+
+            return profile;
         }
 
         /// <summary>Rounds a substep estimate up into the allowed range.</summary>
@@ -2260,6 +2530,122 @@ namespace Thermodynamics.Core
             if (!conductanceTotalsDirty) return;
             RecomputeConductanceTotals();
         }
+
+        /// <summary>
+        /// Raises the mirrored heat capacity of any node whose conduction alone would demand more
+        /// than <c>MaxSubstepsPerBlock</c> substeps of the whole grid.
+        ///
+        /// <para>
+        /// A node is stable over a substep of <c>h</c> while <c>h * G &lt;= C</c>, so the substeps
+        /// a node asks of a step of <c>dt</c> are <c>dt * G / (C * safety)</c>. Holding that at or
+        /// below the cap is one rearrangement: <c>C &gt;= G * dt / (safety * cap)</c>. Nodes at or
+        /// above it are untouched, which on a real hull is nearly all of them.
+        /// </para>
+        ///
+        /// <para>
+        /// Only the mirrored row moves. <c>ThermalNode.ThermalMass</c> keeps the block's real heat
+        /// capacity, so the terminal readout, the energy figure and anything a host asks still
+        /// describe the block rather than the approximation used to integrate it.
+        /// </para>
+        ///
+        /// <para>
+        /// Applied after the conductance totals and before the link mass factors, because it
+        /// needs the first and invalidates the second.
+        /// </para>
+        /// </summary>
+        private void ApplyThermalMassFloor()
+        {
+            FlooredNodes = 0;
+
+            int cap = settings.MaxSubstepsPerBlock;
+            if (cap <= 0) return;
+
+            float step = settings.StepSeconds;
+            if (step <= 0f) return;
+
+            float perRate = step / (StabilitySafetyFactor * cap);
+            bool moved = false;
+
+            StabilityTerms terms = StabilityEnvironment();
+
+            int count = nodes.Count;
+            for (int i = 0; i < count; i++)
+            {
+                float floor = NodeStabilityRate(i, ref terms) * perRate;
+                if (nodeThermalMass[i] >= floor) continue;
+
+                nodeThermalMass[i] = floor;
+                moved = true;
+                FlooredNodes++;
+            }
+
+            // Every link's reduced mass is a function of the two capacities either side of it.
+            if (moved) linkMassFactorFrom = 0;
+
+            for (int l = 0; l < loops.Count; l++)
+            {
+                CoolantLoop loop = loops[l];
+                float floor = LoopConductance(l) * perRate;
+                loopEffectiveMass[l] = loop.ThermalMass < floor ? floor : loop.ThermalMass;
+            }
+
+            for (int r = 0; r < roomAir.Count; r++)
+            {
+                RoomAirNode air = roomAir[r];
+                float floor = RoomConductance(r) * perRate;
+                roomEffectiveMass[r] = air.ThermalMass < floor ? floor : air.ThermalMass;
+            }
+        }
+
+        private float LoopConductance(int index)
+        {
+            CoolantLoop loop = loops[index];
+            float total = 0f;
+            for (int i = 0; i < loop.Links.Count; i++) total += loop.Links[i].Conductance;
+            return total;
+        }
+
+        private float RoomConductance(int index)
+        {
+            RoomAirNode air = roomAir[index];
+            if (!air.HasAir) return 0f;
+
+            float total = 0f;
+            for (int i = 0; i < air.Links.Count; i++) total += air.Links[i].Conductance;
+            return total;
+        }
+
+        /// <summary>
+        /// The capacity the integrator should use for a loop: its own, unless the cap raised it.
+        ///
+        /// Falls back to the real capacity rather than to zero, because the effective row is only
+        /// filled while the cap is on and dividing by zero here would produce an infinite
+        /// temperature rather than an obviously wrong one.
+        /// </summary>
+        private float EffectiveLoopMass(int index)
+        {
+            if (settings.MaxSubstepsPerBlock <= 0 || index >= loopEffectiveMass.Length
+                || loopEffectiveMass[index] <= 0f)
+            {
+                return loops[index].ThermalMass;
+            }
+
+            return loopEffectiveMass[index];
+        }
+
+        private float EffectiveRoomMass(int index)
+        {
+            if (settings.MaxSubstepsPerBlock <= 0 || index >= roomEffectiveMass.Length
+                || roomEffectiveMass[index] <= 0f)
+            {
+                return roomAir[index].ThermalMass;
+            }
+
+            return roomEffectiveMass[index];
+        }
+
+        /// <summary>Nodes the floor raised on the last step. Zero when the cap is off.</summary>
+        public int FlooredNodes { get; private set; }
 
         private void RecomputeConductanceTotals()
         {
@@ -2352,10 +2738,12 @@ namespace Thermodynamics.Core
             if (loopWatts.Length < loops.Count)
             {
                 loopWatts = new float[Math.Max(4, loops.Count * 2)];
+                loopEffectiveMass = new float[loopWatts.Length];
             }
             if (roomWatts.Length < roomAir.Count)
             {
                 roomWatts = new float[Math.Max(4, roomAir.Count * 2)];
+                roomEffectiveMass = new float[roomWatts.Length];
             }
 
             return grew;

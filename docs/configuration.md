@@ -102,6 +102,124 @@ more even steps and its heat evolves more slowly; raise it or set it to zero and
 rate with the spikes back. Grids below roughly a hundred thousand blocks never reach the default
 and are unaffected either way. The telemetry report says what rate each grid is actually keeping.
 
+### `Frequency` is not the cost dial it looks like
+
+Worth understanding before tuning a busy world, because it works on some grids and not at all on
+others.
+
+A step is subdivided twice. `Frequency` cuts a simulated second into steps, and then the solver
+cuts each step into as many **substeps** as it needs to stay numerically stable — enough that no
+block's step is longer than half its own thermal time constant. Substeps advance no extra
+simulated time; they are passes over the same interval, bought so the integration does not
+diverge. A substep is what actually costs: one walk over every node and every link.
+
+```
+substeps a step needs = StepSeconds × max over blocks of (ΣG / C) / safety
+                      = (1 / Frequency) × r_max / 0.5
+```
+
+and what you pay per real second is that times the number of steps:
+
+```
+substeps per real second = (Frequency × SimulationSpeed) × (1 / Frequency) × r_max / 0.5
+                         = SimulationSpeed × r_max / 0.5
+```
+
+**`Frequency` cancels.** Doubling it halves what each step needs and runs twice as many. What sets
+the bill is how much simulated time you asked for and how stiff the stiffest block is.
+
+That holds while the estimate is above one substep. It stops holding at the two ends, and the ends
+are where most grids live:
+
+* **A soft grid** needs a fraction of a substep, and the solver still charges a whole one because
+  it cannot run less. There `Frequency` *is* the cost, one pass per step, linear. Halving it halves
+  the bill. This is a smaller population than it sounds: in the field dump only 37 of 189 stepping
+  grids sat at one substep, and between them they held **182 cells** — they are debris, not ships.
+  A 790-cell corvette needed five.
+* **A grid at `MaxSubsteps`** is being refused what it asked for, so raising `Frequency` shortens
+  the step until the estimate fits again. That is a real accuracy gain, and it costs.
+
+Practically: **lowering `Frequency` saves on debris and does nothing on ships.** Measured across
+the 189 stepping grids of the field dump, by the substeps each asked for:
+
+| substeps | grids | cells between them |
+| ---: | ---: | ---: |
+| 1 | 37 | 182 |
+| 2–4 | 77 | 2,021 |
+| 5–6 | 72 | 46,605 |
+| 11 | 3 | 126,157 |
+
+Eighty per cent of grids, and better than ninety-nine per cent of the blocks, are above one
+substep — which is the regime where `Frequency` cancels out of the bill entirely. That is what
+`MaxSubstepsPerBlock` is for.
+
+### `MaxSubstepsPerBlock`
+
+A step is divided into as many substeps as the **stiffest** block on the grid needs, and every
+other block pays for all of them. On a real ship that stiffest block is almost never anything
+interesting. Measured on a 42,051-block capital ship: forty-three sixteen-kilogram light fittings
+asked for twenty-eight substeps, the five hundred kilogram armour around them asked for one, and
+the ship ran at 35 % of real time to pay for the lights.
+
+Physically, a 32 J/K fitting bolted to armour reaches the armour's temperature in about eighteen
+milliseconds. At a quarter-second step it is not an independent temperature at all — it is a
+reading off the block it is bolted to. This setting says so: any block that would demand more than
+N substeps has its heat capacity raised to the least that keeps it inside N. "Demand" counts
+everything the stability estimate does — conduction to neighbours, coolant loops, room air, and
+the linearised radiation and convection with the sky — so the cap means what it says: set it to
+one and the grid takes one substep.
+
+What it costs is **that block's own transient, and only that block's**. It warms and cools more
+slowly than a sixteen kilogram object would. It ends up at the same temperature, because where
+something settles is decided by the watts cancelling and has nothing to do with heat capacity, so
+the difference decays as the grid settles rather than accumulating. Everything the block is bolted
+to is untouched, and the block's real heat capacity is still what the terminal, the overlay and
+the mod API report.
+
+Measured on a synthetic ship carrying the same proportion of fittings, over fifty simulated
+seconds with temperatures spread across 500 K:
+
+| `MaxSubstepsPerBlock` | substeps | speed | blocks affected of 43,232 | worst error |
+| ---: | ---: | ---: | ---: | ---: |
+| off | 23.0 | 1.0x | 0 | — |
+| 16 | 16 | 1.4x | 172 (0.4 %) | 0.03 K |
+| 8 | 8 | 2.6x | 461 (1.1 %) | 0.14 K |
+| 6 | 6 | 3.4x | 1,450 (3.4 %) | 0.22 K |
+| **4** | 4 | **4.7x** | 3,648 (8.4 %) | 0.36 K |
+| 3 | 3 | 6.1x | 5,219 (12.1 %) | 0.59 K |
+| 2 | 2 | 7.1x | 9,283 (21.5 %) | 1.50 K |
+| 1 | 1 | **11.0x** | 14,138 (32.7 %) | 5.00 K |
+
+**The value is chosen by how many blocks it reaches, not by the error.** The error barely moves
+between 16 and 2 and stays far below anything a player can see; what changes suddenly is the
+population. Above the knee the cap is a handful of fittings; below it, it is re-massing ordinary
+armour. On a real ship the knee sits somewhere in 2–4 — a telemetry dump reports the exact figure
+for *your* world, per grid, for every candidate cap.
+
+**A field dump found the uncapped configuration is already approximating.** A 1,293-block ship
+with its thrusters lit asked for 21.35 substeps against a `MaxSubsteps` of 16, and every one of
+its 1,867 steps was clamped — the overshoot clamps carrying the difference, which is bounded but
+not accurate. Setting `MaxSubstepsPerBlock` to 16 there costs nothing and stops the clamping
+outright, because it makes the demand fit the ceiling rather than leaning on a clamp to survive
+being refused. Setting it to 8 stops the clamping *and* runs at 2.6 times the rate.
+
+Hence a rule worth remembering: **while `MaxSubstepsPerBlock <= MaxSubsteps` the overshoot clamps
+never engage**, and every step is genuinely short enough for the grid it is integrating.
+
+It is off by default because it is an approximation, and a mod that models heat should not make
+one on a player's behalf without being asked. On a world with large ships in it, turning it on is
+the single largest thing that can be done for frame time — and unlike `MaxLinkVisitsPerStep`, it
+buys the throughput back rather than trading it away: a ship that stops needing more substeps than
+the visit budget allows stops being throttled at all.
+
+Reproduce the table with `dotnet run --project Thermodynamics.Sim -- bench floor --size 42000`.
+
+**It does not have to be guessed.** A telemetry dump taken with the cap off reports, per grid and
+for the world, exactly what each cap would do to the substep count and how many blocks it would
+raise — see [telemetry.md](telemetry.md#substeps). The projection is the same arithmetic the
+setting uses, and `SubstepFloorTests` asserts the two agree, so one baseline dump answers the
+question for that world without running the experiment.
+
 ## Profiles
 
 Five ready-made bundles, from simulation-first to arcade. `/thermal profile` lists them,
@@ -118,6 +236,13 @@ each is four numbers, and the section below says what happens as you move them.
 
 *Heat speed is blocks crossed in eight seconds along a held-hot run, relative to default. Cost is
 element visits per real second, machine-independent. `bench profiles` reproduces both.*
+
+> The Cost column tracks `Frequency` exactly, and that is a property of what it was measured on
+> rather than of `Frequency`. Both figures come from a 200-block conduction run where every node
+> has at most two neighbours and the substep estimate sits at or below one — the regime where a
+> step costs one pass whatever its length. On a stiff grid the estimate is far above one and the
+> column would be flat in `Frequency` instead. See
+> [`Frequency` is not the cost dial it looks like](#frequency-is-not-the-cost-dial-it-looks-like).
 
 **The shipped default is the worst point on this table**, and that is worth saying plainly: it is
 outrun by every other profile including the cheapest one. It spends its budget on accuracy — a low
@@ -149,8 +274,10 @@ are carrying the entire step and blocks start being driven to the ambient floor.
 
 ### Designing your own
 
-* **`Frequency` sets responsiveness and cost together.** It is the substeps-per-second dial when
-  `MaxSubsteps` is 1. Nothing else moves both as directly.
+* **`Frequency` sets responsiveness and cost together — but only while `MaxSubsteps` is 1**, or
+  the grid is soft enough that the estimate never rises above one substep. That is the regime
+  every profile above was tuned in. On a grid stiff enough to ask for real substeps it cancels out
+  of the cost entirely; reach for `MaxSubstepsPerBlock` there instead.
 * **`HeatTimeScale` sets how much a substep carries.** Raise it until the clamps engage; past that
   it buys nothing, because the clamp is already moving all it can. `arcade` at 20,000 and the same
   profile at 1,000,000 reach identically far.
@@ -210,10 +337,11 @@ will not move it much.
 
 | Setting | Default | Effect |
 | --- | --- | --- |
-| `Frequency` | 4 | Solver steps per simulated second. The integration step is `1/Frequency`. Lowering it is the cheapest way to cut cost — see above. |
+| `Frequency` | 4 | Solver steps per simulated second. The integration step is `1/Frequency`. Whether lowering it cuts cost depends on the grid — see below. |
 | `SimulationSpeed` | 1 | Simulated seconds per real second, applied by running more steps rather than longer ones. Linear in CPU. |
 | `HeatTimeScale` | 225 | How much faster than real physics heat moves. Divides every heat capacity. |
 | `MaxLinkVisitsPerStep` | 1000000 | Most link visits one step may make — substeps times links — before the step is shortened to fit. 0 removes the bound. See below. |
+| `MaxSubstepsPerBlock` | 0 (off) | Most substeps any single block may demand of the whole grid before it is treated as heavier than it is. The cheapest large win there is on a real ship. See below. |
 | `ClampConductionOvershoot` | `true` | Caps each exchange at the energy that equalises the pair. Off reproduces the original unbounded solver. |
 | `DamageIsPerSecond` | `true` | Overheat damage per second of simulated time. Off applies it per step, which makes damage scale with `Frequency`. |
 

@@ -80,6 +80,62 @@ namespace Thermodynamics.Tests
         /// The same step, one run whole and one run a few elements at a time, must land on the
         /// same temperature in every block — to the bit.
         /// </summary>
+        /// <summary>
+        /// Reading the simulation must not move it, and a step now spans many frames, so
+        /// "observing between steps" is no longer a thing that exists — telemetry profiles a grid
+        /// while a step is part way through one.
+        ///
+        /// <c>ThermalSolver.ProfileSubsteps</c> is the dangerous one, because the natural way to
+        /// write it is to bring the mirrored state up to date first — and <c>SyncNodeState</c>
+        /// rewrites the row the publish stage measures its change against, which would silently
+        /// zero every block's reported delta and discard any temperature a host had written
+        /// mid-step. It refuses to synchronise while a step is in flight; this is what holds it
+        /// to that.
+        /// </summary>
+        [Theory]
+        [InlineData(1)]
+        [InlineData(97)]
+        [InlineData(1000)]
+        public void ProfilingAStepInFlightDoesNotChangeIt(int budget)
+        {
+            ThermalSimulation clean = Build();
+            ThermalSimulation observed = Build();
+            Seed(clean);
+            Seed(observed);
+
+            EnvironmentState state = EnvironmentSolver.Solve(clean.Settings, clean.Planet, Sky());
+
+            clean.Solver.BeginStep(clean.Settings.StepSeconds, state);
+            while (!clean.Solver.AdvanceStep(budget)) { }
+
+            observed.Solver.BeginStep(observed.Settings.StepSeconds, state);
+
+            int profiles = 0;
+            while (!observed.Solver.AdvanceStep(budget))
+            {
+                observed.Solver.ProfileSubsteps();
+                profiles++;
+            }
+
+            Assert.True(profiles > 0, "the step finished in one slice, so nothing was observed mid-step");
+
+            float[] expected = Temperatures(clean);
+            float[] actual = Temperatures(observed);
+
+            for (int i = 0; i < expected.Length; i++)
+            {
+                Assert.True(expected[i].Equals(actual[i]),
+                    "block " + i + " differs after " + profiles + " mid-step profiles: "
+                    + expected[i].ToString("r") + " against " + actual[i].ToString("r"));
+            }
+
+            for (int i = 0; i < clean.Solver.Nodes.Count; i++)
+            {
+                Assert.Equal(clean.Solver.Nodes[i].LastDeltaTemperature,
+                    observed.Solver.Nodes[i].LastDeltaTemperature);
+            }
+        }
+
         [Theory]
         [InlineData(1)]
         [InlineData(7)]
