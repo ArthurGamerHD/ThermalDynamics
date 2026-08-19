@@ -150,6 +150,38 @@ namespace Thermodynamics.Sim
                     return 0;
                 }
 
+                case "coolant":
+                {
+                    // The segmented fluid model against the well-mixed one it replaced, on grids
+                    // carrying increasing amounts of pipe. The ratio at one size is a tuning
+                    // question; a ratio that climbs with the plumbing is a design problem.
+                    int[] ringCounts = new int[] { 1, 4, 16, 48 };
+                    int hull = size > 0 ? size : 8000;
+                    int runSteps = ticks > 0 ? ticks : 200;
+
+                    Console.WriteLine("Coolant model comparison on a " + hull.ToString("n0")
+                        + " block ship, " + runSteps + " steps per reading.");
+                    Console.WriteLine();
+
+                    List<CoolantBenchmarks.Row> rows = new List<CoolantBenchmarks.Row>();
+                    for (int i = 0; i < ringCounts.Length; i++)
+                    {
+                        Console.Error.WriteLine("  " + ringCounts[i] + " rings...");
+                        rows.Add(CoolantBenchmarks.Measure(hull, ringCounts[i], runSteps));
+                    }
+
+                    Console.WriteLine(CoolantBenchmarks.Table(rows));
+
+                    if (csvDirectory != null)
+                    {
+                        Directory.CreateDirectory(csvDirectory);
+                        string path = Path.Combine(csvDirectory, "coolant-models.csv");
+                        File.WriteAllText(path, CoolantBenchmarks.Csv(rows));
+                        Console.WriteLine("csv -> " + path);
+                    }
+                    return 0;
+                }
+
                 case "hitch":
                     PrintHitch(LoadBenchmarks.Hitch(shape, size, ticks > 0 ? ticks : 400));
                     return 0;

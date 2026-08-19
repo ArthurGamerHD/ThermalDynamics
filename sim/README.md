@@ -140,10 +140,38 @@ dotnet run --project Thermodynamics.Sim -- bench report --baseline benchmarks/pe
 | `load` | Building the simulation for a grid this size, which a player sees as the loading screen or as a blueprint paste. |
 | `report` | Everything at once, as a diffable CSV — including the worst cases a plain hull never reaches: air in the compartments, plumbing, blocks past their rating, three hull shapes in three worlds, and fleets of up to a hundred grids. Every scenario row carries what it actually built, so one that builds nothing cannot report a cost of zero. Also: the ladder, every feature measured both marginally and in isolation, every profile, and the substep cap across its range — plus a noise floor so a reader can tell a small cost from no cost. `--baseline <csv>` compares against an earlier run. See [benchmarks.md](../docs/benchmarks.md). |
 | `floor --driven` | The same sweep on a ship held at temperature by forty 250 kW sources instead of by a seeded spread — the case that says whether a player would notice, and the one that reports the peak temperature overheat damage is decided by. |
+| `coolant` | The segmented fluid model against the well-mixed one it replaced, on the same grid, at rising amounts of pipe. |
 | `floor` | `MaxSubstepsPerBlock` swept: what each cap does to the substep count and the clock, how many blocks it moves, and how far it moves them. Builds from the block census, because the population's *shape* is what decides how far a cap reaches. |
 
 `--shape ship|cube|truss` picks the shape, `--max N` stops the ladder early, `--ticks N` sets the
 run length, `--csv <dir>` writes the ladder as a table.
+
+### What segmenting the coolant cost
+
+`bench coolant` runs both fluid models on one grid. Best of five passes per model per row, because
+the first version of it reported a four-ring grid as faster than a one-ring grid — a mean was
+measuring the machine rather than the work.
+
+```
+  rings  pipes  loops   blocks    links   segmented   well-mixed   ratio  substeps
+      1     24      1    1,253    2,835      0.2326       0.2333    1.00   23 / 23
+      4     96      4    1,349    2,931      0.2540       0.2536    1.00   23 / 23
+     16    384     16    1,733    3,315      0.3421       0.3393    1.01   23 / 23
+     48   1152     48    2,757    4,339      0.5963       0.5913    1.01   23 / 23
+```
+
+**One percent, on a grid that is 42 % coolant pipe** — against a field ship measured at 21 %. The
+ratio does not climb with the plumbing, which was the thing worth checking: a fixed multiple is a
+tuning question, a multiple that grows with what a player builds is a design problem.
+
+It is that cheap because segmenting does not change the link count. One link per pipe plus one per
+sink face exists either way; what changed is which temperature each link reads. The only new work is
+one pass over N floats per substep to carry the fluid, against a per-node environment pass and a
+per-link conduction pass that both dwarf it. The substep column is the other half of the answer: 23
+either way, set by the hull's light blocks, so the loops are nowhere near being the stiffest thing on
+the grid.
+
+`WellMixedCoolant` therefore exists for the choice rather than for the cost.
 
 **The harness runs on .NET 9 and the game runs .NET Framework 4.8**, so absolute milliseconds here
 are optimistic against the game. Ratios and shapes of curve carry across; a millisecond figure
