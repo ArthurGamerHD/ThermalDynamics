@@ -519,6 +519,39 @@ namespace Thermodynamics.Core
             return diagnostics;
         }
 
+        /// <summary>
+        /// Why one coolant block is in no loop, or <see cref="CoolantFault.None"/> when it is.
+        ///
+        /// Costs one walk along that block's own run rather than a pass over the grid, which is what
+        /// makes it safe to call from a terminal panel refreshing while a player watches it.
+        /// <see cref="DiagnoseLoops"/> is the whole-grid form and is for reports.
+        /// </summary>
+        public CoolantFault DiagnoseBlock(BlockInstance block)
+        {
+            if (block == null || block.Model.Coolant == null) return CoolantFault.None;
+            if (FindLoopContaining(block) != null) return CoolantFault.None;
+
+            CoolantFault fault;
+            List<BlockInstance> ring = CoolantLoopBuilder.TraceRing(grid, block, out fault);
+
+            // A run that traces closed but holds no loop can only have been rejected for the one
+            // reason the search rejects a closed run.
+            return ring != null ? CoolantFault.NoPump : fault;
+        }
+
+        /// <summary>The loop a coolant block belongs to, or null.</summary>
+        public CoolantLoop FindLoopContaining(BlockInstance block)
+        {
+            if (block == null) return null;
+
+            IList<CoolantLoop> loops = solver.Loops;
+            for (int i = 0; i < loops.Count; i++)
+            {
+                if (loops[i].Contains(block)) return loops[i];
+            }
+            return null;
+        }
+
         private void OnRoomsCompleted()
         {
             exposureDirty = true;

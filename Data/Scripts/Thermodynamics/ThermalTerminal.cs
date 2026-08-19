@@ -157,6 +157,7 @@ namespace Thermodynamics
             Text.Append("Waste heat: ").Append((node.HeatGenerationWatts / 1000f).ToString("n1")).Append(" kW\n");
 
             AppendHeatPump(bound);
+            AppendCoolant(bound);
 
             RoomAirNode air = RoomOf(bound);
             if (air != null)
@@ -208,16 +209,89 @@ namespace Thermodynamics
                 return;
             }
 
+            // Distinguished from "off", because the fix is different: one is this block's switch and
+            // the other is the ship's power budget.
+            if (pump.PowerAvailable <= 0f)
+            {
+                Text.Append("Heat pump: on, but the grid is supplying it no power\n");
+                return;
+            }
+
             Text.Append("Heat pump: moving ")
                 .Append((pump.LastLiftedWatts / 1000f).ToString("n1")).Append(" kW for ")
                 .Append((pump.LastPowerWatts / 1000f).ToString("n1")).Append(" kW drawn\n");
 
             Text.Append("Coefficient: ").Append(pump.LastCoefficient.ToString("n2"));
-            if (pump.LastWasLimited) Text.Append("  (limited by the gap)");
+
+            // Which limit binds is the block's whole character, and it tells a player what to change:
+            // at the rating there is nothing to gain from a smaller gap, short of it there is.
+            if (pump.LastLiftedWatts >= pump.RatedWatts - 1f)
+            {
+                Text.Append("  (at its rating — a smaller gap would not help)");
+            }
+            else if (pump.LastWasLimited)
+            {
+                Text.Append("  (limited by the gap — narrow it and this rises)");
+            }
             Text.Append('\n');
 
             Text.Append("Rejecting: ").Append((pump.LastRejectedWatts / 1000f).ToString("n1"))
                 .Append(" kW into the hot side\n");
+        }
+
+        /// <summary>
+        /// What this coolant block's loop is doing, or why it is in none. Emits nothing for a block
+        /// with no plumbing.
+        ///
+        /// "I built a ring and nothing happened" is the commonest coolant failure and the hardest to
+        /// see, because a broken ring's only symptom is a loop that is absent. Diagnosing one block
+        /// costs a walk along its own run rather than a pass over the grid, so it is cheap enough for
+        /// a panel that refreshes while the player reads it.
+        /// </summary>
+        private static void AppendCoolant(ThermalBlock bound)
+        {
+            BlockInstance instance = bound.Instance;
+            if (instance == null || instance.Model.Coolant == null) return;
+
+            ThermalSimulation simulation = bound.Grid.Simulation;
+            CoolantLoop loop = simulation.FindLoopContaining(instance);
+
+            Text.Append('\n');
+
+            if (loop == null)
+            {
+                CoolantFault fault = simulation.DiagnoseBlock(instance);
+                Text.Append("Coolant: no loop — ")
+                    .Append(CoolantLoopDiagnostics.Describe(fault)).Append('\n');
+                return;
+            }
+
+            Text.Append("Coolant: ").Append(Tools.KelvinToCelsiusString(loop.Temperature))
+                .Append(" in a ring of ").Append(loop.PipeCount).Append('\n');
+
+            // Gross both ways. A loop in balance nets to nothing while carrying its whole load, so a
+            // single figure would tell a player their working plumbing was idle.
+            Text.Append("Drawing: ").Append((loop.LastWattsAbsorbed / 1000f).ToString("n1"))
+                .Append(" kW    shedding: ").Append((loop.LastWattsRejected / 1000f).ToString("n1"))
+                .Append(" kW\n");
+
+            int sinks = instance.CoolantSinkPorts().Count;
+            if (sinks == 0)
+            {
+                Text.Append("This block is plumbing only — no sink face\n");
+            }
+            else
+            {
+                Text.Append("Sink faces on this block: ").Append(sinks).Append('\n');
+            }
+
+            // A loop that carries nothing while looking perfectly healthy is the failure worth
+            // naming: the ring is closed, the pump is there, and no sink face meets anything hotter.
+            if (loop.LastWattsAbsorbed <= 0f && loop.LastWattsRejected <= 0f)
+            {
+                Text.Append("This loop is moving no heat — check that a sink face is\n");
+                Text.Append("against something hotter than the coolant\n");
+            }
         }
 
         /// <summary>Air node of a room this block bounds, or null when it bounds none.</summary>

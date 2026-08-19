@@ -196,6 +196,19 @@ block's name — with that block's temperature, rate of change, critical point, 
 area, waste heat, the room it bounds, what its heat pump is achieving if it has one, and a short
 summary of the grid. It refreshes while the panel is open.
 
+On a **coolant pipe or pump** it also reports that block's loop: coolant temperature, ring length,
+and the kilowatts the fluid is drawing and shedding — both, because a loop in balance nets to
+nothing while carrying its whole load. It names the sink faces on this block, or says it is plumbing
+only. And when the block is in no loop it says **why**, in the same words as
+[the fault table above](#when-a-ring-does-not-become-a-loop). That costs one walk along this block's
+own run rather than a pass over the grid, so it is safe on a panel that refreshes while you read it.
+
+Two failures that look like success are called out rather than left to be inferred: a loop moving no
+heat at all, and a heat pump that is switched on but being given no power by the grid — which is a
+different line from "off", because the fix is the ship's power budget rather than this block's
+switch. A running pump also says which of its limits is binding: *at its rating* means a smaller gap
+would gain nothing, *limited by the gap* means narrowing it would.
+
 It goes there rather than into a terminal control because the terminal's controls are single-line
 fields: a text box handed fifteen lines shows one and a half and clips the rest.
 [ThermalTerminal.cs](../Data/Scripts/Thermodynamics/ThermalTerminal.cs) needs no HUD framework at

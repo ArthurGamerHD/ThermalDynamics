@@ -226,6 +226,84 @@ namespace Thermodynamics.Tests
             Assert.Equal(1, diagnostics.CountOf(CoolantFault.OpenEnd));
         }
 
+        /// <summary>
+        /// The per-block form the terminal uses. It has to agree with the whole-grid diagnosis, or a
+        /// player reading one pipe's panel gets a different answer from the report.
+        /// </summary>
+        [Fact]
+        public void DiagnosingOneBlockAgreesWithDiagnosingTheGrid()
+        {
+            GridBuilder builder = GridBuilder.Large();
+
+            // A working ring, a pumpless ring, and a lone pump, all on one grid.
+            PipeFitter.BuildRing(builder, PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3));
+
+            List<Vector3I> pumpless = PipeFitter.RectangleXZ(new Vector3I(0, 10, 0), 3, 3);
+            for (int i = 0; i < pumpless.Count; i++)
+            {
+                Vector3I cell = pumpless[i];
+                Vector3I toPrevious = pumpless[(i - 1 + pumpless.Count) % pumpless.Count] - cell;
+                Vector3I toNext = pumpless[(i + 1) % pumpless.Count] - cell;
+
+                BlockModel model = toPrevious == -toNext
+                    ? Catalog.CoolantPipeStraight()
+                    : Catalog.CoolantPipeCorner();
+                builder.Place(model, cell, PipeFitter.Orient(model, toPrevious, toNext));
+            }
+
+            builder.Place(Catalog.CoolantPump(), new Vector3I(0, 20, 0),
+                new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));
+
+            ThermalSimulation simulation = builder.BuildSimulation(Isolated());
+
+            int[] perBlock = new int[7];
+            IList<BlockInstance> blocks = simulation.Grid.Blocks;
+            for (int i = 0; i < blocks.Count; i++)
+            {
+                if (blocks[i].Model.Coolant == null) continue;
+                perBlock[(int)simulation.DiagnoseBlock(blocks[i])]++;
+            }
+
+            CoolantLoopDiagnostics whole = simulation.DiagnoseLoops();
+
+            for (int fault = 1; fault < perBlock.Length; fault++)
+            {
+                Assert.Equal(whole.Counts[fault], perBlock[fault]);
+            }
+
+            // And the blocks in the working ring report no fault at all.
+            Assert.Equal(whole.PipesInLoops, perBlock[(int)CoolantFault.None]);
+        }
+
+        [Fact]
+        public void ABlockInAWorkingLoopReportsItsLoopAndNoFault()
+        {
+            GridBuilder builder = GridBuilder.Large();
+            List<BlockInstance> ring = PipeFitter.BuildRing(
+                builder, PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3));
+
+            ThermalSimulation simulation = builder.BuildSimulation(Isolated());
+
+            for (int i = 0; i < ring.Count; i++)
+            {
+                Assert.Equal(CoolantFault.None, simulation.DiagnoseBlock(ring[i]));
+                Assert.NotNull(simulation.FindLoopContaining(ring[i]));
+            }
+        }
+
+        [Fact]
+        public void ABlockWithNoPlumbingIsNotDiagnosedAtAll()
+        {
+            GridBuilder builder = GridBuilder.Large();
+            builder.Place(Catalog.HeavyArmor(), Vector3I.Zero);
+            BlockInstance armour = builder.Last;
+
+            ThermalSimulation simulation = builder.BuildSimulation(Isolated());
+
+            Assert.Equal(CoolantFault.None, simulation.DiagnoseBlock(armour));
+            Assert.Null(simulation.FindLoopContaining(armour));
+        }
+
         private static string Reasons(CoolantLoopDiagnostics diagnostics)
         {
             string text = "";
