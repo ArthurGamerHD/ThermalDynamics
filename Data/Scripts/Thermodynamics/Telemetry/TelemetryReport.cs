@@ -108,6 +108,92 @@ namespace Thermodynamics
             return sb.ToString();
         }
 
+        /// <summary>
+        /// What the grid's plumbing and heat pumps achieved.
+        ///
+        /// Printed only when the grid carries some, so a report on a ship with no cooling gear says
+        /// nothing rather than printing a page of dashes. Every line here answers a question a
+        /// temperature cannot: whether the fluid is carrying heat, whether a pump is moving any, and
+        /// for a pump that is not, which of the three fixable reasons applies.
+        /// </summary>
+        private static void AppendCoolantAndPumps(StringBuilder sb, GridTelemetry g)
+        {
+            bool loops = g.LoopTemperature.Count > 0;
+            bool pumps = g.HeatPumps.Count > 0 && g.HeatPumps.Max > 0;
+            if (!loops && !pumps) return;
+
+            sb.Append("\n    coolant and heat pumps\n");
+
+            if (loops)
+            {
+                Field(sb, "  loop temperature K", g.LoopTemperature.Format("n1"));
+                Field(sb, "  drawn from blocks W", g.LoopWattsAbsorbed.Format("n0"));
+                Field(sb, "  shed into blocks W", g.LoopWattsRejected.Format("n0"));
+
+                // The pair above is gross. A loop in balance nets to about nothing while carrying
+                // its full load, so the net is stated separately rather than instead.
+                Field(sb, "  net into the fluid W",
+                    (g.LoopWattsAbsorbed.Mean - g.LoopWattsRejected.Mean).ToString("n0"));
+                Field(sb, "  pipes per loop", g.LoopPipes.Format("n0"));
+                Field(sb, "  links per loop", g.LoopLinks.Format("n0"));
+
+                if (g.LoopWattsAbsorbed.Max <= 0.0)
+                {
+                    sb.Append("      !! every loop on this grid carried nothing: check that a sink\n");
+                    sb.Append("         face is against something hotter than the coolant\n");
+                }
+            }
+            else
+            {
+                Field(sb, "  loops", "none");
+            }
+
+            if (!pumps) return;
+
+            Field(sb, "  heat pumps", g.HeatPumps.Format("n0"));
+            Field(sb, "  of which running", g.HeatPumpsRunning.Format("n0"));
+
+            if (g.HeatPumpUnconnectedSamples > 0)
+                Field(sb, "  idle: nothing on a face", g.HeatPumpUnconnectedSamples.ToString("n0") + " samples");
+            if (g.HeatPumpDisabledSamples > 0)
+                Field(sb, "  idle: switched off", g.HeatPumpDisabledSamples.ToString("n0") + " samples");
+            if (g.HeatPumpStarvedSamples > 0)
+                Field(sb, "  idle: no power", g.HeatPumpStarvedSamples.ToString("n0") + " samples");
+
+            if (g.HeatPumpLiftWatts.Count == 0)
+            {
+                sb.Append("      !! no heat pump on this grid ran at all\n");
+                return;
+            }
+
+            Field(sb, "  lifting W", g.HeatPumpLiftWatts.Format("n0"));
+            Field(sb, "  drawing W", g.HeatPumpPowerWatts.Format("n0"));
+            Field(sb, "  rejecting W", g.HeatPumpRejectedWatts.Format("n0"));
+            Field(sb, "  coefficient", g.HeatPumpCoefficient.Format("n2"));
+
+            long limited = g.HeatPumpLimitedByRating + g.HeatPumpLimitedByCarnotOrHeat;
+            if (limited > 0)
+            {
+                Field(sb, "  bound by its rating",
+                    Percent(g.HeatPumpLimitedByRating, limited) + " of running samples");
+                Field(sb, "  bound by Carnot or heat",
+                    Percent(g.HeatPumpLimitedByCarnotOrHeat, limited) + " of running samples");
+            }
+
+            // A pump paying for more than it moves is working against a gap too wide to be worth it.
+            if (g.HeatPumpCoefficient.Count > 0 && g.HeatPumpCoefficient.Mean < 1.0)
+            {
+                sb.Append("      note: mean coefficient below 1 — these pumps spend more energy than\n");
+                sb.Append("            they move, so the gap they lift across is very wide\n");
+            }
+        }
+
+        private static string Percent(long part, long whole)
+        {
+            if (whole <= 0) return "-";
+            return (100.0 * part / whole).ToString("n1") + " %";
+        }
+
         private static void Section(StringBuilder sb, string title)
         {
             sb.Append('\n').Append(title).Append('\n');
@@ -359,7 +445,9 @@ namespace Thermodynamics
             long added = 0, removed = 0, splits = 0, merges = 0, doorChanges = 0;
             long mapperPasses = 0, surfaceRecalcs = 0, saves = 0, loads = 0;
             long saveBytes = 0, loadBytes = 0, damageEvents = 0, simFrames = 0;
-            long loopsCreated = 0, clampedSteps = 0, nodeUpdates = 0;
+            long clampedSteps = 0, nodeUpdates = 0;
+            int gridsWithLoops = 0, gridsWithWorkingLoops = 0;
+            int gridsWithHeatPumps = 0, gridsWithWorkingPumps = 0;
             double totalDamage = 0;
             long liveGrids = 0;
             int peakCells = 0;
@@ -381,7 +469,14 @@ namespace Thermodynamics
                 damageEvents += g.DamageEvents;
                 totalDamage += g.TotalDamage;
                 simFrames += g.SimulationSteps;
-                loopsCreated += g.CoolantLoopsCreated;
+                // CoolantLoopsCreated was never written by anything and reported 0 for every
+                // session, including ones where four ships each held a working ring. The useful
+                // session figures come from the per-grid state instead: how many loops were seen,
+                // and how many grids carry plumbing that formed none.
+                if (g.CoolantLoops.Count > 0 && g.CoolantLoops.Max > 0) gridsWithLoops++;
+                if (g.LoopWattsAbsorbed.Count > 0 && g.LoopWattsAbsorbed.Max > 0) gridsWithWorkingLoops++;
+                if (g.HeatPumps.Count > 0 && g.HeatPumps.Max > 0) gridsWithHeatPumps++;
+                if (g.HeatPumpLiftWatts.Count > 0 && g.HeatPumpLiftWatts.Max > 0) gridsWithWorkingPumps++;
                 clampedSteps += g.ClampedSteps;
                 nodeUpdates += g.NodeUpdates;
                 if (!g.IsClosed) liveGrids++;
@@ -412,7 +507,10 @@ namespace Thermodynamics
             Field(sb, "door state changes", doorChanges.ToString("n0"));
             Field(sb, "surface refreshes", surfaceRecalcs.ToString("n0"));
             Field(sb, "room mapper passes", mapperPasses.ToString("n0"));
-            Field(sb, "coolant loops created", loopsCreated);
+            Field(sb, "grids with a coolant loop", gridsWithLoops
+                + (gridsWithLoops > 0 ? " (" + gridsWithWorkingLoops + " carrying heat)" : ""));
+            Field(sb, "grids with a heat pump", gridsWithHeatPumps
+                + (gridsWithHeatPumps > 0 ? " (" + gridsWithWorkingPumps + " running)" : ""));
             Field(sb, "critical damage events", damageEvents.ToString("n0"));
             Field(sb, "total heat damage", totalDamage.ToString("n1"));
             Field(sb, "saves / bytes", saves + " / " + saveBytes.ToString("n0"));
@@ -1140,6 +1238,8 @@ namespace Thermodynamics
 
                 WriteGridSubsteps(sb, g);
 
+                AppendCoolantAndPumps(sb, g);
+
                 sb.Append("\n    environment\n");
                 Field(sb, "  planets visited", g.PlanetList);
                 Field(sb, "  ambient K", g.AmbientTemperature.Format("n1"));
@@ -1730,7 +1830,7 @@ namespace Thermodynamics
             sb.Append("ambient_min,ambient_mean,ambient_max,air_density_mean,wind_mean,wind_max,speed_max,");
             sb.Append("occluded_fraction,atmosphere_fraction,");
             sb.Append("blocks_added,blocks_removed,blocks_restored,rooms_restored,splits,merges,door_changes,surface_refreshes,");
-            sb.Append("mapper_passes,loops_created,saves,loads,save_bytes,load_bytes,");
+            sb.Append("mapper_passes,loop_w_absorbed,loop_w_rejected,pump_lift_w,pump_draw_w,pump_cop,saves,loads,save_bytes,load_bytes,");
             sb.Append("sim_ms_total,sim_ms_max,topology_ms_total,mapping_ms_total,exposure_ms_total,solver_ms_total,solver_ms_max,");
             sb.Append("solar_ms_total,solar_ms_max,save_ms_total,load_ms_total,");
             sb.Append("ticks,first_tick_frame,last_tick_frame,");
@@ -1807,7 +1907,11 @@ namespace Thermodynamics
                 Csv(sb, g.DoorStateChanges);
                 Csv(sb, g.SurfaceRecalcs);
                 Csv(sb, g.MapperCompletions);
-                Csv(sb, g.CoolantLoopsCreated);
+                Csv(sb, g.LoopWattsAbsorbed.Mean);
+                Csv(sb, g.LoopWattsRejected.Mean);
+                Csv(sb, g.HeatPumpLiftWatts.Mean);
+                Csv(sb, g.HeatPumpPowerWatts.Mean);
+                Csv(sb, g.HeatPumpCoefficient.Mean);
                 Csv(sb, g.Saves);
                 Csv(sb, g.Loads);
                 Csv(sb, g.SaveBytes);

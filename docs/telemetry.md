@@ -430,6 +430,60 @@ and projected grids on worker threads, so the registries behind grids, block typ
 are locked; see F1 and F2 in [bugs-and-performance.md](bugs-and-performance.md) for what happened
 before they were.
 
+## Coolant loops and heat pumps
+
+Until this was added, a report could tell you a grid held *n* coolant loops and nothing else about
+them. A field dump showed four ships each carrying a closed pumped ring, eight radiators and four
+heat pumps, and could not say whether any of it moved a single watt — while the session summary line
+`coolant loops created` read `0`, because nothing had ever incremented that counter.
+
+Per grid, when the grid carries any:
+
+```
+    coolant and heat pumps
+      loop temperature K          339.0 / 412.6 / 498.1 (sd 41.2, n 233)
+      drawn from blocks W         0 / 18,402 / 41,118 (sd 9,004, n 233)
+      shed into blocks W          0 / 17,988 / 40,233 (sd 8,911, n 233)
+      net into the fluid W        414
+      pipes per loop              72 / 72 / 72 (sd 0, n 233)
+      links per loop              80 / 80 / 80 (sd 0, n 233)
+      heat pumps                  4 / 4 / 4 (sd 0, n 233)
+      of which running            3 / 3.2 / 4 (sd 0.4, n 233)
+      idle: nothing on a face     233 samples
+      lifting W                   0 / 18,811 / 60,000 (sd 4,102, n 700)
+      drawing W                   0 / 20,000 / 20,000 (sd 0, n 700)
+      rejecting W                 0 / 38,811 / 80,000 (sd 4,102, n 700)
+      coefficient                 0.94 / 2.31 / 8.00 (sd 1.88, n 700)
+      bound by its rating         41.2 % of running samples
+      bound by Carnot or heat     58.8 % of running samples
+```
+
+**Drawn and shed are gross and are deliberately not summed.** A loop doing its job draws heat off a
+reactor at one sink and sheds it into a radiator at another, so its *net* is around zero exactly when
+it is carrying its full load. A single net figure would report a loop moving 40 kW as an idle one.
+The net is printed as well, because a loop still warming up is a different state from one in balance.
+
+**A pump that is doing nothing is reported by the reason, in the order a player can fix them:**
+nothing bolted to a face, then switched off, then given no power. A pump can only be one of these,
+and a pump that clears all three appears in the `lifting` figures instead.
+
+**Which limit bound the pump is the block's whole character.** At its rating the machine ran out
+before the physics did — the gap is small and the pump is cheap. Short of its rating the Carnot cost
+or the heat available in the cold block stopped it, which is what makes a wide lift ruinous. A mean
+coefficient below 1 is called out in the report: those pumps spend more energy than they move.
+
+Two lines flag the failures that look like success. A grid whose every loop carried nothing gets a
+`!!` line, because a warm loop that never moves heat looks healthy on a temperature readout. So does
+a grid where no heat pump ran at all.
+
+The session summary reports `grids with a coolant loop` and `grids with a heat pump`, each with how
+many of them were actually working — which is the figure that would have shown, at a glance, that two
+of six identical ships had no loop.
+
+Why a loop did not form is a separate question, answered by `ThermalSimulation.DiagnoseLoops` rather
+than by the periodic sample, because it needs a walk rather than a reading. See
+[blocks.md](blocks.md#when-a-ring-does-not-become-a-loop).
+
 ## Tests
 
 Most of the module reads `Sandbox.*` and `VRage.Game` types, which cannot load in [`sim/`](../sim).
@@ -452,7 +506,14 @@ rebuild, and — the two that matter most — an instrumented run and an uninstr
 
 What is not covered is the wiring: which game fields each hook reads, and whether the report is
 written successfully during shutdown. That is the same boundary the rest of `sim/` accepts, and
-it can only be checked by loading a world.
+it can only be checked by loading a world. **The coolant and heat pump section above is inside that
+boundary** — `GridTelemetry` and `TelemetryReport` both read `Sandbox.*`, so the section's rendering
+is compile-checked and not test-covered. What it reads is covered: `CoolantLoopTests` pins the loop
+watt figures and `HeatPumpTests` pins each of the three idle states the section classifies.
+
+`dotnet build Generic.csproj --no-incremental` is the only check that compiles this module at all —
+a green `sim/` test run says nothing about it, because `sim/` links four of its files and skips the
+rest.
 
 ## Settings
 

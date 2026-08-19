@@ -228,6 +228,54 @@ namespace Thermodynamics
         private int auditedPass = -1;
         public readonly RunningStat SurfaceEntries = new RunningStat();
         public readonly RunningStat CoolantLoops = new RunningStat();
+
+        // ---- what the plumbing is actually doing -----------------------------------------
+        //
+        // The loop count and a substep figure were the only coolant data a report carried, so a
+        // dump could show four ships each holding a closed pumped ring and not say whether any of
+        // them moved a watt. Absorbed and rejected are kept apart because a loop in balance nets to
+        // about zero exactly when it is carrying the most heat.
+
+        /// <summary>Coolant temperature across every loop on the grid, K.</summary>
+        public readonly RunningStat LoopTemperature = new RunningStat();
+
+        /// <summary>Heat every loop drew out of the blocks it touches, W.</summary>
+        public readonly RunningStat LoopWattsAbsorbed = new RunningStat();
+
+        /// <summary>Heat every loop pushed back into the blocks it touches, W.</summary>
+        public readonly RunningStat LoopWattsRejected = new RunningStat();
+
+        /// <summary>Pipe blocks per loop, so a report can tell a long ring from a short one.</summary>
+        public readonly RunningStat LoopPipes = new RunningStat();
+
+        /// <summary>Sink and pipe links per loop: how many blocks the fluid is coupled to.</summary>
+        public readonly RunningStat LoopLinks = new RunningStat();
+
+        /// <summary>Heat pumps on the grid, and how many of them are actually working.</summary>
+        public readonly RunningStat HeatPumps = new RunningStat();
+        public readonly RunningStat HeatPumpsRunning = new RunningStat();
+
+        /// <summary>Pumps bolted to a block on only one face, so they can move nothing.</summary>
+        public long HeatPumpUnconnectedSamples;
+
+        /// <summary>Pumps connected but switched off by their terminal.</summary>
+        public long HeatPumpDisabledSamples;
+
+        /// <summary>Pumps connected and enabled but given no power by the grid.</summary>
+        public long HeatPumpStarvedSamples;
+
+        /// <summary>Samples of a pump that ran, with what it achieved.</summary>
+        public readonly RunningStat HeatPumpLiftWatts = new RunningStat();
+        public readonly RunningStat HeatPumpPowerWatts = new RunningStat();
+        public readonly RunningStat HeatPumpRejectedWatts = new RunningStat();
+        public readonly RunningStat HeatPumpCoefficient = new RunningStat();
+
+        /// <summary>
+        /// Which of the three limits bound a running pump. Docs call this the block's whole
+        /// character, and it is the one thing a temperature cannot show.
+        /// </summary>
+        public long HeatPumpLimitedByRating;
+        public long HeatPumpLimitedByCarnotOrHeat;
         public readonly RunningStat RecentlyRemovedSize = new RunningStat();
         public readonly RunningStat MapperQueueDepth = new RunningStat();
         public int PeakCellCount;
@@ -244,7 +292,6 @@ namespace Thermodynamics
         public long DoorStateChanges;
         public long SurfaceRecalcs;
         public long MapperCompletions;
-        public long CoolantLoopsCreated;
 
         // ---- persistence ----------------------------------------------------------------
         public long Saves;
@@ -435,7 +482,69 @@ namespace Thermodynamics
                 CaptureProfile(solver);
             }
 
+            SampleLoopsAndPumps(solver);
             SampleNodes(solver);
+        }
+
+        /// <summary>
+        /// Records what every loop and heat pump on the grid achieved on the step just finished.
+        ///
+        /// Both lists are short — a ship carries a handful of each, against thousands of nodes — so
+        /// this walks them whole rather than sampling a slice, and it reads figures the solver
+        /// already accumulated rather than computing anything.
+        /// </summary>
+        private void SampleLoopsAndPumps(ThermalSolver solver)
+        {
+            IList<CoolantLoop> loops = solver.Loops;
+            for (int i = 0; i < loops.Count; i++)
+            {
+                CoolantLoop loop = loops[i];
+                LoopTemperature.Add(loop.Temperature);
+                LoopWattsAbsorbed.Add(loop.LastWattsAbsorbed);
+                LoopWattsRejected.Add(loop.LastWattsRejected);
+                LoopPipes.Add(loop.PipeCount);
+                LoopLinks.Add(loop.Links.Count);
+            }
+
+            IList<HeatPumpDevice> pumps = solver.HeatPumps;
+            HeatPumps.Add(pumps.Count);
+
+            int running = 0;
+            for (int i = 0; i < pumps.Count; i++)
+            {
+                HeatPumpDevice pump = pumps[i];
+
+                // Counted in order of what a player can fix: bolt something to it, switch it on,
+                // then give it power.
+                if (!pump.IsConnected)
+                {
+                    HeatPumpUnconnectedSamples++;
+                    continue;
+                }
+                if (!pump.Enabled)
+                {
+                    HeatPumpDisabledSamples++;
+                    continue;
+                }
+                if (pump.PowerAvailable <= 0f)
+                {
+                    HeatPumpStarvedSamples++;
+                    continue;
+                }
+
+                running++;
+                HeatPumpLiftWatts.Add(pump.LastLiftedWatts);
+                HeatPumpPowerWatts.Add(pump.LastPowerWatts);
+                HeatPumpRejectedWatts.Add(pump.LastRejectedWatts);
+                HeatPumpCoefficient.Add(pump.LastCoefficient);
+
+                // At the rating the machine ran out before the physics did; short of it the Carnot
+                // cost or the heat available in the cold block was what stopped it.
+                if (pump.LastLiftedWatts >= pump.RatedWatts - 1f) HeatPumpLimitedByRating++;
+                else HeatPumpLimitedByCarnotOrHeat++;
+            }
+
+            HeatPumpsRunning.Add(running);
         }
 
         /// <summary>
