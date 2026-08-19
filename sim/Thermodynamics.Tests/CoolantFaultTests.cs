@@ -40,8 +40,15 @@ namespace Thermodynamics.Tests
             Assert.False(diagnostics.HasFaults);
         }
 
+        /// <summary>
+        /// A closed ring with no pump is a loop, and one that circulates nothing.
+        ///
+        /// It used to be no loop at all, which is what made destroying a pump delete the ring and every
+        /// joule its coolant held — a ship could dump heat by grinding its own pump. The ring now keeps
+        /// its coolant and its heat, and moves neither.
+        /// </summary>
         [Fact]
-        public void AClosedRingWithNoPumpSaysSo()
+        public void AClosedRingWithNoPumpIsALoopThatCirculatesNothing()
         {
             GridBuilder builder = GridBuilder.Large();
             List<Vector3I> cells = PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3);
@@ -59,13 +66,18 @@ namespace Thermodynamics.Tests
                 builder.Place(model, cell, PipeFitter.Orient(model, toPrevious, toNext));
             }
 
-            CoolantLoopDiagnostics diagnostics = builder.BuildSimulation(Isolated()).DiagnoseLoops();
+            ThermalSimulation simulation = builder.BuildSimulation(Isolated());
+            CoolantLoopDiagnostics diagnostics = simulation.DiagnoseLoops();
 
-            Assert.Equal(0, diagnostics.Loops);
-            Assert.Equal(8, diagnostics.PipesAdrift);
+            Assert.Equal(1, diagnostics.Loops);
+            Assert.Equal(8, diagnostics.PipesInLoops);
+            Assert.Equal(0, diagnostics.PipesAdrift);
+            Assert.False(diagnostics.HasFaults);
 
-            // Reported against every block in the ring: the fix is to the ring, not to one cell.
-            Assert.Equal(8, diagnostics.CountOf(CoolantFault.NoPump));
+            CoolantLoop loop = simulation.Solver.Loops[0];
+            Assert.False(loop.HasPump);
+            Assert.Empty(loop.Pumps);
+            Assert.Equal(0f, loop.FlowSegmentsPerSecond);
         }
 
         [Fact]
@@ -221,8 +233,12 @@ namespace Thermodynamics.Tests
 
             Assert.Equal(8 + 8 + 1, coolantBlocks);
             Assert.Equal(coolantBlocks, diagnostics.PipesInLoops + diagnostics.PipesAdrift);
-            Assert.Equal(1, diagnostics.Loops);
-            Assert.Equal(8, diagnostics.CountOf(CoolantFault.NoPump));
+
+            // Both closed rings are loops — the pumpless one circulates nothing but exists — and only
+            // the lone pump with free ends is adrift.
+            Assert.Equal(2, diagnostics.Loops);
+            Assert.Equal(16, diagnostics.PipesInLoops);
+            Assert.Equal(1, diagnostics.PipesAdrift);
             Assert.Equal(1, diagnostics.CountOf(CoolantFault.OpenEnd));
         }
 
@@ -235,7 +251,7 @@ namespace Thermodynamics.Tests
         {
             GridBuilder builder = GridBuilder.Large();
 
-            // A working ring, a pumpless ring, and a lone pump, all on one grid.
+            // A working ring, a pumpless ring (also a loop), and a lone pump that is adrift.
             PipeFitter.BuildRing(builder, PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3));
 
             List<Vector3I> pumpless = PipeFitter.RectangleXZ(new Vector3I(0, 10, 0), 3, 3);
@@ -256,7 +272,7 @@ namespace Thermodynamics.Tests
 
             ThermalSimulation simulation = builder.BuildSimulation(Isolated());
 
-            int[] perBlock = new int[7];
+            int[] perBlock = new int[6];
             IList<BlockInstance> blocks = simulation.Grid.Blocks;
             for (int i = 0; i < blocks.Count; i++)
             {

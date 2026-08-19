@@ -65,6 +65,20 @@ namespace Thermodynamics.Core
         public bool EnableCoolantLoops = true;
 
         /// <summary>
+        /// When true, a loop's fluid is one well-mixed mass instead of one parcel per pipe.
+        ///
+        /// The well-mixed model is the older one. It is cheaper — one temperature and one integration
+        /// per ring rather than one per pipe — and it is wrong in a way that matters for gameplay:
+        /// heat crosses from a reactor to a radiator on the far side of the ship instantly, whether
+        /// anything is circulating or not, so a pump's only possible effect is to exist. Segmented
+        /// fluid is the default because a stopped pump ought to stop cooling.
+        ///
+        /// Kept switchable rather than deleted so the two can be measured against each other on the
+        /// same grid, and so a very large station can buy back the difference if it ever needs to.
+        /// </summary>
+        public bool WellMixedCoolant = false;
+
+        /// <summary>
         /// Sealed rooms hold an air mass that carries heat between the surfaces facing it. When
         /// off, a sealed face exchanges nothing.
         /// </summary>

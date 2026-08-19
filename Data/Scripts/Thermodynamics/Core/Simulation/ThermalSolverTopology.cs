@@ -298,7 +298,8 @@ namespace Thermodynamics.Core
                 for (int i = 0; i < loopLinks.Count; i++)
                 {
                     if (loopLinks[i].NodeIndex != from) continue;
-                    loopLinks[i] = new LoopLink(to, loopLinks[i].Conductance);
+                    // A node moved index; the parcel it is bolted to did not.
+                    loopLinks[i] = new LoopLink(to, loopLinks[i].Conductance, loopLinks[i].SegmentIndex);
                 }
             }
 

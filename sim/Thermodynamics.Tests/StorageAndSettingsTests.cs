@@ -390,9 +390,9 @@ namespace Thermodynamics.Tests
             Assert.Equal(1f, planet.SolarDecay, 5);
             Assert.Equal(0f, planet.ConvectionCoefficient, 5);
 
-            LoopThermalProperties loop = new LoopThermalProperties { Mass = 0f, Conductivity = 9f };
+            LoopThermalProperties loop = new LoopThermalProperties { MassPerPipe = 0f, Conductivity = 9f };
             loop.Clamp();
-            Assert.Equal(1f, loop.Mass, 5);
+            Assert.Equal(1f, loop.MassPerPipe, 5);
             Assert.Equal(1f, loop.Conductivity, 5);
         }
     }

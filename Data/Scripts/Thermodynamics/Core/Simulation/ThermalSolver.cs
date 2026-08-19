@@ -62,7 +62,6 @@ namespace Thermodynamics.Core
         private float[] nodeStepStart = new float[0];
 
         private float[] nodeConductanceTotal = new float[0];
-        private float[] loopWatts = new float[0];
         private float[] roomWatts = new float[0];
 
         /// <summary>
@@ -744,6 +743,59 @@ namespace Thermodynamics.Core
         /// Replaces the coolant loops, preserving the temperature of any loop whose signature
         /// survives the rebuild.
         /// </summary>
+        /// <summary>
+        /// Pours the coolant of every loop that is about to disappear into the pipe blocks that were
+        /// carrying it.
+        ///
+        /// A loop survives a rebuild when its signature comes back, so only the ones with no successor
+        /// spill. The heat goes to the ring's own pipes in proportion to their capacity — the metal
+        /// the fluid was in contact with — and a pipe that was destroyed along with the ring simply
+        /// is not there to take a share, which is right: that coolant left with the block.
+        /// </summary>
+        private void SpillDissolvedLoops(List<CoolantLoop> newLoops)
+        {
+            if (loops.Count == 0) return;
+
+            for (int i = 0; i < loops.Count; i++)
+            {
+                CoolantLoop dying = loops[i];
+
+                bool survives = false;
+                if (newLoops != null)
+                {
+                    for (int n = 0; n < newLoops.Count; n++)
+                    {
+                        if (newLoops[n].Signature != dying.Signature) continue;
+                        survives = true;
+                        break;
+                    }
+                }
+                if (survives) continue;
+
+                // Each pipe takes the parcel that was inside it and comes to one temperature with it,
+                // rather than the ring being averaged first. Local, exact, and it needs no decision
+                // about where a destroyed pipe's coolant went — it went with the block.
+                float segmentMass = dying.SegmentThermalMass;
+
+                for (int p = 0; p < dying.Pipes.Count; p++)
+                {
+                    ThermalNode node = GetNode(dying.Pipes[p]);
+                    if (node == null) continue;
+
+                    float nodeMass = node.ThermalMass;
+                    float combined = nodeMass + segmentMass;
+                    if (combined <= 0f) continue;
+
+                    float mixed = ((node.Temperature * nodeMass)
+                                 + (dying.SegmentTemperature(p) * segmentMass)) / combined;
+
+                    node.Temperature = mixed < ThermalConstants.MinimumTemperature
+                        ? ThermalConstants.MinimumTemperature
+                        : mixed;
+                }
+            }
+        }
+
         public void SetLoops(List<CoolantLoop> newLoops)
         {
             Dictionary<long, float> previous = new Dictionary<long, float>();
@@ -751,6 +803,27 @@ namespace Thermodynamics.Core
             {
                 previous[loops[i].Signature] = loops[i].Temperature;
             }
+
+            // Pump settings are the player's, so they survive any rebuild the layout provokes. Keyed
+            // by block rather than by loop: splitting a ring in two must leave each pump where the
+            // player left it.
+            Dictionary<long, CoolantPump> previousPumps = new Dictionary<long, CoolantPump>();
+            for (int i = 0; i < loops.Count; i++)
+            {
+                IList<CoolantPump> pumps = loops[i].Pumps;
+                for (int p = 0; p < pumps.Count; p++)
+                {
+                    if (pumps[p].Block == null) continue;
+                    previousPumps[pumps[p].Block.Key] = pumps[p];
+                }
+            }
+
+            // Heat in a ring that is about to stop existing has to go somewhere. Breaking a ring —
+            // grinding out a pipe, or the pump, which is a ring member itself — used to delete the
+            // loop and silently delete every joule its coolant was holding with it: 190 MJ in one
+            // measured case, and a ship close to overheating could dump heat on demand by grinding
+            // its own pump and rebuilding the ring cold.
+            SpillDissolvedLoops(newLoops);
 
             loops.Clear();
             if (newLoops != null)
@@ -767,7 +840,23 @@ namespace Thermodynamics.Core
                     // Coolant must run on the same clock as the blocks it exchanges with, so the
                     // solver imposes the scale rather than trusting the loop builder.
                     loop.HeatTimeScale = settings.HeatTimeScale;
+                    loop.WellMixed = settings.WellMixedCoolant;
 
+                    for (int p = 0; p < loop.Pumps.Count; p++)
+                    {
+                        CoolantPump fresh = loop.Pumps[p];
+                        if (fresh.Block == null) continue;
+
+                        CoolantPump kept;
+                        if (!previousPumps.TryGetValue(fresh.Block.Key, out kept)) continue;
+
+                        fresh.Speed = kept.Speed;
+                        fresh.Enabled = kept.Enabled;
+                        fresh.PowerAvailable = kept.PowerAvailable;
+                        fresh.MaxPowerWatts = kept.MaxPowerWatts;
+                    }
+
+                    loop.RefreshFlow();
                     BuildLoopLinks(loop);
                     loops.Add(loop);
                 }
@@ -790,7 +879,8 @@ namespace Thermodynamics.Core
                 {
                     loop.Links.Add(new LoopLink(
                         pipeNode.Index,
-                        CoolantLoopBuilder.PipeConductance(grid, pipe, loop.Properties)));
+                        CoolantLoopBuilder.PipeConductance(grid, pipe, loop.Properties),
+                        i));
                 }
 
                 List<GridPort> sinks = pipe.CoolantSinkPorts();
@@ -802,9 +892,12 @@ namespace Thermodynamics.Core
                     ThermalNode targetNode = GetNode(target);
                     if (targetNode == null) continue;
 
+                    // Bound to the parcel inside this pipe, not to the ring: a sink face draws from
+                    // the coolant actually touching it.
                     loop.Links.Add(new LoopLink(
                         targetNode.Index,
-                        CoolantLoopBuilder.PlateConductance(grid, loop.Properties)));
+                        CoolantLoopBuilder.PlateConductance(grid, loop.Properties),
+                        i));
                 }
             }
         }
@@ -1407,7 +1500,7 @@ namespace Thermodynamics.Core
             Array.Clear(nodeWatts, 0, nodeCount);
             for (int i = 0; i < loops.Count; i++)
             {
-                loopWatts[i] = 0f;
+                loops[i].ClearSegmentWatts();
             }
             for (int i = 0; i < roomAir.Count; i++)
             {
@@ -1998,32 +2091,37 @@ namespace Thermodynamics.Core
             for (int l = 0; l < loops.Count; l++)
             {
                 CoolantLoop loop = loops[l];
-                float loopTemperature = loop.Temperature;
+                float[] watts = loop.SegmentWatts;
 
                 for (int i = 0; i < loop.Links.Count; i++)
                 {
                     LoopLink link = loop.Links[i];
                     if (link.NodeIndex < 0 || link.NodeIndex >= nodes.Count) continue;
+                    if (link.SegmentIndex < 0 || link.SegmentIndex >= watts.Length) continue;
 
-                    float difference = loopTemperature - nodeTemperatures[link.NodeIndex];
-                    float watts = link.Conductance * difference;
+                    // The parcel's own temperature, not the ring's mean. This is what makes a stopped
+                    // pump behave like a stopped pump: the coolant beside a reactor saturates and
+                    // stops drawing, while the coolant at a radiator never learns the reactor is hot.
+                    float difference = loop.SegmentTemperature(link.SegmentIndex)
+                                     - nodeTemperatures[link.NodeIndex];
+                    float exchange = link.Conductance * difference;
 
                     if (clamp)
                     {
-                        watts = ClampExchange(
-                            watts, h, difference,
-                            loop.ThermalMass,
+                        exchange = ClampExchange(
+                            exchange, h, difference,
+                            loop.SegmentThermalMass,
                             nodeThermalMass[link.NodeIndex]);
                     }
 
-                    nodeWatts[link.NodeIndex] += watts;
-                    loopWatts[l] -= watts;
+                    nodeWatts[link.NodeIndex] += exchange;
+                    watts[link.SegmentIndex] -= exchange;
 
                     // Signed by which way the heat went, so a loop drawing off a reactor at one
                     // sink and shedding into a radiator at another reports both rather than their
                     // difference. See CoolantLoop.LastWattsAbsorbed.
-                    if (watts < 0f) loop.AbsorbedEnergy -= watts * h;
-                    else loop.RejectedEnergy += watts * h;
+                    if (exchange < 0f) loop.AbsorbedEnergy -= exchange * h;
+                    else loop.RejectedEnergy += exchange * h;
                 }
             }
         }
@@ -2178,11 +2276,17 @@ namespace Thermodynamics.Core
             for (int l = 0; l < loops.Count; l++)
             {
                 CoolantLoop loop = loops[l];
-                float delta = loopWatts[l] * h / EffectiveLoopMass(l);
-                float updated = loop.Temperature + delta;
-                loop.Temperature = updated < ThermalConstants.MinimumTemperature
-                    ? ThermalConstants.MinimumTemperature
-                    : updated;
+                float mass = EffectiveLoopMass(l);
+                float[] watts = loop.SegmentWatts;
+
+                for (int i = 0; i < watts.Length; i++)
+                {
+                    loop.ApplySegmentWatts(i, watts[i], h, mass);
+                }
+
+                // Exchange first, then carry: a parcel takes heat where it is and then moves on,
+                // which is the order that lets a sink face reach a radiator on the far side.
+                loop.Advect(h);
             }
 
             for (int r = 0; r < roomAir.Count; r++)
@@ -2287,8 +2391,22 @@ namespace Thermodynamics.Core
 
             for (int l = 0; l < loops.Count; l++)
             {
-                float perLoop = LoopConductance(l) / EffectiveLoopMass(l);
+                // Per parcel, not per ring: splitting the fluid divides capacity and links by the
+                // same count, so this is unchanged from the well-mixed model — but only because both
+                // halves were divided. Comparing a ring's total conductance against one parcel's
+                // capacity would over-report by the ring's length.
+                float perLoop = SegmentConductance(l) / EffectiveLoopMass(l);
                 if (perLoop > worst) worst = perLoop;
+
+                // Advection is limited by how far fluid may travel in one substep: past one parcel
+                // per substep the upwind scheme reads from fluid that has already moved on. Unlike
+                // the conduction term this does not depend on the ring's length at all, because a
+                // parcel's volume does not. The well-mixed model transports by levelling rather than
+                // by carrying, so it has no such limit.
+                if (settings.WellMixedCoolant) continue;
+
+                float perFlow = loops[l].FlowSegmentsPerSecond * StabilitySafetyFactor;
+                if (perFlow > worst) worst = perFlow;
             }
 
             // Room air has the lowest capacity and the largest contact area on the grid, so it
@@ -2585,8 +2703,8 @@ namespace Thermodynamics.Core
             for (int l = 0; l < loops.Count; l++)
             {
                 CoolantLoop loop = loops[l];
-                float floor = LoopConductance(l) * perRate;
-                loopEffectiveMass[l] = loop.ThermalMass < floor ? floor : loop.ThermalMass;
+                float floor = SegmentConductance(l) * perRate;
+                loopEffectiveMass[l] = loop.SegmentThermalMass < floor ? floor : loop.SegmentThermalMass;
             }
 
             for (int r = 0; r < roomAir.Count; r++)
@@ -2626,6 +2744,44 @@ namespace Thermodynamics.Core
         {
             return index >= 0 && index < loopConductanceTotal.Length ? loopConductanceTotal[index] : 0f;
         }
+
+        /// <summary>
+        /// The largest conductance any single parcel of a loop carries, W/K.
+        ///
+        /// The stability question is about one parcel, and parcels are not alike: a pipe with two sink
+        /// faces carries three links while a plain length of pipe carries one. Taking the worst is
+        /// what keeps the busiest parcel stable rather than the average one.
+        /// </summary>
+        private float SegmentConductance(int index)
+        {
+            if (index < 0 || index >= loops.Count) return 0f;
+
+            CoolantLoop loop = loops[index];
+            int count = loop.PipeCount;
+            if (count <= 0) return 0f;
+
+            if (segmentConductanceScratch.Length < count)
+            {
+                segmentConductanceScratch = new float[Math.Max(16, count * 2)];
+            }
+            Array.Clear(segmentConductanceScratch, 0, count);
+
+            for (int i = 0; i < loop.Links.Count; i++)
+            {
+                LoopLink link = loop.Links[i];
+                if (link.SegmentIndex < 0 || link.SegmentIndex >= count) continue;
+                segmentConductanceScratch[link.SegmentIndex] += link.Conductance;
+            }
+
+            float worst = 0f;
+            for (int i = 0; i < count; i++)
+            {
+                if (segmentConductanceScratch[i] > worst) worst = segmentConductanceScratch[i];
+            }
+            return worst;
+        }
+
+        private float[] segmentConductanceScratch = new float[0];
 
         private float RoomConductance(int index)
         {
@@ -2678,7 +2834,7 @@ namespace Thermodynamics.Core
             if (settings.MaxSubstepsPerBlock <= 0 || index >= loopEffectiveMass.Length
                 || loopEffectiveMass[index] <= 0f)
             {
-                return loops[index].ThermalMass;
+                return loops[index].SegmentThermalMass;
             }
 
             return loopEffectiveMass[index];
@@ -2795,10 +2951,11 @@ namespace Thermodynamics.Core
                 nodeFaceWeights = new float[size * Face.Count];
                 nodeSunLit = new float[size * Face.Count];
             }
-            if (loopWatts.Length < loops.Count)
+            if (loopEffectiveMass.Length < loops.Count)
             {
-                loopWatts = new float[Math.Max(4, loops.Count * 2)];
-                loopEffectiveMass = new float[loopWatts.Length];
+                // One capacity per loop, not per parcel: every parcel in a ring has the same mass, so
+                // the floor that applies to one applies to all of them.
+                loopEffectiveMass = new float[Math.Max(4, loops.Count * 2)];
             }
             if (roomWatts.Length < roomAir.Count)
             {

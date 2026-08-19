@@ -32,8 +32,14 @@ namespace Thermodynamics.Tests
             Assert.True(simulation.Solver.Loops[0].HasPump);
         }
 
+        /// <summary>
+        /// A ring with no pump is still a loop. It holds coolant and circulates none.
+        ///
+        /// Requiring a pump for the loop to exist is what made grinding a pump delete the ring and
+        /// every joule its coolant held, which a player could use to dump heat on demand.
+        /// </summary>
         [Fact]
-        public void ARingWithoutAPumpIsIgnored()
+        public void ARingWithoutAPumpIsStillALoop()
         {
             GridBuilder builder = GridBuilder.Large();
             List<Vector3I> cells = PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3);
@@ -53,7 +59,13 @@ namespace Thermodynamics.Tests
             }
 
             ThermalSimulation simulation = builder.BuildSimulation(Isolated());
-            Assert.Empty(simulation.Solver.Loops);
+
+            Assert.Single(simulation.Solver.Loops);
+            CoolantLoop loop = simulation.Solver.Loops[0];
+
+            Assert.Equal(8, loop.PipeCount);
+            Assert.False(loop.HasPump);
+            Assert.Equal(0f, loop.FlowSegmentsPerSecond);
         }
 
         [Fact]
@@ -379,48 +391,58 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// A longer ring couples to the fluid harder and carries no more fluid, so it cools better.
+        /// A longer ring holds proportionally more coolant, so it is a bigger buffer rather than a
+        /// better cooler — and it costs the solver the same per pipe however long it is.
         ///
-        /// Documented the other way round for a while — that the coupling constants divide by segment
-        /// count, so length only spreads the same cooling over more contact points. Nothing divides
-        /// by segment count: <see cref="CoolantLoopBuilder.PipeConductance"/> is per pipe and the
-        /// fluid mass is the flat figure the loop definition declares. This pins the behaviour the
-        /// code actually has, so the two cannot drift apart again.
+        /// The fluid charge used to be a fixed figure for the whole loop. That made a longer ring
+        /// couple harder to the grid while holding no more coolant, so length was a free cooling
+        /// multiplier; and it divided the same fluid into ever smaller parcels, so every parcel got
+        /// stiffer to integrate as a player added pipe. Charging per pipe fixes both at once: the
+        /// parcel capacity and the parcel's contact area are now both constant.
         /// </summary>
         [Fact]
-        public void LongerRingsCoupleHarderAndCarryTheSameFluid()
+        public void ALongerRingHoldsMoreCoolantAndCostsTheSamePerPipe()
         {
             CoolantLoop small, large;
             ThermalNode smallSink, largeSink;
-            ThermalSimulation a = RingOverOneHotBlock(3, 3, out small, out smallSink);
-            ThermalSimulation b = RingOverOneHotBlock(9, 9, out large, out largeSink);
+            RingOverOneHotBlock(3, 3, out small, out smallSink);
+            RingOverOneHotBlock(9, 9, out large, out largeSink);
 
             Assert.Equal(8, small.PipeCount);
             Assert.Equal(32, large.PipeCount);
 
-            // One link per pipe plus the sink face against the hot block.
-            Assert.Equal(small.PipeCount + 1, small.Links.Count);
-            Assert.Equal(large.PipeCount + 1, large.Links.Count);
+            // One parcel per pipe, each holding the same charge.
+            Assert.Equal(small.SegmentThermalMass, large.SegmentThermalMass, 3);
 
-            // Same fluid, whatever the length.
-            Assert.Equal(small.ThermalMass, large.ThermalMass, 3);
+            // So the ring's total capacity scales with its length.
+            Assert.Equal(small.ThermalMass * 4f, large.ThermalMass, 1);
 
-            // Every link is full strength; nothing divides by segment count.
+            // And every link is still full strength: nothing divides by segment count.
             float perLink = TotalConductance(small) / small.Links.Count;
             Assert.Equal(perLink, TotalConductance(large) / large.Links.Count, 1);
+        }
 
-            // So total coupling grows with the ring, roughly with its pipe count.
-            Assert.True(TotalConductance(large) > TotalConductance(small) * 3f,
-                "the 32-pipe ring couples at " + TotalConductance(large)
-                + " W/K against the 8-pipe ring's " + TotalConductance(small));
+        /// <summary>
+        /// The stiffness a ring presents to the integrator does not grow with its length, because a
+        /// parcel's capacity and the links it carries both stay put as the ring grows. This is the
+        /// property that lets a player plumb a whole ship without making the solver pay for it.
+        /// </summary>
+        [Fact]
+        public void RingLengthDoesNotChangeWhatTheSolverPaysPerParcel()
+        {
+            CoolantLoop small, large;
+            ThermalNode smallSink, largeSink;
+            ThermalSimulation a = RingOverOneHotBlock(3, 3, out small, out smallSink);
+            ThermalSimulation b = RingOverOneHotBlock(20, 20, out large, out largeSink);
 
-            // And the longer ring is the better cooler, with the same single sink face.
-            a.StepExact(60, Worlds.Shadow());
-            b.StepExact(60, Worlds.Shadow());
+            Assert.Equal(8, small.PipeCount);
+            Assert.Equal(76, large.PipeCount);
 
-            Assert.True(largeSink.Temperature < smallSink.Temperature,
-                "the 32-pipe ring left the block at " + largeSink.Temperature
-                + " K against the 8-pipe ring's " + smallSink.Temperature + " K");
+            a.StepExact(1, Worlds.Shadow());
+            b.StepExact(1, Worlds.Shadow());
+
+            // A ring nine times longer must not demand more substeps of the grid it is on.
+            Assert.Equal(a.Solver.LastRequiredSubsteps, b.Solver.LastRequiredSubsteps, 2);
         }
 
         private static float TotalConductance(CoolantLoop loop)

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Thermodynamics.Core;
 using Thermodynamics.Harness;
@@ -56,7 +57,8 @@ namespace Thermodynamics.Tests
             ScenarioResult result = Scenarios.Run("loop-faults");
             CoolantLoopDiagnostics diagnosis = result.Runner.Simulation.DiagnoseLoops();
 
-            Assert.Equal(1, diagnosis.Loops);
+            // Two loops: the working ring, and the pumpless ring that circulates nothing but exists.
+            Assert.Equal(2, diagnosis.Loops);
             Assert.True(diagnosis.PipesAdrift > 0, "the scenario is supposed to contain broken plumbing");
 
             // Three distinct reasons on one grid, so the diagnosis discriminates rather than
@@ -66,10 +68,10 @@ namespace Thermodynamics.Tests
             {
                 if (diagnosis.Counts[i] > 0) kinds++;
             }
-            Assert.True(kinds >= 3, "only " + kinds + " kinds of fault were distinguished");
+            Assert.True(kinds >= 2, "only " + kinds + " kinds of fault were distinguished");
 
-            Assert.True(diagnosis.CountOf(CoolantFault.NoPump) > 0);
             Assert.True(diagnosis.CountOf(CoolantFault.BlockedByNonCoolant) > 0);
+            Assert.True(diagnosis.CountOf(CoolantFault.OpenEnd) > 0);
         }
 
         /// <summary>
@@ -154,12 +156,16 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// A long ring is the stiffest thing a player can build cheaply — coupling grows with length
-        /// while the fluid mass does not — so the substep estimate has to see it. A stiff element the
-        /// estimator cannot see is how an integrator goes unstable.
+        /// A long ring costs the solver no more per parcel than a short one, and the substep estimate
+        /// accounts for the flow carrying heat around it.
+        ///
+        /// This used to be the opposite claim — that a long ring was the stiffest thing a player could
+        /// build cheaply, because a fixed fluid charge divided into ever smaller parcels as the ring
+        /// grew. Charging the coolant per pipe removes that: the parcel capacity and the links it
+        /// carries are both constant, so a 76-pipe ring demands what an 8-pipe ring demands.
         /// </summary>
         [Fact]
-        public void TheSubstepEstimateSeesALongRingsStiffness()
+        public void ALongRingCostsNoMorePerParcelThanAShortOne()
         {
             ScenarioResult result = Scenarios.Run("loop-stiffness");
             string summary = result.Summary;
@@ -167,24 +173,29 @@ namespace Thermodynamics.Tests
             Assert.Contains("8 pipes", summary);
             Assert.Contains("76 pipes", summary);
 
-            // Energy survived at every length, which is the property stiffness threatens.
+            // Energy survived at every length, which is the property advection threatens most.
             Assert.DoesNotContain("energy x0.9", summary);
             Assert.DoesNotContain("energy x1.1", summary);
 
-            // The longest ring is stiffer than the step that integrates it and still holds.
             ThermalSimulation simulation = result.Runner.Simulation;
             CoolantLoop loop = simulation.Solver.Loops[0];
 
+            // A parcel is not stiffer than the step that integrates it, whatever the ring's length.
             float conductance = 0f;
             for (int i = 0; i < loop.Links.Count; i++) conductance += loop.Links[i].Conductance;
+            float perParcel = conductance / loop.PipeCount;
 
-            float tau = loop.ThermalMass / conductance;
-            Assert.True(tau < simulation.Settings.StepSeconds,
-                "the longest ring's time constant " + tau + " s is not shorter than the "
-                + simulation.Settings.StepSeconds + " s step, so this is not testing stiffness");
+            Assert.True(loop.SegmentThermalMass / perParcel > simulation.Settings.StepSeconds,
+                "a parcel's time constant " + (loop.SegmentThermalMass / perParcel)
+                + " s is shorter than the " + simulation.Settings.StepSeconds
+                + " s step, so a long ring is stiff again");
 
-            Assert.True(simulation.Solver.LastSubsteps > 1,
-                "a ring this stiff should force more than one substep");
+            // And the flow the pumps provide is inside the advective limit of one parcel per substep.
+            float parcelsPerSubstep = loop.FlowSegmentsPerSecond
+                * (simulation.Settings.StepSeconds / Math.Max(1, simulation.Solver.LastSubsteps));
+
+            Assert.True(parcelsPerSubstep <= 1f,
+                "the flow moves " + parcelsPerSubstep + " parcels per substep, past the upwind limit");
         }
     }
 }

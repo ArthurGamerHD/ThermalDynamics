@@ -9,13 +9,32 @@
 			</Id>
 			<ModExtensions>
 				<Group Name="ThermalLoopProperties">
-					<!--kg of coolant in one loop-->
-					<Decimal Name="Mass" Value ="500" />
+					<!--
+						kg of coolant in each pipe block, so a ring's charge scales with its length.
+						Per pipe rather than per loop: a fixed charge per loop divided the same fluid
+						into smaller parcels as a ring grew, which made every parcel stiffer to
+						integrate and made a longer ring couple harder to the grid while holding no
+						more coolant. 50 kg matches the old 500 kg figure at a ten-pipe ring.
+					-->
+					<Decimal Name="MassPerPipe" Value ="50" />
 					<Decimal Name="Conductivity" Value="1" />
 					<!--J/(kg K), real units: water-glycol coolant-->
 					<Decimal Name="SpecificHeat" Value="3400" />
 					<Decimal Name="PipeSurfaceAreaScaler" Value ="1" />
 					<Decimal Name="PlateSurfaceAreaScaler" Value ="1" />
+					<!--
+						Coolant parcels a pump at full speed pushes past a point each second. This is
+						how fast heat travels round the ring, and with it how long a radiator takes to
+						hear about a reactor. Per parcel, so it costs the solver the same whatever
+						length of pipe a player laid.
+					-->
+					<Decimal Name="SegmentsPerSecondAtFullFlow" Value ="4" />
+					<!--
+						What survives with nothing circulating. A stagnant pipe still conducts into the
+						coolant touching it; it just cannot carry that heat anywhere, which the
+						advection rate above handles on its own.
+					-->
+					<Decimal Name="StagnantTransferFraction" Value ="1" />
 				</Group>
 			</ModExtensions>
 		</Definition>

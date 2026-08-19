@@ -64,25 +64,28 @@ namespace Thermodynamics.Core
                 List<BlockInstance> ring = TraceRing(grid, start);
                 if (ring == null) continue;
 
-                bool hasPump = false;
-                for (int r = 0; r < ring.Count; r++)
-                {
-                    if (ring[r].Model.Coolant != null && ring[r].Model.Coolant.IsPump)
-                    {
-                        hasPump = true;
-                        break;
-                    }
-                }
-                if (!hasPump) continue;
-
+                // A closed ring is a loop whether or not it holds a pump. It used to need one, which
+                // meant destroying the pump deleted the loop and silently deleted every joule its
+                // coolant was holding — a ship could dump heat by grinding its own pump. A pumpless
+                // ring is now a loop that circulates nothing: it keeps its coolant and its heat, and
+                // transports neither.
                 CoolantLoop loop = new CoolantLoop(properties, initialTemperature);
                 for (int r = 0; r < ring.Count; r++)
                 {
                     loop.Pipes.Add(ring[r]);
                     claimed.Add(ring[r].Key);
+
+                    if (ring[r].Model.Coolant == null || !ring[r].Model.Coolant.IsPump) continue;
+
+                    CoolantPump pump = new CoolantPump();
+                    pump.Block = ring[r];
+                    loop.Pumps.Add(pump);
                 }
-                loop.HasPump = true;
+
+                loop.HasPump = loop.Pumps.Count > 0;
                 loop.RefreshSignature();
+                loop.RefreshThermalMass();
+                loop.RefreshFlow();
                 loops.Add(loop);
             }
 
@@ -112,12 +115,7 @@ namespace Thermodynamics.Core
                 if (claimed.Contains(block.Key)) continue;
 
                 CoolantFault fault;
-                List<BlockInstance> ring = TraceRing(grid, block, out fault);
-
-                // A ring that traces cleanly but was skipped above has no pump in it — that is the
-                // only reason the search rejects a closed run.
-                if (ring != null) fault = CoolantFault.NoPump;
-
+                TraceRing(grid, block, out fault);
                 diagnostics.Record(block, fault);
             }
         }

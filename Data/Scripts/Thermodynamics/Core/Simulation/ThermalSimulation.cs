@@ -532,11 +532,8 @@ namespace Thermodynamics.Core
             if (FindLoopContaining(block) != null) return CoolantFault.None;
 
             CoolantFault fault;
-            List<BlockInstance> ring = CoolantLoopBuilder.TraceRing(grid, block, out fault);
-
-            // A run that traces closed but holds no loop can only have been rejected for the one
-            // reason the search rejects a closed run.
-            return ring != null ? CoolantFault.NoPump : fault;
+            CoolantLoopBuilder.TraceRing(grid, block, out fault);
+            return fault;
         }
 
         /// <summary>The loop a coolant block belongs to, or null.</summary>

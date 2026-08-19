@@ -278,7 +278,7 @@ namespace Thermodynamics.Core
             int nodeCount = stepNodeCount;
 
             Array.Clear(nodeWatts, 0, nodeCount);
-            for (int i = 0; i < loops.Count; i++) loopWatts[i] = 0f;
+            for (int i = 0; i < loops.Count; i++) loops[i].ClearSegmentWatts();
             for (int i = 0; i < roomAir.Count; i++) roomWatts[i] = 0f;
 
             ClearConductionDiagnostics();

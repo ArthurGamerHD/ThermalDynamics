@@ -324,11 +324,13 @@ namespace Thermodynamics
             LoopThermalProperties properties = new LoopThermalProperties();
             if (definition == null) return properties.Clamp();
 
-            properties.Mass = definition.Mass;
+            properties.MassPerPipe = definition.MassPerPipe;
             properties.Conductivity = definition.Conductivity;
             properties.SpecificHeat = definition.SpecificHeat;
             properties.PipeSurfaceAreaScaler = definition.PipeSurfaceAreaScaler;
             properties.PlateSurfaceAreaScaler = definition.PlateSurfaceAreaScaler;
+            properties.SegmentsPerSecondAtFullFlow = definition.SegmentsPerSecondAtFullFlow;
+            properties.StagnantTransferFraction = definition.StagnantTransferFraction;
 
             return properties.Clamp();
         }

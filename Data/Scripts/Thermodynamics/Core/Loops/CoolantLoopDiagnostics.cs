@@ -21,16 +21,18 @@ namespace Thermodynamics.Core
         /// </summary>
         PortsDoNotMeet = 3,
 
-        /// <summary>The run closes on itself but contains no pump, so nothing circulates.</summary>
-        NoPump = 4,
-
         /// <summary>
         /// The walk arrived at a block it had already left. A tee or a crossing, rather than a ring.
         /// </summary>
-        BranchOrCrossing = 5,
+        BranchOrCrossing = 4,
 
         /// <summary>The run returned to its start through the port it left by, which is not a ring.</summary>
-        DoubledBack = 6,
+        DoubledBack = 5,
+
+        // There is deliberately no "no pump" fault. A closed ring with no pump is a perfectly good
+        // loop that circulates nothing: it holds coolant, exchanges with what it touches, and carries
+        // heat nowhere. That is a state the loop reports through its flow rate, not a reason it failed
+        // to exist — and making it a fault is what used to delete the ring and the heat in it.
     }
 
     /// <summary>One example of a fault, for a readout to name a cell the player can walk to.</summary>
@@ -61,7 +63,7 @@ namespace Thermodynamics.Core
         /// <summary>Most examples kept per fault, so a grid of broken plumbing cannot flood a readout.</summary>
         public const int DefaultExampleLimit = 4;
 
-        public readonly int[] Counts = new int[7];
+        public readonly int[] Counts = new int[6];
 
         public readonly List<CoolantFaultExample> Examples = new List<CoolantFaultExample>();
 
@@ -124,7 +126,6 @@ namespace Thermodynamics.Core
                 case CoolantFault.OpenEnd: return "open end: a port faces empty space";
                 case CoolantFault.BlockedByNonCoolant: return "a port faces a block with no plumbing";
                 case CoolantFault.PortsDoNotMeet: return "pipes touch but their ports do not line up";
-                case CoolantFault.NoPump: return "closed ring with no pump";
                 case CoolantFault.BranchOrCrossing: return "a branch or crossing, not a ring";
                 case CoolantFault.DoubledBack: return "the run doubles back on itself";
                 default: return "none";
