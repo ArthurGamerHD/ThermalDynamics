@@ -35,25 +35,23 @@ namespace Thermodynamics.Core
         public int[] LocalSurfaces;
 
         /// <summary>
-        /// The same bits for a block whose state has stopped it sealing — an open door.
+        /// The same bits for a block whose state has stopped it sealing, such as an open door.
         ///
-        /// Null for everything else, which is nearly every block: only a block that seals
-        /// differently open than closed needs a second set. A door is not simply "sealed or not":
-        /// the game seals a closed door's walk-through face by door rule, and seals its side
-        /// faces from the definition whether it is open or shut. One flag cannot say that, and a
-        /// flag was what this used to be.
+        /// Null for every block that seals identically open and closed, which is nearly all of
+        /// them. A second bit set rather than a flag because a door's sealing is not uniform: the
+        /// game seals a closed door's walk-through face by door rule, and seals its side faces from
+        /// the definition whether it is open or shut.
         /// </summary>
         public int[] LocalSurfacesWhenOpen;
 
         /// <summary>
-        /// True when this block has an open state at all — a door. Nothing else can seal
-        /// differently from one moment to the next, and a block that cannot is not affected by
-        /// <see cref="BlockInstance.IsSealedByDoorState"/> however that flag is set.
+        /// True when this block has an open state, meaning it is a door. Nothing else can change what
+        /// it seals between one moment and the next, and a block that cannot is unaffected by
+        /// <see cref="BlockInstance.IsSealedByDoorState"/> whatever that flag is set to.
         ///
-        /// This is deliberately the only way to be a door. The alternative — letting any block be
-        /// held "open" and quietly seal nothing — produced a block whose live surfaces and whose
-        /// structure disagreed with no way to tell which was meant, and a test harness that faked
-        /// airlocks out of armour cubes for long enough that a real defect hid behind it.
+        /// This is the only way for a block to be a door. Allowing any block to be held open and
+        /// seal nothing would let a block's live surfaces and its structure disagree with no way to
+        /// tell which was intended.
         /// </summary>
         public bool HasOpenState
         {
@@ -98,9 +96,9 @@ namespace Thermodynamics.Core
         /// <summary>
         /// Fraction of one local face's cells that carry a mount surface, 0..1.
         ///
-        /// Computed once per block <em>type</em> and cached, so a placed block never has to walk
-        /// its own cells. This is the summary the conduction and exposure maths work from: it
-        /// stays meaningful whatever the block's size, where a per-cell list does not.
+        /// Computed once per block type and cached, so a placed block never walks its own cells.
+        /// This is the summary the conduction and exposure arithmetic works from, and it is
+        /// size-independent where a per-cell list is not.
         /// </summary>
         public float LocalFaceMountFraction(int localFace)
         {
@@ -115,7 +113,7 @@ namespace Thermodynamics.Core
             return (localFace >= 0 && localFace < Face.Count) ? localSealFraction[localFace] : 0f;
         }
 
-        /// <summary>The same for the open state — what a door still seals with its side faces.</summary>
+        /// <summary>The same for the open state, which for a door is its side faces alone.</summary>
         public float LocalFaceSealFractionWhenOpen(int localFace)
         {
             EnsureFaceFractions();
@@ -189,8 +187,8 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// A block that mounts on every face but does not seal — a lattice, an open frame, or
-        /// any block the game marks as not airtight.
+        /// A block that mounts on every face but seals none: a lattice, an open frame, or any block
+        /// the game marks as not airtight.
         /// </summary>
         public static BlockModel Open(string name, Vector3I size, float mass, BlockThermalProperties thermal)
         {
@@ -225,11 +223,9 @@ namespace Thermodynamics.Core
         /// <summary>
         /// A block's six mount and seal fractions in grid space, for one orientation.
         ///
-        /// Shared by every instance that has this model in this orientation, because that is all
-        /// they depend on. Each instance used to allocate four <c>float[6]</c> arrays of its own
-        /// and fill them with the same twenty-four numbers as every identically placed block on
-        /// the ship — 192 bytes of the 456 a block cost, to hold something there are at most
-        /// twenty-four distinct copies of per block type.
+        /// Shared by every instance of this model in this orientation, since the values depend on
+        /// nothing else. Held per model rather than per instance: there are at most twenty-four
+        /// distinct copies per block type, against four <c>float[6]</c> arrays per placed block.
         /// </summary>
         public class FaceFractions
         {
@@ -245,14 +241,12 @@ namespace Thermodynamics.Core
         private readonly FaceFractions[] fractionsByOrientation = new FaceFractions[36];
 
         /// <summary>
-        /// The face fractions for one orientation of this model, building them if this is the
-        /// first block placed that way.
+        /// The face fractions for one orientation of this model, building them on first use.
         ///
-        /// Two threads can arrive here at once — the game builds pasted and projected grids on
-        /// workers — and both are allowed to build. They compute the same twenty-four numbers from
-        /// the same inputs, the loser's copy is collected, and the reference is published by a
-        /// single aligned write that a reader either sees or does not. That is cheaper and simpler
-        /// than a lock on a path every block placement takes.
+        /// Two threads can arrive concurrently, since the game builds pasted and projected grids on
+        /// workers, and both are allowed to build. They compute identical values from identical
+        /// inputs, the losing copy is collected, and the reference is published by a single aligned
+        /// write. Cheaper than a lock on a path every block placement takes.
         /// </summary>
         public FaceFractions FractionsFor(BlockOrientation orientation)
         {
@@ -292,8 +286,8 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Overrides one local cell's self surface bits. Used to describe blocks that are only
-        /// partly sealed, such as slopes and doors.
+        /// Overrides one local cell's self surface bits. Describes blocks that are only partly
+        /// sealed, such as slopes and doors.
         /// </summary>
         public BlockModel SetLocalSurface(Vector3I localCell, int selfState)
         {

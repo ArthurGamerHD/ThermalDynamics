@@ -8,29 +8,27 @@ namespace Thermodynamics.Core
     /// add and remove operations built on it.
     ///
     /// <para>
-    /// A block placed needs no index — nothing links to a block that was not there, so its links
-    /// are appended and everything below them is left alone. A block <em>removed</em> is the hard
-    /// direction, and the whole reason this file exists. Its links have to be found before they
-    /// can be dropped, and finding them by scanning the link list is proportional to the grid,
-    /// which is the cost being removed. Its node also has to leave the node list, and taking it
-    /// out by shifting everything after it moves every one of those indices — invalidating every
-    /// link that referred to any of them, which is what forced the global rebuild.
+    /// A placed block needs no index: nothing links to a block that was not there, so its links are
+    /// appended and everything below them is untouched. A removed block is the case this file
+    /// exists for. Its links must be found before they can be dropped, and scanning the link list
+    /// for them costs a pass over the grid. Its node must also leave the node list, and removing it
+    /// by shifting would move every index after it, invalidating every link referring to any of
+    /// them.
     /// </para>
     ///
     /// <para>
-    /// Both are solved by the same two decisions. Links are indexed per node as an intrusive
-    /// chain — three int arrays, no per-node collections and no managed references, which is what
-    /// <see href="../../../../docs/scale-design.md">scale-design</see> asks for in the hot data —
-    /// so a node's links are walked in time proportional to how many it has. And a node is taken
-    /// out by moving the last one into its place rather than by shifting, so exactly one index
-    /// changes and only the links touching that one node have to be rewritten.
+    /// Both are addressed by two decisions. Links are indexed per node as an intrusive chain —
+    /// three int arrays, with no per-node collections and no managed references, as
+    /// <see href="../../../../docs/scale-design.md">scale-design</see> requires of the hot data —
+    /// so a node's links are walked in time proportional to its degree. And a node is removed by
+    /// moving the last one into its slot rather than by shifting, so exactly one index changes and
+    /// only the links touching that node need rewriting.
     /// </para>
     ///
     /// <para>
-    /// Nothing reads the node list in order. The solver is order-independent by construction —
+    /// Nothing reads the node list in order. The solver is order-independent by construction, since
     /// every exchange is computed from the temperatures at the start of a substep and applied at
-    /// the end — which is what makes the cheap removal the correct one rather than merely the
-    /// fast one.
+    /// the end, which is what makes the swap removal correct as well as cheap.
     /// </para>
     /// </summary>
     public partial class ThermalSolver
@@ -67,7 +65,7 @@ namespace Thermodynamics.Core
             Array.Resize(ref linkNextB, size);
         }
 
-        /// <summary>Clears every chain. Used by the global rebuild, which makes them all again.</summary>
+        /// <summary>Clears every chain. Used by the full rebuild, which reconstructs them all.</summary>
         private void ResetLinkChains()
         {
             EnsureNodeChainCapacity(nodes.Count);
@@ -153,12 +151,11 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Takes one link out of the graph: out of both chains, out of the conductance totals, and
-        /// out of the link list by moving the last link into its place.
+        /// Removes one link from the graph: from both chains, from the conductance totals, and from
+        /// the link list by moving the last link into its slot.
         ///
-        /// Every mirrored row moves with it — the flat arrays the substep loop reads, and the
-        /// cached reduced mass — because they are indexed by link and the link has changed index.
-        /// Forgetting one of those is the failure this arrangement invites, so they are all done
+        /// Every link-indexed row moves with it — the flat arrays the substep loop reads and the
+        /// cached reduced mass — since the moved link has changed index. All of them are updated
         /// here and nowhere else.
         /// </summary>
         private void RemoveLinkAt(int link)
@@ -197,17 +194,16 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Removes a node and every link touching it, without rebuilding anything.
+        /// Removes a node and every link touching it, without a rebuild.
         ///
-        /// The links first, in descending index order. That order is not cosmetic: removing one
-        /// moves the last link into the hole, and taking the highest index first guarantees the
-        /// link that moves is never one still waiting to be removed.
+        /// Links go first, in descending index order. Removing one moves the last link into the
+        /// hole, so taking the highest index first guarantees the moved link is never one still
+        /// waiting to be removed.
         ///
-        /// Then the node itself, by moving the last node into its place. That changes exactly one
-        /// index, and everything holding node indices is repaired for that one change — the links
-        /// touching it, the mirrored rows, the coolant loops, the room air and the heat pumps.
-        /// Everything holding an index is listed in <see cref="RepointNode"/>; anything added
-        /// later that keeps one has to be added there too.
+        /// The node then moves the last node into its slot, changing exactly one index. Every holder
+        /// of node indices is repaired for that change — the links touching it, the mirrored rows,
+        /// the coolant loops, the room air and the heat pumps — all listed in
+        /// <see cref="RepointNode"/>, which any new holder must be added to.
         /// </summary>
         private void RemoveNodeIncremental(ThermalNode node)
         {
@@ -215,11 +211,11 @@ namespace Thermodynamics.Core
 
             Work.NodesRemoved++;
 
-            // Blocks can be placed and taken away again without a step in between, and a
-            // placement does not size the buffers — the step that drains the queue does. So the
-            // node arrays this walks may be shorter than the node list. Reading past one of them
-            // throws IndexOutOfRangeException, which the game's script whitelist prohibits, so it
-            // would not even be catchable: it would take the grid's update down for the session.
+            // Blocks can be placed and removed with no step in between, and placement does not size
+            // the buffers — the step that drains the queue does — so the node arrays walked here may
+            // be shorter than the node list. Reading past one throws IndexOutOfRangeException, which
+            // the game's script whitelist prohibits and so cannot be caught: it would end the
+            // grid's update for the session.
             EnsureBuffers();
             EnsureNodeChainCapacity(nodes.Count);
 
@@ -250,9 +246,9 @@ namespace Thermodynamics.Core
                 nodeFirstLink[index] = nodeFirstLink[last];
                 nodeConductanceTotal[index] = nodeConductanceTotal[last];
 
-                // The mirrored row for the moved node is now in the wrong place. Marking it
-                // dirty has SyncNodeState refill it at the top of the next step, which is where
-                // that row is written from anyway.
+                // The mirrored row for the moved node is now at the wrong index. Marking it dirty
+                // has SyncNodeState refill it at the top of the next step, which is where that row
+                // is written from in any case.
                 moved.StateDirty = true;
 
                 RepointNode(last, index);
@@ -266,13 +262,11 @@ namespace Thermodynamics.Core
         /// Rewrites every stored reference to node index <paramref name="from"/> as
         /// <paramref name="to"/>.
         ///
-        /// The links are the obvious ones and the cheap ones — the moved node's own chain, which
-        /// is as long as its degree. The other three are the ones worth being careful about,
-        /// because they are rebuilt on their own schedules rather than with the graph: coolant
-        /// loops and heat pumps are remade on the next topology stage, but room air is not remade
-        /// until a room mapping pass completes, which on a large grid is thousands of ticks after
-        /// the block was removed. A room's links pointing at the wrong node for that long would
-        /// pour its air's heat into whichever block happened to inherit the index.
+        /// The links cost the moved node's degree. The coolant loops, room air and heat pumps matter
+        /// more because they are rebuilt on their own schedules rather than with the graph: loops
+        /// and pumps are remade on the next topology stage, but room air waits for a room mapping
+        /// pass to complete, which on a large grid is thousands of ticks. A room's links pointing at
+        /// a stale index for that long would deliver its air's heat to whichever block inherited it.
         /// </summary>
         private void RepointNode(int from, int to)
         {

@@ -21,28 +21,24 @@ namespace Thermodynamics.Core
         private readonly List<BlockInstance> blocks = new List<BlockInstance>();
 
         /// <summary>
-        /// Where each block sits in <see cref="blocks"/>, so removal does not have to search for
-        /// it. <c>List.Remove</c> is a linear scan and then a shift of everything after the hole:
-        /// grinding a block off a million-block grid walked the list twice for one block, and a
-        /// section being shot away did it once per block destroyed.
+        /// Where each block sits in <see cref="blocks"/>, so a removal does not have to search for
+        /// it. <c>List.Remove</c> is a linear scan followed by a shift of everything after the hole,
+        /// paid once per block removed.
         /// </summary>
         private readonly Dictionary<long, int> blockSlots = new Dictionary<long, int>();
 
         /// <summary>
-        /// Blocks that carry coolant plumbing, and blocks that are heat pumps.
+        /// Counts of blocks carrying coolant plumbing and blocks that are heat pumps.
         ///
-        /// Both searches used to walk every block on the grid asking a question almost every
-        /// block answers no to. Counting them as they are placed turns "does this ship have any
-        /// plumbing" from a pass over a million blocks into an integer test, and the overwhelming
-        /// majority of grids have none of either.
+        /// Maintained as blocks are placed, so establishing that a grid has neither is an integer
+        /// test rather than a pass over every block. Most grids have neither.
         /// </summary>
         private int coolantBlocks;
         private int heatPumpBlocks;
 
         /// <summary>
-        /// The doors, kept apart from the rest so that the room mapper can find every portal in
-        /// the ship without walking every block. A capital ship has tens of thousands of blocks
-        /// and perhaps thirty doors, and it is the doors that move.
+        /// The doors, held separately so the room mapper can find every portal without walking every
+        /// block. A large grid has tens of thousands of blocks and a few dozen doors.
         /// </summary>
         private readonly List<BlockInstance> stateDependent = new List<BlockInstance>();
 
@@ -52,7 +48,7 @@ namespace Thermodynamics.Core
 
         public GridModel(float gridSize)
         {
-            // ArgumentOutOfRangeException is not on the in-game script compiler's whitelist
+            // ArgumentOutOfRangeException is not on the in-game script compiler's whitelist.
             if (gridSize <= 0f) throw new ArgumentException("gridSize must be positive", "gridSize");
             GridSize = gridSize;
         }
@@ -74,7 +70,7 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Blocks whose sealing depends on their own state — doors. Every portal between two
+        /// Blocks whose sealing depends on their own state, meaning doors. Every portal between two
         /// regions of the grid is one of these.
         /// </summary>
         public IList<BlockInstance> StateDependentBlocks
@@ -162,19 +158,18 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Takes a block out of the flat list by moving the last one into its place.
+        /// Removes a block from the flat list by moving the last entry into its slot.
         ///
-        /// Nothing reads this list in order — the loop search, the heat pump search and the
-        /// solver's own registration all treat it as a set — so the cheap removal is the correct
-        /// one. What it must not do is leave a stale slot behind, which is why the moved block's
-        /// entry is rewritten before the list shrinks.
+        /// Nothing reads this list in order: the loop search, the heat pump search and the solver's
+        /// registration all treat it as a set. The moved block's slot entry is rewritten before the
+        /// list shrinks, so no stale slot remains.
         /// </summary>
         private void RemoveSlot(BlockInstance block)
         {
             int slot;
             if (!blockSlots.TryGetValue(block.Key, out slot))
             {
-                // Should not happen, but a linear fallback is better than a corrupt list.
+                // Should not occur, but a linear fallback is preferable to a corrupt list.
                 blocks.Remove(block);
                 return;
             }
@@ -192,7 +187,7 @@ namespace Thermodynamics.Core
             blocks.RemoveAt(last);
         }
 
-        /// <summary>Blocks on this grid carrying coolant plumbing. Zero on almost every grid.</summary>
+        /// <summary>Blocks on this grid carrying coolant plumbing. Zero on most grids.</summary>
         public int CoolantBlockCount
         {
             get { return coolantBlocks; }
@@ -233,13 +228,11 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Allocation-free neighbour query. The caller owns and clears
-        /// <paramref name="results"/>.
+        /// Allocation-free neighbour query. The caller owns and clears <paramref name="results"/>.
         ///
-        /// Only the block's boundary is walked, never its interior: a neighbour has to touch an
-        /// outward face, so the cells inside the block cannot contribute one. That makes the
-        /// cost proportional to a block's surface rather than its volume, which matters once
-        /// blocks are large enough for the difference to be an order of magnitude.
+        /// Walks only the block's boundary, never its interior: a neighbour must touch an outward
+        /// face, so interior cells cannot contribute one. Cost is proportional to a block's surface
+        /// rather than its volume.
         /// </summary>
         public void GetNeighbours(BlockInstance block, List<BlockInstance> results)
         {

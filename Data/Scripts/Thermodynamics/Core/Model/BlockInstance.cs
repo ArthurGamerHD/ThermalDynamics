@@ -19,8 +19,8 @@ namespace Thermodynamics.Core
         public Vector3I Min;
 
         /// <summary>
-        /// Exclusive upper corner in grid space. Named for clarity: the game's
-        /// <c>SlimBlock.Max</c> is inclusive and the original code added one at every use site.
+        /// Exclusive upper corner in grid space. Named explicitly because the game's
+        /// <c>SlimBlock.Max</c> is inclusive.
         /// </summary>
         public Vector3I MaxExclusive;
 
@@ -41,7 +41,7 @@ namespace Thermodynamics.Core
         /// </summary>
         public float ThrustWatts;
 
-        /// <summary>Set by the host for doors; flips the sealing faces.</summary>
+        /// <summary>Set by the host for doors. Selects which set of sealing faces applies.</summary>
         public bool IsSealedByDoorState = true;
 
         /// <summary>Stable key: the flattened <see cref="Position"/>.</summary>
@@ -52,10 +52,9 @@ namespace Thermodynamics.Core
         private Vector3I[] gridCells;
 
         /// <summary>
-        /// This block's mount and seal fractions per grid face, shared with every other block of
-        /// the same model in the same orientation. See <see cref="BlockModel.FaceFractions"/>:
-        /// four arrays an instance used to own outright, holding numbers that depend on nothing
-        /// an instance knows.
+        /// This block's mount and seal fractions per grid face, shared with every other block of the
+        /// same model in the same orientation. The values depend only on the model and the
+        /// orientation, so they are held once per pair; see <see cref="BlockModel.FaceFractions"/>.
         /// </summary>
         private BlockModel.FaceFractions fractions;
 
@@ -89,12 +88,12 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// The same bits with the block's state taken as sealing — a door read as shut.
+        /// The same bits with the block's state taken as sealing, so a door reads as shut.
         ///
-        /// This is the block's <em>structure</em>: what it would seal if nobody touched it. The
-        /// room mapper walks these rather than the live ones, so a door opening does not change
-        /// the shape of the grid and does not cost a new flood fill. What the door opening does
-        /// change is recorded as a portal between the regions either side of it.
+        /// This is the block's structure: what it seals when untouched. The room mapper walks these
+        /// rather than the live bits, so a door opening does not change the shape of the grid or
+        /// cost a new flood fill; it is recorded instead as a portal between the regions either
+        /// side of it.
         /// </summary>
         public int[] StructuralSurfaces
         {
@@ -102,8 +101,8 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// True when this block seals differently open than shut, i.e. it is a door. These are
-        /// the only blocks that can put a portal in a room's wall.
+        /// True when this block seals differently open than shut, meaning it is a door. Only these
+        /// blocks can place a portal in a room's wall.
         /// </summary>
         public bool HasStateDependentSealing
         {
@@ -111,8 +110,8 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Faces of this block, in grid space, whose sealing depends on its state: shut they
-        /// seal, open they do not. The way through a door, and nothing else.
+        /// Faces of this block, in grid space, whose sealing depends on its state: sealing when shut
+        /// and not when open. For a door, the way through it.
         /// </summary>
         public bool IsPortalFace(int gridFace)
         {
@@ -131,9 +130,9 @@ namespace Thermodynamics.Core
         /// <summary>
         /// Fraction of a grid-space face that carries a mount surface, 0..1.
         ///
-        /// This and <see cref="SealFraction"/> are the block's whole surface description as far
-        /// as conduction and exposure are concerned. They are twelve floats regardless of how
-        /// many cells the block occupies, which is what lets the geometry maths stay O(1).
+        /// This and <see cref="SealFraction"/> are the block's entire surface description for
+        /// conduction and exposure: twelve floats regardless of cell count, which keeps the geometry
+        /// arithmetic O(1) in block size.
         /// </summary>
         public float MountFraction(int gridFace)
         {
@@ -142,12 +141,11 @@ namespace Thermodynamics.Core
 
         /// <summary>Fraction of a grid-space face that seals, 0..1. Zero for an open door.</summary>
         /// <summary>
-        /// How much of a face seals, given what the block is currently doing.
+        /// How much of a face seals in the block's current state.
         ///
-        /// Resolved when asked rather than cached, because the only thing that varies between two
-        /// blocks sharing a model and an orientation is whether a door is shut — and that is a
-        /// bool this already holds. It also means a door cycling no longer has to rewrite anything
-        /// to be answered correctly.
+        /// Resolved on demand rather than cached: the only difference between two blocks sharing a
+        /// model and an orientation is whether a door is shut, which this already holds as a bool,
+        /// so a door cycling rewrites nothing.
         /// </summary>
         public float SealFraction(int gridFace)
         {
@@ -191,7 +189,7 @@ namespace Thermodynamics.Core
 
         private Vector3I RotatedLocalMin()
         {
-            // Rotating the local box can move its minimum corner off the origin; re-anchor so
+            // Rotating the local box can move its minimum corner off the origin, so re-anchor such
             // that local (0,0,0) maps onto the instance's Min.
             Vector3I a = Orientation.Rotate(Vector3I.Zero);
             Vector3I b = Orientation.Rotate(Model.Size - Vector3I.One);
@@ -199,8 +197,8 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Rotates the model's per-face mount and seal summaries into grid space. Cheap and
-        /// size-independent — six lookups, no cell walk.
+        /// Rotates the model's per-face mount and seal summaries into grid space: six lookups, with
+        /// no walk over the block's cells.
         /// </summary>
         private void BuildFaceFractions()
         {
@@ -253,9 +251,9 @@ namespace Thermodynamics.Core
         /// Recomputes the cached grid-space surfaces. Call after the host changes door state or
         /// anything else that alters sealing.
         ///
-        /// The open state comes from the model, not from stripping every seal bit here: a door
-        /// that is open still seals with the sides it is bolted in by, and only stops sealing
-        /// across the way through.
+        /// The open state comes from the model rather than from clearing every seal bit here: an
+        /// open door still seals along the sides it is mounted in, and stops sealing only across the
+        /// way through.
         /// </summary>
         public void RefreshSurfaces()
         {
@@ -275,8 +273,8 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// The cells this block's heat pump draws from and rejects into, in grid space. Both are
-        /// the cell one step off the named face, which is the cell a neighbouring block occupies.
+        /// The cells this block's heat pump draws from and rejects into, in grid space. Each is the
+        /// cell one step off the named face, where a neighbouring block sits.
         /// </summary>
         /// <returns>False when the block is not a heat pump.</returns>
         public bool TryHeatPumpCells(out Vector3I coldCell, out Vector3I hotCell)
