@@ -69,7 +69,27 @@ integrator is refused what it asks for by six orders of magnitude.
 
 **But not the only cause.** The five that survive are loop-bearing, and `loop-faults` gets *worse*
 with more substeps — 2.4×10¹⁵ K against 7×10⁴. Something in the coolant path is genuinely unstable
-rather than merely starved, and that is the open question.
+rather than merely starved.
+
+### The loop path has a stiffness ceiling
+
+Found by asking whether the coolant pipes could go back to copper. They cannot, and the reason is
+the same defect. `CoolantFlowTests.SpreadAcrossAHeatedRing` deliberately runs **one substep across a
+whole second** and relies on the overshoot clamps to bound it. They do, up to a point — and then
+they do not:
+
+| pipe conductivity, effective W/(m·K) | 264 (brass) | 360 | 480 | 600 | 960 (copper) |
+| --- | --- | --- | --- | --- | --- |
+| flow tests failing | 0 | 0 | 3 | 5 | 5 |
+
+The edge is between 360 and 480. Copper sits at 960 — 2.7× past it — and the ring reaches
+291,360 K. Brass at 264 is comfortably clear, which is why the shipped pipes are brass and why
+`Cubes.xml` calls that a compromise rather than a materials decision.
+
+**This is a millisecond-long reproduction of the arcade loop divergence**, in a test that was
+already in the suite. Pinned by `TheLoopPathStillHasAStiffnessCeiling`, written to fail when the
+defect is fixed — at which point the pipes can go back to copper and the arcade profile can be
+re-measured.
 
 Two hypotheses were tested and both were wrong, which is recorded here so they are not tried again:
 

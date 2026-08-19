@@ -404,6 +404,52 @@ namespace Thermodynamics.Tests
         /// The spread across parcels of a ring heated at one point, after it has settled. A ring that
         /// transports evens out; one that aliases does not.
         /// </summary>
+        /// <summary>
+        /// **A known defect, pinned.** The loop path has a stiffness ceiling the clamps do not hold.
+        ///
+        /// <c>SpreadAcrossAHeatedRing</c> deliberately runs one substep across a whole second and
+        /// relies on the overshoot clamps to keep that bounded. They do — up to a point. Raising the
+        /// pipe's conductivity walks the ring off a cliff:
+        ///
+        /// <code>
+        ///   effective W/(m K)   360    480    600    960
+        ///   flow tests failing    0      3      5      5
+        /// </code>
+        ///
+        /// Brass sits at 264 and is comfortably clear; copper's 400 W/(m K) is 960 effective, which
+        /// is 2.7x past the edge and reaches 291,360 K. That is why the shipped pipes are brass, and
+        /// the comment in Cubes.xml calls it a compromise.
+        ///
+        /// This is the same failure as the arcade profile's loop divergences, which more substeps
+        /// made *worse* rather than better — and this is a millisecond-long reproduction of it. When
+        /// the loop integration is fixed this test fails, which is the point.
+        /// </summary>
+        [Fact]
+        public void TheLoopPathStillHasAStiffnessCeiling()
+        {
+            try
+            {
+                // Only the coolant, identified by its own specific heat, so the reactor beside it
+                // stays exactly as it was and the stiffness change has one source.
+                Catalog.MaterialOverride = properties =>
+                {
+                    if (Math.Abs(properties.SpecificHeat - 380f) < 0.5f) properties.Conductivity = 400f;
+                    return properties;
+                };
+
+                float spread = SpreadAcrossAHeatedRing(64f);
+
+                Assert.True(spread > 1000f,
+                    "the loop path no longer blows up at copper's conductivity — it spread "
+                    + spread + " K. If that was fixed deliberately, invert this test and put the "
+                    + "pipes back to 400 in Cubes.xml.");
+            }
+            finally
+            {
+                Catalog.MaterialOverride = null;
+            }
+        }
+
         private static float SpreadAcrossAHeatedRing(float segmentsPerSecond)
         {
             ThermalSettings settings = new ThermalSettings();
