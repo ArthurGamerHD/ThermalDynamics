@@ -222,22 +222,48 @@ directly and does not care.
 ## The terminal readout
 
 Selecting any simulated block in the terminal fills its **detail info** panel — the pane under the
-block's name — with that block's temperature, rate of change, critical point, exposed faces and
-area, waste heat, the room it bounds, what its heat pump is achieving if it has one, and a short
-summary of the grid. It refreshes while the panel is open.
+block's name — and it says only what applies to *that* block. The pane is a few lines tall and shares
+them with whatever else the block reports, so a line reading `Waste heat: 0.0 kW` on a block that
+generates none is a line spent saying nothing. Every section is conditional.
 
-On a **coolant pipe or pump** it also reports that block's loop: coolant temperature, ring length,
-and the kilowatts the fluid is drawing and shedding — both, because a loop in balance nets to
-nothing while carrying its whole load. It names the sink faces on this block, or says it is plumbing
-only. And when the block is in no loop it says **why**, in the same words as
-[the fault table above](#when-a-ring-does-not-become-a-loop). That costs one walk along this block's
-own run rather than a pass over the grid, so it is safe on a panel that refreshes while you read it.
+A reactor:
 
-Two failures that look like success are called out rather than left to be inferred: a loop moving no
-heat at all, and a heat pump that is switched on but being given no power by the grid — which is a
-different line from "off", because the fix is the ship's power budget rather than this block's
-switch. A running pump also says which of its limits is binding: *at its rating* means a smaller gap
-would gain nothing, *limited by the gap* means narrowing it would.
+```
+Temp     354°C  +0.31 K/s
+Critical 627°C
+Exposed  3 faces  18.8 m2
+Waste    12.5 kW
+
+Grid     -270°C ambient  peak 613°C
+         1 loop  12 rooms
+```
+
+A coolant pump, which adds its loop's flow rate and coolant temperatures:
+
+```
+Temp     139°C  +0.01 K/s
+Exposed  buried
+
+Coolant  139°C  (128 - 151)
+Flow     5.7/s forward   28 pipe ring
+Transfer 18.4 kW in  18.1 kW out
+```
+
+Coolant is given as a mean with the **range across the ring** in brackets, because with the fluid
+carried round in parcels a loop is not one temperature. A wide spread with the pump running means the
+flow cannot keep up with the load; a wide spread with no flow means nothing is circulating.
+
+`Exposed` stays even at zero — `buried` is the most useful single thing the panel can say about a hot
+block. `Waste`, `Critical` and `Room` appear only when they apply.
+
+Four states get named rather than left to be inferred, because each looks healthy on every other line:
+
+| Line | What it means |
+| --- | --- |
+| `Flow  stopped - pumps oppose each other` | The ring's pumps are running, drawing power, and cancelling. |
+| `Flow  stopped - no pump running` | Switched off or unpowered. The opposite fix. |
+| `moving nothing - no sink face on anything hotter` | A warm, closed, pumped loop that carries no heat. |
+| `Pump  on, but the grid supplies it nothing` | Distinct from `off`: the fix is the ship's power budget. |
 
 It goes there rather than into a terminal control because the terminal's controls are single-line
 fields: a text box handed fifteen lines shows one and a half and clips the rest.

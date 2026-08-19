@@ -633,5 +633,51 @@ namespace Thermodynamics.Tests
             CoolantLoop loop = simulation.Solver.Loops[0];
             return loop.HottestSegment - loop.ColdestSegment;
         }
+    
+        /// <summary>
+        /// A ring can sit still two ways, and they want opposite fixes: nothing running, or things
+        /// running and cancelling. The flow rate is zero in both, so the readout needs something else
+        /// to tell them apart.
+        /// </summary>
+        [Fact]
+        public void StoppedBecauseNothingRunsIsDistinctFromStoppedBecausePumpsFight()
+        {
+            CoolantLoop loop;
+            Ring(5, 5, 4f, out loop);
+            loop.Pumps.Clear();
+
+            CoolantPump forward = new CoolantPump();
+            forward.MaxPowerWatts = 20000f;
+            forward.Direction = 1;
+            loop.Pumps.Add(forward);
+
+            CoolantPump against = new CoolantPump();
+            against.MaxPowerWatts = 20000f;
+            against.Direction = -1;
+            loop.Pumps.Add(against);
+
+            // Fighting: no net flow, but plenty of effort being spent.
+            loop.RefreshFlow();
+            Assert.Equal(0f, loop.FlowSegmentsPerSecond, 4);
+            Assert.Equal(0f, loop.PumpDemand, 4);
+            Assert.Equal(2f, loop.PumpEffort, 4);
+
+            // Switched off: no net flow and no effort either.
+            forward.Enabled = false;
+            against.Enabled = false;
+            loop.RefreshFlow();
+
+            Assert.Equal(0f, loop.FlowSegmentsPerSecond, 4);
+            Assert.Equal(0f, loop.PumpEffort, 4);
+
+            // Starved of power is the same story as switched off: nothing is being achieved.
+            forward.Enabled = true;
+            against.Enabled = true;
+            forward.PowerAvailable = 0f;
+            against.PowerAvailable = 0f;
+            loop.RefreshFlow();
+
+            Assert.Equal(0f, loop.PumpEffort, 4);
+        }
     }
 }
