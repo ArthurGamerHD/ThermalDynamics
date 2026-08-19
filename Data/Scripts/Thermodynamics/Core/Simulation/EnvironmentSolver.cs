@@ -23,9 +23,9 @@ namespace Thermodynamics.Core
             state.WindDirectionLocal = sample.RelativeWindDirectionLocal;
             state.WindSpeed = Math.Max(0f, sample.RelativeWindSpeed);
 
-            // Point sources pass through untouched: the host has already resolved distance and
-            // occlusion, and nothing here would improve on that. The switch is honoured here so
-            // the solver never has to test it per source per node.
+            // Point sources pass through unchanged: the host has already resolved distance and
+            // occlusion. The enable switch is applied here so the solver never tests it per source
+            // per node.
             if (settings.EnableHeatSources && sample.HeatSources != null)
             {
                 state.HeatSources = sample.HeatSources;
@@ -33,8 +33,8 @@ namespace Thermodynamics.Core
             }
 
             // ---- solar ---------------------------------------------------------------------
-            // The flag and the fraction have to agree in both directions: a caller that only set
-            // the flag — every scenario written before the fraction existed — still means "no sun".
+            // The occlusion flag and the fraction must agree in both directions, since a caller may
+            // set only the flag.
             state.SolarOcclusion = Clamp01(sample.SolarOcclusion);
             if (sample.IsSolarOccluded || !settings.EnableSolarHeat) state.SolarOcclusion = 1f;
 
@@ -58,8 +58,8 @@ namespace Thermodynamics.Core
             state.AtmosphereFactor = AtmosphereFactor(density);
 
             // ---- weather -------------------------------------------------------------------
-            // Resolved to what it is worth right now, once, so nothing below has to know about
-            // intensity. Clear air softens to Calm, whose every term is the identity.
+            // Resolved once against its intensity, so nothing below handles intensity. Clear air
+            // softens to Calm, whose terms are all the identity.
             WeatherResponse.Weather weather = WeatherResponse.Soften(sample.Weather, Clamp01(sample.WeatherIntensity));
 
             state.WeatherIntensity = Clamp01(sample.WeatherIntensity);
@@ -67,33 +67,33 @@ namespace Thermodynamics.Core
 
             // ---- ambient -------------------------------------------------------------------
             //
-            // Everything that decides what the air should be doing goes into a target, and the
-            // lag is applied to that target exactly once at the end. Scaling the running ambient
-            // instead compounds the scale against the lag every step: 0.977 four times a second
-            // against a 45 second lag settles at 14% of the intended figure, which is how a
-            // snowfield at 5.6 km came to sit at 36 K.
+            // Every term contributing to the air temperature goes into a target, and the lag is
+            // applied to that target exactly once at the end. Scaling the running ambient instead
+            // compounds the scale against the lag every step: 0.977 four times a second against a
+            // 45 second lag settles at 14 % of the intended figure.
 
             // Sine of the sun's height above the horizon: negative at night, 1 overhead.
             float elevation = Vector3.Dot(SafeNormalize(sample.UpDirection), SafeNormalize(sample.SunDirection));
 
-            // A sample from before the ground had a say sends 0, which would flatten the day
-            // to nothing; that reads as "no opinion" and leaves the planet's own swing.
+            // A sample that supplies no ground swing sends 0, which would flatten the day entirely;
+            // it is treated as unspecified and leaves the planet's own swing.
             float groundSwing = sample.GroundSwing > 0f ? sample.GroundSwing : 1f;
 
             // Ground and weather both shift the air and both change the size of its day, so they
-            // arrive at the model as one offset and one swing. Overcast is the same fact twice —
-            // the cloud that keeps the sun off by day keeps the heat in at night.
+            // reach the model as one offset and one swing. Overcast weather narrows the swing in
+            // both directions: cloud that blocks the sun by day also retains heat at night.
             float offset = sample.GroundOffset + weather.TemperatureOffset;
             float swing = groundSwing * WeatherResponse.SwingMultiplier(weather);
 
             float target = ClimateModel.Target(planet, sample.LatitudeSine, elevation, offset, swing);
 
-            // Colder the higher it is, then faded toward vacuum only where the air actually runs
-            // out. Two separate facts that the single density multiply used to conflate.
+            // Cooled by altitude first, then faded towards vacuum only where the air runs out.
+            // These are separate effects and a single density multiply would conflate them.
             target = ClimateModel.Lapse(target, sample.Altitude, planet.AmbientLapseRate);
             target = ClimateModel.Thin(target, density, settings.VacuumTemperature);
 
-            // Underground there is no day, no weather and no sky, only rock and what is under it.
+            // Underground there is no day, no weather and no sky, only the rock and the planet's
+            // interior.
             if (sample.Depth > 0f)
             {
                 target = ClimateModel.Underground(
@@ -106,8 +106,8 @@ namespace Thermodynamics.Core
                 state.SolarOcclusion = 1f;
             }
 
-            // Air chases that rather than being it, so the day's peak lands after noon. A grid
-            // with no history to chase from takes the target and starts there.
+            // The lag is applied to the target, which places the day's peak after noon. A grid with
+            // no previous ambient starts at the target.
             float ambient = sample.HasPreviousAmbient
                 ? ClimateModel.Follow(
                     sample.PreviousAmbient, target, sample.SecondsSincePrevious, planet.AmbientLagSeconds)
@@ -116,8 +116,8 @@ namespace Thermodynamics.Core
             state.SetAmbient(Math.Max(settings.VacuumTemperature, ambient));
 
             // ---- convection ----------------------------------------------------------------
-            // Wet air strips heat off a hull far faster than dry air of the same speed, and the
-            // wind term alone cannot say so: fog barely moves and still carries heat away.
+            // Humid air removes heat faster than dry air at the same speed, which the wind term
+            // alone cannot express: fog barely moves and still carries heat away.
             float windBonus = 1f + (WindConvectionScale * (float)Math.Sqrt(state.WindSpeed));
             state.ConvectionCoefficient =
                 planet.ConvectionCoefficient * windBonus * Math.Max(0f, weather.ConvectionMultiplier);
@@ -138,9 +138,9 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Maps raw air density onto how fluid-like the environment is. 1 - (1 - d)^4: at 25%
-        /// density the atmosphere already behaves 68% like sea level, which matches how quickly
-        /// convection dominates radiation in a real atmosphere.
+        /// Maps raw air density onto how fluid-like the environment is, as 1 - (1 - d)^4. At 25 %
+        /// density the atmosphere behaves 68 % like sea level, matching how quickly convection comes
+        /// to dominate radiation in a real atmosphere.
         /// </summary>
         public static float AtmosphereFactor(float airDensity)
         {
