@@ -127,6 +127,79 @@ nobody reads a slow-cooling ship as a physics bug.
 
 A grid at 100 % has never hit the budget, which below roughly a hundred thousand blocks is always.
 
+## Substeps
+
+A solver step is divided into as many substeps as the **stiffest element on the grid** needs to
+stay numerically stable, and every other element pays for all of them. Substeps advance no extra
+simulated time — they are repeated passes over the same interval — so they are the whole of the
+solver's bill and none of its output. A grid's cost is its elements times its substeps, and its
+substeps are decided by one block.
+
+The `Substeps` section is what makes that attributable rather than mysterious.
+
+**What it costs.** Substep passes across the session, the solver milliseconds they took, and the
+two derived rates: millseconds per substep pass, and nanoseconds per element visited. The second
+is machine-independent enough to compare against the harness — a field session measured 45–58 ns
+against the harness's 16, which is the size of the .NET 4.8 penalty and applies to every
+millisecond figure in [load-and-hitching.md](load-and-hitching.md).
+
+**Who is paying.** Substeps granted, bucketed both by grid count and by how many cells are in
+those grids, because thirty pieces of debris and three capital ships are not the same finding.
+
+**What sets it.** Per grid, the block that demanded the count — subtype, position and heat
+capacity — beside what was demanded, what was granted, how much of that block's stiffness is
+conduction rather than the sky, and the stiffest room air and coolant loop for comparison. Then
+the same question by *definition* rather than by block: the twenty subtypes that ask the most of a
+step anywhere in the world, with the spread of what each asked, since a block's demand depends on
+what it is bolted to as much as on what it is.
+
+**What a cap would do.** For each candidate `MaxSubstepsPerBlock`, how many blocks it would raise,
+what the substep count would fall to, and what share of the element visits that removes — per grid
+and summed over the world. This is the same arithmetic the setting itself uses, and
+`SubstepFloorTests.TheProjectionPredictsWhatTheCapDoes` asserts that the projection and the
+setting agree, so **a dump taken with the cap off already says what turning it on would buy** —
+including how many blocks are stiff through radiation and convection rather than conduction, which
+is the population where the trade is more visible.
+
+Per grid, the detail section adds a histogram of blocks by the substeps they demand. Everything
+here is also in `Thermodynamics_Grids_*.csv` and `Thermodynamics_BlockTypes_*.csv`, so two dumps
+under different settings can be diffed rather than read.
+
+Demand figures are computed from **real** heat capacities, never from the floored ones the solver
+may be integrating with, so a profile describes the grid rather than the configuration and dumps
+taken under different caps are directly comparable.
+
+## Whether the report agrees with itself
+
+Every aggregate in the report is a sum over the same list of grid records, taken at different
+points while it is written, and the CSVs are another pass over that list after the text is
+finished. Nothing about that is supposed to be able to disagree.
+
+A dump of 18 August did. The Cost table's merged `grid simulation` total came to 62 % of the sum
+of the per-grid rows printed further down the same file, and every session counter — frames,
+steps, node updates — was short by a similar factor. The per-grid rows and the CSV agreed with
+each other to the last decimal, so whatever moved, moved between sections.
+
+Reading the code did not settle it. `TimingStat.Merge` is arithmetically correct and now has a
+test that sums two hundred stats to prove it, the Cost table walks the same list the CSV does, and
+between them nothing runs that could tick a grid. So the report checks itself instead. The
+**Consistency** section, written last, re-takes the Cost table's own figures and states the two
+invariants in a form that can fail loudly:
+
+* the record list must not change while the report is being built;
+* a grid cannot tick more often than the session is framed, because both happen once each in the
+  same `Simulate` call.
+
+It prints both readings of records, ticks, milliseconds and steps, the frame range each record was
+ticked over, and the longest grid lifetime beside the session clock. A line beginning `!!` is a
+defect in the telemetry rather than in the simulation.
+
+One cause has been fixed on suspicion rather than on evidence: `Telemetry.Reset` zeroed the session
+clock and cleared the registry while every live grid still held the record it had been handed, so a
+record could outlive the clock its timestamps came from and go on accumulating outside every
+aggregate. It now detaches those references with the list. Whether that was the cause is a question
+for the next dump — a report written while the world was closing could equally explain it.
+
 ## Work counters
 
 Alongside the millisecond figures, the simulation counts what its one-shot stages *touched*:

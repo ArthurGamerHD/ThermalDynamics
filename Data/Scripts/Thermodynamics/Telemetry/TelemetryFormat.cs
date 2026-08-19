@@ -93,6 +93,11 @@ namespace Thermodynamics
             sb.Append(Number(value)).Append('\n');
         }
 
+        public static void AppendCsvLast(StringBuilder sb, long value)
+        {
+            sb.Append(Integer(value)).Append('\n');
+        }
+
         /// <summary>A quoted string as the last column of a row.</summary>
         public static void AppendCsvLast(StringBuilder sb, string value)
         {

@@ -63,6 +63,22 @@ namespace Thermodynamics
         public long PeakTemperatureGrid;
 
         /// <summary>
+        /// Substeps one block of this type would need for a full step on its own, from its real
+        /// heat capacity and everything it is coupled to.
+        ///
+        /// The whole grid takes as many substeps as its stiffest block asks for, so this is the
+        /// column that says which definitions are expensive to have on a ship. A block's own
+        /// demand is not a property of the definition alone — it depends on what it is bolted to
+        /// and whether it is exposed — so it is a distribution rather than a number, and the
+        /// maximum is the one that decides the grid.
+        /// </summary>
+        public readonly RunningStat SubstepDemand = new RunningStat();
+
+        public float PeakSubstepDemand;
+        public long PeakSubstepDemandGrid;
+        public string PeakSubstepDemandPosition = "";
+
+        /// <summary>
         /// How much of each of the definition's six faces seals, read once from the block model.
         ///
         /// This is what the room mapper walks, so it is the first thing to look at when a hull
@@ -159,6 +175,28 @@ namespace Thermodynamics
                 PeakTemperature = node.Temperature;
                 PeakTemperatureGrid = gridId;
             }
+        }
+
+        /// <summary>
+        /// Records what one block of this type asked of its grid's step.
+        ///
+        /// Kept separate from <see cref="Sample"/> because it needs the solver rather than the
+        /// node — the coupling that makes a block stiff lives in the conduction graph, not on the
+        /// block.
+        /// </summary>
+        public void SampleSubstepDemand(float demand, ThermalNode node, long gridId)
+        {
+            if (demand <= 0f) return;
+
+            SubstepDemand.Add(demand);
+
+            if (demand <= PeakSubstepDemand) return;
+
+            PeakSubstepDemand = demand;
+            PeakSubstepDemandGrid = gridId;
+            PeakSubstepDemandPosition = node == null || node.Block == null
+                ? ""
+                : node.Block.Position.ToString();
         }
 
         public void Sample(ThermalNode node)

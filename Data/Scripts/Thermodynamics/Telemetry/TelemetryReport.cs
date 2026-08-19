@@ -98,9 +98,11 @@ namespace Thermodynamics
             WriteAnomalies(sb);
             AppendClimate(sb);
             WritePerformance(sb);
+            WriteSubsteps(sb);
             WriteGridTable(sb);
             WriteGridDetails(sb);
             WriteBlockTypes(sb);
+            WriteConsistency(sb);
 
             sb.Append("\n--- end of report ---\n");
             return sb.ToString();
@@ -454,6 +456,22 @@ namespace Thermodynamics
             }
         }
 
+        /// <summary>
+        /// What the Cost table saw, kept so the consistency section can re-take the same figures
+        /// after every other section has been written and say whether they moved.
+        ///
+        /// A report is built from one list in one call, so these must not move. In a field dump
+        /// of 18 August they did: the merged total came to 62 % of the sum of the per-grid rows
+        /// printed further down the same file, and the per-grid rows agreed to the last decimal
+        /// with the CSV written afterwards. Either the list grew between the two sections — grids
+        /// register from worker threads — or the aggregates ran over a shorter one. Recording
+        /// both ends of the report is what tells the two apart.
+        /// </summary>
+        private static int costRecords;
+        private static long costCalls;
+        private static double costMilliseconds;
+        private static long costSteps;
+
         private static void WritePerformance(StringBuilder sb)
         {
             Section(sb, "Cost");
@@ -467,9 +485,20 @@ namespace Thermodynamics
             TimingStat save = new TimingStat("save");
             TimingStat load = new TimingStat("load");
 
+            costRecords = 0;
+            costCalls = 0;
+            costMilliseconds = 0;
+            costSteps = 0;
+
             for (int i = 0; i < Telemetry.Grids.Count; i++)
             {
                 GridTelemetry g = Telemetry.Grids[i];
+
+                costRecords++;
+                costCalls += g.SimulationTime.Calls;
+                costMilliseconds += g.SimulationTime.TotalMilliseconds;
+                costSteps += g.SimulationSteps;
+
                 simulation.Merge(g.SimulationTime);
                 topology.Merge(g.Profiler.Topology);
                 mapping.Merge(g.Profiler.RoomMapping);
@@ -641,6 +670,438 @@ namespace Thermodynamics
             }
         }
 
+        /// <summary>
+        /// What the substep count is, what sets it, and what capping it would buy.
+        ///
+        /// <para>
+        /// A solver step is divided into as many substeps as the <em>stiffest</em> element on the
+        /// grid needs to stay numerically stable, and every other element pays for all of them. So
+        /// this is the section that explains the solver's bill: the cost of a grid is its elements
+        /// times its substeps, and the substeps are decided by one block.
+        /// </para>
+        ///
+        /// <para>
+        /// It reports what was asked for beside what was granted, because they diverge in two
+        /// different ways — <c>MaxSubsteps</c> refuses, and <c>MaxLinkVisitsPerStep</c> shortens
+        /// the step instead — and the demand keeps moving after both have bound.
+        /// </para>
+        /// </summary>
+        private static void WriteSubsteps(StringBuilder sb)
+        {
+            Section(sb, "Substeps");
+
+            sb.Append("  A step is cut into as many substeps as the stiffest element needs, and every\n");
+            sb.Append("  other element pays for all of them. Demand figures are computed from real heat\n");
+            sb.Append("  capacities, so they describe the grids rather than the settings in force.\n");
+
+            List<GridTelemetry> grids = SortedGrids();
+
+            // What a substep actually costs, measured rather than assumed: the solver's own
+            // milliseconds divided by the passes it made, and again per element visited.
+            double passes = 0;
+            double solverMs = 0;
+            double elementPasses = 0;
+            long stepping = 0;
+
+            Histogram granted = new Histogram(new float[] { 1.5f, 2.5f, 4.5f, 6.5f, 8.5f, 12.5f, 16.5f, 32.5f, 64.5f });
+            long[] grantedCells = new long[granted.Counts.Length];
+
+            for (int i = 0; i < grids.Count; i++)
+            {
+                GridTelemetry g = grids[i];
+                if (g.SimulationSteps <= 0 || g.Substeps.Count == 0) continue;
+
+                stepping++;
+
+                double substeps = g.Substeps.Mean;
+                double gridPasses = g.SimulationSteps * substeps;
+
+                passes += gridPasses;
+                solverMs += g.Profiler.Solver.TotalMilliseconds;
+                elementPasses += gridPasses * (g.PeakCellCount + g.NeighborLinks.SafeMax);
+
+                granted.Add((float)substeps);
+
+                // The same buckets, weighted by how much ship is in them, because thirty grids of
+                // debris and three capital ships are not the same finding.
+                float value = (float)substeps;
+                int bucket = granted.Edges.Length;
+                for (int e = 0; e < granted.Edges.Length; e++)
+                {
+                    if (value < granted.Edges[e]) { bucket = e; break; }
+                }
+                grantedCells[bucket] += g.PeakCellCount;
+            }
+
+            sb.Append('\n');
+            Field(sb, "grids stepping", stepping.ToString("n0"));
+            Field(sb, "substep passes", passes.ToString("n0"));
+            Field(sb, "solver ms", solverMs.ToString("n1"));
+            Field(sb, "ms per substep pass", passes <= 0 ? "-" : (solverMs / passes).ToString("n4"));
+            Field(sb, "ns per element visit", elementPasses <= 0
+                ? "-"
+                : (solverMs * 1e6 / elementPasses).ToString("n1"));
+
+            sb.Append("\n  substeps granted, by grid and by how many cells are in them:\n");
+            for (int i = 0; i < granted.Counts.Length; i++)
+            {
+                if (granted.Counts[i] == 0) continue;
+
+                string label = TelemetryFormat.BucketLabel(granted.Edges, i, "");
+                sb.Append("      ").Append(label.PadRight(20))
+                  .Append(granted.Counts[i].ToString("n0").PadLeft(8)).Append(" grids")
+                  .Append(grantedCells[i].ToString("n0").PadLeft(12)).Append(" cells\n");
+            }
+
+            WriteSubstepDrivers(sb, grids);
+            WriteStiffestBlockTypes(sb);
+            WriteSubstepProjection(sb, grids);
+        }
+
+        /// <summary>
+        /// The block definitions that ask the most of a step, ranked.
+        ///
+        /// The per-grid view names one block; this names the *kinds* of block, across every grid
+        /// in the world, which is what a definition author or a server operator can act on. A
+        /// block's demand is not a property of its definition alone — it depends on what it is
+        /// bolted to and whether it is exposed — so the spread matters as much as the peak.
+        /// </summary>
+        private static void WriteStiffestBlockTypes(StringBuilder sb)
+        {
+            List<BlockTypeTelemetry> types = new List<BlockTypeTelemetry>();
+            foreach (BlockTypeTelemetry type in Telemetry.BlockTypes.Values)
+            {
+                if (type.SubstepDemand.Count > 0) types.Add(type);
+            }
+
+            if (types.Count == 0) return;
+
+            types.Sort(delegate (BlockTypeTelemetry a, BlockTypeTelemetry b)
+            {
+                return b.PeakSubstepDemand.CompareTo(a.PeakSubstepDemand);
+            });
+
+            sb.Append("\n  block types by the substeps they demand (20 stiffest of ")
+              .Append(types.Count).Append("):\n");
+
+            sb.Append("    ").Append("subtype".PadRight(34))
+              .Append("live".PadLeft(9)).Append("J/K".PadLeft(11))
+              .Append("worst".PadLeft(9)).Append("mean".PadLeft(9)).Append("  where\n");
+
+            int limit = Math.Min(types.Count, 20);
+            for (int i = 0; i < limit; i++)
+            {
+                BlockTypeTelemetry t = types[i];
+
+                sb.Append("    ").Append(Truncate(t.Name, 33).PadRight(34))
+                  .Append(t.Live.ToString("n0").PadLeft(9))
+                  .Append(t.ThermalMass.Mean.ToString("n0").PadLeft(11))
+                  .Append(t.PeakSubstepDemand.ToString("n1").PadLeft(9))
+                  .Append(t.SubstepDemand.Mean.ToString("n1").PadLeft(9))
+                  .Append("  ").Append(t.PeakSubstepDemandPosition).Append('\n');
+            }
+        }
+
+        /// <summary>The block on each grid that sets its substep count, worst grids first.</summary>
+        private static void WriteSubstepDrivers(StringBuilder sb, IList<GridTelemetry> grids)
+        {
+            List<GridTelemetry> profiled = new List<GridTelemetry>();
+            for (int i = 0; i < grids.Count; i++)
+            {
+                if (grids[i].Profile != null && grids[i].Profile.WorstNodeIndex >= 0) profiled.Add(grids[i]);
+            }
+
+            profiled.Sort(delegate (GridTelemetry a, GridTelemetry b)
+            {
+                return b.Profile.RequiredSubsteps.CompareTo(a.Profile.RequiredSubsteps);
+            });
+
+            if (profiled.Count == 0) return;
+
+            sb.Append("\n  what sets each grid's substep count (");
+            sb.Append(Math.Min(profiled.Count, DetailedGridLimit)).Append(" stiffest of ")
+              .Append(profiled.Count).Append("):\n");
+
+            sb.Append("    ").Append("grid".PadRight(26))
+              .Append("needs".PadLeft(8)).Append("got".PadLeft(6))
+              .Append("cond%".PadLeft(7)).Append("air".PadLeft(8)).Append("loop".PadLeft(8))
+              .Append("  set by\n");
+
+            int limit = Math.Min(profiled.Count, DetailedGridLimit);
+            for (int i = 0; i < limit; i++)
+            {
+                GridTelemetry g = profiled[i];
+                ThermalSolver.SubstepProfile p = g.Profile;
+
+                sb.Append("    ").Append(Truncate(g.Name, 25).PadRight(26))
+                  .Append(p.RequiredSubsteps.ToString("n1").PadLeft(8))
+                  .Append(g.Substeps.SafeMax.ToString("n0").PadLeft(6))
+                  .Append((100f * p.WorstNodeConductionShare).ToString("n0").PadLeft(7))
+                  .Append(p.WorstRoomAirDemand.ToString("n1").PadLeft(8))
+                  .Append(p.WorstLoopDemand.ToString("n1").PadLeft(8))
+                  .Append("  ").Append(g.WorstSubstepBlock).Append('\n');
+            }
+        }
+
+        /// <summary>
+        /// What each candidate <c>MaxSubstepsPerBlock</c> would do, summed over the world.
+        ///
+        /// This is the setting's own evidence: how many blocks it would raise, what the substep
+        /// count would fall to, and therefore how much of the solver's bill it would remove. A
+        /// cap that reaches only a handful of blocks and halves the arithmetic is a different
+        /// proposition from one that reaches a tenth of the ship.
+        /// </summary>
+        private static void WriteSubstepProjection(StringBuilder sb, IList<GridTelemetry> grids)
+        {
+            int[] caps = ThermalSolver.SubstepProfile.ProjectedCaps;
+
+            double[] visitsAfter = new double[caps.Length];
+            long[] flooredNodes = new long[caps.Length];
+            double visitsNow = 0;
+            long nodes = 0;
+            long profiled = 0;
+            long environmentDominated = 0;
+
+            for (int i = 0; i < grids.Count; i++)
+            {
+                GridTelemetry g = grids[i];
+                ThermalSolver.SubstepProfile p = g.Profile;
+                if (p == null || g.SimulationSteps <= 0 || g.Substeps.Count == 0) continue;
+
+                profiled++;
+                nodes += p.Nodes;
+                environmentDominated += p.EnvironmentDominatedNodes;
+
+                // Per simulated second, not per step, and the distinction is the whole reading.
+                //
+                // MaxLinkVisitsPerStep answers a step it cannot afford by making it shorter, so a
+                // throttled grid already takes few substeps — measuring visits per *step* there
+                // shows a cap saving nothing, because what the cap actually buys is returned as
+                // simulated time rather than as arithmetic. Per simulated second the budget
+                // cancels out entirely: substeps are proportional to step length, so the cost of
+                // a second of heat is elements x demand / StepSeconds however the step is cut.
+                // A field dump reported 0.1 % where the truth was an eightfold saving, because
+                // this line divided by the wrong thing.
+                double elements = p.Nodes + p.Links;
+                double perStepSecond = p.StepSeconds <= 0 ? 1 : elements / p.StepSeconds;
+
+                visitsNow += perStepSecond * Math.Max(1.0, p.RequiredSubsteps);
+
+                for (int c = 0; c < caps.Length; c++)
+                {
+                    visitsAfter[c] += perStepSecond * Math.Max(1.0, p.CapRequiredSubsteps[c]);
+                    flooredNodes[c] += p.CapNodesFloored[c];
+                }
+            }
+
+            if (profiled == 0) return;
+
+            sb.Append("\n  what MaxSubstepsPerBlock would do, over ").Append(profiled.ToString("n0"))
+              .Append(" profiled grids and ").Append(nodes.ToString("n0")).Append(" blocks:\n");
+
+            sb.Append("  Cost is element visits per simulated second, which is what a cap changes:\n");
+            sb.Append("  a shortened step trades the same arithmetic for less heat, so per step it\n");
+            sb.Append("  would look free.\n\n");
+
+            sb.Append("    ").Append("cap".PadLeft(5))
+              .Append("blocks raised".PadLeft(16)).Append("share".PadLeft(9))
+              .Append("visits/sim second".PadLeft(20)).Append("saving".PadLeft(9))
+              .Append("speedup".PadLeft(10)).Append('\n');
+
+            sb.Append("    ").Append("off".PadLeft(5))
+              .Append("0".PadLeft(16)).Append("-".PadLeft(9))
+              .Append(visitsNow.ToString("n0").PadLeft(20)).Append("-".PadLeft(9))
+              .Append("-".PadLeft(10)).Append('\n');
+
+            for (int c = 0; c < caps.Length; c++)
+            {
+                double saving = visitsNow <= 0 ? 0 : 1.0 - (visitsAfter[c] / visitsNow);
+                double speedup = visitsAfter[c] <= 0 ? 0 : visitsNow / visitsAfter[c];
+
+                sb.Append("    ").Append(caps[c].ToString().PadLeft(5))
+                  .Append(flooredNodes[c].ToString("n0").PadLeft(16))
+                  .Append((nodes <= 0 ? 0 : 100.0 * flooredNodes[c] / nodes).ToString("n2").PadLeft(8)).Append('%')
+                  .Append(visitsAfter[c].ToString("n0").PadLeft(20))
+                  .Append((100.0 * saving).ToString("n1").PadLeft(8)).Append('%')
+                  .Append(speedup.ToString("n2").PadLeft(9)).Append('x').Append('\n');
+            }
+
+            if (environmentDominated > 0)
+            {
+                sb.Append("\n  ").Append(environmentDominated.ToString("n0"))
+                  .Append(" blocks are stiff mostly through radiation and convection rather than\n");
+                sb.Append("  conduction. The cap covers those too, which changes how they exchange with\n");
+                sb.Append("  the sky rather than with what they are bolted to — a more visible trade.\n");
+            }
+        }
+
+        /// <summary>
+        /// Whether the report agrees with itself.
+        ///
+        /// Every aggregate in this file is a sum over the same list of grid records, taken at
+        /// different points while the report is built, and the CSVs are a sixth pass over it
+        /// after the text is finished. Nothing about that is supposed to be able to disagree, and
+        /// in a field dump it did — by a factor of 1.6, across every counter, in the direction
+        /// that made the mod look cheaper than it was. A total that cannot be checked is a total
+        /// that gets believed.
+        ///
+        /// So this section re-takes the Cost table's own figures after everything else has been
+        /// written, and states the two invariants that must hold:
+        ///
+        /// <list type="bullet">
+        /// <item>the record list must not change while the report is built;</item>
+        /// <item>a grid cannot tick more often than the session is framed, because both happen
+        /// once each in the same <c>Simulate</c> call.</item>
+        /// </list>
+        ///
+        /// A line beginning <c>!!</c> is a defect in the telemetry, not in the simulation.
+        /// </summary>
+        private static void WriteConsistency(StringBuilder sb)
+        {
+            Section(sb, "Consistency");
+
+            int records = 0;
+            long calls = 0;
+            long steps = 0;
+            double milliseconds = 0;
+            long mostTicks = 0;
+            long firstFrame = long.MaxValue;
+            long lastFrame = -1;
+            int overFramed = 0;
+
+            for (int i = 0; i < Telemetry.Grids.Count; i++)
+            {
+                GridTelemetry g = Telemetry.Grids[i];
+
+                records++;
+                calls += g.SimulationTime.Calls;
+                steps += g.SimulationSteps;
+                milliseconds += g.SimulationTime.TotalMilliseconds;
+
+                if (g.SimulationTime.Calls > mostTicks) mostTicks = g.SimulationTime.Calls;
+                if (g.SimulationTime.Calls > Telemetry.FramesObserved) overFramed++;
+                if (g.FirstTickFrame >= 0 && g.FirstTickFrame < firstFrame) firstFrame = g.FirstTickFrame;
+                if (g.LastTickFrame > lastFrame) lastFrame = g.LastTickFrame;
+            }
+
+            if (firstFrame == long.MaxValue) firstFrame = -1;
+
+            sb.Append("  The same list, summed at the Cost table and again here. These must agree;\n");
+            sb.Append("  a line marked !! is a defect in the telemetry rather than in the mod.\n\n");
+
+            Field(sb, "grid records", costRecords + " -> " + records);
+            Field(sb, "grid ticks", costCalls.ToString("n0") + " -> " + calls.ToString("n0"));
+            Field(sb, "grid simulation ms", costMilliseconds.ToString("n2") + " -> " + milliseconds.ToString("n2"));
+            Field(sb, "grid simulation steps", costSteps.ToString("n0") + " -> " + steps.ToString("n0"));
+
+            if (records != costRecords || calls != costCalls || steps != costSteps)
+            {
+                sb.Append("  !! the record list changed while the report was being written;\n");
+                sb.Append("  !! every aggregate above the grid detail is short by the difference.\n");
+            }
+
+            sb.Append('\n');
+            Field(sb, "frames observed", Telemetry.FramesObserved.ToString("n0"));
+            Field(sb, "most ticks on one grid", mostTicks.ToString("n0"));
+            Field(sb, "tick frames spanned", firstFrame < 0
+                ? "-"
+                : firstFrame.ToString("n0") + " .. " + lastFrame.ToString("n0"));
+
+            if (overFramed > 0)
+            {
+                sb.Append("  !! ").Append(overFramed).Append(" grid(s) ticked more often than the session was framed.\n");
+                sb.Append("  !! A grid ticks once per Simulate call and so does the frame counter, so this\n");
+                sb.Append("  !! means the session counters were reset under records that survived it —\n");
+                sb.Append("  !! see Telemetry.Reset and Telemetry.Start. Every per-session figure in this\n");
+                sb.Append("  !! report covers a shorter window than the per-grid rows do.\n");
+            }
+
+            double longestLife = 0;
+            for (int i = 0; i < Telemetry.Grids.Count; i++)
+            {
+                double life = Telemetry.Grids[i].LifetimeSeconds;
+                if (life > longestLife) longestLife = life;
+            }
+
+            sb.Append('\n');
+            Field(sb, "session seconds", Telemetry.SessionSeconds.ToString("n1"));
+            Field(sb, "longest grid lifetime", longestLife.ToString("n1") + " s");
+
+            // Both are read off the same stopwatch, so a grid cannot have lived longer than the
+            // session it lived in. Where it has, the clock was restarted under the record.
+            if (longestLife > Telemetry.SessionSeconds + 1.0)
+            {
+                sb.Append("  !! a grid outlived the session clock, which is only possible if the\n");
+                sb.Append("  !! clock was reset while the record survived.\n");
+            }
+        }
+
+        /// <summary>
+        /// Why this grid takes the substeps it does: what sets the count, the distribution of
+        /// demand behind it, and what each cap would leave.
+        /// </summary>
+        private static void WriteGridSubsteps(StringBuilder sb, GridTelemetry g)
+        {
+            ThermalSolver.SubstepProfile p = g.Profile;
+            if (p == null) return;
+
+            sb.Append("\n    substeps\n");
+            Field(sb, "  demanded (uncapped)", p.RequiredSubsteps.ToString("n2"));
+            Field(sb, "  demanded as configured", p.RequiredSubstepsInForce.ToString("n2"));
+            Field(sb, "  set by", g.WorstSubstepBlock);
+            Field(sb, "  of which conduction", (100f * p.WorstNodeConductionShare).ToString("n0") + " %");
+
+            if (p.WorstRoomAirDemand > 0f)
+            {
+                Field(sb, "  stiffest room air", p.WorstRoomAirDemand.ToString("n2")
+                    + " substeps (room " + p.WorstRoomAirIndex + ")");
+            }
+
+            if (p.WorstLoopDemand > 0f)
+            {
+                Field(sb, "  stiffest coolant loop", p.WorstLoopDemand.ToString("n2")
+                    + " substeps (loop " + p.WorstLoopIndex + ")");
+            }
+
+            if (p.EnvironmentDominatedNodes > 0)
+            {
+                Field(sb, "  stiff through the sky", p.EnvironmentDominatedNodes.ToString("n0") + " blocks");
+            }
+
+            sb.Append("\n      blocks by the substeps they demand\n");
+            float[] edges = ThermalSolver.SubstepProfile.DemandEdges;
+            for (int i = 0; i < p.Buckets.Length; i++)
+            {
+                if (p.Buckets[i] == 0) continue;
+
+                string label = TelemetryFormat.BucketLabel(edges, i, "");
+                double share = p.Nodes <= 0 ? 0 : 100.0 * p.Buckets[i] / p.Nodes;
+
+                sb.Append("        ").Append(label.PadRight(22))
+                  .Append(p.Buckets[i].ToString("n0").PadLeft(10))
+                  .Append("  ").Append(share.ToString("n2")).Append("%\n");
+            }
+
+            sb.Append("\n      what a cap would leave\n");
+            sb.Append("        ").Append("cap".PadLeft(5))
+              .Append("blocks raised".PadLeft(16)).Append("substeps".PadLeft(11))
+              .Append("cost per sim s".PadLeft(16)).Append('\n');
+
+            int[] caps = ThermalSolver.SubstepProfile.ProjectedCaps;
+            double now = Math.Ceiling(Math.Max(1.0, p.RequiredSubsteps));
+
+            for (int c = 0; c < caps.Length; c++)
+            {
+                double after = Math.Ceiling(Math.Max(1.0, p.CapRequiredSubsteps[c]));
+                double share = now <= 0 ? 1 : after / now;
+
+                sb.Append("        ").Append(caps[c].ToString().PadLeft(5))
+                  .Append(p.CapNodesFloored[c].ToString("n0").PadLeft(16))
+                  .Append(after.ToString("n0").PadLeft(11))
+                  .Append((100.0 * share).ToString("n0").PadLeft(12)).Append("%").Append('\n');
+            }
+        }
+
         private static void WriteGridDetails(StringBuilder sb)
         {
             List<GridTelemetry> grids = SortedGrids();
@@ -680,7 +1141,11 @@ namespace Thermodynamics
                 Field(sb, "  nodes sampled", g.SampledNodes.ToString("n0"));
                 Field(sb, "  nodes per step", g.NodesPerStep.Format("n0"));
                 Field(sb, "  solver substeps", g.Substeps.Format("n2"));
+                Field(sb, "  substeps required", g.RequiredSubsteps.Format("n2"));
                 Field(sb, "  steps clamped", g.ClampedSteps.ToString("n0"));
+                Field(sb, "  blocks raised by cap", g.FlooredNodes.Count == 0
+                    ? "-"
+                    : g.FlooredNodes.Format("n0"));
                 Field(sb, "  simulation rate", g.SimulationRate.Count == 0
                     ? "-"
                     : (100.0 * g.SimulationRate.Mean).ToString("n1") + " % ("
@@ -690,6 +1155,8 @@ namespace Thermodynamics
                 Field(sb, "  critical blocks", g.CriticalBlocks.Format("n0"));
                 Field(sb, "  damage events", g.DamageEvents.ToString("n0"));
                 Field(sb, "  total damage", g.TotalDamage.ToString("n1"));
+
+                WriteGridSubsteps(sb, g);
 
                 sb.Append("\n    environment\n");
                 Field(sb, "  planets visited", g.PlanetList);
@@ -728,6 +1195,12 @@ namespace Thermodynamics
                 g.SolarTime.WriteRow(sb);
                 g.SaveTime.WriteRow(sb);
                 g.LoadTime.WriteRow(sb);
+
+                Field(sb, "  ticks", g.SimulationTime.Calls.ToString("n0")
+                    + (g.FirstTickFrame < 0
+                        ? ""
+                        : " over frames " + g.FirstTickFrame.ToString("n0")
+                            + " .. " + g.LastTickFrame.ToString("n0")));
 
                 sb.Append("\n    final temperature distribution\n");
                 g.FinalTemperatures.Write(sb, "      ", "K");
@@ -823,6 +1296,15 @@ namespace Thermodynamics
                 Field(sb, "  power produced W", t.EnergyProduction.Format("n0"));
                 Field(sb, "  power consumed W", t.EnergyConsumption.Format("n0"));
                 Field(sb, "  thrust consumed W", t.ThrustConsumption.Format("n0"));
+                Field(sb, "  substeps demanded", t.SubstepDemand.Count == 0
+                    ? "-"
+                    : t.SubstepDemand.Format("n2"));
+                if (t.PeakSubstepDemand > 0f)
+                {
+                    Field(sb, "  worst demand", t.PeakSubstepDemand.ToString("n2")
+                        + " substeps, " + t.PeakSubstepDemandPosition
+                        + " on grid " + t.PeakSubstepDemandGrid);
+                }
                 Field(sb, "  critical updates", t.CriticalUpdates.ToString("n0"));
                 Field(sb, "  heat damage dealt", t.TotalDamage.ToString("n1"));
 
@@ -858,7 +1340,8 @@ namespace Thermodynamics
             sb.Append("temp_min,temp_mean,temp_max,temp_sd,peak_temp,");
             sb.Append("dt_mean,conduction_w_mean,radiation_w_mean,convection_w_mean,solar_w_mean,friction_w_mean,heat_generation_w_mean,");
             sb.Append("power_produced_mean,power_consumed_mean,thrust_mean,");
-            sb.Append("critical_updates,total_damage\n");
+            sb.Append("critical_updates,total_damage,");
+            sb.Append("substep_demand_mean,substep_demand_max,substep_demand_peak,substep_demand_where\n");
 
             List<BlockTypeTelemetry> types = SortedBlockTypes();
             for (int i = 0; i < types.Count; i++)
@@ -910,7 +1393,12 @@ namespace Thermodynamics
                 Csv(sb, t.ThrustConsumption.Mean);
 
                 Csv(sb, t.CriticalUpdates);
-                CsvLast(sb, t.TotalDamage);
+                Csv(sb, t.TotalDamage);
+
+                Csv(sb, t.SubstepDemand.Mean);
+                Csv(sb, t.SubstepDemand.SafeMax);
+                Csv(sb, t.PeakSubstepDemand);
+                CsvLast(sb, t.PeakSubstepDemandPosition);
             }
 
             return sb.ToString();
@@ -1264,7 +1752,24 @@ namespace Thermodynamics
             sb.Append("blocks_added,blocks_removed,blocks_restored,rooms_restored,splits,merges,door_changes,surface_refreshes,");
             sb.Append("mapper_passes,loops_created,saves,loads,save_bytes,load_bytes,");
             sb.Append("sim_ms_total,sim_ms_max,topology_ms_total,mapping_ms_total,exposure_ms_total,solver_ms_total,solver_ms_max,");
-            sb.Append("solar_ms_total,solar_ms_max,save_ms_total,load_ms_total\n");
+            sb.Append("solar_ms_total,solar_ms_max,save_ms_total,load_ms_total,");
+            sb.Append("ticks,first_tick_frame,last_tick_frame,");
+            sb.Append("substeps_required_mean,substeps_required_max,floored_nodes_mean,");
+            sb.Append("demand_uncapped,demand_configured,demand_conduction_share,");
+            sb.Append("demand_room_air,demand_loop,environment_stiff_nodes,substep_driver,");
+
+            // Generated from the same array the projection walks, so a cap added there cannot
+            // leave the header describing columns that are no longer the ones being written.
+            int[] capColumns = ThermalSolver.SubstepProfile.ProjectedCaps;
+            for (int c = 0; c < capColumns.Length; c++)
+            {
+                sb.Append("cap").Append(capColumns[c]).Append("_substeps,");
+            }
+            for (int c = 0; c < capColumns.Length; c++)
+            {
+                sb.Append("cap").Append(capColumns[c]).Append("_blocks");
+                sb.Append(c == capColumns.Length - 1 ? "\n" : ",");
+            }
 
             List<GridTelemetry> grids = SortedGrids();
             for (int i = 0; i < grids.Count; i++)
@@ -1338,7 +1843,35 @@ namespace Thermodynamics
                 Csv(sb, g.SolarTime.TotalMilliseconds);
                 Csv(sb, g.SolarTime.MaxMilliseconds);
                 Csv(sb, g.SaveTime.TotalMilliseconds);
-                CsvLast(sb, g.LoadTime.TotalMilliseconds);
+                Csv(sb, g.LoadTime.TotalMilliseconds);
+
+                Csv(sb, g.SimulationTime.Calls);
+                Csv(sb, g.FirstTickFrame);
+                Csv(sb, g.LastTickFrame);
+
+                Csv(sb, g.RequiredSubsteps.Mean);
+                Csv(sb, g.RequiredSubsteps.SafeMax);
+                Csv(sb, g.FlooredNodes.Mean);
+
+                ThermalSolver.SubstepProfile p = g.Profile;
+                Csv(sb, p == null ? 0 : p.RequiredSubsteps);
+                Csv(sb, p == null ? 0 : p.RequiredSubstepsInForce);
+                Csv(sb, p == null ? 0 : p.WorstNodeConductionShare);
+                Csv(sb, p == null ? 0 : p.WorstRoomAirDemand);
+                Csv(sb, p == null ? 0 : p.WorstLoopDemand);
+                Csv(sb, p == null ? 0 : p.EnvironmentDominatedNodes);
+                Csv(sb, g.WorstSubstepBlock);
+
+                int[] caps = ThermalSolver.SubstepProfile.ProjectedCaps;
+                for (int c = 0; c < caps.Length; c++)
+                {
+                    Csv(sb, p == null ? 0 : p.CapRequiredSubsteps[c]);
+                }
+                for (int c = 0; c < caps.Length; c++)
+                {
+                    if (c == caps.Length - 1) CsvLast(sb, p == null ? 0 : p.CapNodesFloored[c]);
+                    else Csv(sb, p == null ? 0 : p.CapNodesFloored[c]);
+                }
             }
 
             return sb.ToString();
@@ -1360,6 +1893,11 @@ namespace Thermodynamics
         }
 
         private static void CsvLast(StringBuilder sb, double value)
+        {
+            TelemetryFormat.AppendCsvLast(sb, value);
+        }
+
+        private static void CsvLast(StringBuilder sb, long value)
         {
             TelemetryFormat.AppendCsvLast(sb, value);
         }

@@ -311,6 +311,18 @@ namespace Thermodynamics
             }
 
             SessionClock.Reset();
+
+            // Clearing the registry is not enough on its own: every live grid still holds the
+            // record it was handed, and a record that is no longer in the list goes on being
+            // written to. Its cost, its steps and its node updates then exist but are in no
+            // aggregate, and its opened-at is a reading from a stopwatch that has just been set
+            // back to zero — which is how a grid comes to report a lifetime longer than the
+            // session it lived in. Take the references away with the list.
+            IList<ThermalGrid> live = ThermalGrid.LiveGrids;
+            for (int i = 0; i < live.Count; i++)
+            {
+                live[i].RefreshTelemetry();
+            }
         }
 
         // ------------------------------------------------------------------------------------

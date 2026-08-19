@@ -91,6 +91,7 @@ namespace Thermodynamics
                 Stats.SimulationTime.Begin();
                 UpdateInternal();
                 Stats.SimulationTime.End();
+                Stats.NoteTick(Telemetry.FramesObserved);
 
                 Telemetry.FrameCost.AddGrid(
                     Grid == null ? "(grid)" : Grid.DisplayName,

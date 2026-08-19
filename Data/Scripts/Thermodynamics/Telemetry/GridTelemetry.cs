@@ -182,6 +182,27 @@ namespace Thermodynamics
         public double ClosedAtSeconds = -1;
         public bool IsClosed;
 
+        /// <summary>
+        /// The session frame this record first and last saw a tick on.
+        ///
+        /// A record cannot be ticked more often than the session is framed — both happen once,
+        /// in the same <c>Simulate</c> call — so <c>SimulationTime.Calls</c> must fit inside
+        /// <c>LastTickFrame - FirstTickFrame + 1</c>, and that must fit inside
+        /// <c>Telemetry.FramesObserved</c>. A field report has been seen where it did not, and
+        /// with only totals to go on there was no way to tell whether the records had outlived a
+        /// clock reset or the aggregates had been taken over a shorter list. These two numbers
+        /// answer that without another guess.
+        /// </summary>
+        public long FirstTickFrame = -1;
+        public long LastTickFrame = -1;
+
+        /// <summary>Notes that this record was ticked on the frame the session is counting now.</summary>
+        public void NoteTick(long frame)
+        {
+            if (FirstTickFrame < 0) FirstTickFrame = frame;
+            LastTickFrame = frame;
+        }
+
         /// <summary>Null once the grid has closed, so the record does not keep the entity alive.</summary>
         public ThermalGrid Grid;
 
@@ -295,6 +316,44 @@ namespace Thermodynamics
         public long InAtmosphereSamples;
         public readonly HashSet<string> Planets = new HashSet<string>();
 
+        // ---- substeps -------------------------------------------------------------------
+
+        /// <summary>
+        /// Substeps the stability estimate asked for, before <c>MaxSubsteps</c> refused any and
+        /// before rounding. <see cref="Substeps"/> is what was granted; where the two differ the
+        /// grid is being refused, and where <c>MaxLinkVisitsPerStep</c> is also binding the step
+        /// has been shortened rather than the substeps coarsened.
+        /// </summary>
+        public readonly RunningStat RequiredSubsteps = new RunningStat();
+
+        /// <summary>Nodes <c>MaxSubstepsPerBlock</c> raised the heat capacity of, per step.</summary>
+        public readonly RunningStat FlooredNodes = new RunningStat();
+
+        /// <summary>
+        /// The last full walk of what sets this grid's substep count: which element, the
+        /// distribution behind it, and what each candidate cap would do to both.
+        ///
+        /// Taken rarely — it is O(nodes) — and always again when the grid closes, so a report has
+        /// one whether or not the grid lived long enough for the periodic one to fire.
+        /// </summary>
+        public ThermalSolver.SubstepProfile Profile;
+
+        /// <summary>
+        /// The block that set the substep count when the profile was last taken, as subtype and
+        /// position.
+        ///
+        /// Resolved at capture rather than at report time because the index it comes from is into
+        /// the solver's node list, and that list is compacted whenever a block is removed — by the
+        /// time a report is written the index would name whichever block had been moved into the
+        /// hole.
+        /// </summary>
+        public string WorstSubstepBlock = "-";
+
+        private int stepsSinceProfile = ProfileInterval;
+
+        /// <summary>Solver steps between full substep profiles. Structure changes slowly.</summary>
+        private const int ProfileInterval = 64;
+
         // ---- cost -----------------------------------------------------------------------
         public readonly TimingStat SimulationTime = new TimingStat("grid simulation");
 
@@ -358,6 +417,8 @@ namespace Thermodynamics
             NodeUpdates += (long)nodeCount * steps;
 
             Substeps.Add(solver.LastSubsteps);
+            RequiredSubsteps.Add(solver.LastRequiredSubsteps);
+            FlooredNodes.Add(solver.FlooredNodes);
             if (solver.LastStepWasClamped) ClampedSteps++;
 
             SimulationRate.Add((float)Grid.Simulation.SimulationRate);
@@ -378,7 +439,37 @@ namespace Thermodynamics
                 SampleStructure();
             }
 
+            stepsSinceProfile += steps;
+            if (stepsSinceProfile >= ProfileInterval)
+            {
+                stepsSinceProfile = 0;
+                CaptureProfile(solver);
+            }
+
             SampleNodes(solver);
+        }
+
+        /// <summary>
+        /// Takes a full substep profile and names the block it blames, while the index is still
+        /// valid.
+        /// </summary>
+        private void CaptureProfile(ThermalSolver solver)
+        {
+            ThermalSolver.SubstepProfile profile = solver.ProfileSubsteps();
+            Profile = profile;
+
+            int index = profile.WorstNodeIndex;
+            if (index < 0 || index >= solver.Nodes.Count)
+            {
+                WorstSubstepBlock = "-";
+                return;
+            }
+
+            ThermalNode node = solver.Nodes[index];
+            string name = node.Block == null || node.Block.Model == null ? "?" : node.Block.Model.Name;
+
+            WorstSubstepBlock = name + " " + (node.Block == null ? "" : node.Block.Position.ToString())
+                + " (" + node.ThermalMass.ToString("n0") + " J/K)";
         }
 
         /// <summary>
@@ -405,6 +496,7 @@ namespace Thermodynamics
                 {
                     type.OnUpdate(node, EntityId);
                     type.Sample(node);
+                    type.SampleSubstepDemand(solver.NodeSubstepDemand(i), node, EntityId);
                 }
 
                 NoteTemperature(node);
@@ -533,6 +625,10 @@ namespace Thermodynamics
             SampleStructure();
             SnapshotSurfaces();
             SnapshotRooms();
+
+            // Always retaken here rather than left to whenever the periodic one last fired, so a
+            // report describes the grid as it was when the report was asked for.
+            CaptureProfile(Grid.Simulation.Solver);
 
             // Rebuilt rather than appended to, so a manual mid-session dump does not leave its
             // counts behind for the next report.

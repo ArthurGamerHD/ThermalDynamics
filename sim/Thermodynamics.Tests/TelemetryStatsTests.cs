@@ -428,6 +428,40 @@ namespace Thermodynamics.Tests
             Assert.Equal(5.0, a.MaxMilliseconds, 9);
         }
 
+        /// <summary>
+        /// The invariant the report's consistency section now asserts against itself.
+        ///
+        /// A field dump printed a merged "grid simulation" total of 73,454 ms beside per-grid
+        /// rows that added to 119,182 ms — a merge coming out at 62 % of its own parts. This
+        /// pins the primitive so that if it happens again the cause is upstream of here, which
+        /// is what the consistency section is there to catch.
+        /// </summary>
+        [Fact]
+        public void MergingManyStatsEqualsTheArithmeticSumOfTheirParts()
+        {
+            TimingStat merged = new TimingStat("merged");
+
+            long calls = 0;
+            double total = 0;
+
+            for (int i = 1; i <= 200; i++)
+            {
+                TimingStat part = new TimingStat("part " + i);
+                for (int c = 0; c < i; c++)
+                {
+                    double sample = 0.001 * i * (c + 1);
+                    part.Record(sample);
+                    calls++;
+                    total += sample;
+                }
+
+                merged.Merge(part);
+            }
+
+            Assert.Equal(calls, merged.Calls);
+            Assert.Equal(total, merged.TotalMilliseconds, 6);
+        }
+
         [Fact]
         public void MergingCarriesTheDistributionAcrossToo()
         {
