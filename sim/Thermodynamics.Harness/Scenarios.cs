@@ -54,6 +54,7 @@ namespace Thermodynamics.Harness
             "heatpump-limits",
             "cooling-runaway",
             "loop-stiffness",
+            "loop-layout",
         };
 
         public static ScenarioResult Run(string name)
@@ -91,6 +92,7 @@ namespace Thermodynamics.Harness
                 case "heatpump-limits": return HeatPumpLimits();
                 case "cooling-runaway": return CoolingRunaway();
                 case "loop-stiffness": return LoopStiffness();
+                case "loop-layout": return LoopLayout();
                 default:
                     throw new ArgumentException("Unknown scenario: " + name);
             }
@@ -2075,6 +2077,118 @@ namespace Thermodynamics.Harness
             return Result("loop-stiffness", last,
                 "A ring at three lengths, step " + (1f / new ThermalSettings().Derive().StepsPerSecond).ToString("n4")
                 + " s. " + report + ".");
+        }
+
+        /// <summary>
+        /// How to lay a loop out: one ring or several, and where to put the sinks.
+        ///
+        /// The intuition this was written to test was that several small rings should beat one large
+        /// one, because flow rises only with the square root of combined pumping while the distance
+        /// heat must travel rises linearly with ring size — so splitting a ring in four ought to make
+        /// transport twice as fast for the same pumps.
+        ///
+        /// It is wrong, and the first measurement looked like it was right: four small rings came out
+        /// 40 K ahead of one big one. All of that was where the sources sat. Spread the same four
+        /// reactors evenly around the big ring instead of bunching them at one end and it matches the
+        /// four small rings to within 2 K. What saturates a loop is several sources dumping into one
+        /// short stretch of pipe, not the length of the ring they sit on.
+        /// </summary>
+        public static ScenarioResult LoopLayout()
+        {
+            float bunched = LoopLayoutPlant(1, 4, false);
+            float spread = LoopLayoutPlant(1, 4, true);
+            ScenarioRunner runner;
+            float small = LoopLayoutPlant(4, 1, false, out runner);
+
+            return Result("loop-layout", runner,
+                "Four 250 kW reactors and four radiators, 32 pipes and 4 pumps, arranged three ways. "
+                + "One ring with the sources bunched: " + C(bunched) + ". One ring with them spread "
+                + "evenly: " + C(spread) + ". Four separate rings: " + C(small)
+                + ". Splitting the ring buys nothing; spreading the sources buys "
+                + (bunched - spread).ToString("n0") + " K.");
+        }
+
+        private static float LoopLayoutPlant(int rings, int pumpsPerRing, bool spreadSources)
+        {
+            ScenarioRunner ignored;
+            return LoopLayoutPlant(rings, pumpsPerRing, spreadSources, out ignored);
+        }
+
+        private static float LoopLayoutPlant(int rings, int pumpsPerRing, bool spreadSources,
+            out ScenarioRunner runner)
+        {
+            GridBuilder builder = GridBuilder.Large();
+            List<BlockInstance> reactors = new List<BlockInstance>();
+
+            int reactorsPerRing = rings == 1 ? 4 : 1;
+            int side = rings == 1 ? 9 : 3;
+
+            for (int r = 0; r < rings; r++)
+            {
+                List<Vector3I> cells = PipeFitter.RectangleXZ(new Vector3I(0, r * 14, 0), side, side);
+                Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
+
+                for (int i = 0; i < reactorsPerRing; i++)
+                {
+                    int step = cells.Count / Math.Max(1, reactorsPerRing);
+                    int sourceAt = spreadSources ? (i * step) + 1 : 1 + i;
+                    int radiatorAt = spreadSources
+                        ? (i * step) + 1 + (step / 2)
+                        : (cells.Count / 2) + i;
+
+                    sinks[sourceAt] = Vector3I.Down;
+                    sinks[radiatorAt] = Vector3I.Up;
+                }
+
+                PipeFitter.BuildRing(builder, cells, -1, sinks);
+
+                for (int i = 0; i < reactorsPerRing; i++)
+                {
+                    int step = cells.Count / Math.Max(1, reactorsPerRing);
+                    int sourceAt = spreadSources ? (i * step) + 1 : 1 + i;
+                    int radiatorAt = spreadSources
+                        ? (i * step) + 1 + (step / 2)
+                        : (cells.Count / 2) + i;
+
+                    builder.Place(Catalog.Reactor(), cells[sourceAt] + Vector3I.Down)
+                           .Producing(250000f);
+                    reactors.Add(builder.Last);
+
+                    builder.Place(Catalog.Radiator(), cells[radiatorAt] + Vector3I.Up);
+                }
+            }
+
+            ThermalSettings settings = new ThermalSettings();
+            settings.EnableSolarHeat = false;
+            settings.EnableFriction = false;
+            settings.EnableDamage = false;
+
+            ThermalSimulation simulation = builder.BuildSimulation(settings.Derive(), 293.15f);
+
+            IList<CoolantLoop> loops = simulation.Solver.Loops;
+            for (int l = 0; l < loops.Count; l++)
+            {
+                while (loops[l].Pumps.Count < pumpsPerRing)
+                {
+                    CoolantPump extra = new CoolantPump();
+                    extra.MaxPowerWatts = 20000f;
+                    loops[l].Pumps.Add(extra);
+                }
+                loops[l].RefreshFlow();
+            }
+
+            runner = new ScenarioRunner(simulation);
+            runner.Environment = t => Worlds.Shadow();
+            runner.Track("reactor", reactors[0]);
+            runner.Run(10000f, 2000f);
+
+            float hottest = 0f;
+            for (int i = 0; i < reactors.Count; i++)
+            {
+                float t = simulation.Solver.GetNode(reactors[i]).Temperature;
+                if (t > hottest) hottest = t;
+            }
+            return hottest;
         }
 
         private static ScenarioResult Result(string name, ScenarioRunner runner, string summary)

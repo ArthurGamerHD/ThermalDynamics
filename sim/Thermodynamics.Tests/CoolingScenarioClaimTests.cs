@@ -197,5 +197,26 @@ namespace Thermodynamics.Tests
             Assert.True(parcelsPerSubstep <= 1f,
                 "the flow moves " + parcelsPerSubstep + " parcels per substep, past the upwind limit");
         }
+    
+        /// <summary>
+        /// Splitting a ring buys nothing; spreading the sources around it buys a great deal. Pinned
+        /// because the intuition runs the other way and the first measurement appeared to confirm it.
+        /// </summary>
+        [Fact]
+        public void SplittingARingBuysNothingButSpreadingTheSourcesDoes()
+        {
+            string summary = Scenarios.Run("loop-layout").Summary;
+
+            float bunched = ScenarioClaimTests.ExtractCelsius(summary, 0);
+            float spread = ScenarioClaimTests.ExtractCelsius(summary, 1);
+            float split = ScenarioClaimTests.ExtractCelsius(summary, 2);
+
+            Assert.True(bunched - spread > 20f,
+                "spreading the sources should be worth a lot: " + bunched + " C then " + spread + " C");
+
+            Assert.True(Math.Abs(spread - split) < 5f,
+                "one ring with spread sources (" + spread + " C) and four rings (" + split
+                + " C) should be within a few kelvin; splitting is not what helps");
+        }
     }
 }

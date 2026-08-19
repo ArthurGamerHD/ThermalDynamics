@@ -73,6 +73,14 @@ Practical build advice:
   Pinned by `LongerRingsCoupleHarderAndCarryTheSameFluid`.
 * A loop's temperature is saved and restored by member hash, so reloading cannot swap two loops'
   heat and rebuilding a ring does not reset it.
+* **Spread your sources around the ring; do not bother splitting it.** Four reactors bunched into one
+  stretch of a 32-pipe ring settle at 134 C; the same four spread evenly around the same ring settle
+  at 93 C. Dividing that ring into four separate rings with a pump each lands at 95 C — no better than
+  spreading, for four times the pumps. What saturates a loop is several sources dumping into one short
+  run of pipe, not the length of the ring. Measured by the `loop-layout` scenario.
+* One large ring is also the more robust arrangement. Flow rises with the square root of combined
+  pumping, so a ring with four pumps that loses one still circulates at 87 %; a ring with one pump that
+  loses it stops circulating altogether and becomes a local heat buffer.
 
 ### When a ring does not become a loop
 
