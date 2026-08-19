@@ -11,7 +11,7 @@ namespace Thermodynamics.Harness
     /// Data/Cubes.xml. They exist so scenarios behave plausibly, not so results can be quoted as
     /// exact in-game numbers.
     ///
-    /// Specific heat is in real J/(kg K), as it is in the definitions: steel 450, copper 385,
+    /// Specific heat is in real J/(kg K), as it is in the definitions: steel 450, brass 380,
     /// aluminium 900. The playable pace comes from <see cref="ThermalSettings.HeatTimeScale"/>,
     /// not from writing the capacities small.
     /// </summary>
@@ -114,8 +114,8 @@ namespace Thermodynamics.Harness
         public static BlockThermalProperties CoolantThermal()
         {
             BlockThermalProperties t = RawDefault();
-            t.Conductivity = 400f;     // copper
-            t.SpecificHeat = 385f;     // copper
+            t.Conductivity = 110f;     // brass, see Cubes.xml
+            t.SpecificHeat = 380f;     // brass
             t.ProducerWasteEnergy = 0f;
             t.ConsumerWasteEnergy = 0f;
             t.CriticalTemperature = 1000f;

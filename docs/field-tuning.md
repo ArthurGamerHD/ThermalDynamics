@@ -139,3 +139,26 @@ already three times inside tolerance. **Cap 6 is the right place to stop**, and 
 demand should be attacked at its source rather than paid for: the fourteen floored blocks are
 decorative lights, and giving them a sane thermal mass would drop uncapped demand from 21.4 to
 about 5.8 and make the cap irrelevant.
+
+## Done: the lights now have definitions
+
+`Cubes.xml` had no entry for any decorative or electronic type, so every light, neon tube and
+camera fell through to `DefaultThermodynamics` and inherited **mild steel's 50 W/(m·K)** on a 16 kg
+body. That is what made the least massive block on the ship the stiffest thing on it.
+
+Four per-type entries now say what these blocks are actually made of. It is not a fudge — a light
+is a plastic housing around a glass lens, and plastic is about 0.2 W/(m·K) against steel's 50:
+
+| type | conductivity | specific heat | demand before | after |
+| --- | --- | --- | --- | --- |
+| `InteriorLight` | 2 | 900 | 21.4 | **0.43** |
+| `ReflectorLight` | 2 | 900 | — | — |
+| `EmissiveBlock` | 1 | 840 | 5.8 | **0.06** |
+| `CameraBlock` | 5 | 800 | 9.3 | **0.52** |
+
+Uncapped demand for the ship falls from **21.4 to about 5.6**, where the next driver is the armour
+panelling — the structure, which is what should have been setting the pace all along. The substep
+cap becomes very nearly irrelevant: at cap 6 nothing should be floored at all.
+
+Worth a run to confirm. The figures above are the stiffness relation, `conductivity / (mass ×
+specific heat)`, applied to the measured demands rather than a fresh measurement.

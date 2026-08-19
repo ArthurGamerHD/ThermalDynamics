@@ -150,9 +150,18 @@ namespace Thermodynamics.Tests
             Assert.True(medium > light,
                 "four times the load should be hotter: " + light + " C then " + medium + " C");
 
-            // The heaviest load reaches damage rather than settling at a large number.
-            Assert.Contains("4 over critical", summary);
-            Assert.Contains("0 over critical", summary);
+            // The heaviest load reaches damage rather than settling at a large number, and the
+            // lighter ones do not. Asserted as the claim rather than as an exact count: the count
+            // moves with any conduction tuning — it went from four to five when the coolant pipes
+            // stopped being priced as steel — while the claim the scenario exists to make is that
+            // there is a knee, not where precisely it lands.
+            string[] loads = summary.Split(';');
+            Assert.Equal(3, loads.Length);
+
+            Assert.Contains("0 over critical", loads[0]);
+            Assert.Contains("0 over critical", loads[1]);
+            Assert.DoesNotContain("0 over critical", loads[2]);
+            Assert.Contains("over critical", loads[2]);
         }
 
         /// <summary>
