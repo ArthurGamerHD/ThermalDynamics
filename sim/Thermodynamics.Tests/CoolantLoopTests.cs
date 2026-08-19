@@ -336,6 +336,68 @@ namespace Thermodynamics.Tests
             Assert.Equal(0f, loop.LastWattsRejected, 3);
         }
 
+        /// <summary>
+        /// A longer ring couples to the fluid harder and carries no more fluid, so it cools better.
+        ///
+        /// Documented the other way round for a while — that the coupling constants divide by segment
+        /// count, so length only spreads the same cooling over more contact points. Nothing divides
+        /// by segment count: <see cref="CoolantLoopBuilder.PipeConductance"/> is per pipe and the
+        /// fluid mass is the flat figure the loop definition declares. This pins the behaviour the
+        /// code actually has, so the two cannot drift apart again.
+        /// </summary>
+        [Fact]
+        public void LongerRingsCoupleHarderAndCarryTheSameFluid()
+        {
+            CoolantLoop small, large;
+            ThermalNode smallSink, largeSink;
+            ThermalSimulation a = RingOverOneHotBlock(3, 3, out small, out smallSink);
+            ThermalSimulation b = RingOverOneHotBlock(9, 9, out large, out largeSink);
+
+            Assert.Equal(8, small.PipeCount);
+            Assert.Equal(32, large.PipeCount);
+
+            // Same fluid, whatever the length.
+            Assert.Equal(small.ThermalMass, large.ThermalMass, 3);
+
+            // Total coupling grows with the pipe count, one full-strength link each.
+            Assert.Equal(TotalConductance(small) * 4f, TotalConductance(large), 1);
+
+            // And the longer ring is the better cooler, with the same single sink face.
+            a.StepExact(60, Worlds.Shadow());
+            b.StepExact(60, Worlds.Shadow());
+
+            Assert.True(largeSink.Temperature < smallSink.Temperature,
+                "the 32-pipe ring left the block at " + largeSink.Temperature
+                + " K against the 8-pipe ring's " + smallSink.Temperature + " K");
+        }
+
+        private static float TotalConductance(CoolantLoop loop)
+        {
+            float total = 0f;
+            for (int i = 0; i < loop.Links.Count; i++) total += loop.Links[i].Conductance;
+            return total;
+        }
+
+        /// <summary>A ring of the given rectangle with one sink face down onto a 900 K armour block.</summary>
+        private static ThermalSimulation RingOverOneHotBlock(int width, int depth,
+            out CoolantLoop loop, out ThermalNode sink)
+        {
+            Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
+            sinks[1] = Vector3I.Down;
+
+            GridBuilder builder = GridBuilder.Large();
+            List<Vector3I> cells = PipeFitter.RectangleXZ(Vector3I.Zero, width, depth);
+            PipeFitter.BuildRing(builder, cells, -1, sinks);
+            builder.Place(Catalog.HeavyArmor(), cells[1] + Vector3I.Down);
+            BlockInstance hot = builder.Last;
+
+            ThermalSimulation simulation = builder.BuildSimulation(Isolated(), 300f);
+            loop = simulation.Solver.Loops[0];
+            sink = simulation.Solver.GetNode(hot);
+            sink.Temperature = 900f;
+            return simulation;
+        }
+
         [Fact]
         public void DisablingLoopsRemovesThemFromTheSolver()
         {

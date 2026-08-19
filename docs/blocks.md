@@ -64,8 +64,13 @@ Practical build advice:
 
 * Run the loop *through* your heat sources with sink faces against reactors, thrusters and
   batteries, then out to radiators or a cold hull section.
-* Loop length does not increase total transfer — the coupling constants divide by segment
-  count. Longer loops spread the same cooling over more contact points.
+* **Loop length does increase total transfer, and the fluid mass does not grow with it.** Each pipe
+  in the ring gets its own full-strength link to the fluid, so a 32-pipe ring couples at 32,000 W/K
+  against an 8-pipe ring's 8,000 W/K, while both carry the same 500 kg of coolant. A longer ring
+  therefore cools strictly better: measured with a single sink face on the same hot block, an
+  8-pipe ring took it to 549.8 K and a 32-pipe ring to 532.5 K, because the fixed fluid mass is
+  buffered by more pipe metal and so stays colder at the sink. Nothing divides by segment count.
+  Pinned by `LongerRingsCoupleHarderAndCarryTheSameFluid`.
 * A loop's temperature is saved and restored by member hash, so reloading cannot swap two loops'
   heat and rebuilding a ring does not reset it.
 
@@ -93,9 +98,9 @@ plumbing cannot flood a readout while the counts stay exact.
 `Gauge_LG_Radiator` / `Gauge_SG_Radiator` — a plain `CubeBlock`, 1×5×2 (LG), mounting only on
 Top and Bottom.
 
-It has **no script behaviour**. It is purely a definition-driven heat shedder: low specific
-heat (1), high emissivity (0.35) and a 1.25× surface area scaler, so it radiates faster than
-any armour block of comparable mass. To use it, conduct heat into it — mount it on a coolant
+It has **no script behaviour**. It is purely a definition-driven heat shedder: aluminium's specific
+heat (900 J/(kg K)), conductivity 1, high emissivity (0.35 against the 0.125 default) and a 1.25×
+surface area scaler, so it radiates faster than any armour block of comparable mass. To use it, conduct heat into it — mount it on a coolant
 pipe sink face or directly against a hot block — and keep its faces exposed to vacuum.
 
 ## Heat pump
