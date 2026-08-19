@@ -205,19 +205,15 @@ namespace Thermodynamics.Harness
 
             Stopwatch build = Stopwatch.StartNew();
 
+            // Built from the measured block census, because substep count is set by the
+            // *stiffest* node on the grid and therefore by its lightest block. This ladder used
+            // to build armour with a grating in eight, which was a step in the right direction
+            // from one block type and still had a lightest block twelve times heavier than a
+            // real ship's — so it asked for three substeps where a field ship asks for sixteen
+            // to thirty-two, and every millisecond below was measured on a hull an order of
+            // magnitude softer than the ones it described. See <see cref="Census"/>.
             GridBuilder builder = GridBuilder.Large();
-            BlockModel armour = Catalog.HeavyArmor();
-            BlockModel fitting = Catalog.Grating();
-
-            // Two block types, because substep count is set by the stiffest node on the grid and
-            // a hull built of one heavy block solves in a single substep however large it is.
-            // A ship is armour with light fittings bolted through it, and the fitting is the
-            // stiff node — so a benchmark of one block type measures a case the game never runs.
-            int index = 0;
-            foreach (Vector3I cell in cells)
-            {
-                builder.Place((index++ % 8) == 0 ? fitting : armour, cell);
-            }
+            builder.PlaceCensus(cells);
 
             ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), builder.Grid);
             for (int i = 0; i < builder.Placed.Count; i++)
@@ -301,7 +297,8 @@ namespace Thermodynamics.Harness
             // pumps and the room map for the whole grid.
 
             Vector3I spare = simulation.Grid.Max + new Vector3I(0, 0, 1);
-            simulation.AddBlock(new BlockInstance(armour, spare, BlockOrientation.Identity), 293.15f);
+            simulation.AddBlock(
+                new BlockInstance(Catalog.HeavyArmor(), spare, BlockOrientation.Identity), 293.15f);
 
             double worst = 0d;
             double total = 0d;
@@ -566,11 +563,7 @@ namespace Thermodynamics.Harness
             int maxSubsteps = settings.MaxSubsteps;
 
             GridBuilder builder = GridBuilder.Large();
-            int index = 0;
-            foreach (Vector3I cell in GridShapes.Ship(fuselageLength: 20, fuselageWidth: 7, bulkheadSpacing: 6))
-            {
-                builder.Place((index++ % 8) == 0 ? Catalog.Grating() : Catalog.HeavyArmor(), cell);
-            }
+            builder.PlaceCensus(GridShapes.Ship(fuselageLength: 20, fuselageWidth: 7, bulkheadSpacing: 6));
 
             ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);
             while (simulation.HasPendingWork) simulation.Update(FrameSeconds, Worlds.Shadow());
@@ -982,8 +975,7 @@ namespace Thermodynamics.Harness
             List<MemoryRow> rows = new List<MemoryRow>();
 
             HashSet<Vector3I> cells = LoadShapes.Build(shape, targetCells);
-            BlockModel armour = Catalog.HeavyArmor();
-            BlockModel fitting = Catalog.Grating();
+            BlockModel[] tiers = Census.Models();
 
             long baseline = Settled();
 
@@ -994,7 +986,7 @@ namespace Thermodynamics.Harness
             foreach (Vector3I cell in cells)
             {
                 BlockInstance block = new BlockInstance(
-                    (index++ % 8) == 0 ? fitting : armour, cell, BlockOrientation.Identity);
+                    tiers[Census.TierAt(index++)], cell, BlockOrientation.Identity);
                 instances.Add(block);
             }
 
@@ -1342,19 +1334,36 @@ namespace Thermodynamics.Harness
             GC.Collect();
         }
 
+        /// <summary>
+        /// Set false to build hulls the way the benchmarks used to — heavy armour with a grating
+        /// in eight — instead of from the measured block census.
+        ///
+        /// Kept only so an old figure can be reproduced. The legacy mix is not a ship: its
+        /// lightest block is twelve times heavier than a real ship's, so it asks for 2.25 substeps
+        /// where a real hull asks for twenty to thirty, and it makes the solver look an order of
+        /// magnitude cheaper than it is. See <see cref="Census"/>.
+        /// </summary>
+        public static bool UseCensus = true;
+
         /// <summary>Builds a grid and takes it all the way to a mapped, settled state.</summary>
         public static ThermalSimulation BuildSettled(string shape, int targetCells)
         {
             HashSet<Vector3I> cells = LoadShapes.Build(shape, targetCells);
 
             GridBuilder builder = GridBuilder.Large();
-            BlockModel armour = Catalog.HeavyArmor();
-            BlockModel fitting = Catalog.Grating();
 
-            int index = 0;
-            foreach (Vector3I cell in cells)
+            if (UseCensus)
             {
-                builder.Place((index++ % 8) == 0 ? fitting : armour, cell);
+                builder.PlaceCensus(cells);
+            }
+            else
+            {
+
+                int index = 0;
+                foreach (Vector3I cell in cells)
+                {
+                    builder.Place(Census.Models()[Census.TierAt(index++)], cell);
+                }
             }
 
             ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), builder.Grid);

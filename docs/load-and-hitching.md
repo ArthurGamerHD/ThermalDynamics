@@ -7,6 +7,13 @@ Companion to [scale-design.md](scale-design.md), which is the design for a milli
 still mostly unbuilt, and to [bugs-and-performance.md](bugs-and-performance.md), which is the
 record of an earlier investigation at eight thousand.
 
+> **Read [stiffness.md](stiffness.md) beside the ladder below.** Every figure on this page was
+> measured on a synthetic ship whose lightest block is a 200 kg grating, and a field dump has
+> since established that a real ship's lightest block is a 16 kg light fitting — which is twelve
+> times stiffer and sets the substep count for the whole grid. The benchmark ship asks for two
+> substeps where the real one asks for thirty-one, so the steady cost here is optimistic by more
+> than the runtime difference. The shapes of the curves and the spike findings are unaffected.
+
 ---
 
 ## The distinction the whole exercise rests on
@@ -44,10 +51,31 @@ dotnet run --project Thermodynamics.Sim -- bench hitch --size 125000  # per-tick
 dotnet run --project Thermodynamics.Sim -- bench load  --size 1000000 # what world load costs
 ```
 
-> **The harness runs on .NET 9; the game runs .NET Framework 4.8.** Absolute milliseconds here are
-> optimistic against the game by a factor this project has not measured directly, but which the
-> field data suggests is several. Ratios, counts and shapes of curve carry across; a millisecond
-> figure does not. Treat the tables below as a floor and the telemetry report as the truth.
+> **The harness runs on .NET 9; the game runs .NET Framework 4.8, and the factor is now
+> measured: six to eight.** The telemetry report divides a grid's solver milliseconds by the
+> substep passes it made and the elements each pass walked, and the harness's own benchmarks can
+> be divided the same way, so the two are directly comparable:
+>
+> | | elements | substeps | ns per element visit |
+> | --- | ---: | ---: | ---: |
+> | harness, 8,904-block ship | 29,683 | 28.1 | **3.97** |
+> | harness, 43,232-block ship | 140,095 | 28.1 | **5.67** |
+> | field, 1,293-block ship | 4,542 | 16.0 | **24.9** |
+> | field, 42,051-block ship | 132,195 | 11.0 | **46.6** |
+>
+> The 1,293-block field ship is the important row. Its whole working set is a few tens of
+> kilobytes and fits in L2 with room to spare, so cache pressure explains none of it — and it is
+> still **6.3x** the harness's rate on a grid seven times larger. The capital ship is 8.2x. What
+> is left is the runtime: no modern JIT, weaker bounds-check elimination, no vectorisation.
+>
+> Two caveats on those field figures. Telemetry was collecting in all of them, which switches the
+> solver's per-mechanism watt figures on and costs about 7 % on the harness and probably more on
+> 4.8. And the per-element rate includes the fixed per-step work — state sync, publish, the
+> stability estimate — so it inflates on a grid taking few substeps; both rows above are in a
+> regime where that is a minor term.
+>
+> So: **multiply every millisecond on this page by about seven** to guess at the game, and treat
+> ratios, counts and shapes of curve as the parts that carry across unchanged.
 
 **These benchmarks run one grid.** A world runs hundreds, and the largest single finding of this
 work — every grid ticking on the same frame — was invisible to all of them and came from a
@@ -78,13 +106,28 @@ All figures from this machine, release build, single thread, ship shape.
 
 ### The ladder
 
-| blocks | links | bbox | build | topology | rooms | exposure | full step | tick | cap | resident |
-| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 8,904 | 20,779 | 68,800 | 124 ms | 11.8 | 36.1 | 5.1 | 0.56 | 0.57 | 48 | 22 MB |
-| 32,800 | 73,787 | 328,640 | 238 ms | 27.8 | 76.2 | 5.9 | 2.84 | 1.56 | 13 | 98 MB |
-| 126,731 | 277,967 | 1,499,616 | 890 ms | 53.3 | 383.9 | 26.2 | 16.05 | 16.58 | 3 | 345 MB |
-| 505,566 | 1,079,559 | 6,838,104 | 5,552 ms | 220.1 | 3,191.3 | 133.1 | 52.63 | 22.16 | 1 | 1,639 MB |
-| 1,000,294 | 2,114,111 | 14,278,796 | 11,192 ms | 461.0 | 6,212.1 | 150.7 | 102.50 | 42.41 | 1 | 2,545 MB |
+Measured on hulls built from the block [`Census`](../sim/Thermodynamics.Harness/Census.cs) — the
+population of a real ship, rather than the heavy armour and gratings this ladder used to use. See
+[the note below](#the-ladder-was-measured-on-the-wrong-ship) for what that changed and why the
+figures moved so much.
+
+> These were taken before the per-step environment terms were cached; `bench report`'s ladder is
+> the current figure and is about a third faster at 125k. See
+> [benchmarks.md](benchmarks.md).
+
+| blocks | links | bbox | build | topology | rooms | exposure | full step | sub | tick | cap | resident |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 8,904 | 20,779 | 68,800 | 94 ms | 12.8 | 16.8 | 5.6 | 2.60 | 16 | 2.56 | 48 | 10 MB |
+| 32,800 | 73,787 | 328,640 | 148 ms | 29.2 | 35.0 | 7.9 | 9.88 | 16 | 7.49 | 13 | 40 MB |
+| 126,731 | 277,967 | 1,499,616 | 571 ms | 59.5 | 176.7 | 49.5 | 82.18 | 16 | 13.10 | 3 | 137 MB |
+| 505,566 | 1,079,559 | 6,838,104 | 3,376 ms | 283.2 | 1,446.8 | 261.8 | 298.95 | 16 | 25.68 | 1 | 613 MB |
+| 1,000,294 | 2,114,111 | 14,278,796 | 6,683 ms | 589.9 | 2,739.7 | 194.1 | 623.43 | 16 | 55.04 | 1 | 1,182 MB |
+
+**`sub` is 16 at every rung, and 16 is the ceiling.** `MaxSubsteps` is refusing what the stability
+estimate asks for on every hull on this ladder, from nine thousand blocks upward — which is
+exactly what a field dump found a real 1,293-block ship doing on every one of its steps. The
+`full step` column is therefore not the cost of an accurate step; it is the cost of the most
+accurate step the default settings will pay for, with the overshoot clamps carrying the rest.
 
 The topology, rooms and exposure columns are each stage run **whole**, which is what a one-shot
 rebuild or a world load costs. They are not what a tick costs; every one of them is now spread.
@@ -96,9 +139,29 @@ is how many substeps that leaves. Below about a hundred thousand blocks the budg
 the two agree. Above it they diverge, and that divergence is the trade being made: at a million
 blocks a tick pays 42 ms instead of 103, and simulated time advances more slowly to pay for it.
 
-**The solver scales.** Cost per link visit is 9.0 ns at 8k and 16.2 ns at a million — it doubles
-across a working set that grows from half a megabyte to two gigabytes, which is a cache effect
-and not an algorithmic one. Nothing in the conduction pass is superlinear.
+**The solver scales.** Cost per link visit is 7.8 ns at 8k and 18.4 ns at a million — it doubles
+across a working set that grows from ten megabytes to a gigabyte, which is a cache effect and not
+an algorithmic one. Nothing in the conduction pass is superlinear.
+
+### The ladder was measured on the wrong ship
+
+Every figure above moved when the hulls did, and the full step at a million blocks moved by six
+times — from 102 ms to 623 ms. Nothing about the solver changed. What changed is the ship.
+
+A step is divided into as many substeps as the **stiffest** block on the grid needs, so the cost
+of a grid is decided by its *lightest* block and not by its average one. This ladder used to build
+heavy armour with a 200 kg grating in eight, and a real ship's lightest block is a 16 kg light
+fitting — twelve times lighter, and therefore twelve times stiffer. The benchmark hull asked for
+three substeps where field dumps measure twenty-one to thirty-one.
+
+So the old ladder was not slightly optimistic. It was measuring a hull an order of magnitude
+softer than the ships it claimed to describe, and every "the solver costs X" statement built on it
+understated the steady cost by about six. The block mix now comes from the block-type table of a
+field dump — see [`Census`](../sim/Thermodynamics.Harness/Census.cs) — and
+`CensusFidelityTests` fails if it drifts away from what the reports say again.
+
+The spike findings below are unaffected: they are about work proportional to what changed, and
+that is a property of the algorithms rather than of the block mix.
 
 ### The spike, before and after
 
