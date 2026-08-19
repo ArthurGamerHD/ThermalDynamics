@@ -103,6 +103,7 @@ The probe order is `$SE_BIN`, the default Steam path, then the mod's own
 | `cooling-runaway` | More heat than the radiators can shed. Where is the knee, and does it reach damage? |
 | `loop-stiffness` | A long ring is the stiffest thing a player can build cheaply. Does the substep estimate see it? |
 | `loop-layout` | One ring or several, and where to put the sinks? Splitting buys nothing; spreading the sources buys 41 K. |
+| `air-conditioning` | Can a heat pump cool a room? Yes, through a wall, and only a pressurised one. |
 
 > **`perf` and `solver` are not the same measurement.** `perf` steps a settled cube of one block
 > type, where nearly every link joins two cells at the same temperature — and the conduction

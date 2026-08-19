@@ -55,6 +55,7 @@ namespace Thermodynamics.Harness
             "cooling-runaway",
             "loop-stiffness",
             "loop-layout",
+            "air-conditioning",
         };
 
         public static ScenarioResult Run(string name)
@@ -93,6 +94,7 @@ namespace Thermodynamics.Harness
                 case "cooling-runaway": return CoolingRunaway();
                 case "loop-stiffness": return LoopStiffness();
                 case "loop-layout": return LoopLayout();
+                case "air-conditioning": return AirConditioning();
                 default:
                     throw new ArgumentException("Unknown scenario: " + name);
             }
@@ -2189,6 +2191,67 @@ namespace Thermodynamics.Harness
                 if (t > hottest) hottest = t;
             }
             return hottest;
+        }
+
+        /// <summary>
+        /// Can a heat pump air-condition a room?
+        ///
+        /// Not directly: a heat pump binds to two *blocks*, and a room's air is not a block. It has to
+        /// work through a wall — put the cold face on a block that bounds the compartment and the wall
+        /// goes cold, the air in contact with it gives up its heat, and the room follows. The hot face
+        /// goes outside, into a radiator.
+        ///
+        /// Which means it only works on a **pressurised** room. With no air there is nothing coupling
+        /// the compartment to its walls, and the pump is just chilling a piece of hull.
+        /// </summary>
+        public static ScenarioResult AirConditioning()
+        {
+            ScenarioRunner runner;
+            float without = ConditionedCabin(false, out runner);
+            float with = ConditionedCabin(true, out runner);
+
+            return Result("air-conditioning", runner,
+                "A sealed cabin with a 60 kW reactor in it, and a heat pump on one wall rejecting into "
+                + "a radiator outside. Room air settles at " + C(without) + " with the pump off and "
+                + C(with) + " with it on, a difference of " + (without - with).ToString("n0") + " K.");
+        }
+
+        private static float ConditionedCabin(bool pumpRunning, out ScenarioRunner runner)
+        {
+            GridBuilder builder = GridBuilder.Large();
+            builder.Shell(Catalog.LightArmor(), new Vector3I(-1, -1, -1), new Vector3I(4, 4, 4));
+
+            builder.Place(Catalog.Reactor(), new Vector3I(1, 1, 1)).Producing(60000f);
+
+            // Cold face on the cabin wall, hot face away from it, radiator beyond that.
+            builder.Place(Catalog.HeatPump(), new Vector3I(1, 1, -2),
+                new BlockOrientation(Base6Directions.Direction.Backward, Base6Directions.Direction.Up));
+            builder.Place(Catalog.Radiator(), new Vector3I(1, 1, -4));
+
+            ThermalSettings settings = new ThermalSettings();
+            settings.EnableSolarHeat = false;
+            settings.EnableFriction = false;
+            settings.EnableDamage = false;
+
+            ThermalSimulation simulation = builder.BuildSimulation(settings.Derive(), 320f);
+            simulation.RebuildAll();
+
+            Vector3I inside = new Vector3I(2, 1, 1);
+            simulation.SetRoomPressure(inside, 1f);
+            RoomAirNode air = simulation.Solver.GetRoomAir(simulation.Rooms.Map, inside);
+
+            IList<HeatPumpDevice> pumps = simulation.Solver.HeatPumps;
+            for (int i = 0; i < pumps.Count; i++)
+            {
+                pumps[i].Enabled = pumpRunning;
+                pumps[i].PowerAvailable = 1f;
+            }
+
+            runner = new ScenarioRunner(simulation);
+            runner.Environment = t => Worlds.Shadow();
+            runner.Run(5000f, 1000f);
+
+            return air == null ? 0f : air.Temperature;
         }
 
         private static ScenarioResult Result(string name, ScenarioRunner runner, string summary)

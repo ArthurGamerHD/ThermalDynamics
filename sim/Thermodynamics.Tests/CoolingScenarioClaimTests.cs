@@ -218,5 +218,38 @@ namespace Thermodynamics.Tests
                 "one ring with spread sources (" + spread + " C) and four rings (" + split
                 + " C) should be within a few kelvin; splitting is not what helps");
         }
+    
+        /// <summary>
+        /// A heat pump can air-condition a compartment, through the wall rather than directly — and
+        /// only a pressurised one, because with no air there is nothing coupling the room to its walls.
+        /// </summary>
+        [Fact]
+        public void AHeatPumpOnAWallCoolsTheRoomBehindIt()
+        {
+            ScenarioResult result = Scenarios.Run("air-conditioning");
+            string summary = result.Summary;
+
+            float off = ScenarioClaimTests.ExtractCelsius(summary, 0);
+            float on = ScenarioClaimTests.ExtractCelsius(summary, 1);
+
+            Assert.True(off - on > 20f,
+                "the pump should make a real difference to the room: " + off + " C then " + on + " C");
+
+            // It works through the wall: the pump binds to blocks, never to the air itself.
+            ThermalSimulation simulation = result.Runner.Simulation;
+            IList<HeatPumpDevice> pumps = simulation.Solver.HeatPumps;
+
+            Assert.NotEmpty(pumps);
+            Assert.True(pumps[0].IsConnected);
+            Assert.InRange(pumps[0].ColdNodeIndex, 0, simulation.Solver.Nodes.Count - 1);
+
+            // And the room it cools is coupled to its walls, which is what carries the cold inward.
+            RoomAirNode air = simulation.Solver.GetRoomAir(
+                simulation.Rooms.Map, new VRageMath.Vector3I(2, 1, 1));
+
+            Assert.NotNull(air);
+            Assert.True(air.HasAir, "an unpressurised room cannot be air-conditioned");
+            Assert.NotEmpty(air.Links);
+        }
     }
 }

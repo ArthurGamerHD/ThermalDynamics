@@ -148,6 +148,21 @@ concentrates it somewhere you can radiate it away from. And nothing clamps its c
 the cost of a kelvin simply rises without limit as that side approaches absolute zero, so the
 block's own electrical rating stops it long before the temperature does.
 
+### As air conditioning
+
+Yes, with one indirection. A heat pump binds to two **blocks**, and a room's air is not a block, so it
+cannot draw from a compartment directly. Put its cold face on a block that *bounds* the compartment
+and the wall goes cold; the air touching that wall gives up its heat to it, and the room follows. The
+hot face goes outward, into a radiator.
+
+Two consequences. It only works on a **pressurised** room — with no air there is nothing coupling the
+compartment to its walls, and the pump is just chilling a piece of hull. And the rate is limited by
+how much wall the room has in contact with the cooled block, not by the pump's rating: one wall of a
+large cabin is a small window to pull heat through.
+
+Measured by the `air-conditioning` scenario: a sealed cabin with a 60 kW reactor inside settles at
+−50 C with the pump off and −102 C with it on.
+
 The terminal shows what it is moving, what it is drawing, and the coefficient between them. A pump
 with nothing bolted to one of its faces says so rather than silently doing nothing.
 
