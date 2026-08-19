@@ -47,6 +47,13 @@ namespace Thermodynamics.Harness
             "shadow-cost",
             "weather",
             "underground",
+            "cooling-plant",
+            "loop-faults",
+            "loop-dry",
+            "heatpump-backwards",
+            "heatpump-limits",
+            "cooling-runaway",
+            "loop-stiffness",
         };
 
         public static ScenarioResult Run(string name)
@@ -77,6 +84,13 @@ namespace Thermodynamics.Harness
                 case "shadow-cost": return ShadowCost();
                 case "weather": return Weather();
                 case "underground": return Underground();
+                case "cooling-plant": return CoolingPlant();
+                case "loop-faults": return LoopFaults();
+                case "loop-dry": return LoopDry();
+                case "heatpump-backwards": return HeatPumpBackwards();
+                case "heatpump-limits": return HeatPumpLimits();
+                case "cooling-runaway": return CoolingRunaway();
+                case "loop-stiffness": return LoopStiffness();
                 default:
                     throw new ArgumentException("Unknown scenario: " + name);
             }
@@ -1568,6 +1582,459 @@ namespace Thermodynamics.Harness
                    .Append(", because the deadzone is measured from sea level and not from the ground.");
 
             return Result("underground", last, summary.ToString());
+        }
+
+        // ---- the cooling plant, whole and broken ---------------------------------------------
+        //
+        // Everything below was written against a field telemetry dump: a 1,355 cell ship carrying
+        // 288 coolant pipe blocks, 4 pumps, 8 radiators and 4 heat pumps, peaking at 886 K on a
+        // hydrogen thruster, granted 3 substeps against the 21 its lightest block demanded. Nothing
+        // in the suite exercised those four systems together, and the dump could not say whether
+        // any of them worked.
+
+        /// <summary>
+        /// The general case: a whole cooling plant, on the shape the field ship is.
+        ///
+        /// Generation on the inside — a reactor and a bank of hydrogen thrusters, which is what the
+        /// dump found running hottest — a pumped ring with sink faces against both, heat pumps
+        /// lifting out of the ring, and radiators on the skin taking their reject heat. That is the
+        /// full chain the mod exists to make possible, and it is the one arrangement no scenario
+        /// tested end to end.
+        ///
+        /// Reported against the same ship with the plumbing left out, because the number that means
+        /// anything is the difference the plant makes rather than the temperature it settles at.
+        /// </summary>
+        public static ScenarioResult CoolingPlant()
+        {
+            float withPlant, withoutPlant, loopDrawn, loopShed, pumpLift;
+            float ignoredDrawn, ignoredShed, ignoredLift;
+
+            ScenarioRunner plant = BuildCoolingPlant(true, out withPlant,
+                out loopDrawn, out loopShed, out pumpLift);
+            BuildCoolingPlant(false, out withoutPlant,
+                out ignoredDrawn, out ignoredShed, out ignoredLift);
+
+            return Result("cooling-plant", plant,
+                "A reactor and eight hydrogen thrusters behind a pumped ring, four heat pumps and "
+                + "eight radiators. Hottest block " + C(withPlant) + " with the plant, "
+                + C(withoutPlant) + " without it. The loop draws "
+                + loopDrawn.ToString("n0") + " W and sheds " + loopShed.ToString("n0")
+                + " W; the pumps lift " + pumpLift.ToString("n0") + " W.");
+        }
+
+        private static ScenarioRunner BuildCoolingPlant(bool plumbing, out float hottest,
+            out float loopDrawn, out float loopShed, out float pumpLift)
+        {
+            GridBuilder builder = GridBuilder.Large();
+
+            // A hull with the machinery buried in it, as a real ship has.
+            builder.Fill(Catalog.LightArmor(), new Vector3I(0, 0, 0), new Vector3I(12, 4, 6));
+
+            builder.Place(Catalog.Reactor(), new Vector3I(1, 1, 1))
+                   .Producing(3f * ThermalConstants.MegawattsToWatts);
+
+            for (int i = 0; i < 8; i++)
+            {
+                builder.Place(Catalog.Thruster(), new Vector3I(3 + i, 1, 1))
+                       .Thrusting(0.4f * ThermalConstants.MegawattsToWatts);
+            }
+
+            if (plumbing)
+            {
+                // The ring runs along the machinery with its sinks facing it, then out to the skin.
+                Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
+                for (int i = 1; i <= 9; i++) sinks[i] = Vector3I.Down;
+
+                List<Vector3I> cells = PipeFitter.RectangleXZ(new Vector3I(1, 2, 1), 11, 4);
+                PipeFitter.BuildRing(builder, cells, -1, sinks);
+
+                // Four pumps lifting out of the ring into radiators standing clear of the hull.
+                for (int i = 0; i < 4; i++)
+                {
+                    Vector3I pump = new Vector3I(2 + (i * 3), 4, 1);
+                    builder.Place(Catalog.HeatPump(), pump,
+                        new BlockOrientation(Base6Directions.Direction.Down, Base6Directions.Direction.Forward));
+                    builder.Place(Catalog.Radiator(), pump + Vector3I.Up);
+                }
+            }
+
+            ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
+
+            // The host owns a pump's switch and its power; nothing in the harness plays that part.
+            IList<HeatPumpDevice> pumps = simulation.Solver.HeatPumps;
+            for (int i = 0; i < pumps.Count; i++)
+            {
+                pumps[i].Enabled = true;
+                pumps[i].PowerAvailable = 1f;
+            }
+
+            ScenarioRunner runner = new ScenarioRunner(simulation);
+            runner.Environment = t => Worlds.Shadow();
+            runner.Track("reactor", simulation.Grid.GetAtCell(new Vector3I(1, 1, 1)));
+            if (simulation.Solver.Loops.Count > 0) runner.TrackLoop("coolant", simulation.Solver.Loops[0]);
+            runner.Run(7200f, 600f);
+
+            hottest = runner.Final.HottestTemperature;
+
+            loopDrawn = 0f;
+            loopShed = 0f;
+            for (int i = 0; i < simulation.Solver.Loops.Count; i++)
+            {
+                loopDrawn += simulation.Solver.Loops[i].LastWattsAbsorbed;
+                loopShed += simulation.Solver.Loops[i].LastWattsRejected;
+            }
+
+            pumpLift = 0f;
+            for (int i = 0; i < pumps.Count; i++) pumpLift += pumps[i].LastLiftedWatts;
+
+            return runner;
+        }
+
+        /// <summary>
+        /// Every way a ring fails to become a loop, on one grid, each reported with its reason.
+        ///
+        /// The player-facing failure this covers is "I built a ring and nothing happened", which is
+        /// invisible in the loop list by construction: the symptom is that the loop is absent. The
+        /// field dump had six copies of one ship, four with a loop and two without, and no way to
+        /// tell what differed.
+        /// </summary>
+        public static ScenarioResult LoopFaults()
+        {
+            GridBuilder builder = GridBuilder.Large();
+
+            // A ring that works.
+            PipeFitter.BuildRing(builder, PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3));
+
+            // A closed ring with no pump in it.
+            List<Vector3I> pumpless = PipeFitter.RectangleXZ(new Vector3I(0, 10, 0), 3, 3);
+            for (int i = 0; i < pumpless.Count; i++)
+            {
+                Vector3I cell = pumpless[i];
+                Vector3I toPrevious = pumpless[(i - 1 + pumpless.Count) % pumpless.Count] - cell;
+                Vector3I toNext = pumpless[(i + 1) % pumpless.Count] - cell;
+
+                BlockModel model = toPrevious == -toNext
+                    ? Catalog.CoolantPipeStraight()
+                    : Catalog.CoolantPipeCorner();
+                builder.Place(model, cell, PipeFitter.Orient(model, toPrevious, toNext));
+            }
+
+            // A pump with nothing on either end.
+            builder.Place(Catalog.CoolantPump(), new Vector3I(0, 20, 0),
+                new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));
+
+            // A run walking into ordinary armour.
+            builder.Place(Catalog.CoolantPump(), new Vector3I(0, 25, 0),
+                new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));
+            builder.Place(Catalog.HeavyArmor(), new Vector3I(0, 25, 1));
+            builder.Place(Catalog.HeavyArmor(), new Vector3I(0, 25, -1));
+
+            ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
+            CoolantLoopDiagnostics diagnosis = simulation.DiagnoseLoops();
+
+            ScenarioRunner runner = new ScenarioRunner(simulation);
+            runner.Environment = t => Worlds.Shadow();
+            runner.Run(60f, 30f);
+
+            StringBuilder faults = new StringBuilder();
+            for (int i = 1; i < diagnosis.Counts.Length; i++)
+            {
+                if (diagnosis.Counts[i] == 0) continue;
+                if (faults.Length > 0) faults.Append("; ");
+                faults.Append(diagnosis.Counts[i]).Append(" x ")
+                      .Append(CoolantLoopDiagnostics.Describe((CoolantFault)i));
+            }
+
+            return Result("loop-faults", runner,
+                diagnosis.Loops + " loop from " + diagnosis.PipesInLoops + " pipes, "
+                + diagnosis.PipesAdrift + " pipes adrift: " + faults + ".");
+        }
+
+        /// <summary>
+        /// A loop that formed correctly and cools nothing, because no sink face touches anything.
+        ///
+        /// The worst kind of failure to diagnose from a readout: the ring is closed, the pump is
+        /// there, the loop count is 1, and the coolant sits at hull temperature forever. Every
+        /// figure looks healthy. Only the watts moved give it away, which is why they are collected.
+        /// </summary>
+        public static ScenarioResult LoopDry()
+        {
+            float plumbedOnly = RingAgainstReactor(false);
+            float withSink = RingAgainstReactor(true);
+
+            GridBuilder builder = GridBuilder.Large();
+            List<Vector3I> cells = PipeFitter.RectangleXZ(Vector3I.Zero, 4, 3);
+            PipeFitter.BuildRing(builder, cells);
+            builder.Place(Catalog.Reactor(), new Vector3I(1, -1, 0))
+                   .Producing(2f * ThermalConstants.MegawattsToWatts);
+
+            ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
+            ScenarioRunner runner = new ScenarioRunner(simulation);
+            runner.Environment = t => Worlds.Shadow();
+            runner.Track("reactor", simulation.Grid.GetAtCell(new Vector3I(1, -1, 0)));
+            runner.TrackLoop("coolant", simulation.Solver.Loops[0]);
+            runner.Run(3600f, 600f);
+
+            CoolantLoop loop = simulation.Solver.Loops[0];
+
+            return Result("loop-dry", runner,
+                "A closed pumped ring with no sink face against the reactor: 1 loop, coolant at "
+                + C(loop.Temperature) + ", drawing " + loop.LastWattsAbsorbed.ToString("n0")
+                + " W. Reactor " + C(plumbedOnly) + " with plumbing only against " + C(withSink)
+                + " with one sink face turned to meet it.");
+        }
+
+        private static float RingAgainstReactor(bool sink)
+        {
+            GridBuilder builder = GridBuilder.Large();
+
+            Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
+            if (sink) sinks[1] = Vector3I.Down;
+
+            PipeFitter.BuildRing(builder, PipeFitter.RectangleXZ(Vector3I.Zero, 4, 3), -1, sinks);
+            builder.Place(Catalog.Reactor(), new Vector3I(1, -1, 0))
+                   .Producing(2f * ThermalConstants.MegawattsToWatts);
+            BlockInstance reactor = builder.Last;
+
+            ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
+            ScenarioRunner runner = new ScenarioRunner(simulation);
+            runner.Environment = t => Worlds.Shadow();
+            runner.Run(3600f, 1800f);
+
+            return simulation.Solver.GetNode(reactor).Temperature;
+        }
+
+        /// <summary>
+        /// A heat pump installed the wrong way round: cold face on the radiator, hot face on the
+        /// reactor.
+        ///
+        /// The worst realistic build error, because it is a rotation rather than a mistake anyone
+        /// would notice, and because it does not merely fail — it pumps the radiator's cold into the
+        /// reactor and charges electricity for making the ship hotter. The model must punish it, and
+        /// the terminal must be able to say so.
+        /// </summary>
+        public static ScenarioResult HeatPumpBackwards()
+        {
+            float correct = PumpBetweenReactorAndRadiator(true);
+            float backwards = PumpBetweenReactorAndRadiator(false);
+
+            GridBuilder builder = GridBuilder.Large();
+            ScenarioRunner runner = PumpRunner(false, builder);
+
+            return Result("heatpump-backwards", runner,
+                "A pump between a 500 kW reactor and a radiator. Reactor " + C(correct)
+                + " with the cold face against it, " + C(backwards)
+                + " with the pump turned around — the wrong way costs "
+                + (backwards - correct).ToString("n1") + " K and the same electricity.");
+        }
+
+        private static float PumpBetweenReactorAndRadiator(bool correctWayRound)
+        {
+            GridBuilder builder = GridBuilder.Large();
+            ScenarioRunner runner = PumpRunner(correctWayRound, builder);
+            return runner.Final.Tracked["reactor"];
+        }
+
+        private static ScenarioRunner PumpRunner(bool correctWayRound, GridBuilder builder)
+        {
+            builder.Place(Catalog.Reactor(), Vector3I.Zero).Producing(500000f);
+            BlockInstance reactor = builder.Last;
+
+            // Cold face looks at the reactor when correct, at the radiator when not.
+            Base6Directions.Direction forward = correctWayRound
+                ? Base6Directions.Direction.Backward
+                : Base6Directions.Direction.Forward;
+
+            builder.Place(Catalog.HeatPump(), new Vector3I(0, 0, 1),
+                new BlockOrientation(forward, Base6Directions.Direction.Up));
+            builder.Place(Catalog.Radiator(), new Vector3I(0, 0, 2));
+
+            ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
+
+            IList<HeatPumpDevice> pumps = simulation.Solver.HeatPumps;
+            for (int i = 0; i < pumps.Count; i++)
+            {
+                pumps[i].Enabled = true;
+                pumps[i].PowerAvailable = 1f;
+            }
+
+            ScenarioRunner runner = new ScenarioRunner(simulation);
+            runner.Environment = t => Worlds.Shadow();
+            runner.Track("reactor", reactor);
+            runner.Run(3600f, 600f);
+            return runner;
+        }
+
+        /// <summary>
+        /// One pump, swept across the gap it has to lift over, reporting which of its three limits
+        /// binds at each width and what the coefficient costs.
+        ///
+        /// The docs call which limit binds the block's whole character: cheap and rating-bound over a
+        /// small gap, ruinous and Carnot-bound over a large one. That is a claim about numbers and it
+        /// had none behind it. The last row also settles the documented promise that nothing clamps
+        /// the cold side — the electrical rating stops it long before the temperature does.
+        /// </summary>
+        public static ScenarioResult HeatPumpLimits()
+        {
+            StringBuilder report = new StringBuilder();
+            ScenarioRunner last = null;
+            float[] hotSides = new float[] { 300f, 400f, 700f, 1200f };
+
+            for (int i = 0; i < hotSides.Length; i++)
+            {
+                GridBuilder builder = GridBuilder.Large();
+                builder.Place(Catalog.HeavyArmor(), Vector3I.Zero);
+                BlockInstance cold = builder.Last;
+                builder.Place(Catalog.HeatPump(), new Vector3I(0, 0, 1),
+                    new BlockOrientation(Base6Directions.Direction.Backward, Base6Directions.Direction.Up));
+                builder.Place(Catalog.HeavyArmor(), new Vector3I(0, 0, 2));
+                BlockInstance hot = builder.Last;
+
+                ThermalSettings settings = new ThermalSettings();
+                settings.EnableEnvironment = false;
+                settings.EnableDamage = false;
+
+                ThermalSimulation simulation = builder.BuildSimulation(settings.Derive(), 290f);
+                HeatPumpDevice pump = simulation.Solver.HeatPumps[0];
+                pump.Enabled = true;
+                pump.PowerAvailable = 1f;
+
+                // Both sides pinned by an external hand each step, so the sweep measures the pump
+                // at a gap rather than measuring the gap closing.
+                float target = hotSides[i];
+                ScenarioRunner runner = new ScenarioRunner(simulation);
+                runner.Environment = t => Worlds.Shadow();
+                runner.AfterStep = sim => sim.Solver.GetNode(hot).Temperature = target;
+                runner.Track("cold", cold);
+                runner.Run(60f, 30f);
+
+                bool ratingBound = pump.LastLiftedWatts >= pump.RatedWatts - 1f;
+                report.Append("gap ").Append((target - simulation.Solver.GetNode(cold).Temperature).ToString("n0"))
+                      .Append(" K: lift ").Append(pump.LastLiftedWatts.ToString("n0"))
+                      .Append(" W, cop ").Append(pump.LastCoefficient.ToString("n2"))
+                      .Append(ratingBound ? " (rating)" : " (Carnot)")
+                      .Append(i == hotSides.Length - 1 ? "" : "; ");
+
+                last = runner;
+            }
+
+            return Result("heatpump-limits", last,
+                "One 60 kW pump against four gap widths. " + report + ".");
+        }
+
+        /// <summary>
+        /// More heat than the radiators can shed, which is where a real ship ends up.
+        ///
+        /// A cooling plant does not fail gradually: while it has headroom it holds temperature almost
+        /// flat, and past that everything it touches rises together, because the loop ties them into
+        /// one mass. This measures where that knee is and confirms the model reaches damage rather
+        /// than running away to a number.
+        /// </summary>
+        public static ScenarioResult CoolingRunaway()
+        {
+            StringBuilder report = new StringBuilder();
+            ScenarioRunner last = null;
+            float[] megawatts = new float[] { 0.5f, 2f, 8f };
+
+            for (int i = 0; i < megawatts.Length; i++)
+            {
+                GridBuilder builder = GridBuilder.Large();
+
+                Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
+                sinks[1] = Vector3I.Down;
+                sinks[5] = Vector3I.Up;
+
+                List<Vector3I> cells = PipeFitter.RectangleXZ(Vector3I.Zero, 5, 5);
+                PipeFitter.BuildRing(builder, cells, -1, sinks);
+
+                builder.Place(Catalog.Reactor(), cells[1] + Vector3I.Down)
+                       .Producing(megawatts[i] * ThermalConstants.MegawattsToWatts);
+                BlockInstance reactor = builder.Last;
+                builder.Place(Catalog.Radiator(), cells[5] + Vector3I.Up);
+
+                ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
+                ScenarioRunner runner = new ScenarioRunner(simulation);
+                runner.Environment = t => Worlds.Shadow();
+                runner.Track("reactor", reactor);
+                runner.TrackLoop("coolant", simulation.Solver.Loops[0]);
+                runner.Run(7200f, 900f);
+
+                report.Append(megawatts[i].ToString("n1")).Append(" MW: reactor ")
+                      .Append(C(runner.Final.Tracked["reactor"])).Append(", coolant ")
+                      .Append(C(runner.Final.Tracked["coolant"]))
+                      .Append(", ").Append(runner.Final.OverheatingBlocks).Append(" over critical")
+                      .Append(i == megawatts.Length - 1 ? "" : "; ");
+
+                last = runner;
+            }
+
+            return Result("cooling-runaway", last,
+                "One radiator against three heat loads. " + report + ".");
+        }
+
+        /// <summary>
+        /// A very long ring, which is the stiffest thing a player can build cheaply.
+        ///
+        /// Each pipe couples to the fluid at full strength and the fluid mass is a flat figure per
+        /// loop, so coupling grows with length while capacity does not: a 76 pipe ring reaches a
+        /// time constant shorter than the step that integrates it. The substep estimate has to see
+        /// that — a stiff element the estimator cannot see is how an integrator goes unstable — so
+        /// this reports the demand, what was granted, and whether energy survived.
+        /// </summary>
+        public static ScenarioResult LoopStiffness()
+        {
+            StringBuilder report = new StringBuilder();
+            ScenarioRunner last = null;
+            int[] sides = new int[] { 3, 9, 20 };
+
+            for (int i = 0; i < sides.Length; i++)
+            {
+                GridBuilder builder = GridBuilder.Large();
+
+                Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
+                sinks[1] = Vector3I.Down;
+
+                List<Vector3I> cells = PipeFitter.RectangleXZ(Vector3I.Zero, sides[i], sides[i]);
+                PipeFitter.BuildRing(builder, cells, -1, sinks);
+                builder.Place(Catalog.HeavyArmor(), cells[1] + Vector3I.Down);
+                BlockInstance hot = builder.Last;
+
+                ThermalSettings settings = new ThermalSettings();
+                settings.EnableEnvironment = false;
+                settings.EnableDamage = false;
+
+                ThermalSimulation simulation = builder.BuildSimulation(settings.Derive(), 300f);
+                CoolantLoop loop = simulation.Solver.Loops[0];
+                simulation.Solver.GetNode(hot).Temperature = 1200f;
+
+                float conductance = 0f;
+                for (int l = 0; l < loop.Links.Count; l++) conductance += loop.Links[l].Conductance;
+
+                float before = simulation.Solver.TotalEnergy;
+
+                ScenarioRunner runner = new ScenarioRunner(simulation);
+                runner.Environment = t => Worlds.Shadow();
+                runner.Track("sink", hot);
+                runner.TrackLoop("coolant", loop);
+                runner.Run(300f, 150f);
+
+                float after = simulation.Solver.TotalEnergy;
+
+                report.Append(loop.PipeCount).Append(" pipes: ")
+                      .Append(conductance.ToString("n0")).Append(" W/K on ")
+                      .Append(loop.ThermalMass.ToString("n0")).Append(" J/K, tau ")
+                      .Append((loop.ThermalMass / conductance).ToString("n3")).Append(" s, ")
+                      .Append(simulation.Solver.LastSubsteps).Append(" substeps for ")
+                      .Append(simulation.Solver.LastRequiredSubsteps.ToString("n1"))
+                      .Append(" demanded, energy x").Append((after / before).ToString("n4"))
+                      .Append(i == sides.Length - 1 ? "" : "; ");
+
+                last = runner;
+            }
+
+            return Result("loop-stiffness", last,
+                "A ring at three lengths, step " + (1f / new ThermalSettings().Derive().StepsPerSecond).ToString("n4")
+                + " s. " + report + ".");
         }
 
         private static ScenarioResult Result(string name, ScenarioRunner runner, string summary)

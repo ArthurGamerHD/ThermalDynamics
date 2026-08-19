@@ -176,6 +176,15 @@ Coolant rings are laid out by `PipeFitter`, which searches the 24 block orientat
 whose ports face the right way — building rings by hand means deriving rotations by hand, and
 that is how you end up with a scenario that silently tests nothing.
 
+> **It had that failure itself.** A pump carries no sink ports; every rectangle's first straight run
+> is index 1; `BuildRing` put the pump there by default, and a sink requested on index 1 was dropped
+> without a word. Every ring in this repository asked for exactly that, so **no test or scenario had
+> ever exercised a sink face** — they passed on ordinary block-to-block conduction between the hot
+> block and the pipe above it, which happens whether a sink exists or not.
+> `BuildRing` now moves an automatically chosen pump aside, and an explicitly named pump index that
+> collides with a sink is an error. `PipeFitterTests` pins both, and the loop tests now assert the
+> link count they expect instead of assuming the sink arrived.
+
 ```csharp
 var ring = PipeFitter.RectangleXZ(Vector3I.Zero, width: 4, depth: 3);
 PipeFitter.BuildRing(builder, ring);      // pump goes on the first straight run

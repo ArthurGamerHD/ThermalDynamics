@@ -200,6 +200,48 @@ namespace Thermodynamics.Tests
             Assert.Equal(777f, simulation.Solver.Loops[0].Temperature, 3);
         }
 
+        /// <summary>
+        /// A sink face carries heat the pipe blocks alone would not.
+        ///
+        /// The original form of this test asked only that the fluid warmed and the block cooled,
+        /// with the hot block directly under a pipe — which conducts block to block whether a sink
+        /// face exists or not, so the assertions held with no sink present at all. And none was:
+        /// the sink was requested on ring index 1, which is where the pump goes on every rectangle,
+        /// and the pump silently discarded it. The comparison against the same ring without a sink
+        /// is what makes this about sink faces.
+        /// </summary>
+        [Fact]
+        public void ASinkFaceCarriesMoreThanThePipesAlone()
+        {
+            float withSink = HeatDrawnFromABlockUnderTheRing(true);
+            float withoutSink = HeatDrawnFromABlockUnderTheRing(false);
+
+            Assert.True(withSink > withoutSink * 1.2f,
+                "the sink face drew " + withSink + " W against " + withoutSink
+                + " W from the pipes alone; a sink that adds nothing is a sink that is not there");
+        }
+
+        private static float HeatDrawnFromABlockUnderTheRing(bool sink)
+        {
+            Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
+            if (sink) sinks[1] = Vector3I.Down;
+
+            GridBuilder builder = GridBuilder.Large();
+            List<Vector3I> cells = PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3);
+            PipeFitter.BuildRing(builder, cells, -1, sinks);
+            builder.Place(Catalog.HeavyArmor(), cells[1] + Vector3I.Down);
+            BlockInstance hot = builder.Last;
+
+            ThermalSimulation simulation = builder.BuildSimulation(Isolated(), 300f);
+            CoolantLoop loop = simulation.Solver.Loops[0];
+
+            Assert.Equal(sink ? loop.PipeCount + 1 : loop.PipeCount, loop.Links.Count);
+
+            simulation.Solver.GetNode(hot).Temperature = 900f;
+            simulation.StepExact(1, Worlds.Shadow());
+            return loop.LastWattsAbsorbed;
+        }
+
         [Fact]
         public void CoolantMovesHeatFromASinkFaceIntoTheFluid()
         {
@@ -356,11 +398,21 @@ namespace Thermodynamics.Tests
             Assert.Equal(8, small.PipeCount);
             Assert.Equal(32, large.PipeCount);
 
+            // One link per pipe plus the sink face against the hot block.
+            Assert.Equal(small.PipeCount + 1, small.Links.Count);
+            Assert.Equal(large.PipeCount + 1, large.Links.Count);
+
             // Same fluid, whatever the length.
             Assert.Equal(small.ThermalMass, large.ThermalMass, 3);
 
-            // Total coupling grows with the pipe count, one full-strength link each.
-            Assert.Equal(TotalConductance(small) * 4f, TotalConductance(large), 1);
+            // Every link is full strength; nothing divides by segment count.
+            float perLink = TotalConductance(small) / small.Links.Count;
+            Assert.Equal(perLink, TotalConductance(large) / large.Links.Count, 1);
+
+            // So total coupling grows with the ring, roughly with its pipe count.
+            Assert.True(TotalConductance(large) > TotalConductance(small) * 3f,
+                "the 32-pipe ring couples at " + TotalConductance(large)
+                + " W/K against the 8-pipe ring's " + TotalConductance(small));
 
             // And the longer ring is the better cooler, with the same single sink face.
             a.StepExact(60, Worlds.Shadow());
@@ -379,6 +431,14 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>A ring of the given rectangle with one sink face down onto a 900 K armour block.</summary>
+        /// <summary>
+        /// A ring with a sink face genuinely against the hot block.
+        ///
+        /// The sink index matters: every rectangle's first straight run is index 1, which is where
+        /// <c>PipeFitter</c> puts the pump, and a pump carries no sink ports. Asking for a sink there
+        /// used to drop it in silence. <c>BuildRing</c> now moves the pump aside instead, and the
+        /// caller asserts the sink exists rather than assuming it.
+        /// </summary>
         private static ThermalSimulation RingOverOneHotBlock(int width, int depth,
             out CoolantLoop loop, out ThermalNode sink)
         {
@@ -393,6 +453,9 @@ namespace Thermodynamics.Tests
 
             ThermalSimulation simulation = builder.BuildSimulation(Isolated(), 300f);
             loop = simulation.Solver.Loops[0];
+
+            Assert.Equal(loop.PipeCount + 1, loop.Links.Count);
+
             sink = simulation.Solver.GetNode(hot);
             sink.Temperature = 900f;
             return simulation;

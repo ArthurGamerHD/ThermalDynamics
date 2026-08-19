@@ -119,7 +119,17 @@ namespace Thermodynamics.Harness
             if (builder == null) throw new ArgumentNullException("builder");
             if (cells == null || cells.Count < 4) throw new ArgumentException("A ring needs at least four cells");
 
-            if (pumpIndex < 0) pumpIndex = FirstStraightIndex(cells);
+            // A pump carries no sink ports, so a sink asked for on the pump's cell cannot exist.
+            // Silently dropping it is how a scenario ends up testing nothing — the exact failure
+            // this class was written to prevent — so an automatic choice steps aside and an explicit
+            // one is an error.
+            if (pumpIndex < 0) pumpIndex = FirstStraightIndexAvoiding(cells, sinkDirections);
+            else if (sinkDirections != null && sinkDirections.ContainsKey(pumpIndex))
+            {
+                throw new ArgumentException(
+                    "Ring index " + pumpIndex + " was given both the pump and a sink face. A pump has "
+                    + "no sink ports, so the sink would be dropped and the ring would test nothing.");
+            }
 
             List<BlockInstance> ring = new List<BlockInstance>();
 
@@ -173,6 +183,26 @@ namespace Thermodynamics.Harness
         private static bool IsUnitStep(Vector3I step)
         {
             return Face.IndexOf(step) >= 0;
+        }
+
+        /// <summary>
+        /// As <see cref="FirstStraightIndex"/>, skipping any cell the caller asked for a sink face
+        /// on. Every rectangle's first straight run is index 1, so a caller asking for a sink there —
+        /// which every scenario in this repository did — would otherwise lose it to the pump.
+        /// </summary>
+        public static int FirstStraightIndexAvoiding(IList<Vector3I> cells, IDictionary<int, Vector3I> sinks)
+        {
+            for (int i = 0; i < cells.Count; i++)
+            {
+                if (sinks != null && sinks.ContainsKey(i)) continue;
+
+                Vector3I toPrevious = cells[(i - 1 + cells.Count) % cells.Count] - cells[i];
+                Vector3I toNext = cells[(i + 1) % cells.Count] - cells[i];
+                if (toPrevious == -toNext) return i;
+            }
+
+            throw new ArgumentException(
+                "This ring has no straight run left for a pump once every requested sink is placed");
         }
 
         /// <summary>
