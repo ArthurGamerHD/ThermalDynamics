@@ -141,9 +141,20 @@ namespace Thermodynamics.Harness
             return this;
         }
 
+        /// <summary>
+        /// Applied to every settings object this builder is handed, when set.
+        ///
+        /// The scenario library constructs its own <see cref="ThermalSettings"/> in forty-one
+        /// places, each tuned to the shipped defaults. This is the one seam that lets a profile
+        /// sweep run all of them without editing any: set it, run, clear it. Null by default, so
+        /// an ordinary scenario run is byte-identical to what it was.
+        /// </summary>
+        public static Func<ThermalSettings, ThermalSettings> SettingsOverride;
+
         public ThermalSimulation BuildSimulation(ThermalSettings settings = null, float initialTemperature = 293.15f)
         {
             ThermalSettings effective = settings ?? new ThermalSettings();
+            if (SettingsOverride != null) effective = SettingsOverride(effective);
             ThermalSimulation simulation = new ThermalSimulation(effective, grid);
             simulation.DefaultTemperature = initialTemperature;
 
