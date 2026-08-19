@@ -24,7 +24,7 @@ Read by `ThermalCellDefinition.GetDefinition`
 | --- | --- | --- | --- |
 | `ExcludeFromSimulation` | Bool | — | `true` excludes the block from the simulation entirely: no cell is created, it conducts nothing and blocks nothing. |
 | `Conductivity` | Decimal | `0 … 1` | Scales heat transfer to neighbours. `1` is a perfect conductor for this model, not a W/(m·K) value. |
-| `SpecificHeat` | Decimal | `≥ 0` | Heat capacity in **real J/(kg·K)** — look the material up. Steel 450, brass 380, aluminium 900, graphite 710, water 4184. Higher = slower to heat and to cool. See [the note below](#specific-heat-is-real-and-the-clock-is-not). |
+| `SpecificHeat` | Decimal | `≥ 0` | Heat capacity in **real J/(kg·K)** — look the material up. Steel 450, copper 385, aluminium 900, graphite 710, water 4184. Higher = slower to heat and to cool. See [the note below](#specific-heat-is-real-and-the-clock-is-not). |
 | `Emissivity` | Decimal | `≥ 0` | Fraction of blackbody radiation emitted, and equally the fraction of incident solar energy absorbed. Physically `0 … 1`. |
 | `ExposedSurfaceMultiplier` | Decimal | `≥ 0` | Multiplies the geometric face area. Use `> 1` for finned or folded surfaces (the radiator uses `1.25`). It scales **every** external path, so a large value also multiplies solar gain and reentry friction — and it buys much less than it looks: see [balance.md](balance.md). |
 | `ProducerWasteEnergy` | Decimal | `≥ 0` | Fraction of *generated* power converted to heat. |
@@ -65,7 +65,7 @@ description of what the block is made of:
 
 | Material | J/(kg·K) | Used by |
 | --- | --- | --- |
-| Brass | 380 | coolant pipes |
+| Copper | 385 | coolant pipes |
 | Steel | 450 | armour, most blocks, pumps, thrusters |
 | Graphite-shielded steel | 600 | reactors |
 | Aluminium | 900 | radiators |

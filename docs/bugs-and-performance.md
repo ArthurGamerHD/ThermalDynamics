@@ -228,7 +228,7 @@ unit systems.
 *Observable in* the `vacuum-soak` scenario.
 
 **Fixed** — made deliberate rather than removed. `SpecificHeat` is now real J/(kg·K) in every
-definition (steel 450, brass 380, aluminium 900, water-glycol 3400), so both halves of the
+definition (steel 450, copper 385, aluminium 900, water-glycol 3400), so both halves of the
 equation are in the same unit system and a definition reads as a description of the material.
 The game's pace comes from one setting, `HeatTimeScale` (default 225), which divides every heat
 capacity — blocks and coolant alike. Dividing capacity is exactly running thermal time faster,

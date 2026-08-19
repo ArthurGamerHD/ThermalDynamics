@@ -43,15 +43,18 @@
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--
-						W/(m K). Brass, not copper, and the difference is a compromise rather than a
-						materials choice: copper's 400 against the conduction pace makes a 305 kg pipe
-						stiff enough to outrun the substep budget, and five coolant flow tests fail on
-						it. Brass is an honest plumbing alloy and is stable here. The real fix is to
-						stop pricing a thin pipe as a solid billet of its own metal.
+						W/(m K), real units: copper.
+
+						This was brass for a while, because copper made a 305 kg pipe stiff enough to
+						blow the loop integration up to 291,360 K. That turned out to be a defect in
+						the loop's clamp rather than a limit on the material: it bounded each link
+						against the parcel's whole heat capacity, so a parcel carrying two links got
+						twice the energy that equalising it takes. With the ring's own limit applied
+						the same case settles at 0.8 K and copper is back.
 					-->
-					<Decimal Name="Conductivity" Value="110" />
-					<!--J/(kg K), real units: brass-->
-					<Decimal Name="SpecificHeat" Value="380" />
+					<Decimal Name="Conductivity" Value="400" />
+					<!--J/(kg K), real units: copper-->
+					<Decimal Name="SpecificHeat" Value="385" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
@@ -70,15 +73,18 @@
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--
-						W/(m K). Brass, not copper, and the difference is a compromise rather than a
-						materials choice: copper's 400 against the conduction pace makes a 305 kg pipe
-						stiff enough to outrun the substep budget, and five coolant flow tests fail on
-						it. Brass is an honest plumbing alloy and is stable here. The real fix is to
-						stop pricing a thin pipe as a solid billet of its own metal.
+						W/(m K), real units: copper.
+
+						This was brass for a while, because copper made a 305 kg pipe stiff enough to
+						blow the loop integration up to 291,360 K. That turned out to be a defect in
+						the loop's clamp rather than a limit on the material: it bounded each link
+						against the parcel's whole heat capacity, so a parcel carrying two links got
+						twice the energy that equalising it takes. With the ring's own limit applied
+						the same case settles at 0.8 K and copper is back.
 					-->
-					<Decimal Name="Conductivity" Value="110" />
-					<!--J/(kg K), real units: brass-->
-					<Decimal Name="SpecificHeat" Value="380" />
+					<Decimal Name="Conductivity" Value="400" />
+					<!--J/(kg K), real units: copper-->
+					<Decimal Name="SpecificHeat" Value="385" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
@@ -97,15 +103,18 @@
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--
-						W/(m K). Brass, not copper, and the difference is a compromise rather than a
-						materials choice: copper's 400 against the conduction pace makes a 305 kg pipe
-						stiff enough to outrun the substep budget, and five coolant flow tests fail on
-						it. Brass is an honest plumbing alloy and is stable here. The real fix is to
-						stop pricing a thin pipe as a solid billet of its own metal.
+						W/(m K), real units: copper.
+
+						This was brass for a while, because copper made a 305 kg pipe stiff enough to
+						blow the loop integration up to 291,360 K. That turned out to be a defect in
+						the loop's clamp rather than a limit on the material: it bounded each link
+						against the parcel's whole heat capacity, so a parcel carrying two links got
+						twice the energy that equalising it takes. With the ring's own limit applied
+						the same case settles at 0.8 K and copper is back.
 					-->
-					<Decimal Name="Conductivity" Value="110" />
-					<!--J/(kg K), real units: brass-->
-					<Decimal Name="SpecificHeat" Value="380" />
+					<Decimal Name="Conductivity" Value="400" />
+					<!--J/(kg K), real units: copper-->
+					<Decimal Name="SpecificHeat" Value="385" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
@@ -124,15 +133,18 @@
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--
-						W/(m K). Brass, not copper, and the difference is a compromise rather than a
-						materials choice: copper's 400 against the conduction pace makes a 305 kg pipe
-						stiff enough to outrun the substep budget, and five coolant flow tests fail on
-						it. Brass is an honest plumbing alloy and is stable here. The real fix is to
-						stop pricing a thin pipe as a solid billet of its own metal.
+						W/(m K), real units: copper.
+
+						This was brass for a while, because copper made a 305 kg pipe stiff enough to
+						blow the loop integration up to 291,360 K. That turned out to be a defect in
+						the loop's clamp rather than a limit on the material: it bounded each link
+						against the parcel's whole heat capacity, so a parcel carrying two links got
+						twice the energy that equalising it takes. With the ring's own limit applied
+						the same case settles at 0.8 K and copper is back.
 					-->
-					<Decimal Name="Conductivity" Value="110" />
-					<!--J/(kg K), real units: brass-->
-					<Decimal Name="SpecificHeat" Value="380" />
+					<Decimal Name="Conductivity" Value="400" />
+					<!--J/(kg K), real units: copper-->
+					<Decimal Name="SpecificHeat" Value="385" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
@@ -151,15 +163,18 @@
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--
-						W/(m K). Brass, not copper, and the difference is a compromise rather than a
-						materials choice: copper's 400 against the conduction pace makes a 305 kg pipe
-						stiff enough to outrun the substep budget, and five coolant flow tests fail on
-						it. Brass is an honest plumbing alloy and is stable here. The real fix is to
-						stop pricing a thin pipe as a solid billet of its own metal.
+						W/(m K), real units: copper.
+
+						This was brass for a while, because copper made a 305 kg pipe stiff enough to
+						blow the loop integration up to 291,360 K. That turned out to be a defect in
+						the loop's clamp rather than a limit on the material: it bounded each link
+						against the parcel's whole heat capacity, so a parcel carrying two links got
+						twice the energy that equalising it takes. With the ring's own limit applied
+						the same case settles at 0.8 K and copper is back.
 					-->
-					<Decimal Name="Conductivity" Value="110" />
-					<!--J/(kg K), real units: brass-->
-					<Decimal Name="SpecificHeat" Value="380" />
+					<Decimal Name="Conductivity" Value="400" />
+					<!--J/(kg K), real units: copper-->
+					<Decimal Name="SpecificHeat" Value="385" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
@@ -178,15 +193,18 @@
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--
-						W/(m K). Brass, not copper, and the difference is a compromise rather than a
-						materials choice: copper's 400 against the conduction pace makes a 305 kg pipe
-						stiff enough to outrun the substep budget, and five coolant flow tests fail on
-						it. Brass is an honest plumbing alloy and is stable here. The real fix is to
-						stop pricing a thin pipe as a solid billet of its own metal.
+						W/(m K), real units: copper.
+
+						This was brass for a while, because copper made a 305 kg pipe stiff enough to
+						blow the loop integration up to 291,360 K. That turned out to be a defect in
+						the loop's clamp rather than a limit on the material: it bounded each link
+						against the parcel's whole heat capacity, so a parcel carrying two links got
+						twice the energy that equalising it takes. With the ring's own limit applied
+						the same case settles at 0.8 K and copper is back.
 					-->
-					<Decimal Name="Conductivity" Value="110" />
-					<!--J/(kg K), real units: brass-->
-					<Decimal Name="SpecificHeat" Value="380" />
+					<Decimal Name="Conductivity" Value="400" />
+					<!--J/(kg K), real units: copper-->
+					<Decimal Name="SpecificHeat" Value="385" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
@@ -205,15 +223,18 @@
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--
-						W/(m K). Brass, not copper, and the difference is a compromise rather than a
-						materials choice: copper's 400 against the conduction pace makes a 305 kg pipe
-						stiff enough to outrun the substep budget, and five coolant flow tests fail on
-						it. Brass is an honest plumbing alloy and is stable here. The real fix is to
-						stop pricing a thin pipe as a solid billet of its own metal.
+						W/(m K), real units: copper.
+
+						This was brass for a while, because copper made a 305 kg pipe stiff enough to
+						blow the loop integration up to 291,360 K. That turned out to be a defect in
+						the loop's clamp rather than a limit on the material: it bounded each link
+						against the parcel's whole heat capacity, so a parcel carrying two links got
+						twice the energy that equalising it takes. With the ring's own limit applied
+						the same case settles at 0.8 K and copper is back.
 					-->
-					<Decimal Name="Conductivity" Value="110" />
-					<!--J/(kg K), real units: brass-->
-					<Decimal Name="SpecificHeat" Value="380" />
+					<Decimal Name="Conductivity" Value="400" />
+					<!--J/(kg K), real units: copper-->
+					<Decimal Name="SpecificHeat" Value="385" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
@@ -232,15 +253,18 @@
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--
-						W/(m K). Brass, not copper, and the difference is a compromise rather than a
-						materials choice: copper's 400 against the conduction pace makes a 305 kg pipe
-						stiff enough to outrun the substep budget, and five coolant flow tests fail on
-						it. Brass is an honest plumbing alloy and is stable here. The real fix is to
-						stop pricing a thin pipe as a solid billet of its own metal.
+						W/(m K), real units: copper.
+
+						This was brass for a while, because copper made a 305 kg pipe stiff enough to
+						blow the loop integration up to 291,360 K. That turned out to be a defect in
+						the loop's clamp rather than a limit on the material: it bounded each link
+						against the parcel's whole heat capacity, so a parcel carrying two links got
+						twice the energy that equalising it takes. With the ring's own limit applied
+						the same case settles at 0.8 K and copper is back.
 					-->
-					<Decimal Name="Conductivity" Value="110" />
-					<!--J/(kg K), real units: brass-->
-					<Decimal Name="SpecificHeat" Value="380" />
+					<Decimal Name="Conductivity" Value="400" />
+					<!--J/(kg K), real units: copper-->
+					<Decimal Name="SpecificHeat" Value="385" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
@@ -260,15 +284,18 @@
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--
-						W/(m K). Brass, not copper, and the difference is a compromise rather than a
-						materials choice: copper's 400 against the conduction pace makes a 305 kg pipe
-						stiff enough to outrun the substep budget, and five coolant flow tests fail on
-						it. Brass is an honest plumbing alloy and is stable here. The real fix is to
-						stop pricing a thin pipe as a solid billet of its own metal.
+						W/(m K), real units: copper.
+
+						This was brass for a while, because copper made a 305 kg pipe stiff enough to
+						blow the loop integration up to 291,360 K. That turned out to be a defect in
+						the loop's clamp rather than a limit on the material: it bounded each link
+						against the parcel's whole heat capacity, so a parcel carrying two links got
+						twice the energy that equalising it takes. With the ring's own limit applied
+						the same case settles at 0.8 K and copper is back.
 					-->
-					<Decimal Name="Conductivity" Value="110" />
-					<!--J/(kg K), real units: brass-->
-					<Decimal Name="SpecificHeat" Value="380" />
+					<Decimal Name="Conductivity" Value="400" />
+					<!--J/(kg K), real units: copper-->
+					<Decimal Name="SpecificHeat" Value="385" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
@@ -287,15 +314,18 @@
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--
-						W/(m K). Brass, not copper, and the difference is a compromise rather than a
-						materials choice: copper's 400 against the conduction pace makes a 305 kg pipe
-						stiff enough to outrun the substep budget, and five coolant flow tests fail on
-						it. Brass is an honest plumbing alloy and is stable here. The real fix is to
-						stop pricing a thin pipe as a solid billet of its own metal.
+						W/(m K), real units: copper.
+
+						This was brass for a while, because copper made a 305 kg pipe stiff enough to
+						blow the loop integration up to 291,360 K. That turned out to be a defect in
+						the loop's clamp rather than a limit on the material: it bounded each link
+						against the parcel's whole heat capacity, so a parcel carrying two links got
+						twice the energy that equalising it takes. With the ring's own limit applied
+						the same case settles at 0.8 K and copper is back.
 					-->
-					<Decimal Name="Conductivity" Value="110" />
-					<!--J/(kg K), real units: brass-->
-					<Decimal Name="SpecificHeat" Value="380" />
+					<Decimal Name="Conductivity" Value="400" />
+					<!--J/(kg K), real units: copper-->
+					<Decimal Name="SpecificHeat" Value="385" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
@@ -315,15 +345,18 @@
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--
-						W/(m K). Brass, not copper, and the difference is a compromise rather than a
-						materials choice: copper's 400 against the conduction pace makes a 305 kg pipe
-						stiff enough to outrun the substep budget, and five coolant flow tests fail on
-						it. Brass is an honest plumbing alloy and is stable here. The real fix is to
-						stop pricing a thin pipe as a solid billet of its own metal.
+						W/(m K), real units: copper.
+
+						This was brass for a while, because copper made a 305 kg pipe stiff enough to
+						blow the loop integration up to 291,360 K. That turned out to be a defect in
+						the loop's clamp rather than a limit on the material: it bounded each link
+						against the parcel's whole heat capacity, so a parcel carrying two links got
+						twice the energy that equalising it takes. With the ring's own limit applied
+						the same case settles at 0.8 K and copper is back.
 					-->
-					<Decimal Name="Conductivity" Value="110" />
-					<!--J/(kg K), real units: brass-->
-					<Decimal Name="SpecificHeat" Value="380" />
+					<Decimal Name="Conductivity" Value="400" />
+					<!--J/(kg K), real units: copper-->
+					<Decimal Name="SpecificHeat" Value="385" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
@@ -342,15 +375,18 @@
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--
-						W/(m K). Brass, not copper, and the difference is a compromise rather than a
-						materials choice: copper's 400 against the conduction pace makes a 305 kg pipe
-						stiff enough to outrun the substep budget, and five coolant flow tests fail on
-						it. Brass is an honest plumbing alloy and is stable here. The real fix is to
-						stop pricing a thin pipe as a solid billet of its own metal.
+						W/(m K), real units: copper.
+
+						This was brass for a while, because copper made a 305 kg pipe stiff enough to
+						blow the loop integration up to 291,360 K. That turned out to be a defect in
+						the loop's clamp rather than a limit on the material: it bounded each link
+						against the parcel's whole heat capacity, so a parcel carrying two links got
+						twice the energy that equalising it takes. With the ring's own limit applied
+						the same case settles at 0.8 K and copper is back.
 					-->
-					<Decimal Name="Conductivity" Value="110" />
-					<!--J/(kg K), real units: brass-->
-					<Decimal Name="SpecificHeat" Value="380" />
+					<Decimal Name="Conductivity" Value="400" />
+					<!--J/(kg K), real units: copper-->
+					<Decimal Name="SpecificHeat" Value="385" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />

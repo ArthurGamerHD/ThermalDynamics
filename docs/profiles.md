@@ -71,7 +71,7 @@ integrator is refused what it asks for by six orders of magnitude.
 with more substeps — 2.4×10¹⁵ K against 7×10⁴. Something in the coolant path is genuinely unstable
 rather than merely starved.
 
-### The loop path has a stiffness ceiling
+### The loop path had a stiffness ceiling — fixed
 
 Found by asking whether the coolant pipes could go back to copper. They cannot, and the reason is
 the same defect. `CoolantFlowTests.SpreadAcrossAHeatedRing` deliberately runs **one substep across a
@@ -86,10 +86,28 @@ The edge is between 360 and 480. Copper sits at 960 — 2.7× past it — and th
 291,360 K. Brass at 264 is comfortably clear, which is why the shipped pipes are brass and why
 `Cubes.xml` calls that a compromise rather than a materials decision.
 
-**This is a millisecond-long reproduction of the arcade loop divergence**, in a test that was
-already in the suite. Pinned by `TheLoopPathStillHasAStiffnessCeiling`, written to fail when the
-defect is fixed — at which point the pipes can go back to copper and the arcade profile can be
-re-measured.
+**This was a millisecond-long reproduction of the arcade loop divergence**, in a test that had been
+in the suite all along.
+
+**The cause was the clamp, not the material.** `AccumulateLoops` bounded each link with
+`ClampExchange`, which limits one exchange to the energy that would equalise *that pair*. Correct
+for a pair, and wrong for a parcel carrying more than one link: two links each allowed to equalise
+deliver twice the energy equalising takes, so the parcel overshoots past its neighbours and the
+overshoot grows every substep. A pipe with a sink face has exactly that shape — its own link plus
+the sink's — and a well-mixed ring puts *every* link in the ring on one parcel.
+
+Below the clamp threshold it changed nothing, which is why it went unnoticed for so long. It only
+bites once exchanges are large enough to saturate, and conductance is what decides that: brass
+stayed under it and copper did not.
+
+The fix is one aggregate limit per parcel, the same shape as `RelaxationFactor` for conduction —
+`mass / (h × total conductance on that parcel)`, with the worst parcel setting the ring's factor.
+The same case now settles at **0.8 K instead of 291,360**, the pipes are copper again, and the
+sweep's arcade divergences fell from **14 to 7 — every loop-bearing one**, including
+`loop-stiffness` at 2.4×10¹⁰ K. The seven survivors are all non-loop.
+
+Guarded by `TheLoopPathSurvivesAVeryConductivePipe` at copper and at four times copper, and by
+`ArcadeNoLongerDivergesOnTheEverythingRig`.
 
 Two hypotheses were tested and both were wrong, which is recorded here so they are not tried again:
 

@@ -405,7 +405,7 @@ namespace Thermodynamics.Tests
         /// transports evens out; one that aliases does not.
         /// </summary>
         /// <summary>
-        /// **A known defect, pinned.** The loop path has a stiffness ceiling the clamps do not hold.
+        /// **A fixed defect, guarded.** The loop path used to have a stiffness ceiling.
         ///
         /// <c>SpreadAcrossAHeatedRing</c> deliberately runs one substep across a whole second and
         /// relies on the overshoot clamps to keep that bounded. They do — up to a point. Raising the
@@ -416,16 +416,19 @@ namespace Thermodynamics.Tests
         ///   flow tests failing    0      3      5      5
         /// </code>
         ///
-        /// Brass sits at 264 and is comfortably clear; copper's 400 W/(m K) is 960 effective, which
-        /// is 2.7x past the edge and reaches 291,360 K. That is why the shipped pipes are brass, and
-        /// the comment in Cubes.xml calls it a compromise.
+        /// The cause was the loop's clamp, not the material. It bounded each link against the
+        /// parcel's whole heat capacity — correct for a pair, and wrong for a parcel carrying more
+        /// than one link, which gets twice the energy equalising it takes and overshoots further
+        /// every substep. A pipe with a sink face has exactly that shape; a well-mixed ring puts
+        /// every link in the ring on one parcel.
         ///
-        /// This is the same failure as the arcade profile's loop divergences, which more substeps
-        /// made *worse* rather than better — and this is a millisecond-long reproduction of it. When
-        /// the loop integration is fixed this test fails, which is the point.
+        /// With the ring's own limit applied the same case settles at under a kelvin, and the
+        /// shipped pipes are copper again. This test now guards that rather than recording it.
         /// </summary>
-        [Fact]
-        public void TheLoopPathStillHasAStiffnessCeiling()
+        [Theory]
+        [InlineData(400f, 5f)]      // copper, what ships
+        [InlineData(1600f, 100f)]   // four times copper: degraded but bounded, not 291,360 K
+        public void TheLoopPathSurvivesAVeryConductivePipe(float conductivity, float tolerance)
         {
             try
             {
@@ -433,16 +436,15 @@ namespace Thermodynamics.Tests
                 // stays exactly as it was and the stiffness change has one source.
                 Catalog.MaterialOverride = properties =>
                 {
-                    if (Math.Abs(properties.SpecificHeat - 380f) < 0.5f) properties.Conductivity = 400f;
+                    if (Math.Abs(properties.SpecificHeat - 385f) < 0.5f) properties.Conductivity = conductivity;
                     return properties;
                 };
 
                 float spread = SpreadAcrossAHeatedRing(64f);
 
-                Assert.True(spread > 1000f,
-                    "the loop path no longer blows up at copper's conductivity — it spread "
-                    + spread + " K. If that was fixed deliberately, invert this test and put the "
-                    + "pipes back to 400 in Cubes.xml.");
+                Assert.True(spread < tolerance,
+                    "a ring lapping 64 times a second should stay bounded whatever the pipe is made "
+                    + "of; at " + conductivity + " W/(m K) it spread " + spread + " K");
             }
             finally
             {

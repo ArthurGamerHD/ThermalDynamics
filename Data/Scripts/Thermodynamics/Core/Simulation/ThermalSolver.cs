@@ -103,6 +103,14 @@ namespace Thermodynamics.Core
         private float[] nodeRelaxation = new float[0];
 
         /// <summary>
+        /// Per-parcel conductance totals, reused across loops and substeps.
+        ///
+        /// Sized to the largest ring seen; a ring's parcel count is its pipe count, so this stays
+        /// small even on a heavily plumbed grid.
+        /// </summary>
+        private float[] parcelConductanceTotal = new float[0];
+
+        /// <summary>
         /// Per-node environment terms that are constant across the substeps of one step.
         ///
         /// <para>
@@ -2105,6 +2113,48 @@ namespace Thermodynamics.Core
                 CoolantLoop loop = loops[l];
                 float[] watts = loop.SegmentWatts;
 
+                // How hard every link on a parcel pulls, together.
+                //
+                // ClampExchange bounds one exchange to the energy that would equalise that pair,
+                // which is right for a pair and wrong for a parcel with more than one link on it:
+                // two links each allowed to equalise deliver twice the energy that equalising
+                // takes, the parcel overshoots past its neighbours, and the overshoot grows. A
+                // pipe carrying a sink face has exactly that shape — its own link plus the sink's
+                // — and a well-mixed ring has one parcel carrying every link in the ring.
+                //
+                // Below the clamp threshold this changes nothing, which is why it went unnoticed:
+                // it only bites once the exchanges are large enough to saturate, and conductance
+                // is what decides that. Brass stayed under it and copper did not.
+                float relaxation = 1f;
+                if (clamp && h > 0f)
+                {
+                    if (parcelConductanceTotal.Length < loop.PipeCount)
+                    {
+                        parcelConductanceTotal = new float[loop.PipeCount];
+                    }
+                    for (int i = 0; i < loop.PipeCount; i++) parcelConductanceTotal[i] = 0f;
+
+                    for (int i = 0; i < loop.Links.Count; i++)
+                    {
+                        LoopLink probe = loop.Links[i];
+                        if (probe.SegmentIndex < 0 || probe.SegmentIndex >= loop.PipeCount) continue;
+                        parcelConductanceTotal[loop.ParcelOf(probe.SegmentIndex)] += probe.Conductance;
+                    }
+
+                    // The worst parcel sets the factor for the ring: a per-link factor would let a
+                    // lightly loaded parcel run ahead of a saturated one and reintroduce the same
+                    // imbalance between parcels instead of within one.
+                    float mass = loop.SegmentThermalMass;
+                    for (int i = 0; i < loop.PipeCount; i++)
+                    {
+                        float total = parcelConductanceTotal[i];
+                        if (total <= 0f || mass <= 0f) continue;
+
+                        float stable = mass / (h * total);
+                        if (stable < relaxation) relaxation = stable;
+                    }
+                }
+
                 for (int i = 0; i < loop.Links.Count; i++)
                 {
                     LoopLink link = loop.Links[i];
@@ -2129,6 +2179,9 @@ namespace Thermodynamics.Core
                             exchange, h, difference,
                             loop.SegmentThermalMass,
                             nodeThermalMass[link.NodeIndex]);
+
+                        // Then the ring's own limit, which the pairwise bound cannot see.
+                        exchange *= relaxation;
                     }
 
                     nodeWatts[link.NodeIndex] += exchange;

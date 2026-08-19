@@ -155,18 +155,24 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// **A known defect, pinned so a fix is visible.**
+        /// **A fixed defect, guarded.**
         ///
-        /// The arcade profile diverges on a rig a player could build: a 2 MW source in a
-        /// pressurised box with a ring and a radiator. It reaches tens of thousands of kelvin on
-        /// the hot end while driving other blocks to absolute zero, and it does so under every
-        /// combination of mechanism switches, so it is arcade itself rather than an interaction.
+        /// The arcade profile used to diverge on a rig a player could build — a 2 MW source in a
+        /// pressurised box with a ring and a radiator — reaching tens of thousands of kelvin at the
+        /// hot end while driving other blocks to absolute zero, under every combination of
+        /// mechanism switches.
         ///
-        /// This test asserts the defect is still there. When it is fixed this test fails, which is
-        /// the point: the alternative is a number in a report that nobody is watching.
+        /// It was the loop clamp, the same defect as the pipe stiffness ceiling: one aggregate
+        /// limit per parcel fixed both, and the hot end no longer runs away.
+        ///
+        /// The cold end is a different thing and is not fixed, because it is not a defect. Arcade
+        /// runs a HeatTimeScale/Frequency ratio near the documented ceiling, where the clamps carry
+        /// the whole step and blocks are pulled to the ambient floor — configuration.md describes
+        /// that as the far end being a wall rather than a slope. This asserts the runaway is gone,
+        /// not that arcade has become accurate.
         /// </summary>
         [Fact]
-        public void ArcadeStillDivergesOnTheEverythingRig()
+        public void ArcadeNoLongerDivergesOnTheEverythingRig()
         {
             List<FeatureMatrix.Row> rows = FeatureMatrix.Run();
 
@@ -177,12 +183,10 @@ namespace Thermodynamics.Tests
             }
 
             Assert.NotNull(arcade);
-            Assert.True(arcade.Diverged,
-                "arcade no longer diverges on the everything rig — if that was deliberate, this "
-                + "test should be inverted to assert it stays fixed");
-            Assert.True(arcade.ColdestKelvin <= 1f,
-                "arcade used to drive a block to the ambient floor while another ran away; it "
-                + "reached " + arcade.ColdestKelvin + " K");
+            Assert.False(arcade.Diverged,
+                "arcade diverged again on the everything rig, reaching " + arcade.PeakKelvin + " K");
+            Assert.True(arcade.PeakKelvin < ProfileSweep.DivergenceKelvin,
+                "arcade's hot end ran away again, reaching " + arcade.PeakKelvin + " K");
         }
 
         /// <summary>
