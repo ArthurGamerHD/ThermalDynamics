@@ -199,9 +199,11 @@ namespace Thermodynamics.Core
         /// <summary>
         /// Counts, per face direction, how many of a block's cell faces are open to the outside.
         ///
-        /// A face counts when it lies on the block's boundary, the space beyond is external, the
-        /// neighbour does not seal against it, and it is not a mount-to-mount contact with another
-        /// block.
+        /// A face counts when it lies on the block's boundary, the space beyond is external, and
+        /// the neighbour does not seal against it. A mount joint does not disqualify a face: a
+        /// joint against a sealing block is already rejected by the sealing test, so the only
+        /// joints left are against blocks that do not seal, and those do not stop a face seeing
+        /// the sky.
         /// </summary>
         public void GetExposedFaces(BlockInstance block, RoomMap rooms, int[] resultsByFace)
         {
@@ -248,9 +250,14 @@ namespace Thermodynamics.Core
                         // Something on the other side seals this face off.
                         if (CellSurface.NeighbourAirtight(state, face)) continue;
 
-                        // Two mount surfaces pressed together: a joint, not an exposed face.
-                        if (CellSurface.NeighbourMount(state, face) && CellSurface.SelfMount(state, face)) continue;
-
+                        // A mount joint is deliberately *not* a rejection. Every joint against a
+                        // block that seals is already gone above, so the only faces a mount test
+                        // could reach are those bolted to something that does not seal — a
+                        // grating, a catwalk, a ladder. Air floods through those, which is why the
+                        // room map calls the space beyond external; a hull panel under a catwalk
+                        // still radiates and still takes sunlight. The joint conducts as well,
+                        // which is what a catwalk bolted to a hull actually does.
+                        //
                         // The space beyond must reach the outside.
                         if (rooms != null && !rooms.IsExternal(neighbour)) continue;
 

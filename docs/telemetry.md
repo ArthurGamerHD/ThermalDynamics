@@ -244,7 +244,7 @@ rows per live block, on every grid in the world.
 | `face_cells` | cell faces on that side — the four counts below sum to this |
 | `exposed` | cell faces the model counts as open to the sky |
 | `sealed` | rejected: something airtight on the other side |
-| `mounted` | rejected: two mount surfaces bolted together |
+| `mounted` | of the exposed faces, how many also carry a mount joint — a grating or catwalk bolted flat against a face that still sees the sky. A subset of `exposed`, not a rejection. |
 | `interior` | rejected: the space beyond is a sealed room, not outdoors |
 | `sun_dot` | how square the face is to the sun, −1..1 |
 | `sun_lit_fraction` | the share of *this face* the sun reaches, from the shadow map — per face, since the far layer of a wall is dark toward the sun and lit on the flank |

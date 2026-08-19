@@ -7,12 +7,16 @@ namespace Thermodynamics.Core
     /// Why a block face counts as exposed, or does not.
     ///
     /// <see cref="SurfaceMap.GetExposedFaces"/> returns only a count, which cannot say why a face
-    /// that looks open to the sky was not counted. Three separate rules can reject a cell face and
-    /// all three produce the same count. This records which rule applied, per cell face.
+    /// that looks open to the sky was not counted. Two separate rules can reject a cell face and
+    /// both produce the same count. This records which rule applied, per cell face, and counts
+    /// mount joints alongside rather than as a rejection.
     /// </summary>
     public struct FaceExposure
     {
-        /// <summary>Cell faces on this side of the block. The rest of the counts sum to this.</summary>
+        /// <summary>
+        /// Cell faces on this side of the block. <see cref="Exposed"/>, <see cref="Sealed"/> and
+        /// <see cref="Interior"/> sum to this; <see cref="Mounted"/> is a subset of the first.
+        /// </summary>
         public int Cells;
 
         /// <summary>Cell faces open to the outside: what the model counts.</summary>
@@ -21,7 +25,12 @@ namespace Thermodynamics.Core
         /// <summary>Rejected because something on the other side is airtight against this face.</summary>
         public int Sealed;
 
-        /// <summary>Rejected because two mount surfaces are pressed together, forming a joint.</summary>
+        /// <summary>
+        /// Exposed cell faces that also carry a mount-to-mount joint — a panel with a grating or a
+        /// catwalk bolted flat against it. Not a rejection: a subset of <see cref="Exposed"/>,
+        /// reported so the population that conducts *and* radiates through the same face can be
+        /// counted on a real ship.
+        /// </summary>
         public int Mounted;
 
         /// <summary>Rejected because the space beyond is inside the ship rather than outdoors.</summary>
@@ -30,7 +39,7 @@ namespace Thermodynamics.Core
         public override string ToString()
         {
             return Exposed + "/" + Cells
-                + " (sealed " + Sealed + ", mounted " + Mounted + ", interior " + Interior + ")";
+                + " (sealed " + Sealed + ", interior " + Interior + ", of which bolted " + Mounted + ")";
         }
     }
 
@@ -90,17 +99,11 @@ namespace Thermodynamics.Core
                         Vector3I neighbour = cell + offset;
 
                         // The order mirrors GetExposedFaces exactly: a cell face rejected by two
-                        // rules is reported against the first, so the counts sum to the number of
-                        // cell faces rather than double-counting.
+                        // rules is reported against the first, so the rejection counts sum to the
+                        // number of cell faces rather than double-counting.
                         if (CellSurface.NeighbourAirtight(state, face))
                         {
                             result.Sealed++;
-                            continue;
-                        }
-
-                        if (CellSurface.NeighbourMount(state, face) && CellSurface.SelfMount(state, face))
-                        {
-                            result.Mounted++;
                             continue;
                         }
 
@@ -111,6 +114,14 @@ namespace Thermodynamics.Core
                         }
 
                         result.Exposed++;
+
+                        // Counted beside the exposure rather than instead of it. A face bolted to
+                        // something that does not seal both conducts through the joint and sees
+                        // the sky, and this is how much of a ship is in that state.
+                        if (CellSurface.NeighbourMount(state, face) && CellSurface.SelfMount(state, face))
+                        {
+                            result.Mounted++;
+                        }
                     }
                 }
 

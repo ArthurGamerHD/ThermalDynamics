@@ -214,15 +214,23 @@ the same discipline as the catalogue: probe under the lock, build outside it, pu
 
 ## Suspected defects
 
-**A face bolted to a block that does not seal is counted as buried.** Exposure rejects any cell face
-where two mount surfaces meet, regardless of what the neighbour is. Against a grating, lattice or
-any other non-airtight block that is wrong twice over: the room mapper calls the cell beyond that
-face *external* — air floods through it — and the face still neither radiates nor takes sunlight.
-Pinned by `AFaceAgainstAnOpenLatticeIsRejectedAsMountedNotSealed` in
-[ExposureAuditTests](../sim/Thermodynamics.Tests/ExposureAuditTests.cs), which characterises the
-behaviour rather than endorsing it. The fix is a judgement call about what a mount joint means:
-either exempt neighbours that do not seal, or scale the face by the mounted fraction rather than
-dropping it whole.
+**A face bolted to a block that does not seal was counted as buried — fixed.** Exposure rejected
+any cell face where two mount surfaces met, regardless of what the neighbour was. The ordering is
+what made that wrong: the sealing test runs first, so every joint against a block that seals was
+already gone, and the mount test could only ever reach faces bolted to something that does *not*
+seal — a grating, a catwalk, a ladder. The room mapper calls the cell beyond one of those
+external, because air floods through it, and exposure threw the face away anyway. A hull panel
+with a catwalk bolted flat against it therefore lost 100% of its radiation and solar gain while
+the mod's own room map said it was outdoors.
+
+The mount test is gone. A face against an open lattice now radiates and takes sunlight, and the
+joint conducts as it always did — both are true of a real catwalk. `FaceExposure.Mounted` survives
+as a *subset* of `Exposed` rather than a rejection, so the surface dump's `mounted` column now
+answers how much of a ship conducts and radiates through the same face; the audit's rejection
+counts sum to the cell count without it. `AFaceAgainstAnOpenLatticeRadiatesAndIsCountedAsBolted`
+replaces the characterisation test, and
+`ASealingNeighbourStillBuriesTheFaceWhateverItsMounts` pins the ordering argument the fix rests
+on — a solid hull cannot be opened up by this change.
 
 **The step budget counts link visits but not node visits.** `MaxLinkVisitsPerStep` bounds a step
 by substeps times links, and the environment pass is per node per substep — radiation, convection,

@@ -45,7 +45,10 @@ namespace Thermodynamics.Tests
                 Assert.Equal(counted[face], faces[face].Exposed);
                 Assert.Equal(
                     faces[face].Cells,
-                    faces[face].Exposed + faces[face].Sealed + faces[face].Mounted + faces[face].Interior);
+                    faces[face].Exposed + faces[face].Sealed + faces[face].Interior);
+
+                // Mounted is a subset of Exposed rather than a rejection of its own.
+                Assert.True(faces[face].Mounted <= faces[face].Exposed);
             }
 
             return faces;
@@ -226,14 +229,14 @@ namespace Thermodynamics.Tests
             for (int face = 0; face < Face.Count; face++)
             {
                 Assert.Equal(0, faces[face].Exposed);
-                Assert.Equal(1, faces[face].Sealed + faces[face].Mounted + faces[face].Interior);
+                Assert.Equal(1, faces[face].Sealed + faces[face].Interior);
             }
         }
 
         // ---- the mount rule, which is the one that surprises people -------------------------
 
         [Fact]
-        public void AFaceAgainstAnOpenLatticeIsRejectedAsMountedNotSealed()
+        public void AFaceAgainstAnOpenLatticeRadiatesAndIsCountedAsBolted()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.LightArmor(), Vector3I.Zero);
@@ -248,24 +251,46 @@ namespace Thermodynamics.Tests
             FaceExposure[] faces = Explain(surfaces, armour, mapper.Map);
             int right = Face.IndexOf(new Vector3I(1, 0, 0));
 
-            // Nothing airtight is in the way and the cell beyond is outdoors, but the two blocks
-            // are bolted together, and a mount-to-mount contact is not counted as a surface. This
-            // is the rule that makes a face behind an open structure read as buried.
-            Assert.Equal(0, faces[right].Exposed);
+            // Nothing airtight is in the way and the cell beyond is outdoors, so the face sees the
+            // sky. The two blocks are bolted together as well, which conducts, but a bolt through
+            // an open lattice does not stop a hull panel radiating.
+            Assert.Equal(1, faces[right].Exposed);
             Assert.Equal(0, faces[right].Sealed);
+            Assert.Equal(0, faces[right].Interior);
+
+            // The joint is still reported, as a subset of the exposure rather than instead of it.
             Assert.Equal(1, faces[right].Mounted);
 
-            // Characterising, not endorsing — and the two halves of the model disagree here. The
-            // room mapper calls the cell beyond the face outdoors, because a grating seals nothing
-            // and air floods straight through it. Exposure still throws the face away, on the
-            // grounds that the two blocks are bolted together. So a face the model itself says is
-            // open to the sky neither radiates nor takes sunlight.
+            // The two halves of the model now agree: the room mapper calls the cell beyond the
+            // face outdoors, and exposure counts the face.
             Assert.True(mapper.Map.IsExternal(new Vector3I(1, 0, 0)));
             Assert.False(mapper.Map.IsSolid(new Vector3I(1, 0, 0)));
         }
 
         [Fact]
-        public void TheMountRuleNeedsBothSidesToMount()
+        public void ASealingNeighbourStillBuriesTheFaceWhateverItsMounts()
+        {
+            GridBuilder builder = GridBuilder.Large();
+            builder.Place(Catalog.LightArmor(), Vector3I.Zero);
+            BlockInstance armour = builder.Last;
+
+            // Armour mounts and seals. The sealing test rejects the face before mounting is even
+            // considered, which is why deleting the mount rule cannot open up a solid hull.
+            builder.Place(Catalog.LightArmor(), new Vector3I(1, 0, 0));
+
+            SurfaceMap surfaces;
+            RoomMapper mapper = MapperFor(builder.Grid, out surfaces);
+
+            FaceExposure[] faces = Explain(surfaces, armour, mapper.Map);
+            int right = Face.IndexOf(new Vector3I(1, 0, 0));
+
+            Assert.Equal(0, faces[right].Exposed);
+            Assert.Equal(1, faces[right].Sealed);
+            Assert.Equal(0, faces[right].Mounted);
+        }
+
+        [Fact]
+        public void TheBoltedCountNeedsBothSidesToMount()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.LightArmor(), Vector3I.Zero);
@@ -274,8 +299,9 @@ namespace Thermodynamics.Tests
             SurfaceMap surfaces;
             RoomMapper mapper = MapperFor(builder.Grid, out surfaces);
 
-            // With nothing on the other side there is no neighbour mount, so the face survives:
-            // the rule is about a joint, not about this block's own mount points.
+            // With nothing on the other side there is no neighbour mount, so the face is exposed
+            // and carries no joint: the count is about a joint, not about this block's own mount
+            // points.
             FaceExposure[] faces = Explain(surfaces, armour, mapper.Map);
             int right = Face.IndexOf(new Vector3I(1, 0, 0));
 

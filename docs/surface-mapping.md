@@ -46,8 +46,15 @@ outside. A face counts when:
 
 * it is on the block's boundary,
 * nothing on the far side seals against it,
-* it is not a mount-to-mount contact — two bolted faces are a conduction joint, not a surface,
 * and the cell beyond is external.
+
+A mount joint is deliberately not one of the tests. Any joint against a block that seals is
+already rejected by the second rule, so the only joints a mount test could reach are those against
+a block that does *not* seal — a grating, a catwalk, a ladder. Air floods through those, which is
+why the room map calls the space beyond them external, and a hull panel under a catwalk goes on
+radiating and taking sunlight. The joint conducts as well; both are true at once. The audit counts
+those faces as `bolted`, a subset of the exposed ones, so the population can be measured on a real
+ship.
 
 Only the block's six boundary slabs are walked, never its interior: the cost is a block's surface,
 not its volume.
