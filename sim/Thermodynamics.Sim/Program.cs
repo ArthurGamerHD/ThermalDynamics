@@ -38,6 +38,10 @@ namespace Thermodynamics.Sim
                 case "balance":
                     return BalanceCommand(args);
 
+                case "profiles":
+                    Console.Write(ProfileLab.Report());
+                    return 0;
+
                 default:
                     Console.Error.WriteLine("Unknown command: " + args[0]);
                     PrintUsage();
@@ -487,6 +491,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine();
             Console.WriteLine("  balance                 every block costed and measured against vanilla");
             Console.WriteLine("  balance --csv <dir>     also write the block table as CSV");
+            Console.WriteLine("  profiles                realism against arcade: what each buys and costs");
             Console.WriteLine();
             Console.WriteLine("  bench scale             cost per stage as the grid grows");
             Console.WriteLine("  bench hitch --size N    per-tick cost, with a block welded mid-run");
