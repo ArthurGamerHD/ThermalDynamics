@@ -230,6 +230,75 @@ namespace Thermodynamics.Tests
             return worst;
         }
 
+        /// <summary>
+        /// The count of floored nodes describes the grid's current state, not the one step that
+        /// happened to move a row.
+        ///
+        /// It read zero on every step, including the first, while the floor was doing all of its
+        /// work: <c>SyncNodeState</c> only refreshes a mirrored row whose node is dirty, so the row
+        /// still held the floored capacity from the previous step, and a pass that compared against
+        /// the row found nothing left to raise. A live dump reported "blocks raised by cap 0" beside
+        /// its own projection that the configured cap raises 804 blocks on that ship.
+        /// </summary>
+        [Fact]
+        public void TheFlooredCountHoldsForAsLongAsTheFloorDoes()
+        {
+            ThermalSimulation simulation = Hull(Settings(3), 900f);
+            EnvironmentSample sample = Worlds.Shadow();
+
+            for (int step = 0; step < 6; step++)
+            {
+                simulation.StepExact(1, sample);
+                Assert.Equal(1, simulation.Solver.FlooredNodes);
+            }
+        }
+
+        /// <summary>
+        /// Whenever a grid's own blocks demand more substeps than the cap allows, the floor must
+        /// bring the estimate to exactly the cap — not below it.
+        ///
+        /// The floor is sized to do precisely that: hold <c>C &gt;= G dt / (safety cap)</c>, so the
+        /// demand lands on the cap. A capped grid demanding less has been damped by something the
+        /// cap did not ask for. Computing the floor from the mirrored row rather than from the
+        /// block's capacity did exactly that: <c>SyncNodeState</c> leaves a clean row alone, so the
+        /// row still held the previous step's floor, this pass compared against it and raised it
+        /// again, and a 20 kg fitting on heavy armour settled at 1.94 substeps demanded against a
+        /// cap of 3.
+        ///
+        /// The raw demand is read through <c>NodeSubstepDemand</c>, which divides by the block's
+        /// real capacity and so is independent of the floor — otherwise this would be asking the
+        /// floor to confirm its own work.
+        /// </summary>
+        [Fact]
+        public void AFlooredGridDemandsExactlyItsCapAndNotLess()
+        {
+            // Heavy armour under a very light fitting: the pair where the floor has most to do.
+            GridBuilder builder = GridBuilder.Large();
+            builder.Fill(Catalog.HeavyArmor(), Vector3I.Zero, new Vector3I(3, 3, 3));
+            builder.Place(BlockModel.Solid("Interior", Vector3I.One, 20f, Catalog.DefaultThermal()),
+                new Vector3I(3, 0, 0));
+
+            ThermalSimulation simulation = builder.BuildSimulation(Settings(3), 900f);
+            EnvironmentSample sample = Worlds.Shadow();
+
+            for (int step = 0; step < 20; step++)
+            {
+                simulation.StepExact(1, sample);
+
+                float raw = 0f;
+                for (int i = 0; i < simulation.Solver.Nodes.Count; i++)
+                {
+                    float demand = simulation.Solver.NodeSubstepDemand(i);
+                    if (demand > raw) raw = demand;
+                }
+
+                // Below the cap the floor has nothing to do and the demand is the grid's own.
+                if (raw <= 3f) continue;
+
+                Assert.Equal(3f, simulation.Solver.LastRequiredSubsteps, 2);
+            }
+        }
+
         [Fact]
         public void TheBlockKeepsItsRealHeatCapacity()
         {

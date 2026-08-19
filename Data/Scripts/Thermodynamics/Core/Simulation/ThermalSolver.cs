@@ -2551,12 +2551,26 @@ namespace Thermodynamics.Core
             int count = nodes.Count;
             for (int i = 0; i < count; i++)
             {
+                // Based on the block's real capacity, as the loop and room passes below are, and
+                // not on the mirrored row. SyncNodeState only refreshes a row whose node is dirty,
+                // so the row still holds whatever this pass wrote last step: reading it back would
+                // make the floor a high-water mark that never falls. A block that was briefly hot
+                // would stay damped for the rest of the session, and the grid's behaviour would
+                // depend on the hottest moment in its history.
+                float real = nodes[i].ThermalMass;
                 float floor = NodeStabilityRate(i, ref terms) * perRate;
-                if (nodeThermalMass[i] >= floor) continue;
+                float wanted = real < floor ? floor : real;
 
-                nodeThermalMass[i] = floor;
-                moved = true;
-                FlooredNodes++;
+                if (nodeThermalMass[i] != wanted)
+                {
+                    nodeThermalMass[i] = wanted;
+                    moved = true;
+                }
+
+                // Counts the nodes standing above their real capacity, not the ones this pass
+                // happened to move. An event count reads zero on every step after the first, which
+                // is precisely when the floor is doing all of its work.
+                if (wanted > real) FlooredNodes++;
             }
 
             // A link's reduced mass is a function of the two capacities either side of it.

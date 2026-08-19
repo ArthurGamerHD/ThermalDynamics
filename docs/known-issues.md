@@ -37,6 +37,39 @@ beats the default entry on both properties it exists for, and that the heat pump
 fractions are zero. The radiator assertions compare against the default entry rather than against
 literals, because silently *becoming* the default is the failure being guarded.
 
+**The substep mass floor was computed from its own previous answer, and its diagnostic read zero
+whenever it was working.** `ApplyThermalMassFloor` raises a light block's *integration* capacity so
+it stops demanding more substeps than `MaxSubstepsPerBlock` allows. It compared each node against
+the mirrored row `nodeThermalMass[i]` — but `SyncNodeState` only refreshes a row whose node is
+dirty, so on a settled grid the row still held the floor this same pass wrote last step. Two
+consequences, one cosmetic and one not:
+
+* `FlooredNodes`, reported as **blocks raised by cap**, counted only the nodes a pass *moved*. After
+  the first step there were none, so it read `0` on every step while the floor was doing all of its
+  work. A live dump reported `blocks raised by cap 0 / 0 / 0` on the same page as its own projection
+  that the configured cap of 3 raises 804 blocks on that ship.
+* Because the pass could only ever raise, the floor became a high-water mark: it was re-raised
+  against its own previous output rather than sized from the block. A 20 kg fitting on heavy armour
+  settled at **1.94 substeps demanded against a cap of 3** — damped harder than the cap ever asked
+  for, which is wasted accuracy in the other direction.
+
+Both come from the same line. The floor is now sized from `nodes[i].ThermalMass`, as the coolant
+loop and room air passes immediately below it always were, and `FlooredNodes` counts the nodes
+standing above their real capacity rather than the ones one pass happened to move.
+
+**The behavioural half of this is smaller than it looks, and worth stating so nobody re-derives an
+alarm from it.** A node's stability rate is conduction plus radiation, and on a real ship
+conduction dominates — the live dump attributes 100 % of its substep demand to conduction.
+Conduction is temperature-independent, so the stale row usually held the same floor the block
+deserved. Measured on a 16 kg fitting in light armour, a grid that had been at 1200 K and one that
+never left 400 K integrated **bit-identically** from the same state. The ratchet is real, is fixed,
+and was inert wherever conduction sets the floor.
+
+`SubstepFloorTests` gains `TheFlooredCountHoldsForAsLongAsTheFloorDoes` and
+`AFlooredGridDemandsExactlyItsCapAndNotLess`; both were confirmed to fail against the previous
+arithmetic. The second reads the raw demand through `NodeSubstepDemand`, which divides by the
+block's real capacity, so the floor is not being asked to confirm its own work.
+
 **Never assign `NeedsUpdate` from a game logic component that asked for entity updates.**
 `[MyEntityComponentDescriptor(typeof(MyObjectBuilder_CubeGrid), true)]` makes the component's
 `NeedsUpdate` property the *grid entity's* update flags. Assigning to it clears whatever the grid
