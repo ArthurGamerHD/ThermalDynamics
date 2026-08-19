@@ -38,25 +38,24 @@ namespace Thermodynamics.Core
         public float HeatGenerationWatts { get; private set; }
 
         /// <summary>
-        /// Set whenever a value the solver mirrors into its own arrays changes. The solver
-        /// clears it when it picks the change up, so a step only re-reads the nodes that
-        /// actually moved rather than all of them.
+        /// Set whenever a value the solver mirrors into its own arrays changes, and cleared by the
+        /// solver when it reads the change, so a step re-reads only the nodes that moved.
         /// </summary>
         public bool StateDirty = true;
 
         /// <summary>
         /// True while this node is waiting for its conduction links to be built.
         ///
-        /// Read only by the incremental builder, and only to settle which end of a pair of
-        /// newly placed neighbours adds the link between them. Both ends see each other as a
-        /// neighbour, so without it the pair is added twice and the joint conducts double.
+        /// Read only by the incremental builder, to decide which end of a pair of newly placed
+        /// neighbours adds the link between them. Both ends see each other as a neighbour, so
+        /// without it the pair would be added twice and the joint would conduct double.
         /// </summary>
         public bool PendingLinks;
 
         /// <summary>
-        /// How many conduction links touch this node. A count rather than a list of indices:
-        /// the solver walks links, never a node's links, so the list was one heap object per
-        /// block rewritten on every topology change and read by nothing.
+        /// How many conduction links touch this node. A count rather than a list of indices: the
+        /// solver walks the link array, not a node's links, so a per-node list would be a heap
+        /// object per block rewritten on every topology change and read by nothing.
         /// </summary>
         public int LinkCount;
 
@@ -79,9 +78,9 @@ namespace Thermodynamics.Core
         private readonly float cellFaceArea;
 
         /// <summary>
-        /// Heat capacity is divided by this. See <see cref="ThermalSettings.HeatTimeScale"/>:
-        /// specific heat is stated in real J/(kg K), and this is what turns real thermal time
-        /// into playable thermal time.
+        /// Divisor applied to heat capacity. See <see cref="ThermalSettings.HeatTimeScale"/>: specific
+        /// heat is stated in real J/(kg K), and this converts real thermal time into playable
+        /// thermal time.
         /// </summary>
         public float HeatTimeScale
         {
@@ -121,7 +120,7 @@ namespace Thermodynamics.Core
 
         /// <summary>
         /// Area of one of this block's cell faces, m^2, including the definition's
-        /// <c>SurfaceAreaScaler</c>. The unit every area in the simulation is counted in.
+        /// <c>SurfaceAreaScaler</c>. The unit every area in the simulation is measured in.
         /// </summary>
         public float CellFaceArea
         {
@@ -155,9 +154,7 @@ namespace Thermodynamics.Core
             StateDirty = true;
         }
 
-        /// <summary>
-        /// Recomputes waste heat from the block's current power figures.
-        /// </summary>
+        /// <summary>Recomputes waste heat from the block's current power figures.</summary>
         public void RefreshHeatGeneration()
         {
             float produced = Math.Max(0f, Block.PowerProducedWatts) * Thermal.ProducerWasteEnergy;

@@ -4,48 +4,40 @@ using VRageMath;
 namespace Thermodynamics.Core
 {
     /// <summary>
-    /// A wind field over a planet, because the game does not have one.
+    /// A wind field over a planet, which the game does not provide.
     ///
-    /// What the game offers is <c>MyPlanet.GetWindSpeed</c>, which is the planet definition's
-    /// maximum wind speed scaled by air density — a constant for a given altitude, the same at the
-    /// pole as at the equator, in the lee of a mountain as on an open plain, and with no direction
-    /// at all. On an earthlike world it reads 80 m/s at sea level: not weather, a rating, and the
-    /// number wind turbines are balanced against.
+    /// <c>MyPlanet.GetWindSpeed</c> returns the planet definition's maximum wind speed scaled by
+    /// air density: a constant for a given altitude, identical at the pole and the equator, with no
+    /// direction. On an earthlike world that is 80 m/s at sea level — a rating that wind turbines
+    /// are balanced against rather than a wind speed.
     ///
-    /// Taken literally it does damage. Eighty metres a second is a hurricane twice over, so a
-    /// parked ship reads as flying at 290 km/h: it trips the friction threshold and heats up
-    /// standing still, and convection runs at nearly twice its still-air rate everywhere on the
-    /// planet.
+    /// Used directly it places a parked grid in a permanent 290 km/h wind, tripping the friction
+    /// threshold and running convection at nearly twice its still-air rate everywhere.
     ///
-    /// So the game's figure is treated as what it is — a ceiling — and the field below decides how
-    /// much of it blows and which way. The pattern is Earth's, because Earth's is the one people
-    /// recognise: easterly trades either side of the equator, westerlies in the middle latitudes,
-    /// easterlies again at the poles. It is not a simulation of anything. It is a map that is
-    /// steady, cheap, different in different places, and recognisable when you fly across it.
+    /// The game's figure is therefore treated as a ceiling, and this field decides how much of it
+    /// blows and in which direction. The pattern follows Earth's: easterly trades either side of
+    /// the equator, westerlies in the middle latitudes, easterlies again at the poles. It is not a
+    /// simulation — it is a steady, cheap, position-dependent map.
     /// </summary>
     public static class WindField
     {
         /// <summary>
-        /// Share of the planet's maximum wind that blows in ordinary weather.
-        ///
-        /// A tenth of a hurricane is a stiff breeze, which is what most of a planet has most of the
-        /// time. Weather takes it up from there.
+        /// Share of the planet's maximum wind that blows in clear weather. Weather scales up from
+        /// here towards <see cref="StormShare"/>.
         /// </summary>
         public const float CalmFraction = 0.12f;
 
         /// <summary>Share blowing in the worst weather the game reports.</summary>
         public const float StormFraction = 0.55f;
 
-        /// <summary>
-        /// Wind at a point, in world space.
-        /// </summary>
+        /// <summary>Wind at a point, in world space.</summary>
         /// <param name="up">Away from the planet's centre at this point, normalised.</param>
         /// <param name="axis">The planet's own north, normalised.</param>
-        /// <param name="maxSpeed">The game's wind speed for this point: the ceiling, not the wind.</param>
+        /// <param name="maxSpeed">The game's wind figure for this point, used as a ceiling.</param>
         /// <param name="weather">Weather intensity here, 0..1.</param>
         /// <param name="variation">
-        /// A steady per-place value, 0..1, that keeps one valley windier than the next. Anything
-        /// deterministic in position will do; the field does not care where it came from.
+        /// A steady per-position value, 0..1, giving one place more wind than another. Any function
+        /// deterministic in position is acceptable.
         /// </param>
         public static Vector3 Velocity(
             Vector3 up, Vector3 axis, float maxSpeed, float weather, float variation)
@@ -57,7 +49,7 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Which way the wind blows here: along the surface, in the band this latitude falls in.
+        /// Wind direction here: along the surface, in the circulation band this latitude falls in.
         /// </summary>
         public static Vector3 Direction(Vector3 up, Vector3 axis)
         {
@@ -68,9 +60,8 @@ namespace Thermodynamics.Core
 
             Vector3 east = Vector3.Cross(axis, up);
 
-            // Standing on a pole there is no east: every direction is south. Wind there is a
-            // circle around the axis and any tangent will do, so the field hands back nothing
-            // rather than a normalised rounding error.
+            // At a pole there is no east: every direction is south, so any tangent would do.
+            // Returns zero rather than a normalised rounding error.
             if (east.LengthSquared() < 1e-6f) return Vector3.Zero;
 
             east = Vector3.Normalize(east);
@@ -80,15 +71,14 @@ namespace Thermodynamics.Core
             float latitude = (float)Math.Asin(sine);
             float distance = Math.Abs(latitude);
 
-            // Three bands per hemisphere, the way Earth has them: trades blowing west out to 30
-            // degrees, westerlies to 60, polar easterlies beyond. Taken on the distance from the
-            // equator, so both hemispheres have westerlies in their middle latitudes as Earth does.
+            // Three bands per hemisphere, as on Earth: trades blowing west out to 30 degrees,
+            // westerlies to 60, polar easterlies beyond. Taken on distance from the equator, so both
+            // hemispheres carry westerlies in their middle latitudes.
             //
-            // The band is a bearing rather than a pair of components. Mixing a fixed sideways
-            // term into a fading one and normalising the result makes the wind snap round at every
-            // band edge, because near the calms the sideways term is all that is left. Turning the
-            // bearing instead, the wind swings east to north to west and back through the whole
-            // pattern, which is both continuous and what it does.
+            // The band is expressed as a bearing rather than a pair of components. Mixing a fixed
+            // sideways term into a fading one and normalising makes the wind jump at every band
+            // edge, because near the calms the sideways term is all that remains. Rotating the
+            // bearing instead keeps the direction continuous across the whole pattern.
             double bearing = (Math.PI / 2d) + ((Math.PI / 2d) * Math.Sin(distance * 6d));
 
             Vector3 alongMeridian = latitude < 0f ? -north : north;
@@ -106,12 +96,11 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// As above, with what this particular weather does to the wind.
+        /// As above, with the specific weather's effect on wind applied.
         ///
-        /// Intensity alone cannot say: fog and a sandstorm are both weather at full strength and
-        /// one of them is still. The multiplier is the game's own <c>WindOutputModifier</c> for
-        /// the effect standing over the grid, already faded in with its intensity, so a tenth of a
-        /// gale is a tenth of the way toward one rather than all of it a tenth of the time.
+        /// Intensity alone is insufficient: fog and a sandstorm are both weather at full strength
+        /// and one of them is still. The multiplier is the game's <c>WindOutputModifier</c> for the
+        /// effect over the grid, already faded in with its intensity.
         /// </summary>
         public static float Speed(float maxSpeed, float weather, float variation, float weatherWind)
         {
@@ -121,8 +110,8 @@ namespace Thermodynamics.Core
             weather = Clamp(weather, 0f, 1f);
             variation = Clamp(variation, 0f, 1f);
 
-            // Calm to storm on the weather, and a steady spread either side of that so two places
-            // in the same weather are not the same.
+            // Interpolates calm to storm on the weather, with a steady per-position spread so two
+            // places under the same weather differ.
             float share = CalmFraction + ((StormFraction - CalmFraction) * weather);
             share *= 0.6f + (0.8f * variation);
             share *= weatherWind;
@@ -138,11 +127,8 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// A steady value per place, 0..1, from the position alone.
-        ///
-        /// Deterministic and continuous enough that flying a kilometre changes the wind a little
-        /// rather than not at all — the point is that the map has texture, not that the texture
-        /// means anything.
+        /// A steady value per position, 0..1, derived from the position alone. Deterministic and
+        /// continuous enough that moving a kilometre changes the wind slightly.
         /// </summary>
         public static float Variation(Vector3D position, double scale = 900d)
         {

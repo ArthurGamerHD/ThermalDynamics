@@ -6,14 +6,14 @@ namespace Thermodynamics.Core
     /// <summary>
     /// Walks a ray through a grid's cells and reports whether it hits anything solid.
     ///
-    /// The traversal is Amanatides and Woo's: keep the distance to the next cell boundary on each
-    /// axis and cross whichever is nearest. It visits every cell the ray actually passes through
-    /// and no others, so a ray cannot slip diagonally between two blocks that touch along an edge.
+    /// The traversal is Amanatides and Woo's: track the distance to the next cell boundary on each
+    /// axis and cross whichever is nearest. It visits every cell the ray passes through and no
+    /// others, so a ray cannot slip diagonally between two blocks touching along an edge.
     ///
-    /// The origin is a point rather than a cell, which is what lets one walk serve two purposes. A
-    /// grid asking about its own shadow starts at cell centres, on the integers. A grid asking
-    /// whether the station overhead is in the way starts wherever the station's cell lattice
-    /// happens to fall relative to its own — almost never on an integer, and rotated besides.
+    /// The origin is a point rather than a cell, so one implementation serves both callers. A grid
+    /// testing its own shadow starts at cell centres, on the integers; a grid testing another grid
+    /// starts wherever that grid's lattice falls relative to its own, which is rotated and rarely
+    /// on an integer.
     /// </summary>
     public static class VoxelWalk
     {
@@ -21,8 +21,8 @@ namespace Thermodynamics.Core
         /// True when the ray from <paramref name="origin"/> along <paramref name="direction"/>
         /// crosses an occupied cell of <paramref name="grid"/>, both in that grid's cell space.
         ///
-        /// The walk is bounded by the grid's own box: a ray that never reaches it, or has left it,
-        /// cannot hit anything and stops rather than stepping on forever.
+        /// Bounded by the grid's own box: a ray that never reaches it, or has left it, can hit
+        /// nothing and stops rather than stepping indefinitely.
         /// </summary>
         public static bool Blocked(GridModel grid, Vector3D origin, Vector3D direction, double startOffset = 0d)
         {
@@ -38,8 +38,8 @@ namespace Thermodynamics.Core
             if (!BoxRange(origin, direction, min, max, out enter, out exit)) return false;
             if (exit <= startOffset) return false;
 
-            // Start at the box rather than at the origin when the origin is outside it: the ray may
-            // have kilometres to cross before the first cell it could possibly hit.
+            // Start at the box rather than the origin when the origin is outside it: the ray may
+            // have kilometres to cross before the first cell it could hit.
             double travelled = Math.Max(enter, startOffset);
             Vector3D point = origin + (direction * travelled);
 
@@ -61,9 +61,8 @@ namespace Thermodynamics.Core
 
             double span = exit - travelled;
 
-            // Bounded twice: by the distance the ray stays in the box, and by a step count no sane
-            // geometry reaches. The first is the real limit; the second stops a degenerate
-            // direction spinning.
+            // Bounded twice: by the distance the ray stays inside the box, which is the real limit,
+            // and by a step count that stops a degenerate direction from looping.
             int limit = (2 * ((max.X - min.X) + (max.Y - min.Y) + (max.Z - min.Z))) + 8;
 
             for (int i = 0; i < limit; i++)
@@ -97,8 +96,8 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Where the ray enters and leaves the grid's box, in distance along the ray. False when it
-        /// misses the box altogether or leaves it behind.
+        /// Where the ray enters and leaves the grid's box, as distances along the ray. False when the
+        /// ray misses the box or has already passed it.
         /// </summary>
         private static bool BoxRange(
             Vector3D origin, Vector3D direction, Vector3I min, Vector3I max,

@@ -66,14 +66,14 @@ namespace Thermodynamics.Core
     /// <summary>
     /// The set of temperatures being watched on one grid.
     ///
-    /// Kept apart from the solver so the cost is visible: with nothing registered, a step tests
-    /// one integer. With thresholds registered, the check is one comparison per node per
-    /// threshold against the temperatures the step already has in hand — no extra pass over the
-    /// grid, and no per-block subscription list to maintain.
+    /// Held apart from the solver so its cost is explicit: with nothing registered a step tests one
+    /// integer, and with thresholds registered the check is one comparison per node per threshold
+    /// against temperatures the step already holds — no extra pass over the grid and no per-block
+    /// subscription list.
     ///
-    /// Crossings are detected against the temperature at the top of the step, not the top of a
+    /// Crossings are detected against the temperature at the start of the step rather than of a
     /// substep, so a block that crosses and recrosses within one step reports once, in the
-    /// direction it actually ended up going.
+    /// direction it finished in.
     /// </summary>
     public class ThermalThresholds
     {
@@ -138,7 +138,7 @@ namespace Thermodynamics.Core
             {
                 ThermalThreshold threshold = thresholds[i];
 
-                // Half-open so a block sitting exactly on a threshold cannot report twice.
+                // Half-open, so a block sitting exactly on a threshold cannot report twice.
                 if (threshold.Temperature <= low || threshold.Temperature > high) continue;
 
                 if (threshold.Direction == ThresholdDirection.Rising && !rising) continue;

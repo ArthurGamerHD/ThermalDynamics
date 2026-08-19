@@ -7,8 +7,8 @@ namespace Thermodynamics.Core
     /// The heat-pump hardware a block type carries: which of its faces is the cold side, how much
     /// heat it can lift, and how much electricity it can draw doing it.
     ///
-    /// Both faces are one axis of the block in its own local space, so a rotated pump needs no
-    /// special case — the same reason <see cref="CoolantPort"/> is local.
+    /// Both faces are expressed along one axis of the block's own local space, so a rotated pump
+    /// needs no special case, as with <see cref="CoolantPort"/>.
     /// </summary>
     public class HeatPumpShape
     {
@@ -27,24 +27,20 @@ namespace Thermodynamics.Core
         /// <summary>Most heat the pump can lift out of the cold side, W.</summary>
         public float RatedWatts = 50000f;
 
-        /// <summary>Most electricity it can draw, W. What the pump lifts is limited by both.</summary>
+        /// <summary>Most electricity it can draw, W. The lift is limited by this and the rating.</summary>
         public float MaxPowerWatts = 20000f;
 
-        /// <summary>
-        /// A one-cell pump along an axis: cold face one way, hot face the opposite way.
-        /// </summary>
+        /// <summary>A one-cell pump along an axis, with the cold and hot faces opposed.</summary>
         public static HeatPumpShape Along(Vector3I coldDirection, float ratedWatts, float maxPowerWatts)
         {
             return Centred(coldDirection, Vector3I.One, ratedWatts, maxPowerWatts);
         }
 
         /// <summary>
-        /// A pump of any size along an axis, with both faces on the middle of the block's end
-        /// caps rather than on a corner of them.
+        /// A pump of any size along an axis, with both faces at the centre of the block's end caps.
         ///
-        /// The middle matters as soon as a pump is more than one cell across its own axis: the
-        /// small-grid block is three by three, and reading its corner cell would bind the pump to
-        /// whatever happened to be diagonally behind it instead of to what it is facing.
+        /// The centre matters once a pump is more than one cell across: taking a corner cell would
+        /// bind the pump to whatever sits diagonally behind it rather than to what it faces.
         /// </summary>
         public static HeatPumpShape Centred(Vector3I coldDirection, Vector3I size, float ratedWatts, float maxPowerWatts)
         {
@@ -55,7 +51,7 @@ namespace Thermodynamics.Core
             Vector3I extent = new Vector3I(
                 Math.Max(1, size.X), Math.Max(1, size.Y), Math.Max(1, size.Z)) - Vector3I.One;
 
-            // Middle of the face on the two axes the pump does not run along, and the far end of
+            // Centre of the face on the two axes the pump does not run along, and the far end of
             // the one it does.
             Vector3I middle = extent / 2;
             Vector3I axis = Vector3I.Abs(coldDirection);
@@ -83,22 +79,20 @@ namespace Thermodynamics.Core
     /// One placed heat pump, resolved against the grid: the node it draws from, the node it
     /// rejects into, and what it managed last step.
     ///
-    /// A pump moves heat the wrong way up a gradient, which nothing else in the model does. It
-    /// pays for that with electricity, and the price is set by Carnot: lifting heat across a small
-    /// difference is nearly free, and across a large one is ruinous. That single relation is what
-    /// stops the block being a cheat — you cannot drive a reactor to absolute zero, because the
-    /// closer you get the more power each further kelvin costs, and the pump's electrical limit
-    /// arrives long before the temperature does.
+    /// A pump moves heat up a gradient, which nothing else in the model does, and pays for it with
+    /// electricity at a price set by the Carnot relation: nearly free across a small difference and
+    /// prohibitive across a large one. That relation bounds the block — each further kelvin costs
+    /// more, so the pump's electrical limit binds long before absolute zero is reached.
     /// </summary>
     public class HeatPumpDevice
     {
         /// <summary>The pump block itself.</summary>
         public BlockInstance Block;
 
-        /// <summary>Node heat is drawn out of, or -1 when nothing is bolted to the cold face.</summary>
+        /// <summary>Node heat is drawn from, or -1 when nothing is mounted on the cold face.</summary>
         public int ColdNodeIndex = -1;
 
-        /// <summary>Node heat is rejected into, or -1 when nothing is bolted to the hot face.</summary>
+        /// <summary>Node heat is rejected into, or -1 when nothing is mounted on the hot face.</summary>
         public int HotNodeIndex = -1;
 
         /// <summary>Most heat this pump can lift, W.</summary>
@@ -108,45 +102,42 @@ namespace Thermodynamics.Core
         public float MaxPowerWatts;
 
         /// <summary>
-        /// Whether the host is running it — the terminal switch, and whatever else the host
-        /// decides. A pump the host has not enabled costs nothing and moves nothing.
+        /// Whether the host is running the pump, from the terminal switch and any other host
+        /// condition. A disabled pump costs nothing and moves nothing.
         /// </summary>
         public bool Enabled;
 
         /// <summary>
-        /// Fraction of the electricity it asked for that the grid actually supplied, 0..1. The
-        /// host sets this from its own power model; a browned-out pump lifts proportionally less
-        /// rather than stopping dead.
+        /// Fraction of the requested electricity the grid supplied, 0..1. Set by the host from its
+        /// own power model; an under-supplied pump lifts proportionally less rather than stopping.
         /// </summary>
         public float PowerAvailable = 1f;
 
         /// <summary>Heat taken out of the cold side over the last step, W.</summary>
         public float LastLiftedWatts;
 
-        /// <summary>Electricity consumed over the last step, W. What the host bills for.</summary>
+        /// <summary>Electricity consumed over the last step, W. The figure the host bills for.</summary>
         public float LastPowerWatts;
 
         /// <summary>
-        /// Electricity the pump would have drawn last step had the grid supplied everything it
-        /// asked for, W.
+        /// Electricity the pump would have drawn last step had the grid supplied its full request, W.
         ///
-        /// This is what a host should request from its power model, not
-        /// <see cref="LastPowerWatts"/>. Asking for what it managed on a browned-out grid asks for
-        /// less every step than the step before, and a pump that keeps lowering its request
-        /// because its request was not met never recovers when the power comes back.
+        /// Hosts should request this from their power model rather than <see cref="LastPowerWatts"/>.
+        /// Requesting what the pump achieved on an under-supplied grid lowers the request every
+        /// step, and a pump that lowers its request because it was refused never recovers.
         /// </summary>
         public float LastDemandWatts;
 
-        /// <summary>Heat put into the hot side over the last step, W — the lift plus the work.</summary>
+        /// <summary>Heat delivered to the hot side over the last step, W: the lift plus the work.</summary>
         public float LastRejectedWatts;
 
         /// <summary>Coefficient of performance over the last step: heat lifted per watt drawn.</summary>
         public float LastCoefficient;
 
-        /// <summary>True when the pump ran but could not lift its rating, W being the limit.</summary>
+        /// <summary>True when the pump ran but could not reach its rated lift.</summary>
         public bool LastWasLimited;
 
-        /// <summary>True when it is wired up at both ends. A pump missing a side does nothing.</summary>
+        /// <summary>True when both faces resolve to a node. A pump missing a side does nothing.</summary>
         public bool IsConnected
         {
             get { return ColdNodeIndex >= 0 && HotNodeIndex >= 0; }
@@ -167,10 +158,9 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Turns the energy moved over a whole step into the rates the host and the readouts
-        /// quote. Reported per step and not per substep deliberately: a value written once per
-        /// substep describes the last substep only, which is how the old model came to
-        /// under-report every rate of change by roughly the substep count.
+        /// Converts the energy moved over a whole step into the rates the host and readouts report.
+        /// Computed per step rather than per substep: a value written once per substep describes
+        /// only that substep, understating the rate by roughly the substep count.
         /// </summary>
         internal void EndStep(float deltaSeconds)
         {
@@ -185,11 +175,11 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Coefficient of performance for lifting heat out of <paramref name="cold"/> and into
+        /// Coefficient of performance for lifting heat from <paramref name="cold"/> into
         /// <paramref name="hot"/>: a fraction of the Carnot limit for a cooler, Tc/(Th-Tc).
         ///
-        /// Pumping downhill is not a special case worth its own code path — it is just a very
-        /// efficient pump — so it saturates at the cap rather than branching.
+        /// Pumping down a gradient is not special-cased; it saturates at the cap rather than
+        /// branching.
         /// </summary>
         public static float Coefficient(float cold, float hot, float carnotFraction, float maxCoefficient)
         {

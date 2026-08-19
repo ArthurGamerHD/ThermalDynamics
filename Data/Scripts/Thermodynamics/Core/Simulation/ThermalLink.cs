@@ -6,10 +6,10 @@ namespace Thermodynamics.Core
     /// <summary>
     /// A conduction path between two nodes, with a single symmetric conductance in W/K.
     ///
-    /// One conductance shared by both ends is what makes the exchange energy-conserving: the
-    /// watts leaving one node are exactly the watts entering the other. The original
-    /// implementation derived a separate coefficient per node from that node's own geometry, so
-    /// the two halves disagreed and heat was created or destroyed at every asymmetric joint.
+    /// One conductance shared by both ends is what makes the exchange energy-conserving: the watts
+    /// leaving one node are exactly the watts entering the other. Deriving a coefficient per node
+    /// from that node's own geometry would let the two halves disagree and create or destroy heat
+    /// at every asymmetric joint.
     /// </summary>
     public struct ThermalLink
     {
@@ -19,7 +19,7 @@ namespace Thermodynamics.Core
         /// <summary>Conductance, W/K. Always positive.</summary>
         public float Conductance;
 
-        /// <summary>Bolted contact area in lattice cell faces. Diagnostic only.</summary>
+        /// <summary>Mounted contact area in lattice cell faces. Diagnostic only.</summary>
         public int ContactFaces;
 
         public ThermalLink(int nodeA, int nodeB, float conductance, int contactFaces)
@@ -38,12 +38,11 @@ namespace Thermodynamics.Core
     /// summaries, in constant time. Nothing walks a block's cells.
     ///
     /// <para>
-    /// The previous implementation counted bolted cell faces by iterating every cell of block A,
-    /// and for each of its six faces searched <em>every cell of block B</em> for a matching
-    /// mount — O(cellsA x 6 x cellsB). That is tolerable while blocks are one or two cells. On a
-    /// lattice fine enough for Space Engineers 2's smallest blocks, a five-metre block occupies
-    /// around eight thousand cells, and one such pair would cost hundreds of millions of
-    /// operations per topology rebuild.
+    /// Counting mounted cell faces directly would iterate every cell of block A and, for each of its
+    /// six faces, search every cell of block B for a matching mount: O(cellsA * 6 * cellsB). That is
+    /// tolerable for one- and two-cell blocks, but on a lattice fine enough for Space Engineers 2's
+    /// smallest blocks a five-metre block occupies around eight thousand cells, and one such pair
+    /// would cost hundreds of millions of operations per topology rebuild.
     /// </para>
     /// </summary>
     public static class ConductionBuilder
@@ -69,8 +68,8 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Shared area where the two blocks are bolted together — both sides carry a mount
-        /// surface across the joint. This is the area heat conducts through.
+        /// Shared area where both blocks carry a mount surface across the joint. This is the area
+        /// heat conducts through.
         /// </summary>
         /// <remarks>
         /// Mount coverage is tracked per face as a fraction, so where a face is uniformly
@@ -116,10 +115,10 @@ namespace Thermodynamics.Core
         /// W/(m K). Result is symmetric by construction.
         ///
         /// <para>
-        /// Both terms scale with the blocks' real dimensions, so a joint between a small block
-        /// and a large one is described correctly: the contact area is the overlap of the two
-        /// faces, and the large block's greater depth makes it the slower conductor. That is
-        /// what lets one grid mix block sizes.
+        /// Both terms scale with the blocks' real dimensions, so a joint between a small block and a
+        /// large one is described correctly: the contact area is the overlap of the two faces, and
+        /// the larger block's greater depth makes it the slower conductor. This is what allows one
+        /// grid to mix block sizes.
         /// </para>
         /// </summary>
         public static float Conductance(
