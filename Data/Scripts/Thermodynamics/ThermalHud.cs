@@ -80,6 +80,10 @@ namespace Thermodynamics
         private static readonly GlyphFormat Muted =
             new GlyphFormat(new Color(140, 158, 168), TextAlignment.Left, 0.95f);
 
+        /// <summary>For the two figures that mean something is wrong: starvation and criticals.</summary>
+        private static readonly GlyphFormat Warning =
+            new GlyphFormat(new Color(226, 92, 80), TextAlignment.Left, 0.95f);
+
         public static void Reset()
         {
             toolLabel = null;
@@ -165,47 +169,97 @@ namespace Thermodynamics
             ToolText.Append(Tools.KelvinToCelsiusString(bound.Node.Temperature));
         }
 
+        /// <summary>
+        /// The performance panel: what the simulation is doing right now, across every live grid.
+        ///
+        /// It replaced a panel that appeared only while a player was seated in a block and showed
+        /// five temperature lines. That is the wrong shape for the question people actually have,
+        /// which is whether the mod is costing them frames and why — and it cannot be answered from
+        /// a cockpit, because the grid that is struggling is usually not the one being flown.
+        ///
+        /// **Every figure here is a count, not a clock.** Milliseconds depend on the machine and on
+        /// what else is running, so they are the wrong thing to leave on screen: two players
+        /// comparing notes would be comparing hardware. Substeps, link visits and floored blocks are
+        /// properties of what has been built, so they mean the same thing to everyone and can be
+        /// read against the figures in docs/field-tuning.md directly.
+        ///
+        /// Toggled with ctrl+shift+P, and off by default.
+        /// </summary>
         private static void DrawGridHud()
         {
             GridPanelText = null;
+            if (!ShowPerformancePanel) return;
 
-            IMyCubeBlock controlledBlock = MyAPIGateway.Session == null || MyAPIGateway.Session.Player == null
-                ? null
-                : MyAPIGateway.Session.Player.Controller.ControlledEntity as IMyCubeBlock;
-            if (controlledBlock == null) return;
+            IList<ThermalGrid> grids = ThermalGrid.LiveGrids;
+            if (grids == null || grids.Count == 0) return;
 
-            MyCubeGrid grid = controlledBlock.CubeGrid as MyCubeGrid;
-            if (grid == null) return;
+            int simulated = 0;
+            long blocks = 0;
+            long links = 0;
+            int loops = 0;
+            int critical = 0;
+            int floored = 0;
 
-            ThermalGrid thermals = grid.GameLogic.GetAs<ThermalGrid>();
-            if (thermals == null || thermals.Simulation == null) return;
+            // Worst rather than mean: a step costs what its stiffest grid demands, and an average
+            // across a fleet would hide the one grid that is actually setting the bill.
+            int granted = 0;
+            float demanded = 0f;
+            double visitsPerSecond = 0d;
+
+            float peak = float.MinValue;
+            float ambient = 0f;
+
+            for (int i = 0; i < grids.Count; i++)
+            {
+                ThermalGrid thermals = grids[i];
+                if (thermals == null || thermals.Simulation == null) continue;
+
+                ThermalSolver solver = thermals.Simulation.Solver;
+                simulated++;
+                blocks += thermals.BlockCount;
+                links += solver.LinkCount;
+                loops += solver.Loops == null ? 0 : solver.Loops.Count;
+                critical += thermals.CriticalBlocks;
+                floored += solver.FlooredNodes;
+
+                if (solver.LastSubsteps > granted) granted = solver.LastSubsteps;
+                if (solver.LastRequiredSubsteps > demanded) demanded = solver.LastRequiredSubsteps;
+
+                visitsPerSecond += (double)solver.LinkCount * solver.LastSubsteps
+                    * Settings.Instance.StepsPerSecond;
+
+                ThermalNode hottest = thermals.HottestNode;
+                if (hottest != null && hottest.Temperature > peak) peak = hottest.Temperature;
+                ambient = thermals.LastState.AmbientTemperature;
+            }
+
+            if (simulated == 0) return;
 
             RichText text = new RichText();
 
-            Row(text, "ambient", Tools.KelvinToCelsiusString(thermals.LastState.AmbientTemperature));
+            Pair(text, "grids", Thousands(simulated), "blocks", Thousands(blocks));
+            Pair(text, "links", Thousands(links), "loops", loops.ToString());
 
-            ThermalNode hottest = thermals.HottestNode;
-            if (hottest != null)
-            {
-                // Only the peak line is coloured: tinting the whole panel would apply a temperature
-                // colour to figures that are not temperatures.
-                Row(text, "peak", Tools.KelvinToCelsiusString(hottest.Temperature),
-                    new GlyphFormat(
-                        ColorExtensions.HSVtoColor(Tools.GetTemperatureColor(hottest.Temperature)),
-                        TextAlignment.Left, 0.95f));
+            // Starvation is the one number that predicts trouble: everything that has ever diverged
+            // in this mod was refused the substeps it asked for. Red once any is being refused.
+            float starved = demanded > granted && demanded > 0f
+                ? (demanded - granted) / demanded : 0f;
+            Pair(text, "substeps", granted + " / " + demanded.ToString("n1"),
+                "starved", (starved * 100f).ToString("n0") + "%",
+                starved > 0f ? Warning : (GlyphFormat?)null);
 
-                // Per second, so the figure is comparable at any step rate.
-                float perSecond = hottest.LastDeltaTemperature * Settings.Instance.StepsPerSecond;
-                Row(text, "rate", perSecond.ToString("n2") + " K/s");
-            }
+            Pair(text, "visits/s", Thousands((long)visitsPerSecond), "floored", Thousands(floored));
 
-            int critical = thermals.CriticalBlocks;
-            Row(text, "critical", critical.ToString(),
-                critical > 0
-                    ? new GlyphFormat(new Color(226, 92, 80), TextAlignment.Left, 0.95f)
-                    : (GlyphFormat?)null);
+            Pair(text, "ambient", Tools.KelvinToCelsiusString(ambient),
+                "peak", peak == float.MinValue ? "-" : Tools.KelvinToCelsiusString(peak),
+                peak == float.MinValue ? (GlyphFormat?)null : new GlyphFormat(
+                    ColorExtensions.HSVtoColor(Tools.GetTemperatureColor(peak)),
+                    TextAlignment.Left, 0.95f));
 
-            Row(text, "loops", thermals.Simulation.Solver.Loops.Count.ToString());
+            Pair(text, "critical", critical.ToString(), "clock",
+                Settings.Instance.HeatTimeScale.ToString("n0") + " / "
+                + Settings.Instance.Frequency,
+                critical > 0 ? Warning : (GlyphFormat?)null);
 
             GridPanelText = text;
         }
@@ -215,6 +269,40 @@ namespace Thermodynamics
         {
             text.Add(label.PadRight(9), Muted);
             text.Add(value + "\n", format ?? Body);
+        }
+
+        /// <summary>
+        /// Two label-value pairs on one line, which is what makes the panel compact enough to leave
+        /// on. Six lines of paired figures against twelve of single ones is the difference between a
+        /// readout a player tolerates in the corner of the screen and one they turn off.
+        /// </summary>
+        private static void Pair(RichText text, string leftLabel, string leftValue,
+            string rightLabel, string rightValue, GlyphFormat? rightFormat = null)
+        {
+            text.Add(leftLabel.PadRight(9), Muted);
+            text.Add(leftValue.PadRight(11), Body);
+            text.Add(rightLabel.PadRight(9), Muted);
+            text.Add(rightValue + "\n", rightFormat ?? Body);
+        }
+
+        /// <summary>
+        /// Whether the performance panel is up. Toggled from <c>Session.PollKeys</c>.
+        ///
+        /// Off by default and remembered for the session only: it is a diagnostic, and a player who
+        /// wanted it yesterday does not necessarily want it today.
+        /// </summary>
+        public static bool ShowPerformancePanel;
+
+        /// <summary>Flips the panel and returns the new state, for the chat acknowledgement.</summary>
+        public static bool TogglePerformancePanel()
+        {
+            ShowPerformancePanel = !ShowPerformancePanel;
+            return ShowPerformancePanel;
+        }
+
+        private static string Thousands(long value)
+        {
+            return value.ToString("n0");
         }
 
         /// <summary>The panel's contents, or null when there is nothing to show.</summary>

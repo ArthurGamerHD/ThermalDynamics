@@ -207,23 +207,42 @@ equipped, a 15 m camera raycast finds the block you are looking at, prints its t
 thermal neighbours using the `GaugeThermalTexture` transparent material
 ([TransparentMaterials.sbc](../Data/TransparentMaterials.sbc)).
 
-## Cockpit HUD
+## The performance panel
 
-`ThermalHud.DrawGridHud` ([ThermalHud.cs:95](../Data/Scripts/Thermodynamics/ThermalHud.cs#L95))
-shows, whenever the player controls a cube block:
+`ThermalHud.DrawGridHud` draws a compact readout of what the simulation is doing across **every live
+grid**, toggled with **ctrl+shift+P** and off by default:
 
 ```
-ambient    current grid ambient temperature (°C)
-peak       hottest block on the grid (°C), tinted by the heat ramp
-rate       that block's change over the last step × StepsPerSecond, K/s
-critical   count over critical temperature in the last completed pass, red when above zero
-loops      number of valid loops on the grid
+grids     7          blocks    7,976
+links     3,294      loops     4
+substeps  6 / 21.4   starved   72%
+visits/s  395,280    floored   122
+ambient   -270 C     peak      634 C
+critical  0          clock     225 / 4
 ```
 
-It is a Rich HUD panel at the top right: a background behind the text, because five lines of bare
-text over a planet is unreadable whatever drew them, and the label column dimmed so the numbers are
-what the eye lands on. Only the two lines that can mean trouble carry colour — the peak temperature
-and a non-zero critical count.
+It replaced a panel that appeared only while a player was seated in a block and showed five
+temperature lines. That is the wrong shape for the question people actually have — whether the mod
+is costing them frames, and why — and it could not be answered from a cockpit, because the grid
+that is struggling is usually not the one being flown.
+
+**Every figure is a count, not a clock.** Milliseconds depend on the machine and on what else is
+running, so two players comparing notes would be comparing hardware. Substeps, link visits and
+floored blocks are properties of what has been *built*, so they mean the same thing to everyone and
+read directly against [field-tuning.md](field-tuning.md).
+
+Two lines carry colour, and only when they mean trouble:
+
+* **`starved`** — how much of the substep demand is being refused. This is the number that predicts
+  failure: everything that has ever diverged in this mod was refused the substeps it asked for. Any
+  figure above zero is worth acting on, by raising `MaxSubsteps`, raising `MaxSubstepsPerBlock`, or
+  raising `Frequency` to cut the demand per step.
+* **`critical`** — blocks past their rating right now.
+
+`substeps` reads *granted / demanded* and `clock` reads `HeatTimeScale / Frequency`, whose ratio is
+the safety rail described in [configuration.md](configuration.md). `floored` is how many blocks the
+per-block cap is holding back — on a real ship that is usually the lightest fittings, and
+[field-tuning.md](field-tuning.md) is about getting it down.
 
 Both HUD elements are drawn by the Rich HUD Framework; without Rich HUD Master the framework never
 registers and no text appears. The extinguisher's temperature billboard is drawn through the mod API
