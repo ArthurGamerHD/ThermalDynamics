@@ -515,6 +515,665 @@
 
 			See docs/field-tuning.md for the measurement.
 		-->
+		<!--
+			Vanilla blocks whose material is not steel.
+
+			Anything without an entry here inherits DefaultThermodynamics, which is mild steel at
+			50 W/(m K) — right for armour and wrong for a light, a screen, a tyre or a plush toy.
+			It matters because stiffness is conductance over capacity, so the lightest block on a
+			ship sets the substep count for all of it, and a field run found decorative fittings
+			doing exactly that. See docs/field-tuning.md.
+
+			Only materials that are genuinely not steel are listed. A 20 kg armour panel is steel
+			and its stiffness is real; correcting that would be a fudge rather than a fix.
+
+			The plush toys are the extreme case: one kilogram, and by default the stiffest object
+			anyone can put on a ship.
+		-->
+		<!-- Glass and electronics — screens and panels: a glass front over a circuit board -->
+		<Definition>
+			<Id>
+				<TypeId>TextPanel</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: glass and electronics-->
+					<Decimal Name="Conductivity" Value="3" />
+					<!--J/(kg K), real units: glass and electronics-->
+					<Decimal Name="SpecificHeat" Value="800" />
+					<Decimal Name="Emissivity" Value="0.125" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<Decimal Name="ProducerWasteEnergy" Value="0.05" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="CriticalTemperature" Value="900" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<Definition>
+			<Id>
+				<TypeId>ButtonPanel</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: glass and electronics-->
+					<Decimal Name="Conductivity" Value="3" />
+					<!--J/(kg K), real units: glass and electronics-->
+					<Decimal Name="SpecificHeat" Value="800" />
+					<Decimal Name="Emissivity" Value="0.125" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<Decimal Name="ProducerWasteEnergy" Value="0.05" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="CriticalTemperature" Value="900" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<!-- Electronics in a housing — a circuit board in a cast case; the case conducts, the board does not -->
+		<Definition>
+			<Id>
+				<TypeId>RemoteControl</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: electronics in a housing-->
+					<Decimal Name="Conductivity" Value="5" />
+					<!--J/(kg K), real units: electronics in a housing-->
+					<Decimal Name="SpecificHeat" Value="800" />
+					<Decimal Name="Emissivity" Value="0.125" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<Decimal Name="ProducerWasteEnergy" Value="0.05" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="CriticalTemperature" Value="900" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<Definition>
+			<Id>
+				<TypeId>TimerBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: electronics in a housing-->
+					<Decimal Name="Conductivity" Value="5" />
+					<!--J/(kg K), real units: electronics in a housing-->
+					<Decimal Name="SpecificHeat" Value="800" />
+					<Decimal Name="Emissivity" Value="0.125" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<Decimal Name="ProducerWasteEnergy" Value="0.05" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="CriticalTemperature" Value="900" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<Definition>
+			<Id>
+				<TypeId>SensorBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: electronics in a housing-->
+					<Decimal Name="Conductivity" Value="5" />
+					<!--J/(kg K), real units: electronics in a housing-->
+					<Decimal Name="SpecificHeat" Value="800" />
+					<Decimal Name="Emissivity" Value="0.125" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<Decimal Name="ProducerWasteEnergy" Value="0.05" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="CriticalTemperature" Value="900" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<Definition>
+			<Id>
+				<TypeId>Decoy</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: electronics in a housing-->
+					<Decimal Name="Conductivity" Value="5" />
+					<!--J/(kg K), real units: electronics in a housing-->
+					<Decimal Name="SpecificHeat" Value="800" />
+					<Decimal Name="Emissivity" Value="0.125" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<Decimal Name="ProducerWasteEnergy" Value="0.05" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="CriticalTemperature" Value="900" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<Definition>
+			<Id>
+				<TypeId>OreDetector</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: electronics in a housing-->
+					<Decimal Name="Conductivity" Value="5" />
+					<!--J/(kg K), real units: electronics in a housing-->
+					<Decimal Name="SpecificHeat" Value="800" />
+					<Decimal Name="Emissivity" Value="0.125" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<Decimal Name="ProducerWasteEnergy" Value="0.05" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="CriticalTemperature" Value="900" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<Definition>
+			<Id>
+				<TypeId>MyProgrammableBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: electronics in a housing-->
+					<Decimal Name="Conductivity" Value="5" />
+					<!--J/(kg K), real units: electronics in a housing-->
+					<Decimal Name="SpecificHeat" Value="800" />
+					<Decimal Name="Emissivity" Value="0.125" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<Decimal Name="ProducerWasteEnergy" Value="0.05" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="CriticalTemperature" Value="900" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<Definition>
+			<Id>
+				<TypeId>EventControllerBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: electronics in a housing-->
+					<Decimal Name="Conductivity" Value="5" />
+					<!--J/(kg K), real units: electronics in a housing-->
+					<Decimal Name="SpecificHeat" Value="800" />
+					<Decimal Name="Emissivity" Value="0.125" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<Decimal Name="ProducerWasteEnergy" Value="0.05" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="CriticalTemperature" Value="900" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<Definition>
+			<Id>
+				<TypeId>BroadcastController</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: electronics in a housing-->
+					<Decimal Name="Conductivity" Value="5" />
+					<!--J/(kg K), real units: electronics in a housing-->
+					<Decimal Name="SpecificHeat" Value="800" />
+					<Decimal Name="Emissivity" Value="0.125" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<Decimal Name="ProducerWasteEnergy" Value="0.05" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="CriticalTemperature" Value="900" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<Definition>
+			<Id>
+				<TypeId>TransponderBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: electronics in a housing-->
+					<Decimal Name="Conductivity" Value="5" />
+					<!--J/(kg K), real units: electronics in a housing-->
+					<Decimal Name="SpecificHeat" Value="800" />
+					<Decimal Name="Emissivity" Value="0.125" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<Decimal Name="ProducerWasteEnergy" Value="0.05" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="CriticalTemperature" Value="900" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<Definition>
+			<Id>
+				<TypeId>RadioAntenna</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: electronics in a housing-->
+					<Decimal Name="Conductivity" Value="5" />
+					<!--J/(kg K), real units: electronics in a housing-->
+					<Decimal Name="SpecificHeat" Value="800" />
+					<Decimal Name="Emissivity" Value="0.125" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<Decimal Name="ProducerWasteEnergy" Value="0.05" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="CriticalTemperature" Value="900" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<Definition>
+			<Id>
+				<TypeId>Beacon</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: electronics in a housing-->
+					<Decimal Name="Conductivity" Value="5" />
+					<!--J/(kg K), real units: electronics in a housing-->
+					<Decimal Name="SpecificHeat" Value="800" />
+					<Decimal Name="Emissivity" Value="0.125" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<Decimal Name="ProducerWasteEnergy" Value="0.05" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="CriticalTemperature" Value="900" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<Definition>
+			<Id>
+				<TypeId>EmotionControllerBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: electronics in a housing-->
+					<Decimal Name="Conductivity" Value="5" />
+					<!--J/(kg K), real units: electronics in a housing-->
+					<Decimal Name="SpecificHeat" Value="800" />
+					<Decimal Name="Emissivity" Value="0.125" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<Decimal Name="ProducerWasteEnergy" Value="0.05" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="CriticalTemperature" Value="900" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<Definition>
+			<Id>
+				<TypeId>BasicMissionBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: electronics in a housing-->
+					<Decimal Name="Conductivity" Value="5" />
+					<!--J/(kg K), real units: electronics in a housing-->
+					<Decimal Name="SpecificHeat" Value="800" />
+					<Decimal Name="Emissivity" Value="0.125" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<Decimal Name="ProducerWasteEnergy" Value="0.05" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="CriticalTemperature" Value="900" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<Definition>
+			<Id>
+				<TypeId>DefensiveCombatBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: electronics in a housing-->
+					<Decimal Name="Conductivity" Value="5" />
+					<!--J/(kg K), real units: electronics in a housing-->
+					<Decimal Name="SpecificHeat" Value="800" />
+					<Decimal Name="Emissivity" Value="0.125" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<Decimal Name="ProducerWasteEnergy" Value="0.05" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="CriticalTemperature" Value="900" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<Definition>
+			<Id>
+				<TypeId>FlightMovementBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: electronics in a housing-->
+					<Decimal Name="Conductivity" Value="5" />
+					<!--J/(kg K), real units: electronics in a housing-->
+					<Decimal Name="SpecificHeat" Value="800" />
+					<Decimal Name="Emissivity" Value="0.125" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<Decimal Name="ProducerWasteEnergy" Value="0.05" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="CriticalTemperature" Value="900" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<Definition>
+			<Id>
+				<TypeId>OffensiveCombatBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: electronics in a housing-->
+					<Decimal Name="Conductivity" Value="5" />
+					<!--J/(kg K), real units: electronics in a housing-->
+					<Decimal Name="SpecificHeat" Value="800" />
+					<Decimal Name="Emissivity" Value="0.125" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<Decimal Name="ProducerWasteEnergy" Value="0.05" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="CriticalTemperature" Value="900" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<Definition>
+			<Id>
+				<TypeId>PathRecorderBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: electronics in a housing-->
+					<Decimal Name="Conductivity" Value="5" />
+					<!--J/(kg K), real units: electronics in a housing-->
+					<Decimal Name="SpecificHeat" Value="800" />
+					<Decimal Name="Emissivity" Value="0.125" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<Decimal Name="ProducerWasteEnergy" Value="0.05" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="CriticalTemperature" Value="900" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<Definition>
+			<Id>
+				<TypeId>MyObjectBuilder_Projector</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: electronics in a housing-->
+					<Decimal Name="Conductivity" Value="5" />
+					<!--J/(kg K), real units: electronics in a housing-->
+					<Decimal Name="SpecificHeat" Value="800" />
+					<Decimal Name="Emissivity" Value="0.125" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<Decimal Name="ProducerWasteEnergy" Value="0.05" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="CriticalTemperature" Value="900" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<Definition>
+			<Id>
+				<TypeId>SoundBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: electronics in a housing-->
+					<Decimal Name="Conductivity" Value="5" />
+					<!--J/(kg K), real units: electronics in a housing-->
+					<Decimal Name="SpecificHeat" Value="800" />
+					<Decimal Name="Emissivity" Value="0.125" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<Decimal Name="ProducerWasteEnergy" Value="0.05" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="CriticalTemperature" Value="900" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<Definition>
+			<Id>
+				<TypeId>Jukebox</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: electronics in a housing-->
+					<Decimal Name="Conductivity" Value="5" />
+					<!--J/(kg K), real units: electronics in a housing-->
+					<Decimal Name="SpecificHeat" Value="800" />
+					<Decimal Name="Emissivity" Value="0.125" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<Decimal Name="ProducerWasteEnergy" Value="0.05" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="CriticalTemperature" Value="900" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<!-- Silicon and glass — a solar cell is a silicon wafer behind glass, not a steel plate -->
+		<Definition>
+			<Id>
+				<TypeId>SolarPanel</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: silicon and glass-->
+					<Decimal Name="Conductivity" Value="8" />
+					<!--J/(kg K), real units: silicon and glass-->
+					<Decimal Name="SpecificHeat" Value="750" />
+					<Decimal Name="Emissivity" Value="0.125" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<Decimal Name="ProducerWasteEnergy" Value="0.05" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="CriticalTemperature" Value="900" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<!-- Woven fabric — canopy fabric, which is very nearly an insulator -->
+		<Definition>
+			<Id>
+				<TypeId>Parachute</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: woven fabric-->
+					<Decimal Name="Conductivity" Value="0.05" />
+					<!--J/(kg K), real units: woven fabric-->
+					<Decimal Name="SpecificHeat" Value="1300" />
+					<Decimal Name="Emissivity" Value="0.125" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<Decimal Name="ProducerWasteEnergy" Value="0.05" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="CriticalTemperature" Value="900" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<!-- Rubber — a tyre; rubber is one of the poorest conductors on a ship -->
+		<Definition>
+			<Id>
+				<TypeId>Wheel</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: rubber-->
+					<Decimal Name="Conductivity" Value="0.15" />
+					<!--J/(kg K), real units: rubber-->
+					<Decimal Name="SpecificHeat" Value="1900" />
+					<Decimal Name="Emissivity" Value="0.125" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<Decimal Name="ProducerWasteEnergy" Value="0.05" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="CriticalTemperature" Value="900" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<!-- Aluminium — a heat vent is a finned aluminium exchanger, and was inheriting steel -->
+		<Definition>
+			<Id>
+				<TypeId>HeatVentBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: aluminium-->
+					<Decimal Name="Conductivity" Value="237" />
+					<!--J/(kg K), real units: aluminium-->
+					<Decimal Name="SpecificHeat" Value="900" />
+					<Decimal Name="Emissivity" Value="0.125" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<Decimal Name="ProducerWasteEnergy" Value="0.05" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="CriticalTemperature" Value="900" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<Definition>
+			<Id>
+				<TypeId>CubeBlock</TypeId>
+				<SubtypeId>EngineerPlushie</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: stuffed fabric-->
+					<Decimal Name="Conductivity" Value="0.05" />
+					<!--J/(kg K), real units: polyester filling-->
+					<Decimal Name="SpecificHeat" Value="1300" />
+					<Decimal Name="Emissivity" Value="0.9" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0" />
+					<Decimal Name="CriticalTemperature" Value="500" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<Definition>
+			<Id>
+				<TypeId>CubeBlock</TypeId>
+				<SubtypeId>EngineerPlushieSE2</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: stuffed fabric-->
+					<Decimal Name="Conductivity" Value="0.05" />
+					<!--J/(kg K), real units: polyester filling-->
+					<Decimal Name="SpecificHeat" Value="1300" />
+					<Decimal Name="Emissivity" Value="0.9" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0" />
+					<Decimal Name="CriticalTemperature" Value="500" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<Definition>
+			<Id>
+				<TypeId>CubeBlock</TypeId>
+				<SubtypeId>SabiroidPlushie</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: stuffed fabric-->
+					<Decimal Name="Conductivity" Value="0.05" />
+					<!--J/(kg K), real units: polyester filling-->
+					<Decimal Name="SpecificHeat" Value="1300" />
+					<Decimal Name="Emissivity" Value="0.9" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0" />
+					<Decimal Name="CriticalTemperature" Value="500" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
+				</Group>
+			</ModExtensions>
+		</Definition>
+
 		<Definition>
 			<Id>
 				<TypeId>InteriorLight</TypeId>

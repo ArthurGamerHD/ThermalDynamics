@@ -162,3 +162,54 @@ cap becomes very nearly irrelevant: at cap 6 nothing should be floored at all.
 
 Worth a run to confirm. The figures above are the stiffness relation, `conductivity / (mass ×
 specific heat)`, applied to the measured demands rather than a fresh measurement.
+
+---
+
+# Frequency: there is no sweet spot above 1
+
+`dotnet run --project Thermodynamics.Sim -- frequency`. A 289-block grid with a real stiffness
+spread, `MaxSubsteps` high enough that the estimate is always granted, warmed up and best-of-three.
+
+| freq | substeps/step | substeps/s | demanded | ms/step | **ms/sim second** | settled K |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | 14.00 | 14.0 | 13.4 | 0.0375 | **0.038** | 945.3 |
+| 2 | 7.00 | 14.0 | 6.7 | 0.0193 | 0.039 | 945.3 |
+| 3 | 5.00 | 15.0 | 4.5 | 0.0140 | 0.042 | 945.3 |
+| 4 | 4.00 | 16.0 | 3.3 | 0.0111 | 0.044 | 945.3 |
+| 6 | 3.00 | 18.0 | 2.2 | 0.0091 | 0.055 | 945.3 |
+| 8 | 2.00 | 16.0 | 1.7 | 0.0065 | 0.052 | 945.3 |
+| 12 | 2.00 | 24.0 | 1.1 | 0.0065 | 0.078 | 945.3 |
+| 16 | 1.00 | 16.0 | 0.8 | 0.0040 | 0.064 | 945.3 |
+| 24 | 1.00 | 24.0 | 0.6 | 0.0041 | 0.099 | 945.3 |
+| 32 | 1.00 | 32.0 | 0.4 | 0.0039 | 0.126 | 945.3 |
+| 60 | 1.00 | 60.0 | 0.2 | 0.0039 | 0.234 | 945.3 |
+
+**Raising `Frequency` cannot reduce substep cost, and the sweep shows why.** A step is `1/Frequency`
+seconds long and needs proportionally fewer substeps, so the product — `substeps/s`, the third
+column — is the grid's stiffness rather than a setting. It sits at 14–16 from Frequency 1 to 8 and
+does not improve anywhere.
+
+Past that it gets *worse*, for a reason worth knowing: **substeps are an integer**. At Frequency 12
+the estimate asks for 1.1 and pays 2, which is 24 substeps a second against a true demand of 13. At
+Frequency 16 it asks for 0.8, pays 1, and drops back to 16. The curve is not monotonic — Frequency
+16 is cheaper than Frequency 12 — and every frequency whose demand lands just above an integer is
+paying for a whole substep it does not need.
+
+By the clock, **Frequency 1 is cheapest** and cost rises about six-fold to Frequency 60, entirely in
+per-step overhead. The settled temperature is 945.3 K at every single row, so this is a pure
+cost-and-latency dial with no effect on the answer.
+
+## So what should it be?
+
+Not 1, despite the table. `Frequency` is also how often damage lands, how often the HUD moves and
+how quickly a change is felt, and none of that is measured here. What the sweep rules out is the
+idea that raising it buys performance — it does not, and above the point where demand falls under
+one substep it costs several times over.
+
+The shipped 4 is a reasonable middle: 16 substeps a second against a floor of 14, so about 12 %
+above the cheapest possible, in exchange for four times the responsiveness of Frequency 1.
+
+This refines what [configuration.md](configuration.md) says. That documents `Frequency` as setting
+responsiveness and cost together *while `MaxSubsteps` is 1* — true, and the case measured there. With
+the estimate granted, the relationship inverts: cost rises with `Frequency` and the substep count
+falls to meet it.
