@@ -57,6 +57,16 @@ namespace Thermodynamics.Harness
             public double MillisecondsPerSimulatedSecond;
 
             public float SettledKelvin;
+
+            /// <summary>
+            /// Simulated seconds to reach 90 % of the total rise.
+            ///
+            /// The column that answers whether Frequency is a propagation dial. Substepping is an
+            /// accuracy device, not a rate one: the integrated transfer over a second is the same
+            /// however the second is chopped up, so if this is flat then Frequency moves no heat
+            /// and is purely latency and cost.
+            /// </summary>
+            public float SecondsTo90Percent;
         }
 
         /// <summary>
@@ -145,7 +155,7 @@ namespace Thermodynamics.Harness
             runner.Track("source", source);
 
             Stopwatch clock = Stopwatch.StartNew();
-            runner.Run(simulatedSeconds, simulatedSeconds / 10f);
+            runner.Run(simulatedSeconds, simulatedSeconds / 200f);
             clock.Stop();
 
             long steps = Math.Max(1, simulation.Work.SolverSteps);
@@ -153,6 +163,17 @@ namespace Thermodynamics.Harness
 
             float settled;
             runner.Final.Tracked.TryGetValue("source", out settled);
+
+            // Where the transient crossed nine tenths of its rise, from the samples.
+            float start = 293.15f;
+            float target = start + ((settled - start) * 0.9f);
+            float crossed = simulatedSeconds;
+            foreach (Sample sample in runner.Samples)
+            {
+                float value;
+                if (!sample.Tracked.TryGetValue("source", out value)) continue;
+                if (value >= target) { crossed = sample.TimeSeconds; break; }
+            }
 
             return new Row
             {
@@ -164,6 +185,7 @@ namespace Thermodynamics.Harness
                 MillisecondsPerStep = clock.Elapsed.TotalMilliseconds / steps,
                 MillisecondsPerSimulatedSecond = clock.Elapsed.TotalMilliseconds / simulatedSeconds,
                 SettledKelvin = settled,
+                SecondsTo90Percent = crossed,
             };
         }
 
@@ -179,8 +201,8 @@ namespace Thermodynamics.Harness
 
             sb.AppendLine("FREQUENCY SWEEP — where does substep cost bottom out?");
             sb.AppendLine();
-            sb.AppendLine(string.Format("{0,6} {1,12} {2,14} {3,11} {4,12} {5,14} {6,11}",
-                "freq", "substeps", "substeps/s", "demanded", "ms/step", "ms/sim second", "settled K"));
+            sb.AppendLine(string.Format("{0,6} {1,12} {2,14} {3,11} {4,12} {5,14} {6,11} {7,10}",
+                "freq", "substeps", "substeps/s", "demanded", "ms/step", "ms/sim second", "settled K", "90% at s"));
 
             double best = double.MaxValue;
             int bestFrequency = 0;
@@ -193,10 +215,11 @@ namespace Thermodynamics.Harness
                     bestFrequency = row.Frequency;
                 }
 
-                sb.AppendLine(string.Format("{0,6} {1,12} {2,14} {3,11} {4,12} {5,14} {6,11}",
+                sb.AppendLine(string.Format("{0,6} {1,12} {2,14} {3,11} {4,12} {5,14} {6,11} {7,10}",
                     row.Frequency, N(row.SubstepsPerStep), N(row.SubstepsPerSecond, 1),
                     N(row.Demanded, 1) + (row.Starved ? "!" : ""), N(row.MillisecondsPerStep, 4),
-                    N(row.MillisecondsPerSimulatedSecond, 3), N(row.SettledKelvin, 1)));
+                    N(row.MillisecondsPerSimulatedSecond, 3), N(row.SettledKelvin, 1),
+                    N(row.SecondsTo90Percent, 0)));
             }
 
             sb.AppendLine();

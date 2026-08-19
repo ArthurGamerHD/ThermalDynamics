@@ -199,6 +199,43 @@ By the clock, **Frequency 1 is cheapest** and cost rises about six-fold to Frequ
 per-step overhead. The settled temperature is 945.3 K at every single row, so this is a pure
 cost-and-latency dial with no effect on the answer.
 
+## It is not a propagation dial either
+
+The obvious follow-up: if it does not buy performance, is `Frequency` at least how fast heat
+spreads? No — it moves no heat at all.
+
+Time for the source to reach 90 % of its total rise, at 3-second resolution: **18 s at every
+frequency from 1 to 60**. The settled temperature is 945.3 K on all eleven rows. A 60-fold change in
+step rate does not move the transient or the equilibrium by a measurable amount.
+
+That is what substepping is for. It is an accuracy device, not a rate one: the integrated transfer
+over a second is the same however the second is chopped up, so a shorter step simply needs fewer
+substeps to resolve the same physics.
+
+**The exception is when substeps are refused.** With `MaxSubsteps` at 1 the step is deliberately too
+long and an overshoot clamp decides how much crosses — the most a substep can carry, by definition.
+There, each step moves a fixed maximum and more steps a second really does move more heat, which is
+why [configuration.md](configuration.md) describes `Frequency` as a responsiveness dial. That is
+propagation bought by being wrong, and it is the arcade profile's whole method.
+
+## What it is actually for
+
+Two things, neither of them heat movement.
+
+**Observation latency.** How often a temperature reaches the HUD, the terminal, an overheat event
+and the damage pass. At `Frequency 1` a player's readout updates once a second.
+
+**Headroom under a substep cap** — the practical one. Demand *per step* is proportional to step
+length, so it falls straight down the table: 13.4 substeps at `Frequency 1`, 3.3 at 4, 0.8 at 16.
+Raising `Frequency` is therefore a legitimate way out of starvation: it buys room under a fixed
+`MaxSubsteps` at the price of per-step overhead, without changing the total work or the answer.
+
+That is worth knowing for the field configuration. At `Frequency 4` the test ship demands 3.3
+substeps a step, which is why `MaxSubsteps 6` is comfortably sufficient. **At `Frequency 2` demand
+would double to about 6.7 and start clipping that cap.** The two settings are not independent, and
+lowering `Frequency` for performance would quietly cost accuracy at the cap rather than saving
+anything.
+
 ## So what should it be?
 
 Not 1, despite the table. `Frequency` is also how often damage lands, how often the HUD moves and
