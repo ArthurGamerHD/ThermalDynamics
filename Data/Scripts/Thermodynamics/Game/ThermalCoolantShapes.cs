@@ -6,12 +6,9 @@ using VRageMath;
 namespace Thermodynamics
 {
     /// <summary>
-    /// The coolant plumbing of the blocks this mod ships, keyed by subtype.
-    ///
-    /// The old crawler carried two parallel dictionaries and a hard-coded "multiply the offset
-    /// by three for the small-grid pump" rule. A <see cref="CoolantShape"/> states which cell of
-    /// the block each port sits on, so a pump of any length works from its declared size and
-    /// there is no special case left to keep in sync.
+    /// The coolant plumbing of the blocks this mod ships, keyed by subtype. A
+    /// <see cref="CoolantShape"/> states which cell of the block each port sits on, so a pump of any
+    /// length is derived from its declared size rather than from a per-subtype special case.
     /// </summary>
     public static class ThermalCoolantShapes
     {
@@ -43,22 +40,17 @@ namespace Thermodynamics
         /// <summary>
         /// Guards <see cref="Cache"/>.
         ///
-        /// <see cref="ThermalBlockCatalog"/> already learned this lesson and locks its own model
-        /// dictionary — but it deliberately calls <c>Build</c> <em>outside</em> that lock, so as
-        /// not to serialise every worker thread the game is pasting with, and <c>Build</c> is
-        /// what calls in here. The one unguarded dictionary left on the path is the one that
-        /// tore: a field run logged three <c>NullReferenceException</c>s out of
-        /// <c>Dictionary.Insert</c> inside the first tenth of a second of a world load, which is
-        /// what two threads writing the same bucket looks like from the far side. Every block of
-        /// those types silently failed to become a node.
+        /// <see cref="ThermalBlockCatalog"/> locks its own model dictionary but calls <c>Build</c>
+        /// outside that lock, so as not to serialise the worker threads the game pastes with, and
+        /// <c>Build</c> calls in here. Unguarded, this dictionary tore: a field run logged three
+        /// <c>NullReferenceException</c>s from <c>Dictionary.Insert</c> within the first tenth of a
+        /// second of a world load, and every block of those types failed to become a node.
         ///
-        /// A lock here costs a dictionary probe once per block type per session.
+        /// The lock costs a dictionary probe once per block type per session.
         /// </summary>
         private static readonly object CacheLock = new object();
 
-        /// <summary>
-        /// The plumbing for a subtype, or null when the block is not part of the coolant system.
-        /// </summary>
+        /// <summary>The plumbing for a subtype, or null when the block is not part of the coolant system.</summary>
         /// <param name="subtype">Full subtype name, e.g. <c>Gauge_LG_CoolantPump</c>.</param>
         /// <param name="size">Block size in cells, used to place a long pump's far port.</param>
         public static CoolantShape Get(string subtype, Vector3I size)
@@ -71,9 +63,8 @@ namespace Thermodynamics
                 if (Cache.TryGetValue(subtype, out cached)) return cached;
             }
 
-            // Built outside the lock for the same reason the catalogue builds its models outside
-            // its own: two threads racing on one subtype build the same shape twice and one is
-            // discarded, which costs a duplicate build and nothing else.
+            // Built outside the lock, as the catalogue builds its models outside its own: two
+            // threads racing on one subtype build the same shape twice and one copy is discarded.
             CoolantShape shape = Build(subtype, size);
 
             lock (CacheLock)
@@ -101,7 +92,7 @@ namespace Thermodynamics
 
             if (plumbing.IsPump)
             {
-                // The pump's second port sits at the far end of however long the block is.
+                // The pump's second port sits at the far end of the block, whatever its length.
                 Vector3I axis = Vector3I.Abs(plumbing.Link[1]);
                 int length = (axis.X * size.X) + (axis.Y * size.Y) + (axis.Z * size.Z);
                 return CoolantShape.Pump(plumbing.Link[0], plumbing.Link[1], Math.Max(1, length));
@@ -111,8 +102,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Drops the <c>Gauge_LG_</c> / <c>Gauge_SG_</c> prefix, so one table entry covers both
-        /// grid sizes of a block instead of two that can drift apart.
+        /// Drops the <c>Gauge_LG_</c> / <c>Gauge_SG_</c> prefix, so one table entry covers both grid
+        /// sizes of a block rather than two that can diverge.
         /// </summary>
         public static string StripGridPrefix(string subtype)
         {

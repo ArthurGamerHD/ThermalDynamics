@@ -14,15 +14,15 @@ namespace Thermodynamics
     /// <summary>
     /// The electrical half of a heat pump.
     ///
-    /// The simulation works out how much power the pump wants — that figure follows from Carnot
-    /// and the two temperatures, and only the solver knows those. This component is what turns the
-    /// answer into an actual load on the ship: it gives the block a resource sink, tells the sink
-    /// what the pump asked for, and reads back how much of it the grid could supply.
+    /// The simulation derives the power the pump wants from the Carnot relation and the two
+    /// temperatures, which only the solver holds. This component turns that figure into a load on
+    /// the grid: it gives the block a resource sink, reports the pump's request to it, and reads
+    /// back how much the grid supplied.
     ///
-    /// The sink is created here rather than declared in the block definition because Space
-    /// Engineers has no definition field for one on an upgrade module. It is added during
-    /// <see cref="Init"/>, before the block joins the grid's resource system, which is what gets
-    /// it registered with the distributor.
+    /// The sink is created here rather than declared in the block definition because Space Engineers
+    /// has no definition field for one on an upgrade module. It is added during <see cref="Init"/>,
+    /// before the block joins the grid's resource system, which is what registers it with the
+    /// distributor.
     /// </summary>
     [MyEntityComponentDescriptor(typeof(MyObjectBuilder_UpgradeModule), false,
         "Gauge_LG_HeatPump", "Gauge_SG_HeatPump")]
@@ -35,8 +35,8 @@ namespace Thermodynamics
         private MyResourceSinkComponent sink;
 
         /// <summary>
-        /// What the pump asked for on its last step, MW — the unit the resource system uses.
-        /// Read by the sink through a callback, so it has to be a field the callback can see.
+        /// What the pump requested on its last step, MW, which is the unit the resource system uses.
+        /// Read by the sink through a callback, so it must be a field that callback can capture.
         /// </summary>
         private float demandMegawatts;
 
@@ -45,8 +45,8 @@ namespace Thermodynamics
         {
             float megawatts = watts > 0f ? watts * Tools.WattToMW : 0f;
 
-            // Only disturb the resource system when the answer actually moved. A pump holding
-            // steady is the common case and re-registering its draw every step is pure cost.
+            // Update the resource system only when the figure changed. A pump holding steady is the
+            // common case, and re-registering its draw every step is wasted work.
             if (Math.Abs(megawatts - demandMegawatts) < 0.000001f) return;
 
             demandMegawatts = megawatts;
@@ -68,8 +68,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Fraction of the electricity asked for that the grid supplied, 0..1. A pump on a
-        /// browned-out ship runs slower rather than stopping.
+        /// Fraction of the requested electricity the grid supplied, 0..1. An under-supplied pump runs
+        /// proportionally slower rather than stopping.
         /// </summary>
         public float PowerAvailable
         {
@@ -107,8 +107,8 @@ namespace Thermodynamics
 
         private void AttachSink()
         {
-            // A block that already carries one keeps it: adding a second sink for the same
-            // resource is how a block ends up billed twice.
+            // A block that already carries a sink keeps it: a second sink for the same resource
+            // would bill the block twice.
             if (Entity.Components.Contains(typeof(MyResourceSinkComponent))) return;
 
             MyResourceSinkInfo info = new MyResourceSinkInfo
@@ -125,8 +125,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// The block's own rating, in the resource system's units. The sink needs a ceiling up
-        /// front, and it has to be the hardware's, not whatever the pump happens to want now.
+        /// The block's rated draw, in the resource system's units. The sink needs a ceiling at
+        /// construction, and it must be the hardware's rating rather than the current request.
         /// </summary>
         private float MaxDrawMegawatts()
         {

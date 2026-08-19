@@ -14,10 +14,10 @@ namespace Thermodynamics
     /// Turns Space Engineers block definitions into the simulation's <see cref="BlockModel"/>,
     /// once per definition for the life of the session.
     ///
-    /// This is the whole definition half of the game adapter. Everything expensive about
-    /// describing a block — reading the Definition Extensions properties, walking the
-    /// pressurisation table, intersecting mount rectangles — happens here, for the block
-    /// <em>type</em>. Placing a block is then a dictionary hit and a rotation.
+    /// The definition half of the game adapter. Everything expensive about describing a block —
+    /// reading the Definition Extensions properties, walking the pressurisation table, intersecting
+    /// mount rectangles — happens here, per block type. Placing a block is then a dictionary lookup
+    /// and a rotation.
     /// </summary>
     public static class ThermalBlockCatalog
     {
@@ -27,16 +27,15 @@ namespace Thermodynamics
         /// <summary>
         /// Guards <see cref="Models"/> and the counters beside it.
         ///
-        /// Block placement is not a main-thread-only path: the game builds pasted and projected
-        /// grids on worker threads, so <see cref="Get"/> runs concurrently with itself. An
-        /// unguarded <c>Dictionary</c> torn by two writers throws out of the *reader* — a field
-        /// run pasting twenty capital ships lost 442 blocks to
-        /// <c>ArgumentOutOfRangeException</c> raised inside <c>List.EnsureCapacity</c>, which is
-        /// what a shared scratch list looks like from the far side of a race.
+        /// Block placement is not main-thread-only: the game builds pasted and projected grids on
+        /// worker threads, so <see cref="Get"/> runs concurrently with itself. An unguarded
+        /// <c>Dictionary</c> torn by two writers throws out of the reader — a field run pasting
+        /// twenty capital ships lost 442 blocks to <c>ArgumentOutOfRangeException</c> raised inside
+        /// <c>List.EnsureCapacity</c> on a shared scratch list.
         ///
-        /// The lock is affordable precisely because this is a cache: it is taken once per block
-        /// type per session on the miss path and for a dictionary probe on the hit path, never
-        /// per step and never per cell.
+        /// The lock is affordable because this is a cache: it is taken once per block type per
+        /// session on the miss path and for a dictionary probe on the hit path, never per step or
+        /// per cell.
         /// </summary>
         private static readonly object ModelLock = new object();
 
@@ -67,9 +66,8 @@ namespace Thermodynamics
 
             // Built outside the lock: reading a definition walks the pressurisation table and the
             // mount rectangles, and holding a session-wide lock across that would serialise every
-            // worker thread the game is pasting with. Two threads racing on the same new
-            // definition build the same model twice and one of them is discarded, which costs a
-            // duplicate build and nothing else.
+            // worker thread the game pastes with. Two threads racing on the same new definition
+            // build the same model twice and one copy is discarded.
             BlockModel built = Build(block.BlockDefinition as MyCubeBlockDefinition, id, DoorKindOf(block));
 
             lock (ModelLock)
@@ -94,9 +92,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// How a door seals when it is closed. The game does not answer this from the
-        /// pressurisation table — a closed door's way through is sealed by a rule per door
-        /// family, in <c>MyGridGasSystem.IsDoorAirtight</c> — so neither can this.
+        /// How a door seals when closed. The game does not derive this from the pressurisation table:
+        /// a closed door's way through is sealed by a rule per door family, in
+        /// <c>MyGridGasSystem.IsDoorAirtight</c>.
         /// </summary>
         public enum DoorKind
         {
@@ -109,7 +107,7 @@ namespace Thermodynamics
             /// <summary>A generic airtight door, e.g. a hangar door: forward and backward.</summary>
             AirtightGeneric,
 
-            /// <summary>Any other door: seals every face that carries no mount point.</summary>
+            /// <summary>Any other door: seals every face carrying no mount point.</summary>
             Plain
         }
 
@@ -126,8 +124,8 @@ namespace Thermodynamics
             if (definition is MyAirtightDoorGenericDefinition) return DoorKind.AirtightGeneric;
             if (definition is MyDoorDefinition) return DoorKind.Plain;
 
-            // Modded doors need not use the stock definition types, but they do have to present
-            // as one to the game's own door handling.
+            // Modded doors need not use the stock definition types, but must present as one to the
+            // game's own door handling.
             return block.FatBlock is IMyDoor ? DoorKind.Plain : DoorKind.None;
         }
 
@@ -151,8 +149,8 @@ namespace Thermodynamics
             model.Mass = definition.Mass > 0f ? definition.Mass : 100f;
             model.LocalSurfaces = BuildSurfaces(definition, door);
 
-            // A door that is open seals only what it seals whatever its state: the sides it is
-            // bolted in by. That is the definition's own table with the door rule left out.
+            // An open door seals only what it seals in either state: the sides it is mounted in by.
+            // That is the definition's own table with the door rule omitted.
             if (door != DoorKind.None)
             {
                 model.LocalSurfacesWhenOpen = BuildSurfaces(definition, DoorKind.None);
@@ -171,9 +169,9 @@ namespace Thermodynamics
         /// </summary>
         private static int[] BuildSurfaces(MyCubeBlockDefinition definition, DoorKind door)
         {
-            // Deliberately a local, not pooled scratch: see the note on ModelLock. This runs once
-            // per block type for the life of the session, so the allocation is not on any hot
-            // path, and sharing one list across threads is what broke the field run.
+            // A local rather than a pooled scratch list; see the note on ModelLock. This runs once
+            // per block type per session, so the allocation is off every hot path, and a shared list
+            // would be written concurrently from worker threads.
             List<MountRect> mounts = new List<MountRect>();
             if (definition.MountPoints != null)
             {
@@ -186,15 +184,15 @@ namespace Thermodynamics
                 }
             }
 
-            // An explicit IsAirTight is the whole answer either way: the game's
-            // IsAirtightFromDefinition returns it before the table is ever consulted, so a
-            // definition that says false does not seal even where its mount points cover a face.
+            // An explicit IsAirTight settles the question in either direction: the game's
+            // IsAirtightFromDefinition returns it before consulting the table, so a definition that
+            // says false does not seal even where its mount points cover a face.
             bool airtight = definition.IsAirTight == true;
             bool decided = definition.IsAirTight.HasValue;
 
             if (decided || definition.IsCubePressurized == null)
             {
-                // Nothing left to read per face. Mounts everywhere so conduction still works.
+                // Nothing further to read per face. Mounts everywhere so conduction still works.
                 return BlockSurfaceBuilder.BuildFallbackSurfaces(definition.Size, airtight);
             }
 
@@ -207,10 +205,9 @@ namespace Thermodynamics
 
             int[] surfaces = BlockSurfaceBuilder.BuildSurfaces(definition.Size, airtight, seals, mounts);
 
-            // A block with no mount surface anywhere conducts to nothing, which is a far worse
-            // failure than over-reporting contact. If the definition's mount rectangles produced
-            // nothing at all, fall back to mounting everywhere and count it, so the report says
-            // which definitions the reader could not describe.
+            // A block with no mount surface conducts to nothing, which is worse than over-reporting
+            // contact. Where the definition's mount rectangles produced none, fall back to mounting
+            // everywhere and count it, so the report names the definitions that could not be read.
             if (!HasAnyMount(surfaces))
             {
                 System.Threading.Interlocked.Increment(ref MountFallbacks);
@@ -233,15 +230,14 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Whether one face of one cell of the definition seals when the block is complete, and
-        /// — for a door — closed.
+        /// Whether one face of one cell of the definition seals when the block is complete and, for a
+        /// door, closed.
         ///
-        /// This mirrors <c>MyGridGasSystem.IsAirtightBlock</c>: the pressurisation table first,
-        /// and then, for a door, the rule per door family. The table alone is not enough. An
-        /// airtight sliding door's mount points along the way through are the 5% frame either
-        /// side, which does not cover the face, so the table marks it not pressurised — while the
-        /// game seals it by door rule and the player watches it hold air. Reading only the table
-        /// leaves every room with a door in it unsealed.
+        /// Mirrors <c>MyGridGasSystem.IsAirtightBlock</c>: the pressurisation table first, then the
+        /// per-family rule for a door. The table alone is insufficient — an airtight sliding door's
+        /// mount points along the way through are the narrow frame either side, which does not cover
+        /// the face, so the table marks it unpressurised while the game seals it by door rule.
+        /// Reading only the table leaves every room containing a door unsealed.
         ///
         /// The open state belongs to the placed block, through
         /// <see cref="BlockInstance.IsSealedByDoorState"/> and the model's open surface set.
@@ -270,9 +266,7 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>
-        /// The closed-door half of the game's rule, in the block's own local space.
-        /// </summary>
+        /// <summary>The closed-door half of the game's rule, in the block's own local space.</summary>
         private static bool SealsAsDoor(MyCubeBlockDefinition definition, int face, DoorKind door)
         {
             switch (door)
@@ -284,8 +278,8 @@ namespace Thermodynamics
                     return face == Face.Forward || face == Face.Backward;
 
                 case DoorKind.Plain:
-                    // Everything the door does not mount through: a closed door is a wall
-                    // except where it is bolted to one.
+                    // Everything the door does not mount through: a closed door is a wall except
+                    // where it is mounted to one.
                     return !HasMountOnFace(definition, face);
 
                 default:

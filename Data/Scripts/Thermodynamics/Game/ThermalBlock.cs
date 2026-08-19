@@ -17,10 +17,9 @@ namespace Thermodynamics
     /// <summary>
     /// One placed block, bound to the simulation node that represents it.
     ///
-    /// Everything the game can tell the simulation about a block arrives through here, and it
-    /// arrives by event: power output, thrust, door state and mass are pushed when they change
-    /// and never polled. That is what keeps a grid's per-step cost proportional to the solver
-    /// rather than to the number of components on it.
+    /// Everything the game reports about a block arrives through here, and arrives by event: power
+    /// output, thrust, door state and mass are pushed when they change rather than polled. This
+    /// keeps a grid's per-step cost proportional to the solver rather than to its component count.
     /// </summary>
     public class ThermalBlock
     {
@@ -40,14 +39,14 @@ namespace Thermodynamics
         public BlockTypeTelemetry Stats;
 
         /// <summary>
-        /// The air vent this block is, or null. Vents are the only thing the game will tell a mod
-        /// about pressurisation, so they are how a room comes to have air in it.
+        /// The air vent this block is, or null. Vents are the fallback source of pressurisation state
+        /// where the game's gas system cannot be read.
         /// </summary>
         public IMyAirVent Vent;
 
         /// <summary>
-        /// The electrical half of this block if it is a heat pump, or null. Holds the resource
-        /// sink and the terminal switch; the heat it moves is the simulation's business.
+        /// The electrical half of this block if it is a heat pump, or null. Holds the resource sink
+        /// and the terminal switch; the heat moved is the simulation's concern.
         /// </summary>
         public ThermalHeatPumpBlock HeatPump;
 
@@ -89,8 +88,8 @@ namespace Thermodynamics
         /// </summary>
         public void RefreshStats()
         {
-            // Records outlive a toggle, so a block that has already introduced itself to one
-            // must not do it again — its placement would be counted once per switch.
+            // Records outlive a toggle, so a block that has already registered with one must not
+            // register again, which would count its placement once per switch.
             if (Stats != null) return;
 
             Stats = Telemetry.GetBlockType(Block.BlockDefinition.Id);
@@ -143,9 +142,8 @@ namespace Thermodynamics
             Vent = fat as IMyAirVent;
             if (Vent != null) Grid.RegisterVent(this);
 
-            // A heat pump is the one block whose behaviour is a two-way conversation with the
-            // game: the simulation says what it wants to draw, the ship's power system says how
-            // much of that it got.
+            // A heat pump is the only block with a two-way exchange with the game: the simulation
+            // reports the draw it wants and the power system reports how much it supplied.
             if (ThermalHeatPumpShapes.IsHeatPump(Name))
             {
                 HeatPump = fat.GameLogic == null ? null : fat.GameLogic.GetAs<ThermalHeatPumpBlock>();
@@ -161,7 +159,7 @@ namespace Thermodynamics
             }
 
             // A rotor or piston conducts into the grid on the far side of the joint, which is a
-            // different simulation. Only these two block families raise the event.
+            // separate simulation. Only these two block families raise the event.
             piston = fat as IMyPistonBase;
             motor = fat as IMyMotorBase;
             if (piston != null || motor != null)
@@ -205,9 +203,9 @@ namespace Thermodynamics
                 Vent = null;
             }
 
-            // Tested on the subtype rather than on the field: a pump whose game logic could not be
-            // resolved was still registered, and leaving it in the list would keep the block alive
-            // after it was removed.
+            // Tested on the subtype rather than the field: a pump whose game logic could not be
+            // resolved is still registered, and leaving it in the list would keep the block alive
+            // after removal.
             if (ThermalHeatPumpShapes.IsHeatPump(Name))
             {
                 Grid.UnregisterHeatPump(this);
@@ -231,12 +229,11 @@ namespace Thermodynamics
             outputChanged = OnPowerProduced;
             source.OutputChanged += outputChanged;
 
-            // Only ask for electricity if this component actually carries it. A hydrogen tank, an
-            // oxygen farm and an ice-fed generator all have a source component with no electric
-            // type in it, and the by-type accessors index a dictionary rather than probing it —
-            // a field run took a KeyNotFoundException out of the game's own
-            // MyResourceSourceComponent.GetTypeIndex for exactly this, which aborted binding the
-            // block and left it out of the simulation entirely.
+            // Query electricity only when the component carries it. A hydrogen tank, an oxygen farm
+            // and an ice-fed generator all have a source component with no electric type, and the
+            // by-type accessors index a dictionary rather than probing it: a field run took a
+            // KeyNotFoundException out of MyResourceSourceComponent.GetTypeIndex for this, which
+            // aborted binding and left the block out of the simulation.
             if (Carries(source.ResourceTypes))
             {
                 Instance.PowerProducedWatts =
@@ -264,11 +261,11 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Whether a resource component handles electricity at all.
+        /// Whether a resource component handles electricity.
         ///
-        /// The subscription is kept either way: a sink can gain a type after it is built
-        /// (<c>AddType</c>), and the change event filters on the resource id, so a component that
-        /// starts out non-electric still reports correctly if it becomes electric later.
+        /// The subscription is kept either way: a sink can gain a type after construction via
+        /// <c>AddType</c>, and the change event filters on the resource id, so a component that
+        /// starts non-electric still reports correctly if it later becomes electric.
         /// </summary>
         private static bool Carries(ListReader<MyDefinitionId> resources)
         {
@@ -353,9 +350,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// An open door stops sealing, which changes what the rooms behind it radiate to. This is
-        /// the only per-block event that costs more than a couple of floats, and doors are the
-        /// only blocks that raise it.
+        /// Handles a door changing state, which changes what the rooms behind it radiate to. The only
+        /// per-block event costing more than a few floats, and raised only by doors.
         /// </summary>
         private void OnDoorStateChanged(bool closed)
         {
@@ -388,8 +384,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Re-reads the block's mass. Build progress and damage both change it, and thermal mass
-        /// is the denominator of every temperature change, so it cannot be left stale.
+        /// Re-reads the block's mass. Build progress and damage both change it, and thermal mass is
+        /// the denominator of every temperature change.
         /// </summary>
         /// <summary>
         /// This block's place in its grid's mass-sweep rota, or -1 when it is not in one.

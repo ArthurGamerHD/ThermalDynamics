@@ -11,10 +11,10 @@ namespace Thermodynamics
     /// Heat conduction across a rotor or a piston, where the two blocks belong to different
     /// grids and therefore to different simulations.
     ///
-    /// A grid's solver works on one array of nodes, so a link between two of them cannot live
-    /// inside either. It lives here instead: a small list of pairs, exchanged once per tick with
-    /// the same clamped, energy-conserving step the solver uses internally. There are a handful
-    /// of these on a ship, not thousands, so a flat list is the right shape.
+    /// A grid's solver works over one array of nodes, so a link between two grids cannot live in
+    /// either. It is held here as a list of pairs, exchanged once per tick with the same clamped,
+    /// energy-conserving step the solver uses internally. A grid carries a handful of these, so a
+    /// flat list is sufficient.
     /// </summary>
     public static class ThermalBridges
     {
@@ -52,8 +52,8 @@ namespace Thermodynamics
                 baseBlock.Grid.Model.GridSize,
                 topGrid.Model.GridSize);
 
-            // One cell face of contact, along the axis the head sits on. A rotor joint is a
-            // single mounting plate however large the blocks either side of it are.
+            // One cell face of contact, along the axis the head sits on: a rotor joint is a single
+            // mounting plate whatever the size of the blocks either side.
             float conductance = ConductionBuilder.Conductance(
                 lattice, baseBlock.Instance, top.Instance, 1, Face.Axis(Face.Up));
 

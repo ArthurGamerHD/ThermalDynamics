@@ -9,12 +9,12 @@ namespace Thermodynamics
     /// <summary>
     /// Point heat sources registered by other mods: a burning wreck, a plasma bolt, a second sun.
     ///
-    /// A source is a position, a power and a reach. The registry turns that into the irradiance
-    /// reaching one grid — watts spread over the sphere at that distance — and the simulation
-    /// treats the result exactly as it treats sunlight, because it is the same physics.
+    /// A source is a position, a power and a reach. The registry converts that into the irradiance
+    /// reaching one grid — watts spread over the sphere at that distance — which the simulation
+    /// treats exactly as it treats sunlight.
     ///
-    /// Sources bound to an entity follow it and disappear with it, so a mod that registers one on
-    /// a projectile does not have to remember to clean it up.
+    /// A source bound to an entity follows it and is removed with it, so a mod registering one on a
+    /// projectile need not clean it up.
     /// </summary>
     public static class ThermalHeatSources
     {
@@ -54,8 +54,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// The live sources, for readouts. Callers must not hold the list across a frame: it is
-        /// the registry's own, and <see cref="Sample"/> removes entries whose entity has gone.
+        /// The live sources, for readouts. Callers must not retain the list across a frame: it is the
+        /// registry's own, and <see cref="Sample"/> removes entries whose entity has gone.
         /// </summary>
         public static IList<HeatSource> All
         {
@@ -125,9 +125,8 @@ namespace Thermodynamics
         /// <summary>
         /// Fills a host buffer with the sources reaching one grid.
         ///
-        /// Called once per grid per sampled step, so it is written to allocate nothing: the
-        /// caller owns the buffer and this grows it only when a session genuinely has more
-        /// sources than it did before.
+        /// Called once per grid per sampled step and allocates nothing: the caller owns the buffer,
+        /// which is grown only when the session gains more sources than it previously held.
         /// </summary>
         /// <param name="gridCentre">World position to sample at.</param>
         /// <param name="worldToLocal">Grid orientation, transposed — world direction to local.</param>
@@ -143,7 +142,7 @@ namespace Thermodynamics
             {
                 HeatSource source = Sources[i];
 
-                // An entity that has been removed takes its source with it.
+                // A removed entity takes its source with it.
                 if (source.Entity != null && (source.Entity.MarkedForClose || source.Entity.Closed))
                 {
                     source.Alive = false;
@@ -157,8 +156,8 @@ namespace Thermodynamics
                 double distanceSquared = delta.LengthSquared();
                 if (distanceSquared > source.Range * (double)source.Range) continue;
 
-                // Inside a metre the inverse square law runs away; a source you are standing in
-                // delivers its full output and no more.
+                // Clamped at one metre: below that the inverse square law diverges, so a source at
+                // zero distance delivers its full output and no more.
                 if (distanceSquared < 1.0) distanceSquared = 1.0;
 
                 float irradiance = (float)(source.Watts / (4.0 * Math.PI * distanceSquared));
