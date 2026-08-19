@@ -169,7 +169,7 @@ namespace Thermodynamics.Harness
         public static readonly int[] DefaultSizes = { 8000, 32000, 125000, 500000, 1000000 };
 
         public static readonly string[] Names =
-            { "scale", "hitch", "weld", "load", "spike", "pace", "reach", "memory" };
+            { "scale", "hitch", "weld", "load", "spike", "pace", "reach", "memory", "floor" };
 
         // ---- the ladder --------------------------------------------------------------------
 
@@ -1397,6 +1397,220 @@ namespace Thermodynamics.Harness
                 state ^= state << 5;
                 nodes[i].Temperature = 250f + (state % 500u);
             }
+        }
+
+
+        // ---- the substep floor -------------------------------------------------------------
+
+        /// <summary>One row of the substep floor sweep: what a cap buys, and what it costs.</summary>
+        public class FloorRow
+        {
+            public int Cap;
+            public float RequiredSubsteps;
+            public double Milliseconds;
+            public int Nodes;
+            public int Floored;
+            public float MaxError;
+            public double RmsError;
+            public float MaxFlooredError;
+
+            /// <summary>
+            /// Hottest block at the end of the run, and how far that is from the uncapped run's.
+            ///
+            /// The figure that decides overheat damage, and the one a diffusion test cannot
+            /// answer: a spread of temperatures left to even out says what the cap does to a
+            /// transient, while a ship held at equilibrium by its own thrusters says what it does
+            /// to the number a player is actually looking at.
+            /// </summary>
+            public float PeakTemperature;
+            public float PeakError;
+        }
+
+        /// <summary>
+        /// What <c>MaxSubstepsPerBlock</c> buys and what it costs, swept across caps.
+        ///
+        /// <para>
+        /// The hull is built from the measured block <see cref="Census"/>, which is what makes
+        /// this comparable to a real ship at all: a step is divided into as many substeps as the
+        /// stiffest block needs, so the answer is decided by the lightest block on the hull and
+        /// not by its average one. The census ship asks for about 23 substeps against a field
+        /// range of 21 to 31, and — more subtly — reproduces the *shape* of the population, which
+        /// is what decides how many blocks a given cap reaches.
+        /// </para>
+        ///
+        /// <para>
+        /// Accuracy is measured against the uncapped run rather than against an analytic answer,
+        /// because the question is not whether the integrator is right — that is what the rest of
+        /// the suite is for — but how far the approximation moves it, and on which blocks.
+        /// </para>
+        /// </summary>
+        public static List<FloorRow> SubstepFloor(string shape, int size, int steps,
+            IList<int> caps, Action<string> log = null, bool driven = false)
+        {
+            List<FloorRow> rows = new List<FloorRow>();
+            float[] reference = null;
+            float referencePeak = 0f;
+
+            // The first row measured would otherwise be measuring the JIT.
+            RunFloor(shape, Math.Min(size, 2000), 2, 0, null, driven);
+
+            for (int i = 0; i < caps.Count; i++)
+            {
+                if (log != null) log("cap " + caps[i]);
+
+                FloorRow row = RunFloor(shape, size, steps, caps[i], reference, driven);
+                if (reference == null)
+                {
+                    reference = lastTemperatures;
+                    referencePeak = row.PeakTemperature;
+                }
+
+                row.PeakError = row.PeakTemperature - referencePeak;
+                rows.Add(row);
+            }
+
+            return rows;
+        }
+
+        /// <summary>The temperatures the last <see cref="RunFloor"/> ended on.</summary>
+        private static float[] lastTemperatures;
+
+        private static FloorRow RunFloor(string shape, int size, int steps, int cap,
+            float[] reference, bool driven)
+        {
+            HashSet<Vector3I> cells = LoadShapes.Build(shape, size);
+
+            GridBuilder builder = GridBuilder.Large();
+            builder.PlaceCensus(cells);
+
+            ThermalSettings settings = new ThermalSettings();
+            settings.MaxSubstepsPerBlock = cap;
+
+            // Both of the bounds that would otherwise hide what the floor does: one refuses the
+            // substeps the estimate asks for, the other shortens the step rather than pay.
+            settings.MaxSubsteps = 4096;
+            settings.MaxLinkVisitsPerStep = 0;
+            settings.Derive();
+
+            ThermalSimulation simulation = new ThermalSimulation(settings, builder.Grid);
+            for (int i = 0; i < builder.Placed.Count; i++)
+            {
+                simulation.Solver.AddBlock(builder.Placed[i], 293.15f);
+            }
+            simulation.RebuildAll();
+
+            IList<ThermalNode> nodes = simulation.Solver.Nodes;
+            int count = nodes.Count;
+
+            if (driven)
+            {
+                // The measured share of heat producers, at the measured wattage, left to reach
+                // the equilibrium they hold the hull at. Nothing is seeded: the gradient this
+                // measures is the one the ship makes for itself.
+                Census.DriveCensus(simulation);
+            }
+            else
+            {
+                SeedSpread(simulation);
+            }
+
+            bool[] isFloored = new bool[count];
+            int floored = 0;
+            if (cap > 0)
+            {
+                float[] conductance = new float[count];
+                IList<ThermalLink> links = simulation.Solver.Links;
+                for (int i = 0; i < links.Count; i++)
+                {
+                    conductance[links[i].NodeA] += links[i].Conductance;
+                    conductance[links[i].NodeB] += links[i].Conductance;
+                }
+
+                float perConductance = settings.StepSeconds / (ThermalSolver.StabilitySafetyFactor * cap);
+                for (int i = 0; i < count; i++)
+                {
+                    if (nodes[i].ThermalMass >= conductance[i] * perConductance) continue;
+                    isFloored[i] = true;
+                    floored++;
+                }
+            }
+
+            EnvironmentSample sample = Worlds.Space(new Vector3(0f, 1f, 0f));
+
+            FloorRow row = new FloorRow();
+            row.Cap = cap;
+            row.Nodes = count;
+            row.Floored = floored;
+            row.RequiredSubsteps = simulation.Solver.RequiredSubsteps(settings.StepSeconds);
+
+            Stopwatch watch = Stopwatch.StartNew();
+            simulation.StepExact(steps, sample);
+            watch.Stop();
+            row.Milliseconds = watch.Elapsed.TotalMilliseconds;
+
+            float[] result = new float[count];
+            for (int i = 0; i < count; i++)
+            {
+                result[i] = nodes[i].Temperature;
+                if (result[i] > row.PeakTemperature) row.PeakTemperature = result[i];
+            }
+            lastTemperatures = result;
+
+            if (reference != null && reference.Length == count)
+            {
+                double sumSquares = 0;
+                for (int i = 0; i < count; i++)
+                {
+                    float error = Math.Abs(result[i] - reference[i]);
+                    sumSquares += (double)error * error;
+                    if (error > row.MaxError) row.MaxError = error;
+                    if (isFloored[i] && error > row.MaxFlooredError) row.MaxFlooredError = error;
+                }
+
+                row.RmsError = Math.Sqrt(sumSquares / count);
+            }
+
+            return row;
+        }
+
+        public static string FloorTable(IList<FloorRow> rows)
+        {
+            StringBuilder sb = new StringBuilder();
+
+            sb.Append("cap".PadLeft(6))
+              .Append("substeps".PadLeft(10))
+              .Append("ms".PadLeft(10))
+              .Append("x uncapped".PadLeft(12))
+              .Append("floored".PadLeft(11))
+              .Append("of".PadLeft(11))
+              .Append("peak K".PadLeft(10))
+              .Append("peakErr".PadLeft(10))
+              .Append("maxErr K".PadLeft(11))
+              .Append("rmsErr K".PadLeft(11))
+              .Append("maxErr floored".PadLeft(16))
+              .Append('\n');
+
+            double baseline = rows.Count > 0 ? rows[0].Milliseconds : 0;
+
+            for (int i = 0; i < rows.Count; i++)
+            {
+                FloorRow row = rows[i];
+
+                sb.Append((row.Cap <= 0 ? "off" : row.Cap.ToString()).PadLeft(6))
+                  .Append(row.RequiredSubsteps.ToString("n2").PadLeft(10))
+                  .Append(row.Milliseconds.ToString("n0").PadLeft(10))
+                  .Append((row.Milliseconds <= 0 ? "-" : (baseline / row.Milliseconds).ToString("n1") + "x").PadLeft(12))
+                  .Append(row.Floored.ToString("n0").PadLeft(11))
+                  .Append(row.Nodes.ToString("n0").PadLeft(11))
+                  .Append(row.PeakTemperature.ToString("n1").PadLeft(10))
+                  .Append((i == 0 ? "-" : row.PeakError.ToString("n3")).PadLeft(10))
+                  .Append((i == 0 ? "-" : row.MaxError.ToString("n4")).PadLeft(11))
+                  .Append((i == 0 ? "-" : row.RmsError.ToString("n4")).PadLeft(11))
+                  .Append((i == 0 ? "-" : row.MaxFlooredError.ToString("n4")).PadLeft(16))
+                  .Append('\n');
+            }
+
+            return sb.ToString();
         }
 
         // ---- reporting ----------------------------------------------------------------------

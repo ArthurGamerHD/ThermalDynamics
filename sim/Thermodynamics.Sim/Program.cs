@@ -103,6 +103,7 @@ namespace Thermodynamics.Sim
         ///   bench hitch --size 250000         per-tick cost with a block welded mid-run
         ///   bench weld  --size 250000         a block welded on every tick
         ///   bench load  --size 1000000        what building the grid costs before tick one
+        ///   bench floor --size 42000           what a per-block substep cap buys, and costs
         /// </summary>
         private static int BenchCommand(string[] args)
         {
@@ -271,6 +272,28 @@ namespace Thermodynamics.Sim
                     return 0;
                 }
 
+                case "floor":
+                {
+                    int[] caps = { 0, 32, 16, 8, 6, 4, 3, 2, 1 };
+
+                    Console.WriteLine();
+                    Console.WriteLine("== substep floor, " + shape + " " + size.ToString("n0") + " ==");
+                    Console.WriteLine("  MaxSubstepsPerBlock swept, on a hull built from the measured"
+                        + " block census.");
+                    Console.WriteLine("  " + (ticks > 0 ? ticks : 200) + " steps of a quarter second, "
+                        + (Has(args, "--driven")
+                            ? "the census share of heat producers run to equilibrium"
+                            : "temperatures spread 250-750 K")
+                        + ", vacuum. Error is against the uncapped run.");
+                    Console.WriteLine();
+
+                    Console.WriteLine(LoadBenchmarks.FloorTable(LoadBenchmarks.SubstepFloor(
+                        shape, size, ticks > 0 ? ticks : 200, caps,
+                        message => Console.Error.WriteLine("  " + message),
+                        Has(args, "--driven"))));
+                    return 0;
+                }
+
                 case "spike":
                 {
                     LoadBenchmarks.SpikeReport report = LoadBenchmarks.Spike(shape, size);
@@ -352,6 +375,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  bench hitch --size N    per-tick cost, with a block welded mid-run");
             Console.WriteLine("  bench weld  --size N    a block welded on every tick");
             Console.WriteLine("  bench load  --size N    what building the grid costs before tick one");
+            Console.WriteLine("  bench floor --size N    what a per-block substep cap buys, and costs");
             Console.WriteLine("  bench spike --size N    one block placed, split by stage");
             Console.WriteLine("  bench pace  --size N    does slowing sim and raising transfer save anything");
             Console.WriteLine("  bench reach --length N  how fast heat crosses a grid, against what it costs");

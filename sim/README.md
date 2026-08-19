@@ -5,6 +5,16 @@ debugged in seconds instead of by loading a world.
 
 ## Layout
 
+> **Hulls are built from a measured block census.**
+> [`Census.cs`](Thermodynamics.Harness/Census.cs) holds the block population of a real ship —
+> eight bands by heat capacity, plus the share that generate waste heat — read out of a telemetry
+> dump's block-type table. Every benchmark builds from it, because a step takes as many substeps
+> as the *stiffest* block needs, so a hull's cost is decided by its lightest block. The old mix of
+> heavy armour and gratings asked for three substeps where a real ship asks for twenty-one to
+> thirty-one, which made every scale figure about six times too cheap. `CensusFidelityTests`
+> fails if the census drifts away from the field observations recorded beside it in
+> `Census.Field`; refresh both when a new dump arrives.
+
 | Project | What it is |
 | --- | --- |
 | `Thermodynamics.Core` | The simulation itself. Sources live in [`../Data/Scripts/Thermodynamics/Core`](../Data/Scripts/Thermodynamics/Core) so the game compiles them as part of the mod; this project links the same files. |
@@ -109,6 +119,9 @@ dotnet run --project Thermodynamics.Sim -- bench spike --size 125000   # one blo
 dotnet run --project Thermodynamics.Sim -- bench weld  --size 125000   # a block welded every tick
 dotnet run --project Thermodynamics.Sim -- bench hitch --size 125000   # per-tick distribution
 dotnet run --project Thermodynamics.Sim -- bench load  --size 1000000  # world load, before the first tick
+dotnet run --project Thermodynamics.Sim -- bench floor --size 42000    # what a per-block substep cap buys, and costs
+dotnet run --project Thermodynamics.Sim -- bench report --csv benchmarks              # the full report
+dotnet run --project Thermodynamics.Sim -- bench report --baseline benchmarks/performance.csv   # and the diff
 ```
 
 | Benchmark | Question it answers |
@@ -118,6 +131,9 @@ dotnet run --project Thermodynamics.Sim -- bench load  --size 1000000  # world l
 | `weld` | A block welded every tick for 120 ticks — sustained construction, which never gets a quiet tick to recover in. |
 | `hitch` | 300 ticks of a settled grid with one block welded and one ground off. Reports median, p95, p99, max and the spike ratio. |
 | `load` | Building the simulation for a grid this size, which a player sees as the loading screen or as a blueprint paste. |
+| `report` | Everything at once, as a diffable CSV — including the worst cases a plain hull never reaches: air in the compartments, plumbing, blocks past their rating, three hull shapes in three worlds, and fleets of up to a hundred grids. Every scenario row carries what it actually built, so one that builds nothing cannot report a cost of zero. Also: the ladder, every feature measured both marginally and in isolation, every profile, and the substep cap across its range — plus a noise floor so a reader can tell a small cost from no cost. `--baseline <csv>` compares against an earlier run. See [benchmarks.md](../docs/benchmarks.md). |
+| `floor --driven` | The same sweep on a ship held at temperature by forty 250 kW sources instead of by a seeded spread — the case that says whether a player would notice, and the one that reports the peak temperature overheat damage is decided by. |
+| `floor` | `MaxSubstepsPerBlock` swept: what each cap does to the substep count and the clock, how many blocks it moves, and how far it moves them. Builds from the block census, because the population's *shape* is what decides how far a cap reaches. |
 
 `--shape ship|cube|truss` picks the shape, `--max N` stops the ladder early, `--ticks N` sets the
 run length, `--csv <dir>` writes the ladder as a table.
