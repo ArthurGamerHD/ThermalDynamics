@@ -51,12 +51,11 @@ namespace Thermodynamics.Core
     public static class BlockSurfaceBuilder
     {
         /// <summary>
-        /// The slab of a unit cell each face occupies, in local cell units. A mount rectangle
-        /// counts for a face when it intersects that face's slab.
+        /// The slab of a unit cell each face occupies, in local cell units. A mount rectangle counts
+        /// for a face when it intersects that face's slab.
         ///
-        /// The 0.002 inset keeps a mount that merely abuts the edge of a neighbouring face from
-        /// registering on both; the 0.1 depth accepts the small overshoot the game's own mount
-        /// rectangles carry.
+        /// The 0.002 inset stops a mount abutting the edge of a neighbouring face from registering on
+        /// both; the 0.1 depth accepts the overshoot the game's own mount rectangles carry.
         /// </summary>
         public static readonly BoundingBox[] FaceMountBounds = new BoundingBox[]
         {
@@ -136,8 +135,8 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// A block whose mount points the host cannot describe: every face of every cell mounts,
-        /// which is what the simulation assumed before mount data existed.
+        /// Fallback for a block whose mount points the host cannot describe: every face of every cell
+        /// mounts, so the block still conducts.
         /// </summary>
         public static int[] BuildFallbackSurfaces(Vector3I size, bool sealsEverywhere)
         {

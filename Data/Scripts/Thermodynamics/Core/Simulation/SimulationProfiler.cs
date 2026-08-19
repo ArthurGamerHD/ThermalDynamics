@@ -1,9 +1,8 @@
 namespace Thermodynamics.Core
 {
     /// <summary>
-    /// The stages of a simulation update, as the host sees them. Costs are wanted per stage,
-    /// because they behave completely differently: two of them run only when the block layout
-    /// changes, and the other two run every step.
+    /// The stages of a simulation update, as the host sees them. Timed separately because their cost
+    /// profiles differ: two run only when the block layout changes and two run every step.
     /// </summary>
     public enum SimulationPhase
     {
@@ -25,10 +24,10 @@ namespace Thermodynamics.Core
     /// <summary>
     /// Optional instrumentation hook.
     ///
-    /// <see cref="ThermalSimulation"/> calls this around each stage when one is attached, and
-    /// does nothing at all when it is not — the whole cost of measurement is a null check per
-    /// stage per update. It is an interface rather than a set of counters inside the simulation
-    /// so that what gets measured, and whether measuring happens, stays the host's decision.
+    /// <see cref="ThermalSimulation"/> calls this around each stage when one is attached, and does
+    /// nothing when it is not, so uninstrumented measurement costs one null check per stage per
+    /// update. An interface rather than counters inside the simulation, so what is measured and
+    /// whether measurement happens are the host's decisions.
     /// </summary>
     public interface ISimulationProfiler
     {

@@ -3,22 +3,17 @@ namespace Thermodynamics.Core
     /// <summary>
     /// How much work the one-shot stages did, counted rather than timed.
     ///
-    /// The stage timings in <see cref="ISimulationProfiler"/> answer "how long did it take",
-    /// which is the question a player's stutter poses but the wrong question for a test: a
-    /// millisecond figure depends on the machine, the build and what else was running, so a test
-    /// written against one either has a threshold so loose it catches nothing or so tight it
-    /// fails on someone else's laptop.
+    /// The stage timings in <see cref="ISimulationProfiler"/> measure elapsed time, which depends on
+    /// the machine, the build and the rest of the load, so a test asserting on milliseconds is
+    /// either too loose to catch anything or fails on other hardware.
     ///
-    /// These counters answer "how many things did it touch", which is deterministic. That makes
-    /// them the assertion a load test wants — <em>placing one block must not visit a hundred
-    /// thousand nodes</em> is a claim about the algorithm, and it holds or fails identically
-    /// everywhere. They also make a telemetry report explain itself: a slow topology stage with
-    /// a node-visit count equal to the grid size is a global rebuild, and the same stage with a
-    /// count of forty is a slow machine.
+    /// These counters measure elements visited, which is deterministic and so testable: that placing
+    /// one block must not visit a hundred thousand nodes is a claim about the algorithm. They also
+    /// disambiguate a telemetry report — a slow topology stage with a node-visit count equal to the
+    /// grid size is a full rebuild, while the same stage with a count of forty is a slow machine.
     ///
-    /// Everything here is incremented once per pass or once per node inside a loop that already
-    /// walks every node. Nothing is incremented per link per substep, so the innermost loop in
-    /// the mod is untouched.
+    /// Every counter is incremented once per pass, or once per node inside a loop that already walks
+    /// every node. None is incremented per link per substep, so the innermost loop is untouched.
     /// </summary>
     public class SimulationWork
     {
@@ -36,9 +31,9 @@ namespace Thermodynamics.Core
         public long ExposureNodeVisits;
 
         /// <summary>
-        /// Passes over every link recomputing what conductance each node sees. Structural changes
-        /// mark it stale and it is recomputed once before it is next read, so this should stay
-        /// far below the number of changes that dirtied it.
+        /// Passes over every link recomputing the conductance each node sees. Structural changes mark
+        /// it stale and it is recomputed once before it is next read, so this should stay well below
+        /// the number of changes that dirtied it.
         /// </summary>
         public long ConductanceRecomputes;
 
@@ -64,8 +59,8 @@ namespace Thermodynamics.Core
         public long SolverSubsteps;
 
         /// <summary>
-        /// Every counter, back to zero. A test measures a window by clearing before it and
-        /// reading after, rather than by subtracting two snapshots.
+        /// Resets every counter to zero. A test measures a window by clearing before it and reading
+        /// after, rather than by subtracting two snapshots.
         /// </summary>
         public void Reset()
         {
@@ -117,8 +112,8 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Everything a rebuild touched, as one figure. The stages are separate because they are
-        /// fixed separately, but what lands in a single frame is their sum.
+        /// Total elements a rebuild touched across every stage. The stages are counted separately
+        /// because they are addressed separately, but a single frame pays their sum.
         /// </summary>
         public long TotalRebuildVisits
         {

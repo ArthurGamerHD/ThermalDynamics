@@ -3,8 +3,8 @@ using System;
 namespace Thermodynamics.Core
 {
     /// <summary>
-    /// Physical constants and unit conversions. Nothing here is tunable at runtime — tunable
-    /// values live in <see cref="ThermalSettings"/> or in the definition property classes.
+    /// Physical constants and unit conversions. Nothing here is tunable at runtime; tunable values
+    /// live in <see cref="ThermalSettings"/> or in the definition property classes.
     /// </summary>
     public static class ThermalConstants
     {
@@ -19,9 +19,8 @@ namespace Thermodynamics.Core
 
         /// <summary>
         /// Conductivity in the block definitions is a unitless 0..1 quality value. This is the
-        /// W/(m K) that a value of 1.0 maps to, so that conduction can be computed in real units.
-        /// 200 sits between steel (~50) and aluminium (~235); it is a game-feel choice, but it is
-        /// applied consistently instead of cancelling out of the equations.
+        /// W/(m K) a value of 1.0 maps to, so conduction is computed in real units. 200 sits between
+        /// steel (~50) and aluminium (~235).
         /// </summary>
         public const float ReferenceConductivity = 200f;
 
@@ -31,14 +30,12 @@ namespace Thermodynamics.Core
         /// </summary>
         public const float AirSpecificHeat = 1005f;
 
-        /// <summary>
-        /// Absolute floor for any node temperature. Nothing may go below this.
-        /// </summary>
+        /// <summary>Absolute floor for any node temperature.</summary>
         public const float MinimumTemperature = 0f;
 
         /// <summary>
-        /// Guards against divide-by-zero when a definition declares zero specific heat or a block
-        /// reports zero mass.
+        /// Minimum heat capacity, guarding against division by zero when a definition declares zero
+        /// specific heat or a block reports zero mass.
         /// </summary>
         public const float MinimumThermalMass = 0.001f;
 

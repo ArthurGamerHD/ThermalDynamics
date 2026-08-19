@@ -8,8 +8,8 @@ namespace Thermodynamics.Core
     /// step by <see cref="EnvironmentSolver"/> and shared by every node on the grid.
     /// </summary>
     /// <summary>
-    /// One directional heat source other than the sun, reduced to what the solver needs: which
-    /// way it is, and how many watts per square metre it delivers to a face pointing at it.
+    /// One directional heat source other than the sun, reduced to a direction and the watts per
+    /// square metre it delivers to a face pointing at it.
     /// </summary>
     public struct HeatSourceState
     {
@@ -38,8 +38,8 @@ namespace Thermodynamics.Core
         public float AirDensity;
 
         /// <summary>
-        /// How much the atmosphere behaves like a fluid rather than a vacuum, 0..1. Rises much
-        /// faster than raw density, so thin air still convects meaningfully.
+        /// How much the atmosphere behaves as a fluid rather than a vacuum, 0..1. Rises faster than
+        /// raw density, so thin air still convects.
         /// </summary>
         public float AtmosphereFactor;
 
@@ -70,25 +70,23 @@ namespace Thermodynamics.Core
         public bool FrictionActive;
 
         /// <summary>
-        /// Weather intensity in force, 0..1, and what it did to the air, K.
+        /// Weather intensity in force, 0..1, and the temperature offset it applied, K.
         ///
-        /// Neither is read by the simulation — every effect the weather has is already folded into
-        /// the ambient, the convection coefficient and the solar figure above. They are here so a
-        /// readout can say why a hull is losing heat twice as fast as it did a minute ago, which
-        /// is otherwise invisible.
+        /// Neither is read by the simulation: every effect the weather has is already folded into the
+        /// ambient, the convection coefficient and the solar figure above. Carried for readouts.
         /// </summary>
         public float WeatherIntensity;
 
         public float WeatherTemperatureOffset;
 
         /// <summary>
-        /// Point heat sources registered by other mods, already reduced to a direction and an
-        /// irradiance. Null when there are none, which is the ordinary case; the array may be
-        /// longer than <see cref="HeatSourceCount"/> so a host can reuse one buffer.
+        /// Point heat sources registered by other mods, reduced to a direction and an irradiance. Null
+        /// when there are none, which is the usual case. The array may be longer than
+        /// <see cref="HeatSourceCount"/> so a host can reuse one buffer.
         /// </summary>
         public HeatSourceState[] HeatSources;
 
-        /// <summary>Entries of <see cref="HeatSources"/> that are live this step.</summary>
+        /// <summary>Live entries in <see cref="HeatSources"/> this step.</summary>
         public int HeatSourceCount;
 
         public static EnvironmentState Vacuum(float vacuumTemperature)

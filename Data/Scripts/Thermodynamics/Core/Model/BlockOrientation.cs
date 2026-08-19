@@ -25,8 +25,8 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// The rotation that takes a direction in block-local space to grid space. Built the
-        /// same way the game builds it, so results match in game.
+        /// The rotation taking a direction in block-local space to grid space. Constructed the same
+        /// way the game constructs it, so the results match.
         /// </summary>
         public Matrix GetMatrix()
         {

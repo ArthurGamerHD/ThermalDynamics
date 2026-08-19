@@ -29,7 +29,7 @@ namespace Thermodynamics.Core
         public const int SelfMountMask = 0x3F << SelfMountShift;
         public const int NeighbourMountMask = 0x3F << NeighbourMountShift;
 
-        /// <summary>All six self faces sealed — a fully airtight cell.</summary>
+        /// <summary>All six self faces sealed: a fully airtight cell.</summary>
         public const int FullySealed = SelfAirtightMask;
 
         public static bool SelfAirtight(int state, int face)
