@@ -300,7 +300,12 @@ G_plate = Conductivity × ReferenceConductivity × A_plate / L
 watts   = G × (T_loop − T_block)
 ```
 
-Both exchanges are clamped and energy-conserving like every other. Rings are traced from the ports
+Both exchanges are clamped and energy-conserving like every other. Each loop accumulates what it
+drew out of blocks and what it pushed back into them over a step, reported as
+`LastWattsAbsorbed` and `LastWattsRejected`. They are kept apart rather than summed because a loop
+in balance — drawing off a reactor at one sink and shedding into a radiator at another — has a net
+of about zero exactly when it is carrying its full load, so a single net figure would describe a
+working loop as an idle one. Rings are traced from the ports
 each block declares, so any block size or orientation works without special cases, and each ring is
 found once whichever pipe the search starts from. A loop keeps its heat across a rebuild through an
 order-independent hash of its members.

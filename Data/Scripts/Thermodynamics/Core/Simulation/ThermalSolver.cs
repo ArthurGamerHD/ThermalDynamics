@@ -2018,6 +2018,12 @@ namespace Thermodynamics.Core
 
                     nodeWatts[link.NodeIndex] += watts;
                     loopWatts[l] -= watts;
+
+                    // Signed by which way the heat went, so a loop drawing off a reactor at one
+                    // sink and shedding into a radiator at another reports both rather than their
+                    // difference. See CoolantLoop.LastWattsAbsorbed.
+                    if (watts < 0f) loop.AbsorbedEnergy -= watts * h;
+                    else loop.RejectedEnergy += watts * h;
                 }
             }
         }

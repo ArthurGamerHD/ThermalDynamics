@@ -196,6 +196,11 @@ namespace Thermodynamics.Core
                 heatPumps[p].BeginStep();
             }
 
+            for (int l = 0; l < loops.Count; l++)
+            {
+                loops[l].BeginStep();
+            }
+
             Work.SolverSteps++;
             Work.SolverSubsteps += substeps;
 
@@ -378,6 +383,11 @@ namespace Thermodynamics.Core
                 heatPumps[p].EndStep(stepDeltaSeconds);
             }
 
+            for (int l = 0; l < loops.Count; l++)
+            {
+                loops[l].EndStep(stepDeltaSeconds);
+            }
+
             stage = StepStage.Publish;
             stageCursor = 0;
             publishHottest = -1;
@@ -484,6 +494,11 @@ namespace Thermodynamics.Core
             for (int p = 0; p < heatPumps.Count; p++)
             {
                 heatPumps[p].EndStep(stepDeltaSeconds);
+            }
+
+            for (int l = 0; l < loops.Count; l++)
+            {
+                loops[l].EndStep(stepDeltaSeconds);
             }
 
             stage = StepStage.Idle;

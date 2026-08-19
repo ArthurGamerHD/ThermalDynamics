@@ -249,6 +249,93 @@ namespace Thermodynamics.Tests
             Assert.Equal(1f, after / before, 3);
         }
 
+        /// <summary>
+        /// A loop reports what it drew and what it shed as two figures, because a loop doing its job
+        /// has a net of about zero. This is the case the two-figure form exists for: a reactor at one
+        /// sink and a radiator at another, where the fluid is a conduit rather than a store.
+        /// </summary>
+        [Fact]
+        public void AWorkingLoopReportsGrossFlowNotItsNearZeroNet()
+        {
+            Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
+            sinks[1] = Vector3I.Down;   // reactor
+            sinks[5] = Vector3I.Up;     // radiator
+
+            GridBuilder builder = GridBuilder.Large();
+            List<Vector3I> cells = PipeFitter.RectangleXZ(Vector3I.Zero, 5, 5);
+            PipeFitter.BuildRing(builder, cells, -1, sinks);
+
+            builder.Place(Catalog.Reactor(), cells[1] + Vector3I.Down).Producing(200000f);
+            builder.Place(Catalog.Radiator(), cells[5] + Vector3I.Up);
+
+            ThermalSettings settings = new ThermalSettings();
+            settings.EnableSolarHeat = false;
+            settings.EnableFriction = false;
+            settings.EnableDamage = false;
+
+            ThermalSimulation simulation = builder.BuildSimulation(settings.Derive(), 293.15f);
+            CoolantLoop loop = simulation.Solver.Loops[0];
+
+            // Long enough for the fluid to stop warming and start simply carrying.
+            simulation.StepExact(30000, Worlds.Shadow());
+
+            Assert.True(loop.LastWattsAbsorbed > 1000f,
+                "the loop reports drawing only " + loop.LastWattsAbsorbed + " W off a 200 kW reactor");
+            Assert.True(loop.LastWattsRejected > 1000f,
+                "the loop reports shedding only " + loop.LastWattsRejected + " W into a radiator");
+
+            // The point of the pair: the net is small against either gross figure, so a single
+            // net figure would describe this loop as idle.
+            Assert.True(Math.Abs(loop.LastNetWatts) < loop.LastWattsAbsorbed * 0.1f,
+                "net " + loop.LastNetWatts + " W against " + loop.LastWattsAbsorbed
+                + " W absorbed: the loop has not reached balance, so this is not testing the case");
+        }
+
+        /// <summary>
+        /// The two figures are the same energy the integrator applied to the fluid, so their
+        /// difference has to be the change in the fluid's own heat content and nothing else.
+        /// </summary>
+        [Fact]
+        public void TheReportedFlowAccountsForTheFluidsChangeInHeat()
+        {
+            Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
+            sinks[1] = Vector3I.Down;
+
+            GridBuilder builder = GridBuilder.Large();
+            List<Vector3I> cells = PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3);
+            PipeFitter.BuildRing(builder, cells, -1, sinks);
+            builder.Place(Catalog.HeavyArmor(), cells[1] + Vector3I.Down);
+            BlockInstance hot = builder.Last;
+
+            ThermalSimulation simulation = builder.BuildSimulation(Isolated(), 300f);
+            CoolantLoop loop = simulation.Solver.Loops[0];
+            simulation.Solver.GetNode(hot).Temperature = 900f;
+
+            float before = loop.Temperature;
+            simulation.StepExact(1, Worlds.Shadow());
+
+            float reported = loop.LastNetWatts * simulation.Settings.StepSeconds;
+            float actual = (loop.Temperature - before) * loop.ThermalMass;
+
+            Assert.Equal(1f, reported / actual, 2);
+        }
+
+        /// <summary>An idle loop reports zero rather than whatever it last carried.</summary>
+        [Fact]
+        public void ALoopInBalanceWithItsSurroundingsReportsNothing()
+        {
+            GridBuilder builder = GridBuilder.Large();
+            PipeFitter.BuildRing(builder, PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3));
+
+            ThermalSimulation simulation = builder.BuildSimulation(Isolated(), 300f);
+            CoolantLoop loop = simulation.Solver.Loops[0];
+
+            simulation.StepExact(10, Worlds.Shadow());
+
+            Assert.Equal(0f, loop.LastWattsAbsorbed, 3);
+            Assert.Equal(0f, loop.LastWattsRejected, 3);
+        }
+
         [Fact]
         public void DisablingLoopsRemovesThemFromTheSolver()
         {

@@ -141,5 +141,53 @@ namespace Thermodynamics.Core
         {
             get { return Temperature * ThermalMass; }
         }
+
+        // ---- what the loop moved, per step -------------------------------------------------
+
+        /// <summary>
+        /// Heat the fluid drew out of the blocks it touches over the last step, W.
+        ///
+        /// Gross rather than net, and that is the whole point of reporting two figures. A working
+        /// loop settles where what it draws off a reactor equals what it sheds into a radiator, so
+        /// its *net* is around zero exactly when it is doing the most work. A single figure would
+        /// make a loop moving 40 kW indistinguishable from a loop moving nothing.
+        /// </summary>
+        public float LastWattsAbsorbed;
+
+        /// <summary>Heat the fluid pushed back into the blocks it touches over the last step, W.</summary>
+        public float LastWattsRejected;
+
+        /// <summary>
+        /// Net change in the fluid's own heat content, W. Positive means the loop is still warming
+        /// up; around zero with a large <see cref="LastWattsAbsorbed"/> means it is in balance and
+        /// carrying its full load.
+        /// </summary>
+        public float LastNetWatts
+        {
+            get { return LastWattsAbsorbed - LastWattsRejected; }
+        }
+
+        /// <summary>Energy accumulated across the substeps of one step, J.</summary>
+        internal float AbsorbedEnergy;
+        internal float RejectedEnergy;
+
+        internal void BeginStep()
+        {
+            AbsorbedEnergy = 0f;
+            RejectedEnergy = 0f;
+        }
+
+        /// <summary>
+        /// Converts the energy moved over a whole step into the rates a readout reports. Per step
+        /// rather than per substep, as <see cref="HeatPumpDevice.EndStep"/> is and for the same
+        /// reason: a value overwritten each substep describes only the last one.
+        /// </summary>
+        internal void EndStep(float deltaSeconds)
+        {
+            if (deltaSeconds <= 0f) return;
+
+            LastWattsAbsorbed = AbsorbedEnergy / deltaSeconds;
+            LastWattsRejected = RejectedEnergy / deltaSeconds;
+        }
     }
 }
