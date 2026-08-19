@@ -35,11 +35,44 @@ namespace Thermodynamics.Sim
                 case "bench":
                     return BenchCommand(args);
 
+                case "balance":
+                    return BalanceCommand(args);
+
                 default:
                     Console.Error.WriteLine("Unknown command: " + args[0]);
                     PrintUsage();
                     return 1;
             }
+        }
+
+        /// <summary>
+        /// The block balance pass: every shipped block costed and measured against the vanilla
+        /// blocks it competes with. Prints the tables; <c>--csv &lt;dir&gt;</c> also writes the
+        /// block table so one tuning pass can be diffed against the last.
+        /// </summary>
+        private static int BalanceCommand(string[] args)
+        {
+            Console.Write(BalanceLab.Report());
+
+            string directory = ValueAfter(args, "--csv");
+            if (directory != null)
+            {
+                Directory.CreateDirectory(directory);
+                string path = Path.Combine(directory, "balance-blocks.csv");
+                File.WriteAllText(path, BalanceLab.BlocksCsv());
+                Console.WriteLine();
+                Console.WriteLine("wrote " + path);
+            }
+            return 0;
+        }
+
+        private static string ValueAfter(string[] args, string flag)
+        {
+            for (int i = 0; i < args.Length - 1; i++)
+            {
+                if (args[i] == flag) return args[i + 1];
+            }
+            return null;
         }
 
         private static int RunCommand(string[] args)
@@ -451,6 +484,9 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  list                    show available scenarios");
             Console.WriteLine("  run <name|all>          run a scenario");
             Console.WriteLine("  run <name> --csv <dir>  also write full results as CSV");
+            Console.WriteLine();
+            Console.WriteLine("  balance                 every block costed and measured against vanilla");
+            Console.WriteLine("  balance --csv <dir>     also write the block table as CSV");
             Console.WriteLine();
             Console.WriteLine("  bench scale             cost per stage as the grid grows");
             Console.WriteLine("  bench hitch --size N    per-tick cost, with a block welded mid-run");

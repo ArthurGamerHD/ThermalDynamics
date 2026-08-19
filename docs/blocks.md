@@ -115,8 +115,18 @@ Top and Bottom.
 
 It has **no script behaviour**. It is purely a definition-driven heat shedder: aluminium's specific
 heat (900 J/(kg K)), conductivity 1, high emissivity (0.35 against the 0.125 default) and a 1.25×
-surface area scaler, so it radiates faster than any armour block of comparable mass. To use it, conduct heat into it — mount it on a coolant
-pipe sink face or directly against a hot block — and keep its faces exposed to vacuum.
+surface area scaler, so it radiates faster than any armour block of comparable mass. Against a slab
+of light armour of the same shape on the same load it is about 48× better per tonne, which is what
+earns it its place.
+
+**Plumb it; do not bolt it.** A coolant sink face couples to the panel at about 1,000 W/K and a bolt
+joint at about 167 W/K, and on the same load that difference is worth 195 K — more than every
+surface property of the block put together. A panel bolted straight onto a hot block is limited by
+its joint, not its surface, which is why the second one you bolt on is worth 3 K and the eighth is
+worth nothing. Past a certain load it goes further than useless: bolted to a block already saturated,
+a panel makes it *hotter*, because it covers faces that were radiating and cannot carry off what it
+blocked. Keep the panel's own faces exposed to vacuum either way. Measured in
+[balance.md](balance.md).
 
 ## Heat pump
 

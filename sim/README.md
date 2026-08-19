@@ -52,7 +52,7 @@ sufficient. See [development.md](../docs/development.md#repo-conventions) for th
 ```bash
 cd sim
 
-dotnet test                                    # the whole suite (679 tests)
+dotnet test                                    # the whole suite (887 tests)
 dotnet run --project Thermodynamics.Sim -- list
 dotnet run --project Thermodynamics.Sim -- run reactor
 dotnet run --project Thermodynamics.Sim -- run all --csv out/
@@ -116,6 +116,23 @@ The probe order is `$SE_BIN`, the default Steam path, then the mod's own
 Scenarios are deterministic: no clock, no randomness, no dependence on iteration order. The same
 scenario produces byte-identical output on every run, which is what lets them double as
 regression tests (`ScenarioTests`).
+
+## Block balance
+
+`balance` is neither a scenario nor a benchmark: it costs every block the mod ships and measures it
+against the vanilla blocks it competes with, reading the shipped `.sbc` and `Cubes.xml` at run time
+rather than from a hand-written catalogue.
+
+```bash
+dotnet run --project Thermodynamics.Sim -- balance
+dotnet run --project Thermodynamics.Sim -- balance --csv out/
+```
+
+It reports five tables — every block costed and measured, what the vanilla heat sources put in, what
+a panel delivers end to end, which dial actually moves that number, and the heat pump and coolant
+rings across their ranges. The conclusions are pinned by `BalanceTests`. See
+[balance.md](../docs/balance.md); the short version is that a coolant sink face couples six times
+harder than a bolt joint, and no surface property comes close to being worth as much.
 
 ## Load benchmarks
 
@@ -239,7 +256,7 @@ PipeFitter.BuildRing(builder, ring);      // pump goes on the first straight run
 
 ## Test coverage
 
-679 tests across:
+887 tests across:
 
 * position keys and block geometry maths
 * face indexing, the colour ramp, occlusion
@@ -255,6 +272,10 @@ PipeFitter.BuildRing(builder, ring);      // pump goes on the first straight run
 * scheduling, settings and definition clamping
 * end-to-end simulation, save/load, and every scenario
 * the claims each scenario's summary line makes, so a headline conclusion cannot quietly invert
+* block balance: that every shipped block is priced, weighs something, gets its own thermal entry
+  and carries plumbing exactly when it should; and that the conclusions drawn from the balance pass
+  — the radiator beating the armour it displaces, a coolant sink beating every surface dial, the
+  heat pump passing through all three of its limits — cannot quietly invert
 * the climate: latitude, ground, lag, altitude, thin air, weather and depth
 * room air coupling — that a pressurised room gains links and takes the temperature of its walls
 * the compartments the game seals and this model does not
