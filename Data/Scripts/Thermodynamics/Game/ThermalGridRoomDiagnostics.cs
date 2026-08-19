@@ -92,7 +92,7 @@ namespace Thermodynamics
             ///
             /// This is what decides whether a dry room is a fault. <see cref="GameAirtight"/> and
             /// <see cref="VentPressurised"/> both mean sealed rather than full: an enclosed space
-            /// nobody piped air into, on a grid in vacuum, is airtight and empty in both models.
+            /// that was never filled, on a grid in vacuum, is airtight and empty in both models.
             /// </summary>
             public float GameOxygen;
 

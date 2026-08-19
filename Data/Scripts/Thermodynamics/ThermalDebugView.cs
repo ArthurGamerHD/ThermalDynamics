@@ -13,17 +13,16 @@ using static VRageRender.MyBillboard;
 namespace Thermodynamics
 {
     /// <summary>
-    /// The block debug overlay: every block of the grid in front of you drawn as a coloured box,
-    /// seen through the hull. Two views draw something else, because their subject is not the
-    /// block: the solar view draws the skin, one quad per exposed face, and the room view draws the
-    /// mapped air, a box per cell.
+    /// The block debug overlay: every block of the targeted grid drawn as a coloured box, visible
+    /// through the hull. Two views draw something other than blocks: the solar view draws the skin,
+    /// one quad per exposed face, and the room view draws the mapped air, one box per cell.
     ///
     /// Everything is drawn client side, per frame, as transparent geometry; nothing is written to
     /// the grid. The replaced block-colouring modes called <c>ColorBlocks</c>, which is a real,
     /// replicated and permanent change to a grid's paint.
     ///
     /// Every block is drawn whether or not something stands between it and the camera, since the
-    /// blocks worth inspecting are usually buried. This is done by scaling each box about the eye
+    /// blocks under inspection are usually buried. This is done by scaling each box about the eye
     /// onto a shallow band just in front of the near plane: a perspective projection is invariant
     /// under scaling about the eye, so each box appears exactly where the block is while nothing in
     /// the scene can occlude it. Relative depth order between boxes is preserved because they all
@@ -378,7 +377,7 @@ namespace Thermodynamics
                 bool hasAir = air != null && air.HasAir;
 
                 // Mapped and dry while the game has oxygen in it. Compares oxygen rather than
-                // airtightness: a sealed space nobody piped air into is empty in both models and is
+                // airtightness: a sealed space that was never filled is empty in both models and is
                 // not a fault.
                 bool disagrees = Disagrees(thermals, room);
 

@@ -302,7 +302,7 @@ namespace Thermodynamics
         /// Three conditions empty a room, none of them owned by this mod: the world may have oxygen
         /// or pressurisation disabled; the game's sealing test may disagree with this model's, since
         /// it knows the true shape of a sloped block where this knows only a cell, and it wins; or
-        /// the room may simply hold no air.
+        /// the room may hold no air.
         ///
         /// The fill level comes per room from the game's gas system through
         /// <see cref="ThermalGrid.GameOxygenAt"/>. The game's rooms are whole connected volumes

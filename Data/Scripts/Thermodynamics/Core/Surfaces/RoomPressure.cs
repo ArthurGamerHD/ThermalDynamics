@@ -57,7 +57,7 @@ namespace Thermodynamics.Core
         /// <remarks>
         /// Compares oxygen, not airtightness. Both <c>IsRoomAtPositionAirtight</c> and
         /// <c>IMyAirVent.IsPressurized</c> report whether a room is sealed, not whether it holds air.
-        /// An enclosed space nobody piped air into, on a grid in vacuum, is sealed and empty in both
+        /// An enclosed space that was never filled, on a grid in vacuum, is sealed and empty in both
         /// models and is not a fault; testing sealing instead flags every such compartment and
         /// buries the genuine cases among them.
         /// </remarks>

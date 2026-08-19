@@ -157,7 +157,7 @@ namespace Thermodynamics.Core
         /// The faces where this region ends and the model does not seal.
         ///
         /// A face leaving the region that this model calls sealed is not a leak: both models agree
-        /// and the region simply ends there. A face leaving it that this model leaves open is the
+        /// and the region ends there. A face leaving it that this model leaves open is the
         /// disagreement being measured.
         /// </summary>
         private static void CollectLeaks(Region region, SurfaceMap surfaces)

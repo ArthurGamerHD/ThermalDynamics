@@ -110,8 +110,8 @@ namespace Thermodynamics.Core
         /// True when the room currently reaches open air, directly through an open door or through a
         /// chain of open doors and other rooms.
         ///
-        /// A vented room is still a room; it simply holds no air, so the surfaces facing it see
-        /// outdoors, which <see cref="IsExternal"/> reports.
+        /// A vented room is still a room; it holds no air, so the surfaces facing it see outdoors,
+        /// which <see cref="IsExternal"/> reports.
         /// </summary>
         public bool IsVented(int roomIndex)
         {

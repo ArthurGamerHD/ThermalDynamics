@@ -103,8 +103,8 @@ namespace Thermodynamics
         /// <summary>
         /// Reports why there is no panel, once, the first time a view is enabled without one.
         ///
-        /// Registration with Rich HUD Master reports no failure: the framework simply never calls
-        /// back, so the absence must be reported here.
+        /// Registration with Rich HUD Master reports no failure; the framework never calls back, so
+        /// the absence must be reported here.
         /// </summary>
         private static void WarnOnce()
         {
