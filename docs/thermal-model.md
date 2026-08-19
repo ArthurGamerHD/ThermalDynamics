@@ -290,7 +290,7 @@ watts = produced × ProducerWasteEnergy + (consumed + thrust) × ConsumerWasteEn
 
 ## Coolant loops
 
-A closed ring of pipe blocks containing at least one pump is one lumped fluid mass
+A closed ring of pipe blocks carries one parcel of coolant per pipe
 ([CoolantLoopBuilder](../Data/Scripts/Thermodynamics/Core/Loops/CoolantLoopBuilder.cs)). It links
 to the pipe blocks it runs through, and to whatever block sits behind each pipe's sink faces:
 
@@ -299,6 +299,32 @@ G_pipe  = Conductivity × ReferenceConductivity × A_pipe  / L
 G_plate = Conductivity × ReferenceConductivity × A_plate / L
 watts   = G × (T_loop − T_block)
 ```
+
+Each parcel exchanges only with its own pipe and the blocks on that pipe's sink faces, so heat
+reaches the far side of the ring only by being carried there:
+
+```
+parcels/s = SegmentsPerSecondAtFullFlow x sqrt(sum of pump speed x power supplied)
+pipe i reads parcel (i - round(parcels carried)) mod N
+```
+
+Carrying the fluid is a rotation of the ring's origin rather than a shuffle of its contents. Because
+a pipe's index is a whole number, the rounded offset collapses to one integer shift shared by every
+pipe, which makes the mapping a bijection at any speed: no parcel is read twice and none is skipped.
+It is therefore exactly conservative and has **no stability limit on flow rate at all**, so a fast
+pump costs no substeps. It is also plug flow with no numerical diffusion — a hot parcel arrives at the
+radiator still hot, smoothed only by the pipes it passed through, which is the physical mechanism
+rather than an artefact of the scheme.
+
+Flow going as the square root of combined pump demand is real parallel-pump behaviour against a fixed
+circuit, where turbulent pressure loss rises with the square of flow: four pumps carry twice one
+pump's flow. A pump's own draw follows the affinity law, the cube of its speed.
+
+With no pump running, `parcels/s` is zero and nothing is carried. The ring still holds its coolant and
+still exchanges with what it touches, so the coolant beside a reactor saturates while the coolant at
+the radiator stays cold — which is what a stopped pump does. `WellMixedCoolant` reverts to the older
+single-mass fluid, where the whole ring is one temperature and heat crosses it instantly whether
+anything is circulating or not.
 
 Both exchanges are clamped and energy-conserving like every other. Each loop accumulates what it
 drew out of blocks and what it pushed back into them over a step, reported as

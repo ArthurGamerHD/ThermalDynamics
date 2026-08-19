@@ -2097,7 +2097,12 @@ namespace Thermodynamics.Core
                 {
                     LoopLink link = loop.Links[i];
                     if (link.NodeIndex < 0 || link.NodeIndex >= nodes.Count) continue;
-                    if (link.SegmentIndex < 0 || link.SegmentIndex >= watts.Length) continue;
+                    if (link.SegmentIndex < 0 || link.SegmentIndex >= loop.PipeCount) continue;
+
+                    // Pipe to parcel: which coolant is in this pipe right now. Eight pipes resolve to
+                    // one parcel when the ring is well mixed, which is the whole of that model.
+                    int parcel = loop.ParcelOf(link.SegmentIndex);
+                    if (parcel >= watts.Length) continue;
 
                     // The parcel's own temperature, not the ring's mean. This is what makes a stopped
                     // pump behave like a stopped pump: the coolant beside a reactor saturates and
@@ -2115,7 +2120,7 @@ namespace Thermodynamics.Core
                     }
 
                     nodeWatts[link.NodeIndex] += exchange;
-                    watts[link.SegmentIndex] -= exchange;
+                    watts[parcel] -= exchange;
 
                     // Signed by which way the heat went, so a loop drawing off a reactor at one
                     // sink and shedding into a radiator at another reports both rather than their
@@ -2281,7 +2286,7 @@ namespace Thermodynamics.Core
 
                 for (int i = 0; i < watts.Length; i++)
                 {
-                    loop.ApplySegmentWatts(i, watts[i], h, mass);
+                    loop.ApplyParcelWatts(i, watts[i], h, mass);
                 }
 
                 // Exchange first, then carry: a parcel takes heat where it is and then moves on,
@@ -2398,15 +2403,11 @@ namespace Thermodynamics.Core
                 float perLoop = SegmentConductance(l) / EffectiveLoopMass(l);
                 if (perLoop > worst) worst = perLoop;
 
-                // Advection is limited by how far fluid may travel in one substep: past one parcel
-                // per substep the upwind scheme reads from fluid that has already moved on. Unlike
-                // the conduction term this does not depend on the ring's length at all, because a
-                // parcel's volume does not. The well-mixed model transports by levelling rather than
-                // by carrying, so it has no such limit.
-                if (settings.WellMixedCoolant) continue;
-
-                float perFlow = loops[l].FlowSegmentsPerSecond * StabilitySafetyFactor;
-                if (perFlow > worst) worst = perFlow;
+                // Flow imposes no limit of its own. Carrying the fluid is a rotation of which parcel
+                // sits in which pipe, which is exact at any speed — so a fast pump costs substeps
+                // nowhere, and the flow rate is free to be set for how the game should feel rather
+                // than for what the integrator will tolerate. Blending each parcel into the next,
+                // which this replaced, was stable only below one parcel per substep.
             }
 
             // Room air has the lowest capacity and the largest contact area on the grid, so it
@@ -2757,7 +2758,7 @@ namespace Thermodynamics.Core
             if (index < 0 || index >= loops.Count) return 0f;
 
             CoolantLoop loop = loops[index];
-            int count = loop.PipeCount;
+            int count = loop.ParcelCount;
             if (count <= 0) return 0f;
 
             if (segmentConductanceScratch.Length < count)
@@ -2769,8 +2770,12 @@ namespace Thermodynamics.Core
             for (int i = 0; i < loop.Links.Count; i++)
             {
                 LoopLink link = loop.Links[i];
-                if (link.SegmentIndex < 0 || link.SegmentIndex >= count) continue;
-                segmentConductanceScratch[link.SegmentIndex] += link.Conductance;
+                if (link.SegmentIndex < 0 || link.SegmentIndex >= loop.PipeCount) continue;
+
+                int parcel = loop.ParcelOf(link.SegmentIndex);
+                if (parcel < 0 || parcel >= count) continue;
+
+                segmentConductanceScratch[parcel] += link.Conductance;
             }
 
             float worst = 0f;

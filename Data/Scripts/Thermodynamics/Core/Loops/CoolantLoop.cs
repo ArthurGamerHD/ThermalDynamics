@@ -42,7 +42,23 @@ namespace Thermodynamics.Core
     /// Transport is advective rather than diffusive on purpose. Diffusion around a ring of N parcels
     /// mixes in time proportional to N squared, so a long ring would need a conductance high enough
     /// to make the solver unusably stiff. Advection carries a parcel N places in time proportional
-    /// to N, and its stability limit — one parcel per substep — does not depend on N at all.
+    /// to N.
+    ///
+    /// And the fluid does not move: the ring's *origin* does. Parcels sit in a fixed array and each
+    /// pipe reads the parcel currently passing through it, offset by a rotation this class advances
+    /// once per substep. Because a pipe's own index is a whole number, rounding that offset collapses
+    /// to an integer shift shared by every pipe, which is a bijection at any speed — two pipes can
+    /// never land on one parcel, and none is ever skipped. Three things follow:
+    ///
+    /// <list type="bullet">
+    /// <item>Carrying the fluid costs one float add per substep instead of a pass over the ring.</item>
+    /// <item>It is exactly conservative, because it only relabels which parcel sits where. There is no
+    /// stability limit on flow speed at all, where blending each parcel into the next was stable only
+    /// below one parcel per substep.</item>
+    /// <item>It is plug flow with no numerical diffusion. A blended scheme smears a hot pulse as it
+    /// travels; this carries it intact, and the only thing that smooths it is exchange with the pipes
+    /// it passes through — which is the physical mechanism rather than an artefact of the scheme.</item>
+    /// </list>
     /// </summary>
     public class CoolantLoop
     {
@@ -79,11 +95,65 @@ namespace Thermodynamics.Core
             }
         }
 
-        /// <summary>Temperature of one coolant parcel, K, indexed as <see cref="Pipes"/>.</summary>
+        /// <summary>
+        /// Temperature of the coolant currently inside pipe <paramref name="index"/>, K.
+        ///
+        /// The argument is a position in <see cref="Pipes"/>, not a slot in the parcel array: the
+        /// parcels rotate past the pipes. Every caller wants "what is in this pipe now", so the
+        /// mapping lives here rather than at each call site.
+        /// </summary>
         public float SegmentTemperature(int index)
         {
             if (segments == null || index < 0 || index >= segmentCount) return seeded;
-            return segments[index];
+            return segments[ParcelOf(index)];
+        }
+
+        /// <summary>
+        /// Parcel array slot currently sitting in pipe <paramref name="pipeIndex"/>.
+        ///
+        /// Subtracted rather than added: the fluid runs forward along the ring, so after one parcel of
+        /// travel the coolant that was in pipe i-1 is in pipe i.
+        /// </summary>
+        public int ParcelOf(int pipeIndex)
+        {
+            if (segmentCount <= 0) return 0;
+
+            int slot = (pipeIndex - shift) % segmentCount;
+            return slot < 0 ? slot + segmentCount : slot;
+        }
+
+        /// <summary>Parcels of coolant the ring carries. One per pipe, or one in total when well mixed.</summary>
+        public int ParcelCount
+        {
+            get { return segmentCount; }
+        }
+
+        /// <summary>Parcels of travel since the ring was built. Whole parcels; the fraction is carried.</summary>
+        private int shift;
+
+        /// <summary>Fractional travel not yet worth a whole parcel of rotation.</summary>
+        private float travelled;
+
+        /// <summary>Parcels the coolant has been carried since the loop formed. Diagnostic.</summary>
+        public float ParcelsTravelled
+        {
+            get { return travelled; }
+        }
+
+        /// <summary>
+        /// Sets the temperature of the coolant currently inside pipe <paramref name="pipeIndex"/>, K.
+        ///
+        /// The counterpart to <see cref="SegmentTemperature"/>, and the only way to put an uneven
+        /// profile into a ring from outside — which a restored save, a test and a host all need, since
+        /// <see cref="Temperature"/> levels the whole ring.
+        /// </summary>
+        public void SetSegmentTemperature(int pipeIndex, float temperature)
+        {
+            if (segments == null || pipeIndex < 0 || pipeIndex >= segmentCount) return;
+
+            segments[ParcelOf(pipeIndex)] = temperature < ThermalConstants.MinimumTemperature
+                ? ThermalConstants.MinimumTemperature
+                : temperature;
         }
 
         /// <summary>Hottest and coldest parcel in the ring, K. The spread a stopped pump opens up.</summary>
@@ -118,7 +188,6 @@ namespace Thermodynamics.Core
         }
 
         private float[] segments = new float[0];
-        private float[] carried = new float[0];
         private int segmentCount;
 
         /// <summary>Temperature a parcel takes when the ring gains one, and the value before any exist.</summary>
@@ -234,7 +303,13 @@ namespace Thermodynamics.Core
             float perSegment = (Properties.SpecificHeat * Properties.MassPerPipe) / heatTimeScale;
             SegmentThermalMass = Math.Max(ThermalConstants.MinimumThermalMass, perSegment);
 
-            int count = Pipes.Count;
+            // The well-mixed model is a ring carrying exactly one parcel. Expressing it that way rather
+            // than as a special case in the solver means every path below — the links, the watts, the
+            // integration, the energy — is the same code, and the per-parcel work genuinely collapses
+            // to one accumulator and one integration rather than being levelled afterwards.
+            int count = wellMixed ? Math.Min(1, Pipes.Count) : Pipes.Count;
+            if (wellMixed) SegmentThermalMass = SegmentThermalMass * Math.Max(1, Pipes.Count);
+
             if (count != segmentCount)
             {
                 float[] resized = new float[count];
@@ -243,8 +318,12 @@ namespace Thermodynamics.Core
                     resized[i] = i < segmentCount ? segments[i] : seeded;
                 }
                 segments = resized;
-                carried = new float[count];
                 segmentCount = count;
+
+                // The rotation indexes the ring, so a ring that changed length cannot keep it. A
+                // length change means a rebuilt loop anyway; this is the guard, not the mechanism.
+                shift = 0;
+                travelled = 0f;
             }
 
             ThermalMass = SegmentThermalMass * Math.Max(1, count);
@@ -333,12 +412,20 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>Applies watts to one parcel over <paramref name="h"/> seconds.</summary>
-        internal void ApplySegmentWatts(int index, float watts, float h, float effectiveMass)
+        /// <summary>
+        /// Applies watts to parcel <paramref name="parcel"/> directly.
+        ///
+        /// Indexed by parcel rather than by pipe, and so is <see cref="SegmentWatts"/>: the two models
+        /// differ in how many parcels a ring has, so accumulating against pipes would need one of them
+        /// special-cased. Accumulating against parcels means eight pipes feeding one parcel is simply
+        /// what the well-mixed ring does.
+        /// </summary>
+        internal void ApplyParcelWatts(int parcel, float watts, float h, float effectiveMass)
         {
-            if (segments == null || index < 0 || index >= segmentCount) return;
+            if (segments == null || parcel < 0 || parcel >= segmentCount) return;
 
-            float updated = segments[index] + (watts * h / effectiveMass);
-            segments[index] = updated < ThermalConstants.MinimumTemperature
+            float updated = segments[parcel] + (watts * h / effectiveMass);
+            segments[parcel] = updated < ThermalConstants.MinimumTemperature
                 ? ThermalConstants.MinimumTemperature
                 : updated;
         }
@@ -357,49 +444,42 @@ namespace Thermodynamics.Core
         /// normal path.
         /// </summary>
         /// <summary>
-        /// When set, every parcel is levelled to the ring's mean after each substep, which reproduces
-        /// the older well-mixed fluid exactly: one temperature for the whole ring, and transport that
-        /// does not depend on a pump. See <see cref="ThermalSettings.WellMixedCoolant"/>.
+        /// When set, the ring carries one parcel instead of one per pipe: the older well-mixed fluid,
+        /// where every pipe and every sink reads and writes a single temperature and heat crosses the
+        /// ring instantly whether anything is circulating or not.
+        ///
+        /// See <see cref="ThermalSettings.WellMixedCoolant"/> for why it is still here.
         /// </summary>
-        public bool WellMixed;
-
-        /// <summary>Levels every parcel to the ring's mean. Conserves energy: the masses are equal.</summary>
-        internal void Mix()
+        public bool WellMixed
         {
-            if (segmentCount < 2) return;
+            get { return wellMixed; }
+            set
+            {
+                if (wellMixed == value) return;
 
-            float total = 0f;
-            for (int i = 0; i < segmentCount; i++) total += segments[i];
-
-            float mean = total / segmentCount;
-            for (int i = 0; i < segmentCount; i++) segments[i] = mean;
+                wellMixed = value;
+                RefreshThermalMass();
+            }
         }
 
-        internal void Advect(float h)
-        {
-            if (WellMixed)
-            {
-                Mix();
-                return;
-            }
+        private bool wellMixed;
 
+        /// <summary>Carries the coolant round the ring for <paramref name="h"/> seconds.</summary>
+        public void Advect(float h)
+        {
+            // One parcel has nowhere to be carried to, which is what the well-mixed model reduces to.
             if (segmentCount < 2 || FlowSegmentsPerSecond <= 0f) return;
 
-            float fraction = FlowSegmentsPerSecond * h;
-            if (fraction <= 0f) return;
-            if (fraction > 1f) fraction = 1f;
+            // One add and, occasionally, an integer step. No pass over the ring, and no upper bound on
+            // the rate: rotating by five parcels in a substep is as exact as rotating by a fifth.
+            travelled += FlowSegmentsPerSecond * h;
 
-            for (int i = 0; i < segmentCount; i++)
-            {
-                carried[i] = segments[i];
-            }
+            int whole = (int)travelled;
+            if (whole == 0) return;
 
-            // Pipes are held in crawl order, so the parcel before index i is at i-1 around the ring.
-            for (int i = 0; i < segmentCount; i++)
-            {
-                int previous = i == 0 ? segmentCount - 1 : i - 1;
-                segments[i] = carried[i] + (fraction * (carried[previous] - carried[i]));
-            }
+            travelled -= whole;
+            shift = (shift + whole) % segmentCount;
+            if (shift < 0) shift += segmentCount;
         }
 
         // ---- what the loop moved, per step -------------------------------------------------

@@ -154,22 +154,32 @@ measuring the machine rather than the work.
 
 ```
   rings  pipes  loops   blocks    links   segmented   well-mixed   ratio  substeps
-      1     24      1    1,253    2,835      0.2326       0.2333    1.00   23 / 23
-      4     96      4    1,349    2,931      0.2540       0.2536    1.00   23 / 23
-     16    384     16    1,733    3,315      0.3421       0.3393    1.01   23 / 23
-     48   1152     48    2,757    4,339      0.5963       0.5913    1.01   23 / 23
+      1     24      1    1,253    2,835      0.2306       0.2307    1.00   23 / 23
+      4     96      4    1,349    2,931      0.2532       0.2528    1.00   23 / 23
+     16    384     16    1,733    3,315      0.3421       0.3400    1.01   23 / 23
+     48   1152     48    2,757    4,339      0.5901       0.5908    1.00   23 / 23
 ```
 
-**One percent, on a grid that is 42 % coolant pipe** — against a field ship measured at 21 %. The
-ratio does not climb with the plumbing, which was the thing worth checking: a fixed multiple is a
+**Within one percent, on a grid that is 42 % coolant pipe** — against a field ship measured at 21 %.
+The ratio does not climb with the plumbing, which was the thing worth checking: a fixed multiple is a
 tuning question, a multiple that grows with what a player builds is a design problem.
 
-It is that cheap because segmenting does not change the link count. One link per pipe plus one per
-sink face exists either way; what changed is which temperature each link reads. The only new work is
-one pass over N floats per substep to carry the fluid, against a per-node environment pass and a
-per-link conduction pass that both dwarf it. The substep column is the other half of the answer: 23
-either way, set by the hull's light blocks, so the loops are nowhere near being the stiffest thing on
-the grid.
+It is that cheap because **the link count is identical**. One link per pipe plus one per sink face
+exists in both models; what changed is which temperature each link reads. The cost of a coolant loop
+was always its links, and there are exactly as many as before.
+
+> **The comparison is only honest because the well-mixed path is genuinely single-mass.** The first
+> version of `WellMixedCoolant` reproduced the old *behaviour* by carrying a parcel per pipe and
+> levelling them after every substep — so a setting whose only purpose is to be cheaper kept the whole
+> cost of the thing it was meant to avoid, and the benchmark was comparing the new model against
+> itself. A well-mixed ring is now literally a ring with one parcel holding all of its coolant, so it
+> costs one accumulator and one integration however long it is. `TheWellMixedRingIsOneParcelHoldingEverything`
+> pins that.
+
+The substep column is the other half of the answer: 23 either way, set by the hull's light blocks, so
+loops are nowhere near the stiffest thing on the grid. And they cannot become so by circulating
+faster — carrying the fluid is a rotation of which parcel sits in which pipe, which is exact at any
+speed. `FlowSpeedDoesNotCostSubsteps` asserts that at 5,000 parcels per second.
 
 `WellMixedCoolant` therefore exists for the choice rather than for the cost.
 
