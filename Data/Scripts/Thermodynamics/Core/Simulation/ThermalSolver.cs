@@ -114,6 +114,56 @@ namespace Thermodynamics.Core
         /// </summary>
         private float[] nodeRelaxation = new float[0];
 
+        /// <summary>
+        /// Per-node environment terms that do not change between the substeps of one step.
+        ///
+        /// <para>
+        /// A substep recomputed all of these, sixteen times a step, from inputs that had not
+        /// moved. Solar gain is emissivity times exposed area times how square the node's faces
+        /// are to the sun and how much of each is lit — and none of those depend on temperature,
+        /// which is the only thing a substep changes. Friction is the same shape. Convection's
+        /// coefficient is too; only the <c>(T - ambient)</c> it multiplies varies. And the
+        /// relaxation factor is <c>mass / (h * conductance)</c>, whose three inputs are all fixed
+        /// for the whole step — a float divide per node per substep for an answer that was
+        /// already on the previous line.
+        /// </para>
+        ///
+        /// <para>
+        /// They are filled by the first substep's own environment pass rather than by a pass of
+        /// their own, so the work is charged and paced exactly as it was and the later substeps
+        /// simply read. The result is arithmetically identical, which
+        /// <c>PrecomputedEnvironmentTests</c> asserts bit for bit.
+        /// </para>
+        /// </summary>
+        private float[] nodeSolarRow = new float[0];
+        private float[] nodeFrictionRow = new float[0];
+        private float[] nodeConvectionRow = new float[0];
+
+        /// <summary>
+        /// False when the rows above have to be recomputed rather than read.
+        ///
+        /// Cleared at the top of every step, and again whenever the self-shadow pass publishes new
+        /// lit fractions — which it can do part way through a step, since it runs on a budget of
+        /// its own. That is the one input to the rows that moves under them.
+        /// </summary>
+        private bool environmentRowsValid;
+
+        /// <summary>Forces the per-step environment rows to be recomputed on the next pass.</summary>
+        private void InvalidateEnvironmentRows()
+        {
+            environmentRowsValid = false;
+        }
+
+        /// <summary>
+        /// Set false to recompute the per-step environment terms on every substep, as the solver
+        /// did before they were cached.
+        ///
+        /// Exists so the claim behind the cache can be tested rather than argued: reusing a value
+        /// is only safe if recomputing it would have produced the same bits, and
+        /// <c>PrecomputedEnvironmentTests</c> runs the same grid both ways and compares. A
+        /// property that is asserted by an optimisation's own presence is not asserted at all.
+        /// </summary>
+        public bool PrecomputeEnvironment = true;
 
         /// <summary>
         /// Fraction of each node's <em>face</em> the sun reaches, six per node, 0..1. All ones when
@@ -1566,7 +1616,8 @@ namespace Thermodynamics.Core
                 Vector3 sun = env.SunDirectionLocal;
                 ResolveDirection(ref sun, sunWeights);
 
-                RefreshSunShadow(ref sun);
+                // The one input to the precomputed rows that can move part way through a step.
+                if (RefreshSunShadow(ref sun)) environmentRowsValid = false;
             }
 
             return plan;
@@ -1580,9 +1631,12 @@ namespace Thermodynamics.Core
 
             if (plan.GenerationOnly)
             {
-                for (int i = from; i < to; i++)
+                if (!environmentRowsValid || !PrecomputeEnvironment)
                 {
-                    nodeRelaxation[i] = RelaxationFactor(i, h);
+                    for (int i = from; i < to; i++)
+                    {
+                        nodeRelaxation[i] = RelaxationFactor(i, h);
+                    }
                 }
 
                 if (plan.Generating)
@@ -1597,6 +1651,7 @@ namespace Thermodynamics.Core
                     for (int i = from; i < to; i++) ClearEnvironmentDiagnostics(i);
                 }
 
+                if (PrecomputeEnvironment && to >= nodes.Count) environmentRowsValid = true;
                 return;
             }
 
@@ -1612,18 +1667,30 @@ namespace Thermodynamics.Core
             float radiationShare = plan.RadiationShare;
             float frictionScale = plan.FrictionScale;
 
+            // The first substep of a step fills the rows below; every later one reads them. The
+            // inputs — exposure, area, emissivity, the sun and wind directions, the step length —
+            // are all fixed for the length of a step, so the two paths are the same arithmetic.
+            bool fill = !environmentRowsValid || !PrecomputeEnvironment;
+
             for (int i = from; i < to; i++)
             {
                 // Every node, exposed or buried: conduction needs this and conduction does not
                 // care whether a block can see the sky. Computed here rather than in a pass of its
                 // own because this loop already walks every node once per substep, and the
                 // conduction pass that reads it does not start until this one has finished.
-                nodeRelaxation[i] = RelaxationFactor(i, h);
+                if (fill) nodeRelaxation[i] = RelaxationFactor(i, h);
 
                 float generation = generating ? nodeGeneration[i] : 0f;
 
                 if (nodeExposedFaces[i] <= 0)
                 {
+                    if (fill)
+                    {
+                        nodeSolarRow[i] = 0f;
+                        nodeFrictionRow[i] = 0f;
+                        nodeConvectionRow[i] = 0f;
+                    }
+
                     nodeWatts[i] += generation;
                     if (diagnostics) ClearEnvironmentDiagnostics(i);
                     continue;
@@ -1638,6 +1705,29 @@ namespace Thermodynamics.Core
                 float solarWatts = 0f;
                 float frictionWatts = 0f;
 
+                if (fill)
+                {
+                    // A face in the airflow sheds more heat, but still air convects too. The
+                    // factor is a property of the geometry and the wind, not of the temperature.
+                    float windFactor = windy
+                        ? 0.5f + (0.5f * Weighted(i, windWeights))
+                        : 1f;
+
+                    nodeConvectionRow[i] = convecting
+                        ? -env.ConvectionCoefficient * area * windFactor
+                        : 0f;
+
+                    // Per face, and both terms are needed: how square the face is to the sun, and
+                    // whether the ship is standing in front of that face.
+                    nodeSolarRow[i] = solarEnabled
+                        ? env.SolarEnergy * nodeEmissivity[i] * WeightedLit(i, sunWeights) * area
+                        : 0f;
+
+                    nodeFrictionRow[i] = frictionEnabled
+                        ? frictionScale * area * Weighted(i, windWeights)
+                        : 0f;
+                }
+
                 if (environmentEnabled)
                 {
                     float radiation = 0f;
@@ -1650,13 +1740,7 @@ namespace Thermodynamics.Core
                     float convection = 0f;
                     if (convecting)
                     {
-                        // A face in the airflow sheds more heat, but still air convects too.
-                        float windFactor = windy
-                            ? 0.5f + (0.5f * Weighted(i, windWeights))
-                            : 1f;
-
-                        convection = -env.ConvectionCoefficient * area * windFactor
-                            * (temperature - env.AmbientTemperature);
+                        convection = nodeConvectionRow[i] * (temperature - env.AmbientTemperature);
                     }
 
                     radiationWatts = radiationShare * radiation;
@@ -1691,15 +1775,13 @@ namespace Thermodynamics.Core
 
                 if (solarEnabled)
                 {
-                    // Per face, and both terms are needed: how square the face is to the sun, and
-                    // whether the ship is standing in front of that face.
-                    solarWatts = env.SolarEnergy * nodeEmissivity[i] * WeightedLit(i, sunWeights) * area;
+                    solarWatts = nodeSolarRow[i];
                     watts += solarWatts;
                 }
 
                 if (frictionEnabled)
                 {
-                    frictionWatts = frictionScale * area * Weighted(i, windWeights);
+                    frictionWatts = nodeFrictionRow[i];
                     watts += frictionWatts;
                 }
 
@@ -1715,6 +1797,9 @@ namespace Thermodynamics.Core
                 node.LastHeatSourceWatts = 0f;
             }
 
+            // Only once the whole grid has been covered: the pass is sliced across frames, and a
+            // partly filled row is not one a later substep may read.
+            if (PrecomputeEnvironment && to >= nodes.Count) environmentRowsValid = true;
         }
 
         private void AccumulateEnvironment(ref EnvironmentState env, float h)
@@ -1755,7 +1840,10 @@ namespace Thermodynamics.Core
         /// Both are rebuilt on the same trigger, because both depend on the same two things: where
         /// the sun is, and what the grid is made of. Between triggers this costs one dot product.
         /// </summary>
-        private void RefreshSunShadow(ref Vector3 sunLocal)
+        /// <returns>
+        /// True when the lit fractions moved, which invalidates the precomputed solar row.
+        /// </returns>
+        private bool RefreshSunShadow(ref Vector3 sunLocal)
         {
             if (!settings.SolarSelfShadowing)
             {
@@ -1766,8 +1854,7 @@ namespace Thermodynamics.Core
                     sunLitDirty = false;
                 }
 
-                StepSunLit(SunLitBudget);
-                return;
+                return StepSunLit(SunLitBudget);
             }
 
             // A block added or removed invalidates a pass in flight as much as it invalidates the
@@ -1786,7 +1873,7 @@ namespace Thermodynamics.Core
             // budget to cover it in one go finishes inside the same substep that completed the
             // pass — which is what it did before there was a budget, and what every test of the
             // shadow model asserts.
-            StepSunLit(SunLitBudget);
+            return StepSunLit(SunLitBudget);
         }
 
         /// <summary>Starts a lit-fraction refresh, from the shadow map or from a fixed value.</summary>
@@ -1800,14 +1887,15 @@ namespace Thermodynamics.Core
         /// <summary>
         /// Advances a lit-fraction refresh by at most <paramref name="nodeBudget"/> nodes.
         /// </summary>
-        private void StepSunLit(int nodeBudget)
+        /// <returns>True when it wrote any lit fraction.</returns>
+        private bool StepSunLit(int nodeBudget)
         {
-            if (!sunLitPending) return;
+            if (!sunLitPending) return false;
 
             if (sunLitCursor >= nodes.Count)
             {
                 sunLitPending = false;
-                return;
+                return false;
             }
 
             int end = sunLitCursor + nodeBudget;
@@ -1835,6 +1923,7 @@ namespace Thermodynamics.Core
 
             sunLitCursor = end;
             if (sunLitCursor >= nodes.Count) sunLitPending = false;
+            return true;
         }
 
         /// <summary>Runs a pending lit-fraction refresh to completion. For tests and one-shot rebuilds.</summary>
@@ -2732,6 +2821,10 @@ namespace Thermodynamics.Core
                 nodeEmissivity = new float[size];
                 nodeExposedFaces = new int[size];
                 nodeRelaxation = new float[size];
+                nodeSolarRow = new float[size];
+                nodeFrictionRow = new float[size];
+                nodeConvectionRow = new float[size];
+                environmentRowsValid = false;
                 nodeFaceWeights = new float[size * Face.Count];
                 nodeSunLit = new float[size * Face.Count];
             }

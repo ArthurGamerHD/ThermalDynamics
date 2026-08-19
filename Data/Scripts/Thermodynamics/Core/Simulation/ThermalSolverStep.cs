@@ -190,6 +190,10 @@ namespace Thermodynamics.Core
             stepEnvironment = environment;
             stepDeltaSeconds = deltaSeconds;
 
+            // A new step is a new environment sample and a new substep length, so everything the
+            // substeps were allowed to reuse from the last one has to be recomputed.
+            InvalidateEnvironmentRows();
+
             overheats.Clear();
             crossings.Clear();
 
@@ -201,10 +205,6 @@ namespace Thermodynamics.Core
             LastSubsteps = substeps;
             LastStepWasClamped = required > MaxSubsteps;
 
-            for (int p = 0; p < heatPumps.Count; p++)
-            {
-                heatPumps[p].BeginStep();
-            }
             // Reported against a *full* step, not against the shortened one this call was handed.
             // The estimate is proportional to the step, so a step already cut down to fit the
             // visit budget asks for about what it was granted, by construction — recording that
@@ -215,6 +215,10 @@ namespace Thermodynamics.Core
                 ? required * (settings.StepSeconds / deltaSeconds)
                 : required;
 
+            for (int p = 0; p < heatPumps.Count; p++)
+            {
+                heatPumps[p].BeginStep();
+            }
 
             Work.SolverSteps++;
             Work.SolverSubsteps += substeps;
