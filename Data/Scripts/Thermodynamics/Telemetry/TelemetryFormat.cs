@@ -6,10 +6,9 @@ namespace Thermodynamics
     /// <summary>
     /// Formatting for the report and the CSVs.
     ///
-    /// Everything numeric that lands in a file goes through here in the invariant culture. A
-    /// German or French client formats 1.5 as "1,5", which would silently corrupt every CSV
-    /// written on those machines — the delimiter and the decimal separator would be the same
-    /// character.
+    /// Every number written to a file goes through here in the invariant culture. A client whose
+    /// locale formats 1.5 as "1,5" would otherwise corrupt every CSV it wrote, since the decimal
+    /// separator and the delimiter would be the same character.
     ///
     /// Free of any Space Engineers type, so it can be tested outside the game.
     /// </summary>
@@ -17,7 +16,7 @@ namespace Thermodynamics
     {
         private static readonly CultureInfo Invariant = CultureInfo.InvariantCulture;
 
-        /// <summary>Blank rather than "NaN" or "Infinity", which no spreadsheet reads as a number.</summary>
+        /// <summary>Blank rather than "NaN" or "Infinity", neither of which a spreadsheet reads as a number.</summary>
         public static string Number(double value)
         {
             if (double.IsNaN(value) || double.IsInfinity(value)) return "";
@@ -36,8 +35,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Clips to a column width, marking the clip so a truncated name is never mistaken for a
-        /// real one. The result is never longer than <paramref name="length"/>.
+        /// Clips to a column width, marking the clip so a truncated name is not mistaken for a
+        /// complete one. The result is never longer than <paramref name="length"/>.
         /// </summary>
         public static string Truncate(string value, int length)
         {
@@ -47,7 +46,7 @@ namespace Thermodynamics
             return value.Substring(0, length - 1) + "~";
         }
 
-        /// <summary>A peak that was never set reads as absent rather than as -3.4e38.</summary>
+        /// <summary>Formats a peak that was never set as absent rather than as -3.4e38.</summary>
         public static string Peak(float value)
         {
             return value == float.MinValue ? "-" : value.ToString("n1");
@@ -103,7 +102,7 @@ namespace Thermodynamics
         {
             AppendCsv(sb, value);
 
-            // AppendCsv leaves the separator behind; the last column ends the line instead.
+            // AppendCsv appends a separator; the last column ends the line instead.
             sb.Length--;
             sb.Append('\n');
         }

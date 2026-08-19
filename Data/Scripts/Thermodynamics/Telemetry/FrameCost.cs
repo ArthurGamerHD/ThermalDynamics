@@ -58,23 +58,19 @@ namespace Thermodynamics
     }
 
     /// <summary>
-    /// What the mod costs per frame, across every grid, and which frames were the worst.
+    /// What the mod costs per frame across every grid, and which frames were the worst.
     ///
-    /// Everything else the telemetry records is per grid. A player does not experience per grid:
-    /// twenty ships each taking a tolerable two milliseconds on the same frame is forty
-    /// milliseconds of one frame, and that is a stutter no per-grid figure shows. Grids tick on
-    /// the ten-frame cadence and the engine calls them all on the same frame, so this is not a
-    /// hypothetical — it is the shape of the cost by default.
+    /// Every other telemetry figure is per grid, while a stutter is per frame: twenty grids each
+    /// costing an acceptable two milliseconds on the same frame produce a forty-millisecond frame
+    /// that no per-grid figure shows. Grids tick on the ten-frame cadence and the engine calls them
+    /// together, so this is the default shape of the cost.
     ///
-    /// The worst frames are kept in full rather than summarised, because a stutter is a
-    /// particular event with a cause. A mean says the mod is cheap, a maximum says one frame was
-    /// not, and only the sample says the frame was a 300,000-block station rebuilding its
-    /// conduction graph while three others flooded their room maps. That is the difference
-    /// between knowing there is a problem and knowing what to change.
+    /// The worst frames are kept in full rather than summarised. A mean shows the mod is cheap and a
+    /// maximum shows one frame was not; only the full sample identifies what that frame was doing.
     ///
-    /// Kept small on purpose: the worst sixteen frames of a session, one struct each, and a
-    /// histogram. There is no per-frame history — a world open for hours would spend more memory
-    /// on it than on the simulation.
+    /// Bounded by design: the worst sixteen frames of a session, one struct each, plus a histogram.
+    /// No per-frame history is kept, which for a session running hours would exceed the simulation's
+    /// own memory.
     /// </summary>
     public class FrameCostTracker
     {
@@ -82,11 +78,11 @@ namespace Thermodynamics
         public const int Keep = 16;
 
         /// <summary>
-        /// Frames costing less than this are not considered for the hitch list at all.
+        /// Frames costing less than this are not considered for the hitch list.
         ///
-        /// A frame at 60 fps is 16.7 ms of everything the game does, so a mod taking four of
-        /// them is already worth looking at and anything under is noise. Without a floor the
-        /// list fills with the sixteen most ordinary frames of a quiet session and says nothing.
+        /// A 60 fps frame is 16.7 ms for everything the game does, so a mod taking a quarter of one
+        /// is the reporting threshold. Without a floor the list fills with the sixteen most ordinary
+        /// frames of a quiet session.
         /// </summary>
         public double HitchThresholdMs = 4d;
 
@@ -146,7 +142,7 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>Adds what the one-shot stages touched, so a hitch says why and not only how long.</summary>
+        /// <summary>Adds what the one-shot stages touched, so a hitch records its cause as well as its cost.</summary>
         public void AddWork(long topologyNodes, long exposureNodes, long cellsFlooded)
         {
             topologyVisits += topologyNodes;
@@ -157,9 +153,9 @@ namespace Thermodynamics
         /// <summary>
         /// Closes the frame in progress and records it.
         ///
-        /// Called at the top of the next frame rather than at the end of this one, because the
-        /// order the engine runs session components and entity components in is not something a
-        /// mod controls — and a frame closed before the grids have run records nothing.
+        /// Called at the top of the next frame rather than the end of this one: a mod cannot control
+        /// the order in which the engine runs session and entity components, and a frame closed
+        /// before its grids have run would record nothing.
         /// </summary>
         public void EndFrame(long frame, double sessionSeconds)
         {
@@ -199,8 +195,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Keeps the sample if it is worse than the least bad one held, so the list is the
-        /// session's worst rather than its most recent.
+        /// Keeps the sample when it is worse than the least severe one held, so the list holds the
+        /// session's worst frames rather than its most recent.
         /// </summary>
         private void Offer(FrameSample sample)
         {
@@ -245,13 +241,11 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// How spiky the session was: the worst frame against the median one.
+        /// Peak-to-median frame cost ratio.
         ///
-        /// The single number worth quoting about smoothness. A mod that is uniformly expensive
-        /// costs frame rate, which players tolerate; one that is cheap on average and
-        /// occasionally enormous costs a stutter, which they do not. A ratio near one is the
-        /// first and a ratio in the hundreds is the second, and the two want completely
-        /// different fixes.
+        /// Near one indicates a uniformly expensive mod, which costs frame rate; a ratio in the
+        /// hundreds indicates one that is cheap on average and occasionally very expensive, which
+        /// costs a stutter. The two call for different fixes.
         /// </summary>
         public double SpikeRatio
         {

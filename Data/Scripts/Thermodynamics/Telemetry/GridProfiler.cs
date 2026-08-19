@@ -5,10 +5,9 @@ namespace Thermodynamics
     /// <summary>
     /// Stage timing for one grid, attached to its simulation only while telemetry is collecting.
     ///
-    /// Splitting the update by stage is what makes the cost numbers actionable: topology and
-    /// room mapping run on block changes and are the expensive pair, while the solver runs every
-    /// step and is usually not the problem. A single "grid simulation" figure hides which is
-    /// which, and that was the main gap in the old report.
+    /// Splitting the update by stage separates the two cost profiles: topology and room mapping run
+    /// on block changes and are the expensive pair, while the solver runs every step and is usually
+    /// not the bottleneck. A single grid-simulation figure cannot distinguish them.
     /// </summary>
     public class GridProfiler : ISimulationProfiler
     {
@@ -27,8 +26,8 @@ namespace Thermodynamics
             TimingStat stat = Stat(phase);
             stat.End();
 
-            // Also into the frame's total, so a stall can be split by stage across every grid
-            // that ran on it rather than only within the grid that happened to be worst.
+            // Also added to the frame's total, so a stall can be split by stage across every grid
+            // that ran on it rather than only within the worst one.
             Telemetry.FrameCost.AddStage((int)phase, stat.LastMilliseconds);
         }
 

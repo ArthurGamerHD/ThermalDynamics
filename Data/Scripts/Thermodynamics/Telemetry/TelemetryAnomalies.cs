@@ -1,8 +1,6 @@
 namespace Thermodynamics
 {
-    /// <summary>
-    /// A class of value the simulation should not have produced.
-    /// </summary>
+    /// <summary>A class of value the simulation should not have produced.</summary>
     public enum TelemetryAnomalyKind
     {
         None = 0,
@@ -17,18 +15,18 @@ namespace Thermodynamics
         Implausible,
 
         /// <summary>
-        /// The solver's floor at zero swallowed a negative excursion. This is the signature of
-        /// an unstable step: without the clamp the value would have gone negative and then
-        /// oscillated with growing amplitude.
+        /// The solver's floor at zero absorbed a negative excursion. The signature of an unstable
+        /// step: without the clamp the value would go negative and then oscillate with growing
+        /// amplitude.
         /// </summary>
         ClampedToZero
     }
 
     /// <summary>
-    /// Decides whether a cell's post-update state is worth recording as an anomaly.
+    /// Classifies a cell's post-update state as an anomaly or not.
     ///
-    /// Deliberately free of any Space Engineers type, so the classification can be tested
-    /// outside the game — the same boundary the simulation core draws.
+    /// Free of any Space Engineers type, so the classification can be tested outside the game, on
+    /// the same boundary the simulation core draws.
     /// </summary>
     public static class TelemetryAnomalies
     {
@@ -41,16 +39,16 @@ namespace Thermodynamics
             if (float.IsInfinity(temperature)) return TelemetryAnomalyKind.Infinite;
             if (temperature > implausible) return TelemetryAnomalyKind.Implausible;
 
-            // Only interesting when the cell had heat to lose. A cell that was already at zero
-            // and stayed there is the normal state of an unsimulated block.
+            // Only reported when the cell had heat to lose: a cell already at zero that stayed there
+            // is the normal state of an unsimulated block.
             if (temperature == 0f && lastTemperature > 0f) return TelemetryAnomalyKind.ClampedToZero;
 
             return TelemetryAnomalyKind.None;
         }
 
         /// <summary>
-        /// The name a kind is aggregated under in the report. Stable, because it is the
-        /// dictionary key that groups every occurrence of the same problem.
+        /// The name a kind is aggregated under in the report. Stable, since it is the dictionary key
+        /// grouping every occurrence of the same problem.
         /// </summary>
         public static string Name(TelemetryAnomalyKind kind, float implausible)
         {

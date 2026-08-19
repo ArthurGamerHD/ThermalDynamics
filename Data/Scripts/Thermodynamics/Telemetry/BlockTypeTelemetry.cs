@@ -7,10 +7,8 @@ namespace Thermodynamics
     /// <summary>
     /// Everything observed about one block definition across the whole session, on every grid.
     ///
-    /// This is the balance-facing half of the telemetry: it answers "what temperature does a
-    /// battery actually sit at", "which block reaches its critical temperature and how often",
-    /// and "is this definition's SpecificHeat doing anything" — the questions a retune of
-    /// Cubes.xml needs answered with numbers instead of guesses.
+    /// The balance-facing half of the telemetry: what temperature a definition settles at, how
+    /// often it reaches its critical temperature, and what effect its declared properties have.
     /// </summary>
     public class BlockTypeTelemetry
     {
@@ -18,9 +16,9 @@ namespace Thermodynamics
         public readonly string Name;
 
         /// <summary>
-        /// The thermal properties in force for this block type, captured from the first block
-        /// created. Written into the report so a run's numbers can be read against the values
-        /// that produced them.
+        /// The thermal properties in force for this block type, captured from the first block created.
+        /// Written into the report so a run's figures can be read against the values that produced
+        /// them.
         /// </summary>
         public BlockThermalProperties Definition;
 
@@ -63,14 +61,13 @@ namespace Thermodynamics
         public long PeakTemperatureGrid;
 
         /// <summary>
-        /// Substeps one block of this type would need for a full step on its own, from its real
-        /// heat capacity and everything it is coupled to.
+        /// Substeps one block of this type would need for a full step on its own, from its real heat
+        /// capacity and everything it is coupled to.
         ///
-        /// The whole grid takes as many substeps as its stiffest block asks for, so this is the
-        /// column that says which definitions are expensive to have on a ship. A block's own
-        /// demand is not a property of the definition alone — it depends on what it is bolted to
-        /// and whether it is exposed — so it is a distribution rather than a number, and the
-        /// maximum is the one that decides the grid.
+        /// A grid takes as many substeps as its stiffest block demands, so this identifies which
+        /// definitions are expensive to place. Demand is not a property of the definition alone — it
+        /// depends on what the block is mounted to and whether it is exposed — so it is recorded as a
+        /// distribution, of which the maximum sets the grid.
         /// </summary>
         public readonly RunningStat SubstepDemand = new RunningStat();
 
@@ -81,16 +78,16 @@ namespace Thermodynamics
         /// <summary>
         /// How much of each of the definition's six faces seals, read once from the block model.
         ///
-        /// This is what the room mapper walks, so it is the first thing to look at when a hull
-        /// that is plainly airtight in game maps as open space: a definition the adapter could not
-        /// read the pressurisation of shows up here as zeroes.
+        /// This is what the room mapper walks, and so the first figure to check when a hull that is
+        /// airtight in game maps as open space: a definition whose pressurisation could not be read
+        /// appears here as zeroes.
         /// </summary>
         public float[] SealFractionByFace;
 
         /// <summary>The same, for mount surfaces, which is what conduction walks.</summary>
         public float[] MountFractionByFace;
 
-        /// <summary>Observations where the block's own state had suppressed its sealing: an open door.</summary>
+        /// <summary>Observations where the block's own state suppressed its sealing, such as an open door.</summary>
         public long UnsealedByDoorState;
 
         public bool HasSurfaceProfile
@@ -113,7 +110,7 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>Faces of the definition that carry any mount surface at all.</summary>
+        /// <summary>Faces of the definition carrying any mount surface.</summary>
         public int MountingFaces
         {
             get
@@ -163,8 +160,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Cheap per-observation path: a compare and a couple of increments. The wide stat set
-        /// is in <see cref="Sample"/>.
+        /// The cheap per-observation path: a compare and two increments. The full statistics are in
+        /// <see cref="Sample"/>.
         /// </summary>
         public void OnUpdate(ThermalNode node, long gridId)
         {
@@ -178,11 +175,10 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Records what one block of this type asked of its grid's step.
+        /// Records what one block of this type demanded of its grid's step.
         ///
-        /// Kept separate from <see cref="Sample"/> because it needs the solver rather than the
-        /// node — the coupling that makes a block stiff lives in the conduction graph, not on the
-        /// block.
+        /// Separate from <see cref="Sample"/> because it reads the solver rather than the node: the
+        /// coupling that makes a block stiff lives in the conduction graph.
         /// </summary>
         public void SampleSubstepDemand(float demand, ThermalNode node, long gridId)
         {
@@ -227,9 +223,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Reads the definition's per-face sealing and mounting out of the shared block model.
-        /// Once per type, from the first block placed: the model is immutable, so a second read
-        /// could only produce the same answer.
+        /// Reads the definition's per-face sealing and mounting from the shared block model. Once per
+        /// type, from the first block placed; the model is immutable, so a second read would return
+        /// the same values.
         /// </summary>
         private void CaptureSurfaceProfile(BlockModel model)
         {
@@ -260,7 +256,7 @@ namespace Thermodynamics
     }
 
     /// <summary>
-    /// A block size, stored without depending on VRageMath so the report formatting stays in the
+    /// A block size, held without a dependency on VRageMath so the report formatting stays in the
     /// game-free half of the module.
     /// </summary>
     public struct Vector3ITriple

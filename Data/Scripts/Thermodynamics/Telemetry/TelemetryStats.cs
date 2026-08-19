@@ -7,9 +7,9 @@ namespace Thermodynamics
     /// <summary>
     /// A streaming min/max/mean/stddev accumulator.
     ///
-    /// Everything the telemetry module records uses one of these rather than a sample buffer.
-    /// A world can be open for hours; keeping arrays of samples would cost more memory than the
-    /// simulation itself and would tell us nothing a moment count and two sums do not.
+    /// Every figure the telemetry module records uses one of these rather than a sample buffer. A
+    /// session can run for hours, over which arrays of samples would exceed the simulation's own
+    /// memory without adding anything a count and two sums do not provide.
     /// </summary>
     public class RunningStat
     {
@@ -22,8 +22,8 @@ namespace Thermodynamics
 
         public void Add(float value)
         {
-            // NaN would poison every derived number silently. Telemetry.Anomaly records the
-            // occurrence; the stat itself refuses the sample.
+            // NaN would silently poison every derived figure. Telemetry.Anomaly records the
+            // occurrence and the accumulator rejects the sample.
             if (float.IsNaN(value) || float.IsInfinity(value)) return;
 
             Count++;
@@ -179,10 +179,10 @@ namespace Thermodynamics
     }
 
     /// <summary>
-    /// Wall-clock cost of one code path: call count, total, mean, worst, and the distribution.
+    /// Wall-clock cost of one code path: call count, total, mean, worst and distribution.
     ///
-    /// Not reentrant — Begin/End pairs must not nest on the same instance. Every call site in this
-    /// mod is a leaf or has its own instance.
+    /// Not reentrant: Begin/End pairs must not nest on the same instance. Every call site in this mod
+    /// is either a leaf or has its own instance.
     /// </summary>
     public class TimingStat
     {
