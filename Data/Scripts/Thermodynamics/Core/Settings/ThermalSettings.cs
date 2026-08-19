@@ -4,8 +4,8 @@ using System.Collections.Generic;
 namespace Thermodynamics.Core
 {
     /// <summary>
-    /// Every runtime-tunable value for the simulation. Pure data — the host is responsible for
-    /// serialising it, so this type carries no XML or ProtoBuf attributes and no file IO.
+    /// Every runtime-tunable value for the simulation. Pure data: serialisation belongs to the
+    /// host, so this type carries no XML or ProtoBuf attributes and performs no file IO.
     /// </summary>
     public class ThermalSettings
     {
@@ -15,9 +15,9 @@ namespace Thermodynamics.Core
 
         // ---- feature switches -------------------------------------------------------------
         //
-        // Every mechanism is independently switchable and every switch takes effect on the next
-        // step, so a server can turn one off without a reload. Nothing reads a switch except the
-        // stage it belongs to, so switching one off removes exactly its own cost.
+        // Each mechanism is independently switchable and each switch takes effect on the next step,
+        // so a server can disable one without a reload. A switch is read only by the stage it
+        // belongs to, so disabling it removes exactly that stage's cost.
 
         /// <summary>Master switch for radiation and convection against the environment.</summary>
         public bool EnableEnvironment = true;
@@ -37,14 +37,12 @@ namespace Thermodynamics.Core
         /// <summary>
         /// Whether a grid shadows itself.
         ///
-        /// Off, a face is lit whenever it points at the sun, whatever the ship has built in front
-        /// of it — the inside of a doorway recess and a hull plate under an overhang both heat as
-        /// if they were in the open. On, a <see cref="SunShadowMap"/> is kept per grid and a face
-        /// only takes sunlight if nothing of the grid stands between it and the sun.
+        /// When off, a face is lit whenever it points at the sun regardless of what the grid has
+        /// built in front of it. When on, a <see cref="SunShadowMap"/> is kept per grid and a face
+        /// takes sunlight only if no part of the grid stands between it and the sun.
         ///
-        /// The cost is one pass over the grid's cells whenever the sun has moved appreciably, so it
-        /// scales with ship size rather than with step rate. Off is the cheap model and stays
-        /// available for anyone who would rather spend nothing.
+        /// Costs one pass over the grid's cells whenever the sun has moved appreciably, so it
+        /// scales with grid size rather than step rate.
         /// </summary>
         public bool SolarSelfShadowing = true;
 
@@ -67,15 +65,14 @@ namespace Thermodynamics.Core
         public bool EnableCoolantLoops = true;
 
         /// <summary>
-        /// Sealed rooms hold an air mass that carries heat between the surfaces facing it.
-        /// When off, a sealed face simply exchanges nothing, which is the behaviour before room
-        /// air existed.
+        /// Sealed rooms hold an air mass that carries heat between the surfaces facing it. When
+        /// off, a sealed face exchanges nothing.
         /// </summary>
         public bool EnableRoomAir = true;
 
         /// <summary>
-        /// Heat pumps move heat against a gradient for an electrical cost. When off they are
-        /// ordinary blocks, which is what they were before the mechanism existed.
+        /// Heat pumps move heat against a gradient for an electrical cost. When off they behave as
+        /// ordinary blocks.
         /// </summary>
         public bool EnableHeatPumps = true;
 
@@ -88,30 +85,26 @@ namespace Thermodynamics.Core
         public int Frequency = 4;
 
         /// <summary>
-        /// How much faster than real time heat evolves. Applied by running more steps per
-        /// second, not by lengthening the step, so accuracy is unaffected — and so the cost
-        /// rises with it.
+        /// Multiplier on how fast heat evolves relative to real time. Applied by running more steps
+        /// per second rather than by lengthening the step, so accuracy is unaffected and cost rises
+        /// in proportion.
         /// </summary>
         public float SimulationSpeed = 1f;
 
         /// <summary>
-        /// How many times faster than real physics heat moves.
+        /// Factor by which thermal time runs faster than real physics.
         ///
-        /// Specific heat in the block definitions is in real J/(kg K) — steel is about 450 —
-        /// which makes a ship behave like a real ship: a hot hull takes hours to cool. That is
-        /// accurate and unplayable, so the simulation divides every heat capacity by this one
-        /// number. Dividing capacity by <em>k</em> is exactly running thermal time at
-        /// <em>k</em>×: every rate scales together, so equilibrium temperatures, the balance
-        /// between conduction and radiation, and every ratio between block types are unchanged.
-        /// Only the clock moves.
+        /// Block definitions carry real specific heats in J/(kg K) — steel is about 450 — under
+        /// which a hot hull takes hours to cool. Every heat capacity is divided by this value,
+        /// which is equivalent to running thermal time at that multiple: all rates scale together,
+        /// so equilibrium temperatures, the balance between conduction and radiation, and the
+        /// ratios between block types are unchanged.
         ///
-        /// This is deliberately the single place the mod trades physics for pace. It is not
-        /// free: coupling per unit capacity rises with it, so the solver takes more substeps,
-        /// and a large value on a grid with very light blocks is what makes a step clamp. The
-        /// telemetry report shows both.
+        /// The cost is that coupling per unit capacity rises with it, so the solver takes more
+        /// substeps, and a high value on a grid of light blocks is what drives a step to clamp.
+        /// Both are reported in the telemetry.
         ///
-        /// 1 is fully physical. 225 is the pace the mod shipped with: steel's real 450 J/(kg K)
-        /// divided by 225 is the flat "2" the definitions used to carry.
+        /// 1 is fully physical. The shipped default of 225 divides steel's 450 J/(kg K) to 2.
         /// </summary>
         public float HeatTimeScale = 225f;
 
@@ -132,160 +125,132 @@ namespace Thermodynamics.Core
         // ---- room air ---------------------------------------------------------------------
 
         /// <summary>
-        /// Convective coefficient between a room's air and the surfaces facing it, W/(m^2 K).
-        /// Lower than the planetary figure: room air is still, and still air convects poorly.
+        /// Convective coefficient between a room's air and the surfaces facing it, W/(m^2 K). Lower
+        /// than the planetary figure because room air is still.
         /// </summary>
         public float RoomConvectionCoefficient = 8f;
 
         /// <summary>
-        /// Air density inside a fully pressurised room, kg/m^3. Sea level on Earth is 1.225;
-        /// the game's breathable atmospheres are close enough that one figure serves.
+        /// Air density inside a fully pressurised room, kg/m^3. Defaults to Earth sea level; the
+        /// game's breathable atmospheres are close enough that one figure serves.
         /// </summary>
         public float RoomAirDensity = 1.225f;
 
         // ---- heat pumps -------------------------------------------------------------------
 
         /// <summary>
-        /// How much of the Carnot limit a heat pump achieves, 0..1. A real domestic heat pump
-        /// manages about 0.4 of it; 1 would be a thermodynamically perfect machine.
+        /// Fraction of the Carnot limit a heat pump achieves, 0..1. A real domestic heat pump
+        /// manages about 0.4; 1 would be thermodynamically perfect.
         ///
-        /// This is the whole balance of the block in one number. It does not change what the pump
-        /// can do — the shape of the cost curve is Carnot's and is not negotiable — only how far
-        /// up it the block sits.
+        /// The primary balance lever for the block. It scales the coefficient of performance but
+        /// not the shape of the Carnot cost curve.
         /// </summary>
         public float HeatPumpCarnotFraction = 0.4f;
 
         /// <summary>
-        /// Ceiling on the coefficient of performance, so a pump working across almost no
-        /// difference cannot lift unbounded heat for nothing. Carnot's figure goes to infinity as
-        /// the two sides converge; a real machine is limited by its compressor long before that.
+        /// Ceiling on the coefficient of performance. The Carnot figure diverges as the two sides
+        /// converge, so without a ceiling a pump across a negligible difference would lift
+        /// unbounded heat; a real machine is compressor-limited well before that.
         /// </summary>
         public float HeatPumpMaxCoefficient = 8f;
 
         // ---- solver -----------------------------------------------------------------------
 
         /// <summary>
-        /// Clamp each conduction exchange so a node can never overshoot the temperature it is
-        /// exchanging with. Keeps the explicit integrator stable at low
-        /// <see cref="Frequency"/> or with very light blocks. Disabling it reproduces the
-        /// unbounded behaviour of the original solver.
+        /// Clamp each conduction exchange so a node cannot overshoot the temperature it is
+        /// exchanging with. Keeps the explicit integrator stable at low <see cref="Frequency"/> or
+        /// with very light blocks. Disabling it leaves conduction unbounded.
         /// </summary>
         public bool ClampConductionOvershoot = true;
 
         /// <summary>
-        /// Clamp radiation and convection so a node cannot overshoot the ambient it is exchanging
-        /// with, the same way <see cref="ClampConductionOvershoot"/> does for a pair of blocks.
+        /// Clamp radiation and convection so a node cannot overshoot the ambient it exchanges with,
+        /// as <see cref="ClampConductionOvershoot"/> does for a pair of blocks.
         ///
-        /// Without it the integrator is only conditionally stable, and the condition is one the
-        /// substep estimate is trusted to meet. That works while the estimate is granted what it
-        /// asks for — but <see cref="MaxSubsteps"/> exists precisely to refuse it, and a step that
-        /// clamps has an unguarded environment term. Measured: a hull at
-        /// <c>HeatTimeScale 3600</c> with one substep reached 1.5e22 K in twenty seconds, and two
-        /// pairings reached infinity. Conduction was fine throughout, because conduction was the
-        /// half that had a clamp.
+        /// Without it the integrator is only conditionally stable, on a condition the substep
+        /// estimate is trusted to meet — but <see cref="MaxSubsteps"/> exists to refuse that
+        /// estimate, and a clamped step then has an unguarded environment term. Measured at
+        /// <c>HeatTimeScale 3600</c> with one substep, node temperatures diverged past 1e22 K
+        /// while conduction, which had a clamp, stayed bounded.
         ///
-        /// The cap is the same idea and the same physics: a node cannot radiate past the
-        /// temperature it is radiating towards within one substep, because that is the point at
-        /// which the exchange reverses. Where the substeps are generous it never binds and changes
-        /// nothing; where they are not, it is the difference between an approximation and a
-        /// number with twenty-two digits.
-        ///
-        /// It is what makes an arcade profile possible — heat turned up and substeps turned down
-        /// is a legitimate thing to want from a game, and it is only safe once both halves of the
-        /// exchange are bounded.
+        /// The cap is the same rule as the conduction one: within a substep a node cannot radiate
+        /// past the temperature it radiates towards, since that is where the exchange reverses.
+        /// Where substeps are generous it never binds. It is what makes the low-substep profiles
+        /// usable.
         /// </summary>
         public bool ClampEnvironmentOvershoot = true;
 
         /// <summary>
         /// Most substeps one solver step may divide itself into.
         ///
-        /// The stability estimate asks for however many the stiffest node on the grid needs; this
-        /// is the ceiling on granting it. Reaching the ceiling is reported as a clamped step, and
-        /// a clamped step is not wrong so much as approximate — every exchange is still capped at
-        /// the energy that equalises its pair, so the integrator stays bounded and conserves
-        /// energy whatever this is set to. What it loses is the shape of the curve between two
-        /// temperatures, not the temperatures it ends up between.
+        /// The stability estimate asks for as many as the stiffest node on the grid needs; this is
+        /// the ceiling on granting that. Reaching it is reported as a clamped step. A clamped step
+        /// is approximate rather than wrong: every exchange is still capped at the energy that
+        /// equalises its pair, so the integrator stays bounded and conserves energy at any setting.
+        /// What is lost is the shape of the curve between two temperatures, not the temperatures
+        /// it settles between.
         ///
-        /// That is why this is a setting and not a constant. A simulation-first world wants it
-        /// high enough never to bind. An arcade one wants it at one: a single substep per step,
-        /// every link allowed to equalise once, which is the most heat that can be moved for the
-        /// least arithmetic. Both are legitimate and the difference between them is a game design
-        /// decision, not a correctness one.
+        /// A simulation-oriented world sets this high enough never to bind. A low value — down to
+        /// one substep per step, every link equalising once — moves the most heat for the least
+        /// arithmetic.
         /// </summary>
         public int MaxSubsteps = 16;
 
         /// <summary>
         /// Most link visits one solver step may make — substeps times links — before the step is
-        /// shortened to fit. Zero removes the bound.
+        /// shortened to fit. Zero removes the bound. Trades simulation rate for frame smoothness.
         ///
-        /// This is the setting that trades simulation rate for smoothness, and it is the one that
-        /// makes a very large grid playable.
+        /// A step's cost is its substep count times its link count, and the substep count is set by
+        /// the stiffest node on the grid, which moves as the grid heats. Unbounded, that makes an
+        /// otherwise steady large grid produce occasional steps several times the median cost.
         ///
-        /// A step's cost is not its length but its substep count times its links, and the substep
-        /// count is set by the stiffest node on the grid, which changes as the grid heats. On a
-        /// large ship that produced a step costing fifteen milliseconds most of the time and
-        /// seventy occasionally, from the same grid doing the same thing — a five-fold spike with
-        /// no cause a player could see or avoid.
+        /// A step that would exceed the bound is made shorter rather than coarser. Coarsening the
+        /// substeps would take steps too large for the grid's stiffness and rely on the overshoot
+        /// clamps, losing accuracy. Shortening advances less simulated time at the same accuracy,
+        /// so an oversized grid runs at a reduced rate smoothly rather than at full rate in bursts.
         ///
-        /// When a step would exceed this, the step is made <em>shorter</em> rather than its
-        /// substeps coarser. That distinction is the whole point. Coarsening substeps takes steps
-        /// too large for the stiffness and leans on the overshoot clamp to stay bounded, which is
-        /// an accuracy loss. Shortening the step advances less simulated time at exactly the same
-        /// accuracy: heat moves more slowly, and nothing else about it changes. A grid too large
-        /// to simulate at full rate therefore runs at a lower rate smoothly, rather than at full
-        /// rate in lurches.
-        ///
-        /// The default is about one 60 fps frame's worth of link visits at the measured cost per
-        /// visit. Grids below roughly a hundred thousand blocks never reach it and are unaffected.
+        /// The default is roughly one 60 fps frame of link visits at the measured cost per visit.
+        /// Grids below about a hundred thousand blocks never reach it.
         /// </summary>
         public int MaxLinkVisitsPerStep = 1000000;
 
         /// <summary>
-        /// Most substeps any single block may demand of the whole grid before it is treated as
-        /// heavier than it is. Zero leaves every block's own heat capacity alone.
+        /// Most substeps any single block may demand of the whole grid before its heat capacity is
+        /// floored. Zero leaves every block's real capacity in place.
         ///
         /// <para>
-        /// A step is divided into as many substeps as the <em>stiffest</em> node on the grid
-        /// needs, and every other node pays for them. On a real capital ship that is a very small
-        /// minority: measured on a 42,051-block hull, forty-three 16 kg light fittings at a heat
-        /// capacity of 32 J/K asked for twenty-eight substeps, while the armour around them —
-        /// five hundred kilograms of it — asked for one. Half a percent of the blocks set the
-        /// cost of the other ninety-nine and a half, and the ship ran at 35 % of real time to
-        /// pay for it.
+        /// A step is divided into as many substeps as the stiffest node on the grid needs, and
+        /// every other node pays for them. On a large hull that demand typically comes from a tiny
+        /// minority of very light blocks: measured on a 42,051-block ship, forty-three 16 kg
+        /// fittings at 32 J/K demanded twenty-eight substeps while the surrounding armour demanded
+        /// one, holding the whole grid to 35 % of real time.
         /// </para>
         ///
         /// <para>
-        /// What that stiffness means physically is that such a block reaches its neighbour's
-        /// temperature in about eighteen milliseconds. At a quarter-second step it is not an
-        /// independent temperature at all — it is a reading off the block it is bolted to, and
-        /// resolving its approach to that reading is arithmetic nobody can observe. This raises
-        /// its heat capacity to the least that keeps its demand inside the cap, which is the same
-        /// statement: a block too light to hold heat for as long as a step is treated as part of
-        /// what holds it.
+        /// Such a block reaches its neighbour's temperature in tens of milliseconds, so across a
+        /// quarter-second step it does not carry an independent temperature. This raises its
+        /// capacity to the least value that keeps its demand within the cap.
         /// </para>
         ///
         /// <para>
-        /// <strong>What is given up</strong> is that block's own transient, and only its own: it
-        /// warms and cools more slowly than a 16 kg object would. Its steady state does not move,
-        /// because steady state is where the watts cancel and has nothing to do with capacity, and
-        /// nothing else on the grid changes at all. What is bought is every other block's substep
-        /// count. The floor applies to conduction stiffness only — a block's exchange with the
-        /// environment can still ask for more, and is left alone, because that one is a real
-        /// response to a real gradient rather than an artefact of a block being small.
+        /// The cost is that block's own transient: it warms and cools more slowly than its real
+        /// mass would. Its steady state is unaffected, since steady state is where the watts cancel
+        /// and does not depend on capacity, and no other block changes. The floor applies to
+        /// conduction stiffness only; environment coupling can still demand more substeps, since
+        /// that is a response to a real gradient rather than an artefact of block size.
         /// </para>
         ///
         /// <para>
-        /// Expressed in substeps rather than in kilograms so that it keeps its meaning when
-        /// <see cref="Frequency"/> changes: the step gets shorter, the floor gets lighter, and
-        /// the cap stays where it was put.
+        /// Expressed in substeps rather than kilograms so it keeps its meaning when
+        /// <see cref="Frequency"/> changes: a shorter step lowers the floor and the cap holds.
         /// </para>
         /// </summary>
         public int MaxSubstepsPerBlock = 0;
 
         /// <summary>
-        /// Damage per second is <c>(T - critical) * CriticalTemperatureScaler</c>. When false,
-        /// damage is applied per solver step instead, which makes damage scale with
-        /// <see cref="Frequency"/> — the original behaviour.
+        /// When true, damage per second is <c>(T - critical) * CriticalTemperatureScaler</c>. When
+        /// false, that figure is applied per solver step, making total damage scale with
+        /// <see cref="Frequency"/>.
         /// </summary>
         public bool DamageIsPerSecond = true;
 
@@ -298,10 +263,9 @@ namespace Thermodynamics.Core
         public float StepsPerSecond { get; private set; }
 
         /// <summary>
-        /// Bumped by every <see cref="Derive"/>. A simulation compares it against the revision it
-        /// last acted on, so a setting changed mid-session is picked up on the next step: heat
-        /// capacities are rescaled, coolant loops are rebuilt or dropped, and room air is
-        /// re-derived. Without it a live edit would apply to some mechanisms and not others.
+        /// Incremented by every <see cref="Derive"/>. A simulation compares it against the revision
+        /// it last acted on, so a mid-session change is picked up on the next step: heat capacities
+        /// are rescaled, coolant loops rebuilt or dropped, and room air re-derived.
         /// </summary>
         public int Revision { get; private set; }
 
@@ -346,13 +310,11 @@ namespace Thermodynamics.Core
             if (Frequency > 60) problems.Add("Frequency above 60 costs more than one step per render frame.");
             if (SimulationSpeed <= 0f) problems.Add("SimulationSpeed must be positive.");
             if (HeatTimeScale <= 0f) problems.Add("HeatTimeScale must be positive.");
-            // Not "above ten thousand clamps", which was the old advice and is no longer a
-            // problem: clamping is what the fast profiles are built on, and both halves of the
-            // exchange are bounded now. What still bites is the substep being long enough that
-            // the clamps have to work hard every step — that is HeatTimeScale divided by
-            // Frequency, and measurement puts the edge near four thousand. Arcade sits at 3,333
-            // and is stable over an hour; the same transfer at Frequency 2 is 10,000 and put
-            // blocks at absolute zero.
+            // Clamping itself is not a fault: the fast profiles rely on it and both halves of the
+            // exchange are bounded. What does bite is a substep long enough that the clamps carry
+            // the whole step, which is HeatTimeScale divided by Frequency. Measurement puts the
+            // edge near 4000: the arcade profile sits at 3,333 and is stable over an hour, while
+            // the same transfer at Frequency 2 gives 10,000 and drives blocks to the ambient floor.
             float perSubstep = Frequency < 1 ? HeatTimeScale : HeatTimeScale / Frequency;
             if (perSubstep > 4000f)
             {

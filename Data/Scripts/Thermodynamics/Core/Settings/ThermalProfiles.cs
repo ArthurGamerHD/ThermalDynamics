@@ -3,32 +3,23 @@ using System;
 namespace Thermodynamics.Core
 {
     /// <summary>
-    /// Ready-made settings bundles, from simulation-first to arcade.
+    /// Ready-made settings bundles, spanning accuracy-first to arcade. Each sets only the four
+    /// integration values, plus two mechanism switches at the cheapest end.
     ///
     /// <para>
-    /// This is a game, and not every world wants the same thing from a thermal model. One wants a
-    /// reactor that takes ten minutes to cook a hull and rewards planning; another wants heat that
-    /// visibly rushes down a corridor the moment something breaks, and does not care whether the
-    /// curve on the way is right. Both are reasonable and the difference between them is four
-    /// numbers.
+    /// The governing relationship: diffusion is a square-root process, so a heat front crosses
+    /// blocks at a rate proportional to the square root of substeps per second while cost is
+    /// linear in substeps per second. Doubling responsiveness at fixed accuracy therefore costs
+    /// four times as much, and the profiles are points along that curve.
     /// </para>
     ///
     /// <para>
-    /// The one relationship worth understanding before changing any of them: <b>heat spreads as
-    /// the square root of the arithmetic you spend on it.</b> Diffusion is a square-root process,
-    /// so a front crosses blocks at a rate proportional to the square root of substeps per second,
-    /// while cost is proportional to substeps per second outright. Doubling how responsive a world
-    /// feels therefore costs four times as much. There is no setting that escapes it — the profiles
-    /// below are points along that curve, not ways around it.
-    /// </para>
-    ///
-    /// <para>
-    /// What <em>does</em> change the exchange rate is where the substeps are spent.
+    /// The exception is where the substeps are spent.
     /// <see cref="ThermalSettings.HeatTimeScale"/> buys transfer per substep and
-    /// <see cref="ThermalSettings.MaxSubsteps"/> refuses to pay for more of them; together they
-    /// let a step be deliberately too long and lean on the overshoot clamps to stay bounded. That
-    /// is approximate by construction and it is roughly three times more responsive per unit of
-    /// cost than the accurate route, which is the whole basis of the arcade end of this list.
+    /// <see cref="ThermalSettings.MaxSubsteps"/> caps how many are taken; together they allow a
+    /// deliberately over-long step bounded by the overshoot clamps. That route is approximate by
+    /// construction and roughly three times more responsive per unit of cost, which is what the
+    /// arcade end of this list uses.
     /// </para>
     /// </summary>
     public static class ThermalProfiles
@@ -44,9 +35,7 @@ namespace Thermodynamics.Core
             Simulation, Default, Responsive, Arcade, Minimal
         };
 
-        /// <summary>
-        /// One-line summaries, for a settings menu or a chat command.
-        /// </summary>
+        /// <summary>One-line summary of a profile, for a settings menu or chat command.</summary>
         public static string Describe(string name)
         {
             switch (Normalise(name))
@@ -82,13 +71,11 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Applies a profile to a settings object and derives it.
+        /// Applies a profile to a settings object and calls <see cref="ThermalSettings.Derive"/>.
         ///
-        /// Only the settings a profile is about are touched: the integration knobs, and for the
-        /// cheapest profile the two mechanisms that cost the most for what a player notices.
-        /// Everything else — vacuum temperature, friction, heat pump behaviour, the debug switches
-        /// — is left exactly as it was found, because a profile is a starting point rather than a
-        /// factory reset.
+        /// Only the integration values are written, plus two mechanism switches for the cheapest
+        /// profile. Vacuum temperature, friction, heat pump behaviour and the debug switches are
+        /// left as found: a profile is a starting point, not a reset.
         /// </summary>
         /// <returns>False when the name is not one of <see cref="Names"/>.</returns>
         public static bool Apply(ThermalSettings settings, string name)
@@ -99,7 +86,7 @@ namespace Thermodynamics.Core
             {
                 case Simulation:
                     // Enough substeps that the stability estimate is never refused, so no clamp
-                    // ever binds and the curve between two temperatures is the real one.
+                    // binds and the curve between two temperatures is fully resolved.
                     settings.Frequency = 8;
                     settings.SimulationSpeed = 1f;
                     settings.HeatTimeScale = 225f;
@@ -118,8 +105,8 @@ namespace Thermodynamics.Core
                     break;
 
                 case Responsive:
-                    // Sixteen times the transfer of default, and the substeps to carry most of it
-                    // honestly. Heat you can see move without the model stopping being a model.
+                    // Sixteen times the transfer of default, with enough substeps to resolve most
+                    // of it without relying on the clamps.
                     settings.Frequency = 4;
                     settings.SimulationSpeed = 1f;
                     settings.HeatTimeScale = 3600f;
@@ -129,13 +116,13 @@ namespace Thermodynamics.Core
                     break;
 
                 case Arcade:
-                    // One substep, always clamped, transfer turned up until the clamp is the only
-                    // thing deciding how much heat moves. That is the most a substep can carry, so
-                    // it is the most responsive a world can be per unit of cost.
+                    // One substep, always clamped, with transfer raised until the clamp alone
+                    // decides how much heat moves — the most a single substep can carry, and so the
+                    // most responsive setting per unit of cost.
                     //
-                    // 20,000 rather than more because past roughly that the environment terms stop
-                    // being recoverable by the clamps and blocks start slamming to absolute zero.
-                    // See docs/configuration.md for the measurements behind the number.
+                    // Capped at 20,000: beyond roughly that the environment terms are no longer
+                    // recoverable by the clamps and blocks are driven to the ambient floor. See
+                    // docs/configuration.md for the measurements.
                     settings.Frequency = 6;
                     settings.SimulationSpeed = 1f;
                     settings.HeatTimeScale = 20000f;
@@ -145,15 +132,13 @@ namespace Thermodynamics.Core
                     break;
 
                 case Minimal:
-                    // The same trick as arcade at a third of the rate, plus the two mechanisms
-                    // that cost the most per thing a player actually notices: room air couples
-                    // every surface bounding a compartment, and self-shadowing walks the grid.
+                    // The arcade approach at a third of the rate, with the two most expensive
+                    // mechanisms disabled: room air couples every surface bounding a compartment,
+                    // and self-shadowing walks the grid.
                     //
-                    // The transfer comes down with the rate rather than staying at arcade's. What
-                    // destabilises a step is the substep length times the stiffness, and a third
-                    // of the steps makes each one three times longer — arcade's 20,000 at
-                    // Frequency 2 put blocks at absolute zero, which is what this number is
-                    // avoiding rather than a taste decision.
+                    // Transfer scales down with the rate. Stability depends on substep length times
+                    // stiffness, and a third of the step rate makes each substep three times
+                    // longer; arcade's 20,000 at Frequency 2 drives blocks to the ambient floor.
                     settings.Frequency = 2;
                     settings.SimulationSpeed = 1f;
                     settings.HeatTimeScale = 6000f;

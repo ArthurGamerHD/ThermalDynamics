@@ -22,11 +22,10 @@ namespace Thermodynamics.Core
     /// <summary>
     /// The thermal simulation for one grid.
     ///
-    /// Integration is explicit but energy-conserving and order-independent: every exchange is
+    /// Integration is explicit, energy-conserving and order-independent: every exchange is
     /// computed from the temperatures at the start of a substep, accumulated as watts per node,
-    /// and applied at the end. Nothing depends on the order nodes appear in, so there is no need
-    /// for the alternating sweep direction the original used to hide its order dependence, and
-    /// the pass is safe to parallelise later.
+    /// and applied at the end. Results do not depend on node iteration order, so the passes may
+    /// be split across frames or parallelised.
     /// </summary>
     public partial class ThermalSolver
     {
@@ -35,11 +34,7 @@ namespace Thermodynamics.Core
 
         /// <summary>
         /// Upper bound on substeps per call, so a pathological grid cannot stall a frame.
-        ///
-        /// Read from the settings, so a world can choose where it sits between accuracy and cost;
-        /// see <see cref="ThermalSettings.MaxSubsteps"/>. Kept as a property rather than a field
-        /// because it was a field, and a host or a test that had written to it should stop
-        /// compiling rather than quietly have no effect.
+        /// Read-only view of <see cref="ThermalSettings.MaxSubsteps"/>.
         /// </summary>
         public int MaxSubsteps
         {
@@ -61,8 +56,8 @@ namespace Thermodynamics.Core
         private float[] nodeTemperatures = new float[0];
 
         /// <summary>
-        /// Temperature at the top of the step, kept so the reported change is the change over the
-        /// whole step rather than over its last substep.
+        /// Temperature at the top of the step, so the reported change spans the whole step rather
+        /// than its last substep.
         /// </summary>
         private float[] nodeStepStart = new float[0];
 
@@ -71,21 +66,19 @@ namespace Thermodynamics.Core
         private float[] roomWatts = new float[0];
 
         /// <summary>
-        /// Heat capacities the integrator uses for the coupled elements, which are the real ones
-        /// unless <c>MaxSubstepsPerBlock</c> has raised them.
+        /// Heat capacities the integrator uses for coupled elements: the real capacities unless
+        /// <c>MaxSubstepsPerBlock</c> has raised them.
         ///
-        /// Room air is the lightest thing on a ship and touches the most surface, so a small
-        /// pressurised compartment is routinely stiffer than any block bolted around it — a field
-        /// dump found a capital ship still needing two substeps after every one of its blocks had
-        /// been capped at one, because a two-cell room demanded 1.75 on its own. Capping the
-        /// blocks and not the air would leave the setting unable to reach the value it advertises.
+        /// Coolant loops and room air are capped alongside blocks because they are often the
+        /// stiffest elements on the grid — room air has low capacity and large contact area, so a
+        /// small compartment can demand more substeps than any block around it, and capping only
+        /// blocks would leave the setting unable to reach its advertised value.
         /// </summary>
         private float[] loopEffectiveMass = new float[0];
         private float[] roomEffectiveMass = new float[0];
 
-        // Node state the substep loop reads, copied out of the node objects once per step
-        // instead of being chased through them once per node per substep. A step with sixteen
-        // substeps used to walk eight thousand heap objects sixteen times over.
+        // Node state the substep loop reads, copied out of the node objects once per step rather
+        // than dereferenced once per node per substep.
         private float[] nodeThermalMass = new float[0];
         private float[] nodeRadiation = new float[0];
         private float[] nodeGeneration = new float[0];
@@ -97,42 +90,33 @@ namespace Thermodynamics.Core
         private float[] nodeFaceWeights = new float[0];
 
         /// <summary>
-        /// How much of a node's exchanges it may take this substep, 0..1.
+        /// Fraction of a node's exchanges it may take this substep, 0..1.
         ///
-        /// One is the ordinary case and costs a multiply. Below one means the substep is longer
-        /// than this node is stable over — <c>h * conductance &gt; mass</c> — which happens only
-        /// when the substep count the stability estimate asked for was refused.
+        /// One in the ordinary case. Below one when the substep is longer than the node is stable
+        /// over (<c>h * conductance &gt; mass</c>), which occurs only when the substep count the
+        /// stability estimate asked for was refused by <see cref="MaxSubsteps"/>.
         ///
-        /// The per-link clamp is not enough on its own, and that is not obvious. It caps each
-        /// exchange at the energy that equalises <em>that pair</em>, which bounds a node with one
-        /// neighbour perfectly and a node with six not at all: each of the six is separately
-        /// entitled to move it the whole way, so it lands six times past where it should and comes
-        /// back further still. Measured on a hull at <c>HeatTimeScale 3600</c> with one substep,
-        /// that reached 1.5e22 K; the same settings on a stick of blocks, where no node has more
-        /// than two neighbours, stayed perfectly well behaved. The clamp was not wrong, it was
-        /// local.
+        /// Required in addition to the per-link clamp. That clamp bounds each exchange at the
+        /// energy equalising a single pair, which is sufficient for a node with one neighbour but
+        /// not for one with six: each neighbour may independently move it the whole way, so the
+        /// node overshoots by up to its neighbour count and diverges. This factor bounds the sum.
         /// </summary>
         private float[] nodeRelaxation = new float[0];
 
         /// <summary>
-        /// Per-node environment terms that do not change between the substeps of one step.
+        /// Per-node environment terms that are constant across the substeps of one step.
         ///
         /// <para>
-        /// A substep recomputed all of these, sixteen times a step, from inputs that had not
-        /// moved. Solar gain is emissivity times exposed area times how square the node's faces
-        /// are to the sun and how much of each is lit — and none of those depend on temperature,
-        /// which is the only thing a substep changes. Friction is the same shape. Convection's
-        /// coefficient is too; only the <c>(T - ambient)</c> it multiplies varies. And the
-        /// relaxation factor is <c>mass / (h * conductance)</c>, whose three inputs are all fixed
-        /// for the whole step — a float divide per node per substep for an answer that was
-        /// already on the previous line.
+        /// Solar gain, friction and the convection coefficient depend only on emissivity, exposed
+        /// area, sun incidence and lit fraction — none of which a substep changes. Only the
+        /// <c>(T - ambient)</c> factor convection multiplies varies. The relaxation factor
+        /// <c>mass / (h * conductance)</c> is likewise fixed for the whole step.
         /// </para>
         ///
         /// <para>
-        /// They are filled by the first substep's own environment pass rather than by a pass of
-        /// their own, so the work is charged and paced exactly as it was and the later substeps
-        /// simply read. The result is arithmetically identical, which
-        /// <c>PrecomputedEnvironmentTests</c> asserts bit for bit.
+        /// Filled by the first substep's environment pass rather than by a pass of its own, so
+        /// work accounting and pacing are unchanged and later substeps only read. Results are
+        /// bit-identical to recomputing; <c>PrecomputedEnvironmentTests</c> asserts this.
         /// </para>
         /// </summary>
         private float[] nodeSolarRow = new float[0];
@@ -140,11 +124,11 @@ namespace Thermodynamics.Core
         private float[] nodeConvectionRow = new float[0];
 
         /// <summary>
-        /// False when the rows above have to be recomputed rather than read.
+        /// False when the rows above must be recomputed rather than read.
         ///
         /// Cleared at the top of every step, and again whenever the self-shadow pass publishes new
-        /// lit fractions — which it can do part way through a step, since it runs on a budget of
-        /// its own. That is the one input to the rows that moves under them.
+        /// lit fractions — the one row input that can change mid-step, since that pass runs on a
+        /// budget of its own.
         /// </summary>
         private bool environmentRowsValid;
 
@@ -155,39 +139,30 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Set false to recompute the per-step environment terms on every substep, as the solver
-        /// did before they were cached.
-        ///
-        /// Exists so the claim behind the cache can be tested rather than argued: reusing a value
-        /// is only safe if recomputing it would have produced the same bits, and
-        /// <c>PrecomputedEnvironmentTests</c> runs the same grid both ways and compares. A
-        /// property that is asserted by an optimisation's own presence is not asserted at all.
+        /// Set false to recompute the per-step environment terms on every substep instead of
+        /// caching them. Test hook: <c>PrecomputedEnvironmentTests</c> runs the same grid both
+        /// ways and compares the results bit for bit.
         /// </summary>
         public bool PrecomputeEnvironment = true;
 
         /// <summary>
-        /// Fraction of each node's <em>face</em> the sun reaches, six per node, 0..1. All ones when
-        /// self-shadowing is off, which is what makes the cheap path free rather than cheaper.
+        /// Fraction of each node face the sun reaches, six per node, 0..1. All ones when
+        /// self-shadowing is off, so the cheap path costs nothing extra.
         ///
-        /// Per face because shadow belongs to a surface. The second layer of a two-cell wall is
-        /// buried from the sun's direction and its side faces are still out in the open, on the
-        /// same flank of the same ship; a per-block figure lights a hull along one row of blocks
-        /// and calls the rest of it shadowed.
+        /// Tracked per face rather than per block: a block buried along the sun's axis can still
+        /// have side faces fully exposed, and a per-block figure would shadow them incorrectly.
         /// </summary>
         private float[] nodeSunLit = new float[0];
 
         /// <summary>The grid's own shadow, rebuilt when the sun has moved far enough to matter.</summary>
         private readonly SunShadowMap sunShadow = new SunShadowMap();
 
-        /// <summary>
-        /// Other grids whose shadows fall on this one, filled by the host. Empty in the model's own
-        /// tests, and empty in a world with nothing parked nearby.
-        /// </summary>
+        /// <summary>Other grids whose shadows fall on this one. Filled by the host; usually empty.</summary>
         public readonly List<SunShadowMap.Occluder> SunOccluders = new List<SunShadowMap.Occluder>();
 
         /// <summary>
-        /// Tells the solver its occluders have moved or changed, so the next pass rebuilds against
-        /// them. The host owns that judgement: only it knows a station has drifted a metre.
+        /// Marks <see cref="SunOccluders"/> as moved or changed so the next pass rebuilds against
+        /// them. Called by the host, which owns the judgement of when an occluder has shifted.
         /// </summary>
         public void MarkSunOccludersChanged()
         {
@@ -195,33 +170,26 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// How far the sun may move before a new shadow pass starts. cos(2°): a shadow edge that
-        /// lags the sun by two degrees is a fraction of a cell on any ship, and restarting for less
-        /// would spend a walk over the grid on a picture nobody can tell apart — and on a slowly
-        /// creeping sun, would restart the pass forever without ever finishing one.
+        /// How far the sun may move before a new shadow pass starts, as cos(2°). A two-degree lag
+        /// displaces a shadow edge by a fraction of a cell; a tighter threshold would restart the
+        /// pass faster than it can complete under a slowly moving sun.
         /// </summary>
         private const float SunRebuildCosine = 0.99939f;
 
         /// <summary>
-        /// Cells walked per environment pass. The walk is exact and therefore not free, so it is
-        /// budgeted like the room mapper's flood fill: a slice per tick, with the previous answer
-        /// still readable until the new one is complete.
+        /// Cells walked per environment pass. The walk is exact and so is budgeted like the room
+        /// mapper's flood fill: a slice per tick, with the previous result readable until the new
+        /// one completes.
         /// </summary>
         public int SunShadowBudget = 2048;
 
         /// <summary>
         /// Nodes whose lit fraction is refreshed per step once a shadow pass completes.
         ///
-        /// The walk itself was budgeted; publishing its answer was not. A completed pass called a
-        /// loop over every node on the grid, six faces each, from inside the step — 760,000 shadow
-        /// lookups on a 127k hull, which measured as a 69 ms step against a 12 ms median with the
-        /// conduction loop accounting for only a fifth of it. That is the same shape of mistake as
-        /// the room mapper publishing its map: the expensive part was not the pass, it was the
-        /// moment the pass finished.
-        ///
-        /// Spreading it leaves some faces reading the previous shadow for a few steps, which is
-        /// what the shadow map already does by design — it is allowed to lag the sun by two
-        /// degrees before a rebuild is worth starting.
+        /// Publishing a completed pass is six shadow lookups per node, which on a large grid costs
+        /// more than the step it runs inside, so it is budgeted like the pass itself. The cost is
+        /// that some faces read the previous shadow for a few steps — within the two-degree lag
+        /// the map already tolerates.
         /// </summary>
         public int SunLitBudget = 4096;
 
@@ -230,8 +198,8 @@ namespace Thermodynamics.Core
         private bool sunLitPending;
 
         /// <summary>
-        /// Value to fill every face with instead of reading the shadow map, or a negative number
-        /// when the map is the source. Used by the switched-off path, which has no map to read.
+        /// Constant to fill every face with instead of reading the shadow map, or negative when the
+        /// map is the source. Used when self-shadowing is disabled and no map exists.
         /// </summary>
         private float sunLitFill = -1f;
 
@@ -239,31 +207,23 @@ namespace Thermodynamics.Core
         private bool sunLitDirty = true;
 
         /// <summary>
-        /// Reduced thermal mass of each link, <c>mA*mB/(mA+mB)</c>. This is the only part of the
-        /// overshoot clamp that depends on anything but the current temperatures, and it changes
-        /// only when a block's mass does, so it is cached rather than divided out per link per
-        /// substep.
+        /// Reduced thermal mass of each link, <c>mA*mB/(mA+mB)</c>. The only part of the overshoot
+        /// clamp not derived from current temperatures; it changes only when a block's mass does,
+        /// so it is cached rather than recomputed per link per substep.
         /// </summary>
         private float[] linkMassFactor = new float[0];
 
         /// <summary>
-        /// First link whose cached reduced mass is stale. <see cref="int.MaxValue"/> when none
-        /// are.
-        ///
-        /// An index rather than a flag because the two things that make a factor stale are not
-        /// the same size of event. A block's mass changing — welding progress, damage — could be
-        /// any link on the grid, so it invalidates from zero. Links being appended for a block
-        /// just placed invalidates only the appended rows, and that is the case this needs to
-        /// stay cheap.
+        /// First link whose cached reduced mass is stale, or <see cref="int.MaxValue"/> when none
+        /// are. An index rather than a flag so appending links for a newly placed block
+        /// invalidates only the appended rows; a mass change invalidates from zero.
         /// </summary>
         private int linkMassFactorFrom;
 
-        // The conduction loop mirrored into flat arrays, for the same reason the node state is:
-        // this is the innermost loop in the whole mod. A capital ship in the field run carried
-        // 106,644 links and needed six substeps a step, so every link is visited 640,000 times a
-        // second of simulated time — and reading a link out of a List<ThermalLink> copies a
-        // sixteen-byte struct through a bounds-checked indexer to use twelve bytes of it.
-        // ContactFaces is diagnostic and stays behind in the list.
+        // The conduction loop mirrored into flat arrays. This is the innermost loop in the mod —
+        // a large grid visits every link several hundred thousand times per simulated second —
+        // and indexing List<ThermalLink> copies the whole struct to use three of its fields.
+        // ContactFaces is diagnostic only and stays in the list.
         private int[] linkA = new int[0];
         private int[] linkB = new int[0];
         private float[] linkConductance = new float[0];
@@ -276,11 +236,9 @@ namespace Thermodynamics.Core
         private readonly float[] sourceWeights = new float[Face.Count];
 
         /// <summary>
-        /// Record every mechanism's contribution to every node, for the debug readout and the
-        /// telemetry report.
-        ///
-        /// Off by default. The figures are five floats per node per substep that nothing in the
-        /// simulation itself reads, so a server nobody is watching should not be writing them.
+        /// Record each mechanism's contribution to each node, for the debug readout and the
+        /// telemetry report. Off by default: five floats per node per substep that the simulation
+        /// itself never reads.
         /// </summary>
         public bool CollectDiagnostics;
 
@@ -294,9 +252,8 @@ namespace Thermodynamics.Core
         private IBlockAdjacency adjacency;
 
         /// <summary>
-        /// How much work the one-shot stages did. Never null, so no call site needs a guard;
-        /// the host replaces it with its own instance when it wants to read the same counters
-        /// the room mapper writes to.
+        /// Work counters for the one-shot stages. Never null. The host may replace it with its own
+        /// instance to share counters with the room mapper.
         /// </summary>
         public SimulationWork Work = new SimulationWork();
 
@@ -305,13 +262,10 @@ namespace Thermodynamics.Core
         /// <summary>
         /// Nodes placed since the graph was last built, whose links have not been made yet.
         ///
-        /// A block arriving is the one topology change that needs no demolition: nothing links
-        /// to a block that was not there, so its links can simply be appended and every existing
-        /// link left exactly as it was. That is what makes welding, pasting a blueprint and a
-        /// projector building a ship cost the block rather than the grid.
-        ///
-        /// Anything else — a block removed, a block whose mounting changed, a new adjacency
-        /// source — can invalidate links that already exist, and takes the global path.
+        /// Placement is the only topology change that cannot invalidate an existing link, so its
+        /// links are appended and the rest of the graph left alone. This keeps welding, blueprint
+        /// pasting and projector builds proportional to the blocks added rather than the grid.
+        /// Removal, a changed mount and a new adjacency source all take the full rebuild path.
         /// </summary>
         private readonly List<ThermalNode> pendingLinkNodes = new List<ThermalNode>();
 
@@ -331,10 +285,9 @@ namespace Thermodynamics.Core
             this.grid = grid;
             this.surfaces = surfaces;
 
-            // Until the first step derives one, the environment has to read as empty space and
-            // not as absolute zero. Anything that asks before then — RequiredSubsteps, the HUD,
-            // the telemetry sample the host takes at the top of a step — otherwise sees a 0 K
-            // sky, which is both wrong and the coldest reading the whole session will report.
+            // Until the first step derives one, the environment must read as vacuum rather than
+            // 0 K. RequiredSubsteps, the HUD and the host's pre-step telemetry sample all read it
+            // before any step has run.
             Environment = EnvironmentState.Vacuum(settings.VacuumTemperature);
         }
 
@@ -349,12 +302,10 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Where the conduction graph gets its "who touches whom" answers. Defaults to the
-        /// <see cref="GridModel"/>, which resolves them from its own cell map.
-        ///
-        /// A host with a better index — Space Engineers 2's block octree maintains a face
-        /// connectivity graph already — sets this instead of having the mod rebuild one.
-        /// Setting it invalidates the existing links.
+        /// Source of block adjacency for the conduction graph. Defaults to the
+        /// <see cref="GridModel"/>, which resolves adjacency from its own cell map. A host that
+        /// already maintains a face connectivity graph can supply it here. Assigning invalidates
+        /// the existing links.
         /// </summary>
         public IBlockAdjacency Adjacency
         {
@@ -381,15 +332,9 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// How many links the graph holds <em>now</em>, without rebuilding it.
-        ///
-        /// The distinction matters more than it looks. Reading <see cref="Links"/> on a grid
-        /// whose layout has changed runs a full rebuild, outside any stage bracket and on
-        /// whatever thread asked — so a telemetry sample taken while a ship was being welded
-        /// spent a rebuild's worth of a million nodes to report an integer, and reported it as
-        /// nothing at all because no stage was timing it. An observer must not change what it
-        /// observes; a diagnostic wants a count, not a graph, and is content with the count from
-        /// before the change.
+        /// Links the graph holds now, without rebuilding it. Reading <see cref="Links"/> instead
+        /// would trigger a full rebuild outside any stage bracket, so diagnostics use this and
+        /// accept a count from before a pending layout change.
         /// </summary>
         public int LinkCount
         {
@@ -402,8 +347,8 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// The air masses of the grid's sealed rooms. One entry per room that is holding its air
-        /// in; a vented room has none, because what faces it faces outdoors.
+        /// Air masses of the grid's sealed rooms, one entry per room still holding pressure. A
+        /// vented room has no entry; its faces exchange with the outdoors instead.
         /// </summary>
         public IList<RoomAirNode> RoomAir
         {
@@ -411,8 +356,8 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// The grid's heat pumps, connected or not. A pump with nothing bolted to one of its faces
-        /// is still listed, so a readout can say that is why it is doing nothing.
+        /// The grid's heat pumps, connected or not. An unconnected pump is still listed so a
+        /// readout can report why it is idle.
         /// </summary>
         public IList<HeatPumpDevice> HeatPumps
         {
@@ -441,27 +386,21 @@ namespace Thermodynamics.Core
         public int LastSubsteps { get; private set; }
 
         /// <summary>
-        /// Substeps a <em>full</em> step would have needed, before <see cref="MaxSubsteps"/>
-        /// refused any of them and before the rounding up to a whole number.
+        /// Substeps a full step would have needed, before <see cref="MaxSubsteps"/> clamped the
+        /// count and before rounding up to a whole number.
         ///
-        /// Reported separately from <see cref="LastSubsteps"/> because the two answer different
-        /// questions. What was granted says what the step cost; what was asked for says how far
-        /// the grid is from affording its own stiffness, and it is the only one of the pair that
-        /// keeps moving once the budget has bound.
-        ///
-        /// Scaled up to a full step for exactly that reason. The estimate is proportional to the
-        /// step length, so a step already shortened to fit <c>MaxLinkVisitsPerStep</c> asks for
-        /// about what it was granted — measuring that gives a column identical to the granted one
-        /// and answers nothing.
+        /// <see cref="LastSubsteps"/> reports what was granted, and so what the step cost; this
+        /// reports what was demanded, and keeps moving after the budget has bound. Scaled to a
+        /// full step because the estimate is proportional to step length: measured on a step
+        /// already shortened to fit <c>MaxLinkVisitsPerStep</c>, it would duplicate the granted
+        /// figure.
         /// </summary>
         public float LastRequiredSubsteps { get; private set; }
 
         /// <summary>
-        /// Substeps one element alone would need for a full step, from its real heat capacity.
-        ///
-        /// The per-node figure behind <see cref="LastRequiredSubsteps"/>, which is its maximum.
-        /// Public so per-block-type telemetry can attribute the substep count to the definitions
-        /// responsible for it rather than leaving it as a per-grid total.
+        /// Substeps one node alone would need for a full step, from its real heat capacity.
+        /// <see cref="LastRequiredSubsteps"/> is the maximum of this over all nodes. Public so
+        /// per-block-type telemetry can attribute a grid's substep count to specific definitions.
         /// </summary>
         public float NodeSubstepDemand(int index)
         {
@@ -488,7 +427,10 @@ namespace Thermodynamics.Core
 
         // ---- topology ----------------------------------------------------------------------
 
-        /// <summary>Registers a block. Blocks marked <c>IgnoreThermals</c> are skipped.</summary>
+        /// <summary>
+        /// Registers a block and returns its node, or null if the block is marked
+        /// <c>IgnoreThermals</c>. Returns the existing node if the block is already registered.
+        /// </summary>
         public ThermalNode AddBlock(BlockInstance block, float initialTemperature)
         {
             if (block == null) throw new ArgumentNullException("block");
@@ -500,9 +442,8 @@ namespace Thermodynamics.Core
             nodes.Add(node);
             nodesByKey[block.Key] = node;
 
-            // Appended, so no existing index moved and no existing link became wrong. The node
-            // is queued for linking rather than the whole graph being thrown away; only if the
-            // graph was already due a full rebuild does that stand.
+            // Appending moves no existing index and invalidates no existing link, so the node is
+            // queued for incremental linking rather than dirtying the whole graph.
             node.PendingLinks = true;
             pendingLinkNodes.Add(node);
             EnsureNodeChainCapacity(nodes.Count);
@@ -519,14 +460,14 @@ namespace Thermodynamics.Core
             ThermalNode node;
             if (!nodesByKey.TryGetValue(block.Key, out node)) return false;
 
-            // A removal moves another node into the hole, so a step part way through would be
-            // summing watts for blocks that are no longer where its buffers say they are.
+            // A removal moves another node into the hole, so a step in flight would be summing
+            // watts against indices that no longer refer to the same blocks.
             AbandonStep();
 
             nodesByKey.Remove(block.Key);
 
-            // A node still waiting to be linked has no links to unpick and no chain entry, so it
-            // is dropped from the queue rather than routed through the removal path.
+            // A node still waiting to be linked has no links and no chain entry, so it is dropped
+            // from the queue rather than routed through the incremental removal path.
             if (node.PendingLinks)
             {
                 node.PendingLinks = false;
@@ -535,8 +476,8 @@ namespace Thermodynamics.Core
 
             if (linksDirty)
             {
-                // The graph is already due a full rebuild, so unpicking one node's links would be
-                // work thrown away. Take it out the plain way and let the rebuild sort the rest.
+                // A full rebuild is already due, so unpicking this node's links would be wasted.
+                // Remove it directly and let the rebuild reconstruct the graph.
                 nodes.RemoveAt(node.Index);
                 for (int i = node.Index; i < nodes.Count; i++)
                 {
@@ -551,9 +492,9 @@ namespace Thermodynamics.Core
 
             sunLitDirty = true;
 
-            // The cached hottest index refers to a slot, and a removal moves whoever was last
-            // into some other slot. Forgotten rather than repaired: it is rebuilt by the next
-            // step's write-back anyway, and until then a walk is correct.
+            // The cached hottest index refers to a slot, and a removal moves the last node into
+            // another slot. Cleared rather than repaired: the next step's write-back rebuilds it,
+            // and until then callers fall back to a linear scan.
             hottestNode = -1;
 
             return true;
@@ -588,12 +529,10 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Brings the conduction graph up to date by whichever route is valid: the incremental
-        /// one when only blocks have been placed, the global one otherwise. Does nothing when
-        /// the graph already matches the layout.
-        ///
-        /// Public so the host can do it inside its topology stage rather than leaving it to be
-        /// discovered by the first step, which billed it to the solver.
+        /// Brings the conduction graph up to date, incrementally when only blocks have been placed
+        /// and by full rebuild otherwise. No-op when the graph already matches the layout.
+        /// Public so the host can run it inside its own topology stage, where it is timed as such,
+        /// rather than having the first step absorb the cost.
         /// </summary>
         public void BuildLinksIfNeeded()
         {
@@ -617,14 +556,13 @@ namespace Thermodynamics.Core
         /// </summary>
         public void RebuildLinks()
         {
-            // Every link index changes, so nothing a step in flight has accumulated still means
-            // what it meant.
+            // Every link index changes, invalidating anything a step in flight has accumulated.
             AbandonStep();
 
             Work.TopologyRebuilds++;
             Work.TopologyNodeVisits += nodes.Count;
 
-            // A global build makes every link, including the ones the queue was holding.
+            // A full build makes every link, including those the pending queue was holding.
             for (int i = 0; i < pendingLinkNodes.Count; i++) pendingLinkNodes[i].PendingLinks = false;
             pendingLinkNodes.Clear();
 
@@ -651,7 +589,7 @@ namespace Thermodynamics.Core
                     ThermalNode b = GetNode(neighbourScratch[n]);
                     if (b == null) continue;
 
-                    // add each pair once
+                    // Visit each pair once.
                     if (b.Index <= a.Index) continue;
 
                     int face = ConductionBuilder.ContactFace(a.Block, b.Block);
@@ -683,10 +621,9 @@ namespace Thermodynamics.Core
         /// <summary>
         /// Copies the link fields the substep loop reads into flat arrays.
         ///
-        /// Only the rows that are not already mirrored are written. A global rebuild resets the
-        /// mark and copies everything; an incremental one appends, which is what keeps the cost
-        /// of placing a block proportional to the block. The arrays grow by doubling and keep
-        /// what they held, because the rows below the new ones are still correct.
+        /// Writes only rows not already mirrored: a full rebuild resets the mark and copies
+        /// everything, an incremental one appends. Arrays grow by doubling and retain their
+        /// contents, since rows below the appended ones remain valid.
         /// </summary>
         private void SyncLinkArrays()
         {
@@ -712,15 +649,13 @@ namespace Thermodynamics.Core
         /// <summary>
         /// Builds the links for blocks placed since the last build, and nothing else.
         ///
-        /// The whole saving rests on one fact: a block that has just arrived has no links, and
-        /// nothing that already exists links to it. So there is nothing to demolish — every
-        /// existing link, every mirrored row and every conductance total below the new ones is
-        /// still exactly right, and the work is the new block's own six faces.
+        /// A newly placed block has no links and nothing existing links to it, so every existing
+        /// link, mirrored row and conductance total below the new ones remains valid and the work
+        /// is the new block's six faces.
         ///
-        /// Two placed blocks that touch each other are the case worth being careful about. Each
-        /// finds the other as a neighbour, so the pair is added by whichever of them has the
-        /// lower index and skipped by the other — the same rule the global build uses, and the
-        /// reason both loops test the index rather than a visited set.
+        /// Two placed blocks that touch each other each find the other as a neighbour, so the pair
+        /// is added by the lower index and skipped by the higher — the same rule the full build
+        /// uses, which is why both loops compare indices rather than track a visited set.
         /// </summary>
         private void LinkPendingNodes()
         {
@@ -736,7 +671,7 @@ namespace Thermodynamics.Core
             {
                 ThermalNode a = pendingLinkNodes[p];
 
-                // A node placed and then taken away again before anything stepped.
+                // A node placed and removed again before any step ran.
                 if (a.Index < 0 || a.Index >= nodes.Count || nodes[a.Index] != a) continue;
 
                 neighbourScratch.Clear();
@@ -747,9 +682,9 @@ namespace Thermodynamics.Core
                     ThermalNode b = GetNode(neighbourScratch[n]);
                     if (b == null) continue;
 
-                    // The pair belongs to whichever end is also pending and lower, so a pair of
-                    // new neighbours is added once. A neighbour that was already on the grid is
-                    // never pending, so the test can only skip a pair both ends of which are.
+                    // Skip only when both ends are pending and the other has the lower index, so
+                    // a pair of new neighbours is added once. A pre-existing neighbour is never
+                    // pending, so its links are never skipped here.
                     if (b.PendingLinks && b.Index <= a.Index) continue;
 
                     int face = ConductionBuilder.ContactFace(a.Block, b.Block);
@@ -779,11 +714,11 @@ namespace Thermodynamics.Core
 
             SyncLinkArrays();
 
-            // Growing the buffers zeroed the totals and marked them for a recompute, so adding to
-            // them would be adding to something about to be thrown away.
+            // Growing the buffers zeroed the totals and marked them for recompute, so adding to
+            // them here would be discarded.
             if (!buffersGrew) AddConductanceOfNewLinks(firstNewLink);
 
-            // Marked, not filled: the reduced mass of a link is computed from the mirrored node
+            // Marked rather than filled: a link's reduced mass derives from the mirrored node
             // masses, and the new node's row is not copied in until later in the same step.
             if (firstNewLink < linkMassFactorFrom) linkMassFactorFrom = firstNewLink;
         }
@@ -791,10 +726,9 @@ namespace Thermodynamics.Core
         /// <summary>
         /// Adds the conductance of newly built links to their endpoints' totals.
         ///
-        /// The totals are what the substep estimate divides by thermal mass, and they also carry
-        /// contributions from coolant loops and room air. Adding to them is therefore the correct
-        /// incremental operation; recomputing them would mean walking every link, every loop and
-        /// every room to learn what a handful of new links changed.
+        /// The totals are the numerator of the substep estimate and also carry coolant loop and
+        /// room air contributions, so adding is the correct incremental operation; recomputing
+        /// would require walking every link, loop and room.
         /// </summary>
         private void AddConductanceOfNewLinks(int firstNewLink)
         {
@@ -830,8 +764,8 @@ namespace Thermodynamics.Core
                         loop.Temperature = carried;
                     }
 
-                    // The coolant has to run on the same clock as the blocks it exchanges with,
-                    // so the solver imposes it rather than trusting whoever built the loop.
+                    // Coolant must run on the same clock as the blocks it exchanges with, so the
+                    // solver imposes the scale rather than trusting the loop builder.
                     loop.HeatTimeScale = settings.HeatTimeScale;
 
                     BuildLoopLinks(loop);
@@ -887,7 +821,7 @@ namespace Thermodynamics.Core
             while (StepExposureRefresh(int.MaxValue)) { }
         }
 
-        /// <summary>The map the current exposure pass is reading, or null when none is running.</summary>
+        /// <summary>Map the current exposure pass is reading, or null when no pass is running.</summary>
         private RoomMap exposureMap;
         private int exposureCursor;
 
@@ -900,16 +834,10 @@ namespace Thermodynamics.Core
         /// <summary>
         /// Starts a pass that recomputes every node's exposed faces against a room map.
         ///
-        /// Resumable for the same reason the flood fill is: it is proportional to the grid and
-        /// it lands in one tick. A room pass completing on a 127k ship cost 30 ms here, all of
-        /// it on the tick that published the map — on top of that tick's room stage, which is
-        /// how a single tick came to cost a hundred milliseconds.
-        ///
-        /// Running it in slices leaves some nodes reading the previous map for a few ticks. That
-        /// is not a new inaccuracy: the map they were reading is the one they had been reading
-        /// for the hundreds of ticks the pass took to build, and a wall's exposure changing a
-        /// fraction of a second late is invisible against a thermal clock measured in minutes.
-        /// A stutter is not.
+        /// Resumable because the cost is proportional to the grid and would otherwise land on the
+        /// single tick that publishes a completed room map, alongside that tick's room stage.
+        /// Slicing leaves some nodes reading the previous map for a few ticks, which is the map
+        /// they read for the whole time the room pass was building.
         /// </summary>
         public void BeginExposureRefresh(RoomMap rooms)
         {
@@ -953,12 +881,10 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Refreshes only the nodes that face the given rooms.
+        /// Refreshes only the nodes with a face onto one of the given rooms.
         ///
-        /// A door opening changes what one room's walls can see and nothing else, so walking
-        /// every node on a forty-thousand block ship to find the eight that changed is the
-        /// expensive way to do nothing. The rooms carry their own cells, and a block can only be
-        /// affected if it has a face onto one of them.
+        /// A door opening changes exposure for one room's walls and nothing else, so the affected
+        /// set is derived from the rooms' own cells rather than by scanning every node.
         /// </summary>
         public void RefreshExposureAround(RoomMap rooms, IList<int> roomIndices)
         {
@@ -980,7 +906,7 @@ namespace Thermodynamics.Core
                         if (block != null) affected.Add(block);
                     }
 
-                    // The cell itself may hold a block — a door standing in the room.
+                    // The cell itself may hold a block, such as a door standing in the room.
                     BlockInstance occupant = grid.GetAtCell(cell);
                     if (occupant != null) affected.Add(occupant);
                 }
@@ -1003,7 +929,7 @@ namespace Thermodynamics.Core
             }
         }
 
-        /// <summary>Scratch for <see cref="RefreshExposureAround"/>; kept so it is not reallocated.</summary>
+        /// <summary>Reused scratch set for <see cref="RefreshExposureAround"/>.</summary>
         private HashSet<BlockInstance> affected;
 
         // ---- room air ----------------------------------------------------------------------
@@ -1017,11 +943,10 @@ namespace Thermodynamics.Core
         /// <summary>
         /// Rebuilds the air masses of every sealed room from a room map.
         ///
-        /// A room's air survives a rebuild if the room does: rooms are re-found identically
-        /// whenever the map is remade for a change somewhere else on the ship, so matching on the
-        /// room's lowest cell carries temperature and pressure across. A room whose shape actually
-        /// changed is a different room, and starts at ambient with no air until the host says
-        /// otherwise.
+        /// Air survives a rebuild when the room does: rooms are re-found identically when the map
+        /// is remade for a change elsewhere, so matching on a room's lowest cell carries
+        /// temperature and pressure across. A room whose shape changed is treated as a new room
+        /// and starts at ambient with no air.
         /// </summary>
         public void RebuildRoomAir(RoomMap rooms)
         {
@@ -1080,11 +1005,8 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Links one room's air to every block bounding it.
-        ///
-        /// Walked over the room's own cells rather than over the grid's blocks, so the cost is the
-        /// size of the room and not the size of the ship — the same reason
-        /// <see cref="RefreshExposureAround"/> exists.
+        /// Links one room's air to every block bounding it. Walks the room's own cells rather than
+        /// the grid's blocks, so cost is proportional to the room rather than the ship.
         /// </summary>
         private void BuildRoomLinks(RoomAirNode air, RoomMap rooms)
         {
@@ -1125,8 +1047,8 @@ namespace Thermodynamics.Core
                 air.Links.Add(new RoomLink(contact.Key, conductance));
             }
 
-            // Air appearing in a room for the first time starts at the temperature of the walls
-            // holding it, which is the only defensible answer: it has been in there with them.
+            // Air appearing in a room for the first time starts at the mean temperature of the
+            // walls bounding it.
             if (!air.Initialised && surfaceCount > 0)
             {
                 air.Temperature = surfaceSum / surfaceCount;
@@ -1135,13 +1057,12 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Puts saved air temperatures back onto the rooms they were saved from, matched by anchor
-        /// cell — the same key that carries a room's air across a rebuild.
+        /// Restores saved air temperatures onto the rooms they were saved from, matched by anchor
+        /// cell — the same key that carries air across a rebuild.
         ///
-        /// Marking the air initialised is the point of the exercise. A restored room is almost
-        /// always still at zero pressure when this runs, because pressurisation comes from the vent
-        /// sweep and that has not happened yet; without the flag the first sweep would take the
-        /// room's temperature from the average of its walls and throw the saved figure away.
+        /// Also marks the air initialised. A restored room is usually still at zero pressure here,
+        /// since pressurisation comes from the later vent sweep; without the flag that sweep would
+        /// overwrite the saved temperature with the average of the room's walls.
         /// </summary>
         /// <returns>Number of rooms that took a saved temperature.</returns>
         public int RestoreRoomAir(IList<StoredRoom> stored)
@@ -1198,19 +1119,17 @@ namespace Thermodynamics.Core
         /// <summary>
         /// Rebuilds the grid's heat pumps from the blocks currently placed.
         ///
-        /// A pump is bound to the two nodes either side of it, so anything that changes what is
-        /// bolted to its faces has to run this again. The host switch and the power fraction are
-        /// carried across by block key: they belong to the block, not to this table, and a pump
-        /// must not silently switch itself on because a wall was welded somewhere else.
+        /// A pump is bound to the nodes on either side of it, so any change to what is mounted on
+        /// its faces requires a rebuild. Enabled state and power fraction are carried across by
+        /// block key, since they belong to the block rather than to this table.
         /// </summary>
         public void RebuildHeatPumps()
         {
             Work.HeatPumpRebuilds++;
 
-            // Same reasoning as the coolant search: a grid with no pumps on it should not walk
-            // its blocks to find that out. The early return has to come after the list is
-            // cleared, because the last pump on a grid being ground off is exactly the case
-            // where the count reaches zero and the device must go with it.
+            // A grid with no pump blocks should not walk its blocks to establish that. The list
+            // must be cleared before returning: grinding off the last pump is exactly the case
+            // where the count reaches zero and the stale device must go with it.
             if (grid.HeatPumpBlockCount == 0)
             {
                 heatPumps.Clear();
@@ -1267,7 +1186,7 @@ namespace Thermodynamics.Core
             return node == null ? -1 : node.Index;
         }
 
-        /// <summary>The heat pump bound to a block, or null when that block is not one.</summary>
+        /// <summary>The heat pump bound to a block, or null when the block is not a pump.</summary>
         public HeatPumpDevice GetHeatPump(BlockInstance block)
         {
             if (block == null) return null;
@@ -1280,15 +1199,14 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Moves heat from each pump's cold side to its hot side, and charges the work to its
-        /// hot side as well.
+        /// Moves heat from each pump's cold side to its hot side, charging the electrical work to
+        /// the hot side as well.
         ///
-        /// Three limits apply in turn, and which one binds is the whole behaviour of the block.
-        /// Carnot sets the price of a kelvin; the pump's electrical rating caps what it can pay;
-        /// and the cold node's remaining heat caps what there is to take. Against a small
-        /// difference the rating binds and the pump runs flat out. Against a large one the price
-        /// binds, the pump lifts a trickle, and pushing further costs more than the block can
-        /// draw — which is what makes absolute zero unreachable rather than merely discouraged.
+        /// Three limits apply in turn: the Carnot coefficient of performance sets the electrical
+        /// cost per watt lifted, the pump's rating caps the electrical draw, and the cold node's
+        /// remaining heat caps what can be taken. Across a small temperature difference the rating
+        /// binds; across a large one the Carnot cost binds, which is what makes absolute zero
+        /// unreachable.
         /// </summary>
         private void AccumulateHeatPumps(float h)
         {
@@ -1313,22 +1231,21 @@ namespace Thermodynamics.Core
                     coldTemperature, hotTemperature, fraction, ceiling);
                 if (coefficient <= 0f) continue;
 
-                // Never take more heat out of the cold node than it has above absolute zero: the
-                // pump is bounded by what is there, not only by what it can afford.
+                // Never take more heat from the cold node than it holds above absolute zero.
                 float headroom = (coldTemperature - ThermalConstants.MinimumTemperature)
                     * nodeThermalMass[cold] / h;
                 if (headroom <= 0f) continue;
 
-                // What it would draw on a healthy grid, recorded whether or not it got it — a
-                // request that shrinks because it was refused never recovers.
+                // Demand is recorded at full power regardless of what the grid supplied, so a
+                // request never shrinks merely because it was refused.
                 float wanted = Limit(coefficient * pump.MaxPowerWatts, pump.RatedWatts, headroom);
                 pump.DemandEnergy += (wanted / coefficient) * h;
 
                 float available = pump.MaxPowerWatts * Clamp01(pump.PowerAvailable);
                 if (available <= 0f) continue;
 
-                // What the compressor could pay for, against what the machine is rated to move,
-                // against what there is left to take.
+                // The smallest of: what the available power can pay for, the pump's rating, and
+                // the heat remaining in the cold node.
                 float lift = Limit(coefficient * available, pump.RatedWatts, headroom);
                 float work = lift / coefficient;
 
@@ -1348,7 +1265,7 @@ namespace Thermodynamics.Core
             return value;
         }
 
-        /// <summary>The smallest of three limits on what a pump may move this substep.</summary>
+        /// <summary>Smallest of the three limits on what a pump may move this substep.</summary>
         private static float Limit(float watts, float rating, float headroom)
         {
             if (watts > rating) watts = rating;
@@ -1356,7 +1273,7 @@ namespace Thermodynamics.Core
             return watts;
         }
 
-        /// <summary>The air of the room a cell belongs to, or null when that room holds none.</summary>
+        /// <summary>Air node of the room containing a cell, or null when that room holds no air.</summary>
         public RoomAirNode GetRoomAir(RoomMap rooms, Vector3I cell)
         {
             if (rooms == null) return null;
@@ -1372,9 +1289,9 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Sets how full of air a room is. The host owns this figure — the simulation has no way
-        /// to know whether a compartment is pressurised — and setting it rebuilds the room's links,
-        /// because a room at zero pressure has none.
+        /// Sets a room's air fill fraction, 0..1. Owned by the host, which is the only source of
+        /// pressurisation state. Crossing between zero and non-zero rebuilds the room's links,
+        /// since a room at zero pressure has none.
         /// </summary>
         /// <returns>True when a room took the value.</returns>
         public bool SetRoomPressure(RoomMap rooms, Vector3I cell, float pressure)
@@ -1411,16 +1328,13 @@ namespace Thermodynamics.Core
         // ---- integration -------------------------------------------------------------------
 
         /// <summary>
-        /// Advances the whole grid by <paramref name="deltaSeconds"/> of simulated time.
-        /// </summary>
-        /// <summary>
-        /// Copies the node state the substep loop needs into flat arrays. Everything here is
+        /// Copies the node state the substep loop needs into flat arrays. Every value here is
         /// constant across a step: it changes when a block is built, damaged, exposed or
         /// re-powered, never between substeps.
         /// </summary>
         private void SyncNodeState()
         {
-            // A node's index changes when the block list does, which invalidates every row.
+            // A node index changes when the block list does, which invalidates every row.
             bool all = resyncAll;
             resyncAll = false;
 
@@ -1428,8 +1342,8 @@ namespace Thermodynamics.Core
             {
                 ThermalNode node = nodes[i];
 
-                // Temperature is the one value a host can change from outside a step — loading a
-                // save, a grid split, conduction across a rotor — so it is always re-read.
+                // Temperature is the one value the host can change from outside a step (loading a
+                // save, a grid split, conduction across a rotor), so it is always re-read.
                 float temperature = node.Temperature;
                 nodeTemperatures[i] = temperature;
                 nodeStepStart[i] = temperature;
@@ -1437,9 +1351,8 @@ namespace Thermodynamics.Core
                 if (!all && !node.StateDirty) continue;
                 node.StateDirty = false;
 
-                // Only a change of mass makes a cached reduced mass wrong, and only that forces
-                // the pass over every link. A block that merely became exposed, or started
-                // producing heat, leaves every factor on the grid correct.
+                // Only a mass change invalidates the cached reduced masses. Exposure and heat
+                // generation changes leave every link factor on the grid correct.
                 if (nodeThermalMass[i] != node.ThermalMass) linkMassFactorFrom = 0;
 
                 nodeThermalMass[i] = node.ThermalMass;
@@ -1524,15 +1437,14 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Everything about an environment pass that is the same for every node: which mechanisms
-        /// are switched on, the scalars they need, and the two directions resolved into per-face
+        /// The parts of an environment pass that are identical for every node: which mechanisms are
+        /// enabled, the scalars they need, and the sun and wind directions resolved to per-face
         /// weights.
         ///
-        /// Separated from the per-node work because the pass is no longer run in one go. A step is
-        /// spread across the frames of its simulation window, so the node loop is entered many
-        /// times per substep and this must be computed once per substep rather than once per
-        /// slice — both for the cost and because <see cref="RefreshSunShadow"/> advances a budget
-        /// of its own and would run many times faster than intended.
+        /// Held separately from the per-node work because a step is spread across the frames of its
+        /// simulation window, so the node loop is entered many times per substep. This must be
+        /// computed once per substep rather than once per slice, both for cost and because
+        /// <see cref="RefreshSunShadow"/> advances a budget that would otherwise run too fast.
         /// </summary>
         private struct EnvironmentPlan
         {
@@ -1546,7 +1458,7 @@ namespace Thermodynamics.Core
             public bool Generating;
             public bool Diagnostics;
 
-            /// <summary>True when nothing but waste heat has anything to add.</summary>
+            /// <summary>True when waste heat is the only active contribution.</summary>
             public bool GenerationOnly;
 
             public float RadiationShare;
@@ -1554,12 +1466,11 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// The share of its exchanges a node may take over a substep of <paramref name="h"/>.
+        /// Fraction of its exchanges a node may take over a substep of <paramref name="h"/>.
         ///
-        /// A node is stable over a substep when <c>h * conductance &lt;= mass</c> — that is the
-        /// condition the substep estimate is derived from. Where it holds this is one and nothing
-        /// changes. Where it does not, scaling by the ratio is exactly the under-relaxation that
-        /// makes the step behave as if it were short enough.
+        /// A node is stable over a substep when <c>h * conductance &lt;= mass</c>, the condition
+        /// the substep estimate is derived from. Where it holds this returns one. Where it does
+        /// not, the ratio under-relaxes the node so the substep behaves as if it were short enough.
         /// </summary>
         private float RelaxationFactor(int node, float h)
         {
@@ -1616,7 +1527,7 @@ namespace Thermodynamics.Core
                 Vector3 sun = env.SunDirectionLocal;
                 ResolveDirection(ref sun, sunWeights);
 
-                // The one input to the precomputed rows that can move part way through a step.
+                // The one input to the precomputed rows that can change part way through a step.
                 if (RefreshSunShadow(ref sun)) environmentRowsValid = false;
             }
 
@@ -1667,17 +1578,16 @@ namespace Thermodynamics.Core
             float radiationShare = plan.RadiationShare;
             float frictionScale = plan.FrictionScale;
 
-            // The first substep of a step fills the rows below; every later one reads them. The
-            // inputs — exposure, area, emissivity, the sun and wind directions, the step length —
-            // are all fixed for the length of a step, so the two paths are the same arithmetic.
+            // The first substep of a step fills the rows below; later substeps read them. Their
+            // inputs (exposure, area, emissivity, sun and wind directions, step length) are fixed
+            // for the whole step, so both paths compute the same values.
             bool fill = !environmentRowsValid || !PrecomputeEnvironment;
 
             for (int i = from; i < to; i++)
             {
-                // Every node, exposed or buried: conduction needs this and conduction does not
-                // care whether a block can see the sky. Computed here rather than in a pass of its
-                // own because this loop already walks every node once per substep, and the
-                // conduction pass that reads it does not start until this one has finished.
+                // Computed for every node, exposed or buried, because conduction reads it. Folded
+                // into this loop rather than given a pass of its own: this loop already walks every
+                // node once per substep, and the conduction pass runs strictly after it.
                 if (fill) nodeRelaxation[i] = RelaxationFactor(i, h);
 
                 float generation = generating ? nodeGeneration[i] : 0f;
@@ -1707,8 +1617,8 @@ namespace Thermodynamics.Core
 
                 if (fill)
                 {
-                    // A face in the airflow sheds more heat, but still air convects too. The
-                    // factor is a property of the geometry and the wind, not of the temperature.
+                    // A face in the airflow sheds more heat, but still air convects as well, so
+                    // the factor spans 0.5..1. It depends on geometry and wind, not temperature.
                     float windFactor = windy
                         ? 0.5f + (0.5f * Weighted(i, windWeights))
                         : 1f;
@@ -1717,8 +1627,8 @@ namespace Thermodynamics.Core
                         ? -env.ConvectionCoefficient * area * windFactor
                         : 0f;
 
-                    // Per face, and both terms are needed: how square the face is to the sun, and
-                    // whether the ship is standing in front of that face.
+                    // Per face, weighted by both incidence against the sun and the fraction of
+                    // the face the grid's own shadow leaves lit.
                     nodeSolarRow[i] = solarEnabled
                         ? env.SolarEnergy * nodeEmissivity[i] * WeightedLit(i, sunWeights) * area
                         : 0f;
@@ -1750,19 +1660,18 @@ namespace Thermodynamics.Core
 
                     if (clampRelaxation)
                     {
-                        // Radiation and convection both drive this node towards ambient, and the
-                        // most they can legitimately do in one substep is arrive there — past it
-                        // the exchange would have reversed. Capping at that is what keeps an
-                        // explicit step bounded when the substep count has been refused; solar,
-                        // friction and waste heat are sources rather than relaxation and are
-                        // deliberately left out of it.
+                        // Radiation and convection both drive the node towards ambient, so the
+                        // most either may do in one substep is reach it; beyond that the exchange
+                        // would have reversed. Capping there bounds the explicit step when the
+                        // requested substep count was refused. Solar, friction and waste heat are
+                        // sources rather than relaxation and are excluded.
                         float capped = ClampRelaxation(relaxation,
                             (env.AmbientTemperature - temperature) * nodeThermalMass[i] * inverseH);
 
                         if (capped != relaxation)
                         {
-                            // The per-mechanism figures are a readout of what actually happened,
-                            // so they are scaled rather than left describing the unclamped want.
+                            // The per-mechanism figures report what was applied, so they are
+                            // scaled to match the clamp rather than left at the unclamped values.
                             float scale = relaxation == 0f ? 0f : capped / relaxation;
                             radiationWatts *= scale;
                             convectionWatts *= scale;
@@ -1798,7 +1707,7 @@ namespace Thermodynamics.Core
             }
 
             // Only once the whole grid has been covered: the pass is sliced across frames, and a
-            // partly filled row is not one a later substep may read.
+            // partly filled row must not be read by a later substep.
             if (PrecomputeEnvironment && to >= nodes.Count) environmentRowsValid = true;
         }
 
@@ -1833,12 +1742,11 @@ namespace Thermodynamics.Core
             }
         }
 
-        /// <summary>Intensity against a direction resolved into an explicit weight array.</summary>
         /// <summary>
         /// Keeps the grid's self-shadow current, and the per-node lit fractions with it.
         ///
-        /// Both are rebuilt on the same trigger, because both depend on the same two things: where
-        /// the sun is, and what the grid is made of. Between triggers this costs one dot product.
+        /// Both rebuild on the same trigger, since both depend on the sun direction and the grid
+        /// layout. Between triggers the call costs one dot product.
         /// </summary>
         /// <returns>
         /// True when the lit fractions moved, which invalidates the precomputed solar row.
@@ -1857,22 +1765,20 @@ namespace Thermodynamics.Core
                 return StepSunLit(SunLitBudget);
             }
 
-            // A block added or removed invalidates a pass in flight as much as it invalidates the
-            // answer, because the walk reads the grid it started against.
+            // A block added or removed invalidates a pass in flight as well as its result, since
+            // the walk reads the grid it started against.
             if (sunLitDirty || sunShadow.NeedsRestart(ref sunLocal, SunRebuildCosine))
             {
                 sunShadow.Restart(grid, sunLocal, SunOccluders);
                 sunLitDirty = false;
             }
 
-            // Only a completed pass changes any answer, so the lit fractions are refreshed after
-            // one completes and left alone otherwise.
+            // Only a completed pass changes any result, so lit fractions are refreshed when one
+            // completes and left alone otherwise.
             if (sunShadow.Step(SunShadowBudget)) BeginSunLit(-1f);
 
-            // A slice here rather than at the top of the step, so a grid small enough for the
-            // budget to cover it in one go finishes inside the same substep that completed the
-            // pass — which is what it did before there was a budget, and what every test of the
-            // shadow model asserts.
+            // Sliced here rather than at the top of the step, so a grid small enough for one
+            // budget completes inside the same substep that completed the shadow pass.
             return StepSunLit(SunLitBudget);
         }
 
@@ -1952,8 +1858,8 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// <see cref="Weighted"/>, with each face's share scaled by how much of that face the sun
-        /// actually reaches.
+        /// <see cref="Weighted"/> with each face's share scaled by the fraction of that face the
+        /// sun reaches.
         /// </summary>
         private float WeightedLit(int node, float[] weights)
         {
@@ -1966,6 +1872,10 @@ namespace Thermodynamics.Core
                 + (nodeFaceWeights[b + 5] * nodeSunLit[b + 5] * weights[5]);
         }
 
+        /// <summary>
+        /// A direction's intensity on this node: the per-face weights of a resolved direction,
+        /// each scaled by that face's share of the node's exposed area.
+        /// </summary>
         private float Weighted(int node, float[] weights)
         {
             int b = node * Face.Count;
@@ -2002,11 +1912,10 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Zeroes the per-node conduction figure before a substep accumulates into it.
+        /// Zeroes the per-node conduction diagnostic before a substep accumulates into it.
         ///
-        /// Hoisted out of the pass itself because the pass is now entered many times per substep,
-        /// once per slice — clearing inside it would wipe what earlier slices had added and leave
-        /// the readout showing only the last slice's links.
+        /// Kept out of the pass itself: the pass is entered once per slice, and clearing inside it
+        /// would discard what earlier slices added and leave the readout showing only the last.
         /// </summary>
         private void ClearConductionDiagnostics()
         {
@@ -2028,8 +1937,8 @@ namespace Thermodynamics.Core
 
             float inverseH = h > 0f ? 1f / h : 0f;
 
-            // Hoisted so the loop reads locals rather than fields, and so the JIT can see the
-            // lengths are loop-invariant.
+            // Hoisted so the loop reads locals rather than fields and the array lengths are
+            // visibly loop-invariant.
             if (to > links.Count) to = links.Count;
             int[] fromIndex = linkA;
             int[] toIndex = linkB;
@@ -2047,14 +1956,14 @@ namespace Thermodynamics.Core
                 float difference = temperatures[b] - temperatures[a];
                 if (difference == 0f) continue;
 
-                // One conductance, applied equally and oppositely: what leaves A enters B.
+                // One conductance applied equally and oppositely: what leaves A enters B.
                 float exchange = conductance[i] * difference;
 
                 if (clamp)
                 {
                     // The stricter of the two ends. Taking the smaller keeps the exchange equal
-                    // and opposite — scaling a node's own total instead would bound it and stop
-                    // conserving energy, which is the worse trade of the two.
+                    // and opposite; scaling each node's own total instead would bound the node but
+                    // stop conserving energy.
                     float scale = relaxation[a] < relaxation[b] ? relaxation[a] : relaxation[b];
                     if (scale < 1f) exchange *= scale;
 
@@ -2116,10 +2025,9 @@ namespace Thermodynamics.Core
         /// <summary>
         /// Exchanges heat between each sealed room's air and the surfaces bounding it.
         ///
-        /// Identical in form to <see cref="AccumulateLoops"/> — a lumped mass against a set of
-        /// nodes — because that is what it is. What differs is where the mass comes from: a
-        /// coolant loop carries the fluid its definition declares, and a room carries however much
-        /// air fits in it at the pressure the host reports.
+        /// Same form as <see cref="AccumulateLoops"/>: a lumped mass against a set of nodes. The
+        /// mass differs in origin — a coolant loop carries the fluid its definition declares, a
+        /// room carries the air its volume holds at the pressure the host reports.
         /// </summary>
         private void AccumulateRoomAir(float h)
         {
@@ -2168,18 +2076,11 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Limits a pairwise exchange to the energy that brings both sides to their shared
-        /// equilibrium, so neither can overshoot the other however large the step is.
-        ///
-        /// This is what makes the integrator unconditionally bounded: substepping keeps the
-        /// result accurate, and this keeps it sane when substepping alone is not enough.
-        /// </summary>
-        /// <summary>
         /// Caps a relaxation towards equilibrium at the watts that would exactly reach it.
         ///
-        /// Both arguments carry their sign, and a cap only applies when the two agree: a node
-        /// being warmed cannot be capped by a cooling limit. Where they disagree the exchange is
-        /// already heading away from the limit and there is nothing to cap.
+        /// Both arguments carry their sign and a cap applies only when the two agree: a node being
+        /// warmed cannot be capped by a cooling limit. Where they disagree the exchange is already
+        /// heading away from the limit and there is nothing to cap.
         /// </summary>
         public static float ClampRelaxation(float watts, float wattsToEquilibrium)
         {
@@ -2198,11 +2099,18 @@ namespace Thermodynamics.Core
             return 0f;
         }
 
+        /// <summary>
+        /// Limits a pairwise exchange to the energy that brings both sides to their shared
+        /// equilibrium, so neither can overshoot the other however long the substep is.
+        ///
+        /// Together with the substep count this makes the integrator unconditionally bounded:
+        /// substepping keeps the result accurate, this keeps it finite when substepping is capped.
+        /// </summary>
         public static float ClampExchange(float watts, float h, float difference, float massA, float massB)
         {
             if (h <= 0f) return watts;
 
-            // energy that would equalise the pair exactly
+            // Energy that would equalise the pair exactly.
             float combined = massA + massB;
             if (combined <= 0f) return watts;
 
@@ -2239,8 +2147,8 @@ namespace Thermodynamics.Core
 
                 if (!damageEnabled) continue;
 
-                // Only a node that is actually overheating touches its definition, so the
-                // ordinary case stays inside the arrays.
+                // Only an overheating node dereferences its definition, so the ordinary case
+                // stays within the flat arrays.
                 ThermalNode node = nodes[i];
                 float critical = node.Thermal.CriticalTemperature;
                 if (critical <= 0f || updated <= critical) continue;
@@ -2255,10 +2163,9 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Applies accumulated watts to the coolant loops and the room air.
-        ///
-        /// Kept whole rather than sliced: there are a handful of each against tens of thousands of
-        /// nodes, so slicing them would cost more bookkeeping than the work it spread.
+        /// Applies accumulated watts to the coolant loops and the room air. Run whole rather than
+        /// sliced: there are few of each against tens of thousands of nodes, so slicing would cost
+        /// more bookkeeping than the work it spread.
         /// </summary>
         private void ApplyCoupledWatts(float h)
         {
@@ -2290,13 +2197,9 @@ namespace Thermodynamics.Core
         /// Substeps needed to keep the explicit integrator stable over
         /// <paramref name="deltaSeconds"/>, before the <see cref="MaxSubsteps"/> cap.
         ///
-        /// <para>
-        /// This is a question a host asks *before* deciding to step — whether the grid is
-        /// affordable this frame, what the scheduler should skip — so it brings the mirrored node
-        /// state up to date itself rather than assuming a step has already done it. Reading it
-        /// straight off a solver that has never stepped divided conductance by a thermal mass of
-        /// zero and answered infinity, which is the one answer a caller cannot act on.
-        /// </para>
+        /// Callers ask this before deciding whether to step, so it synchronises the mirrored node
+        /// state itself rather than assuming a step has already done so. On a solver that has never
+        /// stepped, unsynchronised state would divide conductance by a zero thermal mass.
         /// </summary>
         public float RequiredSubsteps(float deltaSeconds)
         {
@@ -2310,16 +2213,11 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// The estimate itself, over state the caller has already synchronised. <see cref="Step"/>
-        /// uses this so that one step does not sync twice.
-        /// </summary>
-        /// <summary>
         /// The environment half of a node's stability demand, resolved once for the whole grid.
         ///
-        /// Split out because three things now need it and they must not drift: the substep
-        /// estimate, the thermal mass floor that bounds what that estimate can ask for, and the
-        /// profile the telemetry reports. A floor computed from a different rate than the estimate
-        /// reads would cap a number nobody is looking at.
+        /// Shared by the substep estimate, the thermal mass floor that bounds it, and the profile
+        /// the telemetry reports; a floor computed from a different rate than the estimate reads
+        /// would cap the wrong figure.
         /// </summary>
         private struct StabilityTerms
         {
@@ -2348,9 +2246,9 @@ namespace Thermodynamics.Core
         /// </summary>
         private float NodeStabilityRate(int i, ref StabilityTerms terms)
         {
-            // Conductance totals cover links, coolant loops and room air alike, and are not
-            // reduced when a mechanism is switched off: over-estimating stiffness costs a
-            // substep, under-estimating it costs stability.
+            // Conductance totals cover links, coolant loops and room air alike and are not reduced
+            // when a mechanism is switched off: over-estimating stiffness costs a substep,
+            // under-estimating it costs stability.
             float rate = nodeConductanceTotal[i];
 
             if (!terms.Exposed || nodeExposedFaces[i] <= 0) return rate;
@@ -2365,6 +2263,10 @@ namespace Thermodynamics.Core
             return rate + (terms.Convection * nodeExposedArea[i]);
         }
 
+        /// <summary>
+        /// The substep estimate over state the caller has already synchronised. <see cref="Step"/>
+        /// uses this so a single step does not synchronise twice.
+        /// </summary>
         private float RequiredSubstepsFromState(float deltaSeconds)
         {
             float worst = 0f;
@@ -2383,8 +2285,8 @@ namespace Thermodynamics.Core
                 if (perLoop > worst) worst = perLoop;
             }
 
-            // Room air is the lightest mass on the grid and touches the most surface, so it is
-            // usually what sets the substep count once a ship is pressurised.
+            // Room air has the lowest capacity and the largest contact area on the grid, so it
+            // usually sets the substep count once a ship is pressurised.
             for (int r = 0; r < roomAir.Count; r++)
             {
                 if (!roomAir[r].HasAir) continue;
@@ -2398,25 +2300,21 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Everything about a grid's substep demand that a report might want, taken in one walk.
+        /// A grid's substep demand broken down for reporting, gathered in one walk.
         ///
         /// <para>
-        /// The substep count is a maximum over every element, so the single number the solver acts
-        /// on says nothing about <em>why</em>. This says why: which element sets it, what the
-        /// distribution behind it looks like, and what capping the demand at each of several
-        /// values would do to both. It is the measurement that turns "set it to four" from a guess
-        /// into a reading.
+        /// The solver acts on a single maximum over every element, which does not say which element
+        /// set it. This reports the responsible element, the distribution behind it, and the effect
+        /// each of several caps would have on both cost and error.
         /// </para>
         ///
         /// <para>
-        /// Every demand here is computed from the block's <em>real</em> heat capacity, not from the
-        /// floored one the solver may be integrating with, so a profile describes the grid rather
-        /// than the settings in force and two configurations can be compared against each other.
+        /// Demands are computed from real heat capacities rather than the floored ones the solver
+        /// may be integrating with, so a profile describes the grid rather than the settings in
+        /// force and two configurations are comparable.
         /// </para>
         ///
-        /// <para>
-        /// O(nodes), so it is meant for a report or a diagnostic rather than for a step.
-        /// </para>
+        /// <para>O(nodes): intended for reports and diagnostics, not for a step.</para>
         /// </summary>
         public class SubstepProfile
         {
@@ -2427,11 +2325,9 @@ namespace Thermodynamics.Core
             /// <summary>
             /// Caps the projection evaluates.
             ///
-            /// Dense at the bottom because that is where the decision is. Cost is linear in the
-            /// cap, so every step down the list is worth as much again — but the population it
-            /// reaches is not linear at all: on a field ship 4 raised six per cent of the blocks
-            /// and 2 raised twenty-four, so the interesting question is which value sits on the
-            /// knee, and it cannot be answered by a list that jumps over it.
+            /// Dense at the low end, where the choice is made. Cost falls linearly with the cap,
+            /// but the share of blocks the cap reaches does not, so the useful reading is where
+            /// the knee falls and a sparser list would step over it.
             /// </summary>
             public static readonly int[] ProjectedCaps = { 32, 16, 8, 6, 4, 3, 2, 1 };
 
@@ -2442,7 +2338,7 @@ namespace Thermodynamics.Core
             /// <summary>Substeps a full step would need, from real capacities and no cap.</summary>
             public float RequiredSubsteps;
 
-            /// <summary>Substeps a full step needs as things actually stand, cap included.</summary>
+            /// <summary>Substeps a full step needs under the settings in force, cap included.</summary>
             public float RequiredSubstepsInForce;
 
             public float WorstNodeDemand;
@@ -2451,7 +2347,7 @@ namespace Thermodynamics.Core
             /// <summary>Share of the worst node's stability rate that is conduction rather than environment.</summary>
             public float WorstNodeConductionShare;
 
-            /// <summary>The stiffest room air and coolant loop, which the block cap cannot reach.</summary>
+            /// <summary>Stiffest room air and coolant loop; neither is reachable by the block cap.</summary>
             public float WorstRoomAirDemand;
             public int WorstRoomAirIndex = -1;
             public float WorstLoopDemand;
@@ -2473,11 +2369,9 @@ namespace Thermodynamics.Core
         /// </summary>
         public SubstepProfile ProfileSubsteps()
         {
-            // Bringing the mirrored state up to date is exactly what must not happen while a step
-            // is part way through one: a step spans many frames now, and SyncNodeState rewrites
-            // the row the publish stage measures its change against. Observing the simulation has
-            // to leave it where it found it, so mid-step the profile reads what the step is
-            // already using rather than refreshing it.
+            // The mirrored state must not be refreshed while a step is in flight: a step spans
+            // many frames, and SyncNodeState rewrites the row the publish stage measures its
+            // change against. Mid-step the profile reads the state the step is already using.
             if (!StepInFlight)
             {
                 RebuildLinksIfNeeded();
@@ -2497,8 +2391,8 @@ namespace Thermodynamics.Core
             float[] edges = SubstepProfile.DemandEdges;
             int[] caps = SubstepProfile.ProjectedCaps;
 
-            // The floor cannot reach room air or coolant loops, so whatever they demand is a
-            // floor under every projection below.
+            // The block cap cannot reach room air or coolant loops, so their demand is a lower
+            // bound on every projection below.
             for (int l = 0; l < loops.Count; l++)
             {
                 CoolantLoop loop = loops[l];
@@ -2539,8 +2433,8 @@ namespace Thermodynamics.Core
                 profile.CapRequiredSubsteps[c] = coupled > caps[c] ? caps[c] : coupled;
             }
 
-            // A node appended during a step in flight has no mirrored row yet — it joins the next
-            // step. Walking past the arrays for it would read another block's conductance.
+            // A node appended during a step in flight has no mirrored row yet and joins the next
+            // step; reading past the arrays would return another block's conductance.
             int count = nodes.Count;
             if (count > nodeConductanceTotal.Length) count = nodeConductanceTotal.Length;
             profile.Nodes = count;
@@ -2550,8 +2444,8 @@ namespace Thermodynamics.Core
                 float rate = NodeStabilityRate(i, ref terms);
                 float conduction = nodeConductanceTotal[i];
 
-                // The block's own capacity, not the one the solver may be integrating with, so
-                // the profile describes the ship rather than the settings.
+                // The block's real capacity, not the floored one the solver may be integrating
+                // with, so the profile describes the grid rather than the settings.
                 float capacity = nodes[i].ThermalMass;
                 float demand = capacity <= 0f ? 0f : (rate / capacity) * scale;
 
@@ -2585,8 +2479,8 @@ namespace Thermodynamics.Core
             float worst = profile.WorstNodeDemand > coupled ? profile.WorstNodeDemand : coupled;
             profile.RequiredSubsteps = worst <= 0f ? 1f : worst;
 
-            // The private estimate, not the public one: the public entry point synchronises first,
-            // which is the thing this method must not do mid-step.
+            // The private estimate: the public entry point synchronises first, which must not
+            // happen mid-step.
             profile.RequiredSubstepsInForce = RequiredSubstepsFromState(settings.StepSeconds);
 
             return profile;
@@ -2603,14 +2497,11 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Set when something structural changed the conductance a node sees, so the totals are
+        /// Set when a structural change altered the conductance a node sees, so the totals are
         /// recomputed once before they are next read rather than once per change.
         ///
-        /// The distinction matters because the changes arrive in bursts. A ship pressurising is
-        /// every room gaining air within a second or two, and each one used to drive its own pass
-        /// over every link, every coolant loop and every room on the grid — so a station with two
-        /// thousand compartments paid two thousand passes over two million links to learn what one
-        /// pass would have told it.
+        /// Such changes arrive in bursts — a ship pressurising is every room gaining air within a
+        /// second or two — and each pass costs a walk over every link, loop and room on the grid.
         /// </summary>
         private bool conductanceTotalsDirty = true;
 
@@ -2621,25 +2512,25 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Raises the mirrored heat capacity of any node whose conduction alone would demand more
-        /// than <c>MaxSubstepsPerBlock</c> substeps of the whole grid.
+        /// Raises the mirrored heat capacity of any node that would otherwise demand more than
+        /// <c>MaxSubstepsPerBlock</c> substeps of the whole grid.
         ///
         /// <para>
-        /// A node is stable over a substep of <c>h</c> while <c>h * G &lt;= C</c>, so the substeps
-        /// a node asks of a step of <c>dt</c> are <c>dt * G / (C * safety)</c>. Holding that at or
-        /// below the cap is one rearrangement: <c>C &gt;= G * dt / (safety * cap)</c>. Nodes at or
-        /// above it are untouched, which on a real hull is nearly all of them.
+        /// A node is stable over a substep of <c>h</c> while <c>h * G &lt;= C</c>, so a step of
+        /// <c>dt</c> demands <c>dt * G / (C * safety)</c> substeps. Holding that at or below the
+        /// cap rearranges to <c>C &gt;= G * dt / (safety * cap)</c>. Nodes already at or above the
+        /// floor are untouched.
         /// </para>
         ///
         /// <para>
         /// Only the mirrored row moves. <c>ThermalNode.ThermalMass</c> keeps the block's real heat
-        /// capacity, so the terminal readout, the energy figure and anything a host asks still
-        /// describe the block rather than the approximation used to integrate it.
+        /// capacity, so terminal readouts, energy figures and host queries still describe the block
+        /// rather than the approximation used to integrate it.
         /// </para>
         ///
         /// <para>
-        /// Applied after the conductance totals and before the link mass factors, because it
-        /// needs the first and invalidates the second.
+        /// Applied after the conductance totals and before the link mass factors: it reads the
+        /// first and invalidates the second.
         /// </para>
         /// </summary>
         private void ApplyThermalMassFloor()
@@ -2668,7 +2559,7 @@ namespace Thermodynamics.Core
                 FlooredNodes++;
             }
 
-            // Every link's reduced mass is a function of the two capacities either side of it.
+            // A link's reduced mass is a function of the two capacities either side of it.
             if (moved) linkMassFactorFrom = 0;
 
             for (int l = 0; l < loops.Count; l++)
@@ -2687,33 +2578,25 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Total conductance into a coolant loop and into a room's air, summed once per rebuild
+        /// Total conductance into each coolant loop and each room's air, summed once per rebuild
         /// rather than once per caller.
         ///
         /// <para>
-        /// These are read by the stability estimate and by the thermal mass floor, and both of
-        /// those run twice in a step — once through <c>AffordableStepSeconds</c> asking what the
-        /// step can afford, and once inside <c>BeginStep</c> taking it. So a step was walking
-        /// every room link four times to re-sum a number that only changes when the graph is
-        /// rebuilt. On a 126,731-block hull that is 139,120 room links walked four times before
-        /// the first substep runs, for four identical answers.
+        /// The stability estimate and the thermal mass floor both read these, and both run twice
+        /// per step — once for <c>AffordableStepSeconds</c> and once inside <c>BeginStep</c> — so
+        /// without the cache a step re-sums every room link four times for four identical answers.
         /// </para>
         ///
         /// <para>
-        /// They are filled by the same pass that recomputes the node conductance totals and
-        /// invalidated by the same flag, because they go stale for exactly the same reasons: a
-        /// loop rebuilt, a room re-derived, a block placed or removed.
+        /// Filled by the pass that recomputes the node conductance totals and invalidated by the
+        /// same flag: they go stale for the same reasons — a loop rebuilt, a room re-derived, a
+        /// block placed or removed.
         /// </para>
         ///
         /// <para>
-        /// <strong>It is a small win, and worth saying so.</strong> Measured on that hull, the
-        /// call this sits in goes from 0.426 ms to 0.346 ms — about a fifth of it — but that call
-        /// happens twice a step against a step of some ninety milliseconds, so it is two parts in
-        /// a thousand. It was first estimated at five times that from the link count alone, which
-        /// is the usual result of reasoning about cost instead of measuring it. Kept because it
-        /// removes work that grows with the wall area of every pressurised compartment, and
-        /// because a total that is summed in one place is easier to reason about than one summed
-        /// in four.
+        /// The saving is small in absolute terms (measured at roughly two parts in a thousand of
+        /// a step) but it removes work that grows with the wall area of every pressurised
+        /// compartment.
         /// </para>
         /// </summary>
         private float[] loopConductanceTotal = new float[0];
@@ -2766,11 +2649,9 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// The capacity the integrator should use for a loop: its own, unless the cap raised it.
-        ///
-        /// Falls back to the real capacity rather than to zero, because the effective row is only
-        /// filled while the cap is on and dividing by zero here would produce an infinite
-        /// temperature rather than an obviously wrong one.
+        /// Capacity the integrator uses for a loop: the loop's own unless the cap raised it. Falls
+        /// back to the real capacity rather than zero, since the effective row is filled only while
+        /// the cap is on and a zero divisor would yield an infinite temperature.
         /// </summary>
         private float EffectiveLoopMass(int index)
         {
@@ -2783,6 +2664,10 @@ namespace Thermodynamics.Core
             return loopEffectiveMass[index];
         }
 
+        /// <summary>
+        /// Capacity the integrator uses for a room's air. Same fallback as
+        /// <see cref="EffectiveLoopMass"/>.
+        /// </summary>
         private float EffectiveRoomMass(int index)
         {
             if (settings.MaxSubstepsPerBlock <= 0 || index >= roomEffectiveMass.Length
@@ -2794,7 +2679,7 @@ namespace Thermodynamics.Core
             return roomEffectiveMass[index];
         }
 
-        /// <summary>Nodes the floor raised on the last step. Zero when the cap is off.</summary>
+        /// <summary>Nodes whose capacity the floor raised on the last step. Zero when the cap is off.</summary>
         public int FlooredNodes { get; private set; }
 
         private void RecomputeConductanceTotals()
@@ -2844,11 +2729,13 @@ namespace Thermodynamics.Core
             }
         }
 
+        /// <summary>
+        /// Grows the per-node, per-loop and per-room buffers to cover the current element counts.
+        /// </summary>
         /// <returns>
-        /// True when the node buffers were reallocated, which throws away anything accumulated
-        /// in them. Only <see cref="nodeConductanceTotal"/> is accumulated rather than rewritten
-        /// each step, so only that has to be rebuilt — but it has to be, and silently returning
-        /// void made an incremental caller unable to know.
+        /// True when the node buffers were reallocated, discarding anything accumulated in them.
+        /// Only <see cref="nodeConductanceTotal"/> accumulates across calls rather than being
+        /// rewritten each step, so incremental callers must check this and rebuild it.
         /// </returns>
         private bool EnsureBuffers()
         {
@@ -2858,17 +2745,15 @@ namespace Thermodynamics.Core
             {
                 grew = true;
 
-                // Growing reallocates, which zeroes the conductance totals — the one node array
-                // that is accumulated across calls rather than rewritten every step. Everything
-                // else here is refilled from the nodes by the resync below; this is not, so it
-                // has to be marked for a recompute or every surviving node silently loses the
+                // Reallocating zeroes the conductance totals, the one node array accumulated
+                // across calls rather than rewritten each step. The resync below refills the rest,
+                // so this must be marked for recompute or every surviving node loses the
                 // conductance it sees, and the substep estimate with it.
                 conductanceTotalsDirty = true;
-                // A quarter more, not double. Around fourteen arrays are indexed by node, so
-                // doubling leaves a settled grid carrying a whole spare copy of each — about ten
-                // megabytes on a 127,000-block ship, held for as long as the grid exists.
-                // Doubling is the right policy for something appended to in a tight loop; these
-                // grow when a block is placed, which is not that.
+
+                // Grow by a quarter rather than doubling. Around fourteen arrays are indexed by
+                // node, so doubling leaves a settled grid holding a spare copy of each for its
+                // lifetime. These grow when a block is placed, not in a tight append loop.
                 int size = Math.Max(16, nodes.Count + (nodes.Count / 4) + 16);
                 nodeWatts = new float[size];
                 nodeTemperatures = new float[size];
@@ -2928,28 +2813,23 @@ namespace Thermodynamics.Core
             }
         }
 
-        /// <summary>The hottest node, or null when the grid has none.</summary>
-        /// <summary>The hottest node as of the last step, kept by the step's own write-back.</summary>
+        /// <summary>Index of the hottest node as of the last step, set by the step's write-back.</summary>
         private int hottestNode = -1;
 
         /// <summary>
-        /// The hottest block on the grid, or null when nothing has stepped yet.
+        /// The hottest node on the grid, or null when the grid has none.
         ///
-        /// Answered from what the last step already worked out rather than by a fresh pass. The
-        /// figure feeds the cockpit summary, the crosshair readout and the telemetry report; it
-        /// was being recomputed every four steps for every client, which on a large grid is a
-        /// walk over every node to answer a question the step had the numbers for.
-        ///
-        /// A host that changes a temperature from outside a step — loading a save, a grid split —
-        /// gets an answer one step out of date, which is what every consumer of it already
-        /// tolerates: it is refreshed on a cadence and displayed to a human.
+        /// Answered from the index the last step recorded rather than by a fresh pass; the figure
+        /// feeds the cockpit summary, the crosshair readout and the telemetry report, all of which
+        /// sample on a cadence. A temperature changed from outside a step — a save load, a grid
+        /// split — is reflected one step later. Falls back to a linear scan when the index is
+        /// stale.
         /// </summary>
         public ThermalNode HottestNode()
         {
             if (hottestNode < 0 || hottestNode >= nodes.Count)
             {
-                // Nothing has stepped, or the node list shrank under it. Fall back to a walk so
-                // the answer is never simply wrong.
+                // Nothing has stepped, or the node list shrank under the cached index.
                 ThermalNode found = null;
                 for (int i = 0; i < nodes.Count; i++)
                 {
@@ -2961,7 +2841,7 @@ namespace Thermodynamics.Core
             return nodes[hottestNode];
         }
 
-        /// <summary>Sets every node to one temperature. Test and load helper.</summary>
+        /// <summary>Sets every node and coolant loop to one temperature. Test and load helper.</summary>
         public void SetAllTemperatures(float kelvin)
         {
             for (int i = 0; i < nodes.Count; i++)

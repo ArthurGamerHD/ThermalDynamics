@@ -8,9 +8,9 @@ namespace Thermodynamics.Core
     /// One grid's complete thermal simulation: block layout, surface map, room mapping, solver,
     /// coolant loops and scheduling, wired together.
     ///
-    /// This is the whole public surface a host needs. The game adapter mirrors block changes in
-    /// and pumps <see cref="Update"/> once a frame; the test harness does exactly the same thing
-    /// with synthetic data.
+    /// This is the entire surface a host needs: mirror block changes in and call
+    /// <see cref="Update"/> once a frame. The game adapter and the test harness both drive it
+    /// this way.
     /// </summary>
     public class ThermalSimulation
     {
@@ -32,8 +32,8 @@ namespace Thermodynamics.Core
         public float DefaultTemperature = 293.15f;
 
         /// <summary>
-        /// Optional stage timing. Null means no instrumentation at all, which is what shipping
-        /// worlds run with; the cost of leaving the hooks in is one null check per stage.
+        /// Optional stage timing. Null disables instrumentation entirely, which is the shipping
+        /// default; the hooks then cost one null check per stage.
         /// </summary>
         public ISimulationProfiler Profiler;
 
@@ -50,8 +50,8 @@ namespace Thermodynamics.Core
             solver = new ThermalSolver(settings, grid, surfaces);
             scheduler = new SimulationScheduler(settings);
 
-            // One instance shared by both, so a caller reads one set of counters for the whole
-            // update rather than adding up two objects' and hoping it caught them all.
+            // One instance shared by both, so a caller reads a single set of counters for the
+            // whole update rather than summing two.
             solver.Work = work;
             rooms.Work = work;
 
@@ -59,9 +59,8 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// How much work this simulation's one-shot stages have done. Counted, not timed — see
-        /// <see cref="SimulationWork"/> for why a load test wants counts and a stutter wants
-        /// milliseconds.
+        /// Work counters for this simulation's one-shot stages. Counted rather than timed; see
+        /// <see cref="SimulationWork"/>.
         /// </summary>
         public SimulationWork Work { get { return work; } }
 
@@ -89,12 +88,11 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Blocks damaged by heat during the last <see cref="Update"/> or
-        /// <see cref="StepExact"/>, across every step it ran.
+        /// Blocks damaged by heat during the last <see cref="Update"/> or <see cref="StepExact"/>,
+        /// across every step it ran.
         ///
-        /// The solver clears its own list each step, so a host reading that directly would miss
-        /// the damage from all but the final step of a multi-step update — which is exactly what
-        /// happens whenever the simulation is running faster than the host polls.
+        /// Accumulated here because the solver clears its own list each step; a host reading the
+        /// solver directly would see only the final step of a multi-step update.
         /// </summary>
         public IList<OverheatEvent> Overheats
         {
@@ -103,8 +101,8 @@ namespace Thermodynamics.Core
 
         /// <summary>
         /// Threshold crossings during the last <see cref="Update"/> or <see cref="StepExact"/>,
-        /// across every step it ran. Accumulated here for the same reason overheats are: the
-        /// solver's own list only survives one step.
+        /// across every step it ran. Accumulated here because the solver's own list survives only
+        /// one step.
         /// </summary>
         public IList<ThresholdCrossing> Crossings
         {
@@ -121,13 +119,11 @@ namespace Thermodynamics.Core
         private readonly List<ThresholdCrossing> crossings = new List<ThresholdCrossing>();
 
         /// <summary>
-        /// Simulated seconds this simulation has chosen not to advance, because advancing them
-        /// would have cost more than one step is allowed.
+        /// Simulated seconds this simulation has declined to advance because doing so would exceed
+        /// what one step is allowed to cost.
         ///
-        /// Reported rather than hidden. A grid running below real time is a legitimate state and
-        /// the one this trade is for, but it is also the difference between a ship that cools in
-        /// a minute and one that takes three, so it has to be visible to anyone reading a report
-        /// and wondering why heat is moving slowly.
+        /// A grid running below real time is an intended state under the work budget, but it also
+        /// changes how long the grid takes to cool, so it is reported rather than absorbed.
         /// </summary>
         public double SimulatedSecondsSkipped { get; private set; }
 
@@ -144,7 +140,7 @@ namespace Thermodynamics.Core
             }
         }
 
-        /// <summary>Simulated seconds actually advanced.</summary>
+        /// <summary>Simulated seconds advanced.</summary>
         public double SimulatedSecondsRun { get; private set; }
 
         /// <summary>
@@ -167,14 +163,11 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// The longest step this grid can afford, in simulated seconds, given how many link
-        /// visits a step is allowed and how stiff the grid currently is.
+        /// Longest step this grid can afford in simulated seconds, from the link visits a step is
+        /// allowed and the grid's current stiffness. Returns the full step whenever it fits.
         ///
-        /// Returns the full step whenever it fits, which on anything below roughly a hundred
-        /// thousand blocks is always.
-        ///
-        /// Public so a benchmark can measure what a tick actually pays rather than what an
-        /// unbounded step would cost — the two diverge on exactly the grids the budget is for.
+        /// Public so a benchmark can measure the bounded cost rather than the unbounded one; the
+        /// two diverge on exactly the grids the budget exists for.
         /// </summary>
         public float AffordableStepSeconds(float seconds)
         {
@@ -184,38 +177,34 @@ namespace Thermodynamics.Core
             int links = solver.LinkCount;
             if (links <= 0) return seconds;
 
-            // At least one substep, however large the grid: a step that cannot afford a single
-            // pass over its links is a grid that cannot be simulated at all, and running slowly
-            // is better than not running.
+            // At least one substep whatever the grid size: a step that cannot afford a single
+            // pass over its links would not advance at all.
             int substepBudget = budgetVisits / links;
             if (substepBudget < 1) substepBudget = 1;
 
             float required = solver.RequiredSubsteps(seconds);
             if (required <= substepBudget) return seconds;
 
-            // The substep estimate is proportional to the step length, so scaling the length by
-            // the ratio lands exactly on the budget.
+            // The substep estimate is proportional to step length, so scaling the length by the
+            // ratio lands exactly on the budget.
             return seconds * (substepBudget / required);
         }
 
         /// <summary>
         /// Fractional work credit carried between frames, in element visits.
         ///
-        /// A frame is owed <c>frameSeconds x StepsPerSecond</c> of a step. On a large grid that is
-        /// thousands of element visits and the fraction is noise; on a small one it is less than a
-        /// single visit, and dropping it would mean a small grid never advancing at all.
+        /// A frame is owed <c>frameSeconds * StepsPerSecond</c> of a step. On a small grid that is
+        /// less than one element visit, so discarding the fraction would stall it entirely.
         /// </summary>
         private double workCredit;
 
         /// <summary>
-        /// The call interval the budgeted passes were sized against: the ten-frame tick the host
-        /// used to poll on.
+        /// Call interval the budgeted passes were sized against: a ten-frame tick.
         ///
-        /// Their budgets are per call, and the host now calls every frame instead of every tenth,
-        /// so taking them at face value would run the room mapper and the exposure refresh ten
-        /// times faster — and cost ten times as much per second — for no reason anyone asked for.
-        /// Scaling by how long the caller's frame actually was keeps the rate what it always was
-        /// and makes it independent of how often the host chooses to call.
+        /// Those budgets are per call, and the host calls every frame, so applying them directly
+        /// would run the room mapper and the exposure refresh ten times faster and ten times more
+        /// expensively. Scaling by the caller's actual frame length holds the rate constant and
+        /// independent of call frequency.
         /// </summary>
         private const float BudgetReferenceSeconds = 10f / 60f;
 
@@ -227,7 +216,7 @@ namespace Thermodynamics.Core
         {
             credit += perTick * (frameSeconds / (double)BudgetReferenceSeconds);
 
-            // Never bank more than one tick's worth: a long frame or a resumed session must not
+            // Never bank more than one tick's worth, so a long frame or a resumed session cannot
             // buy a burst of flood fill.
             if (credit > perTick) credit = perTick;
 
@@ -240,19 +229,18 @@ namespace Thermodynamics.Core
         public long StepsCompleted { get; private set; }
 
         /// <summary>
-        /// True when the next call will begin a step and therefore wants a fresh environment
-        /// sample.
+        /// True when the next call will begin a step and so needs a fresh environment sample.
         ///
-        /// The host builds a sample from a planet lookup and, occasionally, a raycast. Now that
-        /// the simulation is advanced every frame rather than every tenth, sampling every call
-        /// would multiply that by ten for readings that only change between steps.
+        /// A sample costs the host a planet lookup and sometimes a raycast. The simulation is
+        /// advanced every frame, so sampling unconditionally would repeat that work for readings
+        /// that only change between steps.
         /// </summary>
         public bool NeedsEnvironmentSample
         {
             get { return !solver.StepInFlight; }
         }
 
-        /// <summary>True while a step is part way through its window.</summary>
+        /// <summary>True while a step is part way through its frame window.</summary>
         public bool StepInFlight
         {
             get { return solver.StepInFlight; }
@@ -315,8 +303,8 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Call after changing anything that alters sealing or mounting on an existing block —
-        /// a door opening, a block finishing construction.
+        /// Call after a change to an existing block's sealing or mounting, such as a door opening
+        /// or a block finishing construction.
         /// </summary>
         public void RefreshBlock(BlockInstance block)
         {
@@ -328,16 +316,14 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Call after a change that alters only what a block <em>seals</em> — a door opening or
+        /// Call after a change that alters only what a block seals, such as a door opening or
         /// closing.
         ///
-        /// This does not remap the grid. A door does not move a wall: the rooms either side of it
-        /// are the same rooms whether it is open or shut, and the mapper already knows the door
-        /// as a portal between them. So the work here is to update the live surface bits, resolve
-        /// the portals into which rooms now reach open air, and refresh the exposure of the
-        /// blocks facing the rooms that changed. That is a walk over the doors and a handful of
-        /// blocks, against a flood fill of the whole bounding box and a pass over every node —
-        /// which, on a ship with a busy airlock, is the difference between free and not.
+        /// Does not remap the grid: the rooms either side of a door are the same rooms whether it
+        /// is open or shut, and the mapper already holds the door as a portal between them. The
+        /// work is to update the live surface bits, re-resolve which rooms reach open air through
+        /// their portals, and refresh exposure for the blocks facing the rooms that changed —
+        /// proportional to the doors and affected rooms rather than to the grid.
         /// </summary>
         public void RefreshBlockSealing(BlockInstance block)
         {
@@ -347,8 +333,8 @@ namespace Thermodynamics.Core
             surfaces.RemoveBlock(block);
             surfaces.AddBlock(block);
 
-            // A block the mapper has never seen as a door — one placed since the last pass —
-            // has no portal, so the map cannot answer for it and has to be rebuilt.
+            // A door the mapper has not yet seen — one placed since the last pass — has no portal,
+            // so the map cannot resolve it and must be rebuilt.
             if (!rooms.Knows(block))
             {
                 rooms.RequestRestart(grid);
@@ -364,38 +350,32 @@ namespace Thermodynamics.Core
             Begin(SimulationPhase.Exposure);
             solver.RefreshExposureAround(rooms.Map, rooms.Map.ChangedRooms);
 
-            // A room that has just been opened stops holding air, and one that has just been shut
-            // starts. Both are rebuilds of a room, not of the ship: the work is proportional to
-            // the rooms that changed.
+            // An opened room stops holding air and a closed one starts. Both rebuild a room rather
+            // than the grid, so the work is proportional to the rooms that changed.
             solver.RebuildRoomAir(rooms.Map);
             End(SimulationPhase.Exposure);
         }
 
         /// <summary>
-        /// True while some budgeted pass still has work left — the room flood fill, or the
-        /// exposure refresh that follows it.
-        ///
-        /// Worth having as one question rather than two. Now that both stages are spread over
-        /// ticks, a caller that waits on only the mapper stops one stage early, and everything
-        /// that waits for a grid to settle — the benchmarks, the load tests, the scenario runner
-        /// — was written when the mapper was the only budgeted thing there was.
+        /// True while any budgeted pass still has work left: the room flood fill or the exposure
+        /// refresh that follows it. Callers waiting for a grid to settle should test this rather
+        /// than the mapper alone, which would stop one stage early.
         /// </summary>
         public bool HasPendingWork
         {
             get { return rooms.HasWorkPending || solver.ExposureRefreshPending; }
         }
 
-        /// <summary>The air masses of the grid's sealed rooms.</summary>
+        /// <summary>Air masses of the grid's sealed rooms.</summary>
         public IList<RoomAirNode> RoomAir
         {
             get { return solver.RoomAir; }
         }
 
         /// <summary>
-        /// Sets how full of air the room containing <paramref name="cell"/> is, 0..1.
-        ///
-        /// The simulation cannot work this out for itself — pressurisation is the host's model,
-        /// not a thermal property — so a room holds no air until something reports that it does.
+        /// Sets the air fill fraction of the room containing <paramref name="cell"/>, 0..1.
+        /// Pressurisation belongs to the host's model, so a room holds no air until the host
+        /// reports otherwise.
         /// </summary>
         /// <returns>True when a sealed room took the value.</returns>
         public bool SetRoomPressure(Vector3I cell, float pressure)
@@ -403,7 +383,7 @@ namespace Thermodynamics.Core
             return solver.SetRoomPressure(rooms.Map, cell, pressure);
         }
 
-        /// <summary>The air of the room containing a cell, or null when it holds none.</summary>
+        /// <summary>Air node of the room containing a cell, or null when it holds no air.</summary>
         public RoomAirNode GetRoomAir(Vector3I cell)
         {
             return solver.GetRoomAir(rooms.Map, cell);
@@ -416,12 +396,12 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// The heat pump a block drives, or null when the block is not one.
+        /// The heat pump a block drives, or null when the block is not a pump.
         ///
-        /// The host owns whether a pump runs: it holds the terminal switch and knows whether the
-        /// grid could supply the power. Set <see cref="HeatPumpDevice.Enabled"/> and
+        /// The host owns whether a pump runs, since it holds the terminal switch and the grid's
+        /// power state. Set <see cref="HeatPumpDevice.Enabled"/> and
         /// <see cref="HeatPumpDevice.PowerAvailable"/> on the returned device, and read
-        /// <see cref="HeatPumpDevice.LastPowerWatts"/> back to know what to bill for.
+        /// <see cref="HeatPumpDevice.LastPowerWatts"/> back to bill for the power drawn.
         /// </summary>
         public HeatPumpDevice GetHeatPump(BlockInstance block)
         {
@@ -467,13 +447,12 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Reapplies settings that were changed after the simulation was built.
+        /// Reapplies settings changed after the simulation was built.
         ///
-        /// Most settings are read straight off the shared object every step and need nothing.
-        /// These three do not: heat capacities are cached per node, coolant loops are built or not
-        /// built according to a switch, and room air is built the same way. Checking a revision
-        /// number costs one integer comparison per update against reading nothing at all, and it
-        /// is what makes every switch a live switch.
+        /// Most settings are read from the shared object each step and need no action. Three do
+        /// not: heat capacities are cached per node, and coolant loops and room air are built or
+        /// skipped according to a switch. Guarded by a revision comparison, so every setting can
+        /// be changed live for the cost of one integer compare per update.
         /// </summary>
         private void ApplySettingsIfChanged()
         {
@@ -546,22 +525,18 @@ namespace Thermodynamics.Core
                 Begin(SimulationPhase.Topology);
                 topologyDirty = false;
 
-                // Rebuilt here rather than left dirty for the solver to notice.
-                //
-                // The graph has to exist before the next step either way, so deferring it saved
-                // nothing — it only moved the cost onto a tick that was also going to integrate,
-                // and billed it to the solver stage. A report then blamed the solver for a stall
-                // that was a topology rebuild, which is the opposite of what stage timings are
-                // for. Doing it here also puts the rebuild on the earliest tick after the change
-                // rather than on the next stepping one, so the two costs land separately more
-                // often than not.
-                // Whichever route is valid: blocks placed are linked in place, anything that
-                // could have invalidated an existing link rebuilds the graph.
+                // Rebuilt here rather than left dirty for the solver to discover. The graph must
+                // exist before the next step either way, so deferring only moves the cost onto a
+                // tick that also integrates and bills it to the solver stage. Rebuilding here also
+                // lands it on the earliest tick after the change rather than the next stepping
+                // one, so the two costs usually fall on separate frames.
+                // Whichever route is valid: placed blocks are linked incrementally, anything that
+                // could have invalidated an existing link forces a full rebuild.
                 solver.BuildLinksIfNeeded();
                 RebuildLoops();
 
-                // A pump is bound to the two nodes either side of it, so whatever changed may
-                // have been one of them.
+                // A pump is bound to the nodes either side of it, either of which may have
+                // changed.
                 solver.RebuildHeatPumps();
                 rooms.RequestRestart(grid);
                 End(SimulationPhase.Topology);
@@ -591,8 +566,8 @@ namespace Thermodynamics.Core
                 bool more = solver.StepExposureRefresh(Share(ref exposureCredit,
                     SimulationScheduler.ExposureBudget(solver.Nodes.Count), frameSeconds));
 
-                // The air of a room is built from the blocks bounding it, so it is rebuilt once
-                // the exposure they carry is current — not part way through.
+                // A room's air is built from the blocks bounding it, so it is rebuilt only once
+                // their exposure is current.
                 if (!more) solver.RebuildRoomAir(rooms.Map);
 
                 End(SimulationPhase.Exposure);
@@ -604,17 +579,17 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Does this frame's share of the current step, and starts the next one when it finishes.
+        /// Performs this frame's share of the current step, and starts the next one when it
+        /// completes.
         ///
-        /// The share is the whole point. A step covers <c>1 / StepsPerSecond</c> of a second — at
-        /// the default settings, fifteen frames — and the simulation used to do all of it on one
-        /// of those frames and nothing on the other fourteen. The work is the same either way;
-        /// arriving in a lump is what a player feels. So each frame is given the fraction of the
-        /// step that its own length is of the window: <c>frameSeconds x StepsPerSecond</c> of it.
+        /// A step covers <c>1 / StepsPerSecond</c> of a second — fifteen frames at the default
+        /// settings — and is spread evenly across them rather than run whole on one. Each frame is
+        /// given the fraction of the step its own length represents:
+        /// <c>frameSeconds * StepsPerSecond</c>.
         ///
-        /// That expression is where <c>Frequency</c> and <c>SimulationSpeed</c> enter — they are
-        /// what <c>StepsPerSecond</c> is made of — so raising either makes every frame do
-        /// proportionally more, rather than making the lumps arrive closer together.
+        /// <c>Frequency</c> and <c>SimulationSpeed</c> are the factors of <c>StepsPerSecond</c>,
+        /// so raising either makes every frame do proportionally more work rather than making
+        /// whole steps arrive more often.
         /// </summary>
         private void AdvanceSolver(float frameSeconds, EnvironmentSample sample)
         {
@@ -639,8 +614,8 @@ namespace Thermodynamics.Core
 
             workCredit += solver.StepWorkUnits * (double)frameSeconds * settings.StepsPerSecond;
 
-            // A frame that ran long, or a session that was paused, must not be allowed to bank
-            // enough credit to do several steps at once — that is the lump this exists to avoid.
+            // A long frame or a paused session must not bank enough credit to run several steps
+            // at once, which is the lump this pacing exists to avoid.
             double ceiling = solver.StepWorkUnits;
             if (workCredit > ceiling) workCredit = ceiling;
 
@@ -655,13 +630,13 @@ namespace Thermodynamics.Core
                 return;
             }
 
-            // What the step did not need goes back into the credit rather than being discarded,
-            // or the grid runs a little below the rate it was configured for — the estimate a
-            // budget is sized from is proportional, not exact.
+            // Unspent budget returns to the credit rather than being discarded. The work estimate
+            // is proportional rather than exact, so discarding it would run the grid slightly below
+            // its configured rate.
             workCredit += budget - solver.LastAdvanceWork;
 
-            // The next step starts on the next frame, so a completion never drags a second step
-            // in behind it. That is the rule that keeps a frame's cost bounded.
+            // The next step starts on the following frame, so a completion never pulls a second
+            // step in behind it. This is what bounds a frame's cost.
             CollectStepOutput();
         }
 
@@ -685,11 +660,10 @@ namespace Thermodynamics.Core
         {
             ApplySettingsIfChanged();
 
-            // "Exactly this many steps from here" cannot mean "finish whatever the frame pacing
-            // had half done first, using an environment from some earlier moment". A caller that
-            // mixes the two — a scenario taking over a simulation the host had been updating — is
-            // otherwise offset by a fraction of a step, which is enough to make two runs of the
-            // same scenario disagree.
+            // Any step the frame pacing left part done is abandoned rather than finished against
+            // an environment sampled earlier. Without this, a caller that mixes the two — a
+            // scenario taking over a simulation the host was updating — is offset by a fraction of
+            // a step, and two runs of the same scenario disagree.
             solver.AbandonStep();
             workCredit = 0d;
             EnvironmentState state = EnvironmentSolver.Solve(settings, planet, sample);
@@ -699,8 +673,8 @@ namespace Thermodynamics.Core
         // ---- persistence -------------------------------------------------------------------
 
         /// <summary>
-        /// How many rooms took a saved air temperature on the last <see cref="Load"/>. Reported
-        /// rather than returned because the return value is a block count the host already logs.
+        /// Rooms that took a saved air temperature on the last <see cref="Load"/>. Exposed as a
+        /// property because <see cref="Load"/> returns a block count.
         /// </summary>
         public int RoomsRestored { get; private set; }
 
@@ -721,9 +695,9 @@ namespace Thermodynamics.Core
                 loops.Add(new StoredLoop(loop.Signature, loop.Temperature));
             }
 
-            // Only air that means something is written. An uninitialised room holds a placeholder
-            // — ambient, standing in until the room is first filled — and saving that would turn a
-            // guess into a remembered fact.
+            // Only initialised air is written. An uninitialised room holds ambient as a
+            // placeholder until it is first filled, and saving that would persist a placeholder as
+            // a measured value.
             IList<RoomAirNode> air = solver.RoomAir;
             List<StoredRoom> rooms = new List<StoredRoom>(air.Count);
             for (int i = 0; i < air.Count; i++)
@@ -739,10 +713,9 @@ namespace Thermodynamics.Core
         /// Restores temperatures. Unknown positions are ignored, so a blueprint that lost blocks
         /// still loads.
         ///
-        /// Room air is restored onto the rooms the map already holds, so this has to run after the
-        /// map exists — which is why the host loads immediately after <see cref="RebuildAll"/>. A
-        /// room whose shape changed while the world was closed is a different room and starts from
-        /// its walls, exactly as it would have done mid-session.
+        /// Room air is restored onto the rooms already in the map, so this must run after the map
+        /// exists; the host calls it immediately after <see cref="RebuildAll"/>. A room whose shape
+        /// changed while the world was closed is treated as a new room and starts from its walls.
         /// </summary>
         /// <returns>Number of blocks restored.</returns>
         public int Load(string data)
