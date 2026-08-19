@@ -634,5 +634,35 @@ namespace Thermodynamics.Tests
             return loop.HottestSegment - loop.ColdestSegment;
         }
     
+    
+        /// <summary>
+        /// Flow is reported in metres per second, because parcels per second is the solver's unit and
+        /// nobody has any intuition for it. One parcel is one pipe block, so the conversion is the
+        /// grid's cell size.
+        /// </summary>
+        [Fact]
+        public void FlowIsReportedInMetresPerSecond()
+        {
+            CoolantLoop loop;
+            Ring(5, 5, 4f, out loop);
+
+            // A large grid cell is 2.5 m, so four parcels a second is ten metres a second. Which sign
+            // that carries depends on how the ring happened to be traced, so it is the magnitude that
+            // is fixed and the negation that is asserted.
+            Assert.Equal(2.5f, loop.ParcelLengthMetres, 3);
+            Assert.Equal(loop.FlowSegmentsPerSecond * 2.5f, loop.FlowMetresPerSecond, 3);
+            Assert.Equal(10f, Math.Abs(loop.FlowMetresPerSecond), 2);
+
+            // The sign is the direction, and it survives the conversion.
+            float before = loop.FlowMetresPerSecond;
+            loop.Pumps[0].Direction = -loop.Pumps[0].Direction;
+            loop.RefreshFlow();
+            Assert.Equal(-before, loop.FlowMetresPerSecond, 2);
+
+            // A stopped ring is zero either way round.
+            loop.Pumps[0].Enabled = false;
+            loop.RefreshFlow();
+            Assert.Equal(0f, loop.FlowMetresPerSecond, 4);
+        }
     }
 }

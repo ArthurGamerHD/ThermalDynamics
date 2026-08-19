@@ -176,16 +176,6 @@ namespace Thermodynamics
                 Text.Append('\n');
             }
 
-            // Whether a block can see the sky decides most of its fate, so this stays even at zero —
-            // "buried" is the single most useful thing the panel can tell you about a hot block.
-            Row("Exposed");
-            if (node.TotalExposedFaces <= 0) Text.Append("buried\n");
-            else
-            {
-                Text.Append(node.TotalExposedFaces).Append(" faces  ")
-                    .Append(node.ExposedArea.ToString("n1")).Append(" m2\n");
-            }
-
             if (node.HeatGenerationWatts > 0f)
             {
                 Row("Waste");
@@ -317,23 +307,15 @@ namespace Thermodynamics
                 .Append(ThermalConstants.KelvinToCelsius(loop.HottestSegment).ToString("n0"))
                 .Append(")\n");
 
-            // Signed: a ring driven the other way is a working ring, so the direction is named rather
-            // than shown as a minus.
+            // Signed, and the sign is the direction: a ring driven the other way is a working ring.
             //
             // Just the rate. A stopped ring has several causes — pumps switched off, pumps unpowered,
             // pumps fighting each other — and naming them costs a line each to say what a player can
             // read off the number in front of them and the pumps they built.
-            float flow = loop.FlowSegmentsPerSecond;
+            float flow = loop.FlowMetresPerSecond;
             Row("Flow");
-            if (flow == 0f)
-            {
-                Text.Append("0/s\n");
-            }
-            else
-            {
-                Text.Append((flow < 0f ? -flow : flow).ToString("n1")).Append("/s ")
-                    .Append(flow < 0f ? "reverse" : "forward").Append('\n');
-            }
+            if (flow == 0f) Text.Append("0m/s\n");
+            else Text.Append(flow > 0f ? "+" : "").Append(flow.ToString("n1")).Append("m/s\n");
 
             Row("Transfer");
             Text.Append((loop.LastWattsAbsorbed / 1000f).ToString("n1")).Append(" kW in  ")

@@ -201,9 +201,30 @@ namespace Thermodynamics.Core
 
         /// <summary>
         /// Coolant parcels the pumps are pushing past a point each second. Set by the host from the
-        /// pumps in this ring; zero when nothing is circulating.
+        /// pumps in this ring; zero when nothing is circulating. Signed: negative runs the ring the
+        /// other way, which works just as well.
         /// </summary>
         public float FlowSegmentsPerSecond;
+
+        /// <summary>
+        /// Length of one parcel of coolant, m. One pipe block, so the grid's cell size.
+        ///
+        /// Approximate for a pump longer than one cell — the small grid pump is three cells and still
+        /// carries one parcel — which makes this a nominal velocity rather than a surveyed one. It is
+        /// the figure a player can reason about, which is what it is for.
+        /// </summary>
+        public float ParcelLengthMetres = 2.5f;
+
+        /// <summary>
+        /// How fast the coolant is moving, m/s. Signed as <see cref="FlowSegmentsPerSecond"/> is.
+        ///
+        /// Parcels per second is the number the solver works in; metres per second is the number a
+        /// player has any intuition for.
+        /// </summary>
+        public float FlowMetresPerSecond
+        {
+            get { return FlowSegmentsPerSecond * ParcelLengthMetres; }
+        }
 
         /// <summary>True when at least one pipe in the ring is a pump.</summary>
         public bool HasPump;

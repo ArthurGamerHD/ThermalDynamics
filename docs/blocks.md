@@ -229,37 +229,36 @@ generates none is a line spent saying nothing. Every section is conditional.
 A reactor:
 
 ```
-Temp     354°C  +0.31 K/s
-Critical 627°C
-Exposed  3 faces  18.8 m2
-Waste    12.5 kW
+Temp     584°C  +0.00 K/s
+Critical 927°C
+Waste    500.0 kW
 
-Grid     -270°C ambient  peak 613°C
+Grid     -270°C ambient  peak 584°C
          1 loop  12 rooms
 ```
 
 A coolant pump, which adds its loop's flow rate and coolant temperatures:
 
 ```
-Temp     139°C  +0.01 K/s
-Exposed  buried
+Temp     169°C  +0.00 K/s
+Critical 727°C
 
-Coolant  139°C  (128 - 151)
-Flow     5.7/s forward
-Transfer 18.4 kW in  18.1 kW out
+Coolant  133°C  (109 - 157)
+Flow     -10.0m/s
+Transfer 142.9 kW in  142.9 kW out
 ```
 
 Coolant is given as a mean with the **range across the ring** in brackets, because with the fluid
 carried round in parcels a loop is not one temperature. A wide spread with the pump running means the
 flow cannot keep up with the load; a wide spread with no flow means nothing is circulating.
 
-Flow names its direction rather than showing a minus sign, because a ring driven the other way is a
-working ring. **A stopped ring reports `0/s` and nothing else.** It has several causes — pumps off,
-pumps unpowered, pumps fighting each other — and naming them would cost a line each to say what is
+Flow is in **metres per second** — parcels per second is the solver's unit and nobody has any
+intuition for it — and the **sign is the direction**, because a ring driven the other way is a working
+ring. **A stopped ring reports `0m/s` and nothing else.** It has several causes, pumps switched off,
+pumps unpowered, pumps fighting each other, and naming them would cost a line each to say what is
 already legible from the figure and the pumps you built.
 
-`Exposed` stays even at zero — `buried` is the most useful single thing the panel can say about a hot
-block. `Waste`, `Critical` and `Room` appear only when they apply.
+`Waste`, `Critical` and `Room` appear only when they apply.
 
 The one thing still spelled out is a run of pipe that formed **no loop at all**, which reports the
 reason from [the fault table above](#when-a-ring-does-not-become-a-loop). There is no figure to read

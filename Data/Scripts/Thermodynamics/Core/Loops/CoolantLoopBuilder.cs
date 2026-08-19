@@ -84,6 +84,7 @@ namespace Thermodynamics.Core
                 }
 
                 loop.HasPump = loop.Pumps.Count > 0;
+                loop.ParcelLengthMetres = grid.GridSize;
                 loop.RefreshSignature();
                 loop.RefreshThermalMass();
                 loop.RefreshFlow();
