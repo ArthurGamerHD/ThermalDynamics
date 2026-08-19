@@ -332,19 +332,21 @@ namespace Thermodynamics.Tests
         {
             BlockThermalProperties properties = new BlockThermalProperties
             {
-                Conductivity = 5f,
+                Conductivity = -5f,
                 Emissivity = -2f,
                 SpecificHeat = 0f,
-                SurfaceAreaScaler = -1f,
+                ExposedSurfaceMultiplier = -1f,
                 CriticalTemperature = -50f,
             };
 
             properties.Clamp();
 
-            Assert.Equal(1f, properties.Conductivity, 5);
+            // Conductivity has no upper clamp: it is a real W/(m K) figure, and copper's 400 is
+            // a legitimate value. Only negatives are refused.
+            Assert.Equal(0f, properties.Conductivity, 5);
             Assert.Equal(0f, properties.Emissivity, 5);
             Assert.True(properties.SpecificHeat > 0f);
-            Assert.Equal(0f, properties.SurfaceAreaScaler, 5);
+            Assert.Equal(0f, properties.ExposedSurfaceMultiplier, 5);
             Assert.Equal(0f, properties.CriticalTemperature, 5);
         }
 
@@ -390,9 +392,9 @@ namespace Thermodynamics.Tests
             Assert.Equal(1f, planet.SolarDecay, 5);
             Assert.Equal(0f, planet.ConvectionCoefficient, 5);
 
-            LoopThermalProperties loop = new LoopThermalProperties { MassPerPipe = 0f, Conductivity = 9f };
+            LoopThermalProperties loop = new LoopThermalProperties { CoolantMassPerPipe = 0f, Conductivity = 9f };
             loop.Clamp();
-            Assert.Equal(1f, loop.MassPerPipe, 5);
+            Assert.Equal(1f, loop.CoolantMassPerPipe, 5);
             Assert.Equal(1f, loop.Conductivity, 5);
         }
     }

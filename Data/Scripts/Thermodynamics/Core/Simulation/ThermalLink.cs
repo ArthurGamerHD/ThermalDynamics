@@ -143,7 +143,7 @@ namespace Thermodynamics.Core
 
         private static float Conductivity(BlockInstance block)
         {
-            return block.Thermal.Conductivity * ThermalConstants.ReferenceConductivity;
+            return block.Thermal.Conductivity * ThermalConstants.ConductionScale;
         }
 
         private static float HalfDepth(BlockInstance block, int axis, float latticeSize)

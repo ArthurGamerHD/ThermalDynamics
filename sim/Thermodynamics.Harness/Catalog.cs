@@ -26,50 +26,50 @@ namespace Thermodynamics.Harness
         {
             return new BlockThermalProperties
             {
-                Conductivity = 0.60f,
+                Conductivity = 50f,          // mild steel, W/(m K)
                 SpecificHeat = 450f,       // mild steel
                 Emissivity = 0.125f,
-                SurfaceAreaScaler = 1f,
+                ExposedSurfaceMultiplier = 1f,
                 ProducerWasteEnergy = 0.05f,
                 ConsumerWasteEnergy = 0.05f,
                 CriticalTemperature = 900f,
-                CriticalTemperatureScaler = 1f,
+                OverheatDamagePerKelvin = 1f,
             };
         }
 
         public static BlockThermalProperties ReactorThermal()
         {
             BlockThermalProperties t = DefaultThermal();
-            t.Conductivity = 1f;
+            t.Conductivity = 50f;      // steel
             t.SpecificHeat = 600f;     // steel with graphite shielding
             t.Emissivity = 0.25f;
             t.ProducerWasteEnergy = 0.25f;
             t.ConsumerWasteEnergy = 0.25f;
             t.CriticalTemperature = 1200f;
-            t.CriticalTemperatureScaler = 0.25f;
+            t.OverheatDamagePerKelvin = 0.25f;
             return t;
         }
 
         public static BlockThermalProperties ThrusterThermal()
         {
             BlockThermalProperties t = DefaultThermal();
-            t.Conductivity = 1f;
+            t.Conductivity = 50f;      // steel and nickel alloy
             t.SpecificHeat = 450f;     // steel and nickel alloy
             t.Emissivity = 0.15f;
             t.ProducerWasteEnergy = 0f;
             t.ConsumerWasteEnergy = 0.25f;
             t.CriticalTemperature = 1050f;
-            t.CriticalTemperatureScaler = 0.25f;
+            t.OverheatDamagePerKelvin = 0.25f;
             return t;
         }
 
         public static BlockThermalProperties RadiatorThermal()
         {
             BlockThermalProperties t = DefaultThermal();
-            t.Conductivity = 1f;
+            t.Conductivity = 237f;     // aluminium
             t.SpecificHeat = 900f;     // aluminium
             t.Emissivity = 0.35f;
-            t.SurfaceAreaScaler = 1.25f;
+            t.ExposedSurfaceMultiplier = 1.25f;
             t.ProducerWasteEnergy = 0f;
             t.ConsumerWasteEnergy = 0f;
             t.CriticalTemperature = 1000f;
@@ -79,7 +79,7 @@ namespace Thermodynamics.Harness
         public static BlockThermalProperties CoolantThermal()
         {
             BlockThermalProperties t = DefaultThermal();
-            t.Conductivity = 1f;
+            t.Conductivity = 400f;     // copper
             t.SpecificHeat = 385f;     // copper
             t.ProducerWasteEnergy = 0f;
             t.ConsumerWasteEnergy = 0f;
