@@ -11,7 +11,7 @@ namespace Thermodynamics.Harness
     /// Data/Cubes.xml. They exist so scenarios behave plausibly, not so results can be quoted as
     /// exact in-game numbers.
     ///
-    /// Specific heat is in real J/(kg K), as it is in the definitions: steel 450, copper 385,
+    /// Specific heat is in real J/(kg K), as it is in the definitions: steel 450, brass 380,
     /// aluminium 900. The playable pace comes from <see cref="ThermalSettings.HeatTimeScale"/>,
     /// not from writing the capacities small.
     /// </summary>
@@ -22,69 +22,104 @@ namespace Thermodynamics.Harness
 
         // ---- thermal property presets, mirroring Data/Cubes.xml ---------------------------
 
+        /// <summary>
+        /// Applied to every set of thermal properties this catalogue hands out, when set.
+        ///
+        /// The companion to <see cref="GridBuilder.SettingsOverride"/>: settings reach a scenario
+        /// through the builder, but material properties reach it through here, and a profile that
+        /// changes the conduction pace has to move both or it is only half applied. Null by
+        /// default.
+        /// </summary>
+        /// <remarks>
+        /// Thread-local. xUnit runs test classes in parallel, and a plain static here
+        /// leaked one test's profile into every other test running at that moment —
+        /// sixty-six unrelated failures, none of them reproducible alone. The sweep is
+        /// single-threaded, so it is unaffected.
+        /// </remarks>
+        [ThreadStatic]
+        public static Func<BlockThermalProperties, BlockThermalProperties> MaterialOverride;
+
+        private static BlockThermalProperties Apply(BlockThermalProperties properties)
+        {
+            return MaterialOverride == null ? properties : MaterialOverride(properties);
+        }
+
         public static BlockThermalProperties DefaultThermal()
+        {
+            return Apply(RawDefault());
+        }
+
+        /// <summary>
+        /// The default preset before any override.
+        ///
+        /// The derived presets start from this rather than from <see cref="DefaultThermal"/>: that
+        /// one has already had the override applied, and a profile that scales conductivity would
+        /// otherwise scale it twice — squaring the pace on every block built from a preset, which
+        /// is a factor no reader of the table would suspect.
+        /// </summary>
+        private static BlockThermalProperties RawDefault()
         {
             return new BlockThermalProperties
             {
-                Conductivity = 0.60f,
+                Conductivity = 50f,          // mild steel, W/(m K)
                 SpecificHeat = 450f,       // mild steel
                 Emissivity = 0.125f,
-                SurfaceAreaScaler = 1f,
+                ExposedSurfaceMultiplier = 1f,
                 ProducerWasteEnergy = 0.05f,
                 ConsumerWasteEnergy = 0.05f,
                 CriticalTemperature = 900f,
-                CriticalTemperatureScaler = 1f,
+                OverheatDamagePerKelvin = 1f,
             };
         }
 
         public static BlockThermalProperties ReactorThermal()
         {
-            BlockThermalProperties t = DefaultThermal();
-            t.Conductivity = 1f;
+            BlockThermalProperties t = RawDefault();
+            t.Conductivity = 50f;      // steel
             t.SpecificHeat = 600f;     // steel with graphite shielding
             t.Emissivity = 0.25f;
             t.ProducerWasteEnergy = 0.25f;
             t.ConsumerWasteEnergy = 0.25f;
             t.CriticalTemperature = 1200f;
-            t.CriticalTemperatureScaler = 0.25f;
-            return t;
+            t.OverheatDamagePerKelvin = 0.25f;
+            return Apply(t);
         }
 
         public static BlockThermalProperties ThrusterThermal()
         {
-            BlockThermalProperties t = DefaultThermal();
-            t.Conductivity = 1f;
+            BlockThermalProperties t = RawDefault();
+            t.Conductivity = 50f;      // steel and nickel alloy
             t.SpecificHeat = 450f;     // steel and nickel alloy
             t.Emissivity = 0.15f;
             t.ProducerWasteEnergy = 0f;
             t.ConsumerWasteEnergy = 0.25f;
             t.CriticalTemperature = 1050f;
-            t.CriticalTemperatureScaler = 0.25f;
-            return t;
+            t.OverheatDamagePerKelvin = 0.25f;
+            return Apply(t);
         }
 
         public static BlockThermalProperties RadiatorThermal()
         {
-            BlockThermalProperties t = DefaultThermal();
-            t.Conductivity = 1f;
+            BlockThermalProperties t = RawDefault();
+            t.Conductivity = 237f;     // aluminium
             t.SpecificHeat = 900f;     // aluminium
             t.Emissivity = 0.35f;
-            t.SurfaceAreaScaler = 1.25f;
+            t.ExposedSurfaceMultiplier = 1.25f;
             t.ProducerWasteEnergy = 0f;
             t.ConsumerWasteEnergy = 0f;
             t.CriticalTemperature = 1000f;
-            return t;
+            return Apply(t);
         }
 
         public static BlockThermalProperties CoolantThermal()
         {
-            BlockThermalProperties t = DefaultThermal();
-            t.Conductivity = 1f;
-            t.SpecificHeat = 385f;     // copper
+            BlockThermalProperties t = RawDefault();
+            t.Conductivity = 110f;     // brass, see Cubes.xml
+            t.SpecificHeat = 380f;     // brass
             t.ProducerWasteEnergy = 0f;
             t.ConsumerWasteEnergy = 0f;
             t.CriticalTemperature = 1000f;
-            return t;
+            return Apply(t);
         }
 
         // ---- blocks -----------------------------------------------------------------------

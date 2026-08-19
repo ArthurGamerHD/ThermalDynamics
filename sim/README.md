@@ -52,7 +52,7 @@ sufficient. See [development.md](../docs/development.md#repo-conventions) for th
 ```bash
 cd sim
 
-dotnet test                                    # the whole suite (679 tests)
+dotnet test                                    # the whole suite (897 tests)
 dotnet run --project Thermodynamics.Sim -- list
 dotnet run --project Thermodynamics.Sim -- run reactor
 dotnet run --project Thermodynamics.Sim -- run all --csv out/
@@ -116,6 +116,39 @@ The probe order is `$SE_BIN`, the default Steam path, then the mod's own
 Scenarios are deterministic: no clock, no randomness, no dependence on iteration order. The same
 scenario produces byte-identical output on every run, which is what lets them double as
 regression tests (`ScenarioTests`).
+
+## Block balance
+
+`balance` is neither a scenario nor a benchmark: it costs every block the mod ships and measures it
+against the vanilla blocks it competes with, reading the shipped `.sbc` and `Cubes.xml` at run time
+rather than from a hand-written catalogue.
+
+```bash
+dotnet run --project Thermodynamics.Sim -- balance
+dotnet run --project Thermodynamics.Sim -- balance --csv out/
+```
+
+It reports five tables — every block costed and measured, what the vanilla heat sources put in, what
+a panel delivers end to end, which dial actually moves that number, and the heat pump and coolant
+rings across their ranges. The conclusions are pinned by `BalanceTests`. See
+[balance.md](../docs/balance.md); the short version is that a coolant sink face couples six times
+harder than a bolt joint, and no surface property comes close to being worth as much.
+
+## Balance profiles
+
+`profiles`, `sweep` and `features` are the whole-system counterpart to `balance`: not "is this block
+worth building" but "is this world configuration worth running". They live in the harness and change
+nothing that ships.
+
+```bash
+dotnet run --project Thermodynamics.Sim -- profiles          # one rig, four worlds
+dotnet run --project Thermodynamics.Sim -- sweep --csv out/  # every scenario and worst case
+dotnet run --project Thermodynamics.Sim -- features          # mechanism switches in combination
+```
+
+Realism turns out to be the cheapest configuration and the least responsive; the substep estimate
+explains nearly every failure; and both the arcade profile and the shipped default diverge on cases
+a player can build. See [profiles.md](../docs/profiles.md).
 
 ## Load benchmarks
 
@@ -239,7 +272,7 @@ PipeFitter.BuildRing(builder, ring);      // pump goes on the first straight run
 
 ## Test coverage
 
-679 tests across:
+897 tests across:
 
 * position keys and block geometry maths
 * face indexing, the colour ramp, occlusion
@@ -255,6 +288,15 @@ PipeFitter.BuildRing(builder, ring);      // pump goes on the first straight run
 * scheduling, settings and definition clamping
 * end-to-end simulation, save/load, and every scenario
 * the claims each scenario's summary line makes, so a headline conclusion cannot quietly invert
+* block balance: that every shipped block is priced, weighs something, gets its own thermal entry
+  and carries plumbing exactly when it should; and that the conclusions drawn from the balance pass
+  — the radiator beating the armour it displaces, a coolant sink beating every surface dial, the
+  heat pump passing through all three of its limits — cannot quietly invert
+* the profile machinery: that the settings and material hooks reach a scenario, that the material
+  override is applied exactly once, that a profile's conduction pace lands on the number the solver
+  uses, and that no two profiles derive to the same world
+* two divergence defects, pinned as present so that fixing either fails a test rather than moving a
+  number nobody is watching
 * the climate: latitude, ground, lag, altitude, thin air, weather and depth
 * room air coupling — that a pressurised room gains links and takes the temperature of its walls
 * the compartments the game seals and this model does not

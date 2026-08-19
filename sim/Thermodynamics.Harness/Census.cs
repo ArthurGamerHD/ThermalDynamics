@@ -66,14 +66,14 @@ namespace Thermodynamics.Harness
         /// </summary>
         public static readonly Tier[] Tiers =
         {
-            new Tier { Name = "light fitting",   Share = 0.012f, Mass =    20f, Conductivity = 0.60f, CriticalTemperature =  900f, Example = "SmallLight" },
-            new Tier { Name = "armour tip",      Share = 0.068f, Mass =    59f, Conductivity = 0.60f, CriticalTemperature =  900f, Example = "LargeBlockArmorCorner2Tip" },
-            new Tier { Name = "armour slope",    Share = 0.147f, Mass =   108f, Conductivity = 0.60f, CriticalTemperature =  900f, Example = "LargeBlockArmorSlope2Tip" },
-            new Tier { Name = "half armour",     Share = 0.104f, Mass =   194f, Conductivity = 0.60f, CriticalTemperature =  900f, Example = "LargeHalfArmorBlock" },
-            new Tier { Name = "light armour",    Share = 0.347f, Mass =   440f, Conductivity = 0.60f, CriticalTemperature =  900f, Example = "LargeBlockArmorBlock" },
-            new Tier { Name = "conveyor",        Share = 0.157f, Mass =   750f, Conductivity = 0.60f, CriticalTemperature =  900f, Example = "ConveyorTubeDuctT" },
-            new Tier { Name = "heavy armour",    Share = 0.135f, Mass =  2430f, Conductivity = 0.68f, CriticalTemperature =  931f, Example = "LargeHeavyBlockArmorBlock" },
-            new Tier { Name = "machinery",       Share = 0.030f, Mass = 11281f, Conductivity = 0.66f, CriticalTemperature =  929f, Example = "LargeBlockGyro" },
+            new Tier { Name = "light fitting",   Share = 0.012f, Mass =    20f, Conductivity = 50f, CriticalTemperature =  900f, Example = "SmallLight" },
+            new Tier { Name = "armour tip",      Share = 0.068f, Mass =    59f, Conductivity = 50f, CriticalTemperature =  900f, Example = "LargeBlockArmorCorner2Tip" },
+            new Tier { Name = "armour slope",    Share = 0.147f, Mass =   108f, Conductivity = 50f, CriticalTemperature =  900f, Example = "LargeBlockArmorSlope2Tip" },
+            new Tier { Name = "half armour",     Share = 0.104f, Mass =   194f, Conductivity = 50f, CriticalTemperature =  900f, Example = "LargeHalfArmorBlock" },
+            new Tier { Name = "light armour",    Share = 0.347f, Mass =   440f, Conductivity = 50f, CriticalTemperature =  900f, Example = "LargeBlockArmorBlock" },
+            new Tier { Name = "conveyor",        Share = 0.157f, Mass =   750f, Conductivity = 50f, CriticalTemperature =  900f, Example = "ConveyorTubeDuctT" },
+            new Tier { Name = "heavy armour",    Share = 0.135f, Mass =  2430f, Conductivity = 56.667f, CriticalTemperature =  931f, Example = "LargeHeavyBlockArmorBlock" },
+            new Tier { Name = "machinery",       Share = 0.030f, Mass = 11281f, Conductivity = 55f, CriticalTemperature =  929f, Example = "LargeBlockGyro" },
         };
 
         /// <summary>
@@ -114,7 +114,7 @@ namespace Thermodynamics.Harness
             if (producer != null) return producer;
 
             BlockThermalProperties thermal = Catalog.DefaultThermal();
-            thermal.Conductivity = 0.68f;
+            thermal.Conductivity = 56.667f;
             thermal.CriticalTemperature = ProducerCriticalTemperature;
 
             producer = BlockModel.Solid("producer", Vector3I.One, ProducerMass, thermal);

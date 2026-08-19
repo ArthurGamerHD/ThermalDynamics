@@ -26,7 +26,9 @@
 				<Model BuildPercentUpperBound="0.50" File="Models\Gauge\LG\Gauge_LG_Radiator_BS1.mwm"/>
 				<Model BuildPercentUpperBound="1.00" File="Models\Gauge\LG\Gauge_LG_Radiator_BS2.mwm"/>
 			</BuildProgressModels>
-			<BlockPairName>Gauge_LG_Radiator</BlockPairName>
+			<BlockPairName>Gauge_Radiator</BlockPairName>
+			<BuildTimeSeconds>10</BuildTimeSeconds>
+			<PCU>1</PCU>
 			<MirroringX>Y</MirroringX>
 			<MirroringY>X</MirroringY>
 		</Definition>

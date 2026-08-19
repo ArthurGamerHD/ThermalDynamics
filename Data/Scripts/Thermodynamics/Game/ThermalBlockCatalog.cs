@@ -305,15 +305,15 @@ namespace Thermodynamics
             BlockThermalProperties properties = new BlockThermalProperties();
             if (definition == null) return properties.Clamp();
 
-            properties.IgnoreThermals = definition.IgnoreThermals;
+            properties.ExcludeFromSimulation = definition.ExcludeFromSimulation;
             properties.Conductivity = definition.Conductivity;
             properties.SpecificHeat = definition.SpecificHeat;
             properties.Emissivity = definition.Emissivity;
-            properties.SurfaceAreaScaler = definition.SurfaceAreaScaler;
+            properties.ExposedSurfaceMultiplier = definition.ExposedSurfaceMultiplier;
             properties.ProducerWasteEnergy = definition.ProducerWasteEnergy;
             properties.ConsumerWasteEnergy = definition.ConsumerWasteEnergy;
             properties.CriticalTemperature = definition.CriticalTemperature;
-            properties.CriticalTemperatureScaler = definition.CriticalTemperatureScaler;
+            properties.OverheatDamagePerKelvin = definition.OverheatDamagePerKelvin;
 
             return properties.Clamp();
         }
@@ -324,12 +324,13 @@ namespace Thermodynamics
             LoopThermalProperties properties = new LoopThermalProperties();
             if (definition == null) return properties.Clamp();
 
-            properties.MassPerPipe = definition.MassPerPipe;
+            properties.CoolantMassPerPipe = definition.CoolantMassPerPipe;
             properties.Conductivity = definition.Conductivity;
             properties.SpecificHeat = definition.SpecificHeat;
-            properties.PipeSurfaceAreaScaler = definition.PipeSurfaceAreaScaler;
-            properties.PlateSurfaceAreaScaler = definition.PlateSurfaceAreaScaler;
-            properties.SegmentsPerSecondAtFullFlow = definition.SegmentsPerSecondAtFullFlow;
+            properties.PipeContactMultiplier = definition.PipeContactMultiplier;
+            properties.SinkContactMultiplier = definition.SinkContactMultiplier;
+            properties.LargeGridFlowRate = definition.LargeGridFlowRate;
+            properties.SmallGridFlowRate = definition.SmallGridFlowRate;
             properties.StagnantTransferFraction = definition.StagnantTransferFraction;
 
             return properties.Clamp();

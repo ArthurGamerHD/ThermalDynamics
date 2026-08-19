@@ -7,7 +7,7 @@
 				<SubtypeId>Gauge_SG_CoolantPipe_Straight_DoubleSink</SubtypeId>
 			</Id>
 			<DisplayName>{LOC:DisplayName_Gauge_SG_CoolantPipe_Straight_DoubleSink}</DisplayName>
-			<Description>{LOC:Description_Gauge_CoolantPipe}</Description>
+			<Description>{LOC:Description_Gauge_CoolantPipe_Straight_DoubleSink}</Description>
 			<Icon>Textures\GUI\Icons\Gauge\SG_CoolantPipeStraight_TwoSink.dds</Icon>
 			<CubeSize>Small</CubeSize>
 			<BlockTopology>TriangleMesh</BlockTopology>
@@ -30,7 +30,9 @@
 				<Model BuildPercentUpperBound="0.50" File="Models\Gauge\SG\Gauge_SG_CoolantPipe_Straight_DoubleSink_BS1.mwm"/>
 				<Model BuildPercentUpperBound="1.00" File="Models\Gauge\SG\Gauge_SG_CoolantPipe_Straight_DoubleSink_BS2.mwm"/>
 			</BuildProgressModels>
-			<BlockPairName>Gauge_SG_CoolantPipe_Straight_DoubleSink</BlockPairName>
+			<BlockPairName>Gauge_CoolantPipe_Straight_DoubleSink</BlockPairName>
+			<BuildTimeSeconds>4</BuildTimeSeconds>
+			<PCU>1</PCU>
 			<MirroringY>Z</MirroringY>
 			<MirroringZ>Y</MirroringZ>
 		</Definition>

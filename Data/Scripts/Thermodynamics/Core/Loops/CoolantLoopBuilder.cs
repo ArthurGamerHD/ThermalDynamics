@@ -287,7 +287,7 @@ namespace Thermodynamics.Core
         public static float PipeConductance(GridModel grid, BlockInstance pipe, LoopThermalProperties properties)
         {
             float k = properties.Conductivity * ThermalConstants.ReferenceConductivity;
-            float area = grid.CellFaceArea * properties.PipeSurfaceAreaScaler;
+            float area = grid.CellFaceArea * properties.PipeContactMultiplier;
             float length = grid.GridSize * 0.5f;
             if (length <= 0f) return 0f;
             return k * area / length;
@@ -299,7 +299,7 @@ namespace Thermodynamics.Core
         public static float PlateConductance(GridModel grid, LoopThermalProperties properties)
         {
             float k = properties.Conductivity * ThermalConstants.ReferenceConductivity;
-            float area = grid.CellFaceArea * properties.PlateSurfaceAreaScaler;
+            float area = grid.CellFaceArea * properties.SinkContactMultiplier;
             float length = grid.GridSize * 0.5f;
             if (length <= 0f) return 0f;
             return k * area / length;

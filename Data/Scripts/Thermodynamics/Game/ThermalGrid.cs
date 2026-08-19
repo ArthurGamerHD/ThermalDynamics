@@ -303,7 +303,7 @@ namespace Thermodynamics
             try
             {
                 BlockModel model = ThermalBlockCatalog.Get(block);
-                if (model == null || model.Thermal.IgnoreThermals)
+                if (model == null || model.Thermal.ExcludeFromSimulation)
                 {
                     if (Stats != null) Stats.BlocksIgnored++;
                     return;

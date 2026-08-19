@@ -166,12 +166,12 @@ namespace Thermodynamics.Tests
 
             BlockThermalProperties thermal = new BlockThermalProperties
             {
-                Conductivity = 0.6f,
+                Conductivity = 50f,
                 SpecificHeat = 450f,
                 Emissivity = 0.2f,
-                SurfaceAreaScaler = 1f,
+                ExposedSurfaceMultiplier = 1f,
                 CriticalTemperature = 1200f,
-                CriticalTemperatureScaler = 1f,
+                OverheatDamagePerKelvin = 1f,
             };
 
             BlockModel model = BlockModel.Solid("hull", new Vector3I(2, 2, 2), 120f, thermal);

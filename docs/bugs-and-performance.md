@@ -208,9 +208,9 @@ A performance setting silently changes the difficulty.
 by the step length; `ThermalSettings.DamageIsPerSecond = false` restores the old behaviour.
 
 **Fixed** — `HandleCriticalTemperature` multiplies the overshoot by `TimeScaleRatio`, the length
-of one update in seconds, so `CriticalTemperatureScaler` now reads as damage per kelvin per
+of one update in seconds, so `OverheatDamagePerKelvin` now reads as damage per kelvin per
 second. At the default `Frequency = 4` this is a **4× reduction** in damage rate; scale
-`CriticalTemperatureScaler` in `Cubes.xml` if the old pace was the intended one.
+`OverheatDamagePerKelvin` in `Cubes.xml` if the old pace was the intended one.
 
 ### M5. Specific heat is roughly 250× below physical — **medium** — *fixed in the live mod*
 
@@ -228,7 +228,7 @@ unit systems.
 *Observable in* the `vacuum-soak` scenario.
 
 **Fixed** — made deliberate rather than removed. `SpecificHeat` is now real J/(kg·K) in every
-definition (steel 450, copper 385, aluminium 900, water-glycol 3400), so both halves of the
+definition (steel 450, brass 380, aluminium 900, water-glycol 3400), so both halves of the
 equation are in the same unit system and a definition reads as a description of the material.
 The game's pace comes from one setting, `HeatTimeScale` (default 225), which divides every heat
 capacity — blocks and coolant alike. Dividing capacity is exactly running thermal time faster,

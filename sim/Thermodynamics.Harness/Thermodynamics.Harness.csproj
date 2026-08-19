@@ -10,6 +10,18 @@
     <ProjectReference Include="../Thermodynamics.Core/Thermodynamics.Core.csproj" />
   </ItemGroup>
 
+  <!--
+    The two shape tables from the game adapter. Both are pure mappings from a subtype name onto
+    port geometry and ratings, with no Sandbox.* dependency, and both are exactly the sort of
+    table that goes wrong silently. Linked rather than copied so the harness measures the same
+    plumbing the game builds. They were linked into Thermodynamics.Tests before the balance suite
+    needed them here; the tests still see them, through this project.
+  -->
+  <ItemGroup>
+    <Compile Include="$(GameSourceRoot)ThermalCoolantShapes.cs" LinkBase="Game" />
+    <Compile Include="$(GameSourceRoot)ThermalHeatPumpShapes.cs" LinkBase="Game" />
+  </ItemGroup>
+
   <ItemGroup>
     <Reference Include="VRage.Math">
       <HintPath>$(SEBinPath)/VRage.Math.dll</HintPath>

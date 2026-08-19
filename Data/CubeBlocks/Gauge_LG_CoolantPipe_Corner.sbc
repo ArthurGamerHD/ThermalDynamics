@@ -28,7 +28,9 @@
 				<Model BuildPercentUpperBound="0.50" File="Models\Gauge\LG\Gauge_LG_CoolantPipe_Corner_BS1.mwm"/>
 				<Model BuildPercentUpperBound="1.00" File="Models\Gauge\LG\Gauge_LG_CoolantPipe_Corner_BS2.mwm"/>
 			</BuildProgressModels>
-			<BlockPairName>Gauge_LG_CoolantPipe_Corner</BlockPairName>
+			<BlockPairName>Gauge_CoolantPipe_Corner</BlockPairName>
+			<BuildTimeSeconds>8</BuildTimeSeconds>
+			<PCU>1</PCU>
 			<MirroringX>HalfY</MirroringX>
 			<MirroringZ>MinusHalfY</MirroringZ>
 		</Definition>

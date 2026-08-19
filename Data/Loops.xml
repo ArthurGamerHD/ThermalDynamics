@@ -16,19 +16,31 @@
 						integrate and made a longer ring couple harder to the grid while holding no
 						more coolant. 50 kg matches the old 500 kg figure at a ten-pipe ring.
 					-->
-					<Decimal Name="MassPerPipe" Value ="50" />
+					<Decimal Name="CoolantMassPerPipe" Value ="50" />
 					<Decimal Name="Conductivity" Value="1" />
 					<!--J/(kg K), real units: water-glycol coolant-->
 					<Decimal Name="SpecificHeat" Value="3400" />
-					<Decimal Name="PipeSurfaceAreaScaler" Value ="1" />
-					<Decimal Name="PlateSurfaceAreaScaler" Value ="1" />
+					<Decimal Name="PipeContactMultiplier" Value ="1" />
+					<Decimal Name="SinkContactMultiplier" Value ="1" />
 					<!--
-						Coolant parcels a pump at full speed pushes past a point each second. This is
-						how fast heat travels round the ring, and with it how long a radiator takes to
-						hear about a reactor. Per parcel, so it costs the solver the same whatever
-						length of pipe a player laid.
+						How fast the coolant moves with one pump at full power, metres per second —
+						the same unit the terminal reports. This is how fast heat travels round the
+						ring, and with it how long a radiator takes to hear about a reactor.
+
+						Flow rises with the square root of combined pumping, so four pumps carry
+						twice this, not four times.
+
+						Split by grid size because it is a balance dial, not a physical constant: a
+						small-grid pump is a much smaller machine driving a much shorter ring, and
+						whether it should move its coolant as fast as a capital ship's is a
+						judgement. Shipped equal, so the two grids behave alike until someone
+						decides they should not.
+
+						A small-grid pipe is a fifth as long, so the same speed is five times the
+						parcel rate: the ring laps far more often and levels out sooner.
 					-->
-					<Decimal Name="SegmentsPerSecondAtFullFlow" Value ="4" />
+					<Decimal Name="LargeGridFlowRate" Value ="10" />
+					<Decimal Name="SmallGridFlowRate" Value ="10" />
 					<!--
 						What survives with nothing circulating. A stagnant pipe still conducts into the
 						coolant touching it; it just cannot carry that heat anywhere, which the

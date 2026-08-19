@@ -151,8 +151,8 @@ namespace Thermodynamics.Tests
 
                 Assert.True(radiator["Emissivity"] > fallback["Emissivity"],
                     subtype + " emissivity " + radiator["Emissivity"] + " does not beat the default");
-                Assert.True(radiator["SurfaceAreaScaler"] > fallback["SurfaceAreaScaler"],
-                    subtype + " area scaler " + radiator["SurfaceAreaScaler"] + " does not beat the default");
+                Assert.True(radiator["ExposedSurfaceMultiplier"] > fallback["ExposedSurfaceMultiplier"],
+                    subtype + " area scaler " + radiator["ExposedSurfaceMultiplier"] + " does not beat the default");
             }
         }
 

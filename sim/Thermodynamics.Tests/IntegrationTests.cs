@@ -31,7 +31,7 @@ namespace Thermodynamics.Tests
         public void BlocksMarkedIgnoreThermalsNeverBecomeNodes()
         {
             BlockThermalProperties ignored = Catalog.DefaultThermal();
-            ignored.IgnoreThermals = true;
+            ignored.ExcludeFromSimulation = true;
 
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.LightArmor(), Vector3I.Zero);

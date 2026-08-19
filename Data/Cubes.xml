@@ -19,16 +19,17 @@
 			</Id>
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
-					<Bool Name="IgnoreThermals" Value="false" />
-					<Decimal Name="Conductivity" Value="0.60" />
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: mild steel-->
+					<Decimal Name="Conductivity" Value="50" />
 					<!--J/(kg K), real units: mild steel, 466 J/(kg K) rounded down: most blocks are steel plate-->
 					<Decimal Name="SpecificHeat" Value="450" />
 					<Decimal Name="Emissivity" Value="0.125" />
-					<Decimal Name="SurfaceAreaScaler" Value ="1" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0.05" />
 					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
 					<Decimal Name="CriticalTemperature" Value="900" />
-					<Decimal Name="CriticalTemperatureScaler" Value="1"/>
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
 				</Group>
 			</ModExtensions>
 		</Definition>
@@ -40,16 +41,23 @@
 			</Id>
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
-					<Bool Name="IgnoreThermals" Value="false" />
-					<Decimal Name="Conductivity" Value="1" />
-					<!--J/(kg K), real units: copper-->
-					<Decimal Name="SpecificHeat" Value="385" />
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--
+						W/(m K). Brass, not copper, and the difference is a compromise rather than a
+						materials choice: copper's 400 against the conduction pace makes a 305 kg pipe
+						stiff enough to outrun the substep budget, and five coolant flow tests fail on
+						it. Brass is an honest plumbing alloy and is stable here. The real fix is to
+						stop pricing a thin pipe as a solid billet of its own metal.
+					-->
+					<Decimal Name="Conductivity" Value="110" />
+					<!--J/(kg K), real units: brass-->
+					<Decimal Name="SpecificHeat" Value="380" />
 					<Decimal Name="Emissivity" Value="0.125" />
-					<Decimal Name="SurfaceAreaScaler" Value ="1" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
 					<Decimal Name="ConsumerWasteEnergy" Value="0" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
-					<Decimal Name="CriticalTemperatureScaler" Value="1"/>
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
 				</Group>
 			</ModExtensions>
 		</Definition>
@@ -60,16 +68,23 @@
 			</Id>
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
-					<Bool Name="IgnoreThermals" Value="false" />
-					<Decimal Name="Conductivity" Value="1" />
-					<!--J/(kg K), real units: copper-->
-					<Decimal Name="SpecificHeat" Value="385" />
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--
+						W/(m K). Brass, not copper, and the difference is a compromise rather than a
+						materials choice: copper's 400 against the conduction pace makes a 305 kg pipe
+						stiff enough to outrun the substep budget, and five coolant flow tests fail on
+						it. Brass is an honest plumbing alloy and is stable here. The real fix is to
+						stop pricing a thin pipe as a solid billet of its own metal.
+					-->
+					<Decimal Name="Conductivity" Value="110" />
+					<!--J/(kg K), real units: brass-->
+					<Decimal Name="SpecificHeat" Value="380" />
 					<Decimal Name="Emissivity" Value="0.125" />
-					<Decimal Name="SurfaceAreaScaler" Value ="1" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
 					<Decimal Name="ConsumerWasteEnergy" Value="0" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
-					<Decimal Name="CriticalTemperatureScaler" Value="1"/>
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
 				</Group>
 			</ModExtensions>
 		</Definition>
@@ -80,16 +95,23 @@
 			</Id>
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
-					<Bool Name="IgnoreThermals" Value="false" />
-					<Decimal Name="Conductivity" Value="1" />
-					<!--J/(kg K), real units: copper-->
-					<Decimal Name="SpecificHeat" Value="385" />
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--
+						W/(m K). Brass, not copper, and the difference is a compromise rather than a
+						materials choice: copper's 400 against the conduction pace makes a 305 kg pipe
+						stiff enough to outrun the substep budget, and five coolant flow tests fail on
+						it. Brass is an honest plumbing alloy and is stable here. The real fix is to
+						stop pricing a thin pipe as a solid billet of its own metal.
+					-->
+					<Decimal Name="Conductivity" Value="110" />
+					<!--J/(kg K), real units: brass-->
+					<Decimal Name="SpecificHeat" Value="380" />
 					<Decimal Name="Emissivity" Value="0.125" />
-					<Decimal Name="SurfaceAreaScaler" Value ="1" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
 					<Decimal Name="ConsumerWasteEnergy" Value="0" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
-					<Decimal Name="CriticalTemperatureScaler" Value="1"/>
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
 				</Group>
 			</ModExtensions>
 		</Definition>
@@ -100,16 +122,23 @@
 			</Id>
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
-					<Bool Name="IgnoreThermals" Value="false" />
-					<Decimal Name="Conductivity" Value="1" />
-					<!--J/(kg K), real units: copper-->
-					<Decimal Name="SpecificHeat" Value="385" />
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--
+						W/(m K). Brass, not copper, and the difference is a compromise rather than a
+						materials choice: copper's 400 against the conduction pace makes a 305 kg pipe
+						stiff enough to outrun the substep budget, and five coolant flow tests fail on
+						it. Brass is an honest plumbing alloy and is stable here. The real fix is to
+						stop pricing a thin pipe as a solid billet of its own metal.
+					-->
+					<Decimal Name="Conductivity" Value="110" />
+					<!--J/(kg K), real units: brass-->
+					<Decimal Name="SpecificHeat" Value="380" />
 					<Decimal Name="Emissivity" Value="0.125" />
-					<Decimal Name="SurfaceAreaScaler" Value ="1" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
 					<Decimal Name="ConsumerWasteEnergy" Value="0" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
-					<Decimal Name="CriticalTemperatureScaler" Value="1"/>
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
 				</Group>
 			</ModExtensions>
 		</Definition>
@@ -120,16 +149,23 @@
 			</Id>
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
-					<Bool Name="IgnoreThermals" Value="false" />
-					<Decimal Name="Conductivity" Value="1" />
-					<!--J/(kg K), real units: copper-->
-					<Decimal Name="SpecificHeat" Value="385" />
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--
+						W/(m K). Brass, not copper, and the difference is a compromise rather than a
+						materials choice: copper's 400 against the conduction pace makes a 305 kg pipe
+						stiff enough to outrun the substep budget, and five coolant flow tests fail on
+						it. Brass is an honest plumbing alloy and is stable here. The real fix is to
+						stop pricing a thin pipe as a solid billet of its own metal.
+					-->
+					<Decimal Name="Conductivity" Value="110" />
+					<!--J/(kg K), real units: brass-->
+					<Decimal Name="SpecificHeat" Value="380" />
 					<Decimal Name="Emissivity" Value="0.125" />
-					<Decimal Name="SurfaceAreaScaler" Value ="1" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
 					<Decimal Name="ConsumerWasteEnergy" Value="0" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
-					<Decimal Name="CriticalTemperatureScaler" Value="1"/>
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
 				</Group>
 			</ModExtensions>
 		</Definition>
@@ -140,16 +176,23 @@
 			</Id>
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
-					<Bool Name="IgnoreThermals" Value="false" />
-					<Decimal Name="Conductivity" Value="1" />
-					<!--J/(kg K), real units: copper-->
-					<Decimal Name="SpecificHeat" Value="385" />
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--
+						W/(m K). Brass, not copper, and the difference is a compromise rather than a
+						materials choice: copper's 400 against the conduction pace makes a 305 kg pipe
+						stiff enough to outrun the substep budget, and five coolant flow tests fail on
+						it. Brass is an honest plumbing alloy and is stable here. The real fix is to
+						stop pricing a thin pipe as a solid billet of its own metal.
+					-->
+					<Decimal Name="Conductivity" Value="110" />
+					<!--J/(kg K), real units: brass-->
+					<Decimal Name="SpecificHeat" Value="380" />
 					<Decimal Name="Emissivity" Value="0.125" />
-					<Decimal Name="SurfaceAreaScaler" Value ="1" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
 					<Decimal Name="ConsumerWasteEnergy" Value="0" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
-					<Decimal Name="CriticalTemperatureScaler" Value="1"/>
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
 				</Group>
 			</ModExtensions>
 		</Definition>
@@ -160,16 +203,23 @@
 			</Id>
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
-					<Bool Name="IgnoreThermals" Value="false" />
-					<Decimal Name="Conductivity" Value="1" />
-					<!--J/(kg K), real units: copper-->
-					<Decimal Name="SpecificHeat" Value="385" />
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--
+						W/(m K). Brass, not copper, and the difference is a compromise rather than a
+						materials choice: copper's 400 against the conduction pace makes a 305 kg pipe
+						stiff enough to outrun the substep budget, and five coolant flow tests fail on
+						it. Brass is an honest plumbing alloy and is stable here. The real fix is to
+						stop pricing a thin pipe as a solid billet of its own metal.
+					-->
+					<Decimal Name="Conductivity" Value="110" />
+					<!--J/(kg K), real units: brass-->
+					<Decimal Name="SpecificHeat" Value="380" />
 					<Decimal Name="Emissivity" Value="0.125" />
-					<Decimal Name="SurfaceAreaScaler" Value ="1" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
 					<Decimal Name="ConsumerWasteEnergy" Value="0" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
-					<Decimal Name="CriticalTemperatureScaler" Value="1"/>
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
 				</Group>
 			</ModExtensions>
 		</Definition>
@@ -180,16 +230,23 @@
 			</Id>
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
-					<Bool Name="IgnoreThermals" Value="false" />
-					<Decimal Name="Conductivity" Value="1" />
-					<!--J/(kg K), real units: copper-->
-					<Decimal Name="SpecificHeat" Value="385" />
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--
+						W/(m K). Brass, not copper, and the difference is a compromise rather than a
+						materials choice: copper's 400 against the conduction pace makes a 305 kg pipe
+						stiff enough to outrun the substep budget, and five coolant flow tests fail on
+						it. Brass is an honest plumbing alloy and is stable here. The real fix is to
+						stop pricing a thin pipe as a solid billet of its own metal.
+					-->
+					<Decimal Name="Conductivity" Value="110" />
+					<!--J/(kg K), real units: brass-->
+					<Decimal Name="SpecificHeat" Value="380" />
 					<Decimal Name="Emissivity" Value="0.125" />
-					<Decimal Name="SurfaceAreaScaler" Value ="1" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
 					<Decimal Name="ConsumerWasteEnergy" Value="0" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
-					<Decimal Name="CriticalTemperatureScaler" Value="1"/>
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
 				</Group>
 			</ModExtensions>
 		</Definition>
@@ -201,16 +258,23 @@
 			</Id>
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
-					<Bool Name="IgnoreThermals" Value="false" />
-					<Decimal Name="Conductivity" Value="1" />
-					<!--J/(kg K), real units: copper-->
-					<Decimal Name="SpecificHeat" Value="385" />
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--
+						W/(m K). Brass, not copper, and the difference is a compromise rather than a
+						materials choice: copper's 400 against the conduction pace makes a 305 kg pipe
+						stiff enough to outrun the substep budget, and five coolant flow tests fail on
+						it. Brass is an honest plumbing alloy and is stable here. The real fix is to
+						stop pricing a thin pipe as a solid billet of its own metal.
+					-->
+					<Decimal Name="Conductivity" Value="110" />
+					<!--J/(kg K), real units: brass-->
+					<Decimal Name="SpecificHeat" Value="380" />
 					<Decimal Name="Emissivity" Value="0.125" />
-					<Decimal Name="SurfaceAreaScaler" Value ="1" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
 					<Decimal Name="ConsumerWasteEnergy" Value="0" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
-					<Decimal Name="CriticalTemperatureScaler" Value="1"/>
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
 				</Group>
 			</ModExtensions>
 		</Definition>
@@ -221,16 +285,23 @@
 			</Id>
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
-					<Bool Name="IgnoreThermals" Value="false" />
-					<Decimal Name="Conductivity" Value="1" />
-					<!--J/(kg K), real units: copper-->
-					<Decimal Name="SpecificHeat" Value="385" />
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--
+						W/(m K). Brass, not copper, and the difference is a compromise rather than a
+						materials choice: copper's 400 against the conduction pace makes a 305 kg pipe
+						stiff enough to outrun the substep budget, and five coolant flow tests fail on
+						it. Brass is an honest plumbing alloy and is stable here. The real fix is to
+						stop pricing a thin pipe as a solid billet of its own metal.
+					-->
+					<Decimal Name="Conductivity" Value="110" />
+					<!--J/(kg K), real units: brass-->
+					<Decimal Name="SpecificHeat" Value="380" />
 					<Decimal Name="Emissivity" Value="0.125" />
-					<Decimal Name="SurfaceAreaScaler" Value ="1" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
 					<Decimal Name="ConsumerWasteEnergy" Value="0" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
-					<Decimal Name="CriticalTemperatureScaler" Value="1"/>
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
 				</Group>
 			</ModExtensions>
 		</Definition>
@@ -242,16 +313,23 @@
 			</Id>
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
-					<Bool Name="IgnoreThermals" Value="false" />
-					<Decimal Name="Conductivity" Value="1" />
-					<!--J/(kg K), real units: copper-->
-					<Decimal Name="SpecificHeat" Value="385" />
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--
+						W/(m K). Brass, not copper, and the difference is a compromise rather than a
+						materials choice: copper's 400 against the conduction pace makes a 305 kg pipe
+						stiff enough to outrun the substep budget, and five coolant flow tests fail on
+						it. Brass is an honest plumbing alloy and is stable here. The real fix is to
+						stop pricing a thin pipe as a solid billet of its own metal.
+					-->
+					<Decimal Name="Conductivity" Value="110" />
+					<!--J/(kg K), real units: brass-->
+					<Decimal Name="SpecificHeat" Value="380" />
 					<Decimal Name="Emissivity" Value="0.125" />
-					<Decimal Name="SurfaceAreaScaler" Value ="1" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
 					<Decimal Name="ConsumerWasteEnergy" Value="0" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
-					<Decimal Name="CriticalTemperatureScaler" Value="1"/>
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
 				</Group>
 			</ModExtensions>
 		</Definition>
@@ -262,16 +340,23 @@
 			</Id>
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
-					<Bool Name="IgnoreThermals" Value="false" />
-					<Decimal Name="Conductivity" Value="1" />
-					<!--J/(kg K), real units: copper-->
-					<Decimal Name="SpecificHeat" Value="385" />
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--
+						W/(m K). Brass, not copper, and the difference is a compromise rather than a
+						materials choice: copper's 400 against the conduction pace makes a 305 kg pipe
+						stiff enough to outrun the substep budget, and five coolant flow tests fail on
+						it. Brass is an honest plumbing alloy and is stable here. The real fix is to
+						stop pricing a thin pipe as a solid billet of its own metal.
+					-->
+					<Decimal Name="Conductivity" Value="110" />
+					<!--J/(kg K), real units: brass-->
+					<Decimal Name="SpecificHeat" Value="380" />
 					<Decimal Name="Emissivity" Value="0.125" />
-					<Decimal Name="SurfaceAreaScaler" Value ="1" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
 					<Decimal Name="ConsumerWasteEnergy" Value="0" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
-					<Decimal Name="CriticalTemperatureScaler" Value="1"/>
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
 				</Group>
 			</ModExtensions>
 		</Definition>
@@ -282,16 +367,17 @@
 			</Id>
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
-					<Bool Name="IgnoreThermals" Value="false" />
-					<Decimal Name="Conductivity" Value="1" />
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: steel casing-->
+					<Decimal Name="Conductivity" Value="50" />
 					<!--J/(kg K), real units: steel casing-->
 					<Decimal Name="SpecificHeat" Value="450" />
 					<Decimal Name="Emissivity" Value="0.125" />
-					<Decimal Name="SurfaceAreaScaler" Value ="1" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
 					<Decimal Name="ConsumerWasteEnergy" Value="0" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
-					<Decimal Name="CriticalTemperatureScaler" Value="1"/>
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
 				</Group>
 			</ModExtensions>
 		</Definition>
@@ -302,16 +388,17 @@
 			</Id>
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
-					<Bool Name="IgnoreThermals" Value="false" />
-					<Decimal Name="Conductivity" Value="1" />
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: steel casing-->
+					<Decimal Name="Conductivity" Value="50" />
 					<!--J/(kg K), real units: steel casing-->
 					<Decimal Name="SpecificHeat" Value="450" />
 					<Decimal Name="Emissivity" Value="0.125" />
-					<Decimal Name="SurfaceAreaScaler" Value ="1" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
 					<Decimal Name="ConsumerWasteEnergy" Value="0" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
-					<Decimal Name="CriticalTemperatureScaler" Value="1"/>
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
 				</Group>
 			</ModExtensions>
 		</Definition>
@@ -323,12 +410,13 @@
 			</Id>
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
-					<Bool Name="IgnoreThermals" Value="false" />
-					<Decimal Name="Conductivity" Value="1" />
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: steel casing-->
+					<Decimal Name="Conductivity" Value="50" />
 					<!--J/(kg K), real units: steel casing-->
 					<Decimal Name="SpecificHeat" Value="450" />
 					<Decimal Name="Emissivity" Value="0.125" />
-					<Decimal Name="SurfaceAreaScaler" Value ="1" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
 					<!--
 						Zero, and deliberately so. Every watt this block draws is already accounted
 						for: the simulation puts the compressor's work into the hot side along with
@@ -338,7 +426,7 @@
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
 					<Decimal Name="ConsumerWasteEnergy" Value="0" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
-					<Decimal Name="CriticalTemperatureScaler" Value="1"/>
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
 				</Group>
 			</ModExtensions>
 		</Definition>
@@ -349,17 +437,18 @@
 			</Id>
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
-					<Bool Name="IgnoreThermals" Value="false" />
-					<Decimal Name="Conductivity" Value="1" />
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: steel casing-->
+					<Decimal Name="Conductivity" Value="50" />
 					<!--J/(kg K), real units: steel casing-->
 					<Decimal Name="SpecificHeat" Value="450" />
 					<Decimal Name="Emissivity" Value="0.125" />
-					<Decimal Name="SurfaceAreaScaler" Value ="1" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
 					<!--Zero for the same reason as the large grid pump: the work is already counted.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
 					<Decimal Name="ConsumerWasteEnergy" Value="0" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
-					<Decimal Name="CriticalTemperatureScaler" Value="1"/>
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
 				</Group>
 			</ModExtensions>
 		</Definition>
@@ -371,16 +460,17 @@
 			</Id>
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
-					<Bool Name="IgnoreThermals" Value="false" />
-					<Decimal Name="Conductivity" Value="1" />
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: aluminium-->
+					<Decimal Name="Conductivity" Value="237" />
 					<!--J/(kg K), real units: aluminium-->
 					<Decimal Name="SpecificHeat" Value="900" />
 					<Decimal Name="Emissivity" Value="0.35" />
-					<Decimal Name="SurfaceAreaScaler" Value ="1.25" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1.25" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
 					<Decimal Name="ConsumerWasteEnergy" Value="0" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
-					<Decimal Name="CriticalTemperatureScaler" Value="1"/>
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
 				</Group>
 			</ModExtensions>
 		</Definition>
@@ -391,16 +481,124 @@
 			</Id>
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
-					<Bool Name="IgnoreThermals" Value="false" />
-					<Decimal Name="Conductivity" Value="1" />
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: aluminium-->
+					<Decimal Name="Conductivity" Value="237" />
 					<!--J/(kg K), real units: aluminium-->
 					<Decimal Name="SpecificHeat" Value="900" />
 					<Decimal Name="Emissivity" Value="0.35" />
-					<Decimal Name="SurfaceAreaScaler" Value ="1.25" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1.25" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
 					<Decimal Name="ConsumerWasteEnergy" Value="0" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
-					<Decimal Name="CriticalTemperatureScaler" Value="1"/>
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<!--
+			Decorative and electronic blocks: the fittings that were silently setting the
+			simulation cost of an entire ship.
+
+			A light is a plastic housing around a glass lens and a light source. Falling through to
+			DefaultThermodynamics gave it mild steel's 50 W/(m K) on a 16 to 24 kg body, and
+			stiffness is conductance over capacity, so the least massive block on a ship ended up
+			the stiffest thing on it. A field run measured a 36-strong set of light corners
+			demanding 21.4 substeps where the armour, trusses and reactors around them asked for
+			five or fewer — and a grid takes as many substeps as its stiffest element needs, with
+			everything else paying for all of them.
+
+			The fix is not a fudge: these really are insulators. Plastic is about 0.2 W/(m K) and
+			glass about 1, against steel's 50. Giving them figures a materials table would
+			recognise drops their demand from 21.4 to about 0.4 and hands the whole grid back to
+			its structure, which is what should have been setting the pace all along.
+
+			See docs/field-tuning.md for the measurement.
+		-->
+		<Definition>
+			<Id>
+				<TypeId>InteriorLight</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: plastic housing and a glass lens-->
+					<Decimal Name="Conductivity" Value="2" />
+					<!--J/(kg K), real units: glass and polymer-->
+					<Decimal Name="SpecificHeat" Value="900" />
+					<Decimal Name="Emissivity" Value="0.9" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<Decimal Name="CriticalTemperature" Value="500" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<Definition>
+			<Id>
+				<TypeId>ReflectorLight</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: plastic housing and a glass lens-->
+					<Decimal Name="Conductivity" Value="2" />
+					<!--J/(kg K), real units: glass and polymer-->
+					<Decimal Name="SpecificHeat" Value="900" />
+					<Decimal Name="Emissivity" Value="0.9" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<Decimal Name="CriticalTemperature" Value="500" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<Definition>
+			<Id>
+				<TypeId>EmissiveBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: glass tube-->
+					<Decimal Name="Conductivity" Value="1" />
+					<!--J/(kg K), real units: glass-->
+					<Decimal Name="SpecificHeat" Value="840" />
+					<Decimal Name="Emissivity" Value="0.9" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<Decimal Name="CriticalTemperature" Value="500" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<Definition>
+			<Id>
+				<TypeId>CameraBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: electronics in a cast housing-->
+					<Decimal Name="Conductivity" Value="5" />
+					<!--J/(kg K), real units: mixed electronics and casing-->
+					<Decimal Name="SpecificHeat" Value="800" />
+					<Decimal Name="Emissivity" Value="0.3" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<Decimal Name="CriticalTemperature" Value="450" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
 				</Group>
 			</ModExtensions>
 		</Definition>
@@ -412,16 +610,17 @@
 			</Id>
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
-					<Bool Name="IgnoreThermals" Value="false" />
-					<Decimal Name="Conductivity" Value="1" />
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: steel-->
+					<Decimal Name="Conductivity" Value="50" />
 					<!--J/(kg K), real units: steel and nickel alloy-->
 					<Decimal Name="SpecificHeat" Value="450" />
 					<Decimal Name="Emissivity" Value="0.15" />
-					<Decimal Name="SurfaceAreaScaler" Value ="1" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
 					<Decimal Name="ConsumerWasteEnergy" Value="0.25" />
 					<Decimal Name="CriticalTemperature" Value="1050" />
-					<Decimal Name="CriticalTemperatureScaler" Value="0.25"/>
+					<Decimal Name="OverheatDamagePerKelvin" Value="0.25"/>
 				</Group>
 			</ModExtensions>
 		</Definition>
@@ -433,16 +632,17 @@
 			</Id>
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
-					<Bool Name="IgnoreThermals" Value="false" />
-					<Decimal Name="Conductivity" Value="1" />
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: steel-->
+					<Decimal Name="Conductivity" Value="50" />
 					<!--J/(kg K), real units: steel with graphite shielding, which is heavier per kelvin-->
 					<Decimal Name="SpecificHeat" Value="600" />
 					<Decimal Name="Emissivity" Value="0.25" />
-					<Decimal Name="SurfaceAreaScaler" Value ="1" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
 					<Decimal Name="ConsumerWasteEnergy" Value="0.25" />
 					<Decimal Name="CriticalTemperature" Value="1200" />
-					<Decimal Name="CriticalTemperatureScaler" Value="0.25"/>
+					<Decimal Name="OverheatDamagePerKelvin" Value="0.25"/>
 				</Group>
 			</ModExtensions>
 		</Definition>

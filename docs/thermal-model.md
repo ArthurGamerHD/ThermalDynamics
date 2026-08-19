@@ -99,7 +99,7 @@ Every exposed face radiates to the ambient sky:
 watts = −ε σ A_exposed × (T⁴ − T_ambient⁴)
 ```
 
-`A_exposed = exposedFaces × gridSize² × SurfaceAreaScaler`, where `exposedFaces` is the count the
+`A_exposed = exposedFaces × gridSize² × ExposedSurfaceMultiplier`, where `exposedFaces` is the count the
 surface mapper produced — see [surface-mapping.md](surface-mapping.md). A block with no exposed
 face neither radiates nor absorbs. σ = 5.670374419e-8.
 
@@ -135,7 +135,7 @@ A sealed room holds one well-mixed air mass that exchanges with every surface bo
 ([ThermalSolver.AccumulateRoomAir](../Data/Scripts/Thermodynamics/Core/Simulation/ThermalSolver.cs)):
 
 ```
-G     = RoomConvectionCoefficient × faces × gridSize² × SurfaceAreaScaler
+G     = RoomConvectionCoefficient × faces × gridSize² × ExposedSurfaceMultiplier
 watts = G × (T_air − T_block)
 ```
 
@@ -304,7 +304,8 @@ Each parcel exchanges only with its own pipe and the blocks on that pipe's sink 
 reaches the far side of the ring only by being carried there:
 
 ```
-parcels/s = SegmentsPerSecondAtFullFlow x sqrt(sum of pump speed x power supplied)
+parcels/s = (flowRate / cellSize) x sqrt(sum of pump speed x power supplied)
+flowRate  = LargeGridFlowRate or SmallGridFlowRate, m/s, by the grid the ring is on
 pipe i reads parcel (i - round(parcels carried)) mod N
 ```
 
@@ -395,7 +396,7 @@ divided by the step length at the end. See the note on `LastDeltaTemperature` in
 
 ```
 if T > CriticalTemperature:
-    damage = (T − CriticalTemperature) × CriticalTemperatureScaler × h
+    damage = (T − CriticalTemperature) × OverheatDamagePerKelvin × h
 ```
 
 With `DamageIsPerSecond` on, damage is per second of simulated time and independent of `Frequency`.

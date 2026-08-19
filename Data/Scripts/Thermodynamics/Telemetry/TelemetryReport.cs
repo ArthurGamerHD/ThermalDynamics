@@ -1345,11 +1345,11 @@ namespace Thermodynamics
                     Field(sb, "  Conductivity", d.Conductivity);
                     Field(sb, "  SpecificHeat", d.SpecificHeat);
                     Field(sb, "  Emissivity", d.Emissivity);
-                    Field(sb, "  SurfaceAreaScaler", d.SurfaceAreaScaler);
+                    Field(sb, "  ExposedSurfaceMultiplier", d.ExposedSurfaceMultiplier);
                     Field(sb, "  ProducerWasteEnergy", d.ProducerWasteEnergy);
                     Field(sb, "  ConsumerWasteEnergy", d.ConsumerWasteEnergy);
                     Field(sb, "  CriticalTemperature", d.CriticalTemperature);
-                    Field(sb, "  CriticalTemperatureScaler", d.CriticalTemperatureScaler);
+                    Field(sb, "  OverheatDamagePerKelvin", d.OverheatDamagePerKelvin);
                 }
 
                 if (t.HasSurfaceProfile)
@@ -1443,11 +1443,11 @@ namespace Thermodynamics
                 Csv(sb, d == null ? 0 : d.Conductivity);
                 Csv(sb, d == null ? 0 : d.SpecificHeat);
                 Csv(sb, d == null ? 0 : d.Emissivity);
-                Csv(sb, d == null ? 0 : d.SurfaceAreaScaler);
+                Csv(sb, d == null ? 0 : d.ExposedSurfaceMultiplier);
                 Csv(sb, d == null ? 0 : d.ProducerWasteEnergy);
                 Csv(sb, d == null ? 0 : d.ConsumerWasteEnergy);
                 Csv(sb, d == null ? 0 : d.CriticalTemperature);
-                Csv(sb, d == null ? 0 : d.CriticalTemperatureScaler);
+                Csv(sb, d == null ? 0 : d.OverheatDamagePerKelvin);
 
                 Csv(sb, t.Size.X);
                 Csv(sb, t.Size.Y);

@@ -36,7 +36,7 @@ namespace Thermodynamics.Tests
         public static BlockModel Foil(float mass = 10f)
         {
             BlockThermalProperties thermal = Catalog.DefaultThermal();
-            thermal.Conductivity = 1f;
+            thermal.Conductivity = 83.333f;
             return BlockModel.Solid("Foil", Vector3I.One, mass, thermal);
         }
     }

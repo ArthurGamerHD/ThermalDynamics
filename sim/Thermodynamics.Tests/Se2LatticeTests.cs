@@ -49,14 +49,14 @@ namespace Thermodynamics.Tests
         {
             return new BlockThermalProperties
             {
-                Conductivity = 0.6f,
+                Conductivity = 50f,
                 SpecificHeat = 450f,
                 Emissivity = 0.2f,
-                SurfaceAreaScaler = 1f,
+                ExposedSurfaceMultiplier = 1f,
                 ProducerWasteEnergy = 0.05f,
                 ConsumerWasteEnergy = 0.05f,
                 CriticalTemperature = 1400f,
-                CriticalTemperatureScaler = 1f,
+                OverheatDamagePerKelvin = 1f,
             };
         }
 

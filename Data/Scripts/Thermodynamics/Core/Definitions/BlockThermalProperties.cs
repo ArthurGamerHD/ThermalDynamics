@@ -10,13 +10,14 @@ namespace Thermodynamics.Core
     public class BlockThermalProperties
     {
         /// <summary>Exclude the block from the simulation entirely.</summary>
-        public bool IgnoreThermals;
+        public bool ExcludeFromSimulation;
 
         /// <summary>
-        /// Conduction quality, 0..1. Multiplied by
-        /// <see cref="ThermalConstants.ReferenceConductivity"/> to get W/(m K).
+        /// Thermal conductivity in real W/(m K) — mild steel 50, aluminium 237, copper 400.
+        /// Multiplied by <see cref="ThermalConstants.ConductionScale"/> to set the game's pace,
+        /// the same way <c>HeatTimeScale</c> paces real specific heats.
         /// </summary>
-        public float Conductivity = 0.6f;
+        public float Conductivity = 50f;
 
         /// <summary>Specific heat capacity in J/(kg K) game units.</summary>
         public float SpecificHeat = 2f;
@@ -25,7 +26,7 @@ namespace Thermodynamics.Core
         public float Emissivity = 0.125f;
 
         /// <summary>Multiplier on the geometric face area, for finned or folded surfaces.</summary>
-        public float SurfaceAreaScaler = 1f;
+        public float ExposedSurfaceMultiplier = 1f;
 
         /// <summary>Fraction of generated power that becomes heat.</summary>
         public float ProducerWasteEnergy = 0.05f;
@@ -37,7 +38,7 @@ namespace Thermodynamics.Core
         public float CriticalTemperature = 900f;
 
         /// <summary>Damage per Kelvin of overshoot, per second.</summary>
-        public float CriticalTemperatureScaler = 1f;
+        public float OverheatDamagePerKelvin = 1f;
 
         public static BlockThermalProperties Default()
         {
@@ -50,14 +51,14 @@ namespace Thermodynamics.Core
         /// </summary>
         public BlockThermalProperties Clamp()
         {
-            Conductivity = Clamp01(Conductivity);
+            Conductivity = Math.Max(0f, Conductivity);
             Emissivity = Clamp01(Emissivity);
             SpecificHeat = Math.Max(ThermalConstants.MinimumThermalMass, SpecificHeat);
-            SurfaceAreaScaler = Math.Max(0f, SurfaceAreaScaler);
+            ExposedSurfaceMultiplier = Math.Max(0f, ExposedSurfaceMultiplier);
             ProducerWasteEnergy = Math.Max(0f, ProducerWasteEnergy);
             ConsumerWasteEnergy = Math.Max(0f, ConsumerWasteEnergy);
             CriticalTemperature = Math.Max(0f, CriticalTemperature);
-            CriticalTemperatureScaler = Math.Max(0f, CriticalTemperatureScaler);
+            OverheatDamagePerKelvin = Math.Max(0f, OverheatDamagePerKelvin);
             return this;
         }
 
@@ -70,7 +71,6 @@ namespace Thermodynamics.Core
             List<string> problems = new List<string>();
             if (SpecificHeat <= 0f) problems.Add("SpecificHeat must be greater than zero.");
             if (Emissivity > 1f) problems.Add("Emissivity above 1 is not physical.");
-            if (Conductivity > 1f) problems.Add("Conductivity is a 0..1 quality value.");
             if (ProducerWasteEnergy > 1f) problems.Add("ProducerWasteEnergy above 1 creates energy from nothing.");
             if (ConsumerWasteEnergy > 1f) problems.Add("ConsumerWasteEnergy above 1 creates energy from nothing.");
             return problems;
