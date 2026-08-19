@@ -18,6 +18,19 @@ namespace Thermodynamics.Core
         public BlockInstance Block;
 
         /// <summary>
+        /// Which way round the ring this pump pushes: +1 with the ring's own order, -1 against it.
+        ///
+        /// Set from the block's orientation when the loop is traced — a pump drives fluid out of its
+        /// outlet port, and whether that port faces the next pipe in the ring or the previous one is
+        /// the whole of it. A pump fitted the other way round is not broken, it drives the loop
+        /// backwards, and a loop driven backwards works exactly as well.
+        ///
+        /// Two pumps facing each other therefore cancel, which is worth knowing before building it:
+        /// the ring holds coolant, the pumps draw their power, and nothing circulates.
+        /// </summary>
+        public int Direction = 1;
+
+        /// <summary>
         /// Speed the terminal is set to, 0..1.
         ///
         /// Defaults to full so a ring built in a test or a harness circulates without a host to drive
@@ -38,18 +51,19 @@ namespace Thermodynamics.Core
         public float LastPowerWatts;
 
         /// <summary>
-        /// This pump's share of the ring's flow, in units of one pump at full speed.
+        /// This pump's share of the ring's flow, in units of one pump at full speed, signed by
+        /// <see cref="Direction"/>.
         ///
         /// Speed times what the grid supplied: a pump set to half speed on a browned-out grid moves
-        /// half of half. <see cref="CoolantLoop.RefreshFlow"/> takes the square root of the sum, so
-        /// this is a demand rather than a flow.
+        /// half of half. <see cref="CoolantLoop.RefreshFlow"/> sums these and takes the square root of
+        /// the magnitude, so this is a demand rather than a flow, and opposed pumps subtract.
         /// </summary>
         public float Contribution
         {
             get
             {
                 if (!Enabled) return 0f;
-                return Clamp01(Speed) * Clamp01(PowerAvailable);
+                return Direction * Clamp01(Speed) * Clamp01(PowerAvailable);
             }
         }
 

@@ -328,6 +328,12 @@ Flow going as the square root of combined pump demand is real parallel-pump beha
 circuit, where turbulent pressure loss rises with the square of flow: four pumps carry twice one
 pump's flow, not four times.
 
+Demands are **signed** by which way each pump faces — a pump drives fluid out of its outlet port, so
+whether that port opens onto the next pipe round the ring or the previous one sets the sign. They
+subtract before the square root is taken. So a pump fitted the wrong way round drives the ring
+backwards rather than failing, a backwards ring transports exactly as well, and two opposed pumps
+cancel to a standstill while both go on drawing power.
+
 A pump's own draw is **linear** in its speed, which is what stops pump count being a discount. The
 affinity law — power with the cube of speed, which is what a real centrifugal pump does — was tried
 first and is an exploit here rather than a trade: a given flow from N pumps needs each at speed `K/N`,

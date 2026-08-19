@@ -75,6 +75,48 @@ namespace Thermodynamics.Harness
             return orientation;
         }
 
+        /// <summary>
+        /// An orientation whose inlet port faces <paramref name="inlet"/> and whose outlet faces
+        /// <paramref name="outlet"/>, in that order.
+        ///
+        /// <see cref="TryOrient(BlockModel,Vector3I,Vector3I,out BlockOrientation)"/> accepts either
+        /// order, which is right for a pipe — a pipe has no direction — and wrong for a pump, which
+        /// drives fluid out of its second port. Building a pump deliberately the wrong way round
+        /// needs the ordered form.
+        /// </summary>
+        public static bool TryOrientDirected(BlockModel model, Vector3I inlet, Vector3I outlet,
+            out BlockOrientation orientation)
+        {
+            if (model != null && model.Coolant != null && model.Coolant.LinkPorts.Length == 2)
+            {
+                CoolantPort[] ports = model.Coolant.LinkPorts;
+
+                foreach (BlockOrientation candidate in AllOrientations())
+                {
+                    if (candidate.Rotate(ports[0].LocalDirection) != inlet) continue;
+                    if (candidate.Rotate(ports[1].LocalDirection) != outlet) continue;
+
+                    orientation = candidate;
+                    return true;
+                }
+            }
+
+            orientation = BlockOrientation.Identity;
+            return false;
+        }
+
+        public static BlockOrientation OrientDirected(BlockModel model, Vector3I inlet, Vector3I outlet)
+        {
+            BlockOrientation orientation;
+            if (!TryOrientDirected(model, inlet, outlet, out orientation))
+            {
+                throw new InvalidOperationException(
+                    "No orientation of " + model.Name + " takes fluid in from " + inlet
+                    + " and out toward " + outlet);
+            }
+            return orientation;
+        }
+
         private static bool LinksMatch(BlockModel model, BlockOrientation orientation, Vector3I a, Vector3I b)
         {
             CoolantPort[] ports = model.Coolant.LinkPorts;
@@ -114,7 +156,8 @@ namespace Thermodynamics.Harness
             GridBuilder builder,
             IList<Vector3I> cells,
             int pumpIndex = -1,
-            IDictionary<int, Vector3I> sinkDirections = null)
+            IDictionary<int, Vector3I> sinkDirections = null,
+            bool reversePump = false)
         {
             if (builder == null) throw new ArgumentNullException("builder");
             if (cells == null || cells.Count < 4) throw new ArgumentException("A ring needs at least four cells");
@@ -158,6 +201,14 @@ namespace Thermodynamics.Harness
                     if (!isStraight) throw new ArgumentException("The pump cell must be a straight run");
                     model = Catalog.CoolantPump();
                     sink = Vector3I.Zero;
+
+                    // Ordered, so the pump's outlet faces the next cell along the ring — or the
+                    // previous one when the caller wants it fitted backwards.
+                    builder.Place(model, cell, reversePump
+                        ? OrientDirected(model, toNext, toPrevious)
+                        : OrientDirected(model, toPrevious, toNext));
+                    ring.Add(builder.Last);
+                    continue;
                 }
                 else if (isStraight)
                 {

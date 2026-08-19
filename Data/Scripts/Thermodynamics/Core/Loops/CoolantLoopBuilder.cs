@@ -79,6 +79,7 @@ namespace Thermodynamics.Core
 
                     CoolantPump pump = new CoolantPump();
                     pump.Block = ring[r];
+                    pump.Direction = PumpDirection(grid, ring, r);
                     loop.Pumps.Add(pump);
                 }
 
@@ -118,6 +119,32 @@ namespace Thermodynamics.Core
                 TraceRing(grid, block, out fault);
                 diagnostics.Record(block, fault);
             }
+        }
+
+        /// <summary>
+        /// Which way round the ring the pump at <paramref name="index"/> pushes: +1 with the ring's
+        /// own order, -1 against it.
+        ///
+        /// A pump drives fluid out of its second link port — <see cref="CoolantShape.Pump"/> takes the
+        /// inlet first and the outlet second — so the question is only whether that port faces the
+        /// next pipe along the ring or the previous one. A pump fitted the other way round drives the
+        /// loop backwards rather than not working, which is the point: the ring does not care which
+        /// way it turns.
+        /// </summary>
+        private static int PumpDirection(GridModel grid, List<BlockInstance> ring, int index)
+        {
+            BlockInstance pump = ring[index];
+
+            List<GridPort> ports = pump.CoolantLinkPorts();
+            if (ports.Count < 2) return 1;
+
+            BlockInstance next = ring[(index + 1) % ring.Count];
+            if (next == pump) return 1;
+
+            // The outlet is the second port. If it opens onto the next block in crawl order the pump
+            // is pushing with the ring; anything else means it is pushing the other way.
+            GridPort outlet = ports[1];
+            return grid.GetAtCell(outlet.Target) == next ? 1 : -1;
         }
 
         /// <summary>

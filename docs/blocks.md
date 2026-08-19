@@ -78,6 +78,13 @@ Practical build advice:
   at 93 C. Dividing that ring into four separate rings with a pump each lands at 95 C — no better than
   spreading, for four times the pumps. What saturates a loop is several sources dumping into one short
   run of pipe, not the length of the ring. Measured by the `loop-layout` scenario.
+* **A pump fitted the wrong way round is not broken — it drives the loop backwards**, and a loop
+  driven backwards cools exactly as well. A pump pushes fluid out of its outlet port; whether that
+  faces one way round the ring or the other is all that changes.
+* **Two pumps facing each other cancel.** Their demands subtract before the square root, so a ring
+  with three pumps one way and one the other circulates at the rate of two, and a ring with one each
+  way does not circulate at all — while both pumps go on drawing their full power. If a loop has
+  pumps and no flow, check that they agree.
 * One large ring is also the more robust arrangement. Flow rises with the square root of combined
   pumping, so a ring with four pumps that loses one still circulates at 87 %; a ring with one pump that
   loses it stops circulating altogether and becomes a local heat buffer.

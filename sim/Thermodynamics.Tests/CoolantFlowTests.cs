@@ -477,5 +477,161 @@ namespace Thermodynamics.Tests
                 Assert.Equal(10f * (float)Math.Sqrt(i + 1), loop.FlowSegmentsPerSecond, 3);
             }
         }
+    
+        // ---- which way round the ring turns -------------------------------------------------
+
+        /// <summary>
+        /// A pump fitted the other way round drives the loop backwards rather than not working, and a
+        /// loop driven backwards works exactly as well. A build mistake becomes a build choice.
+        /// </summary>
+        [Fact]
+        public void APumpFittedBackwardsDrivesTheRingInReverse()
+        {
+            CoolantLoop forward = RingWithPump(false);
+            CoolantLoop reverse = RingWithPump(true);
+
+            Assert.Single(forward.Pumps);
+            Assert.Single(reverse.Pumps);
+
+            // Which sign counts as "forward" is not fixed: a ring is traced from an arbitrary block
+            // in whichever direction its first port leads, so direction is only ever meaningful
+            // relative to the ring's own order. What must hold is that turning the pump round flips
+            // it, and that the ring then turns the other way at the same speed.
+            Assert.Equal(-forward.Pumps[0].Direction, reverse.Pumps[0].Direction);
+            Assert.Equal(forward.FlowSegmentsPerSecond, -reverse.FlowSegmentsPerSecond, 3);
+            Assert.NotEqual(0f, reverse.FlowSegmentsPerSecond);
+        }
+
+        /// <summary>
+        /// A ring driven backwards carries heat as well as one driven forwards.
+        ///
+        /// Close rather than identical: the sink does not sit symmetrically between the pump and
+        /// itself, so reversing the flow changes how far the heated coolant travels before it comes
+        /// back round. A couple of percent is that asymmetry; anything larger would mean one
+        /// direction transports worse than the other, which is the thing being ruled out.
+        /// </summary>
+        [Fact]
+        public void AReversedRingCarriesHeatJustAsWell()
+        {
+            float forward = SpreadAfterHeatingOneSink(false);
+            float reverse = SpreadAfterHeatingOneSink(true);
+
+            Assert.True(forward > 0f && reverse > 0f, "both directions should be transporting");
+            Assert.Equal(1f, reverse / forward, 1);
+        }
+
+        /// <summary>
+        /// Two pumps facing each other cancel. The ring holds its coolant, both pumps draw their
+        /// power, and nothing circulates — which is worth knowing before building it.
+        /// </summary>
+        [Fact]
+        public void OpposedPumpsCancelAndTheRingStops()
+        {
+            CoolantLoop loop;
+            Ring(5, 5, 4f, out loop);
+
+            loop.Pumps.Clear();
+
+            CoolantPump forward = new CoolantPump();
+            forward.MaxPowerWatts = 20000f;
+            forward.Direction = 1;
+            loop.Pumps.Add(forward);
+
+            loop.RefreshFlow();
+            Assert.True(loop.FlowSegmentsPerSecond > 0f);
+
+            CoolantPump against = new CoolantPump();
+            against.MaxPowerWatts = 20000f;
+            against.Direction = -1;
+            loop.Pumps.Add(against);
+
+            loop.RefreshFlow();
+            Assert.Equal(0f, loop.FlowSegmentsPerSecond, 4);
+            Assert.Equal(0f, loop.PumpDemand, 4);
+
+            // And they are both still drawing, which is the part worth warning about.
+            Assert.Equal(20000f, forward.DemandWatts, 2);
+            Assert.Equal(20000f, against.DemandWatts, 2);
+        }
+
+        /// <summary>
+        /// Three pumps one way against one the other leave net flow for two, not four — the square
+        /// root is taken of what survives the subtraction.
+        /// </summary>
+        [Fact]
+        public void OpposedPumpsSubtractBeforeTheSquareRoot()
+        {
+            CoolantLoop loop;
+            Ring(5, 5, 10f, out loop);
+
+            loop.Pumps.Clear();
+            for (int i = 0; i < 4; i++)
+            {
+                CoolantPump pump = new CoolantPump();
+                pump.MaxPowerWatts = 20000f;
+                pump.Direction = i < 3 ? 1 : -1;
+                loop.Pumps.Add(pump);
+            }
+
+            loop.RefreshFlow();
+
+            // Net demand of two, so flow of sqrt(2) times the base rate.
+            Assert.Equal(2f, loop.PumpDemand, 3);
+            Assert.Equal(10f * (float)Math.Sqrt(2f), loop.FlowSegmentsPerSecond, 3);
+        }
+
+        /// <summary>Reversed flow carries its fractional debt with the right sign, and conserves heat.</summary>
+        [Fact]
+        public void ReverseRotationIsExactToo()
+        {
+            CoolantLoop loop;
+            Ring(5, 5, 4f, out loop);
+
+            loop.Pumps.Clear();
+            CoolantPump against = new CoolantPump();
+            against.MaxPowerWatts = 20000f;
+            against.Direction = -1;
+            loop.Pumps.Add(against);
+            loop.RefreshFlow();
+
+            for (int i = 0; i < loop.PipeCount; i++)
+            {
+                loop.SetSegmentTemperature(i, 250f + (i * 40f));
+            }
+
+            float before = loop.Energy;
+            float hottest = loop.HottestSegment;
+
+            // A whole number of laps: the ring must come back to exactly where it started.
+            for (int i = 0; i < 4 * loop.PipeCount; i++) loop.Advect(1f / 4f);
+
+            Assert.Equal(1f, loop.Energy / before, 5);
+            Assert.Equal(hottest, loop.HottestSegment, 2);
+        }
+
+        private static CoolantLoop RingWithPump(bool reversed)
+        {
+            GridBuilder builder = GridBuilder.Large();
+            PipeFitter.BuildRing(builder, PipeFitter.RectangleXZ(Vector3I.Zero, 5, 5), -1, null, reversed);
+
+            return builder.BuildSimulation(Isolated(), 300f).Solver.Loops[0];
+        }
+
+        private static float SpreadAfterHeatingOneSink(bool reversed)
+        {
+            Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
+            sinks[2] = Vector3I.Down;
+
+            GridBuilder builder = GridBuilder.Large();
+            List<Vector3I> cells = PipeFitter.RectangleXZ(Vector3I.Zero, 5, 5);
+            PipeFitter.BuildRing(builder, cells, -1, sinks, reversed);
+            builder.Place(Catalog.Reactor(), cells[2] + Vector3I.Down).Producing(300000f);
+
+            ThermalSimulation simulation = builder.BuildSimulation(Isolated(), 300f);
+            simulation.StepExact(4000, Worlds.Shadow());
+
+            CoolantLoop loop = simulation.Solver.Loops[0];
+            return loop.HottestSegment - loop.ColdestSegment;
+        }
     }
 }

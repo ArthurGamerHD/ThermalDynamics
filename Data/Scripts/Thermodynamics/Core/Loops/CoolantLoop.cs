@@ -224,6 +224,10 @@ namespace Thermodynamics.Core
         ///
         /// It is also the behaviour worth having in a game: a second pump is a real gain and a
         /// meaningful redundancy, and the tenth is nearly free to leave switched off.
+        ///
+        /// Demands are signed by which way each pump faces, so they subtract where pumps oppose each
+        /// other and the square root is taken of what is left. A ring driven backwards works exactly
+        /// as well as one driven forwards; a ring whose pumps cancel does not circulate at all.
         /// </summary>
         public void RefreshFlow()
         {
@@ -233,12 +237,20 @@ namespace Thermodynamics.Core
                 demand += Pumps[i].Contribution;
             }
 
-            FlowSegmentsPerSecond = demand <= 0f
-                ? 0f
-                : Properties.SegmentsPerSecondAtFullFlow * (float)Math.Sqrt(demand);
+            if (demand == 0f)
+            {
+                FlowSegmentsPerSecond = 0f;
+                return;
+            }
+
+            float magnitude = Properties.SegmentsPerSecondAtFullFlow * (float)Math.Sqrt(Math.Abs(demand));
+            FlowSegmentsPerSecond = demand < 0f ? -magnitude : magnitude;
         }
 
-        /// <summary>Combined pump demand in the ring, in units of one pump at full speed.</summary>
+        /// <summary>
+        /// Net pump demand in the ring, in units of one pump at full speed. Signed: opposed pumps
+        /// subtract, so a ring whose pumps cancel reports zero however many are running.
+        /// </summary>
         public float PumpDemand
         {
             get
@@ -489,13 +501,15 @@ namespace Thermodynamics.Core
         /// </summary>
         public void Advect(float h)
         {
-            if (segmentCount < 2 || FlowSegmentsPerSecond <= 0f) return;
+            if (segmentCount < 2 || FlowSegmentsPerSecond == 0f) return;
 
             float parcels = FlowSegmentsPerSecond * h;
-            if (parcels <= 0f) return;
+            if (parcels == 0f) return;
 
             travelled += parcels;
 
+            // Truncation toward zero is what makes this work in both directions: a fractional debt
+            // stays on the books with its own sign until it is worth a whole parcel of travel.
             int whole = (int)travelled;
             if (whole != 0)
             {
@@ -504,8 +518,10 @@ namespace Thermodynamics.Core
                 if (shift < 0) shift += segmentCount;
             }
 
-            // Faster than the step can see: converge on well mixed rather than alias.
-            if (parcels > 1f) MixToward(1f - (1f / parcels));
+            // Faster than the step can see: converge on well mixed rather than alias. Direction has
+            // no bearing on this — outrunning the step is outrunning the step.
+            float magnitude = parcels < 0f ? -parcels : parcels;
+            if (magnitude > 1f) MixToward(1f - (1f / magnitude));
         }
 
         /// <summary>
@@ -537,6 +553,7 @@ namespace Thermodynamics.Core
         public float MixingFraction(float substepSeconds)
         {
             float parcels = FlowSegmentsPerSecond * substepSeconds;
+            if (parcels < 0f) parcels = -parcels;
             if (parcels <= 1f) return 0f;
             return 1f - (1f / parcels);
         }
