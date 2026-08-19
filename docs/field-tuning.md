@@ -89,3 +89,51 @@ in [profiles.md](profiles.md).
   should not carry a convection coefficient at all. Harmless while the density term zeroes the
   transfer, but it suggests the coefficient is being reported before the density blend rather than
   after.
+
+
+---
+
+# Second run — `MaxSubstepsPerBlock 6` / `MaxSubsteps 6`
+
+Same world, same ship, same build; only the two caps moved. 118.5 s.
+
+| | cap 3 | cap 6 |
+| --- | --- | --- |
+| blocks floored per grid | 121.97 (9.0 %) | **14.0 (1.03 %)** |
+| `demand_configured` | 3.000 | 6.000 |
+| `clamped_steps` | 0 | **0** |
+| substeps per step | 3.00 | 6.00 |
+| solver share of real time | 1.63 % | 2.17 % |
+| total measured | 3.62 % | 4.70 % |
+| ns per element visit | 50.4 | **34.3** |
+| worst peak-to-mean drift | 2.89 K | **1.07 K** |
+| frames over 60 fps | 2 of 17,352 | 2 of 6,801 |
+
+**It cost a third more, not double.** Twice the substep passes came out at 1.33× the solver time,
+because the cost of a single pass fell 32 % — 0.2314 ms to 0.1576 ms, and 50.4 ns per element visit
+to 34.3. More substeps over the same node set is a tighter loop with less per-step setup and better
+locality; the arithmetic per visit is unchanged, so this is cache behaviour rather than a saving in
+work.
+
+**The answer did not move, only its resolution.** Peak temperatures are within 2 K of the first run
+on every grid (883–908 K against 885–910 K), so the extra substeps are not buying a different
+physics result — they are buying the same result with nine tenths of the previously under-resolved
+blocks resolved properly. Drift more than halved on the way.
+
+Both over-budget frames are again frame 1 and frame 15, at 4.1 s and 5.1 s: load, not steady state.
+
+## Stop here
+
+`demand_uncapped` is still 21.35 and still set by `LargeBlockLight_1corner`, so 14 blocks per grid
+are still floored. Going further is possible and not obviously worth it:
+
+* Cap 8 floors ten blocks a grid instead of fourteen.
+* Cap 16 floors two.
+* Uncapped floors none, at roughly 3.5× the substep passes of cap 6 — extrapolating the observed
+  sublinear scaling, somewhere near 5 % solver and 7–8 % total.
+
+That last one is still affordable, but it buys perhaps a tenth of a kelvin of drift on a figure
+already three times inside tolerance. **Cap 6 is the right place to stop**, and the remaining
+demand should be attacked at its source rather than paid for: the fourteen floored blocks are
+decorative lights, and giving them a sane thermal mass would drop uncapped demand from 21.4 to
+about 5.8 and make the cap irrelevant.
