@@ -5,35 +5,30 @@ using VRageMath;
 namespace Thermodynamics.Core
 {
     /// <summary>
-    /// Which of a grid's own cells the sun can actually reach.
+    /// Which of a grid's own cells the sun can reach.
     ///
-    /// The cheap solar model asks one question per face — how square is it to the sun — and that
-    /// question has no answer for a face standing in the ship's own shadow. A wall inside a doorway
-    /// recess, the sunward face of a block under an overhang, the far side of a hangar: all of them
-    /// face the sun and none of them see it.
+    /// Without this, a face is lit whenever it points at the sun, whatever the grid has built in
+    /// front of it — a wall inside a doorway recess, a block under an overhang, the far side of a
+    /// hangar.
     ///
-    /// The question is asked of a face, not of a block. A wall two cells thick has an outer layer
-    /// and an inner one, and the inner layer's side faces are just as open to the sky as the outer
-    /// layer's — they are on the same wall, looking out of the same side of the ship. Asking
-    /// whether the *cell* can see the sun buries every one of them, and a solid hull ends up lit
-    /// along a single row of blocks. So what is traced is the empty cell just outside each face:
-    /// stand where the face's surface is and look at the sun.
+    /// Resolved per face rather than per cell. A wall two cells thick has an inner layer whose side
+    /// faces are as open to the sky as the outer layer's; testing whether the cell can see the sun
+    /// would shadow all of them and leave a solid hull lit along a single row of blocks. What is
+    /// traced is the empty cell just outside each face, which is where the face's surface sits.
     ///
-    /// The walk itself goes one cell at a time from there toward the sun until the grid runs out.
-    /// Cross anything solid and that face is shadowed. Exact at cell resolution.
+    /// The walk steps one cell at a time from there towards the sun until it leaves the grid's
+    /// bounds. Crossing anything solid shadows that face. Exact at cell resolution.
     ///
-    /// The obvious cheaper structure — project every cell onto a plane facing the sun, bucket it,
-    /// keep whichever is nearest — was built first and then thrown away. Buckets are axis-aligned
-    /// and the sun is not, so a column crossing the grid diagonally scatters across neighbouring
-    /// buckets: it leaks sunlight onto shadowed cells, and the tolerance that closes the leak
-    /// invents shadows on cells standing in the open. Measured against a real ship at an oblique
-    /// sun, and against seven test geometries at eight sun angles, every setting of it was wrong in
-    /// both directions at once.
+    /// A cheaper structure — project every cell onto a plane facing the sun, bucket it, keep the
+    /// nearest — was implemented and rejected. Buckets are axis-aligned and the sun is not, so a
+    /// column crossing the grid diagonally scatters across neighbouring buckets: it leaks sunlight
+    /// onto shadowed cells, and the tolerance that closes the leak invents shadows on cells in the
+    /// open. Measured against a real grid at an oblique sun and against seven test geometries at
+    /// eight sun angles, every parameterisation erred in both directions at once.
     ///
-    /// The walk costs more, so it is spread over ticks the way the room mapper spreads its flood
-    /// fill, and the last answer stays readable while the next is being built. A pass only starts
-    /// when the sun has moved enough to matter or the grid's blocks have changed — on a planet,
-    /// seconds apart.
+    /// The walk is therefore budgeted across ticks like the room mapper's flood fill, with the last
+    /// completed answer readable while the next is built. A pass starts only when the sun has moved
+    /// appreciably or the grid's blocks have changed.
     /// </summary>
     public class SunShadowMap
     {
@@ -46,15 +41,14 @@ namespace Thermodynamics.Core
         /// <summary>Air cells the running pass has yet to walk.</summary>
         private readonly List<Vector3I> pending = new List<Vector3I>();
 
-        /// <summary>Air cells already queued, so a cell shared by six faces is walked once.</summary>
+        /// <summary>Air cells already queued, so a cell shared by several faces is walked once.</summary>
         private readonly HashSet<Vector3I> queued = new HashSet<Vector3I>();
 
         /// <summary>
-        /// Another grid that may be standing in the way, and how to get into its cell space.
+        /// Another grid that may stand in the way, with the transform into its cell space.
         ///
-        /// The transform is what makes this tractable. Rather than reasoning about two lattices at
-        /// once, a ray is carried into the occluder's own frame and walked there exactly as the
-        /// grid walks itself — same traversal, same guarantees, a different set of blocks.
+        /// The transform avoids reasoning about two lattices at once: a ray is carried into the
+        /// occluder's frame and walked there by the same traversal the grid uses on itself.
         /// </summary>
         public struct Occluder
         {
@@ -63,11 +57,11 @@ namespace Thermodynamics.Core
             /// <summary>Maps a point in this grid's cell space into the occluder's.</summary>
             public MatrixD ToOccluder;
 
-            /// <summary>Identity of the occluding grid, so a changed set can be noticed.</summary>
+            /// <summary>Identity of the occluding grid, so a changed set can be detected.</summary>
             public long Id;
         }
 
-        /// <summary>Grids the running pass is testing against, beside this one.</summary>
+        /// <summary>Grids other than this one that the running pass is testing against.</summary>
         private readonly List<Occluder> occluders = new List<Occluder>();
 
         /// <summary>Sun direction carried into each occluder's frame, one per occluder.</summary>
@@ -101,15 +95,15 @@ namespace Thermodynamics.Core
         public int PendingCells { get { return Math.Max(0, pending.Count - cursor); } }
 
         /// <summary>
-        /// True when the answer no longer matches this sun direction. A shadow that lags the sun by
-        /// a fraction of a degree is invisible; rebuilding for one is not.
+        /// True when the completed answer no longer matches this sun direction by more than the
+        /// caller's tolerance.
         /// </summary>
         public bool NeedsRestart(ref Vector3 sunLocal, float cosineTolerance)
         {
             if (!IsBuilt && !IsRunning) return true;
 
-            // A pass already running for very nearly this direction is worth finishing rather than
-            // restarting, or a sun that creeps never lets one complete.
+            // A pass already running for nearly this direction is finished rather than restarted;
+            // otherwise a slowly moving sun never lets one complete.
             Vector3 reference = IsRunning ? passSun : sun;
             return Vector3.Dot(reference, sunLocal) < cosineTolerance;
         }
@@ -136,9 +130,8 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Begins a pass that also tests against other grids. Their shadows land on this grid's
-        /// faces the same way its own do, so a station overhead darkens the hull under it and
-        /// nothing else.
+        /// Begins a pass that also tests against other grids. Their shadows fall on this grid's faces
+        /// exactly as its own do, so a station overhead darkens only the hull beneath it.
         /// </summary>
         public void Restart(GridModel model, Vector3 sunLocal, IList<Occluder> others)
         {
@@ -161,9 +154,8 @@ namespace Thermodynamics.Core
                     Occluder occluder = others[i];
                     if (occluder.Model == null) continue;
 
-                    // The direction is carried in once per occluder rather than per ray: it is the
-                    // same sun for every face, and a normal transform per face would be most of
-                    // the cost of the walk it feeds.
+                    // The direction is transformed once per occluder rather than per ray: the sun
+                    // is the same for every face, and a per-face transform would dominate the walk.
                     Vector3D direction = Vector3D.TransformNormal(passSun, occluder.ToOccluder);
                     if (direction.LengthSquared() < 1e-12) continue;
 
@@ -172,9 +164,9 @@ namespace Thermodynamics.Core
                 }
             }
 
-            // The air on the outside of every block face — the ship's skin, one cell out. Interior
-            // air is in there too, and is shadowed by the hull around it, which is correct: a face
-            // looking into a sealed room sees no sun.
+            // The air one cell outside every block face: the grid's skin. Interior air is included
+            // and is correctly shadowed by the hull around it, since a face looking into a sealed
+            // room sees no sun.
             IList<BlockInstance> blocks = grid.Blocks;
             for (int i = 0; i < blocks.Count; i++)
             {
@@ -203,8 +195,8 @@ namespace Thermodynamics.Core
             if (!IsRunning) return false;
 
             // Guarded against overflow rather than clamped afterwards: RunToCompletion passes
-            // int.MaxValue, and cursor + that wraps negative, which reads as "nothing to do" and
-            // spins forever.
+            // int.MaxValue, and adding the cursor to that wraps negative, which reads as no work
+            // remaining and never completes.
             int slice = Math.Max(1, budget);
             int end = slice >= pending.Count - cursor ? pending.Count : cursor + slice;
 
@@ -229,20 +221,19 @@ namespace Thermodynamics.Core
             return true;
         }
 
-        /// <summary>Finishes the running pass in one go. For a full rebuild, and for tests.</summary>
+        /// <summary>Finishes the running pass in one call. Used for a full rebuild and by tests.</summary>
         public void RunToCompletion()
         {
             while (IsRunning) Step(int.MaxValue);
         }
 
         /// <summary>
-        /// True when nothing on the grid stands between this patch of air and the sun.
+        /// True when nothing on the grid stands between this cell of air and the sun.
         ///
-        /// A cell no completed pass has seen answers true: an unbuilt map, or a cell built since the
-        /// last pass, means "not known to be shadowed", and the cheap model's answer is the one to
-        /// fall back to. Inventing a shadow is the worse of the two errors — it cools a block
-        /// standing in full sunlight, which is a temperature nobody can account for, where a missing
-        /// shadow is only the behaviour the setting is switched off for.
+        /// A cell no completed pass has seen returns true — an unbuilt map, or a cell built since
+        /// the last pass, means not known to be shadowed, and the fallback is the unshadowed model.
+        /// A false shadow would cool a block standing in full sunlight, while a missing shadow only
+        /// reproduces the behaviour with self-shadowing disabled.
         /// </summary>
         public bool IsLit(Vector3I cell)
         {
@@ -250,12 +241,11 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// True when the sun reaches this face of this cell: the test is made from the air just
-        /// outside it, which is where the surface actually is.
+        /// True when the sun reaches this face of this cell. Tested from the air just outside the
+        /// face, which is where the surface sits.
         ///
-        /// A face with a block pressed against it sees nothing at all — no air to stand in, and no
-        /// sky beyond. The model never asks about those, since they carry no exposed area either,
-        /// but answering "lit" would be a trap for anything that did.
+        /// A face with a block against it returns false: there is no air outside it and no sky
+        /// beyond. The model never queries those faces, which carry no exposed area either.
         /// </summary>
         public bool IsFaceLit(Vector3I cell, int face)
         {
@@ -266,11 +256,10 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// The fraction of one side of a block the sun reaches, 0..1.
+        /// Fraction of one side of a block the sun reaches, 0..1.
         ///
-        /// Per cell face rather than per block, because a long block can have one end in a shadow
-        /// and the other in the open, and because a block is only ever lit on the sides that face
-        /// outward in the first place.
+        /// Averaged over cell faces rather than taken per block, since a multi-cell block can have
+        /// one end shadowed and the other in the open.
         /// </summary>
         public float FaceLitFraction(BlockInstance block, int face)
         {
@@ -310,12 +299,12 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Walks from a cell toward the sun until the grid's bounding box runs out, and reports
-        /// whether anything solid was in the way.
+        /// Walks from a cell towards the sun until the ray leaves the grid's bounding box, and
+        /// reports whether anything solid was in the way.
         ///
-        /// A standard voxel traversal: keep the distance along the ray to the next boundary on each
-        /// axis, and step across whichever is nearest. It visits every cell the ray actually passes
-        /// through and no others, so a ray cannot slip diagonally between two blocks that touch.
+        /// A standard voxel traversal: track the distance along the ray to the next boundary on each
+        /// axis and step across whichever is nearest. It visits every cell the ray passes through
+        /// and no others, so a ray cannot slip diagonally between two touching blocks.
         /// </summary>
         /// <summary>Grids other than this one that the running pass is testing against.</summary>
         public int OccluderCount { get { return occluders.Count; } }
@@ -342,10 +331,10 @@ namespace Thermodynamics.Core
             Vector3I min = grid.Min;
             Vector3I max = grid.Max;
 
-            // How far the ray stays inside the grid's box. It cannot simply stop the first time it
-            // steps outside: the cells being walked are the air just outside the hull, so most of
-            // them start outside the box already, and one that steps in along a flank would be
-            // called lit before it ever reached the wall standing in its way.
+            // How far the ray stays inside the grid's box. The walk cannot stop the first time it
+            // steps outside: the cells being walked are the air just outside the hull, so most start
+            // outside the box, and one that re-enters along a flank would be called lit before
+            // reaching the wall in its way.
             float exit = BoxExit(start, min, max);
             if (exit <= 0f) return false;
 
@@ -361,9 +350,8 @@ namespace Thermodynamics.Core
             float tDeltaY = Delta(passSun.Y);
             float tDeltaZ = Delta(passSun.Z);
 
-            // Bounded twice over: by the distance the ray stays in the box, and by a step count no
-            // sane geometry reaches. Both are needed — the first is the real limit, the second
-            // stops a degenerate direction spinning.
+            // Bounded twice: by the distance the ray stays inside the box, which is the real limit,
+            // and by a step count that stops a degenerate direction from looping.
             int limit = (2 * ((max.X - min.X) + (max.Y - min.Y) + (max.Z - min.Z))) + 8;
 
             for (int i = 0; i < limit; i++)
@@ -398,9 +386,8 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// How far along the ray the grid's box is left behind, or 0 when the ray never reaches it.
-        /// The box is the block bounds grown by half a cell, since cells are cubes centred on
-        /// integers.
+        /// Distance along the ray at which it leaves the grid's box, or 0 when it never enters. The
+        /// box is the block bounds grown by half a cell, since cells are cubes centred on integers.
         /// </summary>
         private float BoxExit(Vector3I start, Vector3I min, Vector3I max)
         {
@@ -448,7 +435,7 @@ namespace Thermodynamics.Core
         /// <summary>
         /// Distance along the ray to the first cell boundary. Cells are unit cubes centred on
         /// integers, so the ray starts half a cell from the boundary on every axis it moves along.
-        /// An axis it does not move along never comes up for selection.
+        /// An axis it does not move along is never selected.
         /// </summary>
         private static float Boundary(float component)
         {

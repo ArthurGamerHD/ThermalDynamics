@@ -6,9 +6,9 @@ namespace Thermodynamics.Core
     /// <summary>
     /// Raw environment readings for one grid at one instant, supplied by the host.
     ///
-    /// This is the whole boundary between the simulation and the game world: everything that
-    /// needs a planet, a raycast or a session lives on the host side of this struct, so the
-    /// solver can be driven from a test with plain numbers.
+    /// This is the boundary between the simulation and the game world: everything requiring a
+    /// planet, a raycast or a session lives on the host side of this struct, so the solver can be
+    /// driven from a test with plain numbers.
     /// </summary>
     public struct EnvironmentSample
     {
@@ -22,15 +22,15 @@ namespace Thermodynamics.Core
         public bool IsUnderground;
 
         /// <summary>
-        /// Metres of ground over the grid. Zero or less means open air, and the sign is the whole
-        /// test — <see cref="IsUnderground"/> is the game's own answer and is kept for what it is
-        /// good for, which is knowing the sun cannot get in.
+        /// Metres of ground over the grid; zero or less is open air. This model's own depth figure,
+        /// distinct from <see cref="IsUnderground"/>, which is the game's flag and is used only to
+        /// establish that no sunlight reaches the grid.
         /// </summary>
         public float Depth;
 
         /// <summary>
-        /// Metres above the planet's mean radius. Negative in a valley below sea level. The air
-        /// cools with this, which is what makes a mountain top colder than the plain.
+        /// Metres above the planet's mean radius, negative below sea level. Drives the lapse rate
+        /// that makes higher ground colder.
         /// </summary>
         public float Altitude;
 
@@ -41,57 +41,52 @@ namespace Thermodynamics.Core
 
         /// <summary>
         /// Sine of latitude on the planet: 0 at the equator, ±1 at a pole. Zero when the host does
-        /// not say, which reads as the equator and is what the model did before it was asked.
+        /// not supply it, which is treated as the equator.
         /// </summary>
         public float LatitudeSine;
 
         /// <summary>
-        /// What the ground under the grid is worth, K — snow cold, sand warm. Zero when the host
-        /// does not care or cannot tell.
+        /// Temperature offset from the surface material under the grid, K. Zero when the host does
+        /// not supply it.
         /// </summary>
         public float GroundOffset;
 
         /// <summary>
-        /// How much the ground widens or narrows the day-night swing. 1 leaves the planet's own
-        /// figures alone, which is what a host that does not care should send.
+        /// Multiplier the surface material applies to the day-night swing. 1 leaves the planet's own
+        /// figures unchanged.
         /// </summary>
         public float GroundSwing;
 
         /// <summary>
-        /// The weather over the grid at full strength, and how much of it is actually blowing.
+        /// The weather over the grid at full strength, held separately from its intensity because
+        /// the two come from different sources: the weather is a cached name lookup, the intensity
+        /// is recomputed by the game as the front moves.
         ///
-        /// Split that way because the two come from different places and change at different
-        /// rates: which weather it is comes from a name lookup the host caches, while the
-        /// intensity is a number the game recomputes as the front moves over.
-        ///
-        /// A default-constructed <see cref="WeatherResponse.Weather"/> is <em>not</em> calm — every
-        /// multiplier in it is zero, which would put the sun out. It never matters in practice
-        /// because a sample that names no weather also reports no intensity, and intensity zero
-        /// softens anything to <see cref="WeatherResponse.Calm"/>. A caller setting an intensity by
-        /// hand should set this from <see cref="WeatherResponse.For"/> as well.
+        /// A default-constructed <see cref="WeatherResponse.Weather"/> is not calm: every multiplier
+        /// in it is zero, which would extinguish the sun. This does not arise in practice because a
+        /// sample naming no weather also reports zero intensity, which softens any weather to
+        /// <see cref="WeatherResponse.Calm"/>. A caller setting an intensity directly must also set
+        /// this from <see cref="WeatherResponse.For"/>.
         /// </summary>
         public WeatherResponse.Weather Weather;
 
-        /// <summary>Weather intensity here, 0..1. Zero is clear air and costs nothing.</summary>
+        /// <summary>Weather intensity here, 0..1. Zero is clear air.</summary>
         public float WeatherIntensity;
 
         /// <summary>
-        /// Ambient at this grid a moment ago, K, and how long ago in seconds of play. The pair the
-        /// lag needs: air chases the sun rather than tracking it, and chasing needs a start.
+        /// Ambient at this grid a moment ago, K, and how long ago in seconds of play. The lag term
+        /// integrates from this pair.
         /// </summary>
         public float PreviousAmbient;
 
         public float SecondsSincePrevious;
 
         /// <summary>
-        /// Whether <see cref="PreviousAmbient"/> is a climate this grid actually had, rather than
-        /// whatever the field happened to hold.
+        /// Whether <see cref="PreviousAmbient"/> is a climate this grid actually held.
         ///
-        /// The lag needs somewhere to start and there is no such place on the step a grid arrives
-        /// at a planet — the state still holds the vacuum it was seeded with, and chasing 300 K
-        /// from 2.7 K at 45 seconds a decade takes three minutes of play during which every block
-        /// on the ship is dragged toward absolute zero. False means take the target and start
-        /// there, which is what a grid that has just arrived should do.
+        /// False on the step a grid arrives at a planet, where the state still holds the vacuum it
+        /// was seeded with; lagging up from 2.7 K would take minutes of play during which every
+        /// block on the grid is dragged towards absolute zero. False means start at the target.
         /// </summary>
         public bool HasPreviousAmbient;
 
@@ -105,8 +100,8 @@ namespace Thermodynamics.Core
         public Vector3 SunDirection;
 
         /// <summary>
-        /// The same direction expressed in the grid's local frame, so the solver can weight
-        /// block faces without knowing anything about matrices.
+        /// The same direction in the grid's local frame, so the solver can weight block faces without
+        /// handling transforms.
         /// </summary>
         public Vector3 SunDirectionLocal;
 
@@ -114,16 +109,15 @@ namespace Thermodynamics.Core
         public bool IsSolarOccluded;
 
         /// <summary>
-        /// How much of the grid the sun cannot reach, 0..1, from whatever stands between it and the
-        /// sun: a planet, an asteroid, another ship.
+        /// Share of the grid the sun cannot reach, 0..1, from whatever stands between it and the
+        /// sun: a planet, a voxel, or another grid.
         ///
-        /// A fraction rather than a flag because a ship is not a point. A kilometre of hull crossing
-        /// a terminator, or drifting out from behind an asteroid, is partly lit for as long as it
-        /// takes to cross — and a flag makes that a step change from full sun to none, which reads
-        /// as a bug in the shadow rather than as the crude answer it is.
+        /// A fraction rather than a flag because a grid is not a point: a large grid crossing a
+        /// terminator or emerging from behind an asteroid is partly lit throughout, which a flag
+        /// would render as a step change.
         ///
-        /// <see cref="IsSolarOccluded"/> is the fully-shadowed case, kept because most of the model
-        /// only cares whether there is any sun at all.
+        /// <see cref="IsSolarOccluded"/> is the fully shadowed case, retained because most of the
+        /// model only needs to know whether there is any sun at all.
         /// </summary>
         public float SolarOcclusion;
 
@@ -137,8 +131,8 @@ namespace Thermodynamics.Core
         public Vector3 GridVelocity;
 
         /// <summary>
-        /// Relative airflow direction in the grid's local frame. The host computes this from
-        /// wind minus grid velocity.
+        /// Relative airflow direction in the grid's local frame, computed by the host as wind minus
+        /// grid velocity.
         /// </summary>
         public Vector3 RelativeWindDirectionLocal;
 
@@ -146,19 +140,19 @@ namespace Thermodynamics.Core
         public float RelativeWindSpeed;
 
         /// <summary>
-        /// Point heat sources other than the sun, each already reduced by the host to a local
-        /// direction and an irradiance at this grid. Null when there are none.
+        /// Point heat sources other than the sun, each reduced by the host to a local direction and
+        /// an irradiance at this grid. Null when there are none.
         ///
-        /// The host owns the buffer and may reuse it between samples, so the array is allowed to
-        /// be longer than <see cref="HeatSourceCount"/>. Occlusion is the host's business too: a
-        /// source it cannot see is simply left out.
+        /// The host owns the buffer and may reuse it between samples, so the array may be longer
+        /// than <see cref="HeatSourceCount"/>. Occlusion is also the host's responsibility: an
+        /// occluded source is omitted.
         /// </summary>
         public HeatSourceState[] HeatSources;
 
-        /// <summary>Entries of <see cref="HeatSources"/> that are live.</summary>
+        /// <summary>Number of live entries in <see cref="HeatSources"/>.</summary>
         public int HeatSourceCount;
 
-        /// <summary>A grid sitting in deep space with the sun overhead.</summary>
+        /// <summary>A sample for deep space with the sun overhead.</summary>
         public static EnvironmentSample Vacuum(Vector3 sunDirectionLocal)
         {
             EnvironmentSample s = new EnvironmentSample();
@@ -173,7 +167,7 @@ namespace Thermodynamics.Core
             return s;
         }
 
-        /// <summary>Deep space with no sun at all.</summary>
+        /// <summary>A sample for deep space with no sun.</summary>
         public static EnvironmentSample DarkVacuum()
         {
             EnvironmentSample s = Vacuum(Vector3.Zero);
