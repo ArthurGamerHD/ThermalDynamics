@@ -319,59 +319,96 @@ namespace Thermodynamics
             IList<RoomAirNode> air = Simulation.RoomAir;
             if (air.Count == 0) return;
 
-            bool worldPressurised = WorldPressurised();
+            GridProfiler profiler = Stats == null ? null : Stats.Profiler;
+            if (profiler != null) profiler.RoomPressure.Begin();
 
-            // The gas system first: it reports every one of the game's rooms, which are whole
-            // connected volumes rather than this model's pieces of them.
-            GasLevels.Clear();
-            bool anyUnanswered = false;
-
-            for (int i = 0; i < air.Count; i++)
+            try
             {
-                float level = worldPressurised
-                    ? GameOxygenAt(air[i].Anchor)
-                    : RoomPressure.NotReported;
+                if (Stats != null)
+                {
+                    Stats.RoomPressureSweeps++;
+                    Stats.RoomPressureRoomVisits += air.Count;
+                }
 
-                GasLevels.Add(level);
-                if (level < 0f) anyUnanswered = true;
-            }
+                bool worldPressurised = WorldPressurised();
 
-            // Only for rooms the gas system left unanswered: a world where it cannot be read, or a
-            // compartment the game holds no room for.
-            if (anyUnanswered)
-            {
-                // Every room starts unreported, so a room whose vent was removed empties rather
-                // than retaining that vent's last reading.
+                // Nothing in this world can hold air, so neither the gas system nor the vents can
+                // change an answer. Asked once rather than per room, and it skips both walks.
+                if (!worldPressurised)
+                {
+                    for (int i = 0; i < air.Count; i++)
+                    {
+                        Simulation.SetRoomPressure(air[i].Anchor, 0f);
+                    }
+                    return;
+                }
+
+                // The gas system first: it reports every one of the game's rooms, which are whole
+                // connected volumes rather than this model's pieces of them.
+                GasLevels.Clear();
+                SealedByGame.Clear();
+                bool anyUnanswered = false;
+
                 for (int i = 0; i < air.Count; i++)
                 {
-                    VentLevels[air[i].RoomIndex] = RoomPressure.NotReported;
+                    float level = GameOxygenAt(air[i].Anchor);
+                    bool sealedByGame = Grid.IsRoomAtPositionAirtight(air[i].Anchor);
+
+                    GasLevels.Add(level);
+                    SealedByGame.Add(sealedByGame);
+
+                    // Both answers are taken here rather than one now and one in the loop below,
+                    // so the sweep's cost in game calls is exactly two per room and countable.
+                    if (RoomPressure.NeedsVentFallback(true, sealedByGame, level))
+                    {
+                        anyUnanswered = true;
+                    }
                 }
 
-                ReadVents();
-            }
+                if (Stats != null) Stats.RoomPressureGameQueries += air.Count * 2;
 
-            for (int i = 0; i < air.Count; i++)
-            {
-                RoomAirNode room = air[i];
-
-                float reported = GasLevels[i];
-
-                if (reported < 0f && !VentLevels.TryGetValue(room.RoomIndex, out reported))
+                // Only for rooms the gas system left unanswered *and* the game calls sealed. A
+                // room the game does not seal is emptied whatever a vent reports, so reading the
+                // vents for it would be a walk over the grid to produce a value that is discarded.
+                if (anyUnanswered)
                 {
-                    reported = RoomPressure.NotReported;
+                    // Every room starts unreported, so a room whose vent was removed empties
+                    // rather than retaining that vent's last reading.
+                    for (int i = 0; i < air.Count; i++)
+                    {
+                        VentLevels[air[i].RoomIndex] = RoomPressure.NotReported;
+                    }
+
+                    if (Stats != null) Stats.RoomPressureVentScans++;
+                    ReadVents();
                 }
 
-                bool sealedByGame = worldPressurised && Grid.IsRoomAtPositionAirtight(room.Anchor);
+                for (int i = 0; i < air.Count; i++)
+                {
+                    RoomAirNode room = air[i];
 
-                float level = RoomPressure.Level(worldPressurised, sealedByGame, reported);
+                    float reported = GasLevels[i];
 
-                // Set through the solver rather than written onto the field. Pressure decides
-                // whether a room has any links at all, so changing it is a structural change: the
-                // solver rebuilds the room's links to the blocks bounding it, seeds newly appearing
-                // air from the temperature of those walls, and recomputes the conductance totals the
-                // integrator sizes its substeps from. Writing the field directly would leave the
-                // room with air, no links, and whatever temperature the last rebuild left.
-                Simulation.SetRoomPressure(room.Anchor, level);
+                    if (reported < 0f && !VentLevels.TryGetValue(room.RoomIndex, out reported))
+                    {
+                        reported = RoomPressure.NotReported;
+                    }
+
+                    float level = RoomPressure.Level(true, SealedByGame[i], reported);
+
+                    // Set through the solver rather than written onto the field. Pressure decides
+                    // whether a room has any links at all, so changing it is a structural change:
+                    // the solver rebuilds the room's links to the blocks bounding it, seeds newly
+                    // appearing air from the temperature of those walls, and recomputes the
+                    // conductance totals the integrator sizes its substeps from. Writing the field
+                    // directly would leave the room with air, no links, and whatever temperature
+                    // the last rebuild left.
+                    Simulation.SetRoomPressure(room.Anchor, level);
+                }
+            }
+            finally
+            {
+                if (profiler != null) profiler.RoomPressure.End();
             }
         }
 
@@ -415,6 +452,8 @@ namespace Thermodynamics
                     continue;
                 }
 
+                if (Stats != null) Stats.RoomPressureVentsWalked++;
+
                 float level = vent.Depressurize ? 0f : vent.GetOxygenLevel();
 
                 Vector3I[] cells = bound.Instance.Cells;
@@ -443,6 +482,9 @@ namespace Thermodynamics
 
         /// <summary>Gas system readings per room, in air node order.</summary>
         private readonly List<float> GasLevels = new List<float>();
+
+        /// <summary>Whether the game calls each room airtight, in air node order.</summary>
+        private readonly List<bool> SealedByGame = new List<bool>();
 
         /// <summary>
         /// Delivers threshold crossings to registered subscribers. Callbacks belong to other mods,

@@ -36,6 +36,26 @@ namespace Thermodynamics.Core
             return reportedLevel > 1f ? 1f : reportedLevel;
         }
 
+        /// <summary>
+        /// Whether a room's air level is still undecided after the gas system has answered, and so
+        /// needs the air vents read as a fallback.
+        ///
+        /// Both vetoes are checked first, which is the point of asking: a world with no
+        /// pressurisation, and a room the game does not call sealed, both give
+        /// <see cref="Level"/> zero whatever a vent says. Reading vents for such a room cannot
+        /// change an answer, and the vent read is a walk over every vent on the grid — so one
+        /// compartment finer than the game's own sealing test used to buy that walk on every
+        /// sweep, permanently, on most ships.
+        /// </summary>
+        public static bool NeedsVentFallback(
+            bool worldPressurised, bool sealedByGame, float reportedLevel)
+        {
+            if (!worldPressurised) return false;
+            if (!sealedByGame) return false;
+
+            return reportedLevel < 0f;
+        }
+
         /// <summary>Sentinel <see cref="Level"/> accepts to mean that nothing reported a level.</summary>
         public const float NotReported = -1f;
 

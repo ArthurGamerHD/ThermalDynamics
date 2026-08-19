@@ -284,10 +284,35 @@ were confirmed to fail against the previous arithmetic, as was
 `RefreshingABlockCostsItsOwnDegreeRatherThanTheGrid`, which holds the repair to one node's links
 rather than the grid's.
 
-**`SweepRoomPressure` is per room per cadence, unbudgeted**, with two game API calls each. Bounded
-by compartment count rather than block count, so it is small on a ship and unmeasured on a station
-with thousands of rooms. Every other whole-grid pass in the mod is now a rota or a budgeted slice;
-this is the one that is not.
+**`SweepRoomPressure` is per room per cadence, unbudgeted** — measured, instrumented, and cheaper
+than it was. It makes two game API calls per compartment every eight steps, bounded by compartment
+count rather than block count. Every other whole-grid pass in the mod is a rota or a budgeted
+slice; this is the one that is not.
+
+**What a field dump says about it** (TestWorld1, 2026-08-19 20:44, 118.5 s, six grids, 7,976
+blocks): the sweep was *unattributed* — the cost table splits a grid's update into topology, room
+mapping, exposure, solver and solar occlusion, and the sweep runs in `AfterSteps`, outside all of
+them. Backing it out of the totals leaves **64 ms in 118.5 s, 0.054 % of real time**, and that
+remainder also holds the mass sweep, overheat damage, threshold crossings, the heat-pump publish
+and the hottest-node scan. On twelve compartments the sweep is a fraction of a fraction.
+
+**The vent fallback was the part that mattered, and it ran every sweep.** `ReadVents` walks every
+vent on the grid, and it fired whenever any single compartment went unanswered by the gas system.
+The dump shows compartment 7 reporting `seal no` with no gas reading at all — a room this model
+finds and the game does not seal — so the fallback ran on every sweep of the session. That is the
+normal state of most ships, since this model's rooms are finer than the game's.
+
+It cannot change an answer for such a room: `RoomPressure.Level` empties anything the game does
+not seal, whatever a vent reports. The sweep now asks `RoomPressure.NeedsVentFallback` first, which
+is true only for a room that could hold air and that nothing has answered for, so an unsealed
+compartment no longer buys a walk over the grid's vents. A world with oxygen or pressurisation
+disabled now skips the gas system and the vents entirely rather than reading both and discarding
+the result.
+
+The rota is **deliberately not built**. The measurement says it is a station-scale risk with no
+evidence behind it, and the sweep is now timed as `of which room pressure` with counters for
+compartments visited, game calls made, vent scans and vents walked — so the next dump from a large
+station answers the question with a number rather than an argument.
 
 **The first step of a grid's life is several times an ordinary one** — 209 ms against a 24 ms
 median at half a million blocks — from first touch of every flat array and the first fill of every

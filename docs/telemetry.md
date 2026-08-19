@@ -200,6 +200,27 @@ record could outlive the clock its timestamps came from and go on accumulating o
 aggregate. It now detaches those references with the list. Whether that was the cause is a question
 for the next dump — a report written while the world was closing could equally explain it.
 
+## Room pressure sweep
+
+`of which room pressure` in the cost table times the per-compartment sweep that asks the game how
+full each room is. It is nested inside grid simulation like the other stages, but the host drives
+it rather than the simulation, so it is timed by an explicit start and stop rather than through a
+simulation phase.
+
+Four counters sit beside it, per grid:
+
+| Field | Meaning |
+| --- | --- |
+| `room pressure sweeps` | sweeps run, with compartments visited and game API calls made |
+| `of which read vents` | how many sweeps needed the air-vent fallback, and how many vents those walked |
+
+The counters are the point. A millisecond figure on a twelve-room ship cannot answer whether the
+sweep scales badly on a station with thousands of compartments, because the answer is proportional
+to compartment count and the ship has twelve. `game calls` divided by `compartments` should stay at
+exactly two; `read vents` should stay at or near zero on a world whose gas system answers, and a
+number close to the sweep count means something is permanently unanswered — see
+[known-issues.md](known-issues.md).
+
 ## Work counters
 
 Alongside the millisecond figures, the simulation counts what its one-shot stages *touched*:

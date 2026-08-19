@@ -291,6 +291,20 @@ namespace Thermodynamics
         public long Merges;
         public long DoorStateChanges;
         public long SurfaceRecalcs;
+
+        /// <summary>
+        /// Room pressure sweeps run, compartments visited by them, game API calls made, and how
+        /// often the vent fallback was needed — plus the vents it walked when it was.
+        ///
+        /// Counted rather than only timed, because the question this answers is whether the sweep
+        /// scales with a station's compartment count, and a millisecond figure on a twelve-room
+        /// ship cannot answer it.
+        /// </summary>
+        public long RoomPressureSweeps;
+        public long RoomPressureRoomVisits;
+        public long RoomPressureGameQueries;
+        public long RoomPressureVentScans;
+        public long RoomPressureVentsWalked;
         public long MapperCompletions;
 
         // ---- persistence ----------------------------------------------------------------

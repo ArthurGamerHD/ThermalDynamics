@@ -572,6 +572,7 @@ namespace Thermodynamics
             TimingStat topology = new TimingStat("  of which topology rebuild");
             TimingStat mapping = new TimingStat("  of which room mapping");
             TimingStat exposure = new TimingStat("  of which exposure refresh");
+            TimingStat pressure = new TimingStat("  of which room pressure");
             TimingStat solver = new TimingStat("  of which solver");
             TimingStat solar = new TimingStat("  of which solar occlusion");
             TimingStat save = new TimingStat("save");
@@ -595,6 +596,7 @@ namespace Thermodynamics
                 topology.Merge(g.Profiler.Topology);
                 mapping.Merge(g.Profiler.RoomMapping);
                 exposure.Merge(g.Profiler.Exposure);
+                pressure.Merge(g.Profiler.RoomPressure);
                 solver.Merge(g.Profiler.Solver);
                 solar.Merge(g.SolarTime);
                 save.Merge(g.SaveTime);
@@ -609,6 +611,7 @@ namespace Thermodynamics
             topology.WriteRow(sb);
             mapping.WriteRow(sb);
             exposure.WriteRow(sb);
+            pressure.WriteRow(sb);
             solver.WriteRow(sb);
             solar.WriteRow(sb);
             save.WriteRow(sb);
@@ -1261,6 +1264,11 @@ namespace Thermodynamics
                 Field(sb, "  splits / merges", g.Splits + " / " + g.Merges);
                 Field(sb, "  door state changes", g.DoorStateChanges.ToString("n0"));
                 Field(sb, "  surface refreshes", g.SurfaceRecalcs.ToString("n0"));
+                Field(sb, "  room pressure sweeps", g.RoomPressureSweeps.ToString("n0")
+                    + " (" + g.RoomPressureRoomVisits.ToString("n0") + " compartments, "
+                    + g.RoomPressureGameQueries.ToString("n0") + " game calls)");
+                Field(sb, "  of which read vents", g.RoomPressureVentScans.ToString("n0")
+                    + " (" + g.RoomPressureVentsWalked.ToString("n0") + " vents walked)");
                 Field(sb, "  mapper passes completed", g.MapperCompletions.ToString("n0"));
                 Field(sb, "  blocks restored on load", g.BlocksRestored.ToString("n0"));
                 Field(sb, "  rooms restored on load", g.RoomsRestored.ToString("n0"));
@@ -1273,6 +1281,7 @@ namespace Thermodynamics
                 g.Profiler.Topology.WriteRow(sb);
                 g.Profiler.RoomMapping.WriteRow(sb);
                 g.Profiler.Exposure.WriteRow(sb);
+                g.Profiler.RoomPressure.WriteRow(sb);
                 g.Profiler.Solver.WriteRow(sb);
                 g.SolarTime.WriteRow(sb);
                 g.SaveTime.WriteRow(sb);

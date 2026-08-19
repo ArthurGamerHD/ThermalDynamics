@@ -16,6 +16,17 @@ namespace Thermodynamics
         public readonly TimingStat Exposure = new TimingStat("  of which exposure refresh");
         public readonly TimingStat Solver = new TimingStat("  of which solver");
 
+        /// <summary>
+        /// The room pressure sweep, which the host drives rather than the simulation, so it is
+        /// timed by an explicit Begin/End rather than through <see cref="SimulationPhase"/>.
+        ///
+        /// It was unattributed until it was measured: it sits inside a grid's update with two game
+        /// API calls per compartment and a walk over every air vent, and neither is bounded by
+        /// anything the step budget can see. Bounded by compartment count rather than block count,
+        /// so it is small on a ship and unmeasured on a station.
+        /// </summary>
+        public readonly TimingStat RoomPressure = new TimingStat("  of which room pressure");
+
         public void Begin(SimulationPhase phase)
         {
             Stat(phase).Begin();
