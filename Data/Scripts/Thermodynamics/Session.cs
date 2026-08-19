@@ -17,9 +17,7 @@ namespace Thermodynamics
         public const ushort ModID = 30323;
         public static DefinitionExtensionsAPI Definitions;
 
-        /// <summary>
-        /// Typed into chat to write a telemetry report without closing the world.
-        /// </summary>
+        /// <summary>Chat command that writes a telemetry report without closing the world.</summary>
         private const string DumpCommand = "/thermaldump";
 
         /// <summary>
@@ -47,36 +45,36 @@ namespace Thermodynamics
             NetworkAPI.Init(ModID, Settings.Name);
             NetworkAPI.LogNetworkTraffic = true;
 
-            // The config file is what turns telemetry on for a test session and off again for
-            // ordinary play. Grids may have initialised before this ran, so the load is shared
-            // rather than done here: whoever touches the settings first performs it.
+            // The config file controls whether telemetry collects. Grids may have initialised before
+            // this ran, so the load is not performed here: whichever caller touches the settings
+            // first performs it.
             Settings.EnsureLoaded();
 
             Telemetry.Start();
 
             ThermalTerminal.Register();
 
-            // The API is published from Init so a mod that loads after this one still finds it:
-            // late consumers ask for the table and get it re-sent.
+            // Published from Init so a mod loading after this one still finds it: a late consumer
+            // requests the table and it is re-sent.
             ThermalApi.Register();
 
-            // The overlay is client state, not grid state: the config only says which view a
-            // session opens on, and the keybind takes it from there.
+            // The overlay is client state rather than grid state: the config supplies only the view
+            // a session opens on, and the keybind changes it from there.
             ThermalDebugView.Current = (ThermalDebugView.Mode)Settings.Instance.DebugBlockOverlay;
 
-            // Registration with Rich HUD Master is asynchronous and may never complete, so this
-            // only asks; the menu builds itself when the framework answers.
+            // Registration with Rich HUD Master is asynchronous and may never complete, so this only
+            // requests it; the menu builds itself when the framework responds.
             ThermalSettingsMenu.Initialize();
         }
 
         protected override void UnloadData()
         {
-            // The last point at which the mod is still alive and world storage is still writable.
+            // The last point at which the mod is still live and world storage is still writable.
             Telemetry.Finish("world closing");
             Telemetry.Reset();
 
-            // Definition and shape caches are keyed by definition and outlive a single grid, so
-            // they have to be dropped when the session does or a second world inherits them.
+            // Definition and shape caches are keyed by definition and outlive a single grid, so they
+            // must be dropped with the session or a second world inherits them.
             ThermalBlockCatalog.Clear();
             ThermalCoolantShapes.Clear();
             ThermalHeatPumpShapes.Clear();
@@ -115,15 +113,15 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// The session's own per-frame work. Cross-grid conduction runs on the same ten-frame
-        /// cadence the grids step on, because that is the interval its exchange is scaled to.
+        /// The session's own per-frame work. Cross-grid conduction runs on the ten-frame cadence its
+        /// exchange is scaled to.
         /// </summary>
         private void Tick()
         {
             RegisterCommand();
             PollKeys();
 
-            // Every grid, every frame, each doing its share of the step it is part way through.
+            // Every grid every frame, each doing its share of the step it is part way through.
             ThermalGridScheduler.Tick();
 
             if (_frame % 10 == 0)
@@ -143,12 +141,12 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Ctrl+Shift+= cycles the block overlay through its views, and Ctrl+Shift+S opens the
-        /// settings menu.
+        /// Ctrl+Shift+= cycles the block overlay through its views; Ctrl+Shift+S opens the settings
+        /// menu.
         ///
-        /// Chosen over controls the player can rebind because a mod cannot add one: the game's
-        /// binding list is fixed. The chat and terminal typing checks are what keep the keystrokes
-        /// out of a name the player is halfway through entering.
+        /// Hard-coded rather than rebindable because a mod cannot add an entry to the game's binding
+        /// list. The chat and terminal typing checks keep the keystrokes out of text the player is
+        /// entering.
         /// </summary>
         private void PollKeys()
         {
@@ -171,8 +169,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// MyAPIGateway.Utilities is not dependable from Init, so the chat hook is attached on the
-        /// first simulated frame instead.
+        /// Attaches the chat hook. <c>MyAPIGateway.Utilities</c> is not reliably available from Init,
+        /// so this runs on the first simulated frame.
         /// </summary>
         private void RegisterCommand()
         {
@@ -203,8 +201,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// The whole point of the runtime switch: turn collection on for a test, off again
-        /// afterwards, and take a report at any point, without reloading the world.
+        /// Runtime telemetry control: turn collection on or off and take a report at any point,
+        /// without reloading the world.
         /// </summary>
         private void RunCommand(string argument)
         {
@@ -324,10 +322,9 @@ namespace Thermodynamics
         /// <summary>
         /// Changes one setting for the running session.
         ///
-        /// Every switch in the mod is live: the value is written into the settings object every
-        /// grid already holds, and the simulation picks it up on its next step. Nothing is written
-        /// to disk unless <c>/thermal save</c> asks for it, so an experiment cannot outlive the
-        /// session by accident.
+        /// Every setting is live: the value is written into the settings object every grid already
+        /// holds and is picked up on the next step. Nothing is written to disk unless
+        /// <c>/thermal save</c> is issued.
         /// </summary>
         private void RunSet(string argument)
         {
@@ -368,7 +365,7 @@ namespace Thermodynamics
             Reply(name + " = " + Format(name, Settings.Instance.GetValue(name)) + " (unsaved)");
         }
 
-        /// <summary>Matches a setting name without regard to case, so players can type it.</summary>
+        /// <summary>Matches a setting name case-insensitively, for chat entry.</summary>
         private static string Resolve(string name)
         {
             List<string> names = Settings.Names();

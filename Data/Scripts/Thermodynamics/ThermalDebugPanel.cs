@@ -11,22 +11,20 @@ using VRageMath;
 namespace Thermodynamics
 {
     /// <summary>
-    /// The readout that goes with the debug overlay: what the grid in front of you looks like in
-    /// the view that is currently up.
+    /// The numeric readout accompanying the debug overlay, for the grid being looked at in the
+    /// currently selected view.
     ///
-    /// The overlay answers "where", by colouring geometry; this answers "how much", which colour
-    /// cannot. Every view has its own set of figures, and each one is chosen to explain the picture
-    /// on screen — the solar view reports whether the sun is occluded, because a grid drawn
-    /// uniformly cold at noon is either shadowed or switched off, and the colours alone do not say
-    /// which.
+    /// The overlay locates values by colouring geometry; this reports their magnitudes. Each view
+    /// has its own set of figures, chosen to disambiguate the picture on screen — the solar view
+    /// reports occlusion, since a uniformly cold grid at noon is either shadowed or has solar
+    /// heating disabled.
     ///
-    /// Aggregates are swept from the node list, so they cost a pass over the grid. That pass runs a
-    /// few times a second rather than per frame, which is far more often than a person can read and
-    /// far less often than the frame rate.
+    /// Aggregates are swept from the node list, costing a pass over the grid. That pass runs a few
+    /// times a second rather than per frame.
     /// </summary>
     public static class ThermalDebugPanel
     {
-        /// <summary>Draw calls between sweeps. 15 is roughly a quarter second.</summary>
+        /// <summary>Draw calls between sweeps. Fifteen is roughly a quarter second.</summary>
         private const int RefreshInterval = 15;
 
         private static LabelBox panel;
@@ -36,7 +34,7 @@ namespace Thermodynamics
         private static bool warned;
         private static readonly StringBuilder Text = new StringBuilder();
 
-        /// <summary>Reused by the room view so a big ship does not allocate a list per sweep.</summary>
+        /// <summary>Reused by the room view, so a large grid does not allocate a list per sweep.</summary>
         private static readonly List<int> RoomOrder = new List<int>();
 
         public static void Build()
@@ -45,8 +43,7 @@ namespace Thermodynamics
 
             panel = new LabelBox(HudMain.HighDpiRoot)
             {
-                // Top left, clear of the crosshair readout on the left edge of the screen and of
-                // the cockpit summary on the right.
+                // Top left, clear of the crosshair readout and the cockpit summary.
                 ParentAlignment = ParentAlignments.Top | ParentAlignments.Left
                     | ParentAlignments.InnerV | ParentAlignments.InnerH,
                 Offset = new Vector2(20f, -120f),
@@ -65,9 +62,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Called every draw. The panel is only up while the overlay is, and only while it has a
-        /// grid to describe: a readout that stays on screen showing the last ship you looked at is
-        /// worse than no readout.
+        /// Called every draw. The panel is shown only while the overlay is up and a grid is in view,
+        /// so it never displays figures for a grid the player has looked away from.
         /// </summary>
         public static void Update()
         {
@@ -87,8 +83,8 @@ namespace Thermodynamics
             panel.Visible = wanted;
             if (!wanted) return;
 
-            // Cycling a view or looking at another ship redraws now rather than at the next
-            // sweep: a readout that lags a keystroke by a quarter second reads as the wrong answer.
+            // Cycling a view or targeting another grid redraws immediately rather than at the next
+            // sweep, so the readout does not lag a keystroke by a quarter second.
             bool changed = ThermalDebugView.Current != lastMode
                 || thermals.Grid.EntityId != lastGrid
                 || Text.Length == 0;
@@ -105,11 +101,10 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Says why there is no panel, once, the first time a view is switched on without it.
+        /// Reports why there is no panel, once, the first time a view is enabled without one.
         ///
-        /// Registration with Rich HUD Master fails silently by design — the framework simply never
-        /// calls back — and a debug tool that is quietly absent is worse than one that is missing
-        /// loudly.
+        /// Registration with Rich HUD Master reports no failure: the framework simply never calls
+        /// back, so the absence must be reported here.
         /// </summary>
         private static void WarnOnce()
         {
@@ -180,7 +175,7 @@ namespace Thermodynamics
                 Text.Append("         ").Append(hottest.Block.Name).Append('\n');
             }
 
-            // Per second, so the figure means the same whatever the step rate is.
+            // Per second, so the figure is comparable at any step rate.
             Text.Append("peak dT  ")
                 .Append((fastest * Settings.Instance.StepsPerSecond).ToString("n3")).Append(" K/s\n");
             Text.Append("critical ").Append(thermals.CriticalBlocks).Append('\n');
@@ -215,8 +210,8 @@ namespace Thermodynamics
             Text.Append("lit      ").Append(lit).Append(" blocks\n");
             Text.Append('\n');
 
-            // Why the picture looks the way it does. A dark grid at noon is shadowed, switched off
-            // or facing away, and only these three lines tell them apart.
+            // A dark grid at noon is shadowed, has solar heating disabled, or is facing away. These
+            // three lines distinguish the cases.
             Text.Append("sunlight ").Append(state.SolarEnergy.ToString("n0")).Append(" W/m2")
                 .Append(state.IsSolarOccluded ? "  (occluded)" : "").Append('\n');
             Text.Append("mechanism ")
@@ -230,8 +225,8 @@ namespace Thermodynamics
             {
                 SunShadowMap shadow = thermals.Simulation.Solver.SunShadow;
 
-                // Which is worth knowing while a pass is in flight: the figures on screen belong
-                // to the last completed one until it lands.
+                // Reported while a pass is in flight: the figures on screen belong to the last
+                // completed pass until the new one lands.
                 Text.Append("  ").Append(shadow.ShadowedCount).Append(" cells shadowed");
                 if (shadow.IsRunning)
                 {
@@ -324,9 +319,8 @@ namespace Thermodynamics
                 return;
             }
 
-            // Why every room reads empty, when it does. The answer is usually the world's own
-            // oxygen settings, and nothing about this mod can be read off the rooms until it is
-            // known which of the two is talking.
+            // Why every room reads empty when it does. Usually the world's own oxygen settings,
+            // which must be ruled out before the room figures mean anything.
             bool pressurised = MyAPIGateway.Session != null
                 && MyAPIGateway.Session.SessionSettings != null
                 && MyAPIGateway.Session.SessionSettings.EnableOxygen
@@ -337,8 +331,8 @@ namespace Thermodynamics
                 Text.Append("world pressurisation OFF — no room holds air\n");
             }
 
-            // Biggest first: on a ship with twenty compartments the ones worth reading are the ones
-            // holding most of the air, and the list has to stop somewhere.
+            // Largest first, since the list is truncated and the largest compartments hold most of
+            // the grid's air.
             RoomOrder.Clear();
             for (int i = 0; i < air.Count; i++) RoomOrder.Add(i);
             RoomOrder.Sort((a, b) => air[b].CellCount.CompareTo(air[a].CellCount));
@@ -366,7 +360,7 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>Watts at a readable magnitude. A grid's total runs to megawatts.</summary>
+        /// <summary>Formats watts at a readable magnitude; a grid's total reaches megawatts.</summary>
         private static string Watts(float watts)
         {
             float magnitude = Math.Abs(watts);

@@ -12,21 +12,13 @@ namespace Thermodynamics
         private const int size = 1024;
         private const int sizeSquared = size * size;
 
-        /// <summary>
-        /// flattens the 3D array into a linear representation
-        /// </summary>
-        /// <param name="vector"></param>
-        /// <returns></returns>
+        /// <summary>Flattens a grid position into a single integer key.</summary>
         public static int Flatten(this Vector3I vector) 
         {
             return (sizeSquared * vector.Z) + (size * vector.Y) + vector.X;
         }
 
-        /// <summary>
-        /// replaces the contents of the current vector with the extractect x,y,z values
-        /// </summary>
-        /// <param name="flatVector"></param>
-        /// <returns></returns>
+        /// <summary>Inverse of the flatten above: recovers x, y and z from a key.</summary>
         public static Vector3I Unflatten(this Vector3I vector, long flatVector)
         {
             vector.Z = (int)(flatVector / sizeSquared);
@@ -42,9 +34,9 @@ namespace Thermodynamics
         /// the product of the two largest dimensions.
         /// </summary>
         /// <remarks>
-        /// The original seeded both running maxima at 1 and only updated the runner up when a
-        /// new maximum arrived, so 1x5x2 - the shipped radiator - returned 5 instead of 10.
-        /// Ascending inputs like 2x3x4 happened to work, which is why it survived.
+        /// Both running maxima are seeded from the extents and the second is updated independently of
+        /// the first. Seeding at 1 and updating the second only on a new maximum returns 5 instead of
+        /// 10 for a 1x5x2 shape, while producing the correct answer for ascending inputs.
         /// </remarks>
         public static int LargestFace(this Vector3I vector)
         {

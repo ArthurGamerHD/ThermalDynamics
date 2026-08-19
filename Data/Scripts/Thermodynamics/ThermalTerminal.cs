@@ -14,15 +14,13 @@ namespace Thermodynamics
     /// <summary>
     /// Thermal readouts in the terminal.
     ///
-    /// Every functional block reports its own temperature and what is happening to it, and the
-    /// grid it belongs to, in the terminal's detail info panel. This is the one readout that needs
-    /// no third party HUD library and no key held down: it is where a player already goes to ask
-    /// what a block is doing.
+    /// Every functional block reports its own temperature, what is acting on it, and its grid's
+    /// summary in the terminal's detail info panel. The only readout requiring no third-party HUD
+    /// library and no held key.
     ///
-    /// The detail panel rather than a control, because this is a paragraph and the terminal's
-    /// controls are not. A text box is a one-line editable field: it took the fifteen lines it was
-    /// given, showed one and a half of them, and clipped the rest — which is what "thermals in the
-    /// terminal are broken" looked like.
+    /// Written to the detail panel rather than a control because the content is a paragraph. A
+    /// terminal text box is a one-line editable field: given fifteen lines it renders about one and
+    /// a half and clips the rest.
     /// </summary>
     public static class ThermalTerminal
     {
@@ -35,7 +33,7 @@ namespace Thermodynamics
         /// <summary>The block whose panel is on screen.</summary>
         private static IMyTerminalBlock shown;
 
-        /// <summary>True while this class is the one asking, rather than the game.</summary>
+        /// <summary>True while this class is requesting detail info, rather than the game.</summary>
         private static bool refreshing;
 
         public static void Register()
@@ -58,10 +56,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Hooks a block's detail panel the first time its terminal is opened.
-        ///
-        /// Lazily, rather than hooking every block on every grid when it is built: a station has
-        /// thousands of blocks and a player looks at one at a time.
+        /// Hooks a block's detail panel the first time its terminal is opened. Done lazily rather than
+        /// hooking every block at build time, since a player opens one terminal at a time.
         /// </summary>
         private static void OnCustomControlGetter(IMyTerminalBlock block, List<IMyTerminalControl> controls)
         {
@@ -76,12 +72,11 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Keeps the open panel live.
+        /// Keeps the open panel current.
         ///
-        /// The game asks for detail info when the panel is drawn and not again, so a panel left
-        /// open would otherwise show the temperature the block had when it was opened. Only the
-        /// block on screen is refreshed, and only while the control panel is the screen: it is a
-        /// string every ten frames for one block.
+        /// The game requests detail info when the panel is drawn and not again, so a panel left open
+        /// would show the temperature the block held when it was opened. Only the block on screen is
+        /// refreshed, and only while the control panel is open: one string every ten frames.
         /// </summary>
         public static void Update()
         {
@@ -93,9 +88,9 @@ namespace Thermodynamics
                 return;
             }
 
-            // Marked, because the refresh calls straight back into the appender, and a handler that
-            // could not tell the two apart would treat this mod's own question as the game showing
-            // a panel — and then keep answering it forever after the terminal closed.
+            // Flagged because the refresh calls back into the appender: without it the handler would
+            // treat this mod's own request as the game opening a panel and keep refreshing after the
+            // terminal closed.
             refreshing = true;
             try
             {
@@ -189,11 +184,10 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// What a heat pump is actually achieving. Nothing at all for any other block.
+        /// A heat pump's current performance. Emits nothing for any other block.
         ///
-        /// The coefficient is the line worth reading: it is the exchange rate between electricity
-        /// and cooling, it moves with the gap the pump is working across, and it is the reason a
-        /// pump that was keeping up yesterday cannot keep up with a hotter reactor today.
+        /// The coefficient of performance is the key figure: it is the ratio of heat lifted to
+        /// electricity drawn, and it falls as the temperature difference the pump works across grows.
         /// </summary>
         private static void AppendHeatPump(ThermalBlock bound)
         {
@@ -226,7 +220,7 @@ namespace Thermodynamics
                 .Append(" kW into the hot side\n");
         }
 
-        /// <summary>The air of a room this block bounds, or null when it bounds none.</summary>
+        /// <summary>Air node of a room this block bounds, or null when it bounds none.</summary>
         private static RoomAirNode RoomOf(ThermalBlock bound)
         {
             ThermalSimulation simulation = bound.Grid.Simulation;

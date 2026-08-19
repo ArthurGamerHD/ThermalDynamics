@@ -25,32 +25,25 @@ namespace Thermodynamics
         private static readonly MyStringId SolarDecayId = MyStringId.GetOrCompute("SolarDecay");
         private static readonly MyStringId ConvectionCoefficientId = MyStringId.GetOrCompute("ConvectionCoefficient");
 
-        /// <summary>
-        /// The ambiant temperature when the sun is on the opposite side of the planet
-        /// </summary>
+        /// <summary>Ambient temperature with the sun on the far side of the planet, K.</summary>
         [ProtoMember(10)]
         public float NightTemperature;
 
-        /// <summary>
-        /// The ambiant temperature when the sun is directly overhead
-        /// </summary>
+        /// <summary>Ambient temperature with the sun directly overhead, K.</summary>
         [ProtoMember(15)]
         public float DayTemperature;
 
-        /// <summary>
-        /// The ambiant temperature when underground
-        /// </summary>
+        /// <summary>Ambient temperature underground, K.</summary>
         [ProtoMember(17)]
         public float UndergroundTemperature;
 
-        /// <summary>
-        /// The temperature at the center of the planet
-        /// </summary>
+        /// <summary>Temperature at the planet's centre, K.</summary>
         [ProtoMember(20)]
         public float CoreTemperature;
 
         /// <summary>
-        /// the distance below sealevel that remains underground temperatures
+        /// Depth below sea level that stays at the underground temperature, m. Below it the rock
+        /// warms towards the core temperature.
         /// </summary>
         [ProtoMember(25)]
         public float SealevelDeadzone;
@@ -58,10 +51,9 @@ namespace Thermodynamics
         /// <summary>
         /// How much colder a pole is than the equator, K.
         ///
-        /// Unlike the fields above, the four that follow carry the model's own defaults rather
-        /// than zero. They were added after the definitions were written, and zero is a real
-        /// setting for every one of them — no latitude, no lag, no lapse, no damping — so a
-        /// planet file that predates them would silently ask for all four to be switched off.
+        /// This and the three fields below carry the model's defaults rather than zero. Zero is a
+        /// valid setting for each of them — no latitude, no lag, no lapse, no damping — so a planet
+        /// file written before they existed would otherwise disable all four.
         /// </summary>
         [ProtoMember(27)]
         public float PoleTemperatureDrop = 40f;
@@ -74,20 +66,15 @@ namespace Thermodynamics
         [ProtoMember(29)]
         public float AmbientLapseRate = 4f;
 
-        /// <summary>Metres of rock that blunt the surface's day-night swing to nothing.</summary>
+        /// <summary>Depth of rock over which the surface's day-night swing is damped to nothing, m.</summary>
         [ProtoMember(31)]
         public float UndergroundDampingDepth = 20f;
 
-        /// <summary>
-        /// A value between 0 and 1
-        /// Represents the percentage of solar engery that will be lost in full atomosphere 
-        /// </summary>
+        /// <summary>Fraction of solar energy absorbed by a full-density atmosphere, 0..1.</summary>
         [ProtoMember(30)]
         public float SolarDecay;
 
-        /// <summary>
-        /// The value that indicates heat transfer into the atmosphere
-        /// </summary>
+        /// <summary>Convective heat transfer coefficient at rest, W/(m^2 K).</summary>
         [ProtoMember(40)]
         public float ConvectionCoefficient;
 

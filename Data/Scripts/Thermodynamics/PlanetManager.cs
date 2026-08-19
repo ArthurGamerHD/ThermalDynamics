@@ -77,8 +77,7 @@ namespace Thermodynamics
 
 
         /// <summary>
-        /// returns the gravity force vetor being applied at a location
-        /// also returns total air pressure at that location
+        /// The gravity force vector applied at a location, and the total air pressure there.
         /// </summary>
         public static ExternalForceData GetExternalForces(Vector3D worldPosition)
         {
@@ -107,11 +106,7 @@ namespace Thermodynamics
             return data;
         }
 
-        /// <summary>
-        /// Finds the closest planet to the current position
-        /// </summary>
-        /// <param name="position"></param>
-        /// <returns></returns>
+        /// <summary>The planet nearest a world position, or null when there is none.</summary>
         public static Planet GetClosestPlanet(Vector3D position) 
         {
             Planet current = null;

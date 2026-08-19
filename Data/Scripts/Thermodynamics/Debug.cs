@@ -9,9 +9,9 @@ namespace Thermodynamics
     /// <summary>
     /// The crosshair readout: everything the simulation knows about the block being looked at.
     ///
-    /// Client only, and behind <see cref="Settings.DebugTextOnScreen"/>. It reads state that
-    /// already exists on the node, so switching it on costs a raycast and some string building
-    /// and changes nothing about the simulation.
+    /// Client only, and behind <see cref="Settings.DebugTextOnScreen"/>. Reads state that already
+    /// exists on the node, so enabling it costs a raycast and string building and changes nothing
+    /// about the simulation.
     /// </summary>
     public static class Debug
     {
@@ -87,9 +87,9 @@ namespace Thermodynamics
             MyAPIGateway.Utilities.ShowNotification(
                 "[Surface] " + CellSurface.Describe(simulation.Surfaces.GetState(cell)), 1, "White");
 
-            // Where the room mapper put this cell, and where it put the space on the other side of
-            // each of its faces. A hull block that reads "external" is a cell the flood fill walked
-            // into, which is the whole reason a sealed room can map as no room.
+            // How the room mapper classified this cell, and the space on the other side of each of
+            // its faces. A hull block reading external is a cell the flood fill walked into, which is
+            // what causes a sealed room to map as no room.
             RoomMap map = simulation.Rooms.Map;
             MyAPIGateway.Utilities.ShowNotification(
                 "[Room] cell: " + Classify(map, cell) +
@@ -104,9 +104,8 @@ namespace Thermodynamics
         /// <summary>
         /// Why each of this block's faces counts as exposed, or does not.
         ///
-        /// The number the model carries is a total, and the question anyone actually has is about
-        /// one face: it is open to the sky, so why is it not radiating? Three rules can throw a
-        /// cell face away and they are indistinguishable from the total, so each is named here.
+        /// The model carries only a total, from which the three rules that can reject a cell face are
+        /// indistinguishable. Each is named here.
         /// </summary>
         private static string Exposure(ThermalSimulation simulation, BlockInstance block)
         {
@@ -145,8 +144,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// The six neighbours, each as face name, classification, and whether the face between
-        /// them seals. An unsealed face out of a hull block is the leak.
+        /// The six neighbours, each as face name, classification, and whether the face between them
+        /// seals. An unsealed face out of a hull block identifies a leak.
         /// </summary>
         private static string Neighbours(RoomMap map, SurfaceMap surfaces, Vector3I cell)
         {

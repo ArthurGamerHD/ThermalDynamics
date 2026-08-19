@@ -14,28 +14,26 @@ namespace Thermodynamics
     /// The surface other mods bind to.
     ///
     /// Space Engineers mods cannot reference one another's assemblies, so the contract is a
-    /// dictionary of delegates handed over by mod message. A consumer registers a handler for
+    /// dictionary of delegates passed by mod message. A consumer registers a handler for
     /// <see cref="ChannelId"/>, receives <c>Dictionary&lt;string, Delegate&gt;</c>, and casts the
-    /// entries it wants. Every entry is built from whitelisted types only.
+    /// entries it needs. Every entry is built from whitelisted types only.
     ///
-    /// Two rules hold everywhere in here. Nothing throws into a caller: a bad argument produces a
-    /// false or a zero. And nothing a consumer does is allowed to reach the simulation: callbacks
-    /// are invoked inside a try, and one that throws is dropped with a note in the log rather than
-    /// taking a grid's update with it.
+    /// Two invariants hold throughout. Nothing throws into a caller: an invalid argument returns
+    /// false or zero. And nothing a consumer does reaches the simulation: callbacks are invoked
+    /// inside a try, and one that throws is dropped with a log entry rather than failing a grid's
+    /// update.
     ///
-    /// The dictionary is broadcast once at session start and re-sent on request, because load
-    /// order between mods is not something either end controls.
+    /// The dictionary is broadcast at session start and re-sent on request, since neither end
+    /// controls mod load order.
     /// </summary>
     public static class ThermalApi
     {
-        /// <summary>
-        /// Mod message channel. The mod's own workshop id, which cannot collide with anything.
-        /// </summary>
+        /// <summary>Mod message channel: the mod's workshop id, which cannot collide.</summary>
         public const long ChannelId = 2985582372;
 
         /// <summary>
-        /// Bumped when an entry changes meaning or disappears. Consumers should refuse to bind to
-        /// a major they were not written against.
+        /// Incremented when an entry changes meaning or is removed. Consumers should refuse to bind to
+        /// a major version they were not written against.
         /// </summary>
         public const int Version = 1;
 
@@ -47,9 +45,8 @@ namespace Thermodynamics
             new Dictionary<int, Action<IMySlimBlock, int, float, float, bool>>();
 
         /// <summary>
-        /// Thresholds are registered globally and applied to every grid, so a grid created later
-        /// still carries them. The list is small by construction: a threshold is a rule, not an
-        /// instance of one.
+        /// Thresholds registered globally and applied to every grid, so a grid created later still
+        /// carries them. A threshold is a rule rather than an instance, so the list stays small.
         /// </summary>
         private static readonly List<ThermalThreshold> GlobalThresholds = new List<ThermalThreshold>();
 
@@ -77,8 +74,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// A consumer that loaded after the broadcast asks for the table by sending anything at
-        /// all on the channel. Sending the table back is idempotent.
+        /// Handles a request for the table. A consumer that loaded after the broadcast requests it by
+        /// sending any message on the channel; re-sending is idempotent.
         /// </summary>
         private static void OnRequest(object payload)
         {
@@ -211,9 +208,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Adds energy in joules. Expressed as energy rather than as a temperature so a caller
-        /// does not have to know the block's heat capacity — and so that adding the same joules to
-        /// a girder and to a battery does what it should.
+        /// Adds energy in joules. Expressed as energy rather than temperature so callers need not know
+        /// the block's heat capacity, and so the same joules applied to two blocks produce the
+        /// temperature changes their capacities imply.
         /// </summary>
         private static bool AddBlockHeat(IMySlimBlock block, float joules)
         {
@@ -322,8 +319,8 @@ namespace Thermodynamics
             }
             catch (Exception e)
             {
-                // A subscriber that throws is a bug in the subscriber. Dropping it keeps one
-                // misbehaving mod from stopping the simulation for everyone else.
+                // A subscriber that throws is dropped, so one misbehaving consumer cannot stop the
+                // simulation for the rest.
                 Telemetry.Exception("ThermalApi.RaiseThreshold", e);
                 ThresholdHandlers.Remove(crossing.ThresholdId);
             }

@@ -25,28 +25,24 @@ namespace Thermodynamics
         public float Mass;
 
         /// <summary>
-        /// Conductivity equation: watt / ( meter * Temp)
-        /// For examples see https://www.engineeringtoolbox.com/thermal-conductivity-metals-d_858.html
+        /// Thermal conductivity of the coolant, W/(m K). Reference values:
+        /// https://www.engineeringtoolbox.com/thermal-conductivity-metals-d_858.html
         /// </summary>
         [ProtoMember(5)]
         public float Conductivity;
 
         /// <summary>
-        /// SpecificHeat equation: watt / (mass_kg * temp_kelven)
-        /// For examples see https://en.wikipedia.org/wiki/Table_of_specific_heat_capacities
+        /// Specific heat capacity of the coolant, J/(kg K). Reference values:
+        /// https://en.wikipedia.org/wiki/Table_of_specific_heat_capacities
         /// </summary>
         [ProtoMember(10)]
         public float SpecificHeat;
 
-        /// <summary>
-        /// The surface area scaler for the pipe segments
-        /// </summary>
+        /// <summary>Contact area scaler between the coolant and a pipe segment.</summary>
         [ProtoMember(15)]
         public float PipeSurfaceAreaScaler;
 
-        /// <summary>
-        /// The surface area scaler for the plate connection to other blocks
-        /// </summary>
+        /// <summary>Contact area scaler between the coolant and a block on a sink face.</summary>
         [ProtoMember(20)]
         public float PlateSurfaceAreaScaler;
 

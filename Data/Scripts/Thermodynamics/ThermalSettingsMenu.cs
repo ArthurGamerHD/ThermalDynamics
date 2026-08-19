@@ -11,21 +11,18 @@ namespace Thermodynamics
     /// <summary>
     /// The settings menu, built on the Rich HUD Framework.
     ///
-    /// Every value in the config file is reachable here, because the menu is generated from
-    /// <see cref="Settings.Names"/> rather than written out by hand: a setting added to the config
-    /// appears in the menu without anyone remembering to add it. A name the layout table below does
-    /// not mention still gets a control, in an "Other" category, which is the failure mode worth
-    /// having — a stray control rather than a setting that quietly cannot be edited.
+    /// Every value in the config file is reachable here: the menu is generated from
+    /// <see cref="Settings.Names"/> rather than written by hand, so a setting added to the config
+    /// appears without a corresponding menu edit. A name the layout table does not mention still
+    /// gets a control, under an "Other" category, so an unlisted setting is still editable.
     ///
     /// Editing follows the same rule as <c>/thermal set</c>: the config is server side, so on a
     /// multiplayer client every simulation control is disabled and only the client-side
-    /// presentation switches can be touched. Nothing here writes to disk until Save is pressed.
+    /// presentation switches are editable. Nothing is written to disk until Save is pressed.
     ///
-    /// The page is one column read from the top: Save and Reset first, then short titled groups of
-    /// three controls each. That shape is forced by the framework as much as chosen — a tile is a
-    /// fixed 300x250 box that masks whatever does not fit inside it, and a group is a fixed-height
-    /// row that scrolls sideways through its tiles. One tile per group, three controls per tile, is
-    /// the only arrangement in which everything is both visible and in one vertical line.
+    /// The page is a single column: Save and Reset first, then short titled groups. The framework's
+    /// sizes determine this — a tile is a fixed 300x250 box that masks whatever does not fit, and a
+    /// group is a fixed-height row scrolling sideways through its tiles.
     /// </summary>
     public static class ThermalSettingsMenu
     {
@@ -66,9 +63,8 @@ namespace Thermodynamics
         };
 
         /// <summary>
-        /// Label, tooltip and slider range per setting. Switches ignore the range. A range is a
-        /// judgement about what is worth dragging to, not a limit: the chat command and the mod API
-        /// still take any value the clamp accepts.
+        /// Label, tooltip and slider range per setting. Switches ignore the range. The range bounds
+        /// the slider only: the chat command and the mod API accept any value the clamp allows.
         /// </summary>
         private static readonly Dictionary<string, Entry> Layout = new Dictionary<string, Entry>
         {
@@ -124,8 +120,8 @@ namespace Thermodynamics
         };
 
         /// <summary>
-        /// The settings a client may change for itself. Everything else is world state and belongs
-        /// to the server, exactly as <c>/thermal set</c> has it.
+        /// The settings a client may change for itself. Everything else is world state owned by the
+        /// server, matching <c>/thermal set</c>.
         /// </summary>
         private static readonly HashSet<string> ClientSide = new HashSet<string>
         {
@@ -136,9 +132,8 @@ namespace Thermodynamics
         private static ControlPage page;
 
         /// <summary>
-        /// Asks Rich HUD Master to register this mod. The framework answers on its own schedule —
-        /// possibly never, if the player does not have it installed — so the menu is built from the
-        /// callback rather than here.
+        /// Requests registration with Rich HUD Master. The framework responds on its own schedule, or
+        /// never when it is not installed, so the menu is built from the callback rather than here.
         /// </summary>
         public static void Initialize()
         {
@@ -147,9 +142,9 @@ namespace Thermodynamics
 
             initialised = true;
 
-            // Registration is a handshake with a separate mod that may not be installed. It never
-            // reports failure — it just never answers — so the request is logged, and so is the
-            // answer, to tell "no Rich HUD Master" apart from "menu failed to build".
+            // Registration is a handshake with a separate mod that may not be installed and reports
+            // no failure, only silence. Both the request and the response are logged, to distinguish
+            // a missing framework from a menu that failed to build.
             MyLog.Default.Info("[" + Settings.Name + "] requesting Rich HUD registration");
             RichHudClient.Init(Settings.Name, OnRegistered, OnReset);
         }
@@ -196,9 +191,8 @@ namespace Thermodynamics
             RichHudTerminal.Root.Enabled = true;
             RichHudTerminal.Root.Add(page);
 
-            // Save and reset first, at the top, so they are found without reading the page. There
-            // is one of each for the whole file: a Save per section invites the question of what
-            // the other Saves did, and the answer was always "the same thing".
+            // Save and Reset at the top of the page. One of each for the whole file, since every
+            // Save would write the same file.
             page.Add(Actions(editable));
 
             List<string> names = Settings.Names();
@@ -218,13 +212,12 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Lays one section out: its controls in columns of three, side by side across the page.
+        /// Lays one section out as columns of three controls, side by side across the page.
         ///
-        /// The framework's sizes decide this. A tile is a fixed 300x250 box that masks whatever does
-        /// not fit, so three controls is a column; a group is a fixed-height row that holds tiles
-        /// across the page's width, which is about three of them. One column per row wastes two
-        /// thirds of the width and turns forty settings into a very long scroll, which is what the
-        /// last arrangement did.
+        /// The framework's fixed sizes determine this: a tile is a 300x250 box that masks whatever
+        /// does not fit, giving three controls per column, and a group is a fixed-height row holding
+        /// about three tiles across the page's width. One column per row would waste two thirds of
+        /// the width.
         /// </summary>
         private static void AddSection(string name, List<string> members, bool editable)
         {
@@ -256,15 +249,15 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Controls per tile. The tile is 250 high with 54 of padding at each end, and a control is
-        /// about 40 with 12 of spacing, so three fit and a fourth is masked away.
+        /// Controls per tile. A tile is 250 high with 54 of padding at each end and a control is about
+        /// 40 with 12 of spacing, so three fit and a fourth is masked.
         /// </summary>
         private const int ControlsPerTile = 3;
 
         /// <summary>
-        /// Controls per group: two columns, which is what the page is wide enough to show. A third
-        /// would be 936 across a page of about 840 and would have to be scrolled to sideways, which
-        /// is worse than another row. A section with more than six continues in another group.
+        /// Controls per group: two columns, which is what the page width shows. A third would be 936
+        /// across a page of about 840 and would require sideways scrolling. A section with more than
+        /// six controls continues in another group.
         /// </summary>
         private const int ControlsPerGroup = ControlsPerTile * 2;
 
@@ -281,8 +274,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// What each section is for, in one line. The controls carry their own descriptions, so
-        /// this only has to say what kind of thing is below it.
+        /// One-line description of each section. The controls carry their own descriptions, so this
+        /// only names the category.
         /// </summary>
         private static readonly Dictionary<string, string> SectionNotes = new Dictionary<string, string>
         {
@@ -299,9 +292,8 @@ namespace Thermodynamics
         /// <summary>
         /// One Save and one Reset, for the whole file.
         ///
-        /// Nothing here writes to disk until Save is pressed, so a session can be experimented with
-        /// and abandoned by not pressing it — which is also why Reset does not save: it puts the
-        /// values back and leaves the file alone until you say otherwise.
+        /// Nothing is written to disk until Save is pressed, so a session's changes can be abandoned
+        /// by not pressing it. Reset likewise restores the values without writing the file.
         /// </summary>
         private static ControlCategory Actions(bool editable)
         {
@@ -342,9 +334,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Puts back every setting the player is allowed to change — which on a client is the
-        /// presentation switches and nothing else, so a reset there cannot quietly ask the server
-        /// for a world it has no say over.
+        /// Restores every setting the player is allowed to change, which on a client is the
+        /// presentation switches only, so a client reset cannot alter server-owned world state.
         /// </summary>
         private static void ResetAll()
         {
@@ -419,9 +410,8 @@ namespace Thermodynamics
         private static readonly string[] GridShadowNames = { "none", "basic", "full" };
 
         /// <summary>
-        /// A named choice rather than a slider. A setting whose values are three different
-        /// behaviours reads as nonsense on a scale from 0 to 2, however well the tooltip explains
-        /// it.
+        /// A named choice rather than a slider, since the values are three distinct behaviours rather
+        /// than points on a scale.
         /// </summary>
         private static TerminalControlBase Dropdown(string name, Entry entry, bool enabled, string[] labels)
         {
@@ -478,9 +468,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// The one place a control writes back. A client that got a control it should not have —
-        /// through a framework quirk or a change to the layout table — is stopped here rather than
-        /// silently desynchronising itself from the server.
+        /// The single write-back path for every control. A client that acquired a control it should
+        /// not have is rejected here rather than desynchronising from the server.
         /// </summary>
         private static void Write(string name, float value)
         {
@@ -514,9 +503,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// A setting with no layout entry still gets a control: its own name as the label and a
-        /// range wide enough to be useful, so the menu degrades to something usable rather than
-        /// dropping the setting.
+        /// Builds a control for a setting with no layout entry, using its own name as the label and a
+        /// wide default range, so an unlisted setting is still editable.
         /// </summary>
         private static Entry EntryFor(string name)
         {

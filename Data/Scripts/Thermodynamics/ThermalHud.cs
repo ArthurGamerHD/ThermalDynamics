@@ -19,13 +19,12 @@ namespace Thermodynamics
     /// The in-world readouts: a temperature billboard over the block the extinguisher is aimed
     /// at, and a grid summary in the cockpit.
     ///
-    /// Client only, draw rate rather than step rate, and every path starts by finding out
-    /// whether it has anything to draw at all.
+    /// Client only, driven at draw rate rather than step rate, and every path first tests whether
+    /// it has anything to draw.
     ///
-    /// The text is drawn by the Rich HUD Framework, the same as the settings menu and the debug
-    /// readout. The billboard is not: it is a world-space quad over a block, which is the mod API's
-    /// own job and needs no framework at all — so aiming the extinguisher still shows a
-    /// temperature-coloured block when the framework is missing, it just shows no number.
+    /// The text is drawn by the Rich HUD Framework, as the settings menu and debug readout are. The
+    /// billboard is not: it is a world-space quad drawn through the mod API, so aiming the
+    /// extinguisher still shows a temperature-coloured block without the framework, but no number.
     /// </summary>
     public static class ThermalHud
     {
@@ -46,9 +45,9 @@ namespace Thermodynamics
         {
             if (toolLabel != null) return;
 
-            // Just off the crosshair, where the block being aimed at is. A bare label rather than a
-            // panel: it is one short line sitting over the middle of the screen, and a box there
-            // would be in the way of the thing being aimed at.
+            // Just off the crosshair, over the block being aimed at. A bare label rather than a
+            // panel: it is one short line at the centre of the screen, where a box would obscure the
+            // target.
             toolLabel = new Label(HudMain.HighDpiRoot)
             {
                 ParentAlignment = ParentAlignments.Center,
@@ -57,9 +56,8 @@ namespace Thermodynamics
                 Visible = false,
             };
 
-            // Top right, over the world rather than over the game's own cockpit readouts, and on a
-            // background: five lines of unbacked text over a planet is the thing that is hard to
-            // read, whatever drew it.
+            // Top right, clear of the game's own cockpit readouts, and on a background: five lines
+            // of unbacked text over a planet surface is unreadable.
             gridPanel = new LabelBox(HudMain.HighDpiRoot)
             {
                 ParentAlignment = ParentAlignments.Top | ParentAlignments.Right
@@ -74,7 +72,7 @@ namespace Thermodynamics
             };
         }
 
-        /// <summary>Ordinary text: the same blueish the framework's own panels use.</summary>
+        /// <summary>Body text, matching the framework's own panel colour.</summary>
         private static readonly GlyphFormat Body =
             new GlyphFormat(new Color(220, 235, 242), TextAlignment.Left, 0.95f);
 
@@ -92,14 +90,14 @@ namespace Thermodynamics
         {
             if (MyAPIGateway.Utilities.IsDedicated) return;
 
-            // The billboard follows the aim every frame; the text does not have to. Ten updates a
-            // second is past what anyone reads and saves rebuilding a text board sixty times.
+            // The billboard follows the aim every frame; the text does not need to. Ten updates a
+            // second avoids rebuilding a text board sixty times.
             sinceText++;
             bool publish = sinceText >= TextInterval;
             if (publish) sinceText = 0;
 
-            // The billboard is drawn inside the tool pass, so that runs every frame. The summary
-            // is text and nothing else, so it is only built on the frames that publish it.
+            // The billboard is drawn inside the tool pass, so that runs every frame. The summary is
+            // text only, so it is built only on the frames that publish it.
             DrawToolHud();
             if (!publish) return;
 
@@ -114,10 +112,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Pushes a built string onto its label, or does nothing at all when the framework never
-        /// registered. The text is built either way: it is a few appends, and a readout that has to
-        /// be rebuilt from scratch the moment the framework appears is a second code path to get
-        /// wrong.
+        /// Pushes a built string onto its label, or does nothing when the framework never registered.
+        /// The text is built either way, which costs a few appends and avoids a second code path for
+        /// the case where the framework appears late.
         /// </summary>
         private static void Publish(Label label, StringBuilder text)
         {
@@ -190,14 +187,14 @@ namespace Thermodynamics
             ThermalNode hottest = thermals.HottestNode;
             if (hottest != null)
             {
-                // The peak is the line worth colouring, and only that line: a whole panel tinted
-                // orange says "warm" about the coolant loop count as well, which means nothing.
+                // Only the peak line is coloured: tinting the whole panel would apply a temperature
+                // colour to figures that are not temperatures.
                 Row(text, "peak", Tools.KelvinToCelsiusString(hottest.Temperature),
                     new GlyphFormat(
                         ColorExtensions.HSVtoColor(Tools.GetTemperatureColor(hottest.Temperature)),
                         TextAlignment.Left, 0.95f));
 
-                // Per second, so the number stays comparable whatever the step rate is.
+                // Per second, so the figure is comparable at any step rate.
                 float perSecond = hottest.LastDeltaTemperature * Settings.Instance.StepsPerSecond;
                 Row(text, "rate", perSecond.ToString("n2") + " K/s");
             }
@@ -213,7 +210,7 @@ namespace Thermodynamics
             GridPanelText = text;
         }
 
-        /// <summary>Label and value, the label dimmed and the column width fixed.</summary>
+        /// <summary>Appends a label and value, with the label dimmed and the column width fixed.</summary>
         private static void Row(RichText text, string label, string value, GlyphFormat? format = null)
         {
             text.Add(label.PadRight(9), Muted);

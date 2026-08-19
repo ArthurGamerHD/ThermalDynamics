@@ -18,11 +18,7 @@ namespace Thermodynamics
         public const float BoltzmannConstant = 0.00000005670374419f;
         public const float VacuumTemperaturePower4 = 53.1441f; // vacuum temp is 2.7 kelven. 2.7^4 is 53.1441;
 
-        /// <summary>
-        /// Converts a single axis direction vector into a number
-        /// </summary>
-        /// <param name="vector"></param>
-        /// <returns></returns>
+        /// <summary>Converts a single-axis unit vector into a direction index.</summary>
         public static int DirectionToIndex(Vector3I vector)
         {
             if (vector.X > 0) return 0;
@@ -33,11 +29,7 @@ namespace Thermodynamics
             return 5;
         }
 
-        /// <summary>
-        /// Converts the direction index into a vector
-        /// </summary>
-        /// <param name="index"></param>
-        /// <returns></returns>
+        /// <summary>Converts a direction index into a single-axis unit vector.</summary>
         public static Vector3 IndexToDirection(int index) 
         {
             switch (index) 
@@ -101,17 +93,15 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>
-        /// Generates a color based on the heat perameters
-        /// </summary>
-        /// <param name="temp">current temperature</param>
-        /// <param name="max">maximum possible temprature</param>
-        /// <param name="low">0 is black this value is blue</param>
-        /// <param name="high">this value is red max value is white</param>
-        /// <returns>HSV Vector3</returns>
+        /// <summary>Maps a temperature onto the mod's heat colour ramp.</summary>
+        /// <param name="temp">Current temperature.</param>
+        /// <param name="max">Upper bound of the ramp, rendered white.</param>
+        /// <param name="low">Rendered blue; anything below it is black.</param>
+        /// <param name="high">Rendered red.</param>
+        /// <returns>An HSV colour.</returns>
         public static Vector3 GetTemperatureColor(float temp, float max = 1000, float low = 267f, float high = 500f)
         {
-            // Clamp the temperature to the range 0-max
+            // Clamp the temperature to the range 0..max.
             float t = Math.Max(0, Math.Min(max, temp));
 
             float h = 240f / 360f;
@@ -136,12 +126,13 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Calculates the surface area of the touching sides
-        /// If you are using IMySlimBlock. add +1 to the max value
+        /// Shared surface area of two boxes, in cell faces. Callers passing an
+        /// <c>IMySlimBlock</c>'s bounds must add one to the maximum, which the game reports as
+        /// inclusive.
         /// </summary>
         public static int FindTouchingSurfaceArea(Vector3I minA, Vector3I maxA, Vector3I minB, Vector3I maxB)
         {
-            // Check if they touch on the X face
+            // Touching on the X face.
             if (minA.X == maxB.X || maxA.X == minB.X)
             {
                 int overlapY = Math.Min(maxA.Y, maxB.Y) - Math.Max(minA.Y, minB.Y);
@@ -152,7 +143,7 @@ namespace Thermodynamics
                 }
             }
 
-            // Check if they touch on the Y face
+            // Touching on the Y face.
             if (minA.Y == maxB.Y || maxA.Y == minB.Y)
             {
                 int overlapX = Math.Min(maxA.X, maxB.X) - Math.Max(minA.X, minB.X);
@@ -163,7 +154,7 @@ namespace Thermodynamics
                 }
             }
 
-            // Check if they touch on the Z face
+            // Touching on the Z face.
             if (minA.Z == maxB.Z || maxA.Z == minB.Z)
             {
                 int overlapX = Math.Min(maxA.X, maxB.X) - Math.Max(minA.X, minB.X);
@@ -187,23 +178,19 @@ namespace Thermodynamics
             return dot < GetLargestOcclusionDotProduct(GetVisualSize(distance, planet.AverageRadius));
         }
 
-        /// <summary>
-        /// a number between 0 and 1 representing the side object based on distance
-        /// </summary>
-        /// <param name="distance">the distance between the observer and the target</param>
-        /// <param name="radius">the size of the target</param>
+        /// <summary>Apparent angular size of a target, 0..1.</summary>
+        /// <param name="distance">Distance between the observer and the target.</param>
+        /// <param name="radius">Radius of the target.</param>
         public static double GetVisualSize(double distance, double radius)
         {
             return 2 * Math.Atan(radius / (2 * distance));
         }
 
         /// <summary>
-        /// an equation made by plotting the edge most angle of the occluded sun
-        /// takes in the current visual size of the planet and produces a number between 0 and -1
-        /// if the dot product of the planet and sun directions is less than this number it is occluded
+        /// The dot product between the direction to a body and the direction to the sun below which
+        /// the body occludes the sun. A fitted curve over the body's apparent size, returning a value
+        /// between 0 and -1.
         /// </summary>
-        /// <param name="visualSize"></param>
-        /// <returns></returns>
         public static double GetLargestOcclusionDotProduct(double visualSize)
         {
             return -1 + (0.85 * visualSize * visualSize * visualSize);

@@ -24,29 +24,27 @@ namespace Thermodynamics
         private static readonly MyStringId CriticalTemperatureScalerId = MyStringId.GetOrCompute("CriticalTemperatureScaler");
         private static readonly MyDefinitionId DefaultCubeBlockDefinitionId = new MyDefinitionId(typeof(MyObjectBuilder_EnvironmentDefinition), Settings.DefaultSubtypeId);
 
-        /// <summary>
-        /// The block type should be ignored
-        /// </summary>
+        /// <summary>Exclude the block type from the simulation entirely.</summary>
         [ProtoMember(1)]
         public bool IgnoreThermals;
 
         /// <summary>
-        /// Conductivity equation: watt / ( meter * Temp)
-        /// For examples see https://www.engineeringtoolbox.com/thermal-conductivity-metals-d_858.html
+        /// Thermal conductivity, W/(m K). Reference values:
+        /// https://www.engineeringtoolbox.com/thermal-conductivity-metals-d_858.html
         /// </summary>
         [ProtoMember(5)]
         public float Conductivity;
 
         /// <summary>
-        /// SpecificHeat equation: watt / (mass_kg * temp_kelven)
-        /// For examples see https://en.wikipedia.org/wiki/Table_of_specific_heat_capacities
+        /// Specific heat capacity, J/(kg K). Reference values:
+        /// https://en.wikipedia.org/wiki/Table_of_specific_heat_capacities
         /// </summary>
         [ProtoMember(10)]
         public float SpecificHeat;
 
         /// <summary>
-        /// This is a value between 0 and 1 that represents how much energy will radiate away
-        /// see for examples https://www.engineeringtoolbox.com/emissivity-coefficients-d_447.html
+        /// Grey-body emissivity, 0..1, also used as solar absorptivity. Reference values:
+        /// https://www.engineeringtoolbox.com/emissivity-coefficients-d_447.html
         /// </summary>
         [ProtoMember(15)]
         public float Emissivity;
@@ -54,15 +52,11 @@ namespace Thermodynamics
         [ProtoMember(17)]
         public float SurfaceAreaScaler;
 
-        /// <summary>
-        /// the percent of produced energy converted to heat
-        /// </summary>
+        /// <summary>Fraction of produced power converted to heat, 0..1.</summary>
         [ProtoMember(20)]
         public float ProducerWasteEnergy;
 
-        /// <summary>
-        /// the percent of consumed energy converted to heat
-        /// </summary>
+        /// <summary>Fraction of consumed power converted to heat, 0..1.</summary>
         [ProtoMember(30)]
         public float ConsumerWasteEnergy;
 
