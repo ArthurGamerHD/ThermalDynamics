@@ -261,11 +261,28 @@ budgeted, so the cost is ticks rather than a stall — but at a million blocks i
 converge, which is twenty minutes on a stale map. Bounded and wrong is better than unbounded and
 wrong; it is still wrong. See [model-redesign.md §4](model-redesign.md).
 
-**A block whose mounting changes still rebuilds the whole conduction graph.** Placement and
-removal are incremental; `RefreshBlock` — a block finishing construction, a block whose surfaces
-changed — is not, because it can invalidate links that already exist rather than only adding or
-dropping a node's own. It is the same repair as removal followed by placement and could take that
-path.
+**A block whose mounting changed kept stale conduction links — fixed, and it was the opposite of
+what this entry used to claim.** `RefreshBlock` did not rebuild the conduction graph. It did not
+touch it: it refreshed the surface bits and set the topology flag, and the flag's handler only
+rebuilds links when a full rebuild is already due or nodes are queued for their first link, which
+a refresh sets neither of. Contact area is the product of both ends' mount fractions, so every
+link touching a refreshed block went on carrying a conductance derived from geometry the block no
+longer had, for the rest of the session. Meanwhile the *expensive* half of the flag — a full room
+flood fill — was charged on every call.
+
+Both halves are now proportional to what changed. `ThermalSolver.RefreshBlockLinks` drops the
+node's links through the same intrusive chains removal walks and requeues it for the incremental
+link build a placed block takes, which costs the node's degree. The remap is asked for only when
+the block's *structural* sealing bits actually moved, or when a door's live bits moved and the
+mapper has no portal for it; a change to mounting alone re-resolves venting and recounts that one
+block's exposed faces. The dirty flag is split accordingly — `MarkTopologyDirty` for anything that
+can move a wall, `MarkLayoutDirty` for anything that cannot.
+
+`BlockRefreshTests` pins it. `ReorientingABlockRebuildsTheJointsItsMountsDecide` and its inverse
+turn a block whose mounts are on two faces only and check the joint appears and disappears; both
+were confirmed to fail against the previous arithmetic, as was
+`RefreshingABlockCostsItsOwnDegreeRatherThanTheGrid`, which holds the repair to one node's links
+rather than the grid's.
 
 **`SweepRoomPressure` is per room per cadence, unbudgeted**, with two game API calls each. Bounded
 by compartment count rather than block count, so it is small on a ship and unmeasured on a station
@@ -308,6 +325,15 @@ every body as a billboard. That gives coarse terrain, discs for asteroids, and n
 anything the mod does not draw. Seeing temperature is the terminal readout, the cockpit summary, the
 crosshair readout and the x-ray block overlay instead — the overlay keeps the part of that work that
 was worth keeping, since a debug view *wants* to see through the hull.
+
+**Build state does not change a block's thermal properties.** A block at 10% construction has the
+same mass, heat capacity, conductivity and mounting as a finished one, and nothing notifies the
+simulation when a block finishes building. This is a deliberate simplification rather than an
+omission: a partially-built block is a transient a player watches for seconds, the thermal
+difference would be invisible next to the heat its neighbours carry, and tracking it would mean a
+per-block event on the construction path plus a rule for what a half-built block conducts. The
+machinery to support it exists — `RefreshBlock` handles a geometry change correctly and cheaply —
+so this can be revisited by hooking build state to it, and nothing else would need to change.
 
 **Emissivity is used as absorptivity.** The grey-body assumption. A block cannot be made shiny to
 the sun and black to space.

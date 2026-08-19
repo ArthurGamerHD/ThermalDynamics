@@ -13,8 +13,8 @@ chooses; **work** — agreed, designed, unbuilt; **gap** — untested or unmeasu
 | # | Item | Where |
 | --- | --- | --- |
 | ~~A1~~ | ~~A face bolted to a non-sealing block counts as buried.~~ **Done** — the mount rejection is gone; the sealing test already covered every joint that should bury a face. | [known-issues.md](known-issues.md) |
-| A2 | `RefreshBlock` — a block finishing construction or changing surfaces — rebuilds the whole conduction graph; placement and removal are incremental. Same repair as remove-then-place. | [known-issues.md](known-issues.md) |
-| A3 | Removing a block rebuilds the whole graph: 304 ms against a 49 ms median at half a million blocks, on a common event (grinding, combat). Needs per-node intrusive adjacency chains. | [load-and-hitching.md](load-and-hitching.md#what-is-still-open) |
+| ~~A2~~ | ~~`RefreshBlock` rebuilds the whole conduction graph.~~ **Done** — it rebuilt nothing, leaving stale conductances, and charged a full remap. Now O(degree) relink, remap only when sealing moved. Build state remains deliberately unhooked. | [known-issues.md](known-issues.md) |
+| ~~A3~~ | *(was: removal rebuilds the whole graph — already fixed before this pass. `RemoveNodeIncremental` walks the intrusive chains; the "still open" paragraph was stale.)* | — |
 | A4 | `SweepRoomPressure` is per room per cadence with two game API calls each, unbudgeted — the last whole-grid pass that is neither a rota nor a budgeted slice. | [known-issues.md](known-issues.md) |
 | A5 | The step budget (`MaxLinkVisitsPerStep`) counts link visits but not node visits, so the per-node environment pass is invisible to it; measured 85–150 ms against the ~17 ms the link count predicts. Default also wants recalibrating against a game runtime, not the harness's .NET 9. | [known-issues.md](known-issues.md) |
 | A6 | Convection reports 50 W/(m²·K) at air density 0.0000 (44 km). Harmless — the density term zeroes the transfer — but suggests the coefficient is reported before the density blend rather than after. | [field-tuning.md](field-tuning.md) |

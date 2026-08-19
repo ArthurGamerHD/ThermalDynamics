@@ -26,6 +26,14 @@ namespace Thermodynamics.Core
         private PlanetThermalProperties planet = PlanetThermalProperties.Default();
 
         private bool topologyDirty;
+
+        /// <summary>
+        /// Set when the room flood fill has to run again, which is a much larger claim than
+        /// <see cref="topologyDirty"/>: the conduction graph is repaired proportionally to what
+        /// changed, while a remap walks the grid's bounding volume. Anything that alters what a
+        /// block seals sets both; a change to mounting alone sets only the first.
+        /// </summary>
+        private bool roomsDirty;
         private bool exposureDirty;
 
         /// <summary>Temperature new blocks start at, K.</summary>
@@ -303,16 +311,84 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Call after a change to an existing block's sealing or mounting, such as a door opening
-        /// or a block finishing construction.
+        /// Call after a change to an existing block's geometry or mounting.
+        ///
+        /// Repairs everything that reads from the block's surfaces: the surface map, the
+        /// conduction links touching it, the coolant loops and heat pumps that bind to its ports,
+        /// and its own exposed faces. All of it is proportional to the block and its neighbours.
+        ///
+        /// The exception is sealing. What a block seals decides the shape of the rooms around it,
+        /// which only the flood fill can find, so a change to the sealing bits asks for a remap
+        /// and a change to mounting alone does not. Door state has its own path in
+        /// <see cref="RefreshBlockSealing"/>, which never needs the remap because a door is
+        /// already held as a portal between the same two rooms whether it is open or shut.
         /// </summary>
         public void RefreshBlock(BlockInstance block)
         {
             if (block == null) return;
+
+            // RefreshSurfaces allocates fresh arrays, so the old references are a free snapshot.
+            // Both layers are compared because they answer different questions: the structural one
+            // decides the shape of a room, the live one only which rooms currently reach open air.
+            int[] structuralBefore = block.StructuralSurfaces;
+            int[] liveBefore = block.SelfSurfaces;
+
             block.RefreshSurfaces();
             surfaces.RemoveBlock(block);
             surfaces.AddBlock(block);
-            MarkTopologyDirty();
+
+            // Contact area is the product of both ends' mount fractions, so every link touching
+            // this block now carries a conductance derived from geometry it no longer has.
+            solver.RefreshBlockLinks(block);
+
+            bool structuralChanged = !SameSurfaces(structuralBefore, block.StructuralSurfaces);
+            bool ventingChanged = !SameSurfaces(liveBefore, block.SelfSurfaces);
+
+            // A wall moved, or a door the last pass never saw: only the flood fill can answer.
+            if (structuralChanged || (ventingChanged && !rooms.Knows(block)))
+            {
+                MarkTopologyDirty();
+                return;
+            }
+
+            MarkLayoutDirty();
+
+            Begin(SimulationPhase.RoomMapping);
+
+            // The rooms are the same rooms; what may have changed is which of them reach open
+            // air through a portal. Skipped entirely when the sealing bits did not move, which is
+            // the ordinary case for a change to mounting alone.
+            bool venting = ventingChanged && rooms.Map.RefreshVenting();
+            End(SimulationPhase.RoomMapping);
+
+            Begin(SimulationPhase.Exposure);
+
+            // Its own faces are recounted regardless: the surface map has just been rebuilt
+            // underneath it, and this is one node's worth of work.
+            solver.RefreshExposureOf(block, rooms.Map);
+
+            if (venting)
+            {
+                solver.RefreshExposureAround(rooms.Map, rooms.Map.ChangedRooms);
+                solver.RebuildRoomAir(rooms.Map);
+            }
+            End(SimulationPhase.Exposure);
+        }
+
+        /// <summary>
+        /// Whether two of a block's per-cell surface arrays agree. A block keeps its cell count
+        /// across a refresh, so a length change means the model itself was swapped.
+        /// </summary>
+        private static bool SameSurfaces(int[] before, int[] after)
+        {
+            if (before == null || after == null) return false;
+            if (before.Length != after.Length) return false;
+
+            for (int i = 0; i < before.Length; i++)
+            {
+                if (before[i] != after[i]) return false;
+            }
+            return true;
         }
 
         /// <summary>
@@ -411,8 +487,21 @@ namespace Thermodynamics.Core
         /// <summary>
         /// Flags the conduction graph, room map and coolant loops as stale. Repeated calls
         /// before the next update collapse into one rebuild.
+        ///
+        /// Use <see cref="MarkLayoutDirty"/> instead when what a block seals cannot have changed:
+        /// that spares the flood fill, which is the expensive half.
         /// </summary>
         public void MarkTopologyDirty()
+        {
+            topologyDirty = true;
+            roomsDirty = true;
+        }
+
+        /// <summary>
+        /// Flags the conduction graph, coolant loops and heat pumps as stale, without asking for a
+        /// remap. For a change that cannot move a wall: mounting, ports, block properties.
+        /// </summary>
+        public void MarkLayoutDirty()
         {
             topologyDirty = true;
         }
@@ -442,6 +531,7 @@ namespace Thermodynamics.Core
             End(SimulationPhase.Exposure);
 
             topologyDirty = false;
+            roomsDirty = false;
             exposureDirty = false;
             appliedRevision = settings.Revision;
         }
@@ -583,7 +673,14 @@ namespace Thermodynamics.Core
                 // A pump is bound to the nodes either side of it, either of which may have
                 // changed.
                 solver.RebuildHeatPumps();
-                rooms.RequestRestart(grid);
+
+                // Only when something could have changed the shape of a room. A remap walks the
+                // grid's bounding volume; the rest of this branch is proportional to what moved.
+                if (roomsDirty)
+                {
+                    roomsDirty = false;
+                    rooms.RequestRestart(grid);
+                }
                 End(SimulationPhase.Topology);
             }
 

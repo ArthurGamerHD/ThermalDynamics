@@ -496,14 +496,11 @@ must touch every node, and 16 ns per link visit is near the memory-bandwidth flo
 it smaller means not touching every node: activity tracking, chunking and multirate stepping, all
 designed in [scale-design.md](scale-design.md) and none of it built.
 
-**Removing a block still rebuilds the whole graph, and it is now the largest spike there is.**
-304 ms against a 49 ms median on a half-million-block hull, and it is a common event: grinding,
-combat damage, a section breaking off. Additions are incremental; removals are not, because every
-node index after the hole moves and every link referring to one of them becomes wrong. Repairing that incrementally needs a per-node index of the links touching a node — the
-intrusive adjacency chains in [scale-design.md §6](scale-design.md#6-data-structures) — after
-which removal is O(degree) like addition. Until then, grinding or combat damage on a very large
-grid costs a full rebuild per burst. It coalesces, so a section shot away is one rebuild rather
-than one per block.
+~~**Removing a block still rebuilds the whole graph.**~~ **Done**, and this paragraph outlived the
+fix by contradicting finding 6 above. `RemoveNodeIncremental` unpicks a node's links through the
+intrusive `nodeFirstLink` chains, moves one node into the hole and repairs every holder of a node
+index through `RepointNode`, so removal costs the node's degree. `RefreshBlock` now takes the same
+route for a block whose mounting changed, and `DropLinksOf` is shared between them.
 
 **Memory is about 1.8 KB a block**, against the ~110 bytes a node budgeted in
 [scale-design.md §6](scale-design.md#6-data-structures). Half of what a grid retains is indexed by

@@ -194,6 +194,34 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
+        /// Drops every conduction link touching a node, leaving the node itself in place.
+        ///
+        /// Descending index order, for the reason given on <see cref="RemoveNodeIncremental"/>:
+        /// removing a link moves the last link into the hole, so taking the highest first
+        /// guarantees the moved link is never one still waiting to be removed.
+        /// </summary>
+        private void DropLinksOf(ThermalNode node)
+        {
+            int index = node.Index;
+
+            doomedLinks.Clear();
+            for (int link = nodeFirstLink[index]; link != -1; link = NextLink(link, index))
+            {
+                doomedLinks.Add(link);
+            }
+
+            Work.LinksRemoved += doomedLinks.Count;
+
+            doomedLinks.Sort();
+            for (int i = doomedLinks.Count - 1; i >= 0; i--)
+            {
+                RemoveLinkAt(doomedLinks[i]);
+            }
+
+            nodeFirstLink[index] = -1;
+        }
+
+        /// <summary>
         /// Removes a node and every link touching it, without a rebuild.
         ///
         /// Links go first, in descending index order. Removing one moves the last link into the
@@ -219,21 +247,7 @@ namespace Thermodynamics.Core
             EnsureBuffers();
             EnsureNodeChainCapacity(nodes.Count);
 
-            doomedLinks.Clear();
-            for (int link = nodeFirstLink[index]; link != -1; link = NextLink(link, index))
-            {
-                doomedLinks.Add(link);
-            }
-
-            Work.LinksRemoved += doomedLinks.Count;
-
-            doomedLinks.Sort();
-            for (int i = doomedLinks.Count - 1; i >= 0; i--)
-            {
-                RemoveLinkAt(doomedLinks[i]);
-            }
-
-            nodeFirstLink[index] = -1;
+            DropLinksOf(node);
 
             int last = nodes.Count - 1;
             if (index != last)

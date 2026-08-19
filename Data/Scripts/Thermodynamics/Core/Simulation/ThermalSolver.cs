@@ -507,6 +507,65 @@ namespace Thermodynamics.Core
             return true;
         }
 
+        /// <summary>
+        /// Rebuilds the conduction links of one block whose geometry or mounting changed.
+        ///
+        /// Contact area is a product of both blocks' mount fractions, so a change to one end
+        /// changes the conductance of every link touching it — the links are wrong rather than
+        /// merely stale. They are dropped and the node requeued for the same incremental link
+        /// build a freshly placed block takes, which costs the node's degree rather than the
+        /// grid.
+        ///
+        /// Exposure and room membership are not touched here: they follow from the surface map
+        /// and the room map, which the caller owns.
+        /// </summary>
+        /// <returns>False when the block has no node.</returns>
+        public bool RefreshBlockLinks(BlockInstance block)
+        {
+            if (block == null) return false;
+
+            ThermalNode node;
+            if (!nodesByKey.TryGetValue(block.Key, out node)) return false;
+
+            // A full rebuild is already due, or the node has never been linked: either way the
+            // links this would unpick do not exist yet.
+            if (linksDirty || node.PendingLinks) return true;
+
+            // Link indices move, so a step in flight would be summing watts against links that no
+            // longer mean what it read.
+            AbandonStep();
+
+            EnsureBuffers();
+            EnsureNodeChainCapacity(nodes.Count);
+            DropLinksOf(node);
+
+            node.PendingLinks = true;
+            pendingLinkNodes.Add(node);
+            return true;
+        }
+
+        /// <summary>
+        /// Recounts one block's exposed faces. The cheapest unit of exposure work there is: a
+        /// block whose own surfaces changed needs this even when no room around it moved.
+        /// </summary>
+        public void RefreshExposureOf(BlockInstance block, RoomMap rooms)
+        {
+            if (block == null) return;
+
+            ThermalNode node = GetNode(block);
+            if (node == null) return;
+
+            Work.ExposureRefreshes++;
+            Work.ExposureNodeVisits++;
+
+            surfaces.GetExposedFaces(block, rooms, exposureScratch);
+            for (int f = 0; f < Face.Count; f++)
+            {
+                node.ExposedFaces[f] = exposureScratch[f];
+            }
+            node.RefreshExposure();
+        }
+
         public ThermalNode GetNode(BlockInstance block)
         {
             if (block == null) return null;
