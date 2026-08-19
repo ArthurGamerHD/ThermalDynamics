@@ -1,0 +1,178 @@
+section,case,metric,value,unit,lower_is_better
+"machine","host","processors",32,"",0
+"machine","host","64 bit",1,"",0
+"machine","calibration","4k ship, 20 steps",93.6868,"ms",1
+"machine","noise","spread of five identical runs",0.06744666666666621,"ms",1
+"machine","noise","as a share of a step",0.011331835041546438,"",1
+"ladder","8,000","blocks",8904,"",1
+"ladder","8,000","links",20779,"",1
+"ladder","8,000","build",39.038,"ms",1
+"ladder","8,000","step",1.312,"ms",1
+"ladder","8,000","substeps granted",16,"",0
+"ladder","8,000","substeps demanded",43.91009521484375,"",0
+"ladder","8,000","per simulated second",5.248,"ms",1
+"ladder","8,000","per element visit",2.7625240036384464,"ns",1
+"ladder","32,000","blocks",32800,"",1
+"ladder","32,000","links",73787,"",1
+"ladder","32,000","build",153.4662,"ms",1
+"ladder","32,000","step",5.966816666666667,"ms",1
+"ladder","32,000","substeps granted",16,"",0
+"ladder","32,000","substeps demanded",36.9189453125,"",0
+"ladder","32,000","per simulated second",23.86726666666667,"ms",1
+"ladder","32,000","per element visit",3.498794802993486,"ns",1
+"ladder","125,000","blocks",126731,"",1
+"ladder","125,000","links",277967,"",1
+"ladder","125,000","build",728.485,"ms",1
+"ladder","125,000","step",35.190720000000006,"ms",1
+"ladder","125,000","substeps granted",16,"",0
+"ladder","125,000","substeps demanded",43.444618225097656,"",0
+"ladder","125,000","per simulated second",140.76288000000002,"ms",1
+"ladder","125,000","per element visit",5.434719222729049,"ns",1
+"features","everything on","step",6.034566666666667,"ms",1
+"features","everything off","step",0.48589000000000004,"ms",1
+"features","conduction","marginal",3.56255,"ms",1
+"features","conduction","isolated",3.905513333333333,"ms",1
+"features","conduction","demand without it",36.87049865722656,"",0
+"features","radiation","marginal",0.18801999999999985,"ms",1
+"features","radiation","isolated",1.0238899999999997,"ms",1
+"features","radiation","demand without it",36.75709533691406,"",0
+"features","convection","marginal",-0.7802966666666666,"ms",1
+"features","convection","isolated",1.3206166666666665,"ms",1
+"features","convection","demand without it",67.4897232055664,"",0
+"features","solar","marginal",-0.48294333333333306,"ms",1
+"features","solar","isolated",0.7987099999999999,"ms",1
+"features","solar","demand without it",36.91835403442383,"",0
+"features","self shadow","marginal",-0.06474333333333337,"ms",1
+"features","self shadow","isolated",-0.008056666666666656,"ms",1
+"features","self shadow","demand without it",36.9189453125,"",0
+"features","waste heat","marginal",-0.331433333333333,"ms",1
+"features","waste heat","isolated",0.22280333333333324,"ms",1
+"features","waste heat","demand without it",36.89208221435547,"",0
+"features","heat sources","marginal",0.0881966666666667,"ms",1
+"features","heat sources","isolated",-0.002980000000000038,"ms",1
+"features","heat sources","demand without it",36.9189453125,"",0
+"features","friction","marginal",0.15293666666666628,"ms",1
+"features","friction","isolated",0.8086699999999999,"ms",1
+"features","friction","demand without it",36.914939880371094,"",0
+"features","damage","marginal",0.6299599999999996,"ms",1
+"features","damage","isolated",0.6733833333333333,"ms",1
+"features","damage","demand without it",36.9189453125,"",0
+"features","coolant loops","marginal",0.10236333333333292,"ms",1
+"features","coolant loops","isolated",-0.0009066666666667222,"ms",1
+"features","coolant loops","demand without it",36.9189453125,"",0
+"features","room air","marginal",0.10126666666666662,"ms",1
+"features","room air","isolated",-0.010286666666666722,"ms",1
+"features","room air","demand without it",36.9189453125,"",0
+"features","heat pumps","marginal",0.12209000000000003,"ms",1
+"features","heat pumps","isolated",0.00267999999999996,"ms",1
+"features","heat pumps","demand without it",36.9189453125,"",0
+"features","conduction clamp","marginal",2.5486466666666665,"ms",1
+"features","conduction clamp","isolated",0.014379999999999948,"ms",1
+"features","conduction clamp","demand without it",36.9189453125,"",0
+"features","environment clamp","marginal",-0.11621000000000059,"ms",1
+"features","environment clamp","isolated",-0.007770000000000055,"ms",1
+"features","environment clamp","demand without it",36.9189453125,"",0
+"profiles","simulation","per simulated second",64.33032,"ms",1
+"profiles","simulation","substeps granted",19,"",0
+"profiles","simulation","substeps demanded",18.477102279663086,"",0
+"profiles","simulation","clamped",0,"",0
+"profiles","default","per simulated second",23.726786666666666,"ms",1
+"profiles","default","substeps granted",16,"",0
+"profiles","default","substeps demanded",36.9189453125,"",0
+"profiles","default","clamped",1,"",0
+"profiles","responsive","per simulated second",21.45885333333333,"ms",1
+"profiles","responsive","substeps granted",8,"",0
+"profiles","responsive","substeps demanded",1811.3802490234375,"",0
+"profiles","responsive","clamped",1,"",0
+"profiles","arcade","per simulated second",6.548739999999999,"ms",1
+"profiles","arcade","substeps granted",1,"",0
+"profiles","arcade","substeps demanded",80319608,"",0
+"profiles","arcade","clamped",1,"",0
+"profiles","minimal","per simulated second",2.1495666666666664,"ms",1
+"profiles","minimal","substeps granted",1,"",0
+"profiles","minimal","substeps demanded",52879248,"",0
+"profiles","minimal","clamped",1,"",0
+"substep cap","cap off","step",5.933963333333334,"ms",1
+"substep cap","cap off","substeps",16,"",0
+"substep cap","cap off","per simulated second",23.735853333333335,"ms",1
+"substep cap","cap off","blocks raised",0,"",0
+"substep cap","cap off","clamped",1,"",0
+"substep cap","cap 16","step",6.070823333333333,"ms",1
+"substep cap","cap 16","substeps",16,"",0
+"substep cap","cap 16","per simulated second",24.283293333333333,"ms",1
+"substep cap","cap 16","blocks raised",1,"",0
+"substep cap","cap 16","clamped",0,"",0
+"substep cap","cap 8","step",3.4338399999999996,"ms",1
+"substep cap","cap 8","substeps",8,"",0
+"substep cap","cap 8","per simulated second",13.735359999999998,"ms",1
+"substep cap","cap 8","blocks raised",4,"",0
+"substep cap","cap 8","clamped",0,"",0
+"substep cap","cap 4","step",1.9035566666666666,"ms",1
+"substep cap","cap 4","substeps",4,"",0
+"substep cap","cap 4","per simulated second",7.614226666666666,"ms",1
+"substep cap","cap 4","blocks raised",7,"",0
+"substep cap","cap 4","clamped",0,"",0
+"substep cap","cap 2","step",1.2342466666666667,"ms",1
+"substep cap","cap 2","substeps",2,"",0
+"substep cap","cap 2","per simulated second",4.936986666666667,"ms",1
+"substep cap","cap 2","blocks raised",6,"",0
+"substep cap","cap 2","clamped",0,"",0
+"substep cap","cap 1","step",0.8163166666666667,"ms",1
+"substep cap","cap 1","substeps",1,"",0
+"substep cap","cap 1","per simulated second",3.2652666666666668,"ms",1
+"substep cap","cap 1","blocks raised",12,"",0
+"substep cap","cap 1","clamped",0,"",0
+"environments","ship vacuum","step",1.2877100000000001,"ms",1
+"environments","ship vacuum","substeps demanded",23.203126907348633,"",0
+"environments","ship atmosphere","step",1.2380066666666667,"ms",1
+"environments","ship atmosphere","substeps demanded",31.02988624572754,"",0
+"environments","ship flight","step",1.3115400000000002,"ms",1
+"environments","ship flight","substeps demanded",43.91009521484375,"",0
+"environments","cube vacuum","step",1.1398433333333335,"ms",1
+"environments","cube vacuum","substeps demanded",22.734376907348633,"",0
+"environments","cube atmosphere","step",1.1528533333333333,"ms",1
+"environments","cube atmosphere","substeps demanded",28.149581909179688,"",0
+"environments","cube flight","step",1.1431333333333333,"ms",1
+"environments","cube flight","substeps demanded",36.953399658203125,"",0
+"environments","truss vacuum","step",0.6452866666666667,"ms",1
+"environments","truss vacuum","substeps demanded",15.96631908416748,"",0
+"environments","truss atmosphere","step",0.678,"ms",1
+"environments","truss atmosphere","substeps demanded",33.499046325683594,"",0
+"environments","truss flight","step",0.7210966666666666,"ms",1
+"environments","truss flight","substeps demanded",50.89897918701172,"",0
+"scenarios","plain","step",1.28145,"ms",1
+"scenarios","plain","substeps demanded",43.90427780151367,"",0
+"scenarios","plain","rooms with air",0,"",0
+"scenarios","plain","coolant loops",0,"",0
+"scenarios","plain","heat pumps",0,"",0
+"scenarios","plain","overheat events",0,"",0
+"scenarios","pressurised","step",1.5039733333333334,"ms",1
+"scenarios","pressurised","substeps demanded",43.904273986816406,"",0
+"scenarios","pressurised","rooms with air",13,"",0
+"scenarios","pressurised","coolant loops",0,"",0
+"scenarios","pressurised","heat pumps",0,"",0
+"scenarios","pressurised","overheat events",0,"",0
+"scenarios","plumbed","step",1.3219166666666666,"ms",1
+"scenarios","plumbed","substeps demanded",43.90427780151367,"",0
+"scenarios","plumbed","rooms with air",0,"",0
+"scenarios","plumbed","coolant loops",8,"",0
+"scenarios","plumbed","heat pumps",8,"",0
+"scenarios","plumbed","overheat events",0,"",0
+"scenarios","burning","step",1.3661466666666666,"ms",1
+"scenarios","burning","substeps demanded",44.01819610595703,"",0
+"scenarios","burning","rooms with air",0,"",0
+"scenarios","burning","coolant loops",0,"",0
+"scenarios","burning","heat pumps",0,"",0
+"scenarios","burning","overheat events",1444321,"",0
+"fleets","1 grid","step, whole fleet",1.3380333333333332,"ms",1
+"fleets","1 grid","blocks",8904,"",0
+"fleets","1 grid","blocks per grid",8904,"",0
+"fleets","1 grid","per thousand blocks",0.15027328541479482,"ms",1
+"fleets","10 grids","step, whole fleet",1.48782,"ms",1
+"fleets","10 grids","blocks",11240,"",0
+"fleets","10 grids","blocks per grid",1124,"",0
+"fleets","10 grids","per thousand blocks",0.13236832740213522,"ms",1
+"fleets","100 grids","step, whole fleet",12.027023333333334,"ms",1
+"fleets","100 grids","blocks",83500,"",0
+"fleets","100 grids","blocks per grid",835,"",0
+"fleets","100 grids","per thousand blocks",0.14403620758483035,"ms",1

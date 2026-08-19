@@ -1,0 +1,188 @@
+using System;
+using System.Collections.Generic;
+using Thermodynamics.Core;
+using Thermodynamics.Harness;
+
+namespace Thermodynamics.Tests
+{
+    /// <summary>
+    /// The performance report exists to be compared against itself across changes, so the thing
+    /// that must not rot is its <em>shape</em>: the sections it produces, the keys it produces
+    /// them under, and its ability to read back what it wrote.
+    ///
+    /// A benchmark suite fails quietly. If a case is renamed, a diff against last month's
+    /// baseline silently drops that row and reports no regression; if the CSV round-trip breaks,
+    /// every comparison reads as "everything is new". Neither shows up as a failure anywhere
+    /// else, which is why these are ordinary tests rather than something a person remembers to
+    /// check.
+    /// </summary>
+    public class PerformanceReportTests
+    {
+        /// <summary>Small enough to run in the ordinary suite; the shape is the same at any size.</summary>
+        private static List<ReportRow> Small()
+        {
+            PerformanceReport.Repeats = 1;
+            return PerformanceReport.Run("ship", 600, 2, new int[] { 600 });
+        }
+
+        [Fact]
+        public void TheReportCoversEverySectionAndEveryFeature()
+        {
+            List<ReportRow> rows = Small();
+
+            HashSet<string> sections = new HashSet<string>();
+            HashSet<string> features = new HashSet<string>();
+
+            for (int i = 0; i < rows.Count; i++)
+            {
+                sections.Add(rows[i].Section);
+                if (rows[i].Section == "features") features.Add(rows[i].Case);
+            }
+
+            Assert.Contains("machine", sections);
+            Assert.Contains("ladder", sections);
+            Assert.Contains("features", sections);
+            Assert.Contains("profiles", sections);
+            Assert.Contains("substep cap", sections);
+
+            // Every switch a world can turn off has to be in the breakdown, or a feature can grow
+            // expensive without any report noticing.
+            foreach (string expected in new string[]
+            {
+                "conduction", "radiation", "convection", "solar", "self shadow", "waste heat",
+                "heat sources", "friction", "damage", "coolant loops", "room air", "heat pumps",
+                "conduction clamp", "environment clamp",
+            })
+            {
+                Assert.Contains(expected, features);
+            }
+
+            for (int i = 0; i < ThermalProfiles.Names.Length; i++)
+            {
+                bool found = false;
+                for (int r = 0; r < rows.Count; r++)
+                {
+                    if (rows[r].Section == "profiles" && rows[r].Case == ThermalProfiles.Names[i]) found = true;
+                }
+
+                Assert.True(found, "profile " + ThermalProfiles.Names[i] + " is not in the report");
+            }
+        }
+
+        [Fact]
+        public void EveryFigureHasAUniqueKey()
+        {
+            List<ReportRow> rows = Small();
+            HashSet<string> keys = new HashSet<string>();
+
+            for (int i = 0; i < rows.Count; i++)
+            {
+                Assert.True(keys.Add(rows[i].Key),
+                    "two figures share the key " + rows[i].Key + ", so a comparison cannot join on it");
+            }
+        }
+
+        [Fact]
+        public void TheCsvRoundTrips()
+        {
+            List<ReportRow> rows = Small();
+            List<ReportRow> read = PerformanceReport.ParseCsv(PerformanceReport.Csv(rows));
+
+            Assert.Equal(rows.Count, read.Count);
+
+            for (int i = 0; i < rows.Count; i++)
+            {
+                Assert.Equal(rows[i].Key, read[i].Key);
+                Assert.Equal(rows[i].Unit, read[i].Unit);
+                Assert.Equal(rows[i].LowerIsBetter, read[i].LowerIsBetter);
+
+                // Round-tripped exactly, not approximately: a comparison against a baseline is a
+                // subtraction, and a value that loses digits on the way to disk turns into a
+                // regression the next time anyone reads it.
+                Assert.Equal(rows[i].Value, read[i].Value);
+            }
+        }
+
+        [Fact]
+        public void ComparingAReportAgainstItselfFindsNothing()
+        {
+            List<ReportRow> rows = Small();
+            string diff = PerformanceReport.Compare(rows, rows);
+
+            Assert.Contains("regressions (0)", diff);
+            Assert.DoesNotContain("not in the baseline (", diff);
+            Assert.DoesNotContain("gone since the baseline (", diff);
+        }
+
+        [Fact]
+        public void AWorseNumberIsReportedAsARegressionAndABetterOneIsNot()
+        {
+            List<ReportRow> baseline = new List<ReportRow>
+            {
+                new ReportRow { Section = "s", Case = "c", Metric = "slower", Value = 1.0, LowerIsBetter = true },
+                new ReportRow { Section = "s", Case = "c", Metric = "faster", Value = 1.0, LowerIsBetter = true },
+            };
+
+            List<ReportRow> current = new List<ReportRow>
+            {
+                new ReportRow { Section = "s", Case = "c", Metric = "slower", Value = 1.5, LowerIsBetter = true },
+                new ReportRow { Section = "s", Case = "c", Metric = "faster", Value = 0.5, LowerIsBetter = true },
+            };
+
+            string diff = PerformanceReport.Compare(baseline, current);
+
+            Assert.Contains("regressions (1)", diff);
+            Assert.Contains("s/c/slower", diff);
+            Assert.Contains("improvements", diff);
+        }
+
+        /// <summary>
+        /// A change smaller than the machine's own run-to-run spread is not a finding, and a
+        /// report that calls it one trains its reader to ignore the section.
+        /// </summary>
+        [Fact]
+        public void AChangeInsideTheThresholdIsNotReported()
+        {
+            List<ReportRow> baseline = new List<ReportRow>
+            {
+                new ReportRow { Section = "s", Case = "c", Metric = "m", Value = 1.00 },
+            };
+
+            List<ReportRow> current = new List<ReportRow>
+            {
+                new ReportRow { Section = "s", Case = "c", Metric = "m", Value = 1.02 },
+            };
+
+            Assert.Contains("regressions (0)", PerformanceReport.Compare(baseline, current, 0.05));
+            Assert.Contains("regressions (1)", PerformanceReport.Compare(baseline, current, 0.01));
+        }
+
+        /// <summary>
+        /// The report measures features by switching them off, so it is also a check that they
+        /// can be: a toggle that has quietly stopped being wired to anything would show as
+        /// costing exactly nothing in both columns.
+        /// </summary>
+        [Fact]
+        public void TheExpensiveFeaturesCostSomething()
+        {
+            List<ReportRow> rows = Small();
+
+            foreach (string feature in new string[] { "conduction", "radiation", "solar" })
+            {
+                double isolated = 0;
+                for (int i = 0; i < rows.Count; i++)
+                {
+                    if (rows[i].Section == "features" && rows[i].Case == feature
+                        && rows[i].Metric == "isolated")
+                    {
+                        isolated = rows[i].Value;
+                    }
+                }
+
+                Assert.True(isolated != 0d,
+                    feature + " cost exactly nothing in isolation, which means the switch is no"
+                    + " longer wired to anything the solver reads");
+            }
+        }
+    }
+}

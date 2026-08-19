@@ -95,6 +95,8 @@ into atmosphere and into the air of sealed rooms, arrives from the sun, and — 
 | [docs/scale-design.md](docs/scale-design.md) | Design for grids up to a million blocks. |
 | [docs/memory.md](docs/memory.md) | Where a grid's memory goes, and what can be given back. |
 | [docs/load-and-hitching.md](docs/load-and-hitching.md) | What a grid costs as it grows, what was making it stutter, and what still does. |
+| [docs/benchmarks.md](docs/benchmarks.md) | The performance report: cost by size, by feature and by configuration, and how to diff two runs. |
+| [docs/stiffness.md](docs/stiffness.md) | Why a handful of light fittings set the cost of a capital ship, and what to do about it. |
 | [sim/README.md](sim/README.md) | The isolated simulation environment: running the tests and scenarios. |
 
 ## Building and testing

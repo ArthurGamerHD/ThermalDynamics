@@ -104,6 +104,8 @@ namespace Thermodynamics.Sim
         ///   bench weld  --size 250000         a block welded on every tick
         ///   bench load  --size 1000000        what building the grid costs before tick one
         ///   bench floor --size 42000           what a per-block substep cap buys, and costs
+        ///   bench report --csv out/            the full performance report, as a CSV to diff
+        ///   bench report --baseline out/performance.csv   the same, against an earlier one
         /// </summary>
         private static int BenchCommand(string[] args)
         {
@@ -272,6 +274,52 @@ namespace Thermodynamics.Sim
                     return 0;
                 }
 
+                case "report":
+                {
+                    List<int> ladder = new List<int>();
+                    foreach (int rung in LoadBenchmarks.DefaultSizes)
+                    {
+                        if (rung <= max) ladder.Add(rung);
+                    }
+                    if (ladder.Count == 0) ladder.Add(max);
+
+                    int reportTicks = ticks > 0 ? ticks : 20;
+                    string baseline = Option(args, "--baseline", null);
+                    string outDir = csvDirectory ?? "out";
+
+                    Console.WriteLine();
+                    Console.WriteLine("== performance report ==");
+                    Console.WriteLine("  " + shape + ", feature and configuration cases on "
+                        + size.ToString("n0") + " blocks, " + reportTicks + " steps each.");
+                    Console.WriteLine("  Ladder: " + string.Join(", ", ladder.ConvertAll(
+                        delegate (int n) { return n.ToString("n0"); }).ToArray()));
+                    Console.WriteLine();
+
+                    List<ReportRow> rows = PerformanceReport.Run(shape, size, reportTicks, ladder,
+                        message => Console.Error.WriteLine("  " + message));
+
+                    Console.WriteLine(PerformanceReport.Table(rows));
+
+                    Directory.CreateDirectory(outDir);
+                    string path = Path.Combine(outDir, "performance.csv");
+                    File.WriteAllText(path, PerformanceReport.Csv(rows));
+                    Console.WriteLine("csv -> " + path);
+
+                    if (baseline != null && File.Exists(baseline))
+                    {
+                        Console.WriteLine();
+                        Console.WriteLine("== against " + baseline + " ==");
+                        Console.WriteLine(PerformanceReport.Compare(
+                            PerformanceReport.ParseCsv(File.ReadAllText(baseline)), rows));
+                    }
+                    else if (baseline != null)
+                    {
+                        Console.Error.WriteLine("  baseline not found: " + baseline);
+                    }
+
+                    return 0;
+                }
+
                 case "floor":
                 {
                     int[] caps = { 0, 32, 16, 8, 6, 4, 3, 2, 1 };
@@ -376,6 +424,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  bench weld  --size N    a block welded on every tick");
             Console.WriteLine("  bench load  --size N    what building the grid costs before tick one");
             Console.WriteLine("  bench floor --size N    what a per-block substep cap buys, and costs");
+            Console.WriteLine("  bench report            full performance report; --baseline <csv> to compare");
             Console.WriteLine("  bench spike --size N    one block placed, split by stage");
             Console.WriteLine("  bench pace  --size N    does slowing sim and raising transfer save anything");
             Console.WriteLine("  bench reach --length N  how fast heat crosses a grid, against what it costs");
