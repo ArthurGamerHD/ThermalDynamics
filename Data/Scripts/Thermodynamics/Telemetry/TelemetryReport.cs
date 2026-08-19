@@ -18,8 +18,8 @@ namespace Thermodynamics
     ///   Thermodynamics_BlockTypes_&lt;stamp&gt;.csv  one row per block definition
     ///   Thermodynamics_Grids_&lt;stamp&gt;.csv       one row per grid
     ///
-    /// The CSVs exist so a session can be diffed against another one, or against the rewritten
-    /// model in sim/, without re-reading prose.
+    /// The CSVs allow one session to be diffed against another, or against the model in sim/,
+    /// without parsing the prose report.
     /// </summary>
     public static class TelemetryReport
     {
@@ -31,8 +31,8 @@ namespace Thermodynamics
 
             string report = BuildReport(reason);
 
-            // The game log always gets the headline numbers, because world-storage writes are the
-            // part most likely to fail during shutdown.
+            // The game log always receives the headline figures: world-storage writes are the most
+            // likely part to fail during shutdown.
             MyLog.Default.Info("[" + Settings.Name + "] [Telemetry] " + BuildLogSummary(reason));
 
             bool wrote = TryWrite("Thermodynamics_Telemetry_" + stamp + ".log", report);
@@ -44,7 +44,7 @@ namespace Thermodynamics
 
             if (!wrote)
             {
-                // Nowhere else for it to go. The log takes the whole thing rather than lose it.
+                // No storage available, so the whole report goes to the log rather than being lost.
                 MyLog.Default.Info("[" + Settings.Name + "] [Telemetry] world storage unavailable, full report follows\n" + report);
             }
         }
@@ -115,9 +115,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// One "name value" line. The name is padded to a column and always followed by at least
-        /// one space: a name that exactly fills the column used to run straight into its value and
-        /// produce lines like "DebugSolarRadiationBlockColorsFalse".
+        /// One "name value" line. The name is padded to a fixed column and always followed by at
+        /// least one space, so a name that fills the column does not run into its value.
         /// </summary>
         private static void Field(StringBuilder sb, string name, object value)
         {
@@ -127,9 +126,8 @@ namespace Thermodynamics
         /// <summary>
         /// What the room mapper made of the grid, and whether it agrees with the grid.
         ///
-        /// The counts on their own answer "why is my sealed room not a room": every cell of the
-        /// padded search box is external, structure or room, so a total that leaves block cells on
-        /// the external side names the failure without anyone having to reason about flood fills.
+        /// Every cell of the padded search box is classified as external, structure or room, so
+        /// block cells counted as external identify a sealing failure directly.
         /// </summary>
         private static void WriteRoomMapping(StringBuilder sb, GridTelemetry g)
         {
@@ -137,7 +135,7 @@ namespace Thermodynamics
 
             if (g.MapperCompletions == 0)
             {
-                // Not a measurement of anything: the grid closed before its first pass.
+                // Not a measurement: the grid closed before its first mapper pass completed.
                 Field(sb, "  mapped", "never (no pass completed)");
                 return;
             }
@@ -172,15 +170,12 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Every compartment on the grid: the ones this model found, and the ones only the game
-        /// has.
+        /// Every compartment on the grid: those this model mapped, and those only the game holds.
         ///
-        /// The second list is the one worth reading. A room in it is sealed as far as the game is
-        /// concerned — its vent will say pressurised and a player will be standing in air — while
-        /// this model believes the cells are outdoors, runs no air in them, and draws nothing in
-        /// the room overlay. Each is named by the vent standing in it, because that is the only
-        /// identity a player can read off a terminal, and by the block subtypes across the faces
-        /// this model leaves open, because those are what has to be fixed.
+        /// A compartment in the second list is sealed as far as the game is concerned — its vent
+        /// reports pressurised — while this model treats the cells as outdoors and runs no air in
+        /// them. Each is identified by the vent standing in it, which is the only name a player can
+        /// read from a terminal, and by the block subtypes across the faces this model leaves open.
         /// </summary>
         private static void WriteRooms(StringBuilder sb, GridTelemetry g)
         {
@@ -210,8 +205,8 @@ namespace Thermodynamics
             Field(sb, "  held only by the game", lost.ToString("n0")
                 + (lostWithVent > 0 ? "  (" + lostWithVent + " with a vent reporting pressurised)" : ""));
 
-            // The row that matters when the map is right and the air is missing anyway: a
-            // compartment found, left dry, and sealed as far as the game is concerned.
+            // Mapped, sealed as far as the game is concerned, and still running no air — the case
+            // where the map is correct but the air is missing.
             Field(sb, "  found, dry, air in game", dry.ToString("n0")
                 + (dry > 0 ? "  <-- the game has air in these and this model runs none" : ""));
 
@@ -271,8 +266,8 @@ namespace Thermodynamics
         private const int MaxRoomsReported = 60;
 
         /// <summary>
-        /// The rooms themselves, as sizes: "1 room, 2 cells". A count with nothing behind it
-        /// leaves a reader unable to tell one enclosed cupboard from a whole sealed deck.
+        /// The rooms as sizes, for example "1 room, 2 cells". A bare count cannot distinguish one
+        /// enclosed cell from a whole sealed deck.
         /// </summary>
         private static string DescribeRooms(Core.RoomAudit audit)
         {
@@ -341,8 +336,8 @@ namespace Thermodynamics
                 return;
             }
 
-            // Driven off the name table rather than a hand-written list, so a setting added to
-            // the config cannot go missing from the report that is supposed to explain a run.
+            // Driven from the name table rather than a hand-written list, so a setting added to the
+            // config cannot be missing from the report.
             Field(sb, "Version", s.Version);
             Field(sb, "StepsPerSecond", s.StepsPerSecond);
 
@@ -457,15 +452,14 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// What the Cost table saw, kept so the consistency section can re-take the same figures
-        /// after every other section has been written and say whether they moved.
+        /// Figures as the Cost table saw them, kept so the consistency section can re-take them
+        /// after every other section is written and report whether they moved.
         ///
-        /// A report is built from one list in one call, so these must not move. In a field dump
-        /// of 18 August they did: the merged total came to 62 % of the sum of the per-grid rows
-        /// printed further down the same file, and the per-grid rows agreed to the last decimal
-        /// with the CSV written afterwards. Either the list grew between the two sections — grids
-        /// register from worker threads — or the aggregates ran over a shorter one. Recording
-        /// both ends of the report is what tells the two apart.
+        /// A report is built from one list in one call, so these should not move. They have been
+        /// observed to: a field dump showed a merged total at 62 % of the sum of the per-grid rows
+        /// in the same file. Either the record list grew mid-report — grids register from worker
+        /// threads — or the aggregates ran over a shorter list. Recording both ends distinguishes
+        /// the two.
         /// </summary>
         private static int costRecords;
         private static long costCalls;
@@ -523,8 +517,8 @@ namespace Thermodynamics
             load.WriteRow(sb);
             Telemetry.SessionFrameTime.WriteRow(sb);
 
-            // Solar occlusion runs inside the grid simulation call, so only the outer
-            // measurement and the paths driven by events outside it are summed.
+            // Solar occlusion runs inside the grid simulation call, so summing it would double
+            // count; only the outer measurement and the externally driven paths are summed.
             double total = simulation.TotalMilliseconds + save.TotalMilliseconds
                 + load.TotalMilliseconds + Telemetry.SessionFrameTime.TotalMilliseconds;
 
@@ -549,19 +543,17 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// What the mod cost per frame across every grid, and the worst frames of the session.
+        /// Cost per frame across every grid, and the worst frames of the session.
         ///
-        /// This is the section to read first when someone reports stuttering. Every other cost
-        /// figure is per grid and a stutter is not per grid: twenty ships each taking two
-        /// tolerable milliseconds on the same frame is a forty-millisecond frame, and the
-        /// per-grid rows all look fine. The worst frames are printed in full because a stutter
-        /// is a particular event with a cause, and the counts of what its stages touched say
-        /// which cause it was.
+        /// The first section to read for a stutter report. Every other cost figure is per grid,
+        /// while a stutter is per frame: twenty grids each costing two acceptable milliseconds on
+        /// the same frame produce a forty-millisecond frame with no per-grid row out of range. The
+        /// worst frames are printed in full, including what each stage touched.
         /// </summary>
         private static void WriteFrames(StringBuilder sb)
         {
-            // Grids running below real time, which is the work budget doing its job rather than
-            // a fault — but it is also why heat might be moving slowly, so it is said out loud.
+            // Grids running below real time. Expected under the work budget rather than a fault,
+            // but it also explains slow-moving heat, so it is reported explicitly.
             int throttled = 0;
             double worstRate = 1d;
             for (int i = 0; i < Telemetry.Grids.Count; i++)
@@ -605,9 +597,9 @@ namespace Thermodynamics
                     : (100.0 * frames.FramesOverBudget / frames.FramesWithWork).ToString("n2") + " %")
                 + ")");
 
-            // The one number worth quoting about smoothness. Near one is a mod that is uniformly
-            // expensive, which costs frame rate; in the hundreds is one that is cheap on average
-            // and occasionally enormous, which costs a stutter. They want different fixes.
+            // Peak-to-median ratio. Near one means a uniformly expensive mod, which costs frame
+            // rate; in the hundreds means one that is cheap on average and occasionally very
+            // expensive, which costs a stutter. The two call for different fixes.
             Field(sb, "worst over mean", frames.SpikeRatio.ToString("n1") + "x");
 
             sb.Append("\n    distribution:\n");
@@ -671,19 +663,18 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// What the substep count is, what sets it, and what capping it would buy.
+        /// The substep count, what sets it, and what capping it would save.
         ///
         /// <para>
-        /// A solver step is divided into as many substeps as the <em>stiffest</em> element on the
-        /// grid needs to stay numerically stable, and every other element pays for all of them. So
-        /// this is the section that explains the solver's bill: the cost of a grid is its elements
-        /// times its substeps, and the substeps are decided by one block.
+        /// A solver step is divided into as many substeps as the stiffest element on the grid needs
+        /// to stay stable, and every other element pays for all of them, so a grid's cost is its
+        /// elements times a substep count set by one block.
         /// </para>
         ///
         /// <para>
-        /// It reports what was asked for beside what was granted, because they diverge in two
-        /// different ways — <c>MaxSubsteps</c> refuses, and <c>MaxLinkVisitsPerStep</c> shortens
-        /// the step instead — and the demand keeps moving after both have bound.
+        /// Reports demand alongside grant, since the two diverge in two ways —
+        /// <c>MaxSubsteps</c> refuses substeps and <c>MaxLinkVisitsPerStep</c> shortens the step —
+        /// and demand keeps moving after both have bound.
         /// </para>
         /// </summary>
         private static void WriteSubsteps(StringBuilder sb)
@@ -696,8 +687,8 @@ namespace Thermodynamics
 
             List<GridTelemetry> grids = SortedGrids();
 
-            // What a substep actually costs, measured rather than assumed: the solver's own
-            // milliseconds divided by the passes it made, and again per element visited.
+            // Measured substep cost: the solver's own milliseconds divided by the passes it made,
+            // and again per element visited.
             double passes = 0;
             double solverMs = 0;
             double elementPasses = 0;
@@ -722,8 +713,8 @@ namespace Thermodynamics
 
                 granted.Add((float)substeps);
 
-                // The same buckets, weighted by how much ship is in them, because thirty grids of
-                // debris and three capital ships are not the same finding.
+                // The same buckets weighted by block count, so a few large grids are not read the
+                // same way as many small ones.
                 float value = (float)substeps;
                 int bucket = granted.Edges.Length;
                 for (int e = 0; e < granted.Edges.Length; e++)
@@ -759,12 +750,12 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// The block definitions that ask the most of a step, ranked.
+        /// Block definitions ranked by substep demand, across every grid in the world.
         ///
-        /// The per-grid view names one block; this names the *kinds* of block, across every grid
-        /// in the world, which is what a definition author or a server operator can act on. A
-        /// block's demand is not a property of its definition alone — it depends on what it is
-        /// bolted to and whether it is exposed — so the spread matters as much as the peak.
+        /// The per-grid view names one block; this names the definitions, which is what a definition
+        /// author or server operator can act on. Demand is not a property of the definition alone —
+        /// it depends on what the block is mounted to and whether it is exposed — so the spread is
+        /// reported alongside the peak.
         /// </summary>
         private static void WriteStiffestBlockTypes(StringBuilder sb)
         {
@@ -802,7 +793,7 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>The block on each grid that sets its substep count, worst grids first.</summary>
+        /// <summary>The block on each grid that sets its substep count, highest demand first.</summary>
         private static void WriteSubstepDrivers(StringBuilder sb, IList<GridTelemetry> grids)
         {
             List<GridTelemetry> profiled = new List<GridTelemetry>();
@@ -844,12 +835,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// What each candidate <c>MaxSubstepsPerBlock</c> would do, summed over the world.
-        ///
-        /// This is the setting's own evidence: how many blocks it would raise, what the substep
-        /// count would fall to, and therefore how much of the solver's bill it would remove. A
-        /// cap that reaches only a handful of blocks and halves the arithmetic is a different
-        /// proposition from one that reaches a tenth of the ship.
+        /// Effect of each candidate <c>MaxSubstepsPerBlock</c>, summed over the world: blocks the
+        /// cap would floor, the substep count that would result, and the share of solver work it
+        /// would remove.
         /// </summary>
         private static void WriteSubstepProjection(StringBuilder sb, IList<GridTelemetry> grids)
         {
@@ -872,16 +860,12 @@ namespace Thermodynamics
                 nodes += p.Nodes;
                 environmentDominated += p.EnvironmentDominatedNodes;
 
-                // Per simulated second, not per step, and the distinction is the whole reading.
-                //
-                // MaxLinkVisitsPerStep answers a step it cannot afford by making it shorter, so a
-                // throttled grid already takes few substeps — measuring visits per *step* there
-                // shows a cap saving nothing, because what the cap actually buys is returned as
-                // simulated time rather than as arithmetic. Per simulated second the budget
-                // cancels out entirely: substeps are proportional to step length, so the cost of
-                // a second of heat is elements x demand / StepSeconds however the step is cut.
-                // A field dump reported 0.1 % where the truth was an eightfold saving, because
-                // this line divided by the wrong thing.
+                // Per simulated second rather than per step. MaxLinkVisitsPerStep shortens a step
+                // it cannot afford, so a throttled grid already takes few substeps and a per-step
+                // measurement shows the cap saving nothing — what it buys is returned as simulated
+                // time rather than as arithmetic. Per simulated second the budget cancels out:
+                // substeps are proportional to step length, so a second of heat costs
+                // elements * demand / StepSeconds however the step is cut.
                 double elements = p.Nodes + p.Links;
                 double perStepSecond = p.StepSeconds <= 0 ? 1 : elements / p.StepSeconds;
 
@@ -936,25 +920,23 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Whether the report agrees with itself.
+        /// Checks the report against itself.
         ///
-        /// Every aggregate in this file is a sum over the same list of grid records, taken at
-        /// different points while the report is built, and the CSVs are a sixth pass over it
-        /// after the text is finished. Nothing about that is supposed to be able to disagree, and
-        /// in a field dump it did — by a factor of 1.6, across every counter, in the direction
-        /// that made the mod look cheaper than it was. A total that cannot be checked is a total
-        /// that gets believed.
+        /// Every aggregate in the file sums the same list of grid records at different points
+        /// during the build, and the CSVs are a further pass after the text is finished, so all of
+        /// them must agree. A field dump has shown them disagreeing by a factor of 1.6 across every
+        /// counter.
         ///
-        /// So this section re-takes the Cost table's own figures after everything else has been
-        /// written, and states the two invariants that must hold:
+        /// This section re-takes the Cost table's figures after everything else is written and
+        /// checks two invariants:
         ///
         /// <list type="bullet">
         /// <item>the record list must not change while the report is built;</item>
-        /// <item>a grid cannot tick more often than the session is framed, because both happen
-        /// once each in the same <c>Simulate</c> call.</item>
+        /// <item>a grid cannot tick more often than the session frames, since both happen once each
+        /// in the same <c>Simulate</c> call.</item>
         /// </list>
         ///
-        /// A line beginning <c>!!</c> is a defect in the telemetry, not in the simulation.
+        /// A line beginning <c>!!</c> indicates a defect in the telemetry, not in the simulation.
         /// </summary>
         private static void WriteConsistency(StringBuilder sb)
         {
@@ -1027,8 +1009,8 @@ namespace Thermodynamics
             Field(sb, "session seconds", Telemetry.SessionSeconds.ToString("n1"));
             Field(sb, "longest grid lifetime", longestLife.ToString("n1") + " s");
 
-            // Both are read off the same stopwatch, so a grid cannot have lived longer than the
-            // session it lived in. Where it has, the clock was restarted under the record.
+            // Both are read from the same stopwatch, so a grid cannot outlive its session. Where it
+            // appears to, the clock was restarted under the record.
             if (longestLife > Telemetry.SessionSeconds + 1.0)
             {
                 sb.Append("  !! a grid outlived the session clock, which is only possible if the\n");
@@ -1037,8 +1019,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Why this grid takes the substeps it does: what sets the count, the distribution of
-        /// demand behind it, and what each cap would leave.
+        /// Why this grid takes the substeps it does: what sets the count, the distribution of demand
+        /// behind it, and the result of each candidate cap.
         /// </summary>
         private static void WriteGridSubsteps(StringBuilder sb, GridTelemetry g)
         {
@@ -1405,22 +1387,11 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Every face of every block the session saw, and why the model calls it exposed or not.
+        /// One row per compartment per grid, mapped or lost.
         ///
-        /// One row per block face — six per block — because the question this file exists to answer
-        /// is about a single face on a single block: it looks open to the sky and the model says it
-        /// is not, so which of the three rejection rules fired. Aggregates cannot answer that.
-        ///
-        /// The rows are read from the telemetry records rather than from the live grids, because
-        /// the report is usually written while the world is closing and by then there are no live
-        /// grids left. Each record captured its own faces at its final snapshot.
-        /// </summary>
-        /// <summary>
-        /// One row per compartment per grid, found or lost.
-        ///
-        /// The columns that matter are the last four: what the game says about the same cells,
-        /// what a vent in the room says, and — for a room only the game has — which block subtypes
-        /// stand across the faces this model leaves open. That last column is the fix list.
+        /// The diagnostic columns are the last four: the game's verdict on the same cells, what a
+        /// vent in the room reports, and, for a room only the game holds, the block subtypes across
+        /// the faces this model leaves open.
         /// </summary>
         private static string BuildRoomCsv()
         {
@@ -1473,6 +1444,16 @@ namespace Thermodynamics
             return sb.ToString();
         }
 
+        /// <summary>
+        /// Every face of every block the session saw, and why the model treats it as exposed or not.
+        ///
+        /// One row per block face, six per block: the question this file answers is about a single
+        /// face on a single block — which of the three rejection rules excluded it — which no
+        /// aggregate can express.
+        ///
+        /// Read from the telemetry records rather than the live grids, since the report is usually
+        /// written while the world is closing. Each record captured its faces at its final snapshot.
+        /// </summary>
         private static string BuildSurfaceCsv()
         {
             StringBuilder sb = new StringBuilder();
@@ -1523,16 +1504,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// What the world was doing at each grid, over time — the file for balancing a planet.
-        ///
-        /// One row per grid per sampling interval, with position on the globe, the air, the sun,
-        /// what this mod made of them and what the game's own weather thinks. Averages cannot
-        /// answer a climate question: the whole point is the shape of ambient against altitude,
-        /// against latitude, and around a day, and only the raw readings have that in them.
-        /// </summary>
-        /// <summary>
-        /// A climate summary per planet, so the headline is readable without opening the CSV: how
-        /// warm it got, how cold, how thin the air was, and what the ground was made of.
+        /// A climate summary per planet, readable without opening the CSV: temperature range, air
+        /// density range, and the surface materials seen.
         /// </summary>
         private static void AppendClimate(StringBuilder sb)
         {
@@ -1581,10 +1554,10 @@ namespace Thermodynamics
             private readonly RunningStat game = new RunningStat();
             private readonly RunningStat convection = new RunningStat();
 
-            /// <summary>Depth, over the rows that were actually underground.</summary>
+            /// <summary>Depth, over the rows that were underground.</summary>
             private readonly RunningStat depth = new RunningStat();
 
-            /// <summary>Ambient with weather in force, and what the weather was worth.</summary>
+            /// <summary>Ambient with weather in force, and the offset the weather contributed.</summary>
             private readonly RunningStat weatherOffset = new RunningStat();
 
             private readonly Dictionary<string, int> weathers = new Dictionary<string, int>();
@@ -1608,8 +1581,8 @@ namespace Thermodynamics
                 if (row.SunElevationDegrees > 0f) day.Add(row.AmbientKelvin);
                 else night.Add(row.AmbientKelvin);
 
-                // Only the rows it happened on. Averaging a storm against the clear days either
-                // side of it reports a drizzle that never fell.
+                // Only the rows the weather occurred on: averaging a storm against the clear
+                // periods around it understates both.
                 if (row.Depth > 0f) depth.Add(row.Depth);
 
                 if (!string.IsNullOrEmpty(row.Weather) && row.WeatherIntensity > 0f)
@@ -1656,7 +1629,7 @@ namespace Thermodynamics
                 Field(sb, "    ground", Counted(materials));
             }
 
-            /// <summary>"Snow 56, Sand_02 56" — what was seen and how often.</summary>
+            /// <summary>Surface materials seen and their counts, as "Snow 56, Sand_02 56".</summary>
             private static string Counted(Dictionary<string, int> counts)
             {
                 StringBuilder seen = new StringBuilder();
@@ -1680,6 +1653,13 @@ namespace Thermodynamics
             }
         }
 
+        /// <summary>
+        /// What the world was doing at each grid over time; the file for balancing a planet.
+        ///
+        /// One row per grid per sampling interval, carrying position on the globe, the air, the
+        /// sun, this model's interpretation and the game's own weather figures. Kept unaggregated
+        /// because the useful shape is ambient against altitude, against latitude and around a day.
+        /// </summary>
         private static string BuildEnvironmentCsv()
         {
             StringBuilder sb = new StringBuilder();
@@ -1758,8 +1738,8 @@ namespace Thermodynamics
             sb.Append("demand_uncapped,demand_configured,demand_conduction_share,");
             sb.Append("demand_room_air,demand_loop,environment_stiff_nodes,substep_driver,");
 
-            // Generated from the same array the projection walks, so a cap added there cannot
-            // leave the header describing columns that are no longer the ones being written.
+            // Generated from the same array the projection walks, so a cap added there cannot leave
+            // the header describing columns that are no longer written.
             int[] capColumns = ThermalSolver.SubstepProfile.ProjectedCaps;
             for (int c = 0; c < capColumns.Length; c++)
             {

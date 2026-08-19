@@ -8,33 +8,30 @@ using VRage.Utils;
 
 namespace Thermodynamics
 {
-    /// <summary>
-    /// How much work another grid's shadow is worth.
-    /// </summary>
+    /// <summary>Fidelity of shadows cast by other grids.</summary>
     public enum GridShadowMode
     {
         /// <summary>Other grids do not shadow this one at all.</summary>
         None = 0,
 
-        /// <summary>One ray toward the sun; anything in the way dims the whole grid.</summary>
+        /// <summary>One ray towards the sun; anything in the way dims the whole grid.</summary>
         Basic = 1,
 
-        /// <summary>The shadow lands on the faces it covers, and only those.</summary>
+        /// <summary>The shadow falls only on the faces it covers.</summary>
         Full = 2,
     }
 
     /// <summary>
-    /// The world's configuration file, and the bridge from it to the simulation's own settings.
+    /// The world's configuration file, and the bridge from it to the simulation's settings.
     ///
-    /// This type is the serialised form and nothing else: it owns the XML shape, the defaults and
-    /// the file, and it converts into <see cref="Core.ThermalSettings"/>, which is what every grid
-    /// actually reads. The two are kept in step by <see cref="Apply"/>, which writes through to
-    /// the same instance the grids already hold — so a value changed mid-session takes effect on
-    /// the next step without reloading anything.
+    /// This type is the serialised form only: it owns the XML shape, the defaults and the file, and
+    /// converts into <see cref="Core.ThermalSettings"/>, which is what every grid reads.
+    /// <see cref="Apply"/> writes through to the same instance the grids already hold, so a value
+    /// changed mid-session takes effect on the next step without a reload.
     ///
     /// Every field is reachable by name through <see cref="GetValue"/> and <see cref="SetValue"/>,
-    /// which is what the chat commands, the terminal controls and the mod API all drive. Booleans
-    /// read and write as 0 and 1, so one accessor pair covers the whole file.
+    /// which the chat commands, terminal controls and mod API all use. Booleans read and write as
+    /// 0 and 1, so one accessor pair covers the whole file.
     /// </summary>
     [ProtoContract]
     public class Settings
@@ -43,7 +40,7 @@ namespace Thermodynamics
         public const string Name = "Thermodynamics";
 
         /// <summary>
-        /// Bumped whenever the file's shape changes. A file at a different version is replaced
+        /// Incremented whenever the file's shape changes. A file at a different version is replaced
         /// with defaults rather than partially applied.
         /// </summary>
         public const int CurrentVersion = 6;
@@ -64,57 +61,55 @@ namespace Thermodynamics
         [ProtoMember(14)] public bool EnableSolarHeat = true;
 
         /// <summary>
-        /// Whether a grid shadows itself: a face behind the ship's own structure takes no sunlight.
-        /// Costs a pass over the grid's cells each time the sun moves appreciably. Off is the cheap
-        /// model, which lights any face pointing at the sun.
+        /// Whether a grid shadows itself, so a face behind the grid's own structure takes no
+        /// sunlight. Costs a pass over the grid's cells each time the sun moves appreciably. When
+        /// off, any face pointing at the sun is lit.
         /// </summary>
         [ProtoMember(58)] public bool SolarSelfShadowing = true;
 
         /// <summary>
-        /// Whether a planet can shadow a grid — night, and the shadow of a world seen from orbit.
-        /// Analytic: an angle against the planet's radius, no raycast, so it is the cheap one.
+        /// Whether a planet can shadow a grid, covering both night and a planet's shadow seen from
+        /// orbit. Computed analytically from an angle against the planet's radius, with no raycast.
         /// </summary>
         [ProtoMember(59)] public bool SolarOcclusionPlanets = true;
+
+        /// <summary>
+        /// Whether planetary terrain can shadow a grid, such as a ridge at sunrise or a cliff a base
+        /// is parked against. Costs a short walk of ground-height lookups, and only for grids near a
+        /// surface.
+        /// </summary>
+        [ProtoMember(74)] public bool SolarOcclusionTerrain = true;
+
+        /// <summary>
+        /// Distance the terrain walk follows the sun ray, in metres. Deliberately short: nearby
+        /// terrain accounts for almost all real shadowing, and every metre costs height lookups.
+        /// </summary>
+        [ProtoMember(75)] public float SolarTerrainRange = 4000f;
 
         /// <summary>
         /// Whether asteroids and other voxels can shadow a grid. Costs a physics raycast per
         /// candidate voxel per sample.
         /// </summary>
-        /// <summary>
-        /// Whether the planet's own terrain can shadow a grid: the mountain to the east at sunrise,
-        /// the canyon wall, the cliff a base is parked against. Costs a short walk of ground-height
-        /// lookups, and only for grids near a surface.
-        /// </summary>
-        [ProtoMember(74)] public bool SolarOcclusionTerrain = true;
-
-        /// <summary>
-        /// How far the terrain walk looks along the sun ray, in metres. Far ground shadows almost
-        /// nothing — the cliff two hundred metres away is what matters — so this is short by
-        /// design, and every metre of it costs lookups.
-        /// </summary>
-        [ProtoMember(75)] public float SolarTerrainRange = 4000f;
-
         [ProtoMember(71)] public bool SolarOcclusionVoxels = true;
 
         /// <summary>
-        /// How much work other grids' shadows are worth: none, one ray, or the real geometry.
+        /// Fidelity of shadows cast by other grids: none, one ray, or projected geometry.
         ///
-        /// <see cref="GridShadowMode.Basic"/> is the original test — one ray toward the sun, and if
-        /// another grid is in the way the whole grid dims by a sample's share. It costs a ray
-        /// against that grid's blocks per sample and nothing else.
+        /// <see cref="GridShadowMode.Basic"/> casts one ray towards the sun; if another grid is in
+        /// the way the whole grid dims by that sample's share. Costs one ray against the occluder's
+        /// blocks per sample.
         ///
-        /// <see cref="GridShadowMode.Full"/> projects the shadow onto the faces it actually covers,
-        /// so a station overhead darkens the hull beneath it and leaves the rest in the sun. It
-        /// costs a walk through the occluder's blocks per face of this grid, on the shadow pass
-        /// rather than per step, and needs <see cref="SolarSelfShadowing"/> for the pass it rides
-        /// on.
+        /// <see cref="GridShadowMode.Full"/> projects the shadow onto the faces it covers, so a
+        /// station overhead darkens only the hull beneath it. Costs a walk through the occluder's
+        /// blocks per face of this grid, on the shadow pass rather than per step, and requires
+        /// <see cref="SolarSelfShadowing"/> for that pass.
         /// </summary>
         [ProtoMember(77)] public int SolarGridShadows = (int)GridShadowMode.Full;
 
         /// <summary>
-        /// How many points across a grid are tested, 1..9. One is a single ray from the middle,
-        /// which is all or nothing for the whole ship. More points spread through the hull turn a
-        /// terminator crossing into a ramp, and cost their own share of the work each.
+        /// Points across a grid tested for occlusion, 1..9. One is a single ray from the centre,
+        /// giving an all-or-nothing result for the whole grid. More points spread through the hull
+        /// turn a terminator crossing into a ramp, at proportional cost.
         /// </summary>
         [ProtoMember(73)] public int SolarOcclusionSamples = 1;
         [ProtoMember(15)] public bool EnableHeatSources = true;
@@ -131,10 +126,10 @@ namespace Thermodynamics
         [ProtoMember(30)] public bool ClampConductionOvershoot = true;
 
         /// <summary>
-        /// Clamp radiation and convection so a node cannot overshoot ambient in one substep. See
-        /// the core setting of the same name: it is what keeps the integrator bounded when
-        /// <see cref="MaxSubsteps"/> refuses the substeps the stability estimate asked for, and
-        /// therefore what makes a high-transfer, low-substep profile safe.
+        /// Clamp radiation and convection so a node cannot overshoot ambient in one substep. See the
+        /// core setting of the same name: it bounds the integrator when <see cref="MaxSubsteps"/>
+        /// refuses the substeps the stability estimate demanded, and so makes a high-transfer,
+        /// low-substep profile safe.
         /// </summary>
         [ProtoMember(37)] public bool ClampEnvironmentOvershoot = true;
         [ProtoMember(31)] public bool DamageIsPerSecond = true;
@@ -143,27 +138,26 @@ namespace Thermodynamics
         [ProtoMember(34)] public float HeatTimeScale = 225f;
 
         /// <summary>
-        /// Most link visits one solver step may make before it is shortened to fit. Zero removes
-        /// the bound. See the core setting of the same name: this is the knob that trades
-        /// simulation rate for smoothness on very large grids, and it does so by advancing less
-        /// simulated time rather than by taking coarser substeps, so no accuracy is lost.
+        /// Most link visits one solver step may make before it is shortened to fit. Zero removes the
+        /// bound. See the core setting of the same name: it trades simulation rate for frame
+        /// smoothness on large grids by advancing less simulated time rather than by coarsening the
+        /// substeps, so accuracy is unaffected.
         /// </summary>
         [ProtoMember(35)] public int MaxLinkVisitsPerStep = 1000000;
 
         /// <summary>
         /// Most substeps one solver step may divide itself into. See the core setting of the same
-        /// name: the ceiling on the stability estimate, and the knob that separates a
-        /// simulation-first world from an arcade one.
+        /// name: the ceiling on the stability estimate.
         /// </summary>
         [ProtoMember(36)] public int MaxSubsteps = 16;
 
         /// <summary>
-        /// Most substeps any single block may demand of the whole grid before it is treated as
-        /// heavier than it is. Zero leaves every block's own heat capacity alone.
+        /// Most substeps any single block may demand of the whole grid before its heat capacity is
+        /// floored. Zero leaves every block's real capacity in place.
         ///
-        /// See the core setting of the same name. On a real capital ship a few dozen light
-        /// fittings set the substep count for forty thousand blocks; this is the knob that stops
-        /// them, at the cost of their own transient and nothing else.
+        /// See the core setting of the same name. A few dozen very light blocks can otherwise set
+        /// the substep count for a whole capital ship; the cost of the floor is those blocks' own
+        /// transients.
         /// </summary>
         [ProtoMember(84)] public int MaxSubstepsPerBlock = 0;
 
@@ -180,22 +174,19 @@ namespace Thermodynamics
         [ProtoMember(46)] public int SolarOcclusionInterval = 12;
 
         /// <summary>
-        /// How much the ground a grid is parked on shifts the air above it, 0..1.
+        /// Weight given to the surface material under a grid when offsetting the air above it, 0..1.
         ///
-        /// 1 applies the full table — a snowfield about 14 K colder than the planet's own figure, a
-        /// desert about 9 K warmer. 0 ignores what the ground is made of, which is what the model
-        /// did before it could ask.
+        /// 1 applies the full table: a snowfield about 14 K below the planet's own figure, a desert
+        /// about 9 K above. 0 ignores the surface material.
         /// </summary>
         [ProtoMember(82)] public float ClimateGroundInfluence = 1f;
 
         /// <summary>
-        /// How much the weather standing over a grid changes the air around it, 0..1.
+        /// Weight given to the weather over a grid when offsetting the air around it, 0..1.
         ///
-        /// 1 applies the game's own authored figures in full — a heavy snowstorm about 18 K colder
-        /// with a tenth of the sun and twice the wind, a sandstorm 12 K warmer. 0 ignores the
-        /// weather entirely and costs one float compare per grid per step, which is what the model
-        /// did before it looked: the weather was read, used to scale the wind, and otherwise
-        /// thrown away.
+        /// 1 applies the game's authored figures in full: a heavy snowstorm about 18 K colder with a
+        /// tenth of the sunlight and twice the wind, a sandstorm about 12 K warmer. 0 skips the
+        /// weather offset for one float compare per grid per step; weather still scales the wind.
         /// </summary>
         [ProtoMember(83)] public float ClimateWeatherInfluence = 1f;
 
@@ -219,27 +210,24 @@ namespace Thermodynamics
         [ProtoMember(52)] public bool DebugWindRaycast = false;
 
         /// <summary>
-        /// Which value the block overlay starts a session showing, as a
+        /// Value the block overlay starts a session showing, as a
         /// <see cref="ThermalDebugView.Mode"/>: 0 off, 1 temperature, 2 solar watts, 3 exposed
-        /// faces, 4 friction watts, 5 rooms. Ctrl+Shift+= cycles it in play, client side.
+        /// faces, 4 friction watts, 5 rooms. Ctrl+Shift+= cycles it in play. Client side.
         /// </summary>
         [ProtoMember(57)] public int DebugBlockOverlay = 0;
 
         /// <summary>
-        /// Bottom of the room overlay's colour span, K. Room air lives inside a few tens of degrees
-        /// of comfortable, so it gets its own span: on the block ramp every room on a ship is the
-        /// same shade.
+        /// Bottom of the room overlay's colour span, K. Separate from the block ramp because room
+        /// air spans a few tens of degrees, over which the block ramp gives one shade.
         /// </summary>
         [ProtoMember(78)] public float RoomOverlayMinKelvin = 253.15f;   // -20 C
 
         /// <summary>Top of the room overlay's colour span, K.</summary>
         [ProtoMember(79)] public float RoomOverlayMaxKelvin = 323.15f;   //  50 C
 
-        // ProtoMember numbers 72 and 76 were the two switches SolarGridShadows replaced.
-        // ProtoMember numbers 53-56 were the block-colouring debug modes, which wrote real block
-        // paint and have been replaced by the overlay above. 60-70 were the thermal vision
-        // overlay. Both stay unused so an older config or an older peer's message does not land on
-        // a different field.
+        // Retired ProtoMember numbers, left unused so an older config file or peer message cannot
+        // land on a different field: 72 and 76 were the switches SolarGridShadows replaced, 53-56
+        // the block-colouring debug modes, and 60-70 the thermal vision overlay.
 
         // ---- telemetry ---------------------------------------------------------------------
 
@@ -249,11 +237,10 @@ namespace Thermodynamics
         /// <summary>
         /// A fresh configuration.
         ///
-        /// The values themselves live on the fields, which is not a style choice: a config file
-        /// written before a setting existed has no element for it, and the XML reader leaves what
-        /// it finds. With the defaults here instead, every setting added after a world's file was
-        /// written loaded as false or zero in that world — silently, and with no way to tell it
-        /// apart from someone having switched it off.
+        /// Defaults are declared as field initialisers rather than assigned here. A config file
+        /// written before a setting existed carries no element for it and the XML reader leaves the
+        /// field as found, so field initialisers are what make a newly added setting load at its
+        /// default rather than at false or zero.
         /// </summary>
         public static Settings GetDefaults()
         {
@@ -303,9 +290,8 @@ namespace Thermodynamics
         /// <summary>
         /// The same configuration in the form the simulation consumes.
         ///
-        /// Built once and then written through, never replaced: every grid holds a reference to
-        /// this exact instance, so replacing it would leave existing grids running the old values
-        /// while new ones ran the new.
+        /// Built once and thereafter written through, never replaced: every grid holds a reference
+        /// to this instance, so replacing it would leave existing grids on the old values.
         /// </summary>
         public Core.ThermalSettings ToCore()
         {
@@ -317,10 +303,8 @@ namespace Thermodynamics
         /// <summary>
         /// Applies one of the named profiles in <see cref="Core.ThermalProfiles"/>.
         ///
-        /// The profile is applied to a core settings object and read back, rather than being
-        /// duplicated here. A profile that gained a field would otherwise be silently half-applied
-        /// in game while passing all of its tests, which is the failure this arrangement exists to
-        /// make impossible.
+        /// Applied to a core settings object and read back rather than duplicated here, so a
+        /// profile that gains a field cannot be half-applied in game while its tests still pass.
         /// </summary>
         /// <returns>False when the name is not a known profile.</returns>
         public bool ApplyProfile(string name)
@@ -343,8 +327,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Pushes the current values into the simulation's settings and derives them, which is
-        /// what makes every grid pick the change up on its next step.
+        /// Pushes the current values into the simulation's settings and derives them, so every grid
+        /// picks the change up on its next step.
         /// </summary>
         public void Apply()
         {
@@ -400,8 +384,8 @@ namespace Thermodynamics
         // ---- access by name ----------------------------------------------------------------
 
         /// <summary>
-        /// Every setting a player or a mod may change at runtime, in the order they are listed to
-        /// a player. Booleans are 0 and 1.
+        /// Every setting a player or mod may change at runtime, in display order. Booleans are 0
+        /// and 1.
         /// </summary>
         public static List<string> Names()
         {
@@ -577,9 +561,9 @@ namespace Thermodynamics
         /// <summary>
         /// The active settings, loading the world's config file on first use.
         ///
-        /// Load order is not something a mod controls: a grid's game logic can initialise before
-        /// the session component does. Whoever asks first triggers the read, so the config file
-        /// cannot be bypassed by a world whose grids happen to load early.
+        /// A mod cannot control load order — a grid's game logic can initialise before the session
+        /// component — so the first caller triggers the read and the config cannot be bypassed by a
+        /// world whose grids load early.
         /// </summary>
         public static Settings EnsureLoaded()
         {
@@ -591,8 +575,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Whether the config file can be read yet. Clients take the server's settings rather than
-        /// their own file, and very early in a session the utilities are not there at all.
+        /// Whether the config file can be read yet. False on clients, which take the server's
+        /// settings rather than their own file, and early in a session before the file utilities
+        /// exist.
         /// </summary>
         private static bool CanReadWorldStorage()
         {

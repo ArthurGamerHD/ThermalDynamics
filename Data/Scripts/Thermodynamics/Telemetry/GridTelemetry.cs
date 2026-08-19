@@ -7,20 +7,16 @@ using VRageMath;
 
 namespace Thermodynamics
 {
+    /// <summary>One block face, and the model's account of whether it is open to the sky.</summary>
     /// <summary>
-    /// One block face, and the model's account of whether it is open to the sky.
-    /// </summary>
-    /// <summary>
-    /// One compartment, as either half of the model sees it.
+    /// One compartment, whether this model mapped it or only the game holds it.
     ///
-    /// Rooms this model found and compartments only the game has are the same row deliberately.
-    /// The question a reader has is "what rooms does this ship have and which of them work", and
-    /// answering it out of two tables that have to be joined by hand is how a whole ship's worth
-    /// of empty compartments went unnoticed.
+    /// Both kinds share one row type so a reader sees every compartment on the grid in one table
+    /// rather than joining two by hand.
     ///
-    /// Every figure here is copied from <see cref="ThermalGrid.RoomVerdict"/> and
-    /// <see cref="ThermalGrid.LostRoom"/>. Nothing in this file asks the game anything: the room
-    /// scan does that once, and this formats what it decided.
+    /// Every figure is copied from <see cref="ThermalGrid.RoomVerdict"/> and
+    /// <see cref="ThermalGrid.LostRoom"/>. Nothing here queries the game; the room scan does that
+    /// once and this formats its result.
     /// </summary>
     public struct RoomRow
     {
@@ -40,39 +36,38 @@ namespace Thermodynamics
         /// <summary>Mapped rooms only: standing open to the sky through a door.</summary>
         public bool Vented;
 
-        /// <summary>What the simulation is actually running with.</summary>
+        /// <summary>Air state the simulation is running with for this room.</summary>
         public float Pressure;
         public float AirMass;
         public float TemperatureKelvin;
 
         /// <summary>
-        /// Blocks the air is coupled to. Zero beside a non-zero <see cref="AirMass"/> is the shape
-        /// of a room given air and linked to nothing, which is how room air came to be inert in
-        /// game while every test of it passed.
+        /// Blocks the air is coupled to. Zero alongside a non-zero <see cref="AirMass"/> indicates
+        /// a room that was given air but never linked, so its air is inert.
         /// </summary>
         public int LinkCount;
 
-        /// <summary>The game's own verdict at the anchor cell: sealed, which is not the same as full.</summary>
+        /// <summary>The game's airtightness verdict at the anchor cell. Sealed is not the same as full.</summary>
         public bool GameAirtight;
 
         /// <summary>
-        /// The game's own oxygen level in the room, 0..1, or -1 when it could not be asked. Read
-        /// from the grid's gas system, independently of this model's map and of any vent.
+        /// The game's oxygen level in the room, 0..1, or -1 when unavailable. Read from the grid's
+        /// gas system, independently of this model's map and of any vent.
         /// </summary>
         public float GameOxygen;
 
         /// <summary>Air vents standing on it, by terminal name.</summary>
         public string Vents;
 
-        /// <summary>Whether a vent on it reports the game considers its room pressurised.</summary>
+        /// <summary>True when a vent on it reports the game considers its room pressurised.</summary>
         public bool VentPressurised;
 
-        /// <summary>The highest level any vent on it reports, or -1 when none did.</summary>
+        /// <summary>Highest oxygen level any vent on it reports, or -1 when none reported.</summary>
         public float OxygenLevel;
 
         /// <summary>
-        /// The game has air in this room and this model runs none. Oxygen, not airtightness — a
-        /// sealed empty compartment is correct in both models and is not flagged.
+        /// True when the game has oxygen in this room and this model runs no air. Compares oxygen
+        /// rather than airtightness, so a sealed empty compartment is not flagged.
         /// </summary>
         public bool Disagreement;
 
@@ -103,12 +98,12 @@ namespace Thermodynamics
     }
 
     /// <summary>
-    /// One reading of the world at a grid, for working out what a planet's climate should be.
+    /// One raw reading of the world at a grid, for balancing a planet's climate.
     ///
-    /// Deliberately raw. Balancing a planet means comparing what was measured against what it ought
-    /// to be at that altitude, that latitude and that hour, and none of those can be recovered from
-    /// an average. So each row carries where the grid was, what the world said, what this mod made
-    /// of it, and what the game's own weather thinks — enough to plot any of them against any other.
+    /// Kept unaggregated: balancing means comparing a measurement against what it should be at that
+    /// altitude, latitude and hour, none of which survive an average. Each row carries the grid's
+    /// position, the world's readings, this model's interpretation of them, and the game's own
+    /// weather figures.
     /// </summary>
     public struct EnvironmentRow
     {
@@ -129,7 +124,7 @@ namespace Thermodynamics
         /// <summary>Metres of ground over the grid. Zero or less is open air.</summary>
         public float Depth;
 
-        /// <summary>Convective coefficient in force, W/(m^2 K) — wind and weather already in it.</summary>
+        /// <summary>Convective coefficient in force, W/(m^2 K), with wind and weather applied.</summary>
         public float ConvectionCoefficient;
 
         public float SolarEnergy;
@@ -140,18 +135,18 @@ namespace Thermodynamics
         /// <summary>Where the wind is going, in degrees east of the planet's north.</summary>
         public float WindBearingDegrees;
 
-        /// <summary>The game's own wind figure at this point: the ceiling the field scales.</summary>
+        /// <summary>The game's wind figure at this point; the ceiling the wind field scales.</summary>
         public float WindCeiling;
 
         public float WeatherIntensity;
 
-        /// <summary>The game's name for the weather standing over the grid, empty in clear air.</summary>
+        /// <summary>The game's name for the weather over the grid; empty in clear air.</summary>
         public string Weather;
 
-        /// <summary>What that weather did to the air, K. The column that says the model reacted.</summary>
+        /// <summary>Temperature offset that weather applied to the air, K.</summary>
         public float WeatherAmbientOffset;
 
-        /// <summary>The game's own comfort scale at this point, 0..1. Its model, not this one.</summary>
+        /// <summary>The game's own environment comfort scale at this point, 0..1.</summary>
         public float GameTemperature;
 
         public string SurfaceMaterial;
@@ -161,14 +156,14 @@ namespace Thermodynamics
     }
 
     /// <summary>
-    /// Everything observed about one grid, for the life of that grid.
+    /// Everything observed about one grid over that grid's lifetime.
     ///
-    /// A record outlives its grid: when the grid closes, <see cref="Close"/> takes a final
-    /// snapshot and drops the reference, but the record stays in the registry so a ship that was
-    /// destroyed halfway through a session still appears in the report.
+    /// A record outlives its grid: <see cref="Close"/> takes a final snapshot and drops the entity
+    /// reference, but the record stays in the registry so a grid destroyed mid-session still
+    /// appears in the report.
     ///
-    /// Nothing here is reached at all when telemetry is off — the caller checks
-    /// <see cref="Telemetry.Enabled"/> first, and the record is never even created.
+    /// Never reached when telemetry is off; the caller checks <see cref="Telemetry.Enabled"/> and
+    /// the record is not created.
     /// </summary>
     public class GridTelemetry
     {
@@ -183,20 +178,18 @@ namespace Thermodynamics
         public bool IsClosed;
 
         /// <summary>
-        /// The session frame this record first and last saw a tick on.
+        /// First and last session frame this record was ticked on.
         ///
-        /// A record cannot be ticked more often than the session is framed — both happen once,
-        /// in the same <c>Simulate</c> call — so <c>SimulationTime.Calls</c> must fit inside
-        /// <c>LastTickFrame - FirstTickFrame + 1</c>, and that must fit inside
-        /// <c>Telemetry.FramesObserved</c>. A field report has been seen where it did not, and
-        /// with only totals to go on there was no way to tell whether the records had outlived a
-        /// clock reset or the aggregates had been taken over a shorter list. These two numbers
-        /// answer that without another guess.
+        /// A record cannot tick more often than the session frames, since both happen in the same
+        /// <c>Simulate</c> call, so <c>SimulationTime.Calls</c> must fit within
+        /// <c>LastTickFrame - FirstTickFrame + 1</c>, which must fit within
+        /// <c>Telemetry.FramesObserved</c>. Recorded so a report that violates this can be
+        /// diagnosed from the file rather than inferred from totals.
         /// </summary>
         public long FirstTickFrame = -1;
         public long LastTickFrame = -1;
 
-        /// <summary>Notes that this record was ticked on the frame the session is counting now.</summary>
+        /// <summary>Records that this grid was ticked on the session's current frame.</summary>
         public void NoteTick(long frame)
         {
             if (FirstTickFrame < 0) FirstTickFrame = frame;
@@ -216,18 +209,18 @@ namespace Thermodynamics
         public readonly RunningStat RoomCells = new RunningStat();
 
         /// <summary>
-        /// Block cells the room map read as open space. Anything but zero means the flood fill
-        /// walked through structure, which is what turns a sealed room into no room at all.
+        /// Block cells the room map read as open space. Non-zero means the flood fill walked through
+        /// structure, which merges a sealed room into the outdoors.
         /// </summary>
         public readonly RunningStat LeakedCells = new RunningStat();
 
         /// <summary>
-        /// Block cells the map leaves outdoors. Legitimate for anything not airtight, and the
-        /// first number to read when a room that should be sealed is not.
+        /// Block cells the map leaves outdoors. Expected for anything not airtight; the first figure
+        /// to check when a room that should be sealed is not.
         /// </summary>
         public readonly RunningStat OpenBlockCells = new RunningStat();
 
-        /// <summary>The most recent room audit, kept so the report can name what leaked.</summary>
+        /// <summary>Most recent room audit, retained so the report can name what leaked.</summary>
         public RoomAudit LastAudit;
         public bool HasAudit;
 
@@ -264,25 +257,22 @@ namespace Thermodynamics
         public long NodeUpdates;
         public long SampledNodes;
 
-        /// <summary>Substeps the solver needed, per step. Above one means a stiff grid.</summary>
+        /// <summary>Substeps the solver needed per step. Above one indicates a stiff grid.</summary>
         public readonly RunningStat Substeps = new RunningStat();
 
         /// <summary>
-        /// Steps that hit the substep cap and had to clamp. The redesign notes call for this
-        /// specifically: it is how you find out whether real grids are stiffer than the explicit
-        /// integrator can follow, rather than arguing about it from arithmetic.
+        /// Steps that reached the substep cap and clamped. Measures whether real grids are stiffer
+        /// than the explicit integrator can follow at the configured settings.
         /// </summary>
         public long ClampedSteps;
 
         /// <summary>
-        /// How much of real time this grid's simulation is keeping up with, 0..1, and the
-        /// simulated seconds it chose not to advance.
+        /// Fraction of real time this grid's simulation keeps up with, 0..1, and the simulated
+        /// seconds it declined to advance.
         ///
-        /// A grid below one is running on the work budget: it is too large to simulate at full
-        /// rate and is taking shorter steps rather than coarser ones, which is a legitimate state
-        /// and the one that trade exists for. But it is also the difference between a ship that
-        /// cools in a minute and one that takes three, so it has to be visible to anyone reading
-        /// a report and wondering why heat is moving slowly.
+        /// Below one means the work budget is binding: the grid is too large to simulate at full
+        /// rate and is taking shorter steps rather than coarser ones. That is the intended trade,
+        /// but it also changes how long the grid takes to cool, so it is reported.
         /// </summary>
         public readonly RunningStat SimulationRate = new RunningStat();
         public double SimulatedSecondsSkipped;
@@ -306,8 +296,8 @@ namespace Thermodynamics
 
         /// <summary>
         /// Share of the grid in shadow per sample, 0..1. Distinct from
-        /// <see cref="OccludedSamples"/>, which counts only the samples where none of it was lit:
-        /// a fleet flying through a station's shadow spends most of its time between the two.
+        /// <see cref="OccludedSamples"/>, which counts only samples where none of the grid was lit;
+        /// partial occlusion falls between the two.
         /// </summary>
         public readonly RunningStat OccludedShare = new RunningStat();
         public readonly RunningStat Speed = new RunningStat();
@@ -319,10 +309,10 @@ namespace Thermodynamics
         // ---- substeps -------------------------------------------------------------------
 
         /// <summary>
-        /// Substeps the stability estimate asked for, before <c>MaxSubsteps</c> refused any and
-        /// before rounding. <see cref="Substeps"/> is what was granted; where the two differ the
-        /// grid is being refused, and where <c>MaxLinkVisitsPerStep</c> is also binding the step
-        /// has been shortened rather than the substeps coarsened.
+        /// Substeps the stability estimate demanded, before the <c>MaxSubsteps</c> cap and before
+        /// rounding. <see cref="Substeps"/> is what was granted; a difference means the cap is
+        /// binding, and if <c>MaxLinkVisitsPerStep</c> also binds the step was shortened rather
+        /// than the substeps coarsened.
         /// </summary>
         public readonly RunningStat RequiredSubsteps = new RunningStat();
 
@@ -330,36 +320,35 @@ namespace Thermodynamics
         public readonly RunningStat FlooredNodes = new RunningStat();
 
         /// <summary>
-        /// The last full walk of what sets this grid's substep count: which element, the
-        /// distribution behind it, and what each candidate cap would do to both.
+        /// Last full walk of what sets this grid's substep count: the responsible element, the
+        /// distribution behind it, and the effect of each candidate cap.
         ///
-        /// Taken rarely — it is O(nodes) — and always again when the grid closes, so a report has
-        /// one whether or not the grid lived long enough for the periodic one to fire.
+        /// O(nodes), so taken infrequently, and retaken when the grid closes so a report has one
+        /// even for a grid too short-lived for the periodic capture.
         /// </summary>
         public ThermalSolver.SubstepProfile Profile;
 
         /// <summary>
-        /// The block that set the substep count when the profile was last taken, as subtype and
-        /// position.
+        /// Subtype and position of the block that set the substep count when the profile was last
+        /// taken.
         ///
-        /// Resolved at capture rather than at report time because the index it comes from is into
-        /// the solver's node list, and that list is compacted whenever a block is removed — by the
-        /// time a report is written the index would name whichever block had been moved into the
-        /// hole.
+        /// Resolved at capture rather than at report time: the profile carries an index into the
+        /// solver's node list, which is compacted on every block removal, so a later lookup would
+        /// name a different block.
         /// </summary>
         public string WorstSubstepBlock = "-";
 
         private int stepsSinceProfile = ProfileInterval;
 
-        /// <summary>Solver steps between full substep profiles. Structure changes slowly.</summary>
+        /// <summary>Solver steps between full substep profiles.</summary>
         private const int ProfileInterval = 64;
 
         // ---- cost -----------------------------------------------------------------------
         public readonly TimingStat SimulationTime = new TimingStat("grid simulation");
 
         /// <summary>
-        /// Stage timings, filled by the simulation itself. Attached to the simulation only while
-        /// collection is on, so an uninstrumented world runs with no profiler at all.
+        /// Stage timings, filled by the simulation. Attached only while collection is on, so an
+        /// uninstrumented world carries no profiler.
         /// </summary>
         public readonly GridProfiler Profiler = new GridProfiler();
         public readonly TimingStat SolarTime = new TimingStat("solar occlusion");
@@ -367,14 +356,14 @@ namespace Thermodynamics
         public readonly TimingStat LoadTime = new TimingStat("load");
 
         /// <summary>
-        /// Steps between structure samples. Structure walks a handful of collection counts and
-        /// changes only when blocks do, so there is nothing to learn from doing it every step.
+        /// Steps between structure samples. Structure changes only when blocks do, so sampling it
+        /// every step adds nothing.
         /// </summary>
         private const int StructureInterval = 8;
 
         private int stepsSinceStructure = StructureInterval;
 
-        /// <summary>Rotates which slice of nodes the wide per-block sampling looks at.</summary>
+        /// <summary>Cursor rotating which slice of nodes the per-block sampling visits.</summary>
         private int sampleOffset;
 
         public GridTelemetry(ThermalGrid grid)
@@ -401,10 +390,10 @@ namespace Thermodynamics
         // ------------------------------------------------------------------------------------
 
         /// <summary>
-        /// Called once per batch of solver steps. This is the whole hot path of the telemetry
-        /// module: solver-level figures every time, structure occasionally, and a rotating slice
-        /// of nodes so that full per-block coverage costs one pass spread over
-        /// <see cref="Telemetry.SampleStride"/> steps rather than a pass every step.
+        /// Called once per batch of solver steps; the module's hot path. Records solver-level
+        /// figures every call, structure occasionally, and one rotating slice of nodes, so full
+        /// per-block coverage costs a single pass spread over <see cref="Telemetry.SampleStride"/>
+        /// steps.
         /// </summary>
         public void OnSteps(int steps)
         {
@@ -450,8 +439,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Takes a full substep profile and names the block it blames, while the index is still
-        /// valid.
+        /// Takes a full substep profile and resolves the responsible block while its node index is
+        /// still valid.
         /// </summary>
         private void CaptureProfile(ThermalSolver solver)
         {
@@ -474,7 +463,7 @@ namespace Thermodynamics
 
         /// <summary>
         /// Walks one slice of the grid's nodes, feeding the per-definition statistics and the
-        /// anomaly detector. The slice rotates, so every node is seen once per stride.
+        /// anomaly detector. The slice rotates, so every node is visited once per stride.
         /// </summary>
         private void SampleNodes(ThermalSolver solver)
         {
@@ -505,9 +494,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// The structural shape of the grid. Every figure here is a collection count, except the
-        /// link count, which the solver now maintains — the old code had to walk every cell for
-        /// it.
+        /// The structural shape of the grid. Every figure is a collection count, including the link
+        /// count, which the solver maintains.
         /// </summary>
         public void SampleStructure()
         {
@@ -529,9 +517,8 @@ namespace Thermodynamics
             MapperQueueDepth.Add(simulation.Rooms.PendingCells);
             MapperCompletions = simulation.Rooms.CompletedPasses;
 
-            // Only a map a pass actually produced is a measurement. The default one reads as a
-            // grid with nothing anywhere, and averaged in it drags every figure here towards
-            // zero for a grid that simply had not been mapped yet.
+            // Only a map produced by a completed pass is a measurement. The default map reads as
+            // an empty grid and would drag these averages towards zero for a grid not yet mapped.
             if (MapperCompletions > 0)
             {
                 RoomCount.Add(simulation.Rooms.Map.RoomCount);
@@ -551,22 +538,20 @@ namespace Thermodynamics
         /// <summary>
         /// Cross-checks the published room map against the blocks that produced it.
         ///
-        /// The map only changes when a pass completes, so the audit runs once per pass rather
-        /// than once per structure sample: on a grid nobody is building on, this costs one
-        /// integer compare for the rest of the session.
+        /// The map changes only when a pass completes, so the audit runs once per pass rather than
+        /// once per structure sample; on a static grid it costs one integer compare per sample.
         /// </summary>
         private void AuditRooms(ThermalSimulation simulation)
         {
-            // A pass in flight means the published map predates the grid, and every block placed
-            // since would audit as a disagreement it is not.
+            // While a pass is in flight the published map predates the grid, so every block placed
+            // since would audit as a disagreement.
             if (simulation.Rooms.HasWorkPending) return;
 
             int pass = simulation.Rooms.CompletedPasses;
 
-            // Before the first pass there is no map to audit, only the all-external default the
-            // mapper hands out until it has built one. A grid that closes inside its first few
-            // seconds — a paste preview, a subgrid — never gets that far, and auditing it against
-            // the default reported its whole hull as unaccounted for.
+            // Before the first pass completes there is only the all-external default map. Auditing
+            // against it reports the whole hull as unaccounted for, which is what a short-lived
+            // grid — a paste preview, a transient subgrid — would otherwise produce.
             if (pass == 0) return;
 
             if (pass == auditedPass) return;
@@ -615,8 +600,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Walks every live node once and records its end state. Called at shutdown, and for a
-        /// grid that is destroyed mid-session, at the moment it closes.
+        /// Walks every live node once and records its end state. Called at shutdown, and when a
+        /// grid closes mid-session.
         /// </summary>
         public void SnapshotFinalState()
         {
@@ -626,12 +611,12 @@ namespace Thermodynamics
             SnapshotSurfaces();
             SnapshotRooms();
 
-            // Always retaken here rather than left to whenever the periodic one last fired, so a
-            // report describes the grid as it was when the report was asked for.
+            // Retaken here rather than reusing the last periodic capture, so a report describes
+            // the grid as of the moment it was requested.
             CaptureProfile(Grid.Simulation.Solver);
 
-            // Rebuilt rather than appended to, so a manual mid-session dump does not leave its
-            // counts behind for the next report.
+            // Rebuilt rather than appended to, so a manual mid-session dump does not carry its
+            // counts into the next report.
             FinalTemperatures.Clear();
 
             IList<ThermalNode> nodes = Grid.Simulation.Solver.Nodes;
@@ -646,8 +631,8 @@ namespace Thermodynamics
 
                 type.OnFinalTemperature(node.Temperature);
 
-                // The strided sampler may never have seen a rare block. The final pass
-                // guarantees at least one full observation of everything on the grid.
+                // The strided sampler may never have visited a rare block; this pass guarantees at
+                // least one observation of every block on the grid.
                 type.Sample(node);
             }
         }
@@ -663,31 +648,29 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Every face of every block, and why the model calls it exposed or not.
+        /// Every face of every block, and why the model treats it as exposed or not.
         ///
-        /// Taken here rather than read at report time because the report is usually written as the
-        /// world closes, by which point the grids are gone: the first version of this dump asked
-        /// the live grid list and produced a file with nothing but a header in it. A telemetry
-        /// record outlives the grid it describes, and this is part of the description.
+        /// Captured here rather than read at report time: reports are usually written as the world
+        /// closes, by which point the grids no longer exist. The record outlives the grid, so the
+        /// description must be taken while the grid is live.
         /// </summary>
         public readonly List<SurfaceRow> Surfaces = new List<SurfaceRow>();
 
-        /// <summary>Every compartment on the grid, found or lost, at the last snapshot.</summary>
+        /// <summary>Every compartment on the grid, mapped or lost, as of the last snapshot.</summary>
         public readonly List<RoomRow> Rooms = new List<RoomRow>();
 
-        /// <summary>True when the lost-room scan gave up on its cell limit rather than finishing.</summary>
+        /// <summary>True when the lost-room scan stopped at its cell limit rather than finishing.</summary>
         public bool RoomScanTruncated;
 
-        /// <summary>False until a scan has run, so a reader can tell "none" from "never looked".</summary>
+        /// <summary>False until a scan has run, distinguishing "none found" from "not scanned".</summary>
         public bool RoomScanRan;
 
         /// <summary>Readings of the world at this grid, oldest first.</summary>
         public readonly List<EnvironmentRow> Environment = new List<EnvironmentRow>();
 
         /// <summary>
-        /// Records one reading. Called on the sampling cadence the host chooses, not per step: the
-        /// point is a curve over a day, and a row every tick would be a hundred thousand of them
-        /// describing the same minute.
+        /// Records one reading. Called on the host's sampling cadence rather than per step, since
+        /// the intended resolution is a curve over a planetary day.
         /// </summary>
         public void NoteEnvironmentProfile(EnvironmentRow row)
         {
@@ -703,16 +686,15 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>Readings kept per grid. At one every ten seconds, about eleven hours of them.</summary>
+        /// <summary>Readings kept per grid. At one every ten seconds, roughly eleven hours.</summary>
         private const int MaxEnvironmentRows = 4000;
 
         /// <summary>
-        /// Every compartment on the grid: the ones this model found, and the ones only the game
-        /// has.
+        /// Every compartment on the grid: those this model mapped, and those only the game holds.
         ///
-        /// The scan is forced rather than read from whatever the slow cadence last left behind,
-        /// because a dump written moments after a wall was welded should describe the ship as it
-        /// is. It is also the only thing here that talks to the game — everything below copies.
+        /// Forces a scan rather than reusing the slow cadence's last result, so a dump describes
+        /// the grid as it currently stands. This is the only call here that queries the game;
+        /// everything below copies its output.
         /// </summary>
         private void SnapshotRooms()
         {
@@ -780,7 +762,7 @@ namespace Thermodynamics
                 row.CellCount = room.CellCount;
                 row.Volume = room.Volume;
 
-                // By construction: every cell in it is one the game called airtight.
+                // True by construction: every cell in the room was reported airtight by the game.
                 row.GameAirtight = true;
                 row.GameOxygen = room.OxygenLevel;
                 row.Vents = room.Vents;
@@ -793,7 +775,7 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>The air of one mapped room, or null when the solver has none for it.</summary>
+        /// <summary>Air node of one mapped room, or null when the solver holds none for it.</summary>
         private RoomAirNode AirOf(int roomIndex)
         {
             IList<RoomAirNode> air = Grid.Simulation.RoomAir;
@@ -806,7 +788,8 @@ namespace Thermodynamics
 
         private void SnapshotSurfaces()
         {
-            // A re-snapshot replaces this grid's rows, so the session budget gets them back first.
+            // A re-snapshot replaces this grid's rows, so its previous rows return to the session
+            // budget first.
             Telemetry.SurfaceRowsCaptured -= Surfaces.Count;
             Surfaces.Clear();
 
@@ -827,7 +810,7 @@ namespace Thermodynamics
                 if (Surfaces.Count >= SurfaceRowLimit
                     || Telemetry.SurfaceRowsCaptured >= Telemetry.MaxSurfaceRows)
                 {
-                    // Never truncate silently: a short file reads as a small ship.
+                    // Never truncate silently: a truncated file reads as a smaller grid.
                     MyLog.Default.Info("[" + Settings.Name + "] [Telemetry] surface capture for "
                         + Name + " stopped at " + Surfaces.Count + " rows ("
                         + Telemetry.SurfaceRowsCaptured + " captured this session)");
@@ -862,7 +845,7 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>Rows one grid may contribute. Six per block, so about eight thousand blocks.</summary>
+        /// <summary>Rows one grid may contribute. Six per block, so roughly eight thousand blocks.</summary>
         private const int SurfaceRowLimit = 50000;
 
         public double LifetimeSeconds
