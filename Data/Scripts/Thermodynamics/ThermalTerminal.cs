@@ -317,45 +317,27 @@ namespace Thermodynamics
                 .Append(ThermalConstants.KelvinToCelsius(loop.HottestSegment).ToString("n0"))
                 .Append(")\n");
 
-            // Flow is signed: a ring driven the other way is a working ring, so the direction is
-            // stated rather than the sign being shown as a minus.
+            // Signed: a ring driven the other way is a working ring, so the direction is named rather
+            // than shown as a minus.
+            //
+            // Just the rate. A stopped ring has several causes — pumps switched off, pumps unpowered,
+            // pumps fighting each other — and naming them costs a line each to say what a player can
+            // read off the number in front of them and the pumps they built.
             float flow = loop.FlowSegmentsPerSecond;
             Row("Flow");
             if (flow == 0f)
             {
-                if (loop.Pumps.Count == 0)
-                {
-                    Text.Append("none - no pump in this ring\n");
-                }
-                else if (loop.PumpEffort > 0f)
-                {
-                    // The hardest version of a stopped ring to diagnose: the pumps are running, they
-                    // are drawing their power, and they are cancelling each other out. Distinguished
-                    // from every other way of sitting still because the fix is the opposite one.
-                    Text.Append("stopped - pumps oppose each other\n");
-                }
-                else
-                {
-                    Text.Append("stopped - no pump running\n");
-                }
+                Text.Append("0/s\n");
             }
             else
             {
                 Text.Append((flow < 0f ? -flow : flow).ToString("n1")).Append("/s ")
-                    .Append(flow < 0f ? "reverse" : "forward")
-                    .Append("   ").Append(loop.Pipes.Count).Append(" pipe ring\n");
+                    .Append(flow < 0f ? "reverse" : "forward").Append('\n');
             }
 
             Row("Transfer");
             Text.Append((loop.LastWattsAbsorbed / 1000f).ToString("n1")).Append(" kW in  ")
                 .Append((loop.LastWattsRejected / 1000f).ToString("n1")).Append(" kW out\n");
-
-            // A warm loop that carries nothing looks healthy on every other line.
-            if (loop.LastWattsAbsorbed <= 0f && loop.LastWattsRejected <= 0f)
-            {
-                Row("");
-                Text.Append("moving nothing - no sink face on anything hotter\n");
-            }
         }
 
         /// <summary>Air node of a room this block bounds, or null when it bounds none.</summary>

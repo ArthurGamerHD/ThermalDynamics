@@ -261,26 +261,6 @@ namespace Thermodynamics.Core
             }
         }
 
-        /// <summary>
-        /// Pump demand in the ring without regard to direction.
-        ///
-        /// Against <see cref="PumpDemand"/> this separates the two ways a ring can sit still: nothing
-        /// is running, or things are running and cancelling. They look identical from the flow rate
-        /// and want opposite fixes.
-        /// </summary>
-        public float PumpEffort
-        {
-            get
-            {
-                float effort = 0f;
-                for (int i = 0; i < Pumps.Count; i++)
-                {
-                    float contribution = Pumps[i].Contribution;
-                    effort += contribution < 0f ? -contribution : contribution;
-                }
-                return effort;
-            }
-        }
 
         /// <summary>
         /// Identity stable across saves: an order-independent hash of every pipe position in the

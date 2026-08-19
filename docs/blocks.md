@@ -245,7 +245,7 @@ Temp     139°C  +0.01 K/s
 Exposed  buried
 
 Coolant  139°C  (128 - 151)
-Flow     5.7/s forward   28 pipe ring
+Flow     5.7/s forward
 Transfer 18.4 kW in  18.1 kW out
 ```
 
@@ -253,17 +253,17 @@ Coolant is given as a mean with the **range across the ring** in brackets, becau
 carried round in parcels a loop is not one temperature. A wide spread with the pump running means the
 flow cannot keep up with the load; a wide spread with no flow means nothing is circulating.
 
+Flow names its direction rather than showing a minus sign, because a ring driven the other way is a
+working ring. **A stopped ring reports `0/s` and nothing else.** It has several causes — pumps off,
+pumps unpowered, pumps fighting each other — and naming them would cost a line each to say what is
+already legible from the figure and the pumps you built.
+
 `Exposed` stays even at zero — `buried` is the most useful single thing the panel can say about a hot
 block. `Waste`, `Critical` and `Room` appear only when they apply.
 
-Four states get named rather than left to be inferred, because each looks healthy on every other line:
-
-| Line | What it means |
-| --- | --- |
-| `Flow  stopped - pumps oppose each other` | The ring's pumps are running, drawing power, and cancelling. |
-| `Flow  stopped - no pump running` | Switched off or unpowered. The opposite fix. |
-| `moving nothing - no sink face on anything hotter` | A warm, closed, pumped loop that carries no heat. |
-| `Pump  on, but the grid supplies it nothing` | Distinct from `off`: the fix is the ship's power budget. |
+The one thing still spelled out is a run of pipe that formed **no loop at all**, which reports the
+reason from [the fault table above](#when-a-ring-does-not-become-a-loop). There is no figure to read
+in that case: the absence is the whole symptom.
 
 It goes there rather than into a terminal control because the terminal's controls are single-line
 fields: a text box handed fifteen lines shows one and a half and clips the rest.
