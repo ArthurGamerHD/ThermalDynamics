@@ -1615,7 +1615,7 @@ namespace Thermodynamics.Harness
                 out ignoredDrawn, out ignoredShed, out ignoredLift);
 
             return Result("cooling-plant", plant,
-                "A reactor and eight hydrogen thrusters behind a pumped ring, four heat pumps and "
+                "A reactor and eight hard-drawing batteries behind a pumped ring, heat pumps and "
                 + "eight radiators. Hottest block " + C(withPlant) + " with the plant, "
                 + C(withoutPlant) + " without it. The loop draws "
                 + loopDrawn.ToString("n0") + " W and sheds " + loopShed.ToString("n0")
@@ -1627,31 +1627,50 @@ namespace Thermodynamics.Harness
         {
             GridBuilder builder = GridBuilder.Large();
 
-            // A hull with the machinery buried in it, as a real ship has.
-            builder.Fill(Catalog.LightArmor(), new Vector3I(0, 0, 0), new Vector3I(12, 4, 6));
+            // A deck, with the machinery standing on it and the plumbing running over the machinery.
+            builder.Fill(Catalog.LightArmor(), new Vector3I(0, 0, 0), new Vector3I(13, 2, 6));
 
-            builder.Place(Catalog.Reactor(), new Vector3I(1, 1, 1))
+            List<Vector3I> machinery = new List<Vector3I>();
+
+            Vector3I reactorCell = new Vector3I(1, 2, 1);
+            builder.Place(Catalog.Reactor(), reactorCell)
                    .Producing(3f * ThermalConstants.MegawattsToWatts);
+            machinery.Add(reactorCell);
 
+            // Eight consumers drawing hard. Batteries rather than the thrusters the dump found
+            // running hottest, because a large thruster is 3x3x4 cells: a row of them would need
+            // four-cell spacing and the ring above could only reach one face of each. One cell per
+            // heat source is what makes this a test of the plumbing rather than of the geometry.
             for (int i = 0; i < 8; i++)
             {
-                builder.Place(Catalog.Thruster(), new Vector3I(3 + i, 1, 1))
-                       .Thrusting(0.4f * ThermalConstants.MegawattsToWatts);
+                Vector3I cell = new Vector3I(3 + i, 2, 1);
+                builder.Place(Catalog.Battery(), cell)
+                       .Consuming(1f * ThermalConstants.MegawattsToWatts);
+                machinery.Add(cell);
             }
 
             if (plumbing)
             {
-                // The ring runs along the machinery with its sinks facing it, then out to the skin.
-                Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
-                for (int i = 1; i <= 9; i++) sinks[i] = Vector3I.Down;
+                List<Vector3I> cells = PipeFitter.RectangleXZ(new Vector3I(1, 3, 1), 11, 4);
 
-                List<Vector3I> cells = PipeFitter.RectangleXZ(new Vector3I(1, 2, 1), 11, 4);
+                // Sinks are derived from where the machinery actually is rather than from guessed
+                // ring indices, so the plant cannot quietly end up plumbed past its own heat.
+                Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
+                for (int i = 0; i < cells.Count; i++)
+                {
+                    if (machinery.Contains(cells[i] + Vector3I.Down)) sinks[i] = Vector3I.Down;
+                }
+
                 PipeFitter.BuildRing(builder, cells, -1, sinks);
 
-                // Four pumps lifting out of the ring into radiators standing clear of the hull.
-                for (int i = 0; i < 4; i++)
+                // Pumps lift out of the ring's far side into radiators standing clear of the hull.
+                for (int i = 0; i < cells.Count; i++)
                 {
-                    Vector3I pump = new Vector3I(2 + (i * 3), 4, 1);
+                    if (sinks.ContainsKey(i)) continue;
+                    if (cells[i].Z != 4) continue;          // the run away from the machinery
+                    if ((cells[i].X % 3) != 1) continue;    // every third cell along it
+
+                    Vector3I pump = cells[i] + Vector3I.Up;
                     builder.Place(Catalog.HeatPump(), pump,
                         new BlockOrientation(Base6Directions.Direction.Down, Base6Directions.Direction.Forward));
                     builder.Place(Catalog.Radiator(), pump + Vector3I.Up);
@@ -1670,7 +1689,7 @@ namespace Thermodynamics.Harness
 
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
-            runner.Track("reactor", simulation.Grid.GetAtCell(new Vector3I(1, 1, 1)));
+            runner.Track("reactor", simulation.Grid.GetAtCell(reactorCell));
             if (simulation.Solver.Loops.Count > 0) runner.TrackLoop("coolant", simulation.Solver.Loops[0]);
             runner.Run(7200f, 600f);
 
@@ -1840,10 +1859,12 @@ namespace Thermodynamics.Harness
             builder.Place(Catalog.Reactor(), Vector3I.Zero).Producing(500000f);
             BlockInstance reactor = builder.Last;
 
-            // Cold face looks at the reactor when correct, at the radiator when not.
+            // The cold face is the block's local Forward, and orientation Forward is the world
+            // direction that points. The reactor is at -Z of the pump, so cooling it means looking
+            // Forward; turning the pump round points the cold face at the radiator instead.
             Base6Directions.Direction forward = correctWayRound
-                ? Base6Directions.Direction.Backward
-                : Base6Directions.Direction.Forward;
+                ? Base6Directions.Direction.Forward
+                : Base6Directions.Direction.Backward;
 
             builder.Place(Catalog.HeatPump(), new Vector3I(0, 0, 1),
                 new BlockOrientation(forward, Base6Directions.Direction.Up));
@@ -1878,15 +1899,19 @@ namespace Thermodynamics.Harness
         {
             StringBuilder report = new StringBuilder();
             ScenarioRunner last = null;
-            float[] hotSides = new float[] { 300f, 400f, 700f, 1200f };
+            float[] hotSides = new float[] { 300f, 350f, 500f, 1200f };
 
             for (int i = 0; i < hotSides.Length; i++)
             {
                 GridBuilder builder = GridBuilder.Large();
                 builder.Place(Catalog.HeavyArmor(), Vector3I.Zero);
                 BlockInstance cold = builder.Last;
+                // A block's orientation Forward is the world direction its local Forward points, and
+                // the cold face is local Forward. The cold block is at -Z of the pump, so the cold
+                // face looks Forward. Getting this backwards is silent: the pump runs, and every
+                // figure it reports is for the other pair of faces.
                 builder.Place(Catalog.HeatPump(), new Vector3I(0, 0, 1),
-                    new BlockOrientation(Base6Directions.Direction.Backward, Base6Directions.Direction.Up));
+                    new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));
                 builder.Place(Catalog.HeavyArmor(), new Vector3I(0, 0, 2));
                 BlockInstance hot = builder.Last;
 
@@ -1899,17 +1924,32 @@ namespace Thermodynamics.Harness
                 pump.Enabled = true;
                 pump.PowerAvailable = 1f;
 
-                // Both sides pinned by an external hand each step, so the sweep measures the pump
-                // at a gap rather than measuring the gap closing.
-                float target = hotSides[i];
+                // Checked rather than assumed: an inverted pump reports a full coefficient at every
+                // gap, because a hot side below the cold side saturates the cap.
+                if (pump.ColdNodeIndex != simulation.Solver.GetNode(cold).Index)
+                {
+                    throw new InvalidOperationException("the pump's cold face is not on the cold block");
+                }
+
+                // Both sides are pinned by an external hand after every step, so the sweep measures
+                // the pump at a fixed gap rather than watching the gap close. Without the cold side
+                // pinned it drifts upward: with no environment, the work the pump spends has nowhere
+                // to go but back through the block it was lifting from.
+                const float coldSide = 290f;
+                float hotSide = hotSides[i];
+
                 ScenarioRunner runner = new ScenarioRunner(simulation);
                 runner.Environment = t => Worlds.Shadow();
-                runner.AfterStep = sim => sim.Solver.GetNode(hot).Temperature = target;
+                runner.AfterStep = sim =>
+                {
+                    sim.Solver.GetNode(hot).Temperature = hotSide;
+                    sim.Solver.GetNode(cold).Temperature = coldSide;
+                };
                 runner.Track("cold", cold);
                 runner.Run(60f, 30f);
 
                 bool ratingBound = pump.LastLiftedWatts >= pump.RatedWatts - 1f;
-                report.Append("gap ").Append((target - simulation.Solver.GetNode(cold).Temperature).ToString("n0"))
+                report.Append("gap ").Append((hotSide - coldSide).ToString("n0"))
                       .Append(" K: lift ").Append(pump.LastLiftedWatts.ToString("n0"))
                       .Append(" W, cop ").Append(pump.LastCoefficient.ToString("n2"))
                       .Append(ratingBound ? " (rating)" : " (Carnot)")

@@ -155,7 +155,6 @@ namespace Thermodynamics.Tests
                 + coldest + " K to " + hottest + " K");
         }
 
-        /// <summary>Pulls the n-th "&lt;number&gt; C" out of a summary line.</summary>
         /// <summary>
         /// The weather scenario's whole point is that a storm reaches more than the wind. Each of
         /// the three claims can fail on its own — the ambient offset, the solar multiplier and the
@@ -227,7 +226,11 @@ namespace Thermodynamics.Tests
             return float.Parse(value.Replace(",", ""), CultureInfo.InvariantCulture);
         }
 
-        private static float ExtractCelsius(string summary, int index)
+        /// <summary>
+        /// Pulls the n-th "&lt;number&gt; C" out of a summary line. Shared with
+        /// <c>CoolingScenarioClaimTests</c>, which reads the same summary form.
+        /// </summary>
+        internal static float ExtractCelsius(string summary, int index)
         {
             MatchCollection matches = Regex.Matches(summary, @"(-?[\d,]+(?:\.\d+)?) C");
 

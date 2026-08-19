@@ -95,6 +95,13 @@ The probe order is `$SE_BIN`, the default Steam path, then the mod's own
 | `shadow-cost` | What keeping a self-shadow map costs on a large grid, and how often a pass runs. |
 | `weather` | Does a storm reach the temperature model — the air, the sun and the convection, not just the wind? |
 | `underground` | How far down does the day survive, and where does the rock start warming toward the core? |
+| `cooling-plant` | **The general case.** Loop, pumps and radiators as one chain on a loaded ship — how much does the whole plant buy over the same ship without it? |
+| `loop-faults` | Every way a ring fails to become a loop, on one grid, each named with its reason. |
+| `loop-dry` | A loop that formed correctly and cools nothing, because no sink face meets anything. Every figure looks healthy. |
+| `heatpump-backwards` | A pump installed the wrong way round — a rotation, not an obvious mistake. What does it cost? |
+| `heatpump-limits` | One pump across four gap widths: which of its three limits binds, and what the coefficient costs. |
+| `cooling-runaway` | More heat than the radiators can shed. Where is the knee, and does it reach damage? |
+| `loop-stiffness` | A long ring is the stiffest thing a player can build cheaply. Does the substep estimate see it? |
 
 > **`perf` and `solver` are not the same measurement.** `perf` steps a settled cube of one block
 > type, where nearly every link joins two cells at the same temperature — and the conduction
