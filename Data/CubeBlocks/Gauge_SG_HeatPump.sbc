@@ -32,7 +32,6 @@
 				<MountPoint Side="Front" StartX="0.00" StartY="0.00" EndX="3.00" EndY="3.00"/>
 				<MountPoint Side="Back" StartX="0.00" StartY="0.00" EndX="3.00" EndY="3.00"/>
 				<MountPoint Side="Left" StartX="0.00" StartY="0.00" EndX="1.00" EndY="3.00"/>
-				<MountPoint Side="Right" StartX="0.00" StartY="1.00" EndX="1.00" EndY="2.00"/>
 				<MountPoint Side="Right" StartX="0.00" StartY="0.00" EndX="1.00" EndY="3.00"/>
 				<MountPoint Side="Top" StartX="0.00" StartY="0.00" EndX="3.00" EndY="1.00"/>
 				<MountPoint Side="Bottom" StartX="0.00" StartY="0.00" EndX="3.00" EndY="1.00"/>
@@ -41,9 +40,19 @@
 				<Model BuildPercentUpperBound="0.50" File="Models\Gauge\SG\Gauge_SG_HeatPump_BS1.mwm"/>
 				<Model BuildPercentUpperBound="1.00" File="Models\Gauge\SG\Gauge_SG_HeatPump_BS2.mwm"/>
 			</BuildProgressModels>
-			<BlockPairName>Gauge_SG_HeatPump</BlockPairName>
+			<BlockPairName>Gauge_HeatPump</BlockPairName>
+			<BuildTimeSeconds>10</BuildTimeSeconds>
+			<PCU>100</PCU>
 			<MirroringY>Z</MirroringY>
 			<MirroringZ>Y</MirroringZ>
+			<EdgeType>Light</EdgeType>
+			<PrimarySound>BlockModuleProductivity</PrimarySound>
+			<DamageEffectName>Damage_Electrical_Damaged</DamageEffectName>
+			<DamagedSound>ParticleElectrical</DamagedSound>
+			<EmissiveColorPreset>Default</EmissiveColorPreset>
+			<DestroyEffect>BlockDestroyedExplosion_Large</DestroyEffect>
+			<DestroySound>WepSmallWarheadExpl</DestroySound>
+			<IsAirTight>false</IsAirTight>
 		</Definition>
 	</CubeBlocks>
 </Definitions>

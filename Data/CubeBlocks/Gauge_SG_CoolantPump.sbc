@@ -34,7 +34,7 @@
 				<Model BuildPercentUpperBound="0.50" File="Models\Gauge\SG\Gauge_SG_CoolantPump_BS1.mwm"/>
 				<Model BuildPercentUpperBound="1.00" File="Models\Gauge\SG\Gauge_SG_CoolantPump_BS2.mwm"/>
 			</BuildProgressModels>
-			<BlockPairName>Gauge_SG_CoolantPump</BlockPairName>
+			<BlockPairName>Gauge_CoolantPump</BlockPairName>
 			<MirroringY>Z</MirroringY>
 			<MirroringZ>Y</MirroringZ>
 			<BuildTimeSeconds>10</BuildTimeSeconds>

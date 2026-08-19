@@ -124,10 +124,22 @@
     <value>Coolant Pipe Corner</value>
   </data>
   <data name="Description_Gauge_CoolantPipe" xml:space="preserve">
-    <value>A pipe containing coolant liquid. When connected in a loop with a "Coolant Pump", the liquid will circulate spreading heat quickly to all connected blocks.</value>
+    <value>A pipe carrying coolant. Joined end to end into a closed ring with a "Coolant Pump", the fluid circulates and evens out heat around the whole loop. This variant is plumbing only: it has no sink faces, so it exchanges heat with no block mounted against it.</value>
+  </data>
+  <data name="Description_Gauge_CoolantPipe_Straight_SingleSink" xml:space="preserve">
+    <value>A pipe carrying coolant. Joined end to end into a closed ring with a "Coolant Pump", the fluid circulates and evens out heat around the whole loop. Its right face is a sink: heat passes between the coolant and whatever is mounted there.</value>
+  </data>
+  <data name="Description_Gauge_CoolantPipe_Straight_DoubleSink" xml:space="preserve">
+    <value>A pipe carrying coolant. Joined end to end into a closed ring with a "Coolant Pump", the fluid circulates and evens out heat around the whole loop. Its left and right faces are sinks: heat passes between the coolant and whatever is mounted there.</value>
+  </data>
+  <data name="Description_Gauge_CoolantPipe_Corner_SingleSink" xml:space="preserve">
+    <value>A pipe carrying coolant. Joined end to end into a closed ring with a "Coolant Pump", the fluid circulates and evens out heat around the whole loop. Its top face is a sink: heat passes between the coolant and whatever is mounted there.</value>
+  </data>
+  <data name="Description_Gauge_CoolantPipe_Corner_DoubleSink" xml:space="preserve">
+    <value>A pipe carrying coolant. Joined end to end into a closed ring with a "Coolant Pump", the fluid circulates and evens out heat around the whole loop. Its back and right faces are sinks: heat passes between the coolant and whatever is mounted there.</value>
   </data>
   <data name="Description_Gauge_CoolantPump" xml:space="preserve">
-    <value>A pump used to curculate heat through coolant pipes</value>
+    <value>A pump used to circulate heat through coolant pipes</value>
   </data>
   <data name="DisplayName_Gauge_LG_CoolantPipe_Corner_SingleSink" xml:space="preserve">
     <value>Coolant Pipe Corner Single</value>
