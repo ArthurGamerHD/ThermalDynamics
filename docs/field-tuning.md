@@ -80,11 +80,13 @@ in [profiles.md](profiles.md).
 
 ## Two things worth a second look
 
-* **The settings file reports `Version 6`; this branch's `ThermalSettings.CurrentVersion` is 4.**
-  The build that produced this telemetry carries settings this repository does not
-  (`SolarOcclusionSamples`, `ClimateGroundInfluence`, `SolarGridShadows`), so the run is not against
-  this branch's script. The definition figures do match the branch — conductivity 50, the real-units
-  values — so the `Data` folder is current and the compiled script is not.
+* ~~The settings file reports `Version 6`; this branch is 4, so the run is not against this
+  branch.~~ **Wrong, and worth recording as wrong.** There are two settings types with independent
+  version numbers: `Core/Settings/ThermalSettings.cs` is the solver's, at 4, and
+  `Data/Scripts/Thermodynamics/Settings.cs` is the game-side one the `.cfg` is written from, at
+  **6**. Every field I thought was missing — `SolarOcclusionSamples`, `ClimateGroundInfluence`,
+  `SolarGridShadows`, `SolarTerrainRange` — is in this repository. The run *is* against this
+  branch, and the tuning conclusions stand without qualification.
 * **Convection is reported at 50 W/(m²·K) with air density 0.0000 at 44 km altitude.** A vacuum
   should not carry a convection coefficient at all. Harmless while the density term zeroes the
   transfer, but it suggests the coefficient is being reported before the density blend rather than
