@@ -4,6 +4,39 @@ Current as of the review that added room air, thresholds, point heat sources and
 
 ## Fixed, worth remembering
 
+**Every block this mod ships ran on the default thermal properties, in game only.** All eighteen
+of the mod's own entries in [Cubes.xml](../Data/Cubes.xml) declared themselves under
+`<TypeId>CubeBlocks</TypeId>`. There is no such object builder type — the blocks are `CubeBlock`
+(pipes, radiators) and `UpgradeModule` (pumps, heat pumps) — so Definition Extensions matched none
+of them and `ThermalCellDefinition.GetDefinition` took its fallback path to
+`DefaultThermodynamics` for all eighteen. The whole file was inert for the mod's own blocks while
+the three vanilla entries beside it, authored under `Thrust` and `Reactor`, worked; a live dump
+showed `LargeBlockSmallHydrogenThrustReskin` with its authored emissivity 0.15 and critical 1050 K
+on the same page as `Gauge_LG_Radiator` reporting 0.125 and 900 K.
+
+What it cost, per block:
+
+| Block | Authored | Ran as |
+| --- | --- | --- |
+| Radiator | emissivity 0.35, area ×1.25, specific heat 900 | 0.125, ×1, 450 |
+| Heat pump | waste 0 / 0 | 0.05 / 0.05 |
+| Coolant pipes | conductivity 1 | 0.6 |
+
+The radiator is the block that mattered: emissivity and the area multiplier *are* the block, so it
+was shedding at 28 % of the authored rate with none of the area bonus and radiating no better than
+the armour around it. The heat pump was worse than wrong — the solver already puts every watt it
+draws into the hot side, so a 0.05 consumer fraction on a pump drawing its full 20 kW invented
+1 kW of heat a second time. The live dump reported exactly that: `heat generation W 1,000.00`
+against `power consumed W 20,000` on a block whose definition asks for zero.
+
+**No test could see it.** The solver suite builds its own `BlockThermalProperties` in code and was
+right about every equation; the numbers it was handed in game came from a file nobody parsed
+offline. `ShippedDefinitionTests` now reads the shipped XML and cross-checks each entry's `TypeId`
+against the block's own `.sbc`, that every shipped block has an entry at all, that the radiator
+beats the default entry on both properties it exists for, and that the heat pump's waste
+fractions are zero. The radiator assertions compare against the default entry rather than against
+literals, because silently *becoming* the default is the failure being guarded.
+
 **Never assign `NeedsUpdate` from a game logic component that asked for entity updates.**
 `[MyEntityComponentDescriptor(typeof(MyObjectBuilder_CubeGrid), true)]` makes the component's
 `NeedsUpdate` property the *grid entity's* update flags. Assigning to it clears whatever the grid

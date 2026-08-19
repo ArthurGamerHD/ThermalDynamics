@@ -35,7 +35,7 @@
 
 		<Definition>
 			<Id>
-				<TypeId>CubeBlocks</TypeId>
+				<TypeId>CubeBlock</TypeId>
 				<SubtypeId>Gauge_LG_CoolantPipe_Corner</SubtypeId>
 			</Id>
 			<ModExtensions>
@@ -55,7 +55,7 @@
 		</Definition>
 		<Definition>
 			<Id>
-				<TypeId>CubeBlocks</TypeId>
+				<TypeId>CubeBlock</TypeId>
 				<SubtypeId>Gauge_SG_CoolantPipe_Corner</SubtypeId>
 			</Id>
 			<ModExtensions>
@@ -75,7 +75,7 @@
 		</Definition>
 		<Definition>
 			<Id>
-				<TypeId>CubeBlocks</TypeId>
+				<TypeId>CubeBlock</TypeId>
 				<SubtypeId>Gauge_LG_CoolantPipe_Corner_DoubleSink</SubtypeId>
 			</Id>
 			<ModExtensions>
@@ -95,7 +95,7 @@
 		</Definition>
 		<Definition>
 			<Id>
-				<TypeId>CubeBlocks</TypeId>
+				<TypeId>CubeBlock</TypeId>
 				<SubtypeId>Gauge_SG_CoolantPipe_Corner_DoubleSink</SubtypeId>
 			</Id>
 			<ModExtensions>
@@ -115,7 +115,7 @@
 		</Definition>
 		<Definition>
 			<Id>
-				<TypeId>CubeBlocks</TypeId>
+				<TypeId>CubeBlock</TypeId>
 				<SubtypeId>Gauge_LG_CoolantPipe_Corner_SingleSink</SubtypeId>
 			</Id>
 			<ModExtensions>
@@ -135,7 +135,7 @@
 		</Definition>
 		<Definition>
 			<Id>
-				<TypeId>CubeBlocks</TypeId>
+				<TypeId>CubeBlock</TypeId>
 				<SubtypeId>Gauge_SG_CoolantPipe_Corner_SingleSink</SubtypeId>
 			</Id>
 			<ModExtensions>
@@ -155,7 +155,7 @@
 		</Definition>
 		<Definition>
 			<Id>
-				<TypeId>CubeBlocks</TypeId>
+				<TypeId>CubeBlock</TypeId>
 				<SubtypeId>Gauge_LG_CoolantPipe_Straight</SubtypeId>
 			</Id>
 			<ModExtensions>
@@ -175,7 +175,7 @@
 		</Definition>
 		<Definition>
 			<Id>
-				<TypeId>CubeBlocks</TypeId>
+				<TypeId>CubeBlock</TypeId>
 				<SubtypeId>Gauge_SG_CoolantPipe_Straight</SubtypeId>
 			</Id>
 			<ModExtensions>
@@ -196,7 +196,7 @@
 
 		<Definition>
 			<Id>
-				<TypeId>CubeBlocks</TypeId>
+				<TypeId>CubeBlock</TypeId>
 				<SubtypeId>Gauge_LG_CoolantPipe_Straight_DoubleSink</SubtypeId>
 			</Id>
 			<ModExtensions>
@@ -216,7 +216,7 @@
 		</Definition>
 		<Definition>
 			<Id>
-				<TypeId>CubeBlocks</TypeId>
+				<TypeId>CubeBlock</TypeId>
 				<SubtypeId>Gauge_SG_CoolantPipe_Straight_DoubleSink</SubtypeId>
 			</Id>
 			<ModExtensions>
@@ -237,7 +237,7 @@
 
 		<Definition>
 			<Id>
-				<TypeId>CubeBlocks</TypeId>
+				<TypeId>CubeBlock</TypeId>
 				<SubtypeId>Gauge_LG_CoolantPipe_Straight_SingleSink</SubtypeId>
 			</Id>
 			<ModExtensions>
@@ -257,7 +257,7 @@
 		</Definition>
 		<Definition>
 			<Id>
-				<TypeId>CubeBlocks</TypeId>
+				<TypeId>CubeBlock</TypeId>
 				<SubtypeId>Gauge_SG_CoolantPipe_Straight_SingleSink</SubtypeId>
 			</Id>
 			<ModExtensions>
@@ -277,7 +277,7 @@
 		</Definition>
 		<Definition>
 			<Id>
-				<TypeId>CubeBlocks</TypeId>
+				<TypeId>UpgradeModule</TypeId>
 				<SubtypeId>Gauge_LG_CoolantPump</SubtypeId>
 			</Id>
 			<ModExtensions>
@@ -297,7 +297,7 @@
 		</Definition>
 		<Definition>
 			<Id>
-				<TypeId>CubeBlocks</TypeId>
+				<TypeId>UpgradeModule</TypeId>
 				<SubtypeId>Gauge_SG_CoolantPump</SubtypeId>
 			</Id>
 			<ModExtensions>
@@ -318,7 +318,7 @@
 
 		<Definition>
 			<Id>
-				<TypeId>CubeBlocks</TypeId>
+				<TypeId>UpgradeModule</TypeId>
 				<SubtypeId>Gauge_LG_HeatPump</SubtypeId>
 			</Id>
 			<ModExtensions>
@@ -344,7 +344,7 @@
 		</Definition>
 		<Definition>
 			<Id>
-				<TypeId>CubeBlocks</TypeId>
+				<TypeId>UpgradeModule</TypeId>
 				<SubtypeId>Gauge_SG_HeatPump</SubtypeId>
 			</Id>
 			<ModExtensions>
@@ -366,7 +366,7 @@
 
 		<Definition>
 			<Id>
-				<TypeId>CubeBlocks</TypeId>
+				<TypeId>CubeBlock</TypeId>
 				<SubtypeId>Gauge_SG_Radiator</SubtypeId>
 			</Id>
 			<ModExtensions>
@@ -386,7 +386,7 @@
 		</Definition>
 		<Definition>
 			<Id>
-				<TypeId>CubeBlocks</TypeId>
+				<TypeId>CubeBlock</TypeId>
 				<SubtypeId>Gauge_LG_Radiator</SubtypeId>
 			</Id>
 			<ModExtensions>
