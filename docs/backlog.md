@@ -12,14 +12,14 @@ chooses; **work** — agreed, designed, unbuilt; **gap** — untested or unmeasu
 
 | # | Item | Where |
 | --- | --- | --- |
-| A1 | A face bolted to a non-sealing block (grating, lattice) counts as buried: it neither radiates nor takes sun, while the room mapper floods air through it. Fix is a judgement — exempt non-sealing neighbours, or scale the face by the mounted fraction. | [known-issues.md](known-issues.md) |
+| ~~A1~~ | ~~A face bolted to a non-sealing block counts as buried.~~ **Done** — the mount rejection is gone; the sealing test already covered every joint that should bury a face. | [known-issues.md](known-issues.md) |
 | A2 | `RefreshBlock` — a block finishing construction or changing surfaces — rebuilds the whole conduction graph; placement and removal are incremental. Same repair as remove-then-place. | [known-issues.md](known-issues.md) |
 | A3 | Removing a block rebuilds the whole graph: 304 ms against a 49 ms median at half a million blocks, on a common event (grinding, combat). Needs per-node intrusive adjacency chains. | [load-and-hitching.md](load-and-hitching.md#what-is-still-open) |
 | A4 | `SweepRoomPressure` is per room per cadence with two game API calls each, unbudgeted — the last whole-grid pass that is neither a rota nor a budgeted slice. | [known-issues.md](known-issues.md) |
 | A5 | The step budget (`MaxLinkVisitsPerStep`) counts link visits but not node visits, so the per-node environment pass is invisible to it; measured 85–150 ms against the ~17 ms the link count predicts. Default also wants recalibrating against a game runtime, not the harness's .NET 9. | [known-issues.md](known-issues.md) |
 | A6 | Convection reports 50 W/(m²·K) at air density 0.0000 (44 km). Harmless — the density term zeroes the transfer — but suggests the coefficient is reported before the density blend rather than after. | [field-tuning.md](field-tuning.md) |
-| A7 | `RecentlyRemoved` grows without bound for the lifetime of a grid (C9). | [bugs-and-performance.md](bugs-and-performance.md#c9-recentlyremoved-grows-without-bound--low) |
-| A8 | `BlockVarientGroups.sbc` references `Gauge_LG_CoolantPipe_Straight_Sink`; the definition is `..._SingleSink`, so that pipe is missing from its large-grid variant group (C8). | [bugs-and-performance.md](bugs-and-performance.md#c8-block-variant-group-references-a-subtype-that-does-not-exist--low) |
+| A7 | *(was `RecentlyRemoved` unbounded — already fixed: capped at 4096 in `ThermalGrid`.)* | — |
+| A8 | *(was a variant group naming a subtype that does not exist — already fixed in `BlockVarientGroups.sbc`.)* | — |
 | A9 | Solar occlusion by planets and asteroids is per grid, with no self-shadowing from a per-block implementation that exists commented out (M6). Currently listed as a deliberate limit; the code says otherwise. | [bugs-and-performance.md](bugs-and-performance.md#m6-solar-occlusion-is-all-or-nothing-per-grid--medium) |
 
 ## B. Player-facing gaps and decisions
