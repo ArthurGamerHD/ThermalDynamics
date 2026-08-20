@@ -63,14 +63,6 @@ namespace Thermodynamics.Tests
             }
         }
 
-        private static float[] Temperatures(ThermalSimulation simulation)
-        {
-            IList<ThermalNode> nodes = simulation.Solver.Nodes;
-            float[] values = new float[nodes.Count];
-            for (int i = 0; i < nodes.Count; i++) values[i] = nodes[i].Temperature;
-            return values;
-        }
-
         private static EnvironmentSample Sky()
         {
             return Worlds.PlanetSurface(0.6f, timeOfDay: 0.4f, windSpeed: 15f);
@@ -119,15 +111,9 @@ namespace Thermodynamics.Tests
 
             Assert.True(profiles > 0, "the step finished in one slice, so nothing was observed mid-step");
 
-            float[] expected = Temperatures(clean);
-            float[] actual = Temperatures(observed);
-
-            for (int i = 0; i < expected.Length; i++)
-            {
-                Assert.True(expected[i].Equals(actual[i]),
-                    "block " + i + " differs after " + profiles + " mid-step profiles: "
-                    + expected[i].ToString("r") + " against " + actual[i].ToString("r"));
-            }
+            SolverAb.AssertIdentical(
+                SolverAb.Temperatures(clean), SolverAb.Temperatures(observed),
+                profiles + " mid-step profiles", "unobserved", "observed");
 
             for (int i = 0; i < clean.Solver.Nodes.Count; i++)
             {
@@ -159,16 +145,9 @@ namespace Thermodynamics.Tests
                 if (++slices > 10000000) throw new InvalidOperationException("step never finished");
             }
 
-            float[] expected = Temperatures(whole);
-            float[] actual = Temperatures(spread);
-
-            Assert.Equal(expected.Length, actual.Length);
-            for (int i = 0; i < expected.Length; i++)
-            {
-                Assert.True(expected[i].Equals(actual[i]),
-                    "block " + i + " differs: whole " + expected[i].ToString("r")
-                    + ", spread over " + slices + " slices " + actual[i].ToString("r"));
-            }
+            SolverAb.AssertIdentical(
+                SolverAb.Temperatures(whole), SolverAb.Temperatures(spread),
+                "spread over " + slices + " slices", "run whole", "run in slices");
         }
 
         /// <summary>
@@ -194,15 +173,9 @@ namespace Thermodynamics.Tests
                 while (!spread.Solver.AdvanceStep(97)) { }
             }
 
-            float[] expected = Temperatures(whole);
-            float[] actual = Temperatures(spread);
-
-            for (int i = 0; i < expected.Length; i++)
-            {
-                Assert.True(expected[i].Equals(actual[i]),
-                    "block " + i + " drifted after thirty steps: whole " + expected[i].ToString("r")
-                    + ", spread " + actual[i].ToString("r"));
-            }
+            SolverAb.AssertIdentical(
+                SolverAb.Temperatures(whole), SolverAb.Temperatures(spread),
+                "thirty steps", "run whole", "run in slices");
 
             Assert.Equal(whole.Solver.StepCount, spread.Solver.StepCount);
             Assert.Equal(whole.Solver.LastSubsteps, spread.Solver.LastSubsteps);
@@ -285,15 +258,12 @@ namespace Thermodynamics.Tests
             simulation.Solver.AdvanceStep(simulation.Solver.StepWorkUnits / 3);
             Assert.True(simulation.Solver.StepInFlight);
 
-            float[] before = Temperatures(simulation);
+            float[] before = SolverAb.Temperatures(simulation);
             simulation.Solver.AbandonStep();
-            float[] after = Temperatures(simulation);
 
             Assert.False(simulation.Solver.StepInFlight);
-            for (int i = 0; i < before.Length; i++)
-            {
-                Assert.True(before[i].Equals(after[i]), "block " + i + " moved when the step was abandoned");
-            }
+            SolverAb.AssertIdentical(before, SolverAb.Temperatures(simulation),
+                "abandoning a step", "before", "after");
         }
 
         // ---- pacing ---------------------------------------------------------------------------

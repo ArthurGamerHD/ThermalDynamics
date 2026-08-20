@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Thermodynamics.Core;
 using Thermodynamics.Harness;
 using VRageMath;
@@ -31,44 +30,16 @@ namespace Thermodynamics.Tests
         /// <summary>A hull with everything a substep touches, in a world that exercises all of it.</summary>
         private static ThermalSimulation Build(bool precompute)
         {
-            ThermalSettings settings = new ThermalSettings();
-            settings.MaxSubsteps = 4096;
-            settings.MaxElementVisitsPerStep = 0;
-            settings.Derive();
-
-            GridBuilder builder = GridBuilder.Large();
-            builder.PlaceCensus(LoadShapes.Build("ship", 2000));
-
-            ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);
-            simulation.RebuildAll();
+            ThermalSimulation simulation = Hulls.Driven();
             simulation.Solver.PrecomputeEnvironment = precompute;
-
-            Census.DriveCensus(simulation);
-            LoadBenchmarks.SeedSpread(simulation);
             return simulation;
-        }
-
-        private static float[] Temperatures(ThermalSimulation simulation)
-        {
-            IList<ThermalNode> nodes = simulation.Solver.Nodes;
-            float[] values = new float[nodes.Count];
-            for (int i = 0; i < nodes.Count; i++) values[i] = nodes[i].Temperature;
-            return values;
         }
 
         private static void AssertIdentical(ThermalSimulation a, ThermalSimulation b, string what)
         {
-            float[] expected = Temperatures(a);
-            float[] actual = Temperatures(b);
-
-            Assert.Equal(expected.Length, actual.Length);
-
-            for (int i = 0; i < expected.Length; i++)
-            {
-                Assert.True(expected[i].Equals(actual[i]),
-                    what + ": block " + i + " is " + actual[i].ToString("r")
-                    + " with the terms reused and " + expected[i].ToString("r") + " without");
-            }
+            SolverAb.AssertIdentical(
+                SolverAb.Temperatures(a), SolverAb.Temperatures(b), what,
+                "without the terms reused", "with them reused");
         }
 
         /// <summary>

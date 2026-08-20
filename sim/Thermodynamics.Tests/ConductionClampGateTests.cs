@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using Thermodynamics.Core;
 using Thermodynamics.Harness;
 using VRageMath;
@@ -39,44 +38,16 @@ namespace Thermodynamics.Tests
         /// </summary>
         private static ThermalSimulation Build(bool gate, int maxSubsteps)
         {
-            ThermalSettings settings = new ThermalSettings();
-            settings.MaxSubsteps = maxSubsteps;
-            settings.MaxElementVisitsPerStep = 0;
-            settings.Derive();
-
-            GridBuilder builder = GridBuilder.Large();
-            builder.PlaceCensus(LoadShapes.Build("ship", 2000));
-
-            ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);
-            simulation.RebuildAll();
+            ThermalSimulation simulation = Hulls.Driven(Hulls.Uncapped(maxSubsteps));
             simulation.Solver.GateConductionClamp = gate;
-
-            Census.DriveCensus(simulation);
-            LoadBenchmarks.SeedSpread(simulation);
             return simulation;
-        }
-
-        private static float[] Temperatures(ThermalSimulation simulation)
-        {
-            IList<ThermalNode> nodes = simulation.Solver.Nodes;
-            float[] values = new float[nodes.Count];
-            for (int i = 0; i < nodes.Count; i++) values[i] = nodes[i].Temperature;
-            return values;
         }
 
         private static void AssertIdentical(ThermalSimulation always, ThermalSimulation gated, string what)
         {
-            float[] expected = Temperatures(always);
-            float[] actual = Temperatures(gated);
-
-            Assert.Equal(expected.Length, actual.Length);
-
-            for (int i = 0; i < expected.Length; i++)
-            {
-                Assert.True(expected[i].Equals(actual[i]),
-                    what + ": block " + i + " is " + actual[i].ToString("r")
-                    + " with the clamp gated and " + expected[i].ToString("r") + " with it always on");
-            }
+            SolverAb.AssertIdentical(
+                SolverAb.Temperatures(always), SolverAb.Temperatures(gated), what,
+                "with the clamp always on", "with it gated");
         }
 
         /// <summary>

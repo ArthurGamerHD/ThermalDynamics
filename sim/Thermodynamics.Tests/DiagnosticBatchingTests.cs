@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using Thermodynamics.Core;
 using Thermodynamics.Harness;
 using VRageMath;
@@ -28,69 +27,18 @@ namespace Thermodynamics.Tests
     {
         private static ThermalSimulation Build(bool everySubstep, int maxSubsteps)
         {
-            ThermalSettings settings = new ThermalSettings();
-            settings.MaxSubsteps = maxSubsteps;
-            settings.MaxElementVisitsPerStep = 0;
-            settings.Derive();
-
-            GridBuilder builder = GridBuilder.Large();
-            builder.PlaceCensus(LoadShapes.Build("ship", 2000));
-
-            ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);
-            simulation.RebuildAll();
+            ThermalSimulation simulation = Hulls.Driven(Hulls.Uncapped(maxSubsteps));
             simulation.Solver.CollectDiagnostics = true;
             simulation.Solver.DiagnosticsOnEverySubstep = everySubstep;
-
-            Census.DriveCensus(simulation);
-            LoadBenchmarks.SeedSpread(simulation);
             return simulation;
         }
 
-        private static float[] Published(ThermalSimulation simulation)
-        {
-            IList<ThermalNode> nodes = simulation.Solver.Nodes;
-            float[] values = new float[nodes.Count * 6];
-
-            for (int i = 0; i < nodes.Count; i++)
-            {
-                ThermalNode node = nodes[i];
-                int b = i * 6;
-                values[b] = node.LastRadiationWatts;
-                values[b + 1] = node.LastConvectionWatts;
-                values[b + 2] = node.LastSolarWatts;
-                values[b + 3] = node.LastFrictionWatts;
-                values[b + 4] = node.LastHeatSourceWatts;
-                values[b + 5] = node.LastConductionWatts;
-            }
-
-            return values;
-        }
-
-        private static readonly string[] Mechanisms =
-        {
-            "radiation", "convection", "solar", "friction", "heat source", "conduction",
-        };
-
         private static void AssertIdentical(ThermalSimulation every, ThermalSimulation last, string what)
         {
-            float[] expected = Published(every);
-            float[] actual = Published(last);
-
-            Assert.Equal(expected.Length, actual.Length);
-
-            bool anythingAtAll = false;
-            for (int i = 0; i < expected.Length; i++)
-            {
-                if (expected[i] != 0f) anythingAtAll = true;
-
-                Assert.True(expected[i].Equals(actual[i]),
-                    what + ": block " + (i / 6) + " " + Mechanisms[i % 6] + " is "
-                    + actual[i].ToString("r") + " written on the last substep and "
-                    + expected[i].ToString("r") + " written on every substep");
-            }
-
-            // Two grids of zeros agree perfectly and prove nothing.
-            Assert.True(anythingAtAll, what + ": every published figure is zero");
+            SolverAb.AssertIdentical(
+                SolverAb.Diagnostics(every), SolverAb.Diagnostics(last), what,
+                "written on every substep", "written on the last substep",
+                SolverAb.Mechanisms);
         }
 
         [Theory]
@@ -169,7 +117,7 @@ namespace Thermodynamics.Tests
 
             simulation.StepExact(20, Worlds.PlanetSurface(0.8f, timeOfDay: 0.35f, windSpeed: 22f));
 
-            float[] published = Published(simulation);
+            float[] published = SolverAb.Diagnostics(simulation);
             for (int i = 0; i < published.Length; i++)
             {
                 Assert.Equal(0f, published[i]);

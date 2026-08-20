@@ -22,20 +22,8 @@ namespace Thermodynamics.Tests
     {
         private static ThermalSimulation Hull()
         {
-            ThermalSettings settings = new ThermalSettings();
-            settings.MaxSubsteps = 4096;
-            settings.MaxElementVisitsPerStep = 0;
-            settings.Derive();
-
-            GridBuilder builder = GridBuilder.Large();
-            builder.PlaceCensus(LoadShapes.Build("ship", 1200));
-
-            ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);
-            simulation.RebuildAll();
+            ThermalSimulation simulation = Hulls.Driven();
             simulation.Solver.CollectDiagnostics = true;
-
-            Census.DriveCensus(simulation);
-            LoadBenchmarks.SeedSpread(simulation);
             return simulation;
         }
 
