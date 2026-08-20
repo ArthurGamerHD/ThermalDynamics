@@ -99,6 +99,7 @@ namespace Thermodynamics
             methods["GetBlockThermals"] = new Func<IMySlimBlock, MyTuple<float, float, float, int>>(GetBlockThermals);
             methods["GetGridSummary"] = new Func<IMyCubeGrid, MyTuple<float, float, int, int>>(GetGridSummary);
             methods["GetRoom"] = new Func<IMyCubeGrid, Vector3I, MyTuple<bool, float, float, float>>(GetRoom);
+            methods["GetGridHeatBalance"] = new Func<IMyCubeGrid, MyTuple<float, float>>(GetGridHeatBalance);
 
             // ---- writing ------------------------------------------------------------------
             methods["SetBlockTemperature"] = new Func<IMySlimBlock, float, bool>(SetBlockTemperature);
@@ -177,6 +178,29 @@ namespace Thermodynamics
                 thermals.LastState.AmbientTemperature,
                 thermals.CriticalBlocks,
                 thermals.Simulation.Solver.Loops.Count);
+        }
+
+        /// <summary>
+        /// Watts the grid is venting to its surroundings, and watts it is making.
+        ///
+        /// The pair rather than either alone: venting says nothing about whether a ship is coping
+        /// until it is read against what the ship produces, and a ship in balance vents exactly
+        /// what it makes. Venting is zero while a grid is net absorbing, which a hull in sunlight
+        /// or in warm atmosphere can be.
+        /// </summary>
+        private static MyTuple<float, float> GetGridHeatBalance(IMyCubeGrid grid)
+        {
+            ThermalGrid thermals = grid == null || grid.GameLogic == null
+                ? null
+                : grid.GameLogic.GetAs<ThermalGrid>();
+
+            if (thermals == null || thermals.Simulation == null)
+            {
+                return new MyTuple<float, float>(0f, 0f);
+            }
+
+            return new MyTuple<float, float>(
+                thermals.Simulation.VentedWatts, thermals.Simulation.HeatGainWatts);
         }
 
         /// <summary>Is a sealed room, air temperature K, pressure 0..1, volume m^3.</summary>

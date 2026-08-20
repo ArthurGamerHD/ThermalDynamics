@@ -135,7 +135,8 @@ namespace Thermodynamics
             model.Name = id.SubtypeName;
             if (string.IsNullOrEmpty(model.Name)) model.Name = id.TypeId.ToString();
 
-            model.Thermal = ToThermalProperties(ThermalCellDefinition.GetDefinition(id));
+            model.Thermal = ToThermalProperties(
+                ThermalCellDefinition.GetDefinition(id), id.SubtypeName);
 
             if (definition == null)
             {
@@ -300,7 +301,8 @@ namespace Thermodynamics
         }
 
         /// <summary>Copies a definition read through Definition Extensions into the model's own type.</summary>
-        public static BlockThermalProperties ToThermalProperties(ThermalCellDefinition definition)
+        public static BlockThermalProperties ToThermalProperties(
+            ThermalCellDefinition definition, string subtype = "")
         {
             BlockThermalProperties properties = new BlockThermalProperties();
             if (definition == null) return properties.Clamp();
@@ -314,6 +316,11 @@ namespace Thermodynamics
             properties.ConsumerWasteEnergy = definition.ConsumerWasteEnergy;
             properties.CriticalTemperature = definition.CriticalTemperature;
             properties.OverheatDamagePerKelvin = definition.OverheatDamagePerKelvin;
+
+            // The profile's overlay lands here, where properties are built from a definition, so
+            // it is paid once per definition rather than once per block — and so a block reads one
+            // set of properties whatever route it arrived by.
+            ThermalProfileOverlays.Apply(properties, subtype);
 
             return properties.Clamp();
         }
@@ -333,11 +340,14 @@ namespace Thermodynamics
             properties.SmallGridFlowRate = definition.SmallGridFlowRate;
             properties.StagnantTransferFraction = definition.StagnantTransferFraction;
 
+            ThermalProfileOverlays.Apply(properties);
+
             return properties.Clamp();
         }
 
         /// <summary>Copies a planet definition into the model's own type.</summary>
-        public static PlanetThermalProperties ToPlanetProperties(PlanetDefinition definition)
+        public static PlanetThermalProperties ToPlanetProperties(
+            PlanetDefinition definition, string subtype = "")
         {
             PlanetThermalProperties properties = new PlanetThermalProperties();
             if (definition == null) return properties.Clamp();
@@ -353,6 +363,8 @@ namespace Thermodynamics
             properties.UndergroundDampingDepth = definition.UndergroundDampingDepth;
             properties.SolarDecay = definition.SolarDecay;
             properties.ConvectionCoefficient = definition.ConvectionCoefficient;
+
+            ThermalProfileOverlays.Apply(properties, subtype);
 
             return properties.Clamp();
         }

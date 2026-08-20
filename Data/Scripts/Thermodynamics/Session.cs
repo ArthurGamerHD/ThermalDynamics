@@ -15,6 +15,13 @@ namespace Thermodynamics
 	public class Session : MySessionComponentBase
 	{
         public const ushort ModID = 30323;
+
+        /// <summary>
+        /// The running session component, for the few things that need the mod's own context —
+        /// reading a file out of the mod folder needs the mod's entry in the world's mod list, and
+        /// only a component knows its own.
+        /// </summary>
+        public static Session Instance;
         public static DefinitionExtensionsAPI Definitions;
 
         /// <summary>Chat command that writes a telemetry report without closing the world.</summary>
@@ -42,6 +49,8 @@ namespace Thermodynamics
 
         public override void Init(MyObjectBuilder_SessionComponent sessionComponent)
         {
+            Instance = this;
+
             NetworkAPI.Init(ModID, Settings.Name);
             NetworkAPI.LogNetworkTraffic = true;
 
@@ -50,9 +59,19 @@ namespace Thermodynamics
             // first performs it.
             Settings.EnsureLoaded();
 
+            // After the load, so the property is seeded with real settings rather than null — a
+            // null value is never transmitted, and a client's fetch would get nothing back.
+            // Session-scoped properties are addressed by the order they are constructed in, so
+            // this stays first among them and stays on both sides.
+            SettingsSync.Register(this);
+
             Telemetry.Start();
 
             ThermalTerminal.Register();
+
+            // Its own channel and the engine's verified sender, because the shared one cannot say
+            // who really sent a packet — see SettingsRequests.
+            SettingsRequests.Register();
 
             // Published from Init so a mod loading after this one still finds it: a late consumer
             // requests the table and it is re-sent.
@@ -83,6 +102,8 @@ namespace Thermodynamics
             ThermalHeatSources.Clear();
             ThermalApi.Unregister();
             ThermalTerminal.Unregister();
+            SettingsRequests.Unregister();
+            Instance = null;
 
             if (_commandRegistered && MyAPIGateway.Utilities != null)
             {
@@ -94,8 +115,21 @@ namespace Thermodynamics
             base.UnloadData();
         }
 
+        /// <summary>Frames between deferred config writes; one second at 60 fps.</summary>
+        private const int SaveFlushFrames = 60;
+
+        private int framesSinceSaveCheck;
+
         public override void Simulate()
         {
+            // Settings save themselves as they change. The write is deferred to here so that
+            // dragging a slider across its range is one file write rather than one per step of it.
+            if (++framesSinceSaveCheck >= SaveFlushFrames)
+            {
+                framesSinceSaveCheck = 0;
+                Settings.FlushPending();
+            }
+
             _frame++;
 
             if (!Telemetry.Enabled)
@@ -171,7 +205,7 @@ namespace Thermodynamics
             // The performance panel. A key rather than a chat command because it is something a
             // player flicks on to check a suspicion and off again, and because it has to be
             // reachable while flying.
-            if (MyAPIGateway.Input.IsNewKeyPressed(MyKeys.P))
+            if (MyAPIGateway.Input.IsNewKeyPressed(MyKeys.M))
             {
                 bool shown = ThermalHud.TogglePerformancePanel();
                 MyAPIGateway.Utilities.ShowNotification(
@@ -258,6 +292,20 @@ namespace Thermodynamics
                 return;
             }
 
+            if (lowered == "sync")
+            {
+                ReportSync();
+                return;
+            }
+
+            if (lowered == "sync fetch")
+            {
+                Reply(SettingsSync.Fetch()
+                    ? "asked the server for the settings again"
+                    : "nothing to fetch: this is the server");
+                return;
+            }
+
             if (lowered.StartsWith("set "))
             {
                 RunSet(argument.Substring(4).Trim());
@@ -327,7 +375,8 @@ namespace Thermodynamics
             }
 
             Reply("commands: status | settings | set <name> <value> | profile [name] | save"
-                + " | overlay | menu | telemetry on | telemetry off | stride <n> | dump");
+                + " | sync [fetch] | overlay | menu | telemetry on | telemetry off"
+                + " | stride <n> | dump");
         }
 
         /// <summary>
@@ -364,9 +413,13 @@ namespace Thermodynamics
                 return;
             }
 
-            if (!MyAPIGateway.Session.IsServer)
+            // A client owns its own presentation switches and sets them locally; everything else
+            // is world state and goes to the server as a request, which answers whether it was
+            // allowed. The server's own path is unchanged.
+            if (SettingsRequests.MustAsk && !Settings.ClientOwned.Contains(name))
             {
-                Reply("settings are server side; ask an administrator");
+                SettingsRequests.Send(name, value);
+                Reply("asked the server to set " + name);
                 return;
             }
 
@@ -419,6 +472,33 @@ namespace Thermodynamics
 
             Telemetry.Finish("manual dump", true);
             Reply("telemetry report written to world storage");
+        }
+
+        /// <summary>
+        /// Reports whether this machine's settings match the server's, as a digest to compare by
+        /// eye with the same command run on the other side.
+        ///
+        /// Replication is host code and cannot be tested outside a live session, so this is how it
+        /// gets checked: run it on the server, run it on a client, compare one string.
+        /// </summary>
+        private static void ReportSync()
+        {
+            bool server = MyAPIGateway.Session != null && MyAPIGateway.Session.IsServer;
+
+            Reply((server ? "server" : "client")
+                + " | settings digest " + SettingsSync.Fingerprint()
+                + " over " + SettingsSync.ReplicatedCount() + " values"
+                + (SettingsSync.Ready ? "" : " | NOT SYNCED: nothing to send or receive"));
+
+            // The few figures most likely to differ, so a mismatch says which way it went without
+            // needing the config file open.
+            Reply("  Frequency " + Settings.Instance.Frequency
+                + " | HeatTimeScale " + Settings.Instance.HeatTimeScale.ToString("n0")
+                + " | MaxSubsteps " + Settings.Instance.MaxSubsteps
+                + " | MaxSubstepsPerBlock " + Settings.Instance.MaxSubstepsPerBlock
+                + " | MaxElementVisits " + Settings.Instance.MaxElementVisitsPerStep.ToString("n0"));
+
+            if (!server) Reply("  digests differ? run /thermal sync fetch, then this again");
         }
 
         private static void Reply(string message)

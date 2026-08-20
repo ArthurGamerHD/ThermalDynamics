@@ -68,7 +68,111 @@ namespace Thermodynamics
                 block.AppendingCustomInfo += AppendCustomInfo;
             }
 
+            AppendThrottle(block, controls);
             block.RefreshCustomInfo();
+        }
+
+        /// <summary>
+        /// Adds the throttle slider to a coolant pump or a heat pump.
+        ///
+        /// Both devices have carried a 0..1 setting since they were written — a pump's speed and a
+        /// heat pump's share of its rating — read by the flow and power arithmetic, printed by the
+        /// panel below, and settable by nothing at all. The controls are built once and shown on
+        /// the blocks they belong to, which is how the terminal API expects a mod to add one: a
+        /// control is global to a block *interface*, so it carries its own visibility test.
+        /// </summary>
+        private static void AppendThrottle(IMyTerminalBlock block, List<IMyTerminalControl> controls)
+        {
+            if (!(block is IMyUpgradeModule)) return;
+
+            EnsureControls();
+
+            if (IsCoolantPump(block)) controls.Add(pumpSpeed);
+            else if (IsHeatPump(block)) controls.Add(heatPumpPower);
+        }
+
+        private static IMyTerminalControlSlider pumpSpeed;
+        private static IMyTerminalControlSlider heatPumpPower;
+
+        private static bool IsCoolantPump(IMyTerminalBlock block)
+        {
+            return PumpControl(block) != null;
+        }
+
+        private static bool IsHeatPump(IMyTerminalBlock block)
+        {
+            return HeatPumpControl(block) != null;
+        }
+
+        private static ThermalCoolantPumpBlock PumpControl(IMyTerminalBlock block)
+        {
+            return block == null || block.GameLogic == null
+                ? null
+                : block.GameLogic.GetAs<ThermalCoolantPumpBlock>();
+        }
+
+        private static ThermalHeatPumpBlock HeatPumpControl(IMyTerminalBlock block)
+        {
+            return block == null || block.GameLogic == null
+                ? null
+                : block.GameLogic.GetAs<ThermalHeatPumpBlock>();
+        }
+
+        private static void EnsureControls()
+        {
+            if (pumpSpeed != null) return;
+
+            pumpSpeed = MyAPIGateway.TerminalControls
+                .CreateControl<IMyTerminalControlSlider, IMyUpgradeModule>("Gauge_PumpSpeed");
+            pumpSpeed.Title = MyStringId.GetOrCompute("Pump speed");
+            pumpSpeed.Tooltip = MyStringId.GetOrCompute(
+                "How fast this pump drives its ring, as a share of its full speed. Flow rises with"
+                + " the square root of combined pumping, and power with the square of flow, so"
+                + " half speed is a quarter of the power and about seven tenths of the flow.");
+            pumpSpeed.SetLimits(0f, 1f);
+            pumpSpeed.Visible = IsCoolantPump;
+            pumpSpeed.Enabled = IsCoolantPump;
+            pumpSpeed.Getter = b =>
+            {
+                ThermalCoolantPumpBlock pump = PumpControl(b);
+                return pump == null ? 1f : pump.Speed;
+            };
+            pumpSpeed.Setter = (b, value) =>
+            {
+                ThermalCoolantPumpBlock pump = PumpControl(b);
+                if (pump != null) pump.SetSpeed(value);
+            };
+            pumpSpeed.Writer = (b, sb) =>
+            {
+                ThermalCoolantPumpBlock pump = PumpControl(b);
+                sb.Append(((pump == null ? 1f : pump.Speed) * 100f).ToString("n0")).Append('%');
+            };
+
+            heatPumpPower = MyAPIGateway.TerminalControls
+                .CreateControl<IMyTerminalControlSlider, IMyUpgradeModule>("Gauge_HeatPumpPower");
+            heatPumpPower.Title = MyStringId.GetOrCompute("Power limit");
+            heatPumpPower.Tooltip = MyStringId.GetOrCompute(
+                "How much of its rated power this heat pump may draw. Lowering it caps how much"
+                + " heat the pump can move, which is the point on a grid whose supply is the thing"
+                + " running out.");
+            heatPumpPower.SetLimits(0f, 1f);
+            heatPumpPower.Visible = IsHeatPump;
+            heatPumpPower.Enabled = IsHeatPump;
+            heatPumpPower.Getter = b =>
+            {
+                ThermalHeatPumpBlock pump = HeatPumpControl(b);
+                return pump == null ? 1f : pump.PowerSetting;
+            };
+            heatPumpPower.Setter = (b, value) =>
+            {
+                ThermalHeatPumpBlock pump = HeatPumpControl(b);
+                if (pump != null) pump.SetPowerSetting(value);
+            };
+            heatPumpPower.Writer = (b, sb) =>
+            {
+                ThermalHeatPumpBlock pump = HeatPumpControl(b);
+                sb.Append(((pump == null ? 1f : pump.PowerSetting) * 100f).ToString("n0")).Append('%');
+            };
         }
 
         /// <summary>

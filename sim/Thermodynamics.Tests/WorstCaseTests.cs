@@ -156,7 +156,7 @@ namespace Thermodynamics.Tests
         {
             ThermalSettings settings = new ThermalSettings();
             settings.MaxSubsteps = 4096;
-            settings.MaxLinkVisitsPerStep = 0;
+            settings.MaxElementVisitsPerStep = 0;
             settings.Derive();
 
             WorstCases.Built built = WorstCases.Hull("ship", Size, settings);
@@ -185,7 +185,7 @@ namespace Thermodynamics.Tests
         {
             ThermalSettings settings = new ThermalSettings();
             settings.MaxSubsteps = 4096;
-            settings.MaxLinkVisitsPerStep = 0;
+            settings.MaxElementVisitsPerStep = 0;
             settings.Derive();
 
             float shipVacuum = Demand("ship", settings, Worlds.Space(new Vector3(0f, 1f, 0f)));

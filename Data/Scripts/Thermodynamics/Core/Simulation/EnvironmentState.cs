@@ -43,8 +43,28 @@ namespace Thermodynamics.Core
         /// </summary>
         public float AtmosphereFactor;
 
-        /// <summary>Convective coefficient including the wind speed bonus, W/(m^2 K).</summary>
+        /// <summary>
+        /// Convective coefficient including the wind speed bonus and weather, W/(m^2 K), *before*
+        /// the atmosphere blend. This is the planet's own figure scaled by conditions, not the
+        /// rate a surface actually exchanges at — see <see cref="EffectiveConvectionCoefficient"/>.
+        /// </summary>
         public float ConvectionCoefficient;
+
+        /// <summary>
+        /// The coefficient a surface actually exchanges at, W/(m^2 K): the one above, blended by
+        /// how fluid-like the air is.
+        ///
+        /// The solver applies <see cref="AtmosphereFactor"/> to the transfer rather than to the
+        /// coefficient, because the same factor also weights radiation down as it weights
+        /// convection up, and the blend belongs where the two meet. That left the raw coefficient
+        /// as the only figure anything reported: a field dump showed 50 W/(m^2 K) at 44 km with
+        /// the air density column reading 0.0000, which reads as a defect and is not one. Anything
+        /// reporting what convection is doing wants this.
+        /// </summary>
+        public float EffectiveConvectionCoefficient
+        {
+            get { return ConvectionCoefficient * AtmosphereFactor; }
+        }
 
         /// <summary>Solar irradiance after atmospheric absorption, W/m^2.</summary>
         public float SolarEnergy;

@@ -2,6 +2,7 @@ using System;
 using Sandbox.Common.ObjectBuilders;
 using Sandbox.Game.EntityComponents;
 using Sandbox.ModAPI;
+using SENetworkAPI;
 using VRage.Game;
 using VRage.Game.Components;
 using VRage.Game.ModAPI;
@@ -33,6 +34,16 @@ namespace Thermodynamics
         private IMyCubeBlock block;
         private IMyFunctionalBlock functional;
         private MyResourceSinkComponent sink;
+
+        /// <summary>
+        /// How much of its rating the pump is allowed to draw, 0..1, replicated both ways.
+        ///
+        /// <see cref="Core.HeatPumpDevice.PowerSetting"/> has existed since the device was
+        /// written, is read by its power demand and printed by the terminal as "throttled N%" —
+        /// and nothing wrote it, so it could only ever read 100%. The game has no model for a
+        /// custom slider's value, so it is carried here.
+        /// </summary>
+        private NetSync<float> powerSetting;
 
         /// <summary>
         /// What the pump requested on its last step, MW, which is the unit the resource system uses.
@@ -87,6 +98,26 @@ namespace Thermodynamics
             }
         }
 
+        /// <summary>Throttle setting, 0..1. Defaults to full rating.</summary>
+        public float PowerSetting
+        {
+            get { return powerSetting == null ? 1f : Clamp01(powerSetting.Value); }
+        }
+
+        /// <summary>Sets the throttle and replicates it. Called by the terminal slider.</summary>
+        public void SetPowerSetting(float value)
+        {
+            if (powerSetting == null) return;
+            powerSetting.Value = Clamp01(value);
+        }
+
+        private static float Clamp01(float value)
+        {
+            if (value < 0f) return 0f;
+            if (value > 1f) return 1f;
+            return value;
+        }
+
         public override void Init(MyObjectBuilder_EntityBase objectBuilder)
         {
             base.Init(objectBuilder);
@@ -97,6 +128,15 @@ namespace Thermodynamics
 
             try
             {
+                if (!NetworkAPI.IsInitialized)
+                {
+                    NetworkAPI.Init(Session.ModID, Settings.Name);
+                }
+
+                // One property, so its index on this entity is zero on every side. Anything added
+                // here later must go after it.
+                powerSetting = new NetSync<float>(this, TransferType.Both, 1f);
+
                 AttachSink();
             }
             catch (Exception e)

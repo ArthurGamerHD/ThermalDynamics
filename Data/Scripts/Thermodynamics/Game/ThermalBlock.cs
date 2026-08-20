@@ -50,6 +50,9 @@ namespace Thermodynamics
         /// </summary>
         public ThermalHeatPumpBlock HeatPump;
 
+        /// <summary>The coolant pump's switch and speed, or null when this is not a pump.</summary>
+        public ThermalCoolantPumpBlock CoolantPump;
+
         private MyResourceSourceComponent source;
         private MyResourceSinkComponent sink;
         private IMyThrust thrust;
@@ -144,6 +147,10 @@ namespace Thermodynamics
 
             // A heat pump is the only block with a two-way exchange with the game: the simulation
             // reports the draw it wants and the power system reports how much it supplied.
+            CoolantPump = fat.GameLogic == null
+                ? null
+                : fat.GameLogic.GetAs<ThermalCoolantPumpBlock>();
+
             if (ThermalHeatPumpShapes.IsHeatPump(Name))
             {
                 HeatPump = fat.GameLogic == null ? null : fat.GameLogic.GetAs<ThermalHeatPumpBlock>();
@@ -405,6 +412,28 @@ namespace Thermodynamics
         private void RefreshHeat()
         {
             if (Node != null) Node.RefreshHeatGeneration();
+        }
+
+        /// <summary>
+        /// Re-reads this block's thermal properties from the catalogue, after a profile's overlay
+        /// changed what its definition says.
+        ///
+        /// The model holds the properties by reference through <see cref="BlockInstance.Model"/>,
+        /// so a rebuilt catalogue entry reaches this block only by asking for it again — and the
+        /// node's cached capacity and generation are derived from it, so both are recomputed.
+        /// </summary>
+        public void RefreshProperties()
+        {
+            BlockModel model = ThermalBlockCatalog.Get(Block);
+            if (model == null) return;
+
+            Instance.Model = model;
+
+            if (Node == null) return;
+
+            Node.RefreshThermalMass();
+            Node.RefreshHeatGeneration();
+            Node.RefreshExposure();
         }
     }
 }

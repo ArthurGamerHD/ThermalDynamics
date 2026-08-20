@@ -26,6 +26,14 @@ namespace Thermodynamics.Core
         private PlanetThermalProperties planet = PlanetThermalProperties.Default();
 
         private bool topologyDirty;
+
+        /// <summary>
+        /// Set when the room flood fill has to run again, which is a much larger claim than
+        /// <see cref="topologyDirty"/>: the conduction graph is repaired proportionally to what
+        /// changed, while a remap walks the grid's bounding volume. Anything that alters what a
+        /// block seals sets both; a change to mounting alone sets only the first.
+        /// </summary>
+        private bool roomsDirty;
         private bool exposureDirty;
 
         /// <summary>Temperature new blocks start at, K.</summary>
@@ -144,42 +152,92 @@ namespace Thermodynamics.Core
         public double SimulatedSecondsRun { get; private set; }
 
         /// <summary>
-        /// Substeps a step is currently allowed, from <c>MaxLinkVisitsPerStep</c> and the size of
-        /// the conduction graph. <see cref="int.MaxValue"/> when the bound is switched off.
+        /// Watts this grid is shedding to its surroundings — radiation plus convection, counted
+        /// only where they take heat away. The answer to "is this ship able to cool itself at
+        /// all", which per-block temperatures cannot give.
+        /// </summary>
+        public float VentedWatts
+        {
+            get { return solver.LastVentedWatts; }
+        }
+
+        /// <summary>
+        /// Watts this grid is putting into itself: waste heat, sunlight, friction and registered
+        /// heat sources. Venting means nothing without it — a ship shedding a megawatt is coping
+        /// or overwhelmed depending on this figure.
+        /// </summary>
+        public float HeatGainWatts
+        {
+            get { return solver.LastHeatGainWatts; }
+        }
+
+        /// <summary>
+        /// Net watts the environment exchanged with the grid, negative when it is losing heat.
+        /// The signed form of <see cref="VentedWatts"/>, for a caller that wants to know a grid is
+        /// absorbing rather than shedding.
+        /// </summary>
+        public float EnvironmentWatts
+        {
+            get { return solver.LastEnvironmentWatts; }
+        }
+
+        /// <summary>
+        /// What one substep over this grid costs, in the units
+        /// <see cref="ThermalSettings.MaxElementVisitsPerStep"/> is expressed in: its links, plus
+        /// its nodes weighted by what a node is worth.
+        ///
+        /// Nodes are counted because a substep runs the environment pass once per node, which the
+        /// old link-only count could not see — see [element-cost.md](../../../../docs/element-cost.md).
+        /// Exposed faces are deliberately not counted: measured at a tenth to a half of a link
+        /// each, they are inside the noise of the two terms that are here.
+        /// </summary>
+        public long SubstepCost
+        {
+            get
+            {
+                return solver.LinkCount
+                    + ((long)ThermalSettings.NodeCostInLinks * solver.Nodes.Count);
+            }
+        }
+
+        /// <summary>
+        /// Substeps a step is currently allowed, from <c>MaxElementVisitsPerStep</c> and what one
+        /// substep over this grid costs. <see cref="int.MaxValue"/> when the bound is switched off.
         /// </summary>
         public int SubstepBudget
         {
             get
             {
-                int budgetVisits = settings.MaxLinkVisitsPerStep;
+                int budgetVisits = settings.MaxElementVisitsPerStep;
                 if (budgetVisits <= 0) return int.MaxValue;
 
-                int links = solver.LinkCount;
-                if (links <= 0) return int.MaxValue;
+                long cost = SubstepCost;
+                if (cost <= 0) return int.MaxValue;
 
-                int budget = budgetVisits / links;
-                return budget < 1 ? 1 : budget;
+                long budget = budgetVisits / cost;
+                if (budget < 1) return 1;
+                return budget > int.MaxValue ? int.MaxValue : (int)budget;
             }
         }
 
         /// <summary>
-        /// Longest step this grid can afford in simulated seconds, from the link visits a step is
-        /// allowed and the grid's current stiffness. Returns the full step whenever it fits.
+        /// Longest step this grid can afford in simulated seconds, from the element visits a step
+        /// is allowed and the grid's current stiffness. Returns the full step whenever it fits.
         ///
         /// Public so a benchmark can measure the bounded cost rather than the unbounded one; the
         /// two diverge on exactly the grids the budget exists for.
         /// </summary>
         public float AffordableStepSeconds(float seconds)
         {
-            int budgetVisits = settings.MaxLinkVisitsPerStep;
+            int budgetVisits = settings.MaxElementVisitsPerStep;
             if (budgetVisits <= 0) return seconds;
 
-            int links = solver.LinkCount;
-            if (links <= 0) return seconds;
+            long cost = SubstepCost;
+            if (cost <= 0) return seconds;
 
             // At least one substep whatever the grid size: a step that cannot afford a single
-            // pass over its links would not advance at all.
-            int substepBudget = budgetVisits / links;
+            // pass over its elements would not advance at all.
+            long substepBudget = budgetVisits / cost;
             if (substepBudget < 1) substepBudget = 1;
 
             float required = solver.RequiredSubsteps(seconds);
@@ -303,16 +361,84 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Call after a change to an existing block's sealing or mounting, such as a door opening
-        /// or a block finishing construction.
+        /// Call after a change to an existing block's geometry or mounting.
+        ///
+        /// Repairs everything that reads from the block's surfaces: the surface map, the
+        /// conduction links touching it, the coolant loops and heat pumps that bind to its ports,
+        /// and its own exposed faces. All of it is proportional to the block and its neighbours.
+        ///
+        /// The exception is sealing. What a block seals decides the shape of the rooms around it,
+        /// which only the flood fill can find, so a change to the sealing bits asks for a remap
+        /// and a change to mounting alone does not. Door state has its own path in
+        /// <see cref="RefreshBlockSealing"/>, which never needs the remap because a door is
+        /// already held as a portal between the same two rooms whether it is open or shut.
         /// </summary>
         public void RefreshBlock(BlockInstance block)
         {
             if (block == null) return;
+
+            // RefreshSurfaces allocates fresh arrays, so the old references are a free snapshot.
+            // Both layers are compared because they answer different questions: the structural one
+            // decides the shape of a room, the live one only which rooms currently reach open air.
+            int[] structuralBefore = block.StructuralSurfaces;
+            int[] liveBefore = block.SelfSurfaces;
+
             block.RefreshSurfaces();
             surfaces.RemoveBlock(block);
             surfaces.AddBlock(block);
-            MarkTopologyDirty();
+
+            // Contact area is the product of both ends' mount fractions, so every link touching
+            // this block now carries a conductance derived from geometry it no longer has.
+            solver.RefreshBlockLinks(block);
+
+            bool structuralChanged = !SameSurfaces(structuralBefore, block.StructuralSurfaces);
+            bool ventingChanged = !SameSurfaces(liveBefore, block.SelfSurfaces);
+
+            // A wall moved, or a door the last pass never saw: only the flood fill can answer.
+            if (structuralChanged || (ventingChanged && !rooms.Knows(block)))
+            {
+                MarkTopologyDirty();
+                return;
+            }
+
+            MarkLayoutDirty();
+
+            Begin(SimulationPhase.RoomMapping);
+
+            // The rooms are the same rooms; what may have changed is which of them reach open
+            // air through a portal. Skipped entirely when the sealing bits did not move, which is
+            // the ordinary case for a change to mounting alone.
+            bool venting = ventingChanged && rooms.Map.RefreshVenting();
+            End(SimulationPhase.RoomMapping);
+
+            Begin(SimulationPhase.Exposure);
+
+            // Its own faces are recounted regardless: the surface map has just been rebuilt
+            // underneath it, and this is one node's worth of work.
+            solver.RefreshExposureOf(block, rooms.Map);
+
+            if (venting)
+            {
+                solver.RefreshExposureAround(rooms.Map, rooms.Map.ChangedRooms);
+                solver.RebuildRoomAir(rooms.Map);
+            }
+            End(SimulationPhase.Exposure);
+        }
+
+        /// <summary>
+        /// Whether two of a block's per-cell surface arrays agree. A block keeps its cell count
+        /// across a refresh, so a length change means the model itself was swapped.
+        /// </summary>
+        private static bool SameSurfaces(int[] before, int[] after)
+        {
+            if (before == null || after == null) return false;
+            if (before.Length != after.Length) return false;
+
+            for (int i = 0; i < before.Length; i++)
+            {
+                if (before[i] != after[i]) return false;
+            }
+            return true;
         }
 
         /// <summary>
@@ -411,8 +537,21 @@ namespace Thermodynamics.Core
         /// <summary>
         /// Flags the conduction graph, room map and coolant loops as stale. Repeated calls
         /// before the next update collapse into one rebuild.
+        ///
+        /// Use <see cref="MarkLayoutDirty"/> instead when what a block seals cannot have changed:
+        /// that spares the flood fill, which is the expensive half.
         /// </summary>
         public void MarkTopologyDirty()
+        {
+            topologyDirty = true;
+            roomsDirty = true;
+        }
+
+        /// <summary>
+        /// Flags the conduction graph, coolant loops and heat pumps as stale, without asking for a
+        /// remap. For a change that cannot move a wall: mounting, ports, block properties.
+        /// </summary>
+        public void MarkLayoutDirty()
         {
             topologyDirty = true;
         }
@@ -442,6 +581,7 @@ namespace Thermodynamics.Core
             End(SimulationPhase.Exposure);
 
             topologyDirty = false;
+            roomsDirty = false;
             exposureDirty = false;
             appliedRevision = settings.Revision;
         }
@@ -583,7 +723,14 @@ namespace Thermodynamics.Core
                 // A pump is bound to the nodes either side of it, either of which may have
                 // changed.
                 solver.RebuildHeatPumps();
-                rooms.RequestRestart(grid);
+
+                // Only when something could have changed the shape of a room. A remap walks the
+                // grid's bounding volume; the rest of this branch is proportional to what moved.
+                if (roomsDirty)
+                {
+                    roomsDirty = false;
+                    rooms.RequestRestart(grid);
+                }
                 End(SimulationPhase.Topology);
             }
 

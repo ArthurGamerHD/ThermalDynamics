@@ -36,13 +36,15 @@ namespace Thermodynamics.Tests
 
         private static ThermalSettings Settings(int cap)
         {
-            ThermalSettings settings = new ThermalSettings();
+            // Pinned: substep demand is proportional to step length, so these figures are
+            // about the rate they were computed at.
+            ThermalSettings settings = new ThermalSettings { Frequency = 4 };
             settings.MaxSubstepsPerBlock = cap;
 
             // The two bounds that would otherwise hide what the floor does: one refuses the
             // substeps the estimate asks for, the other shortens the step instead of paying.
             settings.MaxSubsteps = 4096;
-            settings.MaxLinkVisitsPerStep = 0;
+            settings.MaxElementVisitsPerStep = 0;
             return settings.Derive();
         }
 

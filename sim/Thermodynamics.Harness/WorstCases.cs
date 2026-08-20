@@ -54,7 +54,7 @@ namespace Thermodynamics.Harness
 
             ThermalSettings created = new ThermalSettings();
             created.MaxSubsteps = 4096;
-            created.MaxLinkVisitsPerStep = 0;
+            created.MaxElementVisitsPerStep = 0;
             return created.Derive();
         }
 

@@ -249,6 +249,61 @@ namespace Thermodynamics.Core
         /// </summary>
         public bool CollectDiagnostics;
 
+        /// <summary>
+        /// Net watts the environment exchanged with the whole grid on the last substep: radiation
+        /// plus convection, negative when the grid is losing heat to its surroundings.
+        ///
+        /// Accumulated on the hot path rather than behind <see cref="CollectDiagnostics"/>,
+        /// because the question it answers — is this ship shedding more heat than it makes — is
+        /// one a player asks of a working ship rather than of an instrumented one. It costs one
+        /// add per node per substep against a pass that already reads both figures.
+        /// </summary>
+        public float LastEnvironmentWatts { get; private set; }
+
+        /// <summary>
+        /// Watts the grid vented on the last substep: the losing half of
+        /// <see cref="LastEnvironmentWatts"/>, as a positive number. Zero while a grid is net
+        /// absorbing, which a hull in sunlight or in hot atmosphere can be.
+        /// </summary>
+        public float LastVentedWatts
+        {
+            get { return LastEnvironmentWatts < 0f ? -LastEnvironmentWatts : 0f; }
+        }
+
+        /// <summary>
+        /// Watts the grid put into itself on the last substep: waste heat, solar gain and
+        /// aerodynamic friction. The figure to read <see cref="LastVentedWatts"/> against —
+        /// venting alone says nothing about whether a ship is coping.
+        /// </summary>
+        public float LastHeatGainWatts { get; private set; }
+
+        private float environmentWattsAccumulator;
+        private float heatGainAccumulator;
+
+        /// <summary>
+        /// Starts a substep's heat totals. Called from both stepping paths: the direct one, which
+        /// runs a whole substep in a call, and the spread one, which cuts each substep into
+        /// budgeted slices across frames. Publishing from only one of them is how the first
+        /// version of this reported zero on every real grid — the spread path is the one the game
+        /// takes.
+        /// </summary>
+        private void ResetEnvironmentTotals()
+        {
+            environmentWattsAccumulator = 0f;
+            heatGainAccumulator = 0f;
+        }
+
+        /// <summary>
+        /// Publishes a completed substep's heat totals, so the figures are an instantaneous rate
+        /// from the most recent pass rather than a sum that grows with the session. This matches
+        /// the per-node LastRadiationWatts beside them, which are also last-substep values.
+        /// </summary>
+        private void PublishEnvironmentTotals()
+        {
+            LastEnvironmentWatts = environmentWattsAccumulator;
+            LastHeatGainWatts = heatGainAccumulator;
+        }
+
         private readonly List<OverheatEvent> overheats = new List<OverheatEvent>();
 
         private readonly ThermalThresholds thresholds = new ThermalThresholds();
@@ -399,7 +454,7 @@ namespace Thermodynamics.Core
         /// <see cref="LastSubsteps"/> reports what was granted, and so what the step cost; this
         /// reports what was demanded, and keeps moving after the budget has bound. Scaled to a
         /// full step because the estimate is proportional to step length: measured on a step
-        /// already shortened to fit <c>MaxLinkVisitsPerStep</c>, it would duplicate the granted
+        /// already shortened to fit <c>MaxElementVisitsPerStep</c>, it would duplicate the granted
         /// figure.
         /// </summary>
         public float LastRequiredSubsteps { get; private set; }
@@ -505,6 +560,65 @@ namespace Thermodynamics.Core
             hottestNode = -1;
 
             return true;
+        }
+
+        /// <summary>
+        /// Rebuilds the conduction links of one block whose geometry or mounting changed.
+        ///
+        /// Contact area is a product of both blocks' mount fractions, so a change to one end
+        /// changes the conductance of every link touching it — the links are wrong rather than
+        /// merely stale. They are dropped and the node requeued for the same incremental link
+        /// build a freshly placed block takes, which costs the node's degree rather than the
+        /// grid.
+        ///
+        /// Exposure and room membership are not touched here: they follow from the surface map
+        /// and the room map, which the caller owns.
+        /// </summary>
+        /// <returns>False when the block has no node.</returns>
+        public bool RefreshBlockLinks(BlockInstance block)
+        {
+            if (block == null) return false;
+
+            ThermalNode node;
+            if (!nodesByKey.TryGetValue(block.Key, out node)) return false;
+
+            // A full rebuild is already due, or the node has never been linked: either way the
+            // links this would unpick do not exist yet.
+            if (linksDirty || node.PendingLinks) return true;
+
+            // Link indices move, so a step in flight would be summing watts against links that no
+            // longer mean what it read.
+            AbandonStep();
+
+            EnsureBuffers();
+            EnsureNodeChainCapacity(nodes.Count);
+            DropLinksOf(node);
+
+            node.PendingLinks = true;
+            pendingLinkNodes.Add(node);
+            return true;
+        }
+
+        /// <summary>
+        /// Recounts one block's exposed faces. The cheapest unit of exposure work there is: a
+        /// block whose own surfaces changed needs this even when no room around it moved.
+        /// </summary>
+        public void RefreshExposureOf(BlockInstance block, RoomMap rooms)
+        {
+            if (block == null) return;
+
+            ThermalNode node = GetNode(block);
+            if (node == null) return;
+
+            Work.ExposureRefreshes++;
+            Work.ExposureNodeVisits++;
+
+            surfaces.GetExposedFaces(block, rooms, exposureScratch);
+            for (int f = 0; f < Face.Count; f++)
+            {
+                node.ExposedFaces[f] = exposureScratch[f];
+            }
+            node.RefreshExposure();
         }
 
         public ThermalNode GetNode(BlockInstance block)
@@ -1665,10 +1779,14 @@ namespace Thermodynamics.Core
 
                 if (plan.Generating)
                 {
+                    float generated = 0f;
                     for (int i = from; i < to; i++)
                     {
-                        nodeWatts[i] += nodeGeneration[i];
+                        float generation = nodeGeneration[i];
+                        nodeWatts[i] += generation;
+                        generated += generation;
                     }
+                    heatGainAccumulator += generated;
                 }
                 if (diagnostics)
                 {
@@ -1715,6 +1833,7 @@ namespace Thermodynamics.Core
                     }
 
                     nodeWatts[i] += generation;
+                    heatGainAccumulator += generation;
                     if (diagnostics) ClearEnvironmentDiagnostics(i);
                     continue;
                 }
@@ -1809,6 +1928,12 @@ namespace Thermodynamics.Core
 
                 nodeWatts[i] += watts;
 
+                // Two adds against a pass that has already computed all four figures. The
+                // environment half is signed, so a grid absorbing more than it sheds reads
+                // positive and the venting figure derived from it reads zero.
+                environmentWattsAccumulator += radiationWatts + convectionWatts;
+                heatGainAccumulator += generation + solarWatts + frictionWatts;
+
                 if (!diagnostics) continue;
 
                 ThermalNode node = nodes[i];
@@ -1826,9 +1951,13 @@ namespace Thermodynamics.Core
 
         private void AccumulateEnvironment(ref EnvironmentState env, float h)
         {
+            ResetEnvironmentTotals();
+
             EnvironmentPlan plan = PlanEnvironment(ref env);
             AccumulateEnvironmentRange(ref env, ref plan, h, 0, nodes.Count);
             if (plan.SourcesEnabled) AccumulateHeatSources(ref env, plan.Diagnostics);
+
+            PublishEnvironmentTotals();
         }
 
         private void AccumulateHeatSources(ref EnvironmentState env, bool diagnostics)
@@ -1850,6 +1979,7 @@ namespace Thermodynamics.Core
                     if (watts == 0f) continue;
 
                     nodeWatts[i] += watts;
+                    heatGainAccumulator += watts;
                     if (diagnostics) nodes[i].LastHeatSourceWatts += watts;
                 }
             }

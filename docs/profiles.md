@@ -1,5 +1,81 @@
 # Balance profiles
 
+Five presets, in the shape a graphics menu uses: a ladder from *everything on, cost ignored* down
+to *cheap and quick*, with the pace of heat as a second axis crossing it.
+
+| Profile | Integration | Pace | For |
+| --- | --- | --- | --- |
+| `simulation` | 64 substeps, no cap, no budget | **real time** (1) | The reference. Real physics, and nothing you can watch. |
+| `optimized` | 6 / 6, budgeted | **real time** (1) | The same temperatures at the same moments, for less work. |
+| `simlite` | 3 / 3, tighter budget, no self-shadowing | **real time** (1) | Real physics, approximately drawn, for a crowded server. |
+| `responsive` | as simulation | tuned (225) | Simulation with the clock run fast. How the mod is meant to be played. |
+| `arcade` | as optimized | tuned (225) | Responsive's pace at optimized's price. |
+
+**`HeatTimeScale` is the clock, and 1 is real.** It divides every heat capacity, so anything above 1
+is thermal time running fast: a real ship at real heat capacity takes hours to change temperature,
+which is why the mod ships at 225 and why `simulation` — the profile that claims pure realism —
+is the one nobody plays on.
+
+**Real time is also the cheapest thing to integrate**, which is the opposite of what a maximum
+quality preset usually means. Stiffness is conductance over capacity, so dividing capacity by 225
+multiplies substep demand by 225. Measured on a 150-block hull with a 200 kW reactor in it:
+
+| `HeatTimeScale` | substeps demanded | hull after 5 simulated seconds |
+| ---: | ---: | ---: |
+| 1 | 0.00 | 293.3 K |
+| 225 | 0.90 | 319.8 K |
+| 3,600 | 14.40 | 440.5 K |
+
+Accuracy on this ladder costs patience, not frames. What costs frames is the pace.
+
+Two axes, and every profile is a point on both. `simulation`, `optimized` and `simlite` run at real
+time and descend in how finely that is integrated; `responsive` and `arcade` are `simulation` and
+`optimized` with the clock run fast.
+
+**A profile is the whole world, not a patch on it.** Applying one returns every setting it does not
+speak for to the shipped value first, so applying the same profile twice with tinkering in between
+lands in the same place both times. That is also why the settings menu has no reset button: a
+profile *is* the reset.
+
+## Each profile brings its own definitions
+
+Settings alone cannot make a coarse profile stable. A block's demand on the integrator is its
+conductance over its heat capacity, so a 16 kg light fitting with a metal's conductivity asks for
+twenty substeps while the armour around it asks for one — and a profile granting three is
+integrating that block outside the range its own physics is stable in. `MaxSubstepsPerBlock` floors
+exactly those blocks, which is a tolerance; an overlay is a balance.
+
+Each profile may ship a **definition overlay** in `Profiles/<name>.xml`, applied over what
+`Cubes.xml`, `Planets.xml` and `Loops.xml` loaded:
+
+| Profile | Overlay |
+| --- | --- |
+| `simulation` | **none, deliberately** |
+| `optimized` | decorative and electronic blocks given the materials they are actually made of |
+| `arcade` | the same as optimized |
+| `simlite` | that, plus a raised fallback specific heat and more coolant per pipe |
+| `responsive` | none — it grants the substeps to resolve its own pace |
+
+**The files live outside `Data/`**, and that is not tidiness: everything under `Data/` is loaded by
+the game and scanned by Definition Extensions, so a second `Cubes.xml` there would collide with the
+first. The mod reads these itself and applies them over the loaded definitions.
+
+**`simulation` has no overlay and must not get one.** It runs the shipped definitions exactly, which
+is what makes it the reference every other configuration is measured against — and what stops a
+benchmark quietly becoming a comparison between two sets of definitions rather than between two
+settings. `ThermalProfileOverlays.Benchmarking` forces that state, and the performance report never
+reads an overlay.
+
+An overlay states only what it changes. A `Block` entry with no subtype reaches every block,
+including the ones no definition file mentions — which on an ordinary world is most of them, and is
+where a stiffness problem usually lives. A named subtype refines that, and later entries win. A
+misspelled property is reported in the log rather than silently doing nothing.
+
+`ProfileTests` holds the ladder to account: each fast profile must carry heat further than the one
+it is built from, and `arcade` must reach within a tenth of `responsive`, since it is meant to be
+the same physics tuned rather than different physics. That check is made at the fast pace on
+purpose — at real time both numbers are nearly zero and would prove nothing.
+
 Where [balance.md](balance.md) asks whether a block is worth building, this asks whether a *world
 configuration* is worth running. Three commands:
 

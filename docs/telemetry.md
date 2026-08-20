@@ -114,7 +114,7 @@ controls, and a frame closed before its grids have run records nothing.
 
 ## Grids running below real time
 
-`MaxLinkVisitsPerStep` bounds what one solver step may cost, and a grid large enough to reach it
+`MaxElementVisitsPerStep` bounds what one solver step may cost, and a grid large enough to reach it
 takes **shorter steps rather than coarser ones** — advancing less simulated time at exactly the
 same accuracy. See [configuration.md](configuration.md#solver).
 
@@ -200,6 +200,45 @@ record could outlive the clock its timestamps came from and go on accumulating o
 aggregate. It now detaches those references with the list. Whether that was the cause is a question
 for the next dump — a report written while the world was closing could equally explain it.
 
+## Grid heat balance
+
+`vented W` and `made W` per grid: what the grid sheds to its surroundings by radiation and
+convection, and what it puts into itself through waste heat, sunlight, friction and registered heat
+sources. Sampled per step from figures the solver accumulates on the hot path rather than behind
+`CollectDiagnostics`, because the question they answer — can this ship cool itself — is one asked
+of a working ship rather than an instrumented one.
+
+At equilibrium the two are equal. A grid whose `made` exceeds its `vented` is storing the
+difference, and its temperatures will keep climbing until radiation catches up or something melts.
+Venting reads zero rather than going negative while a grid is net absorbing, which a hull in
+sunlight or in warm atmosphere legitimately is.
+
+Measured cost of collecting them: none detectable. The per-node figures were already computed by
+the pass that walks every node each substep, so this is two adds; a before-and-after run of
+`bench elements` at a hundred thousand nodes moved the per-node cost from 6.1–6.6 ns to 5.8 ns,
+which is inside that benchmark's run-to-run spread.
+
+## Room pressure sweep
+
+`of which room pressure` in the cost table times the per-compartment sweep that asks the game how
+full each room is. It is nested inside grid simulation like the other stages, but the host drives
+it rather than the simulation, so it is timed by an explicit start and stop rather than through a
+simulation phase.
+
+Four counters sit beside it, per grid:
+
+| Field | Meaning |
+| --- | --- |
+| `room pressure sweeps` | sweeps run, with compartments visited and game API calls made |
+| `of which read vents` | how many sweeps needed the air-vent fallback, and how many vents those walked |
+
+The counters are the point. A millisecond figure on a twelve-room ship cannot answer whether the
+sweep scales badly on a station with thousands of compartments, because the answer is proportional
+to compartment count and the ship has twelve. `game calls` divided by `compartments` should stay at
+exactly two; `read vents` should stay at or near zero on a world whose gas system answers, and a
+number close to the sweep count means something is permanently unanswered — see
+[known-issues.md](known-issues.md).
+
 ## Work counters
 
 Alongside the millisecond figures, the simulation counts what its one-shot stages *touched*:
@@ -244,7 +283,7 @@ rows per live block, on every grid in the world.
 | `face_cells` | cell faces on that side — the four counts below sum to this |
 | `exposed` | cell faces the model counts as open to the sky |
 | `sealed` | rejected: something airtight on the other side |
-| `mounted` | rejected: two mount surfaces bolted together |
+| `mounted` | of the exposed faces, how many also carry a mount joint — a grating or catwalk bolted flat against a face that still sees the sky. A subset of `exposed`, not a rejection. |
 | `interior` | rejected: the space beyond is a sealed room, not outdoors |
 | `sun_dot` | how square the face is to the sun, −1..1 |
 | `sun_lit_fraction` | the share of *this face* the sun reaches, from the shadow map — per face, since the far layer of a wall is dark toward the sun and lit on the flank |

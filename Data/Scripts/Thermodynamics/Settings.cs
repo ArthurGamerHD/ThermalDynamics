@@ -133,7 +133,7 @@ namespace Thermodynamics
         /// </summary>
         [ProtoMember(37)] public bool ClampEnvironmentOvershoot = true;
         [ProtoMember(31)] public bool DamageIsPerSecond = true;
-        [ProtoMember(32)] public int Frequency = 4;
+        [ProtoMember(32)] public int Frequency = 8;
         [ProtoMember(33)] public float SimulationSpeed = 1f;
         [ProtoMember(34)] public float HeatTimeScale = 225f;
 
@@ -143,13 +143,23 @@ namespace Thermodynamics
         /// smoothness on large grids by advancing less simulated time rather than by coarsening the
         /// substeps, so accuracy is unaffected.
         /// </summary>
-        [ProtoMember(35)] public int MaxLinkVisitsPerStep = 1000000;
+        /// <summary>
+        /// Most element visits one solver step may make — substeps times its links plus its nodes
+        /// weighted by what a node costs. Zero removes the bound.
+        ///
+        /// This was <c>MaxLinkVisitsPerStep</c> and counted links alone, which could not see the
+        /// environment pass a substep runs per node. A world's config written before the rename
+        /// has no element for this field and takes the default, deliberately: the old number
+        /// meant something else, so carrying it over would import a value into the wrong unit.
+        /// See [element-cost.md](../../../docs/element-cost.md).
+        /// </summary>
+        [ProtoMember(35)] public int MaxElementVisitsPerStep = 1000000;
 
         /// <summary>
         /// Most substeps one solver step may divide itself into. See the core setting of the same
         /// name: the ceiling on the stability estimate.
         /// </summary>
-        [ProtoMember(36)] public int MaxSubsteps = 16;
+        [ProtoMember(36)] public int MaxSubsteps = 64;
 
         /// <summary>
         /// Most substeps any single block may demand of the whole grid before its heat capacity is
@@ -255,7 +265,7 @@ namespace Thermodynamics
             if (Frequency < 1) Frequency = 1;
             if (SimulationSpeed <= 0f) SimulationSpeed = 1f;
             if (HeatTimeScale <= 0f) HeatTimeScale = 1f;
-            if (MaxLinkVisitsPerStep < 0) MaxLinkVisitsPerStep = 0;
+            if (MaxElementVisitsPerStep < 0) MaxElementVisitsPerStep = 0;
             if (MaxSubsteps < 1) MaxSubsteps = 1;
             if (MaxSubstepsPerBlock < 0) MaxSubstepsPerBlock = 0;
             if (TelemetrySampleStride < 1) TelemetrySampleStride = 1;
@@ -312,6 +322,29 @@ namespace Thermodynamics
             Core.ThermalSettings bundle = new Core.ThermalSettings();
             if (!Core.ThermalProfiles.Apply(bundle, name)) return false;
 
+            // A profile is the whole world, not a patch on it. Everything the profile does not
+            // speak for goes back to the shipped value first, so applying one twice with tinkering
+            // in between lands in the same place both times — and so that `default` is a reset,
+            // which is why the menu no longer carries a separate reset button.
+            Settings shipped = GetDefaults();
+            List<string> names = Names();
+
+            for (int i = 0; i < names.Count; i++)
+            {
+                string setting = names[i];
+
+                // What is drawn on a player's own screen is theirs; a profile is world balance.
+                if (ClientOwned.Contains(setting)) continue;
+
+                SetValue(setting, shipped.GetValue(setting));
+            }
+
+            // The profile's definition overlay goes with its settings: a preset that grants three
+            // substeps needs definitions that are stable at three, and no setting can fix a
+            // stiffness that belongs to a definition. Chosen before the values are applied so the
+            // rebuild below reads the right ones.
+            ThermalProfileOverlays.Use(name);
+
             Frequency = bundle.Frequency;
             SimulationSpeed = bundle.SimulationSpeed;
             HeatTimeScale = bundle.HeatTimeScale;
@@ -323,7 +356,33 @@ namespace Thermodynamics
             SolarSelfShadowing = bundle.SolarSelfShadowing;
 
             Apply();
+
+            // Block properties are cached per definition, so a new overlay reaches nothing until
+            // the cache is dropped and the grids rebuild against it.
+            ThermalBlockCatalog.Clear();
+            RebuildGrids();
+
             return true;
+        }
+
+        /// <summary>
+        /// Rebuilds every live grid's view of the definitions, after something changed what a
+        /// definition says. Not cheap, and not something that happens outside a profile change.
+        /// </summary>
+        private static void RebuildGrids()
+        {
+            try
+            {
+                IList<ThermalGrid> grids = ThermalGrid.LiveGrids;
+                for (int i = 0; grids != null && i < grids.Count; i++)
+                {
+                    if (grids[i] != null) grids[i].RefreshDefinitions();
+                }
+            }
+            catch (Exception e)
+            {
+                MyLog.Default.Info("[" + Name + "] failed to rebuild grids after a profile change\n" + e);
+            }
         }
 
         /// <summary>
@@ -333,6 +392,13 @@ namespace Thermodynamics
         public void Apply()
         {
             Clamp();
+
+            // Every path that changes a setting ends here — the chat commands, the settings menu,
+            // the mod API and a profile change — so this is the one place a server has to publish
+            // from, and the one place that knows the file is now behind. A client applying a value
+            // it just received is guarded inside the sync and never marks the file dirty.
+            SettingsSync.Publish(this);
+            if (this == Instance && !SettingsSync.Applying) SavePending = true;
             if (core == null) core = new Core.ThermalSettings();
 
             core.EnableEnvironment = EnableEnvironment;
@@ -356,7 +422,7 @@ namespace Thermodynamics
             core.Frequency = Frequency;
             core.SimulationSpeed = SimulationSpeed;
             core.HeatTimeScale = HeatTimeScale;
-            core.MaxLinkVisitsPerStep = MaxLinkVisitsPerStep;
+            core.MaxElementVisitsPerStep = MaxElementVisitsPerStep;
             core.MaxSubsteps = MaxSubsteps;
             core.MaxSubstepsPerBlock = MaxSubstepsPerBlock;
 
@@ -384,6 +450,20 @@ namespace Thermodynamics
         // ---- access by name ----------------------------------------------------------------
 
         /// <summary>
+        /// The settings a client owns for itself: what it draws on its own screen. Everything else
+        /// in <see cref="Names"/> is world state belonging to the server.
+        ///
+        /// Held here rather than only in the settings menu because two things need the same
+        /// answer — the menu, deciding what a client may edit, and the replication, deciding what
+        /// the server may overwrite. A server pushing its own overlay choice onto every player's
+        /// screen is the failure this prevents.
+        /// </summary>
+        public static readonly HashSet<string> ClientOwned = new HashSet<string>
+        {
+            "DebugTextOnScreen", "DebugSolarRaycast", "DebugWindRaycast", "DebugBlockOverlay",
+        };
+
+        /// <summary>
         /// Every setting a player or mod may change at runtime, in display order. Booleans are 0
         /// and 1.
         /// </summary>
@@ -400,7 +480,7 @@ namespace Thermodynamics
                 "EnableFriction", "EnableDamage", "EnableCoolantLoops", "EnableRoomAir",
                 "EnableHeatPumps",
                 "ClampConductionOvershoot", "ClampEnvironmentOvershoot", "DamageIsPerSecond",
-                "Frequency", "SimulationSpeed", "HeatTimeScale", "MaxLinkVisitsPerStep",
+                "Frequency", "SimulationSpeed", "HeatTimeScale", "MaxElementVisitsPerStep",
                 "MaxSubsteps", "MaxSubstepsPerBlock",
                 "VacuumTemperature", "SolarEnergy", "FrictionAtSpeedsAbove", "FrictionScale",
                 "RoomConvectionCoefficient", "RoomAirDensity", "SolarOcclusionInterval",
@@ -443,7 +523,7 @@ namespace Thermodynamics
                 case "Frequency": return Frequency;
                 case "SimulationSpeed": return SimulationSpeed;
                 case "HeatTimeScale": return HeatTimeScale;
-                case "MaxLinkVisitsPerStep": return MaxLinkVisitsPerStep;
+                case "MaxElementVisitsPerStep": return MaxElementVisitsPerStep;
                 case "MaxSubsteps": return MaxSubsteps;
                 case "MaxSubstepsPerBlock": return MaxSubstepsPerBlock;
                 case "VacuumTemperature": return VacuumTemperature;
@@ -503,7 +583,7 @@ namespace Thermodynamics
                 case "Frequency": Frequency = (int)value; return true;
                 case "SimulationSpeed": SimulationSpeed = value; return true;
                 case "HeatTimeScale": HeatTimeScale = value; return true;
-                case "MaxLinkVisitsPerStep": MaxLinkVisitsPerStep = (int)value; return true;
+                case "MaxElementVisitsPerStep": MaxElementVisitsPerStep = (int)value; return true;
                 case "MaxSubsteps": MaxSubsteps = (int)value; return true;
                 case "MaxSubstepsPerBlock": MaxSubstepsPerBlock = (int)value; return true;
                 case "VacuumTemperature": VacuumTemperature = value; return true;
@@ -606,6 +686,18 @@ namespace Thermodynamics
 
                     Settings loaded = MyAPIGateway.Utilities.SerializeFromXML<Settings>(text);
 
+                    // Renamed when the step budget stopped counting links alone. The old element
+                    // deserialises into nothing, and that is intended — the two settings are in
+                    // different units — but a world that had tuned it deserves to be told rather
+                    // than left wondering why its value stopped applying.
+                    if (text.IndexOf("MaxLinkVisitsPerStep", StringComparison.Ordinal) >= 0)
+                    {
+                        MyLog.Default.Info("[" + Name + "] MaxLinkVisitsPerStep is now"
+                            + " MaxElementVisitsPerStep and counts nodes as well as links;"
+                            + " the old value was not carried over. Default "
+                            + settings.MaxElementVisitsPerStep + " is in force.");
+                    }
+
                     if (loaded.Version != CurrentVersion)
                     {
                         MyLog.Default.Info("[" + Name + "] config version " + loaded.Version
@@ -629,6 +721,38 @@ namespace Thermodynamics
 
             settings.Clamp();
             return settings;
+        }
+
+        /// <summary>
+        /// True when a setting has changed since the file was last written.
+        ///
+        /// Every change is saved, rather than waiting for someone to press a button — a menu that
+        /// asks you to confirm what you already did is asking you to do it twice, and a setting
+        /// that reverts on reload because the button was missed is worse than either. The write
+        /// itself is deferred a moment by <see cref="FlushPending"/> so that dragging a slider is
+        /// one write rather than one per pixel.
+        /// </summary>
+        public static bool SavePending;
+
+        /// <summary>
+        /// Writes the config file when a change is waiting and the world can be written to.
+        /// Called once a second from the session; cheap when nothing has changed.
+        /// </summary>
+        public static void FlushPending()
+        {
+            if (!SavePending || Instance == null) return;
+
+            try
+            {
+                if (MyAPIGateway.Session == null || !MyAPIGateway.Session.IsServer) return;
+
+                SavePending = false;
+                Save(Instance);
+            }
+            catch (Exception e)
+            {
+                MyLog.Default.Info("[" + Name + "] deferred save failed\n" + e);
+            }
         }
 
         public static void Save(Settings settings)

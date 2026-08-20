@@ -17,7 +17,7 @@ into atmosphere and into the air of sealed rooms, arrives from the sun, and — 
 * **Isolated.** Every mechanism has its own switch, and switching one off removes exactly its own
   cost. Switches take effect on the next step, with no reload.
 * **Tested.** The simulation is a pure library with no dependency on the game session, built and
-  tested outside it — 679 tests, 24 deterministic scenarios and a load benchmark that goes to a
+  tested outside it — 957 tests, 24 deterministic scenarios and a load benchmark that goes to a
   million blocks in one grid.
 * **Open.** Everything the simulation knows is readable and everything it does is drivable from
   another mod, through a delegate table passed by mod message. See [docs/api.md](docs/api.md).
@@ -68,10 +68,11 @@ into atmosphere and into the air of sealed rooms, arrives from the sun, and — 
 8. Press **Ctrl+Shift+S** for the settings menu: every value in the config file, with a slider or a
    switch and a description of what it does.
 9. `/thermal settings` lists every switch; `/thermal set <name> <value>` changes one live.
-10. `/thermal profile` lists five ready-made bundles from `simulation` to `arcade`;
-    `/thermal profile arcade` applies one live. See
-    [docs/configuration.md](docs/configuration.md#profiles) — the shipped default is the slowest
-    of them, deliberately.
+10. `/thermal profile` lists the five presets; `/thermal profile arcade` applies one live. They
+    are a ladder on two axes — how faithfully the simulation is integrated, and how fast heat is
+    made to move. **A fresh world runs `responsive`**: simulation's integration with the clock run
+    at the tuned pace. `simulation` itself is real time, which is physically honest and far too
+    slow to play on. See [docs/profiles.md](docs/profiles.md).
 
 ## Documentation
 
@@ -88,6 +89,7 @@ into atmosphere and into the air of sealed rooms, arrives from the sun, and — 
 | [docs/telemetry.md](docs/telemetry.md) | Session data collection and what the report contains. |
 | [docs/development.md](docs/development.md) | Building, deploying, repo layout, conventions. |
 | [docs/known-issues.md](docs/known-issues.md) | Confirmed defects, unfinished systems and deliberate limits. |
+| [docs/backlog.md](docs/backlog.md) | Every open item across these documents, categorised, one line each. |
 | [docs/bugs-and-performance.md](docs/bugs-and-performance.md) | Findings from putting the simulation under test. |
 | [docs/engine-api-notes.md](docs/engine-api-notes.md) | Engine APIs this mod reimplements by hand, and what it could use instead. |
 | [docs/se2-research.md](docs/se2-research.md) | What the Space Engineers 2 assemblies contain, and what an SE2 adapter would bind to. |
@@ -96,6 +98,8 @@ into atmosphere and into the air of sealed rooms, arrives from the sun, and — 
 | [docs/memory.md](docs/memory.md) | Where a grid's memory goes, and what can be given back. |
 | [docs/load-and-hitching.md](docs/load-and-hitching.md) | What a grid costs as it grows, what was making it stutter, and what still does. |
 | [docs/benchmarks.md](docs/benchmarks.md) | The performance report: cost by size, by feature and by configuration, and how to diff two runs. |
+| [docs/settings-redesign.md](docs/settings-redesign.md) | The plan for the menu, the config file and the definition files as one surface. |
+| [docs/element-cost.md](docs/element-cost.md) | What a substep spends per node, per link and per exposed face, and what the step budget should charge. |
 | [docs/stiffness.md](docs/stiffness.md) | Why a handful of light fittings set the cost of a capital ship, and what to do about it. |
 | [sim/README.md](sim/README.md) | The isolated simulation environment: running the tests and scenarios. |
 
@@ -107,7 +111,7 @@ game compiles it. The projects under [sim/](sim) link the same files so it can b
 profiled outside the game:
 
 ```bash
-cd sim && dotnet test                                  # 679 tests
+cd sim && dotnet test                                  # 957 tests
 dotnet run --project Thermodynamics.Sim -- run all     # scenario suite
 dotnet run --project Thermodynamics.Sim -- bench scale # cost from 8k to 1M blocks
 ```

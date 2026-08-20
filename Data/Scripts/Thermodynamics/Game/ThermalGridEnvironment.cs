@@ -266,7 +266,9 @@ namespace Thermodynamics
             row.Underground = sample.IsUnderground;
             row.Depth = sample.Depth;
             row.WeatherAmbientOffset = state.WeatherTemperatureOffset;
-            row.ConvectionCoefficient = state.ConvectionCoefficient;
+            // The blended figure, which is what the surface exchanges at. The raw coefficient
+            // reads as 50 W/(m2 K) in a vacuum, because the density term lives on the transfer.
+            row.ConvectionCoefficient = state.EffectiveConvectionCoefficient;
             row.SolarEnergy = state.SolarEnergy;
             row.SolarOcclusion = state.SolarOcclusion;
             row.WindSpeed = state.WindSpeed;
@@ -415,7 +417,11 @@ namespace Thermodynamics
             PlanetThermalProperties properties;
             if (PlanetProperties.TryGetValue(planet.Entity.EntityId, out properties)) return properties;
 
-            properties = ThermalBlockCatalog.ToPlanetProperties(planet.Definition());
+            properties = ThermalBlockCatalog.ToPlanetProperties(
+                planet.Definition(),
+                planet.Entity == null || !planet.Entity.DefinitionId.HasValue
+                    ? ""
+                    : planet.Entity.DefinitionId.Value.SubtypeName);
             PlanetProperties[planet.Entity.EntityId] = properties;
             return properties;
         }

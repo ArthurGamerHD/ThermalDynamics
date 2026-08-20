@@ -495,6 +495,10 @@ namespace Thermodynamics.Harness
         private static ThermalSettings Configure(int cap, string profile, bool featuresOn)
         {
             ThermalSettings settings = new ThermalSettings();
+            // Settings only. A profile's definition overlay is deliberately not read here: a
+            // comparison is about settings, and one that also swapped the definitions underneath
+            // would be measuring two things at once and could not say which moved. The game side
+            // enforces the same rule through ThermalProfileOverlays.Benchmarking.
             if (profile != null) ThermalProfiles.Apply(settings, profile);
 
             if (!featuresOn)

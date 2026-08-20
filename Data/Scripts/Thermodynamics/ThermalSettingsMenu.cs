@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Text;
 using RichHudFramework.Client;
 using RichHudFramework.UI;
 using RichHudFramework.UI.Client;
@@ -89,7 +91,15 @@ namespace Thermodynamics
             { "EnableRoomAir", new Entry(Systems, "Room air", "Sealed rooms hold an air mass that carries heat.", 0, 1) },
             { "EnableHeatPumps", new Entry(Systems, "Heat pumps", "The block that moves heat up a gradient for an electrical cost.", 0, 1) },
 
-            { "ClampConductionOvershoot", new Entry(Solver, "Clamp conduction overshoot", "Stops a step from pushing two blocks past each other's temperature. Leave on.", 0, 1) },
+            // These four had no entry at all, so they fell through to "Other — not yet described"
+            // at the bottom of the page, unlabelled and untooltipped. They are the four the field
+            // tuning is entirely about: what a step costs and whether it stays stable.
+            { "MaxSubsteps", new Entry(Solver, "Substep ceiling", "Most substeps one step may divide itself into. The stability estimate asks for as many as the stiffest block needs; this is the ceiling on granting it, and reaching it is reported as a clamped step.", 1, 64, true) },
+            { "MaxSubstepsPerBlock", new Entry(Solver, "Per-block cap", "Most substeps any single block may demand of the whole grid before its heat capacity is floored. 0 leaves every block alone. A handful of light fittings otherwise set the cost of a whole ship. Raise the substep ceiling with it.", 0, 32, true) },
+            { "MaxElementVisitsPerStep", new Entry(Solver, "Step budget", "Most element visits one step may make — substeps times links plus four times nodes — before the step is shortened to fit. 0 removes the bound. Trades simulation rate for frame smoothness on very large grids.", 0, 4000000, true) },
+            { "ClampEnvironmentOvershoot", new Entry(Solver, "Clamp environment", "Stops radiation or convection carrying a block past ambient in one substep. Leave on.", 0, 1) },
+
+            { "ClampConductionOvershoot", new Entry(Solver, "Clamp conduction", "Stops a step from pushing two blocks past each other's temperature. Leave on.", 0, 1) },
             { "DamageIsPerSecond", new Entry(Solver, "Damage is per second", "Overheat damage scaled to real time rather than to the step.", 0, 1) },
             { "Frequency", new Entry(Solver, "Frequency", "Solver steps per second of simulated time. Higher is finer and costlier.", 1, 60, true) },
             { "SimulationSpeed", new Entry(Solver, "Simulation speed", "Multiplier on how fast heat moves. 1 is the tuned pace.", 0.1f, 10f) },
@@ -123,13 +133,44 @@ namespace Thermodynamics
         /// The settings a client may change for itself. Everything else is world state owned by the
         /// server, matching <c>/thermal set</c>.
         /// </summary>
-        private static readonly HashSet<string> ClientSide = new HashSet<string>
+        private static HashSet<string> ClientSide
         {
-            "DebugTextOnScreen", "DebugSolarRaycast", "DebugWindRaycast", "DebugBlockOverlay",
-        };
+            get { return Settings.ClientOwned; }
+        }
 
         private static bool initialised;
+
+        /// <summary>
+        /// The page the menu opens on. Kept for <see cref="Open"/>; the others are reached from
+        /// the framework's own page list down the side.
+        /// </summary>
         private static ControlPage page;
+
+        /// <summary>
+        /// Every setting's control, by setting name, so a change made anywhere — a slider, a
+        /// profile, a reset, or the server pushing new values — can be reflected in all of them
+        /// rather than only the one that was touched.
+        /// </summary>
+        private static readonly Dictionary<string, TerminalControlBase> Controls =
+            new Dictionary<string, TerminalControlBase>();
+
+        /// <summary>What a fresh install ships with, to mark what has been changed away from.</summary>
+        private static Settings shipped;
+
+        /// <summary>
+        /// The status page: the one place in this menu where a sentence survives.
+        ///
+        /// Everything else here is a <see cref="TerminalLabel"/>, which the framework draws as one
+        /// centred line and clips at both ends — a paragraph put in one arrives with its beginning
+        /// and its end cut off. A <see cref="TextPage"/> wraps and scrolls, so the full warning,
+        /// the names of every changed setting and the sync digest live here, and the labels on the
+        /// overview stay short enough to read.
+        /// </summary>
+        private static TextPage statusPage;
+
+        private static TerminalLabel statusLabel;
+        private static TerminalLabel profileLabel;
+        private static TerminalLabel warningLabel;
 
         /// <summary>
         /// Requests registration with Rich HUD Master. The framework responds on its own schedule, or
@@ -178,37 +219,747 @@ namespace Thermodynamics
         private static void OnReset()
         {
             page = null;
+            Controls.Clear();
             ThermalDebugPanel.Reset();
             ThermalHud.Reset();
         }
 
+        /// <summary>
+        /// Pages, and which sections each one carries.
+        ///
+        /// One page per job rather than one page for everything. Forty-five settings on a single
+        /// scroll is a list to be searched by eye; an administrator arrives wanting the solver, or
+        /// the environment, and should be one click from it. The framework lists pages down the
+        /// side, so this is navigation the menu previously had and did not use.
+        /// </summary>
+        /// <summary>
+        /// One page of the menu: its name, and the settings on it.
+        ///
+        /// Named explicitly rather than derived from the mechanism sections, because the split that
+        /// matters to someone tuning a world does not follow the code's own categories. The solver
+        /// section holds both "what a step costs" and "how fast heat moves", which are different
+        /// questions, asked by different people, on different days.
+        /// </summary>
+        private struct Leaf
+        {
+            public string Name;
+            public string[] Settings;
+
+            public Leaf(string name, params string[] settings)
+            {
+                Name = name;
+                Settings = settings;
+            }
+        }
+
+        /// <summary>
+        /// A folder in the terminal's page list, and the pages inside it.
+        ///
+        /// The framework renders these as collapsible groups down the side — its own settings menu
+        /// is built this way and this mod had never used them. Two levels of navigation is what
+        /// turns forty-eight settings from a list to be scrolled into a map to be read once.
+        /// </summary>
+        private struct Folder
+        {
+            public string Name;
+            public Leaf[] Pages;
+
+            public Folder(string name, params Leaf[] pages)
+            {
+                Name = name;
+                Pages = pages;
+            }
+        }
+
+        /// <summary>
+        /// The menu, as it appears down the side. A setting named nowhere here still gets a
+        /// control: whatever is left over lands on a final page, so a setting added to the config
+        /// and forgotten here is reachable rather than invisible.
+        /// </summary>
+        private static readonly Folder[] Folders =
+        {
+            new Folder("Solver",
+                new Leaf("Cost limits",
+                    "MaxSubsteps", "MaxSubstepsPerBlock", "MaxElementVisitsPerStep",
+                    "ClampConductionOvershoot", "ClampEnvironmentOvershoot"),
+                new Leaf("Pace",
+                    "Frequency", "SimulationSpeed", "HeatTimeScale")),
+
+            // One system to a page, its own switch at the top of it. Four switches used to sit
+            // together on a "Mechanisms" page because they were all switches, which is filing by
+            // part of speech: switching convection off belongs above the convection dials, where
+            // you can see what it governs.
+            new Folder("Heat transfer",
+                new Leaf("Ambient",
+                    "EnableEnvironment", "VacuumTemperature"),
+                new Leaf("Conduction",
+                    "EnableConduction"),
+                new Leaf("Radiation",
+                    "EnableRadiation"),
+                new Leaf("Convection",
+                    "EnableConvection"),
+                new Leaf("Solar",
+                    "EnableSolarHeat", "SolarEnergy"),
+                new Leaf("Occlusion",
+                    // Self-shadowing is what a grid does to itself, which is occlusion by any
+                    // reading; it sat under Solar because that is where its setting name starts.
+                    "SolarSelfShadowing", "SolarGridShadows",
+                    "SolarOcclusionPlanets", "SolarOcclusionVoxels",
+                    "SolarOcclusionTerrain", "SolarTerrainRange",
+                    "SolarOcclusionSamples", "SolarOcclusionInterval")),
+
+            new Folder("Ship systems",
+                new Leaf("Coolant loops",
+                    "EnableCoolantLoops"),
+                new Leaf("Heat pumps",
+                    "EnableHeatPumps", "HeatPumpCarnotFraction", "HeatPumpMaxCoefficient"),
+                new Leaf("Room air",
+                    "EnableRoomAir", "RoomConvectionCoefficient", "RoomAirDensity"),
+                new Leaf("Waste heat",
+                    "EnableWasteHeat"),
+                new Leaf("Friction",
+                    "EnableFriction", "FrictionAtSpeedsAbove", "FrictionScale"),
+                new Leaf("Overheat damage",
+                    "EnableDamage", "DamageIsPerSecond"),
+                new Leaf("Point sources",
+                    "EnableHeatSources")),
+
+            new Folder("World",
+                new Leaf("Climate",
+                    "EnablePlanets", "ClimateGroundInfluence", "ClimateWeatherInfluence")),
+        };
+
+        /// <summary>
+        /// A line for a page whose settings do not yet fill it, saying where the rest of that
+        /// system's numbers currently live.
+        ///
+        /// A page with one switch on it looks broken. It is not — it is a system whose remaining
+        /// dials are in a definition file the menu does not reach yet, and saying so is better
+        /// than leaving a reader to wonder. Each of these disappears as its file is brought in;
+        /// see [settings-redesign.md](../../../../docs/settings-redesign.md).
+        /// </summary>
+        private static readonly Dictionary<string, string> PageNotes = new Dictionary<string, string>
+        {
+            { "Conduction", "A block's conductivity is its own, from Cubes.xml" },
+            { "Radiation", "Emissivity and exposed area are per block, from Cubes.xml" },
+            { "Convection", "The coefficient is the planet's, from Planets.xml" },
+            { "Coolant loops", "Flow rate and coolant mass are in Loops.xml" },
+            { "Waste heat", "How much each block wastes is in Cubes.xml" },
+            { "Point sources", "Registered by other mods through the API" },
+            { "Climate", "Temperatures and lapse rate are in Planets.xml" },
+        };
+
+        /// <summary>
+        /// The debug page: what this mod draws on your screen, and what it writes to disk.
+        ///
+        /// Its own page at the root rather than a corner of a display section, because it is the
+        /// page someone opens while something is wrong. The first four belong to you whatever the
+        /// server says; the telemetry pair belongs to the world.
+        /// </summary>
+        private static readonly Leaf DebugPage = new Leaf("Debug",
+            "DebugTextOnScreen", "DebugBlockOverlay", "DebugSolarRaycast", "DebugWindRaycast",
+            "RoomOverlayMinKelvin", "RoomOverlayMaxKelvin",
+            "EnableTelemetry", "TelemetrySampleStride");
+
+        /// <summary>
+        /// Live figures per page, refreshed with everything else.
+        ///
+        /// Several short labels rather than one long one. A <see cref="TerminalLabel"/> is a single
+        /// centred line that clips at both ends rather than wrapping — in game, a sentence of any
+        /// length arrives with its beginning and its end cut off — so every figure gets its own
+        /// line and every line stays inside about twenty-two characters.
+        /// </summary>
+        private static readonly Dictionary<string, List<TerminalLabel>> Readouts =
+            new Dictionary<string, List<TerminalLabel>>();
+
+        /// <summary>Lines a readout tile holds, which is what a tile fits before it masks.</summary>
+        private const int ReadoutLines = 3;
+
         private static void Build()
         {
-            bool editable = MyAPIGateway.Session == null || MyAPIGateway.Session.IsServer;
+            // A client permitted to ask counts as able to edit: its controls send a request to the
+            // server rather than writing locally. Deciding this from IsServer alone is what kept
+            // the whole page greyed out on a client, including for an administrator who could
+            // change the same settings from chat.
+            bool editable = MyAPIGateway.Session == null
+                || MyAPIGateway.Session.IsServer
+                || SettingsRequests.MayAsk;
 
-            page = new ControlPage { Name = "Settings" };
+            // Writing the file and resetting every value are still the server's alone: one is a
+            // disk write on a machine the client is not sitting at, and the other would be forty
+            // separate requests.
+            bool local = MyAPIGateway.Session == null || MyAPIGateway.Session.IsServer;
+
+            Controls.Clear();
+            if (shipped == null) shipped = Settings.GetDefaults();
 
             RichHudTerminal.Root.Enabled = true;
+
+            // Loose pages first, folders after. In game, a root page added *after* a category
+            // draws against the last folder's row rather than on its own line — so the order here
+            // is the order the rail can render, not a preference.
+            page = BuildOverview(local, editable);
             RichHudTerminal.Root.Add(page);
 
-            // Save and Reset at the top of the page. One of each for the whole file, since every
-            // Save would write the same file.
-            page.Add(Actions(editable));
-
-            List<string> names = Settings.Names();
-            List<string> section = new List<string>();
-
-            for (int i = 0; i < Order.Length; i++)
+            statusPage = new TextPage
             {
-                section.Clear();
+                Name = "Status",
+                HeaderText = "Thermodynamics",
+                SubHeaderText = "What this world is set to",
+            };
+            RichHudTerminal.Root.Add(statusPage);
 
-                for (int n = 0; n < names.Count; n++)
+            // Everything the layout accounts for, so what is left over can be swept onto a final
+            // page instead of vanishing.
+            HashSet<string> placed = new HashSet<string>();
+
+            // Built before the folders so it lands above them in the rail, for the ordering reason
+            // above; it is one page and it is the one people open when something is wrong.
+            RichHudTerminal.Root.Add(BuildPage(DebugPage, editable, placed));
+
+            // Anything the tables do not name, worked out before the folders are built so this
+            // page can be added while root pages still render correctly. Hidden when empty: an
+            // empty page in the rail is a promise of something to find.
+            List<string> leftovers = Unplaced();
+            if (leftovers.Count > 0)
+            {
+                RichHudTerminal.Root.Add(
+                    BuildPage(new Leaf("Other", leftovers.ToArray()), editable, placed));
+            }
+
+            for (int f = 0; f < Folders.Length; f++)
+            {
+                Folder folder = Folders[f];
+                TerminalPageCategory category = new TerminalPageCategory { Name = folder.Name };
+
+                for (int p = 0; p < folder.Pages.Length; p++)
                 {
-                    if (SectionOf(names[n]) == Order[i]) section.Add(names[n]);
+                    category.Add(BuildPage(folder.Pages[p], editable, placed));
                 }
 
-                AddSection(Order[i], section, editable);
+                RichHudTerminal.Root.Add(category);
             }
+
+            Refresh();
+        }
+
+        /// <summary>
+        /// Settings the page tables do not mention. Empty in a healthy build; not empty the moment
+        /// someone adds a setting to the config and forgets this file.
+        /// </summary>
+        private static List<string> Unplaced()
+        {
+            HashSet<string> named = new HashSet<string>();
+
+            for (int f = 0; f < Folders.Length; f++)
+            {
+                for (int p = 0; p < Folders[f].Pages.Length; p++)
+                {
+                    string[] settings = Folders[f].Pages[p].Settings;
+                    for (int i = 0; i < settings.Length; i++) named.Add(settings[i]);
+                }
+            }
+
+            for (int i = 0; i < DebugPage.Settings.Length; i++) named.Add(DebugPage.Settings[i]);
+
+            List<string> missing = new List<string>();
+            List<string> names = Settings.Names();
+
+            for (int i = 0; i < names.Count; i++)
+            {
+                if (!named.Contains(names[i])) missing.Add(names[i]);
+            }
+
+            return missing;
+        }
+
+        /// <summary>
+        /// One page: its settings laid out as the framework's fixed tile sizes allow, and — where
+        /// the page's settings have a measurable effect — what they are currently costing.
+        /// </summary>
+        private static ControlPage BuildPage(Leaf leaf, bool editable, HashSet<string> placed)
+        {
+            ControlPage built = new ControlPage { Name = leaf.Name };
+
+            List<string> members = new List<string>();
+            for (int i = 0; i < leaf.Settings.Length; i++)
+            {
+                string name = leaf.Settings[i];
+                if (placed.Contains(name)) continue;
+
+                placed.Add(name);
+                members.Add(name);
+            }
+
+            if (members.Count > 0) AddSection(built, leaf.Name, members, editable);
+
+            string note;
+            if (PageNotes.TryGetValue(leaf.Name, out note))
+            {
+                ControlTile noteTile = new ControlTile();
+                noteTile.Add(new TerminalLabel { Name = "the rest of this system:" });
+                noteTile.Add(new TerminalLabel { Name = note });
+
+                ControlCategory elsewhere = new ControlCategory
+                {
+                    HeaderText = "Elsewhere",
+                    SubheaderText = "Dials this menu does not reach yet",
+                };
+                elsewhere.Add(noteTile);
+                built.Add(elsewhere);
+            }
+
+            string figures = FiguresFor(leaf.Name);
+            if (figures == null) return built;
+
+            List<TerminalLabel> lines = new List<TerminalLabel>();
+            ControlTile tile = new ControlTile();
+
+            for (int i = 0; i < ReadoutLines; i++)
+            {
+                TerminalLabel line = new TerminalLabel { Name = "" };
+                lines.Add(line);
+                tile.Add(line);
+            }
+
+            Readouts[leaf.Name] = lines;
+
+            ControlCategory group = new ControlCategory
+            {
+                HeaderText = "Right now",
+                SubheaderText = figures,
+            };
+            group.Add(tile);
+            built.Add(group);
+
+            return built;
+        }
+
+        /// <summary>
+        /// What a page's live figures describe, or null for a page that has none. Only pages whose
+        /// settings have a measurable effect get one: a readout that never moves is worse than no
+        /// readout at all.
+        /// </summary>
+        private static string FiguresFor(string pageName)
+        {
+            switch (pageName)
+            {
+                case "Cost limits":
+                    return "What the world's grids are asking for, against what they are granted";
+                case "Pace":
+                    return "How much heat the world is moving";
+                case "Debug":
+                    return "What is switched on, and what is being recorded";
+                default:
+                    return null;
+            }
+        }
+
+        /// <summary>
+        /// The page the menu opens on: what state the world is in, and the two actions that change
+        /// all of it at once.
+        ///
+        /// An administrator's first two questions are "what has been changed here" and "what is
+        /// this world set to", and neither was answerable from a wall of sliders — every value was
+        /// shown, and none of them said whether it was the shipped one.
+        /// </summary>
+        private static ControlPage BuildOverview(bool local, bool editable)
+        {
+            ControlPage overview = new ControlPage { Name = "Overview" };
+
+            statusLabel = new TerminalLabel { Name = "" };
+            profileLabel = new TerminalLabel { Name = "" };
+            warningLabel = new TerminalLabel { Name = "" };
+
+            ControlTile state = new ControlTile();
+            state.Add(profileLabel);
+            state.Add(statusLabel);
+            state.Add(warningLabel);
+
+            // A third tile of live figures, so the row carries three filled tiles rather than two
+            // half-empty ones — the framework gives a category a fixed tall band whatever is in it,
+            // and two short tiles in that band is mostly air.
+            ControlTile facts = new ControlTile();
+            List<TerminalLabel> lines = new List<TerminalLabel>();
+
+            for (int i = 0; i < ReadoutLines; i++)
+            {
+                TerminalLabel line = new TerminalLabel { Name = "" };
+                lines.Add(line);
+                facts.Add(line);
+            }
+
+            Readouts["Overview"] = lines;
+
+            ControlCategory summary = new ControlCategory
+            {
+                HeaderText = "This world",
+                SubheaderText = editable && !local
+                    ? "Your changes are sent to the server and saved there"
+                    : "Every change is saved to the config file as you make it",
+            };
+            summary.Add(state);
+            summary.Add(facts);
+            overview.Add(summary);
+
+            overview.Add(ProfileCategory(local));
+            return overview;
+        }
+
+        /// <summary>
+        /// The five shipped profiles as buttons, with what each one is for.
+        ///
+        /// They existed only as a chat command, which meant the menu could show a world tuned by a
+        /// profile without ever mentioning that profiles were how you got there.
+        /// </summary>
+        private static ControlCategory ProfileCategory(bool local)
+        {
+            ControlCategory group = new ControlCategory
+            {
+                HeaderText = "Profiles",
+                SubheaderText = local
+                    ? "A profile sets every world setting, so 'default' is also how you start over"
+                    : "Applied by the server; ask an administrator",
+            };
+
+            ControlTile tile = new ControlTile();
+            int perTile = 0;
+
+            for (int i = 0; i < Core.ThermalProfiles.Names.Length; i++)
+            {
+                string profile = Core.ThermalProfiles.Names[i];
+
+                TerminalButton button = new TerminalButton
+                {
+                    Name = profile,
+                    ToolTip = Tip(Core.ThermalProfiles.Describe(profile)),
+                    Enabled = local,
+                };
+                button.ControlChangedHandler = (sender, args) => ApplyProfile(profile);
+
+                tile.Add(button);
+                perTile++;
+
+                if (perTile == ControlsPerTile)
+                {
+                    group.Add(tile);
+                    tile = new ControlTile();
+                    perTile = 0;
+                }
+            }
+
+            if (perTile > 0) group.Add(tile);
+            return group;
+        }
+
+        private static void ApplyProfile(string profile)
+        {
+            if (!Settings.Instance.ApplyProfile(profile))
+            {
+                MyAPIGateway.Utilities.ShowNotification(
+                    "Thermodynamics: no profile called " + profile, 3000, "Red");
+                return;
+            }
+
+            Refresh();
+            MyAPIGateway.Utilities.ShowNotification(
+                "Thermodynamics: profile " + profile + " applied (unsaved)", 3000, "White");
+        }
+
+        /// <summary>
+        /// Brings every label on the page back in step with the settings.
+        ///
+        /// Called after anything that can move a value from outside a single control — a profile, a
+        /// reset, or the server sending new settings — because the framework's controls read their
+        /// values through a getter but their *names* are fixed at construction, and the name is
+        /// where this menu says what has been changed.
+        /// </summary>
+        public static void Refresh()
+        {
+            if (page == null || shipped == null) return;
+
+            try
+            {
+                int changed = 0;
+                List<string> names = Settings.Names();
+
+                for (int i = 0; i < names.Count; i++)
+                {
+                    string name = names[i];
+                    bool moved = Changed(name);
+                    if (moved) changed++;
+
+                    TerminalControlBase control;
+                    if (Controls.TryGetValue(name, out control)) control.Name = Label(name, moved);
+                }
+
+                // Short enough to survive a single clipped line. The sentences are on the status
+                // page, which wraps.
+                statusLabel.Name = changed == 0
+                    ? "all shipped defaults"
+                    : "changed: " + changed + " of " + names.Count;
+
+                profileLabel.Name = "profile: " + (MatchingProfile() ?? "custom");
+
+                string warning = Warning();
+                warningLabel.Name = warning.Length == 0 ? "no conflicts" : "! " + WarningShort();
+
+                RefreshStatusPage(changed, names);
+
+                RefreshReadouts();
+            }
+            catch (Exception e)
+            {
+                MyLog.Default.Info("[" + Settings.Name + "] failed to refresh the settings menu\n" + e);
+            }
+        }
+
+        /// <summary>
+        /// Fills each page's live figures from the grids themselves.
+        ///
+        /// Read from what is running rather than computed from the settings that produced it: the
+        /// question a page like "Cost and stability" is asked is not what the ceiling is set to —
+        /// that is the slider above — but what the world is doing against it.
+        /// </summary>
+        private static void RefreshReadouts()
+        {
+            if (Readouts.Count == 0) return;
+
+            int grids = 0;
+            long blocks = 0;
+            int floored = 0;
+            int granted = 0;
+            float demanded = 0f;
+            int critical = 0;
+            float hottest = float.MinValue;
+            float vented = 0f;
+            float made = 0f;
+            double rate = 1d;
+
+            IList<ThermalGrid> live = ThermalGrid.LiveGrids;
+            for (int i = 0; live != null && i < live.Count; i++)
+            {
+                ThermalGrid thermals = live[i];
+                if (thermals == null || thermals.Simulation == null) continue;
+
+                Core.ThermalSolver solver = thermals.Simulation.Solver;
+
+                grids++;
+                blocks += thermals.BlockCount;
+                floored += solver.FlooredNodes;
+                critical += thermals.CriticalBlocks;
+                vented += thermals.Simulation.VentedWatts;
+                made += thermals.Simulation.HeatGainWatts;
+
+                // Worst rather than mean: a fleet is as starved as its most starved grid, and an
+                // average across it hides the one that is actually in trouble.
+                if (solver.LastSubsteps > granted) granted = solver.LastSubsteps;
+                if (solver.LastRequiredSubsteps > demanded) demanded = solver.LastRequiredSubsteps;
+                if (thermals.Simulation.SimulationRate < rate) rate = thermals.Simulation.SimulationRate;
+
+                Core.ThermalNode node = thermals.HottestNode;
+                if (node != null && node.Temperature > hottest) hottest = node.Temperature;
+            }
+
+            if (grids == 0)
+            {
+                Fill("Overview", "no grids yet");
+                Fill("Cost limits", "no grids yet");
+                Fill("Pace", "no grids yet");
+            }
+            else
+            {
+                Fill("Cost limits",
+                    grids + " grids, " + blocks.ToString("n0") + " blocks",
+                    "substeps " + granted + " of " + demanded.ToString("n1") + " asked",
+                    floored.ToString("n0") + " floored, "
+                        + (100d * rate).ToString("n0") + "% rate");
+
+                Fill("Pace",
+                    "hottest " + Tools.KelvinToCelsiusString(hottest),
+                    critical + " over critical",
+                    Watts(vented) + " out, " + Watts(made) + " in");
+
+                Fill("Overview",
+                    grids + " grids, " + blocks.ToString("n0") + " blocks",
+                    "hottest " + Tools.KelvinToCelsiusString(hottest),
+                    Watts(vented) + " out, " + Watts(made) + " in");
+            }
+
+            Fill("Debug",
+                "overlay " + ThermalDebugView.Describe(ThermalDebugView.Current),
+                "telemetry " + (Telemetry.Enabled ? "recording" : "off"),
+                "1 sample in " + Telemetry.SampleStride);
+        }
+
+        /// <summary>
+        /// Fills one page's readout, a line at a time. Extra lines are dropped rather than joined,
+        /// because a joined line is a clipped line.
+        /// </summary>
+        private static void Fill(string pageName, params string[] lines)
+        {
+            List<TerminalLabel> labels;
+            if (!Readouts.TryGetValue(pageName, out labels)) return;
+
+            for (int i = 0; i < labels.Count; i++)
+            {
+                labels[i].Name = i < lines.Length ? lines[i] : "";
+            }
+        }
+
+        /// <summary>Watts at a readable magnitude, as the cockpit panel shows them.</summary>
+        private static string Watts(float watts)
+        {
+            float magnitude = watts < 0f ? -watts : watts;
+
+            if (magnitude >= 1000000f) return (watts / 1000000f).ToString("n1") + " MW";
+            if (magnitude >= 1000f) return (watts / 1000f).ToString("n1") + " kW";
+            return watts.ToString("n0") + " W";
+        }
+
+        /// <summary>Whether a setting has been moved away from what a fresh install ships with.</summary>
+        private static bool Changed(string name)
+        {
+            float mine = Settings.Instance.GetValue(name);
+            float theirs = shipped.GetValue(name);
+
+            float difference = mine - theirs;
+            if (difference < 0f) difference = -difference;
+
+            // A relative tolerance, because these span switches at 0 and 1 and a heat time scale in
+            // the tens of thousands.
+            float scale = theirs < 0f ? -theirs : theirs;
+            return difference > 0.0001f * (scale < 1f ? 1f : scale);
+        }
+
+        /// <summary>The label a control carries: its name, dotted when it has been changed.</summary>
+        private static string Label(string name, bool moved)
+        {
+            string label = EntryFor(name).Label;
+            return moved ? "• " + label : label;
+        }
+
+        /// <summary>
+        /// Which shipped profile this world currently matches, or null when it matches none.
+        ///
+        /// Only the nine values a profile sets are compared, so a world on the arcade profile with
+        /// a different vacuum temperature still reads as arcade — which is what an administrator
+        /// means by the question.
+        /// </summary>
+        private static string MatchingProfile()
+        {
+            for (int i = 0; i < Core.ThermalProfiles.Names.Length; i++)
+            {
+                string name = Core.ThermalProfiles.Names[i];
+
+                Core.ThermalSettings bundle = new Core.ThermalSettings();
+                if (!Core.ThermalProfiles.Apply(bundle, name)) continue;
+
+                Settings mine = Settings.Instance;
+                if (bundle.Frequency != mine.Frequency) continue;
+                if (bundle.SimulationSpeed != mine.SimulationSpeed) continue;
+                if (bundle.HeatTimeScale != mine.HeatTimeScale) continue;
+                if (bundle.MaxSubsteps != mine.MaxSubsteps) continue;
+                if (bundle.MaxSubstepsPerBlock != mine.MaxSubstepsPerBlock) continue;
+                if (bundle.ClampConductionOvershoot != mine.ClampConductionOvershoot) continue;
+                if (bundle.ClampEnvironmentOvershoot != mine.ClampEnvironmentOvershoot) continue;
+                if (bundle.EnableRoomAir != mine.EnableRoomAir) continue;
+                if (bundle.SolarSelfShadowing != mine.SolarSelfShadowing) continue;
+
+                return name;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Combinations worth saying out loud, because each one is a setting quietly cancelling
+        /// another and none of them is visible from the two controls involved.
+        /// </summary>
+        /// <summary>
+        /// The same conflict as a label, in the space a label has. The sentence is on the status
+        /// page; this is only the flag that sends you there.
+        /// </summary>
+        private static string WarningShort()
+        {
+            Settings s = Settings.Instance;
+
+            if (s.MaxSubstepsPerBlock > 0 && s.MaxSubsteps < s.MaxSubstepsPerBlock)
+            {
+                return "substep caps disagree";
+            }
+
+            if (s.MaxElementVisitsPerStep <= 0) return "step budget off";
+            if (!s.EnableEnvironment) return "environment off";
+
+            return "";
+        }
+
+        /// <summary>
+        /// Rewrites the status page: what this world is set to, in prose, because it is the only
+        /// control here that can hold prose.
+        /// </summary>
+        private static void RefreshStatusPage(int changed, List<string> names)
+        {
+            if (statusPage == null) return;
+
+            StringBuilder text = new StringBuilder();
+
+            text.Append("Profile: ").Append(MatchingProfile() ?? "custom").Append('\n');
+            text.Append("Settings changed from the shipped defaults: ")
+                .Append(changed).Append(" of ").Append(names.Count).Append('\n');
+            text.Append("Settings digest: ").Append(SettingsSync.Fingerprint())
+                .Append("   (compare with the server's /thermal sync)\n\n");
+
+            string warning = Warning();
+            if (warning.Length > 0) text.Append("Worth knowing: ").Append(warning).Append("\n\n");
+
+            if (changed == 0)
+            {
+                text.Append("Nothing has been moved. This world runs exactly what a fresh install"
+                    + " ships with.");
+            }
+            else
+            {
+                text.Append("Changed, with the shipped value in brackets:\n");
+
+                for (int i = 0; i < names.Count; i++)
+                {
+                    string name = names[i];
+                    if (!Changed(name)) continue;
+
+                    text.Append("    ").Append(EntryFor(name).Label)
+                        .Append("  ").Append(Settings.Instance.GetValue(name).ToString("n2"))
+                        .Append("  (").Append(shipped.GetValue(name).ToString("n2")).Append(")\n");
+                }
+            }
+
+            statusPage.Text = new RichText(text.ToString());
+        }
+
+        private static string Warning()
+        {
+            Settings s = Settings.Instance;
+
+            // The one the field tuning ran into: the per-block cap raises what a step asks for,
+            // and MaxSubsteps refuses above its own ceiling, so the two have to move together.
+            if (s.MaxSubstepsPerBlock > 0 && s.MaxSubsteps < s.MaxSubstepsPerBlock)
+            {
+                return "MaxSubsteps (" + s.MaxSubsteps + ") refuses what MaxSubstepsPerBlock ("
+                    + s.MaxSubstepsPerBlock + ") asks for. Raise MaxSubsteps to at least that.";
+            }
+
+            if (s.MaxElementVisitsPerStep <= 0)
+            {
+                return "The step budget is off. A very large grid can spend a whole frame in one step.";
+            }
+
+            if (!s.EnableEnvironment)
+            {
+                return "The environment is off: nothing radiates, convects or takes sunlight.";
+            }
+
+            return "";
         }
 
         /// <summary>
@@ -219,14 +970,18 @@ namespace Thermodynamics
         /// about three tiles across the page's width. One column per row would waste two thirds of
         /// the width.
         /// </summary>
-        private static void AddSection(string name, List<string> members, bool editable)
+        private static void AddSection(ControlPage target, string name, List<string> members, bool editable)
         {
             for (int start = 0; start < members.Count; start += ControlsPerGroup)
             {
+                // A second row of the same page used to be headed "(cont.)", which tells a reader
+                // nothing they cannot already see. It is named for what is in it instead.
                 ControlCategory group = new ControlCategory
                 {
-                    HeaderText = start == 0 ? name : name + " (cont.)",
-                    SubheaderText = start == 0 ? Subheader(name, editable) : "",
+                    HeaderText = start == 0 ? name : EntryFor(members[start]).Label,
+                    SubheaderText = start == 0
+                        ? Subheader(name, editable)
+                        : "more " + name.ToLower(),
                 };
 
                 int groupEnd = Math.Min(members.Count, start + ControlsPerGroup);
@@ -244,7 +999,7 @@ namespace Thermodynamics
                     group.Add(tile);
                 }
 
-                page.Add(group);
+                target.Add(group);
             }
         }
 
@@ -263,6 +1018,15 @@ namespace Thermodynamics
 
         private static string Subheader(string section, bool editable)
         {
+            if (section != Display && !MyAPIGateway.Session.IsServer)
+            {
+                // Three states rather than two, because "you may change this" and "the server will
+                // decide" are different promises and a player can tell which one they got.
+                return editable
+                    ? "Server side; your changes are sent to the server"
+                    : "Server side; read only here";
+            }
+
             if (!editable)
             {
                 return section == Display
@@ -290,50 +1054,6 @@ namespace Thermodynamics
         };
 
         /// <summary>
-        /// One Save and one Reset, for the whole file.
-        ///
-        /// Nothing is written to disk until Save is pressed, so a session's changes can be abandoned
-        /// by not pressing it. Reset likewise restores the values without writing the file.
-        /// </summary>
-        private static ControlCategory Actions(bool editable)
-        {
-            ControlTile tile = new ControlTile();
-
-            TerminalButton save = new TerminalButton
-            {
-                Name = "Save to config file",
-                ToolTip = Tip("Writes every current value to the world's config file."),
-                Enabled = editable,
-            };
-            save.ControlChangedHandler = (sender, args) =>
-            {
-                Settings.Save(Settings.Instance);
-                MyAPIGateway.Utilities.ShowNotification("Thermodynamics: settings saved", 2000, "White");
-            };
-            tile.Add(save);
-
-            TerminalButton defaults = new TerminalButton
-            {
-                Name = "Reset everything to defaults",
-                ToolTip = Tip("Puts every setting back to what a fresh install ships with. Applies at once; not written to the config file until you press Save."),
-                Enabled = true,
-            };
-            defaults.ControlChangedHandler = (sender, args) => ResetAll();
-            tile.Add(defaults);
-
-            ControlCategory group = new ControlCategory
-            {
-                HeaderText = "Thermodynamics",
-                SubheaderText = editable
-                    ? "Changes apply at once. Save writes them to the config file."
-                    : "Server side; a client may change presentation only.",
-            };
-
-            group.Add(tile);
-            return group;
-        }
-
-        /// <summary>
         /// Restores every setting the player is allowed to change, which on a client is the
         /// presentation switches only, so a client reset cannot alter server-owned world state.
         /// </summary>
@@ -353,12 +1073,20 @@ namespace Thermodynamics
             }
 
             Settings.Instance.Apply();
+            Refresh();
 
             MyAPIGateway.Utilities.ShowNotification(
                 "Thermodynamics: " + changed + " settings back to defaults (unsaved)", 3000, "White");
         }
 
         private static TerminalControlBase Control(string name, bool editable)
+        {
+            TerminalControlBase built = BuildControl(name, editable);
+            Controls[name] = built;
+            return built;
+        }
+
+        private static TerminalControlBase BuildControl(string name, bool editable)
         {
             Entry entry = EntryFor(name);
             bool enabled = editable || ClientSide.Contains(name);
@@ -378,6 +1106,12 @@ namespace Thermodynamics
             }
 
             if (name == "DebugBlockOverlay") return OverlayDropdown(entry, enabled);
+
+            // A slider cannot express either end of this mod's ranges. The step budget spans four
+            // million, so one pixel is ten thousand visits; the friction scale spans a hundredth,
+            // so every pixel is the same number to four decimal places. Both get a field to type
+            // the value into instead.
+            if (NeedsTyping(entry)) return NumberField(name, entry, enabled);
 
             if (name == "SolarGridShadows")
             {
@@ -475,14 +1209,103 @@ namespace Thermodynamics
         {
             if (!CanEdit(name)) return;
 
+            // World state travels to the server, which owns it; a client's own switches are set
+            // here. Without this a client's slider would move its local copy and be overwritten by
+            // the next value the server sent, which looks exactly like the control not working.
+            if (SettingsRequests.MustAsk && !Settings.ClientOwned.Contains(name))
+            {
+                SettingsRequests.Send(name, value);
+                return;
+            }
+
             Settings.Instance.SetValue(name, value);
             Settings.Instance.Apply();
+            Refresh();
         }
 
+        /// <summary>
+        /// Whether this machine may offer a control for a setting at all.
+        ///
+        /// A client owns its presentation switches outright. Everything else is world state, which
+        /// a client can now ask the server to change — so the control is offered when this player
+        /// is permitted to ask. The server checks again on arrival and its answer is the one that
+        /// counts; this only avoids presenting a dial that will be refused.
+        /// </summary>
         private static bool CanEdit(string name)
         {
             if (MyAPIGateway.Session == null || MyAPIGateway.Session.IsServer) return true;
-            return ClientSide.Contains(name);
+            if (ClientSide.Contains(name)) return true;
+
+            return SettingsRequests.MayAsk;
+        }
+
+        /// <summary>
+        /// Whether a setting's range is one a slider cannot usefully divide.
+        ///
+        /// A slider offers something like two hundred distinguishable positions across its range.
+        /// Wider than that and a whole position is a meaningless jump — the step budget moves ten
+        /// thousand element visits at a time. Finer than a tenth and every position rounds to the
+        /// same displayed number, which is the friction scale's problem: its entire range is a
+        /// hundredth.
+        /// </summary>
+        private static bool NeedsTyping(Entry entry)
+        {
+            return (entry.Max - entry.Min) > 200f || entry.Max <= 0.1f;
+        }
+
+        /// <summary>
+        /// A setting typed rather than dragged.
+        ///
+        /// The range is offered in the tooltip rather than enforced here: it is what the slider
+        /// would have spanned, not what the setting will accept, and a typed value is checked by
+        /// the same clamp the chat command and the mod API go through. Someone who wants a step
+        /// budget of nine million can have one, and finds out what it costs.
+        /// </summary>
+        private static TerminalControlBase NumberField(string name, Entry entry, bool enabled)
+        {
+            TerminalTextField field = new TerminalTextField
+            {
+                Name = entry.Label,
+                ToolTip = Tip(entry.Tip + "\n\nTyped, because a slider cannot divide this range."
+                    + " Usual values run from " + Number(entry.Min, entry)
+                    + " to " + Number(entry.Max, entry) + "."),
+                Enabled = enabled,
+                Value = Number(Settings.Instance.GetValue(name), entry),
+                CustomValueGetter = () => Number(Settings.Instance.GetValue(name), entry),
+            };
+
+            // Anything that cannot be part of a number never reaches the field, so a typo is
+            // refused as it is made rather than on losing focus.
+            field.CharFilterFunc = c =>
+                (c >= '0' && c <= '9') || c == '.' || c == '-' || c == 'e' || c == 'E' || c == '+';
+
+            field.ControlChangedHandler = (sender, args) =>
+            {
+                float value;
+                if (!float.TryParse(field.Value, NumberStyles.Float, CultureInfo.InvariantCulture,
+                        out value)
+                    && !float.TryParse(field.Value, NumberStyles.Float, CultureInfo.CurrentCulture,
+                        out value))
+                {
+                    // Unreadable: put the setting's own value back rather than guessing at what
+                    // was meant. The getter above supplies it on the next draw.
+                    field.Value = Number(Settings.Instance.GetValue(name), entry);
+                    return;
+                }
+
+                Write(name, entry.Integer ? (float)Math.Round(value) : value);
+            };
+
+            return field;
+        }
+
+        /// <summary>A value as a field shows it: whole for an integer setting, four places at most
+        /// otherwise, and never in scientific notation, which nobody wants to retype.</summary>
+        private static string Number(float value, Entry entry)
+        {
+            return entry.Integer
+                ? Math.Round(value).ToString("0", CultureInfo.InvariantCulture)
+                : value.ToString("0.####", CultureInfo.InvariantCulture);
         }
 
         private static string Text(string name, float value, Entry entry)

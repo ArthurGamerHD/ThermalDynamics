@@ -386,6 +386,38 @@ namespace Thermodynamics
         /// Refreshes the simulation's view of a block after its geometry or mounting changed.
         /// Rebuilds the conduction graph and the coolant loops with it.
         /// </summary>
+        /// <summary>
+        /// Rebuilds this grid's view of the definitions, after a profile's overlay changed what a
+        /// definition says.
+        ///
+        /// Every block's thermal properties come from a cache keyed by definition, and the nodes
+        /// hold what that cache handed them, so nothing short of rebuilding reaches them. This is
+        /// as expensive as a world load for the grid and happens only when a profile changes.
+        /// </summary>
+        public void RefreshDefinitions()
+        {
+            if (Simulation == null || !started) return;
+
+            try
+            {
+                Simulation.LoopProperties = ThermalBlockCatalog.ToLoopProperties(
+                    ThermalLoopDefintion.GetDefinition(ThermalLoopDefintion.DefaultLoopDefinitionId));
+
+                // The planet's properties are cached per entity and rebuilt on the next sample.
+                PlanetProperties.Clear();
+                currentPlanetId = 0;
+
+                foreach (ThermalBlock bound in blocks.Values)
+                {
+                    if (bound != null) bound.RefreshProperties();
+                }
+            }
+            catch (Exception e)
+            {
+                Telemetry.Exception("ThermalGrid.RefreshDefinitions", e);
+            }
+        }
+
         public void RefreshBlock(ThermalBlock bound)
         {
             if (bound == null || bound.Instance == null) return;

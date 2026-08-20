@@ -572,6 +572,7 @@ namespace Thermodynamics
             TimingStat topology = new TimingStat("  of which topology rebuild");
             TimingStat mapping = new TimingStat("  of which room mapping");
             TimingStat exposure = new TimingStat("  of which exposure refresh");
+            TimingStat pressure = new TimingStat("  of which room pressure");
             TimingStat solver = new TimingStat("  of which solver");
             TimingStat solar = new TimingStat("  of which solar occlusion");
             TimingStat save = new TimingStat("save");
@@ -595,6 +596,7 @@ namespace Thermodynamics
                 topology.Merge(g.Profiler.Topology);
                 mapping.Merge(g.Profiler.RoomMapping);
                 exposure.Merge(g.Profiler.Exposure);
+                pressure.Merge(g.Profiler.RoomPressure);
                 solver.Merge(g.Profiler.Solver);
                 solar.Merge(g.SolarTime);
                 save.Merge(g.SaveTime);
@@ -609,6 +611,7 @@ namespace Thermodynamics
             topology.WriteRow(sb);
             mapping.WriteRow(sb);
             exposure.WriteRow(sb);
+            pressure.WriteRow(sb);
             solver.WriteRow(sb);
             solar.WriteRow(sb);
             save.WriteRow(sb);
@@ -672,7 +675,7 @@ namespace Thermodynamics
                 Field(sb, "grids below real time", throttled.ToString("n0")
                     + ", slowest at " + (100.0 * worstRate).ToString("n1") + " %");
                 sb.Append("  A grid below real time is too large to simulate at full rate and is\n");
-                sb.Append("  taking shorter steps rather than coarser ones — MaxLinkVisitsPerStep.\n");
+                sb.Append("  taking shorter steps rather than coarser ones — MaxElementVisitsPerStep.\n");
                 sb.Append("  Heat moves more slowly on it; nothing else about it is different.\n");
             }
 
@@ -771,7 +774,7 @@ namespace Thermodynamics
         ///
         /// <para>
         /// Reports demand alongside grant, since the two diverge in two ways —
-        /// <c>MaxSubsteps</c> refuses substeps and <c>MaxLinkVisitsPerStep</c> shortens the step —
+        /// <c>MaxSubsteps</c> refuses substeps and <c>MaxElementVisitsPerStep</c> shortens the step —
         /// and demand keeps moving after both have bound.
         /// </para>
         /// </summary>
@@ -958,7 +961,7 @@ namespace Thermodynamics
                 nodes += p.Nodes;
                 environmentDominated += p.EnvironmentDominatedNodes;
 
-                // Per simulated second rather than per step. MaxLinkVisitsPerStep shortens a step
+                // Per simulated second rather than per step. MaxElementVisitsPerStep shortens a step
                 // it cannot afford, so a throttled grid already takes few substeps and a per-step
                 // measurement shows the cap saving nothing — what it buys is returned as simulated
                 // time rather than as arithmetic. Per simulated second the budget cancels out:
@@ -1247,6 +1250,8 @@ namespace Thermodynamics
                 Field(sb, "  atmosphere factor", g.AtmosphereFactor.Format("n4"));
                 Field(sb, "  wind speed m/s", g.WindSpeed.Format("n2"));
                 Field(sb, "  convection coeff", g.ConvectionCoefficient.Format("n3"));
+                Field(sb, "  vented W", g.VentedWatts.Format("n0"));
+                Field(sb, "  made W", g.HeatGainWatts.Format("n0"));
                 Field(sb, "  effective solar W", g.EffectiveSolarEnergy.Format("n1"));
                 Field(sb, "  occluded share", g.OccludedShare.Format("n3"));
                 Field(sb, "  grid speed m/s", g.Speed.Format("n2"));
@@ -1261,6 +1266,11 @@ namespace Thermodynamics
                 Field(sb, "  splits / merges", g.Splits + " / " + g.Merges);
                 Field(sb, "  door state changes", g.DoorStateChanges.ToString("n0"));
                 Field(sb, "  surface refreshes", g.SurfaceRecalcs.ToString("n0"));
+                Field(sb, "  room pressure sweeps", g.RoomPressureSweeps.ToString("n0")
+                    + " (" + g.RoomPressureRoomVisits.ToString("n0") + " compartments, "
+                    + g.RoomPressureGameQueries.ToString("n0") + " game calls)");
+                Field(sb, "  of which read vents", g.RoomPressureVentScans.ToString("n0")
+                    + " (" + g.RoomPressureVentsWalked.ToString("n0") + " vents walked)");
                 Field(sb, "  mapper passes completed", g.MapperCompletions.ToString("n0"));
                 Field(sb, "  blocks restored on load", g.BlocksRestored.ToString("n0"));
                 Field(sb, "  rooms restored on load", g.RoomsRestored.ToString("n0"));
@@ -1273,6 +1283,7 @@ namespace Thermodynamics
                 g.Profiler.Topology.WriteRow(sb);
                 g.Profiler.RoomMapping.WriteRow(sb);
                 g.Profiler.Exposure.WriteRow(sb);
+                g.Profiler.RoomPressure.WriteRow(sb);
                 g.Profiler.Solver.WriteRow(sb);
                 g.SolarTime.WriteRow(sb);
                 g.SaveTime.WriteRow(sb);

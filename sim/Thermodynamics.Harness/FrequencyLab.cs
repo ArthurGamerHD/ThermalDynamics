@@ -143,7 +143,7 @@ namespace Thermodynamics.Harness
                 // run would flatten the curve and hide the knee it exists to find.
                 MaxSubsteps = 4096,
                 MaxSubstepsPerBlock = 0,
-                MaxLinkVisitsPerStep = 0,
+                MaxElementVisitsPerStep = 0,
             };
             settings.Derive();
 

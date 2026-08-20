@@ -34,7 +34,7 @@ namespace Thermodynamics.Harness
         /// stiffness asks for and no work budget applied.
         ///
         /// This is the cost of a full step of simulated time, which is the right figure for
-        /// comparing sizes — but on a grid large enough for <c>MaxLinkVisitsPerStep</c> to bite it
+        /// comparing sizes — but on a grid large enough for <c>MaxElementVisitsPerStep</c> to bite it
         /// is <em>not</em> what a tick pays, because the step is shortened to fit. See
         /// <see cref="BoundedStepMs"/>, and the hitch benchmark for the distribution.
         /// </summary>
@@ -551,7 +551,7 @@ namespace Thermodynamics.Harness
             settings.Frequency = frequency;
             settings.HeatTimeScale = heatTimeScale;
             settings.MaxSubsteps = maxSubsteps;
-            settings.MaxLinkVisitsPerStep = 0;
+            settings.MaxElementVisitsPerStep = 0;
             settings.Derive();
             return Stability(label, settings, realSeconds);
         }
@@ -718,7 +718,7 @@ namespace Thermodynamics.Harness
             settings.EnableSolarHeat = false;
             settings.EnableWasteHeat = false;
             settings.EnableRoomAir = false;
-            settings.MaxLinkVisitsPerStep = 0;
+            settings.MaxElementVisitsPerStep = 0;
             settings.Derive();
 
             GridBuilder builder = GridBuilder.Large();
@@ -886,7 +886,7 @@ namespace Thermodynamics.Harness
             settings.Frequency = frequency;
 
             // The budget would bound the substep count and hide the very effect being measured.
-            settings.MaxLinkVisitsPerStep = 0;
+            settings.MaxElementVisitsPerStep = 0;
             settings.Derive();
 
             SeedSpread(simulation);
@@ -1489,7 +1489,7 @@ namespace Thermodynamics.Harness
             // Both of the bounds that would otherwise hide what the floor does: one refuses the
             // substeps the estimate asks for, the other shortens the step rather than pay.
             settings.MaxSubsteps = 4096;
-            settings.MaxLinkVisitsPerStep = 0;
+            settings.MaxElementVisitsPerStep = 0;
             settings.Derive();
 
             ThermalSimulation simulation = new ThermalSimulation(settings, builder.Grid);

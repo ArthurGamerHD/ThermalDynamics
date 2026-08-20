@@ -134,7 +134,7 @@ rebuild or a world load costs. They are not what a tick costs; every one of them
 
 **`full step` and `tick` are not the same number, and the gap is the point.** `full step` is a
 step of the whole configured length with as many substeps as the grid's stiffness asks for. `tick`
-is what a tick actually pays once `MaxLinkVisitsPerStep` has shortened the step to fit, and `cap`
+is what a tick actually pays once `MaxElementVisitsPerStep` has shortened the step to fit, and `cap`
 is how many substeps that leaves. Below about a hundred thousand blocks the budget never binds and
 the two agree. Above it they diverge, and that divergence is the trade being made: at a million
 blocks a tick pays 42 ms instead of 103, and simulated time advances more slowly to pay for it.
@@ -316,7 +316,7 @@ A step's cost is its substep count times its links, and the substep count is set
 node on the grid, which moves as the grid heats. On a 127k hull that produced a step costing 15 ms
 most of the time and 70 ms occasionally, from the same grid doing the same thing.
 
-`MaxLinkVisitsPerStep` bounds it. When a step would exceed the budget, the step is made
+`MaxElementVisitsPerStep` bounds it. When a step would exceed the budget, the step is made
 **shorter** rather than its substeps coarser — and that distinction is the whole point.
 Coarsening substeps takes steps too large for the stiffness and leans on the overshoot clamp,
 which is an accuracy loss. Shortening the step advances less simulated time at exactly the same
@@ -454,9 +454,13 @@ change.
 
 ## Calibrating the step budget against a real world
 
-`MaxLinkVisitsPerStep` bounds a step at a number of link visits, and its default of 1,000,000 was
-chosen as roughly one 60 fps frame at the harness's measured 16 ns per visit. A field report says
-what that actually buys in game.
+`MaxElementVisitsPerStep` bounds a step at a number of element visits, and its default of 1,000,000
+was chosen as roughly one 60 fps frame at the harness's measured 16 ns per visit. A field report
+says what that actually buys in game.
+
+**This section measured the case that got the counting fixed.** At the time the setting was
+`MaxLinkVisitsPerStep` and counted links alone; the figures below are from that build, and the
+resolution is at the end.
 
 Three 42,051-block ships, 90,136 links each, in a 203-grid world:
 
@@ -482,8 +486,20 @@ generous.** A value nearer 200,000 would put those ships at 2 substeps and a tic
 the cost of simulation rate they are already trading away. The right value is a judgement about
 that trade, and it is per world, which is why it is a setting.
 
-The counting itself is worth fixing rather than only documenting — see
-[known-issues.md](known-issues.md).
+### How it was resolved
+
+The counting was fixed rather than only documented. A node's cost was measured against a link's
+across shapes spanning zero to three links per node — a node is worth 3.3 links at a hundred
+thousand nodes and 7.5 at a quarter of a million, an exposed face a tenth to a half of one — and
+the budget now counts `links + 4 × nodes` under the name `MaxElementVisitsPerStep`. See
+[element-cost.md](element-cost.md).
+
+**The default did not need moving after all, because the unit change did the work.** These ships
+cost `90,136 + 4 × 42,051 = 258,340` element visits a substep, so the same 1,000,000 now grants
+**3.9 substeps instead of 11** — very close to the "nearer 200,000" this section arrived at from the
+other direction, and reached without asking anyone to retune a world. What was five times too
+generous is now about right, and it is right for the reason the arithmetic says rather than by
+being trimmed until it looked sensible.
 
 ## What is still open
 
@@ -496,14 +512,11 @@ must touch every node, and 16 ns per link visit is near the memory-bandwidth flo
 it smaller means not touching every node: activity tracking, chunking and multirate stepping, all
 designed in [scale-design.md](scale-design.md) and none of it built.
 
-**Removing a block still rebuilds the whole graph, and it is now the largest spike there is.**
-304 ms against a 49 ms median on a half-million-block hull, and it is a common event: grinding,
-combat damage, a section breaking off. Additions are incremental; removals are not, because every
-node index after the hole moves and every link referring to one of them becomes wrong. Repairing that incrementally needs a per-node index of the links touching a node — the
-intrusive adjacency chains in [scale-design.md §6](scale-design.md#6-data-structures) — after
-which removal is O(degree) like addition. Until then, grinding or combat damage on a very large
-grid costs a full rebuild per burst. It coalesces, so a section shot away is one rebuild rather
-than one per block.
+~~**Removing a block still rebuilds the whole graph.**~~ **Done**, and this paragraph outlived the
+fix by contradicting finding 6 above. `RemoveNodeIncremental` unpicks a node's links through the
+intrusive `nodeFirstLink` chains, moves one node into the hole and repairs every holder of a node
+index through `RepointNode`, so removal costs the node's degree. `RefreshBlock` now takes the same
+route for a block whose mounting changed, and `DropLinksOf` is shared between them.
 
 **Memory is about 1.8 KB a block**, against the ~110 bytes a node budgeted in
 [scale-design.md §6](scale-design.md#6-data-structures). Half of what a grid retains is indexed by

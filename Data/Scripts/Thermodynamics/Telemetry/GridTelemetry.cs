@@ -291,6 +291,20 @@ namespace Thermodynamics
         public long Merges;
         public long DoorStateChanges;
         public long SurfaceRecalcs;
+
+        /// <summary>
+        /// Room pressure sweeps run, compartments visited by them, game API calls made, and how
+        /// often the vent fallback was needed — plus the vents it walked when it was.
+        ///
+        /// Counted rather than only timed, because the question this answers is whether the sweep
+        /// scales with a station's compartment count, and a millisecond figure on a twelve-room
+        /// ship cannot answer it.
+        /// </summary>
+        public long RoomPressureSweeps;
+        public long RoomPressureRoomVisits;
+        public long RoomPressureGameQueries;
+        public long RoomPressureVentScans;
+        public long RoomPressureVentsWalked;
         public long MapperCompletions;
 
         // ---- persistence ----------------------------------------------------------------
@@ -339,6 +353,14 @@ namespace Thermodynamics
         public readonly RunningStat AtmosphereFactor = new RunningStat();
         public readonly RunningStat WindSpeed = new RunningStat();
         public readonly RunningStat ConvectionCoefficient = new RunningStat();
+
+        /// <summary>
+        /// Watts the grid vented and watts it made, sampled per step. The pair answers whether a
+        /// ship can cool itself, which no per-block temperature can: a grid venting less than it
+        /// makes is heating up however cool any single block currently reads.
+        /// </summary>
+        public readonly RunningStat VentedWatts = new RunningStat();
+        public readonly RunningStat HeatGainWatts = new RunningStat();
         public readonly RunningStat EffectiveSolarEnergy = new RunningStat();
 
         /// <summary>
@@ -358,7 +380,7 @@ namespace Thermodynamics
         /// <summary>
         /// Substeps the stability estimate demanded, before the <c>MaxSubsteps</c> cap and before
         /// rounding. <see cref="Substeps"/> is what was granted; a difference means the cap is
-        /// binding, and if <c>MaxLinkVisitsPerStep</c> also binds the step was shortened rather
+        /// binding, and if <c>MaxElementVisitsPerStep</c> also binds the step was shortened rather
         /// than the substeps coarsened.
         /// </summary>
         public readonly RunningStat RequiredSubsteps = new RunningStat();
@@ -690,8 +712,11 @@ namespace Thermodynamics
             AirDensity.Add(sample.AirDensity);
             AtmosphereFactor.Add(state.AtmosphereFactor);
             WindSpeed.Add(sample.RelativeWindSpeed);
-            ConvectionCoefficient.Add(state.ConvectionCoefficient);
+            ConvectionCoefficient.Add(state.EffectiveConvectionCoefficient);
             EffectiveSolarEnergy.Add(state.SolarEnergy);
+
+            VentedWatts.Add(grid.Simulation.VentedWatts);
+            HeatGainWatts.Add(grid.Simulation.HeatGainWatts);
         }
 
         public void NotePlanet(string name)

@@ -103,7 +103,12 @@ namespace Thermodynamics.Tests
             GridBuilder builder = GridBuilder.Large();
             builder.Fill(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(4, 4, 4));
 
-            ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings());
+            // Four a second, pinned: the assertion below counts steps, so the rate is the
+            // subject of the test rather than something to inherit from the shipped default.
+            ThermalSettings settings = new ThermalSettings { Frequency = 4 };
+            settings.Derive();
+
+            ThermalSimulation simulation = builder.BuildSimulation(settings);
             long before = simulation.Solver.StepCount;
 
             for (int frame = 0; frame < 60; frame++)

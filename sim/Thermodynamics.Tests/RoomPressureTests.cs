@@ -143,5 +143,85 @@ namespace Thermodynamics.Tests
             Assert.False(RoomPressure.Disagrees(false, false, RoomPressure.NotReported));
             Assert.False(RoomPressure.Disagrees(false, false, -1f));
         }
-}
+    
+        // ---- the vent fallback ---------------------------------------------------------------
+
+        /// <summary>
+        /// Reading the air vents is a walk over every vent on the grid, so it is worth asking
+        /// whether it can change an answer before paying for it. These pin the cases where it
+        /// cannot.
+        /// </summary>
+        [Fact]
+        public void AnUnansweredSealedRoomNeedsTheVentsRead()
+        {
+            Assert.True(RoomPressure.NeedsVentFallback(true, true, RoomPressure.NotReported));
+        }
+
+        [Fact]
+        public void ARoomTheGameAnsweredForNeedsNoVents()
+        {
+            Assert.False(RoomPressure.NeedsVentFallback(true, true, 1f));
+            Assert.False(RoomPressure.NeedsVentFallback(true, true, 0f));
+        }
+
+        /// <summary>
+        /// The case that made this worth adding. A compartment this model finds and the game does
+        /// not call sealed is emptied whatever a vent reports, so the vents were being walked
+        /// every sweep to produce a number that <see cref="RoomPressure.Level"/> discards — and a
+        /// field dump showed one such compartment on an ordinary ship, permanently.
+        /// </summary>
+        [Fact]
+        public void ARoomTheGameDoesNotSealNeedsNoVentsBecauseItsAnswerIsAlreadyZero()
+        {
+            Assert.False(RoomPressure.NeedsVentFallback(true, false, RoomPressure.NotReported));
+
+            // And the answer it would have produced is zero regardless of what a vent said.
+            Assert.Equal(0f, RoomPressure.Level(true, false, 1f));
+        }
+
+        [Fact]
+        public void AWorldWithoutPressurisationNeedsNoVentsAtAll()
+        {
+            Assert.False(RoomPressure.NeedsVentFallback(false, true, RoomPressure.NotReported));
+            Assert.Equal(0f, RoomPressure.Level(false, true, 1f));
+        }
+
+        /// <summary>
+        /// The fallback exists to decide a level, so it must be asked for exactly when the level
+        /// is still open. Anything Level would resolve on its own is work not worth doing.
+        /// </summary>
+        [Fact]
+        public void TheFallbackIsNeededExactlyWhenTheAnswerIsStillOpen()
+        {
+            float[] levels = { RoomPressure.NotReported, 0f, 0.5f, 1f };
+
+            for (int w = 0; w < 2; w++)
+            {
+                for (int g = 0; g < 2; g++)
+                {
+                    for (int i = 0; i < levels.Length; i++)
+                    {
+                        bool world = w == 1;
+                        bool sealedByGame = g == 1;
+                        bool needs = RoomPressure.NeedsVentFallback(world, sealedByGame, levels[i]);
+
+                        // Where the vents are not read, the level computed without them is the
+                        // level that stands. It must not depend on what a vent would have said.
+                        if (!needs)
+                        {
+                            Assert.Equal(
+                                RoomPressure.Level(world, sealedByGame, levels[i]),
+                                RoomPressure.Level(world, sealedByGame,
+                                    levels[i] < 0f ? RoomPressure.NotReported : levels[i]));
+                        }
+                        else
+                        {
+                            // Only an unreported level in a room that could hold air.
+                            Assert.True(world && sealedByGame && levels[i] < 0f);
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

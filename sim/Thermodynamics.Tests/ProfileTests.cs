@@ -32,7 +32,7 @@ namespace Thermodynamics.Tests
             Assert.True(ThermalProfiles.Apply(settings, profile), "unknown profile " + profile);
 
             // The work budget shortens steps on its own; a profile has to stand up without it.
-            settings.MaxLinkVisitsPerStep = 0;
+            settings.MaxElementVisitsPerStep = 0;
             settings.Derive();
 
             GridBuilder builder = GridBuilder.Large();
@@ -144,7 +144,7 @@ namespace Thermodynamics.Tests
 
                 ThermalSettings settings = new ThermalSettings();
                 ThermalProfiles.Apply(settings, profile);
-                settings.MaxLinkVisitsPerStep = 0;
+                settings.MaxElementVisitsPerStep = 0;
                 settings.Derive();
 
                 LoadBenchmarks.ReachRow row = LoadBenchmarks.Reach(profile, settings, seconds, length);
@@ -154,10 +154,24 @@ namespace Thermodynamics.Tests
                     + seconds + " s, at " + row.WorkPerRealSecond.ToString("n0") + " work/s.");
             }
 
-            Assert.True(reached[ThermalProfiles.Responsive] > reached[ThermalProfiles.Default],
-                "responsive should outrun default");
-            Assert.True(reached[ThermalProfiles.Arcade] > reached[ThermalProfiles.Responsive],
-                "arcade should outrun responsive");
+            // The ladder has two axes. This is the pace one: responsive and arcade run the clock
+            // at the tuned pace, the other three run at real time, and real time is slow — a hull
+            // moves a fraction of a kelvin a minute, which is the claim `simulation` exists to
+            // make and the reason it is not how anyone plays.
+            Assert.True(reached[ThermalProfiles.Responsive] > reached[ThermalProfiles.Simulation],
+                "responsive is simulation with the clock run fast, so it must outrun it");
+            Assert.True(reached[ThermalProfiles.Arcade] > reached[ThermalProfiles.Optimized],
+                "arcade is optimized with the clock run fast, so it must outrun it");
+
+            // And the accuracy axis, checked at a pace where it can be measured: arcade is
+            // responsive with the cost dials tuned, not different physics, so heat must travel
+            // about as far under both. Comparing simulation with optimized would be comparing two
+            // numbers that are both nearly zero, which proves nothing.
+            float ratio = reached[ThermalProfiles.Arcade]
+                / (float)Math.Max(1, reached[ThermalProfiles.Responsive]);
+
+            Assert.True(ratio > 0.9f && ratio < 1.1f,
+                "arcade should reach about as far as responsive, was " + ratio.ToString("n2"));
         }
 
         /// <summary>
@@ -181,7 +195,7 @@ namespace Thermodynamics.Tests
             settings.Frequency = 4;
             settings.HeatTimeScale = 100000f;
             settings.MaxSubsteps = 1;
-            settings.MaxLinkVisitsPerStep = 0;
+            settings.MaxElementVisitsPerStep = 0;
             settings.EnableEnvironment = false;
             settings.EnableRadiation = false;
             settings.EnableConvection = false;
@@ -219,6 +233,125 @@ namespace Thermodynamics.Tests
             float drift = Math.Abs(after - before) / Math.Max(1f, Math.Abs(before));
             Assert.True(drift < 1e-3f,
                 "scaling an exchange must keep it equal and opposite; energy moved by " + drift);
+        }
+
+        /// <summary>
+        /// A fresh world runs the responsive profile, value for value.
+        ///
+        /// Without this the two drift: someone tunes a default, the menu starts reading "custom"
+        /// on a fresh install, and applying the profile the game says it is already on silently
+        /// changes the world. Every value the profile sets is compared, which is the only set that
+        /// can disagree.
+        /// </summary>
+        [Fact]
+        public void DefaultsMatchTheResponsiveProfile()
+        {
+            ThermalSettings shipped = new ThermalSettings();
+            shipped.Derive();
+
+            ThermalSettings responsive = new ThermalSettings();
+            Assert.True(ThermalProfiles.Apply(responsive, ThermalProfiles.Responsive));
+
+            Assert.Equal(responsive.Frequency, shipped.Frequency);
+            Assert.Equal(responsive.SimulationSpeed, shipped.SimulationSpeed);
+            Assert.Equal(responsive.HeatTimeScale, shipped.HeatTimeScale);
+            Assert.Equal(responsive.MaxSubsteps, shipped.MaxSubsteps);
+            Assert.Equal(responsive.MaxSubstepsPerBlock, shipped.MaxSubstepsPerBlock);
+            Assert.Equal(responsive.MaxElementVisitsPerStep, shipped.MaxElementVisitsPerStep);
+            Assert.Equal(responsive.ClampConductionOvershoot, shipped.ClampConductionOvershoot);
+            Assert.Equal(responsive.ClampEnvironmentOvershoot, shipped.ClampEnvironmentOvershoot);
+            Assert.Equal(responsive.SolarSelfShadowing, shipped.SolarSelfShadowing);
+            Assert.Equal(responsive.EnableRoomAir, shipped.EnableRoomAir);
+        }
+
+        /// <summary>
+        /// The default is playable, which means bounded: a step that lands whole in one frame is
+        /// what the budget exists to prevent, and a world nobody configured should not be able to
+        /// do it. Simulation is the one profile allowed to be unbounded, because it is a reference
+        /// rather than a way to play.
+        /// </summary>
+        [Fact]
+        public void TheDefaultIsFrameBoundedAndOnlySimulationIsNot()
+        {
+            ThermalSettings shipped = new ThermalSettings();
+            Assert.True(shipped.MaxElementVisitsPerStep > 0);
+
+            ThermalSettings simulation = new ThermalSettings();
+            ThermalProfiles.Apply(simulation, ThermalProfiles.Simulation);
+            Assert.Equal(0, simulation.MaxElementVisitsPerStep);
+
+            foreach (string name in new[]
+            {
+                ThermalProfiles.Responsive, ThermalProfiles.Optimized,
+                ThermalProfiles.Simlite, ThermalProfiles.Arcade,
+            })
+            {
+                ThermalSettings settings = new ThermalSettings();
+                ThermalProfiles.Apply(settings, name);
+
+                Assert.True(settings.MaxElementVisitsPerStep > 0,
+                    name + " is a profile people play on, so it must bound a step");
+            }
+        }
+
+        /// <summary>
+        /// The ladder's accuracy axis, as a shape rather than as five separate numbers.
+        ///
+        /// Simulation resolves whatever it is asked for, optimized takes the field-tuned pair, and
+        /// simlite gives up more still. A change that reorders these has changed what the presets
+        /// mean, which is worth failing a build over.
+        /// </summary>
+        [Fact]
+        public void TheAccuracyAxisDescendsInOrder()
+        {
+            int simulation = SubstepCeiling(ThermalProfiles.Simulation);
+            int optimized = SubstepCeiling(ThermalProfiles.Optimized);
+            int simlite = SubstepCeiling(ThermalProfiles.Simlite);
+
+            Assert.True(simulation > optimized, "simulation must resolve more than optimized");
+            Assert.True(optimized > simlite, "optimized must resolve more than simlite");
+
+            // And the floor moves with it: simulation floors nothing, the other two do.
+            Assert.Equal(0, PerBlockCap(ThermalProfiles.Simulation));
+            Assert.True(PerBlockCap(ThermalProfiles.Optimized) > 0);
+            Assert.True(PerBlockCap(ThermalProfiles.Simlite) > 0);
+        }
+
+        /// <summary>
+        /// The pace axis: three profiles run the clock at real time and two run it fast. Which is
+        /// which is the thing a player chooses between, so it is pinned by name.
+        /// </summary>
+        [Fact]
+        public void ThePaceAxisSeparatesRealTimeFromPlayable()
+        {
+            Assert.Equal(1f, Pace(ThermalProfiles.Simulation));
+            Assert.Equal(1f, Pace(ThermalProfiles.Optimized));
+            Assert.Equal(1f, Pace(ThermalProfiles.Simlite));
+
+            Assert.True(Pace(ThermalProfiles.Responsive) > 1f);
+            Assert.Equal(Pace(ThermalProfiles.Responsive), Pace(ThermalProfiles.Arcade));
+        }
+
+        private static ThermalSettings Applied(string profile)
+        {
+            ThermalSettings settings = new ThermalSettings();
+            Assert.True(ThermalProfiles.Apply(settings, profile));
+            return settings;
+        }
+
+        private static int SubstepCeiling(string profile)
+        {
+            return Applied(profile).MaxSubsteps;
+        }
+
+        private static int PerBlockCap(string profile)
+        {
+            return Applied(profile).MaxSubstepsPerBlock;
+        }
+
+        private static float Pace(string profile)
+        {
+            return Applied(profile).HeatTimeScale;
         }
     }
 }

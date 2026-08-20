@@ -50,7 +50,7 @@ namespace Thermodynamics.Tests
             settings.Frequency = frequency;
 
             // The work budget would shorten steps on its own and hide what is being measured.
-            settings.MaxLinkVisitsPerStep = 0;
+            settings.MaxElementVisitsPerStep = 0;
             settings.Derive();
 
             ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);

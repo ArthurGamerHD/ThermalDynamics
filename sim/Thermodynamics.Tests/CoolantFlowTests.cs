@@ -25,7 +25,7 @@ namespace Thermodynamics.Tests
             settings.EnableFriction = false;
             settings.EnableDamage = false;
             settings.MaxSubsteps = 4096;
-            settings.MaxLinkVisitsPerStep = 0;
+            settings.MaxElementVisitsPerStep = 0;
             return settings.Derive();
         }
 
@@ -259,6 +259,60 @@ namespace Thermodynamics.Tests
         }
     
         /// <summary>
+        /// A pump between off and full drives the ring proportionally, which is what the terminal
+        /// slider sets. Flow goes as the square root of combined pumping, so half speed is about
+        /// seven tenths of the flow rather than half of it.
+        /// </summary>
+        [Fact]
+        public void HalfSpeedIsAboutSeventyPercentOfTheFlow()
+        {
+            CoolantLoop loop;
+            Ring(6, 5, 4f, out loop);
+
+            // Magnitudes throughout: the sign of the flow is the direction the ring is driven,
+            // and this ring's pump happens to face the other way round it. A ring driven backwards
+            // cools exactly as well.
+            float full = Math.Abs(loop.FlowSegmentsPerSecond);
+            Assert.True(full > 0f);
+
+            for (int i = 0; i < loop.Pumps.Count; i++) loop.Pumps[i].Speed = 0.5f;
+            loop.RefreshFlow();
+            float half = Math.Abs(loop.FlowSegmentsPerSecond);
+
+            Assert.True(half < full);
+            Assert.Equal(full * (float)Math.Sqrt(0.5), half, 3);
+
+            // And all the way down stops the ring, the same as switching it off.
+            for (int i = 0; i < loop.Pumps.Count; i++) loop.Pumps[i].Speed = 0f;
+            loop.RefreshFlow();
+            Assert.Equal(0f, loop.FlowSegmentsPerSecond);
+        }
+
+        /// <summary>
+        /// The flow rate is cached, not derived on read, so a host that changes a pump's setting
+        /// has to say so.
+        ///
+        /// This is a characterisation rather than a preference — the cache is what keeps a square
+        /// root off the step path — but it is the trap behind the switch that never worked: a
+        /// setting written into the model and never refreshed moves a number nothing reads.
+        /// </summary>
+        [Fact]
+        public void AChangedPumpSettingReachesTheFluidOnlyAfterARefresh()
+        {
+            CoolantLoop loop;
+            Ring(6, 5, 4f, out loop);
+
+            float before = loop.FlowSegmentsPerSecond;
+            Assert.True(Math.Abs(before) > 0f);
+
+            for (int i = 0; i < loop.Pumps.Count; i++) loop.Pumps[i].Enabled = false;
+            Assert.Equal(before, loop.FlowSegmentsPerSecond);
+
+            loop.RefreshFlow();
+            Assert.Equal(0f, loop.FlowSegmentsPerSecond);
+        }
+
+        /// <summary>
         /// The well-mixed model is one parcel holding the whole ring's coolant, so it costs one
         /// accumulator and one integration however long the ring is.
         ///
@@ -460,7 +514,7 @@ namespace Thermodynamics.Tests
             settings.EnableDamage = false;
             settings.MaxSubsteps = 1;                // one substep, so the whole second is one h
             settings.MaxSubstepsPerBlock = 0;
-            settings.MaxLinkVisitsPerStep = 0;
+            settings.MaxElementVisitsPerStep = 0;
             settings.Derive();
 
             Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();

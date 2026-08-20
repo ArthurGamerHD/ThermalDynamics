@@ -14,30 +14,73 @@ to disk unless asked.
 | --- | --- |
 | `/thermal status` | Collection state, sample stride, live grids, block models, bridges. |
 | `/thermal settings` | Every setting and its current value. |
-| `/thermal set <name> <value>` | Changes one setting for this session. Switches take `on`/`off` or `1`/`0`. |
+| `/thermal set <name> <value>` | Changes one setting for this session. Switches take `on`/`off` or `1`/`0`. On a multiplayer client this asks the server, which answers whether it was allowed. |
 | `/thermal save` | Writes the current values to the config file. |
+| `/thermal sync` | Digest of every replicated setting, to compare a client against the server by eye. Run it on both; the strings must match. |
+| `/thermal sync fetch` | Client only: asks the server for the settings again. |
 | `/thermal overlay` | Cycles the block overlay. Same as Ctrl+Shift+=. |
 | `/thermal menu` | Opens the settings menu. Same as Ctrl+Shift+S. |
 | `/thermal telemetry on` / `off` | Starts and stops data collection. |
 | `/thermal stride <n>` | Telemetry sample stride. |
 | `/thermal dump` | Writes a telemetry report without closing the world. |
 
-Settings are server side; `set` from a client is refused. The same names are reachable from other
-mods — see [api.md](api.md#settings).
+Settings are world state. A client at space master or above may change them — the request goes to
+the server, which decides — and the four presentation switches belong to the client outright. The
+same names are reachable from other mods, see [api.md](api.md#settings).
 
 ## The settings menu
 
-**Ctrl+Shift+S** opens it, as does `/thermal menu`. It is built on the [Rich HUD
+**Ctrl+Shift+S** opens it, as does `/thermal menu`.
+
+The menu is eleven pages rather than one, grouped in the rail: **Overview**, **Status**, **Debug**,
+then folders for **Solver** (Cost limits, Pace), **Heat transfer** (Mechanisms, Solar, Occlusion) and
+**World** (Climate, Systems, Room air). Forty-eight settings on a single scroll is a list to be
+searched by eye, and an administrator usually arrives wanting one part of it.
+
+Three of the framework's habits shape what the pages can say, and all three were learned by looking
+at the menu in game rather than by reading the API:
+
+* **A label is one centred line and clips at both ends rather than wrapping.** Every label here
+  stays inside about twenty characters, and anything longer than that — the full text of a warning,
+  the list of what has been changed — lives on the Status page, which is a text page and does wrap.
+* **A page name clips in the rail at about seventeen characters.** Page names are short for that
+  reason, not for taste.
+* **A loose page added after a folder draws against the folder's row.** Overview, Status and Debug
+  are therefore added before the folders.
+
+**Some settings are typed, not dragged.** A slider offers about two hundred distinguishable
+positions, which suits a fraction between 0 and 1 and suits nothing else this mod has. The step
+budget spans four million, so one position is ten thousand element visits; the friction scale spans
+a hundredth, so every position shows the same number. Seven settings therefore get a field to type
+a value into — the step budget, terrain range, solar energy, heat time scale, vacuum temperature,
+the friction threshold and the friction scale — and the rest keep their sliders.
+
+The range in a typed field's tooltip is what the slider *would* have spanned, not a limit. A typed
+value goes through the same clamp as `/thermal set` and the mod API, so a step budget of nine
+million is yours to try. Anything unreadable puts the setting's own value back rather than guessing.
+
+**Overview** answers the two questions a wall of sliders cannot — which profile this world matches,
+worked out by comparing the nine values a profile sets, and how many settings differ from the
+shipped defaults, each of them dotted in front of its label on its own page. It flags a conflict in
+three words; **Status** spells it out, lists every changed setting with the shipped value beside it,
+and carries the settings digest for comparing against the server.
+
+Three pages carry live figures read from the running grids rather than from the settings that
+produced them: **Cost limits** shows substeps granted against substeps asked for and how many blocks
+the cap floored, **Pace** shows the hottest block and what the world is venting against what it
+makes, and **Debug** shows which overlay is up and whether telemetry is recording.
+
+It also carries Save, Reset and the five profiles as buttons — profiles were previously reachable
+only from chat, so the menu could show a world tuned by one without ever mentioning they existed. It is built on the [Rich HUD
 Framework](https://github.com/ZachHembree/RichHudFramework.Client) and needs the **Rich HUD Master**
 mod (`1965654081`) to be enabled; without it the keystroke says so and the chat commands remain the
 way in.
 
-**Save to config file** and **Reset everything to defaults** sit at the top, one of each for the
-whole file. Below them are titled rows — heat transfer, solar, solar occlusion, ship systems, solver,
-environment, display — each holding its settings in two columns. Every value in the config file has a
-control and carries that setting's description; switches are checkboxes, numbers are sliders with a
-range chosen for what is worth dragging to, and a setting that picks between behaviours is a named
-dropdown.
+**Settings save themselves.** Every change is written to the config file about a second
+later — a menu that asks you to confirm what you already did is asking you to do it twice,
+and a setting that reverts on reload because a button was missed is worse than either.
+There is no reset button either: a profile sets every world setting, so applying one is how
+you start over.
 
 Two columns because that is what the page is wide enough for: the framework's tiles are a fixed
 300x250, so a third column would have to be scrolled to sideways.
@@ -83,7 +126,7 @@ Each switch removes exactly its own mechanism and its own cost.
 
 ## Solver
 
-`MaxLinkVisitsPerStep` is the one to reach for when a very large grid stutters, and it is worth
+`MaxElementVisitsPerStep` is the one to reach for when a very large grid stutters, and it is worth
 understanding before changing it.
 
 A step's cost is not its length: it is the number of substeps it takes times the number of links
@@ -208,7 +251,7 @@ never engage**, and every step is genuinely short enough for the grid it is inte
 
 It is off by default because it is an approximation, and a mod that models heat should not make
 one on a player's behalf without being asked. On a world with large ships in it, turning it on is
-the single largest thing that can be done for frame time — and unlike `MaxLinkVisitsPerStep`, it
+the single largest thing that can be done for frame time — and unlike `MaxElementVisitsPerStep`, it
 buys the throughput back rather than trading it away: a ship that stops needing more substeps than
 the visit budget allows stops being throttled at all.
 
@@ -220,22 +263,70 @@ raise — see [telemetry.md](telemetry.md#substeps). The projection is the same 
 setting uses, and `SubstepFloorTests` asserts the two agree, so one baseline dump answers the
 question for that world without running the experiment.
 
+## Changing settings from a client
+
+Every setting except the four presentation switches is world state, owned by the server. A client
+at **space master** or above can change one anyway: the settings menu and `/thermal set` send the
+change to the server as a request, the server checks the asker's promote level and applies it, and
+the result comes back as a chat line. An accepted change then replicates to everyone as part of the
+ordinary settings sync, so the value moving is its own confirmation.
+
+A player below that level is refused, and told so — silence would be indistinguishable from a lost
+packet.
+
+**The request travels on its own channel, not the one the rest of the mod uses.** SENetworkAPI
+registers the game's non-secure message handler, where the sender's id is a field the *sender*
+wrote; its own documentation says not to gate admin actions on it. `SettingsRequests` uses
+`RegisterSecureMessageHandler`, where the transport supplies the sender and a from-the-server flag
+that a client cannot forge. That is the whole reason for the separate channel.
+
+## Checking a client has the server's settings
+
+Only the server reads the config file. A client is sent the world's settings when it joins and
+whenever one changes, and until that arrived it would be simulating the shipped defaults — the same
+physics inputs producing different temperatures on the two machines, with nothing on screen to say
+so.
+
+`/thermal sync` prints a digest over the 44 replicated settings, plus the five figures most likely
+to differ. Run it on the server and on a client: **the digests must match**. If they do not,
+`/thermal sync fetch` asks again, and running the first command a second time says whether that
+worked.
+
+The four presentation switches — the debug text, the two raycast overlays and the block overlay —
+are deliberately outside the digest. A client owns what is drawn on its own screen, so those are
+allowed to differ and a server does not overwrite them.
+
 ## Profiles
 
-Five ready-made bundles, from simulation-first to arcade. `/thermal profile` lists them,
-`/thermal profile arcade` applies one live, `/thermal save` keeps it. They are also templates:
-each is four numbers, and the section below says what happens as you move them.
+Five presets, laid out as a graphics menu lays them out: a ladder on two axes, where the
+simulation is integrated and how fast heat is made to move. `/thermal profile` lists them,
+`/thermal profile arcade` applies one live, and a profile sets **every** world setting — so
+applying one is also how you start over. A fresh world runs `responsive`.
 
-| Profile | Freq | HeatTimeScale | MaxSubsteps | Heat speed | Cost | For |
-| --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `simulation` | 8 | 225 | 64 | 1x | 952 | Never clamps. The curve between two temperatures is the real one. |
-| `default` | 4 | 225 | 16 | 1x | 476 | As shipped. Slow enough to plan around, cheap enough to ignore. |
-| `responsive` | 4 | 3,600 | 8 | **5x** | 476 | Heat you can watch move, for the same cost as default. |
-| `arcade` | 6 | 20,000 | 1 | **11x** | 714 | Fast, cheap, approximate. Heat rushes. |
-| `minimal` | 2 | 6,000 | 1 | **6x** | 238 | A crowded server. Quicker than default at half its cost. |
+| Profile | Freq | HeatTimeScale | MaxSubsteps | Blocks crossed | Work/s | ms/s | For |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| `simulation` | 8 | **1** | 64 | 0.0 | 3,192 | 0.58 | Real time, real physics. The reference, not a way to play. |
+| `optimized` | 4 | **1** | 6 | 0.0 | 1,596 | 0.13 | Real time with the cost dials tuned. |
+| `simlite` | 4 | **1** | 3 | 0.0 | 1,596 | 0.04 | Real time, knowingly approximate. |
+| `responsive` | 8 | 225 | 64 | 0.1 | 3,192 | 0.07 | **The default.** Simulation with the clock run fast. |
+| `arcade` | 4 | 225 | 6 | 0.1 | 1,596 | 0.04 | Responsive's pace at optimized's price. |
 
-*Heat speed is blocks crossed in eight seconds along a held-hot run, relative to default. Cost is
-element visits per real second, machine-independent. `bench profiles` reproduces both.*
+*Measured by `bench profiles --seconds 8`: blocks crossed along a held-hot 200-block run, work as
+element visits per real second, and the solver's own milliseconds per simulated second.*
+
+**Read the first three rows' zero honestly.** It is not a rounding artefact: at `HeatTimeScale` 1 a
+ship changes temperature at the rate a ship does, and eight seconds of play moves heat across no
+blocks at all. The same run with the environment on leaves a hot spot 768 K above its hull on those
+profiles and 10 K above it on the two that run the clock fast. That is the whole difference between
+the reference and a way to play.
+
+**`HeatTimeScale` is also the stiffness dial**, because it divides every heat capacity: substep
+demand on a 150-block hull is 0.00 at scale 1, 0.90 at 225 and 14.40 at 3,600. Real time is the
+cheapest thing to integrate, which is why the accurate profiles are not the expensive ones — on
+this ladder accuracy costs patience, and pace costs frames.
+
+See [profiles.md](profiles.md) for the ladder in full, including the definition overlay each
+profile brings with it.
 
 > The Cost column tracks `Frequency` exactly, and that is a property of what it was measured on
 > rather than of `Frequency`. Both figures come from a 200-block conduction run where every node
@@ -331,16 +422,16 @@ result 0.5 % different.
 
 Two things to watch when lowering it. A longer step needs more substeps, so a stiff grid can reach
 `MaxSubsteps` and start clamping — the report's **steps clamped by substep cap** is where that
-shows, and it should stay at zero. And on a grid large enough for `MaxLinkVisitsPerStep` to bind,
+shows, and it should stay at zero. And on a grid large enough for `MaxElementVisitsPerStep` to bind,
 that budget is already shortening steps and is the constraint that matters; lowering `Frequency`
 will not move it much.
 
 | Setting | Default | Effect |
 | --- | --- | --- |
-| `Frequency` | 4 | Solver steps per simulated second. The integration step is `1/Frequency`. Whether lowering it cuts cost depends on the grid — see below. |
+| `Frequency` | 8 | Solver steps per simulated second. The integration step is `1/Frequency`. Whether lowering it cuts cost depends on the grid — see below. |
 | `SimulationSpeed` | 1 | Simulated seconds per real second, applied by running more steps rather than longer ones. Linear in CPU. |
 | `HeatTimeScale` | 225 | How much faster than real physics heat moves. Divides every heat capacity. |
-| `MaxLinkVisitsPerStep` | 1000000 | Most link visits one step may make — substeps times links — before the step is shortened to fit. 0 removes the bound. See below. |
+| `MaxElementVisitsPerStep` | 1000000 | Most element visits one step may make — substeps times its links plus four times its nodes — before the step is shortened to fit. 0 removes the bound. See below. |
 | `MaxSubstepsPerBlock` | 0 (off) | Most substeps any single block may demand of the whole grid before it is treated as heavier than it is. The cheapest large win there is on a real ship. See below. |
 | `ClampConductionOvershoot` | `true` | Caps each exchange at the energy that equalises the pair. Off reproduces the original unbounded solver. |
 | `DamageIsPerSecond` | `true` | Overheat damage per second of simulated time. Off applies it per step, which makes damage scale with `Frequency`. |

@@ -286,6 +286,30 @@ namespace Thermodynamics.Sim
                     return 0;
                 }
 
+                case "elements":
+                {
+                    // What a substep costs per node and per link, fitted across shapes chosen for
+                    // their link-to-node ratio. The step budget charges for links alone, so this
+                    // is what it would have to charge for instead.
+                    int nodes = OptionInt(args, "--nodes", 8000);
+                    float seconds = OptionInt(args, "--seconds", 20);
+
+                    string only = Option(args, "--shapes", null);
+                    ElementCostLab.OnlyShapes = only == null ? null : only.Split(',');
+
+                    Console.WriteLine();
+                    Console.WriteLine(ElementCostLab.Report(nodes, seconds));
+
+                    if (csvDirectory != null)
+                    {
+                        Directory.CreateDirectory(csvDirectory);
+                        string path = Path.Combine(csvDirectory, "element-cost.csv");
+                        File.WriteAllText(path, ElementCostLab.Csv(nodes, seconds));
+                        Console.WriteLine("csv -> " + path);
+                    }
+                    return 0;
+                }
+
                 case "memory":
                 {
                     Console.WriteLine();
@@ -313,7 +337,7 @@ namespace Thermodynamics.Sim
 
                         ThermalSettings forStability = new ThermalSettings();
                         ThermalProfiles.Apply(forStability, profile);
-                        forStability.MaxLinkVisitsPerStep = 0;
+                        forStability.MaxElementVisitsPerStep = 0;
                         forStability.Derive();
                         stable.Add(LoadBenchmarks.Stability(profile, forStability, seconds));
                     }
