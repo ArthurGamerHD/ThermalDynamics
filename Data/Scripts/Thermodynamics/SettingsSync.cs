@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using Sandbox.ModAPI;
 using SENetworkAPI;
 using VRage.Game.Components;
@@ -169,6 +170,87 @@ namespace Thermodynamics
             finally
             {
                 applying = false;
+            }
+        }
+
+        /// <summary>
+        /// A short digest of every replicated setting, for comparing two machines by eye.
+        ///
+        /// The whole point of this class is that a client and a server hold the same numbers, and
+        /// nothing about it can be tested outside a live session: it is all host code. One string
+        /// that must match, read on each side, is the cheapest way to check it — and the cheapest
+        /// way to tell whether a report of "the client feels different" is this or something else.
+        ///
+        /// Order comes from <see cref="Settings.Names"/> and the client-owned switches are left
+        /// out, so the digest covers exactly what is replicated and nothing that is allowed to
+        /// differ.
+        /// </summary>
+        public static string Fingerprint()
+        {
+            Settings settings = Settings.Instance;
+            if (settings == null) return "none";
+
+            // FNV-1a over each replicated name and its value, rounded to four decimals so a float
+            // that survived a round trip with a last-bit difference still agrees.
+            unchecked
+            {
+                uint hash = 2166136261;
+                List<string> names = Settings.Names();
+
+                for (int i = 0; i < names.Count; i++)
+                {
+                    string name = names[i];
+                    if (Settings.ClientOwned.Contains(name)) continue;
+
+                    string entry = name + "="
+                        + settings.GetValue(name).ToString("n4", CultureInfo.InvariantCulture) + ";";
+
+                    for (int c = 0; c < entry.Length; c++)
+                    {
+                        hash ^= entry[c];
+                        hash *= 16777619;
+                    }
+                }
+
+                return hash.ToString("x8");
+            }
+        }
+
+        /// <summary>How many settings the digest covers.</summary>
+        public static int ReplicatedCount()
+        {
+            List<string> names = Settings.Names();
+            int count = 0;
+            for (int i = 0; i < names.Count; i++)
+            {
+                if (!Settings.ClientOwned.Contains(names[i])) count++;
+            }
+            return count;
+        }
+
+        /// <summary>Whether the property exists and holds something that could be sent.</summary>
+        public static bool Ready
+        {
+            get { return synced != null && synced.Value != null; }
+        }
+
+        /// <summary>
+        /// Asks the server for the current settings again. A client only fetches automatically
+        /// once, when it loads, so this is the way to re-ask after a change that went missing.
+        /// </summary>
+        public static bool Fetch()
+        {
+            if (synced == null || IsServer()) return false;
+
+            try
+            {
+                synced.Fetch();
+                return true;
+            }
+            catch (Exception e)
+            {
+                MyLog.Default.Info("[" + Settings.Name + "] settings fetch failed\n" + e);
+                return false;
             }
         }
 

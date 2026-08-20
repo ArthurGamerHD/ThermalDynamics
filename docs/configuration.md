@@ -16,6 +16,8 @@ to disk unless asked.
 | `/thermal settings` | Every setting and its current value. |
 | `/thermal set <name> <value>` | Changes one setting for this session. Switches take `on`/`off` or `1`/`0`. |
 | `/thermal save` | Writes the current values to the config file. |
+| `/thermal sync` | Digest of every replicated setting, to compare a client against the server by eye. Run it on both; the strings must match. |
+| `/thermal sync fetch` | Client only: asks the server for the settings again. |
 | `/thermal overlay` | Cycles the block overlay. Same as Ctrl+Shift+=. |
 | `/thermal menu` | Opens the settings menu. Same as Ctrl+Shift+S. |
 | `/thermal telemetry on` / `off` | Starts and stops data collection. |
@@ -219,6 +221,22 @@ for the world, exactly what each cap would do to the substep count and how many 
 raise — see [telemetry.md](telemetry.md#substeps). The projection is the same arithmetic the
 setting uses, and `SubstepFloorTests` asserts the two agree, so one baseline dump answers the
 question for that world without running the experiment.
+
+## Checking a client has the server's settings
+
+Only the server reads the config file. A client is sent the world's settings when it joins and
+whenever one changes, and until that arrived it would be simulating the shipped defaults — the same
+physics inputs producing different temperatures on the two machines, with nothing on screen to say
+so.
+
+`/thermal sync` prints a digest over the 44 replicated settings, plus the five figures most likely
+to differ. Run it on the server and on a client: **the digests must match**. If they do not,
+`/thermal sync fetch` asks again, and running the first command a second time says whether that
+worked.
+
+The four presentation switches — the debug text, the two raycast overlays and the block overlay —
+are deliberately outside the digest. A client owns what is drawn on its own screen, so those are
+allowed to differ and a server does not overwrite them.
 
 ## Profiles
 

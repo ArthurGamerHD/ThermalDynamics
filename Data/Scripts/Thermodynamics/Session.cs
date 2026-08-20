@@ -264,6 +264,20 @@ namespace Thermodynamics
                 return;
             }
 
+            if (lowered == "sync")
+            {
+                ReportSync();
+                return;
+            }
+
+            if (lowered == "sync fetch")
+            {
+                Reply(SettingsSync.Fetch()
+                    ? "asked the server for the settings again"
+                    : "nothing to fetch: this is the server");
+                return;
+            }
+
             if (lowered.StartsWith("set "))
             {
                 RunSet(argument.Substring(4).Trim());
@@ -333,7 +347,8 @@ namespace Thermodynamics
             }
 
             Reply("commands: status | settings | set <name> <value> | profile [name] | save"
-                + " | overlay | menu | telemetry on | telemetry off | stride <n> | dump");
+                + " | sync [fetch] | overlay | menu | telemetry on | telemetry off"
+                + " | stride <n> | dump");
         }
 
         /// <summary>
@@ -425,6 +440,33 @@ namespace Thermodynamics
 
             Telemetry.Finish("manual dump", true);
             Reply("telemetry report written to world storage");
+        }
+
+        /// <summary>
+        /// Reports whether this machine's settings match the server's, as a digest to compare by
+        /// eye with the same command run on the other side.
+        ///
+        /// Replication is host code and cannot be tested outside a live session, so this is how it
+        /// gets checked: run it on the server, run it on a client, compare one string.
+        /// </summary>
+        private static void ReportSync()
+        {
+            bool server = MyAPIGateway.Session != null && MyAPIGateway.Session.IsServer;
+
+            Reply((server ? "server" : "client")
+                + " | settings digest " + SettingsSync.Fingerprint()
+                + " over " + SettingsSync.ReplicatedCount() + " values"
+                + (SettingsSync.Ready ? "" : " | NOT SYNCED: nothing to send or receive"));
+
+            // The few figures most likely to differ, so a mismatch says which way it went without
+            // needing the config file open.
+            Reply("  Frequency " + Settings.Instance.Frequency
+                + " | HeatTimeScale " + Settings.Instance.HeatTimeScale.ToString("n0")
+                + " | MaxSubsteps " + Settings.Instance.MaxSubsteps
+                + " | MaxSubstepsPerBlock " + Settings.Instance.MaxSubstepsPerBlock
+                + " | MaxElementVisits " + Settings.Instance.MaxElementVisitsPerStep.ToString("n0"));
+
+            if (!server) Reply("  digests differ? run /thermal sync fetch, then this again");
         }
 
         private static void Reply(string message)
