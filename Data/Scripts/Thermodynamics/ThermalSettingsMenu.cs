@@ -184,7 +184,18 @@ namespace Thermodynamics
 
         private static void Build()
         {
-            bool editable = MyAPIGateway.Session == null || MyAPIGateway.Session.IsServer;
+            // A client permitted to ask counts as able to edit: its controls send a request to the
+            // server rather than writing locally. Deciding this from IsServer alone is what kept
+            // the whole page greyed out on a client, including for an administrator who could
+            // change the same settings from chat.
+            bool editable = MyAPIGateway.Session == null
+                || MyAPIGateway.Session.IsServer
+                || SettingsRequests.MayAsk;
+
+            // Writing the file and resetting every value are still the server's alone: one is a
+            // disk write on a machine the client is not sitting at, and the other would be forty
+            // separate requests.
+            bool local = MyAPIGateway.Session == null || MyAPIGateway.Session.IsServer;
 
             page = new ControlPage { Name = "Settings" };
 
@@ -193,7 +204,7 @@ namespace Thermodynamics
 
             // Save and Reset at the top of the page. One of each for the whole file, since every
             // Save would write the same file.
-            page.Add(Actions(editable));
+            page.Add(Actions(local));
 
             List<string> names = Settings.Names();
             List<string> section = new List<string>();
@@ -263,6 +274,15 @@ namespace Thermodynamics
 
         private static string Subheader(string section, bool editable)
         {
+            if (section != Display && !MyAPIGateway.Session.IsServer)
+            {
+                // Three states rather than two, because "you may change this" and "the server will
+                // decide" are different promises and a player can tell which one they got.
+                return editable
+                    ? "Server side; your changes are sent to the server"
+                    : "Server side; read only here";
+            }
+
             if (!editable)
             {
                 return section == Display
