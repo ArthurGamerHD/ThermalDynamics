@@ -259,6 +259,41 @@ corpus once and the panel's verdicts compared against it, a reduced panel is a g
 matters. Fidelity is a statement about the feature space rather than about behaviour, so it is
 necessary and not sufficient.
 
+## Running the lab: parallel and linear
+
+Two modes, and the distinction is not a preference.
+
+| Mode | For | Why |
+| --- | --- | --- |
+| **Parallel** (default) | balance and data collection | Every result is a settling problem that is a pure function of a ship and a scenario. Nothing about a temperature changes because another core was busy, so going wide is free accuracy. |
+| **Linear** (`--linear`) | anything whose figure is a *duration* | The moment a result is a time, every other core is noise — cache pressure, memory bandwidth, turbo headroom, the scheduler. A benchmark run alongside thirty others measures contention, not the solver. |
+
+A balance figure taken linearly is the same figure. A cost figure taken in parallel is a different
+one, and there is no way to tell from the number itself.
+
+**The run is the unit of parallelism, not the ship.** Every simulation built from one ship shares
+that ship's `BlockInstance` objects and the load is written onto them, so two scenarios on one ship
+at once would overwrite each other — which does not throw and does not look wrong in a report. Each
+job reads the blueprint again for grid state of its own; block *models* stay cached and shared, so
+only the per-block instances are rebuilt, at a fraction of the settling run it frees. Without that,
+a panel of six ships would use six cores of however many the machine has.
+
+Measured on a 32-core machine, 3 specimens through 20 scenarios:
+
+| | Wall clock | Per run |
+| --- | --- | --- |
+| linear | 545.3 s | 9.09 s |
+| parallel | **118.7 s** | 1.98 s |
+
+**The two matrices were identical to the last digit.** `ParallelAndLinearProduceTheSameMatrix` is
+the standing cheap version of that comparison, so a change reintroducing shared state fails in the
+suite rather than in a report nobody re-runs linearly. Results keep the order of their inputs in
+both modes, so two runs can be diffed.
+
+Two other things made it faster without touching accuracy: runs stop on equilibrium rather than on
+the clock — most are flat long before their ceiling — and the definition caches are built once
+before the workers start rather than by whichever arrives first. Screening 32 ships is now 0.1 s.
+
 ## Open questions
 
 * **The fetcher has never run against a real key.** Its failure paths are checked — a missing key,
@@ -270,21 +305,21 @@ necessary and not sufficient.
 * **Whether `Census` should be replaced or kept beside the corpus.** Its tiers are a hypothesis the
   corpus can now test; if they hold, that is worth knowing, and if they do not, every scale figure
   taken on them wants re-reading.
-* **Ships reach hundreds of thousands of kelvin under load, and that is not a balance result.**
-  The first battery run put a 9,378-block hull at 342,510 K in `all-peak` and 684,296 K in
-  `flight-100`, against a screening estimate of 895 K for the same ship. A figure three orders of
-  magnitude past the estimate is a runaway, not a temperature. **It has to be diagnosed before any
-  balance conclusion is drawn from the battery**, and there are two candidates: the solver going
-  unstable on a real hull under a real load at the shipped substep caps — which would be a G6
-  failure and the most valuable thing the lab has found — or a fault in the load model applying
-  watts it should not. `ScenarioOutcome` already records substeps demanded against granted and the
-  energy drift, which is where the answer is.
-* **The battery is too slow to scale.** Two ships through twenty scenarios takes nine and a half
-  minutes, about fourteen seconds a run, even with equilibrium stopping and a 1,800-second ceiling.
-  Five hundred ships would be nearly two days. The stepping is the cost — `StepSeconds` is
-  `1/Frequency`, so an 1,800-second run is over seven thousand steps — and the fix is probably to
-  run the battery at a coarser frequency than the game does, which needs checking against the same
-  answer at the shipped one.
+* ~~Ships reach hundreds of thousands of kelvin under load.~~ **Diagnosed, and it was the
+  harness.** Gyros carry a `ForceMagnitude` element and it means *torque in newton-metres*, not
+  thrust in newtons — a large gyro reads 3.36e7 and a prototech one 2.016e8, against a real draw of
+  ten kilowatts. Reading it off every block that has the element turned one gyro into 33.6 MW of
+  waste heat and drove a 9,378-block hull to 342,510 K. It looked exactly like solver instability
+  and would have been written up as one. **The substep demand being met throughout is what gave it
+  away** — 2.7 against 3 granted, 18.3 against 19 — so the integrator was never short of what it
+  asked for. `all-peak` on the same hull now reads 15,751 K and the hottest block is a hydrogen
+  thruster, which is what the model says should run hot. `OnlyAThrusterCarriesThrust` pins it.
+* **Batteries may be the next one.** `full-electrical` still puts one `LargeBlockBatteryBlock` at
+  7,634 K with a hot spot almost equal to the peak — one block far above everything around it. A
+  large battery rated at 12 MW with a 0.03 producer fraction makes 360 kW inside a 3.8-tonne block,
+  and if it is buried its only exit is conduction. That may be honest, by the same "SE's rating is
+  fictional" argument the reactor needed; or the load model may be wrong to have every battery
+  discharging at full rating while the reactors also run. **Worth settling before any G2 claim.**
 * **Does the panel reproduce the corpus?** The claim in [Specimens](#specimens), unchecked. It needs
   one full battery run over a whole corpus to settle, and that run is the expensive thing the panel
   exists to avoid — so it is paid once.

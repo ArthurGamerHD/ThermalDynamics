@@ -188,6 +188,25 @@ It never handles a password — log the account in once with `steamcmd +login <u
 SteamCMD caches it. See [balance-lab.md](../docs/balance-lab.md) for what the lab is for and how it
 is staged.
 
+## Screening and the battery
+
+`screen` measures every ship in a corpus without stepping it, and cuts the population to a panel of
+specimens chosen to cover the design space rather than to be typical of it. `battery` puts that
+panel through every scenario.
+
+```bash
+dotnet run --project Thermodynamics.Sim -- screen  --panel 24
+dotnet run --project Thermodynamics.Sim -- battery --panel 6
+dotnet run --project Thermodynamics.Sim -- battery --panel 6 --linear
+```
+
+**`--linear` matters.** Balance collection runs concurrently, because a settling problem is a pure
+function of a ship and a scenario and nothing about a temperature changes because another core was
+busy. Anything whose figure is a *duration* has to run one at a time, because there every other
+core is contention rather than speed — and no number carries a note saying which it was. The two
+modes produce identical matrices; only the clock differs. See
+[balance-lab.md](../docs/balance-lab.md#running-the-lab-parallel-and-linear).
+
 ## Balance profiles
 
 `profiles`, `sweep` and `features` are the whole-system counterpart to `balance`: not "is this block
@@ -357,6 +376,11 @@ PipeFitter.BuildRing(builder, ring);      // pump goes on the first straight run
   and carries plumbing exactly when it should; and that the conclusions drawn from the balance pass
   — the radiator beating the armour it displaces, a coolant sink beating every surface dial, the
   heat pump passing through all three of its limits — cannot quietly invert
+* the lab runner: that results keep the order of their inputs in both modes, that one item
+  throwing does not lose the rest, and — the invariant parallel mode rests on — that parallel and
+  linear produce the same matrix
+* the load model: that only a thruster carries thrust, since gyros spell torque with the same
+  element and reading it drove a real hull to 342,000 K
 * blueprint reading: that a ship comes back with its name and every block, that an empty
   SubtypeName is the base armour cube, that one modded block disqualifies a ship, that a block of
   the wrong grid size is refused, and that a real subscribed ship builds a simulation that steps
