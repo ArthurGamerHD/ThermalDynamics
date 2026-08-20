@@ -1,0 +1,255 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Xml.Linq;
+using Thermodynamics.Core;
+
+namespace Thermodynamics.Harness
+{
+    /// <summary>
+    /// Every block Space Engineers ships, read from the installed game's own definitions.
+    ///
+    /// <see cref="Vanilla"/> transcribes fourteen reference blocks because the balance report has
+    /// to run on a machine with no install. This does not transcribe: it is the authoring side of
+    /// the definition pass, and there is no honest way to hand-copy 1,503 definitions. Everything
+    /// here returns empty when the game is absent, and the tests that use it skip rather than fail
+    /// — the *output* of the derivation is checked in as `Data/Cubes.xml` and pinned by a test that
+    /// needs no install at all.
+    /// </summary>
+    public static class GameBlocks
+    {
+        public class Definition
+        {
+            public string TypeId;
+            public string SubtypeId;
+            public bool Large;
+
+            /// <summary>Build cost, priced with the game's own component masses.</summary>
+            public List<BlockComponent> Components = new List<BlockComponent>();
+
+            /// <summary>Kilograms, summed from the components.</summary>
+            public float Mass
+            {
+                get
+                {
+                    float total = 0f;
+                    for (int i = 0; i < Components.Count; i++) total += Components[i].Mass;
+                    return total;
+                }
+            }
+
+            public override string ToString()
+            {
+                return TypeId + "/" + SubtypeId;
+            }
+        }
+
+        /// <summary>
+        /// The installed game's `Content/Data`, or null. The same candidate list
+        /// <c>BalanceTests.GameContentPath</c> walks, kept here so the harness can be used from the
+        /// command line rather than only from a test.
+        /// </summary>
+        public static string ContentPath()
+        {
+            List<string> candidates = new List<string>();
+
+            string bin = Environment.GetEnvironmentVariable("SE_BIN");
+            if (!string.IsNullOrEmpty(bin))
+            {
+                DirectoryInfo parent = Directory.GetParent(bin.TrimEnd('/', '\\'));
+                if (parent != null) candidates.Add(Path.Combine(parent.FullName, "Content", "Data"));
+            }
+
+            string home = Environment.GetEnvironmentVariable("HOME") ?? "";
+            candidates.Add(Path.Combine(home,
+                "Steam/SteamLibrary/steamapps/common/SpaceEngineers/Content/Data"));
+            candidates.Add("C:/Program Files (x86)/Steam/steamapps/common/SpaceEngineers/Content/Data");
+
+            foreach (string candidate in candidates)
+            {
+                if (File.Exists(Path.Combine(candidate, "Components.sbc"))) return candidate;
+            }
+            return null;
+        }
+
+        public static bool IsInstalled
+        {
+            get { return ContentPath() != null; }
+        }
+
+        private static List<Definition> _all;
+        private static Dictionary<string, float> _componentMasses;
+
+        /// <summary>Component name to kilograms, from the installed `Components.sbc`.</summary>
+        public static Dictionary<string, float> ComponentMasses()
+        {
+            if (_componentMasses != null) return _componentMasses;
+
+            Dictionary<string, float> masses = new Dictionary<string, float>();
+            string content = ContentPath();
+
+            if (content != null)
+            {
+                foreach (XElement component in XDocument.Load(Path.Combine(content, "Components.sbc"))
+                             .Descendants("Component"))
+                {
+                    XElement id = component.Element("Id");
+                    if (id == null) continue;
+
+                    string subtype = (string)id.Element("SubtypeId");
+                    float mass;
+                    if (subtype != null && float.TryParse((string)component.Element("Mass"),
+                            NumberStyles.Float, CultureInfo.InvariantCulture, out mass))
+                    {
+                        masses[subtype] = mass;
+                    }
+                }
+            }
+
+            _componentMasses = masses;
+            return masses;
+        }
+
+        /// <summary>Every block definition in the installed game, or an empty list.</summary>
+        public static List<Definition> All()
+        {
+            if (_all != null) return _all;
+
+            List<Definition> blocks = new List<Definition>();
+            string content = ContentPath();
+            if (content == null)
+            {
+                _all = blocks;
+                return blocks;
+            }
+
+            Dictionary<string, float> masses = ComponentMasses();
+            string directory = Path.Combine(content, "CubeBlocks");
+            if (!Directory.Exists(directory))
+            {
+                _all = blocks;
+                return blocks;
+            }
+
+            foreach (string file in Directory.GetFiles(directory, "*.sbc"))
+            {
+                XDocument document;
+                try
+                {
+                    document = XDocument.Load(file);
+                }
+                catch
+                {
+                    // A definition file the game itself tolerates but XDocument will not is not a
+                    // reason to fail the pass; the block simply keeps its fallback.
+                    continue;
+                }
+
+                foreach (XElement definition in document.Descendants("Definition"))
+                {
+                    Definition block = Read(definition, masses);
+                    if (block != null) blocks.Add(block);
+                }
+            }
+
+            _all = blocks;
+            return blocks;
+        }
+
+        private static Definition Read(XElement definition, Dictionary<string, float> masses)
+        {
+            XElement id = definition.Element("Id");
+            if (id == null) return null;
+
+            string type = (string)id.Element("TypeId");
+            string subtype = (string)id.Element("SubtypeId");
+            if (string.IsNullOrEmpty(type)) return null;
+
+            // The .sbc files spell the type both ways depending on their age.
+            if (type.StartsWith("MyObjectBuilder_")) type = type.Substring("MyObjectBuilder_".Length);
+
+            Definition block = new Definition
+            {
+                TypeId = type,
+                SubtypeId = subtype ?? "",
+                Large = ((string)definition.Element("CubeSize") ?? "Large") == "Large",
+            };
+
+            XElement components = definition.Element("Components");
+            if (components != null)
+            {
+                foreach (XElement component in components.Elements("Component"))
+                {
+                    string name = (string)component.Attribute("Subtype");
+                    if (name == null) continue;
+
+                    int count;
+                    if (!int.TryParse((string)component.Attribute("Count"),
+                            NumberStyles.Integer, CultureInfo.InvariantCulture, out count)) continue;
+
+                    float mass;
+                    if (!masses.TryGetValue(name, out mass)) continue;
+
+                    block.Components.Add(new BlockComponent(name, count, mass));
+                }
+            }
+
+            return block;
+        }
+
+        /// <summary>Definitions grouped by type id, in the order the files list them.</summary>
+        public static Dictionary<string, List<Definition>> ByType()
+        {
+            Dictionary<string, List<Definition>> types = new Dictionary<string, List<Definition>>();
+
+            foreach (Definition block in All())
+            {
+                List<Definition> list;
+                if (!types.TryGetValue(block.TypeId, out list))
+                {
+                    list = new List<Definition>();
+                    types[block.TypeId] = list;
+                }
+                list.Add(block);
+            }
+
+            return types;
+        }
+
+        /// <summary>
+        /// The build cost of a whole type, summed over every subtype of it.
+        ///
+        /// This is what a type's fallback entry describes: not any one block, but the material a
+        /// block of that type is typically made of, weighted so the common subtypes count for more
+        /// than the rare ones — which is the right weighting for an entry whose job is to be a
+        /// reasonable answer for whatever is not named individually.
+        /// </summary>
+        public static List<BlockComponent> TypeComponents(IList<Definition> blocks)
+        {
+            Dictionary<string, BlockComponent> total = new Dictionary<string, BlockComponent>();
+
+            for (int i = 0; i < blocks.Count; i++)
+            {
+                List<BlockComponent> components = blocks[i].Components;
+                for (int j = 0; j < components.Count; j++)
+                {
+                    BlockComponent line = components[j];
+
+                    BlockComponent running;
+                    if (total.TryGetValue(line.Component, out running))
+                    {
+                        running.Count += line.Count;
+                        total[line.Component] = running;
+                    }
+                    else
+                    {
+                        total[line.Component] = line;
+                    }
+                }
+            }
+
+            return new List<BlockComponent>(total.Values);
+        }
+    }
+}

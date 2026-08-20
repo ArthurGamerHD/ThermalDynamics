@@ -84,6 +84,65 @@ namespace Thermodynamics
         [ProtoMember(45)]
         public float OverheatDamagePerKelvin;
 
+        /// <summary>
+        /// Which properties an actual definition declared, one bit per property.
+        ///
+        /// The lookup resolves one definition id and reads every property from it, with no merge
+        /// into the entry it stands in for, and the fields above have no initialisers. So a
+        /// property nobody declared is zero — and a zero <c>SpecificHeat</c> is a block with no
+        /// heat capacity, while a zero <c>CriticalTemperature</c> is a block above critical from
+        /// the moment it is placed.
+        ///
+        /// Recording what was declared is what lets <c>ThermalBlockCatalog</c> fill the rest from
+        /// <see cref="BlockThermalDerivation"/> rather than from zeros, so a partial entry means
+        /// "change these and derive the rest" — which is what an author writing three lines always
+        /// meant by it.
+        /// </summary>
+        public DeclaredProperties Declared;
+
+        [Flags]
+        public enum DeclaredProperties
+        {
+            None = 0,
+            Conductivity = 1,
+            SpecificHeat = 2,
+            Emissivity = 4,
+            ExposedSurfaceMultiplier = 8,
+            ProducerWasteEnergy = 16,
+            ConsumerWasteEnergy = 32,
+            CriticalTemperature = 64,
+            OverheatDamagePerKelvin = 128,
+            ExcludeFromSimulation = 256,
+        }
+
+        public bool WasDeclared(DeclaredProperties property)
+        {
+            return (Declared & property) != 0;
+        }
+
+        /// <summary>Which of the three entries the lookup ended up reading.</summary>
+        public enum Resolution
+        {
+            /// <summary>The block's own subtype entry. The most specific thing an author can write.</summary>
+            Subtype,
+
+            /// <summary>The <c>DefaultThermodynamics</c> entry for the block's type.</summary>
+            Type,
+
+            /// <summary>
+            /// The environment-wide default: "nothing here knows anything about this block".
+            ///
+            /// It describes mild steel, because before the component derivation existed that was
+            /// the only honest guess. It no longer is — the block's own build cost is a better
+            /// description of it than a global constant can be — so landing here is now taken as
+            /// *no* answer rather than as an answer, and the derivation is left standing.
+            /// </summary>
+            Fallback,
+        }
+
+        /// <summary>Which entry supplied <see cref="Declared"/>.</summary>
+        public Resolution ResolvedAt;
+
 
         public static ThermalCellDefinition GetDefinition(MyDefinitionId defId)
         {
@@ -91,44 +150,77 @@ namespace Thermodynamics
             DefinitionExtensionsAPI lookup = Session.Definitions;
 
             bool isTrue;
+            def.ResolvedAt = Resolution.Subtype;
+
             if (!lookup.DefinitionIdExists(defId) || !lookup.TryGetBool(defId, GroupId, IgnoreId, out isTrue))
             {
                 defId = new MyDefinitionId(defId.TypeId, Settings.DefaultSubtypeId);
+                def.ResolvedAt = Resolution.Type;
 
                 if (!lookup.DefinitionIdExists(defId))
                 {
                     defId = DefaultCubeBlockDefinitionId;
+                    def.ResolvedAt = Resolution.Fallback;
                 }
             }
 
             if (lookup.TryGetBool(defId, GroupId, IgnoreId, out isTrue)
                 || lookup.TryGetBool(defId, GroupId, LegacyIgnoreId, out isTrue))
+            {
                 def.ExcludeFromSimulation = isTrue;
+                def.Declared |= DeclaredProperties.ExcludeFromSimulation;
+            }
 
             double dvalue;
             if (lookup.TryGetDouble(defId, GroupId, ConductivityId, out dvalue))
+            {
                 def.Conductivity = (float)dvalue;
+                def.Declared |= DeclaredProperties.Conductivity;
+            }
 
             if (lookup.TryGetDouble(defId, GroupId, SpecificHeatId, out dvalue))
+            {
                 def.SpecificHeat = (float)dvalue;
+                def.Declared |= DeclaredProperties.SpecificHeat;
+            }
 
             if (lookup.TryGetDouble(defId, GroupId, EmissivityId, out dvalue))
+            {
                 def.Emissivity = (float)dvalue;
+                def.Declared |= DeclaredProperties.Emissivity;
+            }
 
-            if (lookup.TryGetDouble(defId, GroupId, SurfaceAreaScalerId, out dvalue))          
+            if (lookup.TryGetDouble(defId, GroupId, SurfaceAreaScalerId, out dvalue)
+                || lookup.TryGetDouble(defId, GroupId, LegacyExposedSurfaceId, out dvalue))
+            {
                 def.ExposedSurfaceMultiplier = (float)dvalue;
+                def.Declared |= DeclaredProperties.ExposedSurfaceMultiplier;
+            }
 
             if (lookup.TryGetDouble(defId, GroupId, ProducerWasteEnergyId, out dvalue))
+            {
                 def.ProducerWasteEnergy = (float)dvalue;
+                def.Declared |= DeclaredProperties.ProducerWasteEnergy;
+            }
 
             if (lookup.TryGetDouble(defId, GroupId, ConsumerWasteEnergyId, out dvalue))
+            {
                 def.ConsumerWasteEnergy = (float)dvalue;
+                def.Declared |= DeclaredProperties.ConsumerWasteEnergy;
+            }
 
             if (lookup.TryGetDouble(defId, GroupId, CriticalTemperatureId, out dvalue))
+            {
                 def.CriticalTemperature = (float)dvalue;
+                def.Declared |= DeclaredProperties.CriticalTemperature;
+            }
 
-            if (lookup.TryGetDouble(defId, GroupId, CriticalTemperatureScalerId, out dvalue))
+            if (lookup.TryGetDouble(defId, GroupId, CriticalTemperatureScalerId, out dvalue)
+                || lookup.TryGetDouble(defId, GroupId, LegacyOverheatDamageId, out dvalue))
+            {
                 def.OverheatDamagePerKelvin = (float)dvalue;
+                def.Declared |= DeclaredProperties.OverheatDamagePerKelvin;
+            }
 
             def.Conductivity = Math.Max(0, def.Conductivity);
 

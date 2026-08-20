@@ -56,6 +56,10 @@ namespace Thermodynamics.Sim
                     Console.Write(ReactorLab.Report());
                     return 0;
 
+                case "blocks":
+                    Console.Write(BlockCatalogLab.Report());
+                    return 0;
+
                 case "features":
                     Console.Write(FeatureMatrix.Report());
                     return 0;
@@ -716,6 +720,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  features                mechanism switches in combination, per profile");
             Console.WriteLine("  frequency               where substep cost bottoms out against Frequency");
             Console.WriteLine("  reactors                where a vanilla reactor settles, against its waste fraction");
+            Console.WriteLine("  blocks                  every block in the game, derived from its build components");
             Console.WriteLine();
             Console.WriteLine("  bench scale             cost per stage as the grid grows");
             Console.WriteLine("  bench hitch --size N    per-tick cost, with a block welded mid-run");

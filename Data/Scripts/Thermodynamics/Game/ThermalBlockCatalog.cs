@@ -136,7 +136,7 @@ namespace Thermodynamics
             if (string.IsNullOrEmpty(model.Name)) model.Name = id.TypeId.ToString();
 
             model.Thermal = ToThermalProperties(
-                ThermalCellDefinition.GetDefinition(id), id.SubtypeName);
+                ThermalCellDefinition.GetDefinition(id), id.SubtypeName, definition);
 
             if (definition == null)
             {
@@ -300,22 +300,56 @@ namespace Thermodynamics
             return false;
         }
 
-        /// <summary>Copies a definition read through Definition Extensions into the model's own type.</summary>
+        /// <summary>
+        /// The thermal properties of a block: what its build components make it, with whatever a
+        /// definition actually declared laid over the top.
+        ///
+        /// **Derivation is the floor, not the fallback of last resort.** A block starts as the
+        /// blend of the materials it is built out of — see <see cref="BlockThermalDerivation"/> —
+        /// so a window is glass, a battery is lithium, a medical bay is mostly water, and a plushie
+        /// is fabric, without anyone having authored a line for any of them. Only then is the
+        /// ModExtensions entry applied, property by property, and only for the properties it
+        /// declared.
+        ///
+        /// That ordering does three things at once. It gives every block in the game and in every
+        /// other mod properties that describe it rather than properties that describe armour; it
+        /// turns a partial entry into "change these, derive the rest" instead of "and zero the
+        /// rest"; and it leaves `Cubes.xml` free to carry only deliberate deviations, which is what
+        /// a tuning file should contain.
+        /// </summary>
         public static BlockThermalProperties ToThermalProperties(
-            ThermalCellDefinition definition, string subtype = "")
+            ThermalCellDefinition definition, string subtype = "", MyCubeBlockDefinition block = null)
         {
-            BlockThermalProperties properties = new BlockThermalProperties();
-            if (definition == null) return properties.Clamp();
+            BlockThermalProperties properties = BlockThermalDerivation.Derive(ComponentsOf(block), TypeNameOf(block));
 
-            properties.ExcludeFromSimulation = definition.ExcludeFromSimulation;
-            properties.Conductivity = definition.Conductivity;
-            properties.SpecificHeat = definition.SpecificHeat;
-            properties.Emissivity = definition.Emissivity;
-            properties.ExposedSurfaceMultiplier = definition.ExposedSurfaceMultiplier;
-            properties.ProducerWasteEnergy = definition.ProducerWasteEnergy;
-            properties.ConsumerWasteEnergy = definition.ConsumerWasteEnergy;
-            properties.CriticalTemperature = definition.CriticalTemperature;
-            properties.OverheatDamagePerKelvin = definition.OverheatDamagePerKelvin;
+            // Landing on the environment-wide default means no entry anywhere named this block.
+            // That entry describes mild steel, which was the best guess available before the block's
+            // own build cost could be read and is a worse one now, so it is not applied over a
+            // derivation that actually describes the block.
+            if (definition == null
+                || definition.ResolvedAt == ThermalCellDefinition.Resolution.Fallback)
+            {
+                return properties.Clamp();
+            }
+
+            if (definition.WasDeclared(ThermalCellDefinition.DeclaredProperties.ExcludeFromSimulation))
+                properties.ExcludeFromSimulation = definition.ExcludeFromSimulation;
+            if (definition.WasDeclared(ThermalCellDefinition.DeclaredProperties.Conductivity))
+                properties.Conductivity = definition.Conductivity;
+            if (definition.WasDeclared(ThermalCellDefinition.DeclaredProperties.SpecificHeat))
+                properties.SpecificHeat = definition.SpecificHeat;
+            if (definition.WasDeclared(ThermalCellDefinition.DeclaredProperties.Emissivity))
+                properties.Emissivity = definition.Emissivity;
+            if (definition.WasDeclared(ThermalCellDefinition.DeclaredProperties.ExposedSurfaceMultiplier))
+                properties.ExposedSurfaceMultiplier = definition.ExposedSurfaceMultiplier;
+            if (definition.WasDeclared(ThermalCellDefinition.DeclaredProperties.ProducerWasteEnergy))
+                properties.ProducerWasteEnergy = definition.ProducerWasteEnergy;
+            if (definition.WasDeclared(ThermalCellDefinition.DeclaredProperties.ConsumerWasteEnergy))
+                properties.ConsumerWasteEnergy = definition.ConsumerWasteEnergy;
+            if (definition.WasDeclared(ThermalCellDefinition.DeclaredProperties.CriticalTemperature))
+                properties.CriticalTemperature = definition.CriticalTemperature;
+            if (definition.WasDeclared(ThermalCellDefinition.DeclaredProperties.OverheatDamagePerKelvin))
+                properties.OverheatDamagePerKelvin = definition.OverheatDamagePerKelvin;
 
             // The profile's overlay lands here, where properties are built from a definition, so
             // it is paid once per definition rather than once per block — and so a block reads one
@@ -323,6 +357,37 @@ namespace Thermodynamics
             ThermalProfileOverlays.Apply(properties, subtype);
 
             return properties.Clamp();
+        }
+
+        /// <summary>
+        /// A block's build cost as the derivation wants it, priced with the game's own component
+        /// masses. Empty for a definition the game cannot describe, which derives as plain steel.
+        /// </summary>
+        private static List<BlockComponent> ComponentsOf(MyCubeBlockDefinition block)
+        {
+            List<BlockComponent> components = new List<BlockComponent>();
+            if (block == null || block.Components == null) return components;
+
+            for (int i = 0; i < block.Components.Length; i++)
+            {
+                MyCubeBlockDefinition.Component component = block.Components[i];
+                if (component == null || component.Definition == null) continue;
+
+                components.Add(new BlockComponent(
+                    component.Definition.Id.SubtypeName, component.Count, component.Definition.Mass));
+            }
+
+            return components;
+        }
+
+        /// <summary>The object builder type a block is, without the prefix the derivation's table omits.</summary>
+        private static string TypeNameOf(MyCubeBlockDefinition block)
+        {
+            if (block == null) return null;
+
+            string name = block.Id.TypeId.ToString();
+            const string Prefix = "MyObjectBuilder_";
+            return name.StartsWith(Prefix) ? name.Substring(Prefix.Length) : name;
         }
 
         /// <summary>Copies a loop definition into the model's own type.</summary>
