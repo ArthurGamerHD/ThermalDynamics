@@ -190,6 +190,15 @@ namespace Thermodynamics.Tests
             ThermalSimulation incremental = BuiltOneAtATime(cells);
             ThermalSimulation global = BuiltAllAtOnce(cells);
 
+            // The estimate also reads a temperature — it cubes one per node for the radiation
+            // term — and the two grids do not arrive at the same one: the incremental route ticks
+            // between placements and cools a little while doing it. Levelling both first is what
+            // makes this a comparison of conductance rather than of thermal history. Without it
+            // the test was reading a hundredth of a kelvin of cooling as a conductance difference
+            // and passing only because the tolerance was wider than the drift.
+            incremental.Solver.SetAllTemperatures(293.15f);
+            global.Solver.SetAllTemperatures(293.15f);
+
             float step = incremental.Settings.StepSeconds;
             float a = incremental.Solver.RequiredSubsteps(step);
             float b = global.Solver.RequiredSubsteps(step);

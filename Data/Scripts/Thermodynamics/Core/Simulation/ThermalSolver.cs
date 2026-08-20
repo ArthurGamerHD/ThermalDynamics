@@ -3181,6 +3181,13 @@ namespace Thermodynamics.Core
             {
                 grew = true;
 
+                // Every row below is about to be replaced by a zeroed one and refilled at the next
+                // SyncNodeState, which does not run until the next step begins. A step in flight
+                // would carry on over those zeros — dividing watts by a heat capacity of zero and
+                // publishing the result — so it is abandoned here, exactly as it is for a removal
+                // or a rebuild. Nothing is lost but the watts this substep had accumulated.
+                AbandonStep();
+
                 // Reallocating zeroes the conductance totals, the one node array accumulated
                 // across calls rather than rewritten each step. The resync below refills the rest,
                 // so this must be marked for recompute or every surviving node loses the
