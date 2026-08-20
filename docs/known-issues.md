@@ -214,6 +214,33 @@ the same discipline as the catalogue: probe under the lock, build outside it, pu
 
 ## Suspected defects
 
+**Convection ran at the full sea-level rate in any atmosphere, however thin — fixed.**
+`EnvironmentSolver` built the coefficient from the planet's figure times wind and weather and
+nothing else, and air density decided only *whether* convection ran, through
+`AtmosphereFactor > 0`. So a hull in the top of an atmosphere convected as hard as one at sea
+level. The field dump that prompted this reported `convection W/m2K 50.0` beside
+`air density 0.0000` at 44 km, which is the defect seen from outside.
+
+**The model this breaks is documented, and only half of it was implemented.**
+[thermal-model.md](thermal-model.md#convection) states the two mechanisms as a blend —
+`total = (1 - atmosphereFactor) x radiation + atmosphereFactor x convection` — and the radiation
+half was weighted correctly all along (`plan.RadiationShare = 1 - env.AtmosphereFactor`). The
+convection half carried no weight. In thin air a block therefore got nearly all of its radiation
+*and* all of its convection, which is not a blend but a double count of the same cooling.
+
+Two other places in the code already had it right, which is how the intent was recoverable:
+`StabilityEnvironment` sized the substep estimate from `ConvectionCoefficient * AtmosphereFactor`,
+and `AtmosphereFactor` is documented as the fluid-likeness of the air. The factor is now applied
+once, where the coefficient is decided, so the reported figure, the transfer and the stability
+estimate are the same number; the estimator's second multiplication is gone with it.
+
+`AtmosphereFactor` is `1 - (1 - density)^4`, so this changes almost nothing at sea level — 1.0 at
+density 1, 0.94 at 0.5 — and most of the change is where a hull is barely in the air at all: 0.34
+at a tenth of sea level, 0.04 at a hundredth. Four tests in `ConvectionSolarFrictionTests` were
+confirmed to fail against the old arithmetic, including
+`AThinAtmosphereCoolsABlockSlowerThanAThickOne`, which measures a settled temperature rather than
+reading the field back.
+
 **A face bolted to a block that does not seal was counted as buried — fixed.** Exposure rejected
 any cell face where two mount surfaces met, regardless of what the neighbour was. The ordering is
 what made that wrong: the sealing test runs first, so every joint against a block that seals was

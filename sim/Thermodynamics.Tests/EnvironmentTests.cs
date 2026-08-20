@@ -405,5 +405,136 @@ namespace Thermodynamics.Tests
             simulation.StepExact(1, Worlds.Flight(0.8f, speed));
             return simulation.Solver.Nodes[0].LastFrictionWatts;
         }
+
+        // ---- convection against air density --------------------------------------------------
+
+        /// <summary>
+        /// Convection is a property of the air, so it has to scale with how much air there is.
+        ///
+        /// It did not. The coefficient was the planet's sea-level figure times wind and weather,
+        /// and nothing else; air density decided only whether convection ran at all. Any
+        /// atmosphere, however thin, convected at the full rate. A field dump reported
+        /// 50 W/(m2 K) at 44 km with the density column reading 0.0000, which is that defect seen
+        /// from outside.
+        /// </summary>
+        [Fact]
+        public void ThinnerAirConvectsLess()
+        {
+            ThermalSettings settings = new ThermalSettings();
+            PlanetThermalProperties planet = PlanetThermalProperties.Default();
+
+            float sealevel = EnvironmentSolver.Solve(
+                settings, planet, Worlds.PlanetSurface(1f, 0.5f)).ConvectionCoefficient;
+            float thin = EnvironmentSolver.Solve(
+                settings, planet, Worlds.PlanetSurface(0.1f, 0.5f)).ConvectionCoefficient;
+            float thinner = EnvironmentSolver.Solve(
+                settings, planet, Worlds.PlanetSurface(0.01f, 0.5f)).ConvectionCoefficient;
+
+            Assert.True(sealevel > thin);
+            Assert.True(thin > thinner);
+            Assert.True(thinner > 0f);
+
+            // Sea level is the planet's own figure, undiminished.
+            Assert.Equal(planet.ConvectionCoefficient, sealevel, 2);
+        }
+
+        [Fact]
+        public void TheCoefficientCarriesExactlyTheAtmosphereFactor()
+        {
+            ThermalSettings settings = new ThermalSettings();
+            PlanetThermalProperties planet = PlanetThermalProperties.Default();
+
+            foreach (float density in new float[] { 1f, 0.5f, 0.25f, 0.05f, 0.001f })
+            {
+                EnvironmentState state = EnvironmentSolver.Solve(
+                    settings, planet, Worlds.PlanetSurface(density, 0.5f));
+
+                // No wind and no weather in this sample, so the factor is the only term between
+                // the planet's figure and the reported one.
+                Assert.Equal(
+                    planet.ConvectionCoefficient * state.AtmosphereFactor,
+                    state.ConvectionCoefficient,
+                    3);
+            }
+        }
+
+        /// <summary>
+        /// The altitude the field dump was taken at. Convection there should be a rounding error,
+        /// not the sea-level rate.
+        /// </summary>
+        [Fact]
+        public void NearVacuumBarelyConvects()
+        {
+            ThermalSettings settings = new ThermalSettings();
+            PlanetThermalProperties planet = PlanetThermalProperties.Default();
+
+            EnvironmentState state = EnvironmentSolver.Solve(
+                settings, planet, Worlds.PlanetSurface(0.0001f, 0.5f));
+
+            Assert.True(state.ConvectionCoefficient < 0.05f);
+            Assert.True(state.ConvectionCoefficient >= 0f);
+        }
+
+        /// <summary>
+        /// Wind and weather still multiply the coefficient — the density term is a scale on top of
+        /// them, not a replacement for them. A gale in thin air is still thin air.
+        /// </summary>
+        [Fact]
+        public void WindStillRaisesTheCoefficientAtEveryDensity()
+        {
+            ThermalSettings settings = new ThermalSettings();
+            PlanetThermalProperties planet = PlanetThermalProperties.Default();
+
+            foreach (float density in new float[] { 1f, 0.25f })
+            {
+                float still = EnvironmentSolver.Solve(
+                    settings, planet, Worlds.PlanetSurface(density, 0.5f)).ConvectionCoefficient;
+                float windy = EnvironmentSolver.Solve(
+                    settings, planet, Worlds.PlanetSurface(density, 0.5f, 30f)).ConvectionCoefficient;
+
+                Assert.True(windy > still);
+            }
+        }
+
+        /// <summary>
+        /// A block cools by convection at the rate the report says it does.
+        ///
+        /// The reported coefficient and the one the solver applied were the same number before
+        /// this was fixed, and both were wrong in thin air; what makes this test worth having is
+        /// that it measures the *behaviour* rather than the field, so a future change that scales
+        /// the transfer without scaling the report cannot pass it.
+        /// </summary>
+        [Fact]
+        public void AThinAtmosphereCoolsABlockSlowerThanAThickOne()
+        {
+            float thick = SettledTemperature(1f);
+            float thin = SettledTemperature(0.05f);
+
+            // Same star, same block, same waste heat: the only difference is how much air there is
+            // to carry the heat away.
+            Assert.True(thin > thick);
+        }
+
+        private static float SettledTemperature(float density)
+        {
+            ThermalSettings settings = new ThermalSettings
+            {
+                MaxSubsteps = 64,
+                MaxElementVisitsPerStep = 0,
+                EnableSolarHeat = false,
+            };
+            settings.Derive();
+
+            GridBuilder builder = GridBuilder.Large();
+            builder.Place(Catalog.Reactor(), Vector3I.Zero).Producing(200000f);
+
+            ThermalSimulation simulation = builder.BuildSimulation(settings);
+            simulation.Planet = PlanetThermalProperties.Default();
+
+            EnvironmentSample sample = Worlds.PlanetSurface(density, 0.5f);
+            for (int step = 0; step < 600; step++) simulation.StepExact(1, sample);
+
+            return simulation.Solver.Nodes[0].Temperature;
+        }
     }
 }
