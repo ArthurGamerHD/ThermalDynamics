@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Xml.Linq;
 using Thermodynamics.Core;
+using VRageMath;
 
 namespace Thermodynamics.Harness
 {
@@ -24,6 +25,19 @@ namespace Thermodynamics.Harness
             public string TypeId;
             public string SubtypeId;
             public bool Large;
+
+            /// <summary>Cells the block occupies, from its own <c>Size</c> element.</summary>
+            public Vector3I Size = Vector3I.One;
+
+            /// <summary>Which of the six faces carry a mount point, so a joint can be found.</summary>
+            public readonly bool[] MountFaces = new bool[Face.Count];
+
+            /// <summary>
+            /// Whether the definition seals. Read from <c>IsAirTight</c>, which is a tri-state in
+            /// the game: absent means "decide per face from the pressurisation table", which this
+            /// harness approximates as sealing wherever the block mounts.
+            /// </summary>
+            public bool? Airtight;
 
             /// <summary>Build cost, priced with the game's own component masses.</summary>
             public List<BlockComponent> Components = new List<BlockComponent>();
@@ -174,7 +188,22 @@ namespace Thermodynamics.Harness
                 TypeId = type,
                 SubtypeId = subtype ?? "",
                 Large = ((string)definition.Element("CubeSize") ?? "Large") == "Large",
+                Size = ParseSize(definition.Element("Size")),
             };
+
+            bool airtight;
+            string airtightText = (string)definition.Element("IsAirTight");
+            if (airtightText != null && bool.TryParse(airtightText, out airtight)) block.Airtight = airtight;
+
+            XElement mounts = definition.Element("MountPoints");
+            if (mounts != null)
+            {
+                foreach (XElement mount in mounts.Elements("MountPoint"))
+                {
+                    int face = FaceOf((string)mount.Attribute("Side"));
+                    if (face >= 0) block.MountFaces[face] = true;
+                }
+            }
 
             XElement components = definition.Element("Components");
             if (components != null)
@@ -197,6 +226,56 @@ namespace Thermodynamics.Harness
 
             return block;
         }
+
+        private static Vector3I ParseSize(XElement size)
+        {
+            if (size == null) return Vector3I.One;
+
+            return new Vector3I(
+                Math.Max(1, ParseInt(size.Attribute("x"))),
+                Math.Max(1, ParseInt(size.Attribute("y"))),
+                Math.Max(1, ParseInt(size.Attribute("z"))));
+        }
+
+        private static int ParseInt(XAttribute attribute)
+        {
+            int value;
+            return attribute != null && int.TryParse((string)attribute,
+                NumberStyles.Integer, CultureInfo.InvariantCulture, out value) ? value : 1;
+        }
+
+        private static int FaceOf(string side)
+        {
+            switch (side)
+            {
+                case "Front": return Face.Forward;
+                case "Back": return Face.Backward;
+                case "Left": return Face.Left;
+                case "Right": return Face.Right;
+                case "Top": return Face.Up;
+                case "Bottom": return Face.Down;
+                default: return -1;
+            }
+        }
+
+        /// <summary>Every definition by subtype, for a blueprint to look its blocks up in.</summary>
+        public static Dictionary<string, Definition> BySubtype()
+        {
+            if (_bySubtype != null) return _bySubtype;
+
+            Dictionary<string, Definition> map = new Dictionary<string, Definition>(StringComparer.Ordinal);
+            foreach (Definition block in All())
+            {
+                // A subtype can appear under more than one type across the files; first wins, which
+                // matches the order the game loads them in.
+                if (!map.ContainsKey(block.SubtypeId)) map[block.SubtypeId] = block;
+            }
+
+            _bySubtype = map;
+            return map;
+        }
+
+        private static Dictionary<string, Definition> _bySubtype;
 
         /// <summary>Definitions grouped by type id, in the order the files list them.</summary>
         public static Dictionary<string, List<Definition>> ByType()
