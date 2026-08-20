@@ -59,6 +59,18 @@ namespace Thermodynamics.Core
         public long SolverSubsteps;
 
         /// <summary>
+        /// Per-step passes over every node that are not substeps: mirroring the node objects into
+        /// the flat rows, and the stability estimate that sets the substep count.
+        ///
+        /// Both are fixed costs of a step rather than of the physics in it, and a step that runs
+        /// either of them twice is doing a full node walk for an answer it already had. On a grid
+        /// taking three substeps the fixed part is roughly half the step, so the count matters as
+        /// much as the timing does.
+        /// </summary>
+        public long NodeStateSyncs;
+        public long StabilityEstimates;
+
+        /// <summary>
         /// Resets every counter to zero. A test measures a window by clearing before it and reading
         /// after, rather than by subtracting two snapshots.
         /// </summary>
@@ -83,6 +95,8 @@ namespace Thermodynamics.Core
             RoomCellsVisited = 0;
             SolverSteps = 0;
             SolverSubsteps = 0;
+            NodeStateSyncs = 0;
+            StabilityEstimates = 0;
         }
 
         /// <summary>A copy of the current counts, so a caller can keep one window's figures.</summary>
@@ -108,6 +122,8 @@ namespace Thermodynamics.Core
             copy.RoomCellsVisited = RoomCellsVisited;
             copy.SolverSteps = SolverSteps;
             copy.SolverSubsteps = SolverSubsteps;
+            copy.NodeStateSyncs = NodeStateSyncs;
+            copy.StabilityEstimates = StabilityEstimates;
             return copy;
         }
 

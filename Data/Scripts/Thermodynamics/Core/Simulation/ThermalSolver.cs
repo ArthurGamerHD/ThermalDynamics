@@ -1572,6 +1572,8 @@ namespace Thermodynamics.Core
         /// </summary>
         private void SyncNodeState()
         {
+            Work.NodeStateSyncs++;
+
             // A node index changes when the block list does, which invalidates every row.
             bool all = resyncAll;
             resyncAll = false;
@@ -2543,13 +2545,39 @@ namespace Thermodynamics.Core
         /// </summary>
         public float RequiredSubsteps(float deltaSeconds)
         {
+            PrepareStepState();
+            return RequiredSubstepsFromState(deltaSeconds);
+        }
+
+        /// <summary>
+        /// The same estimate against the environment the step is about to run in, rather than
+        /// against the one the last step left behind.
+        ///
+        /// Both the estimate and the mass floor read the environment's convection coefficient, so
+        /// a caller deciding how long a step to take wants the sample it is about to hand
+        /// <see cref="BeginStep"/> — and <see cref="BeginStep"/> can then be handed the answer
+        /// rather than walking every node again for it.
+        /// </summary>
+        public float RequiredSubsteps(float deltaSeconds, EnvironmentState environment)
+        {
+            Environment = environment;
+            return RequiredSubsteps(deltaSeconds);
+        }
+
+        /// <summary>
+        /// Everything a step needs mirrored before either the estimate or the substeps read it.
+        ///
+        /// Order matters: the conductance totals, then the mass floor that reads them. The link
+        /// mass factors the floor invalidates are refreshed by <see cref="BeginStep"/>, which is
+        /// the only caller that integrates.
+        /// </summary>
+        private void PrepareStepState()
+        {
             RebuildLinksIfNeeded();
             EnsureBuffers();
             SyncNodeState();
             RecomputeConductanceTotalsIfNeeded();
             ApplyThermalMassFloor();
-
-            return RequiredSubstepsFromState(deltaSeconds);
         }
 
         /// <summary>
@@ -2609,6 +2637,8 @@ namespace Thermodynamics.Core
         /// </summary>
         private float RequiredSubstepsFromState(float deltaSeconds)
         {
+            Work.StabilityEstimates++;
+
             float worst = 0f;
 
             StabilityTerms terms = StabilityEnvironment();

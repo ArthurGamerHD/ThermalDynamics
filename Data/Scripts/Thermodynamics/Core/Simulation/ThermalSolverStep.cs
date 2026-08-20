@@ -180,7 +180,16 @@ namespace Thermodynamics.Core
         /// </summary>
         public void Step(float deltaSeconds, EnvironmentState environment)
         {
-            if (!BeginStep(deltaSeconds, environment)) return;
+            Step(deltaSeconds, environment, -1f);
+        }
+
+        /// <summary>
+        /// Runs a whole step in one call, reusing a stability estimate the caller already took.
+        /// See <see cref="BeginStep(float, EnvironmentState, float)"/>.
+        /// </summary>
+        public void Step(float deltaSeconds, EnvironmentState environment, float knownRequired)
+        {
+            if (!BeginStep(deltaSeconds, environment, knownRequired)) return;
             while (!AdvanceStep(long.MaxValue)) { }
         }
 
@@ -190,23 +199,55 @@ namespace Thermodynamics.Core
         /// <returns>False when there was nothing to do, in which case no step is in flight.</returns>
         public bool BeginStep(float deltaSeconds, EnvironmentState environment)
         {
+            return BeginStep(deltaSeconds, environment, -1f);
+        }
+
+        /// <summary>
+        /// Starts a step whose stability estimate the caller has already taken, at this step
+        /// length and against this environment.
+        ///
+        /// <para>
+        /// The estimate is a walk over every node cubing a temperature, and the whole prologue
+        /// around it — mirroring the node objects, re-summing the conductance totals, applying the
+        /// mass floor — is another. A host that has to know how long a step it can afford before
+        /// starting one runs all of it, and then ran it again here for an answer that had not
+        /// moved. Passing the estimate back in is what makes a step's fixed cost one walk rather
+        /// than two.
+        /// </para>
+        ///
+        /// <para>
+        /// A negative <paramref name="knownRequired"/> means the caller has no estimate, and this
+        /// takes its own.
+        /// </para>
+        /// </summary>
+        public bool BeginStep(float deltaSeconds, EnvironmentState environment, float knownRequired)
+        {
             if (deltaSeconds <= 0f) return false;
 
             // Any step already in flight is finished before another begins; discarding it would
             // lose the energy it had accumulated.
             if (StepInFlight) return true;
 
-            RebuildLinksIfNeeded();
-            EnsureBuffers();
-            SyncNodeState();
+            // Set before the mass floor rather than after it. The floor and the estimate are the
+            // same stability test and both read the environment's convection coefficient, so a
+            // floor computed against the previous step's sample caps a figure the estimate never
+            // saw.
+            Environment = environment;
 
-            // Order matters: the conductance totals, then the mass floor that reads them, then the
-            // link factors the floor invalidates.
-            RecomputeConductanceTotalsIfNeeded();
-            ApplyThermalMassFloor();
+            float required;
+            if (knownRequired >= 0f)
+            {
+                required = knownRequired;
+            }
+            else
+            {
+                PrepareStepState();
+                required = RequiredSubstepsFromState(deltaSeconds);
+            }
+
+            // The link factors the mass floor invalidates, refreshed whichever route got here.
             RefreshLinkMassFactors();
 
-            Environment = environment;
             stepEnvironment = environment;
             stepDeltaSeconds = deltaSeconds;
 
@@ -217,9 +258,6 @@ namespace Thermodynamics.Core
             overheats.Clear();
             crossings.Clear();
 
-            // One estimate serves both figures. It walks every node cubing a temperature, so asking
-            // twice per step would double its cost for no new information.
-            float required = RequiredSubstepsFromState(deltaSeconds);
             int substeps = ClampSubsteps(required);
             LastSubsteps = substeps;
             LastStepWasClamped = required > MaxSubsteps;

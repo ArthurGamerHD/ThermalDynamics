@@ -229,6 +229,25 @@ namespace Thermodynamics.Core
         /// </summary>
         public float AffordableStepSeconds(float seconds)
         {
+            float required;
+            return AffordableStepSeconds(seconds, solver.RequiredSubsteps(seconds), out required);
+        }
+
+        /// <summary>
+        /// The same decision over an estimate the caller has already taken, reporting the demand
+        /// that survives the shortening.
+        ///
+        /// <para>
+        /// The estimate is proportional to step length, so shortening the step scales it by the
+        /// same ratio. That is what lets one walk over the nodes answer both questions a step
+        /// asks — how long it may be, and how many substeps it then needs — instead of the two
+        /// walks the two questions used to cost.
+        /// </para>
+        /// </summary>
+        private float AffordableStepSeconds(float seconds, float required, out float demand)
+        {
+            demand = required;
+
             int budgetVisits = settings.MaxElementVisitsPerStep;
             if (budgetVisits <= 0) return seconds;
 
@@ -240,11 +259,11 @@ namespace Thermodynamics.Core
             long substepBudget = budgetVisits / cost;
             if (substepBudget < 1) substepBudget = 1;
 
-            float required = solver.RequiredSubsteps(seconds);
             if (required <= substepBudget) return seconds;
 
             // The substep estimate is proportional to step length, so scaling the length by the
             // ratio lands exactly on the budget.
+            demand = substepBudget;
             return seconds * (substepBudget / required);
         }
 
@@ -311,7 +330,9 @@ namespace Thermodynamics.Core
 
             for (int i = 0; i < steps; i++)
             {
-                float seconds = AffordableStepSeconds(settings.StepSeconds);
+                float demand;
+                float seconds = AffordableStepSeconds(settings.StepSeconds,
+                    solver.RequiredSubsteps(settings.StepSeconds, state), out demand);
 
                 if (seconds < settings.StepSeconds)
                 {
@@ -319,7 +340,7 @@ namespace Thermodynamics.Core
                 }
                 SimulatedSecondsRun += seconds;
 
-                solver.Step(seconds, state);
+                solver.Step(seconds, state, demand);
 
                 IList<OverheatEvent> stepOverheats = solver.Overheats;
                 for (int o = 0; o < stepOverheats.Count; o++)
@@ -789,7 +810,14 @@ namespace Thermodynamics.Core
 
             if (!solver.StepInFlight)
             {
-                float seconds = AffordableStepSeconds(settings.StepSeconds);
+                // Solved before the step is sized rather than after. The estimate that sizes it
+                // reads the environment, so taking the sample first is what lets the same walk
+                // serve the step that follows it.
+                EnvironmentState state = EnvironmentSolver.Solve(settings, planet, sample);
+
+                float demand;
+                float seconds = AffordableStepSeconds(settings.StepSeconds,
+                    solver.RequiredSubsteps(settings.StepSeconds, state), out demand);
 
                 if (seconds < settings.StepSeconds)
                 {
@@ -797,8 +825,7 @@ namespace Thermodynamics.Core
                 }
                 SimulatedSecondsRun += seconds;
 
-                EnvironmentState state = EnvironmentSolver.Solve(settings, planet, sample);
-                if (!solver.BeginStep(seconds, state)) return;
+                if (!solver.BeginStep(seconds, state, demand)) return;
 
                 overheats.Clear();
                 crossings.Clear();
