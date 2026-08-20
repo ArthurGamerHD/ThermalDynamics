@@ -39,6 +39,25 @@ namespace Thermodynamics.Harness
             /// </summary>
             public bool? Airtight;
 
+            /// <summary>
+            /// Rated electrical output in watts, for a block that delivers power through
+            /// <c>MyResourceSourceComponent</c> — reactors, engines, batteries, panels, turbines.
+            /// </summary>
+            public float PowerOutputWatts;
+
+            /// <summary>
+            /// Rated electrical draw in watts. The definitions spell this four different ways
+            /// depending on the block's age, and all four are read.
+            /// </summary>
+            public float PowerDrawWatts;
+
+            /// <summary>
+            /// Thrust in newtons, used as a watt-equivalent by the waste-heat model. It is what
+            /// makes a hydrogen thruster heat at all: it draws no electricity, so thrust is the
+            /// only term that can represent it. See docs/thermal-model.md.
+            /// </summary>
+            public float ThrustNewtons;
+
             /// <summary>Build cost, priced with the game's own component masses.</summary>
             public List<BlockComponent> Components = new List<BlockComponent>();
 
@@ -191,6 +210,15 @@ namespace Thermodynamics.Harness
                 Size = ParseSize(definition.Element("Size")),
             };
 
+            // Megawatts in the definitions, watts everywhere in this model.
+            block.PowerOutputWatts = Megawatts(definition, "MaxPowerOutput");
+            block.PowerDrawWatts = Math.Max(
+                Megawatts(definition, "RequiredPowerInput"),
+                Math.Max(Megawatts(definition, "MaxRequiredPowerInput"),
+                    Math.Max(Megawatts(definition, "MaxPowerConsumption"),
+                        Megawatts(definition, "OperationalPowerConsumption"))));
+            block.ThrustNewtons = Number(definition, "ForceMagnitude");
+
             bool airtight;
             string airtightText = (string)definition.Element("IsAirTight");
             if (airtightText != null && bool.TryParse(airtightText, out airtight)) block.Airtight = airtight;
@@ -225,6 +253,19 @@ namespace Thermodynamics.Harness
             }
 
             return block;
+        }
+
+        private static float Megawatts(XElement definition, string name)
+        {
+            return Number(definition, name) * ThermalConstants.MegawattsToWatts;
+        }
+
+        private static float Number(XElement definition, string name)
+        {
+            float value;
+            string text = (string)definition.Element(name);
+            return text != null && float.TryParse(text, NumberStyles.Float,
+                CultureInfo.InvariantCulture, out value) ? value : 0f;
         }
 
         private static Vector3I ParseSize(XElement size)

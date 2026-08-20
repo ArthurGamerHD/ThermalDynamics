@@ -67,6 +67,22 @@ namespace Thermodynamics.Sim
                 case "corpus-fetch":
                     return CorpusFetch.Run(args);
 
+                case "battery":
+                {
+                    int size;
+                    int.TryParse(ValueAfter(args, "--panel") ?? "0", out size);
+                    Console.Write(BatteryLab.Report(ValueAfter(args, "--path"), size));
+                    return 0;
+                }
+
+                case "screen":
+                {
+                    int panel;
+                    int.TryParse(ValueAfter(args, "--panel") ?? "0", out panel);
+                    Console.Write(ScreeningLab.Report(ValueAfter(args, "--path"), panel));
+                    return 0;
+                }
+
                 case "features":
                     Console.Write(FeatureMatrix.Report());
                     return 0;
@@ -731,6 +747,9 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  corpus [--path <dir>]   real ships read from blueprints, and what they are made of");
             Console.WriteLine("  corpus-fetch            build a corpus from the workshop; --key, --user, --top, --out");
             Console.WriteLine("    --list-only               list to a manifest without downloading anything");
+            Console.WriteLine("  screen [--path <dir>]   measure every ship, and cut the corpus to a panel");
+            Console.WriteLine("    --panel N                 how many specimens to select");
+            Console.WriteLine("  battery [--panel N]     every specimen through every scenario");
             Console.WriteLine();
             Console.WriteLine("  bench scale             cost per stage as the grid grows");
             Console.WriteLine("  bench hitch --size N    per-tick cost, with a block welded mid-run");

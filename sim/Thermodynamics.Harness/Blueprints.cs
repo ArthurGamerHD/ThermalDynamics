@@ -89,6 +89,31 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
+        /// **Where the corpus lives: `<repo>/corpus`.**
+        ///
+        /// One explicit, absolute location rather than a path relative to whatever directory a
+        /// command happened to be run from. Every tool here writes to it and reads from it, and
+        /// every report prints it, so there is never a question of which ships a figure came from.
+        /// It is gitignored — ten thousand blueprints is gigabytes and none of it is source.
+        /// </summary>
+        public static string CorpusPath()
+        {
+            return Path.Combine(ShippedBlocks.RepoRoot(), "corpus");
+        }
+
+        /// <summary>
+        /// The directory a command should read when it was not told one: the corpus if it has
+        /// anything in it, else the subscribed workshop items, else nothing.
+        /// </summary>
+        public static string DefaultPath()
+        {
+            string corpus = CorpusPath();
+            if (Directory.Exists(corpus) && Files(corpus).Count > 0) return corpus;
+
+            return WorkshopPath();
+        }
+
+        /// <summary>
         /// The subscribed-workshop directory of an installed game, or null.
         ///
         /// Items subscribed in game land here already unpacked, so a corpus can be grown by

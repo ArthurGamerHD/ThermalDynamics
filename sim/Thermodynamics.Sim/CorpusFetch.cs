@@ -62,7 +62,7 @@ namespace Thermodynamics.Sim
         {
             string key = Value(args, "--key") ?? Environment.GetEnvironmentVariable("STEAM_WEB_API_KEY");
             string user = Value(args, "--user");
-            string output = Value(args, "--out") ?? "out/corpus";
+            string output = Value(args, "--out") ?? Thermodynamics.Harness.Blueprints.CorpusPath();
             string steamcmd = Value(args, "--steamcmd") ?? "steamcmd";
             int target = Int(Value(args, "--top"), 10000);
             bool listOnly = Has(args, "--list-only");
@@ -287,7 +287,7 @@ namespace Thermodynamics.Sim
 
             Console.WriteLine();
             Console.WriteLine("Corpus at " + Path.GetFullPath(output));
-            Console.WriteLine("Read it with:  corpus --path " + output);
+            Console.WriteLine("Read it with:  corpus");
             return 0;
         }
 

@@ -67,30 +67,85 @@ Every ship in the corpus, no solver:
 This pass alone answers G6 and re-founds `Census` on a population. It also produces the strata for
 what follows.
 
-### 3. Run a scenario battery (medium, stratified sample)
+### 3. Run the scenario battery
 
-Not every ship: a stratified sample across size, grid type, power density and cooling fitted.
-Roughly 500 ships, so a result can be attributed to a stratum rather than to one hull.
+The battery is built along **four independent axes**, and a scenario is a point on all four at
+once. Nothing is included because it seems interesting: a scenario earns its place by answering a
+question no other scenario answers, and where two would answer the same one the cheaper is kept.
 
-Each scenario has to answer a question no other scenario answers:
+| Axis | What varies | Why it is its own axis |
+| --- | --- | --- |
+| **Environment** | vacuum, sun, air, weather, ground | External heating and external cooling are the *same* axis — a planet's surface does both depending on the hour |
+| **Motion** | speed, and direction of travel | Friction heats the leading face and airflow cools every face; which wins is a question of speed, and *where* it lands is a question of heading |
+| **Load** | idle, full electrical, thrust per direction, weapons, everything | Where heat is made decides where it concentrates |
+| **Configuration** | as built, against the same ship with cooling fitted | The only axis the player controls directly, and the one G3 is about |
+
+**Directional cases are enumerated, not sampled.** A ship is not symmetric: most designs have their
+thrusters and their thin armour on different faces, so running only the forward case would miss the
+thing the case exists to find. Both thrust and travel expand to six directions.
+
+#### The scenarios
+
+*Environment, with the ship idle* — anything reached here came from outside it, which is what makes
+these the controls for everything below.
 
 | Scenario | The question |
 | --- | --- |
-| `idle-orbit` | Does it survive doing nothing in space? **G1** |
-| `idle-surface` | Does it survive doing nothing on a hot world? **G1** |
-| `full-power` | Where does it settle with every reactor at rating? **G2** |
-| `burn` | Sustained full thrust — the real load case. **G2** |
-| `combat` | Full power plus weapons plus manoeuvring. **G2** |
-| `reentry` | Atmospheric friction at speed on the leading face. |
-| `sunward` | Unshaded, sun-facing, no rotation. |
-| `night-side` | The cold case — does anything freeze past a floor? |
-| `sealed` | Crew compartments with the air coupled. |
-| `cooled` | The same ship with a standard cooling fit. **G3** |
-| `recovery` | From past critical, throttled to idle. **G5** |
-| `derate` | Power drawn down in steps, to find the sustainable fraction. |
+| `vacuum-shadow` | The cold reference: nothing in, nothing out but radiation |
+| `vacuum-sunlit` | External heating at its worst — one face held to the sun |
+| `orbit-cycling` | Thermal inertia: does a hull average the day or chase it |
+| `surface-hot-noon` | External heating in air: hot ground, high sun, still |
+| `surface-cold-night` | External cooling: does anything freeze below a usable floor |
+| `surface-windy` | Forced convection at rest — what wind alone is worth |
+| `underground` | Buried: no sun, no wind, rock ambient |
 
-The comparison that matters is **within a ship**: `full-power` against `cooled` is G3, and
-`full-power` against `idle-orbit` is G2. Cross-ship comparison is what the strata are for.
+*Load, run in shadow on purpose* — with no sun or air to argue about, anything reached here is the
+ship heating itself, which is the only way to attribute it.
+
+| Scenario | The question |
+| --- | --- |
+| `idle` | **G1**: does a parked ship survive doing nothing |
+| `full-electrical` | **G2**: every consumer at rating, reactors supplying what they ask |
+| `all-peak` | Where heat concentrates when everything runs at once |
+| `burn-{forward,backward,left,right,up,down}` | **Hot spots.** A ship burning forward heats the thrusters at its stern and nothing at its bow, and which blocks those are is a property of the design |
+
+*Motion* — friction against airflow.
+
+| Scenario | The question |
+| --- | --- |
+| `flight-50`, `flight-100` | Friction against airflow: which wins, at which speed |
+| `reentry` | The leading face at terminal speed in thick air |
+
+*Transient*
+
+| Scenario | The question |
+| --- | --- |
+| `recovery` | **G5**: from a full burn, throttled to idle, does it come back |
+
+#### What every run records
+
+A single final temperature cannot judge balance, and the reason is spatial. Two ships settling at
+the same peak are different ships if one is uniformly warm and the other is cold everywhere except
+a 900 K knot around its thrusters — the first has a cooling problem, the second a **layout**
+problem, and only one of them is fixed by adding radiators.
+
+So [`ScenarioOutcome`](../sim/Thermodynamics.Harness/ScenarioOutcome.cs) records the distribution
+and where its top end is:
+
+| Group | Fields |
+| --- | --- |
+| Where it ended up | peak, mean, median, p95, min kelvin |
+| How unevenly | gradient (peak − min), **hot spot** (peak − mean) |
+| Where the hot spot is | hottest block subtype and cell, and how many blocks are within 50 K of it — one block is a definition problem, fifty is a layout problem |
+| Whether it survived | blocks over critical, share, margin at the peak block, seconds to first critical |
+| How it got there | seconds to settle within 5 K of final, fastest rate K/s |
+| What put the heat there | watts by mechanism — radiation, convection, solar, friction, generation |
+| Balance | watts made against watts vented |
+| Cost | substeps demanded and granted, energy drift |
+
+**The per-mechanism shares are what make an outcome interpretable.** A hull hot from solar gain
+wants shading or a lower absorptivity; one hot from friction wants to slow down; one hot from its
+own reactors wants radiators. The temperature alone says none of that.
 
 ### 4. Sweep the settings space (expensive, small sample)
 
@@ -163,12 +218,46 @@ Two filters apply whatever the route:
 | [`CorpusLab`](../sim/Thermodynamics.Harness/CorpusLab.cs) | Corpus yield and size distribution. `-- corpus [--path <dir>]`. |
 | [`BlueprintTests`](../sim/Thermodynamics.Tests/BlueprintTests.cs) | Seven tests on the yield, ending with a real subscribed ship building a simulation that steps. |
 | [`CorpusFetch`](../sim/Thermodynamics.Sim/CorpusFetch.cs) | Lists and fetches the corpus. `-- corpus-fetch`. Unexercised against a real key. |
-| Steps 0, 2, 3, 4 | Designed here, unbuilt. |
+| [`ShipProfile`](../sim/Thermodynamics.Harness/ShipProfile.cs) | Step 2. Every ship measured without stepping it. `-- screen`. |
+| [`Specimens`](../sim/Thermodynamics.Harness/Specimens.cs) | Cuts a corpus to a panel that covers it. See [Specimens](#specimens) below. |
+| [`ShipLoad`](../sim/Thermodynamics.Harness/ShipLoad.cs) | What a ship has switched on, thrust per direction. |
+| [`Battery`](../sim/Thermodynamics.Harness/Battery.cs), [`ScenarioOutcome`](../sim/Thermodynamics.Harness/ScenarioOutcome.cs) | Step 3. `-- battery`. |
+| Steps 0 and 4 | Criteria written above; the settings sweep is designed and unbuilt. |
 
 Measured on the 16 blueprints already subscribed on the development machine: 140 ships, 1 modded,
 107 under the size floor, **32 usable** totalling 25,893 blocks, from 26 up to 9,378 blocks each.
 The yield is low because a subscription list is mostly mods; a corpus acquired as blueprints
 deliberately will do far better.
+
+## Specimens
+
+Ten thousand ships is the right number to *start* with and the wrong number to keep running. A
+corpus of popular workshop designs is enormously redundant — five hundred small-grid fighters differ
+in silhouette and not in anything this simulation can see — and every one of them costs the same to
+run as the one ship that taught you something.
+
+**The useful measure of a ship is not how typical it is but how much it says that nothing else
+says.** So the panel is chosen by *coverage*, not by frequency:
+
+* the extremes of every feature axis first, because an axis with no example at its end is an axis
+  the panel cannot speak about at all;
+* then greedy maximin — repeatedly take the ship furthest from everything already taken, which
+  spreads a small sample through a space without reproducing its density.
+
+Picking the most popular ships instead would produce a panel of near-duplicates from the densest
+part of the design space and no examples of anything unusual, which is exactly backwards: the
+interior of a cluster is predictable from its edges, and the edges are where a balance figure fails
+first.
+
+Two numbers come out of it. **Fidelity** is the distance from the worst-served ship in the corpus to
+its nearest panel member — how well the panel covers what it came from. **Redundancy** is how many
+ships sit on top of another, which is what says when a corpus has stopped being worth growing.
+
+**This is a hypothesis and it has to be checked.** The claim is that two ships close together in
+feature space behave the same way under the battery. Until the battery has been run over a full
+corpus once and the panel's verdicts compared against it, a reduced panel is a guess about what
+matters. Fidelity is a statement about the feature space rather than about behaviour, so it is
+necessary and not sufficient.
 
 ## Open questions
 
@@ -181,6 +270,24 @@ deliberately will do far better.
 * **Whether `Census` should be replaced or kept beside the corpus.** Its tiers are a hypothesis the
   corpus can now test; if they hold, that is worth knowing, and if they do not, every scale figure
   taken on them wants re-reading.
+* **Ships reach hundreds of thousands of kelvin under load, and that is not a balance result.**
+  The first battery run put a 9,378-block hull at 342,510 K in `all-peak` and 684,296 K in
+  `flight-100`, against a screening estimate of 895 K for the same ship. A figure three orders of
+  magnitude past the estimate is a runaway, not a temperature. **It has to be diagnosed before any
+  balance conclusion is drawn from the battery**, and there are two candidates: the solver going
+  unstable on a real hull under a real load at the shipped substep caps — which would be a G6
+  failure and the most valuable thing the lab has found — or a fault in the load model applying
+  watts it should not. `ScenarioOutcome` already records substeps demanded against granted and the
+  energy drift, which is where the answer is.
+* **The battery is too slow to scale.** Two ships through twenty scenarios takes nine and a half
+  minutes, about fourteen seconds a run, even with equilibrium stopping and a 1,800-second ceiling.
+  Five hundred ships would be nearly two days. The stepping is the cost — `StepSeconds` is
+  `1/Frequency`, so an 1,800-second run is over seven thousand steps — and the fix is probably to
+  run the battery at a coarser frequency than the game does, which needs checking against the same
+  answer at the shipped one.
+* **Does the panel reproduce the corpus?** The claim in [Specimens](#specimens), unchecked. It needs
+  one full battery run over a whole corpus to settle, and that run is the expensive thing the panel
+  exists to avoid — so it is paid once.
 * **Subgrids.** A blueprint's rotor and piston subgrids are read as separate ships today. They are
   thermally connected in game, through the bridges `ThermalBridges` builds, and the lab does not
   reassemble them.

@@ -83,11 +83,14 @@ namespace Thermodynamics.Harness
         {
             StringBuilder sb = new StringBuilder();
 
-            string root = path ?? Blueprints.WorkshopPath();
+            string root = path ?? Blueprints.DefaultPath();
             if (root == null)
             {
-                sb.AppendLine("No blueprint directory. Pass --path, or install the game and");
-                sb.AppendLine("subscribe to some blueprints so Steam unpacks them.");
+                sb.AppendLine("No blueprints anywhere. The corpus lives at:");
+                sb.AppendLine("  " + Blueprints.CorpusPath());
+                sb.AppendLine();
+                sb.AppendLine("Fill it with 'corpus-fetch', pass --path <dir>, or subscribe to");
+                sb.AppendLine("blueprints in game so Steam unpacks them.");
                 return sb.ToString();
             }
 
