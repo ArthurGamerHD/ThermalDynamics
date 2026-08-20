@@ -52,7 +52,7 @@ sufficient. See [development.md](../docs/development.md#repo-conventions) for th
 ```bash
 cd sim
 
-dotnet test                                    # the whole suite (962 tests)
+dotnet test                                    # the whole suite (979 tests)
 dotnet run --project Thermodynamics.Sim -- list
 dotnet run --project Thermodynamics.Sim -- run reactor
 dotnet run --project Thermodynamics.Sim -- run all --csv out/
@@ -272,7 +272,7 @@ PipeFitter.BuildRing(builder, ring);      // pump goes on the first straight run
 
 ## Test coverage
 
-962 tests across:
+979 tests across:
 
 * position keys and block geometry maths
 * face indexing, the colour ramp, occlusion

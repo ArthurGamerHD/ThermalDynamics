@@ -25,6 +25,46 @@ namespace Thermodynamics.Tests
             return PerformanceReport.Run("ship", 600, 2, new int[] { 600 });
         }
 
+        /// <summary>
+        /// The clamp A/B measures two regimes, and the whole point of it is that they are
+        /// different regimes.
+        ///
+        /// Both rows would still be produced, and both would still look plausible, if the resolved
+        /// case had drifted stiff or the refused case had been given enough substeps to resolve —
+        /// and the pair would then be one measurement printed twice, reporting a saving of nothing
+        /// and a worst case of nothing. The <c>clamp live</c> flags are what distinguish them, so
+        /// they are asserted rather than merely printed.
+        /// </summary>
+        [Fact]
+        public void TheClampComparisonMeasuresBothRegimes()
+        {
+            List<ReportRow> rows = Small();
+
+            double resolved = Value(rows, "overshoot clamp", "resolved", "clamp live");
+            double refused = Value(rows, "overshoot clamp", "refused", "clamp live");
+
+            Assert.Equal(0.0, resolved);
+            Assert.Equal(1.0, refused);
+
+            // And both halves of each A/B are present, or a comparison has nothing to compare.
+            Assert.True(Value(rows, "overshoot clamp", "resolved", "step, gated") > 0.0);
+            Assert.True(Value(rows, "overshoot clamp", "resolved", "step, always clamped") > 0.0);
+            Assert.True(Value(rows, "overshoot clamp", "refused", "step, gated") > 0.0);
+            Assert.True(Value(rows, "overshoot clamp", "refused", "step, always clamped") > 0.0);
+        }
+
+        private static double Value(IList<ReportRow> rows, string section, string name, string metric)
+        {
+            for (int i = 0; i < rows.Count; i++)
+            {
+                ReportRow row = rows[i];
+                if (row.Section == section && row.Case == name && row.Metric == metric) return row.Value;
+            }
+
+            Assert.Fail("no row for " + section + " / " + name + " / " + metric);
+            return 0.0;
+        }
+
         [Fact]
         public void TheReportCoversEverySectionAndEveryFeature()
         {
@@ -44,6 +84,7 @@ namespace Thermodynamics.Tests
             Assert.Contains("features", sections);
             Assert.Contains("profiles", sections);
             Assert.Contains("substep cap", sections);
+            Assert.Contains("overshoot clamp", sections);
 
             // Every switch a world can turn off has to be in the breakdown, or a feature can grow
             // expensive without any report noticing.

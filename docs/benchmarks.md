@@ -53,9 +53,15 @@ measures the operating system.
 
 Blocks, links, build time, step time, substeps granted, substeps demanded, cost per simulated
 second and cost per element visit, at each rung. The two substep columns matter separately:
-`MaxSubsteps` refuses at 16 on every hull this ladder builds, so *granted* is 16 everywhere and
-says nothing, while *demanded* keeps moving. In flight the gap between them is wider still — see
+*granted* is what `MaxSubsteps` allowed, *demanded* is what the grid asked for, and the gap between
+them is accuracy given up. In flight the gap is widest — see
 [the environments section](#the-environments--and-why-the-old-numbers-were-the-cheap-case).
+
+| rung | blocks | links | step | demanded | per element visit |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 8,000 | 8,904 | 20,779 | 1.43 ms | 22.0 | 2.19 ns |
+| 32,000 | 32,800 | 73,787 | 4.37 ms | 18.5 | 2.30 ns |
+| 125,000 | 126,731 | 277,967 | 31.8 ms | 21.7 | 3.57 ns |
 
 ### The environments — and why the old numbers were the cheap case
 
@@ -63,16 +69,16 @@ Every shape in every world, because which is worst depends on which world:
 
 | | step ms | substeps demanded |
 | --- | ---: | ---: |
-| ship, vacuum | 1.48 | 23.2 |
-| ship, atmosphere | 1.35 | 31.0 |
-| ship, flight at 300 m/s | 1.35 | **43.9** |
-| cube, vacuum | 1.37 | 22.7 |
-| cube, flight | 1.28 | 37.0 |
-| truss, vacuum | 0.65 | **16.0** |
-| truss, atmosphere | 0.69 | 33.5 |
-| truss, flight | 0.72 | **50.9** |
+| ship, vacuum | 0.75 | 11.6 |
+| ship, atmosphere | 1.01 | 15.5 |
+| ship, flight at 300 m/s | 1.43 | **22.0** |
+| cube, vacuum | 0.69 | 11.4 |
+| cube, flight | 1.07 | 18.5 |
+| truss, vacuum | 0.33 | **7.9** |
+| truss, atmosphere | 0.66 | 16.8 |
+| truss, flight | 1.03 | **25.5** |
 
-**A truss is the cheapest hull in vacuum and the stiffest in flight** — 16 substeps to 51, a
+**A truss is the cheapest hull in vacuum and the stiffest in flight** — 7.9 substeps to 25.5, a
 threefold inversion. One link per node and nothing to convect with makes it trivial in space;
 every node being exposed makes convection a per-node term on all of them once there is air.
 
@@ -80,14 +86,13 @@ Until this section existed, every benchmark in this repository ran a **ship in v
 the cheapest of those nine on the axis that matters. Worse, `AtmosphereFactor` is zero in vacuum,
 so convection was switched off *by the world* rather than by its setting — the report dutifully
 recorded convection and friction as costing nothing, having never run either. Both are now
-measured: 1.30 ms and 0.82 ms isolated, which puts convection above solar.
+measured: 1.86 ms and 0.89 ms isolated, which puts convection above solar.
 
 Everything else in the report is now measured in flight, deliberately the worst of the nine.
 
-> **Cost and accuracy have different worst cases.** `MaxSubsteps` grants 16 whatever the demand,
-> so flight does not cost much more per step — it is *further from being resolved*. In vacuum the
-> default profile is 23 demanded against 16 granted; in flight it is 44 against 16. The extra
-> demand is paid in accuracy, through the overshoot clamps, not in milliseconds.
+> **Cost and accuracy have different worst cases.** Where `MaxSubsteps` refuses the demand, flight
+> does not cost much more per step — it is *further from being resolved*, and the extra demand is
+> paid in accuracy through the overshoot clamps rather than in milliseconds.
 
 ### The features, two ways
 
@@ -98,33 +103,31 @@ Every switch a world can turn off, measured twice:
 * **isolated** — everything off, this one on. What the feature does on its own.
 
 They differ whenever features interact, and the gap is usually the interesting part. From the
-committed baseline, on a 32,800-block hull in flight where a whole step is 6.22 ms and a hull with
-every feature off is 0.49 ms:
+committed baseline, on a 32,800-block hull in flight where a whole step is 4.41 ms and a hull with
+every feature off is 0.37 ms:
 
 | feature | marginal | isolated |
 | --- | ---: | ---: |
-| conduction | **3.68 ms** | 3.63 ms |
-| conduction clamp | **2.84 ms** | 0.00 ms |
-| damage | 0.77 ms | 0.66 ms |
-| convection | −0.56 ms | **1.30 ms** |
-| radiation | 0.11 ms | 1.03 ms |
-| friction | −0.19 ms | 0.82 ms |
-| solar | 0.17 ms | 0.79 ms |
-| environment clamp | 0.27 ms | 0.00 ms |
-| waste heat | −0.22 ms | 0.22 ms |
-| heat sources, coolant loops, room air, self shadow | within the noise | within the noise |
+| convection | **1.35 ms** | **1.86 ms** |
+| conduction | 1.24 ms | 0.79 ms |
+| damage | 0.83 ms | 0.49 ms |
+| radiation | 0.19 ms | 0.91 ms |
+| solar | −0.11 ms | 0.93 ms |
+| friction | −0.20 ms | 0.89 ms |
+| environment clamp | 0.26 ms | 0.00 ms |
+| waste heat | −0.17 ms | 0.16 ms |
+| conduction clamp | 0.06 ms | 0.00 ms |
+| heat sources, coolant loops, room air, heat pumps, self shadow | within the noise | within the noise |
 
 Three things fall out of that table that no single-number benchmark would have shown.
 
-**`ClampConductionOvershoot` is the second most expensive thing in the simulation.** 2.84
-milliseconds of a 6.22 ms step — and nothing at all in isolation, because it only acts
-where there is conduction to clamp. It is a per-link branch and two extra reads inside the hottest
-loop in the mod.
-
-That is worth putting beside a result from [stiffness.md](stiffness.md): while
-`MaxSubstepsPerBlock <= MaxSubsteps` **the clamps never engage**, because every step is short
-enough for the grid it is integrating. A configuration that caps the demand is paying three and a
-quarter milliseconds for a branch that can no longer fire.
+**`ClampConductionOvershoot` used to be the second most expensive thing in the simulation**, at
+2.84 ms of a 6.22 ms step, and later 4.17 ms of an 8.52 ms one. It is now 0.06 ms. Both halves of
+the clamp are the same stability test — `h * G > C` for a node, `h * conductance >` the reduced
+mass for a link — and neither reads a temperature, so both can be settled for the whole grid once
+per step. On a grid granted the substeps it demands, which is what the substep count is chosen to
+guarantee, neither holds anywhere and every clamped branch was computing a value it then discarded.
+See [the clamp A/B](#the-overshoot-clamp-ab) for what that is worth in each regime.
 
 **Solar's marginal cost is now a tenth of its isolated cost.** Everything about solar gain except
 the fact of it is precomputed once per step, so removing it saves the one multiply-add it still
@@ -132,8 +135,10 @@ costs. The isolated figure — what solar does on a grid with nothing else runni
 millisecond, and reading that column alone would predict a saving from disabling it that is not
 there.
 
-**Damage costs 0.77 ms marginal**, for a per-node comparison against a definition field on the
-apply pass — a check that fired zero times across two field sessions.
+**Damage costs 0.83 ms marginal**, for a per-node comparison against a definition field on the
+apply pass — a check that fired zero times across two field sessions. With the clamp gone from the
+top of the table it is now the third most expensive switch in the simulation, behind only the two
+that do the physics.
 
 > **A caveat on the marginal column.** Switching a feature off does not only remove its cost, it
 > changes the state the grid reaches — a hull with convection disabled runs hotter, which changes
@@ -150,23 +155,51 @@ second — the unit that does not move when the step length does.
 The profile rows say something the profile table in [configuration.md](configuration.md) does not.
 Measured in flight, on a hull with air moving over it:
 
-| profile | demanded | granted | clamped |
-| --- | ---: | ---: | --- |
-| simulation | 18.5 | 19 | no |
-| default | 36.9 | 16 | yes |
-| responsive | 1,811 | 8 | yes |
-| arcade | **80,319,608** | 1 | yes |
-| minimal | **52,879,248** | 1 | yes |
+| profile | demanded | granted | clamped | per simulated second |
+| --- | ---: | ---: | --- | ---: |
+| simulation | 0.08 | 1 | no | 4.38 ms |
+| optimized | 0.17 | 1 | no | 2.29 ms |
+| simlite | 0.17 | 1 | no | 2.24 ms |
+| responsive | 18.5 | 19 | no | 34.5 ms |
+| arcade | **36.9** | 6 | **yes** | 11.8 ms |
 
-`simulation` is the only profile that resolves what it is integrating. `arcade` and `simlite`
-are eight orders of magnitude under-resolved in an atmosphere: every exposed block is being driven
-to ambient by the overshoot clamp on every substep, and the clamp is the entire integrator rather
-than a guard on it. That is bounded — `ClampEnvironmentOvershoot` is exactly what makes it
-bounded — but it is not a simulation of anything, and it is a much larger number in flight than
-the 1,761 the same profile shows in vacuum.
+`arcade` is the only profile in this measurement that does not resolve what it is integrating: it
+asks for 37 substeps, is granted 6, and the overshoot clamps carry the difference. That is bounded —
+the clamps are exactly what makes it bounded — but the blocks past their limit are being driven
+towards ambient rather than integrated towards it.
 
-Worth deciding whether those profiles should scale `HeatTimeScale` down in an atmosphere, or
-whether being pinned to ambient is the intended arcade behaviour.
+`responsive`, the shipped default, is resolved and costs 34.5 ms per simulated second on a
+32,800-block hull in flight. `simulation` and the two cut-down profiles run real time, which needs
+one substep and costs proportionately little.
+
+> These figures moved by a factor of two against every earlier version of this document, in both
+> directions and for two unrelated reasons: `substeps demanded` was rescaled when the element-visit
+> budget was corrected, and `per simulated second` halved when the overshoot clamp stopped running
+> on steps where it cannot bind. Figures quoted here from before either change are not comparable
+> with these. `BenchmarkBaselineTests` now fails when the committed baseline's keys drift from the
+> report's, which is the class of rot that made the older numbers hard to place.
+
+### The overshoot clamp A/B
+
+The clamp is skipped on any step where it cannot bind. That is a saving in one regime and a cost in
+the other, so the report measures both, each twice — with the test and without it:
+
+| regime | always clamped | gated | change | clamp live |
+| --- | ---: | ---: | ---: | --- |
+| resolved — granted the substeps it demands | 8.83 ms | **4.40 ms** | **−50 %** | no |
+| refused — 4 substeps against a demand of 20 | 2.22 ms | 2.25 ms | +0 % | yes |
+
+The `clamp live` column is what says the two rows are in different regimes rather than being the
+same measurement printed twice; `PerformanceReportTests` asserts it reads 0 and 1 respectively.
+
+**The worst case sits inside the noise floor.** Across repeated runs the `refused` row moved
+between −0.3 % and +7.4 % while the noise row moved between 0.08 ms and 0.39 ms on a 2.2 ms step;
+the two track each other, and the low-noise runs read as zero. The test returns on the first
+element that can bind, so a grid where the answer is yes stops almost immediately — it is one
+comparison, not a pass.
+
+Worth deciding whether `arcade` should scale `HeatTimeScale` down in an atmosphere, or whether
+being pinned to ambient is the intended arcade behaviour.
 
 ### The scenarios
 
@@ -178,21 +211,21 @@ free, which is precisely what happened to convection.
 
 | scenario | step | what it built |
 | --- | ---: | --- |
-| plain | 1.33 ms | — |
-| pressurised | **1.54 ms** | 13 rooms with air |
-| plumbed | 1.38 ms | 8 coolant loops, 8 heat pumps |
-| burning | 1.33 ms | **1.4 million overheat events** |
+| plain | 1.46 ms | — |
+| pressurised | **1.90 ms** | 13 rooms with air |
+| plumbed | 1.53 ms | 8 coolant loops, 8 heat pumps |
+| burning | 1.46 ms | **411,651 overheat events** |
 
-Room air costs about 15 % of a step for thirteen compartments, which is the first time it has been
-measured at all. Plumbing costs 3 %.
+Room air costs about 30 % of a step for thirteen compartments. Plumbing costs 5 %. Both shares grew
+when the step itself halved; neither pass got more expensive.
 
-**The burning row is the finding.** Thirty steps raised 1,444,321 overheat events — about 15,500
-per step on a hull with 970 heat producers. That is one event *per producer per substep*, where one
-per producer per step would do: the damage check lives on the apply pass, which runs sixteen times
-a step. The total damage is right, because `DamageIsPerSecond` divides by the substep length — but
-the event count is sixteen times what it needs to be, and in game every one of those events becomes
-a `DoDamage` call on the host. A burning ship is making sixteen times the damage API calls it
-should.
+**The burning row is the finding, and it is unchanged.** Twenty steps raised 411,651 overheat
+events — about 20,600 per step on a hull with 970 heat producers, against 22 substeps. That is one
+event *per producer per substep*, where one per producer per step would do: the damage check lives
+on the apply pass, which runs once per substep. The total damage is right, because
+`DamageIsPerSecond` divides by the substep length — but the event count is twenty times what it
+needs to be, and in game every one of those events becomes a `DoDamage` call on the host. A burning
+ship is making twenty times the damage API calls it should.
 
 ### The fleets
 
@@ -201,9 +234,9 @@ cost, so a fleet of small grids is not obviously the same price as one large one
 
 | | step, whole fleet | blocks | per thousand blocks |
 | --- | ---: | ---: | ---: |
-| 1 grid | 1.36 ms | 8,904 | 0.153 ms |
-| 10 grids | 1.48 ms | 11,240 | 0.131 ms |
-| 100 grids | 12.05 ms | 83,500 | 0.144 ms |
+| 1 grid | 1.16 ms | 8,904 | 0.130 ms |
+| 10 grids | 1.50 ms | 11,240 | 0.133 ms |
+| 100 grids | 12.02 ms | 83,500 | 0.144 ms |
 
 **Flat, and that is the answer.** Splitting the same work across a hundred grids costs what one
 grid costs per block: the solver's per-grid fixed work — state sync, the stability estimate, the
@@ -241,6 +274,21 @@ sixteen regressions, fifteen of which were figures that had previously been unme
 
 Rows that appear or vanish are listed separately. A vanished row usually means a case was renamed,
 which is worth knowing precisely because it breaks every future comparison silently.
+
+`BenchmarkBaselineTests` is the guard on that. It compares the committed baseline's *keys* against
+a fresh run's and fails when they diverge, so a rename or a new section fails a test rather than
+quietly turning the baseline into a list of rows nothing joins to. It checks keys only — timings
+belong to the machine that took them, which is what the calibration row is for. When it fails,
+re-record:
+
+```bash
+cd sim
+dotnet run --project Thermodynamics.Sim -- bench report --size 32000 --max 125000 --csv benchmarks
+```
+
+Record it on a quiet machine and check the noise row before committing: this baseline's spread was
+0.077 ms, and runs taken at four times that noise moved the smallest figures in the report by
+several per cent.
 
 ---
 

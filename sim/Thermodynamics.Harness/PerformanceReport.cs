@@ -156,6 +156,9 @@ namespace Thermodynamics.Harness
             if (log != null) log("configurations");
             Configurations(rows, shape, size, ticks, log);
 
+            if (log != null) log("overshoot clamp");
+            OvershootClamp(rows, shape, size, ticks, log);
+
             if (log != null) log("environments");
             Environments(rows, ticks, log);
 
@@ -333,6 +336,72 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
+        /// The conduction overshoot clamp, measured against itself in both regimes it has.
+        ///
+        /// <para>
+        /// The clamp is skipped on any step where it cannot bind, which is settled once per step
+        /// from the substep length. That is a saving in one regime and a cost in the other, and a
+        /// single figure would hide whichever one the case happened to land in. So each regime is
+        /// measured twice — with the test and without it — and the two rows sit next to each other.
+        /// </para>
+        ///
+        /// <para>
+        /// <b>resolved</b> is a grid granted the substeps it demands, which is what the substep
+        /// count is chosen to guarantee and therefore the ordinary case. Nothing can overshoot, the
+        /// test says so, and the clamped arithmetic is skipped.
+        /// </para>
+        ///
+        /// <para>
+        /// <b>refused</b> is the worst case for the test and the reason it is measured: four
+        /// substeps against a hull demanding twenty, with no per-block cap to raise the stiff
+        /// blocks out of trouble. The clamp binds, the answer is yes, and the pass that established
+        /// that bought nothing. It is cheap because it returns on the first element that can bind,
+        /// but cheap is a claim and this row is the evidence.
+        /// </para>
+        ///
+        /// <para>
+        /// The <c>clamp live</c> rows are what keep the pair honest: 0 against 1 is what says the
+        /// two cases are in different regimes rather than being the same measurement twice.
+        /// </para>
+        /// </summary>
+        private static void OvershootClamp(List<ReportRow> rows, string shape, int size, int ticks,
+            Action<string> log)
+        {
+            // Enough substeps that nothing is near its limit, then far too few, with the per-block
+            // mass floor off in both so the floor cannot rescue the stiff blocks in the second.
+            Regime(rows, "resolved", 4096, shape, size, ticks, log);
+            Regime(rows, "refused", 4, shape, size, ticks, log);
+        }
+
+        private static void Regime(List<ReportRow> rows, string name, int maxSubsteps, string shape,
+            int size, int ticks, Action<string> log)
+        {
+            if (log != null) log("  clamp " + name);
+
+            ThermalSettings gated = Configure(0, null, true);
+            gated.MaxSubsteps = maxSubsteps;
+            gated.Derive();
+
+            ThermalSettings ungated = Configure(0, null, true);
+            ungated.MaxSubsteps = maxSubsteps;
+            ungated.Derive();
+
+            Sample with = Measure(gated, shape, size, ticks, null, null, true);
+            Sample without = Measure(ungated, shape, size, ticks, null, null, false);
+
+            Add(rows, "overshoot clamp", name, "step, gated", with.StepMs, "ms");
+            Add(rows, "overshoot clamp", name, "step, always clamped", without.StepMs, "ms");
+            Add(rows, "overshoot clamp", name, "substeps granted", with.Substeps, "", false);
+            Add(rows, "overshoot clamp", name, "clamp live", with.ClampLive ? 1 : 0, "", false);
+
+            // Signed, so the worst case reads as the cost it is rather than as a small saving.
+            double change = without.StepMs <= 0.0
+                ? 0.0
+                : 100.0 * (with.StepMs - without.StepMs) / without.StepMs;
+            Add(rows, "overshoot clamp", name, "gate change", change, "%");
+        }
+
+        /// <summary>
         /// Every shape in every world, because which is worst depends on which world.
         ///
         /// In vacuum a truss is the cheapest hull on the ladder — one link per node and nothing to
@@ -486,6 +555,9 @@ namespace Thermodynamics.Harness
 
             public int Floored;
             public bool Clamped;
+
+            /// <summary>Whether the conduction overshoot clamp ran, as opposed to being skipped.</summary>
+            public bool ClampLive;
         }
 
         /// <summary>
@@ -527,9 +599,10 @@ namespace Thermodynamics.Harness
         }
 
         private static Sample Measure(ThermalSettings settings, string shape, int size, int ticks,
-            ThermalSimulation prepared = null, EnvironmentSample? world = null)
+            ThermalSimulation prepared = null, EnvironmentSample? world = null, bool gateClamp = true)
         {
             ThermalSimulation simulation = prepared ?? Build(settings, shape, size);
+            simulation.Solver.GateConductionClamp = gateClamp;
             LoadBenchmarks.SeedSpread(simulation);
             Census.DriveCensus(simulation);
 
@@ -561,6 +634,7 @@ namespace Thermodynamics.Harness
             sample.Demand = simulation.Solver.LastRequiredSubsteps;
             sample.Floored = simulation.Solver.FlooredNodes;
             sample.Clamped = simulation.Solver.LastStepWasClamped;
+            sample.ClampLive = simulation.Solver.ConductionClampLive;
 
             double elements = simulation.Solver.Nodes.Count + simulation.Solver.Links.Count;
             double visits = elements * Math.Max(1, sample.Substeps);
