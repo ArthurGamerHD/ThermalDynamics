@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Sandbox.ModAPI;
 using SENetworkAPI;
 using VRage.Game.Components;
@@ -48,11 +49,25 @@ namespace Thermodynamics
 
             try
             {
+                // Seeded with the settings already in hand, and never with null: a null value is
+                // never transmitted, because there is nothing to encode. A property left at null
+                // answers a joining client's fetch with silence, and since the server only
+                // publishes when a setting *changes*, a world where nobody touches the config
+                // would leave every client on the shipped defaults for the whole session — which
+                // is the failure this class exists to fix, reintroduced one layer up.
+                //
                 // Server to client only: the config is the server's, and a client editing it would
                 // be editing its own copy of someone else's world. Fetch is exempt from that rule
-                // inside the API, which is what lets a joining client ask for the current value.
-                synced = new NetSync<Settings>(session, TransferType.ServerToClient, null);
+                // inside the API, which is what lets a joining client ask at all.
+                synced = new NetSync<Settings>(
+                    session, TransferType.ServerToClient, Settings.EnsureLoaded(), true);
+
                 synced.ValueChangedByNetwork += Received;
+
+                // Answered from the live object rather than from whatever was last assigned, so a
+                // fetch cannot hand out a stale copy if some path ever mutates the settings
+                // without going through Apply.
+                synced.BeforeFetchRequestResponse += Refresh;
             }
             catch (Exception e)
             {
@@ -83,6 +98,27 @@ namespace Thermodynamics
             }
         }
 
+        /// <summary>
+        /// Points the property at the current settings before a fetch is answered. Server side
+        /// only; a client answering a fetch would be handing out its own copy.
+        /// </summary>
+        private static void Refresh(ulong sender)
+        {
+            if (synced == null || !IsServer() || Settings.Instance == null) return;
+
+            try
+            {
+                // SetValue rather than Value: this is a read being served, not a change being
+                // announced, and broadcasting here would send the settings to everyone every time
+                // one player joined.
+                synced.SetValue(Settings.Instance, SyncType.None);
+            }
+            catch (Exception e)
+            {
+                MyLog.Default.Info("[" + Settings.Name + "] failed to refresh settings for fetch\n" + e);
+            }
+        }
+
         private static void Received(Settings previous, Settings value, ulong sender)
         {
             if (value == null) return;
@@ -91,11 +127,38 @@ namespace Thermodynamics
             {
                 applying = true;
 
-                // Replaced rather than merged. A field the server has never written is a field this
-                // build does not have, and a partial apply would leave the two simulations
-                // disagreeing about exactly the settings nobody thought to copy.
-                Settings.Instance = value;
-                value.Apply();
+                // Copied into the live object rather than swapped for it, and this is not a
+                // preference. A grid takes its core settings once, at construction —
+                // `new ThermalSimulation(Settings.Instance.ToCore(), Model)` — and notices later
+                // changes only through that object's Revision. Replacing Settings.Instance leaves
+                // every grid already on the client holding the settings it was born with, which
+                // is a subtler version of the divergence this class exists to close.
+                //
+                // Names() is the same list the settings menu copies through: every setting a
+                // player or mod may change at runtime. It includes the four presentation switches,
+                // which a client owns for itself, so those are skipped — a server has no business
+                // deciding which overlay is on someone else's screen.
+                Settings target = Settings.Instance;
+                if (target == null)
+                {
+                    Settings.Instance = value;
+                    value.Apply();
+                }
+                else
+                {
+                    List<string> names = Settings.Names();
+                    for (int i = 0; i < names.Count; i++)
+                    {
+                        string name = names[i];
+                        if (Settings.ClientOwned.Contains(name)) continue;
+
+                        target.SetValue(name, value.GetValue(name));
+                    }
+
+                    // Bumps the revision the simulations watch, so every grid picks the new values
+                    // up on its next step without being rebuilt.
+                    target.Apply();
+                }
 
                 MyLog.Default.Info("[" + Settings.Name + "] settings received from the server");
             }

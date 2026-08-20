@@ -123,10 +123,10 @@ namespace Thermodynamics
         /// The settings a client may change for itself. Everything else is world state owned by the
         /// server, matching <c>/thermal set</c>.
         /// </summary>
-        private static readonly HashSet<string> ClientSide = new HashSet<string>
+        private static HashSet<string> ClientSide
         {
-            "DebugTextOnScreen", "DebugSolarRaycast", "DebugWindRaycast", "DebugBlockOverlay",
-        };
+            get { return Settings.ClientOwned; }
+        }
 
         private static bool initialised;
         private static ControlPage page;

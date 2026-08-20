@@ -153,6 +153,22 @@ its top and bottom, so adding ports needs the port geometry checked against the 
 initialised on channel `30323` and three properties are registered on it: the world's settings, and
 the two pump throttles.
 
+The settings property is seeded with the loaded settings at construction rather than left at null,
+because **a null value is never transmitted** — a property sitting at null answers a joining
+client's fetch with silence, and since the server publishes only when a setting *changes*, a world
+where nobody touched the config would leave every client on the shipped defaults for the whole
+session. The same shape as the bug being fixed, one layer up.
+
+A received value is **copied into the live settings object rather than swapped for it**. A grid
+takes its core settings once, at construction — `new ThermalSimulation(Settings.Instance.ToCore(),
+Model)` — and notices later changes only through that object's `Revision`, so replacing
+`Settings.Instance` would leave every grid already on the client running the settings it was born
+with. The copy goes through `Settings.Names()`, the same list the settings menu uses, minus
+`Settings.ClientOwned` — the four presentation switches a client owns for itself, since a server
+has no business choosing which overlay is on someone else's screen. That leaves 44 of the 49
+serialized fields replicated; the fifth is the config file's `Version`, which describes the file
+rather than the world.
+
 The settings one closed a silent divergence rather than adding a feature. Only the server can read
 the config file — `CanReadWorldStorage` returns false on a client, and its comment already said
 clients "take the server's settings rather than their own file" — but nothing delivered them, so a

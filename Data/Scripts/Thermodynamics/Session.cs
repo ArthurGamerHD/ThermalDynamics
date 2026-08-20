@@ -45,15 +45,16 @@ namespace Thermodynamics
             NetworkAPI.Init(ModID, Settings.Name);
             NetworkAPI.LogNetworkTraffic = true;
 
-            // Declared before anything can change a setting, and before the load below, which
-            // applies them and therefore publishes. Session-scoped properties are addressed by
-            // the order they are constructed in, so this stays first and stays on both sides.
-            SettingsSync.Register(this);
-
             // The config file controls whether telemetry collects. Grids may have initialised before
             // this ran, so the load is not performed here: whichever caller touches the settings
             // first performs it.
             Settings.EnsureLoaded();
+
+            // After the load, so the property is seeded with real settings rather than null — a
+            // null value is never transmitted, and a client's fetch would get nothing back.
+            // Session-scoped properties are addressed by the order they are constructed in, so
+            // this stays first among them and stays on both sides.
+            SettingsSync.Register(this);
 
             Telemetry.Start();
 

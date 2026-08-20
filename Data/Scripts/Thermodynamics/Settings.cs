@@ -399,6 +399,20 @@ namespace Thermodynamics
         // ---- access by name ----------------------------------------------------------------
 
         /// <summary>
+        /// The settings a client owns for itself: what it draws on its own screen. Everything else
+        /// in <see cref="Names"/> is world state belonging to the server.
+        ///
+        /// Held here rather than only in the settings menu because two things need the same
+        /// answer — the menu, deciding what a client may edit, and the replication, deciding what
+        /// the server may overwrite. A server pushing its own overlay choice onto every player's
+        /// screen is the failure this prevents.
+        /// </summary>
+        public static readonly HashSet<string> ClientOwned = new HashSet<string>
+        {
+            "DebugTextOnScreen", "DebugSolarRaycast", "DebugWindRaycast", "DebugBlockOverlay",
+        };
+
+        /// <summary>
         /// Every setting a player or mod may change at runtime, in display order. Booleans are 0
         /// and 1.
         /// </summary>
