@@ -142,6 +142,16 @@ namespace Thermodynamics.Core
         private float[] nodeConvectionRow = new float[0];
 
         /// <summary>
+        /// Waste heat, solar and friction summed: everything a node gains that does not depend on
+        /// its own temperature, and so is fixed for the whole step.
+        ///
+        /// Carried as its own row rather than summed per substep because the environment pass is
+        /// bound by how many node arrays it streams, not by its arithmetic. The three terms are
+        /// still kept apart above, for the diagnostics substep and for nothing else.
+        /// </summary>
+        private float[] nodeSourceRow = new float[0];
+
+        /// <summary>
         /// False when the rows above must be recomputed rather than read.
         ///
         /// Cleared at the top of every step, and again whenever the self-shadow pass publishes new
@@ -1875,8 +1885,6 @@ namespace Thermodynamics.Core
                 // node once per substep, and the conduction pass runs strictly after it.
                 if (fill) nodeRelaxation[i] = RelaxationFactor(i, h);
 
-                float generation = generating ? nodeGeneration[i] : 0f;
-
                 if (nodeExposedFaces[i] <= 0)
                 {
                     if (fill)
@@ -1884,25 +1892,25 @@ namespace Thermodynamics.Core
                         nodeSolarRow[i] = 0f;
                         nodeFrictionRow[i] = 0f;
                         nodeConvectionRow[i] = 0f;
+                        nodeSourceRow[i] = generating ? nodeGeneration[i] : 0f;
                     }
 
-                    nodeWatts[i] += generation;
-                    heatGainAccumulator += generation;
+                    float buried = nodeSourceRow[i];
+                    nodeWatts[i] += buried;
+                    heatGainAccumulator += buried;
                     if (diagnostics) ClearEnvironmentDiagnostics(i);
                     continue;
                 }
 
                 float temperature = nodeTemperatures[i];
-                float area = nodeExposedArea[i];
-                float watts = generation;
 
                 float radiationWatts = 0f;
                 float convectionWatts = 0f;
-                float solarWatts = 0f;
-                float frictionWatts = 0f;
 
                 if (fill)
                 {
+                    float area = nodeExposedArea[i];
+
                     // A face in the airflow sheds more heat, but still air convects as well, so
                     // the factor spans 0.5..1. It depends on geometry and wind, not temperature.
                     float windFactor = windy
@@ -1915,14 +1923,20 @@ namespace Thermodynamics.Core
 
                     // Per face, weighted by both incidence against the sun and the fraction of
                     // the face the grid's own shadow leaves lit.
-                    nodeSolarRow[i] = solarEnabled
+                    float solar = solarEnabled
                         ? env.SolarEnergy * nodeEmissivity[i] * WeightedLit(i, sunWeights) * area
                         : 0f;
+                    nodeSolarRow[i] = solar;
 
-                    nodeFrictionRow[i] = frictionEnabled
+                    float friction = frictionEnabled
                         ? frictionScale * area * Weighted(i, windWeights)
                         : 0f;
+                    nodeFrictionRow[i] = friction;
+
+                    nodeSourceRow[i] = (generating ? nodeGeneration[i] : 0f) + solar + friction;
                 }
+
+                float watts = nodeSourceRow[i];
 
                 if (environmentEnabled)
                 {
@@ -1968,33 +1982,21 @@ namespace Thermodynamics.Core
                     watts += relaxation;
                 }
 
-                if (solarEnabled)
-                {
-                    solarWatts = nodeSolarRow[i];
-                    watts += solarWatts;
-                }
-
-                if (frictionEnabled)
-                {
-                    frictionWatts = nodeFrictionRow[i];
-                    watts += frictionWatts;
-                }
-
                 nodeWatts[i] += watts;
 
                 // Two adds against a pass that has already computed all four figures. The
                 // environment half is signed, so a grid absorbing more than it sheds reads
                 // positive and the venting figure derived from it reads zero.
                 environmentWattsAccumulator += radiationWatts + convectionWatts;
-                heatGainAccumulator += generation + solarWatts + frictionWatts;
+                heatGainAccumulator += nodeSourceRow[i];
 
                 if (!diagnostics) continue;
 
                 ThermalNode node = nodes[i];
                 node.LastRadiationWatts = radiationWatts;
                 node.LastConvectionWatts = convectionWatts;
-                node.LastSolarWatts = solarWatts;
-                node.LastFrictionWatts = frictionWatts;
+                node.LastSolarWatts = nodeSolarRow[i];
+                node.LastFrictionWatts = nodeFrictionRow[i];
                 node.LastHeatSourceWatts = 0f;
             }
 
@@ -3215,6 +3217,7 @@ namespace Thermodynamics.Core
                 nodeSolarRow = new float[size];
                 nodeFrictionRow = new float[size];
                 nodeConvectionRow = new float[size];
+                nodeSourceRow = new float[size];
                 environmentRowsValid = false;
                 nodeFaceWeights = new float[size * Face.Count];
                 nodeSunLit = new float[size * Face.Count];
