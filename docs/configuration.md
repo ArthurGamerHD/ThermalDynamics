@@ -280,6 +280,20 @@ wrote; its own documentation says not to gate admin actions on it. `SettingsRequ
 `RegisterSecureMessageHandler`, where the transport supplies the sender and a from-the-server flag
 that a client cannot forge. That is the whole reason for the separate channel.
 
+## The definition files, from the menu
+
+`Loops.xml` and `Planets.xml` were settings nobody could reach in game: "how fast does coolant
+move" is a settings question whose answer lived in a file the settings menu had never mentioned.
+Their nineteen values are world settings now — saved, replicated, reachable from `/thermal set` and
+the mod API, and laid out on the **Coolant loops**, **Climate** and **Underground** pages.
+
+They behave as an override rather than a copy. A value still equal to what a fresh install ships
+leaves the definition alone, so an untouched world reads whatever `Loops.xml`, `Planets.xml` and
+the active profile's overlay say. Move one and it wins from then on, for that world.
+
+`Cubes.xml` is not here: its properties are per block subtype, which a flat setting cannot express.
+A profile's overlay reaches those, and editing them per world is the next step.
+
 ## Checking a client has the server's settings
 
 Only the server reads the config file. A client is sent the world's settings when it joins and

@@ -105,6 +105,29 @@ namespace Thermodynamics
             { "SimulationSpeed", new Entry(Solver, "Simulation speed", "Multiplier on how fast heat moves. 1 is the tuned pace.", 0.1f, 10f) },
             { "HeatTimeScale", new Entry(Solver, "Heat time scale", "Seconds of physical time per second of play. The dial that makes heat happen on a human scale.", 1f, 1000f) },
 
+            // From Loops.xml, which the menu never showed. This is the flow rate people ask for.
+            { "LoopLargeGridFlowRate", new Entry(Systems, "Flow rate, large", "How fast coolant moves on a large grid with one pump at full speed, m/s. Flow rises with the square root of combined pumping, so four pumps carry twice this, not four times.", 0f, 40f) },
+            { "LoopSmallGridFlowRate", new Entry(Systems, "Flow rate, small", "The same for a small grid. Split because it is a balance dial rather than a physical constant: a small-grid pump is a smaller machine driving a shorter ring.", 0f, 40f) },
+            { "LoopCoolantMassPerPipe", new Entry(Systems, "Coolant per pipe", "Coolant carried by one pipe block, kg. More is more capacity for the same coupling, so a ring holds heat more steadily and asks less of the integrator.", 1f, 400f) },
+            { "LoopSpecificHeat", new Entry(Systems, "Coolant specific heat", "J/(kg K). Water-glycol is about 3400, which is what the shipped fluid is.", 100f, 6000f) },
+            { "LoopConductivity", new Entry(Systems, "Coolant conductivity", "How well heat crosses between the fluid and the pipe carrying it, 0..1.", 0f, 1f) },
+            { "LoopPipeContactMultiplier", new Entry(Systems, "Pipe contact", "Scales the coupling between the fluid and its own pipe.", 0f, 5f) },
+            { "LoopSinkContactMultiplier", new Entry(Systems, "Sink contact", "Scales the coupling through a sink face into whatever is mounted against it. The stiffest path in the mod: a bolt joint carries 167 W/K and a sink face 1,000.", 0f, 5f) },
+            { "LoopStagnantTransferFraction", new Entry(Systems, "Stagnant transfer", "What a stopped ring still carries between neighbouring parcels, 0..1. A ring with no pump is a heat buffer rather than a conductor.", 0f, 1f) },
+
+            // From Planets.xml, same argument.
+            { "PlanetDayTemperature", new Entry(Environment, "Day temperature", "Air temperature at the equator at noon, K.", 100f, 400f) },
+            { "PlanetNightTemperature", new Entry(Environment, "Night temperature", "Air temperature at the equator at midnight, K.", 100f, 400f) },
+            { "PlanetPoleTemperatureDrop", new Entry(Environment, "Pole drop", "How much colder a pole is than the equator, K. The least evidenced figure in the climate model.", 0f, 100f) },
+            { "PlanetAmbientLapseRate", new Entry(Environment, "Lapse rate", "How much colder the air gets with altitude, K per km. Earth is about 6.5; 4 is a compromise that keeps snow sites from freezing solid.", 0f, 12f) },
+            { "PlanetAmbientLagSeconds", new Entry(Environment, "Ambient lag", "Seconds the air takes to chase its target, which is what puts the day's peak after noon. Absolute seconds against a day that is not, so a short-day world wants this smaller.", 0f, 600f) },
+            { "PlanetConvectionCoefficient", new Entry(Environment, "Convection coeff", "Convective coefficient at sea level, W/(m2 K), before the atmosphere blend thins it with the air.", 0f, 200f) },
+            { "PlanetSolarDecay", new Entry(Environment, "Solar decay", "How much of the sun a full atmosphere absorbs, 0..1.", 0f, 1f) },
+            { "PlanetUndergroundTemperature", new Entry(Environment, "Underground temp", "Rock temperature below the damping depth, K.", 100f, 400f) },
+            { "PlanetUndergroundDampingDepth", new Entry(Environment, "Damping depth", "Metres over which the day-night swing dies out underground.", 1f, 200f) },
+            { "PlanetCoreTemperature", new Entry(Environment, "Core temperature", "Rock temperature the model warms toward below the sea-level deadzone, K. Unreachable in ordinary play at the shipped deadzone.", 300f, 6000f) },
+            { "PlanetSealevelDeadzone", new Entry(Environment, "Core deadzone", "Metres below sea level before the rock starts warming toward the core. Shipped at 2 km, which is deeper than SE's voxels go.", 0f, 4000f) },
+
             { "ClimateGroundInfluence", new Entry(Environment, "Ground influence", "How much the ground a grid is parked on shifts the air above it. 1 applies the full table — snow about 14 K colder than the planet's own figure, desert about 9 K warmer. 0 ignores what the ground is made of.", 0f, 1f) },
             { "ClimateWeatherInfluence", new Entry(Environment, "Weather influence", "How much the weather changes the air around a grid. 1 applies the game's own figures in full — a heavy snowstorm about 18 K colder with a tenth of the sun and twice the wind, a sandstorm 12 K warmer. 0 leaves the weather affecting nothing but the wind.", 0f, 1f) },
             { "VacuumTemperature", new Entry(Environment, "Vacuum temperature", "Sky temperature in space, K. 2.7 is the real background.", 0f, 300f) },
@@ -310,7 +333,11 @@ namespace Thermodynamics
 
             new Folder("Ship systems",
                 new Leaf("Coolant loops",
-                    "EnableCoolantLoops"),
+                    "EnableCoolantLoops",
+                    "LoopLargeGridFlowRate", "LoopSmallGridFlowRate",
+                    "LoopCoolantMassPerPipe", "LoopSpecificHeat", "LoopConductivity",
+                    "LoopPipeContactMultiplier", "LoopSinkContactMultiplier",
+                    "LoopStagnantTransferFraction"),
                 new Leaf("Heat pumps",
                     "EnableHeatPumps", "HeatPumpCarnotFraction", "HeatPumpMaxCoefficient"),
                 new Leaf("Room air",
@@ -326,7 +353,13 @@ namespace Thermodynamics
 
             new Folder("World",
                 new Leaf("Climate",
-                    "EnablePlanets", "ClimateGroundInfluence", "ClimateWeatherInfluence")),
+                    "EnablePlanets", "ClimateGroundInfluence", "ClimateWeatherInfluence",
+                    "PlanetDayTemperature", "PlanetNightTemperature", "PlanetPoleTemperatureDrop",
+                    "PlanetAmbientLapseRate", "PlanetAmbientLagSeconds",
+                    "PlanetConvectionCoefficient", "PlanetSolarDecay"),
+                new Leaf("Underground",
+                    "PlanetUndergroundTemperature", "PlanetUndergroundDampingDepth",
+                    "PlanetCoreTemperature", "PlanetSealevelDeadzone")),
         };
 
         /// <summary>
@@ -342,11 +375,11 @@ namespace Thermodynamics
         {
             { "Conduction", "A block's conductivity is its own, from Cubes.xml" },
             { "Radiation", "Emissivity and exposed area are per block, from Cubes.xml" },
-            { "Convection", "The coefficient is the planet's, from Planets.xml" },
-            { "Coolant loops", "Flow rate and coolant mass are in Loops.xml" },
+            { "Convection", "The coefficient is the planet's, on the Climate page" },
+
             { "Waste heat", "How much each block wastes is in Cubes.xml" },
             { "Point sources", "Registered by other mods through the API" },
-            { "Climate", "Temperatures and lapse rate are in Planets.xml" },
+
         };
 
         /// <summary>

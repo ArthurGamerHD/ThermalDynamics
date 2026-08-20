@@ -200,6 +200,58 @@ namespace Thermodynamics
         /// </summary>
         [ProtoMember(83)] public float ClimateWeatherInfluence = 1f;
 
+        // ---- coolant loops -----------------------------------------------------------------
+        //
+        // These live in Loops.xml, which the settings menu never showed, so "how fast does coolant
+        // move" was a settings question whose answer was in a file nobody could reach from the
+        // game. They are world settings now: saved, replicated and editable like any other.
+        //
+        // A value equal to the shipped one is left alone rather than written over the definition,
+        // so a world nobody has touched still gets whatever Loops.xml and the profile's overlay
+        // say. Change one and it wins from then on.
+
+        /// <summary>Coolant carried by one pipe block, kg. More is more capacity for the same coupling.</summary>
+        [ProtoMember(85)] public float LoopCoolantMassPerPipe = 50f;
+
+        /// <summary>Coolant's conduction quality into the pipe it sits in, 0..1.</summary>
+        [ProtoMember(86)] public float LoopConductivity = 1f;
+
+        /// <summary>Coolant's specific heat, J/(kg K). Water-glycol is about 3400.</summary>
+        [ProtoMember(87)] public float LoopSpecificHeat = 3400f;
+
+        /// <summary>Scales the coupling between the fluid and the pipe carrying it.</summary>
+        [ProtoMember(88)] public float LoopPipeContactMultiplier = 1f;
+
+        /// <summary>Scales the coupling through a sink face into whatever is mounted against it.</summary>
+        [ProtoMember(89)] public float LoopSinkContactMultiplier = 1f;
+
+        /// <summary>How fast coolant moves on a large grid with one pump at full speed, m/s.</summary>
+        [ProtoMember(90)] public float LoopLargeGridFlowRate = 10f;
+
+        /// <summary>The same for a small grid, split because it is a balance dial rather than a constant.</summary>
+        [ProtoMember(91)] public float LoopSmallGridFlowRate = 10f;
+
+        /// <summary>What a stopped ring still carries between neighbouring parcels, 0..1.</summary>
+        [ProtoMember(92)] public float LoopStagnantTransferFraction = 1f;
+
+        // ---- planet climate ----------------------------------------------------------------
+        //
+        // From Planets.xml, and the same argument. One entry ships, so these address it; a world
+        // with several authored planet types still reads them from the file, and only a value
+        // moved from its shipped figure reaches across all of them.
+
+        [ProtoMember(93)] public float PlanetDayTemperature = 294.261f;
+        [ProtoMember(94)] public float PlanetNightTemperature = 283.15f;
+        [ProtoMember(95)] public float PlanetPoleTemperatureDrop = 40f;
+        [ProtoMember(96)] public float PlanetAmbientLapseRate = 4f;
+        [ProtoMember(97)] public float PlanetAmbientLagSeconds = 45f;
+        [ProtoMember(98)] public float PlanetConvectionCoefficient = 50f;
+        [ProtoMember(99)] public float PlanetSolarDecay = 0.5f;
+        [ProtoMember(100)] public float PlanetUndergroundTemperature = 280f;
+        [ProtoMember(101)] public float PlanetUndergroundDampingDepth = 20f;
+        [ProtoMember(102)] public float PlanetCoreTemperature = 3000f;
+        [ProtoMember(103)] public float PlanetSealevelDeadzone = 2000f;
+
         // ---- heat pumps --------------------------------------------------------------------
 
         /// <summary>How much of the Carnot limit a heat pump achieves, 0..1.</summary>
@@ -489,6 +541,16 @@ namespace Thermodynamics
                 "DebugTextOnScreen", "DebugSolarRaycast", "DebugWindRaycast",
                 "DebugBlockOverlay", "RoomOverlayMinKelvin", "RoomOverlayMaxKelvin",
                 "EnableTelemetry", "TelemetrySampleStride",
+
+                "LoopLargeGridFlowRate", "LoopSmallGridFlowRate", "LoopCoolantMassPerPipe",
+                "LoopSpecificHeat", "LoopConductivity", "LoopPipeContactMultiplier",
+                "LoopSinkContactMultiplier", "LoopStagnantTransferFraction",
+
+                "PlanetDayTemperature", "PlanetNightTemperature", "PlanetPoleTemperatureDrop",
+                "PlanetAmbientLapseRate", "PlanetAmbientLagSeconds", "PlanetConvectionCoefficient",
+                "PlanetSolarDecay", "PlanetUndergroundTemperature",
+                "PlanetUndergroundDampingDepth", "PlanetCoreTemperature",
+                "PlanetSealevelDeadzone",
             };
         }
 
@@ -545,6 +607,27 @@ namespace Thermodynamics
                 case "RoomOverlayMaxKelvin": return RoomOverlayMaxKelvin;
                 case "EnableTelemetry": return Flag(EnableTelemetry);
                 case "TelemetrySampleStride": return TelemetrySampleStride;
+
+                case "LoopCoolantMassPerPipe": return LoopCoolantMassPerPipe;
+                case "LoopConductivity": return LoopConductivity;
+                case "LoopSpecificHeat": return LoopSpecificHeat;
+                case "LoopPipeContactMultiplier": return LoopPipeContactMultiplier;
+                case "LoopSinkContactMultiplier": return LoopSinkContactMultiplier;
+                case "LoopLargeGridFlowRate": return LoopLargeGridFlowRate;
+                case "LoopSmallGridFlowRate": return LoopSmallGridFlowRate;
+                case "LoopStagnantTransferFraction": return LoopStagnantTransferFraction;
+
+                case "PlanetDayTemperature": return PlanetDayTemperature;
+                case "PlanetNightTemperature": return PlanetNightTemperature;
+                case "PlanetPoleTemperatureDrop": return PlanetPoleTemperatureDrop;
+                case "PlanetAmbientLapseRate": return PlanetAmbientLapseRate;
+                case "PlanetAmbientLagSeconds": return PlanetAmbientLagSeconds;
+                case "PlanetConvectionCoefficient": return PlanetConvectionCoefficient;
+                case "PlanetSolarDecay": return PlanetSolarDecay;
+                case "PlanetUndergroundTemperature": return PlanetUndergroundTemperature;
+                case "PlanetUndergroundDampingDepth": return PlanetUndergroundDampingDepth;
+                case "PlanetCoreTemperature": return PlanetCoreTemperature;
+                case "PlanetSealevelDeadzone": return PlanetSealevelDeadzone;
                 default: return float.NaN;
             }
         }
@@ -608,6 +691,27 @@ namespace Thermodynamics
                     return true;
                 case "EnableTelemetry": EnableTelemetry = Flag(value); Telemetry.SetEnabled(EnableTelemetry); return true;
                 case "TelemetrySampleStride": TelemetrySampleStride = (int)value; return true;
+
+                case "LoopCoolantMassPerPipe": LoopCoolantMassPerPipe = value; return true;
+                case "LoopConductivity": LoopConductivity = value; return true;
+                case "LoopSpecificHeat": LoopSpecificHeat = value; return true;
+                case "LoopPipeContactMultiplier": LoopPipeContactMultiplier = value; return true;
+                case "LoopSinkContactMultiplier": LoopSinkContactMultiplier = value; return true;
+                case "LoopLargeGridFlowRate": LoopLargeGridFlowRate = value; return true;
+                case "LoopSmallGridFlowRate": LoopSmallGridFlowRate = value; return true;
+                case "LoopStagnantTransferFraction": LoopStagnantTransferFraction = value; return true;
+
+                case "PlanetDayTemperature": PlanetDayTemperature = value; return true;
+                case "PlanetNightTemperature": PlanetNightTemperature = value; return true;
+                case "PlanetPoleTemperatureDrop": PlanetPoleTemperatureDrop = value; return true;
+                case "PlanetAmbientLapseRate": PlanetAmbientLapseRate = value; return true;
+                case "PlanetAmbientLagSeconds": PlanetAmbientLagSeconds = value; return true;
+                case "PlanetConvectionCoefficient": PlanetConvectionCoefficient = value; return true;
+                case "PlanetSolarDecay": PlanetSolarDecay = value; return true;
+                case "PlanetUndergroundTemperature": PlanetUndergroundTemperature = value; return true;
+                case "PlanetUndergroundDampingDepth": PlanetUndergroundDampingDepth = value; return true;
+                case "PlanetCoreTemperature": PlanetCoreTemperature = value; return true;
+                case "PlanetSealevelDeadzone": PlanetSealevelDeadzone = value; return true;
                 default: return false;
             }
         }

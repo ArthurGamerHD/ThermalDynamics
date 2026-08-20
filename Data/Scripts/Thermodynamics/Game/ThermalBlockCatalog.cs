@@ -342,6 +342,11 @@ namespace Thermodynamics
 
             ThermalProfileOverlays.Apply(properties);
 
+            // The world's own values last, and only where they have been moved. An untouched world
+            // still gets whatever Loops.xml and the profile's overlay say; the moment someone sets
+            // a flow rate in the menu, that is the flow rate.
+            ApplyWorldLoopValues(properties);
+
             return properties.Clamp();
         }
 
@@ -365,8 +370,108 @@ namespace Thermodynamics
             properties.ConvectionCoefficient = definition.ConvectionCoefficient;
 
             ThermalProfileOverlays.Apply(properties, subtype);
+            ApplyWorldPlanetValues(properties);
 
             return properties.Clamp();
+        }
+
+        /// <summary>
+        /// Overlays the world's own coolant values onto a loop definition, for the ones that have
+        /// been moved from what a fresh install ships with.
+        ///
+        /// Comparing against the shipped figure rather than carrying a sentinel keeps the settings
+        /// file readable — every value in it is a real number someone can edit — at the price of a
+        /// world being unable to *deliberately* set a value back to the shipped one and have the
+        /// definition stop applying. Since those are the same number, nothing observable turns on
+        /// the difference.
+        /// </summary>
+        private static void ApplyWorldLoopValues(LoopThermalProperties properties)
+        {
+            Settings world = Settings.Instance;
+            Settings shipped = Defaults;
+            if (world == null || shipped == null) return;
+
+            if (Moved(world.LoopCoolantMassPerPipe, shipped.LoopCoolantMassPerPipe))
+                properties.CoolantMassPerPipe = world.LoopCoolantMassPerPipe;
+
+            if (Moved(world.LoopConductivity, shipped.LoopConductivity))
+                properties.Conductivity = world.LoopConductivity;
+
+            if (Moved(world.LoopSpecificHeat, shipped.LoopSpecificHeat))
+                properties.SpecificHeat = world.LoopSpecificHeat;
+
+            if (Moved(world.LoopPipeContactMultiplier, shipped.LoopPipeContactMultiplier))
+                properties.PipeContactMultiplier = world.LoopPipeContactMultiplier;
+
+            if (Moved(world.LoopSinkContactMultiplier, shipped.LoopSinkContactMultiplier))
+                properties.SinkContactMultiplier = world.LoopSinkContactMultiplier;
+
+            if (Moved(world.LoopLargeGridFlowRate, shipped.LoopLargeGridFlowRate))
+                properties.LargeGridFlowRate = world.LoopLargeGridFlowRate;
+
+            if (Moved(world.LoopSmallGridFlowRate, shipped.LoopSmallGridFlowRate))
+                properties.SmallGridFlowRate = world.LoopSmallGridFlowRate;
+
+            if (Moved(world.LoopStagnantTransferFraction, shipped.LoopStagnantTransferFraction))
+                properties.StagnantTransferFraction = world.LoopStagnantTransferFraction;
+        }
+
+        /// <summary>The same for a planet's climate. See <see cref="ApplyWorldLoopValues"/>.</summary>
+        private static void ApplyWorldPlanetValues(PlanetThermalProperties properties)
+        {
+            Settings world = Settings.Instance;
+            Settings shipped = Defaults;
+            if (world == null || shipped == null) return;
+
+            if (Moved(world.PlanetDayTemperature, shipped.PlanetDayTemperature))
+                properties.DayTemperature = world.PlanetDayTemperature;
+
+            if (Moved(world.PlanetNightTemperature, shipped.PlanetNightTemperature))
+                properties.NightTemperature = world.PlanetNightTemperature;
+
+            if (Moved(world.PlanetPoleTemperatureDrop, shipped.PlanetPoleTemperatureDrop))
+                properties.PoleTemperatureDrop = world.PlanetPoleTemperatureDrop;
+
+            if (Moved(world.PlanetAmbientLapseRate, shipped.PlanetAmbientLapseRate))
+                properties.AmbientLapseRate = world.PlanetAmbientLapseRate;
+
+            if (Moved(world.PlanetAmbientLagSeconds, shipped.PlanetAmbientLagSeconds))
+                properties.AmbientLagSeconds = world.PlanetAmbientLagSeconds;
+
+            if (Moved(world.PlanetConvectionCoefficient, shipped.PlanetConvectionCoefficient))
+                properties.ConvectionCoefficient = world.PlanetConvectionCoefficient;
+
+            if (Moved(world.PlanetSolarDecay, shipped.PlanetSolarDecay))
+                properties.SolarDecay = world.PlanetSolarDecay;
+
+            if (Moved(world.PlanetUndergroundTemperature, shipped.PlanetUndergroundTemperature))
+                properties.UndergroundTemperature = world.PlanetUndergroundTemperature;
+
+            if (Moved(world.PlanetUndergroundDampingDepth, shipped.PlanetUndergroundDampingDepth))
+                properties.UndergroundDampingDepth = world.PlanetUndergroundDampingDepth;
+
+            if (Moved(world.PlanetCoreTemperature, shipped.PlanetCoreTemperature))
+                properties.CoreTemperature = world.PlanetCoreTemperature;
+
+            if (Moved(world.PlanetSealevelDeadzone, shipped.PlanetSealevelDeadzone))
+                properties.SealevelDeadzone = world.PlanetSealevelDeadzone;
+        }
+
+        /// <summary>What a fresh install ships, to compare a world's values against.</summary>
+        private static Settings Defaults
+        {
+            get { return defaults ?? (defaults = Settings.GetDefaults()); }
+        }
+
+        private static Settings defaults;
+
+        private static bool Moved(float world, float shipped)
+        {
+            float difference = world - shipped;
+            if (difference < 0f) difference = -difference;
+
+            float scale = shipped < 0f ? -shipped : shipped;
+            return difference > 0.0001f * (scale < 1f ? 1f : scale);
         }
     }
 }

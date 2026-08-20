@@ -816,5 +816,39 @@ namespace Thermodynamics.Tests
             loop.RefreshFlow();
             Assert.Equal(0f, loop.FlowMetresPerSecond, 4);
         }
+
+        /// <summary>
+        /// The flow rate is a dial rather than a constant, and this is the arithmetic the menu's
+        /// version of it rests on: the definition is metres per second and the solver carries
+        /// parcels one pipe block long, so the same number means the same speed on either grid
+        /// size and doubling it doubles the parcels.
+        ///
+        /// Worth pinning now that the value is editable from the settings menu rather than only
+        /// from a file nobody could reach in game — a change here is a change a player can make
+        /// mid-session.
+        /// </summary>
+        [Fact]
+        public void TheFlowRateDialIsMetresPerSecondWhicheverGridItIsOn()
+        {
+            CoolantLoop loop;
+            Ring(6, 5, 4f, out loop);
+
+            float baseline = Math.Abs(loop.FlowSegmentsPerSecond);
+            Assert.True(baseline > 0f);
+
+            loop.Properties.LargeGridFlowRate *= 2f;
+            loop.Properties.SmallGridFlowRate *= 2f;
+            loop.RefreshFlow();
+
+            Assert.Equal(baseline * 2f, Math.Abs(loop.FlowSegmentsPerSecond), 3);
+
+            // And zero stops the ring, which is what a player setting it to zero should get rather
+            // than an exception or a ring that keeps circulating.
+            loop.Properties.LargeGridFlowRate = 0f;
+            loop.Properties.SmallGridFlowRate = 0f;
+            loop.RefreshFlow();
+
+            Assert.Equal(0f, loop.FlowSegmentsPerSecond);
+        }
     }
 }

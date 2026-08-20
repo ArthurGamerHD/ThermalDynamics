@@ -116,9 +116,12 @@ Two things this must not break:
 
 1. ~~Pages per system, mechanisms page removed.~~ **Done**, along with typed entry for the seven
    settings whose range a slider cannot divide, and saving on every change rather than on a button.
-2. **Profile definition overlays — done.** `Profiles/<name>.xml`, outside `Data/` so Definition
-   Extensions cannot claim them, applied over the loaded definitions. What remains of this step is
-   the *editing* half: the menu still cannot change a loop's flow rate, only a profile can.
+2. ~~The definition files become part of the menu.~~ **Done for loops and planets.** Both files'
+   values are world settings now — saved, replicated, reachable from `/thermal set` and the mod
+   API, and on the Coolant loops, Climate and Underground pages. A value equal to the shipped one
+   is left alone, so an untouched world still gets whatever the file and the profile's overlay say;
+   move one and it wins. Profile overlays remain the mechanism for per-subtype block properties,
+   which a flat setting cannot express.
 3. Status panel as a real report, with prototypes to choose a form from.
 4. Config restructure with a v6 migration.
 5. Per-subtype block overrides — defaults, this mod's blocks, and other mods' blocks, which means
