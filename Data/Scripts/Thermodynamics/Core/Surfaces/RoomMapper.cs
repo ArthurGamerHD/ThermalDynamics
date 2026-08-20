@@ -167,15 +167,64 @@ namespace Thermodynamics.Core
         /// <summary>
         /// Runs the whole pass to completion. For tests and load-time mapping; gameplay code should
         /// use the budgeted <see cref="Step"/>.
+        ///
+        /// <para>
+        /// The limit is a guard against a pass that never finishes, not a budget. It used to be a
+        /// flat twenty million cell visits, which a grid of about seven hundred thousand blocks
+        /// exceeds — and exceeding it returned without publishing anything, leaving
+        /// <see cref="RoomMap.AllExternal"/> in place. A hull that large therefore finished its load
+        /// with no rooms and every interior block classified as facing open space: 95 % of blocks
+        /// exposed against 34 % on the same shape one rung smaller, every one of them radiating and
+        /// convecting to the sky, and no compartment holding air. It self-corrected only once the
+        /// budgeted per-tick path had walked the same flood again, thousands of ticks later.
+        /// </para>
+        ///
+        /// <para>
+        /// The flood cannot visit a cell twice — <c>visited</c> is a bitset over the search bounds
+        /// and the interior scan walks each cell once — so the work is bounded by the search volume
+        /// and a limit derived from it can never bind on a grid that is going to finish. That is
+        /// what a guard should be: unreachable unless something is actually wrong.
+        /// </para>
         /// </summary>
-        public void RunToCompletion(int safetyLimit = 20000000)
+        /// <param name="safetyLimit">
+        /// Cell visits to allow, or zero to derive one from the search volume.
+        /// </param>
+        /// <returns>True when a pass completed and published a map.</returns>
+        public bool RunToCompletion(int safetyLimit = 0)
         {
-            int spent = 0;
-            while (HasWorkPending && spent < safetyLimit)
+            long limit = safetyLimit > 0 ? safetyLimit : SafetyLimitFromBounds();
+
+            long spent = 0;
+            while (HasWorkPending && spent < limit)
             {
                 spent += 4096;
                 Step(4096);
             }
+
+            return !HasWorkPending;
+        }
+
+        /// <summary>
+        /// Cell visits to allow for one pass over the bounds it is about to walk.
+        ///
+        /// Four times the volume: the external flood and the interior scan each cover it once, and
+        /// the factor leaves room for the frontier bookkeeping charged alongside them. Saturating
+        /// rather than overflowing — a bounding volume large enough to overflow an <c>int</c> is
+        /// exactly the case a flat limit got wrong.
+        /// </summary>
+        private long SafetyLimitFromBounds()
+        {
+            Vector3I min = hasPendingBounds ? pendingMin : searchMin;
+            Vector3I max = hasPendingBounds ? pendingMaxExclusive : searchMaxExclusive;
+
+            long x = max.X - min.X;
+            long y = max.Y - min.Y;
+            long z = max.Z - min.Z;
+
+            if (x <= 0 || y <= 0 || z <= 0) return 4096;
+
+            long volume = x * y * z;
+            return (volume * 4) + 4096;
         }
 
         /// <summary>

@@ -247,7 +247,16 @@ namespace Thermodynamics.Harness
 
             watch.Restart();
             simulation.Rooms.RequestRestart(simulation.Grid);
-            simulation.Rooms.RunToCompletion();
+            // A row measured on a hull whose map never finished is not comparable with the rows
+            // above it: every block reads exposed, nothing holds air, and the environment pass runs
+            // its expensive branch everywhere. The ladder used to report exactly that at the top
+            // rung without saying so.
+            if (!simulation.Rooms.RunToCompletion())
+            {
+                throw new InvalidOperationException(
+                    "the room map did not finish on " + shape + " at " + targetCells
+                    + " blocks, so every figure from this rung would describe an unmapped hull");
+            }
             watch.Stop();
             row.RoomMapMs = watch.Elapsed.TotalMilliseconds;
 

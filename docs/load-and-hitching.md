@@ -122,23 +122,52 @@ figures moved so much.
 
 | blocks | links | bbox | exposed | build | topology | rooms | exposure | full step | sub | tick | cap | resident |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 8,904 | 20,779 | 68,800 | 72 % | 86 ms | 11.6 | 15.7 | 5.0 | 1.17 | 12 | 1.14 | 17 | 10 MB |
-| 32,800 | 73,787 | 328,640 | 61 % | 132 ms | 26.3 | 45.3 | 5.9 | 2.64 | 12 | 1.06 | 4 | 40 MB |
-| 126,731 | 277,967 | 1,499,616 | 49 % | 466 ms | 43.9 | 134.4 | 29.1 | 22.68 | 12 | 2.44 | 1 | 139 MB |
-| 505,566 | 1,079,559 | 6,838,104 | 35 % | 2,266 ms | 194.5 | 814.0 | 188.1 | 66.67 | 12 | 12.93 | 1 | 585 MB |
-| 1,000,294 | 2,114,111 | 14,278,796 | 95 % | 4,392 ms | 413.4 | 1,521.9 | 154.6 | 133.06 | 12 | 31.02 | 1 | 1,201 MB |
+| 8,904 | 20,779 | 68,800 | 72 % | 85 ms | 11.5 | 15.7 | 5.0 | 1.17 | 12 | 1.14 | 17 | 10 MB |
+| 32,800 | 73,787 | 328,640 | 61 % | 134 ms | 26.0 | 45.3 | 6.1 | 2.65 | 12 | 1.09 | 4 | 40 MB |
+| 126,731 | 277,967 | 1,499,616 | 49 % | 475 ms | 43.6 | 134.4 | 35.5 | 22.29 | 12 | 2.43 | 1 | 139 MB |
+| 505,566 | 1,079,559 | 6,838,104 | 35 % | 2,313 ms | 193.9 | 798.1 | 200.7 | 67.06 | 12 | 13.18 | 1 | 585 MB |
+| 1,000,294 | 2,114,111 | 14,278,796 | 30 % | 5,429 ms | 421.4 | 2,122.4 | 512.6 | 118.20 | 12 | 25.87 | 1 | 1,510 MB |
 
 **`sub` is 12 at every rung, which is what the stability estimate asks for rather than a ceiling.**
 The `full step` column is the cost of the step the default settings actually take.
 
-> The `exposed` column is not monotonic — 35 % at half a million and 95 % at a million — which is
-> the shape generator rather than the solver. `LoadShapes` builds something much closer to a shell
-> at the top rung, so that row is a different hull from the ones under it and its per-element
-> figures are not comparable with theirs.
+**`exposed` falls as the hull grows**, from 72 % to 30 %, which is the bulkheads: they are solid
+slabs of the fuselage's cross-section, so a wider ship buries a larger share of itself. That
+monotonicity is also the check on the row above it — see
+[the mapping limit](#the-room-map-gave-up-above-seven-hundred-thousand-blocks).
 
 Against the same ladder before the overshoot-clamp gate, the mirrored block ratings and the
 diagnostic batching, the full step at a million blocks was 623 ms and the tick 55 ms. The whole
 table is a fresh measurement; earlier versions of this document quoted the older one.
+
+### The room map gave up above seven hundred thousand blocks
+
+The `exposed` column found a defect that no timing would have. It read 95 % at a million blocks
+against 35 % one rung down — a hull that had somehow become nearly all skin.
+
+`RoomMapper.RunToCompletion` carried a flat safety limit of twenty million cell visits. The flood
+walks the grid's **bounding volume**, not its block count, and this ladder's hulls fill about 7 % of
+their bounding box — so twenty million is passed at around seven hundred thousand blocks. Passing it
+returned without publishing anything, leaving `RoomMap.AllExternal` in place: no compartments, every
+cell external, every interior block classified as facing open space.
+
+| blocks | exposed, before | exposed, after | rooms, before | rooms, after |
+| ---: | ---: | ---: | ---: | ---: |
+| 505,566 | 35.5 % | 35.5 % | 67 | 67 |
+| 649,382 | 33.6 % | 33.6 % | 75 | 75 |
+| 804,593 | **94.8 %** | 31.8 % | **0** | 82 |
+| 1,000,294 | **95.1 %** | 29.9 % | **0** | 87 |
+
+In game the consequence is a grid that finishes its load radiating and convecting from every block
+it has, with no compartment holding air, until the budgeted per-tick path walks the same flood again
+— thousands of ticks later. In this ladder the consequence was that the top rung's every figure
+described an unmapped hull while sitting in a column beside four mapped ones.
+
+The limit is now derived from the volume the pass is about to walk. The flood cannot visit a cell
+twice — `visited` is a bitset over the search bounds and the interior scan covers each cell once —
+so four times the volume is a guard that cannot bind on a pass that is going to finish, which is
+what a guard should be. `RunToCompletion` also returns whether it completed, and the ladder throws
+rather than reporting a row measured on an unmapped hull.
 
 The topology, rooms and exposure columns are each stage run **whole**, which is what a one-shot
 rebuild or a world load costs. They are not what a tick costs; every one of them is now spread.
@@ -152,7 +181,7 @@ blocks a tick pays 42 ms instead of 103, and simulated time advances more slowly
 
 **The solver scales, and it now scales flat.** Cost per link visit was 7.8 ns at 8k and 18.4 ns at
 a million — a doubling across a working set growing from ten megabytes to a gigabyte, read at the
-time as an unavoidable cache effect. It is 4.7 ns and 5.2 ns now. The doubling was not the working
+time as an unavoidable cache effect. It is 4.7 ns at both ends now. The doubling was not the working
 set: it was two passes reaching through the node objects on every visit — the damage check's rating
 and the per-mechanism watt diagnostics — into memory that got further apart as the grid grew. Both
 now read or write flat arrays. Nothing in the conduction pass was ever superlinear, and the part
@@ -520,14 +549,14 @@ being trimmed until it looked sensible.
 
 Roughly in order of how much a million-block grid would notice.
 
-**A solver step is atomic, and at a million blocks it is 133 ms.** A step must touch every node, so
+**A solver step is atomic, and at a million blocks it is 118 ms.** A step must touch every node, so
 this is not an accounting mistake, and lowering `Frequency` makes the spike *less frequent* without
 making it smaller. Making it smaller means not touching every node: activity tracking, chunking and
 multirate stepping, all designed in [scale-design.md](scale-design.md) and none of it built.
 
 > This paragraph used to say the step was near the memory-bandwidth floor at 16 ns per link visit.
 > It was not. Two passes were reaching through the node objects on every visit, and removing both
-> took the same step from 623 ms to 133 ms and the per-visit rate to 5.2 ns. What is left may well
+> took the same step from 623 ms to 118 ms and the per-visit rate to 4.7 ns. What is left may well
 > be near the floor; the claim has been wrong once and is not being made again without a
 > measurement that isolates it.
 

@@ -399,8 +399,8 @@ evidence behind it, and the sweep is now timed as `of which room pressure` with 
 compartments visited, game calls made, vent scans and vents walked — so the next dump from a large
 station answers the question with a number rather than an argument.
 
-**The first step of a grid's life is several times an ordinary one** — 28.8 ms above a 12.9 ms tick
-at half a million blocks, and 158 ms above a 31 ms tick at a million — from first touch of every
+**The first step of a grid's life is several times an ordinary one** — 28.3 ms above a 13.2 ms tick
+at half a million blocks, and 53 ms above a 26 ms tick at a million — from first touch of every
 flat array and the first fill of every mirrored row. It happens once, immediately after a world
 load that took four seconds, so it is a warm-up rather than a stutter. It is still the largest
 number in the distribution at the top rung, and it grew relative to the tick as the tick shrank:
