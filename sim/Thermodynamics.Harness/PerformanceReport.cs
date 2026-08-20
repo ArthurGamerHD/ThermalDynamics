@@ -159,6 +159,9 @@ namespace Thermodynamics.Harness
             if (log != null) log("overshoot clamp");
             OvershootClamp(rows, shape, size, ticks, log);
 
+            if (log != null) log("diagnostics");
+            Diagnostics(rows, shape, size, ticks, log);
+
             if (log != null) log("environments");
             Environments(rows, ticks, log);
 
@@ -371,6 +374,69 @@ namespace Thermodynamics.Harness
             // mass floor off in both so the floor cannot rescue the stiff blocks in the second.
             Regime(rows, "resolved", 4096, shape, size, ticks, log);
             Regime(rows, "refused", 4, shape, size, ticks, log);
+        }
+
+        /// <summary>
+        /// What being measured costs.
+        ///
+        /// <para>
+        /// The per-mechanism watt figures — radiation, convection, solar, friction and conduction
+        /// per block — are diagnostics that nothing in the simulation reads. They are produced for
+        /// a telemetry report, for a client with the crosshair readout up, or for a debug overlay,
+        /// and they are five writes into the node object per node per substep plus two more per
+        /// link. A dedicated server in ordinary play writes none of them.
+        /// </para>
+        ///
+        /// <para>
+        /// Every field dump in this repository was taken with them on, because taking a dump is
+        /// what turns them on. So the figures a dump reports are the expensive configuration, and
+        /// this row is what makes the two comparable rather than leaving a reader to assume they
+        /// already are.
+        /// </para>
+        /// </summary>
+        private static void Diagnostics(List<ReportRow> rows, string shape, int size, int ticks,
+            Action<string> log)
+        {
+            if (log != null) log("  diagnostics");
+
+            bool restore = LoadBenchmarks.CollectDiagnostics;
+            try
+            {
+                LoadBenchmarks.CollectDiagnostics = false;
+                Sample off = Measure(Configure(0, null, true), shape, size, ticks);
+
+                LoadBenchmarks.CollectDiagnostics = true;
+                Sample on = Measure(Configure(0, null, true), shape, size, ticks);
+
+                Add(rows, "diagnostics", "per-mechanism watts", "step, off", off.StepMs, "ms");
+                Add(rows, "diagnostics", "per-mechanism watts", "step, on", on.StepMs, "ms");
+                Add(rows, "diagnostics", "per-mechanism watts", "cost of being measured",
+                    on.StepMs - off.StepMs, "ms");
+
+                // The batching, measured against itself. `every substep` is what the solver used
+                // to do; the difference between it and `step, on` is what is saved by writing only
+                // the substep anything reads.
+                Sample all = Measure(Configure(0, null, true), shape, size, ticks,
+                    null, null, true, everySubstep: true);
+
+                Add(rows, "diagnostics", "per-mechanism watts", "step, every substep", all.StepMs, "ms");
+
+                // The worst case for batching: one substep, so the last substep is the only
+                // substep and there is nothing to skip.
+                ThermalSettings single = Configure(0, null, true);
+                single.MaxSubsteps = 1;
+                single.Derive();
+
+                Sample onceLast = Measure(single, shape, size, ticks);
+                Sample onceEvery = Measure(single, shape, size, ticks, null, null, true, everySubstep: true);
+
+                Add(rows, "diagnostics", "one substep", "step, last substep only", onceLast.StepMs, "ms");
+                Add(rows, "diagnostics", "one substep", "step, every substep", onceEvery.StepMs, "ms");
+            }
+            finally
+            {
+                LoadBenchmarks.CollectDiagnostics = restore;
+            }
         }
 
         private static void Regime(List<ReportRow> rows, string name, int maxSubsteps, string shape,
@@ -600,14 +666,23 @@ namespace Thermodynamics.Harness
 
             ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);
             simulation.RebuildAll();
+
+            // `bench report --diagnostics` sets this, and until now nothing in this file read it:
+            // the flag ran the whole report in the cheap configuration and printed it under a name
+            // that claimed otherwise. Telemetry switches the per-mechanism watt figures on, so a
+            // field dump is always measured with them on and a report that cannot reproduce that
+            // cannot be compared against one.
+            simulation.Solver.CollectDiagnostics = LoadBenchmarks.CollectDiagnostics;
             return simulation;
         }
 
         private static Sample Measure(ThermalSettings settings, string shape, int size, int ticks,
-            ThermalSimulation prepared = null, EnvironmentSample? world = null, bool gateClamp = true)
+            ThermalSimulation prepared = null, EnvironmentSample? world = null, bool gateClamp = true,
+            bool everySubstep = false)
         {
             ThermalSimulation simulation = prepared ?? Build(settings, shape, size);
             simulation.Solver.GateConductionClamp = gateClamp;
+            simulation.Solver.DiagnosticsOnEverySubstep = everySubstep;
             LoadBenchmarks.SeedSpread(simulation);
             Census.DriveCensus(simulation);
 

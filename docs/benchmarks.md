@@ -212,6 +212,32 @@ comparison, not a pass.
 Worth deciding whether `arcade` should scale `HeatTimeScale` down in an atmosphere, or whether
 being pinned to ambient is the intended arcade behaviour.
 
+### What being measured costs
+
+The per-mechanism watt figures are diagnostics nothing in the simulation reads, produced for a
+telemetry report, a client with the crosshair readout up, or a debug overlay. Every field dump in
+this repository was taken with them on, because taking a dump is what turns them on — so the
+figures a dump reports are the expensive configuration, and this row is what makes the two
+comparable rather than leaving a reader to assume they already are.
+
+| | step |
+| --- | ---: |
+| off — a dedicated server in ordinary play | 3.75 ms |
+| on, written once a step | **4.32 ms** |
+| on, written every substep | 6.91 ms |
+
+Each figure is overwritten by the next substep and read between steps, so only the last substep's
+writes were ever observed; the other eighteen were five stores into a node object per node and two
+into another per link, discarded immediately. Writing on the last substep alone took the cost of
+being measured from 3.58 ms to 0.57 ms.
+
+The worst case is a grid taking one substep, where the last substep is the only substep: 0.9654 ms
+against 0.9682 ms, inside the noise floor.
+
+> `bench report --diagnostics` set a flag nothing in `PerformanceReport` read, so the whole report
+> ran in the cheap configuration and printed it under a name that said otherwise. The flag now
+> reaches the solver, and this section measures both configurations whether or not it is passed.
+
 ### The scenarios
 
 A plain hull in a plain world does not reach air in the compartments, plumbing on the ship, or

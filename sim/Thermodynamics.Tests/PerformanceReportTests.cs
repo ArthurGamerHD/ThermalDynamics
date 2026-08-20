@@ -53,6 +53,34 @@ namespace Thermodynamics.Tests
             Assert.True(Value(rows, "overshoot clamp", "refused", "step, always clamped") > 0.0);
         }
 
+        /// <summary>
+        /// Diagnostics cost something, and the report has claimed otherwise before.
+        ///
+        /// `bench report --diagnostics` set a flag that this file never read, so the whole report
+        /// ran in the cheap configuration under a name that said it had not. Every field dump is
+        /// taken with the per-mechanism watts on — taking a dump is what turns them on — so a
+        /// report that cannot reach that configuration cannot be compared against one.
+        /// </summary>
+        [Fact]
+        public void TheDiagnosticsRowMeasuresBothConfigurations()
+        {
+            List<ReportRow> rows = Small();
+
+            double off = Value(rows, "diagnostics", "per-mechanism watts", "step, off");
+            double on = Value(rows, "diagnostics", "per-mechanism watts", "step, on");
+            double every = Value(rows, "diagnostics", "per-mechanism watts", "step, every substep");
+
+            Assert.True(off > 0.0);
+            Assert.True(on > 0.0);
+            Assert.True(every > 0.0);
+
+            // Not a timing assertion — writing on every substep does strictly more work than
+            // writing on one of them, on a hull that takes more than one.
+            Assert.True(every >= on * 0.9,
+                "writing the diagnostics on every substep measured cheaper than writing them once,"
+                + " which means one of the two cases is not in the configuration it claims");
+        }
+
         private static double Value(IList<ReportRow> rows, string section, string name, string metric)
         {
             for (int i = 0; i < rows.Count; i++)
@@ -85,6 +113,7 @@ namespace Thermodynamics.Tests
             Assert.Contains("profiles", sections);
             Assert.Contains("substep cap", sections);
             Assert.Contains("overshoot clamp", sections);
+            Assert.Contains("diagnostics", sections);
 
             // Every switch a world can turn off has to be in the breakdown, or a feature can grow
             // expensive without any report noticing.

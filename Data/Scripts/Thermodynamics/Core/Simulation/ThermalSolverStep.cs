@@ -91,6 +91,31 @@ namespace Thermodynamics.Core
         /// </summary>
         public bool GateConductionClamp = true;
 
+        /// <summary>
+        /// Whether this substep writes the per-mechanism watt diagnostics onto the node objects.
+        ///
+        /// <para>
+        /// Those figures are overwritten by each substep and read between steps, so only the last
+        /// substep's writes are ever observed — the earlier ones are five stores into a node object
+        /// and two into another, per element, thrown away by the next substep. Switching them on
+        /// nearly doubled a step: 3.93 ms to 7.51 ms on a 32,800-block hull.
+        /// </para>
+        ///
+        /// <para>
+        /// Every telemetry dump is taken with them on, because taking a dump is what turns them on,
+        /// so this is not a corner of the configuration space — it is the configuration every
+        /// field measurement in this repository was made in.
+        /// </para>
+        /// </summary>
+        private bool diagnosticsSubstep;
+
+        /// <summary>
+        /// Set true to write the per-mechanism watt diagnostics on every substep rather than only
+        /// the last. Test hook: <c>DiagnosticBatchingTests</c> runs the same grid both ways and
+        /// compares the published figures bit for bit.
+        /// </summary>
+        public bool DiagnosticsOnEverySubstep;
+
         /// <summary>True while a step has been begun and not yet finished.</summary>
         public bool StepInFlight
         {
@@ -298,6 +323,9 @@ namespace Thermodynamics.Core
         private long BeginSubstep()
         {
             int nodeCount = stepNodeCount;
+
+            // Decremented at the end of the apply stage, so it counts this substep as well.
+            diagnosticsSubstep = CollectDiagnostics && (DiagnosticsOnEverySubstep || substepsLeft <= 1);
 
             Array.Clear(nodeWatts, 0, nodeCount);
             for (int i = 0; i < loops.Count; i++) loops[i].ClearSegmentWatts();

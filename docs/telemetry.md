@@ -46,6 +46,24 @@ watts per block are diagnostics that nothing in the simulation reads; they are n
 for a report or for a client with the crosshair readout on. A dedicated server in ordinary play
 writes none of them.
 
+**What they cost when they are on** is worth stating plainly, because every dump in this
+repository was taken with them on — taking a dump is what turns them on. Each figure is
+overwritten by the next substep and read between steps, so only the last substep's writes are ever
+observed; the solver now writes on that substep and no other. On a 32,800-block hull at nineteen
+substeps:
+
+| | step |
+| --- | ---: |
+| diagnostics off — a dedicated server in ordinary play | 3.75 ms |
+| diagnostics on, written once a step | **4.32 ms** |
+| diagnostics on, written every substep — what the solver used to do | 6.91 ms |
+
+Being measured cost 3.58 ms of a step and now costs 0.57 ms. The worst case for the batching is a
+grid taking one substep, where the last substep is the only substep and there is nothing to skip:
+0.9654 ms against 0.9682 ms, inside the noise floor. `DiagnosticBatchingTests` asserts the
+published figures are bit-identical to writing on every substep, because "the last substep's
+figures" has to mean exactly that.
+
 ## What it costs when it is on
 
 The solver steps a whole grid at once, so there is no per-block callback to pay for. Per step,

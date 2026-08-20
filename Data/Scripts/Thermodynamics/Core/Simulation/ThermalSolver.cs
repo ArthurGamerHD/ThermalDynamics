@@ -1775,7 +1775,7 @@ namespace Thermodynamics.Core
             plan.SourcesEnabled = settings.EnableHeatSources && env.HeatSourceCount > 0;
             plan.FrictionEnabled = env.FrictionActive;
             plan.Generating = settings.EnableWasteHeat;
-            plan.Diagnostics = CollectDiagnostics;
+            plan.Diagnostics = diagnosticsSubstep;
 
             plan.Convecting = settings.EnableEnvironment && settings.EnableConvection
                 && env.AtmosphereFactor > 0f && env.ConvectionCoefficient > 0f;
@@ -2197,7 +2197,7 @@ namespace Thermodynamics.Core
         /// </summary>
         private void ClearConductionDiagnostics()
         {
-            if (!CollectDiagnostics) return;
+            if (!diagnosticsSubstep) return;
 
             for (int i = 0; i < nodes.Count; i++)
             {
@@ -2209,7 +2209,7 @@ namespace Thermodynamics.Core
         private void AccumulateConductionRange(float h, int from, int to)
         {
             bool clamp = ConductionClampLive;
-            bool diagnostics = CollectDiagnostics;
+            bool diagnostics = diagnosticsSubstep;
 
             if (!settings.EnableConduction) return;
 
