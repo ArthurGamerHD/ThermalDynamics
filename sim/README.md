@@ -177,7 +177,16 @@ dotnet run --project Thermodynamics.Sim -- corpus --path <dir>    # any director
 
 Everything this repository measures, it measures on a hull it built itself, and `Census` says so
 in its own summary: "one ship is one ship". A corpus replaces that hypothesis with a population.
-See [balance-lab.md](../docs/balance-lab.md) for what the lab is for and how it is staged.
+`corpus-fetch` builds one from the workshop, ranked by subscriptions:
+
+```bash
+dotnet run --project Thermodynamics.Sim -- corpus-fetch --key <webapi> --top 10000 --list-only
+dotnet run --project Thermodynamics.Sim -- corpus-fetch --key <webapi> --user <account> --top 10000
+```
+
+It never handles a password — log the account in once with `steamcmd +login <user> +quit` and
+SteamCMD caches it. See [balance-lab.md](../docs/balance-lab.md) for what the lab is for and how it
+is staged.
 
 ## Balance profiles
 

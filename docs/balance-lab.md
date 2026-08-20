@@ -117,8 +117,36 @@ off effort against scale:
 | **Steam Web API + direct UGC** | a free Web API key | thousands, if it works | `IPublishedFileService/QueryFiles` lists popular blueprints by tag and sort order. Whether the items expose a downloadable `file_url` is **unverified** — newer workshop items often do not, and it has to be probed rather than assumed. |
 | **SteamCMD** | a Steam account owning the game | ten thousand | `workshop_download_item 244850 <id>` in batches. Anonymous login generally fails for a paid title. Hours of downloading, and worth rate-limiting out of courtesy. |
 
-The realistic plan is the second for listing and the third for fetching, with the first as the
-bootstrap it already is.
+**The route taken is the second for listing and the third for fetching**, built as
+[`CorpusFetch`](../sim/Thermodynamics.Sim/CorpusFetch.cs):
+
+```bash
+# list only: writes out/corpus/manifest.csv, downloads nothing
+dotnet run --project Thermodynamics.Sim -- corpus-fetch --key <webapi> --top 10000 --list-only
+
+# list and fetch
+dotnet run --project Thermodynamics.Sim -- corpus-fetch --key <webapi> --user <steam-account> --top 10000
+```
+
+Ranked by **total unique subscriptions**, not by votes or recency: the corpus is meant to be the
+designs people build and fly, and a subscription is the closest signal the workshop has to that.
+Ranking by vote would over-weight the spectacular and by date the untested. Items tagged `Mod`
+alongside `Blueprint` are dropped at listing rather than downloaded and rejected.
+
+**No credential passes through this tool.** SteamCMD is invoked with a user name and no password,
+which works once the account has been logged in by hand:
+
+```bash
+steamcmd +login <user> +quit      # once, interactively; SteamCMD caches it
+```
+
+Anything else would mean this program handling a password, and it has no business doing that.
+
+The run is resumable and rate-limited: pages pause, fetches go in batches of fifty, the manifest is
+reused if it is already long enough, and anything already on disk is skipped. SteamCMD unpacks into
+the layout `Blueprints` already reads, so the corpus directory is pointed at rather than assembled.
+A nonzero SteamCMD exit is not treated as failure — on a corpus this size an item being deleted or
+made private between listing and fetching is routine.
 
 Two filters apply whatever the route:
 
@@ -134,6 +162,7 @@ Two filters apply whatever the route:
 | [`Blueprints`](../sim/Thermodynamics.Harness/Blueprints.cs) | Turns a `bp.sbc` into ships the solver can run. Models are derived and shared across the corpus. |
 | [`CorpusLab`](../sim/Thermodynamics.Harness/CorpusLab.cs) | Corpus yield and size distribution. `-- corpus [--path <dir>]`. |
 | [`BlueprintTests`](../sim/Thermodynamics.Tests/BlueprintTests.cs) | Seven tests on the yield, ending with a real subscribed ship building a simulation that steps. |
+| [`CorpusFetch`](../sim/Thermodynamics.Sim/CorpusFetch.cs) | Lists and fetches the corpus. `-- corpus-fetch`. Unexercised against a real key. |
 | Steps 0, 2, 3, 4 | Designed here, unbuilt. |
 
 Measured on the 16 blueprints already subscribed on the development machine: 140 ships, 1 modded,
@@ -143,10 +172,12 @@ deliberately will do far better.
 
 ## Open questions
 
-* **The acquisition route**, above. It is the only thing blocking scale.
-* **Is one unresolved block too strict?** It rejects a ship for a decorative mod block. A softer
-  rule — reject only if the unresolved blocks carry power or mass above a threshold — would raise
-  yield a lot. It would also make the corpus a measurement of *nearly* vanilla balance.
+* **The fetcher has never run against a real key.** Its failure paths are checked — a missing key,
+  a rejected key and a missing account name all report and stop cleanly — but whether the query
+  parameters return what is wanted can only be settled by a run.
+* ~~Is one unresolved block too strict?~~ **Decided: it stays strict.** A softer rule keyed on
+  whether the unresolved blocks carry power would raise yield, at the cost of the corpus measuring
+  *nearly* vanilla balance. Revisit only if the real yield turns out to be unusably low.
 * **Whether `Census` should be replaced or kept beside the corpus.** Its tiers are a hypothesis the
   corpus can now test; if they hold, that is worth knowing, and if they do not, every scale figure
   taken on them wants re-reading.

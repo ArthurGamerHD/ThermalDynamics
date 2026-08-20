@@ -64,6 +64,9 @@ namespace Thermodynamics.Sim
                     Console.Write(CorpusLab.Report(ValueAfter(args, "--path")));
                     return 0;
 
+                case "corpus-fetch":
+                    return CorpusFetch.Run(args);
+
                 case "features":
                     Console.Write(FeatureMatrix.Report());
                     return 0;
@@ -726,6 +729,8 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  reactors                where a vanilla reactor settles, against its waste fraction");
             Console.WriteLine("  blocks                  every block in the game, derived from its build components");
             Console.WriteLine("  corpus [--path <dir>]   real ships read from blueprints, and what they are made of");
+            Console.WriteLine("  corpus-fetch            build a corpus from the workshop; --key, --user, --top, --out");
+            Console.WriteLine("    --list-only               list to a manifest without downloading anything");
             Console.WriteLine();
             Console.WriteLine("  bench scale             cost per stage as the grid grows");
             Console.WriteLine("  bench hitch --size N    per-tick cost, with a block welded mid-run");
