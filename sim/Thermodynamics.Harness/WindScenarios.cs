@@ -1,0 +1,420 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Text;
+using Thermodynamics.Core;
+using VRageMath;
+
+namespace Thermodynamics.Harness
+{
+    /// <summary>
+    /// The wind model put through every world the game ships and every corner of one.
+    ///
+    /// <para><b>Why this is not the same question as "does the arithmetic work".</b> The unit tests
+    /// hold each piece against a synthetic case built to exercise it. This holds the whole model
+    /// against real planets at their real sizes — and Space Engineers planets are strange. They are a
+    /// hundredth the size of real ones with terrain that is a tenth of their own radius, so a
+    /// mountain is a *proportionally enormous* object and every constant borrowed from terrestrial
+    /// meteorology lands somewhere unexpected.</para>
+    ///
+    /// <para>Some of what falls out of that, before any code runs:</para>
+    ///
+    /// <list type="bullet">
+    /// <item>A <b>circulation band</b> spans 30° of latitude. On Earth that is 3,300 km. On a 60 km
+    /// world it is <b>31 km</b> — a band of the general circulation is a short flight.</item>
+    /// <item>The <b>horizon</b> from head height on a 60 km world is about 490 m, against 5 km on
+    /// Earth. On a 9.5 km moon it is 195 m.</item>
+    /// <item>The <b>boundary layer</b> at 600 m is 1% of an earthlike radius, against 0.016% of
+    /// Earth's — and on a small moon it is <i>taller than the entire atmosphere</i>.</item>
+    /// <item><b>Triton's peaks are in vacuum:</b> 20% of its radius in mountain against an
+    /// atmosphere 9.4% of it deep.</item>
+    /// <item><b>The Moon has no atmosphere at all</b>, so every wind figure on it must be zero, and
+    /// nothing in the model may divide by that.</item>
+    /// </list>
+    ///
+    /// <para>Each scenario states what it is for and what would be wrong. They run in about a second
+    /// between them, so the whole matrix is a test rather than an exercise.</para>
+    /// </summary>
+    public static class WindScenarios
+    {
+        public class Scenario
+        {
+            public string Name;
+            public string Asks;
+            public WindLab.Planet Planet;
+            public WindLab.Options Options;
+
+            /// <summary>Latitudes this scenario is interested in, or null for the standard sweep.</summary>
+            public double[] Latitudes;
+
+            /// <summary>Heights above ground, or null for the option's own list.</summary>
+            public double[] Heights;
+        }
+
+        /// <summary>
+        /// Latitudes that matter to this model rather than a plain sweep: the equator, where the
+        /// field's known fault is; the middles of the three circulation bands at 15°, 45° and 75°,
+        /// where the wind is purely zonal; and the band edges at 30° and 60°, where it is purely
+        /// meridional. Negative and positive, because the hemispheres are mirrored and that is worth
+        /// catching if it ever stops being true.
+        /// </summary>
+        public static readonly double[] InterestingLatitudes =
+        {
+            -89d, -75d, -60d, -45d, -30d, -15d, -1d, 0d, 1d, 15d, 30d, 45d, 60d, 75d, 89d,
+        };
+
+        /// <summary>
+        /// Heights that mean something: on the ground, at the weather-station reference, either side
+        /// of the diurnal crossover, at the top of the boundary layer, and well above it.
+        /// </summary>
+        public static readonly double[] InterestingHeights =
+        {
+            0d, 0.5d, 2d, 10d, 40d, 80d, 160d, 400d, 600d, 1200d, 5000d, 20000d,
+        };
+
+        public static List<Scenario> All()
+        {
+            List<Scenario> list = new List<Scenario>();
+
+            // ---- every shipped world, at the size the game usually makes it -------------------
+            for (int i = 0; i < WindLab.Planet.VanillaNames.Length; i++)
+            {
+                string name = WindLab.Planet.VanillaNames[i];
+                list.Add(new Scenario
+                {
+                    Name = "vanilla:" + name,
+                    Asks = "the model on a shipped world at its usual size",
+                    Planet = WindLab.Planet.Vanilla(name),
+                    Options = new WindLab.Options(),
+                    Latitudes = InterestingLatitudes,
+                    Heights = InterestingHeights,
+                });
+            }
+
+            // ---- the size range, on one planet type, so size is the only variable -------------
+            double[] diameters = { 19000d, 60000d, 80000d, 120000d };
+            for (int i = 0; i < diameters.Length; i++)
+            {
+                list.Add(new Scenario
+                {
+                    Name = "size:" + (diameters[i] / 1000d).ToString("n0") + "km",
+                    Asks = "whether world size alone changes the answer",
+                    Planet = WindLab.Planet.Vanilla("EarthLike", diameters[i]),
+                    Options = new WindLab.Options(),
+                    Latitudes = InterestingLatitudes,
+                    Heights = InterestingHeights,
+                });
+            }
+
+            // A modded extreme at each end. Nothing stops a mod shipping these.
+            list.Add(new Scenario
+            {
+                Name = "size:2km-moddedtiny",
+                Asks = "a world so small the terrain ring wraps a measurable arc of it",
+                Planet = WindLab.Planet.Vanilla("EarthLike", 2000d),
+                Options = new WindLab.Options(),
+                Latitudes = InterestingLatitudes,
+                Heights = InterestingHeights,
+            });
+
+            list.Add(new Scenario
+            {
+                Name = "size:1000km-moddedhuge",
+                Asks = "a world large enough that the bands are continents again",
+                Planet = WindLab.Planet.Vanilla("EarthLike", 1000000d),
+                Options = new WindLab.Options(),
+                Latitudes = InterestingLatitudes,
+                Heights = InterestingHeights,
+            });
+
+            // ---- settings pushed to their ends ----------------------------------------------
+            list.Add(Tuned("settings:glass", "the smoothest ground the setting allows",
+                o => { o.Roughness = 0.0001f; }));
+
+            list.Add(Tuned("settings:forest", "the roughest",
+                o => { o.Roughness = 2f; }));
+
+            list.Add(Tuned("settings:shallow-layer", "a boundary layer barely above the reference height",
+                o => { o.GradientHeight = 10f; }));
+
+            list.Add(Tuned("settings:deep-layer", "a boundary layer taller than most SE atmospheres",
+                o => { o.GradientHeight = 3000f; }));
+
+            list.Add(Tuned("settings:no-diurnal", "the daily cycle switched off",
+                o => { o.DiurnalAmplitude = 0f; }));
+
+            list.Add(Tuned("settings:full-diurnal", "the daily cycle at its maximum",
+                o => { o.DiurnalAmplitude = 1f; }));
+
+            list.Add(Tuned("settings:no-terrain", "the ground ignored",
+                o => { o.TerrainInfluence = 0f; }));
+
+            list.Add(Tuned("settings:wide-terrain", "a terrain ring five kilometres across",
+                o => { o.TerrainRadius = 5000f; }));
+
+            list.Add(Tuned("settings:tight-terrain", "a terrain ring inside one landform",
+                o => { o.TerrainRadius = 50f; }));
+
+            list.Add(Tuned("settings:no-slope-wind", "the thermal slope flow switched off",
+                o => { o.SlopeStrength = 0f; }));
+
+            list.Add(Tuned("settings:storm", "the worst weather the game reports",
+                o => { o.WeatherIntensity = 1f; o.WeatherWind = 2f; }));
+
+            // ---- degenerate inputs -----------------------------------------------------------
+            WindLab.Planet still = WindLab.Planet.Vanilla("EarthLike");
+            still.MaxWindSpeed = 0f;
+            list.Add(new Scenario
+            {
+                Name = "degenerate:no-wind-rating",
+                Asks = "a planet whose definition says the wind never blows",
+                Planet = still,
+                Options = new WindLab.Options(),
+                Latitudes = InterestingLatitudes,
+                Heights = InterestingHeights,
+            });
+
+            WindLab.Planet airless = WindLab.Planet.Vanilla("EarthLike");
+            airless.HasAtmosphere = false;
+            list.Add(new Scenario
+            {
+                Name = "degenerate:no-atmosphere",
+                Asks = "an earthlike world with the air taken away",
+                Planet = airless,
+                Options = new WindLab.Options(),
+                Latitudes = InterestingLatitudes,
+                Heights = InterestingHeights,
+            });
+
+            WindLab.Planet flat = WindLab.Planet.Vanilla("EarthLike");
+            flat.Ground = new WindLab.FlatTerrain();
+            list.Add(new Scenario
+            {
+                Name = "degenerate:flat-world",
+                Asks = "ground with no shape, the control for every terrain factor",
+                Planet = flat,
+                Options = new WindLab.Options(),
+                Latitudes = InterestingLatitudes,
+                Heights = InterestingHeights,
+            });
+
+            WindLab.Planet fast = WindLab.Planet.Vanilla("EarthLike");
+            fast.DayLength = 240d;
+            list.Add(new Scenario
+            {
+                Name = "degenerate:four-minute-day",
+                Asks = "a day shorter than the climate lag it drives",
+                Planet = fast,
+                Options = new WindLab.Options(),
+                Latitudes = InterestingLatitudes,
+                Heights = InterestingHeights,
+            });
+
+            return list;
+        }
+
+        private static Scenario Tuned(string name, string asks, Action<WindLab.Options> tune)
+        {
+            WindLab.Options options = new WindLab.Options();
+            tune(options);
+
+            return new Scenario
+            {
+                Name = name,
+                Asks = asks,
+                Planet = WindLab.Planet.Vanilla("EarthLike"),
+                Options = options,
+                Latitudes = InterestingLatitudes,
+                Heights = InterestingHeights,
+            };
+        }
+
+        /// <summary>What one scenario produced, reduced to the figures worth comparing.</summary>
+        public struct Outcome
+        {
+            public string Name;
+            public string Asks;
+            public int Samples;
+
+            public double PlanetRadius;
+            public double AtmosphereAltitude;
+            public double MaxHill;
+            public double BandWidthMetres;
+            public double HorizonMetres;
+
+            public float MinSpeed, MaxSpeed, MeanSpeed;
+            public float MinSpeedUp, MaxSpeedUp;
+            public float MinShelter;
+            public float MaxChannelDegrees;
+            public float MaxProfile;
+            public int OverCeiling;
+            public int Bad;
+
+            /// <summary>Samples where the wind was over the friction threshold with nothing moving.</summary>
+            public int OverFriction;
+        }
+
+        /// <summary>Speed at which the shipped configuration starts heating a hull by friction.</summary>
+        public const float FrictionThreshold = 100f;
+
+        public static Outcome Run(Scenario scenario)
+        {
+            WindLab.Options options = scenario.Options;
+            if (scenario.Heights != null) options.Heights = scenario.Heights;
+
+            List<WindLab.Row> rows = scenario.Latitudes != null
+                ? RunAt(scenario.Planet, options, scenario.Latitudes)
+                : WindLab.Run(scenario.Planet, options);
+
+            Outcome outcome = new Outcome();
+            outcome.Name = scenario.Name;
+            outcome.Asks = scenario.Asks;
+            outcome.Samples = rows.Count;
+
+            outcome.PlanetRadius = scenario.Planet.AverageRadius;
+            outcome.AtmosphereAltitude = scenario.Planet.AtmosphereAltitude;
+            outcome.MaxHill = scenario.Planet.MaxHillHeight;
+            outcome.BandWidthMetres = scenario.Planet.MetresPerDegree * 30d;
+            outcome.HorizonMetres = scenario.Planet.HorizonFrom(2d);
+
+            outcome.MinSpeed = float.MaxValue;
+            outcome.MinSpeedUp = float.MaxValue;
+            outcome.MinShelter = float.MaxValue;
+
+            double total = 0d;
+
+            for (int i = 0; i < rows.Count; i++)
+            {
+                WindLab.Row r = rows[i];
+
+                if (float.IsNaN(r.Speed) || float.IsInfinity(r.Speed) || r.Speed < 0f) outcome.Bad++;
+                if (float.IsNaN(r.SpeedUp) || float.IsNaN(r.Shelter)) outcome.Bad++;
+                if (float.IsNaN(r.BearingDegrees) || float.IsInfinity(r.BearingDegrees)) outcome.Bad++;
+
+                if (r.Speed < outcome.MinSpeed) outcome.MinSpeed = r.Speed;
+                if (r.Speed > outcome.MaxSpeed) outcome.MaxSpeed = r.Speed;
+                total += r.Speed;
+
+                if (r.SpeedUp < outcome.MinSpeedUp) outcome.MinSpeedUp = r.SpeedUp;
+                if (r.SpeedUp > outcome.MaxSpeedUp) outcome.MaxSpeedUp = r.SpeedUp;
+                if (r.Shelter < outcome.MinShelter) outcome.MinShelter = r.Shelter;
+                if (r.ChannelDegrees > outcome.MaxChannelDegrees) outcome.MaxChannelDegrees = r.ChannelDegrees;
+                if (r.Profile > outcome.MaxProfile) outcome.MaxProfile = r.Profile;
+
+                if (r.Speed > r.Ceiling + 1e-4f) outcome.OverCeiling++;
+                if (r.Speed > FrictionThreshold) outcome.OverFriction++;
+            }
+
+            if (rows.Count == 0)
+            {
+                outcome.MinSpeed = 0f;
+                outcome.MinSpeedUp = 0f;
+                outcome.MinShelter = 0f;
+            }
+            else
+            {
+                outcome.MeanSpeed = (float)(total / rows.Count);
+            }
+
+            return outcome;
+        }
+
+        /// <summary>
+        /// A day at named latitudes rather than an even sweep, so the band edges and the equator are
+        /// hit exactly rather than straddled.
+        /// </summary>
+        public static List<WindLab.Row> RunAt(
+            WindLab.Planet planet, WindLab.Options options, double[] latitudes)
+        {
+            List<WindLab.Row> all = new List<WindLab.Row>();
+
+            for (int i = 0; i < latitudes.Length; i++)
+            {
+                WindLab.Options one = Copy(options);
+                one.LatitudeLimit = Math.Abs(latitudes[i]);
+
+                // A single latitude, taken by making the sweep's limit and step land on it.
+                one.LatitudeStep = one.LatitudeLimit > 0d ? one.LatitudeLimit * 2d : 1d;
+
+                List<WindLab.Row> rows = WindLab.Run(planet, one);
+
+                for (int r = 0; r < rows.Count; r++)
+                {
+                    if (Math.Abs(rows[r].Latitude - latitudes[i]) < 1e-6d) all.Add(rows[r]);
+                }
+            }
+
+            return all;
+        }
+
+        private static WindLab.Options Copy(WindLab.Options options)
+        {
+            return new WindLab.Options
+            {
+                Roughness = options.Roughness,
+                GradientHeight = options.GradientHeight,
+                DiurnalAmplitude = options.DiurnalAmplitude,
+                DiurnalCrossover = options.DiurnalCrossover,
+                TerrainInfluence = options.TerrainInfluence,
+                TerrainRadius = options.TerrainRadius,
+                SlopeStrength = options.SlopeStrength,
+                WeatherIntensity = options.WeatherIntensity,
+                WeatherWind = options.WeatherWind,
+                AmbientLagSeconds = options.AmbientLagSeconds,
+                LatitudeLimit = options.LatitudeLimit,
+                LatitudeStep = options.LatitudeStep,
+                LongitudeStep = options.LongitudeStep,
+                Heights = options.Heights,
+                StepsPerDay = options.StepsPerDay,
+            };
+        }
+
+        public static string Report()
+        {
+            List<Scenario> scenarios = All();
+            StringBuilder sb = new StringBuilder();
+
+            sb.Append("Wind model across every shipped world, every size and every corner\n\n");
+
+            sb.Append("The worlds, as the engine derives them\n");
+            sb.Append("  world            radius km   hills m        atmosphere m   band km   horizon m\n");
+
+            for (int i = 0; i < WindLab.Planet.VanillaNames.Length; i++)
+            {
+                WindLab.Planet planet = WindLab.Planet.Vanilla(WindLab.Planet.VanillaNames[i]);
+
+                sb.Append(string.Format(CultureInfo.InvariantCulture,
+                    "  {0,-14} {1,9:n1}   {2,6:n0}..{3,-7:n0} {4,12:n0}   {5,7:n1}   {6,9:n0}{7}\n",
+                    planet.Name,
+                    planet.AverageRadius / 1000d,
+                    planet.MinHillHeight, planet.MaxHillHeight,
+                    planet.AtmosphereAltitude,
+                    planet.MetresPerDegree * 30d / 1000d,
+                    planet.HorizonFrom(2d),
+                    planet.PeaksAboveAir ? "   PEAKS IN VACUUM" : (planet.HasAtmosphere ? "" : "   AIRLESS")));
+            }
+
+            sb.Append("\n  Earth, for scale:  6,371.0        -11,000..8,849        ~100,000   3,336.0       5,048\n");
+
+            sb.Append("\nScenarios\n");
+            sb.Append("  name                         samples   speed m/s          speed-up      shelter  chan   >ceil  >fric  bad\n");
+
+            for (int i = 0; i < scenarios.Count; i++)
+            {
+                Outcome o = Run(scenarios[i]);
+
+                sb.Append(string.Format(CultureInfo.InvariantCulture,
+                    "  {0,-26} {1,8:n0}   {2,5:n1}..{3,-6:n1} ({4,4:n1})  {5,4:n2}..{6,-4:n2}  {7,7:n3}  {8,4:n0}  {9,6:n0} {10,6:n0} {11,4:n0}\n",
+                    o.Name, o.Samples, o.MinSpeed, o.MaxSpeed, o.MeanSpeed,
+                    o.MinSpeedUp, o.MaxSpeedUp, o.MinShelter, o.MaxChannelDegrees,
+                    o.OverCeiling, o.OverFriction, o.Bad));
+            }
+
+            sb.Append("\n  >ceil  samples where the modelled wind exceeded the engine's own figure\n");
+            sb.Append("  >fric  samples where a *parked* grid would be friction-heated by wind alone\n");
+            sb.Append("  bad    NaN, infinite or negative results — must be zero everywhere\n");
+
+            return sb.ToString();
+        }
+    }
+}
