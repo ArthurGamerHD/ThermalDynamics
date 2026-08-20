@@ -163,6 +163,7 @@ dotnet run --project Thermodynamics.Sim -- bench hitch --size 125000   # per-tic
 dotnet run --project Thermodynamics.Sim -- bench load  --size 1000000  # world load, before the first tick
 dotnet run --project Thermodynamics.Sim -- bench floor --size 42000    # what a per-block substep cap buys, and costs
 dotnet run --project Thermodynamics.Sim -- bench steppath              # a step at the solver, against a step through the host
+dotnet run --project Thermodynamics.Sim -- bench smallgrids            # what one grid costs before any of its blocks do
 dotnet run --project Thermodynamics.Sim -- bench report --csv benchmarks              # the full report
 dotnet run --project Thermodynamics.Sim -- bench report --baseline benchmarks/performance.csv   # and the diff
 ```
@@ -178,6 +179,7 @@ dotnet run --project Thermodynamics.Sim -- bench report --baseline benchmarks/pe
 | `floor --driven` | The same sweep on a ship held at temperature by forty 250 kW sources instead of by a seeded spread — the case that says whether a player would notice, and the one that reports the peak temperature overheat damage is decided by. |
 | `coolant` | The segmented fluid model against the well-mixed one it replaced, on the same grid, at rising amounts of pipe. |
 | `steppath` | The same step driven straight at the solver and then through the host's entry point, at three substep caps. Everything else here drives the solver, so work the host does around a step is invisible to it — which is how a duplicate stability estimate survived a section written to attribute fixed cost. Both timed runs re-seed the temperature spread; conduction skips a link whose ends agree, so whichever runs second on a flatter grid reads cheaper for no reason but its order. |
+| `smallgrids` | A 200-grid fleet swept from one block a grid upwards, each row run whole and again paced the way the host drives it. The report's fleet rows stop at eight hundred blocks a grid because that is the smallest the ship generator builds; a real world is mostly smaller than that, and the per-grid fixed cost is what decides its price. Phases alternate order between repeats — whichever ran second inherited a settled grid and read five times faster than the phase it is a superset of. |
 | `floor` | `MaxSubstepsPerBlock` swept: what each cap does to the substep count and the clock, how many blocks it moves, and how far it moves them. Builds from the block census, because the population's *shape* is what decides how far a cap reaches. |
 
 `--shape ship|cube|truss` picks the shape, `--max N` stops the ladder early, `--ticks N` sets the

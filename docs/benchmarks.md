@@ -368,6 +368,50 @@ stepping on the same frame — came from a telemetry dump and could not have com
 this section rules out is the *solver* scaling badly with grid count. It says nothing about the
 adapter.
 
+**It is also narrow in a second way that took a field dump to see.** Eight hundred blocks a grid is
+the *smallest* grid the ship generator builds, and a world is not made of them: the 2026-08-20 dump
+holds 97 grids of five cells or fewer and 198 of five hundred or fewer, costing 10 % of the mod's
+time for 5 % of its blocks. `bench smallgrids` reads the same question below eight hundred.
+
+### Below eight hundred blocks
+
+A 200-grid fleet on a planet surface, each row run twice: whole, and paced the way the host drives
+it — every grid visited every frame, each frame doing its share of a step.
+
+| blocks/grid | whole | paced, before | paced, after | pieces per step, before → after |
+| ---: | ---: | ---: | ---: | --- |
+| 1 | 0.110 ms | +34 % | +34 % | 3.0 → 1.0 |
+| 3 | 0.149 ms | +43 % | **+26 %** | 7.4 → 1.0 |
+| 8 | 0.097 ms | +32 % | **+19 %** | 7.4 → 1.0 |
+| 32 | 0.271 ms | +24 % | **+9 %** | 7.4 → 1.0 |
+| 128 | 2.19 ms | +7 % | **+3 %** | 7.4 → 3.0 |
+| 512 | 9.00 ms | +5 % | +5 % | 7.4 → 7.4 |
+| 2,048 | 35.8 ms | +13 % | +13 % | 7.4 → 7.4 |
+
+The step used to be sliced into whatever a frame's share came to, which on a three-block grid is one
+element visit. Re-entering the resumable stage machine costs the same whatever it carries, so such a
+grid paid fifteen entries a step to integrate three blocks. The per-frame budget now banks until it
+reaches 2,048 element visits or the step's remainder, whichever is smaller; the rate is untouched
+and the step lands in one piece.
+
+**Two things the floor does not fix, and they are the interesting ones.**
+
+The one-block row does not move. Its remaining 34 % is `Update` itself — the settings check, the
+three dirty branches, the profiler scopes — paid once a frame per grid whether or not the frame does
+any solver work. Nothing about a step can reach it; only visiting fewer grids per frame can.
+
+The 512 and 2,048 rows do not move either, and they carry 5 % and 13 % that the floor is deliberately
+too small to touch. A large grid genuinely is sliced across its window, and between two of its
+frames the other 199 grids in the fleet evict its arrays: every resume is a cold start. That is the
+price of spreading a step rather than staggering whole steps across frames, and it is not a bug —
+but it is a design question the ladder cannot ask, because the ladder runs one grid.
+
+**Reading a paced row against a whole one takes care.** Both phases are the same grids in the same
+state, so whichever runs second inherits what the first left behind — a settled temperature spread,
+a completed room map — and conduction skips a link whose ends agree. Run in blocks, the paced phase
+measured *five times faster* than the whole phase it is a superset of. The rows above alternate the
+order between repeats and re-seed the spread before each.
+
 ---
 
 ## Reading a comparison

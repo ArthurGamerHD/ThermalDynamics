@@ -66,6 +66,13 @@ namespace Thermodynamics.Harness
             }
 
             public double Substeps;
+
+            /// <summary>Substeps the paced phase was granted, for comparison with the whole one.</summary>
+            public double PacedSubsteps;
+
+            /// <summary>Steps each grid completed in the paced phase, against the steps asked for.</summary>
+            public double PacedSteps;
+            public int RequestedSteps;
         }
 
         public static List<Row> Run(int grids, IList<int> sizes, int steps, Action<string> log)
@@ -97,69 +104,105 @@ namespace Thermodynamics.Harness
 
             EnvironmentSample sample = Worlds.PlanetSurface(1f, 0.5f);
 
-            for (int i = 0; i < fleet.Count; i++) fleet[i].StepExact(3, sample);
-            row.Substeps = fleet[0].Solver.LastSubsteps;
-
-            double best = double.MaxValue;
-            Stopwatch watch = new Stopwatch();
-
-            for (int repeat = 0; repeat < 3; repeat++)
-            {
-                watch.Restart();
-                for (int s = 0; s < steps; s++)
-                {
-                    for (int i = 0; i < fleet.Count; i++) fleet[i].StepExact(1, sample);
-                }
-                watch.Stop();
-
-                double ms = watch.Elapsed.TotalMilliseconds / steps;
-                if (ms < best) best = ms;
-            }
-
-            row.FleetStepMs = best;
-
-            // And again the way the host drives it: every grid visited every frame, each frame
-            // doing the fraction of a step its own length represents. Same simulated time, same
-            // substeps, same arithmetic — the difference is how many times the stage machine is
-            // entered to do it.
             float frame = 1f / 60f;
             int framesPerStep = (int)Math.Round(60f / fleet[0].Settings.StepsPerSecond);
             int frames = steps * framesPerStep;
 
+            for (int i = 0; i < fleet.Count; i++) fleet[i].StepExact(3, sample);
             for (int i = 0; i < fleet.Count; i++) fleet[i].Update(frame, sample);
 
+            double best = double.MaxValue;
             double pacedBest = double.MaxValue;
-            long advances = 0;
-            long completed = 0;
+            Stopwatch watch = new Stopwatch();
 
-            for (int repeat = 0; repeat < 3; repeat++)
+            // The two phases alternate rather than running one after the other. They are the same
+            // grids in the same state, and whichever went second inherited whatever the first left
+            // behind — a settled temperature spread, a completed room map — and read cheaper for
+            // it. Run in blocks, the paced phase measured five times faster than the whole phase
+            // it is a superset of.
+            for (int repeat = 0; repeat < 4; repeat++)
             {
-                for (int i = 0; i < fleet.Count; i++) fleet[i].Work.Reset();
+                // Order alternates. Whichever phase runs second inherits a grid the first left
+                // settled, and conduction skips a link whose ends agree — so a fixed order gives
+                // the second phase a cheaper problem and the best-of would keep the bias rather
+                // than remove it.
+                bool wholeFirst = (repeat % 2) == 0;
 
-                watch.Restart();
-                for (int f = 0; f < frames; f++)
-                {
-                    for (int i = 0; i < fleet.Count; i++) fleet[i].Update(frame, sample);
-                }
-                watch.Stop();
-
-                double ms = watch.Elapsed.TotalMilliseconds / steps;
-                if (ms < pacedBest)
-                {
-                    pacedBest = ms;
-                    advances = 0;
-                    completed = 0;
-                    for (int i = 0; i < fleet.Count; i++)
-                    {
-                        advances += fleet[i].Work.StepAdvances;
-                        completed += fleet[i].Work.SolverSteps;
-                    }
-                }
+                if (wholeFirst) TimeWhole(fleet, sample, steps, watch, row, ref best);
+                TimePaced(fleet, sample, frame, frames, steps, watch, row, ref pacedBest);
+                if (!wholeFirst) TimeWhole(fleet, sample, steps, watch, row, ref best);
             }
 
+            row.FleetStepMs = best;
             row.PacedStepMs = pacedBest;
-            row.AdvancesPerStep = completed <= 0 ? 0d : advances / (double)completed;
             return row;
+        }
+
+
+        private static void TimeWhole(List<ThermalSimulation> fleet, EnvironmentSample sample,
+            int steps, Stopwatch watch, Row row, ref double best)
+        {
+            Seed(fleet);
+
+            watch.Restart();
+            for (int s = 0; s < steps; s++)
+            {
+                for (int i = 0; i < fleet.Count; i++) fleet[i].StepExact(1, sample);
+            }
+            watch.Stop();
+
+            double whole = watch.Elapsed.TotalMilliseconds / steps;
+            if (whole >= best) return;
+
+            best = whole;
+            row.Substeps = fleet[0].Solver.LastSubsteps;
+        }
+
+        private static void TimePaced(List<ThermalSimulation> fleet, EnvironmentSample sample,
+            float frame, int frames, int steps, Stopwatch watch, Row row, ref double best)
+        {
+            Seed(fleet);
+            for (int i = 0; i < fleet.Count; i++) fleet[i].Work.Reset();
+
+            watch.Restart();
+            for (int f = 0; f < frames; f++)
+            {
+                for (int i = 0; i < fleet.Count; i++) fleet[i].Update(frame, sample);
+            }
+            watch.Stop();
+
+            long advances = 0;
+            long completed = 0;
+            for (int i = 0; i < fleet.Count; i++)
+            {
+                advances += fleet[i].Work.StepAdvances;
+                completed += fleet[i].Work.SolverSteps;
+            }
+
+            // Normalised by the steps that actually completed rather than by the steps asked for:
+            // a whole number of frames per step is not always available, and a row that rounded
+            // would read the difference as a cost.
+            double perGridSteps = completed <= 0 ? steps : completed / (double)fleet.Count;
+            double paced = watch.Elapsed.TotalMilliseconds / perGridSteps;
+            if (paced >= best) return;
+
+            best = paced;
+            row.PacedSteps = perGridSteps;
+            row.RequestedSteps = steps;
+            row.PacedSubsteps = fleet[0].Solver.LastSubsteps;
+            row.AdvancesPerStep = completed <= 0 ? 0d : advances / (double)completed;
+        }
+
+        /// <summary>
+        /// Spreads every grid's temperatures across 250-750 K before a timed run.
+        ///
+        /// Conduction skips a link whose ends already agree, so a run that inherits the previous
+        /// run's settled grid measures a cheaper problem. Unseeded, the paced column read five
+        /// times faster than the whole column it is a superset of, purely because it ran second.
+        /// </summary>
+        private static void Seed(List<ThermalSimulation> fleet)
+        {
+            for (int i = 0; i < fleet.Count; i++) LoadBenchmarks.SeedSpread(fleet[i]);
         }
 
         /// <summary>
@@ -190,14 +233,23 @@ namespace Thermodynamics.Harness
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings());
             simulation.RebuildAll();
+
+            // Taken all the way to a mapped hull. Only the paced path runs the room mapper, so a
+            // fleet handed over with the map still pending would have one phase integrating an
+            // unmapped grid and the other a mapped one.
+            while (simulation.HasPendingWork)
+            {
+                simulation.Update(1f / 60f, Worlds.PlanetSurface(1f, 0.5f));
+            }
+
             return simulation;
         }
 
         public static string Table(IList<Row> rows)
         {
             StringBuilder sb = new StringBuilder();
-            sb.AppendLine("  grids  blocks/grid    blocks  substeps    whole ms"
-                + "    paced ms   pacing   advances   us/grid/step");
+            sb.AppendLine("  grids  blocks/grid    blocks  subs w/p    whole ms"
+                + "    paced ms   pacing   advances   steps p/w   us/grid/step");
 
             for (int i = 0; i < rows.Count; i++)
             {
@@ -205,11 +257,12 @@ namespace Thermodynamics.Harness
                 sb.Append(r.Grids.ToString("n0").PadLeft(7));
                 sb.Append(r.BlocksPerGrid.ToString("n0").PadLeft(13));
                 sb.Append(r.Blocks.ToString("n0").PadLeft(10));
-                sb.Append(r.Substeps.ToString("n0").PadLeft(10));
+                sb.Append((r.Substeps.ToString("n0") + "/" + r.PacedSubsteps.ToString("n0")).PadLeft(10));
                 sb.Append(r.FleetStepMs.ToString("n3").PadLeft(12));
                 sb.Append(r.PacedStepMs.ToString("n3").PadLeft(12));
                 sb.Append((r.PacingOverhead * 100d).ToString("n0").PadLeft(8) + "%");
                 sb.Append(r.AdvancesPerStep.ToString("n1").PadLeft(11));
+                sb.Append((r.PacedSteps.ToString("n1") + "/" + r.RequestedSteps).PadLeft(12));
                 sb.Append(r.MicrosecondsPerGridStep.ToString("n3").PadLeft(15));
                 sb.AppendLine();
             }
