@@ -138,17 +138,28 @@ namespace Thermodynamics
             { "RoomAirDensity", new Entry(Environment, "Room air density", "Density of room air, kg/m3. 1.225 is sea level.", 0f, 5f) },
             { "SolarOcclusionInterval", new Entry(Occlusion, "Occlusion interval", "Solver steps between sun occlusion raycasts.", 1, 60, true) },
 
+            { "WindRoughnessLength", new Entry(Environment, "Roughness length", "Height at which wind theoretically reaches zero, m — about a tenth of what covers the ground. 0.0002 open water, 0.03 grassland, 0.5 forest. Sets how fast wind picks up as you climb.", 0.0001f, 2f) },
+            { "WindGradientHeight", new Entry(Environment, "Gradient height", "Height at which wind stops strengthening, m. Above the boundary layer the ground no longer sets the wind.", 10f, 3000f) },
+            { "WindDiurnalAmplitude", new Entry(Environment, "Diurnal swing", "How far the daily cycle moves wind either side of its mean, 0..1. Ground level peaks in the afternoon; above the crossover it peaks before dawn instead.", 0f, 1f) },
+            { "WindDiurnalCrossover", new Entry(Environment, "Diurnal crossover", "Height at which the daily cycle vanishes, m. Below it the surface cycle, above it the nocturnal jet.", 0f, 500f) },
+            { "WindTerrainInfluence", new Entry(Environment, "Terrain influence", "How much the shape of the ground steers and speeds the wind, 0..1: faster over rises, sheltered behind ridges, channelled along valleys.", 0f, 1f) },
+            { "WindSlopeStrength", new Entry(Environment, "Slope winds", "Air running up a mountain by day and draining back down it at night, 0..1. Blows on a still day and is overrun by a real wind. Costs nothing extra.", 0f, 1f) },
+            { "WindTerrainRadius", new Entry(Environment, "Terrain radius", "How far out the land around a point is read, m. The size of landform the wind notices.", 50f, 2000f) },
+
             { "HeatPumpCarnotFraction", new Entry(Systems, "Carnot fraction", "How much of the Carnot limit a pump achieves, 0..1.", 0f, 1f) },
             { "HeatPumpMaxCoefficient", new Entry(Systems, "Max coefficient", "Ceiling on the coefficient of performance.", 0f, 20f) },
 
             { "DebugTextOnScreen", new Entry(Display, "Crosshair readout", "Everything the simulation knows about the block being looked at. Also makes the solver record per-mechanism watts, which is not free.", 0, 1) },
             { "DebugSolarRaycast", new Entry(Display, "Draw sun ray", "The sun ray from each grid, white when lit and red when occluded.", 0, 1) },
-            { "DebugWindRaycast", new Entry(Display, "Draw wind vector", "The relative wind vector.", 0, 1) },
+            { "DebugWindRaycast", new Entry(Display, "Draw wind vector", "The relative wind each grid is flying through, drawn from the grid. Green in still air, red once it is fast enough to heat the leading face.", 0, 1) },
+            { "DebugWindOverlay", new Entry(Display, "Wind map", "Draws the wind field as arrows: 1 a lattice around you, 2 the whole planet, where the circulation bands are. Ctrl+Shift+W cycles it in play.", 0, WindOverlay.ModeCount - 1, true) },
+            { "DebugWindIndicator", new Entry(Display, "Wind indicator", "A needle and a speed beside the crosshair whenever there is wind where you are.", 0, 1) },
             { "DebugBlockOverlay", new Entry(Display, "Block overlay", "The x-ray box overlay. Ctrl+Shift+= cycles it in play.", 0, ThermalDebugView.ModeCount - 1, true) },
 
             { "RoomOverlayMinKelvin", new Entry(Display, "Room overlay: cold", "Bottom of the room view's colour span, K. Room air lives in a narrow band, so it gets a tighter ramp than blocks do.", 173.15f, 323.15f) },
             { "RoomOverlayMaxKelvin", new Entry(Display, "Room overlay: hot", "Top of the room view's colour span, K.", 273.15f, 423.15f) },
             { "EnableTelemetry", new Entry(Display, "Collect telemetry", "Per-grid and per-block-type data collection. Off for ordinary play.", 0, 1) },
+            { "TelemetryPlanetProbes", new Entry(Display, "Wind probes", "Solver steps between planet-wide wind sweeps, or 0 for none. Reads the wind at 72 points around the planet at five heights each, whether or not anything is standing there. Needs telemetry on.", 0, 3600, true) },
             { "TelemetrySampleStride", new Entry(Display, "Sample stride", "Steps between telemetry samples.", 1, 64, true) },
         };
 
@@ -391,8 +402,9 @@ namespace Thermodynamics
         /// </summary>
         private static readonly Leaf DebugPage = new Leaf("Debug",
             "DebugTextOnScreen", "DebugBlockOverlay", "DebugSolarRaycast", "DebugWindRaycast",
+            "DebugWindOverlay", "DebugWindIndicator",
             "RoomOverlayMinKelvin", "RoomOverlayMaxKelvin",
-            "EnableTelemetry", "TelemetrySampleStride");
+            "EnableTelemetry", "TelemetrySampleStride", "TelemetryPlanetProbes");
 
         /// <summary>
         /// Live figures per page, refreshed with everything else.

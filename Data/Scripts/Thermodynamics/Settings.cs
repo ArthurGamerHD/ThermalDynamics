@@ -252,6 +252,52 @@ namespace Thermodynamics
         [ProtoMember(102)] public float PlanetCoreTemperature = 3000f;
         [ProtoMember(103)] public float PlanetSealevelDeadzone = 2000f;
 
+        // ---- wind --------------------------------------------------------------------------
+
+        /// <summary>
+        /// Roughness length z0, m: about a tenth of the height of whatever covers the ground. 0.0002
+        /// open water, 0.03 grassland, 0.1 scattered obstacles, 0.5 forest. Sets how fast wind
+        /// strengthens with height near the surface.
+        /// </summary>
+        [ProtoMember(104)] public float WindRoughnessLength = 0.03f;
+
+        /// <summary>
+        /// Height at which wind stops strengthening, m — the top of the boundary layer. Above it the
+        /// wind is set by the pressure field rather than by the ground.
+        /// </summary>
+        [ProtoMember(105)] public float WindGradientHeight = 600f;
+
+        /// <summary>
+        /// How far the daily cycle swings wind either side of its mean, 0..1. Surface wind peaks in
+        /// the afternoon; wind above the crossover height peaks before dawn instead.
+        /// </summary>
+        [ProtoMember(106)] public float WindDiurnalAmplitude = 0.35f;
+
+        /// <summary>
+        /// Height at which the daily cycle vanishes, m. Below it the surface cycle, above it the
+        /// nocturnal jet, fully reversed by twice this height.
+        /// </summary>
+        [ProtoMember(107)] public float WindDiurnalCrossover = 80f;
+
+        /// <summary>
+        /// How much the shape of the ground affects wind, 0..1: speed-up over rises, shelter behind
+        /// ridges, and steering along valleys. 0 leaves the wind ignorant of terrain.
+        /// </summary>
+        [ProtoMember(108)] public float WindTerrainInfluence = 1f;
+
+        /// <summary>
+        /// How far out the terrain around a point is read when deciding all three, m. The scale of
+        /// landform the wind is allowed to notice.
+        /// </summary>
+        [ProtoMember(109)] public float WindTerrainRadius = 300f;
+
+        /// <summary>
+        /// How much slope wind blows, 0..1: air running up a mountain by day and draining back down
+        /// it at night. A thermal effect rather than a mechanical one — it blows on a still day, and
+        /// a real wind overruns it. Costs nothing extra: the terrain it needs is already read.
+        /// </summary>
+        [ProtoMember(111)] public float WindSlopeStrength = 1f;
+
         // ---- heat pumps --------------------------------------------------------------------
 
         /// <summary>How much of the Carnot limit a heat pump achieves, 0..1.</summary>
@@ -279,6 +325,25 @@ namespace Thermodynamics
         [ProtoMember(57)] public int DebugBlockOverlay = 0;
 
         /// <summary>
+        /// Value the wind map starts a session showing, as a <see cref="WindOverlay.Mode"/>: 0 off,
+        /// 1 the lattice around the player, 2 the whole globe. Ctrl+Shift+W cycles it in play.
+        /// Client side.
+        /// </summary>
+        [ProtoMember(112)] public int DebugWindOverlay = 0;
+
+        /// <summary>
+        /// The wind indicator beside the crosshair: a needle for the direction and a figure for the
+        /// speed, whenever there is wind where the player is.
+        ///
+        /// On by default, unlike everything else on this page, because it is the one entry here that
+        /// is not a diagnostic — wind pushes a ship about and heats its leading face, and a player
+        /// has no other way to know it is there. It draws nothing in space, nothing in still air and
+        /// nothing while a menu is open, so leaving it on costs a player who does not want it very
+        /// little. Client side.
+        /// </summary>
+        [ProtoMember(113)] public bool DebugWindIndicator = true;
+
+        /// <summary>
         /// Bottom of the room overlay's colour span, K. Separate from the block ramp because room
         /// air spans a few tens of degrees, over which the block ramp gives one shade.
         /// </summary>
@@ -295,6 +360,19 @@ namespace Thermodynamics
 
         [ProtoMember(80)] public bool EnableTelemetry = false;
         [ProtoMember(81)] public int TelemetrySampleStride = 4;
+
+        /// <summary>
+        /// Solver steps between planet-wide wind sweeps, or 0 for none.
+        ///
+        /// A sweep reads the wind at 72 fixed points around the planet — every latitude from −80° to
+        /// +80° including the equator, eight longitudes each — at five heights, whether or not
+        /// anything is standing there. It is the only way to see the model's behaviour with latitude
+        /// and with height without parking a fleet, and it costs nothing per sample: the terrain
+        /// under each probe is read once and the rest is arithmetic.
+        ///
+        /// Needs <see cref="EnableTelemetry"/>. 360 is a sweep every minute at the shipped clock.
+        /// </summary>
+        [ProtoMember(110)] public int TelemetryPlanetProbes = 0;
 
         /// <summary>
         /// A fresh configuration.
@@ -337,11 +415,26 @@ namespace Thermodynamics
             if (DebugBlockOverlay < 0) DebugBlockOverlay = 0;
             if (DebugBlockOverlay >= ThermalDebugView.ModeCount)
                 DebugBlockOverlay = ThermalDebugView.ModeCount - 1;
+            if (DebugWindOverlay < 0) DebugWindOverlay = 0;
+            if (DebugWindOverlay >= WindOverlay.ModeCount)
+                DebugWindOverlay = WindOverlay.ModeCount - 1;
             if (RoomConvectionCoefficient < 0f) RoomConvectionCoefficient = 0f;
             if (RoomAirDensity < 0f) RoomAirDensity = 0f;
             if (HeatPumpCarnotFraction < 0f) HeatPumpCarnotFraction = 0f;
             if (HeatPumpCarnotFraction > 1f) HeatPumpCarnotFraction = 1f;
             if (HeatPumpMaxCoefficient < 0f) HeatPumpMaxCoefficient = 0f;
+            if (WindRoughnessLength <= 0f) WindRoughnessLength = 0.0002f;
+            if (WindGradientHeight < Core.WindProfile.ReferenceHeight)
+                WindGradientHeight = Core.WindProfile.ReferenceHeight;
+            if (WindDiurnalAmplitude < 0f) WindDiurnalAmplitude = 0f;
+            if (WindDiurnalAmplitude > 1f) WindDiurnalAmplitude = 1f;
+            if (WindDiurnalCrossover < 0f) WindDiurnalCrossover = 0f;
+            if (WindTerrainInfluence < 0f) WindTerrainInfluence = 0f;
+            if (WindTerrainInfluence > 1f) WindTerrainInfluence = 1f;
+            if (WindTerrainRadius < 0f) WindTerrainRadius = 0f;
+            if (WindSlopeStrength < 0f) WindSlopeStrength = 0f;
+            if (WindSlopeStrength > 1f) WindSlopeStrength = 1f;
+            if (TelemetryPlanetProbes < 0) TelemetryPlanetProbes = 0;
         }
 
         // ---- conversion --------------------------------------------------------------------
@@ -513,6 +606,7 @@ namespace Thermodynamics
         public static readonly HashSet<string> ClientOwned = new HashSet<string>
         {
             "DebugTextOnScreen", "DebugSolarRaycast", "DebugWindRaycast", "DebugBlockOverlay",
+            "DebugWindOverlay", "DebugWindIndicator",
         };
 
         /// <summary>
@@ -538,9 +632,13 @@ namespace Thermodynamics
                 "RoomConvectionCoefficient", "RoomAirDensity", "SolarOcclusionInterval",
                 "ClimateGroundInfluence", "ClimateWeatherInfluence",
                 "HeatPumpCarnotFraction", "HeatPumpMaxCoefficient",
+                "WindRoughnessLength", "WindGradientHeight",
+                "WindDiurnalAmplitude", "WindDiurnalCrossover",
+                "WindTerrainInfluence", "WindTerrainRadius", "WindSlopeStrength",
                 "DebugTextOnScreen", "DebugSolarRaycast", "DebugWindRaycast",
-                "DebugBlockOverlay", "RoomOverlayMinKelvin", "RoomOverlayMaxKelvin",
-                "EnableTelemetry", "TelemetrySampleStride",
+                "DebugBlockOverlay", "DebugWindOverlay", "DebugWindIndicator",
+                "RoomOverlayMinKelvin", "RoomOverlayMaxKelvin",
+                "EnableTelemetry", "TelemetrySampleStride", "TelemetryPlanetProbes",
 
                 "LoopLargeGridFlowRate", "LoopSmallGridFlowRate", "LoopCoolantMassPerPipe",
                 "LoopSpecificHeat", "LoopConductivity", "LoopPipeContactMultiplier",
@@ -596,6 +694,13 @@ namespace Thermodynamics
                 case "RoomAirDensity": return RoomAirDensity;
                 case "HeatPumpCarnotFraction": return HeatPumpCarnotFraction;
                 case "HeatPumpMaxCoefficient": return HeatPumpMaxCoefficient;
+                case "WindRoughnessLength": return WindRoughnessLength;
+                case "WindGradientHeight": return WindGradientHeight;
+                case "WindDiurnalAmplitude": return WindDiurnalAmplitude;
+                case "WindDiurnalCrossover": return WindDiurnalCrossover;
+                case "WindTerrainInfluence": return WindTerrainInfluence;
+                case "WindTerrainRadius": return WindTerrainRadius;
+                case "WindSlopeStrength": return WindSlopeStrength;
                 case "SolarOcclusionInterval": return SolarOcclusionInterval;
                 case "ClimateGroundInfluence": return ClimateGroundInfluence;
                 case "ClimateWeatherInfluence": return ClimateWeatherInfluence;
@@ -603,10 +708,13 @@ namespace Thermodynamics
                 case "DebugSolarRaycast": return Flag(DebugSolarRaycast);
                 case "DebugWindRaycast": return Flag(DebugWindRaycast);
                 case "DebugBlockOverlay": return DebugBlockOverlay;
+                case "DebugWindOverlay": return DebugWindOverlay;
+                case "DebugWindIndicator": return Flag(DebugWindIndicator);
                 case "RoomOverlayMinKelvin": return RoomOverlayMinKelvin;
                 case "RoomOverlayMaxKelvin": return RoomOverlayMaxKelvin;
                 case "EnableTelemetry": return Flag(EnableTelemetry);
                 case "TelemetrySampleStride": return TelemetrySampleStride;
+                case "TelemetryPlanetProbes": return TelemetryPlanetProbes;
 
                 case "LoopCoolantMassPerPipe": return LoopCoolantMassPerPipe;
                 case "LoopConductivity": return LoopConductivity;
@@ -677,6 +785,13 @@ namespace Thermodynamics
                 case "RoomAirDensity": RoomAirDensity = value; return true;
                 case "HeatPumpCarnotFraction": HeatPumpCarnotFraction = value; return true;
                 case "HeatPumpMaxCoefficient": HeatPumpMaxCoefficient = value; return true;
+                case "WindRoughnessLength": WindRoughnessLength = value; return true;
+                case "WindGradientHeight": WindGradientHeight = value; return true;
+                case "WindDiurnalAmplitude": WindDiurnalAmplitude = value; return true;
+                case "WindDiurnalCrossover": WindDiurnalCrossover = value; return true;
+                case "WindTerrainInfluence": WindTerrainInfluence = value; return true;
+                case "WindTerrainRadius": WindTerrainRadius = value; return true;
+                case "WindSlopeStrength": WindSlopeStrength = value; return true;
                 case "SolarOcclusionInterval": SolarOcclusionInterval = (int)value; return true;
                 case "ClimateGroundInfluence": ClimateGroundInfluence = value; return true;
                 case "ClimateWeatherInfluence": ClimateWeatherInfluence = value; return true;
@@ -689,8 +804,14 @@ namespace Thermodynamics
                     DebugBlockOverlay = (int)value;
                     ThermalDebugView.Set((ThermalDebugView.Mode)DebugBlockOverlay);
                     return true;
+                case "DebugWindOverlay":
+                    DebugWindOverlay = (int)value;
+                    WindOverlay.Set((WindOverlay.Mode)DebugWindOverlay);
+                    return true;
+                case "DebugWindIndicator": DebugWindIndicator = Flag(value); return true;
                 case "EnableTelemetry": EnableTelemetry = Flag(value); Telemetry.SetEnabled(EnableTelemetry); return true;
                 case "TelemetrySampleStride": TelemetrySampleStride = (int)value; return true;
+                case "TelemetryPlanetProbes": TelemetryPlanetProbes = (int)value; return true;
 
                 case "LoopCoolantMassPerPipe": LoopCoolantMassPerPipe = value; return true;
                 case "LoopConductivity": LoopConductivity = value; return true;
@@ -719,7 +840,7 @@ namespace Thermodynamics
         /// <summary>True when the named setting is a switch rather than a number.</summary>
         public static bool IsFlag(string name)
         {
-            return name != null && name != "DebugBlockOverlay"
+            return name != null && name != "DebugBlockOverlay" && name != "DebugWindOverlay"
                 && (name.StartsWith("Enable") || name.StartsWith("Debug")
                 || name == "SolarSelfShadowing"
                 || name == "SolarOcclusionPlanets"

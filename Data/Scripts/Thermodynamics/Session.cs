@@ -80,6 +80,7 @@ namespace Thermodynamics
             // The overlay is client state rather than grid state: the config supplies only the view
             // a session opens on, and the keybind changes it from there.
             ThermalDebugView.Current = (ThermalDebugView.Mode)Settings.Instance.DebugBlockOverlay;
+            WindOverlay.Current = (WindOverlay.Mode)Settings.Instance.DebugWindOverlay;
 
             // Registration with Rich HUD Master is asynchronous and may never complete, so this only
             // requests it; the menu builds itself when the framework responds.
@@ -158,6 +159,10 @@ namespace Thermodynamics
             // Every grid every frame, each doing its share of the step it is part way through.
             ThermalGridScheduler.Tick();
 
+            // The planet-wide wind sweep. Once per frame at most, never per grid, and it returns
+            // immediately unless telemetry and the probe interval are both on.
+            PlanetProbes.Step(ThermalGrid.TickSeconds);
+
             if (_frame % 10 == 0)
             {
                 ThermalBridges.Update(ThermalGrid.TickSeconds);
@@ -171,11 +176,13 @@ namespace Thermodynamics
         {
             ThermalHud.Draw();
             ThermalDebugView.Draw();
+            WindOverlay.Draw();
             ThermalDebugPanel.Update();
         }
 
         /// <summary>
-        /// Ctrl+Shift+= cycles the block overlay through its views; Ctrl+Shift+S opens the settings
+        /// Ctrl+Shift+= cycles the block overlay through its views; Ctrl+Shift+W cycles the wind map
+        /// through its two scales; Ctrl+Shift+S opens the settings
         /// menu.
         ///
         /// Hard-coded rather than rebindable because a mod cannot add an entry to the game's binding
@@ -199,6 +206,15 @@ namespace Thermodynamics
             if (MyAPIGateway.Input.IsNewKeyPressed(MyKeys.S))
             {
                 ThermalSettingsMenu.Open();
+                return;
+            }
+
+            // The wind map, on its own key rather than as another view of the block overlay: it
+            // draws the world rather than a grid, and it is the one a player wants up *while*
+            // flying through what it describes.
+            if (MyAPIGateway.Input.IsNewKeyPressed(MyKeys.W))
+            {
+                WindOverlay.Cycle();
                 return;
             }
 
@@ -283,6 +299,13 @@ namespace Thermodynamics
             {
                 ThermalDebugView.Cycle();
                 Reply("block overlay: " + ThermalDebugView.Describe(ThermalDebugView.Current));
+                return;
+            }
+
+            if (lowered == "wind")
+            {
+                WindOverlay.Cycle();
+                Reply("wind map: " + WindOverlay.Describe(WindOverlay.Current));
                 return;
             }
 

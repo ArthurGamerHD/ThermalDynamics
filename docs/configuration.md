@@ -540,18 +540,101 @@ Raising the fraction does not change what a pump can do — the shape of the cos
 and is not negotiable — only how far up it the block sits. Lowering the ceiling makes pumps
 predictable near equilibrium at the cost of making cheap, small-gap cooling less rewarding.
 
+## Wind
+
+The game's own wind figure is `MaxWindSpeed × airDensity` — one number per planet, scaled linearly
+by altitude, identical at the pole and the equator, with no direction and no time of day. These
+settings drive the model that replaces it. See [wind-model.md](wind-model.md) for what each one is
+and where it comes from.
+
+| Setting | Default | Effect |
+| --- | --- | --- |
+| `WindRoughnessLength` | 0.03 m | Roughness length z0 — about a tenth of the height of whatever covers the ground. 0.0002 open water, 0.03 grassland, 0.1 scattered obstacles, 0.5 forest. Sets how steeply wind strengthens with height near the surface. |
+| `WindGradientHeight` | 600 m | Height at which wind stops strengthening: the top of the boundary layer. Above it the profile is flat and the air density takes it down from there. |
+| `WindDiurnalAmplitude` | 0.35 | How far the daily cycle swings wind either side of its mean. Surface wind peaks in the afternoon; wind above the crossover peaks before dawn. 0 disables the cycle. |
+| `WindDiurnalCrossover` | 80 m | Height at which the daily cycle vanishes. Below it the surface cycle, above it the nocturnal jet, fully reversed by twice this height. |
+| `WindTerrainInfluence` | 1 | How much the shape of the ground affects wind: speed-up over rises, shelter behind ridges, steering along valleys. 0 leaves the wind ignorant of terrain. |
+| `WindTerrainRadius` | 300 m | How far out the land around a point is read. The scale of landform the wind is allowed to notice. |
+| `WindSlopeStrength` | 1 | Slope winds, 0..1: air running **up** a mountain by day and draining back **down** it at night. A thermal flow the ground makes rather than something it does to an existing wind, so it blows on a still day — and a real wind overruns it. Costs about 46 ns a sample, because the terrain it needs is already read. |
+
 ## Presentation
 
-All client side and all off by default.
+All client side, and all off by default but one: the wind indicator, which is the only entry here
+that is a readout for playing rather than a diagnostic for debugging.
 
 | Setting | Default | Draws |
 | --- | --- | --- |
 | `DebugTextOnScreen` | `false` | Crosshair readout: temperature, per-mechanism watts, block constants, environment, grid totals, room classification, raw surface bits. Switching it on also makes the solver record per-mechanism watts, which is not free. |
 | `DebugSolarRaycast` | `false` | Draws the sun ray from each grid, white when lit and red when occluded. |
-| `DebugWindRaycast` | `false` | Draws the relative wind vector. |
+| `DebugWindRaycast` | `false` | Draws the relative wind each grid is flying through, as a line from the grid scaled by its speed: green in still air, red once the grid is over `FrictionAtSpeedsAbove` and the leading face is heating. |
+| `DebugWindOverlay` | 0 | Which view the wind map opens a session on: 0 off, 1 the lattice around you, 2 the whole planet. |
+| `DebugWindIndicator` | `true` | The wind needle and speed under the crosshair. |
 | `RoomOverlayMinKelvin` | 253.15 K | Bottom of the room view's colour span, −20 °C. |
 | `RoomOverlayMaxKelvin` | 323.15 K | Top of the room view's colour span, 50 °C. |
 | `DebugBlockOverlay` | 0 | Which view the block overlay opens a session on: 0 off, 1 temperature, 2 solar watts, 3 exposed faces, 4 friction watts, 5 rooms. |
+
+### The wind map
+
+**Ctrl+Shift+W** cycles it: off → local → planet → off. `/thermal wind` does the same from chat.
+
+The game has no wind field — `MyPlanet.GetWindSpeed` returns the planet definition's maximum scaled
+by air density, the same figure at the pole and the equator — so this mod invents one, and until
+this view there was no way to look at it. See [planet-climate.md](planet-climate.md#wind) for what
+the field is; this is how you see it.
+
+**Local** drapes arrows over the ground itself, out to five kilometres in every direction — a disc of
+about thirteen hundred, 250 m apart, each projected onto the terrain under it and lifted ten metres
+clear. Five kilometres is chosen against the field's own 900 m variation scale: it takes several
+turnovers of that variation to read as a pattern rather than as one gust, and a lattice small enough
+to fit on a landing pad shows a single value repeated.
+
+Because the arrows lie on the terrain, **terrain hides them**. From standing height most of a five
+kilometre field is below the horizon or behind a hill — that is the field being drawn honestly, and
+it is why this view is worth gaining some altitude for. Look down on a valley from a few hundred
+metres up and the whole disc is visible at once.
+
+The lattice is anchored to the world rather than to you, snapped to a whole number of 250 m steps, so
+it stays put as you walk instead of sliding along underfoot. It is rebuilt when you cross into the
+next cell, and the rebuild is spread over frames — about nine of them — because the terrain lookup
+per arrow is the one expensive call in the view. The arrows already up stay up until the replacement
+is complete, so a resample is invisible rather than a blink.
+
+**Planet** draws arrows over the whole globe on a latitude and longitude lattice, sized against the
+planet's radius and floating above its highest terrain. This is the view for the circulation itself:
+easterly trades either side of the equator, westerlies in the middle latitudes, easterly again at the
+poles. Fly out far enough to see a hemisphere. Arrows on the far side are dropped rather than drawn
+through the planet, since nothing occludes transparent geometry.
+
+An arrow points **where the wind blows**, is longer and redder the harder it blows, and is scaled
+against the storm end of the ramp rather than against the planet's ceiling — calm air is about a
+tenth of that ceiling, so scaling against it would draw every ordinary day as a field of stubs.
+
+Arrow *width* is held on the screen rather than in the world, between a floor and the arrow's own
+length. A single lattice spans two orders of magnitude of distance — the arrow at your feet and the
+one five kilometres away are the same arrow — and a fixed width in metres would draw the near one as
+a slab and lose the far one entirely.
+
+Two things it does not do. **Weather is sampled once, where you are standing, and applied to every
+arrow**: asking per arrow costs a string allocation and a lookup for each of several hundred points
+every resample, and on the globe view it would be reading one storm's weather at points thousands of
+kilometres away regardless. And the lattice is resampled every twenty frames rather than every frame,
+so an arrow can be a third of a second out of date — which is far finer than anything in the field
+can actually move.
+
+### The wind indicator
+
+A needle under the crosshair, with the speed beneath it, whenever there is wind where you are.
+
+Screen up is the way you are facing, so the needle points where the wind is pushing you: straight up
+is a tailwind, straight down is a wind in your face, and a needle on its side is the crosswind that
+carries a ship off its line. This is the opposite of the meteorological convention, where a wind is
+named for where it comes from — the question here is which way you are being pushed, not what to call
+the weather.
+
+**In a cockpit it shows the wind the ship is flying through, not the wind over the ground.** Those
+are the same parked and quite different at speed, and the relative one is what the solver heats the
+hull with. On foot there is no grid to ask, so the field's own wind is used. It draws nothing in
+space, nothing in still air, and nothing while a menu or the chat box is open.
 
 ### The block overlay
 
@@ -661,6 +744,7 @@ a session starts on — the keybind is how each client drives it.
 | Setting | Default | Effect |
 | --- | --- | --- |
 | `EnableTelemetry` | `false` | Session-long data collection. See [telemetry.md](telemetry.md). |
+| `TelemetryPlanetProbes` | 0 | Solver steps between planet-wide probe sweeps, or 0 for none. A sweep reads the **wind and the climate** at 72 fixed points — every latitude from −80° to +80° including the equator, eight longitudes each — at five heights, whether or not anything is standing there. Writes `Thermodynamics_PlanetProbes_*.csv`. 360 is a sweep a minute at the shipped clock. |
 | `TelemetrySampleStride` | 4 | Fraction of each grid's blocks sampled per step for the per-definition statistics — `1/n`. Every block is still seen once per `n` steps. |
 
 ## Time and pace
