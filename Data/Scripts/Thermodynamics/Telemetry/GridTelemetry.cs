@@ -353,6 +353,14 @@ namespace Thermodynamics
         public readonly RunningStat AtmosphereFactor = new RunningStat();
         public readonly RunningStat WindSpeed = new RunningStat();
         public readonly RunningStat ConvectionCoefficient = new RunningStat();
+
+        /// <summary>
+        /// Watts the grid vented and watts it made, sampled per step. The pair answers whether a
+        /// ship can cool itself, which no per-block temperature can: a grid venting less than it
+        /// makes is heating up however cool any single block currently reads.
+        /// </summary>
+        public readonly RunningStat VentedWatts = new RunningStat();
+        public readonly RunningStat HeatGainWatts = new RunningStat();
         public readonly RunningStat EffectiveSolarEnergy = new RunningStat();
 
         /// <summary>
@@ -706,6 +714,9 @@ namespace Thermodynamics
             WindSpeed.Add(sample.RelativeWindSpeed);
             ConvectionCoefficient.Add(state.EffectiveConvectionCoefficient);
             EffectiveSolarEnergy.Add(state.SolarEnergy);
+
+            VentedWatts.Add(grid.Simulation.VentedWatts);
+            HeatGainWatts.Add(grid.Simulation.HeatGainWatts);
         }
 
         public void NotePlanet(string name)

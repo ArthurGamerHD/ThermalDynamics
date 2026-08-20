@@ -199,6 +199,8 @@ namespace Thermodynamics
             int loops = 0;
             int critical = 0;
             int floored = 0;
+            float vented = 0f;
+            float made = 0f;
 
             // Worst rather than mean: a step costs what its stiffest grid demands, and an average
             // across a fleet would hide the one grid that is actually setting the bill.
@@ -221,6 +223,11 @@ namespace Thermodynamics
                 loops += solver.Loops == null ? 0 : solver.Loops.Count;
                 critical += thermals.CriticalBlocks;
                 floored += solver.FlooredNodes;
+
+                // Summed across the fleet rather than worst-of, unlike the substep figures: heat
+                // is additive and a fleet's cooling is the sum of its ships'.
+                vented += solver.LastVentedWatts;
+                made += solver.LastHeatGainWatts;
 
                 if (solver.LastSubsteps > granted) granted = solver.LastSubsteps;
                 if (solver.LastRequiredSubsteps > demanded) demanded = solver.LastRequiredSubsteps;
@@ -249,6 +256,13 @@ namespace Thermodynamics
                 starved > 0f ? Warning : (GlyphFormat?)null);
 
             Pair(text, "visits/s", Thousands((long)visitsPerSecond), "floored", Thousands(floored));
+
+            // The cooling question, as the two figures that answer it: a fleet venting less than
+            // it makes is heating up, whatever any single temperature currently reads. Warned on
+            // that condition rather than on any absolute figure, since the numbers themselves are
+            // a property of how big the ships are.
+            Pair(text, "vented", Watts(vented), "made", Watts(made),
+                made > vented ? Warning : (GlyphFormat?)null);
 
             Pair(text, "ambient", Tools.KelvinToCelsiusString(ambient),
                 "peak", peak == float.MinValue ? "-" : Tools.KelvinToCelsiusString(peak),
@@ -303,6 +317,19 @@ namespace Thermodynamics
         private static string Thousands(long value)
         {
             return value.ToString("n0");
+        }
+
+        /// <summary>
+        /// Watts at a readable magnitude. A ship's heat balance spans kilowatts on a miner to tens
+        /// of megawatts on a capital ship, and a raw figure at either end is a wall of digits.
+        /// </summary>
+        private static string Watts(float watts)
+        {
+            float magnitude = watts < 0f ? -watts : watts;
+
+            if (magnitude >= 1000000f) return (watts / 1000000f).ToString("n1") + " MW";
+            if (magnitude >= 1000f) return (watts / 1000f).ToString("n1") + " kW";
+            return watts.ToString("n0") + " W";
         }
 
         /// <summary>The panel's contents, or null when there is nothing to show.</summary>

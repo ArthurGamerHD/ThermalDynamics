@@ -282,6 +282,7 @@ namespace Thermodynamics.Core
             for (int i = 0; i < roomAir.Count; i++) roomWatts[i] = 0f;
 
             ClearConductionDiagnostics();
+            ResetEnvironmentTotals();
 
             // Once per substep rather than once per slice: it resolves the sun and wind into
             // per-face weights and advances the shadow map's budget, both of which would otherwise
@@ -317,6 +318,10 @@ namespace Thermodynamics.Core
                     AccumulateHeatSources(ref stepEnvironment, stepPlan.Diagnostics);
                     spent += (long)stepEnvironment.HeatSourceCount * count;
                 }
+
+                // Every node has been visited and the sources are in, so this substep's heat
+                // totals are complete.
+                PublishEnvironmentTotals();
 
                 stage = StepStage.Conduction;
                 stageCursor = 0;

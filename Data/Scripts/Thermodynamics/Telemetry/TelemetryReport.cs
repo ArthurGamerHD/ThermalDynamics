@@ -1250,6 +1250,8 @@ namespace Thermodynamics
                 Field(sb, "  atmosphere factor", g.AtmosphereFactor.Format("n4"));
                 Field(sb, "  wind speed m/s", g.WindSpeed.Format("n2"));
                 Field(sb, "  convection coeff", g.ConvectionCoefficient.Format("n3"));
+                Field(sb, "  vented W", g.VentedWatts.Format("n0"));
+                Field(sb, "  made W", g.HeatGainWatts.Format("n0"));
                 Field(sb, "  effective solar W", g.EffectiveSolarEnergy.Format("n1"));
                 Field(sb, "  occluded share", g.OccludedShare.Format("n3"));
                 Field(sb, "  grid speed m/s", g.Speed.Format("n2"));

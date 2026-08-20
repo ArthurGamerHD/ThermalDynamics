@@ -26,7 +26,7 @@ chooses; **work** — agreed, designed, unbuilt; **gap** — untested or unmeasu
 
 | # | Item | Where |
 | --- | --- | --- |
-| B1 | **Whole-grid heat venting in watts**, as a troubleshooting stat beside total generation — cockpit summary, terminal and mod API. Wants a scalar accumulated on the hot path, not a walk over nodes behind `CollectDiagnostics`. | requested, deferred |
+| ~~B1~~ | ~~Whole-grid heat venting in watts.~~ **Done** — `vented` and `made` accumulated on the hot path, shown as a pair in the cockpit panel (warned when made exceeds vented), in the telemetry report, and through `GetGridHeatBalance` in the mod API. No measurable cost. | [telemetry.md](telemetry.md) |
 | B2 | The coolant pump's terminal on/off switch does nothing: loops circulate unpowered and with the pump off. Three options — make it stop the loop (a balance change), hide the switch, or document it as deliberate. | open decision |
 | B3 | The settings menu cannot change anything from a multiplayer client; only the four presentation switches work. Blocked on B4. | [known-issues.md](known-issues.md) |
 | B4 | No network replication. `SENetworkAPI` is initialised on channel `30323` with nothing registered; clients re-simulate and are never reconciled. Cosmetic divergence, but real, and a mid-session joiner starts from saved temperatures. | [known-issues.md](known-issues.md) |

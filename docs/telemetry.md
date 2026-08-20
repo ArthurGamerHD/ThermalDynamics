@@ -200,6 +200,24 @@ record could outlive the clock its timestamps came from and go on accumulating o
 aggregate. It now detaches those references with the list. Whether that was the cause is a question
 for the next dump — a report written while the world was closing could equally explain it.
 
+## Grid heat balance
+
+`vented W` and `made W` per grid: what the grid sheds to its surroundings by radiation and
+convection, and what it puts into itself through waste heat, sunlight, friction and registered heat
+sources. Sampled per step from figures the solver accumulates on the hot path rather than behind
+`CollectDiagnostics`, because the question they answer — can this ship cool itself — is one asked
+of a working ship rather than an instrumented one.
+
+At equilibrium the two are equal. A grid whose `made` exceeds its `vented` is storing the
+difference, and its temperatures will keep climbing until radiation catches up or something melts.
+Venting reads zero rather than going negative while a grid is net absorbing, which a hull in
+sunlight or in warm atmosphere legitimately is.
+
+Measured cost of collecting them: none detectable. The per-node figures were already computed by
+the pass that walks every node each substep, so this is two adds; a before-and-after run of
+`bench elements` at a hundred thousand nodes moved the per-node cost from 6.1–6.6 ns to 5.8 ns,
+which is inside that benchmark's run-to-run spread.
+
 ## Room pressure sweep
 
 `of which room pressure` in the cost table times the per-compartment sweep that asks the game how

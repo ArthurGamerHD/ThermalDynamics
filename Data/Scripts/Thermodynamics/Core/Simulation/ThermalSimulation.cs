@@ -152,6 +152,36 @@ namespace Thermodynamics.Core
         public double SimulatedSecondsRun { get; private set; }
 
         /// <summary>
+        /// Watts this grid is shedding to its surroundings — radiation plus convection, counted
+        /// only where they take heat away. The answer to "is this ship able to cool itself at
+        /// all", which per-block temperatures cannot give.
+        /// </summary>
+        public float VentedWatts
+        {
+            get { return solver.LastVentedWatts; }
+        }
+
+        /// <summary>
+        /// Watts this grid is putting into itself: waste heat, sunlight, friction and registered
+        /// heat sources. Venting means nothing without it — a ship shedding a megawatt is coping
+        /// or overwhelmed depending on this figure.
+        /// </summary>
+        public float HeatGainWatts
+        {
+            get { return solver.LastHeatGainWatts; }
+        }
+
+        /// <summary>
+        /// Net watts the environment exchanged with the grid, negative when it is losing heat.
+        /// The signed form of <see cref="VentedWatts"/>, for a caller that wants to know a grid is
+        /// absorbing rather than shedding.
+        /// </summary>
+        public float EnvironmentWatts
+        {
+            get { return solver.LastEnvironmentWatts; }
+        }
+
+        /// <summary>
         /// What one substep over this grid costs, in the units
         /// <see cref="ThermalSettings.MaxElementVisitsPerStep"/> is expressed in: its links, plus
         /// its nodes weighted by what a node is worth.
