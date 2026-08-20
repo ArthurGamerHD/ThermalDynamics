@@ -120,23 +120,25 @@ population of a real ship, rather than the heavy armour and gratings this ladder
 [the note below](#the-ladder-was-measured-on-the-wrong-ship) for what that changed and why the
 figures moved so much.
 
-> These were taken before the per-step environment terms were cached; `bench report`'s ladder is
-> the current figure and is about a third faster at 125k. See
-> [benchmarks.md](benchmarks.md).
+| blocks | links | bbox | exposed | build | topology | rooms | exposure | full step | sub | tick | cap | resident |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 8,904 | 20,779 | 68,800 | 72 % | 86 ms | 11.6 | 15.7 | 5.0 | 1.17 | 12 | 1.14 | 17 | 10 MB |
+| 32,800 | 73,787 | 328,640 | 61 % | 132 ms | 26.3 | 45.3 | 5.9 | 2.64 | 12 | 1.06 | 4 | 40 MB |
+| 126,731 | 277,967 | 1,499,616 | 49 % | 466 ms | 43.9 | 134.4 | 29.1 | 22.68 | 12 | 2.44 | 1 | 139 MB |
+| 505,566 | 1,079,559 | 6,838,104 | 35 % | 2,266 ms | 194.5 | 814.0 | 188.1 | 66.67 | 12 | 12.93 | 1 | 585 MB |
+| 1,000,294 | 2,114,111 | 14,278,796 | 95 % | 4,392 ms | 413.4 | 1,521.9 | 154.6 | 133.06 | 12 | 31.02 | 1 | 1,201 MB |
 
-| blocks | links | bbox | build | topology | rooms | exposure | full step | sub | tick | cap | resident |
-| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 8,904 | 20,779 | 68,800 | 94 ms | 12.8 | 16.8 | 5.6 | 2.60 | 16 | 2.56 | 48 | 10 MB |
-| 32,800 | 73,787 | 328,640 | 148 ms | 29.2 | 35.0 | 7.9 | 9.88 | 16 | 7.49 | 13 | 40 MB |
-| 126,731 | 277,967 | 1,499,616 | 571 ms | 59.5 | 176.7 | 49.5 | 82.18 | 16 | 13.10 | 3 | 137 MB |
-| 505,566 | 1,079,559 | 6,838,104 | 3,376 ms | 283.2 | 1,446.8 | 261.8 | 298.95 | 16 | 25.68 | 1 | 613 MB |
-| 1,000,294 | 2,114,111 | 14,278,796 | 6,683 ms | 589.9 | 2,739.7 | 194.1 | 623.43 | 16 | 55.04 | 1 | 1,182 MB |
+**`sub` is 12 at every rung, which is what the stability estimate asks for rather than a ceiling.**
+The `full step` column is the cost of the step the default settings actually take.
 
-**`sub` is 16 at every rung, and 16 is the ceiling.** `MaxSubsteps` is refusing what the stability
-estimate asks for on every hull on this ladder, from nine thousand blocks upward — which is
-exactly what a field dump found a real 1,293-block ship doing on every one of its steps. The
-`full step` column is therefore not the cost of an accurate step; it is the cost of the most
-accurate step the default settings will pay for, with the overshoot clamps carrying the rest.
+> The `exposed` column is not monotonic — 35 % at half a million and 95 % at a million — which is
+> the shape generator rather than the solver. `LoadShapes` builds something much closer to a shell
+> at the top rung, so that row is a different hull from the ones under it and its per-element
+> figures are not comparable with theirs.
+
+Against the same ladder before the overshoot-clamp gate, the mirrored block ratings and the
+diagnostic batching, the full step at a million blocks was 623 ms and the tick 55 ms. The whole
+table is a fresh measurement; earlier versions of this document quoted the older one.
 
 The topology, rooms and exposure columns are each stage run **whole**, which is what a one-shot
 rebuild or a world load costs. They are not what a tick costs; every one of them is now spread.
@@ -148,9 +150,13 @@ is how many substeps that leaves. Below about a hundred thousand blocks the budg
 the two agree. Above it they diverge, and that divergence is the trade being made: at a million
 blocks a tick pays 42 ms instead of 103, and simulated time advances more slowly to pay for it.
 
-**The solver scales.** Cost per link visit is 7.8 ns at 8k and 18.4 ns at a million — it doubles
-across a working set that grows from ten megabytes to a gigabyte, which is a cache effect and not
-an algorithmic one. Nothing in the conduction pass is superlinear.
+**The solver scales, and it now scales flat.** Cost per link visit was 7.8 ns at 8k and 18.4 ns at
+a million — a doubling across a working set growing from ten megabytes to a gigabyte, read at the
+time as an unavoidable cache effect. It is 4.7 ns and 5.2 ns now. The doubling was not the working
+set: it was two passes reaching through the node objects on every visit — the damage check's rating
+and the per-mechanism watt diagnostics — into memory that got further apart as the grid grew. Both
+now read or write flat arrays. Nothing in the conduction pass was ever superlinear, and the part
+that looked like it was has gone.
 
 ### The ladder was measured on the wrong ship
 
@@ -514,12 +520,16 @@ being trimmed until it looked sensible.
 
 Roughly in order of how much a million-block grid would notice.
 
-**A solver step is atomic, and at a million blocks it is 104 ms.** This is now the largest single
-thing that lands in one tick, and unlike everything above it is not an accounting mistake — a step
-must touch every node, and 16 ns per link visit is near the memory-bandwidth floor. Lowering
-`Frequency` makes the spike *less frequent* without making it smaller, so it does not help. Making
-it smaller means not touching every node: activity tracking, chunking and multirate stepping, all
-designed in [scale-design.md](scale-design.md) and none of it built.
+**A solver step is atomic, and at a million blocks it is 133 ms.** A step must touch every node, so
+this is not an accounting mistake, and lowering `Frequency` makes the spike *less frequent* without
+making it smaller. Making it smaller means not touching every node: activity tracking, chunking and
+multirate stepping, all designed in [scale-design.md](scale-design.md) and none of it built.
+
+> This paragraph used to say the step was near the memory-bandwidth floor at 16 ns per link visit.
+> It was not. Two passes were reaching through the node objects on every visit, and removing both
+> took the same step from 623 ms to 133 ms and the per-visit rate to 5.2 ns. What is left may well
+> be near the floor; the claim has been wrong once and is not being made again without a
+> measurement that isolates it.
 
 ~~**Removing a block still rebuilds the whole graph.**~~ **Done**, and this paragraph outlived the
 fix by contradicting finding 6 above. `RemoveNodeIncremental` unpicks a node's links through the
