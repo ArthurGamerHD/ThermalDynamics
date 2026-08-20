@@ -17,7 +17,7 @@ into atmosphere and into the air of sealed rooms, arrives from the sun, and — 
 * **Isolated.** Every mechanism has its own switch, and switching one off removes exactly its own
   cost. Switches take effect on the next step, with no reload.
 * **Tested.** The simulation is a pure library with no dependency on the game session, built and
-  tested outside it — 679 tests, 24 deterministic scenarios and a load benchmark that goes to a
+  tested outside it — 954 tests, 24 deterministic scenarios and a load benchmark that goes to a
   million blocks in one grid.
 * **Open.** Everything the simulation knows is readable and everything it does is drivable from
   another mod, through a delegate table passed by mod message. See [docs/api.md](docs/api.md).
@@ -68,10 +68,11 @@ into atmosphere and into the air of sealed rooms, arrives from the sun, and — 
 8. Press **Ctrl+Shift+S** for the settings menu: every value in the config file, with a slider or a
    switch and a description of what it does.
 9. `/thermal settings` lists every switch; `/thermal set <name> <value>` changes one live.
-10. `/thermal profile` lists five ready-made bundles from `simulation` to `arcade`;
-    `/thermal profile arcade` applies one live. See
-    [docs/configuration.md](docs/configuration.md#profiles) — the shipped default is the slowest
-    of them, deliberately.
+10. `/thermal profile` lists the five presets; `/thermal profile arcade` applies one live. They
+    are a ladder on two axes — how faithfully the simulation is integrated, and how fast heat is
+    made to move. **A fresh world runs `responsive`**: simulation's integration with the clock run
+    at the tuned pace. `simulation` itself is real time, which is physically honest and far too
+    slow to play on. See [docs/profiles.md](docs/profiles.md).
 
 ## Documentation
 
@@ -110,7 +111,7 @@ game compiles it. The projects under [sim/](sim) link the same files so it can b
 profiled outside the game:
 
 ```bash
-cd sim && dotnet test                                  # 679 tests
+cd sim && dotnet test                                  # 954 tests
 dotnet run --project Thermodynamics.Sim -- run all     # scenario suite
 dotnet run --project Thermodynamics.Sim -- bench scale # cost from 8k to 1M blocks
 ```

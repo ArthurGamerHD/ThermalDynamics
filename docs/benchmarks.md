@@ -158,7 +158,7 @@ Measured in flight, on a hull with air moving over it:
 | arcade | **80,319,608** | 1 | yes |
 | minimal | **52,879,248** | 1 | yes |
 
-`simulation` is the only profile that resolves what it is integrating. `arcade` and `minimal`
+`simulation` is the only profile that resolves what it is integrating. `arcade` and `simlite`
 are eight orders of magnitude under-resolved in an atmosphere: every exposed block is being driven
 to ambient by the overshoot clamp on every substep, and the clamp is the entire integrator rather
 than a guard on it. That is bounded — `ClampEnvironmentOvershoot` is exactly what makes it

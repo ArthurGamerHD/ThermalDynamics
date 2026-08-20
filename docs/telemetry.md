@@ -114,7 +114,7 @@ controls, and a frame closed before its grids have run records nothing.
 
 ## Grids running below real time
 
-`MaxLinkVisitsPerStep` bounds what one solver step may cost, and a grid large enough to reach it
+`MaxElementVisitsPerStep` bounds what one solver step may cost, and a grid large enough to reach it
 takes **shorter steps rather than coarser ones** — advancing less simulated time at exactly the
 same accuracy. See [configuration.md](configuration.md#solver).
 

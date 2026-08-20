@@ -114,12 +114,20 @@ Two things this must not break:
 
 ## Order
 
-1. Pages per system, mechanisms page removed. *No file changes; menu only.*
-2. Loops and Planets overrides, with coolant flow rate on the Coolant loops page. *Adds a world
-   override file.*
-3. Status panel as a real report.
+1. ~~Pages per system, mechanisms page removed.~~ **Done**, along with typed entry for the seven
+   settings whose range a slider cannot divide, and saving on every change rather than on a button.
+2. **Profile definition overlays — done.** `Profiles/<name>.xml`, outside `Data/` so Definition
+   Extensions cannot claim them, applied over the loaded definitions. What remains of this step is
+   the *editing* half: the menu still cannot change a loop's flow rate, only a profile can.
+3. Status panel as a real report, with prototypes to choose a form from.
 4. Config restructure with a v6 migration.
-5. Cubes overrides, defaults and shipped blocks first.
+5. Per-subtype block overrides — defaults, this mod's blocks, and other mods' blocks, which means
+   arbitrary subtypes rather than a fixed list.
+
+**Answered since this was written.** Block overrides cover any subtype, not a fixed list. The
+config file gets nested sections with a v6 migration, keeping every setting name so `/thermal set`,
+the mod API and the sync are unaffected. The Status panel's form is still open, and wants
+prototypes rather than a decision on paper.
 
 Each step stands alone and each is separately revertible, which is why the file restructure — the
 one with a migration risk — is late rather than first.

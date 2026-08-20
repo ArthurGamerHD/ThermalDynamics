@@ -76,12 +76,11 @@ Framework](https://github.com/ZachHembree/RichHudFramework.Client) and needs the
 mod (`1965654081`) to be enabled; without it the keystroke says so and the chat commands remain the
 way in.
 
-**Save to config file** and **Reset everything to defaults** sit at the top, one of each for the
-whole file. Below them are titled rows — heat transfer, solar, solar occlusion, ship systems, solver,
-environment, display — each holding its settings in two columns. Every value in the config file has a
-control and carries that setting's description; switches are checkboxes, numbers are sliders with a
-range chosen for what is worth dragging to, and a setting that picks between behaviours is a named
-dropdown.
+**Settings save themselves.** Every change is written to the config file about a second
+later — a menu that asks you to confirm what you already did is asking you to do it twice,
+and a setting that reverts on reload because a button was missed is worse than either.
+There is no reset button either: a profile sets every world setting, so applying one is how
+you start over.
 
 Two columns because that is what the page is wide enough for: the framework's tiles are a fixed
 300x250, so a third column would have to be scrolled to sideways.
@@ -299,20 +298,35 @@ allowed to differ and a server does not overwrite them.
 
 ## Profiles
 
-Five ready-made bundles, from simulation-first to arcade. `/thermal profile` lists them,
-`/thermal profile arcade` applies one live, `/thermal save` keeps it. They are also templates:
-each is four numbers, and the section below says what happens as you move them.
+Five presets, laid out as a graphics menu lays them out: a ladder on two axes, where the
+simulation is integrated and how fast heat is made to move. `/thermal profile` lists them,
+`/thermal profile arcade` applies one live, and a profile sets **every** world setting — so
+applying one is also how you start over. A fresh world runs `responsive`.
 
-| Profile | Freq | HeatTimeScale | MaxSubsteps | Heat speed | Cost | For |
-| --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `simulation` | 8 | 225 | 64 | 1x | 952 | Never clamps. The curve between two temperatures is the real one. |
-| `default` | 4 | 225 | 16 | 1x | 476 | As shipped. Slow enough to plan around, cheap enough to ignore. |
-| `responsive` | 4 | 3,600 | 8 | **5x** | 476 | Heat you can watch move, for the same cost as default. |
-| `arcade` | 6 | 20,000 | 1 | **11x** | 714 | Fast, cheap, approximate. Heat rushes. |
-| `minimal` | 2 | 6,000 | 1 | **6x** | 238 | A crowded server. Quicker than default at half its cost. |
+| Profile | Freq | HeatTimeScale | MaxSubsteps | Blocks crossed | Work/s | ms/s | For |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| `simulation` | 8 | **1** | 64 | 0.0 | 3,192 | 0.58 | Real time, real physics. The reference, not a way to play. |
+| `optimized` | 4 | **1** | 6 | 0.0 | 1,596 | 0.13 | Real time with the cost dials tuned. |
+| `simlite` | 4 | **1** | 3 | 0.0 | 1,596 | 0.04 | Real time, knowingly approximate. |
+| `responsive` | 8 | 225 | 64 | 0.1 | 3,192 | 0.07 | **The default.** Simulation with the clock run fast. |
+| `arcade` | 4 | 225 | 6 | 0.1 | 1,596 | 0.04 | Responsive's pace at optimized's price. |
 
-*Heat speed is blocks crossed in eight seconds along a held-hot run, relative to default. Cost is
-element visits per real second, machine-independent. `bench profiles` reproduces both.*
+*Measured by `bench profiles --seconds 8`: blocks crossed along a held-hot 200-block run, work as
+element visits per real second, and the solver's own milliseconds per simulated second.*
+
+**Read the first three rows' zero honestly.** It is not a rounding artefact: at `HeatTimeScale` 1 a
+ship changes temperature at the rate a ship does, and eight seconds of play moves heat across no
+blocks at all. The same run with the environment on leaves a hot spot 768 K above its hull on those
+profiles and 10 K above it on the two that run the clock fast. That is the whole difference between
+the reference and a way to play.
+
+**`HeatTimeScale` is also the stiffness dial**, because it divides every heat capacity: substep
+demand on a 150-block hull is 0.00 at scale 1, 0.90 at 225 and 14.40 at 3,600. Real time is the
+cheapest thing to integrate, which is why the accurate profiles are not the expensive ones — on
+this ladder accuracy costs patience, and pace costs frames.
+
+See [profiles.md](profiles.md) for the ladder in full, including the definition overlay each
+profile brings with it.
 
 > The Cost column tracks `Frequency` exactly, and that is a property of what it was measured on
 > rather than of `Frequency`. Both figures come from a 200-block conduction run where every node
@@ -414,7 +428,7 @@ will not move it much.
 
 | Setting | Default | Effect |
 | --- | --- | --- |
-| `Frequency` | 4 | Solver steps per simulated second. The integration step is `1/Frequency`. Whether lowering it cuts cost depends on the grid — see below. |
+| `Frequency` | 8 | Solver steps per simulated second. The integration step is `1/Frequency`. Whether lowering it cuts cost depends on the grid — see below. |
 | `SimulationSpeed` | 1 | Simulated seconds per real second, applied by running more steps rather than longer ones. Linear in CPU. |
 | `HeatTimeScale` | 225 | How much faster than real physics heat moves. Divides every heat capacity. |
 | `MaxElementVisitsPerStep` | 1000000 | Most element visits one step may make — substeps times its links plus four times its nodes — before the step is shortened to fit. 0 removes the bound. See below. |
