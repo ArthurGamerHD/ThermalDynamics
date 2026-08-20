@@ -60,7 +60,7 @@ chooses; **work** — agreed, designed, unbuilt; **gap** — untested or unmeasu
 
 | # | Item | Where |
 | --- | --- | --- |
-| C1 | **Reactors generate no waste heat.** `Cubes.xml` sets `ProducerWasteEnergy` 0, and a reactor delivers power through the source component, so every reactor in the game reports 0 W. | [balance.md](balance.md#open-items) |
+| ~~C1~~ | ~~**Reactors generate no waste heat.**~~ **Done** — `ProducerWasteEnergy` is 0.02, measured rather than picked: the fraction at which every reactor survives at full rating with its faces on open space and the two large ones go past critical once buried in hull. `bench`'s sibling `reactors` sweeps the range in both rigs; `ReactorWasteHeatTests` pins both bounds. **Still open**: the harness's `Catalog.ReactorThermal` stand-in is still 0.25, and hydrogen engines have no entry of their own. | [balance.md](balance.md#reactor-waste-heat) |
 | C2 | The `Cubes.xml` retune implied by the C1/M3/M4 fixes: radiators conduct at half their old rate, fast flight now heats the leading face, overheating destroys blocks 4× slower at `Frequency 4`. | [bugs-and-performance.md](bugs-and-performance.md#suggested-order-of-work) |
 | C3 | Ship `MaxSubstepsPerBlock 6` / `MaxSubsteps 6`. Measured in the field: floored blocks 9.0 % → 1.03 %, drift 2.89 K → 1.07 K, for 1.63 % → 2.17 % of real time. The shipped defaults are still `MaxSubstepsPerBlock 0` / `MaxSubsteps 16`. | [field-tuning.md](field-tuning.md) |
 | C4 | `Catalog` masses in the harness are up to 4× off the shipped definitions (Battery 1040 kg against 3,845; Thruster 10,000 against 43,200; Radiator 900 against 600). Every scenario temperature is quoted off them. | [balance.md](balance.md#open-items) |

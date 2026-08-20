@@ -1334,7 +1334,17 @@
 					<Decimal Name="SpecificHeat" Value="600" />
 					<Decimal Name="Emissivity" Value="0.25" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
-					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--
+						A reactor delivers power through the source component, so its watts run
+						through the producer fraction and this is the only figure that heats it.
+						Balance, not efficiency: SE rates a 3x3x3 reactor at 300 MW, a power density
+						no real plant approaches, so a real plant's efficiency applied to it would
+						make every large reactor unsurvivable in any build. 0.02 is the fraction at
+						which the whole reactor family survives bare in vacuum at full rating and
+						the two large ones need cooling once buried in a hull. Measured by the sim
+						harness's "reactors" command; pinned by ReactorWasteHeatTests.
+					-->
+					<Decimal Name="ProducerWasteEnergy" Value="0.02" />
 					<Decimal Name="ConsumerWasteEnergy" Value="0.25" />
 					<Decimal Name="CriticalTemperature" Value="1200" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="0.25"/>

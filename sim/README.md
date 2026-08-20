@@ -134,6 +134,23 @@ rings across their ranges. The conclusions are pinned by `BalanceTests`. See
 [balance.md](../docs/balance.md); the short version is that a coolant sink face couples six times
 harder than a bolt joint, and no surface property comes close to being worth as much.
 
+## Reactor waste heat
+
+`reactors` answers the one balance question `balance` cannot: what fraction of a reactor's output
+should become heat. The fraction spans three orders of magnitude of rated output — 0.5 MW on a
+small-grid small generator against 300 MW on a large-grid large one — so it cannot be picked by
+analogy with the thruster's.
+
+```bash
+dotnet run --project Thermodynamics.Sim -- reactors
+```
+
+Every vanilla reactor at six candidate fractions and three loads, in two rigs: **bare** in shadow
+with every face on a 2.7 K sky, which is the coolest a reactor can possibly run, and **skinned**
+under one cell of light armour, which is how one is actually installed. The shipped 0.02 is the
+fraction where the bare column survives everywhere and the skinned column does not. Pinned by
+`ReactorWasteHeatTests`; argued in [balance.md](../docs/balance.md#reactor-waste-heat).
+
 ## Balance profiles
 
 `profiles`, `sweep` and `features` are the whole-system counterpart to `balance`: not "is this block
@@ -303,6 +320,9 @@ PipeFitter.BuildRing(builder, ring);      // pump goes on the first straight run
   and carries plumbing exactly when it should; and that the conclusions drawn from the balance pass
   — the radiator beating the armour it displaces, a coolant sink beating every surface dial, the
   heat pump passing through all three of its limits — cannot quietly invert
+* reactor waste heat: that every block type delivering power through the source component converts
+  some of it, that no reactor cooks itself with every face on open space, and that a large one
+  buried in hull at full rating does — so the fraction still means what it was chosen to mean
 * the profile machinery: that the settings and material hooks reach a scenario, that the material
   override is applied exactly once, that a profile's conduction pace lands on the number the solver
   uses, and that no two profiles derive to the same world

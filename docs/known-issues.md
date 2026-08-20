@@ -4,6 +4,19 @@ Current as of the review that added room air, thresholds, point heat sources and
 
 ## Fixed, worth remembering
 
+**Every reactor in the game made no heat, and the whole suite was green over it.** `Cubes.xml` gave
+the `Reactor` type `ProducerWasteEnergy` 0 and `ConsumerWasteEnergy` 0.25. A reactor delivers power
+through `MyResourceSourceComponent`, so only the producer fraction can ever reach it: the largest
+heat source a ship has was inert, and the single most interesting thing the mod simulates never
+happened in an ordinary world.
+
+Worth remembering for its shape rather than its fix. Nothing in the solver was wrong, so no test of
+the solver could see it — the simulation correctly integrated a load of zero. Which of the two
+fractions applies is decided by the game's component wiring, not by the definition, so an entry can
+be internally consistent and still be attached to nothing. The check that catches it now asserts on
+the *type's* producer fraction rather than on any block's behaviour, because behaviour was never
+the thing that broke. See [balance.md](balance.md#reactor-waste-heat).
+
 **A grid welded past its buffer capacity went NaN, whole.** The per-node arrays — temperatures,
 mirrored heat capacities, the watts a substep is accumulating — grow when the node count passes
 their capacity, and growing reallocates every one of them. They are refilled by `SyncNodeState`,

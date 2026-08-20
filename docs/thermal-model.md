@@ -283,10 +283,20 @@ watts = produced × ProducerWasteEnergy + (consumed + thrust) × ConsumerWasteEn
 ```
 
 * `produced` and `consumed` are electrical watts, from `MyResourceSourceComponent.OutputChanged`
-  and `MyResourceSinkComponent.CurrentInputChanged`.
+  and `MyResourceSinkComponent.CurrentInputChanged`. **Which of the two fractions applies to a block
+  is decided by the game, not by the definition.** A reactor delivers through the source component,
+  so only its producer fraction can ever heat it and its consumer fraction is dead text; a thruster
+  is the reverse. This is the one thing a definition can get wrong with no other symptom — a
+  reactor with `ProducerWasteEnergy` 0 simply reports 0 W forever — so
+  `EveryPowerProducerConvertsSomeOfItsOutputToHeat` checks the producer types by name.
 * `thrust = ForceMagnitude × (CurrentThrust / MaxThrust)` — the thruster's force in newtons used
   as a watt-equivalent. This is a balance proxy, not a conversion, and it is what makes hydrogen
   thrusters heat: they draw no electricity, so thrust is the only term that can represent them.
+
+Both fractions are balance figures rather than efficiencies, and the reactor's is the clearest case:
+Space Engineers rates a 3×3×3 block at 300 MW, so a real plant's efficiency applied to it would
+destroy every large reactor in the game in a build no player could improve. See
+[balance.md](balance.md#reactor-waste-heat) for how the shipped 0.02 was measured.
 
 ## Coolant loops
 

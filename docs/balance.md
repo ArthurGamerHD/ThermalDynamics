@@ -22,7 +22,9 @@ Nothing here is transcribed except the vanilla figures, and those are checked.
 | [`ShippedBlocks`](../sim/Thermodynamics.Harness/ShippedBlocks.cs) | The mod's own blocks, read from `Data/CubeBlocks/*.sbc` and `Data/Cubes.xml` at run time — size, mount faces, components, thermal properties |
 | [`Vanilla`](../sim/Thermodynamics.Harness/Vanilla.cs) | Component masses and the comparison blocks, transcribed from Space Engineers' own `Content/Data` |
 | [`BalanceLab`](../sim/Thermodynamics.Harness/BalanceLab.cs) | The measurements |
+| [`ReactorLab`](../sim/Thermodynamics.Harness/ReactorLab.cs) | The reactor waste fraction sweep |
 | [`BalanceTests`](../sim/Thermodynamics.Tests/BalanceTests.cs) | The conclusions, pinned |
+| [`ReactorWasteHeatTests`](../sim/Thermodynamics.Tests/ReactorWasteHeatTests.cs) | The reactor conclusions, pinned |
 
 **A block's mass is the sum of its components**, priced through `Vanilla.ComponentMasses`. That
 matters more than it looks: heat capacity is `mass × specific heat`, so a wrong mass scales every
@@ -129,15 +131,73 @@ Each pipe adds 1,000 W/K of its own and the fluid mass does not grow, so a longe
 better. Pinned by `LongerRingsDeliverColderBlocks`, and by
 `LongerRingsCoupleHarderAndCarryTheSameFluid` in the coolant suite.
 
+## Reactor waste heat
+
+**Reactors generated no waste heat at all.** The `Reactor` entry in `Cubes.xml` set
+`ProducerWasteEnergy` to 0 and `ConsumerWasteEnergy` to 0.25, but a reactor delivers power through
+the *source* component, so only the producer fraction can ever apply to it. The largest heat source
+on a ship was inert, and the `LOAD` table showed every reactor in the game at 0 W. Thrusters were
+never affected — they consume, so their 0.25 applied.
+
+Nothing in the solver was wrong. The number it was handed was, which is why a suite of 1,179 tests
+stayed green over it.
+
+### Why the fraction could not be picked by analogy
+
+The thruster's 0.25 was chosen against a 33 MW draw. A reactor's fraction has to hold across three
+orders of magnitude of rated output — 0.5 MW on a small-grid small generator against 300 MW on a
+large-grid large one — while the block it heats is the same size in both grids. So it was measured
+instead, by `reactors`, in two rigs that bracket the answer:
+
+* **bare** — one reactor alone in shadow, every face radiating to a 2.7 K sky. The coolest a reactor
+  can possibly run, so a fraction that cooks here cooks in every build and no plumbing reaches it.
+  This sets the ceiling.
+* **skinned** — the same reactor under one cell of light armour, which is how one is installed. A
+  fraction the skinned rig survives at full rating is a fraction nobody ever has to cool, so this
+  sets the floor.
+
+Both rigs at four candidate fractions, at full rating, against a 1,200 K critical temperature:
+
+| Fraction | Small gen (15 MW) | Large gen (300 MW) | SG small (0.5 MW) | SG large (14.75 MW) |
+| --- | --- | --- | --- | --- |
+| 0.01 bare | 728.8 K | 889.9 K | 696.4 K | 937.0 K |
+| 0.01 skinned | 603.5 K | **1,245.0 K** | 495.4 K | 971.0 K |
+| **0.02 bare** | 866.7 K | 1,058.2 K | 828.1 K | 1,114.2 K |
+| **0.02 skinned** | 800.3 K | **1,809.2 K** | 603.1 K | **1,240.5 K** |
+| 0.05 bare | 1,089.9 K | **1,330.7 K** | 1,041.3 K | **1,401.1 K** |
+| 0.25 bare | **1,629.7 K** | **1,989.8 K** | **1,557.1 K** | **2,095.1 K** |
+
+Bold is past critical. 0.05 and above put a reactor past critical *bare*, which is unbuildable —
+there is no arrangement cooler than open space. 0.01 leaves only one reactor of the four wanting
+cooling, and only when fully buried at full rating.
+
+**0.02 is the fraction where both bounds hold.** Every reactor survives at full rating with its
+faces on open space; the two large ones go past critical once wrapped in hull. That makes where a
+reactor is installed a decision rather than a detail, and it is the first thing in the mod that
+makes a player want a coolant loop for a reason other than curiosity.
+
+An idling ship is deliberately not a cooling problem: at 10 % of rating every reactor stays clear of
+critical in both rigs. Heat arrives when power is drawn.
+
+### It is balance, not efficiency
+
+0.02 implies a 98 % efficient reactor, which no fission plant approaches. The figure is not an
+efficiency and should not be read as one.
+
+Space Engineers rates a 3×3×3 block at 300 MW — a power density about three orders of magnitude
+past any real plant. A real plant's efficiency of about a third would put 600 MW of waste heat into
+a 73-tonne box, which settles near 2,000 K bare in vacuum: every large reactor in every world
+destroys itself the moment it is switched on, in a build no player can improve. Applying a real
+efficiency to a fictional rating compounds the fiction rather than correcting it. The fraction is
+chosen so the *consequences* land where they should, which is the honest way round when one of the
+two inputs is already invented.
+
 ## Open items
 
-Two things this pass found that it did not change, both recorded here so they are not rediscovered:
-
-* **Reactors generate no waste heat.** The `Reactor` entry in `Cubes.xml` sets
-  `ProducerWasteEnergy` to 0 and `ConsumerWasteEnergy` to 0.25, but a reactor delivers power
-  through the *source* component, so its watts run through the producer fraction. The `LOAD`
-  section of the report shows every reactor in the game at 0 W. Thrusters are unaffected — they
-  consume, so their 0.25 applies.
+* **The harness reactor and the shipped reactor now disagree.** `Catalog.ReactorThermal` carries
+  `ProducerWasteEnergy` 0.25 against the shipped 0.02, so any scenario quoting a reactor temperature
+  quotes one no player will see. It was harmless while the shipped figure was 0 and nothing ran
+  through it; it is a live divergence now. The same shape of problem as C4 below.
 * **`Catalog` masses are not the shipped masses.** The harness's hand-written stand-ins are up to
   4× out (`Battery` 1040 kg against 3,845; `Thruster` 10,000 kg against 43,200; `Radiator` 900 kg
   against 600). They only affect scenarios, not this report, which reads the definitions directly —
