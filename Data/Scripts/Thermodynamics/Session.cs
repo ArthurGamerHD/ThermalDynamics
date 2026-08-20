@@ -171,7 +171,7 @@ namespace Thermodynamics
             // The performance panel. A key rather than a chat command because it is something a
             // player flicks on to check a suspicion and off again, and because it has to be
             // reachable while flying.
-            if (MyAPIGateway.Input.IsNewKeyPressed(MyKeys.P))
+            if (MyAPIGateway.Input.IsNewKeyPressed(MyKeys.M))
             {
                 bool shown = ThermalHud.TogglePerformancePanel();
                 MyAPIGateway.Utilities.ShowNotification(
