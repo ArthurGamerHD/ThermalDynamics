@@ -304,6 +304,14 @@ namespace Thermodynamics
                 row.Weather = WeatherName;
                 row.WindCeiling = entity.GetWindSpeed(position);
 
+                row.WindHeightAboveGround = sample.WindHeightAboveGround;
+                row.WindBandShare = sample.WindBandShare;
+                row.WindProfileFactor = sample.WindProfileFactor;
+                row.WindHeating = sample.WindHeating;
+                row.WindSpeedUp = sample.WindSpeedUp;
+                row.WindShelter = sample.WindShelter;
+                row.WindChannelDegrees = sample.WindChannelDegrees;
+
                 // Wind direction as a bearing: 0 is due north over the planet's own pole, 90 east.
                 Vector3 east = Vector3.Cross(axis, up);
                 if (east.LengthSquared() > 1e-6f)
@@ -451,17 +459,188 @@ namespace Thermodynamics
             Vector3 up = sample.UpDirection;
             Vector3 axis = planet.Entity.PositionComp.WorldMatrixRef.Up;
 
-            Vector3 direction = WindField.Direction(up, axis);
-            float speed = WindField.Speed(ceiling, weather, WindField.Variation(position), weatherWind);
+            // Height above the ground rather than above sea level. The surface radius under the grid
+            // was already read for the ground material and the depth, so this costs nothing.
+            float height = groundSurfaceRadius > 0f ? sample.Radius - groundSurfaceRadius : 0f;
+            if (height < 0f) height = 0f;
 
-            sample.WindSpeed = direction.LengthSquared() > 0f ? speed : 0f;
+            // The sun's height now, lagged into how warm the ground has become, which is what drives
+            // the mixing that brings wind down to the surface — and takes it away again at night.
+            float sunSine = Vector3.Dot(up, Vector3.Normalize(sample.SunDirection));
+            windHeating = WindProfile.Heating(
+                windHeating, sunSine, TickSeconds, Simulation.Planet.AmbientLagSeconds);
+
+            Settings settings = Settings.Instance;
+
+            WindSolver.Inputs inputs = new WindSolver.Inputs();
+            inputs.Ceiling = ceiling;
+            inputs.Up = up;
+            inputs.Axis = axis;
+            inputs.WeatherIntensity = weather;
+            inputs.WeatherWind = weatherWind;
+            inputs.Variation = WindField.Variation(position);
+            inputs.HeightAboveGround = height;
+            inputs.Heating = windHeating;
+            inputs.Roughness = settings.WindRoughnessLength;
+            inputs.GradientHeight = settings.WindGradientHeight;
+            inputs.DiurnalAmplitude = settings.WindDiurnalAmplitude;
+            inputs.DiurnalCrossover = settings.WindDiurnalCrossover;
+            inputs.TerrainInfluence = settings.WindTerrainInfluence;
+            inputs.TerrainRadius = settings.WindTerrainRadius;
+            inputs.SlopeStrength = settings.WindSlopeStrength;
+
+            // Read only when the ground gets a say at all, since it is sixteen surface lookups.
+            inputs.Terrain =
+                settings.WindTerrainInfluence > 0f && settings.WindTerrainRadius > 0f
+                    && height < settings.WindGradientHeight
+                    && ReadTerrain(planet, ref position, up, axis, settings.WindTerrainRadius)
+                ? windTerrain : null;
+
+            WindSolver.Result wind = WindSolver.Solve(ref inputs);
+
+            Vector3 direction = wind.Direction;
+            float speed = wind.Speed;
+
+            sample.WindSpeed = speed;
             sample.WindDirection = direction;
+            sample.WindHeightAboveGround = height;
+            sample.WindHeating = windHeating;
+            sample.WindBandShare = wind.BandShare;
+            sample.WindProfileFactor = wind.Profile;
+            sample.WindSpeedUp = wind.SpeedUp;
+            sample.WindShelter = wind.Shelter;
+            sample.WindChannelDegrees = wind.ChannelDegrees;
+
+            if (direction.LengthSquared() <= 0f)
+            {
+                sample.RelativeWindSpeed = 0f;
+                sample.RelativeWindDirectionLocal = Vector3.Zero;
+                return;
+            }
 
             Vector3 relative = (direction * speed) - sample.GridVelocity;
             sample.RelativeWindSpeed = relative.Length();
             sample.RelativeWindDirectionLocal = sample.RelativeWindSpeed > 0f
                 ? Vector3.Normalize(Vector3D.TransformNormal(relative / sample.RelativeWindSpeed, worldToLocal))
                 : Vector3.Zero;
+
+            DrawWindVector(ref position, ref relative, sample.RelativeWindSpeed);
+        }
+
+        // ---- the local shaping of the wind ---------------------------------------------------
+
+        /// <summary>Lagged share of the day's heating, 0..1. Negative until the first sample.</summary>
+        private float windHeating = -1f;
+
+        /// <summary>The terrain ring around this grid, reused so a sample allocates nothing.</summary>
+        private readonly float[] windTerrain = new float[WindTerrain.SampleCount];
+
+        /// <summary>Where <see cref="windTerrain"/> was taken. The ring is re-read when the grid leaves it.</summary>
+        private Vector3D windTerrainAt;
+
+        private bool hasWindTerrain;
+
+        /// <summary>
+        /// Height above ground at which terrain has stopped mattering, as a share of the gradient
+        /// height. Speed-up, shelter and channelling are all surface-layer effects: a ship two
+        /// kilometres up is in air that has forgotten what the ground under it looks like, and
+        /// steering it along a valley it is nowhere near would be worse than not modelling terrain
+        /// at all.
+        /// </summary>
+        private const float TerrainFadesBy = 1f;
+
+        /// <summary>
+        /// Reads the ring of ground heights around this grid, or keeps the one it has.
+        ///
+        /// Sixteen surface lookups, which is why they are not taken every step: the ring describes a
+        /// few hundred metres of landscape and a grid that has not left it is still standing in the
+        /// same landscape. Re-read once the grid has moved a quarter of the sampling radius.
+        /// </summary>
+        private bool ReadTerrain(
+            PlanetManager.Planet planet, ref Vector3D position, Vector3 up, Vector3 axis, float radius)
+        {
+            double moved = radius * 0.25d;
+
+            if (hasWindTerrain && Vector3D.DistanceSquared(position, windTerrainAt) < moved * moved)
+            {
+                return true;
+            }
+
+            Vector3 east = Vector3.Cross(axis, up);
+            if (east.LengthSquared() < 1e-6f) return false;
+
+            east = Vector3.Normalize(east);
+            Vector3 north = Vector3.Normalize(Vector3.Cross(up, east));
+
+            MyPlanet entity = planet.Entity;
+            Vector3D centre = entity.PositionComp.GetPosition();
+
+            // The site's own ground height, which every sample is measured against. Taken here rather
+            // than reused from groundSurfaceRadius because that is the surface under the *grid*, and
+            // a grid at altitude still wants the ring measured against the ground beneath it.
+            Vector3D under = entity.GetClosestSurfacePointGlobal(ref position);
+            double siteRadius = (under - centre).Length();
+
+            for (int ring = 0; ring < WindTerrain.Radii; ring++)
+            {
+                double distance = ring == 0 ? radius * 0.5d : radius;
+
+                for (int bearing = 0; bearing < WindTerrain.Bearings; bearing++)
+                {
+                    Vector3 offset = WindTerrain.BearingDirection(bearing, north, east);
+                    Vector3D at = position + ((Vector3D)offset * distance);
+
+                    // Back onto the sphere before asking, or the far samples of a large ring sit
+                    // below the surface simply from the tangent plane falling away from it.
+                    Vector3D radial = at - centre;
+                    double length = radial.Length();
+                    if (length <= 0d) continue;
+
+                    at = centre + (radial / length * siteRadius);
+
+                    Vector3D surface = entity.GetClosestSurfacePointGlobal(ref at);
+                    windTerrain[WindTerrain.Index(ring, bearing)] =
+                        (float)((surface - centre).Length() - siteRadius);
+                }
+            }
+
+            windTerrainAt = position;
+            hasWindTerrain = true;
+            return true;
+        }
+
+        /// <summary>Metres of line drawn per metre per second of relative wind.</summary>
+        private const double WindVectorScale = 0.6d;
+
+        /// <summary>
+        /// The relative wind this grid is flying through, drawn from the grid, when
+        /// <see cref="Settings.DebugWindRaycast"/> is on.
+        ///
+        /// It is the *relative* wind rather than the field's, which is the whole reason this is a
+        /// separate drawing from the wind map: a ship at speed makes most of its own weather, and
+        /// what heats the leading face is the difference between the two. Parked beside a map arrow
+        /// the two agree; flying, they should not.
+        ///
+        /// Coloured on the friction threshold, since that is the number this vector decides: green
+        /// below it, red once the grid is fast enough through the air for the leading face to start
+        /// heating.
+        /// </summary>
+        private static void DrawWindVector(ref Vector3D position, ref Vector3 relative, float speed)
+        {
+            if (!Settings.Instance.DebugWindRaycast) return;
+            if (MyAPIGateway.Utilities == null || MyAPIGateway.Utilities.IsDedicated) return;
+            if (speed <= 0f) return;
+
+            Vector4 colour = (speed > Settings.Instance.FrictionAtSpeedsAbove
+                ? new Color(235, 70, 55)
+                : new Color(90, 220, 120)).ToVector4();
+
+            MySimpleObjectDraw.DrawLine(
+                position,
+                position + ((Vector3D)relative * WindVectorScale),
+                MyStringId.GetOrCompute("Square"),
+                ref colour,
+                0.15f);
         }
 
         /// <summary>
