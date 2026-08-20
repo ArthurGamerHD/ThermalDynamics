@@ -437,6 +437,32 @@ namespace Thermodynamics.Sim
                     return 0;
                 }
 
+                case "smallgrids":
+                {
+                    int fleetGrids = OptionInt(args, "--grids", 200);
+                    int fleetSteps = ticks > 0 ? ticks : 40;
+                    string smallOut = csvDirectory ?? "out";
+
+                    Console.WriteLine();
+                    Console.WriteLine("== small grids, " + fleetGrids.ToString("n0") + " of each ==");
+                    Console.WriteLine("  A fleet swept from one block a grid upwards, on a planet"
+                        + " surface, through the host's entry point.");
+                    Console.WriteLine("  What one grid costs before any of its blocks do.");
+                    Console.WriteLine();
+
+                    List<SmallGridLab.Row> smallRows = SmallGridLab.Run(fleetGrids,
+                        SmallGridLab.DefaultSizes, fleetSteps,
+                        message => Console.Error.WriteLine("  " + message));
+
+                    Console.WriteLine(SmallGridLab.Table(smallRows));
+
+                    Directory.CreateDirectory(smallOut);
+                    string smallPath = Path.Combine(smallOut, "smallgrids.csv");
+                    File.WriteAllText(smallPath, SmallGridLab.Csv(smallRows));
+                    Console.WriteLine("csv -> " + smallPath);
+                    return 0;
+                }
+
                 case "steppath":
                 {
                     List<int> ladder = new List<int>();
@@ -584,6 +610,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  bench report            full performance report; --baseline <csv> to compare");
             Console.WriteLine("  bench spike --size N    one block placed, split by stage");
             Console.WriteLine("  bench steppath          a step at the solver, against a step through the host");
+            Console.WriteLine("  bench smallgrids        what one grid costs before any of its blocks do");
             Console.WriteLine("  bench pace  --size N    does slowing sim and raising transfer save anything");
             Console.WriteLine("  bench reach --length N  how fast heat crosses a grid, against what it costs");
             Console.WriteLine("  bench profiles          the named profiles, measured side by side");
