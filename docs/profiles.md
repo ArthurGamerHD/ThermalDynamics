@@ -1,5 +1,29 @@
 # Balance profiles
 
+Five presets, in the shape a graphics menu uses: a ladder from *everything on, cost ignored* down
+to *cheap and quick*, with the pace of heat as a second axis crossing it.
+
+| Profile | Integration | Pace | For |
+| --- | --- | --- | --- |
+| `simulation` | 64 substeps, no cap, no budget | tuned (225) | The reference. What the equations say, whatever it costs. |
+| `optimized` | 6 / 6, budgeted | tuned (225) | Simulation's answer with every dial at its measured sweet spot. |
+| `simlite` | 3 / 3, tighter budget, no self-shadowing | tuned (225) | Realistic and knowingly approximate, for a crowded server. |
+| `responsive` | as simulation | fast (3600) | Simulation, quick enough to watch. |
+| `arcade` | as optimized | fast (3600) | Responsive's pace at optimized's price. |
+
+Two axes, and every profile is a point on both. `simulation`, `optimized` and `simlite` share a
+pace and descend in accuracy; `responsive` and `arcade` are `simulation` and `optimized` with the
+clock run sixteen times faster.
+
+**A profile is the whole world, not a patch on it.** Applying one returns every setting it does not
+speak for to the shipped value first, so applying the same profile twice with tinkering in between
+lands in the same place both times. That is also why the settings menu has no reset button: a
+profile *is* the reset.
+
+`ProfileTests` holds the ladder to account — each fast profile must carry heat further than the one
+it is built from, and `optimized` must reach within a tenth of `simulation`, since it is meant to be
+the same physics tuned rather than different physics.
+
 Where [balance.md](balance.md) asks whether a block is worth building, this asks whether a *world
 configuration* is worth running. Three commands:
 

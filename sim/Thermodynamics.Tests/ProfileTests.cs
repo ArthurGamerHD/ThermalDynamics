@@ -154,10 +154,22 @@ namespace Thermodynamics.Tests
                     + seconds + " s, at " + row.WorkPerRealSecond.ToString("n0") + " work/s.");
             }
 
-            Assert.True(reached[ThermalProfiles.Responsive] > reached[ThermalProfiles.Default],
-                "responsive should outrun default");
-            Assert.True(reached[ThermalProfiles.Arcade] > reached[ThermalProfiles.Responsive],
-                "arcade should outrun responsive");
+            // The ladder has two axes, and this is the pace one: responsive and arcade run the
+            // clock fast, the other three run it at the tuned pace. Both fast profiles must carry
+            // heat further in the same wall time than either of the profiles they are built from.
+            Assert.True(reached[ThermalProfiles.Responsive] > reached[ThermalProfiles.Simulation],
+                "responsive is simulation with the clock run fast, so it must outrun it");
+            Assert.True(reached[ThermalProfiles.Arcade] > reached[ThermalProfiles.Optimized],
+                "arcade is optimized with the clock run fast, so it must outrun it");
+
+            // And the accuracy axis: optimized is simulation with the cost dials tuned, not a
+            // different physics, so heat must travel about as far under both. Ten per cent is the
+            // room the substep cap is allowed to cost.
+            float ratio = reached[ThermalProfiles.Optimized]
+                / (float)Math.Max(1, reached[ThermalProfiles.Simulation]);
+
+            Assert.True(ratio > 0.9f && ratio < 1.1f,
+                "optimized should reach about as far as simulation, was " + ratio.ToString("n2"));
         }
 
         /// <summary>

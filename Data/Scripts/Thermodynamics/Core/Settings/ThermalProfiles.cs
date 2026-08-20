@@ -25,14 +25,22 @@ namespace Thermodynamics.Core
     public static class ThermalProfiles
     {
         public const string Simulation = "simulation";
-        public const string Default = "default";
+        public const string Optimized = "optimized";
+        public const string Simlite = "simlite";
         public const string Responsive = "responsive";
         public const string Arcade = "arcade";
-        public const string Minimal = "minimal";
 
+        /// <summary>
+        /// The presets, most faithful first.
+        ///
+        /// A ladder rather than five unrelated tunings, on two axes: how faithfully the simulation
+        /// is integrated, and how fast heat is made to move. Simulation, optimized and simlite
+        /// share the tuned pace and descend in accuracy; responsive and arcade are simulation and
+        /// optimized with the pace raised.
+        /// </summary>
         public static readonly string[] Names =
         {
-            Simulation, Default, Responsive, Arcade, Minimal
+            Simulation, Optimized, Simlite, Responsive, Arcade
         };
 
         /// <summary>One-line summary of a profile, for a settings menu or chat command.</summary>
@@ -41,15 +49,15 @@ namespace Thermodynamics.Core
             switch (Normalise(name))
             {
                 case Simulation:
-                    return "Accuracy first. Never clamps, heat moves at a realistic pace, costs the most.";
-                case Default:
-                    return "The shipped balance. Heat is slow enough to plan around and cheap enough to ignore.";
+                    return "Every mechanism, integrated as finely as it asks for. Costs the most, and is what the others are measured against.";
+                case Optimized:
+                    return "The same simulation with every performance dial at its measured sweet spot. Nearly the accuracy, a third of the cost.";
+                case Simlite:
+                    return "Realistic and knowingly approximate. Trades the shape of a curve for frames on a crowded server.";
                 case Responsive:
-                    return "Heat you can watch move, about four times the pace of default, for the same cost.";
+                    return "Simulation, with heat moving sixteen times faster. Accurate, and quick enough to watch.";
                 case Arcade:
-                    return "Fast, cheap and approximate. Heat rushes; the curve on the way is not to be trusted.";
-                case Minimal:
-                    return "For a crowded server. Still quicker than default, at half its cost.";
+                    return "Optimized, with heat moving sixteen times faster. The cheap one you can see working.";
                 default:
                     return "";
             }
@@ -85,69 +93,86 @@ namespace Thermodynamics.Core
             switch (Normalise(name))
             {
                 case Simulation:
-                    // Enough substeps that the stability estimate is never refused, so no clamp
-                    // binds and the curve between two temperatures is fully resolved.
+                    // Accuracy first, cost last. Substeps are never refused, no block has its
+                    // capacity floored and no step is shortened to fit a budget, so what comes out
+                    // is what the equations say. Every other profile is measured against this one.
                     settings.Frequency = 8;
                     settings.SimulationSpeed = 1f;
                     settings.HeatTimeScale = 225f;
                     settings.MaxSubsteps = 64;
+                    settings.MaxSubstepsPerBlock = 0;
+                    settings.MaxElementVisitsPerStep = 0;
                     settings.ClampConductionOvershoot = true;
                     settings.ClampEnvironmentOvershoot = true;
+                    settings.SolarSelfShadowing = true;
+                    settings.EnableRoomAir = true;
                     break;
 
-                case Default:
+                case Optimized:
+                    // Simulation's answer at the price the field tuning found: the per-block cap
+                    // and the substep ceiling moved together to six, which resolves nine tenths of
+                    // what the cap was flooring for about a third of simulation's cost. Same
+                    // mechanisms, same pace, same settling temperatures — see field-tuning.md.
                     settings.Frequency = 4;
                     settings.SimulationSpeed = 1f;
                     settings.HeatTimeScale = 225f;
-                    settings.MaxSubsteps = 16;
+                    settings.MaxSubsteps = 6;
+                    settings.MaxSubstepsPerBlock = 6;
+                    settings.MaxElementVisitsPerStep = 1000000;
                     settings.ClampConductionOvershoot = true;
                     settings.ClampEnvironmentOvershoot = true;
+                    settings.SolarSelfShadowing = true;
+                    settings.EnableRoomAir = true;
+                    break;
+
+                case Simlite:
+                    // Realistic and knowingly approximate. Every mechanism still runs; the
+                    // integrator is given less to work with, and self-shadowing — which walks the
+                    // grid — is dropped. Three substeps finds where heat settles but not the shape
+                    // of the curve on the way, which is exactly the trade being made.
+                    settings.Frequency = 4;
+                    settings.SimulationSpeed = 1f;
+                    settings.HeatTimeScale = 225f;
+                    settings.MaxSubsteps = 3;
+                    settings.MaxSubstepsPerBlock = 3;
+                    settings.MaxElementVisitsPerStep = 400000;
+                    settings.ClampConductionOvershoot = true;
+                    settings.ClampEnvironmentOvershoot = true;
+                    settings.SolarSelfShadowing = false;
+                    settings.EnableRoomAir = true;
                     break;
 
                 case Responsive:
-                    // Sixteen times the transfer of default, with enough substeps to resolve most
-                    // of it without relying on the clamps.
-                    settings.Frequency = 4;
+                    // Simulation with the clock run fast: sixteen times the transfer of the tuned
+                    // pace, and the substeps to resolve it. Heat you can watch move, with the
+                    // curve still decided by the equations rather than by a clamp.
+                    settings.Frequency = 8;
                     settings.SimulationSpeed = 1f;
                     settings.HeatTimeScale = 3600f;
-                    settings.MaxSubsteps = 8;
+                    settings.MaxSubsteps = 64;
+                    settings.MaxSubstepsPerBlock = 0;
+                    settings.MaxElementVisitsPerStep = 0;
                     settings.ClampConductionOvershoot = true;
                     settings.ClampEnvironmentOvershoot = true;
+                    settings.SolarSelfShadowing = true;
+                    settings.EnableRoomAir = true;
                     break;
 
                 case Arcade:
-                    // One substep, always clamped, with transfer raised until the clamp alone
-                    // decides how much heat moves — the most a single substep can carry, and so the
-                    // most responsive setting per unit of cost.
-                    //
-                    // Capped at 20,000: beyond roughly that the environment terms are no longer
-                    // recoverable by the clamps and blocks are driven to the ambient floor. See
-                    // docs/configuration.md for the measurements.
-                    settings.Frequency = 6;
+                    // Responsive's pace at optimized's price, which is what most people mean by
+                    // wanting to see it work without paying for it.
+                    settings.Frequency = 4;
                     settings.SimulationSpeed = 1f;
-                    settings.HeatTimeScale = 20000f;
-                    settings.MaxSubsteps = 1;
+                    settings.HeatTimeScale = 3600f;
+                    settings.MaxSubsteps = 6;
+                    settings.MaxSubstepsPerBlock = 6;
+                    settings.MaxElementVisitsPerStep = 1000000;
                     settings.ClampConductionOvershoot = true;
                     settings.ClampEnvironmentOvershoot = true;
+                    settings.SolarSelfShadowing = true;
+                    settings.EnableRoomAir = true;
                     break;
 
-                case Minimal:
-                    // The arcade approach at a third of the rate, with the two most expensive
-                    // mechanisms disabled: room air couples every surface bounding a compartment,
-                    // and self-shadowing walks the grid.
-                    //
-                    // Transfer scales down with the rate. Stability depends on substep length times
-                    // stiffness, and a third of the step rate makes each substep three times
-                    // longer; arcade's 20,000 at Frequency 2 drives blocks to the ambient floor.
-                    settings.Frequency = 2;
-                    settings.SimulationSpeed = 1f;
-                    settings.HeatTimeScale = 6000f;
-                    settings.MaxSubsteps = 1;
-                    settings.ClampConductionOvershoot = true;
-                    settings.ClampEnvironmentOvershoot = true;
-                    settings.EnableRoomAir = false;
-                    settings.SolarSelfShadowing = false;
-                    break;
 
                 default:
                     return false;
