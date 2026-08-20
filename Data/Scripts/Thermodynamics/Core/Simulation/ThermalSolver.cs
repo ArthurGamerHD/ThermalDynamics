@@ -399,7 +399,7 @@ namespace Thermodynamics.Core
         /// <see cref="LastSubsteps"/> reports what was granted, and so what the step cost; this
         /// reports what was demanded, and keeps moving after the budget has bound. Scaled to a
         /// full step because the estimate is proportional to step length: measured on a step
-        /// already shortened to fit <c>MaxLinkVisitsPerStep</c>, it would duplicate the granted
+        /// already shortened to fit <c>MaxElementVisitsPerStep</c>, it would duplicate the granted
         /// figure.
         /// </summary>
         public float LastRequiredSubsteps { get; private set; }

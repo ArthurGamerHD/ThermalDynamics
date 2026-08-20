@@ -25,7 +25,7 @@ namespace Thermodynamics.Tests
             settings.EnableFriction = false;
             settings.EnableDamage = false;
             settings.MaxSubsteps = 4096;
-            settings.MaxLinkVisitsPerStep = 0;
+            settings.MaxElementVisitsPerStep = 0;
             return settings.Derive();
         }
 
@@ -460,7 +460,7 @@ namespace Thermodynamics.Tests
             settings.EnableDamage = false;
             settings.MaxSubsteps = 1;                // one substep, so the whole second is one h
             settings.MaxSubstepsPerBlock = 0;
-            settings.MaxLinkVisitsPerStep = 0;
+            settings.MaxElementVisitsPerStep = 0;
             settings.Derive();
 
             Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();

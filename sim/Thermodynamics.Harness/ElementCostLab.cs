@@ -12,7 +12,7 @@ namespace Thermodynamics.Harness
     /// What a substep costs, split into what it spends per node, per conduction link and per
     /// exposed face.
     ///
-    /// The step budget bounds a step by <c>MaxLinkVisitsPerStep</c> — substeps times links — while
+    /// The step budget bounds a step by <c>MaxElementVisitsPerStep</c> — substeps times links — while
     /// a substep also runs the environment pass, which is per node and scales with how much of
     /// that node is exposed. The budget cannot see any of that, so two grids with the same link
     /// count and different shapes are granted the same budget for very different work. This lab
@@ -195,7 +195,7 @@ namespace Thermodynamics.Harness
                 // The measurement is cost per substep, so nothing may refuse or shorten one.
                 MaxSubsteps = 4096,
                 MaxSubstepsPerBlock = 0,
-                MaxLinkVisitsPerStep = 0,
+                MaxElementVisitsPerStep = 0,
 
                 EnableEnvironment = environment,
                 EnableRadiation = environment,

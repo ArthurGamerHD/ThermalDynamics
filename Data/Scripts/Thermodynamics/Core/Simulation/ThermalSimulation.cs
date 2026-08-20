@@ -152,42 +152,62 @@ namespace Thermodynamics.Core
         public double SimulatedSecondsRun { get; private set; }
 
         /// <summary>
-        /// Substeps a step is currently allowed, from <c>MaxLinkVisitsPerStep</c> and the size of
-        /// the conduction graph. <see cref="int.MaxValue"/> when the bound is switched off.
+        /// What one substep over this grid costs, in the units
+        /// <see cref="ThermalSettings.MaxElementVisitsPerStep"/> is expressed in: its links, plus
+        /// its nodes weighted by what a node is worth.
+        ///
+        /// Nodes are counted because a substep runs the environment pass once per node, which the
+        /// old link-only count could not see — see [element-cost.md](../../../../docs/element-cost.md).
+        /// Exposed faces are deliberately not counted: measured at a tenth to a half of a link
+        /// each, they are inside the noise of the two terms that are here.
+        /// </summary>
+        public long SubstepCost
+        {
+            get
+            {
+                return solver.LinkCount
+                    + ((long)ThermalSettings.NodeCostInLinks * solver.Nodes.Count);
+            }
+        }
+
+        /// <summary>
+        /// Substeps a step is currently allowed, from <c>MaxElementVisitsPerStep</c> and what one
+        /// substep over this grid costs. <see cref="int.MaxValue"/> when the bound is switched off.
         /// </summary>
         public int SubstepBudget
         {
             get
             {
-                int budgetVisits = settings.MaxLinkVisitsPerStep;
+                int budgetVisits = settings.MaxElementVisitsPerStep;
                 if (budgetVisits <= 0) return int.MaxValue;
 
-                int links = solver.LinkCount;
-                if (links <= 0) return int.MaxValue;
+                long cost = SubstepCost;
+                if (cost <= 0) return int.MaxValue;
 
-                int budget = budgetVisits / links;
-                return budget < 1 ? 1 : budget;
+                long budget = budgetVisits / cost;
+                if (budget < 1) return 1;
+                return budget > int.MaxValue ? int.MaxValue : (int)budget;
             }
         }
 
         /// <summary>
-        /// Longest step this grid can afford in simulated seconds, from the link visits a step is
-        /// allowed and the grid's current stiffness. Returns the full step whenever it fits.
+        /// Longest step this grid can afford in simulated seconds, from the element visits a step
+        /// is allowed and the grid's current stiffness. Returns the full step whenever it fits.
         ///
         /// Public so a benchmark can measure the bounded cost rather than the unbounded one; the
         /// two diverge on exactly the grids the budget exists for.
         /// </summary>
         public float AffordableStepSeconds(float seconds)
         {
-            int budgetVisits = settings.MaxLinkVisitsPerStep;
+            int budgetVisits = settings.MaxElementVisitsPerStep;
             if (budgetVisits <= 0) return seconds;
 
-            int links = solver.LinkCount;
-            if (links <= 0) return seconds;
+            long cost = SubstepCost;
+            if (cost <= 0) return seconds;
 
             // At least one substep whatever the grid size: a step that cannot afford a single
-            // pass over its links would not advance at all.
-            int substepBudget = budgetVisits / links;
+            // pass over its elements would not advance at all.
+            long substepBudget = budgetVisits / cost;
             if (substepBudget < 1) substepBudget = 1;
 
             float required = solver.RequiredSubsteps(seconds);

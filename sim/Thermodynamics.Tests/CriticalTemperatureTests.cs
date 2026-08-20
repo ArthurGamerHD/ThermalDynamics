@@ -33,7 +33,7 @@ namespace Thermodynamics.Tests
             ThermalSettings settings = new ThermalSettings();
             settings.MaxSubstepsPerBlock = cap;
             settings.MaxSubsteps = 4096;
-            settings.MaxLinkVisitsPerStep = 0;
+            settings.MaxElementVisitsPerStep = 0;
             settings.EnableDamage = true;
             return settings.Derive();
         }

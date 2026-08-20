@@ -32,7 +32,7 @@ namespace Thermodynamics.Tests
             Assert.True(ThermalProfiles.Apply(settings, profile), "unknown profile " + profile);
 
             // The work budget shortens steps on its own; a profile has to stand up without it.
-            settings.MaxLinkVisitsPerStep = 0;
+            settings.MaxElementVisitsPerStep = 0;
             settings.Derive();
 
             GridBuilder builder = GridBuilder.Large();
@@ -144,7 +144,7 @@ namespace Thermodynamics.Tests
 
                 ThermalSettings settings = new ThermalSettings();
                 ThermalProfiles.Apply(settings, profile);
-                settings.MaxLinkVisitsPerStep = 0;
+                settings.MaxElementVisitsPerStep = 0;
                 settings.Derive();
 
                 LoadBenchmarks.ReachRow row = LoadBenchmarks.Reach(profile, settings, seconds, length);
@@ -181,7 +181,7 @@ namespace Thermodynamics.Tests
             settings.Frequency = 4;
             settings.HeatTimeScale = 100000f;
             settings.MaxSubsteps = 1;
-            settings.MaxLinkVisitsPerStep = 0;
+            settings.MaxElementVisitsPerStep = 0;
             settings.EnableEnvironment = false;
             settings.EnableRadiation = false;
             settings.EnableConvection = false;

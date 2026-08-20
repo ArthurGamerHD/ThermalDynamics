@@ -143,7 +143,17 @@ namespace Thermodynamics
         /// smoothness on large grids by advancing less simulated time rather than by coarsening the
         /// substeps, so accuracy is unaffected.
         /// </summary>
-        [ProtoMember(35)] public int MaxLinkVisitsPerStep = 1000000;
+        /// <summary>
+        /// Most element visits one solver step may make — substeps times its links plus its nodes
+        /// weighted by what a node costs. Zero removes the bound.
+        ///
+        /// This was <c>MaxLinkVisitsPerStep</c> and counted links alone, which could not see the
+        /// environment pass a substep runs per node. A world's config written before the rename
+        /// has no element for this field and takes the default, deliberately: the old number
+        /// meant something else, so carrying it over would import a value into the wrong unit.
+        /// See [element-cost.md](../../../docs/element-cost.md).
+        /// </summary>
+        [ProtoMember(35)] public int MaxElementVisitsPerStep = 1000000;
 
         /// <summary>
         /// Most substeps one solver step may divide itself into. See the core setting of the same
@@ -255,7 +265,7 @@ namespace Thermodynamics
             if (Frequency < 1) Frequency = 1;
             if (SimulationSpeed <= 0f) SimulationSpeed = 1f;
             if (HeatTimeScale <= 0f) HeatTimeScale = 1f;
-            if (MaxLinkVisitsPerStep < 0) MaxLinkVisitsPerStep = 0;
+            if (MaxElementVisitsPerStep < 0) MaxElementVisitsPerStep = 0;
             if (MaxSubsteps < 1) MaxSubsteps = 1;
             if (MaxSubstepsPerBlock < 0) MaxSubstepsPerBlock = 0;
             if (TelemetrySampleStride < 1) TelemetrySampleStride = 1;
@@ -356,7 +366,7 @@ namespace Thermodynamics
             core.Frequency = Frequency;
             core.SimulationSpeed = SimulationSpeed;
             core.HeatTimeScale = HeatTimeScale;
-            core.MaxLinkVisitsPerStep = MaxLinkVisitsPerStep;
+            core.MaxElementVisitsPerStep = MaxElementVisitsPerStep;
             core.MaxSubsteps = MaxSubsteps;
             core.MaxSubstepsPerBlock = MaxSubstepsPerBlock;
 
@@ -400,7 +410,7 @@ namespace Thermodynamics
                 "EnableFriction", "EnableDamage", "EnableCoolantLoops", "EnableRoomAir",
                 "EnableHeatPumps",
                 "ClampConductionOvershoot", "ClampEnvironmentOvershoot", "DamageIsPerSecond",
-                "Frequency", "SimulationSpeed", "HeatTimeScale", "MaxLinkVisitsPerStep",
+                "Frequency", "SimulationSpeed", "HeatTimeScale", "MaxElementVisitsPerStep",
                 "MaxSubsteps", "MaxSubstepsPerBlock",
                 "VacuumTemperature", "SolarEnergy", "FrictionAtSpeedsAbove", "FrictionScale",
                 "RoomConvectionCoefficient", "RoomAirDensity", "SolarOcclusionInterval",
@@ -443,7 +453,7 @@ namespace Thermodynamics
                 case "Frequency": return Frequency;
                 case "SimulationSpeed": return SimulationSpeed;
                 case "HeatTimeScale": return HeatTimeScale;
-                case "MaxLinkVisitsPerStep": return MaxLinkVisitsPerStep;
+                case "MaxElementVisitsPerStep": return MaxElementVisitsPerStep;
                 case "MaxSubsteps": return MaxSubsteps;
                 case "MaxSubstepsPerBlock": return MaxSubstepsPerBlock;
                 case "VacuumTemperature": return VacuumTemperature;
@@ -503,7 +513,7 @@ namespace Thermodynamics
                 case "Frequency": Frequency = (int)value; return true;
                 case "SimulationSpeed": SimulationSpeed = value; return true;
                 case "HeatTimeScale": HeatTimeScale = value; return true;
-                case "MaxLinkVisitsPerStep": MaxLinkVisitsPerStep = (int)value; return true;
+                case "MaxElementVisitsPerStep": MaxElementVisitsPerStep = (int)value; return true;
                 case "MaxSubsteps": MaxSubsteps = (int)value; return true;
                 case "MaxSubstepsPerBlock": MaxSubstepsPerBlock = (int)value; return true;
                 case "VacuumTemperature": VacuumTemperature = value; return true;
@@ -605,6 +615,18 @@ namespace Thermodynamics
                     reader.Close();
 
                     Settings loaded = MyAPIGateway.Utilities.SerializeFromXML<Settings>(text);
+
+                    // Renamed when the step budget stopped counting links alone. The old element
+                    // deserialises into nothing, and that is intended — the two settings are in
+                    // different units — but a world that had tuned it deserves to be told rather
+                    // than left wondering why its value stopped applying.
+                    if (text.IndexOf("MaxLinkVisitsPerStep", StringComparison.Ordinal) >= 0)
+                    {
+                        MyLog.Default.Info("[" + Name + "] MaxLinkVisitsPerStep is now"
+                            + " MaxElementVisitsPerStep and counts nodes as well as links;"
+                            + " the old value was not carried over. Default "
+                            + settings.MaxElementVisitsPerStep + " is in force.");
+                    }
 
                     if (loaded.Version != CurrentVersion)
                     {

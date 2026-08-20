@@ -42,7 +42,7 @@ namespace Thermodynamics.Tests
             // The two bounds that would otherwise hide what the floor does: one refuses the
             // substeps the estimate asks for, the other shortens the step instead of paying.
             settings.MaxSubsteps = 4096;
-            settings.MaxLinkVisitsPerStep = 0;
+            settings.MaxElementVisitsPerStep = 0;
             return settings.Derive();
         }
 

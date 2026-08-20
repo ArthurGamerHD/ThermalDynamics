@@ -337,7 +337,7 @@ namespace Thermodynamics.Sim
 
                         ThermalSettings forStability = new ThermalSettings();
                         ThermalProfiles.Apply(forStability, profile);
-                        forStability.MaxLinkVisitsPerStep = 0;
+                        forStability.MaxElementVisitsPerStep = 0;
                         forStability.Derive();
                         stable.Add(LoadBenchmarks.Stability(profile, forStability, seconds));
                     }

@@ -232,13 +232,33 @@ replaces the characterisation test, and
 `ASealingNeighbourStillBuriesTheFaceWhateverItsMounts` pins the ordering argument the fix rests
 on — a solid hull cannot be opened up by this change.
 
-**The step budget counts link visits but not node visits.** `MaxLinkVisitsPerStep` bounds a step
-by substeps times links, and the environment pass is per node per substep — radiation, convection,
-solar with six face weights each — which the budget cannot see. A grid with few links per node
-therefore gets a more generous budget than one with many, for the same real cost. Measured on a
-field grid with 2.14 links per node: 991,000 budgeted link visits cost 85–150 ms against the
-~17 ms the link count alone predicts. The unit should be links plus nodes, which also means the
-default wants recalibrating against a game runtime rather than against the harness's .NET 9.
+**The step budget counted link visits but not node visits — fixed, and measured first.**
+`MaxElementVisitsPerStep`, formerly `MaxLinkVisitsPerStep`, bounds a step by substeps times links,
+while the environment pass is per node per substep — radiation, convection, solar with six face
+weights each — which the budget could not see. A grid with few links per node therefore got a more
+generous allowance than one with many, for the same real cost.
+
+The weight was measured rather than guessed. Shapes spanning zero to three links per node, each
+timed with the environment off and on so exposure could be separated from link count by
+differencing: a node is worth **2.8 links at four thousand nodes, 3.3 at a hundred thousand and 7.5
+at a quarter of a million**, and an exposed face between a tenth and a half of a link. Per-link cost
+is flat across a hundredfold size range because links stream; per-node cost triples because the
+node state stops fitting in cache. See [element-cost.md](element-cost.md).
+
+The budget now counts `links + 4 × nodes` and ignores faces, four being the low end of the range
+over the sizes where the bound binds at all. The default value is unchanged at 1,000,000 and the
+unit change alone tightens it: at the 18.35 ns per weighted element a field dump measured, that
+allowance is **18.3 ms of solver work per step**, which is what this setting's documentation always
+claimed and had drifted a long way from. On the three 42,051-block ships a field report measured at
+11 substeps and 85–150 ms a tick, the same number now buys about four substeps.
+
+What this retires is the claim that only grids past a hundred thousand blocks reach the default. A
+step's cost is size times stiffness: `TheShippedAllowanceBindsOnAStiffMidSizeGrid` pins an
+8,904-node rig whose substep costs 56,395 element visits, which the allowance shortens to about
+three quarters of real time.
+
+A world whose config predates the rename takes the new default rather than importing its old
+number, which would be a value in the wrong unit; the load path logs when it drops one.
 
 **A grid holds about 1.8 KB a block, against a design budget of ~110 bytes a node**
 ([scale-design.md §6](scale-design.md#6-data-structures)). Measured at 126,731 blocks: 213 MB

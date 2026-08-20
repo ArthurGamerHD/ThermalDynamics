@@ -211,11 +211,17 @@ namespace Thermodynamics.Core
         public int MaxSubsteps = 16;
 
         /// <summary>
-        /// Most link visits one solver step may make — substeps times links — before the step is
-        /// shortened to fit. Zero removes the bound. Trades simulation rate for frame smoothness.
+        /// Most element visits one solver step may make — substeps times the elements a substep
+        /// touches — before the step is shortened to fit. Zero removes the bound. Trades
+        /// simulation rate for frame smoothness.
         ///
-        /// A step's cost is its substep count times its link count, and the substep count is set by
-        /// the stiffest node on the grid, which moves as the grid heats. Unbounded, that makes an
+        /// An element visit is one link, or one node weighted by <see cref="NodeCostInLinks"/>: a
+        /// substep walks both, and a node's visit costs several times a link's. This was counted
+        /// in link visits alone until it was measured, which under-charged a ship-shaped grid by
+        /// two to four times and under-charged a sparsely linked one by more.
+        ///
+        /// A step's cost is its substep count times that, and the substep count is set by the
+        /// stiffest node on the grid, which moves as the grid heats. Unbounded, that makes an
         /// otherwise steady large grid produce occasional steps several times the median cost.
         ///
         /// A step that would exceed the bound is made shorter rather than coarser. Coarsening the
@@ -223,10 +229,30 @@ namespace Thermodynamics.Core
         /// clamps, losing accuracy. Shortening advances less simulated time at the same accuracy,
         /// so an oversized grid runs at a reduced rate smoothly rather than at full rate in bursts.
         ///
-        /// The default is roughly one 60 fps frame of link visits at the measured cost per visit.
-        /// Grids below about a hundred thousand blocks never reach it.
+        /// The default is unchanged in value and tighter in effect, which is the point: on the
+        /// three 42,051-block ships a field report measured at 11 substeps a step and 85–150 ms a
+        /// tick, the same 1,000,000 now buys about 4 substeps. Grids below about a hundred
+        /// thousand blocks still never reach it.
         /// </summary>
-        public int MaxLinkVisitsPerStep = 1000000;
+        public int MaxElementVisitsPerStep = 1000000;
+
+        /// <summary>
+        /// What one node is worth, in links, when a step's cost is counted.
+        ///
+        /// A substep visits every link once and every node once, and a node's visit is the more
+        /// expensive of the two: the environment pass integrates radiation as a fourth power,
+        /// convection and solar, and above about a hundred thousand blocks the node state stops
+        /// fitting in cache while the link arrays go on streaming. Measured across shapes chosen
+        /// for their link-to-node ratio, a node is worth 2.8 links at four thousand nodes, 3.3 at
+        /// a hundred thousand and 7.5 at a quarter of a million — see
+        /// [element-cost.md](../../../../docs/element-cost.md).
+        ///
+        /// Four is the low end of the range over the sizes where the budget binds at all. A grid
+        /// past a quarter of a million blocks is therefore charged slightly less than it costs,
+        /// which errs towards letting a large grid run rather than throttling it on a machine that
+        /// could have kept up.
+        /// </summary>
+        public const int NodeCostInLinks = 4;
 
         /// <summary>
         /// Most substeps any single block may demand of the whole grid before its heat capacity is
@@ -306,7 +332,7 @@ namespace Thermodynamics.Core
             if (HeatPumpCarnotFraction < 0f) HeatPumpCarnotFraction = 0f;
             if (HeatPumpCarnotFraction > 1f) HeatPumpCarnotFraction = 1f;
             if (HeatPumpMaxCoefficient < 0f) HeatPumpMaxCoefficient = 0f;
-            if (MaxLinkVisitsPerStep < 0) MaxLinkVisitsPerStep = 0;
+            if (MaxElementVisitsPerStep < 0) MaxElementVisitsPerStep = 0;
             if (MaxSubsteps < 1) MaxSubsteps = 1;
             if (MaxSubstepsPerBlock < 0) MaxSubstepsPerBlock = 0;
 

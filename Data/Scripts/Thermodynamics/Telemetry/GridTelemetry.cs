@@ -372,7 +372,7 @@ namespace Thermodynamics
         /// <summary>
         /// Substeps the stability estimate demanded, before the <c>MaxSubsteps</c> cap and before
         /// rounding. <see cref="Substeps"/> is what was granted; a difference means the cap is
-        /// binding, and if <c>MaxLinkVisitsPerStep</c> also binds the step was shortened rather
+        /// binding, and if <c>MaxElementVisitsPerStep</c> also binds the step was shortened rather
         /// than the substeps coarsened.
         /// </summary>
         public readonly RunningStat RequiredSubsteps = new RunningStat();

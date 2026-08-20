@@ -614,7 +614,7 @@ namespace Thermodynamics.Tests
 
             // Tight enough that this grid has to shorten its steps, so the mechanism is exercised
             // rather than merely present.
-            simulation.Settings.MaxLinkVisitsPerStep = simulation.Solver.LinkCount * 2;
+            simulation.Settings.MaxElementVisitsPerStep = simulation.Solver.LinkCount * 2;
             simulation.Settings.Derive();
 
             LoadBenchmarks.SeedSpread(simulation);
@@ -630,13 +630,13 @@ namespace Thermodynamics.Tests
             }
 
             output.WriteLine(simulation.Solver.LinkCount.ToString("n0") + " links, budget "
-                + simulation.Settings.MaxLinkVisitsPerStep.ToString("n0")
+                + simulation.Settings.MaxElementVisitsPerStep.ToString("n0")
                 + " visits/step, worst step made " + worst.ToString("n0")
                 + ". Simulation rate " + (100d * simulation.SimulationRate).ToString("n1") + "%.");
 
-            Assert.True(worst <= simulation.Settings.MaxLinkVisitsPerStep,
+            Assert.True(worst <= simulation.Settings.MaxElementVisitsPerStep,
                 "a step made " + worst + " link visits against a budget of "
-                + simulation.Settings.MaxLinkVisitsPerStep);
+                + simulation.Settings.MaxElementVisitsPerStep);
         }
 
         /// <summary>
@@ -656,7 +656,7 @@ namespace Thermodynamics.Tests
 
             LoadBenchmarks.SeedSpread(simulation);
 
-            simulation.Settings.MaxLinkVisitsPerStep = simulation.Solver.LinkCount;
+            simulation.Settings.MaxElementVisitsPerStep = simulation.Solver.LinkCount;
             simulation.Settings.Derive();
 
             for (int tick = 0; tick < 60; tick++)
@@ -679,8 +679,13 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// A grid small enough not to reach the budget must be untouched by it — same substeps,
-        /// no time skipped, same simulation rate.
+        /// A grid whose steps cost less than its allowance must be untouched by it — same
+        /// substeps, no time skipped, same simulation rate.
+        ///
+        /// The allowance is set here rather than left at the default deliberately. This test is
+        /// about the bound doing nothing when it is not reached, and pinning it to whatever the
+        /// shipped default happens to be would make it a test of the tuning instead — which is
+        /// what it became when the budget started counting nodes.
         /// </summary>
         [Fact]
         public void AGridUnderTheBudgetIsUnaffected()
@@ -689,17 +694,72 @@ namespace Thermodynamics.Tests
             while (simulation.HasPendingWork) simulation.Update(LoadBenchmarks.TickSeconds, Space());
             LoadBenchmarks.SeedSpread(simulation);
 
+            // Comfortably above the stiffest step this rig can ask for.
+            simulation.Settings.MaxElementVisitsPerStep = (int)(simulation.SubstepCost * 200);
+            simulation.Settings.Derive();
+
             for (int tick = 0; tick < 60; tick++)
             {
                 simulation.Update(LoadBenchmarks.TickSeconds, Space());
             }
 
-            output.WriteLine(simulation.Solver.LinkCount.ToString("n0") + " links against the default "
-                + simulation.Settings.MaxLinkVisitsPerStep.ToString("n0")
-                + " visit budget: rate " + (100d * simulation.SimulationRate).ToString("n1") + "%.");
+            output.WriteLine(simulation.Solver.Nodes.Count.ToString("n0") + " nodes, "
+                + simulation.Solver.LinkCount.ToString("n0") + " links, substep cost "
+                + simulation.SubstepCost.ToString("n0") + ", demand "
+                + simulation.Solver.LastRequiredSubsteps.ToString("n2") + ", budget "
+                + simulation.SubstepBudget.ToString("n0") + " against the default "
+                + simulation.Settings.MaxElementVisitsPerStep.ToString("n0")
+                + " visit allowance: rate " + (100d * simulation.SimulationRate).ToString("n1") + "%.");
 
             Assert.Equal(0d, simulation.SimulatedSecondsSkipped, 6);
             Assert.Equal(1d, simulation.SimulationRate, 6);
+        }
+
+        /// <summary>
+        /// What the shipped allowance does to a stiff mid-size grid, recorded because it changed
+        /// and because the change is the point.
+        ///
+        /// Counting links alone, this rig's 20,779 links bought 48 substeps against a demand of
+        /// 23, so the default did nothing. Counting nodes as well, a substep over its 8,904 nodes
+        /// costs 56,395 element visits, the same allowance buys 17, and the step is shortened —
+        /// the grid runs at about three quarters of real time and its tick stops spiking.
+        ///
+        /// That is the budget working, not a regression. What it retires is the claim that only
+        /// grids past a hundred thousand blocks reach the default: a step's cost is its size times
+        /// its stiffness, and a small grid with a strong gradient can reach it too.
+        /// </summary>
+        [Fact]
+        public void TheShippedAllowanceBindsOnAStiffMidSizeGrid()
+        {
+            ThermalSimulation simulation = Build(Small);
+            while (simulation.HasPendingWork) simulation.Update(LoadBenchmarks.TickSeconds, Space());
+            LoadBenchmarks.SeedSpread(simulation);
+
+            // This rig demands about 23 substeps, above the shipped MaxSubsteps of 16, so with
+            // that ceiling in place every step would be clamped whatever the budget did and the
+            // two bounds could not be told apart. Raised, so what follows is the budget's doing.
+            simulation.Settings.MaxSubsteps = 4096;
+            simulation.Settings.Derive();
+
+            for (int tick = 0; tick < 60; tick++)
+            {
+                simulation.Update(LoadBenchmarks.TickSeconds, Space());
+            }
+
+            output.WriteLine("substep cost " + simulation.SubstepCost.ToString("n0")
+                + ", demand " + simulation.Solver.LastRequiredSubsteps.ToString("n2")
+                + ", budget " + simulation.SubstepBudget.ToString("n0")
+                + ", rate " + (100d * simulation.SimulationRate).ToString("n1") + "%.");
+
+            // Nodes are the majority of what this rig's substep costs, which is exactly what the
+            // old count could not see.
+            Assert.True(simulation.SubstepCost > simulation.Solver.LinkCount * 2);
+
+            // Shortened, not clamped: the accuracy of each step is preserved and simulated time
+            // is what gets traded.
+            Assert.False(simulation.Solver.LastStepWasClamped);
+            Assert.True(simulation.SimulationRate < 1d);
+            Assert.True(simulation.SimulationRate > 0.5d);
         }
 
         // ---- wall clock, loosely ------------------------------------------------------------

@@ -28,7 +28,7 @@ with three 42,051-block capital ships in it, running in vacuum with every mechan
 Everything the previous round of work fixed stayed fixed: topology rebuild is 338 ms across the
 whole session, room mapping 289 ms, exposure 97 ms. Against 67.7 s of solver. **There is nothing
 left to fix that is not arithmetic**, and the arithmetic is being throttled: a substep count with
-zero variance is `MaxLinkVisitsPerStep` holding it, and a 35 % simulation rate is the price.
+zero variance is `MaxElementVisitsPerStep` holding it, and a 35 % simulation rate is the price.
 
 So the question is not "why is the solver slow". It is **why does this ship need thirty substeps
 for a quarter-second step**.
@@ -54,7 +54,7 @@ Both settings that look like they control cost cancel out of that:
 * **`HeatTimeScale`** divides every block's heat capacity — `ThermalMass = specificHeat · mass /
   heatTimeScale` — so halving it halves `r_max` and halves the heat advanced per real second in
   exactly the same proportion. No change.
-* **`MaxLinkVisitsPerStep`** shortens the step when it will not fit, which is what these ships are
+* **`MaxElementVisitsPerStep`** shortens the step when it will not fit, which is what these ships are
   living on. It buys smoothness, not throughput: the same work per unit of heat time, delivered
   more evenly and therefore more slowly.
 
@@ -248,7 +248,7 @@ with the cap actually bounding the estimate, the untouched nodes staying untouch
 keeping its real capacity for every readout.
 
 **What it means for the field ship.** 31 substeps down to 4 is not only a fifth of the arithmetic:
-it is below the 11 substeps `MaxLinkVisitsPerStep` was granting, so the budget stops binding and
+it is below the 11 substeps `MaxElementVisitsPerStep` was granting, so the budget stops binding and
 the grid stops being throttled. The ship runs at **full simulation rate at about a third of what
 it now spends running at 35 %** — which is between a threefold and a fifteenfold improvement in
 heat moved per millisecond, depending on which of the two you were unhappy about.
@@ -409,7 +409,7 @@ fleet does not.
 
 Backward Euler on the sparse conductance matrix, solved with preconditioned conjugate gradient over
 CSR adjacency. Unconditionally stable: one step of the whole 0.25 s, no substeps, no
-`MaxSubsteps`, no `ClampConductionOvershoot`, no `MaxLinkVisitsPerStep` shortening the step, and
+`MaxSubsteps`, no `ClampConductionOvershoot`, no `MaxElementVisitsPerStep` shortening the step, and
 `r_max` stops being in the cost model at all. Cost becomes iterations × one pass, and iterations
 depend on how well-conditioned and well-preconditioned the system is rather than on the worst
 block on the ship.

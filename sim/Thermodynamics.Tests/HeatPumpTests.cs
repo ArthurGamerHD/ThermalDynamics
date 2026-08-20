@@ -644,7 +644,7 @@ namespace Thermodynamics.Tests
             settings.EnableDamage = false;
             settings.MaxSubsteps = 64;
             settings.MaxSubstepsPerBlock = 0;
-            settings.MaxLinkVisitsPerStep = 0;
+            settings.MaxElementVisitsPerStep = 0;
             settings.Derive();
 
             ThermalSimulation simulation = builder.BuildSimulation(settings, 300f);

@@ -675,7 +675,7 @@ namespace Thermodynamics
                 Field(sb, "grids below real time", throttled.ToString("n0")
                     + ", slowest at " + (100.0 * worstRate).ToString("n1") + " %");
                 sb.Append("  A grid below real time is too large to simulate at full rate and is\n");
-                sb.Append("  taking shorter steps rather than coarser ones — MaxLinkVisitsPerStep.\n");
+                sb.Append("  taking shorter steps rather than coarser ones — MaxElementVisitsPerStep.\n");
                 sb.Append("  Heat moves more slowly on it; nothing else about it is different.\n");
             }
 
@@ -774,7 +774,7 @@ namespace Thermodynamics
         ///
         /// <para>
         /// Reports demand alongside grant, since the two diverge in two ways —
-        /// <c>MaxSubsteps</c> refuses substeps and <c>MaxLinkVisitsPerStep</c> shortens the step —
+        /// <c>MaxSubsteps</c> refuses substeps and <c>MaxElementVisitsPerStep</c> shortens the step —
         /// and demand keeps moving after both have bound.
         /// </para>
         /// </summary>
@@ -961,7 +961,7 @@ namespace Thermodynamics
                 nodes += p.Nodes;
                 environmentDominated += p.EnvironmentDominatedNodes;
 
-                // Per simulated second rather than per step. MaxLinkVisitsPerStep shortens a step
+                // Per simulated second rather than per step. MaxElementVisitsPerStep shortens a step
                 // it cannot afford, so a throttled grid already takes few substeps and a per-step
                 // measurement shows the cap saving nothing — what it buys is returned as simulated
                 // time rather than as arithmetic. Per simulated second the budget cancels out:

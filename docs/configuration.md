@@ -83,7 +83,7 @@ Each switch removes exactly its own mechanism and its own cost.
 
 ## Solver
 
-`MaxLinkVisitsPerStep` is the one to reach for when a very large grid stutters, and it is worth
+`MaxElementVisitsPerStep` is the one to reach for when a very large grid stutters, and it is worth
 understanding before changing it.
 
 A step's cost is not its length: it is the number of substeps it takes times the number of links
@@ -208,7 +208,7 @@ never engage**, and every step is genuinely short enough for the grid it is inte
 
 It is off by default because it is an approximation, and a mod that models heat should not make
 one on a player's behalf without being asked. On a world with large ships in it, turning it on is
-the single largest thing that can be done for frame time — and unlike `MaxLinkVisitsPerStep`, it
+the single largest thing that can be done for frame time — and unlike `MaxElementVisitsPerStep`, it
 buys the throughput back rather than trading it away: a ship that stops needing more substeps than
 the visit budget allows stops being throttled at all.
 
@@ -331,7 +331,7 @@ result 0.5 % different.
 
 Two things to watch when lowering it. A longer step needs more substeps, so a stiff grid can reach
 `MaxSubsteps` and start clamping — the report's **steps clamped by substep cap** is where that
-shows, and it should stay at zero. And on a grid large enough for `MaxLinkVisitsPerStep` to bind,
+shows, and it should stay at zero. And on a grid large enough for `MaxElementVisitsPerStep` to bind,
 that budget is already shortening steps and is the constraint that matters; lowering `Frequency`
 will not move it much.
 
@@ -340,7 +340,7 @@ will not move it much.
 | `Frequency` | 4 | Solver steps per simulated second. The integration step is `1/Frequency`. Whether lowering it cuts cost depends on the grid — see below. |
 | `SimulationSpeed` | 1 | Simulated seconds per real second, applied by running more steps rather than longer ones. Linear in CPU. |
 | `HeatTimeScale` | 225 | How much faster than real physics heat moves. Divides every heat capacity. |
-| `MaxLinkVisitsPerStep` | 1000000 | Most link visits one step may make — substeps times links — before the step is shortened to fit. 0 removes the bound. See below. |
+| `MaxElementVisitsPerStep` | 1000000 | Most element visits one step may make — substeps times its links plus four times its nodes — before the step is shortened to fit. 0 removes the bound. See below. |
 | `MaxSubstepsPerBlock` | 0 (off) | Most substeps any single block may demand of the whole grid before it is treated as heavier than it is. The cheapest large win there is on a real ship. See below. |
 | `ClampConductionOvershoot` | `true` | Caps each exchange at the energy that equalises the pair. Off reproduces the original unbounded solver. |
 | `DamageIsPerSecond` | `true` | Overheat damage per second of simulated time. Off applies it per step, which makes damage scale with `Frequency`. |
