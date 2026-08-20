@@ -1670,9 +1670,8 @@ namespace Thermodynamics.Core
             plan.Generating = settings.EnableWasteHeat;
             plan.Diagnostics = CollectDiagnostics;
 
-            // The density test is inside the coefficient now, so a vacuum reaches zero on its own.
             plan.Convecting = settings.EnableEnvironment && settings.EnableConvection
-                && env.ConvectionCoefficient > 0f;
+                && env.AtmosphereFactor > 0f && env.ConvectionCoefficient > 0f;
 
             if (plan.Convecting) plan.EnvironmentEnabled = true;
 
@@ -2472,11 +2471,9 @@ namespace Thermodynamics.Core
 
             terms.Radiating = settings.EnableEnvironment && settings.EnableRadiation;
             bool convecting = settings.EnableEnvironment && settings.EnableConvection;
-            // The coefficient already carries the air density: EnvironmentSolver applies
-            // AtmosphereFactor once, where the coefficient is decided. Multiplying again here
-            // would square it, and this estimator sizing the step for a stiffness the transfer
-            // does not have is how a grid pays for substeps it does not need.
-            terms.Convection = convecting ? Environment.ConvectionCoefficient : 0f;
+            terms.Convection = convecting
+                ? Environment.ConvectionCoefficient * Environment.AtmosphereFactor
+                : 0f;
             terms.Exposed = terms.Radiating || convecting;
             return terms;
         }

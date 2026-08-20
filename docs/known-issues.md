@@ -214,32 +214,32 @@ the same discipline as the catalogue: probe under the lock, build outside it, pu
 
 ## Suspected defects
 
-**Convection ran at the full sea-level rate in any atmosphere, however thin — fixed.**
-`EnvironmentSolver` built the coefficient from the planet's figure times wind and weather and
-nothing else, and air density decided only *whether* convection ran, through
-`AtmosphereFactor > 0`. So a hull in the top of an atmosphere convected as hard as one at sea
-level. The field dump that prompted this reported `convection W/m2K 50.0` beside
-`air density 0.0000` at 44 km, which is the defect seen from outside.
+**Convection was reported before the atmosphere blend, not after — fixed, and it was only ever a
+reporting fault.** A field dump showed `convection W/m2K 50.0` beside `air density 0.0000` at
+44 km, which reads as a hull convecting in a vacuum. It was not.
+`EnvironmentState.ConvectionCoefficient` is the planet's figure scaled by wind and weather, and the
+solver blends it by `AtmosphereFactor` at the point of transfer — because the same factor weights
+radiation *down* as it weights convection *up*, so the blend belongs where the two meet
+([thermal-model.md](thermal-model.md#convection)). Everything that reported convection read the
+unblended number.
 
-**The model this breaks is documented, and only half of it was implemented.**
-[thermal-model.md](thermal-model.md#convection) states the two mechanisms as a blend —
-`total = (1 - atmosphereFactor) x radiation + atmosphereFactor x convection` — and the radiation
-half was weighted correctly all along (`plan.RadiationShare = 1 - env.AtmosphereFactor`). The
-convection half carried no weight. In thin air a block therefore got nearly all of its radiation
-*and* all of its convection, which is not a blend but a double count of the same cooling.
+Measured on one 200 kW block, the transfer was correct throughout: convective watts fall 50,000 →
+49,401 → 30,562 → 412 → 0 as density falls 1 → 0.25 → 0.01 → 0.0001 → 0, while radiation rises to
+take over. `EnvironmentState.EffectiveConvectionCoefficient` is now what the telemetry and the
+climate dump report, and `ConvectiveWattsFallWithTheAir` holds the reported figure to the
+behaviour.
 
-Two other places in the code already had it right, which is how the intent was recoverable:
-`StabilityEnvironment` sized the substep estimate from `ConvectionCoefficient * AtmosphereFactor`,
-and `AtmosphereFactor` is documented as the fluid-likeness of the air. The factor is now applied
-once, where the coefficient is decided, so the reported figure, the transfer and the stability
-estimate are the same number; the estimator's second multiplication is gone with it.
-
-`AtmosphereFactor` is `1 - (1 - density)^4`, so this changes almost nothing at sea level — 1.0 at
-density 1, 0.94 at 0.5 — and most of the change is where a hull is barely in the air at all: 0.34
-at a tenth of sea level, 0.04 at a hundredth. Four tests in `ConvectionSolarFrictionTests` were
-confirmed to fail against the old arithmetic, including
-`AThinAtmosphereCoolsABlockSlowerThanAThickOne`, which measures a settled temperature rather than
-reading the field back.
+**Worth recording because the first attempt at this got it wrong.** Reading the coefficient's
+construction alone, it looks as though density never enters convection, and applying the factor
+there is an obvious-looking fix — it is a *second* application, and would have squared the blend:
+0.47 instead of 0.68 at quarter density. The stability estimator's `ConvectionCoefficient *
+AtmosphereFactor` reads like corroboration and is actually the same single application, in the one
+other place that needs it. A settled-temperature test written to catch the imagined defect failed
+against correct code, which is what exposed the mistake: **thinner air does not make a block
+hotter** over most of the range, because thin air is also much colder — 294 K at sea level against
+101 K at a twentieth — and a weak coupling to a cold sink beats a strong coupling to a warm one.
+The same block settles at 321 K at sea level, 241 K at a twentieth, and 553 K only in true vacuum.
+`ASettledTemperatureIsNotMonotonicInAirDensity` pins that so the alarm is not re-derived.
 
 **A face bolted to a block that does not seal was counted as buried — fixed.** Exposure rejected
 any cell face where two mount surfaces met, regardless of what the neighbour was. The ordering is

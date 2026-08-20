@@ -704,7 +704,7 @@ namespace Thermodynamics
             AirDensity.Add(sample.AirDensity);
             AtmosphereFactor.Add(state.AtmosphereFactor);
             WindSpeed.Add(sample.RelativeWindSpeed);
-            ConvectionCoefficient.Add(state.ConvectionCoefficient);
+            ConvectionCoefficient.Add(state.EffectiveConvectionCoefficient);
             EffectiveSolarEnergy.Add(state.SolarEnergy);
         }
 

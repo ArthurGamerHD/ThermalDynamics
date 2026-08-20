@@ -119,17 +119,8 @@ namespace Thermodynamics.Core
             // Humid air removes heat faster than dry air at the same speed, which the wind term
             // alone cannot express: fog barely moves and still carries heat away.
             float windBonus = 1f + (WindConvectionScale * (float)Math.Sqrt(state.WindSpeed));
-
-            // Scaled by how fluid-like the air is, which is the whole reason AtmosphereFactor
-            // exists. Without it convection was all or nothing: any air at all, however thin,
-            // convected at the planet's full sea-level coefficient. A field dump reported
-            // 50 W/(m2 K) at 44 km with the air density reading 0.0000, which is what that looks
-            // like from outside. The stability estimator had always applied the factor, so the
-            // two halves of the model disagreed about the same mechanism.
-            state.ConvectionCoefficient = planet.ConvectionCoefficient
-                * state.AtmosphereFactor
-                * windBonus
-                * Math.Max(0f, weather.ConvectionMultiplier);
+            state.ConvectionCoefficient =
+                planet.ConvectionCoefficient * windBonus * Math.Max(0f, weather.ConvectionMultiplier);
 
             // ---- solar through atmosphere --------------------------------------------------
             state.SolarEnergy = settings.SolarEnergy
