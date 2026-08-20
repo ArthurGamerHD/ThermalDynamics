@@ -14,7 +14,7 @@ to disk unless asked.
 | --- | --- |
 | `/thermal status` | Collection state, sample stride, live grids, block models, bridges. |
 | `/thermal settings` | Every setting and its current value. |
-| `/thermal set <name> <value>` | Changes one setting for this session. Switches take `on`/`off` or `1`/`0`. |
+| `/thermal set <name> <value>` | Changes one setting for this session. Switches take `on`/`off` or `1`/`0`. On a multiplayer client this asks the server, which answers whether it was allowed. |
 | `/thermal save` | Writes the current values to the config file. |
 | `/thermal sync` | Digest of every replicated setting, to compare a client against the server by eye. Run it on both; the strings must match. |
 | `/thermal sync fetch` | Client only: asks the server for the settings again. |
@@ -221,6 +221,23 @@ for the world, exactly what each cap would do to the substep count and how many 
 raise — see [telemetry.md](telemetry.md#substeps). The projection is the same arithmetic the
 setting uses, and `SubstepFloorTests` asserts the two agree, so one baseline dump answers the
 question for that world without running the experiment.
+
+## Changing settings from a client
+
+Every setting except the four presentation switches is world state, owned by the server. A client
+at **space master** or above can change one anyway: the settings menu and `/thermal set` send the
+change to the server as a request, the server checks the asker's promote level and applies it, and
+the result comes back as a chat line. An accepted change then replicates to everyone as part of the
+ordinary settings sync, so the value moving is its own confirmation.
+
+A player below that level is refused, and told so — silence would be indistinguishable from a lost
+packet.
+
+**The request travels on its own channel, not the one the rest of the mod uses.** SENetworkAPI
+registers the game's non-secure message handler, where the sender's id is a field the *sender*
+wrote; its own documentation says not to gate admin actions on it. `SettingsRequests` uses
+`RegisterSecureMessageHandler`, where the transport supplies the sender and a from-the-server flag
+that a client cannot forge. That is the whole reason for the separate channel.
 
 ## Checking a client has the server's settings
 

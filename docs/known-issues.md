@@ -181,10 +181,22 @@ but nothing reconciles them: a client that joins mid-session starts from saved t
 divergence is never corrected. Damage and settings are server authoritative, so the divergence is
 cosmetic, but it is real.
 
-**The settings menu cannot change anything from a multiplayer client.** The Rich HUD menu edits the
-same server-side config the chat commands do, so on a client every simulation control is disabled
-and only the four presentation switches work. Making them editable means replicating settings, and
-nothing is registered on the network channel yet — see the replication entry above.
+**The settings menu could not change anything from a multiplayer client — fixed.** The Rich HUD menu
+edits the same server-side config the chat commands do, so on a client every simulation control was
+disabled and only the four presentation switches worked.
+
+A client at space master or above now asks the server instead: the menu and `/thermal set` both
+route through `SettingsRequests`, the server checks the asker's promote level and applies the
+change, and the answer comes back as a chat line. An accepted change replicates to everyone through
+the ordinary settings sync.
+
+**The request does not travel on the mod's shared network channel, and that is deliberate.**
+SENetworkAPI registers the game's non-secure message handler, so every sender id it reports is a
+field the sender wrote — a modified client can claim to be anyone, and the API's own documentation
+says not to gate admin actions on it. This uses the engine's
+`RegisterSecureMessageHandler` on a channel one above the shared one, where the transport supplies
+the sender identity and a from-the-server flag that cannot be forged. Replies are ignored unless
+that flag is set, so a client cannot fake the server's answer to another client.
 
 **The heat pump's electrical hookup is only checkable in game.** The simulation half is under test
 offline. The half that makes it cost anything — a `MyResourceSinkComponent` attached in code during

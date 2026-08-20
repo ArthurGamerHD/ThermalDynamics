@@ -475,14 +475,33 @@ namespace Thermodynamics
         {
             if (!CanEdit(name)) return;
 
+            // World state travels to the server, which owns it; a client's own switches are set
+            // here. Without this a client's slider would move its local copy and be overwritten by
+            // the next value the server sent, which looks exactly like the control not working.
+            if (SettingsRequests.MustAsk && !Settings.ClientOwned.Contains(name))
+            {
+                SettingsRequests.Send(name, value);
+                return;
+            }
+
             Settings.Instance.SetValue(name, value);
             Settings.Instance.Apply();
         }
 
+        /// <summary>
+        /// Whether this machine may offer a control for a setting at all.
+        ///
+        /// A client owns its presentation switches outright. Everything else is world state, which
+        /// a client can now ask the server to change — so the control is offered when this player
+        /// is permitted to ask. The server checks again on arrival and its answer is the one that
+        /// counts; this only avoids presenting a dial that will be refused.
+        /// </summary>
         private static bool CanEdit(string name)
         {
             if (MyAPIGateway.Session == null || MyAPIGateway.Session.IsServer) return true;
-            return ClientSide.Contains(name);
+            if (ClientSide.Contains(name)) return true;
+
+            return SettingsRequests.MayAsk;
         }
 
         private static string Text(string name, float value, Entry entry)

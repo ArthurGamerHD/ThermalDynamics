@@ -60,6 +60,10 @@ namespace Thermodynamics
 
             ThermalTerminal.Register();
 
+            // Its own channel and the engine's verified sender, because the shared one cannot say
+            // who really sent a packet — see SettingsRequests.
+            SettingsRequests.Register();
+
             // Published from Init so a mod loading after this one still finds it: a late consumer
             // requests the table and it is re-sent.
             ThermalApi.Register();
@@ -89,6 +93,7 @@ namespace Thermodynamics
             ThermalHeatSources.Clear();
             ThermalApi.Unregister();
             ThermalTerminal.Unregister();
+            SettingsRequests.Unregister();
 
             if (_commandRegistered && MyAPIGateway.Utilities != null)
             {
@@ -385,9 +390,13 @@ namespace Thermodynamics
                 return;
             }
 
-            if (!MyAPIGateway.Session.IsServer)
+            // A client owns its own presentation switches and sets them locally; everything else
+            // is world state and goes to the server as a request, which answers whether it was
+            // allowed. The server's own path is unchanged.
+            if (SettingsRequests.MustAsk && !Settings.ClientOwned.Contains(name))
             {
-                Reply("settings are server side; ask an administrator");
+                SettingsRequests.Send(name, value);
+                Reply("asked the server to set " + name);
                 return;
             }
 
