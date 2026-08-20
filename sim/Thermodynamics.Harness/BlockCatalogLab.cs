@@ -6,26 +6,33 @@ using Thermodynamics.Core;
 namespace Thermodynamics.Harness
 {
     /// <summary>
-    /// The definition pass: what <see cref="BlockThermalDerivation"/> makes of every block in the
-    /// game, and which individual blocks differ enough from their type to deserve an entry.
+    /// What <see cref="BlockThermalDerivation"/> makes of every block in the game.
     ///
-    /// Run it with `dotnet run --project Thermodynamics.Sim -- blocks`, and
-    /// `-- blocks --xml` to emit the `Data/Cubes.xml` body it implies.
+    /// The per-type rows are the interesting half: they are what a *modded* block of that type
+    /// falls back to, and what a reader should look at to judge whether a category is sensible.
+    ///
+    /// The deviation rows beneath each are documentation rather than a work list. Every block is
+    /// derived from its own build cost at run time, so a window already gets window properties
+    /// without anyone naming it — these rows say which blocks the type average describes worst,
+    /// which is worth knowing when reading the type row above and when deciding whether a category
+    /// is too broad to mean anything.
     /// </summary>
     public static class BlockCatalogLab
     {
         /// <summary>
-        /// How far a subtype has to sit from its type's fallback before it is worth naming.
+        /// How far a subtype has to sit from its type before the report calls it out.
         ///
-        /// The units differ per property, so each is a *relative* difference against the type
-        /// figure, except the temperatures, which are compared in kelvin because a ratio near
-        /// absolute zero is meaningless. Set so that a window against an armour block is far past
-        /// the line and two armour blocks of different thickness are nowhere near it.
+        /// Set so a window against an armour block is far past the line and two armour blocks of
+        /// different thickness are nowhere near it. Emissivity is compared absolutely rather than
+        /// relatively: it is a 0..1 figure, so 0.15 against 0.20 is a third in relative terms and
+        /// nothing at all in practice.
         /// </summary>
-        public const float RelativeThreshold = 0.25f;
+        public const float ConductivityThreshold = 0.5f;
+        public const float SpecificHeatThreshold = 0.35f;
+        public const float EmissivityThreshold = 0.25f;
 
-        /// <summary>Kelvin of critical-temperature difference worth naming a subtype for.</summary>
-        public const float KelvinThreshold = 120f;
+        /// <summary>Kelvin of critical-temperature difference worth calling out.</summary>
+        public const float KelvinThreshold = 150f;
 
         public class TypeRow
         {
@@ -33,7 +40,7 @@ namespace Thermodynamics.Harness
             public int Subtypes;
             public BlockThermalProperties Properties;
 
-            /// <summary>Subtypes that deviate far enough to earn an entry of their own.</summary>
+            /// <summary>Subtypes this type's average describes worst.</summary>
             public List<OverrideRow> Overrides = new List<OverrideRow>();
 
             /// <summary>The heaviest components of the type, as a readable share string.</summary>
@@ -101,9 +108,9 @@ namespace Thermodynamics.Harness
         {
             List<string> reasons = new List<string>();
 
-            if (Differs(type.Conductivity, own.Conductivity)) reasons.Add("conductivity");
-            if (Differs(type.SpecificHeat, own.SpecificHeat)) reasons.Add("specific heat");
-            if (Differs(type.Emissivity, own.Emissivity)) reasons.Add("emissivity");
+            if (Differs(type.Conductivity, own.Conductivity, ConductivityThreshold)) reasons.Add("conductivity");
+            if (Differs(type.SpecificHeat, own.SpecificHeat, SpecificHeatThreshold)) reasons.Add("specific heat");
+            if (Math.Abs(type.Emissivity - own.Emissivity) >= EmissivityThreshold) reasons.Add("emissivity");
 
             if (Math.Abs(type.CriticalTemperature - own.CriticalTemperature) >= KelvinThreshold)
                 reasons.Add("critical temperature");
@@ -111,10 +118,10 @@ namespace Thermodynamics.Harness
             return reasons.Count == 0 ? null : string.Join(", ", reasons.ToArray());
         }
 
-        private static bool Differs(float type, float own)
+        private static bool Differs(float type, float own, float threshold)
         {
             float reference = Math.Max(Math.Abs(type), 1e-6f);
-            return Math.Abs(own - type) / reference >= RelativeThreshold;
+            return Math.Abs(own - type) / reference >= threshold;
         }
 
         private static string Composition(IList<BlockComponent> components)
@@ -156,7 +163,7 @@ namespace Thermodynamics.Harness
             sb.AppendLine();
             sb.Append(GameBlocks.All().Count.ToString("n0")).Append(" definitions, ")
                 .Append(rows.Count).Append(" types, ")
-                .Append(overrides).AppendLine(" subtypes deviating far enough to name");
+                .Append(overrides).AppendLine(" subtypes the type average describes worst");
             sb.AppendLine();
             sb.AppendLine("type                          n     k     c/kg    e   crit K  prod  cons  area  composition");
 
