@@ -66,19 +66,17 @@ namespace Thermodynamics.Tests
         {
             List<ReportRow> rows = Small();
 
-            double off = Value(rows, "diagnostics", "per-mechanism watts", "step, off");
-            double on = Value(rows, "diagnostics", "per-mechanism watts", "step, on");
-            double every = Value(rows, "diagnostics", "per-mechanism watts", "step, every substep");
+            Assert.True(Value(rows, "diagnostics", "per-mechanism watts", "step, off") > 0.0);
+            Assert.True(Value(rows, "diagnostics", "per-mechanism watts", "step, on") > 0.0);
+            Assert.True(Value(rows, "diagnostics", "per-mechanism watts", "step, every substep") > 0.0);
 
-            Assert.True(off > 0.0);
-            Assert.True(on > 0.0);
-            Assert.True(every > 0.0);
-
-            // Not a timing assertion — writing on every substep does strictly more work than
-            // writing on one of them, on a hull that takes more than one.
-            Assert.True(every >= on * 0.9,
-                "writing the diagnostics on every substep measured cheaper than writing them once,"
-                + " which means one of the two cases is not in the configuration it claims");
+            // What distinguishes the three cases, asserted off the node objects rather than off
+            // the timings. An earlier version of this test compared the milliseconds — a two-tick
+            // run on a six-hundred-block hull, where the difference is inside the scheduler's
+            // noise — and failed on a busy machine while the code was correct.
+            Assert.Equal(0.0, Value(rows, "diagnostics", "per-mechanism watts", "written, off"));
+            Assert.Equal(1.0, Value(rows, "diagnostics", "per-mechanism watts", "written, on"));
+            Assert.Equal(1.0, Value(rows, "diagnostics", "per-mechanism watts", "written, every substep"));
         }
 
         private static double Value(IList<ReportRow> rows, string section, string name, string metric)

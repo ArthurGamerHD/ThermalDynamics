@@ -322,6 +322,9 @@ namespace Thermodynamics.Harness
                 Add(rows, "profiles", profile, "clamped", sample.Clamped ? 1 : 0, "", false);
             }
 
+            double[] stepMs = new double[Caps.Length];
+            float[] substeps = new float[Caps.Length];
+
             for (int i = 0; i < Caps.Length; i++)
             {
                 int cap = Caps[i];
@@ -330,12 +333,72 @@ namespace Thermodynamics.Harness
                 Sample sample = Measure(Configure(cap, null, true), shape, size, ticks);
                 string name = cap == 0 ? "cap off" : "cap " + cap;
 
+                stepMs[i] = sample.StepMs;
+                substeps[i] = sample.Substeps;
+
                 Add(rows, "substep cap", name, "step", sample.StepMs, "ms");
                 Add(rows, "substep cap", name, "substeps", sample.Substeps, "", false);
                 Add(rows, "substep cap", name, "per simulated second", sample.MsPerSimulatedSecond, "ms");
                 Add(rows, "substep cap", name, "blocks raised", sample.Floored, "", false);
                 Add(rows, "substep cap", name, "clamped", sample.Clamped ? 1 : 0, "", false);
             }
+
+            StepShape(rows, stepMs, substeps);
+        }
+
+        /// <summary>
+        /// A step split into the part that scales with substeps and the part that does not.
+        ///
+        /// <para>
+        /// A step is one lot of per-step work — mirroring the node state, estimating the substep
+        /// count, applying the mass floor, publishing the result — plus one lot of per-substep work
+        /// for each substep. Those two scale differently, and a single millisecond figure hides
+        /// which of them a change moved. Two points at known substep counts separate them.
+        /// </para>
+        ///
+        /// <para>
+        /// It matters most at the cheap end of the profile ladder. At nineteen substeps the fixed
+        /// part is about an eighth of a step; at one substep, which is what `simulation`,
+        /// `optimized` and `simlite` all run, it is most of it. A change that halves the substep
+        /// cost does nothing for those three.
+        /// </para>
+        ///
+        /// <para>
+        /// Fitted through the `cap 4` and `cap 16` rows because both are clamp-free: the per-block
+        /// mass floor raises the stiff blocks rather than refusing them substeps, so neither point
+        /// carries clamp cost the other does not. Fitting through `cap 1` would put a clamped point
+        /// against an unclamped one and attribute the difference to the fixed term.
+        /// </para>
+        /// </summary>
+        private static void StepShape(List<ReportRow> rows, double[] stepMs, float[] substeps)
+        {
+            int low = IndexOfCap(4);
+            int high = IndexOfCap(16);
+            if (low < 0 || high < 0) return;
+
+            double span = substeps[high] - substeps[low];
+            if (span <= 0d) return;
+
+            double perSubstep = (stepMs[high] - stepMs[low]) / span;
+            double fixedMs = stepMs[low] - (perSubstep * substeps[low]);
+
+            int uncapped = IndexOfCap(0);
+            double atDefault = uncapped >= 0 && stepMs[uncapped] > 0d
+                ? 100d * fixedMs / stepMs[uncapped]
+                : 0d;
+
+            Add(rows, "step shape", "cap 4 to cap 16", "fixed per step", fixedMs, "ms");
+            Add(rows, "step shape", "cap 4 to cap 16", "per substep", perSubstep, "ms");
+            Add(rows, "step shape", "cap 4 to cap 16", "fixed share, uncapped", atDefault, "%");
+        }
+
+        private static int IndexOfCap(int cap)
+        {
+            for (int i = 0; i < Caps.Length; i++)
+            {
+                if (Caps[i] == cap) return i;
+            }
+            return -1;
         }
 
         /// <summary>
@@ -420,6 +483,15 @@ namespace Thermodynamics.Harness
                     null, null, true, everySubstep: true);
 
                 Add(rows, "diagnostics", "per-mechanism watts", "step, every substep", all.StepMs, "ms");
+
+                // Read off the node objects, so a case that claims to be collecting and is not
+                // fails rather than reporting a suspiciously cheap millisecond figure.
+                Add(rows, "diagnostics", "per-mechanism watts", "written, off",
+                    off.DiagnosticsPublished ? 1 : 0, "", false);
+                Add(rows, "diagnostics", "per-mechanism watts", "written, on",
+                    on.DiagnosticsPublished ? 1 : 0, "", false);
+                Add(rows, "diagnostics", "per-mechanism watts", "written, every substep",
+                    all.DiagnosticsPublished ? 1 : 0, "", false);
 
                 // The worst case for batching: one substep, so the last substep is the only
                 // substep and there is nothing to skip.
@@ -629,6 +701,14 @@ namespace Thermodynamics.Harness
 
             /// <summary>Whether the conduction overshoot clamp ran, as opposed to being skipped.</summary>
             public bool ClampLive;
+
+            /// <summary>
+            /// Whether any per-mechanism watt figure reached a node object.
+            ///
+            /// Read off the nodes rather than off the setting that asked for them: the setting is
+            /// the input, and what a diagnostics case has to prove is the output.
+            /// </summary>
+            public bool DiagnosticsPublished;
         }
 
         /// <summary>
@@ -715,6 +795,21 @@ namespace Thermodynamics.Harness
             sample.Floored = simulation.Solver.FlooredNodes;
             sample.Clamped = simulation.Solver.LastStepWasClamped;
             sample.ClampLive = simulation.Solver.ConductionClampLive;
+
+            IList<ThermalNode> written = simulation.Solver.Nodes;
+            for (int i = 0; i < written.Count; i++)
+            {
+                ThermalNode node = written[i];
+                if (node.LastRadiationWatts == 0f && node.LastConvectionWatts == 0f
+                    && node.LastSolarWatts == 0f && node.LastFrictionWatts == 0f
+                    && node.LastConductionWatts == 0f)
+                {
+                    continue;
+                }
+
+                sample.DiagnosticsPublished = true;
+                break;
+            }
 
             double elements = simulation.Solver.Nodes.Count + simulation.Solver.Links.Count;
             double visits = elements * Math.Max(1, sample.Substeps);

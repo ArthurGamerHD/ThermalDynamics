@@ -190,6 +190,38 @@ one substep and costs proportionately little.
 > with these. `BenchmarkBaselineTests` now fails when the committed baseline's keys drift from the
 > report's, which is the class of rot that made the older numbers hard to place.
 
+### The shape of a step
+
+A step is one lot of per-step work — mirroring the node state, estimating the substep count,
+applying the mass floor, publishing the result — plus one lot of per-substep work for each substep.
+Those two scale differently, and a single millisecond figure hides which of them a change moved.
+
+The report fits them through the `cap 4` and `cap 16` rows, both of which are clamp-free because the
+per-block mass floor raises the stiff blocks rather than refusing them substeps. On a 32,800-block
+hull in flight:
+
+| | |
+| --- | ---: |
+| fixed per step | **0.47 ms** |
+| per substep | 0.18 ms |
+| fixed share at the default 19 substeps | 12 % |
+
+**At one substep the fixed part is three quarters of a step**, and one substep is what `simulation`,
+`optimized` and `simlite` all run. A change that halves the per-substep cost does nothing for those
+three, which is worth knowing before optimising for them.
+
+> Fitting through `cap 1` instead would put a clamped point against an unclamped one and attribute
+> the difference to the fixed term.
+
+**Mirroring the block's real heat capacity for the mass floor was tried here and reverted.** The
+floor reads `nodes[i].ThermalMass` once per node per step, which is the same scattered-load shape
+that cost 0.66 ms in the damage check and 3.58 ms in the diagnostics — and it measured as nothing,
+twice, inside a 0.04 ms noise floor. The difference is cadence and company: those two run once per
+*substep* and interleave with the streaming arrays of the environment and apply passes, while the
+floor runs once per step immediately after `SyncNodeState` has walked the same objects in the same
+order. The pattern is not the cost; the pattern plus a cold cache is. A change with no measured
+benefit and a real four bytes a block was not kept.
+
 ### The overshoot clamp A/B
 
 The clamp is skipped on any step where it cannot bind. That is a saving in one regime and a cost in
