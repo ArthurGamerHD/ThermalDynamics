@@ -282,11 +282,21 @@ namespace Thermodynamics
                     "MaxSubsteps", "MaxSubstepsPerBlock", "MaxElementVisitsPerStep",
                     "ClampConductionOvershoot", "ClampEnvironmentOvershoot"),
                 new Leaf("Pace",
-                    "Frequency", "SimulationSpeed", "HeatTimeScale", "DamageIsPerSecond")),
+                    "Frequency", "SimulationSpeed", "HeatTimeScale")),
 
+            // One system to a page, its own switch at the top of it. Four switches used to sit
+            // together on a "Mechanisms" page because they were all switches, which is filing by
+            // part of speech: switching convection off belongs above the convection dials, where
+            // you can see what it governs.
             new Folder("Heat transfer",
-                new Leaf("Mechanisms",
-                    "EnableEnvironment", "EnableConduction", "EnableRadiation", "EnableConvection"),
+                new Leaf("Ambient",
+                    "EnableEnvironment", "VacuumTemperature"),
+                new Leaf("Conduction",
+                    "EnableConduction"),
+                new Leaf("Radiation",
+                    "EnableRadiation"),
+                new Leaf("Convection",
+                    "EnableConvection"),
                 new Leaf("Solar",
                     "EnableSolarHeat", "SolarEnergy"),
                 new Leaf("Occlusion",
@@ -297,16 +307,45 @@ namespace Thermodynamics
                     "SolarOcclusionTerrain", "SolarTerrainRange",
                     "SolarOcclusionSamples", "SolarOcclusionInterval")),
 
+            new Folder("Ship systems",
+                new Leaf("Coolant loops",
+                    "EnableCoolantLoops"),
+                new Leaf("Heat pumps",
+                    "EnableHeatPumps", "HeatPumpCarnotFraction", "HeatPumpMaxCoefficient"),
+                new Leaf("Room air",
+                    "EnableRoomAir", "RoomConvectionCoefficient", "RoomAirDensity"),
+                new Leaf("Waste heat",
+                    "EnableWasteHeat"),
+                new Leaf("Friction",
+                    "EnableFriction", "FrictionAtSpeedsAbove", "FrictionScale"),
+                new Leaf("Overheat damage",
+                    "EnableDamage", "DamageIsPerSecond"),
+                new Leaf("Point sources",
+                    "EnableHeatSources")),
+
             new Folder("World",
                 new Leaf("Climate",
-                    "EnablePlanets", "ClimateGroundInfluence", "ClimateWeatherInfluence",
-                    "VacuumTemperature", "FrictionAtSpeedsAbove", "FrictionScale"),
-                new Leaf("Systems",
-                    "EnableWasteHeat", "EnableHeatSources", "EnableFriction", "EnableDamage",
-                    "EnableCoolantLoops", "EnableHeatPumps", "HeatPumpCarnotFraction",
-                    "HeatPumpMaxCoefficient"),
-                new Leaf("Room air",
-                    "EnableRoomAir", "RoomConvectionCoefficient", "RoomAirDensity")),
+                    "EnablePlanets", "ClimateGroundInfluence", "ClimateWeatherInfluence")),
+        };
+
+        /// <summary>
+        /// A line for a page whose settings do not yet fill it, saying where the rest of that
+        /// system's numbers currently live.
+        ///
+        /// A page with one switch on it looks broken. It is not — it is a system whose remaining
+        /// dials are in a definition file the menu does not reach yet, and saying so is better
+        /// than leaving a reader to wonder. Each of these disappears as its file is brought in;
+        /// see [settings-redesign.md](../../../../docs/settings-redesign.md).
+        /// </summary>
+        private static readonly Dictionary<string, string> PageNotes = new Dictionary<string, string>
+        {
+            { "Conduction", "A block's conductivity is its own, from Cubes.xml" },
+            { "Radiation", "Emissivity and exposed area are per block, from Cubes.xml" },
+            { "Convection", "The coefficient is the planet's, from Planets.xml" },
+            { "Coolant loops", "Flow rate and coolant mass are in Loops.xml" },
+            { "Waste heat", "How much each block wastes is in Cubes.xml" },
+            { "Point sources", "Registered by other mods through the API" },
+            { "Climate", "Temperatures and lapse rate are in Planets.xml" },
         };
 
         /// <summary>
@@ -452,6 +491,22 @@ namespace Thermodynamics
             }
 
             if (members.Count > 0) AddSection(built, leaf.Name, members, editable);
+
+            string note;
+            if (PageNotes.TryGetValue(leaf.Name, out note))
+            {
+                ControlTile noteTile = new ControlTile();
+                noteTile.Add(new TerminalLabel { Name = "the rest of this system:" });
+                noteTile.Add(new TerminalLabel { Name = note });
+
+                ControlCategory elsewhere = new ControlCategory
+                {
+                    HeaderText = "Elsewhere",
+                    SubheaderText = "Dials this menu does not reach yet",
+                };
+                elsewhere.Add(noteTile);
+                built.Add(elsewhere);
+            }
 
             string figures = FiguresFor(leaf.Name);
             if (figures == null) return built;
