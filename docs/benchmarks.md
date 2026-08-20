@@ -206,6 +206,9 @@ hull in flight:
 | per substep | 0.18 ms |
 | fixed share at the default 19 substeps | 12 % |
 
+Measured on the solver path, which until recently paid one prologue where the host paid two. See
+[the two step paths](#the-two-step-paths) below.
+
 **At one substep the fixed part is three quarters of a step**, and one substep is what `simulation`,
 `optimized` and `simlite` all run. A change that halves the per-substep cost does nothing for those
 three, which is worth knowing before optimising for them.
@@ -221,6 +224,40 @@ twice, inside a 0.04 ms noise floor. The difference is cadence and company: thos
 floor runs once per step immediately after `SyncNodeState` has walked the same objects in the same
 order. The pattern is not the cost; the pattern plus a cold cache is. A change with no measured
 benefit and a real four bytes a block was not kept.
+
+### The two step paths
+
+Everything above drives `ThermalSolver.Step` directly. The game does not: it asks how long a step
+it can afford before starting one, and until this was fixed that question and the step it produced
+each ran their own full prologue over every node — the node mirror, the conductance totals, the
+mass floor, and the stability estimate that cubes a temperature per node.
+
+`bench steppath` runs the same grid down both paths, at three substep caps, with
+`MaxElementVisitsPerStep` left active but out of reach so neither column is a shortened step. The
+overhead column is the host's question expressed as a share of the step:
+
+| blocks | 1 substep | 3 substeps | 12 substeps |
+| --- | ---: | ---: | ---: |
+| 8,904 | 9.9 % | 6.4 % | — |
+| 32,800 | 7.9 % | 4.3 % | 2.4 % |
+| 126,731 | 9.6 % | 6.9 % | 4.5 % |
+
+After the fix every one of those nine cells reads within ±1 % of zero, which is the noise floor of
+this measurement. The field runs at about three substeps, so the saving in play is the middle
+column.
+
+> The 8,904-block row at 12 substeps is omitted: both runs land near 0.7 ms and the pair moved by
+> more than the effect between repeats.
+
+**Two runs of the same grid are not interchangeable.** Conduction skips a link whose ends already
+agree, so whichever path runs second inherits a flatter grid and measures cheaper. Unseeded, that
+alone made the host path read 26 % *faster* than the solver path it is a superset of. Both timed
+runs re-seed the spread.
+
+This is the general form of a gap worth watching for: **a benchmark that drives the component
+rather than the caller cannot see work the caller does.** The fixed-cost fit above was written to
+attribute exactly this cost and attributed half of it, because both of its points were measured on
+the path that pays half.
 
 ### The overshoot clamp A/B
 
