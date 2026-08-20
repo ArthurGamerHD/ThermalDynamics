@@ -5,15 +5,32 @@ to *cheap and quick*, with the pace of heat as a second axis crossing it.
 
 | Profile | Integration | Pace | For |
 | --- | --- | --- | --- |
-| `simulation` | 64 substeps, no cap, no budget | tuned (225) | The reference. What the equations say, whatever it costs. |
-| `optimized` | 6 / 6, budgeted | tuned (225) | Simulation's answer with every dial at its measured sweet spot. |
-| `simlite` | 3 / 3, tighter budget, no self-shadowing | tuned (225) | Realistic and knowingly approximate, for a crowded server. |
-| `responsive` | as simulation | fast (3600) | Simulation, quick enough to watch. |
-| `arcade` | as optimized | fast (3600) | Responsive's pace at optimized's price. |
+| `simulation` | 64 substeps, no cap, no budget | **real time** (1) | The reference. Real physics, and nothing you can watch. |
+| `optimized` | 6 / 6, budgeted | **real time** (1) | The same temperatures at the same moments, for less work. |
+| `simlite` | 3 / 3, tighter budget, no self-shadowing | **real time** (1) | Real physics, approximately drawn, for a crowded server. |
+| `responsive` | as simulation | tuned (225) | Simulation with the clock run fast. How the mod is meant to be played. |
+| `arcade` | as optimized | tuned (225) | Responsive's pace at optimized's price. |
 
-Two axes, and every profile is a point on both. `simulation`, `optimized` and `simlite` share a
-pace and descend in accuracy; `responsive` and `arcade` are `simulation` and `optimized` with the
-clock run sixteen times faster.
+**`HeatTimeScale` is the clock, and 1 is real.** It divides every heat capacity, so anything above 1
+is thermal time running fast: a real ship at real heat capacity takes hours to change temperature,
+which is why the mod ships at 225 and why `simulation` — the profile that claims pure realism —
+is the one nobody plays on.
+
+**Real time is also the cheapest thing to integrate**, which is the opposite of what a maximum
+quality preset usually means. Stiffness is conductance over capacity, so dividing capacity by 225
+multiplies substep demand by 225. Measured on a 150-block hull with a 200 kW reactor in it:
+
+| `HeatTimeScale` | substeps demanded | hull after 5 simulated seconds |
+| ---: | ---: | ---: |
+| 1 | 0.00 | 293.3 K |
+| 225 | 0.90 | 319.8 K |
+| 3,600 | 14.40 | 440.5 K |
+
+Accuracy on this ladder costs patience, not frames. What costs frames is the pace.
+
+Two axes, and every profile is a point on both. `simulation`, `optimized` and `simlite` run at real
+time and descend in how finely that is integrated; `responsive` and `arcade` are `simulation` and
+`optimized` with the clock run fast.
 
 **A profile is the whole world, not a patch on it.** Applying one returns every setting it does not
 speak for to the shipped value first, so applying the same profile twice with tinkering in between
@@ -54,9 +71,10 @@ including the ones no definition file mentions — which on an ordinary world is
 where a stiffness problem usually lives. A named subtype refines that, and later entries win. A
 misspelled property is reported in the log rather than silently doing nothing.
 
-`ProfileTests` holds the ladder to account — each fast profile must carry heat further than the one
-it is built from, and `optimized` must reach within a tenth of `simulation`, since it is meant to be
-the same physics tuned rather than different physics.
+`ProfileTests` holds the ladder to account: each fast profile must carry heat further than the one
+it is built from, and `arcade` must reach within a tenth of `responsive`, since it is meant to be
+the same physics tuned rather than different physics. That check is made at the fast pace on
+purpose — at real time both numbers are nearly zero and would prove nothing.
 
 Where [balance.md](balance.md) asks whether a block is worth building, this asks whether a *world
 configuration* is worth running. Three commands:

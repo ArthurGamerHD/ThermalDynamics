@@ -154,22 +154,24 @@ namespace Thermodynamics.Tests
                     + seconds + " s, at " + row.WorkPerRealSecond.ToString("n0") + " work/s.");
             }
 
-            // The ladder has two axes, and this is the pace one: responsive and arcade run the
-            // clock fast, the other three run it at the tuned pace. Both fast profiles must carry
-            // heat further in the same wall time than either of the profiles they are built from.
+            // The ladder has two axes. This is the pace one: responsive and arcade run the clock
+            // at the tuned pace, the other three run at real time, and real time is slow — a hull
+            // moves a fraction of a kelvin a minute, which is the claim `simulation` exists to
+            // make and the reason it is not how anyone plays.
             Assert.True(reached[ThermalProfiles.Responsive] > reached[ThermalProfiles.Simulation],
                 "responsive is simulation with the clock run fast, so it must outrun it");
             Assert.True(reached[ThermalProfiles.Arcade] > reached[ThermalProfiles.Optimized],
                 "arcade is optimized with the clock run fast, so it must outrun it");
 
-            // And the accuracy axis: optimized is simulation with the cost dials tuned, not a
-            // different physics, so heat must travel about as far under both. Ten per cent is the
-            // room the substep cap is allowed to cost.
-            float ratio = reached[ThermalProfiles.Optimized]
-                / (float)Math.Max(1, reached[ThermalProfiles.Simulation]);
+            // And the accuracy axis, checked at a pace where it can be measured: arcade is
+            // responsive with the cost dials tuned, not different physics, so heat must travel
+            // about as far under both. Comparing simulation with optimized would be comparing two
+            // numbers that are both nearly zero, which proves nothing.
+            float ratio = reached[ThermalProfiles.Arcade]
+                / (float)Math.Max(1, reached[ThermalProfiles.Responsive]);
 
             Assert.True(ratio > 0.9f && ratio < 1.1f,
-                "optimized should reach about as far as simulation, was " + ratio.ToString("n2"));
+                "arcade should reach about as far as responsive, was " + ratio.ToString("n2"));
         }
 
         /// <summary>

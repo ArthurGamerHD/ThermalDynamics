@@ -49,15 +49,15 @@ namespace Thermodynamics.Core
             switch (Normalise(name))
             {
                 case Simulation:
-                    return "Every mechanism, integrated as finely as it asks for. Costs the most, and is what the others are measured against.";
+                    return "Real time and real physics. A ship takes the hours a ship takes, so nothing appears to happen in a session; the reference, not a way to play.";
                 case Optimized:
-                    return "The same simulation with every performance dial at its measured sweet spot. Nearly the accuracy, a third of the cost.";
+                    return "Real time, with the cost dials tuned. Same temperatures at the same moments, less work to get them.";
                 case Simlite:
-                    return "Realistic and knowingly approximate. Trades the shape of a curve for frames on a crowded server.";
+                    return "Real time, knowingly approximate. Trades the shape of a curve for frames on a crowded server.";
                 case Responsive:
-                    return "Simulation, with heat moving sixteen times faster. Accurate, and quick enough to watch.";
+                    return "Simulation with the clock run fast, which is what makes the mod playable. Heat you can watch, integrated properly.";
                 case Arcade:
-                    return "Optimized, with heat moving sixteen times faster. The cheap one you can see working.";
+                    return "Responsive's pace at optimized's price. The cheap one you can see working.";
                 default:
                     return "";
             }
@@ -93,12 +93,19 @@ namespace Thermodynamics.Core
             switch (Normalise(name))
             {
                 case Simulation:
-                    // Accuracy first, cost last. Substeps are never refused, no block has its
-                    // capacity floored and no step is shortened to fit a budget, so what comes out
-                    // is what the equations say. Every other profile is measured against this one.
+                    // Real time, and therefore real physics: HeatTimeScale divides every heat
+                    // capacity, so anything above 1 is thermal time running fast. At 1 a ship
+                    // takes the hours a ship really takes, which is the whole claim this profile
+                    // makes and the reason it is not the default.
+                    //
+                    // It is also the *cheapest* profile to integrate, which is the opposite of
+                    // what a "maximum quality" preset usually means. Stiffness is conductance over
+                    // capacity, so dividing capacity by 225 multiplies substep demand by 225:
+                    // measured on a 150-block hull, demand is 0.00 substeps at scale 1, 0.90 at
+                    // 225 and 14.40 at 3600. Accuracy here costs patience, not frames.
                     settings.Frequency = 8;
                     settings.SimulationSpeed = 1f;
-                    settings.HeatTimeScale = 225f;
+                    settings.HeatTimeScale = 1f;
                     settings.MaxSubsteps = 64;
                     settings.MaxSubstepsPerBlock = 0;
                     settings.MaxElementVisitsPerStep = 0;
@@ -109,13 +116,13 @@ namespace Thermodynamics.Core
                     break;
 
                 case Optimized:
-                    // Simulation's answer at the price the field tuning found: the per-block cap
-                    // and the substep ceiling moved together to six, which resolves nine tenths of
-                    // what the cap was flooring for about a third of simulation's cost. Same
-                    // mechanisms, same pace, same settling temperatures — see field-tuning.md.
+                    // Simulation's physics with the cost dials tuned: the same real-time pace, and
+                    // therefore the same temperatures at the same moments, bought with the caps the
+                    // field tuning settled on — see field-tuning.md. What it gives up is headroom
+                    // on a grid stiff enough to need it, not fidelity on an ordinary one.
                     settings.Frequency = 4;
                     settings.SimulationSpeed = 1f;
-                    settings.HeatTimeScale = 225f;
+                    settings.HeatTimeScale = 1f;
                     settings.MaxSubsteps = 6;
                     settings.MaxSubstepsPerBlock = 6;
                     settings.MaxElementVisitsPerStep = 1000000;
@@ -126,13 +133,12 @@ namespace Thermodynamics.Core
                     break;
 
                 case Simlite:
-                    // Realistic and knowingly approximate. Every mechanism still runs; the
-                    // integrator is given less to work with, and self-shadowing — which walks the
-                    // grid — is dropped. Three substeps finds where heat settles but not the shape
-                    // of the curve on the way, which is exactly the trade being made.
+                    // Real time still, so the physics is honest; what is traded is the work spent
+                    // drawing it. Every mechanism runs, the integrator is given less, and
+                    // self-shadowing — which walks the grid — is dropped.
                     settings.Frequency = 4;
                     settings.SimulationSpeed = 1f;
-                    settings.HeatTimeScale = 225f;
+                    settings.HeatTimeScale = 1f;
                     settings.MaxSubsteps = 3;
                     settings.MaxSubstepsPerBlock = 3;
                     settings.MaxElementVisitsPerStep = 400000;
@@ -143,12 +149,16 @@ namespace Thermodynamics.Core
                     break;
 
                 case Responsive:
-                    // Simulation with the clock run fast: sixteen times the transfer of the tuned
-                    // pace, and the substeps to resolve it. Heat you can watch move, with the
-                    // curve still decided by the equations rather than by a clamp.
+                    // Simulation with the clock run fast. This is the only difference from
+                    // simulation, and it is the one that makes the mod playable: at real time a
+                    // hull moves a fraction of a kelvin a minute, and 225 is the pace every
+                    // balance figure in the docs was measured at.
+                    //
+                    // The cost of the acceleration is stiffness, which is why this profile keeps
+                    // simulation's substep budget rather than optimized's.
                     settings.Frequency = 8;
                     settings.SimulationSpeed = 1f;
-                    settings.HeatTimeScale = 3600f;
+                    settings.HeatTimeScale = 225f;
                     settings.MaxSubsteps = 64;
                     settings.MaxSubstepsPerBlock = 0;
                     settings.MaxElementVisitsPerStep = 0;
@@ -163,7 +173,7 @@ namespace Thermodynamics.Core
                     // wanting to see it work without paying for it.
                     settings.Frequency = 4;
                     settings.SimulationSpeed = 1f;
-                    settings.HeatTimeScale = 3600f;
+                    settings.HeatTimeScale = 225f;
                     settings.MaxSubsteps = 6;
                     settings.MaxSubstepsPerBlock = 6;
                     settings.MaxElementVisitsPerStep = 1000000;
