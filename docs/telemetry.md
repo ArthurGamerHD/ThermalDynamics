@@ -444,11 +444,19 @@ min/mean/max/sd for temperature, per-step ΔT, conduction, radiation, convection
 friction watts, heat generation, power produced and consumed and thrust draw; critical updates
 and heat damage dealt; and both a sampled and a final temperature histogram.
 
-**Cost** — call count, total, mean, worst and a distribution for the grid update, and nested
-inside it the four stages the simulation reports through `ISimulationProfiler`: topology
-rebuild, room mapping, exposure refresh and the solver itself, plus the solar occlusion raycast.
-Save and load are measured separately. Rows marked "of which" are nested and are not double
-counted in the total.
+**Cost** — call count, total, mean, worst and a distribution for each path, laid out by nesting.
+The session frame is the outer measurement: it wraps the session component's per-frame call, which
+is what drives every grid. Inside it sits the grid update, and inside that the four stages the
+simulation reports through `ISimulationProfiler` — topology rebuild, room mapping, exposure
+refresh and the solver itself — plus the solar occlusion raycast. Save and load are raised by the
+engine outside the frame and are measured separately.
+
+Only the unindented rows are summed into `total measured`, because an indented row's milliseconds
+are already inside the row above it. `CostRollup.MeasuredMilliseconds` is the one place that
+arithmetic happens, and it takes no grid-simulation argument by construction. Before that,
+the total added grid simulation to the session frame that contains it, which reported a field dump
+costing 36.8 % of real time as costing 73.1 % — roughly double, on any world where the frame is
+mostly simulation, which is every world.
 
 Splitting the update by stage is what makes the cost numbers actionable: topology and room
 mapping run on block changes and are the expensive pair, while the solver runs every step and is

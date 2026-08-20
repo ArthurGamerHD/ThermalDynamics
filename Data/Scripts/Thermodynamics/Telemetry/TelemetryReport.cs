@@ -568,13 +568,13 @@ namespace Thermodynamics
         {
             Section(sb, "Cost");
 
-            TimingStat simulation = new TimingStat("grid simulation");
-            TimingStat topology = new TimingStat("  of which topology rebuild");
-            TimingStat mapping = new TimingStat("  of which room mapping");
-            TimingStat exposure = new TimingStat("  of which exposure refresh");
-            TimingStat pressure = new TimingStat("  of which room pressure");
-            TimingStat solver = new TimingStat("  of which solver");
-            TimingStat solar = new TimingStat("  of which solar occlusion");
+            TimingStat simulation = new TimingStat("  of which grid simulation");
+            TimingStat topology = new TimingStat("    of which topology rebuild");
+            TimingStat mapping = new TimingStat("    of which room mapping");
+            TimingStat exposure = new TimingStat("    of which exposure refresh");
+            TimingStat pressure = new TimingStat("    of which room pressure");
+            TimingStat solver = new TimingStat("    of which solver");
+            TimingStat solar = new TimingStat("    of which solar occlusion");
             TimingStat save = new TimingStat("save");
             TimingStat load = new TimingStat("load");
 
@@ -603,10 +603,11 @@ namespace Thermodynamics
                 load.Merge(g.LoadTime);
             }
 
-            sb.Append("  Rows marked \"of which\" are nested inside grid simulation and are not\n");
-            sb.Append("  added into the total below.\n\n");
+            sb.Append("  Indented rows are nested inside the row above them and are not added\n");
+            sb.Append("  into the total below. Only the unindented rows are summed.\n\n");
 
             TimingStat.WriteHeader(sb, "path (all grids)");
+            Telemetry.SessionFrameTime.WriteRow(sb);
             simulation.WriteRow(sb);
             topology.WriteRow(sb);
             mapping.WriteRow(sb);
@@ -616,18 +617,19 @@ namespace Thermodynamics
             solar.WriteRow(sb);
             save.WriteRow(sb);
             load.WriteRow(sb);
-            Telemetry.SessionFrameTime.WriteRow(sb);
 
-            // Solar occlusion runs inside the grid simulation call, so summing it would double
-            // count; only the outer measurement and the externally driven paths are summed.
-            double total = simulation.TotalMilliseconds + save.TotalMilliseconds
-                + load.TotalMilliseconds + Telemetry.SessionFrameTime.TotalMilliseconds;
+            double total = CostRollup.MeasuredMilliseconds(
+                Telemetry.SessionFrameTime.TotalMilliseconds,
+                save.TotalMilliseconds,
+                load.TotalMilliseconds);
+
+            double share = CostRollup.ShareOfRealTime(total, Telemetry.SessionSeconds);
 
             sb.Append('\n');
             Field(sb, "total measured", total.ToString("n1") + " ms");
-            Field(sb, "share of real time", Telemetry.SessionSeconds <= 0
+            Field(sb, "share of real time", share < 0.0
                 ? "-"
-                : (100.0 * total / (Telemetry.SessionSeconds * 1000.0)).ToString("n3") + " %");
+                : share.ToString("n3") + " %");
 
             WriteFrames(sb);
 

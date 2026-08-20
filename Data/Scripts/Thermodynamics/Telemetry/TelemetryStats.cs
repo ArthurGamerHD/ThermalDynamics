@@ -246,7 +246,7 @@ namespace Thermodynamics
         public void WriteRow(StringBuilder sb)
         {
             sb.Append("  ")
-              .Append(Name.PadRight(28))
+              .Append(Name.PadRight(32))
               .Append(Calls.ToString().PadLeft(12))
               .Append(TotalMilliseconds.ToString("n2").PadLeft(14))
               .Append(MeanMilliseconds.ToString("n5").PadLeft(14))
@@ -257,12 +257,51 @@ namespace Thermodynamics
         public static void WriteHeader(StringBuilder sb, string title)
         {
             sb.Append("  ")
-              .Append(title.PadRight(28))
+              .Append(title.PadRight(32))
               .Append("calls".PadLeft(12))
               .Append("total ms".PadLeft(14))
               .Append("mean ms".PadLeft(14))
               .Append("max ms".PadLeft(12))
               .Append('\n');
+        }
+    }
+
+    /// <summary>
+    /// What the mod cost against the session clock, from timings that nest inside one another.
+    ///
+    /// <para>
+    /// The cost table measures the same work at several depths. <c>session frame</c> wraps the
+    /// session component's whole per-frame call, which is what drives every grid, so
+    /// <c>grid simulation</c> is contained by it, and the <c>of which</c> rows are contained by
+    /// that in turn. Only paths the engine enters independently are roots: the frame itself, and
+    /// the save and load callbacks, which the engine raises outside the frame.
+    /// </para>
+    ///
+    /// <para>
+    /// Summing a row and the row it sits inside charges the same milliseconds twice. Doing that to
+    /// <c>grid simulation</c>, which accounts for nearly all of a frame, reported a mod costing a
+    /// third of real time as costing two thirds of it — and would report one costing 60 % as
+    /// costing more than all the time there was.
+    /// </para>
+    /// </summary>
+    public static class CostRollup
+    {
+        /// <summary>
+        /// Total wall clock the mod is responsible for, over the roots only.
+        ///
+        /// It takes no grid-simulation argument by construction: the figure is nested inside
+        /// <paramref name="sessionFrame"/> and there is no correct way to add it.
+        /// </summary>
+        public static double MeasuredMilliseconds(double sessionFrame, double save, double load)
+        {
+            return sessionFrame + save + load;
+        }
+
+        /// <summary>Share of the session clock the roots account for, or -1 when the clock is unset.</summary>
+        public static double ShareOfRealTime(double measuredMilliseconds, double sessionSeconds)
+        {
+            if (sessionSeconds <= 0.0) return -1.0;
+            return 100.0 * measuredMilliseconds / (sessionSeconds * 1000.0);
         }
     }
 }

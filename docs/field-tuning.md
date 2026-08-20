@@ -7,13 +7,19 @@ Telemetry in the world's `Storage/ThermalDynamics_Thermodynamics`.
 
 | | |
 | --- | --- |
-| total measured | **3.62 %** of real time |
+| total measured | **~1.8 %** of real time (see note) |
 | solver alone | 1.63 % |
 | mean frame | 0.304 ms |
 | worst frame | 25.8 ms |
 | frames over a 60 fps budget | **2 of 17,352** (0.01 %) |
 | block updates / real second | 31,145 |
 | ns per element visit | 50.4 |
+
+> **Note on `total measured`.** The report that produced these figures summed the grid update
+> into the session frame that already contained it, so the dump read 3.62 % and 4.70 %. The
+> session frame is very nearly all grid update, so the true totals are close to half those — hence
+> the approximations above. They cannot be recovered exactly without re-running, because the dump
+> printed the sum rather than the two terms. `solver alone` was never affected.
 
 Both of the two over-budget frames are in the first eight seconds — build and load, not steady
 state. There is a great deal of headroom here, and the tuning question is therefore not "how do we
@@ -106,7 +112,7 @@ Same world, same ship, same build; only the two caps moved. 118.5 s.
 | `clamped_steps` | 0 | **0** |
 | substeps per step | 3.00 | 6.00 |
 | solver share of real time | 1.63 % | 2.17 % |
-| total measured | 3.62 % | 4.70 % |
+| total measured | ~1.8 % | ~2.4 % |
 | ns per element visit | 50.4 | **34.3** |
 | worst peak-to-mean drift | 2.89 K | **1.07 K** |
 | frames over 60 fps | 2 of 17,352 | 2 of 6,801 |
