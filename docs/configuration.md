@@ -24,12 +24,31 @@ to disk unless asked.
 | `/thermal stride <n>` | Telemetry sample stride. |
 | `/thermal dump` | Writes a telemetry report without closing the world. |
 
-Settings are server side; `set` from a client is refused. The same names are reachable from other
-mods — see [api.md](api.md#settings).
+Settings are world state. A client at space master or above may change them — the request goes to
+the server, which decides — and the four presentation switches belong to the client outright. The
+same names are reachable from other mods, see [api.md](api.md#settings).
 
 ## The settings menu
 
-**Ctrl+Shift+S** opens it, as does `/thermal menu`. It is built on the [Rich HUD
+**Ctrl+Shift+S** opens it, as does `/thermal menu`.
+
+The menu is five pages rather than one, listed down the side: **Overview**, **Solver**, **Heat
+transfer**, **World and systems**, **Display**. Forty-five settings on a single scroll is a list to
+be searched by eye, and an administrator usually arrives wanting one section of it.
+
+**Overview** answers the two questions a wall of sliders cannot:
+
+* **Which profile is this world on**, worked out by comparing the nine values a profile sets — so a
+  world on `arcade` with a hand-tuned vacuum temperature still reads as `arcade`, which is what the
+  question means. `custom` when it matches none.
+* **What has been changed**, as a count, with every changed setting marked with a dot in front of
+  its label on its own page. Nothing else distinguished a shipped value from a tuned one.
+* **Whether two settings are cancelling each other**, for the three combinations where that happens
+  quietly: `MaxSubsteps` refusing what `MaxSubstepsPerBlock` asks for, the step budget switched off,
+  and the environment switched off.
+
+It also carries Save, Reset and the five profiles as buttons — profiles were previously reachable
+only from chat, so the menu could show a world tuned by one without ever mentioning they existed. It is built on the [Rich HUD
 Framework](https://github.com/ZachHembree/RichHudFramework.Client) and needs the **Rich HUD Master**
 mod (`1965654081`) to be enabled; without it the keystroke says so and the chat commands remain the
 way in.

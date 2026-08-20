@@ -161,6 +161,10 @@ namespace Thermodynamics
                     target.Apply();
                 }
 
+                // The menu marks what differs from the shipped defaults, so values arriving from
+                // the server have to reach it too — otherwise an open menu shows the old marks.
+                ThermalSettingsMenu.Refresh();
+
                 MyLog.Default.Info("[" + Settings.Name + "] settings received from the server");
             }
             catch (Exception e)
