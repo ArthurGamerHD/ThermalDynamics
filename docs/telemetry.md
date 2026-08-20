@@ -54,13 +54,13 @@ substeps:
 
 | | step |
 | --- | ---: |
-| diagnostics off — a dedicated server in ordinary play | 3.75 ms |
-| diagnostics on, written once a step | **4.32 ms** |
-| diagnostics on, written every substep — what the solver used to do | 6.91 ms |
+| diagnostics off — a dedicated server in ordinary play | 3.60 ms |
+| diagnostics on, written once a step | **4.16 ms** |
+| diagnostics on, written every substep — what the solver used to do | 6.87 ms |
 
-Being measured cost 3.58 ms of a step and now costs 0.57 ms. The worst case for the batching is a
+Being measured cost 3.58 ms of a step and now costs 0.56 ms. The worst case for the batching is a
 grid taking one substep, where the last substep is the only substep and there is nothing to skip:
-0.9654 ms against 0.9682 ms, inside the noise floor. `DiagnosticBatchingTests` asserts the
+0.9657 ms against 0.9645 ms, inside the noise floor. `DiagnosticBatchingTests` asserts the
 published figures are bit-identical to writing on every substep, because "the last substep's
 figures" has to mean exactly that.
 
