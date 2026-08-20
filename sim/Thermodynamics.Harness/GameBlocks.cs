@@ -55,6 +55,13 @@ namespace Thermodynamics.Harness
             /// Thrust in newtons, used as a watt-equivalent by the waste-heat model. It is what
             /// makes a hydrogen thruster heat at all: it draws no electricity, so thrust is the
             /// only term that can represent it. See docs/thermal-model.md.
+            ///
+            /// **Only a <c>Thrust</c> block has one.** Gyros carry the same
+            /// <c>ForceMagnitude</c> element, and it means torque in newton-metres rather than
+            /// thrust in newtons — a large gyro reads 3.36e7 and a prototech one 2.016e8 against a
+            /// real draw of ten kilowatts. Reading it off every block that has the element turned
+            /// one gyro into 33.6 MW of waste heat and drove a real hull to 342,000 K, which looked
+            /// convincingly like solver instability and was arithmetic.
             /// </summary>
             public float ThrustNewtons;
 
@@ -114,9 +121,33 @@ namespace Thermodynamics.Harness
         private static List<Definition> _all;
         private static Dictionary<string, float> _componentMasses;
 
+        /// <summary>
+        /// Guards the three lazy caches below.
+        ///
+        /// The lab runs ships concurrently, so every one of these is read from several workers at
+        /// once and built by whichever gets there first. An unguarded lazy field is the classic way
+        /// to hand one thread a half-built dictionary.
+        /// </summary>
+        private static readonly object CacheLock = new object();
+
+        /// <summary>
+        /// Builds every cache up front, on one thread.
+        ///
+        /// Called before a parallel region so the workers find them warm. Correctness does not
+        /// depend on it — the locks cover that — but without it every worker blocks on the first
+        /// one to arrive, which on a corpus of thousands is the whole first minute.
+        /// </summary>
+        public static void Warm()
+        {
+            All();
+            BySubtype();
+        }
+
         /// <summary>Component name to kilograms, from the installed `Components.sbc`.</summary>
         public static Dictionary<string, float> ComponentMasses()
         {
+            lock (CacheLock)
+            {
             if (_componentMasses != null) return _componentMasses;
 
             Dictionary<string, float> masses = new Dictionary<string, float>();
@@ -142,11 +173,14 @@ namespace Thermodynamics.Harness
 
             _componentMasses = masses;
             return masses;
+            }
         }
 
         /// <summary>Every block definition in the installed game, or an empty list.</summary>
         public static List<Definition> All()
         {
+            lock (CacheLock)
+            {
             if (_all != null) return _all;
 
             List<Definition> blocks = new List<Definition>();
@@ -188,6 +222,7 @@ namespace Thermodynamics.Harness
 
             _all = blocks;
             return blocks;
+            }
         }
 
         private static Definition Read(XElement definition, Dictionary<string, float> masses)
@@ -217,7 +252,7 @@ namespace Thermodynamics.Harness
                 Math.Max(Megawatts(definition, "MaxRequiredPowerInput"),
                     Math.Max(Megawatts(definition, "MaxPowerConsumption"),
                         Megawatts(definition, "OperationalPowerConsumption"))));
-            block.ThrustNewtons = Number(definition, "ForceMagnitude");
+            if (block.TypeId == "Thrust") block.ThrustNewtons = Number(definition, "ForceMagnitude");
 
             bool airtight;
             string airtightText = (string)definition.Element("IsAirTight");
@@ -302,6 +337,8 @@ namespace Thermodynamics.Harness
         /// <summary>Every definition by subtype, for a blueprint to look its blocks up in.</summary>
         public static Dictionary<string, Definition> BySubtype()
         {
+            lock (CacheLock)
+            {
             if (_bySubtype != null) return _bySubtype;
 
             Dictionary<string, Definition> map = new Dictionary<string, Definition>(StringComparer.Ordinal);
@@ -314,6 +351,7 @@ namespace Thermodynamics.Harness
 
             _bySubtype = map;
             return map;
+            }
         }
 
         private static Dictionary<string, Definition> _bySubtype;

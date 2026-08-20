@@ -46,6 +46,51 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// **Only a thruster has thrust.** Gyros carry the same <c>ForceMagnitude</c> element and
+        /// it means torque in newton-metres, not thrust in newtons: a large gyro reads 3.36e7 and
+        /// a prototech one 2.016e8, against a real draw of ten kilowatts.
+        ///
+        /// Reading the element off every block that has it turned one gyro into 33.6 MW of waste
+        /// heat and drove a real 9,378-block hull to 342,000 K across half the battery. It looked
+        /// exactly like solver instability — the sort of finding that would have been written up as
+        /// a defect in the integrator — and it was arithmetic in the harness. The substep demand
+        /// was being met the whole time, which is what gave it away.
+        /// </summary>
+        [Fact]
+        public void OnlyAThrusterCarriesThrust()
+        {
+            if (!GameBlocks.IsInstalled) return;
+
+            List<string> wrong = new List<string>();
+
+            foreach (GameBlocks.Definition definition in GameBlocks.All())
+            {
+                if (definition.TypeId != "Thrust" && definition.ThrustNewtons > 0f)
+                {
+                    wrong.Add(definition.TypeId + "/" + definition.SubtypeId
+                        + " reports " + definition.ThrustNewtons + " N of thrust");
+                }
+            }
+
+            Assert.Empty(wrong);
+        }
+
+        /// <summary>A gyro's heat comes from its draw, which is four orders of magnitude smaller.</summary>
+        [Fact]
+        public void AGyroIsRatedByItsDrawAndNotByItsTorque()
+        {
+            if (!GameBlocks.IsInstalled) return;
+
+            GameBlocks.Definition gyro;
+            if (!GameBlocks.BySubtype().TryGetValue("LargeBlockGyro", out gyro)) return;
+
+            Assert.Equal(0f, gyro.ThrustNewtons);
+            Assert.True(gyro.PowerDrawWatts > 0f, "a gyro draws nothing at all");
+            Assert.True(gyro.PowerDrawWatts < 1e6f,
+                "a gyro drawing " + gyro.PowerDrawWatts + " W has picked up its torque again");
+        }
+
+        /// <summary>
         /// Thermal stress is the number the whole pass exists to produce, and it is a ratio: watts
         /// of heat over square metres of skin. A ship with no exposed surface reports zero rather
         /// than dividing by it.

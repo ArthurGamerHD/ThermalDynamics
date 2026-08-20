@@ -13,30 +13,45 @@ namespace Thermodynamics.Harness
     /// </summary>
     public static class BatteryLab
     {
-        public static List<ScenarioOutcome> Run(IList<Blueprints.Ship> ships,
-            IList<Battery.Scenario> scenarios, ThermalSettings settings = null)
+        /// <summary>One run: a ship in a state.</summary>
+        private class Job
         {
-            List<ScenarioOutcome> outcomes = new List<ScenarioOutcome>();
+            public Blueprints.Ship Ship;
+            public Battery.Scenario Scenario;
+        }
 
+        /// <summary>
+        /// Every ship through every scenario.
+        ///
+        /// **The run is the unit of parallelism**, not the ship. Every simulation built from one
+        /// <c>Ship</c> shares its <c>BlockInstance</c> objects and the load is written onto them,
+        /// so each job reads the blueprint again for grid state of its own — see
+        /// <c>Blueprints.Ship.Reload</c>. Parsing is a fraction of the settling run it frees, and
+        /// without it a panel of six ships would use six cores of however many there are.
+        /// </summary>
+        public static List<ScenarioOutcome> Run(IList<Blueprints.Ship> ships,
+            IList<Battery.Scenario> scenarios, ThermalSettings settings = null,
+            LabMode mode = LabMode.Parallel)
+        {
+            GameBlocks.Warm();
+
+            List<Job> jobs = new List<Job>(ships.Count * scenarios.Count);
             for (int s = 0; s < ships.Count; s++)
             {
                 for (int i = 0; i < scenarios.Count; i++)
                 {
-                    try
-                    {
-                        outcomes.Add(Battery.Run(ships[s], scenarios[i], settings));
-                    }
-                    catch (Exception)
-                    {
-                        // One ship failing one scenario is not a reason to lose the matrix.
-                    }
+                    jobs.Add(new Job { Ship = ships[s], Scenario = scenarios[i] });
                 }
             }
 
-            return outcomes;
+            return LabRun.Map(jobs, job =>
+            {
+                Blueprints.Ship own = mode == LabMode.Parallel ? job.Ship.Reload() : job.Ship;
+                return Battery.Run(own, job.Scenario, settings);
+            }, mode);
         }
 
-        public static string Report(string path, int panelSize)
+        public static string Report(string path, int panelSize, LabMode mode = LabMode.Parallel)
         {
             StringBuilder sb = new StringBuilder();
 
@@ -70,13 +85,19 @@ namespace Thermodynamics.Harness
             }
 
             List<Battery.Scenario> scenarios = Battery.All();
-            List<ScenarioOutcome> outcomes = Run(ships, scenarios);
+            System.Diagnostics.Stopwatch clock = System.Diagnostics.Stopwatch.StartNew();
+            List<ScenarioOutcome> outcomes = Run(ships, scenarios, null, mode);
+            clock.Stop();
 
             sb.AppendLine("SCENARIO BATTERY");
             sb.AppendLine();
             sb.Append("  ").AppendLine(root);
             sb.Append("  ").Append(ships.Count).Append(" specimens x ").Append(scenarios.Count)
                 .Append(" scenarios = ").Append(outcomes.Count).AppendLine(" runs");
+            sb.Append("  ").AppendLine(LabRun.Describe(mode));
+            sb.Append("  ").Append(clock.Elapsed.TotalSeconds.ToString("n1")).Append(" s, ")
+                .Append((clock.Elapsed.TotalSeconds / Math.Max(1, outcomes.Count)).ToString("n2"))
+                .AppendLine(" s a run");
             sb.AppendLine();
 
             sb.AppendLine("  what each scenario is for");
@@ -86,7 +107,7 @@ namespace Thermodynamics.Harness
             }
             sb.AppendLine();
 
-            sb.AppendLine("ship / scenario                                peak K   mean K   hotspot  over  margin   made kW  vent kW  solar  frict  hottest block");
+            sb.AppendLine("ship / scenario                                peak K   mean K   hotspot  over   made kW  vent kW  frict kW   demand  granted  settled  hottest block");
             foreach (ScenarioOutcome o in outcomes)
             {
                 sb.Append(Trim(o.Ship, 22).PadRight(23));
@@ -95,11 +116,12 @@ namespace Thermodynamics.Harness
                 sb.Append(o.MeanKelvin.ToString("n0").PadLeft(9));
                 sb.Append(o.HotSpotKelvin.ToString("n0").PadLeft(9));
                 sb.Append(o.BlocksOverCritical.ToString("n0").PadLeft(6));
-                sb.Append(o.MarginKelvin.ToString("n0").PadLeft(8));
                 sb.Append((o.MadeWatts / 1000f).ToString("n0").PadLeft(10));
                 sb.Append((o.VentedWatts / 1000f).ToString("n0").PadLeft(9));
-                sb.Append((o.SolarWatts / 1000f).ToString("n0").PadLeft(7));
-                sb.Append((o.FrictionWatts / 1000f).ToString("n0").PadLeft(7));
+                sb.Append((o.FrictionWatts / 1000f).ToString("n0").PadLeft(10));
+                sb.Append(o.SubstepsDemanded.ToString("n1").PadLeft(9));
+                sb.Append(o.SubstepsGranted.ToString("n0").PadLeft(9));
+                sb.Append((o.SecondsToSettle >= 0f ? o.SecondsToSettle.ToString("n0") : "never").PadLeft(9));
                 sb.Append("  ").AppendLine(Trim(o.HottestBlock, 26));
             }
 

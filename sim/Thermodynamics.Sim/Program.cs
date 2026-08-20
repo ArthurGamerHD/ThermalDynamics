@@ -71,7 +71,7 @@ namespace Thermodynamics.Sim
                 {
                     int size;
                     int.TryParse(ValueAfter(args, "--panel") ?? "0", out size);
-                    Console.Write(BatteryLab.Report(ValueAfter(args, "--path"), size));
+                    Console.Write(BatteryLab.Report(ValueAfter(args, "--path"), size, LabRun.ModeOf(args)));
                     return 0;
                 }
 
@@ -79,7 +79,7 @@ namespace Thermodynamics.Sim
                 {
                     int panel;
                     int.TryParse(ValueAfter(args, "--panel") ?? "0", out panel);
-                    Console.Write(ScreeningLab.Report(ValueAfter(args, "--path"), panel));
+                    Console.Write(ScreeningLab.Report(ValueAfter(args, "--path"), panel, LabRun.ModeOf(args)));
                     return 0;
                 }
 
@@ -750,6 +750,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  screen [--path <dir>]   measure every ship, and cut the corpus to a panel");
             Console.WriteLine("    --panel N                 how many specimens to select");
             Console.WriteLine("  battery [--panel N]     every specimen through every scenario");
+            Console.WriteLine("    --linear                  one at a time: for any figure that is a duration");
             Console.WriteLine();
             Console.WriteLine("  bench scale             cost per stage as the grid grows");
             Console.WriteLine("  bench hitch --size N    per-tick cost, with a block welded mid-run");

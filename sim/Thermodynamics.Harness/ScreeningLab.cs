@@ -25,27 +25,18 @@ namespace Thermodynamics.Harness
         /// </summary>
         public const double RedundantWithin = 0.08d;
 
-        public static List<ShipProfile> Measure(IList<Blueprints.Ship> ships, ThermalSettings settings = null)
+        /// <summary>
+        /// Measures every ship. Ships are independent, so this goes as wide as it is allowed to; a
+        /// ship this model cannot build is dropped and shows up as yield rather than losing the pass.
+        /// </summary>
+        public static List<ShipProfile> Measure(IList<Blueprints.Ship> ships,
+            ThermalSettings settings = null, LabMode mode = LabMode.Parallel)
         {
-            List<ShipProfile> profiles = new List<ShipProfile>();
-
-            for (int i = 0; i < ships.Count; i++)
-            {
-                try
-                {
-                    profiles.Add(ShipProfile.Measure(ships[i], settings));
-                }
-                catch (Exception)
-                {
-                    // A corpus of ten thousand will contain ships this model cannot build. Losing
-                    // one is not a reason to lose the pass; the yield is reported instead.
-                }
-            }
-
-            return profiles;
+            GameBlocks.Warm();
+            return LabRun.Map(ships, ship => ShipProfile.Measure(ship, settings), mode);
         }
 
-        public static string Report(string path, int panelSize)
+        public static string Report(string path, int panelSize, LabMode mode = LabMode.Parallel)
         {
             StringBuilder sb = new StringBuilder();
 
@@ -64,13 +55,16 @@ namespace Thermodynamics.Harness
                 return sb.ToString();
             }
 
-            List<ShipProfile> profiles = Measure(corpus.Usable);
+            System.Diagnostics.Stopwatch clock = System.Diagnostics.Stopwatch.StartNew();
+            List<ShipProfile> profiles = Measure(corpus.Usable, null, mode);
+            clock.Stop();
 
             sb.AppendLine("SCREENING  (every ship measured, nothing stepped)");
             sb.AppendLine();
             sb.Append("  ").AppendLine(root);
             sb.Append("  ").Append(profiles.Count).Append(" of ").Append(corpus.Usable.Count)
-                .AppendLine(" usable ships measured");
+                .Append(" usable ships measured, ").Append(LabRun.Describe(mode))
+                .Append(", in ").Append(clock.Elapsed.TotalSeconds.ToString("n1")).AppendLine(" s");
             sb.AppendLine();
 
             sb.AppendLine("ship                              blocks    mass t   area m2  exp%    waste kW   W/m2   Teq K  stiff  stiffest block");

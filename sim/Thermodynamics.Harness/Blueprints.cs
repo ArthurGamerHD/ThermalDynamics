@@ -43,6 +43,9 @@ namespace Thermodynamics.Harness
 
             public bool Large;
 
+            /// <summary>Which grid of its blueprint this is, so it can be read again.</summary>
+            public int GridIndex;
+
             /// <summary>Blocks placed, i.e. those whose subtype resolved to a definition.</summary>
             public int Blocks;
 
@@ -70,6 +73,26 @@ namespace Thermodynamics.Harness
             public ThermalSimulation Build(ThermalSettings settings = null, float kelvin = 293.15f)
             {
                 return Builder.BuildSimulation(settings ?? new ThermalSettings(), kelvin);
+            }
+
+            /// <summary>
+            /// The same ship, read again from its file, with grid state of its own.
+            ///
+            /// **This is what lets a run be the unit of parallelism rather than a ship.** Every
+            /// simulation built from one <c>Ship</c> shares that ship's <c>BlockInstance</c>
+            /// objects, and the load is written onto them, so two scenarios on one ship at once
+            /// overwrite each other. Reading the blueprint again is the cheap way out: block
+            /// *models* are cached and shared, so only the per-block instances are rebuilt, and
+            /// that costs a fraction of the settling run it enables.
+            ///
+            /// Without it a panel of six ships uses six cores of however many the machine has.
+            /// </summary>
+            public Ship Reload()
+            {
+                if (Path == null) return this;
+
+                List<Ship> ships = Read(Path);
+                return GridIndex >= 0 && GridIndex < ships.Count ? ships[GridIndex] : this;
             }
 
             /// <summary>
@@ -173,11 +196,13 @@ namespace Thermodynamics.Harness
                 break;
             }
 
+            int index = 0;
             foreach (XElement grid in document.Descendants("CubeGrid"))
             {
                 Ship ship = ReadGrid(grid, definitions);
-                if (ship == null) continue;
+                if (ship == null) { index++; continue; }
 
+                ship.GridIndex = index++;
                 ship.Path = path;
                 ship.Blueprint = blueprintName ?? Path.GetFileName(Path.GetDirectoryName(path));
                 ship.WorkshopId = WorkshopIdOf(path);
@@ -263,6 +288,9 @@ namespace Thermodynamics.Harness
         private static readonly Dictionary<string, BlockModel> Models =
             new Dictionary<string, BlockModel>(StringComparer.Ordinal);
 
+        /// <summary>Guards <see cref="Models"/>, which every worker reads while parsing.</summary>
+        private static readonly object ModelLock = new object();
+
         /// <summary>
         /// The model for a definition, built once and shared. A corpus places millions of blocks
         /// across a few thousand distinct types, so this is the difference between a pass that runs
@@ -271,7 +299,10 @@ namespace Thermodynamics.Harness
         public static BlockModel Model(GameBlocks.Definition definition)
         {
             BlockModel model;
-            if (Models.TryGetValue(definition.SubtypeId, out model)) return model;
+            lock (ModelLock)
+            {
+                if (Models.TryGetValue(definition.SubtypeId, out model)) return model;
+            }
 
             model = BlockModel.Solid(definition.SubtypeId, definition.Size, definition.Mass,
                 BlockThermalDerivation.Derive(definition.Components, definition.TypeId));
@@ -301,7 +332,13 @@ namespace Thermodynamics.Harness
                 }
             }
 
-            Models[definition.SubtypeId] = model;
+            lock (ModelLock)
+            {
+                BlockModel existing;
+                if (Models.TryGetValue(definition.SubtypeId, out existing)) return existing;
+
+                Models[definition.SubtypeId] = model;
+            }
             return model;
         }
 
