@@ -75,11 +75,12 @@ feels is everything that ran on one frame added together, and the per-grid rows 
 while the frame does not. `FrameCostTracker` adds up what the mod spent on each frame across every
 grid that ran on it, and keeps the **worst sixteen frames of the session in full**.
 
-**A frame carries about a tenth of the world's grids.** That is the mod's own doing, not the
-engine's: `ThermalGridScheduler` holds grids in ten buckets and ticks one bucket per frame,
-because the engine fires every grid's ten-frame update together. The report's **grid spread**
-table says how even the split currently is, and `heaviest over average` is the figure to read —
-1.0 is perfect, 10 is everything on one frame, and about 1.3 is the practical floor. See
+**Every frame carries every grid.** That is the mod's own doing, not the engine's: the engine fires
+every grid's ten-frame update together, so `ThermalGridScheduler` ignores it and gives each grid a
+share of each frame from the session component, with each grid spreading its solver step across the
+frames of its own simulation window. The figure to read is therefore `mean` against `worst` rather
+than how the grids are divided up — the division no longer varies. In the TestWorld1 dump, 29,386
+of 29,387 frames did work. See
 [engine-api-notes.md](engine-api-notes.md#entity-updates-are-not-staggered-across-frames--measured).
 
 The report gives, under `Cost`:

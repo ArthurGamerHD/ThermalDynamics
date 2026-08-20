@@ -344,9 +344,11 @@ for where those numbers come from.
 > measurement is what counts. The reading was plausible and wrong, and it was nearly the basis for
 > deciding no fix was needed.
 
-The mod therefore paces its own grids: see `ThermalGridScheduler`. Grids are held in ten buckets,
-one bucket ticks per frame, and a grid joins the bucket carrying the fewest blocks. The interval
-per grid is unchanged at ten frames — only which ten.
+The mod therefore paces its own grids: see `ThermalGridScheduler`. Every grid ticks on every
+frame, and each does its share of the solver step it is part way through — a fifteenth of it at
+`Frequency 4`. Bucketing was the first answer and was not enough: it spreads the grids across the
+cycle but not the work inside any one of them, so a single large grid on its own frame stayed a
+stutter. Spreading the step itself subsumes it, and the buckets are gone.
 
 ## `MyCubeGrid` clears `EACH_FRAME` from its own update flags
 
