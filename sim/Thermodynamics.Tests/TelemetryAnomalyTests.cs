@@ -205,4 +205,111 @@ namespace Thermodynamics.Tests
             Assert.True(gate.Admit());
         }
     }
+
+    /// <summary>
+    /// The always-on health check: whether a whole grid has gone numerically bad, decided from
+    /// three figures the solver already publishes rather than by walking it.
+    ///
+    /// This exists because per-node classification runs only on the sampling walk, and the walk
+    /// runs only while collection is on — which is never, by default. The one class of bug worst
+    /// worth catching, a grid that goes NaN or runs away, was the one nothing in an ordinary
+    /// world was looking for. A grid welded past its buffer capacity did exactly that, whole.
+    /// </summary>
+    public class GridHealthTests
+    {
+        private const float Implausible = 20000f;
+
+        private static TelemetryAnomalyKind Check(float environmentWatts, float gainWatts, float hottest)
+        {
+            return TelemetryAnomalies.ClassifyGrid(environmentWatts, gainWatts, hottest, Implausible);
+        }
+
+        [Theory]
+        [InlineData(-50000f, 50000f, 400f)]     // a ship in balance
+        [InlineData(0f, 0f, 2.7f)]              // cold and idle in vacuum
+        [InlineData(120000f, 0f, 330f)]         // absorbing more than it sheds, in sunlight
+        [InlineData(-1e9f, 1e9f, 19999f)]       // enormous, and still finite and below the threshold
+        public void AWorkingGridIsNotAFault(float environmentWatts, float gainWatts, float hottest)
+        {
+            Assert.Equal(TelemetryAnomalyKind.None, Check(environmentWatts, gainWatts, hottest));
+        }
+
+        /// <summary>
+        /// The watt sums are accumulated over every node on the stepping path, so a NaN anywhere on
+        /// the grid reaches them. That is what makes a three-float test a whole-grid check.
+        /// </summary>
+        [Fact]
+        public void ANanInEitherWattSumFailsTheGrid()
+        {
+            Assert.Equal(TelemetryAnomalyKind.NotANumber, Check(float.NaN, 1000f, 400f));
+            Assert.Equal(TelemetryAnomalyKind.NotANumber, Check(-1000f, float.NaN, 400f));
+        }
+
+        [Fact]
+        public void ANanTemperatureFailsTheGrid()
+        {
+            Assert.Equal(TelemetryAnomalyKind.NotANumber, Check(-1000f, 1000f, float.NaN));
+        }
+
+        [Theory]
+        [InlineData(float.PositiveInfinity, 1000f, 400f)]
+        [InlineData(float.NegativeInfinity, 1000f, 400f)]
+        [InlineData(-1000f, float.PositiveInfinity, 400f)]
+        [InlineData(-1000f, 1000f, float.PositiveInfinity)]
+        public void AnInfinityInAnyOfTheThreeFailsTheGrid(float environmentWatts, float gainWatts, float hottest)
+        {
+            Assert.Equal(TelemetryAnomalyKind.Infinite, Check(environmentWatts, gainWatts, hottest));
+        }
+
+        /// <summary>
+        /// NaN is reported ahead of infinity when both are present, because NaN is the one that
+        /// spreads: an infinity minus an infinity is a NaN, so a grid showing both went NaN first.
+        /// </summary>
+        [Fact]
+        public void NotANumberIsReportedAheadOfInfinity()
+        {
+            Assert.Equal(TelemetryAnomalyKind.NotANumber, Check(float.PositiveInfinity, float.NaN, 400f));
+        }
+
+        [Fact]
+        public void ARunawayTemperatureFailsTheGrid()
+        {
+            Assert.Equal(TelemetryAnomalyKind.Implausible, Check(-1000f, 1000f, Implausible + 1f));
+        }
+
+        /// <summary>
+        /// A grid with no nodes reports a hottest temperature of zero, which must not read as a
+        /// fault — every grid is in that state for its first step, and a paste preview never
+        /// leaves it.
+        /// </summary>
+        [Fact]
+        public void AGridWithNoNodesIsNotAFault()
+        {
+            Assert.Equal(TelemetryAnomalyKind.None, Check(0f, 0f, 0f));
+        }
+
+        /// <summary>
+        /// The names are dictionary keys grouping every occurrence of the same problem, and they
+        /// must not collide with the per-node names or a grid fault and a node reading would merge
+        /// into one record.
+        /// </summary>
+        [Fact]
+        public void GridKindsAreNamedApartFromNodeKinds()
+        {
+            foreach (TelemetryAnomalyKind kind in new TelemetryAnomalyKind[]
+            {
+                TelemetryAnomalyKind.NotANumber,
+                TelemetryAnomalyKind.Infinite,
+                TelemetryAnomalyKind.Implausible,
+            })
+            {
+                string grid = TelemetryAnomalies.GridName(kind, Implausible);
+                string node = TelemetryAnomalies.Name(kind, Implausible);
+
+                Assert.False(string.IsNullOrEmpty(grid));
+                Assert.NotEqual(node, grid);
+            }
+        }
+    }
+
 }

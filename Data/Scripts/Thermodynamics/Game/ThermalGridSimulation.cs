@@ -197,7 +197,12 @@ namespace Thermodynamics
             if (stepsSinceHottest >= HottestInterval)
             {
                 stepsSinceHottest = 0;
-                if (NeedsReadouts()) HottestNode = Simulation.Solver.HottestNode();
+
+                // Unconditional now, where it used to be skipped on a dedicated server with
+                // telemetry off. It is answered from the index the step's write-back recorded, so
+                // it is a bounds check and an array read, and the health check below needs it.
+                HottestNode = Simulation.Solver.HottestNode();
+                CheckHealth();
             }
 
             if (Telemetry.Enabled)
@@ -208,14 +213,38 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Refreshes the hottest-block figure, which feeds the HUD and the report only. Skipped on a
-        /// dedicated server with telemetry off.
+        /// The last health verdict reported for this grid, so a grid that has gone bad is reported
+        /// on the transition rather than every four steps for the rest of the session.
         /// </summary>
-        private bool NeedsReadouts()
+        private TelemetryAnomalyKind lastHealth;
+
+        /// <summary>
+        /// Tests whether this grid has gone numerically bad, on every world, whether or not
+        /// telemetry is collecting.
+        ///
+        /// A NaN or a runaway is the failure that destroys a save rather than degrading a frame,
+        /// and until now it was visible only through the per-node sampling walk — which runs only
+        /// while collection is on, which is never, by default. So the one class of bug worst worth
+        /// catching was the one nothing in an ordinary world was looking for.
+        ///
+        /// The cost is three float tests every fourth step, on figures the solver has already
+        /// summed. Nothing is walked and nothing is allocated. A grid that is healthy and stays
+        /// healthy never reaches the registry at all.
+        /// </summary>
+        private void CheckHealth()
         {
-            return Telemetry.Enabled
-                || MyAPIGateway.Utilities == null
-                || !MyAPIGateway.Utilities.IsDedicated;
+            TelemetryAnomalyKind health = TelemetryAnomalies.ClassifyGrid(
+                Simulation.EnvironmentWatts,
+                Simulation.HeatGainWatts,
+                HottestNode == null ? 0f : HottestNode.Temperature,
+                Telemetry.ImplausibleTemperature);
+
+            if (health == lastHealth) return;
+            lastHealth = health;
+
+            if (health == TelemetryAnomalyKind.None) return;
+
+            Telemetry.GridFault(this, TelemetryAnomalies.GridName(health, Telemetry.ImplausibleTemperature));
         }
 
         private void ApplyOverheatDamage()

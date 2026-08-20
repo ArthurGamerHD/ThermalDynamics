@@ -65,11 +65,40 @@ linked into `sim/`, so it is covered by `AnomalyRegistryTests` rather than argue
 line carries the exception type, its message and the top six stack frames; the report carries what
 the grid was doing.
 
+### A grid that has gone numerically bad is also a fault
+
+An exception is not the only silent failure. A grid that goes NaN or runs away destroys a save
+rather than degrading a frame, and until now it was visible only through the per-node sampling walk
+— which runs only while collection is on. The worst class of bug was the one nothing in an ordinary
+world was looking for. `A11` in the [backlog](backlog.md) is the case: a grid welded past its buffer
+capacity divided watts by a heat capacity of zero and went NaN, whole.
+
+Every fourth step, each grid classifies itself from three figures the solver has already summed:
+
+| Figure | Catches |
+| --- | --- |
+| `EnvironmentWatts` | NaN or infinity anywhere on the grid — it is a sum over every node |
+| `HeatGainWatts` | the same, on the generation side |
+| the hottest node's temperature | runaway, which no watt sum has to show |
+
+The two watt sums are accumulated on the stepping path whether or not anything is collecting, so a
+bad value at any node propagates into them. That is what makes three float tests a whole-grid check
+rather than a sample of one. The one case it cannot see is a bad temperature on a node with no
+exposed face, which contributes to neither sum; per-node classification remains the sampled path's
+job, and this is the always-on floor beneath it.
+
+Cost is three float tests every fourth step per grid, on figures already computed, with nothing
+walked and nothing allocated. A grid that is healthy and stays healthy never reaches the registry.
+Reporting is on the **transition**, so a grid stuck bad is recorded once rather than every fourth
+step for the rest of the session, and a grid that recovers and fails again is recorded twice —
+which is the difference worth knowing. Pinned by `GridHealthTests`.
+
 ## What it costs when it is off
 
 | Path | Cost with collection off |
 | --- | --- |
 | Grid update | one `Telemetry.Enabled` test |
+| Grid health | three float tests every fourth step, on figures the solver already summed |
 | Environment sample | one test |
 | Block placed / removed | one test (`GetBlockType` returns null and the record is never made) |
 | Overheat damage | one test |
@@ -596,12 +625,12 @@ Its decision logic does not, and lives in three files that reference nothing but
 | File | What it holds |
 | --- | --- |
 | `TelemetryStats.cs` | `RunningStat`, `Histogram`, `TimingStat` |
-| `TelemetryAnomalies.cs` | anomaly classification, the sampling gate, `AnomalyRegistry` |
+| `TelemetryAnomalies.cs` | anomaly classification per node and per grid, the sampling gate, `AnomalyRegistry` |
 | `TelemetryFormat.cs` | report and CSV formatting |
 
 `Thermodynamics.Tests` links those three directly — the same files the game compiles, not a
 copy — and covers them in `TelemetryStatsTests.cs`, `TelemetryAnomalyTests.cs`,
-`TelemetryFormatTests.cs` and `AnomalyRegistryTests.cs`.
+`TelemetryFormatTests.cs`, `AnomalyRegistryTests.cs` and `GridHealthTests`.
 
 `AnomalyRegistry` was pulled out of `Telemetry` for exactly this reason: the rule that decides
 whether a problem is recorded at all was wrong for a long time, and it was wrong where nothing

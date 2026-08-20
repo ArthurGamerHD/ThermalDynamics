@@ -50,6 +50,50 @@ namespace Thermodynamics
         }
 
         /// <summary>
+        /// Classifies a whole grid from three figures the solver already publishes, so a grid that
+        /// has gone numerically bad can be caught without walking it.
+        ///
+        /// <paramref name="environmentWatts"/> and <paramref name="heatGainWatts"/> are sums over
+        /// every node, accumulated on the stepping path whether or not anything is collecting. A
+        /// NaN or an infinity at any node propagates into them, so testing the two of them tests
+        /// the grid — which is what makes this affordable where <see cref="Classify"/> is not.
+        ///
+        /// The one case it cannot see is a bad temperature on a node with no exposed face, which
+        /// contributes to neither sum. Per-node classification is still the sampled path's job;
+        /// this is the always-on floor beneath it, and it covers the failure that matters, which is
+        /// the grid-wide one. A whole grid went NaN at once when its buffers grew mid-step.
+        /// </summary>
+        /// <param name="hottestTemperature">
+        /// The hottest node's temperature, or 0 when the grid has no nodes. A NaN never wins a
+        /// maximum, so this catches runaway rather than NaN; the watt sums catch NaN.
+        /// </param>
+        public static TelemetryAnomalyKind ClassifyGrid(float environmentWatts, float heatGainWatts,
+            float hottestTemperature, float implausible)
+        {
+            if (float.IsNaN(environmentWatts) || float.IsNaN(heatGainWatts) || float.IsNaN(hottestTemperature))
+                return TelemetryAnomalyKind.NotANumber;
+
+            if (float.IsInfinity(environmentWatts) || float.IsInfinity(heatGainWatts) || float.IsInfinity(hottestTemperature))
+                return TelemetryAnomalyKind.Infinite;
+
+            if (hottestTemperature > implausible) return TelemetryAnomalyKind.Implausible;
+
+            return TelemetryAnomalyKind.None;
+        }
+
+        /// <summary>The name a grid-level kind is aggregated under. See <see cref="Name"/>.</summary>
+        public static string GridName(TelemetryAnomalyKind kind, float implausible)
+        {
+            switch (kind)
+            {
+                case TelemetryAnomalyKind.NotANumber: return "grid went NaN";
+                case TelemetryAnomalyKind.Infinite: return "grid went infinite";
+                case TelemetryAnomalyKind.Implausible: return "grid above " + TelemetryFormat.Number(implausible) + "K";
+                default: return "none";
+            }
+        }
+
+        /// <summary>
         /// The name a kind is aggregated under in the report. Stable, since it is the dictionary key
         /// grouping every occurrence of the same problem.
         /// </summary>

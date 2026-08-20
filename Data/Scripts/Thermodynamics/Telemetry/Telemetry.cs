@@ -501,6 +501,33 @@ namespace Thermodynamics
             Record("exception in " + where, Describe(e), true);
         }
 
+        /// <summary>
+        /// Records a grid whose published figures have gone bad — NaN, infinite, or a temperature
+        /// past anything the model reaches. Filed as a fault, and so recorded and logged whether or
+        /// not collection is running: it is a defect in the simulation rather than a reading from
+        /// it, and it is the failure that costs a player their ship.
+        /// </summary>
+        public static void GridFault(ThermalGrid grid, string kind)
+        {
+            string example;
+
+            try
+            {
+                example = (grid == null || grid.Entity == null ? "(unknown grid)" : grid.Entity.DisplayName)
+                    + " vented=" + (grid == null ? 0f : grid.Simulation.VentedWatts)
+                    + "W made=" + (grid == null ? 0f : grid.Simulation.HeatGainWatts)
+                    + "W hottest=" + (grid == null || grid.HottestNode == null
+                        ? "(none)"
+                        : grid.HottestNode.Block.Name + " " + grid.HottestNode.Temperature + "K");
+            }
+            catch
+            {
+                example = "(undescribable grid)";
+            }
+
+            Record(kind, example, true);
+        }
+
         private static void Record(string kind, string example, bool fault)
         {
             if (!Enabled && !fault) return;
