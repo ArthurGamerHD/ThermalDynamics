@@ -75,6 +75,22 @@ namespace Thermodynamics.Core
         private int stepNodeCount;
         private int stepLinkCount;
 
+        /// <summary>
+        /// Whether the conduction overshoot clamp can change any exchange during this step.
+        ///
+        /// Settled once in <see cref="BeginStep"/> from the substep length, which is what decides
+        /// it, and read by every substep's conduction pass. See <c>ClampCanBind</c>. Readable so a
+        /// test can tell a step that skipped the clamp from one that could not.
+        /// </summary>
+        public bool ConductionClampLive { get; private set; }
+
+        /// <summary>
+        /// Set false to run the clamped conduction loop whenever the setting asks for it, without
+        /// first testing whether it can bind. Test hook: <c>ConductionClampGateTests</c> runs the
+        /// same grid both ways and compares the results bit for bit.
+        /// </summary>
+        public bool GateConductionClamp = true;
+
         /// <summary>True while a step has been begun and not yet finished.</summary>
         public bool StepInFlight
         {
@@ -206,6 +222,12 @@ namespace Thermodynamics.Core
 
             substepSeconds = deltaSeconds / substeps;
             substepsLeft = substeps;
+
+            // After the substep length is known and before any substep runs: the clamp is a
+            // function of that length and of masses and conductances that cannot move mid-step.
+            ConductionClampLive = settings.ClampConductionOvershoot
+                && settings.EnableConduction
+                && (!GateConductionClamp || ClampCanBind(substepSeconds));
 
             stepNodeCount = nodes.Count;
             stepLinkCount = links.Count;
