@@ -90,6 +90,10 @@ namespace Thermodynamics
         protected override void UnloadData()
         {
             // The last point at which the mod is still live and world storage is still writable.
+            // The fault summary goes first and is not conditional on collection: a world that ran
+            // with telemetry off produces no report, and the faults it hit are the only thing worth
+            // saying about it.
+            Telemetry.LogFaultSummary();
             Telemetry.Finish("world closing");
             Telemetry.Reset();
 

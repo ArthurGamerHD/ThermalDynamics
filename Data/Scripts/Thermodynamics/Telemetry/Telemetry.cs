@@ -2,6 +2,7 @@ using Sandbox.ModAPI;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Text;
 using Thermodynamics.Core;
 using VRage.Game;
 using VRage.Utils;
@@ -9,25 +10,19 @@ using VRage.Utils;
 namespace Thermodynamics
 {
     /// <summary>
-    /// One occurrence class of something the simulation should not have produced.
-    /// </summary>
-    public class AnomalyRecord
-    {
-        public string Kind;
-        public long Count;
-        public double FirstSeconds;
-        public double LastSeconds;
-        public string FirstExample;
-        public string LastExample;
-    }
-
-    /// <summary>
     /// Session-wide data collection for the live mod.
     ///
     /// The simulation reports through the hooks on this class, which aggregate into streaming
     /// statistics and are written to a report when the world closes. Nothing here changes
-    /// simulation behaviour: every entry point is a no-op when <see cref="Enabled"/> is false, and
-    /// every entry point swallows its own exceptions so a telemetry fault cannot fail the mod.
+    /// simulation behaviour, and every entry point swallows its own exceptions so a telemetry fault
+    /// cannot fail the mod.
+    ///
+    /// **Observations are gated on <see cref="Enabled"/>; faults are not.** Every measurement hook
+    /// is a no-op when collection is off, which is the default and is what keeps a shipped world
+    /// paying a bool read and nothing more. <see cref="Exception"/> is the exception to that, in
+    /// both senses: a caught exception costs nothing until the mod has already failed, and a
+    /// failure nobody records is a bug that cannot be fixed. It records always, and puts the first
+    /// of each kind in the game log.
     ///
     /// Sized for a session running for hours: no sample buffers, no per-cell history, no unbounded
     /// dictionaries. Memory is bounded by the number of block definitions and the number of grids
@@ -102,8 +97,22 @@ namespace Thermodynamics
         public static readonly Dictionary<MyDefinitionId, BlockTypeTelemetry> BlockTypes = new Dictionary<MyDefinitionId, BlockTypeTelemetry>(MyDefinitionId.Comparer);
         public static long BlockTypeRecordsDropped;
 
-        public static readonly Dictionary<string, AnomalyRecord> Anomalies = new Dictionary<string, AnomalyRecord>();
-        public static long AnomalyKindsDropped;
+        /// <summary>
+        /// Anomalies and faults, one record per kind. The gating rule — observations only while
+        /// collecting, faults always — lives on the registry, which is free of game types and so
+        /// testable outside a session.
+        /// </summary>
+        public static readonly AnomalyRegistry Faults = new AnomalyRegistry(MaxAnomalyKinds);
+
+        public static Dictionary<string, AnomalyRecord> Anomalies
+        {
+            get { return Faults.Records; }
+        }
+
+        public static long AnomalyKindsDropped
+        {
+            get { return Faults.KindsDropped; }
+        }
 
         /// <summary>
         /// Guards the three registries above.
@@ -295,14 +304,13 @@ namespace Thermodynamics
             GridRecordsDropped = 0;
             SurfaceRowsCaptured = 0;
             BlockTypeRecordsDropped = 0;
-            AnomalyKindsDropped = 0;
 
             lock (RegistryLock)
             {
                 Grids.Clear();
                 GridsById.Clear();
                 BlockTypes.Clear();
-                Anomalies.Clear();
+                Faults.Clear();
             }
 
             SessionClock.Reset();
@@ -470,41 +478,72 @@ namespace Thermodynamics
 
         public static void Anomaly(string kind, string example)
         {
-            if (!Enabled) return;
+            Record(kind, example, false);
+        }
+
+        /// <summary>
+        /// Records a caught exception, <b>whether or not collection is running</b>.
+        ///
+        /// Every <c>catch</c> in the simulation adapter routes here, and for a long time this went
+        /// through <see cref="Anomaly"/> and so through the <see cref="Enabled"/> gate. Telemetry
+        /// is off by default, so in an ordinary world all twenty-two of those handlers swallowed
+        /// their exception, wrote nothing anywhere, and left a grid running in whatever state the
+        /// throw abandoned it in. The guard around <c>ThermalGrid.Tick</c> says an exception named
+        /// here is worth more than a crash dump; it named it nowhere.
+        ///
+        /// A fault is not data collection. Collection is a running cost paid on healthy frames and
+        /// is rightly opt-in; a fault costs nothing until something has already gone wrong, and by
+        /// then it is the only evidence there will be. So faults are always recorded, and the first
+        /// of each kind goes to the game log, which is the one file a player can be asked for.
+        /// </summary>
+        public static void Exception(string where, Exception e)
+        {
+            Record("exception in " + where, Describe(e), true);
+        }
+
+        private static void Record(string kind, string example, bool fault)
+        {
+            if (!Enabled && !fault) return;
 
             try
             {
+                bool log;
                 lock (RegistryLock)
                 {
-                    AnomalyRecord record;
-                    if (!Anomalies.TryGetValue(kind, out record))
-                    {
-                        if (Anomalies.Count >= MaxAnomalyKinds)
-                        {
-                            AnomalyKindsDropped++;
-                            return;
-                        }
-
-                        record = new AnomalyRecord
-                        {
-                            Kind = kind,
-                            FirstSeconds = SessionSeconds,
-                            FirstExample = example
-                        };
-                        Anomalies.Add(kind, record);
-                    }
-
-                    record.Count++;
-                    record.LastSeconds = SessionSeconds;
-                    record.LastExample = example;
+                    log = Faults.Record(kind, example, fault, Enabled, SessionSeconds);
                 }
+
+                if (log) LogLine(kind + "\n        " + example);
             }
             catch { }
         }
 
-        public static void Exception(string where, Exception e)
+        /// <summary>
+        /// One block naming every fault of the session, written as the world closes whether or not
+        /// collection is running.
+        /// </summary>
+        public static void LogFaultSummary()
         {
-            Anomaly("exception in " + where, Describe(e));
+            try
+            {
+                string summary;
+                lock (RegistryLock)
+                {
+                    summary = Faults.FaultSummary(Enabled);
+                }
+
+                if (summary != null) LogLine(summary);
+            }
+            catch { }
+        }
+
+        private static void LogLine(string text)
+        {
+            try
+            {
+                MyLog.Default.Error("[" + Settings.Name + "] " + text);
+            }
+            catch { }
         }
 
         /// <summary>

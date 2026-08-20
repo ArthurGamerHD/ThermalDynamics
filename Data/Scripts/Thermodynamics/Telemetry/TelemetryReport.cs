@@ -542,12 +542,20 @@ namespace Thermodynamics
             }
 
             List<AnomalyRecord> records = new List<AnomalyRecord>(Telemetry.Anomalies.Values);
-            records.Sort(delegate (AnomalyRecord a, AnomalyRecord b) { return b.Count.CompareTo(a.Count); });
+
+            // Faults first, then by frequency. A caught exception is a defect in the mod and a
+            // suspect measurement may be a defect in a definition, so the two want reading in that
+            // order rather than in whichever order they happened to fire most.
+            records.Sort(delegate (AnomalyRecord a, AnomalyRecord b)
+            {
+                if (a.IsFault != b.IsFault) return a.IsFault ? -1 : 1;
+                return b.Count.CompareTo(a.Count);
+            });
 
             for (int i = 0; i < records.Count; i++)
             {
                 AnomalyRecord r = records[i];
-                sb.Append("  ").Append(r.Kind).Append(" x").Append(r.Count.ToString("n0")).Append('\n');
+                sb.Append(r.IsFault ? "  !! " : "  ").Append(r.Kind).Append(" x").Append(r.Count.ToString("n0")).Append('\n');
                 sb.Append("      first at ").Append(r.FirstSeconds.ToString("n1")).Append("s: ").Append(r.FirstExample).Append('\n');
                 if (r.Count > 1)
                 {

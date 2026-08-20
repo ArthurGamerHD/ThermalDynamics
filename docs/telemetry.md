@@ -29,6 +29,42 @@ loading the world, or switch it on in chat during one:
 Repeated dumps are safe: the "final state" sections are rebuilt each time rather than appended
 to.
 
+## Faults are recorded whether or not collection is running
+
+Everything else in this document is *observation*: it costs something on every healthy frame, and
+is rightly off unless someone is reading it. A **fault** — a caught exception — is not. It costs
+nothing until the mod has already failed, and by then it is the only evidence there will be.
+
+For a long time the two were gated together, and telemetry is off by default. Every `catch` in the
+simulation adapter routes through `Telemetry.Exception`, so in an ordinary world all twenty-two of
+them discarded their exception, wrote nothing to any file, and left the grid running in whatever
+state the throw abandoned it in. That includes the guard around `ThermalGrid.Tick`, whose own
+comment says an exception named there is worth more than a crash dump — and which named it nowhere.
+B9 in the [backlog](backlog.md), a startup crash seen once and never reproduced, is exactly the
+shape of bug this made unrecoverable after the fact.
+
+Now:
+
+| | Observation | Fault |
+| --- | --- | --- |
+| Recorded while collection is off | no | **yes** |
+| Written to `SpaceEngineers.log` as it happens | no | **first occurrence of each kind** |
+| Named in the closing log summary | no | **yes, with its count** |
+| In the report's Anomalies section | yes | yes, first and marked `!!` |
+
+Only the *first* occurrence of a kind is logged as it happens. A throw inside the step runs once
+per grid per frame, so logging every one would fill the game log with the same six stack frames and
+bury whatever else was in it. The count keeps rising regardless, and the summary written as the
+world closes carries it — which is what distinguishes a one-off from a permanent failure, and is
+the only output at all on a world that never turned collection on.
+
+The rule lives in `AnomalyRegistry` in `TelemetryAnomalies.cs`, which is free of game types and
+linked into `sim/`, so it is covered by `AnomalyRegistryTests` rather than argued about.
+
+**A fault in the log is a reason to turn telemetry on and reproduce**, not a diagnosis. The log
+line carries the exception type, its message and the top six stack frames; the report carries what
+the grid was doing.
+
 ## What it costs when it is off
 
 | Path | Cost with collection off |
@@ -483,7 +519,9 @@ usually not the problem.
 
 **Anomalies** — NaN, infinite and implausibly high temperatures, temperatures clamped to zero
 from a positive value (the signature of an unstable step), and any exception caught inside the
-module. Each is recorded once per kind with a count and its first and last example.
+module. Each is recorded once per kind with a count and its first and last example. Faults are
+listed first and marked `!!`; see [above](#faults-are-recorded-whether-or-not-collection-is-running)
+for why they are recorded even when nothing else is.
 
 An exception's example carries its type, its message and the top six stack frames. The message
 alone does not say which call threw, and the throw is often inside game code the mod only reaches
@@ -558,12 +596,17 @@ Its decision logic does not, and lives in three files that reference nothing but
 | File | What it holds |
 | --- | --- |
 | `TelemetryStats.cs` | `RunningStat`, `Histogram`, `TimingStat` |
-| `TelemetryAnomalies.cs` | anomaly classification, the sampling gate |
+| `TelemetryAnomalies.cs` | anomaly classification, the sampling gate, `AnomalyRegistry` |
 | `TelemetryFormat.cs` | report and CSV formatting |
 
 `Thermodynamics.Tests` links those three directly — the same files the game compiles, not a
-copy — and covers them in `TelemetryStatsTests.cs`, `TelemetryAnomalyTests.cs` and
-`TelemetryFormatTests.cs`.
+copy — and covers them in `TelemetryStatsTests.cs`, `TelemetryAnomalyTests.cs`,
+`TelemetryFormatTests.cs` and `AnomalyRegistryTests.cs`.
+
+`AnomalyRegistry` was pulled out of `Telemetry` for exactly this reason: the rule that decides
+whether a problem is recorded at all was wrong for a long time, and it was wrong where nothing
+could reach it. It is now the same shape as the classifier beside it — a decision with no game
+types in it, and tests on both directions of every branch.
 
 The instrumentation hook itself is tested in `ProfilerTests.cs`, on the model side: every stage
 is bracketed, an idle update reports no solver stage, a block placement reports a topology
