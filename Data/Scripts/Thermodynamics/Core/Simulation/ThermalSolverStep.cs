@@ -316,6 +316,8 @@ namespace Thermodynamics.Core
             if (stage == StepStage.Idle) return true;
             if (workBudget <= 0) return false;
 
+            Work.StepAdvances++;
+
             long spent = 0;
 
             while (stage != StepStage.Idle && spent < workBudget)

@@ -71,6 +71,15 @@ namespace Thermodynamics.Core
         public long StabilityEstimates;
 
         /// <summary>
+        /// Calls into the resumable stage machine that did any work.
+        ///
+        /// A step is spread over the frames of its window, so this is how many pieces it arrived
+        /// in. Each piece re-enters the machine and dispatches a stage, and on a small grid that
+        /// entry costs more than the element visits it carries.
+        /// </summary>
+        public long StepAdvances;
+
+        /// <summary>
         /// Resets every counter to zero. A test measures a window by clearing before it and reading
         /// after, rather than by subtracting two snapshots.
         /// </summary>
@@ -97,6 +106,7 @@ namespace Thermodynamics.Core
             SolverSubsteps = 0;
             NodeStateSyncs = 0;
             StabilityEstimates = 0;
+            StepAdvances = 0;
         }
 
         /// <summary>A copy of the current counts, so a caller can keep one window's figures.</summary>
@@ -124,6 +134,7 @@ namespace Thermodynamics.Core
             copy.SolverSubsteps = SolverSubsteps;
             copy.NodeStateSyncs = NodeStateSyncs;
             copy.StabilityEstimates = StabilityEstimates;
+            copy.StepAdvances = StepAdvances;
             return copy;
         }
 

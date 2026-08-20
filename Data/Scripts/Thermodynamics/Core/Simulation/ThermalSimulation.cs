@@ -268,6 +268,26 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
+        /// Smallest slice of a step worth handing to the stage machine, in element visits.
+        ///
+        /// <para>
+        /// Pacing exists so one grid's step does not arrive as a lump. It has a floor because the
+        /// entry into a resumable pass costs the same whatever it carries: a grid whose whole step
+        /// is a dozen element visits was re-entering it once a frame for the eight frames of its
+        /// window, and paying more for the entries than for the physics. Measured at 43-50 % of
+        /// such a grid's step.
+        /// </para>
+        ///
+        /// <para>
+        /// The figure bounds the lump this can produce rather than the saving it makes. At the
+        /// measured cost of an element visit in game it is roughly forty microseconds of one
+        /// grid's work, which is below the resolution of a frame; a grid large enough for the
+        /// floor to be a meaningful share of its step is far too large for it to bind.
+        /// </para>
+        /// </summary>
+        private const long MinimumSliceWork = 2048;
+
+        /// <summary>
         /// Fractional work credit carried between frames, in element visits.
         ///
         /// A frame is owed <c>frameSeconds * StepsPerSecond</c> of a step. On a small grid that is
@@ -840,6 +860,19 @@ namespace Thermodynamics.Core
 
             long budget = (long)workCredit;
             if (budget <= 0) return;
+
+            // Banked rather than spent while the slice would be smaller than it is worth
+            // dispatching. Re-entering the stage machine costs the same whether it carries one
+            // element visit or a thousand, and a grid small enough that its whole step fits inside
+            // the floor pays that entry on every frame of its window to integrate a handful of
+            // blocks. Banking leaves the rate untouched — the credit accrues at the same speed and
+            // nothing is discarded — and lands the work in one piece instead of eight.
+            //
+            // Never more than the step has left to do, or a step whose whole cost is under the
+            // floor would bank credit it can never spend.
+            long floor = MinimumSliceWork;
+            if (floor > solver.StepWorkRemaining) floor = solver.StepWorkRemaining;
+            if (budget < floor) return;
 
             workCredit -= budget;
 
