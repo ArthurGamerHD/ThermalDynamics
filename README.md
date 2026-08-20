@@ -97,6 +97,7 @@ into atmosphere and into the air of sealed rooms, arrives from the sun, and — 
 | [docs/memory.md](docs/memory.md) | Where a grid's memory goes, and what can be given back. |
 | [docs/load-and-hitching.md](docs/load-and-hitching.md) | What a grid costs as it grows, what was making it stutter, and what still does. |
 | [docs/benchmarks.md](docs/benchmarks.md) | The performance report: cost by size, by feature and by configuration, and how to diff two runs. |
+| [docs/settings-redesign.md](docs/settings-redesign.md) | The plan for the menu, the config file and the definition files as one surface. |
 | [docs/element-cost.md](docs/element-cost.md) | What a substep spends per node, per link and per exposed face, and what the step budget should charge. |
 | [docs/stiffness.md](docs/stiffness.md) | Why a handful of light fittings set the cost of a capital ship, and what to do about it. |
 | [sim/README.md](sim/README.md) | The isolated simulation environment: running the tests and scenarios. |
