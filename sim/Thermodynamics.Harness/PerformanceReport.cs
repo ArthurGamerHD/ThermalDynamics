@@ -447,6 +447,11 @@ namespace Thermodynamics.Harness
             Measured(rows, "pressurised", WorstCases.Pressurised("ship", Size, Configure(0, null, true)), ticks, log);
             Measured(rows, "plumbed", WorstCases.Plumbed("ship", Size, 8, Configure(0, null, true)), ticks, log);
             Measured(rows, "burning", WorstCases.Burning("ship", Size, Configure(0, null, true)), ticks, log);
+
+            // The bound on the damage check rather than its ordinary cost: burning a ship through
+            // its producers leaves most of the hull under its rating, so the expensive branch is
+            // rarely taken. This takes it on every node of every substep.
+            Measured(rows, "scorched", WorstCases.Scorched("ship", Size, Configure(0, null, true)), ticks, log);
         }
 
         private static void Measured(List<ReportRow> rows, string name, WorstCases.Built built,

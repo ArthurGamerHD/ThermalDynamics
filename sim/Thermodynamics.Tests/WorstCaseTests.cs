@@ -106,6 +106,35 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// `burning` is not the worst case for the damage check, and this is what says so.
+        ///
+        /// A hull driven through its heat producers leaves most of itself under its rating, so the
+        /// check that decides whether a block is burning fails on nearly every node — the ordinary
+        /// case. `scorched` puts every node over every rating in the catalogue and holds it there,
+        /// so the expensive branch is taken on every node of every substep. One event per node per
+        /// substep is the bound, and this asserts the scenario reaches it rather than merely
+        /// aiming at it.
+        /// </summary>
+        [Fact]
+        public void AScorchedHullBurnsOnEveryNodeOfEverySubstep()
+        {
+            WorstCases.Built built = WorstCases.Scorched("ship", Size);
+
+            Assert.True(built.Nodes > 0, "the hull is empty");
+
+            built.Simulation.StepExact(1, Worlds.Shadow());
+
+            int expected = built.Nodes * built.Simulation.Solver.LastSubsteps;
+            Assert.Equal(expected, built.Simulation.Solver.Overheats.Count);
+
+            // And it stays there. Held at temperature rather than driven to it, or the hull
+            // radiates itself cold in one substep and the rest of the run measures the ordinary
+            // case with extra steps.
+            for (int i = 0; i < 20; i++) built.Simulation.StepExact(1, Worlds.Shadow());
+            Assert.Equal(expected, built.Simulation.Solver.Overheats.Count);
+        }
+
+        /// <summary>
         /// The scenario that no benchmark could ever be, and the one that produced the largest
         /// finding of the project when a telemetry dump finally showed it: a world is many grids,
         /// and each pays its own fixed per-step cost.

@@ -166,6 +166,45 @@ namespace Thermodynamics.Harness
             return built;
         }
 
+        /// <summary>
+        /// Every block on the hull past its rating at once, which <see cref="Burning"/> is not.
+        ///
+        /// <para>
+        /// The damage check is a per-node test on the apply pass, and its cost depends entirely on
+        /// how often it passes: a node under its rating is a compare against a mirrored float,
+        /// while one over it reaches through the node to its block and its definition. Burning a
+        /// ship through its heat producers leaves most of the hull cold, so it measures the check
+        /// mostly failing — which is the ordinary case and not the worst one.
+        /// </para>
+        ///
+        /// <para>
+        /// This sets every node above the highest rating in the census, so the expensive branch is
+        /// taken on every node of every substep. It is not a state a ship reaches and survives; it
+        /// is the bound on what the check can cost.
+        /// </para>
+        /// </summary>
+        public static Built Scorched(string shape, int size, ThermalSettings settings = null)
+        {
+            // The environment is switched off so the hull stays where it is put. At 4,000 K a face
+            // radiates fifteen megawatts a square metre, so a scorched hull left to exchange with
+            // the sky is scorched for one substep and cold for the rest of the run — it would
+            // measure the ordinary case with extra steps. What is wanted here is the branch taken
+            // on every node of every substep, held there.
+            ThermalSettings held = settings ?? Defaults(null);
+            held.EnableEnvironment = false;
+            held.EnableSolarHeat = false;
+            held.EnableFriction = false;
+            held.EnableWasteHeat = false;
+            held.Derive();
+
+            Built built = Hull(shape, size, held);
+
+            // Above every CriticalTemperature the catalogue carries, so nothing is left under one.
+            built.Simulation.Solver.SetAllTemperatures(4000f);
+            built.Producers = built.Nodes;
+            return built;
+        }
+
         // ----------------------------------------------------------------------------------
         // Fleets
         // ----------------------------------------------------------------------------------

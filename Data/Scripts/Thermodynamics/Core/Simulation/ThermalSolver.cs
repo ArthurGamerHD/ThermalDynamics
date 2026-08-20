@@ -85,6 +85,17 @@ namespace Thermodynamics.Core
         private float[] nodeEmissivity = new float[0];
         private int[] nodeExposedFaces = new int[0];
 
+        /// <summary>
+        /// Each node's critical temperature, or zero where the block has none.
+        ///
+        /// Mirrored for the same reason as the rows above it, and with a sharper payoff: the apply
+        /// pass tests it once per node per substep, and reaching it through the node object is
+        /// three dependent loads — <c>nodes[i]</c>, its block, its model — into memory scattered
+        /// across the heap, to read a float that almost never fires. The block is dereferenced
+        /// only once a node is actually over its limit.
+        /// </summary>
+        private float[] nodeCritical = new float[0];
+
         /// <summary>Exposed faces as a fraction of the node's total, six per node.</summary>
         private float[] nodeFaceWeights = new float[0];
 
@@ -1587,6 +1598,7 @@ namespace Thermodynamics.Core
                 nodeGeneration[i] = node.HeatGenerationWatts;
                 nodeExposedArea[i] = node.ExposedArea;
                 nodeEmissivity[i] = node.Thermal.Emissivity;
+                nodeCritical[i] = node.Thermal.CriticalTemperature;
 
                 int total = node.TotalExposedFaces;
                 nodeExposedFaces[i] = total;
@@ -2515,11 +2527,12 @@ namespace Thermodynamics.Core
                 if (!damageEnabled) continue;
 
                 // Only an overheating node dereferences its definition, so the ordinary case
-                // stays within the flat arrays.
-                ThermalNode node = nodes[i];
-                float critical = node.Thermal.CriticalTemperature;
+                // stays within the flat arrays — including the test itself, which is what decides
+                // whether the block is reached at all.
+                float critical = nodeCritical[i];
                 if (critical <= 0f || updated <= critical) continue;
 
+                ThermalNode node = nodes[i];
                 float damage = (updated - critical) * node.Thermal.OverheatDamagePerKelvin;
                 if (perSecond) damage *= h;
                 if (damage > 0f)
@@ -3205,6 +3218,7 @@ namespace Thermodynamics.Core
                 nodeGeneration = new float[size];
                 nodeExposedArea = new float[size];
                 nodeEmissivity = new float[size];
+                nodeCritical = new float[size];
                 nodeExposedFaces = new int[size];
                 nodeRelaxation = new float[size];
                 nodeSolarRow = new float[size];
