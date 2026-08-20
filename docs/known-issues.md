@@ -86,6 +86,19 @@ and was inert wherever conduction sets the floor.
 arithmetic. The second reads the raw demand through `NodeSubstepDemand`, which divides by the
 block's real capacity, so the floor is not being asked to confirm its own work.
 
+**A settings toggle with a menu entry, a config field, a label and no reader.** `DebugWindRaycast`
+has been in the file, in `Names()`, in `ClientOwned` and on the Debug page reading "Draw wind vector"
+since the wind field was written, and nothing anywhere in the codebase read it. Switching it on drew
+nothing. It is the same shape as the coolant pump's inert switch and was found the same way — by
+grepping for readers of a setting rather than by using it — which is worth remembering as a check
+worth running over the whole settings list, not just this one.
+
+It now draws what the label promised, and the distinction it draws is the useful one: the *relative*
+wind, per grid, which is the field minus the grid's own velocity. Parked, it agrees with an arrow of
+the new wind map; at speed it should not, and the difference is exactly what heats a leading face.
+Green below `FrictionAtSpeedsAbove` and red above it, since that threshold is the thing this vector
+decides.
+
 **Never assign `NeedsUpdate` from a game logic component that asked for entity updates.**
 `[MyEntityComponentDescriptor(typeof(MyObjectBuilder_CubeGrid), true)]` makes the component's
 `NeedsUpdate` property the *grid entity's* update flags. Assigning to it clears whatever the grid
@@ -484,7 +497,10 @@ would show.
 The test suite covers the model thoroughly and the adapter barely — `HostAdapterTests` exercises
 what can be reached without a session, and the rest of `Game/` is only exercised in the game. In
 particular the vent sweep, the terminal readout and the mod API's delegate table have no automated
-coverage. The API's *shape* is checkable without a session and is
+coverage. The wind map and the wind indicator join that list: the arithmetic under them is in
+`WindCompass` and pinned by `WindCompassTests` — including the handedness, which is the half a
+drawing cannot argue with — but whether an arrow lands where it should on screen is answerable only
+by looking at one. The API's *shape* is checkable without a session and is
 worth pinning down.
 
 The load tests in `sim/Thermodynamics.Tests/LoadTests.cs` close part of that gap for cost rather

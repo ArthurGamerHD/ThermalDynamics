@@ -86,6 +86,8 @@ into atmosphere and into the air of sealed rooms, arrives from the sun, and — 
 | [docs/definitions.md](docs/definitions.md) | Block, planet and loop properties, and how to add support for another mod's blocks. |
 | [docs/blocks.md](docs/blocks.md) | The blocks and items this mod ships, and the coolant loop build rules. |
 | [docs/configuration.md](docs/configuration.md) | Every setting, its default, the profiles, and the runtime commands. |
+| [docs/planet-thermals.md](docs/planet-thermals.md) | What the engine says about a planet's temperature, and where every figure in Planets.xml comes from. |
+| [docs/wind-model.md](docs/wind-model.md) | What the engine's wind actually computes, what real wind does, and the model that replaces it. |
 | [docs/telemetry.md](docs/telemetry.md) | Session data collection and what the report contains. |
 | [docs/development.md](docs/development.md) | Building, deploying, repo layout, conventions. |
 | [docs/known-issues.md](docs/known-issues.md) | Confirmed defects, unfinished systems and deliberate limits. |
