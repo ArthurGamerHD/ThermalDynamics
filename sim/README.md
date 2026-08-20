@@ -278,6 +278,13 @@ PipeFitter.BuildRing(builder, ring);      // pump goes on the first straight run
 
 1,020 tests across:
 
+> **The bit-identity suites share one fixture.** Five of them pin an optimisation against the
+> thing it replaced — the precomputed environment rows, the fixed source row, the gated
+> conduction clamp, the batched diagnostics, a step spread across frames — and all five build from
+> `Hulls.Driven`: a census hull, its producers running, its temperatures spread across 250-750 K.
+> That fixture checks its own postconditions, because two runs of a hull that built nothing agree
+> perfectly and agreement is the whole assertion. `SolverAb` holds the capture and the comparison.
+
 * position keys and block geometry maths
 * face indexing, the colour ramp, occlusion
 * orientations, block instances, grid model bookkeeping
