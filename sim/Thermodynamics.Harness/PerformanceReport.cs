@@ -343,7 +343,7 @@ namespace Thermodynamics.Harness
                 Add(rows, "substep cap", name, "clamped", sample.Clamped ? 1 : 0, "", false);
             }
 
-            StepShape(rows, stepMs, substeps);
+            StepShape(rows, shape, size, ticks, stepMs, substeps);
         }
 
         /// <summary>
@@ -369,8 +369,18 @@ namespace Thermodynamics.Harness
         /// carries clamp cost the other does not. Fitting through `cap 1` would put a clamped point
         /// against an unclamped one and attribute the difference to the fixed term.
         /// </para>
+        ///
+        /// <para>
+        /// **The fitted intercept is not the prologue and write-back, and used to be read as if it
+        /// were.** A step has three terms, not two: the work before and after it integrates, the
+        /// first substep, which fills the per-step environment rows every later substep reads, and
+        /// every substep after that. A two-point fit has nowhere to put the first substep's extra
+        /// and charges it to the intercept. The three rows below measure the two ends directly, so
+        /// what the fit is actually made of is on the page rather than assumed.
+        /// </para>
         /// </summary>
-        private static void StepShape(List<ReportRow> rows, double[] stepMs, float[] substeps)
+        private static void StepShape(List<ReportRow> rows, string shape, int size, int ticks,
+            double[] stepMs, float[] substeps)
         {
             int low = IndexOfCap(4);
             int high = IndexOfCap(16);
@@ -390,6 +400,80 @@ namespace Thermodynamics.Harness
             Add(rows, "step shape", "cap 4 to cap 16", "fixed per step", fixedMs, "ms");
             Add(rows, "step shape", "cap 4 to cap 16", "per substep", perSubstep, "ms");
             Add(rows, "step shape", "cap 4 to cap 16", "fixed share, uncapped", atDefault, "%");
+
+            StepTerms(rows, shape, size, ticks, stepMs, perSubstep);
+        }
+
+        /// <summary>
+        /// The three terms a step is made of, two of them measured rather than fitted.
+        ///
+        /// <para>
+        /// Run at `cap 1`, where the step is one substep and the three terms are separable without
+        /// any fit at all: the prologue is what the solver charges to answer how many substeps it
+        /// needs, the write-back is the last stage of the step machine driven on its own clock, and
+        /// what is left is one substep with the row fill in it.
+        /// </para>
+        /// </summary>
+        private static void StepTerms(List<ReportRow> rows, string shape, int size, int ticks,
+            double[] stepMs, double perSubstep)
+        {
+            int one = IndexOfCap(1);
+            if (one < 0) return;
+
+            ThermalSettings settings = Configure(1, null, true);
+            ThermalSimulation simulation = Build(settings, shape, size);
+            LoadBenchmarks.SeedSpread(simulation);
+            Census.DriveCensus(simulation);
+
+            ThermalSolver solver = simulation.Solver;
+            EnvironmentState state = EnvironmentSolver.Solve(settings, simulation.Planet, Worst());
+            float step = settings.StepSeconds;
+
+            for (int i = 0; i < 2; i++) solver.Step(step, state);
+
+            long nodes = solver.Nodes.Count;
+            int repeats = Repeats < 1 ? 1 : Repeats;
+
+            double prepare = double.MaxValue;
+            double publish = double.MaxValue;
+
+            for (int r = 0; r < repeats; r++)
+            {
+                Stopwatch watch = Stopwatch.StartNew();
+                for (int i = 0; i < ticks; i++) solver.RequiredSubsteps(step, state);
+                watch.Stop();
+
+                double ms = watch.Elapsed.TotalMilliseconds / ticks;
+                if (ms < prepare) prepare = ms;
+
+                // Everything but the write-back, then the write-back on its own clock. The step
+                // machine charges one element visit per node for that last stage, which is what
+                // makes the boundary findable from outside.
+                double total = 0d;
+                for (int i = 0; i < ticks; i++)
+                {
+                    solver.BeginStep(step, state);
+                    long upTo = solver.StepWorkUnits - nodes;
+                    while (solver.StepWorkRemaining > nodes) solver.AdvanceStep(upTo);
+
+                    Stopwatch last = Stopwatch.StartNew();
+                    while (!solver.AdvanceStep(long.MaxValue)) { }
+                    last.Stop();
+                    total += last.Elapsed.TotalMilliseconds;
+                }
+
+                ms = total / ticks;
+                if (ms < publish) publish = ms;
+            }
+
+            double firstSubstep = stepMs[one] - prepare - publish;
+
+            Add(rows, "step shape", "terms", "prologue and estimate", prepare, "ms");
+            Add(rows, "step shape", "terms", "write-back", publish, "ms");
+            Add(rows, "step shape", "terms", "first substep", firstSubstep, "ms");
+            Add(rows, "step shape", "terms", "later substep", perSubstep, "ms");
+            Add(rows, "step shape", "terms", "row fill, first substep only",
+                firstSubstep - perSubstep, "ms");
         }
 
         private static int IndexOfCap(int cap)

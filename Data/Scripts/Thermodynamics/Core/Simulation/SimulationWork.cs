@@ -71,6 +71,17 @@ namespace Thermodynamics.Core
         public long StabilityEstimates;
 
         /// <summary>
+        /// Node walks that filled the per-step environment rows — the convection, solar, friction
+        /// and fixed-source terms, and the relaxation factor when the clamp is live.
+        ///
+        /// One per step is correct: their inputs are fixed for the step's length, so the first
+        /// substep computes them and every later one reads them. The count is what says so
+        /// structurally, where the timing only says the first substep is dearer than the rest. A
+        /// step that fills twice has lost its cache to something that moved under it.
+        /// </summary>
+        public long EnvironmentRowFills;
+
+        /// <summary>
         /// Calls into the resumable stage machine that did any work.
         ///
         /// A step is spread over the frames of its window, so this is how many pieces it arrived
@@ -106,6 +117,7 @@ namespace Thermodynamics.Core
             SolverSubsteps = 0;
             NodeStateSyncs = 0;
             StabilityEstimates = 0;
+            EnvironmentRowFills = 0;
             StepAdvances = 0;
         }
 
@@ -133,6 +145,7 @@ namespace Thermodynamics.Core
             copy.SolverSteps = SolverSteps;
             copy.SolverSubsteps = SolverSubsteps;
             copy.NodeStateSyncs = NodeStateSyncs;
+            copy.EnvironmentRowFills = EnvironmentRowFills;
             copy.StabilityEstimates = StabilityEstimates;
             copy.StepAdvances = StepAdvances;
             return copy;

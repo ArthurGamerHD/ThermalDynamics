@@ -59,9 +59,9 @@ them is accuracy given up. In flight the gap is widest — see
 
 | rung | blocks | links | step | demanded | per element visit |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| 8,000 | 8,904 | 20,779 | 1.13 ms | 22.0 | 1.73 ns |
-| 32,000 | 32,800 | 73,787 | 3.60 ms | 18.5 | 1.78 ns |
-| 125,000 | 126,731 | 277,967 | 16.7 ms | 21.7 | 1.87 ns |
+| 8,000 | 8,904 | 20,779 | 1.12 ms | 22.0 | 1.71 ns |
+| 32,000 | 32,800 | 73,787 | 3.54 ms | 18.5 | 1.75 ns |
+| 125,000 | 126,731 | 277,967 | 16.4 ms | 21.7 | 1.85 ns |
 
 **Cost per element visit is now flat across the ladder** — 1.82, 1.87, 1.91 ns — where it used to
 climb from 2.8 to 6.1. The climb was the two passes that reached through the node objects to the
@@ -74,14 +74,14 @@ Every shape in every world, because which is worst depends on which world:
 
 | | step ms | substeps demanded |
 | --- | ---: | ---: |
-| ship, vacuum | 0.63 | 11.6 |
-| ship, atmosphere | 0.84 | 15.5 |
-| ship, flight at 300 m/s | 1.13 | **22.0** |
+| ship, vacuum | 0.62 | 11.6 |
+| ship, atmosphere | 0.83 | 15.5 |
+| ship, flight at 300 m/s | 1.11 | **22.0** |
 | cube, vacuum | 0.58 | 11.4 |
-| cube, flight | 0.91 | 18.5 |
-| truss, vacuum | 0.27 | **7.9** |
-| truss, atmosphere | 0.54 | 16.8 |
-| truss, flight | 0.79 | **25.5** |
+| cube, flight | 0.90 | 18.5 |
+| truss, vacuum | 0.26 | **7.9** |
+| truss, atmosphere | 0.53 | 16.8 |
+| truss, flight | 0.78 | **25.5** |
 
 **A truss is the cheapest hull in vacuum and the stiffest in flight** — 7.9 substeps to 25.5, a
 threefold inversion. One link per node and nothing to convect with makes it trivial in space;
@@ -91,7 +91,7 @@ Until this section existed, every benchmark in this repository ran a **ship in v
 the cheapest of those nine on the axis that matters. Worse, `AtmosphereFactor` is zero in vacuum,
 so convection was switched off *by the world* rather than by its setting — the report dutifully
 recorded convection and friction as costing nothing, having never run either. Both are now
-measured: 1.66 ms and 0.89 ms isolated, which puts convection above solar.
+measured: 1.62 ms and 0.87 ms isolated, which puts convection above solar.
 
 Everything else in the report is now measured in flight, deliberately the worst of the nine.
 
@@ -108,20 +108,20 @@ Every switch a world can turn off, measured twice:
 * **isolated** — everything off, this one on. What the feature does on its own.
 
 They differ whenever features interact, and the gap is usually the interesting part. From the
-committed baseline, on a 32,800-block hull in flight where a whole step is 3.60 ms and a hull with
+committed baseline, on a 32,800-block hull in flight where a whole step is 3.55 ms and a hull with
 every feature off is 0.37 ms:
 
 | feature | marginal | isolated |
 | --- | ---: | ---: |
-| convection | **1.26 ms** | **1.66 ms** |
+| convection | **1.21 ms** | **1.62 ms** |
 | conduction | 1.22 ms | 0.79 ms |
-| damage | 0.16 ms | 0.13 ms |
-| radiation | 0.10 ms | 0.91 ms |
-| environment clamp | 0.10 ms | 0.00 ms |
-| solar | 0.07 ms | 0.93 ms |
-| friction | 0.03 ms | 0.89 ms |
-| conduction clamp | 0.02 ms | 0.00 ms |
-| waste heat | −0.00 ms | 0.17 ms |
+| damage | 0.20 ms | 0.10 ms |
+| radiation | 0.09 ms | 0.89 ms |
+| environment clamp | 0.08 ms | 0.00 ms |
+| solar | 0.07 ms | 0.91 ms |
+| conduction clamp | 0.04 ms | 0.00 ms |
+| friction | −0.00 ms | 0.87 ms |
+| waste heat | 0.01 ms | 0.13 ms |
 | heat sources, coolant loops, room air, heat pumps, self shadow | within the noise | within the noise |
 
 Three things fall out of that table that no single-number benchmark would have shown.
@@ -142,7 +142,7 @@ a millisecond, because introducing any of them is what makes the pass run at all
 column alone would predict a saving from disabling them that is not there.
 
 **Damage used to cost 0.83 ms marginal** for a check that fired zero times across two field
-sessions. It is now 0.16 ms. The check reads a critical temperature once per node per substep, and
+sessions. It is now 0.20 ms. The check reads a critical temperature once per node per substep, and
 reaching that through the node object was three dependent loads — the node, its block, its model —
 into memory scattered across the heap. The rating is now mirrored into a flat array beside the
 node's mass and emissivity, and the block is reached only once a node is actually over its limit.
@@ -169,11 +169,11 @@ Measured in flight, on a hull with air moving over it:
 
 | profile | demanded | granted | clamped | per simulated second |
 | --- | ---: | ---: | --- | ---: |
-| simulation | 0.08 | 1 | no | 4.20 ms |
-| optimized | 0.17 | 1 | no | 2.10 ms |
-| simlite | 0.17 | 1 | no | 2.08 ms |
-| responsive | 18.5 | 19 | no | 28.7 ms |
-| arcade | **36.9** | 6 | **yes** | 10.3 ms |
+| simulation | 0.08 | 1 | no | 3.92 ms |
+| optimized | 0.17 | 1 | no | 1.87 ms |
+| simlite | 0.17 | 1 | no | 1.87 ms |
+| responsive | 18.5 | 19 | no | 28.5 ms |
+| arcade | **36.9** | 6 | **yes** | 10.4 ms |
 
 `arcade` is the only profile in this measurement that does not resolve what it is integrating: it
 asks for 37 substeps, is granted 6, and the overshoot clamps carry the difference. That is bounded —
@@ -196,6 +196,8 @@ one substep and costs proportionately little.
 A step is one lot of per-step work — mirroring the node state, estimating the substep count,
 applying the mass floor, publishing the result — plus one lot of per-substep work for each substep.
 Those two scale differently, and a single millisecond figure hides which of them a change moved.
+There is a third term the fit cannot see, and [below](#the-fitted-intercept-is-not-the-prologue-and-was-read-as-if-it-were)
+is what it turned out to be.
 
 The report fits them through the `cap 4` and `cap 16` rows, both of which are clamp-free because the
 per-block mass floor raises the stiff blocks rather than refusing them substeps. On a 32,800-block
@@ -203,9 +205,9 @@ hull in flight:
 
 | | |
 | --- | ---: |
-| fixed per step | **0.54 ms** |
+| fixed per step | **0.49 ms** |
 | per substep | 0.17 ms |
-| fixed share at the default 19 substeps | 15 % |
+| fixed share at the default 19 substeps | 14 % |
 
 Measured on the solver path, which until recently paid one prologue where the host paid two. See
 [the two step paths](#the-two-step-paths) below.
@@ -216,6 +218,40 @@ three, which is worth knowing before optimising for them.
 
 > Fitting through `cap 1` instead would put a clamped point against an unclamped one and attribute
 > the difference to the fixed term.
+
+#### The fitted intercept is not the prologue, and was read as if it were
+
+**A step has three terms.** The work before and after it integrates; the first substep, which fills
+the per-step environment rows every later substep reads; and every substep after that. A two-point
+fit has only two terms to spend, so it charges the first substep's extra to the intercept — and the
+intercept is labelled `fixed per step`, which reads as the prologue and the write-back.
+
+The report now measures the two ends directly instead of leaving them inside the fit. At `cap 1`
+the step is one substep and the three terms separate without any fit at all: the prologue is what
+the solver charges to answer how many substeps it needs, the write-back is the step machine's last
+stage driven on its own clock, and what is left is one substep with the fill in it.
+
+| term | ms | what it is |
+| --- | ---: | --- |
+| prologue and estimate | 0.18 | mirroring the node objects, the conductance totals, the mass floor, the stability walk |
+| write-back | 0.05 | the step's results onto the node objects |
+| **row fill** | **0.22** | **the first substep's share, and none of any later one's** |
+| later substep | 0.17 | one substep once the rows are filled |
+
+The three add to 0.45 against a fitted intercept of 0.49, which is the model reconstructing the fit
+to within the noise floor. **Half of what the fit calls fixed is the row fill**, and it is neither
+irreducible nor where anyone was looking.
+
+Two things came out of measuring it. The relaxation row was filled on every step and read only by
+the clamped conduction loop, which on a grid granted its substeps never runs — a store per node per
+step that nothing looked at. And the wind weighting, a six-face sum, was computed twice per node in
+the fill: once for the convection factor and once for the friction row, both of them live in air at
+speed. Removing the two took the one-substep profiles down about a tenth: `optimized` 2.10 ms to
+1.87 ms a simulated second, `simlite` 2.08 to 1.87, `simulation` 4.20 to 3.92.
+
+`StepTermsTests` pins the structural fact a stopwatch cannot: the rows are filled once a step
+however many substeps it is cut into and however many frames it is spread over, and once a substep
+when the cache is switched off.
 
 **Mirroring the block's real heat capacity for the mass floor was tried here and reverted.** The
 floor reads `nodes[i].ThermalMass` once per node per step, which is the same scattered-load shape
@@ -267,8 +303,8 @@ the other, so the report measures both, each twice — with the test and without
 
 | regime | always clamped | gated | change | clamp live |
 | --- | ---: | ---: | ---: | --- |
-| resolved — granted the substeps it demands | 7.86 ms | **3.60 ms** | **−54 %** | no |
-| refused — 4 substeps against a demand of 20 | 1.94 ms | 1.94 ms | −0.4 % | yes |
+| resolved — granted the substeps it demands | 7.99 ms | **3.55 ms** | **−56 %** | no |
+| refused — 4 substeps against a demand of 20 | 1.96 ms | 1.94 ms | −0.9 % | yes |
 
 The `clamp live` column is what says the two rows are in different regimes rather than being the
 same measurement printed twice; `PerformanceReportTests` asserts it reads 0 and 1 respectively.
@@ -292,9 +328,9 @@ comparable rather than leaving a reader to assume they already are.
 
 | | step |
 | --- | ---: |
-| off — a dedicated server in ordinary play | 3.60 ms |
-| on, written once a step | **4.16 ms** |
-| on, written every substep | 6.87 ms |
+| off — a dedicated server in ordinary play | 3.55 ms |
+| on, written once a step | **4.11 ms** |
+| on, written every substep | 6.88 ms |
 
 Each figure is overwritten by the next substep and read between steps, so only the last substep's
 writes were ever observed; the other eighteen were five stores into a node object per node and two
@@ -318,10 +354,10 @@ free, which is precisely what happened to convection.
 
 | scenario | step | what it built |
 | --- | ---: | --- |
-| plain | 1.13 ms | — |
-| pressurised | **1.59 ms** | 13 rooms with air |
-| plumbed | 1.22 ms | 8 coolant loops, 8 heat pumps |
-| burning | 1.16 ms | **411,651 overheat events** |
+| plain | 1.12 ms | — |
+| pressurised | **1.57 ms** | 13 rooms with air |
+| plumbed | 1.20 ms | 8 coolant loops, 8 heat pumps |
+| burning | 1.15 ms | **411,651 overheat events** |
 | scorched | 0.58 ms | **2,136,960 overheat events** — one per node per substep |
 
 `scorched` is the bound on the damage check rather than its ordinary cost. Burning a ship through
@@ -354,9 +390,9 @@ cost, so a fleet of small grids is not obviously the same price as one large one
 
 | | step, whole fleet | blocks | per thousand blocks |
 | --- | ---: | ---: | ---: |
-| 1 grid | 0.90 ms | 8,904 | 0.101 ms |
-| 10 grids | 1.26 ms | 11,240 | 0.112 ms |
-| 100 grids | 9.88 ms | 83,500 | 0.118 ms |
+| 1 grid | 0.88 ms | 8,904 | 0.099 ms |
+| 10 grids | 1.25 ms | 11,240 | 0.111 ms |
+| 100 grids | 9.71 ms | 83,500 | 0.116 ms |
 
 **Flat, and that is the answer.** Splitting the same work across a hundred grids costs what one
 grid costs per block: the solver's per-grid fixed work — state sync, the stability estimate, the

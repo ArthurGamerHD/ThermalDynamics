@@ -59,6 +59,27 @@ namespace Thermodynamics.Tests
             AssertIdentical(recomputed, reused, "atmosphere");
         }
 
+        /// <summary>
+        /// In flight, which is the only world where wind convection and aerodynamic friction are
+        /// both live. They weight a node against the same six faces and used to ask for that sum
+        /// separately; the suite ran at 22 m/s, below the 50 m/s friction threshold, so no
+        /// bit-identity test had ever had both of them on at once.
+        /// </summary>
+        [Fact]
+        public void ReusingThePerStepTermsIsBitIdenticalInFlight()
+        {
+            ThermalSimulation recomputed = Build(false);
+            ThermalSimulation reused = Build(true);
+
+            EnvironmentSample sample = Worlds.PlanetSurface(1f, timeOfDay: 0.35f, windSpeed: 300f);
+
+            recomputed.StepExact(40, sample);
+            reused.StepExact(40, sample);
+
+            Assert.True(recomputed.Solver.Nodes[0].LastFrictionWatts >= 0f);
+            AssertIdentical(recomputed, reused, "flight");
+        }
+
         [Fact]
         public void ReusingThePerStepTermsIsBitIdenticalInVacuum()
         {

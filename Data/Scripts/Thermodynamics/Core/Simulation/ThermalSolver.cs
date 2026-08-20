@@ -1833,7 +1833,10 @@ namespace Thermodynamics.Core
 
             if (plan.GenerationOnly)
             {
-                if (!environmentRowsValid || !PrecomputeEnvironment)
+                // Only the clamped conduction loop reads the relaxation row, and only while the
+                // clamp is live. Filling it otherwise writes a one per node per step that nothing
+                // will look at.
+                if (ConductionClampLive && (!environmentRowsValid || !PrecomputeEnvironment))
                 {
                     for (int i = from; i < to; i++)
                     {
@@ -1878,12 +1881,17 @@ namespace Thermodynamics.Core
             // for the whole step, so both paths compute the same values.
             bool fill = !environmentRowsValid || !PrecomputeEnvironment;
 
+            // Computed for every node, exposed or buried, because the clamped conduction loop
+            // reads it — and for none of them when that loop is not clamping, which is every step
+            // on a grid granted the substeps it asked for.
+            bool fillRelaxation = fill && ConductionClampLive;
+
             for (int i = from; i < to; i++)
             {
-                // Computed for every node, exposed or buried, because conduction reads it. Folded
-                // into this loop rather than given a pass of its own: this loop already walks every
-                // node once per substep, and the conduction pass runs strictly after it.
-                if (fill) nodeRelaxation[i] = RelaxationFactor(i, h);
+                // Folded into this loop rather than given a pass of its own: this loop already
+                // walks every node once per substep, and the conduction pass runs strictly after
+                // it.
+                if (fillRelaxation) nodeRelaxation[i] = RelaxationFactor(i, h);
 
                 if (nodeExposedFaces[i] <= 0)
                 {
@@ -1911,11 +1919,14 @@ namespace Thermodynamics.Core
                 {
                     float area = nodeExposedArea[i];
 
+                    // One weighting against the wind, read by both the terms that want it. The
+                    // convection factor and the friction row asked for the same six-face sum
+                    // separately, and in air at speed both of them are live.
+                    float wind = windy || frictionEnabled ? Weighted(i, windWeights) : 0f;
+
                     // A face in the airflow sheds more heat, but still air convects as well, so
                     // the factor spans 0.5..1. It depends on geometry and wind, not temperature.
-                    float windFactor = windy
-                        ? 0.5f + (0.5f * Weighted(i, windWeights))
-                        : 1f;
+                    float windFactor = windy ? 0.5f + (0.5f * wind) : 1f;
 
                     nodeConvectionRow[i] = convecting
                         ? -env.ConvectionCoefficient * area * windFactor
@@ -1928,9 +1939,7 @@ namespace Thermodynamics.Core
                         : 0f;
                     nodeSolarRow[i] = solar;
 
-                    float friction = frictionEnabled
-                        ? frictionScale * area * Weighted(i, windWeights)
-                        : 0f;
+                    float friction = frictionEnabled ? frictionScale * area * wind : 0f;
                     nodeFrictionRow[i] = friction;
 
                     nodeSourceRow[i] = (generating ? nodeGeneration[i] : 0f) + solar + friction;
@@ -2001,7 +2010,10 @@ namespace Thermodynamics.Core
             }
 
             // Only once the whole grid has been covered: the pass is sliced across frames, and a
-            // partly filled row must not be read by a later substep.
+            // partly filled row must not be read by a later substep. Counted here rather than at
+            // the top of the loop for the same reason — a fill that spans three frames is one
+            // fill, not three.
+            if (fill && to >= nodes.Count) Work.EnvironmentRowFills++;
             if (PrecomputeEnvironment && to >= nodes.Count) environmentRowsValid = true;
         }
 

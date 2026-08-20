@@ -52,7 +52,7 @@ sufficient. See [development.md](../docs/development.md#repo-conventions) for th
 ```bash
 cd sim
 
-dotnet test                                    # the whole suite (1,020 tests)
+dotnet test                                    # the whole suite (1,026 tests)
 dotnet run --project Thermodynamics.Sim -- list
 dotnet run --project Thermodynamics.Sim -- run reactor
 dotnet run --project Thermodynamics.Sim -- run all --csv out/
@@ -276,7 +276,7 @@ PipeFitter.BuildRing(builder, ring);      // pump goes on the first straight run
 
 ## Test coverage
 
-1,020 tests across:
+1,026 tests across:
 
 > **The bit-identity suites share one fixture.** Five of them pin an optimisation against the
 > thing it replaced — the precomputed environment rows, the fixed source row, the gated
