@@ -1699,29 +1699,6 @@ namespace Thermodynamics.Core
             }
         }
 
-        private void Substep(float h, ref EnvironmentState env)
-        {
-            int nodeCount = nodes.Count;
-
-            Array.Clear(nodeWatts, 0, nodeCount);
-            for (int i = 0; i < loops.Count; i++)
-            {
-                loops[i].ClearSegmentWatts();
-            }
-            for (int i = 0; i < roomAir.Count; i++)
-            {
-                roomWatts[i] = 0f;
-            }
-
-            AccumulateEnvironment(ref env, h);
-            AccumulateConduction(h);
-            AccumulateLoops(h);
-            AccumulateRoomAir(h);
-            AccumulateHeatPumps(h);
-
-            ApplyWatts(h);
-        }
-
         /// <summary>
         /// Resolves a direction into the six per-face weights the exposure maths multiplies by.
         /// Done once per step for the whole grid, rather than six dot products per node.
@@ -2024,17 +2001,6 @@ namespace Thermodynamics.Core
             if (PrecomputeEnvironment && to >= nodes.Count) environmentRowsValid = true;
         }
 
-        private void AccumulateEnvironment(ref EnvironmentState env, float h)
-        {
-            ResetEnvironmentTotals();
-
-            EnvironmentPlan plan = PlanEnvironment(ref env);
-            AccumulateEnvironmentRange(ref env, ref plan, h, 0, nodes.Count);
-            if (plan.SourcesEnabled) AccumulateHeatSources(ref env, plan.Diagnostics);
-
-            PublishEnvironmentTotals();
-        }
-
         private void AccumulateHeatSources(ref EnvironmentState env, bool diagnostics)
         {
             for (int s = 0; s < env.HeatSourceCount; s++)
@@ -2221,12 +2187,6 @@ namespace Thermodynamics.Core
             node.LastSolarWatts = 0f;
             node.LastFrictionWatts = 0f;
             node.LastHeatSourceWatts = 0f;
-        }
-
-        private void AccumulateConduction(float h)
-        {
-            ClearConductionDiagnostics();
-            AccumulateConductionRange(h, 0, links.Count);
         }
 
         /// <summary>
@@ -2498,12 +2458,6 @@ namespace Thermodynamics.Core
 
             if (Math.Abs(energy) <= Math.Abs(maxEnergy)) return watts;
             return maxEnergy / h;
-        }
-
-        private void ApplyWatts(float h)
-        {
-            ApplyNodeWattsRange(h, 0, nodes.Count);
-            ApplyCoupledWatts(h);
         }
 
         /// <summary>Applies accumulated watts to nodes <paramref name="from"/> to <paramref name="to"/>.</summary>
