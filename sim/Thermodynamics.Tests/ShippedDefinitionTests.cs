@@ -174,6 +174,121 @@ namespace Thermodynamics.Tests
             }
         }
 
+        /// <summary>
+        /// Every property the game reads. An entry must carry all of them.
+        /// </summary>
+        private static readonly string[] RequiredProperties =
+        {
+            "Conductivity",
+            "SpecificHeat",
+            "Emissivity",
+            "ExposedSurfaceMultiplier",
+            "ProducerWasteEnergy",
+            "ConsumerWasteEnergy",
+            "CriticalTemperature",
+            "OverheatDamagePerKelvin",
+        };
+
+        /// <summary>
+        /// **An entry in Cubes.xml must be complete, because a property it omits reads as zero and
+        /// not as the value of the entry it is standing in for.**
+        ///
+        /// <c>ThermalCellDefinition.GetDefinition</c> resolves one definition id — the exact
+        /// subtype, else the type's <c>DefaultThermodynamics</c>, else the environment default —
+        /// and then reads every property from that one id. There is no merge with the parent. Its
+        /// fields have no initialisers, so a property the chosen entry does not declare stays at
+        /// zero: a block with no <c>SpecificHeat</c> has no heat capacity and reaches any
+        /// temperature instantly, and one with no <c>CriticalTemperature</c> is above critical from
+        /// the moment it is placed and takes damage forever.
+        ///
+        /// Nothing else can catch this. The offline loader in <c>ShippedBlocks</c> starts from
+        /// <c>BlockThermalProperties.Default()</c>, whose fields are *not* zero, so an incomplete
+        /// entry loads as a sensible block in every test in this repository and as a broken one in
+        /// the game. The two parsers disagreeing is the hazard; this test is the only place the
+        /// game's rule is stated.
+        /// </summary>
+        [Fact]
+        public void EveryEntryInCubesDeclaresEveryPropertyTheGameReads()
+        {
+            List<string> incomplete = new List<string>();
+
+            foreach (XElement definition in Load("Data", "Cubes.xml").Descendants("Definition"))
+            {
+                XElement id = definition.Element("Id");
+                if (id == null) continue;
+
+                string subtype = (string)id.Element("SubtypeId");
+                string type = (string)id.Element("TypeId");
+                string name = type + "/" + subtype;
+
+                foreach (XElement group in definition.Descendants("Group"))
+                {
+                    XAttribute groupName = group.Attribute("Name");
+                    if (groupName == null || groupName.Value != "ThermalBlockProperties") continue;
+
+                    HashSet<string> declared = new HashSet<string>();
+                    foreach (XElement value in group.Elements("Decimal"))
+                    {
+                        XAttribute key = value.Attribute("Name");
+                        if (key != null) declared.Add(key.Value);
+                    }
+
+                    foreach (string required in RequiredProperties)
+                    {
+                        if (!declared.Contains(required))
+                        {
+                            incomplete.Add(name + " omits " + required + ", which the game reads as 0");
+                        }
+                    }
+                }
+            }
+
+            Assert.Empty(incomplete);
+        }
+
+        /// <summary>
+        /// **An entry without <c>ExcludeFromSimulation</c> is not an entry at all.**
+        ///
+        /// <c>GetDefinition</c> decides whether to use a subtype's own entry by asking Definition
+        /// Extensions for that one bool. The lookup failing is how it detects "this block has no
+        /// entry", so an otherwise complete and correct block that omits the bool falls straight
+        /// through to its type's default and every authored number is silently ignored — the exact
+        /// failure the rest of this class exists because of, one property further in.
+        /// </summary>
+        [Fact]
+        public void EveryEntryInCubesDeclaresTheBoolThatMakesItVisible()
+        {
+            List<string> invisible = new List<string>();
+
+            foreach (XElement definition in Load("Data", "Cubes.xml").Descendants("Definition"))
+            {
+                XElement id = definition.Element("Id");
+                if (id == null) continue;
+
+                foreach (XElement group in definition.Descendants("Group"))
+                {
+                    XAttribute groupName = group.Attribute("Name");
+                    if (groupName == null || groupName.Value != "ThermalBlockProperties") continue;
+
+                    bool found = false;
+                    foreach (XElement value in group.Elements("Bool"))
+                    {
+                        XAttribute key = value.Attribute("Name");
+                        if (key == null) continue;
+                        if (key.Value == "ExcludeFromSimulation" || key.Value == "IgnoreThermals") found = true;
+                    }
+
+                    if (!found)
+                    {
+                        invisible.Add((string)id.Element("TypeId") + "/" + (string)id.Element("SubtypeId")
+                            + " omits ExcludeFromSimulation, so the whole entry is skipped");
+                    }
+                }
+            }
+
+            Assert.Empty(invisible);
+        }
+
         /// <summary>The ThermalBlockProperties group of one subtype in Cubes.xml.</summary>
         private static Dictionary<string, double> PropertiesOf(string subtype)
         {
