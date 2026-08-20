@@ -69,10 +69,19 @@ dotnet run --project Thermodynamics.Sim -- bench load  --size 1000000 # what wor
 > is left is the runtime: no modern JIT, weaker bounds-check elimination, no vectorisation.
 >
 > Two caveats on those field figures. Telemetry was collecting in all of them, which switches the
-> solver's per-mechanism watt figures on and costs about 7 % on the harness and probably more on
-> 4.8. And the per-element rate includes the fixed per-step work — state sync, publish, the
-> stability estimate — so it inflates on a grid taking few substeps; both rows above are in a
-> regime where that is a minor term.
+> solver's per-mechanism watt figures on — **and that cost 95 %, not the 7 % this paragraph used to
+> estimate.** It has since been measured directly: 3.75 ms against 7.34 ms on a 32,800-block hull.
+> The figures are now written on the last substep alone, which brings it to 15 %, but every dump
+> taken before that carries the whole 95 %. See
+> [benchmarks.md](benchmarks.md#what-being-measured-costs). And the per-element rate includes the
+> fixed per-step work — state sync, publish, the stability estimate — so it inflates on a grid
+> taking few substeps; both rows above are in a regime where that is a minor term.
+
+> **Both sides of this table have since moved and it has not been re-measured.** The harness rows
+> predate the overshoot-clamp gate, the mirrored block ratings and the diagnostic batching, which
+> together took the harness from 3.97–5.67 ns per element visit to 1.87–2.01. The field rows
+> predate all three as well. The runtime factor cannot be recovered from these numbers — it needs a
+> dump taken on a tree that carries them.
 >
 > So: **multiply every millisecond on this page by about seven** to guess at the game, and treat
 > ratios, counts and shapes of curve as the parts that carry across unchanged.

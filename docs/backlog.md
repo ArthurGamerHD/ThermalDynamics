@@ -53,6 +53,10 @@ chooses; **work** — agreed, designed, unbuilt; **gap** — untested or unmeasu
 
 | # | Item | Where |
 | --- | --- | --- |
+| ~~D7~~ | ~~The overshoot clamp runs on steps where it cannot bind.~~ **Done** — both halves are the same stability test and neither reads a temperature, so it is settled once per step. Resolved grids halve their step; a refused one pays one comparison. | [benchmarks.md](benchmarks.md#the-overshoot-clamp-ab) |
+| ~~D8~~ | ~~The damage check reaches through three heap pointers per node per substep.~~ **Done** — the rating is mirrored beside the node's mass. `damage` marginal 0.85 → 0.19 ms; the 125,000 rung 30.8 → 17.0 ms, and cost per element visit is now flat across the ladder. | [benchmarks.md](benchmarks.md#the-features-two-ways) |
+| ~~D9~~ | ~~The watt diagnostics are written every substep and read once per step.~~ **Done** — written on the last substep only. The cost of being measured falls 3.58 → 0.57 ms, which changes what every telemetry dump costs to take. | [benchmarks.md](benchmarks.md#what-being-measured-costs) |
+| D10 | Nodes are not partitioned by exposure, so the environment pass walks every buried block on an armoured hull to add its waste heat and skip. Contiguous exposed nodes would shorten the pass; the cost is maintaining the order across placement and removal. | — |
 | D1 | A solver step is atomic and 104 ms at a million blocks — the largest single thing landing in one tick, and near the memory-bandwidth floor. Only activity tracking, chunking and multirate make it smaller; all designed, none built. | [scale-design.md](scale-design.md), [load-and-hitching.md](load-and-hitching.md#what-is-still-open) |
 | D2 | The room map floods the bounding volume — 14× the block count on a hull — and takes 7,237 ticks (twenty minutes) to converge at a million blocks. Wants the host gas system, with a coarse flood as fallback. | [model-redesign.md](model-redesign.md) §4 |
 | D3 | World load is 11 s at a million blocks in one call. Acceptable behind a loading screen; a blueprint pasted mid-session takes the same path. | [load-and-hitching.md](load-and-hitching.md#what-is-still-open) |
@@ -69,7 +73,7 @@ Local changes, no design work behind them, ~20 % of a grid's footprint between t
 | E1 | Drop the solver's `nodesByKey` dictionary; `BlockInstance` carries the node index. | ~36 B/block |
 | E2 | Pack the per-node face data — `int[6]` counts into one packed int, weights derived, sun-lit array only when self-shadowing is on. | ~70 B/block |
 | E3 | Rooms as one cell array with per-room ranges instead of `List<HashSet>` plus a per-cell dictionary. | ~20 MB at 126k |
-| E4 | Move the node diagnostics out of `ThermalNode` into a side array allocated when diagnostics are on. | ~24 B/block |
+| E4 | Move the node diagnostics out of `ThermalNode` into a side array allocated when diagnostics are on. Their *write* cost is now settled — D9 — but the fields still sit on every node whether or not anything reads them. | ~24 B/block |
 | E5 | Fold `blockSlots` into `blocksByKey` as one dictionary to a small struct. | ~30 B/block |
 
 See [memory.md](memory.md#what-is-worth-doing-next).

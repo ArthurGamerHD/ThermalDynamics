@@ -169,6 +169,14 @@ That gives the pair a useful invariant worth stating plainly:
 > **While `MaxSubstepsPerBlock <= MaxSubsteps`, the overshoot clamps never engage.** Every step is
 > short enough for the grid it is integrating, which is what the clamps exist to fake.
 
+That invariant is now load-bearing rather than an observation. The conduction clamp is a per-link
+branch and two extra reads in the hottest loop in the mod, and it used to run whether or not it
+could do anything: 4.17 ms of an 8.52 ms step on a 32,800-block hull. The solver now settles the
+same stability test once per step — `h * G > C` for a node, `h * conductance >` the reduced mass
+for a link, neither of which reads a temperature — and skips the clamped arithmetic on any step
+where the answer is no. A resolved grid halves its step; a refused one pays one comparison to find
+out. See [benchmarks.md](benchmarks.md#the-overshoot-clamp-ab).
+
 Sixteen blocks of 1,381 are raised at cap 8. Two, at cap 16.
 
 ---

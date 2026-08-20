@@ -85,7 +85,9 @@ the field measurement of what the current default buys in game, and
 [known-issues.md](known-issues.md) for the defect this closes.
 
 **Absolute nanoseconds here do not transfer to the game.** The harness is .NET 9 and the game is
-.NET 4.8; a field dump measured 34.8 ns per element against roughly 2–5 ns here. The *ratios* are
+.NET 4.8; a field dump measured 34.8 ns per element against roughly 1.9–2.0 ns here — and both
+figures move with the solver, so the ratio is only meaningful between a dump and a harness run on
+the same tree. The *ratios* are
 arithmetic per element rather than throughput, which is why the lab reports link-equivalents, and
 `AWeightIsLinksPerNodeAndSurvivesAChangeOfUnits` in `ElementCostFitTests` pins that they do not
 move when the machine does.
