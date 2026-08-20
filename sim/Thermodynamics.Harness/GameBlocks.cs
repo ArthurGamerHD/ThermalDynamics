@@ -33,6 +33,18 @@ namespace Thermodynamics.Harness
             public readonly bool[] MountFaces = new bool[Face.Count];
 
             /// <summary>
+            /// Whether the definition listed any mount points at all.
+            ///
+            /// **A definition that lists none is not a block that mounts nowhere** — it is a block
+            /// whose mount points the game derives from its model geometry, which this harness
+            /// cannot read. Six per cent of the game's definitions are in that state, and reading
+            /// their silence as "no mounts" builds a block with no conduction links and no exposed
+            /// faces: a thermally sealed box, which heats without bound and without a symptom
+            /// beyond the temperature. `LargeBlockBatteryBlock` is one of them.
+            /// </summary>
+            public bool HasDeclaredMounts;
+
+            /// <summary>
             /// Whether the definition seals. Read from <c>IsAirTight</c>, which is a tri-state in
             /// the game: absent means "decide per face from the pressurisation table", which this
             /// harness approximates as sealing wherever the block mounts.
@@ -264,7 +276,10 @@ namespace Thermodynamics.Harness
                 foreach (XElement mount in mounts.Elements("MountPoint"))
                 {
                     int face = FaceOf((string)mount.Attribute("Side"));
-                    if (face >= 0) block.MountFaces[face] = true;
+                    if (face < 0) continue;
+
+                    block.MountFaces[face] = true;
+                    block.HasDeclaredMounts = true;
                 }
             }
 

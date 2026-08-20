@@ -294,6 +294,32 @@ Two other things made it faster without touching accuracy: runs stop on equilibr
 the clock — most are flat long before their ceiling — and the definition caches are built once
 before the workers start rather than by whichever arrives first. Screening 32 ships is now 0.1 s.
 
+## Where the numbers stand
+
+After three harness faults were found and fixed — the gyro torque, the sealed blocks, the
+double-counted stores — the battery reads coherently for the first time. On the 9,378-block Atlas:
+
+| Scenario | Peak K | Mean K | made kW | vented kW | Verdict |
+| --- | --- | --- | --- | --- | --- |
+| `idle` | 298 | 156 | 71 | 406 | **G1 holds** — a parked ship sits at room temperature and sheds |
+| `full-electrical` | 2,507 | 431 | 44,070 | 44,018 | 268 blocks over critical |
+| `all-peak` | 2,574 | 815 | 175,313 | 175,256 | the impossible ceiling |
+| `burn-forward` | 1,461 | 352 | 23,207 | 23,202 | hottest block is a hydrogen thruster |
+| `reentry` | 348 | 305 | 89,992 | 89,956 | 89 MW of friction, shed as fast as it arrives |
+| `recovery` | 368 | 213 | 71 | 1,356 | **G5 holds** — throttled to idle, it comes back |
+
+**`made` and `vented` now agree to within a tenth of a per cent in every loaded case.** That is the
+strongest evidence the model is behaving: the grids are reaching real equilibrium rather than
+climbing until the clock runs out. Substep demand is met throughout.
+
+Corpus-wide thermal stress is now p50 532 W/m², p95 1,476, max 3,451 — down from p50 1,335 / max
+9,367 before the fixes, and from p50 17,893 at the very first run.
+
+**What is left is a balance question rather than a defect.** The remaining hot spot is seven
+`LargeJumpDrive` charging at 32 MW each; at a 0.15 loss fraction that is 33.6 MW inside one
+compartment, and the gyros beside them reach 2,507 K by conduction rather than by anything they do
+themselves. Whether that fraction is right is now the kind of question the lab was built to answer.
+
 ## Open questions
 
 * **The fetcher has never run against a real key.** Its failure paths are checked — a missing key,
@@ -314,12 +340,24 @@ before the workers start rather than by whichever arrives first. Screening 32 sh
   away** — 2.7 against 3 granted, 18.3 against 19 — so the integrator was never short of what it
   asked for. `all-peak` on the same hull now reads 15,751 K and the hottest block is a hydrogen
   thruster, which is what the model says should run hot. `OnlyAThrusterCarriesThrust` pins it.
-* **Batteries may be the next one.** `full-electrical` still puts one `LargeBlockBatteryBlock` at
-  7,634 K with a hot spot almost equal to the peak — one block far above everything around it. A
-  large battery rated at 12 MW with a 0.03 producer fraction makes 360 kW inside a 3.8-tonne block,
-  and if it is buried its only exit is conduction. That may be honest, by the same "SE's rating is
-  fictional" argument the reactor needed; or the load model may be wrong to have every battery
-  discharging at full rating while the reactors also run. **Worth settling before any G2 claim.**
+* ~~Batteries may be the next one.~~ **Two more harness faults, both found by the same method.**
+  The 7,634 K battery had `faces 0`, `area 0` and **`W/K out 0`** — no exit of any kind, radiative
+  or conductive. A thermally sealed box heats without bound and without any symptom but the
+  temperature.
+  * **A definition that lists no mount points is not a block that mounts nowhere.** Six per cent of
+    the game's definitions leave `MountPoints` out and let the game derive them from model
+    geometry; `LargeBlockBatteryBlock` is one. Reading that silence as "no mounts" gave the block
+    no conduction links and no exposed faces. Now an undeclared set means every face mounts, which
+    is what `BlockModel.Solid` already assumed.
+  * **A store is never charging and discharging at once.** A battery rates 12 MW in *and* 12 MW
+    out, and both were being counted: every battery on a ship stood beside the reactors as a
+    co-generator while also drawing its full rating. Generators now carry the load and stores cover
+    only a shortfall.
+
+  Together these moved the Atlas from 7,634 K to **2,507 K** at full electrical load, and idle from
+  412 K to **298 K**. `ABlockThatDeclaresNoMountPointsStillConducts` and
+  `AStoreIsNotBothChargingAndDischarging` pin them.
+
 * **Does the panel reproduce the corpus?** The claim in [Specimens](#specimens), unchecked. It needs
   one full battery run over a whole corpus to settle, and that run is the expensive thing the panel
   exists to avoid — so it is paid once.

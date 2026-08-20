@@ -91,6 +91,69 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// **A definition that lists no mount points is not a block that mounts nowhere.** Six per
+        /// cent of the game's definitions leave <c>MountPoints</c> out and let the game derive them
+        /// from model geometry, and <c>LargeBlockBatteryBlock</c> is one of them.
+        ///
+        /// Reading that silence as "no mounts" built a block with no conduction links and no
+        /// exposed faces — a thermally sealed box. 51.9 kW went into one with no exit of any kind
+        /// and it climbed to 7,634 K, which read as a balance problem with batteries and was a
+        /// parser falling through. Nothing about it looked wrong except the temperature.
+        /// </summary>
+        [Fact]
+        public void ABlockThatDeclaresNoMountPointsStillConducts()
+        {
+            if (!GameBlocks.IsInstalled) return;
+
+            GameBlocks.Definition battery;
+            if (!GameBlocks.BySubtype().TryGetValue("LargeBlockBatteryBlock", out battery)) return;
+
+            // The premise: this is one of the definitions that declares none.
+            Assert.False(battery.HasDeclaredMounts);
+
+            ShipProfile profile = Measure(new string[]
+            {
+                "LargeBlockBatteryBlock:Forward:0",
+                "LargeBlockBatteryBlock:Forward:1",
+            });
+
+            if (profile == null) return;
+
+            Assert.Equal(2, profile.Blocks);
+            Assert.True(profile.ExposedArea > 0f,
+                "a block with no declared mounts came back with no exposed surface at all");
+        }
+
+        /// <summary>
+        /// A battery rates 12 MW out and 12 MW in and is never doing both. Counting both made a
+        /// ship full of them look like it was charging and discharging every one at once, which
+        /// doubled the load and stood the batteries beside the reactors as co-generators.
+        /// </summary>
+        [Fact]
+        public void AStoreIsNotBothChargingAndDischarging()
+        {
+            if (!GameBlocks.IsInstalled) return;
+
+            GameBlocks.Definition battery;
+            if (!GameBlocks.BySubtype().TryGetValue("LargeBlockBatteryBlock", out battery)) return;
+
+            Assert.True(battery.PowerOutputWatts > 0f && battery.PowerDrawWatts > 0f,
+                "the premise has changed: a battery no longer rates both ways");
+            Assert.True(ShipLoad.IsStore(battery.TypeId));
+
+            // A hull of batteries with nothing to power draws nothing and so makes no heat.
+            ShipProfile profile = Measure(new string[]
+            {
+                "LargeBlockBatteryBlock:Forward:0",
+                "LargeBlockBatteryBlock:Forward:1",
+            });
+
+            if (profile == null) return;
+
+            Assert.Equal(0f, profile.WasteWatts, 1);
+        }
+
+        /// <summary>
         /// Thermal stress is the number the whole pass exists to produce, and it is a ratio: watts
         /// of heat over square metres of skin. A ship with no exposed surface reports zero rather
         /// than dividing by it.

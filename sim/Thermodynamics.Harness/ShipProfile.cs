@@ -209,9 +209,16 @@ namespace Thermodynamics.Harness
             profile.ThrustNewtons = thrust;
             profile.PowerOutputWatts = installed;
 
-            float produced = draw < installed ? draw : installed;
+            // Generators carry what they can and the stores cover any shortfall, each at its own
+            // fraction. A ship whose reactors out-rate its draw has its batteries sitting idle,
+            // which is what they do and what counting their plate rating got wrong.
+            float fromGenerators = draw < installed ? draw : installed;
+            float shortfall = draw - fromGenerators;
+            float fromStores = shortfall < profile.StoreReserveWatts ? shortfall : profile.StoreReserveWatts;
+
             profile.WasteWatts =
-                (produced * BlockThermalDerivation.FunctionOf("Reactor").ProducerWasteEnergy)
+                (fromGenerators * BlockThermalDerivation.FunctionOf("Reactor").ProducerWasteEnergy)
+                + (fromStores * BlockThermalDerivation.FunctionOf("BatteryBlock").ProducerWasteEnergy)
                 + profile.ConsumerWasteWatts
                 + (thrust * BlockThermalDerivation.FunctionOf("Thrust").ConsumerWasteEnergy);
 
@@ -229,6 +236,9 @@ namespace Thermodynamics.Harness
 
         /// <summary>Heat from everything that draws power but does not thrust, watts.</summary>
         public float ConsumerWasteWatts;
+
+        /// <summary>Watts of discharge the ship's stores could supply if the generators fell short.</summary>
+        public float StoreReserveWatts;
 
         /// <summary>
         /// Adds one block's contribution to the ship's rated load.
@@ -250,10 +260,24 @@ namespace Thermodynamics.Harness
             BlockThermalDerivation.BlockFunction function =
                 BlockThermalDerivation.FunctionOf(definition.TypeId);
 
-            installed += definition.PowerOutputWatts;
-            draw += definition.PowerDrawWatts;
-
             if (definition.TypeId == "HeatVentBlock") profile.HeatVents++;
+
+            // A store rates both ways and is never doing both, so it is neither demand nor supply.
+            // It is reserve, and it only makes heat for the share of the load the generators cannot
+            // cover — which the caller works out once it knows both totals.
+            if (ShipLoad.IsStore(definition.TypeId))
+            {
+                profile.StoreReserveWatts += definition.PowerOutputWatts;
+                return;
+            }
+
+            if (definition.PowerOutputWatts > 0f)
+            {
+                installed += definition.PowerOutputWatts;
+                return;
+            }
+
+            draw += definition.PowerDrawWatts;
 
             if (definition.ThrustNewtons > 0f)
             {

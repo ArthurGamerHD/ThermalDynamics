@@ -67,6 +67,15 @@ namespace Thermodynamics.Sim
                 case "corpus-fetch":
                     return CorpusFetch.Run(args);
 
+                case "hotspot":
+                {
+                    int top;
+                    int.TryParse(ValueAfter(args, "--top") ?? "0", out top);
+                    Console.Write(HotSpotLab.Report(ValueAfter(args, "--path"),
+                        ValueAfter(args, "--ship"), ValueAfter(args, "--scenario"), top));
+                    return 0;
+                }
+
                 case "battery":
                 {
                     int size;
@@ -751,6 +760,8 @@ namespace Thermodynamics.Sim
             Console.WriteLine("    --panel N                 how many specimens to select");
             Console.WriteLine("  battery [--panel N]     every specimen through every scenario");
             Console.WriteLine("    --linear                  one at a time: for any figure that is a duration");
+            Console.WriteLine("  hotspot --ship <name>   why one block on one ship is the hottest thing on it");
+            Console.WriteLine("    --scenario <name> --top N");
             Console.WriteLine();
             Console.WriteLine("  bench scale             cost per stage as the grid grows");
             Console.WriteLine("  bench hitch --size N    per-tick cost, with a block welded mid-run");

@@ -483,6 +483,22 @@ namespace Thermodynamics.Core
         /// <summary>
         /// Substeps one node alone would need for a full step, from its real heat capacity.
         /// <see cref="LastRequiredSubsteps"/> is the maximum of this over all nodes. Public so
+        /// <summary>
+        /// W/K out of one node through every link it has.
+        ///
+        /// The other half of why a block is hot. A block generating heat sheds it through its own
+        /// exposed faces and through this, and a buried block has only this — so a large generation
+        /// against a small conductance is a block that must run a wide gradient to get rid of what
+        /// it makes, however healthy the grid around it looks.
+        /// </summary>
+        public float NodeConductanceTotal(int index)
+        {
+            if (index < 0 || index >= nodes.Count) return 0f;
+            if (index >= nodeConductanceTotal.Length) return 0f;
+
+            return nodeConductanceTotal[index];
+        }
+
         /// per-block-type telemetry can attribute a grid's substep count to specific definitions.
         /// </summary>
         public float NodeSubstepDemand(int index)

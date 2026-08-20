@@ -80,7 +80,8 @@ namespace Thermodynamics.Harness
             Dictionary<string, GameBlocks.Definition> definitions = GameBlocks.BySubtype();
             ThermalSolver solver = simulation.Solver;
 
-            List<BlockInstance> producers = new List<BlockInstance>();
+            List<BlockInstance> generators = new List<BlockInstance>();
+            List<BlockInstance> stores = new List<BlockInstance>();
             float installed = 0f;
             float demand = 0f;
 
@@ -97,8 +98,16 @@ namespace Thermodynamics.Harness
 
                 if (definition.PowerOutputWatts > 0f)
                 {
-                    producers.Add(block);
-                    installed += definition.PowerOutputWatts;
+                    // A store carries both an output and a draw — a battery is rated 12 MW each
+                    // way — and it is never doing both. Generators carry the load; a store only
+                    // covers what they cannot, which is what keeps a ship full of batteries from
+                    // reporting every one of them discharging at full rating beside its reactors.
+                    if (IsStore(definition.TypeId)) stores.Add(block);
+                    else
+                    {
+                        generators.Add(block);
+                        installed += definition.PowerOutputWatts;
+                    }
                     continue;
                 }
 
@@ -125,17 +134,19 @@ namespace Thermodynamics.Harness
                 demand += block.PowerConsumedWatts;
             }
 
-            // Batteries and reactors share the load in proportion to their rating.
-            float supplied = demand < installed ? demand : installed;
-            if (installed > 0f)
-            {
-                float fraction = supplied / installed;
+            // Generators take the load in proportion to their rating, up to what they have.
+            float fromGenerators = demand < installed ? demand : installed;
+            Share(definitions, generators, installed, fromGenerators);
 
-                for (int i = 0; i < producers.Count; i++)
-                {
-                    GameBlocks.Definition definition = definitions[producers[i].Name];
-                    producers[i].PowerProducedWatts = definition.PowerOutputWatts * fraction;
-                }
+            // Only a shortfall reaches the stores. A ship whose reactors cover its draw has its
+            // batteries sitting there, which is what they do.
+            float shortfall = demand - fromGenerators;
+            if (shortfall > 0f)
+            {
+                float reserve = 0f;
+                for (int i = 0; i < stores.Count; i++) reserve += definitions[stores[i].Name].PowerOutputWatts;
+
+                Share(definitions, stores, reserve, shortfall < reserve ? shortfall : reserve);
             }
 
             solver.RefreshHeatGeneration();
@@ -143,6 +154,28 @@ namespace Thermodynamics.Harness
             float watts = 0f;
             for (int i = 0; i < solver.Nodes.Count; i++) watts += solver.Nodes[i].HeatGenerationWatts;
             return watts;
+        }
+
+        /// <summary>Spreads a supplied total over a set of producers in proportion to their rating.</summary>
+        private static void Share(Dictionary<string, GameBlocks.Definition> definitions,
+            List<BlockInstance> producers, float installed, float supplied)
+        {
+            if (installed <= 0f) return;
+
+            float fraction = supplied / installed;
+            for (int i = 0; i < producers.Count; i++)
+            {
+                producers[i].PowerProducedWatts = definitions[producers[i].Name].PowerOutputWatts * fraction;
+            }
+        }
+
+        /// <summary>
+        /// Blocks that store energy rather than making it, and so carry a rating in both
+        /// directions while only ever doing one of them at a time.
+        /// </summary>
+        public static bool IsStore(string typeId)
+        {
+            return typeId == "BatteryBlock";
         }
 
         /// <summary>

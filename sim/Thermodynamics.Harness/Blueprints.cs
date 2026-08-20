@@ -307,10 +307,18 @@ namespace Thermodynamics.Harness
             model = BlockModel.Solid(definition.SubtypeId, definition.Size, definition.Mass,
                 BlockThermalDerivation.Derive(definition.Components, definition.TypeId));
 
-            bool everyFace = true;
-            for (int face = 0; face < Face.Count; face++)
+            // A definition that declares no mount points has them generated from its model, which
+            // is geometry this harness cannot read. Treating that silence as "mounts nowhere" is
+            // what made a battery a sealed box; the honest fallback is the one BlockModel.Solid
+            // already applies, which is that every face mounts.
+            bool everyFace = !definition.HasDeclaredMounts;
+            if (definition.HasDeclaredMounts)
             {
-                if (!definition.MountFaces[face]) everyFace = false;
+                everyFace = true;
+                for (int face = 0; face < Face.Count; face++)
+                {
+                    if (!definition.MountFaces[face]) everyFace = false;
+                }
             }
 
             // Sealing follows the definition where it states one, and the mount points where it
