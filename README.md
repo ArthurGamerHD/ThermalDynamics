@@ -91,6 +91,7 @@ into atmosphere and into the air of sealed rooms, arrives from the sun, and — 
 | [docs/telemetry.md](docs/telemetry.md) | Session data collection and what the report contains. |
 | [docs/development.md](docs/development.md) | Building, deploying, repo layout, conventions. |
 | [docs/known-issues.md](docs/known-issues.md) | Confirmed defects, unfinished systems and deliberate limits. |
+| [docs/balance-lab.md](docs/balance-lab.md) | Deciding good balance from a population of real ships: criteria, staging, and the corpus. |
 | [docs/backlog.md](docs/backlog.md) | Every open item across these documents, categorised, one line each. |
 | [docs/bugs-and-performance.md](docs/bugs-and-performance.md) | Findings from putting the simulation under test. |
 | [docs/engine-api-notes.md](docs/engine-api-notes.md) | Engine APIs this mod reimplements by hand, and what it could use instead. |

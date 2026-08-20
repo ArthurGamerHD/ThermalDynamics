@@ -166,6 +166,19 @@ derivation it reports is the same one that runs in game, in `BlockThermalDerivat
 view of live behaviour rather than of a generator. See
 [definitions.md](../docs/definitions.md#where-a-blocks-properties-come-from).
 
+## The blueprint corpus
+
+`corpus` reads real ships out of Space Engineers blueprint files and reports what came back.
+
+```bash
+dotnet run --project Thermodynamics.Sim -- corpus                 # subscribed workshop items
+dotnet run --project Thermodynamics.Sim -- corpus --path <dir>    # any directory of bp.sbc files
+```
+
+Everything this repository measures, it measures on a hull it built itself, and `Census` says so
+in its own summary: "one ship is one ship". A corpus replaces that hypothesis with a population.
+See [balance-lab.md](../docs/balance-lab.md) for what the lab is for and how it is staged.
+
 ## Balance profiles
 
 `profiles`, `sweep` and `features` are the whole-system counterpart to `balance`: not "is this block
@@ -335,6 +348,9 @@ PipeFitter.BuildRing(builder, ring);      // pump goes on the first straight run
   and carries plumbing exactly when it should; and that the conclusions drawn from the balance pass
   — the radiator beating the armour it displaces, a coolant sink beating every surface dial, the
   heat pump passing through all three of its limits — cannot quietly invert
+* blueprint reading: that a ship comes back with its name and every block, that an empty
+  SubtypeName is the base armour cube, that one modded block disqualifies a ship, that a block of
+  the wrong grid size is refused, and that a real subscribed ship builds a simulation that steps
 * the block derivation: that specific heat is the exact mass-weighted mean, that a window comes out
   glass and an armour block steel, that a battery is more fragile than a reactor, that a plushie is
   fabric, that an unknown component falls back to steel, and that no invented material sits outside
