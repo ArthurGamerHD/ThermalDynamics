@@ -38,6 +38,16 @@ namespace Thermodynamics
         private static bool applying;
 
         /// <summary>
+        /// True while a value from the server is being applied, so the receiving side can tell an
+        /// incoming change from one made here — one is worth saving to the world's file, the other
+        /// is someone else's world arriving.
+        /// </summary>
+        public static bool Applying
+        {
+            get { return applying; }
+        }
+
+        /// <summary>
         /// Declares the property. Called once from the session component, before anything can
         /// change a setting.
         ///

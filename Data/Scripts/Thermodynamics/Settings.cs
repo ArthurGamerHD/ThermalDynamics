@@ -322,6 +322,23 @@ namespace Thermodynamics
             Core.ThermalSettings bundle = new Core.ThermalSettings();
             if (!Core.ThermalProfiles.Apply(bundle, name)) return false;
 
+            // A profile is the whole world, not a patch on it. Everything the profile does not
+            // speak for goes back to the shipped value first, so applying one twice with tinkering
+            // in between lands in the same place both times — and so that `default` is a reset,
+            // which is why the menu no longer carries a separate reset button.
+            Settings shipped = GetDefaults();
+            List<string> names = Names();
+
+            for (int i = 0; i < names.Count; i++)
+            {
+                string setting = names[i];
+
+                // What is drawn on a player's own screen is theirs; a profile is world balance.
+                if (ClientOwned.Contains(setting)) continue;
+
+                SetValue(setting, shipped.GetValue(setting));
+            }
+
             Frequency = bundle.Frequency;
             SimulationSpeed = bundle.SimulationSpeed;
             HeatTimeScale = bundle.HeatTimeScale;
@@ -346,8 +363,10 @@ namespace Thermodynamics
 
             // Every path that changes a setting ends here — the chat commands, the settings menu,
             // the mod API and a profile change — so this is the one place a server has to publish
-            // from. A client applying a value it just received is guarded inside the sync.
+            // from, and the one place that knows the file is now behind. A client applying a value
+            // it just received is guarded inside the sync and never marks the file dirty.
             SettingsSync.Publish(this);
+            if (this == Instance && !SettingsSync.Applying) SavePending = true;
             if (core == null) core = new Core.ThermalSettings();
 
             core.EnableEnvironment = EnableEnvironment;
@@ -670,6 +689,38 @@ namespace Thermodynamics
 
             settings.Clamp();
             return settings;
+        }
+
+        /// <summary>
+        /// True when a setting has changed since the file was last written.
+        ///
+        /// Every change is saved, rather than waiting for someone to press a button — a menu that
+        /// asks you to confirm what you already did is asking you to do it twice, and a setting
+        /// that reverts on reload because the button was missed is worse than either. The write
+        /// itself is deferred a moment by <see cref="FlushPending"/> so that dragging a slider is
+        /// one write rather than one per pixel.
+        /// </summary>
+        public static bool SavePending;
+
+        /// <summary>
+        /// Writes the config file when a change is waiting and the world can be written to.
+        /// Called once a second from the session; cheap when nothing has changed.
+        /// </summary>
+        public static void FlushPending()
+        {
+            if (!SavePending || Instance == null) return;
+
+            try
+            {
+                if (MyAPIGateway.Session == null || !MyAPIGateway.Session.IsServer) return;
+
+                SavePending = false;
+                Save(Instance);
+            }
+            catch (Exception e)
+            {
+                MyLog.Default.Info("[" + Name + "] deferred save failed\n" + e);
+            }
         }
 
         public static void Save(Settings settings)

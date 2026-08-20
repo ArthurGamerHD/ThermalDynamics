@@ -288,11 +288,14 @@ namespace Thermodynamics
                 new Leaf("Mechanisms",
                     "EnableEnvironment", "EnableConduction", "EnableRadiation", "EnableConvection"),
                 new Leaf("Solar",
-                    "EnableSolarHeat", "SolarSelfShadowing", "SolarEnergy"),
+                    "EnableSolarHeat", "SolarEnergy"),
                 new Leaf("Occlusion",
-                    "SolarOcclusionPlanets", "SolarOcclusionTerrain", "SolarTerrainRange",
-                    "SolarOcclusionVoxels", "SolarGridShadows", "SolarOcclusionSamples",
-                    "SolarOcclusionInterval")),
+                    // Self-shadowing is what a grid does to itself, which is occlusion by any
+                    // reading; it sat under Solar because that is where its setting name starts.
+                    "SolarSelfShadowing", "SolarGridShadows",
+                    "SolarOcclusionPlanets", "SolarOcclusionVoxels",
+                    "SolarOcclusionTerrain", "SolarTerrainRange",
+                    "SolarOcclusionSamples", "SolarOcclusionInterval")),
 
             new Folder("World",
                 new Leaf("Climate",
@@ -536,12 +539,11 @@ namespace Thermodynamics
             {
                 HeaderText = "This world",
                 SubheaderText = editable && !local
-                    ? "Your changes are sent to the server"
-                    : "Nothing is written to the config file until you press Save",
+                    ? "Your changes are sent to the server and saved there"
+                    : "Every change is saved to the config file as you make it",
             };
             summary.Add(state);
             summary.Add(facts);
-            summary.Add(ActionTile(local));
             overview.Add(summary);
 
             overview.Add(ProfileCategory(local));
@@ -560,7 +562,7 @@ namespace Thermodynamics
             {
                 HeaderText = "Profiles",
                 SubheaderText = local
-                    ? "Ready-made bundles. Applied at once, and not written to the config file until you press Save."
+                    ? "A profile sets every world setting, so 'default' is also how you start over"
                     : "Applied by the server; ask an administrator",
             };
 
@@ -916,10 +918,14 @@ namespace Thermodynamics
         {
             for (int start = 0; start < members.Count; start += ControlsPerGroup)
             {
+                // A second row of the same page used to be headed "(cont.)", which tells a reader
+                // nothing they cannot already see. It is named for what is in it instead.
                 ControlCategory group = new ControlCategory
                 {
-                    HeaderText = start == 0 ? name : name + " (cont.)",
-                    SubheaderText = start == 0 ? Subheader(name, editable) : "",
+                    HeaderText = start == 0 ? name : EntryFor(members[start]).Label,
+                    SubheaderText = start == 0
+                        ? Subheader(name, editable)
+                        : "more " + name.ToLower(),
                 };
 
                 int groupEnd = Math.Min(members.Count, start + ControlsPerGroup);
@@ -990,41 +996,6 @@ namespace Thermodynamics
             { Display, "What is drawn on your screen, and what is recorded" },
             { Other, "Not yet described" },
         };
-
-        /// <summary>
-        /// One Save and one Reset, for the whole file.
-        ///
-        /// Nothing is written to disk until Save is pressed, so a session's changes can be abandoned
-        /// by not pressing it. Reset likewise restores the values without writing the file.
-        /// </summary>
-        private static ControlTile ActionTile(bool editable)
-        {
-            ControlTile tile = new ControlTile();
-
-            TerminalButton save = new TerminalButton
-            {
-                Name = "Save to config",
-                ToolTip = Tip("Writes every current value to the world's config file."),
-                Enabled = editable,
-            };
-            save.ControlChangedHandler = (sender, args) =>
-            {
-                Settings.Save(Settings.Instance);
-                MyAPIGateway.Utilities.ShowNotification("Thermodynamics: settings saved", 2000, "White");
-            };
-            tile.Add(save);
-
-            TerminalButton defaults = new TerminalButton
-            {
-                Name = "Reset to defaults",
-                ToolTip = Tip("Puts every setting back to what a fresh install ships with. Applies at once; not written to the config file until you press Save."),
-                Enabled = true,
-            };
-            defaults.ControlChangedHandler = (sender, args) => ResetAll();
-            tile.Add(defaults);
-
-            return tile;
-        }
 
         /// <summary>
         /// Restores every setting the player is allowed to change, which on a client is the

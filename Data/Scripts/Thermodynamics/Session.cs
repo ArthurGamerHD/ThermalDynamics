@@ -105,8 +105,21 @@ namespace Thermodynamics
             base.UnloadData();
         }
 
+        /// <summary>Frames between deferred config writes; one second at 60 fps.</summary>
+        private const int SaveFlushFrames = 60;
+
+        private int framesSinceSaveCheck;
+
         public override void Simulate()
         {
+            // Settings save themselves as they change. The write is deferred to here so that
+            // dragging a slider across its range is one file write rather than one per step of it.
+            if (++framesSinceSaveCheck >= SaveFlushFrames)
+            {
+                framesSinceSaveCheck = 0;
+                Settings.FlushPending();
+            }
+
             _frame++;
 
             if (!Telemetry.Enabled)
