@@ -200,6 +200,17 @@ dotnet run --project Thermodynamics.Sim -- battery --panel 6
 dotnet run --project Thermodynamics.Sim -- battery --panel 6 --linear
 ```
 
+`hotspot` answers why one block is the hottest thing on a ship, which a matrix cannot:
+
+```bash
+dotnet run --project Thermodynamics.Sim -- hotspot --ship Atlas --scenario full-electrical
+```
+
+It dumps the blocks at the top of the distribution with the three figures that decide where each
+landed — what it generates, what it can radiate through its own faces, and what it can conduct into
+its neighbours. A large generation against a small conductance and no exposure is a *layout* result;
+a generation with **no** exit at all is a defect. Three harness faults were found that way.
+
 **`--linear` matters.** Balance collection runs concurrently, because a settling problem is a pure
 function of a ship and a scenario and nothing about a temperature changes because another core was
 busy. Anything whose figure is a *duration* has to run one at a time, because there every other
