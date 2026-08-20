@@ -149,8 +149,18 @@ pressed against it, which works and is what the `radiator` scenario measures. It
 ports of its own, so a loop cannot run *through* one. The block is 1×5×2 with mount points only on
 its top and bottom, so adding ports needs the port geometry checked against the model.
 
-**No network replication.** `SENetworkAPI` is initialised on channel `30323` and nothing is
-registered on it. Clients run their own simulation from the same inputs and reach the same answers,
+**Network replication covers settings and pump controls, not temperatures.** `SENetworkAPI` 2.0 is
+initialised on channel `30323` and three properties are registered on it: the world's settings, and
+the two pump throttles.
+
+The settings one closed a silent divergence rather than adding a feature. Only the server can read
+the config file — `CanReadWorldStorage` returns false on a client, and its comment already said
+clients "take the server's settings rather than their own file" — but nothing delivered them, so a
+client simulated on the shipped defaults while the server ran whatever profile it had been given.
+Two machines integrating different physics from the same inputs is a worse divergence than the one
+this entry was written about.
+
+What remains is the original one. Clients run their own simulation from the same inputs and reach the same answers,
 but nothing reconciles them: a client that joins mid-session starts from saved temperatures, and
 divergence is never corrected. Damage and settings are server authoritative, so the divergence is
 cosmetic, but it is real.

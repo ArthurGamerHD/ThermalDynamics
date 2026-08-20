@@ -50,6 +50,9 @@ namespace Thermodynamics
         /// </summary>
         public ThermalHeatPumpBlock HeatPump;
 
+        /// <summary>The coolant pump's switch and speed, or null when this is not a pump.</summary>
+        public ThermalCoolantPumpBlock CoolantPump;
+
         private MyResourceSourceComponent source;
         private MyResourceSinkComponent sink;
         private IMyThrust thrust;
@@ -144,6 +147,10 @@ namespace Thermodynamics
 
             // A heat pump is the only block with a two-way exchange with the game: the simulation
             // reports the draw it wants and the power system reports how much it supplied.
+            CoolantPump = fat.GameLogic == null
+                ? null
+                : fat.GameLogic.GetAs<ThermalCoolantPumpBlock>();
+
             if (ThermalHeatPumpShapes.IsHeatPump(Name))
             {
                 HeatPump = fat.GameLogic == null ? null : fat.GameLogic.GetAs<ThermalHeatPumpBlock>();

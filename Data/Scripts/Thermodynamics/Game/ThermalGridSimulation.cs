@@ -273,6 +273,62 @@ namespace Thermodynamics
 
                 device.Enabled = electrical.IsRunning;
                 device.PowerAvailable = electrical.PowerAvailable;
+                device.PowerSetting = electrical.PowerSetting;
+            }
+
+            PushCoolantPumpState();
+        }
+
+        /// <summary>
+        /// Carries each coolant pump's switch and speed setting into the loop model, which has
+        /// always read both and never been given either.
+        ///
+        /// Walked through the loops rather than through a registry of pump blocks, because a pump
+        /// only matters when it belongs to a ring: a pump standing on its own drives nothing, and
+        /// the loops already hold exactly the pumps that do.
+        /// </summary>
+        private void PushCoolantPumpState()
+        {
+            IList<CoolantLoop> loops = Simulation.Solver.Loops;
+            if (loops == null || loops.Count == 0) return;
+
+            for (int i = 0; i < loops.Count; i++)
+            {
+                CoolantLoop loop = loops[i];
+                IList<Core.CoolantPump> pumps = loop.Pumps;
+                bool changed = false;
+
+                for (int p = 0; p < pumps.Count; p++)
+                {
+                    Core.CoolantPump pump = pumps[p];
+                    if (pump.Block == null) continue;
+
+                    ThermalBlock bound = Get(pump.Block.Min);
+                    ThermalCoolantPumpBlock control = bound == null ? null : bound.CoolantPump;
+
+                    if (control == null)
+                    {
+                        // A pump the host cannot speak for keeps circulating. Losing the component
+                        // is this mod's fault rather than the player's, and stopping their cooling
+                        // over it would be the worse failure.
+                        continue;
+                    }
+
+                    bool running = control.IsRunning;
+                    float speed = control.Speed;
+
+                    if (pump.Enabled == running && pump.Speed == speed) continue;
+
+                    pump.Enabled = running;
+                    pump.Speed = speed;
+                    changed = true;
+                }
+
+                // A pump's setting reaches the fluid through the ring's flow rate, which is
+                // computed when a loop is built and cached from then on. Without this the switch
+                // and the slider would move a number nothing reads — which is exactly the state
+                // the switch was already in.
+                if (changed) loop.RefreshFlow();
             }
         }
 

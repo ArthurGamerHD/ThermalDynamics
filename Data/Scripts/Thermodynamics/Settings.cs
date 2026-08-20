@@ -343,6 +343,11 @@ namespace Thermodynamics
         public void Apply()
         {
             Clamp();
+
+            // Every path that changes a setting ends here — the chat commands, the settings menu,
+            // the mod API and a profile change — so this is the one place a server has to publish
+            // from. A client applying a value it just received is guarded inside the sync.
+            SettingsSync.Publish(this);
             if (core == null) core = new Core.ThermalSettings();
 
             core.EnableEnvironment = EnableEnvironment;
