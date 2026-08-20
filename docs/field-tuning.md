@@ -1,4 +1,10 @@
-# Field tuning — TestWorld1, 2026-08-19
+# Field tuning — TestWorld1
+
+Three live runs and one harness sweep, oldest first.
+
+---
+
+# First run — 2026-08-19
 
 A 296 s live run, six 1,300-block large grids, `MaxSubsteps 3` / `MaxSubstepsPerBlock 3`.
 Telemetry in the world's `Storage/ThermalDynamics_Thermodynamics`.
@@ -166,8 +172,106 @@ Uncapped demand for the ship falls from **21.4 to about 5.6**, where the next dr
 panelling — the structure, which is what should have been setting the pace all along. The substep
 cap becomes very nearly irrelevant: at cap 6 nothing should be floored at all.
 
-Worth a run to confirm. The figures above are the stiffness relation, `conductivity / (mass ×
-specific heat)`, applied to the measured demands rather than a fresh measurement.
+~~Worth a run to confirm.~~ **Confirmed, and half wrong.** See
+[the fleet run](#third-run--a-fleet-in-atmosphere) below. The figures above are the *conduction*
+term, and a decorative block in air is not limited by conduction.
+
+---
+
+# Third run — a fleet in atmosphere
+
+`Thermodynamics_*_20260820_064044`, 505.6 s, 242 grids of which 205 profiled, 123,784 blocks, the
+largest 44,632 cells. `Frequency 8`, `MaxSubsteps 64`, `MaxSubstepsPerBlock 0`,
+`MaxElementVisitsPerStep 1,000,000`, telemetry on. Not a test ship this time: two capital hulls,
+several dropships, a food truck, and a lot of small grids.
+
+| | |
+| --- | ---: |
+| total measured | 29.9 % of real time |
+| solver alone | 25.9 % |
+| mean frame | 5.30 ms |
+| worst frame | 416.6 ms |
+| frames over a 60 fps budget | 494 of 27,744 (1.78 %) |
+| substeps per step | 3.04 |
+| ns per element visit | 18.9 |
+| steps clamped by the substep cap | 0 |
+| grids below real time | 2, slowest at 15.1 % |
+
+Nothing overheated: zero critical events, zero heat damage, peak 307 K on the hottest hull. The
+demand figures below are what cost the 25.9 %, not what threatened the ships.
+
+## The decorative definitions half worked
+
+The prediction above was that giving lights, neon and cameras real material properties would take
+uncapped demand from 21.4 substeps to about 5.6. The definitions are in force in this run —
+telemetry reads `SmallLight` at conductivity 2 and specific heat 900, exactly as `Cubes.xml` sets
+them — and `SmallLight` is still the third stiffest type on the fleet:
+
+| subtype | live | J/K | worst demand | conduction share |
+| --- | ---: | ---: | ---: | ---: |
+| `SabiroidPlushie` | 1 | 2 | 54.1 | 81 % |
+| `EngineerPlushie` | 2 | 2 | 35.2 | 49 % |
+| `SmallLight` | 909 | 64 | 22.7 | **3 %** |
+| `LargeBlockLight_1corner` | 155 | 96 | 15.2 | — |
+| `LargeBlockArmorCorner2Tip` | 626 | 120 | 14.3 | — |
+
+That conduction share is the finding. `DecorativeStiffnessTests` reproduces it on one 16 kg fitting
+bolted to an armour bar:
+
+| | demand | conduction share |
+| --- | ---: | ---: |
+| steel, vacuum | 6.56 | 71 % |
+| light definition, vacuum | **1.00** | 18 % |
+| steel, air | 31.68 | 15 % |
+| light definition, air | **13.68** | 1 % |
+
+**In vacuum the definitions do what they were written to do. In air they very nearly do not.** A
+block's stability demand is its conductance over its heat capacity, and the conductance has two
+halves: what it is bolted to, and what its exposed surface exchanges with the sky. The definitions
+address the first. In dense air, convection over the cell's exposed area is already 85 % of a steel
+fitting's rate, so removing the conduction half removes almost nothing.
+
+The earlier prediction was arithmetic on `conductivity / (mass × specific heat)`, which is the
+conduction term alone. It was right about that term and silent about the one that dominates.
+
+The fleet was flying in air averaging 0.73 density at 93 W/(m²·K) convection, which is why this run
+shows it and the two before it did not.
+
+## The knob that reaches it is exposed area
+
+A `SmallLight` on a large grid presents 23.6 m² of exposed surface against 64 J/K of heat capacity,
+because exposed area comes from the *cell* a block occupies rather than from the block. A light
+fitting is not a 2.5 m cube of radiating and convecting surface. `ExposedSurfaceMultiplier` is the
+per-type knob for exactly this and every decorative entry leaves it at 1.
+
+At 0.1 the test fitting falls from 13.68 substeps to below the armour it is bolted to — a factor of
+nine on the term that is left.
+
+**Not applied.** It also changes how much heat the block exchanges with its surroundings, so it is a
+balance decision rather than a free one, and the number above is here so the decision can be made
+against one. The same argument applies to the plushies at the top of the table, which are a
+different problem: 1 kg of steel at conductivity 50 is conduction-stiff, and a material definition
+would fix them outright.
+
+## What the caps would buy
+
+From the run's own projection, over 205 grids and 123,784 blocks:
+
+| cap | blocks raised | share | element visits saved | speedup |
+| --- | ---: | ---: | ---: | ---: |
+| off | 0 | — | — | — |
+| 16 | 3 | 0.00 % | 9.6 % | 1.11× |
+| 8 | 209 | 0.17 % | 24.2 % | 1.32× |
+| **6** | 777 | 0.63 % | 35.4 % | 1.55× |
+| 4 | 1,530 | 1.24 % | 46.7 % | 1.88× |
+| 3 | 4,913 | 3.97 % | 57.0 % | 2.32× |
+
+`MaxSubstepsPerBlock 6` remains the recommendation from the second run and this fleet does not
+change it: 0.63 % of blocks floored for a third of the solver's work. What has changed is what the
+cap is standing in for. It is no longer covering blocks whose materials are wrong — 12,764 blocks,
+10.3 % of the fleet, are stiff mostly through radiation and convection, and the cap reaches those
+too. That is a more visible trade than capping a conduction estimate: it changes how a block
+exchanges with the sky rather than with what it is bolted to.
 
 ---
 
