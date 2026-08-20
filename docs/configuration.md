@@ -32,10 +32,26 @@ same names are reachable from other mods, see [api.md](api.md#settings).
 
 **Ctrl+Shift+S** opens it, as does `/thermal menu`.
 
-The menu is eleven pages rather than one, grouped in the rail: **Overview**, **Status**, **Debug**,
-then folders for **Solver** (Cost limits, Pace), **Heat transfer** (Mechanisms, Solar, Occlusion) and
-**World** (Climate, Systems, Room air). Forty-eight settings on a single scroll is a list to be
-searched by eye, and an administrator usually arrives wanting one part of it.
+The menu is a tree rather than one scroll: **Overview**, **Status** and **Debug** at the root, then
+four folders.
+
+| Folder | Pages |
+| --- | --- |
+| **Solver** | Cost limits, Pace |
+| **Heat transfer** | Ambient, Conduction, Radiation, Convection, Solar, Occlusion |
+| **Ship systems** | Coolant loops, Heat pumps, Room air, Waste heat, Friction, Overheat damage, Point sources |
+| **World** | Climate, Underground |
+
+Sixty-eight settings on a single scroll is a list to be searched by eye, and an administrator
+usually arrives wanting one part of it. **One system to a page, with its own switch at the top.**
+Four switches used to share a "Mechanisms" page because they were all switches, which is filing by
+part of speech: switching convection off belongs above the convection dials, where you can see what
+it governs.
+
+A page whose system still keeps most of its numbers in a definition file says so, rather than
+looking broken with one switch on it. A setting named on no page still gets a control, on a final
+**Other** page — a setting added to the config and forgotten here is reachable rather than
+invisible.
 
 Three of the framework's habits shape what the pages can say, and all three were learned by looking
 at the menu in game rather than by reading the API:
@@ -447,7 +463,9 @@ will not move it much.
 | `HeatTimeScale` | 225 | How much faster than real physics heat moves. Divides every heat capacity. |
 | `MaxElementVisitsPerStep` | 1000000 | Most element visits one step may make — substeps times its links plus four times its nodes — before the step is shortened to fit. 0 removes the bound. See below. |
 | `MaxSubstepsPerBlock` | 0 (off) | Most substeps any single block may demand of the whole grid before it is treated as heavier than it is. The cheapest large win there is on a real ship. See below. |
-| `ClampConductionOvershoot` | `true` | Caps each exchange at the energy that equalises the pair. Off reproduces the original unbounded solver. |
+| `MaxSubsteps` | 64 | Most substeps one step may be cut into, whatever the grid asks for. A grid refused here integrates a step too long for its stiffest block, and the overshoot clamps carry the difference. |
+| `ClampConductionOvershoot` | `true` | Caps each exchange at the energy that equalises the pair. Off reproduces the original unbounded solver. Skipped, at no change to the result, on any step short enough that no element can overshoot — see [benchmarks.md](benchmarks.md#the-overshoot-clamp-ab). |
+| `ClampEnvironmentOvershoot` | `true` | The same for radiation and convection: neither may carry a block past ambient in one substep. This is what bounds a profile whose step is deliberately far too long. |
 | `DamageIsPerSecond` | `true` | Overheat damage per second of simulated time. Off applies it per step, which makes damage scale with `Frequency`. |
 
 ## Environment
@@ -463,6 +481,48 @@ will not move it much.
 | `RoomConvectionCoefficient` | 8 W/(m²·K) | Coupling between a room's air and the surfaces facing it. Lower than the planetary figure because room air is still. |
 | `RoomAirDensity` | 1.225 kg/m³ | Air density in a fully pressurised room. |
 | `SolarOcclusionInterval` | 12 | Solver steps between solar occlusion raycasts. The raycast is the most expensive thing a grid does and the sun moves slowly. |
+
+## Coolant loops
+
+These ship in [`Loops.xml`](../Data/Loops.xml), which the settings menu never showed — so "how fast
+does coolant move" was a settings question whose answer lived in a file nobody could reach from the
+game. They are world settings: saved, replicated and editable like any other.
+
+**A value left at its shipped figure does not override the definition.** The file, and whatever a
+profile's overlay does to it, still decides. Move one and it wins from then on, across every loop
+definition in the world.
+
+| Setting | Default | Effect |
+| --- | --- | --- |
+| `LoopCoolantMassPerPipe` | 50 kg | Coolant carried by one pipe block. More capacity for the same coupling: a heavier ring takes longer to saturate and longer to shed. |
+| `LoopSpecificHeat` | 3400 J/(kg·K) | The coolant's specific heat. Water-glycol is about 3,400. |
+| `LoopConductivity` | 1.0 | How well the fluid conducts into the pipe carrying it, 0..1. |
+| `LoopPipeContactMultiplier` | 1.0 | Scales the coupling between the fluid and its own pipe. |
+| `LoopSinkContactMultiplier` | 1.0 | Scales the coupling through a sink face into whatever is mounted against it. This is the dial that decides whether plumbing beats bolting. |
+| `LoopLargeGridFlowRate` | 10 m/s | How fast coolant moves on a large grid with one pump at full speed. Flow costs no substeps — carrying the fluid is a rotation of which parcel sits in which pipe, exact at any speed — so this is free to be set for feel. |
+| `LoopSmallGridFlowRate` | 10 m/s | The same for a small grid. Split from the large-grid figure because it is a balance dial rather than a constant. |
+| `LoopStagnantTransferFraction` | 1.0 | What a stopped ring still carries between neighbouring parcels, 0..1. 0 makes a pump failure total. |
+
+## Planet climate
+
+These ship in [`Planets.xml`](../Data/Planets.xml) and follow the same rule: one entry ships, so
+these address it, and a world with several authored planet types still reads them from the file
+until a value is moved off its shipped figure. See [planet-climate.md](planet-climate.md) for the
+model they parameterise.
+
+| Setting | Default | Effect |
+| --- | --- | --- |
+| `PlanetDayTemperature` | 294.261 K | Equatorial daytime air. |
+| `PlanetNightTemperature` | 283.15 K | Equatorial night air. |
+| `PlanetPoleTemperatureDrop` | 40 K | Span from equator to pole, interpolated on cos(latitude). |
+| `PlanetAmbientLapseRate` | 4 K/km | How fast the air cools with altitude. |
+| `PlanetAmbientLagSeconds` | 45 s | First-order lag on the ambient target, which is what makes the day peak after noon. Absolute seconds against a day that is not — see [planet-climate.md](planet-climate.md#open). |
+| `PlanetConvectionCoefficient` | 50 W/(m²·K) | Convective coupling in full atmosphere, scaled down with air density and up with wind. |
+| `PlanetSolarDecay` | 0.5 | How fast sunlight is attenuated through the atmosphere. |
+| `PlanetUndergroundTemperature` | 280 K | The rock's own temperature below the damping depth and above the deadzone. |
+| `PlanetUndergroundDampingDepth` | 20 m | Depth over which the day's swing, the weather and the ground table all damp out. Below it, ambient is simply `PlanetUndergroundTemperature`. |
+| `PlanetSealevelDeadzone` | 2000 m | Depth below which the rock starts warming toward the core. Deeper than SE's voxels reach, so every reachable depth currently reads flat. |
+| `PlanetCoreTemperature` | 3000 K | Temperature at the planet's centre, approached linearly from the deadzone. |
 
 ## Heat pumps
 
