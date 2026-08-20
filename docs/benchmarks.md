@@ -426,6 +426,13 @@ order between repeats and re-seed the spread before each.
 
 ---
 
+## What each pass cost
+
+A single comparison says whether one change was a regression. It cannot say whether a year of
+changes has been a drift. [iterations.md](iterations.md) keeps one row per pass over this
+repository — the suite's size and duration, and the headline step figures — so the trend is
+readable without reconstructing it from commit messages.
+
 ## Reading a comparison
 
 ```
