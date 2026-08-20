@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text;
 using RichHudFramework.UI;
@@ -32,10 +33,12 @@ namespace Thermodynamics
         private const int TextInterval = 6;
 
         private static Label toolLabel;
+        private static Label windLabel;
         private static LabelBox gridPanel;
         private static int sinceText;
 
         private static readonly StringBuilder ToolText = new StringBuilder();
+        private static readonly StringBuilder WindText = new StringBuilder();
 
         /// <summary>Reused by the billboard pass so aiming at a block allocates nothing.</summary>
         private static readonly List<BlockInstance> NeighbourScratch = new List<BlockInstance>();
@@ -53,6 +56,18 @@ namespace Thermodynamics
                 ParentAlignment = ParentAlignments.Center,
                 Offset = new Vector2(60f, 30f),
                 Format = new GlyphFormat(Color.White, TextAlignment.Left, 1.05f),
+                Visible = false,
+            };
+
+            // Under the needle, which is drawn in the world rather than by the framework. The two
+            // are placed independently — one in pixels, one by field of view — so this offset is
+            // eyeballed against NeedleScreenY rather than derived from it, and moving either wants
+            // both looked at.
+            windLabel = new Label(HudMain.HighDpiRoot)
+            {
+                ParentAlignment = ParentAlignments.Center,
+                Offset = new Vector2(0f, -132f),
+                Format = new GlyphFormat(new Color(200, 224, 236), TextAlignment.Center, 0.9f),
                 Visible = false,
             };
 
@@ -87,6 +102,7 @@ namespace Thermodynamics
         public static void Reset()
         {
             toolLabel = null;
+            windLabel = null;
             gridPanel = null;
         }
 
@@ -103,10 +119,16 @@ namespace Thermodynamics
             // The billboard is drawn inside the tool pass, so that runs every frame. The summary is
             // text only, so it is built only on the frames that publish it.
             DrawToolHud();
+
+            // The needle turns with the camera, so it is drawn every frame; its speed figure is
+            // text and rides the same interval as everything else.
+            DrawWindNeedle();
+
             if (!publish) return;
 
             DrawGridHud();
             Publish(toolLabel, ToolText);
+            Publish(windLabel, WindText);
 
             if (gridPanel != null)
             {
@@ -345,6 +367,181 @@ namespace Thermodynamics
 
             IMyAutomaticRifleGun extinguisher = character.EquippedTool as IMyAutomaticRifleGun;
             return extinguisher != null && extinguisher.DefinitionId.SubtypeId.String == "ExtinguisherGun";
+        }
+
+        // ---- the wind indicator ---------------------------------------------------------------
+
+        /// <summary>
+        /// Where the needle sits, as a share of half the screen's height below the centre. Under the
+        /// crosshair rather than in a corner: it is read while aiming or flying, and an indicator
+        /// that needs the eyes to leave the middle of the screen is one nobody looks at.
+        /// </summary>
+        private const double NeedleScreenY = -0.17d;
+
+        /// <summary>Needle length, on the same scale.</summary>
+        private const double NeedleScreenRadius = 0.055d;
+
+        /// <summary>
+        /// Metres in front of the eye the needle is drawn. Small enough that no cockpit geometry can
+        /// come between it and the camera, and its size is corrected for the distance, so this
+        /// changes nothing but what can occlude it.
+        /// </summary>
+        private const double NeedleDistance = 0.06d;
+
+        /// <summary>Below this the readout hides rather than showing a needle nobody should trust.</summary>
+        private const float MinimumReadableWind = 0.5f;
+
+        private static readonly MyStringId NeedleMaterial = MyStringId.GetOrCompute("Square");
+
+        /// <summary>
+        /// A compass needle for the wind, under the crosshair, with its speed under that.
+        ///
+        /// Screen up is the way the player faces, so the needle points where the wind is pushing
+        /// them: straight up is a tailwind, straight down is a wind in the face, and a needle lying
+        /// on its side is the crosswind that carries a ship off its line. That convention is the
+        /// opposite of the meteorological one, where a wind is named for where it comes from, and it
+        /// is chosen because the question here is which way you are being pushed rather than what to
+        /// call the weather.
+        ///
+        /// **In a cockpit this shows the wind the ship is flying through, not the wind over the
+        /// ground.** They are the same thing parked and quite different at speed, and the relative
+        /// one is what the solver heats the hull with, so it is the one worth showing. On foot there
+        /// is no grid to ask and the field's own wind is used.
+        /// </summary>
+        private static void DrawWindNeedle()
+        {
+            WindText.Clear();
+
+            if (!Settings.Instance.DebugWindIndicator) return;
+            if (MyAPIGateway.Session == null || MyAPIGateway.Session.Camera == null) return;
+            if (MyAPIGateway.Gui != null && (MyAPIGateway.Gui.IsCursorVisible || MyAPIGateway.Gui.ChatEntryVisible)) return;
+
+            Vector3 up = WindOverlay.PlayerUp;
+            if (up.LengthSquared() < 1e-6f) return;
+
+            Vector3 wind;
+            if (!CurrentWind(out wind)) return;
+
+            float speed = wind.Length();
+            if (speed < MinimumReadableWind) return;
+
+            var camera = MyAPIGateway.Session.Camera;
+            MatrixD view = camera.WorldMatrix;
+
+            float bearing;
+            if (!WindCompass.Bearing(wind, view.Forward, up, out bearing)) return;
+
+            // Half the screen at the needle's distance, so a screen fraction becomes metres. Taken
+            // on height alone, so the dial keeps its shape and its place on any window shape, and
+            // corrected for the field of view, so zooming does not shrink it.
+            double halfHeight = NeedleDistance * Math.Tan(camera.FovWithZoom * 0.5f);
+
+            Vector3D centre = view.Translation
+                + (view.Forward * NeedleDistance)
+                + (view.Up * (halfHeight * NeedleScreenY));
+
+            // The bearing turned into a screen direction: clockwise from straight up, which is what
+            // makes the top of the needle mean "the way you are facing".
+            double radians = bearing * Math.PI / 180d;
+            Vector3D screenUp = view.Up;
+            Vector3D screenRight = view.Right;
+
+            Vector3D needle = (screenUp * Math.Cos(radians)) + (screenRight * Math.Sin(radians));
+
+            double length = halfHeight * NeedleScreenRadius;
+            double thickness = length * 0.11d;
+
+            // Strength in the colour as well as the length, matching the wind map's ramp so the two
+            // readouts cannot disagree about what counts as a gale.
+            float share = Clamp01(speed / GaleSpeed);
+            Vector4 colour = WindOverlay.Colour(share).ToVector4();
+
+            Vector3D tail = centre - (needle * (length * 0.35d));
+            Vector3D tip = centre + (needle * length);
+
+            MySimpleObjectDraw.DrawLine(tail, tip, NeedleMaterial, ref colour, (float)thickness);
+
+            // A head, swept back in the screen plane, so a needle pointing away from the viewer is
+            // still distinguishable from one pointing towards them.
+            Vector3D sweep = (screenRight * Math.Cos(radians)) - (screenUp * Math.Sin(radians));
+            Vector3D back = tip - (needle * (length * 0.35d));
+
+            MySimpleObjectDraw.DrawLine(
+                tip, back + (sweep * length * 0.2d), NeedleMaterial, ref colour, (float)thickness);
+            MySimpleObjectDraw.DrawLine(
+                tip, back - (sweep * length * 0.2d), NeedleMaterial, ref colour, (float)thickness);
+
+            // A tick at the top of the dial, dim, so the needle has something to be read against.
+            // Without it a needle a few degrees off vertical looks the same as one dead ahead.
+            Vector4 tick = new Color(120, 140, 152).ToVector4();
+            Vector3D tickBase = centre + (screenUp * (length * 1.25d));
+
+            MySimpleObjectDraw.DrawLine(
+                tickBase, tickBase + (screenUp * (length * 0.25d)), NeedleMaterial, ref tick,
+                (float)(thickness * 0.6d));
+
+            WindText.Append(speed.ToString("n1")).Append(" m/s");
+        }
+
+        /// <summary>
+        /// Wind speed the needle draws at full strength, m/s. The storm end of an earthlike world's
+        /// field, which is a little under half its 80 m/s ceiling.
+        /// </summary>
+        private const float GaleSpeed = 35f;
+
+        /// <summary>
+        /// The wind to show: the controlled grid's own relative wind where there is one, and the
+        /// field at the player where there is not.
+        /// </summary>
+        private static bool CurrentWind(out Vector3 wind)
+        {
+            wind = Vector3.Zero;
+
+            ThermalGrid thermals = ControlledGrid();
+            if (thermals != null)
+            {
+                EnvironmentState state = thermals.LastState;
+                if (state.WindSpeed > 0f && state.WindDirectionLocal.LengthSquared() > 1e-6f)
+                {
+                    // The solver keeps the relative wind in the grid's own frame, since that is
+                    // where it meets the faces it heats. The needle wants it back in the world.
+                    wind = (Vector3)Vector3D.TransformNormal(
+                        state.WindDirectionLocal, thermals.Grid.WorldMatrix) * state.WindSpeed;
+                    return true;
+                }
+
+                // A grid that has not sampled yet, or one parked in still air. Falling through to
+                // the field would show the ground wind beside a ship that disagrees, so it stops.
+                return false;
+            }
+
+            wind = WindOverlay.PlayerWind;
+            return wind.LengthSquared() > 0f;
+        }
+
+        /// <summary>The thermal grid the player is controlling, or null when they are on foot.</summary>
+        private static ThermalGrid ControlledGrid()
+        {
+            if (MyAPIGateway.Session.Player == null || MyAPIGateway.Session.Player.Controller == null)
+                return null;
+
+            IMyShipController controller =
+                MyAPIGateway.Session.Player.Controller.ControlledEntity as IMyShipController;
+
+            if (controller == null || controller.CubeGrid == null) return null;
+
+            MyCubeGrid grid = controller.CubeGrid as MyCubeGrid;
+            if (grid == null || grid.GameLogic == null) return null;
+
+            ThermalGrid thermals = grid.GameLogic.GetAs<ThermalGrid>();
+            return thermals == null || thermals.Simulation == null ? null : thermals;
+        }
+
+        private static float Clamp01(float value)
+        {
+            if (value < 0f) return 0f;
+            if (value > 1f) return 1f;
+            return value;
         }
 
         private static void DrawBillboard(ThermalGrid thermals, ThermalBlock bound, MatrixD cameraMatrix)

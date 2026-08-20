@@ -244,6 +244,23 @@ times a steady per-place variation so one valley is windier than the next.
 It is a map, not a simulation. The properties worth keeping are that it is steady, cheap, different
 in different places, and recognisable from a cockpit.
 
+The circulation is only the planet-wide half. What happens in the first kilometre above one point of
+it — the logarithmic profile, the daily cycle that reverses with height, and what terrain does to
+both — is in [wind-model.md](wind-model.md), which also carries the decompiled source of the engine's
+own wind function and the evaluation of it.
+
+**You can now look at it.** **Ctrl+Shift+W** cycles a wind map: a lattice of arrows around you, then
+the whole globe with its bands. There is also a needle under the crosshair for the wind where you
+are, and `DebugWindRaycast` draws the relative wind each grid is flying through, which is the same
+field minus the grid's own velocity. All three are described in
+[configuration.md](configuration.md#the-wind-map).
+
+That view is what any argument about this pattern should start from. Everything above is a set of
+choices — three bands per hemisphere, a bearing that rotates, an eighth of the ceiling in fair
+weather, a 900 m variation scale — and none of them was picked from evidence, because the game
+supplies none to pick from. They were picked to be plausible and cheap. Seeing them drawn over a
+planet is the first chance anyone has had to say which of them are wrong.
+
 ## Open
 
 * **Nothing here has been measured in game yet.** Everything above is predicted from the model with

@@ -124,6 +124,31 @@ namespace Thermodynamics.Core
         /// <summary>Weather or planetary wind speed at the grid, m/s.</summary>
         public float WindSpeed;
 
+        /// <summary>
+        /// The local shaping applied to the field's speed: the vertical profile times the time of
+        /// day. One at the reference height at the crossover hour. Reported rather than used — the
+        /// speed already has it in — so a dump can say *why* a wind is what it is.
+        /// </summary>
+        public float WindProfileFactor;
+
+        /// <summary>Terrain speed-up, 1 on flat ground, more on a rise, less in a hollow.</summary>
+        public float WindSpeedUp;
+
+        /// <summary>Terrain sheltering, 1 in the open and less behind an obstruction.</summary>
+        public float WindShelter;
+
+        /// <summary>Lagged share of the day's heating, 0..1, that drove the diurnal factor.</summary>
+        public float WindHeating;
+
+        /// <summary>Metres above the ground the wind was evaluated at.</summary>
+        public float WindHeightAboveGround;
+
+        /// <summary>Share of the planet's ceiling the circulation band and weather were blowing, 0..1.</summary>
+        public float WindBandShare;
+
+        /// <summary>Degrees the terrain turned the wind away from the band's own bearing.</summary>
+        public float WindChannelDegrees;
+
         /// <summary>Wind direction in world space.</summary>
         public Vector3 WindDirection;
 
@@ -162,6 +187,13 @@ namespace Thermodynamics.Core
             s.SunDirectionLocal = sunDirectionLocal;
             s.UpDirection = Vector3.Up;
             s.WindDirection = Vector3.Zero;
+            s.WindProfileFactor = 1f;
+            s.WindSpeedUp = 1f;
+            s.WindShelter = 1f;
+            s.WindHeating = 0f;
+            s.WindHeightAboveGround = 0f;
+            s.WindBandShare = 0f;
+            s.WindChannelDegrees = 0f;
             s.RelativeWindDirectionLocal = Vector3.Zero;
             s.Weather = WeatherResponse.Calm;
             return s;

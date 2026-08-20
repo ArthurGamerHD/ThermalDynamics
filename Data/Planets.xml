@@ -1,58 +1,489 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  GENERATED FILE — do not edit by hand.
+
+  Regenerate with:
+      dotnet run --project sim/Thermodynamics.Sim -- planets --write Data/Planets.xml
+
+  Every figure below is derived from the world's own generator definition by
+  Thermodynamics.Core.PlanetThermalDerivation. What each derivation is and why is
+  documented there and in docs/planet-thermals.md; the per-entry comments here say
+  what the engine supplied and what came out.
+-->
 <Definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
 	<CubeBlocks>
+
 		<Definition>
 			<Id>
 				<TypeId>PlanetGeneratorDefinition</TypeId>
 				<SubtypeId>DefaultThermodynamics</SubtypeId>
 			</Id>
 
+			<!--
+			The fallback for any planet without an entry of its own. Earthlike, and unchanged
+			from what this mod shipped before the per-planet entries existed.
+			-->
 			<ModExtensions>
 				<Group Name="ThermalPlanetProperties">
-					<!--The ambiant temperature when the sun is on the opposite side of the planet-->
+
+					<!--Air temperature at the equator at midnight, K.-->
 					<Decimal Name="NightTemperature" Value="283.15" />
-					<!--The ambiant temperature when the sun is directly overhead-->
+
+					<!--Air temperature at the equator at noon, K.-->
 					<Decimal Name="DayTemperature" Value="294.261" />
-					<!--
-					How much colder a pole is than the equator, K.
-					Day and Night above are the planet's EQUATORIAL figures; this is the span from
-					there to its poles. Earth's is about 40. Zero gives one climate for a whole world.
-					-->
+
+					<!--How much colder a pole is than the equator, K. Air carries heat polewards, so a
+					thin-aired world keeps more of what each latitude is given.-->
 					<Decimal Name="PoleTemperatureDrop" Value="40" />
-					<!--
-					How long the air takes to answer the sun, in seconds of play.
-					Without it the hottest moment of the day is exactly noon, which is true nowhere.
-					Worth raising on a world with a long day and lowering on a short one.
-					-->
+
+					<!--Seconds the air takes to answer the sun. What puts the day's peak after noon.-->
 					<Decimal Name="AmbientLagSeconds" Value="45" />
-					<!--
-					How much colder a kilometre above sea level is, K. Earth's is 6.5; this is lower
-					because the ground table already makes mountains snowy. Zero switches altitude off.
-					-->
+
+					<!--How much colder a kilometre up is, K/km. Derived: g/cp, two thirds for moisture.-->
 					<Decimal Name="AmbientLapseRate" Value="4" />
-					<!--The ambiant temperature when underground-->
+
+					<!--Rock temperature below the damping depth, K — the surface's own daily mean.-->
 					<Decimal Name="UndergroundTemperature" Value="280" />
-					<!--
-					Metres of rock that blunt the surface's day-night swing to nothing. Above this
-					depth a buried block still feels some of the day; below it, none.
-					-->
+
+					<!--Metres of rock over which the day-night swing dies out.-->
 					<Decimal Name="UndergroundDampingDepth" Value="20" />
-					<!--The temperature at the center of the planet-->
+
+					<!--Rock temperature the model warms toward below the deadzone, K.-->
 					<Decimal Name="CoreTemperature" Value="3000" />
-					<!--The distance below sealevel that remains underground temperatures-->
+
+					<!--Metres below sea level before the rock starts warming toward the core.-->
 					<Decimal Name="SealevelDeadzone" Value="2000" />
-					<!--
-					A value between 0 and 1
-					Represents the percentage of solar engery that will be lost in full atomosphere 
-					-->
+
+					<!--Fraction of the sun a full atmosphere absorbs, 0..1. From the engine's own
+					SolarRadiationProtectionFactor.-->
 					<Decimal Name="SolarDecay" Value="0.5" />
-					<!--W/(m^2*k)-->
+
+					<!--Convective coefficient at the surface, W/(m^2 K), in proportion to the air.-->
 					<Decimal Name="ConvectionCoefficient" Value="50" />
-					
 				</Group>
 			</ModExtensions>
 		</Definition>
-		
-		
+
+		<Definition>
+			<Id>
+				<TypeId>PlanetGeneratorDefinition</TypeId>
+				<SubtypeId>EarthLike</SubtypeId>
+			</Id>
+
+			<!--
+			From the definition: gravity 1 g, air density 1 breathable, solar protection 1.8.
+			DefaultSurfaceTemperature not authored, so Cozy by engine default.
+			Real analogue: Earth, mean 288 K.
+			-->
+			<ModExtensions>
+				<Group Name="ThermalPlanetProperties">
+
+					<!--Air temperature at the equator at midnight, K.-->
+					<Decimal Name="NightTemperature" Value="282.5" />
+
+					<!--Air temperature at the equator at noon, K.-->
+					<Decimal Name="DayTemperature" Value="293.5" />
+
+					<!--How much colder a pole is than the equator, K. Air carries heat polewards, so a
+					thin-aired world keeps more of what each latitude is given.-->
+					<Decimal Name="PoleTemperatureDrop" Value="40" />
+
+					<!--Seconds the air takes to answer the sun. What puts the day's peak after noon.-->
+					<Decimal Name="AmbientLagSeconds" Value="45" />
+
+					<!--How much colder a kilometre up is, K/km. Derived: g/cp, two thirds for moisture.-->
+					<Decimal Name="AmbientLapseRate" Value="6.4424" />
+
+					<!--Rock temperature below the damping depth, K — the surface's own daily mean.-->
+					<Decimal Name="UndergroundTemperature" Value="288" />
+
+					<!--Metres of rock over which the day-night swing dies out.-->
+					<Decimal Name="UndergroundDampingDepth" Value="20" />
+
+					<!--Rock temperature the model warms toward below the deadzone, K.-->
+					<Decimal Name="CoreTemperature" Value="3000" />
+
+					<!--Metres below sea level before the rock starts warming toward the core.-->
+					<Decimal Name="SealevelDeadzone" Value="2000" />
+
+					<!--Fraction of the sun a full atmosphere absorbs, 0..1. From the engine's own
+					SolarRadiationProtectionFactor.-->
+					<Decimal Name="SolarDecay" Value="0.3" />
+
+					<!--Convective coefficient at the surface, W/(m^2 K), in proportion to the air.-->
+					<Decimal Name="ConvectionCoefficient" Value="50" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<Definition>
+			<Id>
+				<TypeId>PlanetGeneratorDefinition</TypeId>
+				<SubtypeId>Alien</SubtypeId>
+			</Id>
+
+			<!--
+			From the definition: gravity 1.1 g, air density 1.2 breathable, solar protection 1.8.
+			DefaultSurfaceTemperature not authored, so Cozy by engine default.
+			Real analogue: none — a thick-aired earthlike, mean 288 K.
+			-->
+			<ModExtensions>
+				<Group Name="ThermalPlanetProperties">
+
+					<!--Air temperature at the equator at midnight, K.-->
+					<Decimal Name="NightTemperature" Value="282.5" />
+
+					<!--Air temperature at the equator at noon, K.-->
+					<Decimal Name="DayTemperature" Value="293.5" />
+
+					<!--How much colder a pole is than the equator, K. Air carries heat polewards, so a
+					thin-aired world keeps more of what each latitude is given.-->
+					<Decimal Name="PoleTemperatureDrop" Value="40" />
+
+					<!--Seconds the air takes to answer the sun. What puts the day's peak after noon.-->
+					<Decimal Name="AmbientLagSeconds" Value="45" />
+
+					<!--How much colder a kilometre up is, K/km. Derived: g/cp, two thirds for moisture.-->
+					<Decimal Name="AmbientLapseRate" Value="7.0866" />
+
+					<!--Rock temperature below the damping depth, K — the surface's own daily mean.-->
+					<Decimal Name="UndergroundTemperature" Value="288" />
+
+					<!--Metres of rock over which the day-night swing dies out.-->
+					<Decimal Name="UndergroundDampingDepth" Value="20" />
+
+					<!--Rock temperature the model warms toward below the deadzone, K.-->
+					<Decimal Name="CoreTemperature" Value="3000" />
+
+					<!--Metres below sea level before the rock starts warming toward the core.-->
+					<Decimal Name="SealevelDeadzone" Value="2000" />
+
+					<!--Fraction of the sun a full atmosphere absorbs, 0..1. From the engine's own
+					SolarRadiationProtectionFactor.-->
+					<Decimal Name="SolarDecay" Value="0.3" />
+
+					<!--Convective coefficient at the surface, W/(m^2 K), in proportion to the air.-->
+					<Decimal Name="ConvectionCoefficient" Value="50" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<Definition>
+			<Id>
+				<TypeId>PlanetGeneratorDefinition</TypeId>
+				<SubtypeId>Mars</SubtypeId>
+			</Id>
+
+			<!--
+			From the definition: gravity 0.9 g, air density 1 unbreathable, solar protection 0.2.
+			DefaultSurfaceTemperature not authored, so Cozy by engine default.
+			Real analogue: Mars, mean 215 K.
+
+			DEPARTS FROM THE DERIVATION: the definition does not author DefaultSurfaceTemperature, so the engine's Cozy default would put Mars at 288 K. Anchored to the real planet's 215 K mean and its ~60 K daily range instead, which its thin real air cannot damp.
+			-->
+			<ModExtensions>
+				<Group Name="ThermalPlanetProperties">
+
+					<!--Air temperature at the equator at midnight, K.-->
+					<Decimal Name="NightTemperature" Value="185" />
+
+					<!--Air temperature at the equator at noon, K.-->
+					<Decimal Name="DayTemperature" Value="245" />
+
+					<!--How much colder a pole is than the equator, K. Air carries heat polewards, so a
+					thin-aired world keeps more of what each latitude is given.-->
+					<Decimal Name="PoleTemperatureDrop" Value="40" />
+
+					<!--Seconds the air takes to answer the sun. What puts the day's peak after noon.-->
+					<Decimal Name="AmbientLagSeconds" Value="45" />
+
+					<!--How much colder a kilometre up is, K/km. Derived: g/cp, two thirds for moisture.-->
+					<Decimal Name="AmbientLapseRate" Value="6.8555" />
+
+					<!--Rock temperature below the damping depth, K — the surface's own daily mean.-->
+					<Decimal Name="UndergroundTemperature" Value="215" />
+
+					<!--Metres of rock over which the day-night swing dies out.-->
+					<Decimal Name="UndergroundDampingDepth" Value="20" />
+
+					<!--Rock temperature the model warms toward below the deadzone, K.-->
+					<Decimal Name="CoreTemperature" Value="3000" />
+
+					<!--Metres below sea level before the rock starts warming toward the core.-->
+					<Decimal Name="SealevelDeadzone" Value="2000" />
+
+					<!--Fraction of the sun a full atmosphere absorbs, 0..1. From the engine's own
+					SolarRadiationProtectionFactor.-->
+					<Decimal Name="SolarDecay" Value="0.0333" />
+
+					<!--Convective coefficient at the surface, W/(m^2 K), in proportion to the air.-->
+					<Decimal Name="ConvectionCoefficient" Value="50" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<Definition>
+			<Id>
+				<TypeId>PlanetGeneratorDefinition</TypeId>
+				<SubtypeId>Pertam</SubtypeId>
+			</Id>
+
+			<!--
+			From the definition: gravity 1.2 g, air density 1 breathable, solar protection 0.75.
+			DefaultSurfaceTemperature Hot.
+			Real analogue: none — a desert world, mean 325 K.
+			-->
+			<ModExtensions>
+				<Group Name="ThermalPlanetProperties">
+
+					<!--Air temperature at the equator at midnight, K.-->
+					<Decimal Name="NightTemperature" Value="319.5" />
+
+					<!--Air temperature at the equator at noon, K.-->
+					<Decimal Name="DayTemperature" Value="330.5" />
+
+					<!--How much colder a pole is than the equator, K. Air carries heat polewards, so a
+					thin-aired world keeps more of what each latitude is given.-->
+					<Decimal Name="PoleTemperatureDrop" Value="40" />
+
+					<!--Seconds the air takes to answer the sun. What puts the day's peak after noon.-->
+					<Decimal Name="AmbientLagSeconds" Value="45" />
+
+					<!--How much colder a kilometre up is, K/km. Derived: g/cp, two thirds for moisture.-->
+					<Decimal Name="AmbientLapseRate" Value="7.7309" />
+
+					<!--Rock temperature below the damping depth, K — the surface's own daily mean.-->
+					<Decimal Name="UndergroundTemperature" Value="325" />
+
+					<!--Metres of rock over which the day-night swing dies out.-->
+					<Decimal Name="UndergroundDampingDepth" Value="20" />
+
+					<!--Rock temperature the model warms toward below the deadzone, K.-->
+					<Decimal Name="CoreTemperature" Value="3000" />
+
+					<!--Metres below sea level before the rock starts warming toward the core.-->
+					<Decimal Name="SealevelDeadzone" Value="2000" />
+
+					<!--Fraction of the sun a full atmosphere absorbs, 0..1. From the engine's own
+					SolarRadiationProtectionFactor.-->
+					<Decimal Name="SolarDecay" Value="0.125" />
+
+					<!--Convective coefficient at the surface, W/(m^2 K), in proportion to the air.-->
+					<Decimal Name="ConvectionCoefficient" Value="50" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<Definition>
+			<Id>
+				<TypeId>PlanetGeneratorDefinition</TypeId>
+				<SubtypeId>Triton</SubtypeId>
+			</Id>
+
+			<!--
+			From the definition: gravity 1 g, air density 1 breathable, solar protection 1.8.
+			DefaultSurfaceTemperature ExtremeFreeze.
+			Real analogue: Triton (38 K) — but SE's is breathable, mean 38 K.
+			-->
+			<ModExtensions>
+				<Group Name="ThermalPlanetProperties">
+
+					<!--Air temperature at the equator at midnight, K.-->
+					<Decimal Name="NightTemperature" Value="94.5" />
+
+					<!--Air temperature at the equator at noon, K.-->
+					<Decimal Name="DayTemperature" Value="105.5" />
+
+					<!--How much colder a pole is than the equator, K. Air carries heat polewards, so a
+					thin-aired world keeps more of what each latitude is given.-->
+					<Decimal Name="PoleTemperatureDrop" Value="40" />
+
+					<!--Seconds the air takes to answer the sun. What puts the day's peak after noon.-->
+					<Decimal Name="AmbientLagSeconds" Value="45" />
+
+					<!--How much colder a kilometre up is, K/km. Derived: g/cp, two thirds for moisture.-->
+					<Decimal Name="AmbientLapseRate" Value="6.4424" />
+
+					<!--Rock temperature below the damping depth, K — the surface's own daily mean.-->
+					<Decimal Name="UndergroundTemperature" Value="100" />
+
+					<!--Metres of rock over which the day-night swing dies out.-->
+					<Decimal Name="UndergroundDampingDepth" Value="20" />
+
+					<!--Rock temperature the model warms toward below the deadzone, K.-->
+					<Decimal Name="CoreTemperature" Value="3000" />
+
+					<!--Metres below sea level before the rock starts warming toward the core.-->
+					<Decimal Name="SealevelDeadzone" Value="2000" />
+
+					<!--Fraction of the sun a full atmosphere absorbs, 0..1. From the engine's own
+					SolarRadiationProtectionFactor.-->
+					<Decimal Name="SolarDecay" Value="0.3" />
+
+					<!--Convective coefficient at the surface, W/(m^2 K), in proportion to the air.-->
+					<Decimal Name="ConvectionCoefficient" Value="50" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<Definition>
+			<Id>
+				<TypeId>PlanetGeneratorDefinition</TypeId>
+				<SubtypeId>Europa</SubtypeId>
+			</Id>
+
+			<!--
+			From the definition: gravity 0.25 g, air density 1 unbreathable, solar protection 0.
+			DefaultSurfaceTemperature ExtremeFreeze.
+			Real analogue: Europa, mean 102 K.
+			-->
+			<ModExtensions>
+				<Group Name="ThermalPlanetProperties">
+
+					<!--Air temperature at the equator at midnight, K.-->
+					<Decimal Name="NightTemperature" Value="94.5" />
+
+					<!--Air temperature at the equator at noon, K.-->
+					<Decimal Name="DayTemperature" Value="105.5" />
+
+					<!--How much colder a pole is than the equator, K. Air carries heat polewards, so a
+					thin-aired world keeps more of what each latitude is given.-->
+					<Decimal Name="PoleTemperatureDrop" Value="40" />
+
+					<!--Seconds the air takes to answer the sun. What puts the day's peak after noon.-->
+					<Decimal Name="AmbientLagSeconds" Value="45" />
+
+					<!--How much colder a kilometre up is, K/km. Derived: g/cp, two thirds for moisture.-->
+					<Decimal Name="AmbientLapseRate" Value="1.9043" />
+
+					<!--Rock temperature below the damping depth, K — the surface's own daily mean.-->
+					<Decimal Name="UndergroundTemperature" Value="100" />
+
+					<!--Metres of rock over which the day-night swing dies out.-->
+					<Decimal Name="UndergroundDampingDepth" Value="20" />
+
+					<!--Rock temperature the model warms toward below the deadzone, K.-->
+					<Decimal Name="CoreTemperature" Value="3000" />
+
+					<!--Metres below sea level before the rock starts warming toward the core.-->
+					<Decimal Name="SealevelDeadzone" Value="2000" />
+
+					<!--Fraction of the sun a full atmosphere absorbs, 0..1. From the engine's own
+					SolarRadiationProtectionFactor.-->
+					<Decimal Name="SolarDecay" Value="0" />
+
+					<!--Convective coefficient at the surface, W/(m^2 K), in proportion to the air.-->
+					<Decimal Name="ConvectionCoefficient" Value="50" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<Definition>
+			<Id>
+				<TypeId>PlanetGeneratorDefinition</TypeId>
+				<SubtypeId>Titan</SubtypeId>
+			</Id>
+
+			<!--
+			From the definition: gravity 0.25 g, air density 1 breathable, solar protection 1.8.
+			DefaultSurfaceTemperature not authored, so Cozy by engine default.
+			Real analogue: Titan, mean 94 K.
+
+			DEPARTS FROM THE DERIVATION: unauthored, so the engine default would make an ice moon 288 K. Anchored to Titan's measured 94 K, with the very small daily range its thick cold nitrogen atmosphere gives it.
+			-->
+			<ModExtensions>
+				<Group Name="ThermalPlanetProperties">
+
+					<!--Air temperature at the equator at midnight, K.-->
+					<Decimal Name="NightTemperature" Value="92.5" />
+
+					<!--Air temperature at the equator at noon, K.-->
+					<Decimal Name="DayTemperature" Value="95.5" />
+
+					<!--How much colder a pole is than the equator, K. Air carries heat polewards, so a
+					thin-aired world keeps more of what each latitude is given.-->
+					<Decimal Name="PoleTemperatureDrop" Value="40" />
+
+					<!--Seconds the air takes to answer the sun. What puts the day's peak after noon.-->
+					<Decimal Name="AmbientLagSeconds" Value="45" />
+
+					<!--How much colder a kilometre up is, K/km. Derived: g/cp, two thirds for moisture.-->
+					<Decimal Name="AmbientLapseRate" Value="1.6106" />
+
+					<!--Rock temperature below the damping depth, K — the surface's own daily mean.-->
+					<Decimal Name="UndergroundTemperature" Value="94" />
+
+					<!--Metres of rock over which the day-night swing dies out.-->
+					<Decimal Name="UndergroundDampingDepth" Value="20" />
+
+					<!--Rock temperature the model warms toward below the deadzone, K.-->
+					<Decimal Name="CoreTemperature" Value="3000" />
+
+					<!--Metres below sea level before the rock starts warming toward the core.-->
+					<Decimal Name="SealevelDeadzone" Value="2000" />
+
+					<!--Fraction of the sun a full atmosphere absorbs, 0..1. From the engine's own
+					SolarRadiationProtectionFactor.-->
+					<Decimal Name="SolarDecay" Value="0.3" />
+
+					<!--Convective coefficient at the surface, W/(m^2 K), in proportion to the air.-->
+					<Decimal Name="ConvectionCoefficient" Value="50" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<Definition>
+			<Id>
+				<TypeId>PlanetGeneratorDefinition</TypeId>
+				<SubtypeId>Moon</SubtypeId>
+			</Id>
+
+			<!--
+			From the definition: gravity 0.25 g, no atmosphere, solar protection 1.
+			DefaultSurfaceTemperature not authored, so Cozy by engine default.
+			Real analogue: the Moon, mean 245 K.
+
+			DEPARTS FROM THE DERIVATION: unauthored. The derivation already gets an airless world's enormous swing right from having no atmosphere; this pins it to the Moon's measured 100 K before dawn and 390 K at noon rather than leaving the mean at the Cozy default.
+			-->
+			<ModExtensions>
+				<Group Name="ThermalPlanetProperties">
+
+					<!--Air temperature at the equator at midnight, K.-->
+					<Decimal Name="NightTemperature" Value="100" />
+
+					<!--Air temperature at the equator at noon, K.-->
+					<Decimal Name="DayTemperature" Value="390" />
+
+					<!--How much colder a pole is than the equator, K. Air carries heat polewards, so a
+					thin-aired world keeps more of what each latitude is given.-->
+					<Decimal Name="PoleTemperatureDrop" Value="120" />
+
+					<!--Seconds the air takes to answer the sun. What puts the day's peak after noon.-->
+					<Decimal Name="AmbientLagSeconds" Value="5" />
+
+					<!--How much colder a kilometre up is, K/km. Derived: g/cp, two thirds for moisture.-->
+					<Decimal Name="AmbientLapseRate" Value="0" />
+
+					<!--Rock temperature below the damping depth, K — the surface's own daily mean.-->
+					<Decimal Name="UndergroundTemperature" Value="245" />
+
+					<!--Metres of rock over which the day-night swing dies out.-->
+					<Decimal Name="UndergroundDampingDepth" Value="20" />
+
+					<!--Rock temperature the model warms toward below the deadzone, K.-->
+					<Decimal Name="CoreTemperature" Value="3000" />
+
+					<!--Metres below sea level before the rock starts warming toward the core.-->
+					<Decimal Name="SealevelDeadzone" Value="2000" />
+
+					<!--Fraction of the sun a full atmosphere absorbs, 0..1. From the engine's own
+					SolarRadiationProtectionFactor.-->
+					<Decimal Name="SolarDecay" Value="0" />
+
+					<!--Convective coefficient at the surface, W/(m^2 K), in proportion to the air.-->
+					<Decimal Name="ConvectionCoefficient" Value="0" />
+				</Group>
+			</ModExtensions>
+		</Definition>
 	</CubeBlocks>
 </Definitions>

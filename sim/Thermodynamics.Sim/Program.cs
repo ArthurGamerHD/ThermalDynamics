@@ -38,6 +38,12 @@ namespace Thermodynamics.Sim
                 case "balance":
                     return BalanceCommand(args);
 
+                case "wind":
+                    return WindCommand(args);
+
+                case "planets":
+                    return PlanetsCommand(args);
+
                 case "profiles":
                     Console.Write(ProfileLab.Report());
                     return 0;
@@ -90,6 +96,110 @@ namespace Thermodynamics.Sim
                 Console.WriteLine();
                 Console.WriteLine("wrote " + path);
             }
+            return 0;
+        }
+
+        /// <summary>
+        /// A modelled day of wind over a whole planet: every latitude, several heights, and the day
+        /// from midnight to midnight, in about a second.
+        ///
+        ///   wind                    an earthlike world with terrain, clear weather
+        ///   wind scenarios          every shipped planet, every size, every corner
+        ///   wind --planet Triton    one of the game's own worlds at its usual size
+        ///   wind --diameter 19000   at a chosen diameter, in metres
+        ///   wind --flat             the same with the ground levelled, to isolate terrain
+        ///   wind --weather 1        at full weather intensity
+        ///   wind --csv out/         also write wind-day.csv, in the game's own column layout
+        /// </summary>
+        private static int WindCommand(string[] args)
+        {
+            // The scenario matrix rather than one world.
+            for (int i = 1; i < args.Length; i++)
+            {
+                if (args[i] == "scenarios" || args[i] == "--scenarios")
+                {
+                    Console.Write(WindScenarios.Report());
+                    return 0;
+                }
+            }
+
+            WindLab.Planet planet = new WindLab.Planet();
+            WindLab.Options options = new WindLab.Options();
+
+            string world = ValueAfter(args, "--planet");
+            if (world != null) planet = WindLab.Planet.Vanilla(world);
+
+            string diameter = ValueAfter(args, "--diameter");
+            if (diameter != null)
+            {
+                planet.AverageRadius = double.Parse(
+                    diameter, System.Globalization.CultureInfo.InvariantCulture) * 0.5d;
+            }
+
+            for (int i = 1; i < args.Length; i++)
+            {
+                if (args[i] == "--flat") planet.Ground = new WindLab.FlatTerrain(planet);
+            }
+
+            string weather = ValueAfter(args, "--weather");
+            if (weather != null)
+            {
+                options.WeatherIntensity = float.Parse(
+                    weather, System.Globalization.CultureInfo.InvariantCulture);
+            }
+
+            Console.Write(WindLab.Report(planet, options));
+
+            string animation = ValueAfter(args, "--animation");
+            if (animation != null)
+            {
+                File.WriteAllText(animation, WindAnimation.Json());
+                Console.WriteLine("wrote " + animation);
+                return 0;
+            }
+
+            string directory = ValueAfter(args, "--csv");
+            if (directory != null)
+            {
+                Directory.CreateDirectory(directory);
+                string path = Path.Combine(directory, "wind-day.csv");
+                File.WriteAllText(path, WindLab.Csv(WindLab.Run(planet, options)));
+                Console.WriteLine();
+                Console.WriteLine("wrote " + path);
+            }
+
+            return 0;
+        }
+
+        /// <summary>
+        /// The thermal properties of every shipped world, derived from its own generator definition.
+        ///
+        ///   planets                         the table and what it comes from
+        ///   planets --xml                   the generated Planets.xml on stdout
+        ///   planets --write Data/Planets.xml   write it
+        /// </summary>
+        private static int PlanetsCommand(string[] args)
+        {
+            for (int i = 1; i < args.Length; i++)
+            {
+                if (args[i] == "--xml")
+                {
+                    Console.Write(PlanetLab.Xml());
+                    return 0;
+                }
+            }
+
+            string path = ValueAfter(args, "--write");
+            if (path != null)
+            {
+                File.WriteAllText(path, PlanetLab.Xml());
+                Console.Write(PlanetLab.Report());
+                Console.WriteLine();
+                Console.WriteLine("wrote " + path);
+                return 0;
+            }
+
+            Console.Write(PlanetLab.Report());
             return 0;
         }
 

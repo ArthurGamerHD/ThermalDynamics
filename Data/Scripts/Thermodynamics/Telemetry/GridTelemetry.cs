@@ -138,6 +138,31 @@ namespace Thermodynamics
         /// <summary>The game's wind figure at this point; the ceiling the wind field scales.</summary>
         public float WindCeiling;
 
+        // The wind decomposed, so a reading can be attributed rather than argued about. Multiply the
+        // ceiling by the band share, the profile and the two terrain factors and the speed comes
+        // back; a column that is doing nothing is a column reading 1.
+
+        /// <summary>Metres above the ground, which is what the vertical profile is a function of.</summary>
+        public float WindHeightAboveGround;
+
+        /// <summary>Share of the ceiling the circulation band and the weather were blowing, 0..1.</summary>
+        public float WindBandShare;
+
+        /// <summary>Vertical profile times time of day, as a multiple of the reference-height wind.</summary>
+        public float WindProfileFactor;
+
+        /// <summary>Lagged share of the day's heating, 0..1: 0 at the coldest hour, 1 at peak afternoon.</summary>
+        public float WindHeating;
+
+        /// <summary>Terrain speed-up: above 1 on a rise, below 1 in a hollow.</summary>
+        public float WindSpeedUp;
+
+        /// <summary>Terrain sheltering: 1 in the open, less behind an obstruction.</summary>
+        public float WindShelter;
+
+        /// <summary>Degrees the terrain turned the wind from the band's own bearing.</summary>
+        public float WindChannelDegrees;
+
         public float WeatherIntensity;
 
         /// <summary>The game's name for the weather over the grid; empty in clear air.</summary>

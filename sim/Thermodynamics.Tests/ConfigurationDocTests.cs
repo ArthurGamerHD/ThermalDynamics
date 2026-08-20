@@ -123,5 +123,71 @@ namespace Thermodynamics.Tests
                 "docs/configuration.md documents settings that no longer exist:\n  "
                 + string.Join("\n  ", stale.ToArray()));
         }
+
+        /// <summary>
+        /// Files that carry a setting's name without being a reader of it: the declaration itself,
+        /// the menu that lists what can be edited, and the two halves of the replication, which move
+        /// every setting by name and would therefore vouch for all of them.
+        /// </summary>
+        private static readonly HashSet<string> NotReaders = new HashSet<string>
+        {
+            "Settings.cs", "ThermalSettingsMenu.cs", "SettingsSync.cs", "SettingsRequests.cs",
+        };
+
+        /// <summary>
+        /// Every setting is read by something.
+        ///
+        /// <para>
+        /// This is the check that `DebugWindRaycast` would have failed for as long as it existed. It
+        /// had a field with a `ProtoMember`, a place in `Names()`, a place in `ClientOwned`, a row on
+        /// the Debug page and a label reading "Draw wind vector" — and no reader anywhere. Switching
+        /// it on drew nothing, and nothing could tell you that but reading the whole codebase for the
+        /// absence of a mention. The coolant pump's on/off switch was the same failure wearing a
+        /// terminal control instead of a config field.
+        /// </para>
+        ///
+        /// <para>
+        /// A setting with no reader is worse than a missing feature, because it is a promise on
+        /// screen. Textual, and deliberately generous: any mention of the name outside the files that
+        /// merely enumerate settings counts as a reader. It cannot catch a setting that is read into
+        /// a variable nothing then uses, but it catches the whole class of setting that was never
+        /// wired to anything at all.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void EverySettingIsReadBySomething()
+        {
+            HashSet<string> declared = Declared();
+
+            string scripts = Path.Combine(RepoRoot(), "Data", "Scripts", "Thermodynamics");
+            System.Text.StringBuilder body = new System.Text.StringBuilder();
+
+            foreach (string file in Directory.GetFiles(scripts, "*.cs", SearchOption.AllDirectories))
+            {
+                // Bundled third-party sources. They cannot read this mod's settings, and sweeping
+                // them in would only slow the test down.
+                if (file.Contains("RichHudFramework") || file.Contains("NetworkAPI")) continue;
+                if (NotReaders.Contains(Path.GetFileName(file))) continue;
+
+                body.Append(File.ReadAllText(file)).Append('\n');
+            }
+
+            string source = body.ToString();
+            Assert.True(source.Length > 100000,
+                "only " + source.Length + " characters of source were read, so this test is looking"
+                + " in the wrong place and would pass whatever the code did");
+
+            List<string> unread = new List<string>();
+            foreach (string name in declared)
+            {
+                if (source.IndexOf(name, StringComparison.Ordinal) < 0) unread.Add(name);
+            }
+
+            unread.Sort();
+
+            Assert.True(unread.Count == 0,
+                "settings that exist, appear in the menu and are read by nothing:\n  "
+                + string.Join("\n  ", unread.ToArray()));
+        }
     }
 }
