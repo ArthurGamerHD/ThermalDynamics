@@ -44,9 +44,14 @@ namespace Thermodynamics
         public static void Tick()
         {
             IList<ThermalGrid> grids = ThermalGrid.LiveGrids;
+            if (grids == null) return;
+
             for (int i = grids.Count - 1; i >= 0; i--)
             {
-                grids[i].Tick(FrameSeconds);
+                ThermalGrid grid = grids[i];
+                if (grid == null) continue;
+
+                grid.Tick(FrameSeconds);
             }
         }
     }

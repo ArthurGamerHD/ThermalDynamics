@@ -73,8 +73,24 @@ namespace Thermodynamics
         /// </summary>
         public void Tick(float frameSeconds)
         {
-            if (disabled || !started) return;
+            if (disabled || !started || Simulation == null) return;
 
+            // Everything below the stepping call is guarded by UpdateInternal's own handler; this
+            // one covers the observation around it, which was not. A null out here reached the
+            // session and took the game down with it — a thermal mod should never be able to do
+            // that, and an exception named here is worth more than a crash dump.
+            try
+            {
+                TickInternal(frameSeconds);
+            }
+            catch (Exception e)
+            {
+                Telemetry.Exception("ThermalGrid.Tick", e);
+            }
+        }
+
+        private void TickInternal(float frameSeconds)
+        {
             this.frameSeconds = frameSeconds;
 
             // Stats is null when telemetry is off, and when the grid record cap has been reached.
@@ -253,6 +269,11 @@ namespace Thermodynamics
         /// </summary>
         private void PushHeatPumpState()
         {
+            // Coolant pumps are pushed whether or not this grid has a heat pump. They shared a
+            // method and therefore shared its early return, so a ring on a grid with no heat pump
+            // never heard about its own switch.
+            PushCoolantPumpState();
+
             if (heatPumps.Count == 0) return;
 
             for (int i = 0; i < heatPumps.Count; i++)
@@ -275,8 +296,6 @@ namespace Thermodynamics
                 device.PowerAvailable = electrical.PowerAvailable;
                 device.PowerSetting = electrical.PowerSetting;
             }
-
-            PushCoolantPumpState();
         }
 
         /// <summary>
