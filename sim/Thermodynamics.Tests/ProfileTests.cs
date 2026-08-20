@@ -293,5 +293,65 @@ namespace Thermodynamics.Tests
                     name + " is a profile people play on, so it must bound a step");
             }
         }
+
+        /// <summary>
+        /// The ladder's accuracy axis, as a shape rather than as five separate numbers.
+        ///
+        /// Simulation resolves whatever it is asked for, optimized takes the field-tuned pair, and
+        /// simlite gives up more still. A change that reorders these has changed what the presets
+        /// mean, which is worth failing a build over.
+        /// </summary>
+        [Fact]
+        public void TheAccuracyAxisDescendsInOrder()
+        {
+            int simulation = SubstepCeiling(ThermalProfiles.Simulation);
+            int optimized = SubstepCeiling(ThermalProfiles.Optimized);
+            int simlite = SubstepCeiling(ThermalProfiles.Simlite);
+
+            Assert.True(simulation > optimized, "simulation must resolve more than optimized");
+            Assert.True(optimized > simlite, "optimized must resolve more than simlite");
+
+            // And the floor moves with it: simulation floors nothing, the other two do.
+            Assert.Equal(0, PerBlockCap(ThermalProfiles.Simulation));
+            Assert.True(PerBlockCap(ThermalProfiles.Optimized) > 0);
+            Assert.True(PerBlockCap(ThermalProfiles.Simlite) > 0);
+        }
+
+        /// <summary>
+        /// The pace axis: three profiles run the clock at real time and two run it fast. Which is
+        /// which is the thing a player chooses between, so it is pinned by name.
+        /// </summary>
+        [Fact]
+        public void ThePaceAxisSeparatesRealTimeFromPlayable()
+        {
+            Assert.Equal(1f, Pace(ThermalProfiles.Simulation));
+            Assert.Equal(1f, Pace(ThermalProfiles.Optimized));
+            Assert.Equal(1f, Pace(ThermalProfiles.Simlite));
+
+            Assert.True(Pace(ThermalProfiles.Responsive) > 1f);
+            Assert.Equal(Pace(ThermalProfiles.Responsive), Pace(ThermalProfiles.Arcade));
+        }
+
+        private static ThermalSettings Applied(string profile)
+        {
+            ThermalSettings settings = new ThermalSettings();
+            Assert.True(ThermalProfiles.Apply(settings, profile));
+            return settings;
+        }
+
+        private static int SubstepCeiling(string profile)
+        {
+            return Applied(profile).MaxSubsteps;
+        }
+
+        private static int PerBlockCap(string profile)
+        {
+            return Applied(profile).MaxSubstepsPerBlock;
+        }
+
+        private static float Pace(string profile)
+        {
+            return Applied(profile).HeatTimeScale;
+        }
     }
 }

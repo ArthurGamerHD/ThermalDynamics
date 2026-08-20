@@ -25,7 +25,7 @@ Measured against a screenshot of it running, not against intent.
 | A profile changed nine settings | it read as a full preset and behaved as a patch |
 
 The first five are fixed. The last two are fixed: every change saves itself a second later, a
-profile now sets every world setting, and `default` is therefore the way to start over.
+profile now sets every world setting, so applying any of them is the way to start over.
 
 ## What is left, in the order it should be done
 

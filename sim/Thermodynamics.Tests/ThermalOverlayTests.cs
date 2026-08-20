@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using Thermodynamics.Core;
+using Thermodynamics.Harness;
+using VRageMath;
 using Xunit;
 
 namespace Thermodynamics.Tests
@@ -205,6 +207,70 @@ namespace Thermodynamics.Tests
             // Capacity is mass times specific heat, and demand falls with capacity, so the same
             // block on the same grid asks for 450 times fewer substeps.
             Assert.Equal(450f, after.SpecificHeat / before.SpecificHeat, 3);
+        }
+
+        /// <summary>
+        /// The overlay's whole justification, measured rather than asserted: raising a block's
+        /// specific heat lowers what it demands of the integrator.
+        ///
+        /// A profile that grants three substeps to a ship whose fittings ask for twenty is
+        /// integrating those blocks outside the range their own physics is stable in. This is the
+        /// arithmetic that fixes it — stiffness is conductance over capacity, and an overlay is
+        /// how a preset raises the capacity of the blocks that have too little.
+        /// </summary>
+        [Fact]
+        public void AnOverlayThatRaisesCapacityLowersWhatTheStepIsAskedFor()
+        {
+            float before = DemandWith(null);
+            float after = DemandWith(Overlay(new ThermalOverride("SpecificHeat", 900f)));
+
+            Assert.True(before > 0f, "the rig has to ask for something to begin with");
+            Assert.True(after < before,
+                "raising capacity must lower demand: " + before.ToString("n2")
+                    + " became " + after.ToString("n2"));
+
+            // Demand is inversely proportional to capacity, so a 450-fold capacity buys a
+            // 450-fold reduction. Loose bounds, because the grid's own conductance is unchanged
+            // and the estimate mixes several terms.
+            Assert.True(after < before / 100f,
+                "the fall should be proportional to the capacity: " + before.ToString("n2")
+                    + " became " + after.ToString("n2"));
+        }
+
+        /// <summary>Substeps a stiff little grid asks for, with an overlay applied or without.</summary>
+        private static float DemandWith(ThermalOverlay overlay)
+        {
+            // Deliberately stiff: a light body with a metal's conductivity, which is the shape of
+            // block that sets the pace of a whole ship.
+            BlockThermalProperties properties = new BlockThermalProperties
+            {
+                Conductivity = 50f,
+                SpecificHeat = 2f,
+            };
+
+            if (overlay != null) overlay.ApplyTo(properties, "Fitting");
+
+            ThermalSettings settings = new ThermalSettings
+            {
+                Frequency = 4,
+                HeatTimeScale = 225f,
+                MaxSubsteps = 4096,
+                MaxSubstepsPerBlock = 0,
+                MaxElementVisitsPerStep = 0,
+                EnableEnvironment = false,
+            };
+            settings.Derive();
+
+            BlockModel model = BlockModel.Solid("Fitting", Vector3I.One, 16f, properties);
+
+            GridBuilder builder = GridBuilder.Large();
+            builder.Fill(model, Vector3I.Zero, new Vector3I(4, 1, 1));
+
+            ThermalSimulation simulation = builder.BuildSimulation(settings, 300f);
+            simulation.Solver.Nodes[0].Temperature = 900f;
+            simulation.StepExact(1, Worlds.Shadow());
+
+            return simulation.Solver.LastRequiredSubsteps;
         }
     }
 }
