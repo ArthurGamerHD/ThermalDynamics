@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 using RichHudFramework.Client;
 using RichHudFramework.UI;
 using RichHudFramework.UI.Client;
@@ -89,7 +90,15 @@ namespace Thermodynamics
             { "EnableRoomAir", new Entry(Systems, "Room air", "Sealed rooms hold an air mass that carries heat.", 0, 1) },
             { "EnableHeatPumps", new Entry(Systems, "Heat pumps", "The block that moves heat up a gradient for an electrical cost.", 0, 1) },
 
-            { "ClampConductionOvershoot", new Entry(Solver, "Clamp conduction overshoot", "Stops a step from pushing two blocks past each other's temperature. Leave on.", 0, 1) },
+            // These four had no entry at all, so they fell through to "Other — not yet described"
+            // at the bottom of the page, unlabelled and untooltipped. They are the four the field
+            // tuning is entirely about: what a step costs and whether it stays stable.
+            { "MaxSubsteps", new Entry(Solver, "Substep ceiling", "Most substeps one step may divide itself into. The stability estimate asks for as many as the stiffest block needs; this is the ceiling on granting it, and reaching it is reported as a clamped step.", 1, 64, true) },
+            { "MaxSubstepsPerBlock", new Entry(Solver, "Per-block cap", "Most substeps any single block may demand of the whole grid before its heat capacity is floored. 0 leaves every block alone. A handful of light fittings otherwise set the cost of a whole ship. Raise the substep ceiling with it.", 0, 32, true) },
+            { "MaxElementVisitsPerStep", new Entry(Solver, "Step budget", "Most element visits one step may make — substeps times links plus four times nodes — before the step is shortened to fit. 0 removes the bound. Trades simulation rate for frame smoothness on very large grids.", 0, 4000000, true) },
+            { "ClampEnvironmentOvershoot", new Entry(Solver, "Clamp environment", "Stops radiation or convection carrying a block past ambient in one substep. Leave on.", 0, 1) },
+
+            { "ClampConductionOvershoot", new Entry(Solver, "Clamp conduction", "Stops a step from pushing two blocks past each other's temperature. Leave on.", 0, 1) },
             { "DamageIsPerSecond", new Entry(Solver, "Damage is per second", "Overheat damage scaled to real time rather than to the step.", 0, 1) },
             { "Frequency", new Entry(Solver, "Frequency", "Solver steps per second of simulated time. Higher is finer and costlier.", 1, 60, true) },
             { "SimulationSpeed", new Entry(Solver, "Simulation speed", "Multiplier on how fast heat moves. 1 is the tuned pace.", 0.1f, 10f) },
@@ -146,6 +155,17 @@ namespace Thermodynamics
 
         /// <summary>What a fresh install ships with, to mark what has been changed away from.</summary>
         private static Settings shipped;
+
+        /// <summary>
+        /// The status page: the one place in this menu where a sentence survives.
+        ///
+        /// Everything else here is a <see cref="TerminalLabel"/>, which the framework draws as one
+        /// centred line and clips at both ends — a paragraph put in one arrives with its beginning
+        /// and its end cut off. A <see cref="TextPage"/> wraps and scrolls, so the full warning,
+        /// the names of every changed setting and the sync digest live here, and the labels on the
+        /// overview stay short enough to read.
+        /// </summary>
+        private static TextPage statusPage;
 
         private static TerminalLabel statusLabel;
         private static TerminalLabel profileLabel;
@@ -211,18 +231,106 @@ namespace Thermodynamics
         /// the environment, and should be one click from it. The framework lists pages down the
         /// side, so this is navigation the menu previously had and did not use.
         /// </summary>
-        private static readonly string[][] Pages =
+        /// <summary>
+        /// One page of the menu: its name, and the settings on it.
+        ///
+        /// Named explicitly rather than derived from the mechanism sections, because the split that
+        /// matters to someone tuning a world does not follow the code's own categories. The solver
+        /// section holds both "what a step costs" and "how fast heat moves", which are different
+        /// questions, asked by different people, on different days.
+        /// </summary>
+        private struct Leaf
         {
-            new[] { Solver },
-            new[] { Transfer, Solar, Occlusion },
-            new[] { Environment, Systems },
-            new[] { Display, Other },
+            public string Name;
+            public string[] Settings;
+
+            public Leaf(string name, params string[] settings)
+            {
+                Name = name;
+                Settings = settings;
+            }
+        }
+
+        /// <summary>
+        /// A folder in the terminal's page list, and the pages inside it.
+        ///
+        /// The framework renders these as collapsible groups down the side — its own settings menu
+        /// is built this way and this mod had never used them. Two levels of navigation is what
+        /// turns forty-eight settings from a list to be scrolled into a map to be read once.
+        /// </summary>
+        private struct Folder
+        {
+            public string Name;
+            public Leaf[] Pages;
+
+            public Folder(string name, params Leaf[] pages)
+            {
+                Name = name;
+                Pages = pages;
+            }
+        }
+
+        /// <summary>
+        /// The menu, as it appears down the side. A setting named nowhere here still gets a
+        /// control: whatever is left over lands on a final page, so a setting added to the config
+        /// and forgotten here is reachable rather than invisible.
+        /// </summary>
+        private static readonly Folder[] Folders =
+        {
+            new Folder("Solver",
+                new Leaf("Cost limits",
+                    "MaxSubsteps", "MaxSubstepsPerBlock", "MaxElementVisitsPerStep",
+                    "ClampConductionOvershoot", "ClampEnvironmentOvershoot"),
+                new Leaf("Pace",
+                    "Frequency", "SimulationSpeed", "HeatTimeScale", "DamageIsPerSecond")),
+
+            new Folder("Heat transfer",
+                new Leaf("Mechanisms",
+                    "EnableEnvironment", "EnableConduction", "EnableRadiation", "EnableConvection"),
+                new Leaf("Solar",
+                    "EnableSolarHeat", "SolarSelfShadowing", "SolarEnergy"),
+                new Leaf("Occlusion",
+                    "SolarOcclusionPlanets", "SolarOcclusionTerrain", "SolarTerrainRange",
+                    "SolarOcclusionVoxels", "SolarGridShadows", "SolarOcclusionSamples",
+                    "SolarOcclusionInterval")),
+
+            new Folder("World",
+                new Leaf("Climate",
+                    "EnablePlanets", "ClimateGroundInfluence", "ClimateWeatherInfluence",
+                    "VacuumTemperature", "FrictionAtSpeedsAbove", "FrictionScale"),
+                new Leaf("Systems",
+                    "EnableWasteHeat", "EnableHeatSources", "EnableFriction", "EnableDamage",
+                    "EnableCoolantLoops", "EnableHeatPumps", "HeatPumpCarnotFraction",
+                    "HeatPumpMaxCoefficient"),
+                new Leaf("Room air",
+                    "EnableRoomAir", "RoomConvectionCoefficient", "RoomAirDensity")),
         };
 
-        private static readonly string[] PageNames =
-        {
-            "Solver", "Heat transfer", "World and systems", "Display",
-        };
+        /// <summary>
+        /// The debug page: what this mod draws on your screen, and what it writes to disk.
+        ///
+        /// Its own page at the root rather than a corner of a display section, because it is the
+        /// page someone opens while something is wrong. The first four belong to you whatever the
+        /// server says; the telemetry pair belongs to the world.
+        /// </summary>
+        private static readonly Leaf DebugPage = new Leaf("Debug",
+            "DebugTextOnScreen", "DebugBlockOverlay", "DebugSolarRaycast", "DebugWindRaycast",
+            "RoomOverlayMinKelvin", "RoomOverlayMaxKelvin",
+            "EnableTelemetry", "TelemetrySampleStride");
+
+        /// <summary>
+        /// Live figures per page, refreshed with everything else.
+        ///
+        /// Several short labels rather than one long one. A <see cref="TerminalLabel"/> is a single
+        /// centred line that clips at both ends rather than wrapping — in game, a sentence of any
+        /// length arrives with its beginning and its end cut off — so every figure gets its own
+        /// line and every line stays inside about twenty-two characters.
+        /// </summary>
+        private static readonly Dictionary<string, List<TerminalLabel>> Readouts =
+            new Dictionary<string, List<TerminalLabel>>();
+
+        /// <summary>Lines a readout tile holds, which is what a tile fits before it masks.</summary>
+        private const int ReadoutLines = 3;
 
         private static void Build()
         {
@@ -244,31 +352,148 @@ namespace Thermodynamics
 
             RichHudTerminal.Root.Enabled = true;
 
+            // Loose pages first, folders after. In game, a root page added *after* a category
+            // draws against the last folder's row rather than on its own line — so the order here
+            // is the order the rail can render, not a preference.
             page = BuildOverview(local, editable);
             RichHudTerminal.Root.Add(page);
 
-            List<string> names = Settings.Names();
-            List<string> section = new List<string>();
-
-            for (int p = 0; p < Pages.Length; p++)
+            statusPage = new TextPage
             {
-                ControlPage topic = new ControlPage { Name = PageNames[p] };
-                RichHudTerminal.Root.Add(topic);
+                Name = "Status",
+                HeaderText = "Thermodynamics",
+                SubHeaderText = "What this world is set to",
+            };
+            RichHudTerminal.Root.Add(statusPage);
 
-                for (int i = 0; i < Pages[p].Length; i++)
+            // Everything the layout accounts for, so what is left over can be swept onto a final
+            // page instead of vanishing.
+            HashSet<string> placed = new HashSet<string>();
+
+            // Built before the folders so it lands above them in the rail, for the ordering reason
+            // above; it is one page and it is the one people open when something is wrong.
+            RichHudTerminal.Root.Add(BuildPage(DebugPage, editable, placed));
+
+            // Anything the tables do not name, worked out before the folders are built so this
+            // page can be added while root pages still render correctly. Hidden when empty: an
+            // empty page in the rail is a promise of something to find.
+            List<string> leftovers = Unplaced();
+            if (leftovers.Count > 0)
+            {
+                RichHudTerminal.Root.Add(
+                    BuildPage(new Leaf("Other", leftovers.ToArray()), editable, placed));
+            }
+
+            for (int f = 0; f < Folders.Length; f++)
+            {
+                Folder folder = Folders[f];
+                TerminalPageCategory category = new TerminalPageCategory { Name = folder.Name };
+
+                for (int p = 0; p < folder.Pages.Length; p++)
                 {
-                    section.Clear();
-
-                    for (int n = 0; n < names.Count; n++)
-                    {
-                        if (SectionOf(names[n]) == Pages[p][i]) section.Add(names[n]);
-                    }
-
-                    if (section.Count > 0) AddSection(topic, Pages[p][i], section, editable);
+                    category.Add(BuildPage(folder.Pages[p], editable, placed));
                 }
+
+                RichHudTerminal.Root.Add(category);
             }
 
             Refresh();
+        }
+
+        /// <summary>
+        /// Settings the page tables do not mention. Empty in a healthy build; not empty the moment
+        /// someone adds a setting to the config and forgets this file.
+        /// </summary>
+        private static List<string> Unplaced()
+        {
+            HashSet<string> named = new HashSet<string>();
+
+            for (int f = 0; f < Folders.Length; f++)
+            {
+                for (int p = 0; p < Folders[f].Pages.Length; p++)
+                {
+                    string[] settings = Folders[f].Pages[p].Settings;
+                    for (int i = 0; i < settings.Length; i++) named.Add(settings[i]);
+                }
+            }
+
+            for (int i = 0; i < DebugPage.Settings.Length; i++) named.Add(DebugPage.Settings[i]);
+
+            List<string> missing = new List<string>();
+            List<string> names = Settings.Names();
+
+            for (int i = 0; i < names.Count; i++)
+            {
+                if (!named.Contains(names[i])) missing.Add(names[i]);
+            }
+
+            return missing;
+        }
+
+        /// <summary>
+        /// One page: its settings laid out as the framework's fixed tile sizes allow, and — where
+        /// the page's settings have a measurable effect — what they are currently costing.
+        /// </summary>
+        private static ControlPage BuildPage(Leaf leaf, bool editable, HashSet<string> placed)
+        {
+            ControlPage built = new ControlPage { Name = leaf.Name };
+
+            List<string> members = new List<string>();
+            for (int i = 0; i < leaf.Settings.Length; i++)
+            {
+                string name = leaf.Settings[i];
+                if (placed.Contains(name)) continue;
+
+                placed.Add(name);
+                members.Add(name);
+            }
+
+            if (members.Count > 0) AddSection(built, leaf.Name, members, editable);
+
+            string figures = FiguresFor(leaf.Name);
+            if (figures == null) return built;
+
+            List<TerminalLabel> lines = new List<TerminalLabel>();
+            ControlTile tile = new ControlTile();
+
+            for (int i = 0; i < ReadoutLines; i++)
+            {
+                TerminalLabel line = new TerminalLabel { Name = "" };
+                lines.Add(line);
+                tile.Add(line);
+            }
+
+            Readouts[leaf.Name] = lines;
+
+            ControlCategory group = new ControlCategory
+            {
+                HeaderText = "Right now",
+                SubheaderText = figures,
+            };
+            group.Add(tile);
+            built.Add(group);
+
+            return built;
+        }
+
+        /// <summary>
+        /// What a page's live figures describe, or null for a page that has none. Only pages whose
+        /// settings have a measurable effect get one: a readout that never moves is worse than no
+        /// readout at all.
+        /// </summary>
+        private static string FiguresFor(string pageName)
+        {
+            switch (pageName)
+            {
+                case "Cost limits":
+                    return "What the world's grids are asking for, against what they are granted";
+                case "Pace":
+                    return "How much heat the world is moving";
+                case "Debug":
+                    return "What is switched on, and what is being recorded";
+                default:
+                    return null;
+            }
         }
 
         /// <summary>
@@ -394,18 +619,122 @@ namespace Thermodynamics
                     if (Controls.TryGetValue(name, out control)) control.Name = Label(name, moved);
                 }
 
+                // Short enough to survive a single clipped line. The sentences are on the status
+                // page, which wraps.
                 statusLabel.Name = changed == 0
-                    ? "Every setting is the shipped default"
-                    : changed + (changed == 1 ? " setting differs" : " settings differ")
-                        + " from the shipped defaults, marked with a dot";
+                    ? "all shipped defaults"
+                    : "changed: " + changed + " of " + names.Count;
 
-                profileLabel.Name = "Profile: " + (MatchingProfile() ?? "custom");
-                warningLabel.Name = Warning();
+                profileLabel.Name = "profile: " + (MatchingProfile() ?? "custom");
+
+                string warning = Warning();
+                warningLabel.Name = warning.Length == 0 ? "no conflicts" : "! " + WarningShort();
+
+                RefreshStatusPage(changed, names);
+
+                RefreshReadouts();
             }
             catch (Exception e)
             {
                 MyLog.Default.Info("[" + Settings.Name + "] failed to refresh the settings menu\n" + e);
             }
+        }
+
+        /// <summary>
+        /// Fills each page's live figures from the grids themselves.
+        ///
+        /// Read from what is running rather than computed from the settings that produced it: the
+        /// question a page like "Cost and stability" is asked is not what the ceiling is set to —
+        /// that is the slider above — but what the world is doing against it.
+        /// </summary>
+        private static void RefreshReadouts()
+        {
+            if (Readouts.Count == 0) return;
+
+            int grids = 0;
+            long blocks = 0;
+            int floored = 0;
+            int granted = 0;
+            float demanded = 0f;
+            int critical = 0;
+            float hottest = float.MinValue;
+            float vented = 0f;
+            float made = 0f;
+            double rate = 1d;
+
+            IList<ThermalGrid> live = ThermalGrid.LiveGrids;
+            for (int i = 0; live != null && i < live.Count; i++)
+            {
+                ThermalGrid thermals = live[i];
+                if (thermals == null || thermals.Simulation == null) continue;
+
+                Core.ThermalSolver solver = thermals.Simulation.Solver;
+
+                grids++;
+                blocks += thermals.BlockCount;
+                floored += solver.FlooredNodes;
+                critical += thermals.CriticalBlocks;
+                vented += thermals.Simulation.VentedWatts;
+                made += thermals.Simulation.HeatGainWatts;
+
+                // Worst rather than mean: a fleet is as starved as its most starved grid, and an
+                // average across it hides the one that is actually in trouble.
+                if (solver.LastSubsteps > granted) granted = solver.LastSubsteps;
+                if (solver.LastRequiredSubsteps > demanded) demanded = solver.LastRequiredSubsteps;
+                if (thermals.Simulation.SimulationRate < rate) rate = thermals.Simulation.SimulationRate;
+
+                Core.ThermalNode node = thermals.HottestNode;
+                if (node != null && node.Temperature > hottest) hottest = node.Temperature;
+            }
+
+            if (grids == 0)
+            {
+                Fill("Cost limits", "no grids yet");
+                Fill("Pace", "no grids yet");
+            }
+            else
+            {
+                Fill("Cost limits",
+                    grids + " grids, " + blocks.ToString("n0") + " blocks",
+                    "substeps " + granted + " of " + demanded.ToString("n1") + " asked",
+                    floored.ToString("n0") + " floored, "
+                        + (100d * rate).ToString("n0") + "% rate");
+
+                Fill("Pace",
+                    "hottest " + Tools.KelvinToCelsiusString(hottest),
+                    critical + " over critical",
+                    Watts(vented) + " out, " + Watts(made) + " in");
+            }
+
+            Fill("Debug",
+                "overlay " + ThermalDebugView.Describe(ThermalDebugView.Current),
+                "telemetry " + (Telemetry.Enabled ? "recording" : "off"),
+                "1 sample in " + Telemetry.SampleStride);
+        }
+
+        /// <summary>
+        /// Fills one page's readout, a line at a time. Extra lines are dropped rather than joined,
+        /// because a joined line is a clipped line.
+        /// </summary>
+        private static void Fill(string pageName, params string[] lines)
+        {
+            List<TerminalLabel> labels;
+            if (!Readouts.TryGetValue(pageName, out labels)) return;
+
+            for (int i = 0; i < labels.Count; i++)
+            {
+                labels[i].Name = i < lines.Length ? lines[i] : "";
+            }
+        }
+
+        /// <summary>Watts at a readable magnitude, as the cockpit panel shows them.</summary>
+        private static string Watts(float watts)
+        {
+            float magnitude = watts < 0f ? -watts : watts;
+
+            if (magnitude >= 1000000f) return (watts / 1000000f).ToString("n1") + " MW";
+            if (magnitude >= 1000f) return (watts / 1000f).ToString("n1") + " kW";
+            return watts.ToString("n0") + " W";
         }
 
         /// <summary>Whether a setting has been moved away from what a fresh install ships with.</summary>
@@ -467,6 +796,67 @@ namespace Thermodynamics
         /// Combinations worth saying out loud, because each one is a setting quietly cancelling
         /// another and none of them is visible from the two controls involved.
         /// </summary>
+        /// <summary>
+        /// The same conflict as a label, in the space a label has. The sentence is on the status
+        /// page; this is only the flag that sends you there.
+        /// </summary>
+        private static string WarningShort()
+        {
+            Settings s = Settings.Instance;
+
+            if (s.MaxSubstepsPerBlock > 0 && s.MaxSubsteps < s.MaxSubstepsPerBlock)
+            {
+                return "substep caps disagree";
+            }
+
+            if (s.MaxElementVisitsPerStep <= 0) return "step budget off";
+            if (!s.EnableEnvironment) return "environment off";
+
+            return "";
+        }
+
+        /// <summary>
+        /// Rewrites the status page: what this world is set to, in prose, because it is the only
+        /// control here that can hold prose.
+        /// </summary>
+        private static void RefreshStatusPage(int changed, List<string> names)
+        {
+            if (statusPage == null) return;
+
+            StringBuilder text = new StringBuilder();
+
+            text.Append("Profile: ").Append(MatchingProfile() ?? "custom").Append('\n');
+            text.Append("Settings changed from the shipped defaults: ")
+                .Append(changed).Append(" of ").Append(names.Count).Append('\n');
+            text.Append("Settings digest: ").Append(SettingsSync.Fingerprint())
+                .Append("   (compare with the server's /thermal sync)\n\n");
+
+            string warning = Warning();
+            if (warning.Length > 0) text.Append("Worth knowing: ").Append(warning).Append("\n\n");
+
+            if (changed == 0)
+            {
+                text.Append("Nothing has been moved. This world runs exactly what a fresh install"
+                    + " ships with.");
+            }
+            else
+            {
+                text.Append("Changed, with the shipped value in brackets:\n");
+
+                for (int i = 0; i < names.Count; i++)
+                {
+                    string name = names[i];
+                    if (!Changed(name)) continue;
+
+                    text.Append("    ").Append(EntryFor(name).Label)
+                        .Append("  ").Append(Settings.Instance.GetValue(name).ToString("n2"))
+                        .Append("  (").Append(shipped.GetValue(name).ToString("n2")).Append(")\n");
+                }
+            }
+
+            statusPage.Text = new RichText(text.ToString());
+        }
+
         private static string Warning()
         {
             Settings s = Settings.Instance;
@@ -591,7 +981,7 @@ namespace Thermodynamics
 
             TerminalButton save = new TerminalButton
             {
-                Name = "Save to config file",
+                Name = "Save to config",
                 ToolTip = Tip("Writes every current value to the world's config file."),
                 Enabled = editable,
             };
@@ -604,7 +994,7 @@ namespace Thermodynamics
 
             TerminalButton defaults = new TerminalButton
             {
-                Name = "Reset everything to defaults",
+                Name = "Reset to defaults",
                 ToolTip = Tip("Puts every setting back to what a fresh install ships with. Applies at once; not written to the config file until you press Save."),
                 Enabled = true,
             };

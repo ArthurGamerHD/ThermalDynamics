@@ -32,20 +32,32 @@ same names are reachable from other mods, see [api.md](api.md#settings).
 
 **Ctrl+Shift+S** opens it, as does `/thermal menu`.
 
-The menu is five pages rather than one, listed down the side: **Overview**, **Solver**, **Heat
-transfer**, **World and systems**, **Display**. Forty-five settings on a single scroll is a list to
-be searched by eye, and an administrator usually arrives wanting one section of it.
+The menu is eleven pages rather than one, grouped in the rail: **Overview**, **Status**, **Debug**,
+then folders for **Solver** (Cost limits, Pace), **Heat transfer** (Mechanisms, Solar, Occlusion) and
+**World** (Climate, Systems, Room air). Forty-eight settings on a single scroll is a list to be
+searched by eye, and an administrator usually arrives wanting one part of it.
 
-**Overview** answers the two questions a wall of sliders cannot:
+Three of the framework's habits shape what the pages can say, and all three were learned by looking
+at the menu in game rather than by reading the API:
 
-* **Which profile is this world on**, worked out by comparing the nine values a profile sets — so a
-  world on `arcade` with a hand-tuned vacuum temperature still reads as `arcade`, which is what the
-  question means. `custom` when it matches none.
-* **What has been changed**, as a count, with every changed setting marked with a dot in front of
-  its label on its own page. Nothing else distinguished a shipped value from a tuned one.
-* **Whether two settings are cancelling each other**, for the three combinations where that happens
-  quietly: `MaxSubsteps` refusing what `MaxSubstepsPerBlock` asks for, the step budget switched off,
-  and the environment switched off.
+* **A label is one centred line and clips at both ends rather than wrapping.** Every label here
+  stays inside about twenty characters, and anything longer than that — the full text of a warning,
+  the list of what has been changed — lives on the Status page, which is a text page and does wrap.
+* **A page name clips in the rail at about seventeen characters.** Page names are short for that
+  reason, not for taste.
+* **A loose page added after a folder draws against the folder's row.** Overview, Status and Debug
+  are therefore added before the folders.
+
+**Overview** answers the two questions a wall of sliders cannot — which profile this world matches,
+worked out by comparing the nine values a profile sets, and how many settings differ from the
+shipped defaults, each of them dotted in front of its label on its own page. It flags a conflict in
+three words; **Status** spells it out, lists every changed setting with the shipped value beside it,
+and carries the settings digest for comparing against the server.
+
+Three pages carry live figures read from the running grids rather than from the settings that
+produced them: **Cost limits** shows substeps granted against substeps asked for and how many blocks
+the cap floored, **Pace** shows the hottest block and what the world is venting against what it
+makes, and **Debug** shows which overlay is up and whether telemetry is recording.
 
 It also carries Save, Reset and the five profiles as buttons — profiles were previously reachable
 only from chat, so the menu could show a world tuned by one without ever mentioning they existed. It is built on the [Rich HUD
