@@ -437,6 +437,39 @@ namespace Thermodynamics.Sim
                     return 0;
                 }
 
+                case "steppath":
+                {
+                    List<int> ladder = new List<int>();
+                    foreach (int rung in LoadBenchmarks.DefaultSizes)
+                    {
+                        if (rung <= max) ladder.Add(rung);
+                    }
+                    if (ladder.Count == 0) ladder.Add(max);
+
+                    int pathSteps = ticks > 0 ? ticks : 20;
+                    string outPath = csvDirectory ?? "out";
+
+                    Console.WriteLine();
+                    Console.WriteLine("== step path, " + shape + " ==");
+                    Console.WriteLine("  A step driven straight at the solver, against the same step"
+                        + " through the host's entry point.");
+                    Console.WriteLine("  The difference is the walk over every node that answers"
+                        + " how long a step the grid can afford.");
+                    Console.WriteLine();
+
+                    List<StepPathLab.Row> pathRows = StepPathLab.Run(shape, ladder,
+                        StepPathLab.DefaultCaps, pathSteps,
+                        message => Console.Error.WriteLine("  " + message));
+
+                    Console.WriteLine(StepPathLab.Table(pathRows));
+
+                    Directory.CreateDirectory(outPath);
+                    string csvPath = Path.Combine(outPath, "steppath.csv");
+                    File.WriteAllText(csvPath, StepPathLab.Csv(pathRows));
+                    Console.WriteLine("csv -> " + csvPath);
+                    return 0;
+                }
+
                 case "floor":
                 {
                     int[] caps = { 0, 32, 16, 8, 6, 4, 3, 2, 1 };
@@ -550,6 +583,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  bench floor --size N    what a per-block substep cap buys, and costs");
             Console.WriteLine("  bench report            full performance report; --baseline <csv> to compare");
             Console.WriteLine("  bench spike --size N    one block placed, split by stage");
+            Console.WriteLine("  bench steppath          a step at the solver, against a step through the host");
             Console.WriteLine("  bench pace  --size N    does slowing sim and raising transfer save anything");
             Console.WriteLine("  bench reach --length N  how fast heat crosses a grid, against what it costs");
             Console.WriteLine("  bench profiles          the named profiles, measured side by side");
