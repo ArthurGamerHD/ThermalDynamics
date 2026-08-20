@@ -517,6 +517,21 @@ namespace Thermodynamics
             state.Add(statusLabel);
             state.Add(warningLabel);
 
+            // A third tile of live figures, so the row carries three filled tiles rather than two
+            // half-empty ones — the framework gives a category a fixed tall band whatever is in it,
+            // and two short tiles in that band is mostly air.
+            ControlTile facts = new ControlTile();
+            List<TerminalLabel> lines = new List<TerminalLabel>();
+
+            for (int i = 0; i < ReadoutLines; i++)
+            {
+                TerminalLabel line = new TerminalLabel { Name = "" };
+                lines.Add(line);
+                facts.Add(line);
+            }
+
+            Readouts["Overview"] = lines;
+
             ControlCategory summary = new ControlCategory
             {
                 HeaderText = "This world",
@@ -525,6 +540,7 @@ namespace Thermodynamics
                     : "Nothing is written to the config file until you press Save",
             };
             summary.Add(state);
+            summary.Add(facts);
             summary.Add(ActionTile(local));
             overview.Add(summary);
 
@@ -689,6 +705,7 @@ namespace Thermodynamics
 
             if (grids == 0)
             {
+                Fill("Overview", "no grids yet");
                 Fill("Cost limits", "no grids yet");
                 Fill("Pace", "no grids yet");
             }
@@ -703,6 +720,11 @@ namespace Thermodynamics
                 Fill("Pace",
                     "hottest " + Tools.KelvinToCelsiusString(hottest),
                     critical + " over critical",
+                    Watts(vented) + " out, " + Watts(made) + " in");
+
+                Fill("Overview",
+                    grids + " grids, " + blocks.ToString("n0") + " blocks",
+                    "hottest " + Tools.KelvinToCelsiusString(hottest),
                     Watts(vented) + " out, " + Watts(made) + " in");
             }
 
