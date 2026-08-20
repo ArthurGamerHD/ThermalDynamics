@@ -161,7 +161,13 @@ namespace Thermodynamics.Core
                     settings.HeatTimeScale = 225f;
                     settings.MaxSubsteps = 64;
                     settings.MaxSubstepsPerBlock = 0;
-                    settings.MaxElementVisitsPerStep = 0;
+
+                    // Kept, unlike simulation's. The budget costs no accuracy — it shortens a step
+                    // rather than coarsening it, so a grid too large for a frame advances less
+                    // simulated time at the same fidelity instead of stuttering at full rate. This
+                    // is the profile people actually play on, and a default that can drop a
+                    // hundred-millisecond step into a frame is not a default.
+                    settings.MaxElementVisitsPerStep = 1000000;
                     settings.ClampConductionOvershoot = true;
                     settings.ClampEnvironmentOvershoot = true;
                     settings.SolarSelfShadowing = true;

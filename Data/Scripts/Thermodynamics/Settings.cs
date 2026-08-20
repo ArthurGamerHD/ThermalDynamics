@@ -133,7 +133,7 @@ namespace Thermodynamics
         /// </summary>
         [ProtoMember(37)] public bool ClampEnvironmentOvershoot = true;
         [ProtoMember(31)] public bool DamageIsPerSecond = true;
-        [ProtoMember(32)] public int Frequency = 4;
+        [ProtoMember(32)] public int Frequency = 8;
         [ProtoMember(33)] public float SimulationSpeed = 1f;
         [ProtoMember(34)] public float HeatTimeScale = 225f;
 
@@ -159,7 +159,7 @@ namespace Thermodynamics
         /// Most substeps one solver step may divide itself into. See the core setting of the same
         /// name: the ceiling on the stability estimate.
         /// </summary>
-        [ProtoMember(36)] public int MaxSubsteps = 16;
+        [ProtoMember(36)] public int MaxSubsteps = 64;
 
         /// <summary>
         /// Most substeps any single block may demand of the whole grid before its heat capacity is

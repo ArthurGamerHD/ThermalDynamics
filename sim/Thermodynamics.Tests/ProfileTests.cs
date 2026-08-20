@@ -234,5 +234,64 @@ namespace Thermodynamics.Tests
             Assert.True(drift < 1e-3f,
                 "scaling an exchange must keep it equal and opposite; energy moved by " + drift);
         }
+
+        /// <summary>
+        /// A fresh world runs the responsive profile, value for value.
+        ///
+        /// Without this the two drift: someone tunes a default, the menu starts reading "custom"
+        /// on a fresh install, and applying the profile the game says it is already on silently
+        /// changes the world. Every value the profile sets is compared, which is the only set that
+        /// can disagree.
+        /// </summary>
+        [Fact]
+        public void DefaultsMatchTheResponsiveProfile()
+        {
+            ThermalSettings shipped = new ThermalSettings();
+            shipped.Derive();
+
+            ThermalSettings responsive = new ThermalSettings();
+            Assert.True(ThermalProfiles.Apply(responsive, ThermalProfiles.Responsive));
+
+            Assert.Equal(responsive.Frequency, shipped.Frequency);
+            Assert.Equal(responsive.SimulationSpeed, shipped.SimulationSpeed);
+            Assert.Equal(responsive.HeatTimeScale, shipped.HeatTimeScale);
+            Assert.Equal(responsive.MaxSubsteps, shipped.MaxSubsteps);
+            Assert.Equal(responsive.MaxSubstepsPerBlock, shipped.MaxSubstepsPerBlock);
+            Assert.Equal(responsive.MaxElementVisitsPerStep, shipped.MaxElementVisitsPerStep);
+            Assert.Equal(responsive.ClampConductionOvershoot, shipped.ClampConductionOvershoot);
+            Assert.Equal(responsive.ClampEnvironmentOvershoot, shipped.ClampEnvironmentOvershoot);
+            Assert.Equal(responsive.SolarSelfShadowing, shipped.SolarSelfShadowing);
+            Assert.Equal(responsive.EnableRoomAir, shipped.EnableRoomAir);
+        }
+
+        /// <summary>
+        /// The default is playable, which means bounded: a step that lands whole in one frame is
+        /// what the budget exists to prevent, and a world nobody configured should not be able to
+        /// do it. Simulation is the one profile allowed to be unbounded, because it is a reference
+        /// rather than a way to play.
+        /// </summary>
+        [Fact]
+        public void TheDefaultIsFrameBoundedAndOnlySimulationIsNot()
+        {
+            ThermalSettings shipped = new ThermalSettings();
+            Assert.True(shipped.MaxElementVisitsPerStep > 0);
+
+            ThermalSettings simulation = new ThermalSettings();
+            ThermalProfiles.Apply(simulation, ThermalProfiles.Simulation);
+            Assert.Equal(0, simulation.MaxElementVisitsPerStep);
+
+            foreach (string name in new[]
+            {
+                ThermalProfiles.Responsive, ThermalProfiles.Optimized,
+                ThermalProfiles.Simlite, ThermalProfiles.Arcade,
+            })
+            {
+                ThermalSettings settings = new ThermalSettings();
+                ThermalProfiles.Apply(settings, name);
+
+                Assert.True(settings.MaxElementVisitsPerStep > 0,
+                    name + " is a profile people play on, so it must bound a step");
+            }
+        }
     }
 }

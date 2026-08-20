@@ -78,6 +78,14 @@ namespace Thermodynamics.Tests
             return cells;
         }
 
+        /// <summary>Four steps a second, pinned: these compare temperatures after a fixed
+        /// number of steps, and the shipped rate is a product decision.</summary>
+        private static ThermalSettings Pace()
+        {
+            ThermalSettings settings = new ThermalSettings { Frequency = 4 };
+            return settings.Derive();
+        }
+
         private static ThermalSimulation BuiltAllAtOnce(List<Vector3I> cells)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -86,7 +94,7 @@ namespace Thermodynamics.Tests
                 builder.Place(Model(i), cells[i]);
             }
 
-            ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), builder.Grid);
+            ThermalSimulation simulation = new ThermalSimulation(Pace(), builder.Grid);
             for (int i = 0; i < builder.Placed.Count; i++)
             {
                 simulation.Solver.AddBlock(builder.Placed[i], 293.15f);
@@ -99,7 +107,7 @@ namespace Thermodynamics.Tests
         private static ThermalSimulation BuiltOneAtATime(List<Vector3I> cells)
         {
             GridModel grid = new GridModel(Catalog.LargeGridSize);
-            ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), grid);
+            ThermalSimulation simulation = new ThermalSimulation(Pace(), grid);
 
             for (int i = 0; i < cells.Count; i++)
             {
@@ -145,7 +153,7 @@ namespace Thermodynamics.Tests
         public void TwoBlocksPlacedTogetherAgainstEachOtherGetOneLinkNotTwo()
         {
             GridModel grid = new GridModel(Catalog.LargeGridSize);
-            ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), grid);
+            ThermalSimulation simulation = new ThermalSimulation(Pace(), grid);
 
             simulation.AddBlock(new BlockInstance(Catalog.HeavyArmor(), Vector3I.Zero,
                 BlockOrientation.Identity), 293.15f);
@@ -304,7 +312,7 @@ namespace Thermodynamics.Tests
         public void ArbitraryBuildingAndGrindingAlwaysMatchesARebuild()
         {
             GridModel grid = new GridModel(Catalog.LargeGridSize);
-            ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), grid);
+            ThermalSimulation simulation = new ThermalSimulation(Pace(), grid);
 
             List<Vector3I> plot = new List<Vector3I>();
             for (int z = 0; z < 5; z++)
@@ -446,7 +454,7 @@ namespace Thermodynamics.Tests
         public void PlacingAndRemovingManyBlocksWithoutSteppingStaysInBounds()
         {
             GridModel grid = new GridModel(Catalog.LargeGridSize);
-            ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), grid);
+            ThermalSimulation simulation = new ThermalSimulation(Pace(), grid);
 
             // One step first, so the graph is clean and removal takes the incremental path
             // rather than the plain one a dirty graph falls back to.
@@ -538,7 +546,7 @@ namespace Thermodynamics.Tests
         public void GrindingDownALongRunThatWasFullyLinkedLeavesNothingBehind()
         {
             GridModel grid = new GridModel(Catalog.LargeGridSize);
-            ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), grid);
+            ThermalSimulation simulation = new ThermalSimulation(Pace(), grid);
 
             List<BlockInstance> placed = new List<BlockInstance>();
             for (int i = 0; i < 600; i++)
@@ -588,7 +596,7 @@ namespace Thermodynamics.Tests
         public void APlacementUndoneBeforeTheNextTickLeavesNoLink()
         {
             GridModel grid = new GridModel(Catalog.LargeGridSize);
-            ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), grid);
+            ThermalSimulation simulation = new ThermalSimulation(Pace(), grid);
 
             simulation.AddBlock(new BlockInstance(Catalog.HeavyArmor(), Vector3I.Zero,
                 BlockOrientation.Identity), 293.15f);

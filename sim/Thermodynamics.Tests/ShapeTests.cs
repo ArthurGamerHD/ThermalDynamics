@@ -37,11 +37,20 @@ namespace Thermodynamics.Tests
             throw new ArgumentException("Unknown shape: " + name);
         }
 
+        /// <summary>Four steps a second, pinned for the reason given at the call site.</summary>
+        private static ThermalSettings Pace()
+        {
+            ThermalSettings settings = new ThermalSettings { Frequency = 4 };
+            return settings.Derive();
+        }
+
         private static ThermalSimulation Build(string name, ThermalSettings settings = null)
         {
             GridBuilder builder = GridBuilder.Large();
             builder.PlaceAll(Catalog.LightArmor(), CellsFor(name));
-            return builder.BuildSimulation(settings ?? new ThermalSettings());
+            // These settle a shape over a fixed number of steps, so the length of a step is
+            // part of the test rather than a default it happens to inherit.
+            return builder.BuildSimulation(settings ?? Pace());
         }
 
         // ---- structural --------------------------------------------------------------------
@@ -100,6 +109,9 @@ namespace Thermodynamics.Tests
         {
             ThermalSettings settings = new ThermalSettings
             {
+                // Pinned with the rest: symmetry is compared to a thousandth, and the two runs
+                // must integrate the same amount of simulated time to be comparable at all.
+                Frequency = 4,
                 EnableEnvironment = false,
                 EnableSolarHeat = false,
                 EnableFriction = false,
@@ -148,6 +160,9 @@ namespace Thermodynamics.Tests
         {
             ThermalSettings settings = new ThermalSettings
             {
+                // Pinned: this runs a fixed number of steps, so the length of a step decides
+                // how much simulated time it covers.
+                Frequency = 4,
                 EnableEnvironment = false,
                 EnableSolarHeat = false,
                 EnableFriction = false,
@@ -184,6 +199,9 @@ namespace Thermodynamics.Tests
             // model's M2 — this is where it shows up worst.
             ThermalSettings settings = new ThermalSettings
             {
+                // Pinned: this runs a fixed number of steps, so the length of a step decides
+                // how much simulated time it covers.
+                Frequency = 4,
                 EnableEnvironment = false,
                 EnableSolarHeat = false,
                 EnableFriction = false,
@@ -243,7 +261,7 @@ namespace Thermodynamics.Tests
         {
             GridBuilder builder = GridBuilder.Large();
             builder.PlaceAll(Catalog.LightArmor(), cells);
-            ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings());
+            ThermalSimulation simulation = builder.BuildSimulation(Pace());
 
             simulation.Solver.SetAllTemperatures(300f);
             simulation.Solver.GetNodeAt(Vector3I.Zero).Temperature = 900f;

@@ -31,7 +31,9 @@ namespace Thermodynamics.Tests
     {
         private static ThermalSimulation Hull(int blocks, int cap = 0)
         {
-            ThermalSettings settings = new ThermalSettings();
+            // Pinned: this compares a hull's stiffness against a field measurement taken at
+            // four steps a second, so the rate is part of the measurement rather than a default.
+            ThermalSettings settings = new ThermalSettings { Frequency = 4 };
             settings.MaxSubstepsPerBlock = cap;
             settings.MaxSubsteps = 4096;
             settings.MaxElementVisitsPerStep = 0;

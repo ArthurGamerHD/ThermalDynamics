@@ -96,7 +96,14 @@ namespace Thermodynamics.Core
         /// Simulation steps per simulated second. Sets the integration step to 1/Frequency.
         /// Higher is more accurate and more expensive.
         /// </summary>
-        public int Frequency = 4;
+        /// <remarks>
+        /// The shipped defaults are the <c>responsive</c> profile, value for value. A fresh world
+        /// therefore reads "profile: responsive" rather than "custom", and applying that profile
+        /// changes nothing — which is what makes it honest to call it the default rather than a
+        /// preset that happens to be nearby. <c>DefaultsMatchTheResponsiveProfile</c> holds them
+        /// together.
+        /// </remarks>
+        public int Frequency = 8;
 
         /// <summary>
         /// Multiplier on how fast heat evolves relative to real time. Applied by running more steps
@@ -208,7 +215,7 @@ namespace Thermodynamics.Core
         /// one substep per step, every link equalising once — moves the most heat for the least
         /// arithmetic.
         /// </summary>
-        public int MaxSubsteps = 16;
+        public int MaxSubsteps = 64;
 
         /// <summary>
         /// Most element visits one solver step may make — substeps times the elements a substep

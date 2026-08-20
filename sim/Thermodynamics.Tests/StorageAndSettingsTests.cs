@@ -317,7 +317,9 @@ namespace Thermodynamics.Tests
         [Fact]
         public void CloningDoesNotShareState()
         {
-            ThermalSettings settings = new ThermalSettings();
+            // The value is set here rather than taken from the defaults: what this pins is that a
+            // clone is a separate object, not what a fresh one happens to contain.
+            ThermalSettings settings = new ThermalSettings { Frequency = 4 };
             ThermalSettings copy = settings.Clone();
             copy.Frequency = 32;
 
@@ -404,7 +406,11 @@ namespace Thermodynamics.Tests
         [Fact]
         public void CreditAccumulatesAcrossShortFrames()
         {
-            ThermalSettings settings = new ThermalSettings();   // 4 steps per second
+            // Pinned rather than inherited: this asserts arithmetic about the step rate, and the
+            // shipped default is a product decision that has moved before and will again.
+            ThermalSettings settings = new ThermalSettings { Frequency = 4 };
+            settings.Derive();
+
             SimulationScheduler scheduler = new SimulationScheduler(settings);
 
             // a sixtieth of a second earns 4/60 of a step
@@ -420,7 +426,8 @@ namespace Thermodynamics.Tests
         [Fact]
         public void SimulationSpeedMultipliesTheStepRate()
         {
-            ThermalSettings settings = new ThermalSettings();
+            // The rate is pinned; what is being tested is the multiplier on top of it.
+            ThermalSettings settings = new ThermalSettings { Frequency = 4 };
             settings.SimulationSpeed = 3f;
             settings.Derive();
 

@@ -10,7 +10,9 @@ namespace Thermodynamics.Tests
     {
         private static ThermalSettings Isolated()
         {
-            ThermalSettings settings = new ThermalSettings();
+            // The pace is pinned because these assert temperatures after a fixed number of steps,
+            // and a step's length is the shipped default's to change.
+            ThermalSettings settings = new ThermalSettings { Frequency = 4 };
             settings.EnableEnvironment = false;
             settings.EnableSolarHeat = false;
             settings.EnableFriction = false;
