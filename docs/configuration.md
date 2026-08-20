@@ -48,6 +48,17 @@ at the menu in game rather than by reading the API:
 * **A loose page added after a folder draws against the folder's row.** Overview, Status and Debug
   are therefore added before the folders.
 
+**Some settings are typed, not dragged.** A slider offers about two hundred distinguishable
+positions, which suits a fraction between 0 and 1 and suits nothing else this mod has. The step
+budget spans four million, so one position is ten thousand element visits; the friction scale spans
+a hundredth, so every position shows the same number. Seven settings therefore get a field to type
+a value into — the step budget, terrain range, solar energy, heat time scale, vacuum temperature,
+the friction threshold and the friction scale — and the rest keep their sliders.
+
+The range in a typed field's tooltip is what the slider *would* have spanned, not a limit. A typed
+value goes through the same clamp as `/thermal set` and the mod API, so a step budget of nine
+million is yours to try. Anything unreadable puts the setting's own value back rather than guessing.
+
 **Overview** answers the two questions a wall of sliders cannot — which profile this world matches,
 worked out by comparing the nine values a profile sets, and how many settings differ from the
 shipped defaults, each of them dotted in front of its label on its own page. It flags a conflict in

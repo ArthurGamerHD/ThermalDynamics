@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 using RichHudFramework.Client;
 using RichHudFramework.UI;
@@ -1106,6 +1107,12 @@ namespace Thermodynamics
 
             if (name == "DebugBlockOverlay") return OverlayDropdown(entry, enabled);
 
+            // A slider cannot express either end of this mod's ranges. The step budget spans four
+            // million, so one pixel is ten thousand visits; the friction scale spans a hundredth,
+            // so every pixel is the same number to four decimal places. Both get a field to type
+            // the value into instead.
+            if (NeedsTyping(entry)) return NumberField(name, entry, enabled);
+
             if (name == "SolarGridShadows")
             {
                 return Dropdown(name, entry, enabled, GridShadowNames);
@@ -1230,6 +1237,75 @@ namespace Thermodynamics
             if (ClientSide.Contains(name)) return true;
 
             return SettingsRequests.MayAsk;
+        }
+
+        /// <summary>
+        /// Whether a setting's range is one a slider cannot usefully divide.
+        ///
+        /// A slider offers something like two hundred distinguishable positions across its range.
+        /// Wider than that and a whole position is a meaningless jump — the step budget moves ten
+        /// thousand element visits at a time. Finer than a tenth and every position rounds to the
+        /// same displayed number, which is the friction scale's problem: its entire range is a
+        /// hundredth.
+        /// </summary>
+        private static bool NeedsTyping(Entry entry)
+        {
+            return (entry.Max - entry.Min) > 200f || entry.Max <= 0.1f;
+        }
+
+        /// <summary>
+        /// A setting typed rather than dragged.
+        ///
+        /// The range is offered in the tooltip rather than enforced here: it is what the slider
+        /// would have spanned, not what the setting will accept, and a typed value is checked by
+        /// the same clamp the chat command and the mod API go through. Someone who wants a step
+        /// budget of nine million can have one, and finds out what it costs.
+        /// </summary>
+        private static TerminalControlBase NumberField(string name, Entry entry, bool enabled)
+        {
+            TerminalTextField field = new TerminalTextField
+            {
+                Name = entry.Label,
+                ToolTip = Tip(entry.Tip + "\n\nTyped, because a slider cannot divide this range."
+                    + " Usual values run from " + Number(entry.Min, entry)
+                    + " to " + Number(entry.Max, entry) + "."),
+                Enabled = enabled,
+                Value = Number(Settings.Instance.GetValue(name), entry),
+                CustomValueGetter = () => Number(Settings.Instance.GetValue(name), entry),
+            };
+
+            // Anything that cannot be part of a number never reaches the field, so a typo is
+            // refused as it is made rather than on losing focus.
+            field.CharFilterFunc = c =>
+                (c >= '0' && c <= '9') || c == '.' || c == '-' || c == 'e' || c == 'E' || c == '+';
+
+            field.ControlChangedHandler = (sender, args) =>
+            {
+                float value;
+                if (!float.TryParse(field.Value, NumberStyles.Float, CultureInfo.InvariantCulture,
+                        out value)
+                    && !float.TryParse(field.Value, NumberStyles.Float, CultureInfo.CurrentCulture,
+                        out value))
+                {
+                    // Unreadable: put the setting's own value back rather than guessing at what
+                    // was meant. The getter above supplies it on the next draw.
+                    field.Value = Number(Settings.Instance.GetValue(name), entry);
+                    return;
+                }
+
+                Write(name, entry.Integer ? (float)Math.Round(value) : value);
+            };
+
+            return field;
+        }
+
+        /// <summary>A value as a field shows it: whole for an integer setting, four places at most
+        /// otherwise, and never in scientific notation, which nobody wants to retype.</summary>
+        private static string Number(float value, Entry entry)
+        {
+            return entry.Integer
+                ? Math.Round(value).ToString("0", CultureInfo.InvariantCulture)
+                : value.ToString("0.####", CultureInfo.InvariantCulture);
         }
 
         private static string Text(string name, float value, Entry entry)
