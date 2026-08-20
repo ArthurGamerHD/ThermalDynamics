@@ -50,6 +50,29 @@ namespace Thermodynamics.Harness
             /// <summary>Calls into the resumable stage machine per step, per grid.</summary>
             public double AdvancesPerStep;
 
+            /// <summary>
+            /// Milliseconds a step's worth of frames spends entering <c>Update</c> without
+            /// reaching the solver at all: the settings check, the three dirty branches and the
+            /// profiler scopes, paid once a frame per grid whether or not the frame does any
+            /// solver work.
+            ///
+            /// Measured by driving the same fleet on a zero-length frame, which returns from
+            /// <c>AdvanceSolver</c>'s first line. It is the floor under the pacing overhead — the
+            /// part no change to a step can reach, and the part only visiting fewer grids per
+            /// frame can.
+            /// </summary>
+            public double VisitMs;
+
+            /// <summary>What share of the pacing overhead the visit floor accounts for.</summary>
+            public double VisitShare
+            {
+                get
+                {
+                    double overhead = PacedStepMs - FleetStepMs;
+                    return overhead <= 0d ? 0d : VisitMs / overhead;
+                }
+            }
+
             public double PacingOverhead
             {
                 get { return FleetStepMs <= 0d ? 0d : (PacedStepMs - FleetStepMs) / FleetStepMs; }
@@ -113,6 +136,7 @@ namespace Thermodynamics.Harness
 
             double best = double.MaxValue;
             double pacedBest = double.MaxValue;
+            double visitBest = double.MaxValue;
             Stopwatch watch = new Stopwatch();
 
             // The two phases alternate rather than running one after the other. They are the same
@@ -131,10 +155,13 @@ namespace Thermodynamics.Harness
                 if (wholeFirst) TimeWhole(fleet, sample, steps, watch, row, ref best);
                 TimePaced(fleet, sample, frame, frames, steps, watch, row, ref pacedBest);
                 if (!wholeFirst) TimeWhole(fleet, sample, steps, watch, row, ref best);
+
+                TimeVisits(fleet, sample, frames, steps, watch, ref visitBest);
             }
 
             row.FleetStepMs = best;
             row.PacedStepMs = pacedBest;
+            row.VisitMs = visitBest;
             return row;
         }
 
@@ -194,6 +221,24 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
+        /// The same frame count with a zero-length frame, so every visit stops before the solver.
+        /// Nothing is stepped, so nothing needs seeding and the fleet is left as it was found.
+        /// </summary>
+        private static void TimeVisits(List<ThermalSimulation> fleet, EnvironmentSample sample,
+            int frames, int steps, Stopwatch watch, ref double best)
+        {
+            watch.Restart();
+            for (int f = 0; f < frames; f++)
+            {
+                for (int i = 0; i < fleet.Count; i++) fleet[i].Update(0f, sample);
+            }
+            watch.Stop();
+
+            double visits = watch.Elapsed.TotalMilliseconds / steps;
+            if (visits < best) best = visits;
+        }
+
+        /// <summary>
         /// Spreads every grid's temperatures across 250-750 K before a timed run.
         ///
         /// Conduction skips a link whose ends already agree, so a run that inherits the previous
@@ -249,7 +294,8 @@ namespace Thermodynamics.Harness
         {
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("  grids  blocks/grid    blocks  subs w/p    whole ms"
-                + "    paced ms   pacing   advances   steps p/w   us/grid/step");
+                + "    paced ms   pacing   advances   steps p/w   us/grid/step"
+                + "    visit ms   visit share");
 
             for (int i = 0; i < rows.Count; i++)
             {
@@ -264,6 +310,8 @@ namespace Thermodynamics.Harness
                 sb.Append(r.AdvancesPerStep.ToString("n1").PadLeft(11));
                 sb.Append((r.PacedSteps.ToString("n1") + "/" + r.RequestedSteps).PadLeft(12));
                 sb.Append(r.MicrosecondsPerGridStep.ToString("n3").PadLeft(15));
+                sb.Append(r.VisitMs.ToString("n4").PadLeft(12));
+                sb.Append((r.VisitShare * 100d).ToString("n0").PadLeft(13) + "%");
                 sb.AppendLine();
             }
 
@@ -274,7 +322,8 @@ namespace Thermodynamics.Harness
         {
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("grids,blocks_per_grid,blocks,substeps,fleet_step_ms,paced_step_ms,"
-                + "pacing_overhead,advances_per_step,us_per_grid_step,ns_per_block_step");
+                + "pacing_overhead,advances_per_step,us_per_grid_step,ns_per_block_step,"
+                + "visit_ms,visit_share");
 
             for (int i = 0; i < rows.Count; i++)
             {
@@ -288,7 +337,9 @@ namespace Thermodynamics.Harness
                 sb.Append(r.PacingOverhead.ToString("r")).Append(',');
                 sb.Append(r.AdvancesPerStep.ToString("r")).Append(',');
                 sb.Append(r.MicrosecondsPerGridStep.ToString("r")).Append(',');
-                sb.Append(r.NanosecondsPerBlockStep.ToString("r"));
+                sb.Append(r.NanosecondsPerBlockStep.ToString("r")).Append(',');
+                sb.Append(r.VisitMs.ToString("r")).Append(',');
+                sb.Append(r.VisitShare.ToString("r"));
                 sb.AppendLine();
             }
 

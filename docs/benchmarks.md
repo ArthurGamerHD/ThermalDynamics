@@ -379,15 +379,15 @@ time for 5 % of its blocks. `bench smallgrids` reads the same question below eig
 A 200-grid fleet on a planet surface, each row run twice: whole, and paced the way the host drives
 it — every grid visited every frame, each frame doing its share of a step.
 
-| blocks/grid | whole | paced, before | paced, after | pieces per step, before → after |
+| blocks/grid | whole | paced | of which the visit floor | pieces per step, before the floor → after |
 | ---: | ---: | ---: | ---: | --- |
-| 1 | 0.110 ms | +34 % | +34 % | 3.0 → 1.0 |
-| 3 | 0.149 ms | +43 % | **+26 %** | 7.4 → 1.0 |
-| 8 | 0.097 ms | +32 % | **+19 %** | 7.4 → 1.0 |
-| 32 | 0.271 ms | +24 % | **+9 %** | 7.4 → 1.0 |
-| 128 | 2.19 ms | +7 % | **+3 %** | 7.4 → 3.0 |
-| 512 | 9.00 ms | +5 % | +5 % | 7.4 → 7.4 |
-| 2,048 | 35.8 ms | +13 % | +13 % | 7.4 → 7.4 |
+| 1 | 0.116 ms | +35 % | 0.0282 ms — 70 % | 3.0 → 1.0 |
+| 3 | 0.150 ms | +27 % | 0.0280 ms — 69 % | 7.4 → 1.0 |
+| 8 | 0.100 ms | +63 % | 0.0175 ms — 28 % | 7.4 → 1.0 |
+| 32 | 0.257 ms | +9 % | 0.0174 ms — 76 % | 7.4 → 1.0 |
+| 128 | 2.05 ms | +2 % | 0.0177 ms — 56 % | 7.4 → 3.0 |
+| 512 | 8.68 ms | +5 % | 0.0177 ms — 4 % | 7.4 → 7.4 |
+| 2,048 | 35.1 ms | +13 % | 0.0177 ms — 0 % | 7.4 → 7.4 |
 
 The step used to be sliced into whatever a frame's share came to, which on a three-block grid is one
 element visit. Re-entering the resumable stage machine costs the same whatever it carries, so such a
@@ -395,17 +395,28 @@ grid paid fifteen entries a step to integrate three blocks. The per-frame budget
 reaches 2,048 element visits or the step's remainder, whichever is smaller; the rate is untouched
 and the step lands in one piece.
 
+**The visit floor is the fourth column, and it is measured rather than argued.** The same fleet is
+driven a fourth time on a zero-length frame, which returns from `AdvanceSolver`'s first line: what
+is left is `Update` entered and abandoned — the settings check, the three dirty branches, the
+profiler scopes — once a frame per grid whether or not the frame does any solver work. It is flat
+at 5.9 ns a grid a frame from eight blocks upwards, because none of it reads the grid.
+
 **Two things the floor does not fix, and they are the interesting ones.**
 
-The one-block row does not move. Its remaining 34 % is `Update` itself — the settings check, the
-three dirty branches, the profiler scopes — paid once a frame per grid whether or not the frame does
-any solver work. Nothing about a step can reach it; only visiting fewer grids per frame can.
+The one-block row does not move, and 70 % of what it still pays is that visit. The remaining 30 %
+is the credit arithmetic below it, which a banked frame runs before deciding it has nothing to
+spend. Nothing about a step can reach either; only visiting fewer grids per frame can.
 
 The 512 and 2,048 rows do not move either, and they carry 5 % and 13 % that the floor is deliberately
 too small to touch. A large grid genuinely is sliced across its window, and between two of its
 frames the other 199 grids in the fleet evict its arrays: every resume is a cold start. That is the
 price of spreading a step rather than staggering whole steps across frames, and it is not a bug —
 but it is a design question the ladder cannot ask, because the ladder runs one grid.
+
+**The eight-block row is not a stable figure.** It has swung from +48 % to +74 % across repeats of
+an unchanged tree, on a whole cost of a tenth of a millisecond for two hundred grids; its share
+column swings with it. Read the rows at 32 blocks and above, and the visit column, which do not
+move.
 
 **Reading a paced row against a whole one takes care.** Both phases are the same grids in the same
 state, so whichever runs second inherits what the first left behind — a settled temperature spread,
