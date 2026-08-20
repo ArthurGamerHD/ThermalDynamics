@@ -4,6 +4,22 @@ Current as of the review that added room air, thresholds, point heat sources and
 
 ## Fixed, worth remembering
 
+**A grid welded past its buffer capacity went NaN, whole.** The per-node arrays — temperatures,
+mirrored heat capacities, the watts a substep is accumulating — grow when the node count passes
+their capacity, and growing reallocates every one of them. They are refilled by `SyncNodeState`,
+which runs when a step *begins*. A step already in flight carried on over the zeroed rows, divided
+its watts by a heat capacity of zero, and published the result onto every block on the grid.
+
+The trigger is a block placed on a frame the step is not finished with, on a grid with no headroom
+left in its buffers. A step spans fifteen frames at the shipped settings, so the window is most of
+the time; the buffers grow by a quarter plus sixteen, so a ship being welded crosses the boundary
+regularly. `BufferGrowthTests` reproduces it in twenty milliseconds.
+
+The step is now abandoned when the buffers grow, exactly as it already was for a block removal or a
+graph rebuild. Nothing is lost but the watts that substep had accumulated. Worth remembering for
+the shape of it: three call sites documented the invariant *"a step in flight is abandoned when the
+grid changes shape"* and the fourth, which changes the grid's shape most violently, did not.
+
 **Every block this mod ships ran on the default thermal properties, in game only.** All eighteen
 of the mod's own entries in [Cubes.xml](../Data/Cubes.xml) declared themselves under
 `<TypeId>CubeBlocks</TypeId>`. There is no such object builder type — the blocks are `CubeBlock`
