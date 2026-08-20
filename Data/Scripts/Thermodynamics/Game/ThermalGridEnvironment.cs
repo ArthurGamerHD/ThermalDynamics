@@ -417,7 +417,11 @@ namespace Thermodynamics
             PlanetThermalProperties properties;
             if (PlanetProperties.TryGetValue(planet.Entity.EntityId, out properties)) return properties;
 
-            properties = ThermalBlockCatalog.ToPlanetProperties(planet.Definition());
+            properties = ThermalBlockCatalog.ToPlanetProperties(
+                planet.Definition(),
+                planet.Entity == null || !planet.Entity.DefinitionId.HasValue
+                    ? ""
+                    : planet.Entity.DefinitionId.Value.SubtypeName);
             PlanetProperties[planet.Entity.EntityId] = properties;
             return properties;
         }

@@ -15,6 +15,13 @@ namespace Thermodynamics
 	public class Session : MySessionComponentBase
 	{
         public const ushort ModID = 30323;
+
+        /// <summary>
+        /// The running session component, for the few things that need the mod's own context —
+        /// reading a file out of the mod folder needs the mod's entry in the world's mod list, and
+        /// only a component knows its own.
+        /// </summary>
+        public static Session Instance;
         public static DefinitionExtensionsAPI Definitions;
 
         /// <summary>Chat command that writes a telemetry report without closing the world.</summary>
@@ -42,6 +49,8 @@ namespace Thermodynamics
 
         public override void Init(MyObjectBuilder_SessionComponent sessionComponent)
         {
+            Instance = this;
+
             NetworkAPI.Init(ModID, Settings.Name);
             NetworkAPI.LogNetworkTraffic = true;
 
@@ -94,6 +103,7 @@ namespace Thermodynamics
             ThermalApi.Unregister();
             ThermalTerminal.Unregister();
             SettingsRequests.Unregister();
+            Instance = null;
 
             if (_commandRegistered && MyAPIGateway.Utilities != null)
             {

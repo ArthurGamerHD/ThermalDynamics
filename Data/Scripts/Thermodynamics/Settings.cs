@@ -339,6 +339,12 @@ namespace Thermodynamics
                 SetValue(setting, shipped.GetValue(setting));
             }
 
+            // The profile's definition overlay goes with its settings: a preset that grants three
+            // substeps needs definitions that are stable at three, and no setting can fix a
+            // stiffness that belongs to a definition. Chosen before the values are applied so the
+            // rebuild below reads the right ones.
+            ThermalProfileOverlays.Use(name);
+
             Frequency = bundle.Frequency;
             SimulationSpeed = bundle.SimulationSpeed;
             HeatTimeScale = bundle.HeatTimeScale;
@@ -350,7 +356,33 @@ namespace Thermodynamics
             SolarSelfShadowing = bundle.SolarSelfShadowing;
 
             Apply();
+
+            // Block properties are cached per definition, so a new overlay reaches nothing until
+            // the cache is dropped and the grids rebuild against it.
+            ThermalBlockCatalog.Clear();
+            RebuildGrids();
+
             return true;
+        }
+
+        /// <summary>
+        /// Rebuilds every live grid's view of the definitions, after something changed what a
+        /// definition says. Not cheap, and not something that happens outside a profile change.
+        /// </summary>
+        private static void RebuildGrids()
+        {
+            try
+            {
+                IList<ThermalGrid> grids = ThermalGrid.LiveGrids;
+                for (int i = 0; grids != null && i < grids.Count; i++)
+                {
+                    if (grids[i] != null) grids[i].RefreshDefinitions();
+                }
+            }
+            catch (Exception e)
+            {
+                MyLog.Default.Info("[" + Name + "] failed to rebuild grids after a profile change\n" + e);
+            }
         }
 
         /// <summary>

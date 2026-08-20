@@ -20,6 +20,40 @@ speak for to the shipped value first, so applying the same profile twice with ti
 lands in the same place both times. That is also why the settings menu has no reset button: a
 profile *is* the reset.
 
+## Each profile brings its own definitions
+
+Settings alone cannot make a coarse profile stable. A block's demand on the integrator is its
+conductance over its heat capacity, so a 16 kg light fitting with a metal's conductivity asks for
+twenty substeps while the armour around it asks for one — and a profile granting three is
+integrating that block outside the range its own physics is stable in. `MaxSubstepsPerBlock` floors
+exactly those blocks, which is a tolerance; an overlay is a balance.
+
+Each profile may ship a **definition overlay** in `Profiles/<name>.xml`, applied over what
+`Cubes.xml`, `Planets.xml` and `Loops.xml` loaded:
+
+| Profile | Overlay |
+| --- | --- |
+| `simulation` | **none, deliberately** |
+| `optimized` | decorative and electronic blocks given the materials they are actually made of |
+| `arcade` | the same as optimized |
+| `simlite` | that, plus a raised fallback specific heat and more coolant per pipe |
+| `responsive` | none — it grants the substeps to resolve its own pace |
+
+**The files live outside `Data/`**, and that is not tidiness: everything under `Data/` is loaded by
+the game and scanned by Definition Extensions, so a second `Cubes.xml` there would collide with the
+first. The mod reads these itself and applies them over the loaded definitions.
+
+**`simulation` has no overlay and must not get one.** It runs the shipped definitions exactly, which
+is what makes it the reference every other configuration is measured against — and what stops a
+benchmark quietly becoming a comparison between two sets of definitions rather than between two
+settings. `ThermalProfileOverlays.Benchmarking` forces that state, and the performance report never
+reads an overlay.
+
+An overlay states only what it changes. A `Block` entry with no subtype reaches every block,
+including the ones no definition file mentions — which on an ordinary world is most of them, and is
+where a stiffness problem usually lives. A named subtype refines that, and later entries win. A
+misspelled property is reported in the log rather than silently doing nothing.
+
 `ProfileTests` holds the ladder to account — each fast profile must carry heat further than the one
 it is built from, and `optimized` must reach within a tenth of `simulation`, since it is meant to be
 the same physics tuned rather than different physics.
