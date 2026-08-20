@@ -83,7 +83,7 @@ namespace Thermodynamics.Harness
         /// </summary>
         public static List<Row> Shipped()
         {
-            return SweepAt(new float[] { ShippedBlocks.ThermalForType("Reactor").ProducerWasteEnergy });
+            return SweepAt(new float[] { BlockThermalDerivation.FunctionOf("Reactor").ProducerWasteEnergy });
         }
 
         /// <summary>
@@ -95,7 +95,6 @@ namespace Thermodynamics.Harness
         private static List<Row> SweepAt(float[] fractions)
         {
             List<Row> rows = new List<Row>();
-            BlockThermalProperties shipped = ShippedBlocks.ThermalForType("Reactor");
 
             foreach (float fraction in fractions)
             {
@@ -109,7 +108,7 @@ namespace Thermodynamics.Harness
                     }
                 }
 
-                cached = At(shipped, fraction);
+                cached = At(fraction);
                 lock (Cache) Cache[fraction] = cached;
                 rows.AddRange(cached);
             }
@@ -117,13 +116,19 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-        private static List<Row> At(BlockThermalProperties shipped, float fraction)
+        private static List<Row> At(float fraction)
         {
             List<Row> rows = new List<Row>();
 
             foreach (Vanilla.Block reactor in Vanilla.Reference)
             {
                 if (reactor.TypeId != "Reactor") continue;
+
+                // Each reactor is derived from its own build cost. They are close but not
+                // identical — the large-grid large generator carries a hundred superconductors the
+                // others do not — so using one figure for all four would report the family as more
+                // uniform than it is.
+                BlockThermalProperties shipped = reactor.Thermal;
 
                 foreach (float load in Loads)
                 {

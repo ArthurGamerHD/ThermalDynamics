@@ -141,6 +141,47 @@ namespace Thermodynamics.Tests
         /// any temperature instantly. Adding a component to a definition that <see cref="Vanilla"/>
         /// does not price is the way that happens.
         /// </summary>
+        /// <summary>
+        /// The transcribed build costs still match the installed game.
+        ///
+        /// These matter more than the masses beside them now: a block's thermal properties are
+        /// derived from its components, so a component list that has drifted does not merely make
+        /// a mass wrong, it makes the block a different material.
+        /// </summary>
+        [Fact]
+        public void TheVanillaComponentListsStillMatchTheInstalledGame()
+        {
+            if (!GameBlocks.IsInstalled) return;
+
+            List<string> wrong = new List<string>();
+
+            foreach (Vanilla.Block reference in Vanilla.Reference)
+            {
+                GameBlocks.Definition installed = null;
+                foreach (GameBlocks.Definition block in GameBlocks.All())
+                {
+                    if (block.SubtypeId == reference.Subtype) { installed = block; break; }
+                }
+
+                if (installed == null)
+                {
+                    wrong.Add(reference.Subtype + " is no longer a block in the installed game");
+                    continue;
+                }
+
+                float transcribed = 0f;
+                foreach (BlockComponent line in reference.Components) transcribed += line.Mass;
+
+                if (Math.Abs(transcribed - installed.Mass) > 0.5f)
+                {
+                    wrong.Add(reference.Subtype + " components weigh " + transcribed
+                        + " in Vanilla.cs and " + installed.Mass + " in game");
+                }
+            }
+
+            Assert.Empty(wrong);
+        }
+
         [Fact]
         public void EveryShippedBlockIsPricedAndWeighsSomething()
         {

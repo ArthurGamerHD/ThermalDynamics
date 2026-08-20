@@ -23,21 +23,27 @@ namespace Thermodynamics.Tests
     public class ReactorWasteHeatTests
     {
         /// <summary>
-        /// Block types whose electrical output reaches the simulation through
-        /// <c>MyResourceSourceComponent</c>, and which therefore heat through the *producer*
-        /// fraction and nothing else. A zero here is not a cold block, it is a disconnected one.
+        /// Block types that *convert* something into electricity — fuel, or a charge they hold —
+        /// and deliver it through <c>MyResourceSourceComponent</c>. Their heat runs through the
+        /// producer fraction and nothing else, so a zero there is not a cold block, it is a
+        /// disconnected one.
+        ///
+        /// A solar panel and a wind turbine are deliberately not here. They convert energy the
+        /// environment supplied, and for the panel the solar path has already put that energy into
+        /// the block: charging it again through a producer fraction would count the same sunlight
+        /// twice.
         /// </summary>
-        private static readonly string[] ProducerTypes = { "Reactor", "SolarPanel" };
+        private static readonly string[] ProducerTypes = { "Reactor", "HydrogenEngine", "BatteryBlock" };
 
         [Fact]
         public void EveryPowerProducerConvertsSomeOfItsOutputToHeat()
         {
             foreach (string typeId in ProducerTypes)
             {
-                BlockThermalProperties thermal = ShippedBlocks.ThermalForType(typeId);
+                BlockThermalDerivation.BlockFunction function = BlockThermalDerivation.FunctionOf(typeId);
 
-                Assert.True(thermal.ProducerWasteEnergy > 0f,
-                    typeId + " carries ProducerWasteEnergy " + thermal.ProducerWasteEnergy
+                Assert.True(function.ProducerWasteEnergy > 0f,
+                    typeId + " carries ProducerWasteEnergy " + function.ProducerWasteEnergy
                     + ", so its output makes no heat. A producer's consumer fraction never applies.");
             }
         }

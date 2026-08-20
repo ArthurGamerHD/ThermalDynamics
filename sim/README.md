@@ -151,6 +151,21 @@ under one cell of light armour, which is how one is actually installed. The ship
 fraction where the bare column survives everywhere and the skinned column does not. Pinned by
 `ReactorWasteHeatTests`; argued in [balance.md](../docs/balance.md#reactor-waste-heat).
 
+## The block catalog
+
+`blocks` is the authoring side of the definition pass: what every block in the game derives to from
+its build components, and which subtypes deviate far enough from their type to be worth naming.
+
+```bash
+dotnet run --project Thermodynamics.Sim -- blocks
+```
+
+It reads the installed game's own `CubeBlocks/*.sbc` rather than a transcription — there is no
+honest way to hand-copy 1,503 definitions — and prints nothing useful without an install. The
+derivation it reports is the same one that runs in game, in `BlockThermalDerivation`, so this is a
+view of live behaviour rather than of a generator. See
+[definitions.md](../docs/definitions.md#where-a-blocks-properties-come-from).
+
 ## Balance profiles
 
 `profiles`, `sweep` and `features` are the whole-system counterpart to `balance`: not "is this block
@@ -320,6 +335,10 @@ PipeFitter.BuildRing(builder, ring);      // pump goes on the first straight run
   and carries plumbing exactly when it should; and that the conclusions drawn from the balance pass
   — the radiator beating the armour it displaces, a coolant sink beating every surface dial, the
   heat pump passing through all three of its limits — cannot quietly invert
+* the block derivation: that specific heat is the exact mass-weighted mean, that a window comes out
+  glass and an armour block steel, that a battery is more fragile than a reactor, that a plushie is
+  fabric, that an unknown component falls back to steel, and that no invented material sits outside
+  the range the real ones span
 * reactor waste heat: that every block type delivering power through the source component converts
   some of it, that no reactor cooks itself with every face on open space, and that a large one
   buried in hull at full rating does — so the fraction still means what it was chosen to mean

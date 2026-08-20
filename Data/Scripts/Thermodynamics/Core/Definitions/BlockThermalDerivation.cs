@@ -210,11 +210,18 @@ namespace Thermodynamics.Core
             // ever applies and its consumer fraction is dead text. Getting that backwards is how
             // every reactor in the game ran at 0 W; see docs/balance.md.
             //
-            // The reactor's 0.02 is measured rather than chosen — SE rates a 3x3x3 block at 300 MW,
-            // so a real plant's efficiency would destroy every large reactor in any build. It is
-            // the fraction at which the family survives bare in vacuum at full rating and needs
-            // cooling once buried in hull.
-            Add(t, "Reactor", 0.02f, 0.02f, 1f, 0.25f);
+            // The reactor's fraction is measured rather than chosen — SE rates a 3x3x3 block at
+            // 300 MW, so a real plant's efficiency would destroy every large reactor in any build.
+            // It is the fraction at which the family survives bare in vacuum at full rating and
+            // needs cooling once buried in hull.
+            //
+            // It was 0.02 while a reactor's critical temperature was the hand-written 1,200 K. The
+            // derivation puts the four reactors between 938 and 1,090 K instead, from what they are
+            // actually built out of, and at 0.02 the two smaller ones then cook themselves bare in
+            // vacuum — a state no build can improve on. 0.01 restores both bounds against the
+            // derived limits. The retune is the point of deriving rather than asserting: the
+            // balance was resting on a number nobody had checked.
+            Add(t, "Reactor", 0.01f, 0.01f, 1f, 0.25f);
 
             // A combustion engine is the hottest producer there is: most of what it burns leaves as
             // heat rather than as electricity, and unlike a reactor its rating is modest enough to

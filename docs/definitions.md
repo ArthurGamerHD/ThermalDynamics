@@ -23,7 +23,7 @@ Read by `ThermalCellDefinition.GetDefinition`
 | Property | Type | Clamp | Meaning |
 | --- | --- | --- | --- |
 | `ExcludeFromSimulation` | Bool | — | `true` excludes the block from the simulation entirely: no cell is created, it conducts nothing and blocks nothing. |
-| `Conductivity` | Decimal | `0 … 1` | Scales heat transfer to neighbours. `1` is a perfect conductor for this model, not a W/(m·K) value. |
+| `Conductivity` | Decimal | `≥ 0` | Thermal conductivity in **real W/(m·K)** — the number a materials table gives. Mild steel 50, stainless 15, glass 1, aluminium 237, copper 400. The game's pace is set once, globally, in `ThermalConstants.ConductionScale`, so this stays a description of the material. |
 | `SpecificHeat` | Decimal | `≥ 0` | Heat capacity in **real J/(kg·K)** — look the material up. Steel 450, copper 385, aluminium 900, graphite 710, water 4184. Higher = slower to heat and to cool. See [the note below](#specific-heat-is-real-and-the-clock-is-not). |
 | `Emissivity` | Decimal | `≥ 0` | Fraction of blackbody radiation emitted, and equally the fraction of incident solar energy absorbed. Physically `0 … 1`. |
 | `ExposedSurfaceMultiplier` | Decimal | `≥ 0` | Multiplies the geometric face area. Use `> 1` for finned or folded surfaces (the radiator uses `1.25`). It scales **every** external path, so a large value also multiplies solar gain and reentry friction — and it buys much less than it looks: see [balance.md](balance.md). |
@@ -51,12 +51,18 @@ the shipped defaults with no error and no log line.
 
 New definitions should use the current names. The old ones are not planned for removal.
 
-### `Conductivity` is not in W/(m·K)
+### `Conductivity` is in real W/(m·K)
 
-Worth stating plainly, because the name says otherwise: the value is clamped to **0…1** and
-multiplied by a 200 W/(m·K) reference at the point of use. A tabulated figure typed in here —
-steel's 50, copper's 400 — clamps to 1 and quietly means "the best there is". `1` is a very good
-conductor, `0.6` is the default for most blocks, `0` conducts nothing.
+Type the figure a materials table gives: mild steel 50, stainless 15, glass 1, aluminium 237,
+copper 400. `ThermalLink` multiplies it by `ThermalConstants.ConductionScale`, which is one global
+constant setting the game's pace, so the value here stays a description of the material rather than
+a balance dial.
+
+This was not always true. It used to be a 0…1 quality value against a 200 W/(m·K) reference, where
+a tabulated figure clamped to 1 and quietly meant "the best there is" — which made every metal
+conduct like every other metal. **A coolant loop's `Conductivity` still works the old way**, and
+deliberately: fluid-to-wall transfer is convective, and the honest dial for it is a heat transfer
+coefficient in W/(m²·K), which is a change to the loop equations rather than to a number.
 
 ### Specific heat is real, and the clock is not
 
@@ -85,35 +91,90 @@ game feels* there, in one place.
 The shipped default is 225, which is what makes steel's 450 J/(kg·K) behave the way the flat
 game value of `2` used to.
 
+### Where a block's properties come from
+
+**Almost nothing is authored.** A block's material properties are *derived* from its build
+components — the list of steel plates, glass, power cells and motors the game already publishes for
+every block that exists. `BlockMaterials` gives each of the game's thirty-two components real
+material figures, and `BlockThermalDerivation` blends them by mass.
+
+That means a window is glass, a battery is lithium, a medical bay is mostly water and a plushie is
+fabric, without anyone having written a line for any of them — and the same is true of every block
+of every other mod, which previously all fell through to one entry describing mild steel.
+
+| Derived from components | Taken from the block's type | 
+| --- | --- |
+| `Conductivity`, `SpecificHeat`, `Emissivity`, `CriticalTemperature` | `ProducerWasteEnergy`, `ConsumerWasteEnergy`, `ExposedSurfaceMultiplier`, `OverheatDamagePerKelvin` |
+
+The split is not arbitrary. What a block is made of cannot say what it does with power: two blocks
+of identical construction, one a thruster and one a girder, differ entirely in what they put into
+the ship. The functional half is a table keyed by block type in `BlockThermalDerivation`, and it is
+the only place opinions are left.
+
+Of the three derived blends, only specific heat is exact — heat capacity is additive, so the
+mass-weighted mean is the right answer rather than an approximation of one. Conductivity and
+critical temperature are mass-weighted because a build cost does not say how the phases are
+arranged. Emissivity is a property of the *surface*, so it comes from the heaviest component rather
+than from a blend.
+
+Run the sim harness's `blocks` command to print the whole table, every type and every subtype that
+deviates from it.
+
 ### Lookup and fallback
 
-For a block with definition id `TypeId/SubtypeId`, `GetDefinition` resolves in this order:
+An entry in `Cubes.xml` **overrides** the derivation. For a block with definition id
+`TypeId/SubtypeId`, `GetDefinition` resolves in this order:
 
 1. `TypeId/SubtypeId` — an exact per-block entry.
-2. `TypeId/DefaultThermodynamics` — a per-type default (this is how *all* thrusters and *all*
-   reactors get their properties without listing every subtype).
+2. `TypeId/DefaultThermodynamics` — a per-type entry.
 3. `EnvironmentDefinition/DefaultThermodynamics` — the global fallback.
 
 The probe for steps 1 and 2 is whether the definition id is indexed **and** exposes
-`ExcludeFromSimulation`, so a partial group without `ExcludeFromSimulation` falls through to the next level
-rather than being read with zeros.
+`ExcludeFromSimulation`, so a group without that bool is not an entry at all and falls through.
+
+Two rules matter more than the order:
+
+* **A partial entry is merged, not substituted.** Whatever an entry declares wins; whatever it omits
+  is derived. So an author who wants a block to run hotter writes one line — a
+  `CriticalTemperature` and nothing else — and keeps the material the block's components imply.
+  Before this, an omitted property read as *zero*, and a zero `SpecificHeat` is a block with no heat
+  capacity while a zero `CriticalTemperature` is a block above critical the moment it is placed.
+  `EveryEntryInCubesDeclaresEveryPropertyTheGameReads` guards the shipped file against that.
+* **Landing on the global fallback counts as no answer.** That entry describes mild steel, which was
+  the best available guess before a block's own build cost could be read and is a worse one now, so
+  it does not override a derivation that actually describes the block. It applies to a block with no
+  priced components at all.
 
 ### Shipped values ([Data/Cubes.xml](../Data/Cubes.xml))
 
-| Definition | Cond. | Spec. heat | Emiss. | Area | Prod. waste | Cons. waste | Critical | Scaler |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `EnvironmentDefinition/DefaultThermodynamics` (global) | 0.60 | 2 | 0.125 | 1 | 0.05 | 0.05 | 900 | 1 |
-| `Thrust/DefaultThermodynamics` | 1 | 3 | 0.15 | 1 | 0 | 0.25 | 1050 | 0.25 |
-| `Reactor/DefaultThermodynamics` | 1 | 6 | 0.25 | 1 | 0 | 0.25 | 1200 | 0.25 |
-| Coolant pipes, pumps (LG + SG) | 1 | 2 | 0.125 | 1 | 0 | 0 | 1000 | 1 |
-| Heat pumps (LG + SG) | 1 | 2 | 0.125 | 1 | 0.05 | 0.05 | 1000 | 1 |
-| Radiators (LG + SG) | 1 | **1** | **0.35** | **1.25** | 0 | 0 | 1000 | 1 |
+`Cubes.xml` no longer carries an entry per block type. It holds only deliberate deviations from the
+derivation:
 
-The radiator is the only block tuned to shed heat: low thermal mass so it responds fast, high
-emissivity, and 25 % extra surface area.
+| Definition | What it overrides and why |
+| --- | --- |
+| Coolant pipes and pumps (LG + SG) | Copper: conductivity 400, specific heat 385. The block exists to move heat. |
+| Heat pumps (LG + SG) | Both waste fractions **0** — the solver already puts every watt the pump draws into its hot side, so a fraction on top would charge the same energy twice. |
+| Radiators (LG + SG) | Emissivity 0.35 and 1.25× surface against the default 0.15 and 1×. Shedding is the block's whole purpose, so these are design decisions rather than consequences of a build cost. |
+| `EnvironmentDefinition/DefaultThermodynamics` | The floor for a block with no priced components. |
 
-> Note that the reactor entry uses `ConsumerWasteEnergy`, not `ProducerWasteEnergy` — reactors
-> report through a resource *sink* for their fuel, so waste heat is driven by consumption.
+Every vanilla block's properties now come from the derivation instead. Notable results, all of them
+consequences rather than choices:
+
+| Type | k W/(m·K) | c J/(kg·K) | ε | Critical K | Why |
+| --- | --- | --- | --- | --- | --- |
+| `CubeBlock` (armour) | 45 | 535 | 0.15 | 868 | steel |
+| Windows | 8 | 788 | 0.92 | 814 | glass conducts two orders of magnitude worse and radiates six times better |
+| `BatteryBlock` | 34 | 704 | 0.85 | **735** | lithium cells are the least heat-tolerant thing on a ship |
+| `MedicalRoom` | 28 | 964 | 0.90 | **592** | mostly water, plastics and fluids |
+| `Reactor` | 43 | 553 | 0.25 | 1,086 | fuel in a graphite and steel assembly |
+| `HydrogenEngine` | 98 | 550 | 0.25 | 1,121 | carries a prototech cooling unit |
+| `JumpDrive` | **173** | 460 | 0.20 | 745 | forty per cent superconductor by mass |
+| `Thrust` | 56 | 472 | 0.40 | 1,115 | refractory nozzle alloy |
+| Plushies | **0.05** | **1,300** | 0.95 | 500 | fabric, not the steel they used to be |
+
+> A reactor's heat runs through `ProducerWasteEnergy` and nothing else. It delivers power through
+> `MyResourceSourceComponent`, so its consumer fraction is dead text — getting that backwards is how
+> every reactor in the game ran at 0 W. See [balance.md](balance.md#reactor-waste-heat).
 
 ## Group: `ThermalPlanetProperties`
 

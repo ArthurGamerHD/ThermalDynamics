@@ -360,7 +360,7 @@ namespace Thermodynamics.Harness
             {
                 if (block.TypeId == "CubeBlock") continue;
 
-                BlockThermalProperties thermal = ThermalFor(block.TypeId);
+                BlockThermalProperties thermal = block.Thermal;
                 bool produces = block.PowerOutputMegawatts > 0f && block.TypeId != "Thrust";
                 float rated = produces ? block.PowerOutputMegawatts : block.PowerDrawMegawatts;
 
@@ -383,23 +383,6 @@ namespace Thermodynamics.Harness
             }
 
             return rows;
-        }
-
-        /// <summary>
-        /// The thermal entry a vanilla block resolves to: its type's, or the default.
-        ///
-        /// Cubes.xml carries per-type entries under the <c>DefaultThermodynamics</c> subtype, which
-        /// is how the mod gives every reactor in the game reactor properties without naming them
-        /// all. Reading it back the same way is the only way to see what a vanilla block will
-        /// actually be handed.
-        /// </summary>
-        private static BlockThermalProperties ThermalFor(string typeId)
-        {
-            foreach (ShippedBlocks.Definition definition in ShippedBlocks.All().Values)
-            {
-                if (definition.TypeId == typeId && !definition.HasOwnThermalEntry) return definition.Thermal;
-            }
-            return ShippedBlocks.ThermalForType(typeId);
         }
 
         // ---- delivered cooling ------------------------------------------------------------------

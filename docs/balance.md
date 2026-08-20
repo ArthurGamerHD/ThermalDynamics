@@ -171,10 +171,17 @@ Bold is past critical. 0.05 and above put a reactor past critical *bare*, which 
 there is no arrangement cooler than open space. 0.01 leaves only one reactor of the four wanting
 cooling, and only when fully buried at full rating.
 
-**0.02 is the fraction where both bounds hold.** Every reactor survives at full rating with its
-faces on open space; the two large ones go past critical once wrapped in hull. That makes where a
+**0.01 is the fraction where both bounds hold.** Every reactor survives at full rating with its
+faces on open space; the 300 MW one goes past critical once wrapped in hull. That makes where a
 reactor is installed a decision rather than a detail, and it is the first thing in the mod that
 makes a player want a coolant loop for a reason other than curiosity.
+
+It was 0.02 for one pass, against a critical temperature of 1,200 K that had been typed into
+`Cubes.xml` by hand. Deriving a reactor from its own build cost instead puts the four of them
+between 938 and 1,090 K — fuel and graphite in a steel assembly, not the round number — and at 0.02
+the two smaller reactors then cook themselves bare in vacuum, which is a state no build can improve
+on. The table above is the pre-derivation measurement; the retune is what deriving is for. A
+balance figure resting on a number nobody had checked is not a balance figure.
 
 An idling ship is deliberately not a cooling problem: at 10 % of rating every reactor stays clear of
 critical in both rigs. Heat arrives when power is drawn.
@@ -194,10 +201,10 @@ two inputs is already invented.
 
 ## Open items
 
-* **The harness reactor and the shipped reactor now disagree.** `Catalog.ReactorThermal` carries
-  `ProducerWasteEnergy` 0.25 against the shipped 0.02, so any scenario quoting a reactor temperature
-  quotes one no player will see. It was harmless while the shipped figure was 0 and nothing ran
-  through it; it is a live divergence now. The same shape of problem as C4 below.
+* **The harness reactor and the shipped reactor still disagree.** `Catalog.ReactorThermal` carries
+  `ProducerWasteEnergy` 0.25 against the shipped 0.01, so any scenario quoting a reactor temperature
+  quotes one no player will see. `Vanilla.Reference` now derives from real build costs and is the
+  right model for `Catalog` to follow. The same shape of problem as C4 below.
 * **`Catalog` masses are not the shipped masses.** The harness's hand-written stand-ins are up to
   4× out (`Battery` 1040 kg against 3,845; `Thruster` 10,000 kg against 43,200; `Radiator` 900 kg
   against 600). They only affect scenarios, not this report, which reads the definitions directly —
