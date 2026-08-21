@@ -82,7 +82,7 @@ sufficient. See [development.md](../docs/development.md#repo-conventions) for th
 cd tests
 
 dotnet test                                    # the whole suite, about five minutes
-dotnet test --filter "speed!=slow"             # the fast lane, under a minute
+dotnet test --filter "speed!=slow"             # skip the nine scenario batteries
 dotnet run --project Thermodynamics.Sim -- list
 dotnet run --project Thermodynamics.Sim -- run reactor
 dotnet run --project Thermodynamics.Sim -- run all --csv out/
@@ -97,10 +97,12 @@ SE_BIN=/path/to/SpaceEngineers/Bin64 dotnet test
 The probe order is `$SE_BIN`, the default Steam path, then the mod's own
 `bin/Release/net472` output.
 
-The nine suites that dominate the run — each a scenario battery stepping whole ships for tens of
-seconds — carry `[Trait("speed", "slow")]`, so the fast lane covers everything else: the unit and
-model tests that catch most regressions. The full run remains the gate; the fast lane is for the
-edit loop.
+The nine scenario batteries — each stepping whole ships for tens of seconds — carry
+`[Trait("speed", "slow")]`. **Excluding them does not yet shorten the run**: measured clean, the
+filtered run is 5 m 03 s against the full suite's 5 m 04 s, while the filtered tests' own durations
+sum to about a minute. Roughly four minutes of wall clock belongs to no test body — discovery,
+fixture builds or a parallelism ceiling — and finding it is the open item; the tags are the
+prerequisite, not the result.
 
 ## Scenarios
 
