@@ -392,7 +392,7 @@ a claim observed in a real world are the same claim.
 
 ## Output
 
-Three files land in the world's storage folder
+These files land in the world's storage folder
 (`%AppData%/SpaceEngineers/Saves/<world>/Storage/<mod>/`), stamped with the session start time:
 
 | File | Contents |
@@ -401,6 +401,9 @@ Three files land in the world's storage folder
 | `Thermodynamics_BlockTypes_<stamp>.csv` | one row per block definition |
 | `Thermodynamics_Grids_<stamp>.csv` | one row per grid |
 | `Thermodynamics_Rooms_<stamp>.csv` | one row per compartment — see [Room dump](#room-dump) |
+| `Thermodynamics_Surfaces_<stamp>.csv` | one row per block face — see [Surface dump](#surface-dump) |
+| `Thermodynamics_Environment_<stamp>.csv` | one row per grid per climate sample — see [Climate dump](#climate-dump) |
+| `Thermodynamics_PlanetProbes_<stamp>.csv` | one row per probe, written only when a sweep ran |
 
 A summary line always goes to `SpaceEngineers.log`. If world storage cannot be written — the
 failure mode most likely during shutdown — the whole report goes to the game log instead, so a
@@ -540,6 +543,16 @@ Capped at 4000 rows per grid, about eleven hours of play at the default cadence,
 elapsed time, frame count, and every setting that produced the numbers. The settings section is
 generated from the same name table the chat commands and the mod API use, so a setting added to the
 config cannot go missing from the report meant to explain a run.
+
+**World** — the game's own session settings, the game version, and the mod list. Taken by
+serialising `MyObjectBuilder_SessionSettings` and flattening it, rather than from a field list here,
+so a setting the game gains appears in the next dump without a code change.
+
+The world outranks the mod, and the section names each place it does. `EnableDamage` with the
+world's `DestructibleBlocks` off records damage the engine then discards; `EnableRoomAir` without
+`EnableOxygen` or `EnableOxygenPressurization` leaves every room airless; `EnableSaving` off means
+no dump can show a load. Each is printed as a `!!` line above the settings, because a dump read
+without them reads as a broken model rather than a silenced one.
 
 **Per grid** (kept for the life of the grid, and retained after it is destroyed) — node count,
 block count, conduction links, sealed rooms, exterior cells, surface entries, coolant loops,

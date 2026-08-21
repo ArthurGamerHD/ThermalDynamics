@@ -76,6 +76,15 @@ namespace Thermodynamics
         public static int MaxPlayers;
         public static string SessionPath = "";
         public static DateTime GameStartDate;
+        public static string GameVersion = "(unknown)";
+
+        /// <summary>
+        /// The world's own settings, flattened from the serialised session settings, and the mods
+        /// loaded beside this one. Both decide what the mod is allowed to do, so a dump that omits
+        /// them cannot be read on its own.
+        /// </summary>
+        public static readonly List<KeyValuePair<string, string>> WorldSettingsRows = new List<KeyValuePair<string, string>>();
+        public static readonly List<string> Mods = new List<string>();
         public static DateTime GameEndDate;
         public static Settings SettingsSnapshot;
 
@@ -215,7 +224,11 @@ namespace Thermodynamics
                 IsMultiplayer = MyAPIGateway.Multiplayer != null && MyAPIGateway.Multiplayer.MultiplayerActive;
                 SessionPath = MyAPIGateway.Session.CurrentPath;
                 GameStartDate = MyAPIGateway.Session.GameDateTime;
+                GameVersion = MyAPIGateway.Session.Version.ToString();
                 SettingsSnapshot = Settings.Instance;
+
+                CaptureWorldSettings();
+                CaptureMods();
 
                 _identityCaptured = true;
             }
@@ -223,6 +236,42 @@ namespace Thermodynamics
             {
                 Exception("Telemetry.CaptureIdentity", e);
                 _identityCaptured = true;
+            }
+        }
+
+        /// <summary>
+        /// Reads the world's settings through the serialiser rather than field by field, so a
+        /// setting the game gains is dumped without a change here.
+        /// </summary>
+        private static void CaptureWorldSettings()
+        {
+            WorldSettingsRows.Clear();
+
+            MyObjectBuilder_SessionSettings settings = MyAPIGateway.Session.SessionSettings;
+            if (settings == null || MyAPIGateway.Utilities == null) return;
+
+            WorldSettingsRows.AddRange(WorldSettings.Parse(MyAPIGateway.Utilities.SerializeToXML(settings)));
+        }
+
+        /// <summary>
+        /// The mod list, which decides which block and planet definitions exist at all. A world that
+        /// loads a planet pack answers different climate questions from one that does not.
+        /// </summary>
+        private static void CaptureMods()
+        {
+            Mods.Clear();
+
+            List<MyObjectBuilder_Checkpoint.ModItem> mods = MyAPIGateway.Session.Mods;
+            if (mods == null) return;
+
+            for (int i = 0; i < mods.Count; i++)
+            {
+                MyObjectBuilder_Checkpoint.ModItem mod = mods[i];
+                string name = string.IsNullOrEmpty(mod.FriendlyName) ? mod.Name : mod.FriendlyName;
+
+                Mods.Add(mod.PublishedFileId != 0
+                    ? name + " (" + mod.PublishedFileId + ")"
+                    : name + " (local)");
             }
         }
 
@@ -304,6 +353,9 @@ namespace Thermodynamics
             GridRecordsDropped = 0;
             SurfaceRowsCaptured = 0;
             BlockTypeRecordsDropped = 0;
+            WorldSettingsRows.Clear();
+            Mods.Clear();
+            GameVersion = "(unknown)";
 
             lock (RegistryLock)
             {

@@ -100,6 +100,7 @@ namespace Thermodynamics
             StringBuilder sb = new StringBuilder(64 * 1024);
 
             WriteHeader(sb, reason);
+            WriteWorld(sb);
             WriteSettings(sb);
             WriteSessionTotals(sb);
             WriteAnomalies(sb);
@@ -416,6 +417,58 @@ namespace Thermodynamics
             Field(sb, "dedicated", Telemetry.IsDedicated);
             Field(sb, "multiplayer", Telemetry.IsMultiplayer);
             Field(sb, "sample stride", "1 in " + Telemetry.SampleStride + " cell updates");
+        }
+
+        /// <summary>
+        /// The world the mod ran in: the engine's own settings, the mods loaded beside it, and any
+        /// setting that overrides one of this mod's.
+        ///
+        /// Printed before the mod's own settings because it outranks them. A world with
+        /// DestructibleBlocks off discards every gram of heat damage the model applied, and a dump
+        /// read without that fact reads as a model that damages nothing.
+        /// </summary>
+        private static void WriteWorld(StringBuilder sb)
+        {
+            Section(sb, "World");
+
+            Field(sb, "game version", Telemetry.GameVersion);
+            Field(sb, "mods loaded", Telemetry.Mods.Count);
+            for (int i = 0; i < Telemetry.Mods.Count; i++)
+            {
+                Field(sb, "  " + (i + 1).ToString("n0"), Telemetry.Mods[i]);
+            }
+
+            List<string> conflicts = WorldConflicts();
+            for (int i = 0; i < conflicts.Count; i++)
+            {
+                sb.Append("      !! ").Append(conflicts[i]).Append('\n');
+            }
+
+            if (Telemetry.WorldSettingsRows.Count == 0)
+            {
+                sb.Append("  (the world's settings were not readable)\n");
+                return;
+            }
+
+            sb.Append("\n  world settings\n");
+            for (int i = 0; i < Telemetry.WorldSettingsRows.Count; i++)
+            {
+                KeyValuePair<string, string> row = Telemetry.WorldSettingsRows[i];
+                Field(sb, "  " + row.Key, row.Value.Length == 0 ? "-" : row.Value);
+            }
+        }
+
+        /// <summary>Which of the mod's features the world overrides. Empty when nothing is silenced.</summary>
+        private static List<string> WorldConflicts()
+        {
+            Settings s = Telemetry.SettingsSnapshot;
+
+            WorldSettings.ModFeatures features = new WorldSettings.ModFeatures();
+            features.Damage = s == null || s.EnableDamage;
+            features.RoomAir = s == null || s.EnableRoomAir;
+            features.Persistence = true;
+
+            return WorldSettings.Conflicts(Telemetry.WorldSettingsRows, features);
         }
 
         private static void WriteSettings(StringBuilder sb)
