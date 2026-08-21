@@ -27,6 +27,25 @@ namespace Thermodynamics
         /// </summary>
         public readonly TimingStat RoomPressure = new TimingStat("  of which room pressure");
 
+        /// <summary>
+        /// Reading the world a step is about to run against: planet, air, wind, weather, sun, and
+        /// the solar raycast nested inside it.
+        ///
+        /// Host-driven for the same reason the pressure sweep is — it happens around the simulation
+        /// rather than inside it — and it is taken once a step rather than once a frame.
+        /// </summary>
+        public readonly TimingStat EnvironmentSample = new TimingStat("  of which environment sample");
+
+        /// <summary>
+        /// Everything that reads a step's output: overheat damage, threshold crossings, heat pump
+        /// demand, the mass sweep, the pressure sweep, the hottest-node scan and the health check.
+        ///
+        /// Deliberately off the stepping path, which is why none of it was timed. The consequence
+        /// was that a worst frame in a field dump could attribute five per cent of itself and leave
+        /// the rest unexplained.
+        /// </summary>
+        public readonly TimingStat AfterStep = new TimingStat("  of which after step");
+
         public void Begin(SimulationPhase phase)
         {
             Stat(phase).Begin();

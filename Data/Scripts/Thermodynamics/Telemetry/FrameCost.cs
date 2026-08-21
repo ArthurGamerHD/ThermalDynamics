@@ -18,6 +18,10 @@ namespace Thermodynamics
         public double ExposureMs;
         public double SolverMs;
 
+        /// <summary>The two stages that sit around the simulation rather than inside it.</summary>
+        public double SampleMs;
+        public double AfterStepMs;
+
         /// <summary>Grids that did any work, and the worst single one.</summary>
         public int Grids;
         public double WorstGridMs;
@@ -28,6 +32,23 @@ namespace Thermodynamics
         public long TopologyNodeVisits;
         public long ExposureNodeVisits;
         public long RoomCellsVisited;
+
+        /// <summary>
+        /// What the frame cost that no stage claimed: pacing, the scheduler's walk over every grid,
+        /// and anything not yet instrumented.
+        ///
+        /// Derived rather than measured, so it cannot drift from the rows above it. A negative
+        /// figure would mean two stages timed the same milliseconds, which is a defect in the
+        /// instrumentation and is shown rather than clamped away.
+        /// </summary>
+        public double UnattributedMs
+        {
+            get
+            {
+                return TotalMs - TopologyMs - RoomMappingMs - ExposureMs - SolverMs
+                    - SampleMs - AfterStepMs;
+            }
+        }
 
         public string Describe()
         {
@@ -47,7 +68,10 @@ namespace Thermodynamics
             sb.Append("\n      topology ").Append(TopologyMs.ToString("n2"))
               .Append(", rooms ").Append(RoomMappingMs.ToString("n2"))
               .Append(", exposure ").Append(ExposureMs.ToString("n2"))
-              .Append(", solver ").Append(SolverMs.ToString("n2")).Append(" ms");
+              .Append(", solver ").Append(SolverMs.ToString("n2"))
+              .Append(", sample ").Append(SampleMs.ToString("n2"))
+              .Append(", after step ").Append(AfterStepMs.ToString("n2"))
+              .Append(", unattributed ").Append(UnattributedMs.ToString("n2")).Append(" ms");
 
             sb.Append("\n      touched ").Append(TopologyNodeVisits.ToString("n0"))
               .Append(" nodes for topology, ").Append(ExposureNodeVisits.ToString("n0"))
@@ -106,6 +130,8 @@ namespace Thermodynamics
         private double roomMapping;
         private double exposure;
         private double solver;
+        private double sample;
+        private double afterStep;
         private int grids;
         private double worstGridMs;
         private string worstGrid;
@@ -140,6 +166,22 @@ namespace Thermodynamics
                 case 2: exposure += milliseconds; break;
                 default: solver += milliseconds; break;
             }
+        }
+
+        /// <summary>
+        /// Adds a stage the host drives rather than the simulation: reading the world before a step,
+        /// and reading the step's output after it. Both are nested inside a grid's update.
+        /// </summary>
+        public void AddSample(double milliseconds)
+        {
+            if (double.IsNaN(milliseconds) || double.IsInfinity(milliseconds)) return;
+            sample += milliseconds;
+        }
+
+        public void AddAfterStep(double milliseconds)
+        {
+            if (double.IsNaN(milliseconds) || double.IsInfinity(milliseconds)) return;
+            afterStep += milliseconds;
         }
 
         /// <summary>Adds what the one-shot stages touched, so a hitch records its cause as well as its cost.</summary>
@@ -184,6 +226,8 @@ namespace Thermodynamics
             sample.RoomMappingMs = roomMapping;
             sample.ExposureMs = exposure;
             sample.SolverMs = solver;
+            sample.SampleMs = this.sample;
+            sample.AfterStepMs = afterStep;
             sample.Grids = grids;
             sample.WorstGridMs = worstGridMs;
             sample.WorstGrid = worstGrid;
@@ -225,6 +269,8 @@ namespace Thermodynamics
             roomMapping = 0d;
             exposure = 0d;
             solver = 0d;
+            sample = 0d;
+            afterStep = 0d;
             grids = 0;
             worstGridMs = 0d;
             worstGrid = null;

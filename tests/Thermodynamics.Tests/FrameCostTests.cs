@@ -90,6 +90,57 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// The two stages the host drives around a step. Neither is inside the simulation, so
+        /// neither reached a frame's breakdown until it was added — which is how a worst frame in a
+        /// field dump attributed five per cent of itself and left the rest unexplained.
+        /// </summary>
+        [Fact]
+        public void TheStagesAroundAStepReachTheFrameToo()
+        {
+            FrameCostTracker tracker = new FrameCostTracker();
+
+            tracker.AddGrid("station", 30d, 300000);
+            tracker.AddStage(3, 6d);
+            tracker.AddSample(9d);
+            tracker.AddAfterStep(11d);
+            tracker.EndFrame(1, 1d);
+
+            FrameSample sample = tracker.Worst[0];
+            Assert.Equal(9d, sample.SampleMs, 6);
+            Assert.Equal(11d, sample.AfterStepMs, 6);
+            Assert.Equal(4d, sample.UnattributedMs, 6);
+            Assert.Contains("after step 11.00", sample.Describe());
+        }
+
+        /// <summary>
+        /// What no stage claimed is derived from the rows rather than measured, so it cannot drift
+        /// from them; and two stages timing the same milliseconds shows as a negative rather than
+        /// being clamped into looking correct.
+        /// </summary>
+        [Fact]
+        public void WhatNoStageClaimedIsTheRemainderAndCanGoNegative()
+        {
+            FrameCostTracker tracker = new FrameCostTracker();
+
+            tracker.AddGrid("station", 20d, 300000);
+            tracker.AddStage(0, 5d);
+            tracker.AddStage(1, 5d);
+            tracker.AddStage(2, 5d);
+            tracker.AddStage(3, 5d);
+            tracker.EndFrame(1, 1d);
+
+            Assert.Equal(0d, tracker.Worst[0].UnattributedMs, 6);
+
+            FrameCostTracker overlapping = new FrameCostTracker();
+            overlapping.AddGrid("station", 20d, 300000);
+            overlapping.AddStage(3, 15d);
+            overlapping.AddAfterStep(15d);
+            overlapping.EndFrame(1, 1d);
+
+            Assert.Equal(-10d, overlapping.Worst[0].UnattributedMs, 6);
+        }
+
+        /// <summary>
         /// A frame's accumulation must not leak into the next one — the failure that would make
         /// every frame after the first hitch look like a hitch.
         /// </summary>
@@ -100,6 +151,8 @@ namespace Thermodynamics.Tests
 
             tracker.AddGrid("station", 30d, 300000);
             tracker.AddStage(0, 12d);
+            tracker.AddSample(3d);
+            tracker.AddAfterStep(4d);
             tracker.AddWork(300000, 0, 0);
             tracker.EndFrame(1, 1d);
 
@@ -112,6 +165,7 @@ namespace Thermodynamics.Tests
             // The cheap frame is under the hitch threshold, so only the expensive one is kept.
             Assert.Single(tracker.Worst);
             Assert.Equal(1, tracker.Worst[0].Frame);
+            Assert.Equal(3d, tracker.Worst[0].SampleMs, 6);
         }
 
         /// <summary>

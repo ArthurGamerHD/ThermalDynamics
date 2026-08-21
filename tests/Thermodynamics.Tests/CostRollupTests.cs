@@ -48,6 +48,36 @@ namespace Thermodynamics.Tests
             Assert.Equal(60.0, Thermodynamics.CostRollup.ShareOfRealTime(total, 1.0), 6);
         }
 
+        /// <summary>
+        /// The other half of the nesting rule. Not charging an inner row twice is what keeps the
+        /// total honest; knowing what the inner rows leave over is what keeps the *breakdown*
+        /// honest, and until the observation around a step was timed the breakdown left an eighth
+        /// of grid simulation unexplained.
+        /// </summary>
+        [Fact]
+        public void WhatTheChildrenDoNotClaimIsReportedRatherThanLost()
+        {
+            // The 2026-08-20 fleet dump: grid simulation against the stages that were timed at the
+            // time. An eighth of it belonged to nothing.
+            const double gridSimulation = 39540.00;
+            double timed = 521.40 + 260.05 + 189.43 + 33627.24;
+
+            double unattributed = Thermodynamics.CostRollup.Unattributed(gridSimulation, timed);
+
+            Assert.Equal(4941.88, unattributed, 2);
+            Assert.True(unattributed / gridSimulation > 0.12);
+        }
+
+        /// <summary>
+        /// Two stages timing the same milliseconds is a defect in the instrumentation. Clamping it
+        /// at zero would hide exactly the case the row exists to expose.
+        /// </summary>
+        [Fact]
+        public void DoubleTimedWorkShowsAsNegativeRatherThanZero()
+        {
+            Assert.Equal(-10.0, Thermodynamics.CostRollup.Unattributed(20.0, 30.0), 6);
+        }
+
         [Fact]
         public void TheShareIsUndefinedBeforeTheClockHasRun()
         {

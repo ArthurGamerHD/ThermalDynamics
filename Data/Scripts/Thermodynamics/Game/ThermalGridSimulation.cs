@@ -150,7 +150,7 @@ namespace Thermodynamics
                 // A sample costs a planet lookup and sometimes a raycast, and is read once when a
                 // step begins rather than on every frame the step spans.
                 bool starting = Simulation.NeedsEnvironmentSample;
-                EnvironmentSample sample = starting ? Sample() : default(EnvironmentSample);
+                EnvironmentSample sample = starting ? TimedSample() : default(EnvironmentSample);
 
                 // Pumps must know their switch and power state before the step that spends the
                 // power, not after it.
@@ -163,12 +163,56 @@ namespace Thermodynamics
                 if (stepped <= 0) return;
 
                 StepsRun += stepped;
-                AfterSteps((int)stepped);
+                TimedAfterSteps((int)stepped);
             }
             catch (Exception e)
             {
                 Telemetry.Exception("ThermalGrid.Update", e);
             }
+        }
+
+        /// <summary>
+        /// The two stages the host drives around a step, timed.
+        ///
+        /// Both sit inside a grid's update and neither is inside the simulation, so neither was
+        /// reported by any row of the cost table. On a field dump that left an eighth of grid
+        /// simulation unattributed, and the steady-state worst frames almost entirely so.
+        ///
+        /// Timed only while telemetry collects, like every other stage.
+        /// </summary>
+        private EnvironmentSample TimedSample()
+        {
+            GridProfiler profiler = Profiler;
+            if (profiler == null) return Sample();
+
+            profiler.EnvironmentSample.Begin();
+            EnvironmentSample sample = Sample();
+            profiler.EnvironmentSample.End();
+
+            Telemetry.FrameCost.AddSample(profiler.EnvironmentSample.LastMilliseconds);
+            return sample;
+        }
+
+        private void TimedAfterSteps(int steps)
+        {
+            GridProfiler profiler = Profiler;
+            if (profiler == null)
+            {
+                AfterSteps(steps);
+                return;
+            }
+
+            profiler.AfterStep.Begin();
+            AfterSteps(steps);
+            profiler.AfterStep.End();
+
+            Telemetry.FrameCost.AddAfterStep(profiler.AfterStep.LastMilliseconds);
+        }
+
+        /// <summary>Stage timings for this grid, or null when telemetry is not collecting.</summary>
+        private GridProfiler Profiler
+        {
+            get { return Telemetry.Enabled && Stats != null ? Stats.Profiler : null; }
         }
 
         /// <summary>

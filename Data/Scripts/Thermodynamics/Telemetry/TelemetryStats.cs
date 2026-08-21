@@ -297,6 +297,19 @@ namespace Thermodynamics
             return sessionFrame + save + load;
         }
 
+        /// <summary>
+        /// What a parent row cost that none of its children claimed.
+        ///
+        /// Reported rather than clamped. A large positive figure means work nobody has instrumented
+        /// — which is what a field dump showed for the observation that runs around a step — and a
+        /// negative one means two children timed the same milliseconds, which is a defect in the
+        /// instrumentation and is not made to disappear by taking a maximum with zero.
+        /// </summary>
+        public static double Unattributed(double parent, double children)
+        {
+            return parent - children;
+        }
+
         /// <summary>Share of the session clock the roots account for, or -1 when the clock is unset.</summary>
         public static double ShareOfRealTime(double measuredMilliseconds, double sessionSeconds)
         {

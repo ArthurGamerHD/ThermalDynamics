@@ -178,11 +178,48 @@ The report gives, under `Cost`:
 | worst frames | sixteen samples, worst first |
 
 Each worst-frame sample names the frame, when in the session it happened, the total, the split
-across topology, room mapping, exposure and solver, how many grids ran, which single grid was
+across topology, room mapping, exposure, solver, the environment sample, the after-step
+observation and whatever none of them claimed, how many grids ran, which single grid was
 worst and how large it is — and **what the one-shot stages touched**: nodes visited for topology,
 nodes refreshed for exposure, cells flooded. Those counts are what turns "a 90 ms frame" into "a
 300,000-block station rebuilt its whole conduction graph", which is a line to change rather than
 a number to worry about.
+
+### What the stages leave over
+
+The cost table nests, and the nesting is only worth reading if the children add up to the parent.
+For most of this mod's life they did not: `grid simulation` wrapped a grid's whole update, and the
+`of which` rows covered only the stages inside `ThermalSimulation`. Reading the world before a step
+and reading its output after one both sit in `ThermalGrid`, outside the simulation, and neither was
+timed.
+
+On the 2026-08-20 fleet dump that was **4,942 ms of 39,540 — an eighth of grid simulation belonging
+to no row**, and on the steady-state worst frames almost all of them: five frames of 67–72 ms, at a
+regular thirty-second spacing, reporting 2.0–2.8 ms of solver and nothing else.
+
+Both stages are now timed, and the table carries an `unattributed` row that is the parent minus its
+children rather than a measurement, so it cannot drift from the rows above it. A negative figure
+there means two stages timed the same milliseconds, which is a defect in the instrumentation, and
+it is printed rather than clamped.
+
+```
+  session frame
+    of which grid simulation
+      of which environment sample     planet, air, wind, weather, sun
+        of which solar occlusion      the raycast, nested inside the sample
+      of which topology rebuild
+      of which room mapping
+      of which exposure refresh
+      of which solver
+      of which after step             damage, thresholds, pump demand, mass and pressure sweeps
+        of which room pressure
+      unattributed                    the remainder: pacing, and anything still uninstrumented
+```
+
+**The thirty-second spike is not yet explained.** Nothing in the mod runs on a thirty-second period:
+the mass sweep is every 8 steps and the hottest-node scan every 4, which at 8 steps a second is one
+second and a half second. The next dump is what will name it, and it will name it in one of the two
+new rows or in `unattributed`.
 
 **`worst over mean` is the number to quote about smoothness.** A mod that is uniformly expensive
 has a ratio near one and costs frame rate, which players tolerate; one that is cheap on average

@@ -587,9 +587,11 @@ namespace Thermodynamics
             TimingStat topology = new TimingStat("    of which topology rebuild");
             TimingStat mapping = new TimingStat("    of which room mapping");
             TimingStat exposure = new TimingStat("    of which exposure refresh");
-            TimingStat pressure = new TimingStat("    of which room pressure");
+            TimingStat sample = new TimingStat("    of which environment sample");
+            TimingStat solar = new TimingStat("      of which solar occlusion");
             TimingStat solver = new TimingStat("    of which solver");
-            TimingStat solar = new TimingStat("    of which solar occlusion");
+            TimingStat after = new TimingStat("    of which after step");
+            TimingStat pressure = new TimingStat("      of which room pressure");
             TimingStat save = new TimingStat("save");
             TimingStat load = new TimingStat("load");
 
@@ -613,6 +615,8 @@ namespace Thermodynamics
                 exposure.Merge(g.Profiler.Exposure);
                 pressure.Merge(g.Profiler.RoomPressure);
                 solver.Merge(g.Profiler.Solver);
+                sample.Merge(g.Profiler.EnvironmentSample);
+                after.Merge(g.Profiler.AfterStep);
                 solar.Merge(g.SolarTime);
                 save.Merge(g.SaveTime);
                 load.Merge(g.LoadTime);
@@ -624,12 +628,29 @@ namespace Thermodynamics
             TimingStat.WriteHeader(sb, "path (all grids)");
             Telemetry.SessionFrameTime.WriteRow(sb);
             simulation.WriteRow(sb);
+            sample.WriteRow(sb);
+            solar.WriteRow(sb);
             topology.WriteRow(sb);
             mapping.WriteRow(sb);
             exposure.WriteRow(sb);
-            pressure.WriteRow(sb);
             solver.WriteRow(sb);
-            solar.WriteRow(sb);
+            after.WriteRow(sb);
+            pressure.WriteRow(sb);
+
+            // Derived, so it cannot disagree with the rows above it. Solar occlusion and the
+            // pressure sweep are nested one level deeper and are already inside their parents.
+            double unattributed = CostRollup.Unattributed(
+                simulation.TotalMilliseconds,
+                sample.TotalMilliseconds + topology.TotalMilliseconds + mapping.TotalMilliseconds
+                    + exposure.TotalMilliseconds + solver.TotalMilliseconds + after.TotalMilliseconds);
+
+            sb.Append("    unattributed").Append(new string(' ', 20))
+              .Append("-".PadLeft(12))
+              .Append(unattributed.ToString("n2").PadLeft(14))
+              .Append("-".PadLeft(14))
+              .Append("-".PadLeft(12))
+              .Append('\n');
+
             save.WriteRow(sb);
             load.WriteRow(sb);
 
