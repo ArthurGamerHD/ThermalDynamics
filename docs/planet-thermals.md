@@ -144,6 +144,15 @@ The report names both: the Climate section prints the climate each planet is bei
 and which fields its definition supplied, and the World section lists the mods loaded — which is
 where a missing BlockExtensions shows up.
 
+That line found two more on its first outing (`[from definition: None]` on all five planets of a
+world with the API loaded). **The file itself was illegal XML**: the header comment carried the
+regen command's `--`, which no strict parser accepts, and Definition Extensions rejected the whole
+file on every load of every world since the file was generated. **And the lookup key was wrong**:
+the planet entity's `DefinitionId` is `MyObjectBuilder_Planet/(null)`, so the per-planet entries —
+keyed `PlanetGeneratorDefinition/EarthLike` — could never have matched; the lookup now asks with
+`Entity.Generator.Id`. `DefinitionFileTests` strict-parses everything `definitionextensions.txt`
+names, so a file the importer would reject fails the suite instead of a session.
+
 ## 7. Reading it back: planet probes
 
 `TelemetryPlanetProbes` sweeps **72 fixed points** — every latitude from −80° to +80° including the

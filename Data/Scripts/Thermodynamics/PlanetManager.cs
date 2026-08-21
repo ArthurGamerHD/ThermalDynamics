@@ -33,12 +33,18 @@ namespace Thermodynamics
             /// tick may ask before it exists. A null answer is kept rather than cached, and the
             /// caller asks again next time — the alternative is a whole session run against the
             /// blank definition of a planet that has one.
+            ///
+            /// Keyed by the *generator*, not the entity. A planet entity's own DefinitionId is
+            /// <c>MyObjectBuilder_Planet/(null)</c> — a field dump's game log has it verbatim — so
+            /// looking that up matched nothing and every planet fell through to the fallback. The
+            /// generator's id is <c>PlanetGeneratorDefinition/EarthLike</c>, which is what
+            /// Planets.xml keys its entries on.
             /// </summary>
             public PlanetDefinition Definition() 
             {
-                if (definition == NullDef && Entity.DefinitionId.HasValue) 
+                if (definition == NullDef && Entity.Generator != null)
                 {
-                    PlanetDefinition read = PlanetDefinition.GetDefinition(Entity.DefinitionId.Value);
+                    PlanetDefinition read = PlanetDefinition.GetDefinition(Entity.Generator.Id);
                     if (read == null) return null;
 
                     definition = read;

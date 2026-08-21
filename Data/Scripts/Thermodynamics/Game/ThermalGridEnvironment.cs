@@ -440,11 +440,13 @@ namespace Thermodynamics
 
             PlanetDefinition definition = planet.Definition();
 
+            // The generator's subtype — "EarthLike", "Triton" — which is what the profile
+            // overlays are keyed on. The entity's own DefinitionId has a null subtype.
             properties = ThermalBlockCatalog.ToPlanetProperties(
                 definition,
-                planet.Entity == null || !planet.Entity.DefinitionId.HasValue
+                planet.Entity == null || planet.Entity.Generator == null
                     ? ""
-                    : planet.Entity.DefinitionId.Value.SubtypeName);
+                    : planet.Entity.Generator.Id.SubtypeName);
 
             // Only a definition that answered is cached. Until the lookup is up this is the mod's
             // own earthlike defaults, which is a climate rather than a vacuum, and it is replaced

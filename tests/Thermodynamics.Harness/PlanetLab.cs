@@ -272,8 +272,11 @@ namespace Thermodynamics.Harness
             sb.Append("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
             sb.Append("<!--\n");
             sb.Append("  GENERATED FILE — do not edit by hand.\n\n");
-            sb.Append("  Regenerate with:\n");
-            sb.Append("      dotnet run --project tests/Thermodynamics.Sim -- planets --write Data/Planets.xml\n\n");
+            // No double hyphen anywhere in this comment: a "--" inside an XML comment is illegal
+            // XML, and Definition Extensions reads this file with a strict serialiser. The shipped
+            // file carried the regen command verbatim, so every planet entry in it was silently
+            // unread by every world that ever loaded it. The command lives in the README instead.
+            sb.Append("  Regenerate with the sim's planets command; see tests/README.md.\n\n");
             sb.Append("  Every figure below is derived from the world's own generator definition by\n");
             sb.Append("  Thermodynamics.Core.PlanetThermalDerivation. What each derivation is and why is\n");
             sb.Append("  documented there and in docs/planet-thermals.md; the per-entry comments here say\n");
