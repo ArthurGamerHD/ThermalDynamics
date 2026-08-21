@@ -223,11 +223,20 @@ namespace Thermodynamics
         /// </summary>
         private void AfterSteps(int steps)
         {
+            GridProfiler profiler = Profiler;
+
+            // Each part is timed separately when a profiler is attached. They are bounded by
+            // different things — the damage list, the block count, the compartment count, the
+            // external-cell count — so the total on its own names nothing.
+            Begin(profiler == null ? null : profiler.Damage);
             ApplyOverheatDamage();
             RaiseThresholdCrossings();
             PublishHeatPumpDemand();
+            End(profiler == null ? null : profiler.Damage);
 
+            Begin(profiler == null ? null : profiler.MassSweep);
             SweepMass(steps);
+            End(profiler == null ? null : profiler.MassSweep);
 
             stepsSinceMassSweep += steps;
             if (stepsSinceMassSweep >= MassSweepInterval)
@@ -237,25 +246,43 @@ namespace Thermodynamics
             }
 
             // Skipped unless the room overlay is up or telemetry is on.
+            Begin(profiler == null ? null : profiler.LostRooms);
             RefreshLostRooms();
+            End(profiler == null ? null : profiler.LostRooms);
 
             stepsSinceHottest += steps;
             if (stepsSinceHottest >= HottestInterval)
             {
                 stepsSinceHottest = 0;
 
+                Begin(profiler == null ? null : profiler.Health);
+
                 // Unconditional now, where it used to be skipped on a dedicated server with
                 // telemetry off. It is answered from the index the step's write-back recorded, so
                 // it is a bounds check and an array read, and the health check below needs it.
                 HottestNode = Simulation.Solver.HottestNode();
                 CheckHealth();
+
+                End(profiler == null ? null : profiler.Health);
             }
 
             if (Telemetry.Enabled)
             {
+                Begin(profiler == null ? null : profiler.Sampling);
                 Telemetry.OnGridStepped(this, steps);
                 ProfileEnvironment();
+                End(profiler == null ? null : profiler.Sampling);
             }
+        }
+
+        private static void Begin(TimingStat stat)
+        {
+            if (stat != null) stat.Begin();
+        }
+
+        private static void End(TimingStat stat)
+        {
+            if (stat != null) stat.End();
         }
 
         /// <summary>

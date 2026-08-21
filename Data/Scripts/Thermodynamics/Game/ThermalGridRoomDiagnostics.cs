@@ -138,7 +138,16 @@ namespace Thermodynamics
 
         private readonly List<UnmappedRooms.Region> regionScratch = new List<UnmappedRooms.Region>();
         private Func<Vector3I, bool> airtightProbe;
-        private int stepsSinceLostRoomScan = int.MaxValue;
+
+        /// <summary>
+        /// The cadence, and the room map revision the last scan answered for.
+        ///
+        /// A lost compartment is a property of the map: until the mapper completes another pass
+        /// there is nothing new to find. A 292-grid dump re-derived the same answer for every grid
+        /// every thirty seconds, all inside one frame's after-step, and one frame in the
+        /// 2026-08-21 dump spent 108 of its 111 milliseconds there.
+        /// </summary>
+        private readonly RescanGate lostRoomScan = new RescanGate(LostRoomScanInterval);
 
         /// <summary>
         /// Steps between scans. A scan costs one call into the game per external cell, and a lost
@@ -155,18 +164,22 @@ namespace Thermodynamics
             if (!WantsLostRooms())
             {
                 if (lostRooms.Count > 0) lostRooms.Clear();
-                stepsSinceLostRoomScan = int.MaxValue;
+                lostRoomScan.Idle();
                 return;
             }
 
-            if (stepsSinceLostRoomScan < LostRoomScanInterval)
-            {
-                stepsSinceLostRoomScan++;
-                return;
-            }
+            if (!lostRoomScan.Due(RoomMapRevision, 1)) return;
 
-            stepsSinceLostRoomScan = 0;
             ScanLostRooms();
+        }
+
+        /// <summary>
+        /// What the scan's answer depends on: the room map, which changes only when the mapper
+        /// completes a pass. Doors and block changes both reach it that way.
+        /// </summary>
+        private int RoomMapRevision
+        {
+            get { return Simulation == null ? 0 : Simulation.Rooms.CompletedPasses; }
         }
 
         /// <summary>
@@ -187,6 +200,8 @@ namespace Thermodynamics
         /// </summary>
         public void ScanLostRooms()
         {
+            lostRoomScan.Mark(RoomMapRevision);
+
             lostRooms.Clear();
             roomVerdicts.Clear();
             LostRoomScanTruncated = false;

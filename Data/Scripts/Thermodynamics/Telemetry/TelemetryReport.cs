@@ -646,6 +646,11 @@ namespace Thermodynamics
             TimingStat solver = new TimingStat("    of which solver");
             TimingStat after = new TimingStat("    of which after step");
             TimingStat pressure = new TimingStat("      of which room pressure");
+            TimingStat damage = new TimingStat("      of which overheat damage");
+            TimingStat massSweep = new TimingStat("      of which mass sweep");
+            TimingStat lostRooms = new TimingStat("      of which lost-room scan");
+            TimingStat health = new TimingStat("      of which hottest and health");
+            TimingStat sampling = new TimingStat("      of which telemetry sampling");
             TimingStat save = new TimingStat("save");
             TimingStat load = new TimingStat("load");
             TimingStat build = new TimingStat("build");
@@ -672,6 +677,11 @@ namespace Thermodynamics
                 solver.Merge(g.Profiler.Solver);
                 sample.Merge(g.Profiler.EnvironmentSample);
                 after.Merge(g.Profiler.AfterStep);
+                damage.Merge(g.Profiler.Damage);
+                massSweep.Merge(g.Profiler.MassSweep);
+                lostRooms.Merge(g.Profiler.LostRooms);
+                health.Merge(g.Profiler.Health);
+                sampling.Merge(g.Profiler.Sampling);
                 solar.Merge(g.SolarTime);
                 save.Merge(g.SaveTime);
                 load.Merge(g.LoadTime);
@@ -691,7 +701,12 @@ namespace Thermodynamics
             exposure.WriteRow(sb);
             solver.WriteRow(sb);
             after.WriteRow(sb);
+            damage.WriteRow(sb);
+            massSweep.WriteRow(sb);
             pressure.WriteRow(sb);
+            lostRooms.WriteRow(sb);
+            health.WriteRow(sb);
+            sampling.WriteRow(sb);
 
             // Derived, so it cannot disagree with the rows above it. Solar occlusion and the
             // pressure sweep are nested one level deeper and are already inside their parents.

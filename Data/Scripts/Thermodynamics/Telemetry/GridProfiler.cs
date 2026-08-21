@@ -46,6 +46,31 @@ namespace Thermodynamics
         /// </summary>
         public readonly TimingStat AfterStep = new TimingStat("  of which after step");
 
+        // The after-step's own parts. It was one figure, and a field dump recorded a frame that
+        // spent 108 of its 111 milliseconds inside it with nothing to say which of the six things
+        // it does was responsible. Each is host-driven and bounded by something different — the
+        // damage list, the block count, the compartment count, the external-cell count — so one
+        // total cannot be read.
+
+        /// <summary>Applying overheat damage, which is one engine call per critical block.</summary>
+        public readonly TimingStat Damage = new TimingStat("    of which overheat damage");
+
+        /// <summary>The rolling block-mass refresh.</summary>
+        public readonly TimingStat MassSweep = new TimingStat("    of which mass sweep");
+
+        /// <summary>
+        /// The lost-room scan: a diagnostic that walks the grid's unmapped space with a game call
+        /// per external cell. It runs only while telemetry collects or the room overlay is up,
+        /// which makes it the most expensive thing in a dump that nothing outside a dump pays.
+        /// </summary>
+        public readonly TimingStat LostRooms = new TimingStat("    of which lost-room scan");
+
+        /// <summary>The hottest-node read and the grid health check.</summary>
+        public readonly TimingStat Health = new TimingStat("    of which hottest and health");
+
+        /// <summary>Telemetry's own per-step sampling walk.</summary>
+        public readonly TimingStat Sampling = new TimingStat("    of which telemetry sampling");
+
         /// <summary>
         /// Whether a tick is what is driving the stages right now.
         ///

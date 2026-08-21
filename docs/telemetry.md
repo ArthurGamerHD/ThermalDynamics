@@ -211,8 +211,13 @@ it is printed rather than clamped.
       of which room mapping
       of which exposure refresh
       of which solver
-      of which after step             damage, thresholds, pump demand, mass and pressure sweeps
+      of which after step             everything reading a step's output
+        of which overheat damage      one engine call per critical block
+        of which mass sweep           the rolling block-mass refresh
         of which room pressure
+        of which lost-room scan       the diagnostic walk, telemetry or room overlay only
+        of which hottest and health   the hottest-node read and the NaN check
+        of which telemetry sampling   telemetry's own per-step walk
       unattributed                    the remainder: pacing, and anything still uninstrumented
   save
   load
@@ -500,9 +505,13 @@ because pressurisation is only ever asked about rooms the map already found, not
 the two.
 
 The scan costs one call into the game per external cell. It runs only when the room overlay is up
-or telemetry is on, on a 240-step cadence, and is forced once at dump time so a report written
-moments after a wall was welded describes the ship as it is. It is capped at 200,000 cells and says
-so in the report when it hits that rather than truncating silently.
+or telemetry is on, on a 240-step cadence, **and only when the room map has changed since the last
+scan** — a lost compartment is a property of the map, so a fleet at anchor is scanned once rather
+than every thirty seconds. A field dump recorded the cost of not gating it: one frame spent 108 of
+its 111 ms in the after-step, over 292 grids. It is still forced once at dump time so a report
+written moments after a wall was welded describes the ship as it is, and that scan satisfies the
+cadence. It is capped at 200,000 cells and says so in the report when it hits that rather than
+truncating silently.
 
 The same regions are drawn by the room overlay in red, one hue per region, brightest where a vent
 in them reports pressurised — so a hole in the model reads as a hole rather than as an absence.
@@ -709,15 +718,18 @@ than by the periodic sample, because it needs a walk rather than a reading. See
 ## Tests
 
 Most of the module reads `Sandbox.*` and `VRage.Game` types, which cannot load in [`tests/`](../sim).
-Its decision logic does not, and lives in three files that reference nothing but `System`:
+Its decision logic does not, and lives in files that reference nothing but `System`:
 
 | File | What it holds |
 | --- | --- |
 | `TelemetryStats.cs` | `RunningStat`, `Histogram`, `TimingStat` |
 | `TelemetryAnomalies.cs` | anomaly classification per node and per grid, the sampling gate, `AnomalyRegistry` |
 | `TelemetryFormat.cs` | report and CSV formatting |
+| `WorldSettings.cs` | flattening the game's serialised session settings, and the mod-feature conflicts |
+| `OverlayTelemetry.cs` | the block overlay's cost accumulators |
+| `FrameCost.cs` | the per-frame cost tracker and worst-frame ring |
 
-`Thermodynamics.Tests` links those three directly — the same files the game compiles, not a
+`Thermodynamics.Tests` links those directly — the same files the game compiles, not a
 copy — and covers them in `TelemetryStatsTests.cs`, `TelemetryAnomalyTests.cs`,
 `TelemetryFormatTests.cs`, `AnomalyRegistryTests.cs` and `GridHealthTests`.
 
