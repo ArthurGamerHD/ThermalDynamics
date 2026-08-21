@@ -294,6 +294,71 @@ Two other things made it faster without touching accuracy: runs stop on equilibr
 the clock — most are flat long before their ceiling — and the definition caches are built once
 before the workers start rather than by whichever arrives first. Screening 32 ships is now 0.1 s.
 
+## The first full cycle
+
+Thirty-two ships through twenty scenarios — 640 runs, 432 s wall clock, 0.68 s a run on 31 workers.
+
+| Scenario | Peak K | Mean K | Worst hot spot | Ships over critical |
+| --- | --- | --- | --- | --- |
+| `vacuum-shadow` / `idle` | 470 | 154 | 152 | **0 of 32** |
+| `vacuum-sunlit` | 476 | 210 | 148 | 0 of 32 |
+| `surface-hot-noon` | 377 | 295 | 78 | 0 of 32 |
+| `surface-cold-night` | 365 | 279 | 82 | 0 of 32 |
+| `underground` | 362 | 280 | 78 | 0 of 32 |
+| `full-electrical` | 2,507 | 277 | 2,076 | 9 of 32 |
+| `all-peak` | 4,033 | 491 | 3,187 | 17 of 32 |
+| `burn-down` | 3,141 | 339 | 2,661 | 16 of 32 |
+| `burn-left` | 1,687 | 320 | 1,304 | 14 of 32 |
+| `flight-100` | 2,582 | 307 | 2,274 | 4 of 32 |
+| `reentry` | 381 | 312 | 67 | 0 of 32 |
+| `recovery` | 470 | 162 | 177 | **0 of 32** |
+
+Read against the criteria, and **provisionally**, because the counts are contaminated by the sealed
+gyro below:
+
+* **G1 holds.** Not one ship in thirty-two goes critical at rest, in any environment — vacuum,
+  sunlit, hot surface, cold night, underground. The target was under 1 %.
+* **G2 appears to hold.** Between a quarter and a half of ships reach critical under sustained load,
+  against a target of at least 20 %. This is the criterion I expected to fail.
+* **G5 holds.** Every ship recovers: `recovery` is 0 of 32 over critical, back to a 162 K mean.
+* **G3, G4, G6** need the cooled comparison, the correlation analysis and the settings sweep, none
+  of which are built.
+
+The corpus is thirty-two subscribed ships, so none of this is a population claim. It says the
+pipeline works end to end and the criteria are computable, which is what a first cycle is for.
+
+## A real defect, found by running real ships
+
+**A block whose only mount face is unconnected has no thermal exit at all.**
+
+This model conducts across the area where *both* blocks carry a mount surface. `LargeBlockGyro`
+declares exactly one mount point, on its bottom, and is not airtight. A gyro buried in a hull with
+nothing mounted below it therefore has no conduction path and no exposed face: whatever it makes
+stays, and its temperature rises without bound. Nineteen are in that state across thirty-two ships,
+and the gyro is one of the most common functional blocks in the game.
+
+It is not a large heat source — 1.5 kW — but the exit is *zero*, and anything divided by zero goes
+the same place. It is also invisible: no exception, no NaN, no warning, just a number nobody has a
+prior for. The first battery investigation mistook exactly this signature for a balance problem.
+
+This is a defect in the shipped mod rather than in the lab, and it is the first thing the corpus has
+found that a synthetic hull could not — the rig this repository builds for itself never places a
+gyro with an unconnected mount face.
+
+**What to do about it is a design decision**, in three shapes:
+
+* conduct across any touching face rather than only mount-to-mount, which is a broad change to the
+  conduction model and touches every joint;
+* guarantee a floor conductance between touching blocks, keeping the mount rule for the *rate* and
+  removing the zero;
+* detect and report it — a block generating heat with no exit is exactly what the grid health check
+  added for telemetry should raise as a fault.
+
+The third is cheap and immediate; the first two are balance changes that want measuring.
+
+**Every over-critical count above is contaminated by this**, since a sealed gyro crosses any
+threshold eventually. The load figures want re-reading once it is settled.
+
 ## Where the numbers stand
 
 After three harness faults were found and fixed — the gyro torque, the sealed blocks, the
