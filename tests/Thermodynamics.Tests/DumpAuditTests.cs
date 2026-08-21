@@ -83,8 +83,9 @@ namespace Thermodynamics.Tests
         /// <summary>Columns of the grid CSV the checks read, and one plausible grid.</summary>
         private const string GridHeader =
             "entity_id,name,grid_size,peak_cells,mean_cells,simulation_steps,clamped_steps," +
-            "ambient_min,ambient_mean,ambient_max,sim_ms_total,sim_ms_max," +
-            "topology_ms_total,mapping_ms_total,exposure_ms_total,solver_ms_total,solver_ms_max";
+            "ambient_min,ambient_mean,ambient_max,mean_hottest,sim_ms_total,sim_ms_max," +
+            "topology_ms_total,mapping_ms_total,exposure_ms_total,solver_ms_total,solver_ms_max," +
+            "loop_w_absorbed,loop_w_rejected,pump_lift_w,pump_draw_w,pump_cop";
 
         private static Dictionary<string, string> Grid()
         {
@@ -108,13 +109,15 @@ namespace Thermodynamics.Tests
             row["exposure_ms_total"] = "4";
             row["solver_ms_total"] = "70";
             row["solver_ms_max"] = "1.5";
+            row["mean_hottest"] = "310";
             return row;
         }
 
         /// <summary>Columns of the block-type CSV the checks read, and one plausible type.</summary>
         private const string TypeHeader =
             "subtype,type,placed,removed,live,conductivity,specific_heat,emissivity," +
-            "critical_temperature,temp_min,temp_mean,temp_max,peak_temp," +
+            "critical_temperature,mass_mean,thermal_mass_mean,exposed_area_mean," +
+            "temp_min,temp_mean,temp_max,peak_temp," +
             "substep_demand_mean,substep_demand_max,substep_demand_peak";
 
         private static Dictionary<string, string> Type()
@@ -138,6 +141,9 @@ namespace Thermodynamics.Tests
             row["substep_demand_mean"] = "1.9";
             row["substep_demand_max"] = "2.4";
             row["substep_demand_peak"] = "2.4";
+            row["mass_mean"] = "3000";
+            row["thermal_mass_mean"] = "6200";
+            row["exposed_area_mean"] = "18.75";
             return row;
         }
 
@@ -363,6 +369,65 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// The narrowest claim the pump columns support. They are session means, and a mean of a
+        /// ratio is not the ratio of the means, so a coefficient cannot be checked against a lift
+        /// and a draw unless the throttle never moved. A mean of exactly zero is the one case where
+        /// every step must have been zero.
+        /// </summary>
+        [Fact]
+        public void APumpThatDrewNothingAndStillLiftedIsADefect()
+        {
+            Dictionary<string, string> idle = Grid();
+            idle["pump_draw_w"] = "0";
+            idle["pump_lift_w"] = "4258";
+
+            Assert.Equal(1, Check(DumpAudit.Run(WriteDump(new[] { Row() }, new[] { idle })),
+                "a pump that drew nothing").Hits);
+
+            // A pump below unity is not a fault: lifting across a wide gap costs more per watt than
+            // it moves, which is what the Carnot relation says and what the model implements.
+            Dictionary<string, string> poor = Grid();
+            poor["pump_draw_w"] = "20000";
+            poor["pump_lift_w"] = "4258";
+            poor["pump_cop"] = "0.213";
+
+            Assert.True(DumpAudit.Run(WriteDump(new[] { Row() }, new[] { poor })).Passed);
+        }
+
+        [Fact]
+        public void ANonsenseReadingIsCaughtInEveryTableNotJustTheClimate()
+        {
+            Dictionary<string, string> grid = Grid();
+            grid["solver_ms_total"] = "-70";
+
+            DumpAudit.CheckResult inGrids = Check(
+                DumpAudit.Run(WriteDump(new[] { Row() }, new[] { grid })), "no grid reading");
+            Assert.Equal(1, inGrids.Hits);
+            Assert.Contains("Test Grid", inGrids.Worst);
+
+            Dictionary<string, string> type = Type();
+            type["thermal_mass_mean"] = "NaN";
+
+            DumpAudit.CheckResult inTypes = Check(
+                DumpAudit.Run(WriteDump(new[] { Row() }, null, new[] { type })), "no block type reading");
+            Assert.Equal(1, inTypes.Hits);
+            Assert.Contains("LargeBlockArmorBlock", inTypes.Worst);
+        }
+
+        /// <summary>
+        /// A signed column in the grid table is not an impossible negative either: a Celsius
+        /// ambient, a bearing, a latitude.
+        /// </summary>
+        [Fact]
+        public void AGridsSignedColumnsAreLeftAlone()
+        {
+            Dictionary<string, string> grid = Grid();
+            grid["mean_hottest"] = "-40";
+
+            Assert.True(DumpAudit.Run(WriteDump(new[] { Row() }, new[] { grid })).Passed);
+        }
+
+        /// <summary>
         /// A dump with no grid or block-type CSV beside it still audits its climate, and says so
         /// about the rest rather than passing them.
         /// </summary>
@@ -373,6 +438,12 @@ namespace Thermodynamics.Tests
 
             Assert.True(Check(result, "a grid's stages fit").Skipped);
             Assert.True(Check(result, "live blocks").Skipped);
+
+            // The whole-table check names the file it wanted rather than a column.
+            DumpAudit.CheckResult grids = Check(result, "no grid reading");
+            Assert.True(grids.Skipped);
+            Assert.Contains("grid CSV", grids.Missing);
+
             Assert.False(Check(result, "convection is reported").Skipped);
             Assert.True(result.Passed);
         }
@@ -532,14 +603,14 @@ namespace Thermodynamics.Tests
             Dictionary<string, string> nan = Row();
             nan["grid_peak_k"] = "NaN";
 
-            DumpAudit.CheckResult check = Check(DumpAudit.Run(Write(nan)), "no reading is a NaN");
+            DumpAudit.CheckResult check = Check(DumpAudit.Run(Write(nan)), "no climate reading");
             Assert.Equal(1, check.Hits);
             Assert.Contains("grid_peak_k", check.Worst);
 
             Dictionary<string, string> negative = Row();
             negative["air_density"] = "-0.5";
 
-            Assert.Equal(1, Check(DumpAudit.Run(Write(negative)), "no reading is a NaN").Hits);
+            Assert.Equal(1, Check(DumpAudit.Run(Write(negative)), "no climate reading").Hits);
         }
 
         /// <summary>

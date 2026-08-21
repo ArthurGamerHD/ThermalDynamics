@@ -163,7 +163,7 @@ namespace Thermodynamics.Harness
             result.Checks.Add(ConvectionNeedsAir(table));
             result.Checks.Add(DepthIsUndergroundOnly(table));
             result.Checks.Add(WeatherScalesWithIntensity(table));
-            result.Checks.Add(NothingIsNonsense(table));
+            result.Checks.Add(NothingIsNonsense(table, "climate", ClimatePositive));
 
             result.Checks.Add(StagesFitInsideTheUpdate(grids));
             result.Checks.Add(AWorstCallFitsItsParent(grids));
@@ -172,6 +172,9 @@ namespace Thermodynamics.Harness
             result.Checks.Add(LiveBlocksAreWhatWasPlaced(types));
             result.Checks.Add(BlockRangesAreOrdered(types));
             result.Checks.Add(EveryTypeHasUsableMaterialProperties(types));
+            result.Checks.Add(AnIdlePumpLiftsNothing(grids));
+            result.Checks.Add(NothingIsNonsense(grids, "grid", GridPositive));
+            result.Checks.Add(NothingIsNonsense(types, "block type", BlockTypePositive));
 
             return result;
         }
@@ -490,17 +493,19 @@ namespace Thermodynamics.Harness
         /// not. A dump is the last place a NaN can be seen before it is a black grid in someone's
         /// world.
         /// </summary>
-        private static CheckResult NothingIsNonsense(Table table)
+        private static CheckResult NothingIsNonsense(Table table, string what, string[] positive)
         {
             CheckResult check = new CheckResult();
-            check.Name = "no reading is a NaN, an infinity or impossibly negative";
+            check.Name = "no " + what + " reading is a NaN, an infinity or impossibly negative";
             check.Where = "docs/known-issues.md, A11";
 
-            string[] positive =
+            // A dump with no such file cannot be judged on it. Named after the file rather than a
+            // column, since it is the whole table that is absent.
+            if (table.Columns.Count == 0)
             {
-                "air_density", "ambient_k", "solar_w", "wind_speed", "wind_ceiling",
-                "convection_coeff", "weather_intensity", "grid_mean_k", "grid_peak_k",
-            };
+                check.Missing = what + " CSV";
+                return check;
+            }
 
             for (int i = 0; i < table.Rows.Count; i++)
             {
@@ -520,7 +525,7 @@ namespace Thermodynamics.Harness
                     if (check.Worst.Length > 0) break;
 
                     check.Worst = "first " + column + " = " + table.Text(i, column)
-                        + " on " + table.Text(i, "grid");
+                        + " on " + Identity(table, i);
                     break;
                 }
             }
@@ -785,6 +790,15 @@ namespace Thermodynamics.Harness
             return check;
         }
 
+        /// <summary>Whatever the table calls a row: a grid, a ship, or a block subtype.</summary>
+        private static string Identity(Table table, int row)
+        {
+            if (table.Has("grid")) return table.Text(row, "grid");
+            if (table.Has("name")) return table.Text(row, "name");
+            if (table.Has("subtype")) return table.Text(row, "subtype");
+            return "row " + row;
+        }
+
         /// <summary>
         /// Names the first pair out of order, or null when the whole run ascends. Equality passes:
         /// a stat with one sample has its minimum, mean and maximum all equal.
@@ -801,6 +815,73 @@ namespace Thermodynamics.Harness
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Columns that cannot be negative in each of the three tables.
+        ///
+        /// Named rather than inferred, because plenty of columns legitimately are: a latitude, a
+        /// bearing, a Celsius temperature, an altitude below sea level, a depth reported as the
+        /// negative of a height.
+        /// </summary>
+        private static readonly string[] ClimatePositive =
+        {
+            "air_density", "ambient_k", "solar_w", "wind_speed", "wind_ceiling",
+            "convection_coeff", "weather_intensity", "grid_mean_k", "grid_peak_k",
+        };
+
+        private static readonly string[] GridPositive =
+        {
+            "lifetime_s", "peak_cells", "mean_cells", "peak_links", "peak_rooms",
+            "simulation_steps", "node_updates", "substeps_mean", "clamped_steps",
+            "peak_temperature", "ambient_min", "ambient_mean", "ambient_max",
+            "air_density_mean", "wind_mean", "wind_max", "sim_ms_total", "sim_ms_max",
+            "topology_ms_total", "mapping_ms_total", "exposure_ms_total",
+            "solver_ms_total", "solver_ms_max", "pump_draw_w", "pump_cop",
+        };
+
+        private static readonly string[] BlockTypePositive =
+        {
+            "placed", "removed", "live", "peak_live", "updates", "sampled",
+            "conductivity", "specific_heat", "emissivity", "critical_temperature",
+            "mass_mean", "thermal_mass_mean", "exposed_area_mean",
+            "temp_min", "temp_mean", "temp_max", "peak_temp",
+            "substep_demand_mean", "substep_demand_max", "substep_demand_peak",
+        };
+
+        /// <summary>
+        /// A pump that drew no power over a whole session lifted no heat and reported no
+        /// coefficient.
+        ///
+        /// The narrowest claim these columns support. They are session *means* rather than totals,
+        /// and a mean of a ratio is not the ratio of the means, so the obvious check — that the
+        /// coefficient is the lift over the draw — holds only for a pump whose throttle never
+        /// moved. A mean of exactly zero is the one case where every step must have been zero.
+        /// </summary>
+        private static CheckResult AnIdlePumpLiftsNothing(Table table)
+        {
+            CheckResult check = new CheckResult();
+            check.Name = "a pump that drew nothing lifted nothing";
+            check.Where = "docs/telemetry.md#coolant-loops-and-heat-pumps";
+
+            string[] needs = { "pump_lift_w", "pump_draw_w", "pump_cop" };
+            if (!table.Require(needs, check)) return check;
+
+            for (int i = 0; i < table.Rows.Count; i++)
+            {
+                if (table.Number(i, "pump_draw_w") > 0d) continue;
+
+                check.Rows++;
+                if (table.Number(i, "pump_lift_w") <= 0d && table.Number(i, "pump_cop") <= 0d) continue;
+
+                check.Hits++;
+                if (check.Worst.Length > 0) continue;
+
+                check.Worst = "first " + Fixed(table.Number(i, "pump_lift_w")) + " W lifted on no draw, on "
+                    + table.Text(i, "name");
+            }
+
+            return check;
         }
 
         // ---- the summary ------------------------------------------------------------------

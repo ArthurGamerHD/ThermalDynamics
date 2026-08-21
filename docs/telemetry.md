@@ -617,6 +617,20 @@ before they were.
 
 ## Coolant loops and heat pumps
 
+> **The grid CSV's loop and pump columns are session means, and a mean does not carry the
+> invariants the quantity does.** `pump_cop` is the mean of each step's coefficient, not
+> `pump_lift_w / pump_draw_w`, and the two agree only for a pump whose throttle never moved — so a
+> dump cannot be used to check a coefficient against its own lift and draw. The one claim that
+> survives the averaging is that a pump whose mean draw is exactly zero drew zero on every step,
+> and therefore lifted nothing; `-- dump` checks that and nothing stronger. The energy balance the
+> columns cannot check — that the hot side receives the lift plus the work — is pinned offline by
+> `HeatPumpTests.TheHotSideGetsTheLiftPlusTheWork`.
+>
+> A coefficient below one is not a fault. Lifting across a wide gap costs more electricity than it
+> moves heat, which is what the Carnot relation says: the 2026-08-20 fleet dump has a pump at 0.21,
+> drawing 20 kW to move 4.3 kW.
+
+
 Until this was added, a report could tell you a grid held *n* coolant loops and nothing else about
 them. A field dump showed four ships each carrying a closed pumped ring, eight radiators and four
 heat pumps, and could not say whether any of it moved a single watt — while the session summary line

@@ -61,7 +61,7 @@ sufficient. See [development.md](../docs/development.md#repo-conventions) for th
 ```bash
 cd tests
 
-dotnet test                                    # the whole suite (1,302 tests)
+dotnet test                                    # the whole suite (1,305 tests)
 dotnet run --project Thermodynamics.Sim -- list
 dotnet run --project Thermodynamics.Sim -- run reactor
 dotnet run --project Thermodynamics.Sim -- run all --csv out/
