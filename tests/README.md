@@ -81,8 +81,8 @@ sufficient. See [development.md](../docs/development.md#repo-conventions) for th
 ```bash
 cd tests
 
-dotnet test                                    # the whole suite, about five minutes
-dotnet test --filter "speed!=slow"             # skip the nine scenario batteries
+dotnet test                                    # the whole suite, under a minute
+dotnet test --filter "speed!=slow"             # the fast lane, about fifteen seconds
 dotnet run --project Thermodynamics.Sim -- list
 dotnet run --project Thermodynamics.Sim -- run reactor
 dotnet run --project Thermodynamics.Sim -- run all --csv out/
@@ -98,11 +98,10 @@ The probe order is `$SE_BIN`, the default Steam path, then the mod's own
 `bin/Release/net472` output.
 
 The nine scenario batteries — each stepping whole ships for tens of seconds — carry
-`[Trait("speed", "slow")]`. **Excluding them does not yet shorten the run**: measured clean, the
-filtered run is 5 m 03 s against the full suite's 5 m 04 s, while the filtered tests' own durations
-sum to about a minute. Roughly four minutes of wall clock belongs to no test body — discovery,
-fixture builds or a parallelism ceiling — and finding it is the open item; the tags are the
-prerequisite, not the result.
+`[Trait("speed", "slow")]`; the fast lane is everything else. The suite spent months at five
+minutes because one test read the whole blueprint corpus on every run despite its own class's
+opt-in rule — 4 m 57 s of a 5 m 4 s suite. It is behind `THERMAL_CORPUS_TESTS` now, where the rest
+of its class already was.
 
 ## Scenarios
 
