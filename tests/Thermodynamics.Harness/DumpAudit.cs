@@ -162,6 +162,7 @@ namespace Thermodynamics.Harness
             result.Checks.Add(WindUnderTheCeiling(table));
             result.Checks.Add(ConvectionNeedsAir(table));
             result.Checks.Add(DepthIsUndergroundOnly(table));
+            result.Checks.Add(NoWindWhollyBuried(table));
             result.Checks.Add(WeatherScalesWithIntensity(table));
             result.Checks.Add(NothingIsNonsense(table, "climate", ClimatePositive));
 
@@ -277,6 +278,10 @@ namespace Thermodynamics.Harness
                     * table.Number(i, "wind_speedup")
                     * table.Number(i, "wind_shelter");
 
+                // Burial joined the factors later, so an older dump does not carry the column and
+                // is audited without it.
+                if (table.Has("wind_burial")) predicted *= table.Number(i, "wind_burial");
+
                 check.Rows++;
 
                 // Only a shortfall is a defect: the slope term is a velocity added after the
@@ -290,6 +295,41 @@ namespace Thermodynamics.Harness
                 worst = shortfall;
                 check.Worst = "worst " + Fixed(speed) + " m/s reported against " + Fixed(predicted)
                     + " m/s composed, on " + table.Text(i, "grid");
+            }
+
+            return check;
+        }
+
+        /// <summary>
+        /// A grid the burial factor reports as wholly under the surface is in no wind at all. This
+        /// is the fault the factor was added for: a field dump recorded a grid 9.6 m under, flag
+        /// false, blowing 4.3 m/s. An older dump without the column is audited without the check.
+        /// </summary>
+        private static CheckResult NoWindWhollyBuried(Table table)
+        {
+            CheckResult check = new CheckResult();
+            check.Name = "a wholly buried grid is in no wind";
+            check.Where = "docs/wind-model.md, Under the surface; backlog A15";
+
+            string[] needs = { "wind_speed", "wind_burial" };
+            if (!table.Require(needs, check)) return check;
+
+            double worst = 0d;
+            for (int i = 0; i < table.Rows.Count; i++)
+            {
+                if (table.Number(i, "wind_burial") > 0d) continue;
+
+                double speed = table.Number(i, "wind_speed");
+
+                check.Rows++;
+                if (speed <= AbsoluteTolerance) continue;
+
+                check.Hits++;
+                if (speed <= worst) continue;
+
+                worst = speed;
+                check.Worst = "worst " + Fixed(speed) + " m/s at depth "
+                    + Fixed(table.Number(i, "depth_m")) + " m, on " + table.Text(i, "grid");
             }
 
             return check;
@@ -318,6 +358,8 @@ namespace Thermodynamics.Harness
                     * table.Number(i, "wind_profile")
                     * table.Number(i, "wind_speedup")
                     * table.Number(i, "wind_shelter");
+
+                if (table.Has("wind_burial")) predicted *= table.Number(i, "wind_burial");
 
                 check.Rows++;
 

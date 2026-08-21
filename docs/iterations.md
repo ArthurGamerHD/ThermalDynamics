@@ -24,6 +24,7 @@ can be recovered for any row here by reading that file at the row's commit.
 | 3 | 2026-08-20 | `9aaf3d2` | 1,026 | 44 s | +6: `StepTermsTests`, and a flight case for the bit-identity suite |
 | — | | `9aaf3d2..55a6935` | | | **36 commits recorded no row.** The wind model, per-planet climate, block derivation from build components, the blueprint corpus and the balance lab all landed between rows 3 and 4. |
 | 4 | 2026-08-21 | `55a6935` | 1,285 | 2 m 11 s | +259 across those 36 commits and this one; this pass added `DumpAuditTests` and the field-dump fixture |
+| 5 | 2026-08-20 | `b7ccf75` | 1,358 | 5 m 4 s | +73: world settings, the overlay budget, the descent, the planet-definition merge, `RescanGate`, and the burial audit. Nine slow suites now carry `speed=slow`; the fast lane runs in under a minute. |
 
 ## The solver
 
@@ -37,6 +38,7 @@ flight unless the row says otherwise.
 | 2 | `78d736f` | — | — | — | — | — | — | — |
 | 3 | `9aaf3d2` | 86.2 ms | 0.043 ms | 1.119 ms | 3.544 ms | 3.550 ms | 1.617 ms | 2.11 |
 | 4 | `55a6935` | 87.4 ms | 0.038 ms | 1.134 ms | 3.621 ms | 3.613 ms | 1.680 ms | 2.17 |
+| 5 | `b7ccf75` | 105.6 ms | 0.206 ms | 1.210 ms | 4.198 ms | 4.282 ms | 1.951 ms | 2.41 |
 
 Row 2 changed no shipped code, so its solver figures are row 1's.
 
@@ -68,6 +70,12 @@ Where a pass moves something the columns above cannot see, it gets a row here.
 | 3 | substep cap 1, step | 0.668 ms | **0.619 ms** |
 | 3 | substep cap 4, step | 1.210 ms | **1.165 ms** |
 | 3 | step shape, fixed per step | 0.535 ms | **0.494 ms** |
+
+**Row 5 was taken on a loud machine and its solver columns are not readable against row 4.**
+Calibration is up 21 % and noise is five times row 4's; a re-take mid-pass moved every column
+together. Nothing in the pass touched the per-node path — the burial factor is one branch per
+environment solve, once a step per grid — so the 14-19 % across the board is the machine. Re-take
+on a quiet one before reading a trend from it.
 
 ## Recording a row
 

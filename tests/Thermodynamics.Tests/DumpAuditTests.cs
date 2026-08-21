@@ -42,7 +42,7 @@ namespace Thermodynamics.Tests
             "time_s,grid,grid_id,planet,altitude_surface_m,altitude_sealevel_m,latitude_deg," +
             "sun_elevation_deg,air_density,atmosphere_factor,ambient_k,ambient_c,underground," +
             "depth_m,solar_w,solar_occlusion,convection_coeff,wind_speed,wind_bearing_deg," +
-            "wind_ceiling,wind_agl_m,wind_band_share,wind_profile,wind_heating,wind_speedup," +
+            "wind_ceiling,wind_agl_m,wind_burial,wind_band_share,wind_profile,wind_heating,wind_speedup," +
             "wind_shelter,wind_channel_deg,weather,weather_intensity,weather_ambient_k," +
             "game_temperature,surface_material,grid_mean_k,grid_peak_k";
 
@@ -72,6 +72,7 @@ namespace Thermodynamics.Tests
             row["wind_shelter"] = "1";
             row["wind_speed"] = "21";
             row["wind_agl_m"] = "120";
+            row["wind_burial"] = "1";
             row["weather"] = "Clear";
             row["surface_material"] = "Grass";
             row["grid_mean_k"] = "290";
@@ -534,6 +535,22 @@ namespace Thermodynamics.Tests
         /// A flying grid carries the negative of its height in the depth column, which is not a
         /// defect. Only a positive depth on a grid the game does not call buried is.
         /// </summary>
+        /// <summary>The A15 fault as the audit sees it: buried whole, still blowing.</summary>
+        [Fact]
+        public void WindOnAWhollyBuriedGridFails()
+        {
+            Dictionary<string, string> row = Row();
+            row["depth_m"] = "12";
+            row["underground"] = "1";
+            row["wind_burial"] = "0";
+            row["wind_speed"] = "4.3";
+
+            DumpAudit.Result result = DumpAudit.Run(Write(row));
+
+            Assert.False(result.Passed);
+            Assert.True(Check(result, "a wholly buried grid").Hits > 0);
+        }
+
         [Fact]
         public void OnlyAPositiveDepthOnAnUnburiedGridIsADefect()
         {
