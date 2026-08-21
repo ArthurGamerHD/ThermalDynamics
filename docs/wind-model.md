@@ -219,7 +219,8 @@ The environment CSV carries the wind decomposed, one row per sample per grid:
 | --- | --- |
 | `wind_ceiling` | The engine's figure — `MaxWindSpeed × airDensity`. The scale everything else works against. |
 | `wind_band_share` | Share of that ceiling the circulation band and the weather were blowing, 0..1. |
-| `wind_agl_m` | Metres above the **ground**, which is what the profile is a function of — as against `altitude_surface`, which is the grid's own height. |
+| `wind_agl_m` | Metres above the **ground**, signed — negative below the surface — which is what the profile is a function of, as against `altitude_surface`, which is the grid's own height. |
+| `wind_burial` | Share of the wind left after being under the surface, 0..1. 1 at or above ground, 0 once the whole grid is buried. |
 | `wind_profile` | Vertical profile × time of day, as a multiple of the reference-height wind. |
 | `wind_heating` | Lagged share of the day's heating, 0..1: 0 at the coldest hour, 1 at peak afternoon. This is the phase of the daily cycle. |
 | `wind_speedup` | Terrain exposure. Above 1 on a rise, below 1 in a hollow. |
