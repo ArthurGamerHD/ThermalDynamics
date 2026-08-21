@@ -22,6 +22,8 @@ can be recovered for any row here by reading that file at the row's commit.
 | 1 | 2026-08-20 | `57d1807` | 1,020 | 45 s | +3, `FixedSourceRowTests` |
 | 2 | 2026-08-20 | `78d736f` | 1,020 | 45 s | no test added or removed; five suites moved onto one fixture |
 | 3 | 2026-08-20 | `9aaf3d2` | 1,026 | 44 s | +6: `StepTermsTests`, and a flight case for the bit-identity suite |
+| — | | `9aaf3d2..55a6935` | | | **36 commits recorded no row.** The wind model, per-planet climate, block derivation from build components, the blueprint corpus and the balance lab all landed between rows 3 and 4. |
+| 4 | 2026-08-21 | `55a6935` | 1,285 | 2 m 11 s | +259 across those 36 commits and this one; this pass added `DumpAuditTests` and the field-dump fixture |
 
 ## The solver
 
@@ -34,12 +36,27 @@ flight unless the row says otherwise.
 | 1 | `57d1807` | 86.2 ms | 0.014 ms | 1.129 ms | 3.603 ms | 3.595 ms | 1.661 ms | 2.11 |
 | 2 | `78d736f` | — | — | — | — | — | — | — |
 | 3 | `9aaf3d2` | 86.2 ms | 0.043 ms | 1.119 ms | 3.544 ms | 3.550 ms | 1.617 ms | 2.11 |
+| 4 | `55a6935` | 87.4 ms | 0.038 ms | 1.134 ms | 3.621 ms | 3.613 ms | 1.680 ms | 2.17 |
 
 Row 2 changed no shipped code, so its solver figures are row 1's.
 
 **Row 3's noise column is three times row 1's**, and row 1's was the quietest run this machine has
 recorded. Differences of a few per cent between those two rows are not readable; the row 3 change
 was aimed at the one-substep configurations, which are in the table below rather than above.
+
+**Row 4 is row 3 on a slightly slower machine.** Calibration is up 1.4 % and every column with it,
+by 1.4-3.9 %, in the same direction and roughly the same proportion — which is what a machine
+looks like, not what a change looks like. The two rows are comparable in the one way that matters:
+`substeps demanded` on both ladder rungs is identical to six decimal places, so the census hull's
+stiffness has not moved and the columns are measuring the same work. The report names eight
+regressions against the committed baseline; all eight are under 0.02 ms absolute, against a noise
+floor of 0.038 ms.
+
+Nothing in rows 3 to 4 aimed at the solver. The shipped code this pass touched — the frame cost
+tracker, the grid profiler, the two host stages now timed — is telemetry-gated and lives in the
+game adapter, which the harness does not compile, so no benchmark here can see it either way.
+`tests/benchmarks/performance.csv` is deliberately left at row 3: re-recording a baseline for a
+pass that moved no solver code would bake this run's machine state into every future comparison.
 
 Where a pass moves something the columns above cannot see, it gets a row here.
 
