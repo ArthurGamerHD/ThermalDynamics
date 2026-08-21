@@ -29,16 +29,10 @@ namespace Thermodynamics.Tests
     {
         private static string RepoRoot()
         {
-            DirectoryInfo directory = new DirectoryInfo(AppContext.BaseDirectory);
-            while (directory != null)
-            {
-                if (File.Exists(Path.Combine(directory.FullName, "Data", "Cubes.xml")))
-                {
-                    return directory.FullName;
-                }
-                directory = directory.Parent;
-            }
-            throw new InvalidOperationException("Could not find the repository root from " + AppContext.BaseDirectory);
+            // Delegates rather than walking up from the assembly, because the build output no
+            // longer sits inside the repository — see Directory.Build.props. ShippedBlocks anchors
+            // itself to its own compiled-in source path, which survives the move.
+            return Thermodynamics.Harness.ShippedBlocks.RepoRoot();
         }
 
         private static HashSet<string> Keys(IEnumerable<ReportRow> rows)
@@ -51,7 +45,7 @@ namespace Thermodynamics.Tests
         [Fact]
         public void TheCommittedBaselineCarriesTheKeysTheReportStillProduces()
         {
-            string path = Path.Combine(RepoRoot(), "sim", "benchmarks", "performance.csv");
+            string path = Path.Combine(RepoRoot(), "tests", "benchmarks", "performance.csv");
             Assert.True(File.Exists(path), "no committed baseline at " + path);
 
             PerformanceReport.Repeats = 1;
@@ -78,7 +72,7 @@ namespace Thermodynamics.Tests
             orphaned.Sort();
 
             Assert.True(missing.Count == 0 && orphaned.Count == 0,
-                "sim/benchmarks/performance.csv no longer matches the report. Re-record it with\n"
+                "tests/benchmarks/performance.csv no longer matches the report. Re-record it with\n"
                 + "  dotnet run --project Thermodynamics.Sim -- bench report --size 32000 --max 125000 --csv benchmarks\n"
                 + "figures the report now produces and the baseline lacks:\n  "
                 + string.Join("\n  ", missing.ToArray())

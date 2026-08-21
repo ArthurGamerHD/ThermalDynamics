@@ -111,8 +111,8 @@ Each departure is written into the generated file beside the entry it affects, u
 `Data/Planets.xml` is produced by `PlanetLab.Xml()`, not typed:
 
 ```
-dotnet run --project sim/Thermodynamics.Sim -- planets                        # the table
-dotnet run --project sim/Thermodynamics.Sim -- planets --write Data/Planets.xml
+dotnet run --project tests/Thermodynamics.Sim -- planets                        # the table
+dotnet run --project tests/Thermodynamics.Sim -- planets --write Data/Planets.xml
 ```
 
 `TheShippedPlanetsFileIsWhatThisCodeGenerates` fails if the file on disk drifts from what the code

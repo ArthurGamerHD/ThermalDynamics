@@ -273,7 +273,7 @@ namespace Thermodynamics.Harness
             sb.Append("<!--\n");
             sb.Append("  GENERATED FILE — do not edit by hand.\n\n");
             sb.Append("  Regenerate with:\n");
-            sb.Append("      dotnet run --project sim/Thermodynamics.Sim -- planets --write Data/Planets.xml\n\n");
+            sb.Append("      dotnet run --project tests/Thermodynamics.Sim -- planets --write Data/Planets.xml\n\n");
             sb.Append("  Every figure below is derived from the world's own generator definition by\n");
             sb.Append("  Thermodynamics.Core.PlanetThermalDerivation. What each derivation is and why is\n");
             sb.Append("  documented there and in docs/planet-thermals.md; the per-entry comments here say\n");

@@ -141,7 +141,7 @@ game session, and its two seams are meant to be used:
 * **`ThermalSimulation`** — `AddBlock`, `RemoveBlock`, `RefreshBlock`, `RefreshBlockSealing`,
   `Update`, `StepExact`, `Save`, `Load`, and read back node temperatures, overheat events and
   threshold crossings. This is the whole surface a host needs; the test harness under
-  [sim/](../sim) drives it with plain numbers and the game adapter drives it from the session.
+  [tests/](../sim) drives it with plain numbers and the game adapter drives it from the session.
 
 ## Guarantees
 

@@ -222,12 +222,12 @@ namespace Thermodynamics.Harness
         public static ScenarioOutcome Run(Blueprints.Ship ship, Scenario scenario,
             ThermalSettings settings = null)
         {
-            ThermalSimulation simulation = ship.Build(settings ?? new ThermalSettings());
-            simulation.Solver.CollectDiagnostics = true;
+            ShipAssembly assembly = ship.Build(settings ?? new ThermalSettings());
+            assembly.CollectDiagnostics(true);
 
-            ShipLoad.Apply(simulation, scenario.Load);
+            ShipLoad.Apply(assembly, scenario.Load);
 
-            ScenarioRunner runner = new ScenarioRunner(simulation);
+            AssemblyRunner runner = new AssemblyRunner(assembly);
             runner.Environment = scenario.Environment;
 
             // The recovery case is the only one that changes state mid-run: it burns until the
@@ -235,20 +235,54 @@ namespace Thermodynamics.Harness
             // question becomes whether it comes back down.
             if (scenario.Name == "recovery")
             {
-                runner.Run(scenario.Seconds, scenario.Seconds);
-                ShipLoad.Apply(simulation, ShipLoad.State.Idle);
-                runner.Run(scenario.Seconds, scenario.Seconds / 8f);
+                RunUntilSettled(runner, scenario.Seconds);
+                ShipLoad.Apply(assembly, ShipLoad.State.Idle);
+                RunUntilSettled(runner, scenario.Seconds);
             }
             else
             {
-                runner.Run(scenario.Seconds, scenario.Seconds / 16f);
+                RunUntilSettled(runner, scenario.Seconds);
             }
 
-            ScenarioOutcome outcome = ScenarioOutcome.Read(simulation, ship.Name, scenario.Name);
+            ScenarioOutcome outcome = ScenarioOutcome.Read(assembly, ship.Name, scenario.Name);
             outcome.WorkshopId = ship.WorkshopId;
+            outcome.SecondsToCritical = runner.SecondsToCritical;
 
             Settle(outcome, runner);
             return outcome;
+        }
+
+        /// <summary>Kelvin of movement across a chunk below which a run is called settled.</summary>
+        public const float SettleWithin = 0.25f;
+
+        /// <summary>Simulated seconds per chunk. The resolution the settle test can see.</summary>
+        public const float Chunk = 60f;
+
+        /// <summary>
+        /// Steps until the hottest block stops moving, or until the ceiling is reached.
+        ///
+        /// Almost every run in the battery is flat long before its clock runs out — a small hull in
+        /// shadow settles in minutes and then sits there. Running to the ceiling regardless is most
+        /// of the cost of the lab and buys nothing. Stopping on equilibrium also makes the run
+        /// length itself a measurement: how long a ship takes to settle is its thermal inertia, and
+        /// one that never settles is saying something too.
+        /// </summary>
+        private static void RunUntilSettled(AssemblyRunner runner, float ceiling)
+        {
+            float previous = float.NaN;
+            float elapsed = 0f;
+
+            while (elapsed < ceiling)
+            {
+                float chunk = Math.Min(Chunk, ceiling - elapsed);
+                runner.Run(chunk);
+                elapsed += chunk;
+
+                float hottest = runner.Hottest[runner.Hottest.Count - 1];
+                if (!float.IsNaN(previous) && Math.Abs(hottest - previous) <= SettleWithin) return;
+
+                previous = hottest;
+            }
         }
 
         /// <summary>
@@ -259,9 +293,9 @@ namespace Thermodynamics.Harness
         /// is deliberate — resolving them finely would mean sampling every step, and they are used
         /// to sort ships rather than to decide anything on their own.
         /// </summary>
-        private static void Settle(ScenarioOutcome outcome, ScenarioRunner runner)
+        private static void Settle(ScenarioOutcome outcome, AssemblyRunner runner)
         {
-            IList<Sample> samples = runner.Samples;
+            List<float> samples = runner.Hottest;
             if (samples.Count < 2) return;
 
             float final = outcome.PeakKelvin;
@@ -269,21 +303,12 @@ namespace Thermodynamics.Harness
 
             for (int i = 1; i < samples.Count; i++)
             {
-                float seconds = samples[i].TimeSeconds - samples[i - 1].TimeSeconds;
-                if (seconds <= 0f) continue;
-
-                float rate = Math.Abs(samples[i].HottestTemperature - samples[i - 1].HottestTemperature) / seconds;
+                float rate = Math.Abs(samples[i] - samples[i - 1]) / Chunk;
                 if (rate > fastest) fastest = rate;
 
-                if (outcome.SecondsToSettle < 0f
-                    && Math.Abs(samples[i].HottestTemperature - final) <= 5f)
+                if (outcome.SecondsToSettle < 0f && Math.Abs(samples[i] - final) <= 5f)
                 {
-                    outcome.SecondsToSettle = samples[i].TimeSeconds;
-                }
-
-                if (outcome.SecondsToCritical < 0f && samples[i].OverheatingBlocks > 0)
-                {
-                    outcome.SecondsToCritical = samples[i].TimeSeconds;
+                    outcome.SecondsToSettle = (i + 1) * Chunk;
                 }
             }
 

@@ -59,7 +59,7 @@ world closes carries it — which is what distinguishes a one-off from a permane
 the only output at all on a world that never turned collection on.
 
 The rule lives in `AnomalyRegistry` in `TelemetryAnomalies.cs`, which is free of game types and
-linked into `sim/`, so it is covered by `AnomalyRegistryTests` rather than argued about.
+linked into `tests/`, so it is covered by `AnomalyRegistryTests` rather than argued about.
 
 **A fault in the log is a reason to turn telemetry on and reproduce**, not a diagnosis. The log
 line carries the exception type, its message and the top six stack frames; the report carries what
@@ -335,7 +335,7 @@ global rebuild — an algorithm problem, reproducible anywhere. The same stage w
 forty is a slow machine. Milliseconds alone cannot distinguish them, which is why a report that
 carried only timings could say a session stuttered without saying why.
 
-They are also what the load tests in `sim/` assert against, so a claim proved on a benchmark and
+They are also what the load tests in `tests/` assert against, so a claim proved on a benchmark and
 a claim observed in a real world are the same claim.
 
 ## Output
@@ -619,7 +619,7 @@ than by the periodic sample, because it needs a walk rather than a reading. See
 
 ## Tests
 
-Most of the module reads `Sandbox.*` and `VRage.Game` types, which cannot load in [`sim/`](../sim).
+Most of the module reads `Sandbox.*` and `VRage.Game` types, which cannot load in [`tests/`](../sim).
 Its decision logic does not, and lives in three files that reference nothing but `System`:
 
 | File | What it holds |
@@ -643,14 +643,14 @@ rebuild, and — the two that matter most — an instrumented run and an uninstr
 **identical temperatures**, with and without diagnostics.
 
 What is not covered is the wiring: which game fields each hook reads, and whether the report is
-written successfully during shutdown. That is the same boundary the rest of `sim/` accepts, and
+written successfully during shutdown. That is the same boundary the rest of `tests/` accepts, and
 it can only be checked by loading a world. **The coolant and heat pump section above is inside that
 boundary** — `GridTelemetry` and `TelemetryReport` both read `Sandbox.*`, so the section's rendering
 is compile-checked and not test-covered. What it reads is covered: `CoolantLoopTests` pins the loop
 watt figures and `HeatPumpTests` pins each of the three idle states the section classifies.
 
 `dotnet build Generic.csproj --no-incremental` is the only check that compiles this module at all —
-a green `sim/` test run says nothing about it, because `sim/` links four of its files and skips the
+a green `tests/` test run says nothing about it, because `tests/` links four of its files and skips the
 rest.
 
 ## Settings

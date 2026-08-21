@@ -9,9 +9,9 @@ namespace Thermodynamics.Sim
     /// <summary>
     /// Command line front end for the scenario library.
     ///
-    ///   dotnet run --project sim/Thermodynamics.Sim -- list
-    ///   dotnet run --project sim/Thermodynamics.Sim -- run reactor
-    ///   dotnet run --project sim/Thermodynamics.Sim -- run all --csv out/
+    ///   dotnet run --project tests/Thermodynamics.Sim -- list
+    ///   dotnet run --project tests/Thermodynamics.Sim -- run reactor
+    ///   dotnet run --project tests/Thermodynamics.Sim -- run all --csv out/
     /// </summary>
     public static class Program
     {

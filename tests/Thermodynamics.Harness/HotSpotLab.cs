@@ -86,15 +86,15 @@ namespace Thermodynamics.Harness
 
             // Re-run the scenario here rather than reading a matrix, because the per-block state
             // this needs is gone by the time an outcome has been summarised.
-            ThermalSimulation simulation = ship.Build();
-            simulation.Solver.CollectDiagnostics = true;
-            float applied = ShipLoad.Apply(simulation, scenario.Load);
+            ShipAssembly assembly = ship.Build();
+            assembly.CollectDiagnostics(true);
+            float applied = ShipLoad.Apply(assembly, scenario.Load);
 
-            ScenarioRunner runner = new ScenarioRunner(simulation);
+            AssemblyRunner runner = new AssemblyRunner(assembly);
             runner.Environment = scenario.Environment;
-            runner.Run(scenario.Seconds, scenario.Seconds / 8f);
+            runner.Run(scenario.Seconds);
 
-            List<Row> rows = Rows(simulation);
+            List<Row> rows = Rows(assembly);
             rows.Sort(delegate (Row a, Row b) { return b.Kelvin.CompareTo(a.Kelvin); });
 
             sb.AppendLine("HOT SPOT");
@@ -158,19 +158,23 @@ namespace Thermodynamics.Harness
 
             foreach (Blueprints.Ship ship in corpus.Usable)
             {
-                ThermalSimulation simulation = ship.Build();
-                ThermalSolver solver = simulation.Solver;
-                if (solver.Nodes.Count < 2) continue;
+                ShipAssembly assembly = ship.Build();
+                if (assembly.NodeCount < 2) continue;
 
-                for (int i = 0; i < solver.Nodes.Count; i++)
+                for (int g = 0; g < assembly.Simulations.Count; g++)
                 {
-                    ThermalNode node = solver.Nodes[i];
-                    if (node.ExposedArea > 0f || solver.NodeConductanceTotal(i) > 0f) continue;
+                    ThermalSolver solver = assembly.Simulations[g].Solver;
 
-                    int count;
-                    counts.TryGetValue(node.Block.Name, out count);
-                    counts[node.Block.Name] = count + 1;
-                    total++;
+                    for (int i = 0; i < solver.Nodes.Count; i++)
+                    {
+                        ThermalNode node = solver.Nodes[i];
+                        if (node.ExposedArea > 0f || solver.NodeConductanceTotal(i) > 0f) continue;
+
+                        int count;
+                        counts.TryGetValue(node.Block.Name, out count);
+                        counts[node.Block.Name] = count + 1;
+                        total++;
+                    }
                 }
             }
 
@@ -201,11 +205,13 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-        private static List<Row> Rows(ThermalSimulation simulation)
+        private static List<Row> Rows(ShipAssembly assembly)
         {
-            ThermalSolver solver = simulation.Solver;
-            List<Row> rows = new List<Row>(solver.Nodes.Count);
+            List<Row> rows = new List<Row>(assembly.NodeCount);
 
+            for (int g = 0; g < assembly.Simulations.Count; g++)
+            {
+            ThermalSolver solver = assembly.Simulations[g].Solver;
             for (int i = 0; i < solver.Nodes.Count; i++)
             {
                 ThermalNode node = solver.Nodes[i];
@@ -222,6 +228,7 @@ namespace Thermodynamics.Harness
                     ConductanceOut = solver.NodeConductanceTotal(i),
                     ThermalMass = node.ThermalMass,
                 });
+            }
             }
 
             return rows;

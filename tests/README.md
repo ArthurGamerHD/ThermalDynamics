@@ -50,7 +50,7 @@ sufficient. See [development.md](../docs/development.md#repo-conventions) for th
 ## Running it
 
 ```bash
-cd sim
+cd tests
 
 dotnet test                                    # the whole suite (1,026 tests)
 dotnet run --project Thermodynamics.Sim -- list

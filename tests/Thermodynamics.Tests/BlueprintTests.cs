@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using Thermodynamics.Core;
@@ -65,8 +66,11 @@ namespace Thermodynamics.Tests
             List<Blueprints.Ship> ships = Blueprints.Read(file);
 
             Assert.Single(ships);
-            Assert.Equal("Test Ship", ships[0].Name);
+
+            // The blueprint's own name, not the hull grid's: a ship is the whole blueprint now.
+            Assert.Equal("TestShip", ships[0].Name);
             Assert.Equal(3, ships[0].Blocks);
+            Assert.Single(ships[0].Grids);
             Assert.True(ships[0].IsVanilla);
         }
 
@@ -118,11 +122,16 @@ namespace Thermodynamics.Tests
         {
             if (!GameBlocks.IsInstalled) return;
 
-            string file = WriteBlueprint(Block("LargeBlockArmorBlock", 0, 0, 0), false);
+            // One block of the right size so the ship exists at all, and one of the wrong size.
+            string file = WriteBlueprint(
+                Block("SmallBlockArmorBlock", 0, 0, 0) +
+                Block("LargeBlockArmorBlock", 1, 0, 0), false);
+
             Blueprints.Ship ship = Blueprints.Read(file)[0];
 
-            Assert.Equal(0, ship.Blocks);
+            Assert.Equal(1, ship.Blocks);
             Assert.Equal(1, ship.UnknownBlocks);
+            Assert.False(ship.IsVanilla);
         }
 
         [Fact]
@@ -136,7 +145,8 @@ namespace Thermodynamics.Tests
             Blueprints.Ship ship = Blueprints.Read(file)[0];
 
             Assert.Equal(1, ship.Blocks);
-            Assert.Equal(Base6Directions.Direction.Right, ship.Grid.Blocks[0].Orientation.Forward);
+            Assert.Equal(Base6Directions.Direction.Right,
+                ship.Grids[0].Builder.Grid.Blocks[0].Orientation.Forward);
         }
 
         /// <summary>A file that is not a blueprint, or not XML, must yield nothing rather than throw.</summary>
@@ -164,7 +174,11 @@ namespace Thermodynamics.Tests
         {
             if (!GameBlocks.IsInstalled) return;
 
-            string workshop = Blueprints.WorkshopPath();
+            // Opt-in: the corpus is gigabytes, lives outside the repository and is fetched rather
+            // than authored, so the default suite does not depend on it.
+            if (Environment.GetEnvironmentVariable("THERMAL_CORPUS_TESTS") == null) return;
+
+            string workshop = Blueprints.DefaultPath();
             if (workshop == null) return;
 
             CorpusLab.Summary corpus = CorpusLab.Scan(workshop);
@@ -172,15 +186,15 @@ namespace Thermodynamics.Tests
 
             Blueprints.Ship ship = corpus.Usable[0];
 
-            ThermalSimulation simulation = ship.Build();
+            ShipAssembly assembly = ship.Build();
 
-            ScenarioRunner runner = new ScenarioRunner(simulation);
+            AssemblyRunner runner = new AssemblyRunner(assembly);
             runner.Environment = t => Worlds.Shadow();
-            runner.Run(60f, 30f);
+            runner.Run(60f);
 
-            Assert.True(simulation.Solver.Nodes.Count > 0,
+            Assert.True(assembly.NodeCount > 0,
                 ship.Name + " built no nodes from " + ship.Blocks + " blocks");
-            Assert.True(runner.Final.HottestTemperature > 0f,
+            Assert.True(runner.Hottest[runner.Hottest.Count - 1] > 0f,
                 ship.Name + " reports no temperature after stepping");
         }
     }

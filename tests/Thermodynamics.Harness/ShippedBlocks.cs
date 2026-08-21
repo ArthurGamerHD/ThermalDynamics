@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Xml.Linq;
 using Thermodynamics.Core;
 using VRageMath;
@@ -94,19 +95,46 @@ namespace Thermodynamics.Harness
             {
                 if (repoRoot != null) return repoRoot;
 
-                DirectoryInfo directory = new DirectoryInfo(AppContext.BaseDirectory);
-                while (directory != null)
-                {
-                    if (File.Exists(Path.Combine(directory.FullName, "Data", "Cubes.xml")))
-                    {
-                        repoRoot = directory.FullName;
-                        return repoRoot;
-                    }
-                    directory = directory.Parent;
-                }
+                // From the assembly first, which is where it is when the build output sits inside
+                // the repository, and from this file's own compiled-in path second, which is where
+                // it is when the output has been sent elsewhere — as it now is, so that build
+                // artifacts do not end up in the published mod. See Directory.Build.props.
+                repoRoot = Above(AppContext.BaseDirectory) ?? Above(SourceDirectory());
+                if (repoRoot != null) return repoRoot;
+
                 throw new InvalidOperationException(
-                    "Could not find the repository root from " + AppContext.BaseDirectory);
+                    "Could not find the repository root from " + AppContext.BaseDirectory
+                    + " or from " + SourceDirectory());
             }
+        }
+
+        /// <summary>The first directory at or above <paramref name="start"/> holding the mod's data.</summary>
+        private static string Above(string start)
+        {
+            if (string.IsNullOrEmpty(start)) return null;
+
+            DirectoryInfo directory = new DirectoryInfo(start);
+            while (directory != null)
+            {
+                if (File.Exists(Path.Combine(directory.FullName, "Data", "Cubes.xml")))
+                {
+                    return directory.FullName;
+                }
+                directory = directory.Parent;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// The directory this source file was compiled from.
+        ///
+        /// Baked in at build time, so it survives the output assembly being written anywhere at
+        /// all — which it now is, because build artifacts inside the mod folder are build artifacts
+        /// inside whatever gets published.
+        /// </summary>
+        private static string SourceDirectory([CallerFilePath] string file = "")
+        {
+            return string.IsNullOrEmpty(file) ? null : Path.GetDirectoryName(file);
         }
 
         /// <summary>Every block the mod ships, keyed by subtype.</summary>

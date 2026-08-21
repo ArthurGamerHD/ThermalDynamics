@@ -16,7 +16,7 @@ namespace Thermodynamics.Tests
     /// terrestrial meteorology and every one of them lands somewhere unexpected here.</para>
     ///
     /// <para>These run the whole matrix at a coarse day so the suite stays quick; the full-resolution
-    /// version is <c>dotnet run --project sim/Thermodynamics.Sim -- wind scenarios</c>.</para>
+    /// version is <c>dotnet run --project tests/Thermodynamics.Sim -- wind scenarios</c>.</para>
     /// </summary>
     public class WindScenarioTests
     {

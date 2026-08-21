@@ -44,7 +44,7 @@ Constraints that matter when writing code for this project:
   `MyAPIGateway.Utilities`, no threading. The solver is order-independent by
   construction, so it could be parallelised if the whitelist ever allowed it.
 * **The whitelist covers exception types too**, and this is easy to miss because the local build
-  and `sim/` both accept them — only the in-game compiler rejects them, at world load. Confirmed
+  and `tests/` both accept them — only the in-game compiler rejects them, at world load. Confirmed
   prohibited: `IndexOutOfRangeException`, `ArgumentOutOfRangeException`. Confirmed allowed:
   `Exception`, `ArgumentException`, `ArgumentNullException`, `InvalidOperationException`,
   `FormatException`. Prefer bounds-checking over catching an out-of-range throw — see
@@ -107,13 +107,13 @@ Do not hand-edit these; replace them wholesale when the upstream author publishe
 
 ## Scenarios
 
-The harness in [sim/](../sim) runs the model without the game. `dotnet run --project
-sim/Thermodynamics.Sim -- list` names them; `run <name|all>` runs them, `--csv <dir>` writes the
+The harness in [tests/](../sim) runs the model without the game. `dotnet run --project
+tests/Thermodynamics.Sim -- list` names them; `run <name|all>` runs them, `--csv <dir>` writes the
 full series.
 
 Each one states a conclusion in its summary line, and
-[ScenarioClaimTests](../sim/Thermodynamics.Tests/ScenarioClaimTests.cs) and
-[SelfShadowScenarioTests](../sim/Thermodynamics.Tests/SelfShadowScenarioTests.cs) assert those
+[ScenarioClaimTests](../tests/Thermodynamics.Tests/ScenarioClaimTests.cs) and
+[SelfShadowScenarioTests](../tests/Thermodynamics.Tests/SelfShadowScenarioTests.cs) assert those
 conclusions cannot quietly invert — a scenario whose headline can flip is worse than none, because
 it reads like evidence.
 
@@ -136,7 +136,7 @@ Two are about the sun rather than about heat flow:
   `/thermal dump`. The cost section breaks the update into topology rebuild, room mapping,
   exposure refresh and solver, which is the breakdown you want before optimising anything. See
   [telemetry.md](telemetry.md).
-* **Outside the game:** most questions are faster to answer in [`sim/`](../sim) —
+* **Outside the game:** most questions are faster to answer in [`tests/`](../sim) —
   `dotnet test`, or `dotnet run --project Thermodynamics.Sim -- run perf` for throughput.
 
 ## Where to start when adding a feature
@@ -152,3 +152,35 @@ Two are about the sun rather than about heat flow:
 | Per-block sun shadowing | `ThermalNode`'s directional weighting is the hook; the solver resolves the sun into six per-face weights once per step |
 | New instrumentation | `ISimulationProfiler` for a stage, `GridTelemetry` for a figure, `TelemetryReport` for a row |
 | Multiplayer sync | `SENetworkAPI` is already initialised in `Session.Init` with channel `30323`; no commands are registered yet |
+
+
+## Publishing
+
+**This repository is the mod folder.** It is linked into the game so a change is testable without
+copying, which means everything sitting in it is part of what a workshop publish uploads. Two things
+that are not mod content are therefore kept outside it deliberately, so that publishing needs no
+cleanup step — and a cleanup step that has to be remembered is one that eventually is not.
+
+| What | Where it lives | Why |
+| --- | --- | --- |
+| Build output | `../ThermalDynamics.build/` | The game compiles `Data/Scripts` itself; the assemblies exist only for compile-checking and tests here. They were 394 MB. Set by [Directory.Build.props](../Directory.Build.props). |
+| The blueprint corpus | `~/.local/share/thermal-dynamics/corpus` | Ten thousand of other people's ships is over a hundred gigabytes, and none of it belongs in a mod. Override with `THERMAL_CORPUS`. |
+
+What remains is the mod and its tests:
+
+```
+Models      95 MB   .mwm block models
+Textures    14 MB
+Data       4.3 MB   definitions and every C# source file the game compiles
+tests      2.8 MB   the isolated build, the suite and the balance lab
+docs       736 KB
+```
+
+About 115 MB, plus `.git`. The test projects are kept in the tree on purpose — they are part of the
+work, they are small, and the game ignores them.
+
+**No credential is ever written into this tree.** The corpus fetcher takes a Steam Web API key from
+the command line or the environment and redacts it from anything it prints; nothing writes it to a
+file. The only personal data in the repository is the developer's own paths in `Generic.csproj`,
+which should be parameterised the way [tests/Directory.Build.props](../tests/Directory.Build.props)
+already parameterises the game location.

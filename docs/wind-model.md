@@ -243,7 +243,7 @@ translating anything.
 | --- | --- | --- |
 | **Grid telemetry** | Every grid samples its own position. `Thermodynamics_Environment_*.csv`. | Wherever somebody parked. |
 | **Planet probes** | 72 fixed points on the planet — every latitude from −80° to +80° including the equator, eight longitudes each — at five heights, sampled on an interval whether or not anything is standing there — **wind and climate together**, since they share every input. `Thermodynamics_PlanetProbes_*.csv`. Set `TelemetryPlanetProbes` to a step interval; needs `EnableTelemetry`. | The whole planet, over a real day. |
-| **The offline model** | `dotnet run --project sim/Thermodynamics.Sim -- wind`. A synthetic planet with the engine's own wind function reproduced from its decompiled source, a heightmap with features from forty kilometres down to four hundred metres, and a full day at 73 times of day. Add `--csv out/`, `--flat` or `--weather 1`. | Everything, in about a second. |
+| **The offline model** | `dotnet run --project tests/Thermodynamics.Sim -- wind`. A synthetic planet with the engine's own wind function reproduced from its decompiled source, a heightmap with features from forty kilometres down to four hundred metres, and a full day at 73 times of day. Add `--csv out/`, `--flat` or `--weather 1`. | Everything, in about a second. |
 
 The probes and the offline model both call `WindSolver.Solve` — the same function the grids do — so
 none of them can drift from the model without the model itself changing. The offline planet models
@@ -309,7 +309,7 @@ Five consequences, none of them obvious before the numbers were on the page:
 
 ### The scenario matrix
 
-`dotnet run --project sim/Thermodynamics.Sim -- wind scenarios` runs the model over **28 scenarios**
+`dotnet run --project tests/Thermodynamics.Sim -- wind scenarios` runs the model over **28 scenarios**
 — every shipped world at its usual size, four sizes plus two modded extremes, ten settings pushed to
 their ends, and four degenerate worlds (airless, no wind rating, flat, and a day shorter than the lag
 that follows it) — at fifteen latitudes chosen to hit the equator, the band middles and the band

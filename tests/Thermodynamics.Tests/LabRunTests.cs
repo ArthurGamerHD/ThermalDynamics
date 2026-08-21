@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Thermodynamics.Harness;
 using Xunit;
@@ -82,7 +83,11 @@ namespace Thermodynamics.Tests
         {
             if (!GameBlocks.IsInstalled) return;
 
-            string workshop = Blueprints.WorkshopPath();
+            // Opt-in: the corpus is gigabytes, lives outside the repository and is fetched rather
+            // than authored, so the default suite does not depend on it.
+            if (Environment.GetEnvironmentVariable("THERMAL_CORPUS_TESTS") == null) return;
+
+            string workshop = Blueprints.DefaultPath();
             if (workshop == null) return;
 
             CorpusLab.Summary corpus = CorpusLab.Scan(workshop);

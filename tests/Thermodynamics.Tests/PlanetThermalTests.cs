@@ -31,14 +31,10 @@ namespace Thermodynamics.Tests
 
         private static string RepoRoot()
         {
-            DirectoryInfo directory = new DirectoryInfo(AppContext.BaseDirectory);
-            while (directory != null)
-            {
-                if (File.Exists(Path.Combine(directory.FullName, "Data", "Cubes.xml")))
-                    return directory.FullName;
-                directory = directory.Parent;
-            }
-            throw new InvalidOperationException("could not find the repository root");
+            // Delegates rather than walking up from the assembly, because the build output no
+            // longer sits inside the repository — see Directory.Build.props. ShippedBlocks anchors
+            // itself to its own compiled-in source path, which survives the move.
+            return Thermodynamics.Harness.ShippedBlocks.RepoRoot();
         }
 
         // ---- the levels ------------------------------------------------------------------------
@@ -295,7 +291,7 @@ namespace Thermodynamics.Tests
 
             Assert.True(onDisk == generated,
                 "Data/Planets.xml has drifted from PlanetLab.Xml(). Regenerate it with:\n"
-                + "  dotnet run --project sim/Thermodynamics.Sim -- planets --write Data/Planets.xml");
+                + "  dotnet run --project tests/Thermodynamics.Sim -- planets --write Data/Planets.xml");
         }
 
         [Fact]

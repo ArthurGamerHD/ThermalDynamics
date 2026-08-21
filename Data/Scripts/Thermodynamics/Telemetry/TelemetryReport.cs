@@ -18,7 +18,7 @@ namespace Thermodynamics
     ///   Thermodynamics_BlockTypes_&lt;stamp&gt;.csv  one row per block definition
     ///   Thermodynamics_Grids_&lt;stamp&gt;.csv       one row per grid
     ///
-    /// The CSVs allow one session to be diffed against another, or against the model in sim/,
+    /// The CSVs allow one session to be diffed against another, or against the model in tests/,
     /// without parsing the prose report.
     /// </summary>
     public static class TelemetryReport

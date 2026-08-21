@@ -17,7 +17,7 @@ namespace Thermodynamics.Tests
     /// and hands back temperatures. Every game type that leaks into the core is a line that
     /// adapter would have to fake.
     ///
-    /// It has always been asserted in prose — <c>sim/README.md</c> says the core references one
+    /// It has always been asserted in prose — <c>tests/README.md</c> says the core references one
     /// assembly and names it — and never by anything that fails. A stray <c>using Sandbox.Game</c>
     /// would be caught by the build here, because the reference is not present to satisfy it; a
     /// type that arrives indirectly, through a shared struct or an interface parameter, would not

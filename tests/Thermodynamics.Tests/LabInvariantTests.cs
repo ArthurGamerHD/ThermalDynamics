@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Thermodynamics.Core;
 using Thermodynamics.Harness;
@@ -24,14 +25,30 @@ namespace Thermodynamics.Tests
     /// </summary>
     public class LabInvariantTests
     {
+        /// <summary>
+        /// The blueprint corpus, or nothing.
+        ///
+        /// **Opt-in.** These tests read thousands of other people's ships off a corpus that is
+        /// gigabytes, lives outside the repository and is fetched rather than authored, and they
+        /// take minutes. A suite that everyone runs on every change cannot depend on any of that,
+        /// so they stand down unless <c>THERMAL_CORPUS_TESTS</c> is set — the same shape as the
+        /// guards that stand down without a game install.
+        ///
+        ///     THERMAL_CORPUS_TESTS=1 dotnet test --filter LabInvariantTests
+        /// </summary>
         private static List<Blueprints.Ship> Corpus()
         {
+            if (Environment.GetEnvironmentVariable("THERMAL_CORPUS_TESTS") == null)
+            {
+                return new List<Blueprints.Ship>();
+            }
+
             if (!GameBlocks.IsInstalled) return new List<Blueprints.Ship>();
 
-            string workshop = Blueprints.DefaultPath();
-            if (workshop == null) return new List<Blueprints.Ship>();
+            string root = Blueprints.DefaultPath();
+            if (root == null) return new List<Blueprints.Ship>();
 
-            return CorpusLab.Scan(workshop).Usable;
+            return CorpusLab.Scan(root).Usable;
         }
 
         // ---- what a definition may say ---------------------------------------------------------
@@ -123,38 +140,99 @@ namespace Thermodynamics.Tests
 
             foreach (Blueprints.Ship ship in corpus)
             {
-                ThermalSimulation simulation = ship.Build();
-                ThermalSolver solver = simulation.Solver;
+                ShipAssembly assembly = ship.Build();
 
-                // One node is the whole grid and radiates from every face; it is not sealed.
-                if (solver.Nodes.Count < 2) continue;
-
-                for (int i = 0; i < solver.Nodes.Count; i++)
+                for (int g = 0; g < assembly.Simulations.Count; g++)
                 {
-                    ThermalNode node = solver.Nodes[i];
-                    if (node.ExposedArea > 0f) continue;
-                    if (solver.NodeConductanceTotal(i) > 0f) continue;
+                    ThermalSolver solver = assembly.Simulations[g].Solver;
 
-                    GameBlocks.Definition definition;
-                    if (!definitions.TryGetValue(node.Block.Name, out definition)) continue;
+                    // One node is the whole grid and radiates from every face; it is not sealed.
+                    if (solver.Nodes.Count < 2) continue;
 
-                    int faces = 0;
-                    for (int face = 0; face < Face.Count; face++)
+                    for (int i = 0; i < solver.Nodes.Count; i++)
                     {
-                        if (definition.MountFaces[face]) faces++;
-                    }
+                        ThermalNode node = solver.Nodes[i];
+                        if (node.ExposedArea > 0f) continue;
+                        if (solver.NodeConductanceTotal(i) > 0f) continue;
 
-                    // A definition that declares nothing gets every face, so it can never be here
-                    // by parse; one declaring a single face can be here honestly.
-                    if (faces > 1 && misread.Count < 8)
-                    {
-                        misread.Add(ship.Name + " / " + node.Block.Name + " mounts on " + faces
-                            + " faces and still came out with no exit");
+                        GameBlocks.Definition definition;
+                        if (!definitions.TryGetValue(node.Block.Name, out definition)) continue;
+
+                        int faces = 0;
+                        for (int face = 0; face < Face.Count; face++)
+                        {
+                            if (definition.MountFaces[face]) faces++;
+                        }
+
+                        // A definition that declares nothing gets every face, so it can never be
+                        // here by parse. One or two declared faces can be here honestly — a gyro
+                        // mounts only on its bottom, a conveyor tube only on its two ends — and
+                        // that is the open defect pinned by the test below. Three or more and the
+                        // block had places to connect and did not, which is a parse hole.
+                        if (faces > 2 && misread.Count < 8)
+                        {
+                            misread.Add(ship.Name + " / " + node.Block.Name + " mounts on " + faces
+                                + " faces and still came out with no exit");
+                        }
                     }
                 }
             }
 
             Assert.Empty(misread);
+        }
+
+        /// <summary>
+        /// **Pins an open defect as present**, so that fixing it fails here rather than quietly
+        /// moving a number nobody is watching.
+        ///
+        /// This model conducts across the area where *both* blocks carry a mount surface. A
+        /// definition that mounts on one or two faces — a gyro on its bottom, a conveyor tube on
+        /// its two ends — therefore has one or two joints, and a hull that leaves those faces
+        /// unconnected leaves the block with nowhere at all to send its heat. Neither radiation nor
+        /// conduction: the temperature climbs until the run stops.
+        ///
+        /// It is not rare and it is not one block type. Across a corpus of real workshop ships it
+        /// turns up on gyros and conveyor tubes routinely, which makes it a consequence of the
+        /// conduction rule rather than a quirk of one definition.
+        ///
+        /// See docs/balance-lab.md. Three shapes of fix, all of them balance decisions: conduct
+        /// across any touching face, floor the conductance between touching blocks, or raise it as
+        /// a telemetry fault. **Until one is chosen, every load figure the lab produces is
+        /// contaminated**, because a sealed block crosses any threshold eventually.
+        /// </summary>
+        [Fact]
+        public void SealedBlocksAreStillPresentOnRealShips()
+        {
+            List<Blueprints.Ship> corpus = Corpus();
+            if (corpus.Count == 0) return;
+
+            int sealedBlocks = 0;
+
+            foreach (Blueprints.Ship ship in corpus)
+            {
+                ShipAssembly assembly = ship.Build();
+
+                for (int g = 0; g < assembly.Simulations.Count; g++)
+                {
+                    ThermalSolver solver = assembly.Simulations[g].Solver;
+                    if (solver.Nodes.Count < 2) continue;
+
+                    for (int i = 0; i < solver.Nodes.Count; i++)
+                    {
+                        if (solver.Nodes[i].ExposedArea > 0f) continue;
+                        if (solver.NodeConductanceTotal(i) > 0f) continue;
+
+                        sealedBlocks++;
+                    }
+                }
+
+                if (sealedBlocks > 0) break;
+            }
+
+            Assert.True(sealedBlocks > 0,
+                "No block on any ship in the corpus is thermally sealed any more. If the conduction "
+                + "rule was changed on purpose, delete this test and the note in balance-lab.md; if "
+                + "it was not, something has stopped looking.");
         }
 
         /// <summary>
@@ -246,8 +324,17 @@ namespace Thermodynamics.Tests
                 }
             }
 
-            // The largest ship in the corpus: the one with the most places for heat to hide.
-            List<Blueprints.Ship> ships = new List<Blueprints.Ship> { corpus[0] };
+            // A ship with no sealed block in it. One that has one can never balance — the sealed
+            // block absorbs without limit — so running this on an arbitrary hull measures the open
+            // defect above rather than the invariant here.
+            List<Blueprints.Ship> ships = new List<Blueprints.Ship>();
+            foreach (Blueprints.Ship candidate in corpus)
+            {
+                if (!HasSealedBlock(candidate)) { ships.Add(candidate); break; }
+            }
+
+            if (ships.Count == 0) return;
+
             List<ScenarioOutcome> outcomes = BatteryLab.Run(ships, scenarios);
 
             List<string> unbalanced = new List<string>();
@@ -269,6 +356,28 @@ namespace Thermodynamics.Tests
             }
 
             Assert.Empty(unbalanced);
+        }
+
+        /// <summary>Whether any block on a ship has no exit at all. See the note above.</summary>
+        private static bool HasSealedBlock(Blueprints.Ship ship)
+        {
+            ShipAssembly assembly = ship.Build();
+
+            for (int g = 0; g < assembly.Simulations.Count; g++)
+            {
+                ThermalSolver solver = assembly.Simulations[g].Solver;
+                if (solver.Nodes.Count < 2) continue;
+
+                for (int i = 0; i < solver.Nodes.Count; i++)
+                {
+                    if (solver.Nodes[i].ExposedArea > 0f) continue;
+                    if (solver.NodeConductanceTotal(i) > 0f) continue;
+
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>

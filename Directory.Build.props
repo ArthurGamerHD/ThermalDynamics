@@ -1,0 +1,22 @@
+<Project>
+
+  <!--
+    Build output goes outside the mod folder.
+
+    This repository IS the mod folder - it is linked into the game so a change is testable without
+    copying - which means everything sitting in it is part of what gets published to the workshop.
+    Build artifacts are not part of the mod: the game compiles Data/Scripts itself at load, and the
+    assemblies under bin/ exist only so the code can be compile-checked and tested here. They were
+    394 MB.
+
+    So they land in a sibling directory instead. Nothing about the mod changes, and publishing needs
+    no cleanup step - which is the point, because a cleanup step that has to be remembered is a
+    cleanup step that eventually is not.
+  -->
+  <PropertyGroup>
+    <ThermalBuildRoot Condition="'$(ThermalBuildRoot)' == ''">$(MSBuildThisFileDirectory)../ThermalDynamics.build/</ThermalBuildRoot>
+    <BaseOutputPath>$(ThermalBuildRoot)$(MSBuildProjectName)/bin/</BaseOutputPath>
+    <BaseIntermediateOutputPath>$(ThermalBuildRoot)$(MSBuildProjectName)/obj/</BaseIntermediateOutputPath>
+  </PropertyGroup>
+
+</Project>

@@ -40,10 +40,10 @@ what changed, and let the steady cost be whatever the arithmetic says it is.**
 
 ## Measuring it
 
-Three tools, in `sim/`, described in [sim/README.md](../sim/README.md).
+Three tools, in `tests/`, described in [tests/README.md](../tests/README.md).
 
 ```bash
-cd sim
+cd tests
 dotnet run --project Thermodynamics.Sim -- bench scale                 # the ladder
 dotnet run --project Thermodynamics.Sim -- bench spike --size 125000  # one block placed, split by stage
 dotnet run --project Thermodynamics.Sim -- bench weld  --size 125000  # a block every tick
@@ -115,7 +115,7 @@ All figures from this machine, release build, single thread, ship shape.
 
 ### The ladder
 
-Measured on hulls built from the block [`Census`](../sim/Thermodynamics.Harness/Census.cs) — the
+Measured on hulls built from the block [`Census`](../tests/Thermodynamics.Harness/Census.cs) — the
 population of a real ship, rather than the heavy armour and gratings this ladder used to use. See
 [the note below](#the-ladder-was-measured-on-the-wrong-ship) for what that changed and why the
 figures moved so much.
@@ -201,7 +201,7 @@ three substeps where field dumps measure twenty-one to thirty-one.
 So the old ladder was not slightly optimistic. It was measuring a hull an order of magnitude
 softer than the ships it claimed to describe, and every "the solver costs X" statement built on it
 understated the steady cost by about six. The block mix now comes from the block-type table of a
-field dump — see [`Census`](../sim/Thermodynamics.Harness/Census.cs) — and
+field dump — see [`Census`](../tests/Thermodynamics.Harness/Census.cs) — and
 `CensusFidelityTests` fails if it drifts away from what the reports say again.
 
 The spike findings below are unaffected: they are about work proportional to what changed, and
@@ -454,7 +454,7 @@ was not there would simply have worked, and nobody would have learned that the p
 
 ## Catching it again
 
-The load tests in `sim/Thermodynamics.Tests/LoadTests.cs` run with the ordinary suite and assert
+The load tests in `tests/Thermodynamics.Tests/LoadTests.cs` run with the ordinary suite and assert
 these properties rather than leaving them to a benchmark nobody runs. Almost every assertion is
 on a `SimulationWork` counter rather than a stopwatch, because a millisecond threshold is a claim
 about the machine that ran it and a claim that placing one block must not visit every node is a

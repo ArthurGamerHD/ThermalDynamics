@@ -7,7 +7,7 @@ the same link count and different shapes are granted the same allowance for diff
 This measures the difference, so the budget can charge for what a substep actually does.
 
 ```bash
-cd sim
+cd tests
 dotnet run --project Thermodynamics.Sim -- bench elements --nodes 100000 --seconds 4
 dotnet run --project Thermodynamics.Sim -- bench elements --nodes 250000 --seconds 4 \
     --shapes stick,comb,plate,hollow,box --csv out/bench

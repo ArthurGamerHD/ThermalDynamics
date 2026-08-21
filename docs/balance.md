@@ -4,12 +4,12 @@ Every block this mod ships, costed and measured against the vanilla blocks a pla
 otherwise have built. Run it with:
 
 ```bash
-cd sim
+cd tests
 dotnet run --project Thermodynamics.Sim -- balance
 dotnet run --project Thermodynamics.Sim -- balance --csv out/     # also a diffable table
 ```
 
-The scenarios in [the sim README](../sim/README.md) answer *does this mechanism work*. This
+The scenarios in [the sim README](../tests/README.md) answer *does this mechanism work*. This
 answers *is this block worth building*, which needs a different shape of measurement: not a
 settling curve, but a per-block figure that can be divided by what the block costs.
 
@@ -19,12 +19,12 @@ Nothing here is transcribed except the vanilla figures, and those are checked.
 
 | Source | What it supplies |
 | --- | --- |
-| [`ShippedBlocks`](../sim/Thermodynamics.Harness/ShippedBlocks.cs) | The mod's own blocks, read from `Data/CubeBlocks/*.sbc` and `Data/Cubes.xml` at run time — size, mount faces, components, thermal properties |
-| [`Vanilla`](../sim/Thermodynamics.Harness/Vanilla.cs) | Component masses and the comparison blocks, transcribed from Space Engineers' own `Content/Data` |
-| [`BalanceLab`](../sim/Thermodynamics.Harness/BalanceLab.cs) | The measurements |
-| [`ReactorLab`](../sim/Thermodynamics.Harness/ReactorLab.cs) | The reactor waste fraction sweep |
-| [`BalanceTests`](../sim/Thermodynamics.Tests/BalanceTests.cs) | The conclusions, pinned |
-| [`ReactorWasteHeatTests`](../sim/Thermodynamics.Tests/ReactorWasteHeatTests.cs) | The reactor conclusions, pinned |
+| [`ShippedBlocks`](../tests/Thermodynamics.Harness/ShippedBlocks.cs) | The mod's own blocks, read from `Data/CubeBlocks/*.sbc` and `Data/Cubes.xml` at run time — size, mount faces, components, thermal properties |
+| [`Vanilla`](../tests/Thermodynamics.Harness/Vanilla.cs) | Component masses and the comparison blocks, transcribed from Space Engineers' own `Content/Data` |
+| [`BalanceLab`](../tests/Thermodynamics.Harness/BalanceLab.cs) | The measurements |
+| [`ReactorLab`](../tests/Thermodynamics.Harness/ReactorLab.cs) | The reactor waste fraction sweep |
+| [`BalanceTests`](../tests/Thermodynamics.Tests/BalanceTests.cs) | The conclusions, pinned |
+| [`ReactorWasteHeatTests`](../tests/Thermodynamics.Tests/ReactorWasteHeatTests.cs) | The reactor conclusions, pinned |
 
 **A block's mass is the sum of its components**, priced through `Vanilla.ComponentMasses`. That
 matters more than it looks: heat capacity is `mass × specific heat`, so a wrong mass scales every

@@ -233,7 +233,7 @@ lit 38 cells where 28 are lit — ten of them behind something.
 
 `faceWeight` and `litFraction` answer different questions per face and both are needed: the first is
 how square that face is to the sun, the second is whether anything of the ship stands in the way of
-it. The [self-shadow scenario](../sim/Thermodynamics.Harness/Scenarios.cs) measures both on a solid
+it. The [self-shadow scenario](../tests/Thermodynamics.Harness/Scenarios.cs) measures both on a solid
 slab: the face turned to the sun is lit whole, the flanks around 80%, a recess cut into the hull
 0%.
 
@@ -553,7 +553,7 @@ there is no convection.
 ## Where the old model differed
 
 The previous per-cell implementation is preserved verbatim in
-[sim/Thermodynamics.Tests/LegacyFormulas.cs](../sim/Thermodynamics.Tests/LegacyFormulas.cs), and
+[tests/Thermodynamics.Tests/LegacyFormulas.cs](../tests/Thermodynamics.Tests/LegacyFormulas.cs), and
 several tests compare against it so the differences stay pinned rather than remembered.
 
 | Then | Now |

@@ -80,7 +80,7 @@ Where [balance.md](balance.md) asks whether a block is worth building, this asks
 configuration* is worth running. Three commands:
 
 ```bash
-cd sim
+cd tests
 dotnet run --project Thermodynamics.Sim -- profiles              # one rig, four worlds
 dotnet run --project Thermodynamics.Sim -- sweep --csv out/      # every scenario and worst case
 dotnet run --project Thermodynamics.Sim -- features              # mechanism switches in combination
@@ -93,7 +93,7 @@ bundles — `simulation` through `minimal` — and every one of them tunes the s
 accurately a step is integrated**. All five run `HeatTimeScale = 225`, so even `simulation` is a
 faithful integration of a model that is deliberately 225 times faster than the world.
 
-[`BalanceProfile`](../sim/Thermodynamics.Harness/BalanceProfiles.cs) is the other axis: **how
+[`BalanceProfile`](../tests/Thermodynamics.Harness/BalanceProfiles.cs) is the other axis: **how
 physically true the model is**. It lives in the harness, changes nothing that ships, and carries
 every knob that moves the balance — both pace scales, the environment constants, which mechanisms
 run, how the coolant is modelled, and what a reactor's waste heat is.

@@ -4,13 +4,13 @@ One command that measures what the simulation costs — by size, by feature, and
 and knows how to compare itself against an earlier run.
 
 ```bash
-cd sim
+cd tests
 dotnet run --project Thermodynamics.Sim -- bench report --size 32000 --max 125000 --csv benchmarks
 dotnet run --project Thermodynamics.Sim -- bench report --baseline benchmarks/performance.csv
 ```
 
 The first writes `benchmarks/performance.csv`. The second measures again and prints what moved.
-[`benchmarks/performance.csv`](../sim/benchmarks/performance.csv) is committed, so a change can be
+[`benchmarks/performance.csv`](../tests/benchmarks/performance.csv) is committed, so a change can be
 measured against the tree it was made on rather than against somebody's memory.
 
 ---
@@ -500,7 +500,7 @@ belong to the machine that took them, which is what the calibration row is for. 
 re-record:
 
 ```bash
-cd sim
+cd tests
 dotnet run --project Thermodynamics.Sim -- bench report --size 32000 --max 125000 --csv benchmarks
 ```
 
@@ -515,7 +515,7 @@ several per cent.
 The report is only as good as the hull it measures, and for most of this project's life that hull
 was wrong — see
 [load-and-hitching.md](load-and-hitching.md#the-ladder-was-measured-on-the-wrong-ship). Everything
-is now built from [`Census`](../sim/Thermodynamics.Harness/Census.cs), the block population of a
+is now built from [`Census`](../tests/Thermodynamics.Harness/Census.cs), the block population of a
 real ship read out of a telemetry dump, and `CensusFidelityTests` fails if it drifts away from the
 field observations recorded beside it.
 

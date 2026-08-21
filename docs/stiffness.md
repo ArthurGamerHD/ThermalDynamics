@@ -119,7 +119,7 @@ block capital ship.** Removing the top 225 nodes of 42,051 — half a percent �
 
 ### Reproducing it synthetically
 
-`bench floor` builds its hull from the measured block [`Census`](../sim/Thermodynamics.Harness/Census.cs)
+`bench floor` builds its hull from the measured block [`Census`](../tests/Thermodynamics.Harness/Census.cs)
 — the eight-band population of a real ship, read out of a dump's block-type table — and it lands
 on **22.97 substeps** in vacuum and 43.9 in flight, against a field range of 21 to 31. Close
 enough that the synthetic ship can now be used to answer questions about the real one, which it
@@ -531,7 +531,7 @@ gratings and one 16 kg fitting — a gap where a real ship has hundreds of armou
 panels between 120 and 240 J/K. That gap mattered because it is what decides how many blocks a cap
 reaches: cap 2 raised 2.3 % of the old benchmark hull and 23.7 % of a field ship.
 
-Every benchmark hull is now built from [`Census`](../sim/Thermodynamics.Harness/Census.cs), the
+Every benchmark hull is now built from [`Census`](../tests/Thermodynamics.Harness/Census.cs), the
 eight-band block population of a real 1,381-block ship read out of a dump's block-type table. The
 census hull asks for 23 substeps against a field range of 21 to 31, and its cap curve tracks the
 field's closely — cap 8 reaches 1.2 % against the field's 1.2 %, cap 2 reaches 24 % against 23.7 %,

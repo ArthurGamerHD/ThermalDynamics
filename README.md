@@ -105,17 +105,17 @@ into atmosphere and into the air of sealed rooms, arrives from the sun, and — 
 | [docs/settings-redesign.md](docs/settings-redesign.md) | The plan for the menu, the config file and the definition files as one surface. |
 | [docs/element-cost.md](docs/element-cost.md) | What a substep spends per node, per link and per exposed face, and what the step budget should charge. |
 | [docs/stiffness.md](docs/stiffness.md) | Why a handful of light fittings set the cost of a capital ship, and what to do about it. |
-| [sim/README.md](sim/README.md) | The isolated simulation environment: running the tests and scenarios. |
+| [tests/README.md](tests/README.md) | The isolated simulation environment: running the tests and scenarios. |
 
 ## Building and testing
 
 The simulation core lives under
 [Data/Scripts/Thermodynamics/Core/](Data/Scripts/Thermodynamics/Core) and ships with the mod — the
-game compiles it. The projects under [sim/](sim) link the same files so it can be built, tested and
+game compiles it. The projects under [tests/](sim) link the same files so it can be built, tested and
 profiled outside the game:
 
 ```bash
-cd sim && dotnet test                                  # 1,026 tests
+cd tests && dotnet test                                  # 1,026 tests
 dotnet run --project Thermodynamics.Sim -- run all     # scenario suite
 dotnet run --project Thermodynamics.Sim -- bench scale # cost from 8k to 1M blocks
 ```
@@ -143,6 +143,6 @@ ThermalDynamics/
 ├── Models/                       .mwm models — do not restructure, LOD paths are baked in
 ├── Textures/                     Block, decal and particle textures
 ├── Audio/                        FireExtinguisher.wav
-├── sim/                          Isolated build, tests and scenarios
+├── tests/                          Isolated build, tests and scenarios
 └── docs/                         This documentation
 ```

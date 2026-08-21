@@ -1,6 +1,13 @@
 <Project>
 
   <!--
+    The root props sends build output outside the mod folder; see the note there. MSBuild stops at
+    the first Directory.Build.props it finds walking up, so this one has to ask for the parent
+    explicitly or the sim projects would keep writing their bin/ and obj/ into the published tree.
+  -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <!--
     Shared settings for the isolated simulation environment.
 
     The only Space Engineers assembly any of these projects reference is VRage.Math.dll,

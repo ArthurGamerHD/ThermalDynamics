@@ -108,8 +108,12 @@ namespace Thermodynamics.Harness
         /// <summary>The subtype that set <see cref="PeakSubstepDemand"/>. Names what to tune.</summary>
         public string StiffestBlock;
 
-        /// <summary>Sealed compartments the room mapper found.</summary>
+        /// <summary>Sealed compartments the room mapper found, across every grid.</summary>
         public int Rooms;
+
+        /// <summary>Grids in the blueprint, and the mechanical joints linking them.</summary>
+        public int Grids;
+        public int Joints;
 
         /// <summary>
         /// The feature vector used for stratifying, clustering and selecting specimens.
@@ -156,8 +160,7 @@ namespace Thermodynamics.Harness
         /// </summary>
         public static ShipProfile Measure(Blueprints.Ship ship, ThermalSettings settings = null)
         {
-            ThermalSimulation simulation = ship.Build(settings ?? new ThermalSettings());
-            ThermalSolver solver = simulation.Solver;
+            ShipAssembly assembly = ship.Build(settings ?? new ThermalSettings());
 
             ShipProfile profile = new ShipProfile
             {
@@ -165,35 +168,44 @@ namespace Thermodynamics.Harness
                 WorkshopId = ship.WorkshopId,
                 Large = ship.Large,
                 Blocks = ship.Blocks,
-                Rooms = simulation.Rooms.Map.RoomCount,
+                Grids = assembly.Simulations.Count,
+                Joints = assembly.Bridges.Count,
+                Rooms = assembly.RoomCount,
             };
 
-            List<float> demands = new List<float>(solver.Nodes.Count);
+            List<float> demands = new List<float>(assembly.NodeCount);
             float[] thrustByDirection = new float[Face.Count];
             float draw = 0f;
             float installed = 0f;
             int exposed = 0;
             float peak = 0f;
 
-            for (int i = 0; i < solver.Nodes.Count; i++)
+            // Every grid in the blueprint, subgrids included: a turret on a rotor is part of the
+            // ship, and its mass, surface and stiffness all belong to the ship's totals.
+            for (int g = 0; g < assembly.Simulations.Count; g++)
             {
-                ThermalNode node = solver.Nodes[i];
+                ThermalSolver solver = assembly.Simulations[g].Solver;
 
-                profile.Mass += node.Block.Mass;
-                profile.HeatCapacity += node.ThermalMass;
-                profile.ExposedArea += node.ExposedArea;
-                if (node.TotalExposedFaces > 0) exposed++;
-
-                float demand = solver.NodeSubstepDemand(i);
-                demands.Add(demand);
-
-                if (demand > peak)
+                for (int i = 0; i < solver.Nodes.Count; i++)
                 {
-                    peak = demand;
-                    profile.StiffestBlock = node.Block.Name;
-                }
+                    ThermalNode node = solver.Nodes[i];
 
-                Rate(profile, node.Block, thrustByDirection, ref draw, ref installed);
+                    profile.Mass += node.Block.Mass;
+                    profile.HeatCapacity += node.ThermalMass;
+                    profile.ExposedArea += node.ExposedArea;
+                    if (node.TotalExposedFaces > 0) exposed++;
+
+                    float demand = solver.NodeSubstepDemand(i);
+                    demands.Add(demand);
+
+                    if (demand > peak)
+                    {
+                        peak = demand;
+                        profile.StiffestBlock = node.Block.Name;
+                    }
+
+                    Rate(profile, node.Block, thrustByDirection, ref draw, ref installed);
+                }
             }
 
             // A ship's reactors deliver what its consumers ask for and no more, so the load is
@@ -222,9 +234,9 @@ namespace Thermodynamics.Harness
                 + profile.ConsumerWasteWatts
                 + (thrust * BlockThermalDerivation.FunctionOf("Thrust").ConsumerWasteEnergy);
 
-            profile.ExposedFraction = solver.Nodes.Count == 0
+            profile.ExposedFraction = assembly.NodeCount == 0
                 ? 0f
-                : exposed / (float)solver.Nodes.Count;
+                : exposed / (float)assembly.NodeCount;
 
             profile.PeakSubstepDemand = peak;
             demands.Sort();

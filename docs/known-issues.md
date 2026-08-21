@@ -516,7 +516,7 @@ drawing cannot argue with — but whether an arrow lands where it should on scre
 by looking at one. The API's *shape* is checkable without a session and is
 worth pinning down.
 
-The load tests in `sim/Thermodynamics.Tests/LoadTests.cs` close part of that gap for cost rather
+The load tests in `tests/Thermodynamics.Tests/LoadTests.cs` close part of that gap for cost rather
 than for correctness, and they assert work counters rather than milliseconds so they hold on any
 machine. What they cannot reach is the adapter: the mass sweep asks the game for a block's mass,
 and a harness has no game block to ask, so the rota that bounds it is covered only by arithmetic

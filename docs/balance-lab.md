@@ -5,7 +5,7 @@ hull this repository built for itself.
 
 ## Why
 
-Every number this mod ships was chosen against a synthetic rig. [`Census`](../sim/Thermodynamics.Harness/Census.cs)
+Every number this mod ships was chosen against a synthetic rig. [`Census`](../tests/Thermodynamics.Harness/Census.cs)
 is honest about the cost of that in its own summary — its tiers come from the telemetry dump of one
 1,381-block ship, and *"one ship is one ship"*. The reactor retune in
 [balance.md](balance.md#reactor-waste-heat) is the same shape of argument one level up: a fraction
@@ -129,7 +129,7 @@ the same peak are different ships if one is uniformly warm and the other is cold
 a 900 K knot around its thrusters — the first has a cooling problem, the second a **layout**
 problem, and only one of them is fixed by adding radiators.
 
-So [`ScenarioOutcome`](../sim/Thermodynamics.Harness/ScenarioOutcome.cs) records the distribution
+So [`ScenarioOutcome`](../tests/Thermodynamics.Harness/ScenarioOutcome.cs) records the distribution
 and where its top end is:
 
 | Group | Fields |
@@ -173,7 +173,7 @@ off effort against scale:
 | **SteamCMD** | a Steam account owning the game | ten thousand | `workshop_download_item 244850 <id>` in batches. Anonymous login generally fails for a paid title. Hours of downloading, and worth rate-limiting out of courtesy. |
 
 **The route taken is the second for listing and the third for fetching**, built as
-[`CorpusFetch`](../sim/Thermodynamics.Sim/CorpusFetch.cs):
+[`CorpusFetch`](../tests/Thermodynamics.Sim/CorpusFetch.cs):
 
 ```bash
 # list only: writes out/corpus/manifest.csv, downloads nothing
@@ -213,15 +213,15 @@ Two filters apply whatever the route:
 
 | Piece | State |
 | --- | --- |
-| [`GameBlocks`](../sim/Thermodynamics.Harness/GameBlocks.cs) | Reads every definition out of the installed game — size, mounts, sealing, build cost. |
-| [`Blueprints`](../sim/Thermodynamics.Harness/Blueprints.cs) | Turns a `bp.sbc` into ships the solver can run. Models are derived and shared across the corpus. |
-| [`CorpusLab`](../sim/Thermodynamics.Harness/CorpusLab.cs) | Corpus yield and size distribution. `-- corpus [--path <dir>]`. |
-| [`BlueprintTests`](../sim/Thermodynamics.Tests/BlueprintTests.cs) | Seven tests on the yield, ending with a real subscribed ship building a simulation that steps. |
-| [`CorpusFetch`](../sim/Thermodynamics.Sim/CorpusFetch.cs) | Lists and fetches the corpus. `-- corpus-fetch`. Unexercised against a real key. |
-| [`ShipProfile`](../sim/Thermodynamics.Harness/ShipProfile.cs) | Step 2. Every ship measured without stepping it. `-- screen`. |
-| [`Specimens`](../sim/Thermodynamics.Harness/Specimens.cs) | Cuts a corpus to a panel that covers it. See [Specimens](#specimens) below. |
-| [`ShipLoad`](../sim/Thermodynamics.Harness/ShipLoad.cs) | What a ship has switched on, thrust per direction. |
-| [`Battery`](../sim/Thermodynamics.Harness/Battery.cs), [`ScenarioOutcome`](../sim/Thermodynamics.Harness/ScenarioOutcome.cs) | Step 3. `-- battery`. |
+| [`GameBlocks`](../tests/Thermodynamics.Harness/GameBlocks.cs) | Reads every definition out of the installed game — size, mounts, sealing, build cost. |
+| [`Blueprints`](../tests/Thermodynamics.Harness/Blueprints.cs) | Turns a `bp.sbc` into ships the solver can run. Models are derived and shared across the corpus. |
+| [`CorpusLab`](../tests/Thermodynamics.Harness/CorpusLab.cs) | Corpus yield and size distribution. `-- corpus [--path <dir>]`. |
+| [`BlueprintTests`](../tests/Thermodynamics.Tests/BlueprintTests.cs) | Seven tests on the yield, ending with a real subscribed ship building a simulation that steps. |
+| [`CorpusFetch`](../tests/Thermodynamics.Sim/CorpusFetch.cs) | Lists and fetches the corpus. `-- corpus-fetch`. Unexercised against a real key. |
+| [`ShipProfile`](../tests/Thermodynamics.Harness/ShipProfile.cs) | Step 2. Every ship measured without stepping it. `-- screen`. |
+| [`Specimens`](../tests/Thermodynamics.Harness/Specimens.cs) | Cuts a corpus to a panel that covers it. See [Specimens](#specimens) below. |
+| [`ShipLoad`](../tests/Thermodynamics.Harness/ShipLoad.cs) | What a ship has switched on, thrust per direction. |
+| [`Battery`](../tests/Thermodynamics.Harness/Battery.cs), [`ScenarioOutcome`](../tests/Thermodynamics.Harness/ScenarioOutcome.cs) | Step 3. `-- battery`. |
 | Steps 0 and 4 | Criteria written above; the settings sweep is designed and unbuilt. |
 
 Measured on the 16 blueprints already subscribed on the development machine: 140 ships, 1 modded,

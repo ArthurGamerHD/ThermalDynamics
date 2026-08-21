@@ -29,6 +29,10 @@ namespace Thermodynamics.Harness
         public long WorkshopId;
         public int Blocks;
 
+        /// <summary>Grids in the blueprint, and the mechanical joints linking them.</summary>
+        public int Grids;
+        public int Joints;
+
         // ---- where it ended up -----------------------------------------------------------------
 
         /// <summary>Kelvin, across every block, at the end of the run.</summary>
@@ -121,30 +125,30 @@ namespace Thermodynamics.Harness
         /// nothing here depends on how often the run was sampled — except the two that are about
         /// time, which are handed in.
         /// </summary>
-        public static ScenarioOutcome Read(ThermalSimulation simulation, string ship, string scenario)
+        public static ScenarioOutcome Read(ShipAssembly assembly, string ship, string scenario)
         {
-            ThermalSolver solver = simulation.Solver;
             ScenarioOutcome outcome = new ScenarioOutcome
             {
                 Ship = ship,
                 Scenario = scenario,
-                Blocks = solver.Nodes.Count,
+                Blocks = assembly.NodeCount,
+                Grids = assembly.Simulations.Count,
+                Joints = assembly.Bridges.Count,
                 MinKelvin = float.MaxValue,
-                MadeWatts = simulation.HeatGainWatts,
-                VentedWatts = simulation.VentedWatts,
-                SubstepsDemanded = solver.LastRequiredSubsteps,
-                SubstepsGranted = solver.LastSubsteps,
+                MadeWatts = assembly.HeatGainWatts,
+                VentedWatts = assembly.VentedWatts,
+                SubstepsDemanded = assembly.RequiredSubsteps,
+                SubstepsGranted = assembly.GrantedSubsteps,
             };
 
-            if (solver.Nodes.Count == 0) return outcome;
+            if (outcome.Blocks == 0) return outcome;
 
-            List<float> temperatures = new List<float>(solver.Nodes.Count);
+            List<float> temperatures = new List<float>(outcome.Blocks);
             float total = 0f;
             float margin = float.MaxValue;
 
-            for (int i = 0; i < solver.Nodes.Count; i++)
+            foreach (ThermalNode node in assembly.Nodes)
             {
-                ThermalNode node = solver.Nodes[i];
                 float kelvin = node.Temperature;
 
                 temperatures.Add(kelvin);
@@ -169,7 +173,7 @@ namespace Thermodynamics.Harness
                 outcome.GenerationWatts += node.HeatGenerationWatts;
             }
 
-            outcome.MeanKelvin = total / solver.Nodes.Count;
+            outcome.MeanKelvin = total / outcome.Blocks;
             outcome.MarginKelvin = margin;
 
             temperatures.Sort();

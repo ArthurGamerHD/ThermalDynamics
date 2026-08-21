@@ -28,100 +28,187 @@ namespace Thermodynamics.Harness
     /// </summary>
     public static class Blueprints
     {
-        /// <summary>One ship out of one blueprint file. A blueprint may hold several.</summary>
+        /// <summary>One grid inside a blueprint: a hull, or a turret on a rotor.</summary>
+        public class Grid
+        {
+            public string Name;
+            public bool Large;
+            public int Blocks;
+            public GridBuilder Builder;
+
+            /// <summary>Entity id to the cell of the block carrying it, for resolving joints.</summary>
+            public readonly Dictionary<long, Vector3I> BlocksById = new Dictionary<long, Vector3I>();
+
+            /// <summary>Mechanical bases here: the cell each sits on, and the head it holds.</summary>
+            public readonly List<KeyValuePair<Vector3I, long>> Mechanical =
+                new List<KeyValuePair<Vector3I, long>>();
+        }
+
+        /// <summary>
+        /// One ship: **a whole blueprint, subgrids included.**
+        ///
+        /// A blueprint is one machine, not a pile of separate ones. A turret is a small grid on a
+        /// rotor bolted to the hull, a drilling rig is a piston stack, a hangar door is a set of
+        /// advanced rotors. Reading each grid as its own ship measures something that does not
+        /// exist — a turret floating in space with a heat budget of its own — and gets both halves
+        /// wrong at once: the subgrid has no hull to dump into, and the hull has no subgrid warming
+        /// it.
+        /// </summary>
         public class Ship
         {
-            /// <summary>The blueprint's own name, and the grid's within it.</summary>
-            public string Blueprint;
+            /// <summary>The blueprint's own name.</summary>
             public string Name;
 
             /// <summary>Where it came from, so a surprising result can be looked at by hand.</summary>
             public string Path;
 
-            /// <summary>Workshop id when the file came from a subscribed item, else 0.</summary>
+            /// <summary>Workshop id when the file came from a subscribed or fetched item, else 0.</summary>
             public long WorkshopId;
 
-            public bool Large;
+            /// <summary>Every grid in the blueprint, largest first.</summary>
+            public readonly List<Grid> Grids = new List<Grid>();
 
-            /// <summary>Which grid of its blueprint this is, so it can be read again.</summary>
-            public int GridIndex;
-
-            /// <summary>Blocks placed, i.e. those whose subtype resolved to a definition.</summary>
-            public int Blocks;
-
-            /// <summary>
-            /// Blocks skipped because no vanilla definition carries that subtype.
-            ///
-            /// The count matters more than the names: a ship with any of these is *modded*, and a
-            /// modded ship is not a measurement of vanilla balance because the blocks doing the
-            /// heating are ones this model has never seen. <see cref="IsVanilla"/> is the filter.
-            /// </summary>
-            public int UnknownBlocks;
-
-            /// <summary>Up to a few names of what was missing, for a report to be specific.</summary>
-            public List<string> UnknownSubtypes = new List<string>();
-
-            public GridModel Grid;
-
-            /// <summary>
-            /// The builder the grid was placed through, kept because a simulation is built from the
-            /// list of placed blocks rather than from the grid alone.
-            /// </summary>
-            public GridBuilder Builder;
-
-            /// <summary>This ship as a simulation, ready to step.</summary>
-            public ThermalSimulation Build(ThermalSettings settings = null, float kelvin = 293.15f)
+            /// <summary>Whether the biggest grid in it is a large-grid one.</summary>
+            public bool Large
             {
-                return Builder.BuildSimulation(settings ?? new ThermalSettings(), kelvin);
+                get { return Grids.Count > 0 && Grids[0].Large; }
+            }
+
+            /// <summary>Blocks placed across every grid.</summary>
+            public int Blocks
+            {
+                get
+                {
+                    int total = 0;
+                    for (int i = 0; i < Grids.Count; i++) total += Grids[i].Blocks;
+                    return total;
+                }
+            }
+
+            /// <summary>Grids beyond the hull: turrets, doors, drills, piston stacks.</summary>
+            public int Subgrids
+            {
+                get { return Grids.Count == 0 ? 0 : Grids.Count - 1; }
             }
 
             /// <summary>
-            /// The same ship, read again from its file, with grid state of its own.
-            ///
-            /// **This is what lets a run be the unit of parallelism rather than a ship.** Every
-            /// simulation built from one <c>Ship</c> shares that ship's <c>BlockInstance</c>
-            /// objects, and the load is written onto them, so two scenarios on one ship at once
-            /// overwrite each other. Reading the blueprint again is the cheap way out: block
-            /// *models* are cached and shared, so only the per-block instances are rebuilt, and
-            /// that costs a fraction of the settling run it enables.
-            ///
-            /// Without it a panel of six ships uses six cores of however many the machine has.
+            /// Blocks skipped because no vanilla definition carries that subtype. One is enough to
+            /// disqualify the blueprint: there is no telling whether it was a decorative panel or
+            /// the reactor.
+            /// </summary>
+            public int UnknownBlocks;
+
+            public List<string> UnknownSubtypes = new List<string>();
+
+            public bool IsVanilla
+            {
+                get { return UnknownBlocks == 0 && Blocks > 0; }
+            }
+
+            /// <summary>
+            /// The whole blueprint as one running assembly: every grid stepped together, with heat
+            /// crossing the mechanical joints between them.
+            /// </summary>
+            public ShipAssembly Build(ThermalSettings settings = null, float kelvin = 293.15f)
+            {
+                ThermalSettings effective = settings ?? new ThermalSettings();
+                ShipAssembly assembly = new ShipAssembly();
+
+                for (int i = 0; i < Grids.Count; i++)
+                {
+                    assembly.Simulations.Add(Grids[i].Builder.BuildSimulation(effective, kelvin));
+                }
+
+                LinkJoints(assembly);
+                return assembly;
+            }
+
+            /// <summary>
+            /// Resolves every mechanical connection the blueprint records into a bridge. A stator
+            /// carries the entity id of the head it holds, and the head is a block in another grid
+            /// with that id, so the joints are recoverable exactly.
+            /// </summary>
+            private void LinkJoints(ShipAssembly assembly)
+            {
+                for (int i = 0; i < Grids.Count; i++)
+                {
+                    Grid grid = Grids[i];
+
+                    for (int m = 0; m < grid.Mechanical.Count; m++)
+                    {
+                        Vector3I baseCell = grid.Mechanical[m].Key;
+                        long topId = grid.Mechanical[m].Value;
+
+                        for (int j = 0; j < Grids.Count; j++)
+                        {
+                            if (j == i) continue;
+
+                            Vector3I topCell;
+                            if (!Grids[j].BlocksById.TryGetValue(topId, out topCell)) continue;
+
+                            assembly.Bridge2(
+                                assembly.Simulations[i], NodeAt(assembly.Simulations[i], baseCell),
+                                assembly.Simulations[j], NodeAt(assembly.Simulations[j], topCell));
+                            break;
+                        }
+                    }
+                }
+            }
+
+            private static ThermalNode NodeAt(ThermalSimulation simulation, Vector3I cell)
+            {
+                IList<ThermalNode> nodes = simulation.Solver.Nodes;
+                for (int i = 0; i < nodes.Count; i++)
+                {
+                    if (nodes[i].Block.Position == cell) return nodes[i];
+                }
+                return null;
+            }
+
+            /// <summary>
+            /// The same blueprint, read again, with grid state of its own. See the note in
+            /// <c>BatteryLab</c>: this is what lets a run be the unit of parallelism.
             /// </summary>
             public Ship Reload()
             {
                 if (Path == null) return this;
 
                 List<Ship> ships = Read(Path);
-                return GridIndex >= 0 && GridIndex < ships.Count ? ships[GridIndex] : this;
-            }
-
-            /// <summary>
-            /// True when every block on the ship resolved. Deliberately strict: one unknown block
-            /// is enough to disqualify a ship, because there is no way to know whether the block
-            /// that did not resolve was a decorative panel or the reactor.
-            /// </summary>
-            public bool IsVanilla
-            {
-                get { return UnknownBlocks == 0 && Blocks > 0; }
+                return ships.Count > 0 ? ships[0] : this;
             }
 
             public override string ToString()
             {
-                return Name + " (" + Blocks + " blocks)";
+                return Name + " (" + Blocks + " blocks, " + Grids.Count + " grids)";
             }
         }
 
         /// <summary>
-        /// **Where the corpus lives: `<repo>/corpus`.**
+        /// **Where the corpus lives, and it is deliberately outside the mod folder.**
         ///
-        /// One explicit, absolute location rather than a path relative to whatever directory a
-        /// command happened to be run from. Every tool here writes to it and reads from it, and
-        /// every report prints it, so there is never a question of which ships a figure came from.
-        /// It is gitignored — ten thousand blueprints is gigabytes and none of it is source.
+        /// This repository *is* the mod folder — it is linked into the game so a change is testable
+        /// without copying — which means anything sitting in it is part of what gets published. A
+        /// corpus of ten thousand ships is over a hundred gigabytes of other people's blueprints,
+        /// and none of it belongs in a mod. Nor do the fetch manifest or the workshop ids in it.
+        ///
+        /// So it lives under the user's data directory instead, and the only thing publishing has
+        /// to know about it is that it is not there. Override with `--path`, or `THERMAL_CORPUS`
+        /// for a machine that wants it on another disk.
         /// </summary>
         public static string CorpusPath()
         {
-            return Path.Combine(ShippedBlocks.RepoRoot(), "corpus");
+            string configured = Environment.GetEnvironmentVariable("THERMAL_CORPUS");
+            if (!string.IsNullOrEmpty(configured)) return configured;
+
+            string data = Environment.GetEnvironmentVariable("XDG_DATA_HOME");
+            if (string.IsNullOrEmpty(data))
+            {
+                string home = Environment.GetEnvironmentVariable("HOME")
+                    ?? Environment.GetEnvironmentVariable("USERPROFILE") ?? ".";
+                data = Path.Combine(home, ".local", "share");
+            }
+
+            return Path.Combine(data, "thermal-dynamics", "corpus");
         }
 
         /// <summary>
@@ -169,8 +256,11 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
-        /// Reads one blueprint file into its ships. Returns an empty list rather than throwing:
-        /// a corpus of ten thousand files will contain some that no parser should die on.
+        /// Reads one blueprint file into **one ship**, whatever number of grids it holds.
+        ///
+        /// Returns a list because a file can hold more than one blueprint, which is rare. It does
+        /// not return one entry per grid. Never throws: a corpus of ten thousand files will contain
+        /// some that no parser should die on.
         /// </summary>
         public static List<Ship> Read(string path)
         {
@@ -187,29 +277,36 @@ namespace Thermodynamics.Harness
             }
 
             Dictionary<string, GameBlocks.Definition> definitions = GameBlocks.BySubtype();
-            string blueprintName = null;
 
+            string name = null;
             foreach (XElement definition in document.Descendants("ShipBlueprint"))
             {
                 XElement id = definition.Element("Id");
-                if (id != null) blueprintName = (string)id.Attribute("Subtype") ?? (string)id.Element("SubtypeId");
+                if (id != null) name = (string)id.Attribute("Subtype") ?? (string)id.Element("SubtypeId");
                 break;
             }
 
-            int index = 0;
+            Ship ship = new Ship
+            {
+                Path = path,
+                WorkshopId = WorkshopIdOf(path),
+                Name = name,
+            };
+
             foreach (XElement grid in document.Descendants("CubeGrid"))
             {
-                Ship ship = ReadGrid(grid, definitions);
-                if (ship == null) { index++; continue; }
-
-                ship.GridIndex = index++;
-                ship.Path = path;
-                ship.Blueprint = blueprintName ?? Path.GetFileName(Path.GetDirectoryName(path));
-                ship.WorkshopId = WorkshopIdOf(path);
-
-                ships.Add(ship);
+                Grid part = ReadGrid(grid, definitions, ship);
+                if (part != null && part.Blocks > 0) ship.Grids.Add(part);
             }
 
+            if (ship.Grids.Count == 0) return ships;
+
+            // Largest first, so the hull is Grids[0] and a report can name the ship by it.
+            ship.Grids.Sort(delegate (Grid a, Grid b) { return b.Blocks.CompareTo(a.Blocks); });
+
+            if (string.IsNullOrEmpty(ship.Name)) ship.Name = ship.Grids[0].Name;
+
+            ships.Add(ship);
             return ships;
         }
 
@@ -220,20 +317,20 @@ namespace Thermodynamics.Harness
             return long.TryParse(folder, NumberStyles.Integer, CultureInfo.InvariantCulture, out id) ? id : 0L;
         }
 
-        private static Ship ReadGrid(XElement grid, Dictionary<string, GameBlocks.Definition> definitions)
+        private static Grid ReadGrid(XElement grid,
+            Dictionary<string, GameBlocks.Definition> definitions, Ship ship)
         {
             XElement blocks = grid.Element("CubeBlocks");
             if (blocks == null) return null;
 
             bool large = ((string)grid.Element("GridSizeEnum") ?? "Large") == "Large";
 
-            Ship ship = new Ship
+            Grid part = new Grid
             {
                 Name = (string)grid.Element("DisplayName") ?? "(unnamed)",
                 Large = large,
+                Builder = large ? GridBuilder.Large() : GridBuilder.Small(),
             };
-
-            GridBuilder builder = large ? GridBuilder.Large() : GridBuilder.Small();
 
             foreach (XElement block in blocks.Elements())
             {
@@ -244,7 +341,11 @@ namespace Thermodynamics.Harness
                 if (string.IsNullOrEmpty(subtype)) subtype = BaseSubtypeOf(block, large);
 
                 GameBlocks.Definition definition;
-                if (subtype == null || !definitions.TryGetValue(subtype, out definition))
+
+                // A blueprint's grid size and a definition's must agree, or a small-grid ship would
+                // be built out of large-grid blocks that happen to share a subtype name.
+                if (subtype == null || !definitions.TryGetValue(subtype, out definition)
+                    || definition.Large != large)
                 {
                     ship.UnknownBlocks++;
                     if (ship.UnknownSubtypes.Count < 4 && subtype != null
@@ -255,21 +356,30 @@ namespace Thermodynamics.Harness
                     continue;
                 }
 
-                // A blueprint's grid size and a definition's must agree, or a small-grid ship would
-                // be built out of large-grid blocks that happen to share a subtype name.
-                if (definition.Large != large)
+                Vector3I cell = ParseCell(block.Element("Min"));
+                part.Builder.Place(Model(definition), cell, Orientation(block));
+                part.Blocks++;
+
+                // Entity ids, and the head each mechanical base holds. The blueprint records its
+                // joints exactly, so they are recoverable without guessing from geometry.
+                long entityId = ParseLong(block.Element("EntityId"));
+                if (entityId != 0L && !part.BlocksById.ContainsKey(entityId))
                 {
-                    ship.UnknownBlocks++;
-                    continue;
+                    part.BlocksById[entityId] = cell;
                 }
 
-                builder.Place(Model(definition), ParseCell(block.Element("Min")), Orientation(block));
-                ship.Blocks++;
+                long topId = ParseLong(block.Element("TopBlockId"));
+                if (topId != 0L) part.Mechanical.Add(new KeyValuePair<Vector3I, long>(cell, topId));
             }
 
-            ship.Grid = builder.Grid;
-            ship.Builder = builder;
-            return ship;
+            return part;
+        }
+
+        private static long ParseLong(XElement element)
+        {
+            long value;
+            return element != null && long.TryParse((string)element,
+                NumberStyles.Integer, CultureInfo.InvariantCulture, out value) ? value : 0L;
         }
 
         /// <summary>

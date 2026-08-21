@@ -75,19 +75,18 @@ namespace Thermodynamics.Harness
         /// ship whose reactors out-rate its load runs them part-loaded, which is the ordinary case
         /// and the one a plate rating gets wrong.
         /// </summary>
-        public static float Apply(ThermalSimulation simulation, State state)
+        public static float Apply(ShipAssembly assembly, State state)
         {
             Dictionary<string, GameBlocks.Definition> definitions = GameBlocks.BySubtype();
-            ThermalSolver solver = simulation.Solver;
 
             List<BlockInstance> generators = new List<BlockInstance>();
             List<BlockInstance> stores = new List<BlockInstance>();
             float installed = 0f;
             float demand = 0f;
 
-            for (int i = 0; i < solver.Nodes.Count; i++)
+            foreach (ThermalNode node in assembly.Nodes)
             {
-                BlockInstance block = solver.Nodes[i].Block;
+                BlockInstance block = node.Block;
 
                 block.PowerProducedWatts = 0f;
                 block.PowerConsumedWatts = 0f;
@@ -149,10 +148,13 @@ namespace Thermodynamics.Harness
                 Share(definitions, stores, reserve, shortfall < reserve ? shortfall : reserve);
             }
 
-            solver.RefreshHeatGeneration();
+            for (int i = 0; i < assembly.Simulations.Count; i++)
+            {
+                assembly.Simulations[i].Solver.RefreshHeatGeneration();
+            }
 
             float watts = 0f;
-            for (int i = 0; i < solver.Nodes.Count; i++) watts += solver.Nodes[i].HeatGenerationWatts;
+            foreach (ThermalNode node in assembly.Nodes) watts += node.HeatGenerationWatts;
             return watts;
         }
 

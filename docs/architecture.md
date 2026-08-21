@@ -7,7 +7,7 @@ The mod is in two halves, and the line between them is the point of the design.
 | **The model** | [`Data/Scripts/Thermodynamics/Core/`](../Data/Scripts/Thermodynamics/Core) | Blocks, heat, geometry. One Space Engineers assembly, `VRage.Math`, for vectors. No session, no entity, no `MyAPIGateway`. |
 | **The adapter** | everything else under [`Data/Scripts/Thermodynamics/`](../Data/Scripts/Thermodynamics) | Definitions, entity events, raycasts, damage, storage, HUD, terminal, mod API. |
 
-The model is what [`sim/`](../sim) builds and tests outside the game; the adapter is what the game
+The model is what [`tests/`](../sim) builds and tests outside the game; the adapter is what the game
 compiles around it. Everything the game supplies crosses one of three boundaries — block layout, an
 environment sample, and results out — and nothing else.
 

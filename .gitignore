@@ -15,5 +15,9 @@
 !*.sln
 !*.props
 
-# the blueprint corpus: gigabytes of other people's ships, fetched not authored
+# The blueprint corpus and the build output both live OUTSIDE this folder now - see
+# Directory.Build.props and Blueprints.CorpusPath. This repository is the mod folder, linked into
+# the game, so anything sitting in it is part of what gets published to the workshop. These entries
+# remain so an older checkout that still has them does not commit them.
 corpus/
+*.build/

@@ -3,7 +3,7 @@
   GENERATED FILE — do not edit by hand.
 
   Regenerate with:
-      dotnet run --project sim/Thermodynamics.Sim -- planets --write Data/Planets.xml
+      dotnet run --project tests/Thermodynamics.Sim -- planets --write Data/Planets.xml
 
   Every figure below is derived from the world's own generator definition by
   Thermodynamics.Core.PlanetThermalDerivation. What each derivation is and why is

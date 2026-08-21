@@ -11,7 +11,7 @@ each other at all — a run taken at several times the usual noise moved the sma
 the benchmark report by several per cent.
 
 The benchmark baseline itself is versioned at
-[`sim/benchmarks/performance.csv`](../sim/benchmarks/performance.csv), so any figure in the report
+[`tests/benchmarks/performance.csv`](../tests/benchmarks/performance.csv), so any figure in the report
 can be recovered for any row here by reading that file at the row's commit.
 
 ## The suite
@@ -55,7 +55,7 @@ Where a pass moves something the columns above cannot see, it gets a row here.
 ## Recording a row
 
 ```bash
-cd sim
+cd tests
 dotnet test                                                                   # tests, duration
 dotnet run --project Thermodynamics.Sim -- bench report --size 32000 --max 125000 --csv benchmarks
 dotnet run --project Thermodynamics.Sim -- bench elements                     # ns per node

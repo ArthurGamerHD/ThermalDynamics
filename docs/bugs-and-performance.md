@@ -6,13 +6,13 @@
 > order of work has since been measured, and most of it fixed. The correctness findings here still
 > stand.
 
-Findings from extracting the simulation into [`sim/`](../sim) and putting it under test. Each
+Findings from extracting the simulation into [`tests/`](../sim) and putting it under test. Each
 correctness item says whether it is confirmed by a test, and where the fixed behaviour lives.
 
 Severity is about impact on a running game, not on how hard it is to fix.
 
 > **Status.** The live mod now runs the rewritten model, so the model defects below are fixed in
-> the shipping path rather than only in `sim/`. What is still open is measurement: the questions
+> the shipping path rather than only in `tests/`. What is still open is measurement: the questions
 > these findings raise — how often real grids clamp, what the room mapper costs on a real ship —
 > are answered by switching telemetry on (`/thermal telemetry on`) and reading the cost and
 > substep sections of the report. See [telemetry.md](telemetry.md).
