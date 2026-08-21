@@ -123,7 +123,28 @@ fallback entry is byte-for-byte the earthlike climate the mod always shipped, an
 of definition inputs — including ones no shipped world uses — produces a negative, NaN or inverted
 climate.
 
-## 6. Reading it back: planet probes
+## 6. What happens when the file does not reach the mod
+
+The entries are read through Draygo's BlockExtensions API, which is a second mod answering on a
+message. Two things follow, and a field dump found both the hard way — an earthlike world reading
+2.7 K of ambient at 0.93 air density, no convection, no solar decay, and 232,000 points of heat
+damage behind it.
+
+**A definition overrides only what it carried.** Every value the lookup did not answer for used to
+arrive as zero and be written over the model's own default, so a planet with no thermal group — or
+a pack authoring three values of eleven — became a vacuum. `PlanetProperties.Merge` takes only the
+fields the read actually supplied; the rest keep the earthlike defaults on
+`PlanetThermalProperties`.
+
+**A lookup that is not up yet is not an answer.** The first grid to tick can ask before the other
+mod has sent its handlers, which returns nothing for every field and was then cached for the
+session. The lookup returns null until it is ready, and nothing caches a null.
+
+The report names both: the Climate section prints the climate each planet is being simulated with
+and which fields its definition supplied, and the World section lists the mods loaded — which is
+where a missing BlockExtensions shows up.
+
+## 7. Reading it back: planet probes
 
 `TelemetryPlanetProbes` sweeps **72 fixed points** — every latitude from −80° to +80° including the
 equator, eight longitudes each — at five heights, on an interval, whether or not anything is standing
@@ -136,7 +157,7 @@ altitude, thinned by the air, then lagged.
 the difference between them *is* the lag, and it is the only way to see that the day's peak lands
 after noon rather than at it.
 
-## 7. What is still guesswork
+## 8. What is still guesswork
 
 - **Seven of eight worlds have identical air density**, so swing, pole drop, lag and convection are
   the same figure for all of them. The only real differentiation between shipped atmospheric worlds

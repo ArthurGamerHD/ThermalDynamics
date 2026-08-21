@@ -889,6 +889,24 @@ namespace Thermodynamics
             Telemetry.Overlay.Write(sb);
         }
 
+        /// <summary>
+        /// The climate each planet was simulated with, and how much of it the planet's own
+        /// definition supplied. A planet whose definition never loaded reads as the mod's defaults
+        /// with an empty supplied list, which is the difference between a tuning question and a
+        /// definition that is not reaching the mod.
+        /// </summary>
+        private static void WritePlanetProperties(StringBuilder sb)
+        {
+            if (Telemetry.PlanetProperties.Count == 0) return;
+
+            sb.Append("\n  climate in force\n");
+            foreach (KeyValuePair<string, string> planet in Telemetry.PlanetProperties)
+            {
+                sb.Append("    ").Append(planet.Key).Append('\n');
+                sb.Append("      ").Append(planet.Value).Append('\n');
+            }
+        }
+
         private static void WriteSubsteps(StringBuilder sb)
         {
             Section(sb, "Substeps");
@@ -1754,7 +1772,7 @@ namespace Thermodynamics
                 }
             }
 
-            if (planets.Count == 0) return;
+            if (planets.Count == 0 && Telemetry.PlanetProperties.Count == 0) return;
 
             Section(sb, "Climate");
 
@@ -1763,6 +1781,8 @@ namespace Thermodynamics
                 sb.Append("  ").Append(pair.Key).Append('\n');
                 pair.Value.Write(sb);
             }
+
+            WritePlanetProperties(sb);
         }
 
         /// <summary>Ranges seen on one planet, over every grid that was on it.</summary>

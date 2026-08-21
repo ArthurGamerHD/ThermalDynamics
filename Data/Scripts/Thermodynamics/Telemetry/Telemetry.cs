@@ -85,6 +85,13 @@ namespace Thermodynamics
         /// </summary>
         public static readonly List<KeyValuePair<string, string>> WorldSettingsRows = new List<KeyValuePair<string, string>>();
         public static readonly List<string> Mods = new List<string>();
+
+        /// <summary>
+        /// The climate each planet is actually being simulated with, and which of its values its
+        /// definition supplied. A dump where a planet reads as vacuum in breathable air is answered
+        /// by this line and by nothing else in the report.
+        /// </summary>
+        public static readonly Dictionary<string, string> PlanetProperties = new Dictionary<string, string>();
         public static DateTime GameEndDate;
         public static Settings SettingsSnapshot;
 
@@ -281,6 +288,31 @@ namespace Thermodynamics
             }
         }
 
+        /// <summary>Records the climate in force for one planet, the first time it is resolved.</summary>
+        public static void NotePlanetProperties(string planet, PlanetThermalProperties properties, string supplied)
+        {
+            if (!Enabled || properties == null) return;
+
+            string name = string.IsNullOrEmpty(planet) ? "(unnamed)" : planet;
+
+            lock (RegistryLock)
+            {
+                PlanetProperties[name] =
+                    "day " + properties.DayTemperature.ToString("n1") + " K"
+                    + ", night " + properties.NightTemperature.ToString("n1") + " K"
+                    + ", pole drop " + properties.PoleTemperatureDrop.ToString("n1") + " K"
+                    + ", lapse " + properties.AmbientLapseRate.ToString("n2") + " K/km"
+                    + ", lag " + properties.AmbientLagSeconds.ToString("n0") + " s"
+                    + ", underground " + properties.UndergroundTemperature.ToString("n1") + " K"
+                    + ", damping " + properties.UndergroundDampingDepth.ToString("n0") + " m"
+                    + ", core " + properties.CoreTemperature.ToString("n0") + " K"
+                    + ", deadzone " + properties.SealevelDeadzone.ToString("n0") + " m"
+                    + ", solar decay " + properties.SolarDecay.ToString("n2")
+                    + ", convection " + properties.ConvectionCoefficient.ToString("n1") + " W/m2K"
+                    + " [from definition: " + supplied + "]";
+            }
+        }
+
         /// <summary>Called once per rendered/simulated frame from the session component.</summary>
         public static void FrameTick()
         {
@@ -361,6 +393,7 @@ namespace Thermodynamics
             BlockTypeRecordsDropped = 0;
             WorldSettingsRows.Clear();
             Mods.Clear();
+            PlanetProperties.Clear();
             GameVersion = "(unknown)";
             Overlay = new OverlayTelemetry();
 

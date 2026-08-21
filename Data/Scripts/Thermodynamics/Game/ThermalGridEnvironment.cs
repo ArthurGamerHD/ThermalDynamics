@@ -438,12 +438,25 @@ namespace Thermodynamics
             PlanetThermalProperties properties;
             if (PlanetProperties.TryGetValue(planet.Entity.EntityId, out properties)) return properties;
 
+            PlanetDefinition definition = planet.Definition();
+
             properties = ThermalBlockCatalog.ToPlanetProperties(
-                planet.Definition(),
+                definition,
                 planet.Entity == null || !planet.Entity.DefinitionId.HasValue
                     ? ""
                     : planet.Entity.DefinitionId.Value.SubtypeName);
-            PlanetProperties[planet.Entity.EntityId] = properties;
+
+            // Only a definition that answered is cached. Until the lookup is up this is the mod's
+            // own earthlike defaults, which is a climate rather than a vacuum, and it is replaced
+            // by the planet's own the moment there is one to read.
+            if (definition != null)
+            {
+                PlanetProperties[planet.Entity.EntityId] = properties;
+
+                if (Telemetry.Enabled) Telemetry.NotePlanetProperties(
+                    planet.Entity.StorageName, properties, definition.Supplied.ToString());
+            }
+
             return properties;
         }
 

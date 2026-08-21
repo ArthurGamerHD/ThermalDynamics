@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using VRage.Game;
+using Thermodynamics.Core;
 using VRage.Utils;
 
 namespace Thermodynamics
@@ -24,6 +25,21 @@ namespace Thermodynamics
         private static readonly MyStringId UndergroundDampingDepthId = MyStringId.GetOrCompute("UndergroundDampingDepth");
         private static readonly MyStringId SolarDecayId = MyStringId.GetOrCompute("SolarDecay");
         private static readonly MyStringId ConvectionCoefficientId = MyStringId.GetOrCompute("ConvectionCoefficient");
+
+        /// <summary>
+        /// Which values the definition actually carried.
+        ///
+        /// A planet whose generator has no <c>ThermalPlanetProperties</c> group — or one authored
+        /// with three of the eleven — used to hand back zeros for everything it did not say, and
+        /// those zeros were copied straight over the model's own defaults. Nothing carries what a
+        /// definition did not say any more.
+        /// </summary>
+        public PlanetField Supplied;
+
+        public bool Has(PlanetField field)
+        {
+            return (Supplied & field) != 0;
+        }
 
         /// <summary>Ambient temperature with the sun on the far side of the planet, K.</summary>
         [ProtoMember(10)]
@@ -85,6 +101,12 @@ namespace Thermodynamics
             PlanetDefinition def = new PlanetDefinition();
             DefinitionExtensionsAPI lookup = Session.Definitions;
 
+            // The lookup arrives asynchronously, on a message from the mod that owns it. Reading it
+            // before it answers returns nothing for every field, and a definition built from that is
+            // indistinguishable from a planet that authored none — permanently, since the caller
+            // caches. Null says "not yet" instead, and the caller asks again.
+            if (lookup == null || !lookup.Init) return null;
+
             if (!lookup.DefinitionIdExists(defId))
             {
                 defId = new MyDefinitionId(typeof(MyObjectBuilder_PlanetGeneratorDefinition), Settings.DefaultSubtypeId);
@@ -93,37 +115,70 @@ namespace Thermodynamics
             double dvalue;
 
             if (lookup.TryGetDouble(defId, GroupId, NightTemperatureId, out dvalue))
+            {
                 def.NightTemperature = (float)dvalue;
+                def.Supplied |= PlanetField.NightTemperature;
+            }
 
             if (lookup.TryGetDouble(defId, GroupId, DayTemperatureId, out dvalue))
+            {
                 def.DayTemperature = (float)dvalue;
+                def.Supplied |= PlanetField.DayTemperature;
+            }
 
             if (lookup.TryGetDouble(defId, GroupId, UndergroundTemperatureId, out dvalue))
+            {
                 def.UndergroundTemperature = (float)dvalue;
+                def.Supplied |= PlanetField.UndergroundTemperature;
+            }
 
             if (lookup.TryGetDouble(defId, GroupId, CoreTemperatureId, out dvalue))
+            {
                 def.CoreTemperature = (float)dvalue;
+                def.Supplied |= PlanetField.CoreTemperature;
+            }
 
             if (lookup.TryGetDouble(defId, GroupId, SealevelDeadzoneId, out dvalue))
+            {
                 def.SealevelDeadzone = (float)dvalue;
+                def.Supplied |= PlanetField.SealevelDeadzone;
+            }
 
             if (lookup.TryGetDouble(defId, GroupId, PoleTemperatureDropId, out dvalue))
+            {
                 def.PoleTemperatureDrop = (float)dvalue;
+                def.Supplied |= PlanetField.PoleTemperatureDrop;
+            }
 
             if (lookup.TryGetDouble(defId, GroupId, AmbientLagSecondsId, out dvalue))
+            {
                 def.AmbientLagSeconds = (float)dvalue;
+                def.Supplied |= PlanetField.AmbientLagSeconds;
+            }
 
             if (lookup.TryGetDouble(defId, GroupId, AmbientLapseRateId, out dvalue))
+            {
                 def.AmbientLapseRate = (float)dvalue;
+                def.Supplied |= PlanetField.AmbientLapseRate;
+            }
 
             if (lookup.TryGetDouble(defId, GroupId, UndergroundDampingDepthId, out dvalue))
+            {
                 def.UndergroundDampingDepth = (float)dvalue;
+                def.Supplied |= PlanetField.UndergroundDampingDepth;
+            }
 
             if (lookup.TryGetDouble(defId, GroupId, SolarDecayId, out dvalue))
+            {
                 def.SolarDecay = (float)dvalue;
+                def.Supplied |= PlanetField.SolarDecay;
+            }
 
             if (lookup.TryGetDouble(defId, GroupId, ConvectionCoefficientId, out dvalue))
+            {
                 def.ConvectionCoefficient = (float)dvalue;
+                def.Supplied |= PlanetField.ConvectionCoefficient;
+            }
 
             return def;
 

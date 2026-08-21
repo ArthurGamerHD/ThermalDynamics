@@ -25,16 +25,29 @@ namespace Thermodynamics
             public Vector3D Position;
             public MyGravityProviderComponent GravityComponent;
             private PlanetDefinition definition = NullDef;
+
+            /// <summary>
+            /// This planet's thermal definition, or null until the definition lookup can answer.
+            ///
+            /// The lookup is a mod-to-mod API that initialises on a message, so the first grid to
+            /// tick may ask before it exists. A null answer is kept rather than cached, and the
+            /// caller asks again next time — the alternative is a whole session run against the
+            /// blank definition of a planet that has one.
+            /// </summary>
             public PlanetDefinition Definition() 
             {
                 if (definition == NullDef && Entity.DefinitionId.HasValue) 
                 {
-                    definition = PlanetDefinition.GetDefinition(Entity.DefinitionId.Value);
+                    PlanetDefinition read = PlanetDefinition.GetDefinition(Entity.DefinitionId.Value);
+                    if (read == null) return null;
 
-                    MyLog.Default.Info($"[{Settings.Name}] updated planet definition: {Entity.DisplayName}");
+                    definition = read;
+
+                    MyLog.Default.Info($"[{Settings.Name}] updated planet definition: {Entity.DisplayName}"
+                        + $" ({definition.Supplied})");
                 }
 
-                return definition;
+                return definition == NullDef ? null : definition;
             }
         }
 

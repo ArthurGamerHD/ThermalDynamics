@@ -419,20 +419,31 @@ namespace Thermodynamics
         public static PlanetThermalProperties ToPlanetProperties(
             PlanetDefinition definition, string subtype = "")
         {
+            // Seeded with the model's own defaults, which describe an earthlike world. A definition
+            // overrides only what it actually carried: a planet with no thermal group at all, or a
+            // pack authoring three values of eleven, keeps a climate rather than being handed zeros
+            // — and a zero day and night temperature is the vacuum figure, in breathable air.
             PlanetThermalProperties properties = new PlanetThermalProperties();
-            if (definition == null) return properties.Clamp();
+            if (definition == null)
+            {
+                ApplyWorldPlanetValues(properties);
+                return properties.Clamp();
+            }
 
-            properties.NightTemperature = definition.NightTemperature;
-            properties.DayTemperature = definition.DayTemperature;
-            properties.UndergroundTemperature = definition.UndergroundTemperature;
-            properties.CoreTemperature = definition.CoreTemperature;
-            properties.SealevelDeadzone = definition.SealevelDeadzone;
-            properties.PoleTemperatureDrop = definition.PoleTemperatureDrop;
-            properties.AmbientLagSeconds = definition.AmbientLagSeconds;
-            properties.AmbientLapseRate = definition.AmbientLapseRate;
-            properties.UndergroundDampingDepth = definition.UndergroundDampingDepth;
-            properties.SolarDecay = definition.SolarDecay;
-            properties.ConvectionCoefficient = definition.ConvectionCoefficient;
+            PlanetThermalProperties read = new PlanetThermalProperties();
+            read.NightTemperature = definition.NightTemperature;
+            read.DayTemperature = definition.DayTemperature;
+            read.UndergroundTemperature = definition.UndergroundTemperature;
+            read.CoreTemperature = definition.CoreTemperature;
+            read.SealevelDeadzone = definition.SealevelDeadzone;
+            read.PoleTemperatureDrop = definition.PoleTemperatureDrop;
+            read.AmbientLagSeconds = definition.AmbientLagSeconds;
+            read.AmbientLapseRate = definition.AmbientLapseRate;
+            read.UndergroundDampingDepth = definition.UndergroundDampingDepth;
+            read.SolarDecay = definition.SolarDecay;
+            read.ConvectionCoefficient = definition.ConvectionCoefficient;
+
+            properties = PlanetProperties.Merge(properties, read, definition.Supplied);
 
             ThermalProfileOverlays.Apply(properties, subtype);
             ApplyWorldPlanetValues(properties);
