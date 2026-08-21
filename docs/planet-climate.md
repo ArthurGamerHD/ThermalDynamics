@@ -221,6 +221,23 @@ and cached on the same 40 m movement rule, so between refreshes depth is the dif
 radii — a subtraction, exact for a shaft sunk straight down, and anything moving far enough sideways
 for it not to be has already tripped the resample.
 
+**There is no wind under the ground.** The height a grid sits at above the ground is signed, and the
+wind model reads it: at the surface the wind is whole, and it fades to nothing over the grid's own
+reach below it. The fade is over the hull rather than at the rim because a grid is a body and the
+height is measured at its centre — a ship in the trench it has just dug has its midpoint under the
+surface and its deck still open to the sky, so a test on the centre alone would switch the wind off
+while half the hull was still in the open.
+
+The game's `IsUnderGround` answers for a point and is not what decides this. It reads true the
+moment a grid's centre passes the surface, which is exactly the case the fade exists for. A field
+dump recorded the failure this fixes: a grid 9.6 m below the surface, with the game's flag reading
+false, blowing 4.3 m/s. `wind_burial` in the environment dump is the share that survived, and
+`dotnet run --project tests/Thermodynamics.Sim -- descent` prints the whole descent.
+
+**Convection underground is still the planet's own coefficient** — a buried grid exchanges with rock
+at the rate it would exchange with still air. Rock contact is not modelled, so this is the nearest
+available answer rather than a correct one; see the backlog.
+
 **With the shipped 2 km deadzone the core term is out of reach in ordinary play**, since SE's voxels
 do not go down that far. That is deliberate rather than an oversight: the model is correct and the
 tuning lever is documented. Lowering `SealevelDeadzone` to a few hundred metres is how a planet

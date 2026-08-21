@@ -44,6 +44,9 @@ namespace Thermodynamics.Sim
                 case "planets":
                     return PlanetsCommand(args);
 
+                case "descent":
+                    return DescentCommand(args);
+
                 case "profiles":
                     Console.Write(ProfileLab.Report());
                     return 0;
@@ -123,6 +126,36 @@ namespace Thermodynamics.Sim
                     PrintUsage();
                     return 1;
             }
+        }
+
+        /// <summary>
+        /// A ship digging from the surface to the core: what the environment does at every depth.
+        ///
+        /// The one place the sun, the wind, the rock's damping and the planet's own heat are read on
+        /// a single axis. <c>--csv &lt;dir&gt;</c> writes the table for comparison against a field
+        /// dump's environment rows, which carry the same columns.
+        /// </summary>
+        private static int DescentCommand(string[] args)
+        {
+            List<Descent.Reading> readings = Descent.Run();
+            string csv = Descent.Csv(readings);
+
+            Console.WriteLine("A ship of " + Descent.HullReach.ToString("n1")
+                + " m reach digging from the surface to the core.");
+            Console.WriteLine();
+            Console.Write(csv.Replace(",", "\t"));
+
+            string directory = ValueAfter(args, "--csv");
+            if (directory != null)
+            {
+                Directory.CreateDirectory(directory);
+                string path = Path.Combine(directory, "descent.csv");
+                File.WriteAllText(path, csv);
+                Console.WriteLine();
+                Console.WriteLine("wrote " + path);
+            }
+
+            return 0;
         }
 
         /// <summary>
@@ -799,6 +832,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  hotspot --ship <name>   why one block on one ship is the hottest thing on it");
             Console.WriteLine("    --scenario <name> --top N");
             Console.WriteLine("  dump [--path <dir>]     audit a field telemetry dump against the model's own claims");
+            Console.WriteLine("  descent [--csv <dir>]   surface to core: sun, wind, rock damping and planet heat");
             Console.WriteLine();
             Console.WriteLine("  bench scale             cost per stage as the grid grows");
             Console.WriteLine("  bench hitch --size N    per-tick cost, with a block welded mid-run");

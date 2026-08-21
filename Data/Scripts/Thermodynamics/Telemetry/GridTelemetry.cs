@@ -145,6 +145,12 @@ namespace Thermodynamics
         /// <summary>Metres above the ground, which is what the vertical profile is a function of.</summary>
         public float WindHeightAboveGround;
 
+        /// <summary>
+        /// Share of the wind left after being under the surface, 0..1. Zero once the whole grid is
+        /// buried; between the two while it is digging itself in.
+        /// </summary>
+        public float WindBurial;
+
         /// <summary>Share of the ceiling the circulation band and the weather were blowing, 0..1.</summary>
         public float WindBandShare;
 

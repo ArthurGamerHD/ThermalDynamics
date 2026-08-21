@@ -200,6 +200,17 @@ All three terrain effects fade linearly to nothing at the gradient height. They 
 phenomena, and steering a ship two kilometres up along a valley it is nowhere near would be worse
 than not modelling terrain at all.
 
+### Under the surface
+
+Height above ground is signed, and `WindSolver.Burial` turns it into the share of the wind that
+reaches the grid: 1 at or above the surface, 0 once the whole body is under, linear between. The
+fade length is the grid's own reach — half its bounding box — supplied by the adapter, so a large
+ship in a shallow scrape still blows and a small one in a shaft does not.
+
+Before this, `HeightAboveGround` was clamped to zero and a buried grid was given the ground-level
+wind. A field dump recorded a grid 9.6 m under the surface at 4.3 m/s, with convection and friction
+reading against it.
+
 ## 4. Reading it: the telemetry
 
 The environment CSV carries the wind decomposed, one row per sample per grid:

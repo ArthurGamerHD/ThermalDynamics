@@ -146,6 +146,21 @@ Scenarios are deterministic: no clock, no randomness, no dependence on iteration
 scenario produces byte-identical output on every run, which is what lets them double as
 regression tests (`ScenarioTests`).
 
+## The descent
+
+```
+dotnet run --project Thermodynamics.Sim -- descent
+dotnet run --project Thermodynamics.Sim -- descent --csv out/
+```
+
+A ship digging from the surface to the core, read at every depth: the sun, the wind, the day
+damping out in the rock, and the rock's own heat below the deadzone. It is the one place the four
+hand over to each other, and each of them was written on its own.
+
+The columns match the environment dump's, so a descent flown in game can be laid against the
+modelled one. It found the wind fault A15 — a buried grid was still in the ground-level wind — and
+it is where the unmodelled rock contact (A16) is visible.
+
 ## Block balance
 
 `balance` is neither a scenario nor a benchmark: it costs every block the mod ships and measures it

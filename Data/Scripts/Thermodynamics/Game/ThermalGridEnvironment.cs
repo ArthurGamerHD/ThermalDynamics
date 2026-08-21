@@ -213,6 +213,18 @@ namespace Thermodynamics
             return weatherResponse;
         }
 
+        /// <summary>
+        /// Half the grid's extent, metres: how far its centre can drop below the surface before all
+        /// of it is buried. Bounded below so a one-block grid still fades over something.
+        /// </summary>
+        private float BurialDepth()
+        {
+            BoundingBoxD box = Grid.PositionComp.WorldAABB;
+            double reach = box.HalfExtents.Length();
+
+            return reach < 2.5 ? 2.5f : (float)reach;
+        }
+
         /// <summary>The weather last looked up, and the table's response to it.</summary>
         private string weatherName;
         private float weatherInfluence = 1f;
@@ -305,6 +317,7 @@ namespace Thermodynamics
                 row.WindCeiling = entity.GetWindSpeed(position);
 
                 row.WindHeightAboveGround = sample.WindHeightAboveGround;
+                row.WindBurial = sample.WindBurial;
                 row.WindBandShare = sample.WindBandShare;
                 row.WindProfileFactor = sample.WindProfileFactor;
                 row.WindHeating = sample.WindHeating;
@@ -460,9 +473,9 @@ namespace Thermodynamics
             Vector3 axis = planet.Entity.PositionComp.WorldMatrixRef.Up;
 
             // Height above the ground rather than above sea level. The surface radius under the grid
-            // was already read for the ground material and the depth, so this costs nothing.
+            // was already read for the ground material and the depth, so this costs nothing. Signed:
+            // a grid digging itself in is below the surface, and the wind model reads that.
             float height = groundSurfaceRadius > 0f ? sample.Radius - groundSurfaceRadius : 0f;
-            if (height < 0f) height = 0f;
 
             // The sun's height now, lagged into how warm the ground has become, which is what drives
             // the mixing that brings wind down to the surface — and takes it away again at night.
@@ -480,6 +493,11 @@ namespace Thermodynamics
             inputs.WeatherWind = weatherWind;
             inputs.Variation = WindField.Variation(position);
             inputs.HeightAboveGround = height;
+
+            // The grid's own reach above its centre, which is how far it can descend before the
+            // whole of it is under the surface. The game's underground flag answers a point rather
+            // than a body and reads false for a ship whose deck is still open to the sky.
+            inputs.BurialDepth = BurialDepth();
             inputs.Heating = windHeating;
             inputs.Roughness = settings.WindRoughnessLength;
             inputs.GradientHeight = settings.WindGradientHeight;
@@ -501,6 +519,7 @@ namespace Thermodynamics
             Vector3 direction = wind.Direction;
             float speed = wind.Speed;
 
+            sample.WindBurial = wind.Burial;
             sample.WindSpeed = speed;
             sample.WindDirection = direction;
             sample.WindHeightAboveGround = height;

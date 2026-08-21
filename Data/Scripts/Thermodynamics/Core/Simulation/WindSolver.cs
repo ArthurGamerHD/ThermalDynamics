@@ -45,8 +45,24 @@ namespace Thermodynamics.Core
             /// <summary>The steady per-place variation, 0..1. See <see cref="WindField.Variation"/>.</summary>
             public float Variation;
 
-            /// <summary>Metres above the ground.</summary>
+            /// <summary>
+            /// Metres above the ground, signed. Negative below the surface, which is where a grid
+            /// digging itself in sits.
+            /// </summary>
             public float HeightAboveGround;
+
+            /// <summary>
+            /// Metres of descent below the surface over which the wind dies, m.
+            ///
+            /// A grid is a body rather than a point, and the height above ground is measured at its
+            /// centre: a ship in the trench it has just dug has its centre under the surface and its
+            /// deck still open to the sky. Fading over the grid's own size answers both — a shallow
+            /// scrape still blows, a shaft does not — where a test on the centre alone would switch
+            /// the wind off the moment the hull's midpoint passed the rim.
+            ///
+            /// Zero or less cuts the wind at the surface exactly.
+            /// </summary>
+            public float BurialDepth;
 
             /// <summary>Lagged share of the day's heating, 0..1. See <see cref="WindProfile.Heating"/>.</summary>
             public float Heating;
@@ -90,6 +106,9 @@ namespace Thermodynamics.Core
             /// <summary>Vertical profile times time of day, against the reference height.</summary>
             public float Profile;
 
+            /// <summary>How much of the wind survives being under the surface, 0..1.</summary>
+            public float Burial;
+
             /// <summary>Terrain exposure: above 1 on a rise, below 1 in a hollow.</summary>
             public float SpeedUp;
 
@@ -109,11 +128,27 @@ namespace Thermodynamics.Core
             public float Gradient;
         }
 
+        /// <summary>
+        /// The share of the wind that reaches a grid whose centre is <paramref name="height"/> above
+        /// the ground: all of it at or above the surface, none of it once the whole body is under.
+        /// </summary>
+        public static float Burial(float height, float depth)
+        {
+            if (height >= 0f) return 1f;
+            if (depth <= 0f) return 0f;
+
+            float share = 1f + (height / depth);
+
+            if (share <= 0f) return 0f;
+            return share > 1f ? 1f : share;
+        }
+
         public static Result Solve(ref Inputs inputs)
         {
             Result result = new Result();
             result.BandShare = 0f;
             result.Profile = 1f;
+            result.Burial = 1f;
             result.SpeedUp = 1f;
             result.Shelter = 1f;
             result.ChannelDegrees = 0f;
@@ -134,6 +169,12 @@ namespace Thermodynamics.Core
             result.BandShare = share / inputs.Ceiling;
 
             float height = inputs.HeightAboveGround;
+
+            // Under the surface. There is no wind in rock, and a grid that has dug itself in is
+            // between the two: it keeps whatever share of itself is still above ground.
+            result.Burial = Burial(height, inputs.BurialDepth);
+            if (result.Burial <= 0f) return result;
+
             if (height < 0f) height = 0f;
 
             float profile = WindProfile.Multiplier(height, inputs.Roughness, inputs.GradientHeight)
@@ -143,7 +184,7 @@ namespace Thermodynamics.Core
 
             result.Profile = profile;
 
-            float speed = share * profile;
+            float speed = share * profile * result.Burial;
 
             float influence = Terrain(ref inputs, height);
             if (influence > 0f && inputs.Terrain != null)
@@ -190,7 +231,7 @@ namespace Thermodynamics.Core
 
                     Vector3 slope = WindSlope.Velocity(
                         downhill, gradient, inputs.Heating, height, speed,
-                        inputs.SlopeStrength * influence);
+                        inputs.SlopeStrength * influence * result.Burial);
 
                     // Bounded by the air there is. A drainage flow is a few metres a second of real
                     // air moving downhill, and near the top of an atmosphere — or on a world whose

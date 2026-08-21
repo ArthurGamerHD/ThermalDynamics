@@ -143,6 +143,12 @@ namespace Thermodynamics.Core
         /// <summary>Metres above the ground the wind was evaluated at.</summary>
         public float WindHeightAboveGround;
 
+        /// <summary>
+        /// The share of the wind that survived being under the surface, 0..1. Diagnostic: the speed
+        /// already carries it.
+        /// </summary>
+        public float WindBurial;
+
         /// <summary>Share of the planet's ceiling the circulation band and weather were blowing, 0..1.</summary>
         public float WindBandShare;
 
@@ -192,6 +198,7 @@ namespace Thermodynamics.Core
             s.WindShelter = 1f;
             s.WindHeating = 0f;
             s.WindHeightAboveGround = 0f;
+            s.WindBurial = 1f;
             s.WindBandShare = 0f;
             s.WindChannelDegrees = 0f;
             s.RelativeWindDirectionLocal = Vector3.Zero;
