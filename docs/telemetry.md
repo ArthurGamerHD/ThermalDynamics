@@ -248,6 +248,16 @@ The frame is closed at the top of the *next* frame rather than at the end of its
 order the engine runs session components and entity components in is not something a mod
 controls, and a frame closed before its grids have run records nothing.
 
+## What the block overlay costs
+
+The overlay draws every block of the targeted grid as a transparent box, on the render thread,
+every frame. It simulates nothing, so its cost appears nowhere in the Cost table — a frame it
+stalls otherwise reads as a simulation that stalled.
+
+The **Block overlay** section records, per frame it drew: boxes considered, drawn, dropped as off
+screen and dropped by the budget; the billboards handed to the renderer; the milliseconds spent;
+and the radius the budget fitted, when it was limiting. `DebugOverlayMaxBoxes` sets the budget.
+
 ## Grids running below real time
 
 `MaxElementVisitsPerStep` bounds what one solver step may cost, and a grid large enough to reach it

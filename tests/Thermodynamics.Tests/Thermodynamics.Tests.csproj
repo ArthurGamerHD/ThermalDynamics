@@ -32,6 +32,8 @@
     <Compile Include="$(TelemetrySourceRoot)TelemetryAnomalies.cs" LinkBase="Telemetry" />
     <Compile Include="$(TelemetrySourceRoot)TelemetryFormat.cs" LinkBase="Telemetry" />
     <Compile Include="$(TelemetrySourceRoot)WorldSettings.cs" LinkBase="Telemetry" />
+    <Compile Include="$(TelemetrySourceRoot)OverlayTelemetry.cs" LinkBase="Telemetry" />
+    <Compile Include="$(TelemetrySourceRoot)../OverlayBudget.cs" LinkBase="Telemetry" />
     <Compile Include="$(TelemetrySourceRoot)FrameCost.cs" LinkBase="Telemetry" />
   </ItemGroup>
 

@@ -106,6 +106,7 @@ namespace Thermodynamics
             WriteAnomalies(sb);
             AppendClimate(sb);
             WritePerformance(sb);
+            WriteOverlay(sb);
             WriteSubsteps(sb);
             WriteGridTable(sb);
             WriteGridDetails(sb);
@@ -873,6 +874,21 @@ namespace Thermodynamics
         /// and demand keeps moving after both have bound.
         /// </para>
         /// </summary>
+        /// <summary>
+        /// What the block overlay cost, on the frames it drew.
+        ///
+        /// Printed only when it drew, so a session that never opened it says nothing. The overlay
+        /// runs on the render thread and simulates nothing, so its cost appears nowhere in the Cost
+        /// table: a frame it stalls otherwise reads as a simulation that stalled.
+        /// </summary>
+        private static void WriteOverlay(StringBuilder sb)
+        {
+            if (Telemetry.Overlay.Frames == 0) return;
+
+            Section(sb, "Block overlay");
+            Telemetry.Overlay.Write(sb);
+        }
+
         private static void WriteSubsteps(StringBuilder sb)
         {
             Section(sb, "Substeps");
@@ -1873,7 +1889,7 @@ namespace Thermodynamics
             sb.Append("time_s,grid,grid_id,planet,altitude_surface_m,altitude_sealevel_m,latitude_deg,");
             sb.Append("sun_elevation_deg,air_density,atmosphere_factor,ambient_k,ambient_c,underground,depth_m,");
             sb.Append("solar_w,solar_occlusion,convection_coeff,wind_speed,wind_bearing_deg,wind_ceiling,");
-            sb.Append("wind_agl_m,wind_band_share,wind_profile,wind_heating,wind_speedup,wind_shelter,wind_channel_deg,");
+            sb.Append("wind_agl_m,wind_burial,wind_band_share,wind_profile,wind_heating,wind_speedup,wind_shelter,wind_channel_deg,");
             sb.Append("weather,weather_intensity,weather_ambient_k,game_temperature,");
             sb.Append("surface_material,grid_mean_k,grid_peak_k\n");
 
@@ -1913,6 +1929,7 @@ namespace Thermodynamics
                     Csv(sb, row.WindCeiling);
 
                     Csv(sb, row.WindHeightAboveGround);
+                    Csv(sb, row.WindBurial);
                     Csv(sb, row.WindBandShare);
                     Csv(sb, row.WindProfileFactor);
                     Csv(sb, row.WindHeating);

@@ -572,6 +572,7 @@ that is a readout for playing rather than a diagnostic for debugging.
 | `RoomOverlayMinKelvin` | 253.15 K | Bottom of the room view's colour span, −20 °C. |
 | `RoomOverlayMaxKelvin` | 323.15 K | Top of the room view's colour span, 50 °C. |
 | `DebugBlockOverlay` | 0 | Which view the block overlay opens a session on: 0 off, 1 temperature, 2 solar watts, 3 exposed faces, 4 friction watts, 5 rooms. |
+| `DebugOverlayMaxBoxes` | 12000 | Boxes the block overlay may draw in one frame. Beyond it the overlay draws the part of the grid nearest the camera. 0 draws nothing. |
 
 ### The wind map
 
@@ -734,7 +735,14 @@ two compartments you think are separate came back as one room, and where the lea
 think is sealed reads as vented.
 
 Everything about it is client side and per frame: nothing is written to the grid, nothing
-replicates, and switching it off leaves no trace. It replaces the four `Debug*BlockColors` modes,
+replicates, and switching it off leaves no trace.
+
+A box is six transparent quads and twelve lines, so a forty thousand block ship drawn whole asks
+the renderer for over seven hundred thousand billboards a frame. Two things bound that. Boxes
+outside the camera's view cone are not drawn, which changes nothing on screen. What is left is held
+to `DebugOverlayMaxBoxes` by a radius fitted each frame to the count, so a large ship is drawn out
+to the distance that fits the budget and a small one is drawn whole. The report's *Block overlay*
+section records what it cost and how much was held back. It replaces the four `Debug*BlockColors` modes,
 which called `MyCubeGrid.ColorBlocks` and showed heat by permanently overwriting every player's
 paint. `DebugBlockOverlay` is a server-side setting like the rest of the file, so it only sets what
 a session starts on — the keybind is how each client drives it.

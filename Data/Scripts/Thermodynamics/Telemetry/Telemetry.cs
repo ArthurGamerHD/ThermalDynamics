@@ -138,6 +138,12 @@ namespace Thermodynamics
         /// </summary>
         private static readonly object RegistryLock = new object();
 
+        /// <summary>
+        /// What the block overlay costs the client. Replaced rather than cleared on reset, since a
+        /// second world starts a second overlay.
+        /// </summary>
+        public static OverlayTelemetry Overlay = new OverlayTelemetry();
+
         /// <summary>Wall clock spent inside the mod's own per-frame entry points.</summary>
         public static readonly TimingStat SessionFrameTime = new TimingStat("session frame");
 
@@ -356,6 +362,7 @@ namespace Thermodynamics
             WorldSettingsRows.Clear();
             Mods.Clear();
             GameVersion = "(unknown)";
+            Overlay = new OverlayTelemetry();
 
             lock (RegistryLock)
             {

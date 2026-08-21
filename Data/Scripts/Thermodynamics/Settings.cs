@@ -325,6 +325,14 @@ namespace Thermodynamics
         [ProtoMember(57)] public int DebugBlockOverlay = 0;
 
         /// <summary>
+        /// Boxes the block overlay may draw in one frame. Each is eighteen billboards, so a capital
+        /// ship drawn whole is over half a million a frame and the client stops rendering at rate.
+        /// Beyond the budget the overlay draws the part of the grid nearest the camera; the radius
+        /// it uses is fitted per frame. Client side.
+        /// </summary>
+        [ProtoMember(114)] public int DebugOverlayMaxBoxes = 12000;
+
+        /// <summary>
         /// Value the wind map starts a session showing, as a <see cref="WindOverlay.Mode"/>: 0 off,
         /// 1 the lattice around the player, 2 the whole globe. Ctrl+Shift+W cycles it in play.
         /// Client side.
@@ -412,6 +420,7 @@ namespace Thermodynamics
                 SolarOcclusionSamples = Core.SolarOcclusionSampler.MaxSamples;
             if (RoomOverlayMaxKelvin <= RoomOverlayMinKelvin)
                 RoomOverlayMaxKelvin = RoomOverlayMinKelvin + 1f;
+            if (DebugOverlayMaxBoxes < 0) DebugOverlayMaxBoxes = 0;
             if (DebugBlockOverlay < 0) DebugBlockOverlay = 0;
             if (DebugBlockOverlay >= ThermalDebugView.ModeCount)
                 DebugBlockOverlay = ThermalDebugView.ModeCount - 1;
@@ -606,7 +615,7 @@ namespace Thermodynamics
         public static readonly HashSet<string> ClientOwned = new HashSet<string>
         {
             "DebugTextOnScreen", "DebugSolarRaycast", "DebugWindRaycast", "DebugBlockOverlay",
-            "DebugWindOverlay", "DebugWindIndicator",
+            "DebugWindOverlay", "DebugWindIndicator", "DebugOverlayMaxBoxes",
         };
 
         /// <summary>
@@ -637,6 +646,7 @@ namespace Thermodynamics
                 "WindTerrainInfluence", "WindTerrainRadius", "WindSlopeStrength",
                 "DebugTextOnScreen", "DebugSolarRaycast", "DebugWindRaycast",
                 "DebugBlockOverlay", "DebugWindOverlay", "DebugWindIndicator",
+                "DebugOverlayMaxBoxes",
                 "RoomOverlayMinKelvin", "RoomOverlayMaxKelvin",
                 "EnableTelemetry", "TelemetrySampleStride", "TelemetryPlanetProbes",
 
@@ -708,6 +718,7 @@ namespace Thermodynamics
                 case "DebugSolarRaycast": return Flag(DebugSolarRaycast);
                 case "DebugWindRaycast": return Flag(DebugWindRaycast);
                 case "DebugBlockOverlay": return DebugBlockOverlay;
+                case "DebugOverlayMaxBoxes": return DebugOverlayMaxBoxes;
                 case "DebugWindOverlay": return DebugWindOverlay;
                 case "DebugWindIndicator": return Flag(DebugWindIndicator);
                 case "RoomOverlayMinKelvin": return RoomOverlayMinKelvin;
@@ -808,6 +819,7 @@ namespace Thermodynamics
                     DebugWindOverlay = (int)value;
                     WindOverlay.Set((WindOverlay.Mode)DebugWindOverlay);
                     return true;
+                case "DebugOverlayMaxBoxes": DebugOverlayMaxBoxes = (int)value; return true;
                 case "DebugWindIndicator": DebugWindIndicator = Flag(value); return true;
                 case "EnableTelemetry": EnableTelemetry = Flag(value); Telemetry.SetEnabled(EnableTelemetry); return true;
                 case "TelemetrySampleStride": TelemetrySampleStride = (int)value; return true;
@@ -841,6 +853,7 @@ namespace Thermodynamics
         public static bool IsFlag(string name)
         {
             return name != null && name != "DebugBlockOverlay" && name != "DebugWindOverlay"
+                && name != "DebugOverlayMaxBoxes"
                 && (name.StartsWith("Enable") || name.StartsWith("Debug")
                 || name == "SolarSelfShadowing"
                 || name == "SolarOcclusionPlanets"

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Sandbox.Game.Entities;
 using Sandbox.ModAPI;
 using Thermodynamics.Core;
@@ -54,6 +55,21 @@ namespace Thermodynamics
 
         /// <summary>Reused every frame so looking at a ship allocates nothing.</summary>
         private static readonly List<ThermalGrid> Targets = new List<ThermalGrid>();
+
+        /// <summary>
+        /// How much of the target is drawn. A capital ship is forty thousand blocks and each box is
+        /// eighteen billboards, which the renderer cannot carry at frame rate.
+        /// </summary>
+        public static readonly OverlayBudget Budget = new OverlayBudget();
+
+        /// <summary>Billboards handed to the renderer this frame, for the report.</summary>
+        private static long billboards;
+
+        /// <summary>Frame timer for the overlay's own cost. Only started while telemetry collects.</summary>
+        private static readonly Stopwatch DrawClock = new Stopwatch();
+
+        /// <summary>Cone containing the camera frustum, recomputed per frame.</summary>
+        private static double coneSin, coneCos;
 
         /// <summary>
         /// The grid the readout describes: the one being looked at, or the one being controlled when
@@ -137,12 +153,92 @@ namespace Thermodynamics
             CollectTargets(ref camera, ref eye);
             Focus = Targets.Count > 0 ? Targets[Targets.Count - 1] : null;
 
+            BeginFrame();
+
             for (int i = 0; i < Targets.Count; i++)
             {
                 DrawGrid(Targets[i], ref camera, ref eye);
             }
 
+            EndFrame();
             Targets.Clear();
+        }
+
+        /// <summary>
+        /// Sets the frame's budget and view cone, and starts the clock when anything is reading it.
+        /// </summary>
+        private static void BeginFrame()
+        {
+            Budget.MaxBoxes = Settings.Instance == null ? 12000 : Settings.Instance.DebugOverlayMaxBoxes;
+            Budget.BeginFrame();
+            billboards = 0;
+
+            IMyCamera camera = MyAPIGateway.Session.Camera;
+            Vector2 viewport = camera.ViewportSize;
+            double aspect = viewport.Y > 0 ? viewport.X / viewport.Y : 1.0;
+            double half = OverlayBudget.ConeHalfAngle(camera.FovWithZoom, aspect);
+
+            coneSin = Math.Sin(half);
+            coneCos = Math.Cos(half);
+
+            if (!Telemetry.Enabled) return;
+
+            DrawClock.Reset();
+            DrawClock.Start();
+        }
+
+        private static void EndFrame()
+        {
+            Budget.EndFrame();
+
+            if (!Telemetry.Enabled || Budget.Considered == 0) return;
+
+            DrawClock.Stop();
+
+            Telemetry.Overlay.Frame(
+                Describe(Current), Budget.Considered, Budget.Drawn, Budget.OffScreen, Budget.OverBudget,
+                billboards, Budget.Radius, DrawClock.Elapsed.TotalMilliseconds);
+        }
+
+        /// <summary>
+        /// Whether a box is drawn: in the camera's cone, and inside the budget. Counts the decision
+        /// either way, which is what fits the radius for the next frame.
+        /// </summary>
+        private static bool Wanted(ref Vector3D delta, double boxRadius, ref MatrixD camera)
+        {
+            Vector3D forward = camera.Forward;
+
+            if (!OverlayBudget.InView(ref delta, boxRadius, ref forward, coneSin, coneCos))
+            {
+                Budget.Cull();
+                return false;
+            }
+
+            return Budget.Accept(delta.Length());
+        }
+
+        /// <summary>
+        /// One box on the band in front of the eye, counted against the billboards the renderer is
+        /// handed: six quads and twelve lines for a solid box, twelve lines for an outline.
+        /// </summary>
+        private static void Box(
+            ref MatrixD box, ref BoundingBoxD local, ref Color colour,
+            MySimpleObjectRasterizer rasterizer, double thickness)
+        {
+            MySimpleObjectDraw.DrawTransparentBox(
+                ref box,
+                ref local,
+                ref colour,
+                rasterizer,
+                1,
+                (float)(thickness * BandScale),
+                FaceMaterial,
+                LineMaterial,
+                false,
+                -1,
+                BlendTypeEnum.PostPP);
+
+            billboards += rasterizer == MySimpleObjectRasterizer.Wireframe ? 12 : 18;
         }
 
         /// <summary>
@@ -206,11 +302,12 @@ namespace Thermodynamics
 
                 Vector3D delta = centre - eye;
 
-                // Behind the camera: scaling about the eye would fold it in front of the player.
-                if (Vector3D.Dot(delta, camera.Forward) <= 0) continue;
-
                 Vector3D half = (Vector3D)(bound.Block.Max - bound.Block.Min + Vector3I.One)
                     * (gridSize * 0.5);
+
+                // Off screen, behind the eye, or beyond what the budget allows this frame. A box
+                // scaled onto the band still costs its billboards wherever the block is.
+                if (!Wanted(ref delta, half.Length(), ref camera)) continue;
 
                 MatrixD box = gridMatrix;
                 box.Translation = eye + (delta * BandScale);
@@ -218,18 +315,7 @@ namespace Thermodynamics
                 BoundingBoxD local = new BoundingBoxD(-half * BandScale, half * BandScale);
                 Color colour = Colour(node);
 
-                MySimpleObjectDraw.DrawTransparentBox(
-                    ref box,
-                    ref local,
-                    ref colour,
-                    MySimpleObjectRasterizer.SolidAndWireframe,
-                    1,
-                    (float)(0.02 * BandScale),
-                    FaceMaterial,
-                    LineMaterial,
-                    false,
-                    -1,
-                    BlendTypeEnum.PostPP);
+                Box(ref box, ref local, ref colour, MySimpleObjectRasterizer.SolidAndWireframe, 0.02);
             }
         }
 
@@ -267,10 +353,11 @@ namespace Thermodynamics
                 bound.Block.ComputeWorldCenter(out centre);
 
                 Vector3D delta = centre - eye;
-                if (Vector3D.Dot(delta, camera.Forward) <= 0) continue;
 
                 Vector3 half = ((Vector3)(bound.Block.Max - bound.Block.Min + Vector3I.One))
                     * (gridSize * 0.5f);
+
+                if (!Wanted(ref delta, half.Length(), ref camera)) continue;
 
                 for (int face = 0; face < Face.Count; face++)
                 {
@@ -315,6 +402,8 @@ namespace Thermodynamics
                         (float)(Extent(ref half, ref localUp) * BandScale),
                         Vector2.Zero,
                         BlendTypeEnum.PostPP);
+
+                    billboards++;
                 }
             }
         }
@@ -392,7 +481,7 @@ namespace Thermodynamics
                     Vector3D centre = thermals.Grid.GridIntegerToWorld(cell);
                     Vector3D delta = centre - eye;
 
-                    if (Vector3D.Dot(delta, camera.Forward) <= 0) continue;
+                    if (!Wanted(ref delta, half.Length(), ref camera)) continue;
 
                     MatrixD box = gridMatrix;
                     box.Translation = eye + (delta * BandScale);
@@ -402,20 +491,11 @@ namespace Thermodynamics
                     // Solid where there is air to colour. Where there is none the box is still
                     // drawn: faintly filled when the game reports air the model lacks, and as a bare
                     // outline when both agree the room is empty.
-                    MySimpleObjectDraw.DrawTransparentBox(
-                        ref box,
-                        ref local,
-                        ref fill,
+                    Box(ref box, ref local, ref fill,
                         hasAir || disagrees
                             ? MySimpleObjectRasterizer.SolidAndWireframe
                             : MySimpleObjectRasterizer.Wireframe,
-                        1,
-                        (float)(0.02 * BandScale),
-                        FaceMaterial,
-                        LineMaterial,
-                        false,
-                        -1,
-                        BlendTypeEnum.PostPP);
+                        0.02);
 
                     if (!hasAir)
                     {
@@ -424,35 +504,14 @@ namespace Thermodynamics
                         Color dryEdge = edge;
                         dryEdge.A = (byte)(disagrees ? 255 : 90);
 
-                        MySimpleObjectDraw.DrawTransparentBox(
-                            ref box,
-                            ref local,
-                            ref dryEdge,
-                            MySimpleObjectRasterizer.Wireframe,
-                            1,
-                            (float)((disagrees ? 0.04 : 0.02) * BandScale),
-                            FaceMaterial,
-                            LineMaterial,
-                            false,
-                            -1,
-                            BlendTypeEnum.PostPP);
+                        Box(ref box, ref local, ref dryEdge, MySimpleObjectRasterizer.Wireframe,
+                            disagrees ? 0.04 : 0.02);
 
                         continue;
                     }
 
                     // The edges carry the room's identity over its temperature colour.
-                    MySimpleObjectDraw.DrawTransparentBox(
-                        ref box,
-                        ref local,
-                        ref edge,
-                        MySimpleObjectRasterizer.Wireframe,
-                        1,
-                        (float)(0.02 * BandScale),
-                        FaceMaterial,
-                        LineMaterial,
-                        false,
-                        -1,
-                        BlendTypeEnum.PostPP);
+                    Box(ref box, ref local, ref edge, MySimpleObjectRasterizer.Wireframe, 0.02);
                 }
             }
 
@@ -488,25 +547,14 @@ namespace Thermodynamics
                     Vector3D centre = thermals.Grid.GridIntegerToWorld(cell);
                     Vector3D delta = centre - eye;
 
-                    if (Vector3D.Dot(delta, camera.Forward) <= 0) continue;
+                    if (!Wanted(ref delta, half.Length(), ref camera)) continue;
 
                     MatrixD box = gridMatrix;
                     box.Translation = eye + (delta * BandScale);
 
                     BoundingBoxD local = new BoundingBoxD(-half * BandScale, half * BandScale);
 
-                    MySimpleObjectDraw.DrawTransparentBox(
-                        ref box,
-                        ref local,
-                        ref fill,
-                        MySimpleObjectRasterizer.SolidAndWireframe,
-                        1,
-                        (float)(0.04 * BandScale),
-                        FaceMaterial,
-                        LineMaterial,
-                        false,
-                        -1,
-                        BlendTypeEnum.PostPP);
+                    Box(ref box, ref local, ref fill, MySimpleObjectRasterizer.SolidAndWireframe, 0.04);
                 }
             }
         }
