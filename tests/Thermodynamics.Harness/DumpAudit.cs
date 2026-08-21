@@ -268,9 +268,17 @@ namespace Thermodynamics.Harness
             string[] needs = { "wind_speed", "wind_ceiling", "wind_band_share", "wind_profile", "wind_speedup", "wind_shelter" };
             if (!table.Require(needs, check)) return check;
 
+            // The speed column is the *relative* wind: a ship flying downwind legitimately reads
+            // below the composed ambient product. Only a row known to be standing still can turn a
+            // shortfall into a verdict; without the column, the check observes rather than fails.
+            bool motionKnown = table.Has("grid_speed");
+            check.Observation = !motionKnown;
+
             double worst = 0d;
             for (int i = 0; i < table.Rows.Count; i++)
             {
+                if (motionKnown && table.Number(i, "grid_speed") > 0.5d) continue;
+
                 double speed = table.Number(i, "wind_speed");
                 double predicted = table.Number(i, "wind_ceiling")
                     * table.Number(i, "wind_band_share")

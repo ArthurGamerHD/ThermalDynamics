@@ -43,7 +43,7 @@ namespace Thermodynamics.Tests
             "sun_elevation_deg,air_density,atmosphere_factor,ambient_k,ambient_c,underground," +
             "depth_m,solar_w,solar_occlusion,convection_coeff,wind_speed,wind_bearing_deg," +
             "wind_ceiling,wind_agl_m,wind_burial,wind_band_share,wind_profile,wind_heating,wind_speedup," +
-            "wind_shelter,wind_channel_deg,weather,weather_intensity,weather_ambient_k," +
+            "wind_shelter,wind_channel_deg,grid_speed,weather,weather_intensity,weather_ambient_k," +
             "game_temperature,surface_material,grid_mean_k,grid_peak_k";
 
         /// <summary>
@@ -466,6 +466,24 @@ namespace Thermodynamics.Tests
             Assert.True(check.Failed);
             Assert.False(result.Passed);
             Assert.Contains("10.00", check.Worst);
+        }
+
+        /// <summary>
+        /// The same shortfall on a moving grid is not a defect: the speed column is the relative
+        /// wind, and a ship flying downwind legitimately reads below the ambient product.
+        /// </summary>
+        [Fact]
+        public void AMovingGridMayReadBelowItsFactors()
+        {
+            Dictionary<string, string> row = Row();
+            row["wind_speed"] = "10";
+            row["grid_speed"] = "45";
+
+            DumpAudit.Result result = DumpAudit.Run(Write(row));
+            DumpAudit.CheckResult check = Check(result, "wind decomposes");
+
+            Assert.Equal(0, check.Hits);
+            Assert.True(result.Passed);
         }
 
         /// <summary>

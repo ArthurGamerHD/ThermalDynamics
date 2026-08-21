@@ -169,6 +169,13 @@ namespace Thermodynamics
         /// <summary>Degrees the terrain turned the wind from the band's own bearing.</summary>
         public float WindChannelDegrees;
 
+        /// <summary>
+        /// How fast the grid itself was moving, m/s. The wind columns are the *relative* wind, so
+        /// a ship flying downwind legitimately reads below the composed ambient product — and
+        /// without this column nothing distinguishes that from a factor going unreported.
+        /// </summary>
+        public float GridSpeed;
+
         public float WeatherIntensity;
 
         /// <summary>The game's name for the weather over the grid; empty in clear air.</summary>

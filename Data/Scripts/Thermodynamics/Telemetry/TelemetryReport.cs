@@ -1924,7 +1924,7 @@ namespace Thermodynamics
             sb.Append("time_s,grid,grid_id,planet,altitude_surface_m,altitude_sealevel_m,latitude_deg,");
             sb.Append("sun_elevation_deg,air_density,atmosphere_factor,ambient_k,ambient_c,underground,depth_m,");
             sb.Append("solar_w,solar_occlusion,convection_coeff,wind_speed,wind_bearing_deg,wind_ceiling,");
-            sb.Append("wind_agl_m,wind_burial,wind_band_share,wind_profile,wind_heating,wind_speedup,wind_shelter,wind_channel_deg,");
+            sb.Append("wind_agl_m,wind_burial,wind_band_share,wind_profile,wind_heating,wind_speedup,wind_shelter,wind_channel_deg,grid_speed,");
             sb.Append("weather,weather_intensity,weather_ambient_k,game_temperature,");
             sb.Append("surface_material,grid_mean_k,grid_peak_k\n");
 
@@ -1971,6 +1971,7 @@ namespace Thermodynamics
                     Csv(sb, row.WindSpeedUp);
                     Csv(sb, row.WindShelter);
                     Csv(sb, row.WindChannelDegrees);
+                    Csv(sb, row.GridSpeed);
 
                     Csv(sb, Truncate(row.Weather ?? "", 32));
                     Csv(sb, row.WeatherIntensity);

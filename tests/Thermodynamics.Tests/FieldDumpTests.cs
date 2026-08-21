@@ -16,10 +16,11 @@ namespace Thermodynamics.Tests
     /// planet produced, which is the only place the model and the world meet — the same reason
     /// `Census` keeps a real ship's block population rather than a plausible one.</para>
     ///
-    /// <para>The fixture is the 2026-08-20 fleet dump: 264 climate rows thinned one in twenty and
-    /// then completed with every buried row, every row under weather, every airless row, and every
-    /// row that exceeded the engine's wind ceiling or carried slope wind — the minorities a uniform
-    /// sample would drop — beside all 242 of its grids and 560 of its 815 block types. Refresh it
+    /// <para>The fixture is the 2026-08-21 ToastyBugs dump — five planets, a grid buried 99 m
+    /// into Mars, a Hailstorm, and the first session with per-stage after-step timing: 597 climate
+    /// rows thinned one in twenty and then completed with the minority rows a uniform sample would
+    /// drop (every row under weather or over the engine's ceiling; one in ten of the buried,
+    /// airless and slope-wind rows), beside all 304 of its grids and 720 block types. Refresh it
     /// from `-- dump`.</para>
     /// </summary>
     public class FieldDumpTests
@@ -56,71 +57,63 @@ namespace Thermodynamics.Tests
 
             foreach (DumpAudit.CheckResult check in result.Checks)
             {
-                // The burial check reads a column added after this fixture was taken, so it skips
-                // by design here. Remove the exemption when a dump from a build carrying A15
-                // refreshes the fixture.
-                if (check.Name.StartsWith("a wholly buried grid")) continue;
-
                 Assert.False(check.Skipped, check.Name + " skipped: the fixture lost a column");
             }
 
-            Assert.Equal(264, result.Rows);
-            Assert.Equal(242, result.GridRows);
-            Assert.Equal(560, result.BlockTypeRows);
+            Assert.Equal(597, result.Rows);
+            Assert.Equal(304, result.GridRows);
+            Assert.Equal(720, result.BlockTypeRows);
         }
 
         /// <summary>
-        /// The two faults this fixture caught, held as the diagnosis rather than as a passing test.
+        /// The fault this fixture caught, held as the diagnosis rather than as a passing test.
         ///
-        /// <para>A dump records what the mod was when it was taken, not what it is. Both faults were
-        /// fixed after this one: the one-off build was timed into the stage rows, which the cost
-        /// table indents under a `grid simulation` row that does not contain it; and a block type's
-        /// peak temperature was fed only by the strided sampler while its temperature range was fed
-        /// by the end-of-session sweep as well, so a type the sampler never reached reported a
-        /// maximum above its own peak.</para>
-        ///
-        /// <para>These assertions are what say the checks still detect what they were written for.
-        /// When a dump is taken on a build carrying both fixes, refresh the fixture and this test
-        /// becomes the ordinary "everything holds" one.</para>
+        /// <para>A dump records what the mod was when it was taken. This one carries the census
+        /// race: the game places blocks from worker threads, the per-type counters were plain
+        /// increments, and one placement in fourteen thousand lost its ++ — placed 14,273, removed
+        /// 113, live 14,159. The counters are interlocked now; the fixture still shows the tear,
+        /// because that is what proves the check can see one.</para>
         /// </summary>
         [Fact]
-        public void TheFixtureStillCarriesTheTwoFaultsItCaught()
+        public void TheFixtureStillCarriesTheCensusTearItCaught()
         {
             DumpAudit.Result result = DumpAudit.Run(Fixture());
 
-            DumpAudit.CheckResult stages = Check(result, "a grid's stages fit");
-            Assert.Equal(1, stages.Hits);
-            Assert.Contains("Large Grid 1784", stages.Worst);
-
-            DumpAudit.CheckResult ordered = Check(result, "a block type's temperatures");
-            Assert.True(ordered.Hits > 300, "peak below max on " + ordered.Hits + " types");
+            DumpAudit.CheckResult census = Check(result, "live blocks");
+            Assert.Equal(1, census.Hits);
+            Assert.Contains("SmallBlockArmorBlock", census.Worst);
 
             foreach (DumpAudit.CheckResult check in result.Checks)
             {
-                if (check == stages || check == ordered) continue;
+                if (check == census) continue;
                 Assert.False(check.Failed, check.Name + " failed: " + check.Worst);
             }
         }
 
         /// <summary>
-        /// The two open questions the fixture is evidence for. Both are counted rather than failed,
-        /// and both are here so that a change which quietly resolves — or worsens — one of them
-        /// cannot pass unnoticed.
+        /// The open questions the fixture is evidence for. Counted rather than failed, and here so
+        /// a change that quietly resolves — or worsens — one of them cannot pass unnoticed.
         /// </summary>
         [Fact]
-        public void TheFixtureCarriesTheTwoOpenObservations()
+        public void TheFixtureCarriesTheOpenObservations()
         {
             DumpAudit.Result result = DumpAudit.Run(Fixture());
 
-            // B18: the engine's figure scales the wind rather than bounding it, once the vertical
-            // profile multiplies the band share above the reference height.
+            // B18: the engine's figure scales the wind rather than bounding it. 23 rows exceed it,
+            // the worst at three times the local ceiling, 8.4 km up a mountain on Alien.
             DumpAudit.CheckResult ceiling = Check(result, "wind stays under");
-            Assert.Equal(3, ceiling.Hits);
-            Assert.Contains("80.29", ceiling.Worst);
+            Assert.Equal(23, ceiling.Hits);
+            Assert.Contains("103.94", ceiling.Worst);
 
-            // B15: slope wind is a near-ground term and behaves like one.
+            // B15: slope wind is what carries a reading above the composed factors.
             DumpAudit.CheckResult slope = Check(result, "slope wind");
-            Assert.Equal(2, slope.Hits);
+            Assert.Equal(112, slope.Hits);
+
+            // The dump predates the grid_speed column, so rows below the composed product — a ship
+            // flying downwind — are observations rather than verdicts here.
+            DumpAudit.CheckResult decomposes = Check(result, "wind decomposes");
+            Assert.True(decomposes.Observation);
+            Assert.Equal(20, decomposes.Hits);
         }
     }
 }

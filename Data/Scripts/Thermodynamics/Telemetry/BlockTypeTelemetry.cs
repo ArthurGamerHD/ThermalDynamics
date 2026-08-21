@@ -136,11 +136,26 @@ namespace Thermodynamics
             if (string.IsNullOrEmpty(Name)) Name = id.TypeId.ToString();
         }
 
+        /// <summary>
+        /// The game builds pasted and projected grids on worker threads, so two placements of the
+        /// same block type can run concurrently. Plain increments lost one against fourteen
+        /// thousand in a field dump — placed 14,273, removed 113, live 14,159 — which is exactly
+        /// what a torn ++ looks like, so the four counters that must reconcile are interlocked.
+        /// The peak is a monotonic race-tolerant max: a stale read can only under-record a peak
+        /// that another thread has already recorded.
+        /// </summary>
         public void OnPlaced(ThermalBlock block)
         {
-            Placed++;
-            Live++;
-            if (Live > PeakLive) PeakLive = Live;
+            System.Threading.Interlocked.Increment(ref Placed);
+            long live = System.Threading.Interlocked.Increment(ref Live);
+
+            long peak = System.Threading.Interlocked.Read(ref PeakLive);
+            while (live > peak)
+            {
+                long seen = System.Threading.Interlocked.CompareExchange(ref PeakLive, live, peak);
+                if (seen == peak) break;
+                peak = seen;
+            }
 
             if (Definition == null && block.Instance != null)
             {
@@ -155,8 +170,15 @@ namespace Thermodynamics
 
         public void OnRemoved()
         {
-            Removed++;
-            if (Live > 0) Live--;
+            System.Threading.Interlocked.Increment(ref Removed);
+
+            // Floored at zero without a lock: a decrement that raced below zero is undone. The
+            // floor exists for a block whose removal is seen without its placement, at session
+            // start.
+            if (System.Threading.Interlocked.Decrement(ref Live) < 0)
+            {
+                System.Threading.Interlocked.Increment(ref Live);
+            }
         }
 
         /// <summary>

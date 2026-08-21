@@ -324,6 +324,7 @@ namespace Thermodynamics
                 row.WindSpeedUp = sample.WindSpeedUp;
                 row.WindShelter = sample.WindShelter;
                 row.WindChannelDegrees = sample.WindChannelDegrees;
+                row.GridSpeed = sample.GridVelocity.Length();
 
                 // Wind direction as a bearing: 0 is due north over the planet's own pole, 90 east.
                 Vector3 east = Vector3.Cross(axis, up);
@@ -469,6 +470,10 @@ namespace Thermodynamics
             {
                 sample.RelativeWindSpeed = 0f;
                 sample.RelativeWindDirectionLocal = Vector3.Zero;
+
+                // Nothing is buried in space. Without this the diagnostic column reads 0 — the
+                // wholly-buried figure — for every row a grid spends in vacuum.
+                sample.WindBurial = 1f;
                 return;
             }
 
