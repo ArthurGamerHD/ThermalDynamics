@@ -327,37 +327,38 @@ gyro below:
 The corpus is thirty-two subscribed ships, so none of this is a population claim. It says the
 pipeline works end to end and the criteria are computable, which is what a first cycle is for.
 
-## A real defect, found by running real ships
+## Sealed blocks: three harness faults, not a mod defect
 
-**A block whose only mount face is unconnected has no thermal exit at all.**
+A block with no exposed face and no conduction has nowhere at all to send its heat. It climbs until
+the run stops — no exception, no NaN, no warning, just a number nobody has a prior for. It is the
+single most misleading failure this lab can produce, and it produced it three times.
 
-This model conducts across the area where *both* blocks carry a mount surface. `LargeBlockGyro`
-declares exactly one mount point, on its bottom, and is not airtight. A gyro buried in a hull with
-nothing mounted below it therefore has no conduction path and no exposed face: whatever it makes
-stays, and its temperature rises without bound. Nineteen are in that state across thirty-two ships,
-and the gyro is one of the most common functional blocks in the game.
+**All three were the harness reading a definition wrongly**, and each looked exactly like physics:
 
-It is not a large heat source — 1.5 kW — but the exit is *zero*, and anything divided by zero goes
-the same place. It is also invisible: no exception, no NaN, no warning, just a number nobody has a
-prior for. The first battery investigation mistook exactly this signature for a balance problem.
+| Fault | What it did |
+| --- | --- |
+| A gyro's `ForceMagnitude` is torque, not thrust | 33.6 MW of waste heat from one gyro; a hull at 342,510 K |
+| A definition with no `MountPoints` read as mounting nowhere | Batteries built with no conduction and no exposure |
+| A block that does not seal had its mounts zeroed as well | The same, for every non-airtight block that leaves its mounts to the model — batteries, decoys |
 
-This is a defect in the shipped mod rather than in the lab, and it is the first thing the corpus has
-found that a synthetic hull could not — the rig this repository builds for itself never places a
-gyro with an unconnected mount face.
+The last one is the subtle one and it was hiding behind the fix for the second. Sealing and mounting
+are separate properties; entering the "write the surface bits by hand" branch *because a block does
+not seal*, and then filling the mount bits from a definition that declared none, zeroed them. The
+two halves have to be written from the same source.
 
-**What to do about it is a design decision**, in three shapes:
+**An earlier version of this document called this a systemic defect in the mod's conduction rule.
+That was wrong** — it was three harness bugs stacked, and the evidence for the claim was the
+symptom rather than the mechanism. What settled it was asking the model directly: a synthetic grid
+with two disconnected blocks reports all six faces exposed, exactly as it should, which no amount of
+staring at corpus temperatures would have shown.
 
-* conduct across any touching face rather than only mount-to-mount, which is a broad change to the
-  conduction model and touches every joint;
-* guarantee a floor conductance between touching blocks, keeping the mount rule for the *rate* and
-  removing the zero;
-* detect and report it — a block generating heat with no exit is exactly what the grid health check
-  added for telemetry should raise as a fault.
+Sealed blocks went 76 → 24 across the corpus with the third fix, and the 24 that remain are
+**all on one ship**, `UNSC Panama` — 0.002 % of 1.15 million blocks. Those are armour cubes that
+mount on every face, have no neighbour in any direction, and still report no exposed face, which
+the synthetic case says should be impossible. **That one is unexplained and still open.**
 
-The third is cheap and immediate; the first two are balance changes that want measuring.
-
-**Every over-critical count above is contaminated by this**, since a sealed gyro crosses any
-threshold eventually. The load figures want re-reading once it is settled.
+`SealedBlocksAreRare` bounds it rather than asserting zero, so a regression to anything like the
+earlier scale fails while the one unexplained ship does not hold the suite hostage.
 
 ## Where the numbers stand
 

@@ -421,22 +421,25 @@ namespace Thermodynamics.Harness
             // is geometry this harness cannot read. Treating that silence as "mounts nowhere" is
             // what made a battery a sealed box; the honest fallback is the one BlockModel.Solid
             // already applies, which is that every face mounts.
-            bool everyFace = !definition.HasDeclaredMounts;
-            if (definition.HasDeclaredMounts)
+            bool[] mounts = new bool[Face.Count];
+            bool everyFace = true;
+
+            for (int face = 0; face < Face.Count; face++)
             {
-                everyFace = true;
-                for (int face = 0; face < Face.Count; face++)
-                {
-                    if (!definition.MountFaces[face]) everyFace = false;
-                }
+                mounts[face] = definition.HasDeclaredMounts ? definition.MountFaces[face] : true;
+                if (!mounts[face]) everyFace = false;
             }
 
-            // Sealing follows the definition where it states one, and the mount points where it
+            // Sealing follows the definition where it states one, and defaults to sealing where it
             // does not. The game decides the unstated case per face from a pressurisation table
-            // this harness does not read; mounting is the closest thing it has, and it is the same
-            // approximation ShippedBlocks makes for the mod's own blocks.
+            // this harness does not read.
             bool seals = definition.Airtight ?? true;
 
+            // **Both halves have to be written from the same source.** Entering this branch because
+            // a block does not seal, and then filling the mount bits from a definition that
+            // declared none, is what zeroed the mounts of every non-airtight block that leaves its
+            // mount points to the model — batteries and decoys among them. They came out with no
+            // conduction and no exposure at all, and read as a balance problem.
             if (!everyFace || !seals)
             {
                 foreach (Vector3I cell in model.LocalCells())
@@ -444,7 +447,7 @@ namespace Thermodynamics.Harness
                     int state = seals ? CellSurface.SelfAirtightMask : 0;
                     for (int face = 0; face < Face.Count; face++)
                     {
-                        state = CellSurface.WithSelfMount(state, face, definition.MountFaces[face]);
+                        state = CellSurface.WithSelfMount(state, face, mounts[face]);
                     }
                     model.SetLocalSurface(cell, state);
                 }

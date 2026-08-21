@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Thermodynamics.Core;
+using VRageMath;
 
 namespace Thermodynamics.Harness
 {
@@ -154,12 +155,22 @@ namespace Thermodynamics.Harness
 
             CorpusLab.Summary corpus = CorpusLab.Scan(root);
             Dictionary<string, int> counts = new Dictionary<string, int>();
+            List<string> examples = new List<string>();
             int total = 0;
+            int incomplete = 0;
 
             foreach (Blueprints.Ship ship in corpus.Usable)
             {
                 ShipAssembly assembly = ship.Build();
                 if (assembly.NodeCount < 2) continue;
+
+                // Whether the room map finished. A flood fill that gave up leaves every block
+                // looking un-exposed, which is indistinguishable from being buried — and a buried
+                // block with no mount joint is exactly what this report calls sealed.
+                for (int g2 = 0; g2 < assembly.Simulations.Count; g2++)
+                {
+                    if (assembly.Simulations[g2].Rooms.HasWorkPending) incomplete++;
+                }
 
                 for (int g = 0; g < assembly.Simulations.Count; g++)
                 {
@@ -174,12 +185,25 @@ namespace Thermodynamics.Harness
                         counts.TryGetValue(node.Block.Name, out count);
                         counts[node.Block.Name] = count + 1;
                         total++;
+
+                        // The first few get explained rather than counted. "Sealed" on its own is an
+                        // assertion; naming the neighbours it failed to bolt to, and which way each
+                        // of them mounts, is the evidence for whether the isolation is real.
+                        if (examples.Count < 5) Explain(examples, ship, assembly.Simulations[g], node);
                     }
                 }
             }
 
             sb.Append("SEALED BLOCKS  ").Append(total).AppendLine(" across the corpus");
+            sb.Append("  ").Append(incomplete).AppendLine(" grids whose room map did not finish");
             sb.AppendLine();
+
+            if (examples.Count > 0)
+            {
+                sb.AppendLine("  why, block by block");
+                foreach (string example in examples) sb.AppendLine(example);
+                sb.AppendLine();
+            }
 
             List<KeyValuePair<string, int>> rows = new List<KeyValuePair<string, int>>(counts);
             rows.Sort(delegate (KeyValuePair<string, int> a, KeyValuePair<string, int> b)
@@ -203,6 +227,60 @@ namespace Thermodynamics.Harness
             }
 
             return sb.ToString();
+        }
+
+        /// <summary>
+        /// Writes out one sealed block and every block it touches, with the mount fractions on
+        /// both sides of each joint.
+        ///
+        /// Conduction here runs across the area where *both* blocks carry a mount surface, so a
+        /// zero on either side is a joint that carries nothing. Six zeros is a sealed block, and
+        /// this is what shows whether that is the geometry or the parser.
+        /// </summary>
+        private static void Explain(List<string> examples, Blueprints.Ship ship,
+            ThermalSimulation simulation, ThermalNode node)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.Append("    ").Append(node.Block.Name).Append(" at ").Append(node.Block.Position)
+                .Append("  faces ").Append(node.TotalExposedFaces)
+                .Append("  area ").Append(node.ExposedArea.ToString("n1"))
+                .Append("  size ").Append(node.Block.Model.Size)
+                .Append("  on ").AppendLine(Trim(ship.Name, 40));
+
+            for (int face = 0; face < Face.Count; face++)
+            {
+                Vector3I probe = node.Block.Min + Face.Offsets[face];
+                BlockInstance neighbour = simulation.Grid.At(probe);
+
+                string mine = node.Block.MountFraction(face).ToString("n2");
+
+                if (neighbour == null)
+                {
+                    sb.Append("      ").Append(FaceName(face).PadRight(9))
+                        .Append("mine ").Append(mine).AppendLine("  nothing there");
+                    continue;
+                }
+
+                sb.Append("      ").Append(FaceName(face).PadRight(9))
+                    .Append("mine ").Append(mine)
+                    .Append("  theirs ").Append(neighbour.MountFraction(Face.Opposite(face)).ToString("n2"))
+                    .Append("  ").AppendLine(Trim(neighbour.Name, 34));
+            }
+
+            examples.Add(sb.ToString().TrimEnd());
+        }
+
+        private static string FaceName(int face)
+        {
+            switch (face)
+            {
+                case Face.Forward: return "forward";
+                case Face.Backward: return "backward";
+                case Face.Left: return "left";
+                case Face.Right: return "right";
+                case Face.Up: return "up";
+                default: return "down";
+            }
         }
 
         private static List<Row> Rows(ShipAssembly assembly)

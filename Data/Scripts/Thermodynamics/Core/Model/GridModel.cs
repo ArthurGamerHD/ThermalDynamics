@@ -94,6 +94,19 @@ namespace Thermodynamics.Core
         /// Adds a block. Throws when any of its cells is already occupied, which would silently
         /// corrupt the surface map.
         /// </summary>
+        /// <summary>
+        /// The block occupying a cell, or null.
+        ///
+        /// A read-only probe. The solver walks its own link lists rather than the grid, so nothing
+        /// on a hot path needs this; it is here so a diagnostic can ask what a block's neighbour is
+        /// without rebuilding the map to find out.
+        /// </summary>
+        public BlockInstance At(Vector3I cell)
+        {
+            BlockInstance block;
+            return blocksByCell.TryGetValue(cell, out block) ? block : null;
+        }
+
         public BlockInstance Add(BlockInstance block)
         {
             if (block == null) throw new ArgumentNullException("block");
