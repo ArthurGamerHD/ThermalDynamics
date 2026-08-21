@@ -60,6 +60,9 @@ namespace Thermodynamics.Sim
                     Console.Write(BlockCatalogLab.Report());
                     return 0;
 
+                case "dump":
+                    return DumpCommand(args);
+
                 case "corpus":
                     Console.Write(CorpusLab.Report(ValueAfter(args, "--path")));
                     return 0;
@@ -741,6 +744,34 @@ namespace Thermodynamics.Sim
             if (lines.Length > shown) Console.WriteLine("  ... " + (lines.Length - shown) + " more rows");
         }
 
+        /// <summary>
+        /// Audits the newest telemetry dump under a path, or one named directly.
+        ///
+        /// Returns non-zero when a defect check fails, so a dump can be audited from a script
+        /// rather than read.
+        /// </summary>
+        private static int DumpCommand(string[] args)
+        {
+            string path = ValueAfter(args, "--path") ?? DumpAudit.DefaultPath();
+            if (path == null)
+            {
+                Console.WriteLine("No dump given. Point --path at a world's storage folder, or at one");
+                Console.WriteLine("Thermodynamics_Environment_*.csv, and set THERMAL_DUMPS to skip saying so.");
+                return 2;
+            }
+
+            string file = DumpAudit.Newest(path);
+            if (file == null)
+            {
+                Console.WriteLine("No Thermodynamics_Environment_*.csv under " + path);
+                return 2;
+            }
+
+            DumpAudit.Result result = DumpAudit.Run(file);
+            Console.Write(DumpAudit.Report(result));
+            return result.Passed ? 0 : 1;
+        }
+
         private static void PrintUsage()
         {
             Console.WriteLine("Thermal Dynamics simulation harness");
@@ -767,6 +798,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("    --all                     every usable ship, not just the panel");
             Console.WriteLine("  hotspot --ship <name>   why one block on one ship is the hottest thing on it");
             Console.WriteLine("    --scenario <name> --top N");
+            Console.WriteLine("  dump [--path <dir>]     audit a field telemetry dump against the model's own claims");
             Console.WriteLine();
             Console.WriteLine("  bench scale             cost per stage as the grid grows");
             Console.WriteLine("  bench hitch --size N    per-tick cost, with a block welded mid-run");

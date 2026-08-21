@@ -136,6 +136,13 @@ Two are about the sun rather than about heat flow:
   `/thermal dump`. The cost section breaks the update into topology rebuild, room mapping,
   exposure refresh and solver, which is the breakdown you want before optimising anything. See
   [telemetry.md](telemetry.md).
+* **Auditing a dump:** `dotnet run --project Thermodynamics.Sim -- dump` reads the newest
+  environment CSV out of the game's saves and checks it against the claims the model makes about
+  itself — that the wind decomposes into the factors reported beside it, that convection is
+  reported only where there is air, that a positive depth means a buried grid. `--path` names a
+  folder or one CSV, `THERMAL_DUMPS` names a folder for good. Non-zero exit means a defect check
+  failed; the counts against open questions are printed as observations and never fail. Columns a
+  dump predates are skipped by name rather than passed silently.
 * **Outside the game:** most questions are faster to answer in [`tests/`](../sim) —
   `dotnet test`, or `dotnet run --project Thermodynamics.Sim -- run perf` for throughput.
 
