@@ -48,6 +48,26 @@ Everything the game would supply crosses one of three boundaries:
 A test fills those in with plain numbers; the game adapter fills them in from the session. The
 solver cannot tell the difference, which is the point.
 
+## Where the defects have actually been
+
+Three faults found in one pass over a field dump had the same shape, and it is worth stating
+because it says where to write the next test rather than where the last one was.
+
+| Fault | Why the suite missed it |
+| --- | --- |
+| A grid's substep demand was conduction-only until it had stepped | every test measures a grid *after* stepping it |
+| A grid's one-off build was charged to no row in the cost table | nothing read the report the mod writes |
+| A block type's peak temperature could sit below its own maximum | nothing read the report the mod writes |
+
+**The suite tests the simulation, and the things around it were untested**: the state a grid is in
+before its first step, and the artefacts the mod produces about itself. Both are exactly where a
+fault survives longest, because both look like output rather than behaviour and neither changes a
+temperature. `DumpAuditTests` and `FieldDumpTests` close the second; the first is a habit — when a
+figure is read outside a step, test it outside a step.
+
+The adapter under `Game/` remains the largest uncovered surface; see F1 in the
+[backlog](../docs/backlog.md).
+
 `LangVersion` is pinned to 6 on the core project — the same version the in-game script compiler
 accepts — so the language features used here are ones the game accepts.
 
