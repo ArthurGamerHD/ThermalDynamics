@@ -146,7 +146,10 @@ namespace Thermodynamics.Sim
                     }
                     catch (Exception e)
                     {
-                        Console.Error.WriteLine("Listing stopped: " + e.Message);
+                        // Redacted, because the key is in the query string and some transports put
+                        // the whole URI in the message. A secret that reaches a log or a pasted
+                        // error report has escaped as surely as one committed to a file.
+                        Console.Error.WriteLine("Listing stopped: " + Redact(e.Message, key));
                         break;
                     }
 
@@ -164,6 +167,13 @@ namespace Thermodynamics.Sim
             }
 
             return items;
+        }
+
+        /// <summary>Removes a secret from anything about to be printed.</summary>
+        private static string Redact(string text, string secret)
+        {
+            if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(secret)) return text;
+            return text.Replace(secret, "<key>");
         }
 
         /// <summary>Reads one API page, returning the cursor for the next.</summary>
