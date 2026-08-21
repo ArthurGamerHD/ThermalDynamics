@@ -261,12 +261,31 @@ weather, a 900 m variation scale — and none of them was picked from evidence, 
 supplies none to pick from. They were picked to be plausible and cheap. Seeing them drawn over a
 planet is the first chance anyone has had to say which of them are wrong.
 
+## Measured in game
+
+The 2026-08-20 fleet dump is the run those columns were added for: 4,371 climate rows over one
+earthlike world, 146 grids, six ground materials, across a sunrise. Audit it with
+`dotnet run --project Thermodynamics.Sim -- dump`.
+
+| Column | What the dump says |
+| --- | --- |
+| `depth_m` | 42 buried rows, 46–169 m. Every one reads 280.00 K — a flat `UndergroundTemperature`, since all of them are inside the 2 km deadzone. The model is in force and the core gradient is unreachable, exactly as [Underground](#underground) argues. |
+| `weather` | `RainLight` on 672 rows and nothing else. The offset is −1.8 K per unit of intensity on every one of them, so the table figure is being faded in by intensity and applied once. |
+| `convection_coeff` | 0–166 W/(m²·K), mean 59. Zero on all 906 airless rows and non-zero on all 3,465 rows with air, which is [A6](known-issues.md) holding in the field rather than in a test. |
+| `game_temperature` | 0.269–0.395 where there is oxygen, zero on every airless row. |
+
+**The game's own temperature figure cannot check anything here.** It correlates +0.86 with the sun's
+elevation and +0.12 with this model's ambient, over the 3,465 rows that carry one. It is a daylight
+figure on a 0..1 scale — see [B23](backlog.md) — so it says when it is day, which this model already
+knows, and nothing about how warm the ground under a grid is. The ground and convection offset
+tables remain unevidenced, and a dump is not what will evidence them.
+
+**What the dump could not reach:** one planet, one weather kind, one latitude band, and no still air
+anywhere — every row with air also had wind, so the convection coefficient was never observed at its
+unmodified value.
+
 ## Open
 
-* **Nothing here has been measured in game yet.** Everything above is predicted from the model with
-  the test world's own latitudes, materials and altitudes. The whole point of the next dump is to
-  check it, and the new `depth_m`, `weather`, `weather_ambient_k` and `convection_coeff` columns are
-  in the climate CSV precisely so it can be.
 * **The lag is in absolute seconds and the day is not.** `AmbientLagSeconds` = 45 attenuates the
   swing to 46% of its intended size against a four-minute day and does essentially nothing against a
   default two-hour one. It is physically a fraction of a day. `MySectorWeatherComponent` exposes a
@@ -279,12 +298,13 @@ planet is the first chance anyone has had to say which of them are wrong.
   a site is only snowy *because* it is high. The snow row is where that will show.
 * **No latitude spread in the data.** The three sites span 7°–41°. The pole drop is still the least
   evidenced term in the model; a fourth grid near a pole would settle it.
-* **No weather in the data either.** Only one of three sites saw any weather in 851 seconds, and
-  none of it was snow, sand or fog. `/weather SnowHeavy` forces one, which is the cheapest way to
-  get a row per kind into a dump.
+* **No weather in the data either.** Still one kind — `RainLight`, on 672 of 4,371 rows in the
+  latest dump — and no snow, sand or fog. `/weather SnowHeavy` forces one, which is the cheapest way
+  to get a row per kind into a dump.
 * **Ground and convection offsets are opinions.** Both tables' numbers were chosen to look like
-  Earth, not fitted to anything. The game's own `game_temperature` column is in the dump precisely
-  so they can be.
+  Earth, not fitted to anything, and the cross-check they were going to be fitted against does not
+  exist: `game_temperature` tracks the sun rather than the ground. See
+  [Measured in game](#measured-in-game).
 * **The core gradient is unreachable in play.** See [Underground](#underground): correct, and behind
   a 2 km deadzone that SE's voxel depth does not reach. Worth revisiting if the deadzone default
   should be lower rather than the model deeper.
