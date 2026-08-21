@@ -15,6 +15,14 @@ debugged in seconds instead of by loading a world.
 > fails if the census drifts away from the field observations recorded beside it in
 > `Census.Field`; refresh both when a new dump arrives.
 
+> **A field dump is kept beside the census.**
+> [`benchmarks/field-environment.csv`](benchmarks/field-environment.csv) is a 264-row sample of a
+> real telemetry dump's climate and wind rows. `DumpAuditTests` audits it on every run, so the
+> claims the model makes about a planet — that the wind decomposes into the factors reported beside
+> it, that convection is reported only where there is air — are checked against numbers a world
+> produced rather than numbers a test invented. Refresh it when a dump arrives, from
+> `-- dump`.
+
 | Project | What it is |
 | --- | --- |
 | `Thermodynamics.Core` | The simulation itself. Sources live in [`../Data/Scripts/Thermodynamics/Core`](../Data/Scripts/Thermodynamics/Core) so the game compiles them as part of the mod; this project links the same files. |
@@ -52,7 +60,7 @@ sufficient. See [development.md](../docs/development.md#repo-conventions) for th
 ```bash
 cd tests
 
-dotnet test                                    # the whole suite (1,026 tests)
+dotnet test                                    # the whole suite (1,285 tests)
 dotnet run --project Thermodynamics.Sim -- list
 dotnet run --project Thermodynamics.Sim -- run reactor
 dotnet run --project Thermodynamics.Sim -- run all --csv out/

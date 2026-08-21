@@ -390,6 +390,65 @@ namespace Thermodynamics.Tests
             }
         }
 
+        /// <summary>
+        /// The auditor against real field data rather than invented rows.
+        ///
+        /// <para>Synthetic rows prove a check can fire. They cannot prove it holds against numbers
+        /// a planet produced, which is the only place the model and the world meet — the same reason
+        /// `Census` keeps a real ship's block population rather than a plausible one.</para>
+        ///
+        /// <para>The fixture is a 264-row sample of the 2026-08-20 fleet dump, thinned one row in
+        /// twenty and then completed with every buried row, every row under weather, every airless
+        /// row, and every row that exceeded the engine's wind ceiling or carried slope wind — the
+        /// minorities a uniform sample would drop. Refresh it when a dump arrives, from
+        /// `-- dump`.</para>
+        /// </summary>
+        [Fact]
+        public void TheFieldDumpFixtureHoldsEveryDefectCheck()
+        {
+            DumpAudit.Result result = DumpAudit.Run(Fixture());
+
+            foreach (DumpAudit.CheckResult check in result.Checks)
+            {
+                Assert.False(check.Skipped, check.Name + " skipped: the fixture lost a column");
+                Assert.False(check.Failed, check.Name + " failed: " + check.Worst);
+            }
+
+            Assert.Equal(264, result.Rows);
+        }
+
+        /// <summary>
+        /// The two open questions the fixture is evidence for. Both are counted rather than failed,
+        /// and both are here so that a change which quietly resolves — or worsens — one of them
+        /// cannot pass unnoticed.
+        /// </summary>
+        [Fact]
+        public void TheFieldDumpFixtureCarriesTheTwoOpenObservations()
+        {
+            DumpAudit.Result result = DumpAudit.Run(Fixture());
+
+            // B18: the engine's figure scales the wind rather than bounding it, once the vertical
+            // profile multiplies the band share above the reference height.
+            DumpAudit.CheckResult ceiling = Check(result, "wind stays under");
+            Assert.Equal(3, ceiling.Hits);
+            Assert.Contains("80.29", ceiling.Worst);
+
+            // B15: slope wind is a near-ground term and behaves like one.
+            DumpAudit.CheckResult slope = Check(result, "slope wind");
+            Assert.Equal(2, slope.Hits);
+        }
+
+        private static string Fixture()
+        {
+            // The build output no longer sits inside the repository, so the fixture is located the
+            // way the benchmark baseline is: from the compiled-in source path.
+            string path = Path.Combine(
+                Harness.ShippedBlocks.RepoRoot(), "tests", "benchmarks", "field-environment.csv");
+
+            Assert.True(File.Exists(path), "field dump fixture missing at " + path);
+            return path;
+        }
+
         [Fact]
         public void APathWithNoDumpInItAnswersNothingRatherThanThrowing()
         {
