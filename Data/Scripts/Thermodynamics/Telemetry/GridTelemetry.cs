@@ -450,6 +450,18 @@ namespace Thermodynamics
         public readonly TimingStat LoadTime = new TimingStat("load");
 
         /// <summary>
+        /// The one-off build of a grid's graph, rooms and exposure, before its first tick.
+        ///
+        /// A root of its own, like save and load. It runs from the entity's own
+        /// <c>UpdateOnceBeforeFrame</c>, so it is inside neither the session frame nor a grid's
+        /// update, and until it had a row it was inside nothing: its cost appeared in the stage
+        /// rows, which the table indents under `grid simulation`, and in no total at all. It is the
+        /// single most expensive call a grid ever makes — 179 ms on a 44,000-block ship in the
+        /// 2026-08-20 fleet dump — so the omission was not a rounding matter.
+        /// </summary>
+        public readonly TimingStat BuildTime = new TimingStat("build");
+
+        /// <summary>
         /// Steps between structure samples. Structure changes only when blocks do, so sampling it
         /// every step adds nothing.
         /// </summary>
@@ -791,7 +803,9 @@ namespace Thermodynamics
                 type.OnFinalTemperature(node.Temperature);
 
                 // The strided sampler may never have visited a rare block; this pass guarantees at
-                // least one observation of every block on the grid.
+                // least one observation of every block on the grid. The peak is fed from here too,
+                // or a type only this pass reaches reports a maximum above its own peak.
+                type.NotePeak(node.Temperature, EntityId);
                 type.Sample(node);
             }
         }

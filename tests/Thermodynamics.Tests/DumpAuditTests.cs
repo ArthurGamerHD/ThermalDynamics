@@ -20,12 +20,19 @@ namespace Thermodynamics.Tests
     public class DumpAuditTests : IDisposable
     {
         private readonly List<string> written = new List<string>();
+        private readonly List<string> folders = new List<string>();
 
         public void Dispose()
         {
             foreach (string path in written)
             {
                 try { File.Delete(path); }
+                catch (IOException) { }
+            }
+
+            foreach (string folder in folders)
+            {
+                try { Directory.Delete(folder, true); }
                 catch (IOException) { }
             }
         }
@@ -73,6 +80,93 @@ namespace Thermodynamics.Tests
             return row;
         }
 
+        /// <summary>Columns of the grid CSV the checks read, and one plausible grid.</summary>
+        private const string GridHeader =
+            "entity_id,name,grid_size,peak_cells,mean_cells,simulation_steps,clamped_steps," +
+            "ambient_min,ambient_mean,ambient_max,sim_ms_total,sim_ms_max," +
+            "topology_ms_total,mapping_ms_total,exposure_ms_total,solver_ms_total,solver_ms_max";
+
+        private static Dictionary<string, string> Grid()
+        {
+            Dictionary<string, string> row = new Dictionary<string, string>();
+            foreach (string column in GridHeader.Split(',')) row[column] = "0";
+
+            row["entity_id"] = "1";
+            row["name"] = "Test Grid";
+            row["grid_size"] = "Large";
+            row["peak_cells"] = "900";
+            row["mean_cells"] = "880";
+            row["simulation_steps"] = "1200";
+            row["clamped_steps"] = "3";
+            row["ambient_min"] = "250";
+            row["ambient_mean"] = "270";
+            row["ambient_max"] = "290";
+            row["sim_ms_total"] = "100";
+            row["sim_ms_max"] = "2";
+            row["topology_ms_total"] = "10";
+            row["mapping_ms_total"] = "5";
+            row["exposure_ms_total"] = "4";
+            row["solver_ms_total"] = "70";
+            row["solver_ms_max"] = "1.5";
+            return row;
+        }
+
+        /// <summary>Columns of the block-type CSV the checks read, and one plausible type.</summary>
+        private const string TypeHeader =
+            "subtype,type,placed,removed,live,conductivity,specific_heat,emissivity," +
+            "critical_temperature,temp_min,temp_mean,temp_max,peak_temp," +
+            "substep_demand_mean,substep_demand_max,substep_demand_peak";
+
+        private static Dictionary<string, string> Type()
+        {
+            Dictionary<string, string> row = new Dictionary<string, string>();
+            foreach (string column in TypeHeader.Split(',')) row[column] = "0";
+
+            row["subtype"] = "LargeBlockArmorBlock";
+            row["type"] = "CubeBlock";
+            row["placed"] = "500";
+            row["removed"] = "20";
+            row["live"] = "480";
+            row["conductivity"] = "50";
+            row["specific_heat"] = "466";
+            row["emissivity"] = "0.9";
+            row["critical_temperature"] = "868";
+            row["temp_min"] = "280";
+            row["temp_mean"] = "291";
+            row["temp_max"] = "300";
+            row["peak_temp"] = "312";
+            row["substep_demand_mean"] = "1.9";
+            row["substep_demand_max"] = "2.4";
+            row["substep_demand_peak"] = "2.4";
+            return row;
+        }
+
+        /// <summary>
+        /// A whole dump: the three CSVs under the names the mod writes, in one folder, so the
+        /// auditor resolves the siblings the way it does in a world's storage.
+        /// </summary>
+        private string WriteDump(
+            Dictionary<string, string>[] rows,
+            Dictionary<string, string>[] grids = null,
+            Dictionary<string, string>[] types = null)
+        {
+            string folder = Path.Combine(Path.GetTempPath(),
+                "thermal-dump-" + Guid.NewGuid().ToString("n"));
+            Directory.CreateDirectory(folder);
+            folders.Add(folder);
+
+            const string stamp = "20260820_175059";
+            string environment = Path.Combine(folder, "Thermodynamics_Environment_" + stamp + ".csv");
+
+            Write(environment, Header, rows);
+            Write(Path.Combine(folder, "Thermodynamics_Grids_" + stamp + ".csv"),
+                GridHeader, grids ?? new[] { Grid() });
+            Write(Path.Combine(folder, "Thermodynamics_BlockTypes_" + stamp + ".csv"),
+                TypeHeader, types ?? new[] { Type() });
+
+            return environment;
+        }
+
         private string Write(params Dictionary<string, string>[] rows)
         {
             return Write(Header, rows);
@@ -84,6 +178,12 @@ namespace Thermodynamics.Tests
                 "thermal-dump-" + Guid.NewGuid().ToString("n") + ".csv");
             written.Add(path);
 
+            Write(path, header, rows);
+            return path;
+        }
+
+        private static void Write(string path, string header, Dictionary<string, string>[] rows)
+        {
             string[] columns = header.Split(',');
 
             using (StreamWriter writer = new StreamWriter(path))
@@ -100,8 +200,6 @@ namespace Thermodynamics.Tests
                     writer.WriteLine(string.Join(",", fields));
                 }
             }
-
-            return path;
         }
 
         private static DumpAudit.CheckResult Check(DumpAudit.Result result, string name)
@@ -117,16 +215,166 @@ namespace Thermodynamics.Tests
         [Fact]
         public void APlausibleDumpPassesEveryCheck()
         {
-            DumpAudit.Result result = DumpAudit.Run(Write(Row(), Row()));
+            DumpAudit.Result result = DumpAudit.Run(WriteDump(new[] { Row(), Row() }));
 
             Assert.True(result.Passed);
             Assert.Equal(2, result.Rows);
+            Assert.Equal(1, result.GridRows);
+            Assert.Equal(1, result.BlockTypeRows);
 
             foreach (DumpAudit.CheckResult check in result.Checks)
             {
                 Assert.False(check.Skipped, check.Name + " skipped on a full dump");
                 Assert.Equal(0, check.Hits);
             }
+        }
+
+        /// <summary>
+        /// A grid's stages fit inside its update. The one-off build ran the same three stages from
+        /// outside any tick and recorded them into the same rows, so the stages of a grid that had
+        /// just loaded exceeded the update they are printed underneath.
+        /// </summary>
+        [Fact]
+        public void StagesLargerThanTheUpdateTheyNestInAreADefect()
+        {
+            Dictionary<string, string> grid = Grid();
+            grid["sim_ms_total"] = "11.93";
+            grid["topology_ms_total"] = "21.75";
+            grid["mapping_ms_total"] = "12.36";
+            grid["exposure_ms_total"] = "6.83";
+            grid["solver_ms_total"] = "3.26";
+
+            DumpAudit.Result result = DumpAudit.Run(
+                WriteDump(new[] { Row() }, new[] { grid }));
+
+            DumpAudit.CheckResult check = Check(result, "a grid's stages fit");
+            Assert.Equal(1, check.Hits);
+            Assert.True(check.Failed);
+            Assert.Contains("11.93", check.Worst);
+        }
+
+        /// <summary>
+        /// Slack the other way is expected and must not fail: what an update costs beyond its
+        /// stages is the environment sample, the after-step observation and pacing.
+        /// </summary>
+        [Fact]
+        public void AnUpdateLargerThanItsStagesIsNotADefect()
+        {
+            Dictionary<string, string> grid = Grid();
+            grid["sim_ms_total"] = "100";
+            grid["solver_ms_total"] = "40";
+
+            Assert.True(DumpAudit.Run(WriteDump(new[] { Row() }, new[] { grid })).Passed);
+        }
+
+        [Fact]
+        public void ASolverCallLongerThanTheUpdateAroundItIsADefect()
+        {
+            Dictionary<string, string> grid = Grid();
+            grid["solver_ms_max"] = "5";
+            grid["sim_ms_max"] = "2";
+
+            Assert.Equal(1, Check(DumpAudit.Run(WriteDump(new[] { Row() }, new[] { grid })),
+                "a grid's worst solver call").Hits);
+        }
+
+        [Fact]
+        public void MoreClampedStepsThanStepsIsADefect()
+        {
+            Dictionary<string, string> grid = Grid();
+            grid["clamped_steps"] = "1300";
+
+            Assert.Equal(1, Check(DumpAudit.Run(WriteDump(new[] { Row() }, new[] { grid })),
+                "clamped steps").Hits);
+        }
+
+        [Fact]
+        public void AMeanOutsideItsOwnRangeIsADefect()
+        {
+            Dictionary<string, string> grid = Grid();
+            grid["ambient_mean"] = "300";
+
+            Assert.Equal(1, Check(DumpAudit.Run(WriteDump(new[] { Row() }, new[] { grid })),
+                "a grid's minima").Hits);
+        }
+
+        [Fact]
+        public void LiveBlocksThatDoNotFollowFromPlacedAndRemovedAreADefect()
+        {
+            Dictionary<string, string> type = Type();
+            type["live"] = "500";
+
+            Assert.Equal(1, Check(DumpAudit.Run(WriteDump(new[] { Row() }, null, new[] { type })),
+                "live blocks").Hits);
+        }
+
+        /// <summary>
+        /// The peak is fed by one pass and the range by two, so a type the sampler never reached
+        /// reported a maximum above its own peak — 327 of 815 types in the fleet dump.
+        /// </summary>
+        [Fact]
+        public void APeakBelowTheMaximumItBoundsIsADefect()
+        {
+            Dictionary<string, string> type = Type();
+            type["peak_temp"] = "282.23";
+            type["temp_max"] = "293.15";
+
+            DumpAudit.CheckResult check = Check(
+                DumpAudit.Run(WriteDump(new[] { Row() }, null, new[] { type })),
+                "a block type's temperatures");
+
+            Assert.Equal(1, check.Hits);
+            Assert.Contains("temp_max", check.Worst);
+        }
+
+        /// <summary>
+        /// A type nothing sampled carries zeros, which order trivially and say nothing. Counting
+        /// those would bury a real one.
+        /// </summary>
+        [Fact]
+        public void ATypeNothingSampledIsNotJudgedOnItsZeroes()
+        {
+            Dictionary<string, string> type = Type();
+            type["temp_min"] = "0";
+            type["temp_mean"] = "0";
+            type["temp_max"] = "0";
+            type["peak_temp"] = "0";
+
+            DumpAudit.Result result = DumpAudit.Run(WriteDump(new[] { Row() }, null, new[] { type }));
+
+            Assert.True(result.Passed);
+            Assert.Equal(0, Check(result, "a block type's temperatures").Rows);
+        }
+
+        [Fact]
+        public void APropertyTheSolverCannotDivideByIsADefect()
+        {
+            Dictionary<string, string> zeroHeat = Type();
+            zeroHeat["specific_heat"] = "0";
+
+            Assert.Equal(1, Check(DumpAudit.Run(WriteDump(new[] { Row() }, null, new[] { zeroHeat })),
+                "every block type has properties").Hits);
+
+            Dictionary<string, string> superBlack = Type();
+            superBlack["emissivity"] = "1.4";
+
+            Assert.Equal(1, Check(DumpAudit.Run(WriteDump(new[] { Row() }, null, new[] { superBlack })),
+                "every block type has properties").Hits);
+        }
+
+        /// <summary>
+        /// A dump with no grid or block-type CSV beside it still audits its climate, and says so
+        /// about the rest rather than passing them.
+        /// </summary>
+        [Fact]
+        public void AnEnvironmentCsvOnItsOwnSkipsTheChecksItCannotReach()
+        {
+            DumpAudit.Result result = DumpAudit.Run(Write(Row()));
+
+            Assert.True(Check(result, "a grid's stages fit").Skipped);
+            Assert.True(Check(result, "live blocks").Skipped);
+            Assert.False(Check(result, "convection is reported").Skipped);
+            Assert.True(result.Passed);
         }
 
         /// <summary>
@@ -404,17 +652,51 @@ namespace Thermodynamics.Tests
         /// `-- dump`.</para>
         /// </summary>
         [Fact]
-        public void TheFieldDumpFixtureHoldsEveryDefectCheck()
+        public void TheFieldDumpFixtureIsAuditedInFull()
         {
             DumpAudit.Result result = DumpAudit.Run(Fixture());
 
             foreach (DumpAudit.CheckResult check in result.Checks)
             {
                 Assert.False(check.Skipped, check.Name + " skipped: the fixture lost a column");
-                Assert.False(check.Failed, check.Name + " failed: " + check.Worst);
             }
 
             Assert.Equal(264, result.Rows);
+            Assert.Equal(242, result.GridRows);
+            Assert.Equal(560, result.BlockTypeRows);
+        }
+
+        /// <summary>
+        /// The two faults this fixture caught, held as the diagnosis rather than as a passing test.
+        ///
+        /// <para>A dump records what the mod was when it was taken, not what it is. Both faults were
+        /// fixed after this one: the one-off build was timed into the stage rows, which the cost
+        /// table indents under a `grid simulation` row that does not contain it; and a block type's
+        /// peak temperature was fed only by the strided sampler while its temperature range was fed
+        /// by the end-of-session sweep as well, so a type the sampler never reached reported a
+        /// maximum above its own peak.</para>
+        ///
+        /// <para>These assertions are what say the checks still detect what they were written for.
+        /// When a dump is taken on a build carrying both fixes, refresh the fixture and this test
+        /// becomes the ordinary "everything holds" one.</para>
+        /// </summary>
+        [Fact]
+        public void TheFieldDumpFixtureStillCarriesTheTwoFaultsItCaught()
+        {
+            DumpAudit.Result result = DumpAudit.Run(Fixture());
+
+            DumpAudit.CheckResult stages = Check(result, "a grid's stages fit");
+            Assert.Equal(1, stages.Hits);
+            Assert.Contains("Large Grid 1784", stages.Worst);
+
+            DumpAudit.CheckResult ordered = Check(result, "a block type's temperatures");
+            Assert.True(ordered.Hits > 300, "peak below max on " + ordered.Hits + " types");
+
+            foreach (DumpAudit.CheckResult check in result.Checks)
+            {
+                if (check == stages || check == ordered) continue;
+                Assert.False(check.Failed, check.Name + " failed: " + check.Worst);
+            }
         }
 
         /// <summary>
@@ -441,11 +723,14 @@ namespace Thermodynamics.Tests
         private static string Fixture()
         {
             // The build output no longer sits inside the repository, so the fixture is located the
-            // way the benchmark baseline is: from the compiled-in source path.
-            string path = Path.Combine(
-                Harness.ShippedBlocks.RepoRoot(), "tests", "benchmarks", "field-environment.csv");
+            // way the benchmark baseline is: from the compiled-in source path. The folder holds the
+            // three CSVs of one dump under their own names, so the auditor finds the siblings the
+            // way it finds them in a world's storage.
+            string folder = Path.Combine(
+                Harness.ShippedBlocks.RepoRoot(), "tests", "benchmarks", "field-dump");
 
-            Assert.True(File.Exists(path), "field dump fixture missing at " + path);
+            string path = DumpAudit.Newest(folder);
+            Assert.True(path != null, "field dump fixture missing under " + folder);
             return path;
         }
 

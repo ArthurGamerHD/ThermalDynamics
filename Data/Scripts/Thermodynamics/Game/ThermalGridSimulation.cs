@@ -101,9 +101,11 @@ namespace Thermodynamics
                 long exposureBefore = work.ExposureNodeVisits;
                 long cellsBefore = work.RoomCellsVisited;
 
+                Stats.Profiler.InTick = true;
                 Stats.SimulationTime.Begin();
                 UpdateInternal();
                 Stats.SimulationTime.End();
+                Stats.Profiler.InTick = false;
                 Stats.NoteTick(Telemetry.FramesObserved);
 
                 Telemetry.FrameCost.AddGrid(

@@ -46,13 +46,27 @@ namespace Thermodynamics
         /// </summary>
         public readonly TimingStat AfterStep = new TimingStat("  of which after step");
 
+        /// <summary>
+        /// Whether a tick is what is driving the stages right now.
+        ///
+        /// The one-off build runs the same three stages from the entity's own callback, outside any
+        /// tick and outside the session frame. Recorded into the same rows it made them larger than
+        /// the `grid simulation` row the table indents them under, and added stage milliseconds to
+        /// frames that had not spent them. The build is timed as its own root instead — see
+        /// <see cref="GridTelemetry.BuildTime"/>.
+        /// </summary>
+        public bool InTick;
+
         public void Begin(SimulationPhase phase)
         {
+            if (!InTick) return;
             Stat(phase).Begin();
         }
 
         public void End(SimulationPhase phase)
         {
+            if (!InTick) return;
+
             TimingStat stat = Stat(phase);
             stat.End();
 

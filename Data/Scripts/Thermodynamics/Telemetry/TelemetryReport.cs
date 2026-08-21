@@ -594,6 +594,7 @@ namespace Thermodynamics
             TimingStat pressure = new TimingStat("      of which room pressure");
             TimingStat save = new TimingStat("save");
             TimingStat load = new TimingStat("load");
+            TimingStat build = new TimingStat("build");
 
             costRecords = 0;
             costCalls = 0;
@@ -620,6 +621,7 @@ namespace Thermodynamics
                 solar.Merge(g.SolarTime);
                 save.Merge(g.SaveTime);
                 load.Merge(g.LoadTime);
+                build.Merge(g.BuildTime);
             }
 
             sb.Append("  Indented rows are nested inside the row above them and are not added\n");
@@ -653,11 +655,13 @@ namespace Thermodynamics
 
             save.WriteRow(sb);
             load.WriteRow(sb);
+            build.WriteRow(sb);
 
             double total = CostRollup.MeasuredMilliseconds(
                 Telemetry.SessionFrameTime.TotalMilliseconds,
                 save.TotalMilliseconds,
-                load.TotalMilliseconds);
+                load.TotalMilliseconds,
+                build.TotalMilliseconds);
 
             double share = CostRollup.ShareOfRealTime(total, Telemetry.SessionSeconds);
 

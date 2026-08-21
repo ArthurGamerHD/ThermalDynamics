@@ -20,8 +20,9 @@ namespace Thermodynamics.Tests
         [Fact]
         public void TheTotalIsTheRootsOnly()
         {
-            // Save and load are raised by the engine outside the frame, so they are roots too.
-            Assert.Equal(1000.0, Thermodynamics.CostRollup.MeasuredMilliseconds(900.0, 40.0, 60.0));
+            // Save, load and a grid's one-off build are all raised by the engine outside the
+            // session frame, so all three are roots too.
+            Assert.Equal(1000.0, Thermodynamics.CostRollup.MeasuredMilliseconds(880.0, 40.0, 60.0, 20.0));
         }
 
         [Fact]
@@ -32,7 +33,7 @@ namespace Thermodynamics.Tests
             const double sessionFrame = 221719.10;
             const double gridSimulation = 218419.39;
 
-            double total = Thermodynamics.CostRollup.MeasuredMilliseconds(sessionFrame, 19.81, 47.33);
+            double total = Thermodynamics.CostRollup.MeasuredMilliseconds(sessionFrame, 19.81, 47.33, 0.0);
 
             Assert.True(total < sessionFrame + gridSimulation);
             Assert.Equal(221786.24, total, 2);
@@ -43,7 +44,7 @@ namespace Thermodynamics.Tests
         {
             // The failing case in miniature: a mod using 60 % of real time whose frame is nearly
             // all simulation reported 120 %, a figure that cannot be true of a single thread.
-            double total = Thermodynamics.CostRollup.MeasuredMilliseconds(600.0, 0.0, 0.0);
+            double total = Thermodynamics.CostRollup.MeasuredMilliseconds(600.0, 0.0, 0.0, 0.0);
 
             Assert.Equal(60.0, Thermodynamics.CostRollup.ShareOfRealTime(total, 1.0), 6);
         }
@@ -76,6 +77,20 @@ namespace Thermodynamics.Tests
         public void DoubleTimedWorkShowsAsNegativeRatherThanZero()
         {
             Assert.Equal(-10.0, Thermodynamics.CostRollup.Unattributed(20.0, 30.0), 6);
+        }
+
+        /// <summary>
+        /// A grid's one-off build runs from the entity's own callback, so nothing else in the table
+        /// contains it. It was left out of the total entirely — the mod under-reporting itself by
+        /// the largest single call any grid ever makes.
+        /// </summary>
+        [Fact]
+        public void TheOneOffBuildIsARootAndReachesTheTotal()
+        {
+            double without = Thermodynamics.CostRollup.MeasuredMilliseconds(900.0, 0.0, 0.0, 0.0);
+            double with = Thermodynamics.CostRollup.MeasuredMilliseconds(900.0, 0.0, 0.0, 179.1);
+
+            Assert.Equal(179.1, with - without, 6);
         }
 
         [Fact]

@@ -166,12 +166,24 @@ namespace Thermodynamics
         public void OnUpdate(ThermalNode node, long gridId)
         {
             TotalUpdates++;
+            NotePeak(node.Temperature, gridId);
+        }
 
-            if (node.Temperature > PeakTemperature)
-            {
-                PeakTemperature = node.Temperature;
-                PeakTemperatureGrid = gridId;
-            }
+        /// <summary>
+        /// The hottest this type has been, without counting an update.
+        ///
+        /// The peak and the temperature range are fed by different passes: the peak by the strided
+        /// sampler, the range by that sampler *and* by the end-of-session sweep that guarantees one
+        /// observation of every block on every grid. A type the sampler never reached therefore
+        /// reported a maximum above its own peak — 327 of 815 types in the 2026-08-20 fleet dump,
+        /// most of them at the 293.15 K blocks are created at.
+        /// </summary>
+        public void NotePeak(float temperature, long gridId)
+        {
+            if (temperature <= PeakTemperature) return;
+
+            PeakTemperature = temperature;
+            PeakTemperatureGrid = gridId;
         }
 
         /// <summary>

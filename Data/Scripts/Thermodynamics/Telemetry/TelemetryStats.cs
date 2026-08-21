@@ -291,10 +291,15 @@ namespace Thermodynamics
         ///
         /// It takes no grid-simulation argument by construction: the figure is nested inside
         /// <paramref name="sessionFrame"/> and there is no correct way to add it.
+        ///
+        /// <para><paramref name="build"/> is a root for the opposite reason: a grid's one-off build
+        /// runs from the entity's own callback, so nothing else here contains it. It was left out
+        /// of the total entirely until it was given a row.</para>
         /// </summary>
-        public static double MeasuredMilliseconds(double sessionFrame, double save, double load)
+        public static double MeasuredMilliseconds(
+            double sessionFrame, double save, double load, double build)
         {
-            return sessionFrame + save + load;
+            return sessionFrame + save + load + build;
         }
 
         /// <summary>

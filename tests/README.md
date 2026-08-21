@@ -16,12 +16,13 @@ debugged in seconds instead of by loading a world.
 > `Census.Field`; refresh both when a new dump arrives.
 
 > **A field dump is kept beside the census.**
-> [`benchmarks/field-environment.csv`](benchmarks/field-environment.csv) is a 264-row sample of a
-> real telemetry dump's climate and wind rows. `DumpAuditTests` audits it on every run, so the
-> claims the model makes about a planet — that the wind decomposes into the factors reported beside
-> it, that convection is reported only where there is air — are checked against numbers a world
-> produced rather than numbers a test invented. Refresh it when a dump arrives, from
-> `-- dump`.
+> [`benchmarks/field-dump/`](benchmarks/field-dump) holds three CSVs of one real telemetry dump —
+> 264 climate rows, 242 grids, 560 block types — under the names the mod writes them with.
+> `DumpAuditTests` audits them on every run, so the claims the model makes are checked against
+> numbers a world produced rather than numbers a test invented. It found two faults on its first
+> pass: a grid's stages exceeding the update they nest inside, and a block type's peak temperature
+> sitting below its own maximum. Both are fixed and the fixture still carries them, because a dump
+> records what the mod was when it was taken. Refresh it when a dump arrives, from `-- dump`.
 
 | Project | What it is |
 | --- | --- |
@@ -60,7 +61,7 @@ sufficient. See [development.md](../docs/development.md#repo-conventions) for th
 ```bash
 cd tests
 
-dotnet test                                    # the whole suite (1,285 tests)
+dotnet test                                    # the whole suite (1,302 tests)
 dotnet run --project Thermodynamics.Sim -- list
 dotnet run --project Thermodynamics.Sim -- run reactor
 dotnet run --project Thermodynamics.Sim -- run all --csv out/

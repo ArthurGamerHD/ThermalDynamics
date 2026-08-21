@@ -64,6 +64,10 @@ namespace Thermodynamics.Harness
         {
             public string Path = "";
             public int Rows;
+
+            /// <summary>Rows in the grid and block-type CSVs beside it, or zero where absent.</summary>
+            public int GridRows;
+            public int BlockTypeRows;
             public readonly List<CheckResult> Checks = new List<CheckResult>();
             public readonly List<string> Summary = new List<string>();
 
@@ -142,10 +146,14 @@ namespace Thermodynamics.Harness
         public static Result Run(string path)
         {
             Table table = Table.Read(path);
+            Table grids = Table.Read(Sibling(path, "Grids"));
+            Table types = Table.Read(Sibling(path, "BlockTypes"));
 
             Result result = new Result();
             result.Path = path;
             result.Rows = table.Rows.Count;
+            result.GridRows = grids.Rows.Count;
+            result.BlockTypeRows = types.Rows.Count;
 
             Describe(table, result);
 
@@ -157,7 +165,32 @@ namespace Thermodynamics.Harness
             result.Checks.Add(WeatherScalesWithIntensity(table));
             result.Checks.Add(NothingIsNonsense(table));
 
+            result.Checks.Add(StagesFitInsideTheUpdate(grids));
+            result.Checks.Add(AWorstCallFitsItsParent(grids));
+            result.Checks.Add(ClampedStepsAreSteps(grids));
+            result.Checks.Add(GridRangesAreOrdered(grids));
+            result.Checks.Add(LiveBlocksAreWhatWasPlaced(types));
+            result.Checks.Add(BlockRangesAreOrdered(types));
+            result.Checks.Add(EveryTypeHasUsableMaterialProperties(types));
+
             return result;
+        }
+
+        /// <summary>
+        /// The grid or block-type CSV written alongside an environment CSV. The three share a stamp
+        /// and a directory by construction, so one names the others.
+        /// </summary>
+        private static string Sibling(string path, string kind)
+        {
+            if (string.IsNullOrEmpty(path)) return null;
+
+            string name = Path.GetFileName(path);
+            const string prefix = "Thermodynamics_Environment_";
+            if (!name.StartsWith(prefix, StringComparison.Ordinal)) return null;
+
+            string directory = Path.GetDirectoryName(path);
+            string sibling = "Thermodynamics_" + kind + "_" + name.Substring(prefix.Length);
+            return string.IsNullOrEmpty(directory) ? sibling : Path.Combine(directory, sibling);
         }
 
         public static string Report(Result result)
@@ -167,7 +200,9 @@ namespace Thermodynamics.Harness
             sb.AppendLine("DUMP AUDIT");
             sb.AppendLine();
             sb.Append("  ").AppendLine(result.Path);
-            sb.Append("  ").Append(result.Rows.ToString("n0")).AppendLine(" environment rows");
+            sb.Append("  ").Append(result.Rows.ToString("n0")).Append(" environment rows, ")
+              .Append(result.GridRows.ToString("n0")).Append(" grids, ")
+              .Append(result.BlockTypeRows.ToString("n0")).AppendLine(" block types");
             sb.AppendLine();
 
             for (int i = 0; i < result.Summary.Count; i++)
@@ -493,6 +528,281 @@ namespace Thermodynamics.Harness
             return check;
         }
 
+        // ---- the grid table ---------------------------------------------------------------
+
+        /// <summary>
+        /// A grid's stage timings fit inside its whole update. The cost table nests, and a child
+        /// larger than its parent means two timers overlapped or one is being merged into the wrong
+        /// row — the class of fault that once reported a mod costing a third of real time as
+        /// costing two thirds.
+        ///
+        /// Slack is expected and is not checked here: what a grid's update costs beyond its stages
+        /// is the environment sample, the after-step observation and pacing, which the report
+        /// attributes in its own row.
+        /// </summary>
+        private static CheckResult StagesFitInsideTheUpdate(Table table)
+        {
+            CheckResult check = new CheckResult();
+            check.Name = "a grid's stages fit inside its update";
+            check.Where = "docs/telemetry.md#what-the-stages-leave-over";
+
+            string[] needs =
+            {
+                "sim_ms_total", "topology_ms_total", "mapping_ms_total",
+                "exposure_ms_total", "solver_ms_total",
+            };
+            if (!table.Require(needs, check)) return check;
+
+            double worst = 0d;
+            for (int i = 0; i < table.Rows.Count; i++)
+            {
+                double update = table.Number(i, "sim_ms_total");
+                double stages = table.Number(i, "topology_ms_total")
+                    + table.Number(i, "mapping_ms_total")
+                    + table.Number(i, "exposure_ms_total")
+                    + table.Number(i, "solver_ms_total");
+
+                check.Rows++;
+
+                double over = stages - update;
+                if (over <= Tolerance(update)) continue;
+
+                check.Hits++;
+                if (over <= worst) continue;
+
+                worst = over;
+                check.Worst = "worst " + Fixed(stages) + " ms of stages inside " + Fixed(update)
+                    + " ms of update, on " + table.Text(i, "name");
+            }
+
+            return check;
+        }
+
+        /// <summary>
+        /// The same rule on the worst single call rather than the total: one solver call cannot
+        /// take longer than the update that contains it.
+        /// </summary>
+        private static CheckResult AWorstCallFitsItsParent(Table table)
+        {
+            CheckResult check = new CheckResult();
+            check.Name = "a grid's worst solver call fits its worst update";
+            check.Where = "docs/telemetry.md#frame-cost-and-hitching";
+
+            string[] needs = { "sim_ms_max", "solver_ms_max" };
+            if (!table.Require(needs, check)) return check;
+
+            for (int i = 0; i < table.Rows.Count; i++)
+            {
+                double update = table.Number(i, "sim_ms_max");
+                double solver = table.Number(i, "solver_ms_max");
+
+                check.Rows++;
+                if (solver <= update + Tolerance(update)) continue;
+
+                check.Hits++;
+                if (check.Worst.Length > 0) continue;
+
+                check.Worst = "first " + Fixed(solver) + " ms of solver inside " + Fixed(update)
+                    + " ms of update, on " + table.Text(i, "name");
+            }
+
+            return check;
+        }
+
+        /// <summary>
+        /// A clamped step is a step. A count above the steps taken means the clamp is being recorded
+        /// somewhere other than once a step, which would make every conclusion about the substep
+        /// cap wrong in the same direction.
+        /// </summary>
+        private static CheckResult ClampedStepsAreSteps(Table table)
+        {
+            CheckResult check = new CheckResult();
+            check.Name = "clamped steps are a subset of steps taken";
+            check.Where = "docs/telemetry.md#substeps";
+
+            string[] needs = { "simulation_steps", "clamped_steps" };
+            if (!table.Require(needs, check)) return check;
+
+            for (int i = 0; i < table.Rows.Count; i++)
+            {
+                double steps = table.Number(i, "simulation_steps");
+                double clamped = table.Number(i, "clamped_steps");
+
+                check.Rows++;
+                if (clamped <= steps) continue;
+
+                check.Hits++;
+                if (check.Worst.Length > 0) continue;
+
+                check.Worst = "first " + clamped.ToString("n0", CultureInfo.InvariantCulture)
+                    + " clamped of " + steps.ToString("n0", CultureInfo.InvariantCulture)
+                    + " steps, on " + table.Text(i, "name");
+            }
+
+            return check;
+        }
+
+        private static CheckResult GridRangesAreOrdered(Table table)
+        {
+            CheckResult check = new CheckResult();
+            check.Name = "a grid's minima, means and maxima are ordered";
+            check.Where = "RunningStat, TelemetryStats.cs";
+
+            string[] needs = { "ambient_min", "ambient_mean", "ambient_max", "mean_cells", "peak_cells" };
+            if (!table.Require(needs, check)) return check;
+
+            for (int i = 0; i < table.Rows.Count; i++)
+            {
+                check.Rows++;
+
+                string broke = Ordered(table, i,
+                    "ambient_min", "ambient_mean", "ambient_max");
+                if (broke == null && table.Number(i, "mean_cells") > table.Number(i, "peak_cells") + 0.5d)
+                {
+                    broke = "mean_cells above peak_cells";
+                }
+
+                if (broke == null) continue;
+
+                check.Hits++;
+                if (check.Worst.Length > 0) continue;
+
+                check.Worst = "first " + broke + " on " + table.Text(i, "name");
+            }
+
+            return check;
+        }
+
+        // ---- the block type table ----------------------------------------------------------
+
+        /// <summary>
+        /// What is live is what was placed less what was removed. The three are counted by separate
+        /// paths — a build, a removal, and the node list — so agreement between them is the one
+        /// thing that says the census a report is built on is the population that was there.
+        /// </summary>
+        private static CheckResult LiveBlocksAreWhatWasPlaced(Table table)
+        {
+            CheckResult check = new CheckResult();
+            check.Name = "live blocks are what was placed less what was removed";
+            check.Where = "docs/telemetry.md#what-is-collected";
+
+            string[] needs = { "placed", "removed", "live" };
+            if (!table.Require(needs, check)) return check;
+
+            for (int i = 0; i < table.Rows.Count; i++)
+            {
+                double placed = table.Number(i, "placed");
+                double removed = table.Number(i, "removed");
+                double live = table.Number(i, "live");
+
+                check.Rows++;
+                if (Math.Abs((placed - removed) - live) < 0.5d) continue;
+
+                check.Hits++;
+                if (check.Worst.Length > 0) continue;
+
+                check.Worst = "first " + table.Text(i, "subtype") + ": placed "
+                    + placed.ToString("n0", CultureInfo.InvariantCulture) + ", removed "
+                    + removed.ToString("n0", CultureInfo.InvariantCulture) + ", live "
+                    + live.ToString("n0", CultureInfo.InvariantCulture);
+            }
+
+            return check;
+        }
+
+        private static CheckResult BlockRangesAreOrdered(Table table)
+        {
+            CheckResult check = new CheckResult();
+            check.Name = "a block type's temperatures and demands are ordered";
+            check.Where = "RunningStat, TelemetryStats.cs";
+
+            string[] needs =
+            {
+                "temp_min", "temp_mean", "temp_max", "peak_temp",
+                "substep_demand_mean", "substep_demand_max",
+            };
+            if (!table.Require(needs, check)) return check;
+
+            for (int i = 0; i < table.Rows.Count; i++)
+            {
+                // A type nothing sampled carries zeros, which order trivially and mean nothing.
+                if (table.Number(i, "temp_max") <= 0d) continue;
+
+                check.Rows++;
+
+                string broke = Ordered(table, i, "temp_min", "temp_mean", "temp_max", "peak_temp")
+                    ?? Ordered(table, i, "substep_demand_mean", "substep_demand_max");
+                if (broke == null) continue;
+
+                check.Hits++;
+                if (check.Worst.Length > 0) continue;
+
+                check.Worst = "first " + broke + " on " + table.Text(i, "subtype");
+            }
+
+            return check;
+        }
+
+        /// <summary>
+        /// Every block type reaches the solver with properties it can divide by.
+        ///
+        /// A specific heat of zero is a heat capacity of zero, which is a division by zero in the
+        /// step; a conductivity of zero is a block heat cannot reach; an emissivity outside 0..1 is
+        /// a surface that radiates more than a black body. The derivation from build components is
+        /// what fills these now, and a definition it cannot reach used to fall back to steel
+        /// silently.
+        /// </summary>
+        private static CheckResult EveryTypeHasUsableMaterialProperties(Table table)
+        {
+            CheckResult check = new CheckResult();
+            check.Name = "every block type has properties the solver can use";
+            check.Where = "docs/definitions.md";
+
+            string[] needs = { "specific_heat", "emissivity", "critical_temperature" };
+            if (!table.Require(needs, check)) return check;
+
+            for (int i = 0; i < table.Rows.Count; i++)
+            {
+                check.Rows++;
+
+                double heat = table.Number(i, "specific_heat");
+                double emissivity = table.Number(i, "emissivity");
+                double critical = table.Number(i, "critical_temperature");
+
+                string broke = null;
+                if (heat <= 0d) broke = "specific heat " + Fixed(heat);
+                else if (emissivity < 0d || emissivity > 1d) broke = "emissivity " + Fixed(emissivity);
+                else if (critical <= 0d) broke = "critical temperature " + Fixed(critical);
+
+                if (broke == null) continue;
+
+                check.Hits++;
+                if (check.Worst.Length > 0) continue;
+
+                check.Worst = "first " + table.Text(i, "subtype") + ": " + broke;
+            }
+
+            return check;
+        }
+
+        /// <summary>
+        /// Names the first pair out of order, or null when the whole run ascends. Equality passes:
+        /// a stat with one sample has its minimum, mean and maximum all equal.
+        /// </summary>
+        private static string Ordered(Table table, int row, params string[] columns)
+        {
+            for (int i = 1; i < columns.Length; i++)
+            {
+                double lower = table.Number(row, columns[i - 1]);
+                double upper = table.Number(row, columns[i]);
+                if (lower <= upper + Tolerance(upper)) continue;
+
+                return columns[i - 1] + " " + Fixed(lower) + " above " + columns[i] + " " + Fixed(upper);
+            }
+
+            return null;
+        }
+
         // ---- the summary ------------------------------------------------------------------
 
         /// <summary>
@@ -596,6 +906,7 @@ namespace Thermodynamics.Harness
             public static Table Read(string path)
             {
                 Table table = new Table();
+                if (string.IsNullOrEmpty(path) || !File.Exists(path)) return table;
 
                 using (StreamReader reader = new StreamReader(path))
                 {

@@ -223,7 +223,13 @@ namespace Thermodynamics
 
             // One full build is cheaper than the incremental path replayed per block, and leaves
             // the room map complete before the first step rather than after it.
+            //
+            // Timed as a root of its own: this runs from the entity's callback, so it is inside
+            // neither the session frame nor a grid's update, and it is the largest single call a
+            // grid ever makes.
+            if (Stats != null) Stats.BuildTime.Begin();
             Simulation.RebuildAll();
+            if (Stats != null) Stats.BuildTime.End();
 
             Load();
             started = true;

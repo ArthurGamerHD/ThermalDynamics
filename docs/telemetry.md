@@ -214,7 +214,22 @@ it is printed rather than clamped.
       of which after step             damage, thresholds, pump demand, mass and pressure sweeps
         of which room pressure
       unattributed                    the remainder: pacing, and anything still uninstrumented
+  save
+  load
+  build                               a grid's one-off graph, rooms and exposure, before tick one
 ```
+
+**`build` is a root, and used to be nothing at all.** A grid builds its conduction graph, floods
+its rooms and computes its exposure once, from the entity's own `UpdateOnceBeforeFrame` — outside
+the session frame, outside any grid's update, and outside the save/load pair. It was timed into the
+three stage rows regardless, which the table indents under `grid simulation`, so on a grid that had
+just loaded the children exceeded the parent: 40.9 ms of stages inside an 11.9 ms update, on a
+one-block grid in the 2026-08-20 fleet dump. It also added stage milliseconds to frames that had
+not spent them, and it reached no total, so the mod under-reported itself by the largest single
+call any grid ever makes — **179 ms on a 44,000-block ship**.
+
+The three stage rows are now recorded only while a tick is driving them, and the build is timed as
+its own root. `-- dump` checks the nesting on every grid of a dump.
 
 **The thirty-second spike is not yet explained.** Nothing in the mod runs on a thirty-second period:
 the mass sweep is every 8 steps and the hottest-node scan every 4, which at 8 steps a second is one
