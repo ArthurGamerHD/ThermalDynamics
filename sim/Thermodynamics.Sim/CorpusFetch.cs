@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.IO.Compression;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -44,7 +45,7 @@ namespace Thermodynamics.Sim
         private const int PageSize = 100;
 
         /// <summary>Workshop ids per SteamCMD invocation.</summary>
-        private const int BatchSize = 50;
+        private const int BatchSize = 100;
 
         /// <summary>Courtesy pause between API pages and between fetch batches.</summary>
         private static readonly TimeSpan PagePause = TimeSpan.FromMilliseconds(500);
@@ -61,19 +62,14 @@ namespace Thermodynamics.Sim
         public static int Run(string[] args)
         {
             string key = Value(args, "--key") ?? Environment.GetEnvironmentVariable("STEAM_WEB_API_KEY");
-            string user = Value(args, "--user");
+            // Anonymous works for this workshop, tested against a real item, so no credential is
+            // needed at all — which is the best possible answer to a tool that would otherwise want
+            // one. --user is kept for the case where an item turns out to need ownership.
+            string user = Value(args, "--user") ?? "anonymous";
             string output = Value(args, "--out") ?? Thermodynamics.Harness.Blueprints.CorpusPath();
             string steamcmd = Value(args, "--steamcmd") ?? "steamcmd";
             int target = Int(Value(args, "--top"), 10000);
             bool listOnly = Has(args, "--list-only");
-
-            if (string.IsNullOrEmpty(key))
-            {
-                Console.Error.WriteLine("A Steam Web API key is required to list the workshop.");
-                Console.Error.WriteLine("Get one free at https://steamcommunity.com/dev/apikey, then pass");
-                Console.Error.WriteLine("--key <key>, or set STEAM_WEB_API_KEY.");
-                return 1;
-            }
 
             Directory.CreateDirectory(output);
             string manifest = Path.Combine(output, "manifest.csv");
@@ -81,7 +77,19 @@ namespace Thermodynamics.Sim
             List<Item> items = Load(manifest);
             if (items.Count >= target)
             {
+                // The key buys the listing and nothing else, so a corpus with a manifest already
+                // long enough can be fetched without one.
                 Console.WriteLine("Manifest already holds " + items.Count.ToString("n0") + " items; not re-listing.");
+            }
+            else if (string.IsNullOrEmpty(key))
+            {
+                Console.Error.WriteLine("A Steam Web API key is required to list the workshop.");
+                Console.Error.WriteLine("Get one free at https://steamcommunity.com/dev/apikey, then pass");
+                Console.Error.WriteLine("--key <key>, or set STEAM_WEB_API_KEY.");
+                Console.Error.WriteLine();
+                Console.Error.WriteLine("Only listing needs it. Fetching does not, and neither needs an account:");
+                Console.Error.WriteLine("this workshop answers an anonymous SteamCMD login.");
+                return 1;
             }
             else
             {
@@ -92,16 +100,7 @@ namespace Thermodynamics.Sim
 
             if (listOnly) return 0;
 
-            if (string.IsNullOrEmpty(user))
-            {
-                Console.Error.WriteLine();
-                Console.Error.WriteLine("Listing done. To fetch, pass --user <steam account name>.");
-                Console.Error.WriteLine("Log that account in once by hand first so SteamCMD caches it:");
-                Console.Error.WriteLine("    " + steamcmd + " +login <user> +quit");
-                Console.Error.WriteLine("This tool never handles a password.");
-                return 1;
-            }
-
+            if (items.Count > target) items = items.GetRange(0, target);
             return Fetch(items, user, steamcmd, output);
         }
 
@@ -260,11 +259,7 @@ namespace Thermodynamics.Sim
             List<long> wanted = new List<long>();
             foreach (Item item in items)
             {
-                if (!Directory.Exists(Path.Combine(output, "steamapps", "content", "244850",
-                        item.Id.ToString(CultureInfo.InvariantCulture))))
-                {
-                    wanted.Add(item.Id);
-                }
+                if (!Directory.Exists(ItemPath(output, item.Id))) wanted.Add(item.Id);
             }
 
             Console.WriteLine();
@@ -295,10 +290,70 @@ namespace Thermodynamics.Sim
                 if (end < wanted.Count) Thread.Sleep(BatchPause);
             }
 
+            int unpacked = Unpack(output);
+
             Console.WriteLine();
+            Console.WriteLine(unpacked.ToString("n0") + " legacy archives unpacked to bp.sbc");
             Console.WriteLine("Corpus at " + Path.GetFullPath(output));
             Console.WriteLine("Read it with:  corpus");
             return 0;
+        }
+
+        /// <summary>
+        /// Where SteamCMD unpacks one workshop item.
+        ///
+        /// The <c>workshop</c> segment is not optional and leaving it out is not harmless: the
+        /// resume check then never finds anything already on disk, and a re-run downloads all ten
+        /// thousand items again rather than none of them.
+        /// </summary>
+        private static string ItemPath(string output, long id)
+        {
+            return Path.Combine(output, "steamapps", "workshop", "content", "244850",
+                id.ToString(CultureInfo.InvariantCulture));
+        }
+
+        /// <summary>
+        /// Unpacks the legacy workshop format.
+        ///
+        /// An item published before Steam's current UGC system arrives as a single
+        /// <c>*_legacy.bin</c>, which is a zip holding the <c>bp.sbc</c> and a thumbnail rather than
+        /// the unpacked folder a newer item gives. Both shapes end up in the corpus, so the reader
+        /// finds a blueprint either way and never has to know which era an item came from.
+        /// </summary>
+        private static int Unpack(string output)
+        {
+            string root = Path.Combine(output, "steamapps", "workshop", "content", "244850");
+            if (!Directory.Exists(root)) return 0;
+
+            int unpacked = 0;
+
+            foreach (string archive in Directory.GetFiles(root, "*_legacy.bin", SearchOption.AllDirectories))
+            {
+                string folder = Path.GetDirectoryName(archive);
+                if (folder == null || File.Exists(Path.Combine(folder, "bp.sbc"))) continue;
+
+                try
+                {
+                    using (ZipArchive zip = ZipFile.OpenRead(archive))
+                    {
+                        foreach (ZipArchiveEntry entry in zip.Entries)
+                        {
+                            if (entry.Name != "bp.sbc") continue;
+
+                            entry.ExtractToFile(Path.Combine(folder, "bp.sbc"), true);
+                            unpacked++;
+                            break;
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+                    // A corpus of ten thousand will contain a truncated or unreadable archive. It
+                    // is one ship, and the yield reports it rather than the pass failing.
+                }
+            }
+
+            return unpacked;
         }
 
         private static bool RunSteamCmd(string steamcmd, string arguments)
