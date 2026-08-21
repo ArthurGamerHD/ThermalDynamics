@@ -503,17 +503,55 @@ namespace Thermodynamics.Core
         /// </summary>
         public float NodeSubstepDemand(int index)
         {
+            EnvironmentState environment = Environment;
+            return NodeSubstepDemand(index, ref environment);
+        }
+
+        /// <summary>
+        /// The same demand under an environment the grid is not in.
+        ///
+        /// A block's stiffness has two halves — what it is bolted to, and what it exchanges with the
+        /// world over its exposed area — and only the first is a property of the ship. A hull
+        /// measured before it has stepped is measured in a vacuum, where the second half is
+        /// radiation alone; the same hull in air is several times stiffer, which is the difference
+        /// between a fleet a field dump found demanding twenty substeps and the three a desk
+        /// measurement predicted for it.
+        ///
+        /// Reads no state and writes none, so a caller can ask about any number of worlds without
+        /// stepping the grid into any of them.
+        /// </summary>
+        public float NodeSubstepDemand(int index, ref EnvironmentState environment)
+        {
             if (index < 0 || index >= nodes.Count) return 0f;
 
             // Same guard as the profile: a node appended during a step has no mirrored row yet.
             if (index >= nodeConductanceTotal.Length) return 0f;
 
-            float capacity = nodes[index].ThermalMass;
+            ThermalNode node = nodes[index];
+
+            float capacity = node.ThermalMass;
             if (capacity <= 0f) return 0f;
 
-            StabilityTerms terms = StabilityEnvironment();
-            return (NodeStabilityRate(index, ref terms) / capacity)
-                * (settings.StepSeconds / StabilitySafetyFactor);
+            StabilityTerms terms = StabilityEnvironment(ref environment);
+
+            // Read through the node rather than the mirrored rows, which the step path fills. A
+            // grid that has never stepped has empty mirrors, so the mirrored form of this answered
+            // conduction alone whatever world it was asked about — six times low for a hull in air,
+            // and the number the ship screening stratified its specimens on.
+            float rate = nodeConductanceTotal[index];
+
+            if (terms.Exposed && node.TotalExposedFaces > 0)
+            {
+                if (terms.Radiating)
+                {
+                    float t = node.Temperature;
+                    rate += 4f * node.RadiationCoefficient * t * t * t;
+                }
+
+                rate += terms.Convection * node.ExposedArea;
+            }
+
+            return (rate / capacity) * (settings.StepSeconds / StabilitySafetyFactor);
         }
 
         /// <summary>True when the last step hit <see cref="MaxSubsteps"/> and had to clamp.</summary>
@@ -2626,12 +2664,18 @@ namespace Thermodynamics.Core
 
         private StabilityTerms StabilityEnvironment()
         {
+            EnvironmentState environment = Environment;
+            return StabilityEnvironment(ref environment);
+        }
+
+        private StabilityTerms StabilityEnvironment(ref EnvironmentState environment)
+        {
             StabilityTerms terms = new StabilityTerms();
 
             terms.Radiating = settings.EnableEnvironment && settings.EnableRadiation;
             bool convecting = settings.EnableEnvironment && settings.EnableConvection;
             terms.Convection = convecting
-                ? Environment.ConvectionCoefficient * Environment.AtmosphereFactor
+                ? environment.ConvectionCoefficient * environment.AtmosphereFactor
                 : 0f;
             terms.Exposed = terms.Radiating || convecting;
             return terms;

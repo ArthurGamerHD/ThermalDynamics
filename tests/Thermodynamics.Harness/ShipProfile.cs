@@ -108,6 +108,26 @@ namespace Thermodynamics.Harness
         /// <summary>The subtype that set <see cref="PeakSubstepDemand"/>. Names what to tune.</summary>
         public string StiffestBlock;
 
+        /// <summary>
+        /// The same peak, measured in air at sea level rather than in the vacuum a ship that has
+        /// never stepped is measured in.
+        ///
+        /// <para>Every other figure here is a property of the ship. Stiffness is not: half of it is
+        /// what a block exchanges with the world over its exposed area, and in a vacuum that half is
+        /// radiation alone. A field dump of a fleet flying at 0.73 air density found `SmallLight`
+        /// demanding 23.7 substeps with 3 % of the demand coming from conduction, against the two
+        /// or three the same hulls demand here — so the vacuum figure is not a smaller version of
+        /// the atmospheric one, it is a different quantity.</para>
+        ///
+        /// <para>Both are kept because both are real: a ship in orbit is in the first world and a
+        /// ship over a planet is in the second, and which one a specimen is selected on is a
+        /// decision rather than a default.</para>
+        /// </summary>
+        public float PeakSubstepDemandInAir;
+
+        /// <summary>The subtype that set <see cref="PeakSubstepDemandInAir"/>.</summary>
+        public string StiffestBlockInAir;
+
         /// <summary>Sealed compartments the room mapper found, across every grid.</summary>
         public int Rooms;
 
@@ -160,7 +180,8 @@ namespace Thermodynamics.Harness
         /// </summary>
         public static ShipProfile Measure(Blueprints.Ship ship, ThermalSettings settings = null)
         {
-            ShipAssembly assembly = ship.Build(settings ?? new ThermalSettings());
+            ThermalSettings effective = settings ?? new ThermalSettings();
+            ShipAssembly assembly = ship.Build(effective);
 
             ShipProfile profile = new ShipProfile
             {
@@ -174,6 +195,8 @@ namespace Thermodynamics.Harness
             };
 
             List<float> demands = new List<float>(assembly.NodeCount);
+            EnvironmentState air = SeaLevelAir(effective);
+            float peakInAir = 0f;
             float[] thrustByDirection = new float[Face.Count];
             float draw = 0f;
             float installed = 0f;
@@ -202,6 +225,15 @@ namespace Thermodynamics.Harness
                     {
                         peak = demand;
                         profile.StiffestBlock = node.Block.Name;
+                    }
+
+                    // A second reading of the same node, differing only in the world it is asked
+                    // about. Costs one more pass over the conductance arrays and no step.
+                    float inAir = solver.NodeSubstepDemand(i, ref air);
+                    if (inAir > peakInAir)
+                    {
+                        peakInAir = inAir;
+                        profile.StiffestBlockInAir = node.Block.Name;
                     }
 
                     Rate(profile, node.Block, thrustByDirection, ref draw, ref installed);
@@ -239,11 +271,26 @@ namespace Thermodynamics.Harness
                 : exposed / (float)assembly.NodeCount;
 
             profile.PeakSubstepDemand = peak;
+            profile.PeakSubstepDemandInAir = peakInAir;
             demands.Sort();
             profile.SubstepDemandMedian = Percentile(demands, 0.50f);
             profile.SubstepDemandP95 = Percentile(demands, 0.95f);
 
             return profile;
+        }
+
+        /// <summary>
+        /// Still air at sea level on an earthlike world: the world most ships in the corpus were
+        /// built to fly in, and the one a vacuum measurement is furthest from.
+        ///
+        /// Still rather than windy on purpose. Wind raises the convective coefficient and would
+        /// make the figure a statement about the weather; this is the floor of what an atmosphere
+        /// does, so a ship stiffer than this in air is stiffer than this everywhere in air.
+        /// </summary>
+        private static EnvironmentState SeaLevelAir(ThermalSettings settings)
+        {
+            return EnvironmentSolver.Solve(
+                settings, PlanetThermalProperties.Default(), Worlds.PlanetSurface(1f, 0.5f));
         }
 
         /// <summary>Heat from everything that draws power but does not thrust, watts.</summary>

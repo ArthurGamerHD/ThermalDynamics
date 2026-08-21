@@ -62,7 +62,16 @@ Every ship in the corpus, no solver:
 * installed power, thrust and their ratio to hull mass;
 * exposed area, buried fraction, room count;
 * cooling fitted: radiators, loops, heat pumps, vents;
-* **stiffness demand** — conductance over capacity per block, and the distribution's tail.
+* **stiffness demand** — conductance over capacity per block, and the distribution's tail, in two
+  worlds: `stiff` is the ship in vacuum and `air` is the same ship at sea level.
+
+Stiffness is the one measurement here that is not a property of the ship. Half of it is what a
+block exchanges with the world over its exposed area, and in a vacuum that half is radiation
+alone — so a hull that demands 2.5 substeps in orbit demands 14.3 over a planet, set by a light
+fitting either way. Both are reported because a ship is flown in both, and which one a specimen is
+selected on is a decision rather than a default. **It is currently the vacuum figure**, which is
+the conservative choice for a feature the panel is stratified on and is worth revisiting once the
+battery has run against both.
 
 This pass alone answers G6 and re-founds `Census` on a population. It also produces the strata for
 what follows.

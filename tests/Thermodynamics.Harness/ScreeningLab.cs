@@ -67,7 +67,10 @@ namespace Thermodynamics.Harness
                 .Append(", in ").Append(clock.Elapsed.TotalSeconds.ToString("n1")).AppendLine(" s");
             sb.AppendLine();
 
-            sb.AppendLine("ship                              blocks    mass t   area m2  exp%    waste kW   W/m2   Teq K  stiff  stiffest block");
+            sb.AppendLine("  `stiff` is the vacuum figure; `air` is the same ship at sea level, where");
+            sb.AppendLine("  convection over a block's exposed area rather than conduction sets it.");
+            sb.AppendLine();
+            sb.AppendLine("ship                              blocks    mass t   area m2  exp%    waste kW   W/m2   Teq K  stiff    air  stiffest block (in air)");
             profiles.Sort(delegate (ShipProfile a, ShipProfile b)
             {
                 return b.ThermalStress.CompareTo(a.ThermalStress);
@@ -84,7 +87,8 @@ namespace Thermodynamics.Harness
                 sb.Append(p.ThermalStress.ToString("n0").PadLeft(7));
                 sb.Append(p.EquilibriumKelvin().ToString("n0").PadLeft(8));
                 sb.Append(p.PeakSubstepDemand.ToString("n1").PadLeft(7));
-                sb.Append("  ").AppendLine(Trim(p.StiffestBlock, 28));
+                sb.Append(p.PeakSubstepDemandInAir.ToString("n1").PadLeft(7));
+                sb.Append("  ").AppendLine(Trim(p.StiffestBlockInAir, 28));
             }
 
             sb.AppendLine();
@@ -92,6 +96,7 @@ namespace Thermodynamics.Harness
             Band(sb, "blocks", profiles, delegate (ShipProfile p) { return p.Blocks; });
             Band(sb, "W per m2", profiles, delegate (ShipProfile p) { return p.ThermalStress; });
             Band(sb, "substep demand", profiles, delegate (ShipProfile p) { return p.PeakSubstepDemand; });
+            Band(sb, "substep demand, air", profiles, delegate (ShipProfile p) { return p.PeakSubstepDemandInAir; });
             sb.AppendLine();
 
             // ---- the panel ----------------------------------------------------------------------
