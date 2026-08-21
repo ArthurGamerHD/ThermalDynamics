@@ -184,6 +184,34 @@ namespace Thermodynamics.Core
         public int HeatSourceCount;
 
         /// <summary>A sample for deep space with the sun overhead.</summary>
+        /// <summary>
+        /// Composes the airflow a hull actually feels: the ambient wind minus the grid's own
+        /// velocity, resolved into the grid's local frame.
+        ///
+        /// This is the one place the two motions meet, extracted so the offline harness feels
+        /// exactly the airflow a session would. Friction and forced convection read nothing but
+        /// the result, which is why a ship flying with the wind at the wind's own speed is in calm
+        /// air at 100 m/s ground speed, and a ship flying into it feels the sum.
+        /// </summary>
+        public void ComposeRelativeWind(Vector3 windDirection, float windSpeed, Matrix worldToLocal)
+        {
+            WindSpeed = windSpeed;
+            WindDirection = windDirection;
+
+            if (windSpeed <= 0f && GridVelocity.LengthSquared() <= 0f)
+            {
+                RelativeWindSpeed = 0f;
+                RelativeWindDirectionLocal = Vector3.Zero;
+                return;
+            }
+
+            Vector3 relative = (windDirection * windSpeed) - GridVelocity;
+            RelativeWindSpeed = relative.Length();
+            RelativeWindDirectionLocal = RelativeWindSpeed > 0f
+                ? Vector3.Normalize(Vector3.TransformNormal(relative / RelativeWindSpeed, worldToLocal))
+                : Vector3.Zero;
+        }
+
         public static EnvironmentSample Vacuum(Vector3 sunDirectionLocal)
         {
             EnvironmentSample s = new EnvironmentSample();

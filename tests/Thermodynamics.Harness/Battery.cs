@@ -189,6 +189,39 @@ namespace Thermodynamics.Harness
                 });
             }
 
+            // ---- wind against velocity, isolated and composed ----------------------------------
+            // The hull feels one scalar: the relative wind. A session with both a storm and a
+            // moving ship cannot attribute a heat to either, so the battery holds each still while
+            // the other moves, then runs the two compositions where the sum does something neither
+            // part does. flight-100 above is the velocity-only case.
+
+            scenarios.Add(new Scenario
+            {
+                Name = "storm-parked",
+                Question = "wind alone: a parked hull in a 100 m/s gale heats exactly as flight-100 does",
+                Environment = t => Worlds.Storm(ThickAir, 100f),
+                Load = ShipLoad.State.Idle,
+                Seconds = 3600f,
+            });
+
+            scenarios.Add(new Scenario
+            {
+                Name = "flight-headwind",
+                Question = "composition: 40 of wind against 60 of speed trips a threshold neither reaches alone",
+                Environment = t => Worlds.WindAndMotion(ThickAir, 40f, Vector3.Forward, Vector3.Backward * 60f),
+                Load = ShipLoad.State.Burn(Face.Forward),
+                Seconds = 3600f,
+            });
+
+            scenarios.Add(new Scenario
+            {
+                Name = "flight-downwind",
+                Question = "composition: 80 of speed in a 60 m/s tailwind is 20 of airflow — no friction at full throttle",
+                Environment = t => Worlds.WindAndMotion(ThickAir, 60f, Vector3.Forward, Vector3.Forward * 80f),
+                Load = ShipLoad.State.Burn(Face.Forward),
+                Seconds = 3600f,
+            });
+
             scenarios.Add(new Scenario
             {
                 Name = "reentry",

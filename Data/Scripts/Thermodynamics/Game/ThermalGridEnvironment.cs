@@ -540,8 +540,6 @@ namespace Thermodynamics
             float speed = wind.Speed;
 
             sample.WindBurial = wind.Burial;
-            sample.WindSpeed = speed;
-            sample.WindDirection = direction;
             sample.WindHeightAboveGround = height;
             sample.WindHeating = windHeating;
             sample.WindBandShare = wind.BandShare;
@@ -550,19 +548,13 @@ namespace Thermodynamics
             sample.WindShelter = wind.Shelter;
             sample.WindChannelDegrees = wind.ChannelDegrees;
 
-            if (direction.LengthSquared() <= 0f)
-            {
-                sample.RelativeWindSpeed = 0f;
-                sample.RelativeWindDirectionLocal = Vector3.Zero;
-                return;
-            }
+            // Composed in Core, so the offline harness feels exactly the airflow a session does.
+            sample.ComposeRelativeWind(
+                direction.LengthSquared() > 0f ? direction : Vector3.Zero,
+                direction.LengthSquared() > 0f ? speed : 0f,
+                worldToLocal);
 
-            Vector3 relative = (direction * speed) - sample.GridVelocity;
-            sample.RelativeWindSpeed = relative.Length();
-            sample.RelativeWindDirectionLocal = sample.RelativeWindSpeed > 0f
-                ? Vector3.Normalize(Vector3D.TransformNormal(relative / sample.RelativeWindSpeed, worldToLocal))
-                : Vector3.Zero;
-
+            Vector3 relative = (sample.WindDirection * sample.WindSpeed) - sample.GridVelocity;
             DrawWindVector(ref position, ref relative, sample.RelativeWindSpeed);
         }
 

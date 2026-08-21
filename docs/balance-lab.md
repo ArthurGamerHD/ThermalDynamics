@@ -118,11 +118,17 @@ ship heating itself, which is the only way to attribute it.
 | `all-peak` | Where heat concentrates when everything runs at once |
 | `burn-{forward,backward,left,right,up,down}` | **Hot spots.** A ship burning forward heats the thrusters at its stern and nothing at its bow, and which blocks those are is a property of the design |
 
-*Motion* — friction against airflow.
+*Motion* — friction against airflow. The hull feels one scalar, the relative wind, so a session
+with both a storm and a moving ship cannot attribute a heat to either. The battery holds each
+contributor still while the other moves, then runs the two compositions where the sum does
+something neither part does. `FrictionIsolationTests` pins the same matrix at unit scale.
 
 | Scenario | The question |
 | --- | --- |
-| `flight-50`, `flight-100` | Friction against airflow: which wins, at which speed |
+| `flight-50`, `flight-100` | Velocity alone, in still air: friction against airflow, at which speed |
+| `storm-parked` | Wind alone: a parked hull in a 100 m/s gale heats exactly as `flight-100` does |
+| `flight-headwind` | Composition: 40 of wind against 60 of speed trips a threshold neither reaches alone |
+| `flight-downwind` | Composition: 80 of speed in a 60 m/s tailwind is 20 of airflow — no friction at full throttle |
 | `reentry` | The leading face at terminal speed in thick air |
 
 *Transient*

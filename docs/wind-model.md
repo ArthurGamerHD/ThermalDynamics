@@ -200,6 +200,17 @@ All three terrain effects fade linearly to nothing at the gradient height. They 
 phenomena, and steering a ship two kilometres up along a valley it is nowhere near would be worse
 than not modelling terrain at all.
 
+### Wind against a moving hull
+
+The ambient wind and the grid's own velocity meet in exactly one place:
+`EnvironmentSample.ComposeRelativeWind`, which both the game adapter and the offline harness call.
+Friction, its threshold and the forced-convection bonus read nothing but the result, so a hull
+flying with the wind at the wind's own speed is in calm air at full ground speed, and one flying
+into a 40 m/s wind at 40 m/s trips the 50 m/s friction threshold neither reaches alone.
+`FrictionIsolationTests` holds each contributor still while the other moves and pins both
+compositions; the corpus battery runs the same matrix over whole ships as `storm-parked`,
+`flight-headwind` and `flight-downwind`.
+
 ### Under the surface
 
 Height above ground is signed, and `WindSolver.Burial` turns it into the share of the wind that

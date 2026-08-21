@@ -85,15 +85,34 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
-        /// Flying fast through atmosphere. Airflow comes from local forward, which is what a
-        /// ship travelling nose-first experiences.
+        /// Flying fast through still air. Composed the way the game composes it — velocity against
+        /// a zero wind — so the airflow on the hull is the adapter's own arithmetic, not a fixture
+        /// asserting what it should have been.
         /// </summary>
         public static EnvironmentSample Flight(float airDensity, float speed, float timeOfDay = 0.5f)
         {
+            return WindAndMotion(airDensity, 0f, Vector3.Zero, Vector3.Backward * speed, timeOfDay);
+        }
+
+        /// <summary>A parked hull in an ambient wind — a storm, with the ship standing still.</summary>
+        public static EnvironmentSample Storm(float airDensity, float windSpeed, float timeOfDay = 0.5f)
+        {
+            return WindAndMotion(airDensity, windSpeed, Vector3.Forward, Vector3.Zero, timeOfDay);
+        }
+
+        /// <summary>
+        /// The general case: an ambient wind and a moving grid at once, composed exactly as the
+        /// game adapter composes them. The hull feels the *relative* wind — the one scalar friction
+        /// and forced convection read — so flying with the wind at the wind's own speed is calm air
+        /// at full ground speed, and flying into it is the sum. World and local frames coincide.
+        /// </summary>
+        public static EnvironmentSample WindAndMotion(
+            float airDensity, float windSpeed, Vector3 windDirection, Vector3 velocity,
+            float timeOfDay = 0.5f)
+        {
             EnvironmentSample sample = PlanetSurface(airDensity, timeOfDay);
-            sample.GridVelocity = Vector3.Forward * speed;
-            sample.RelativeWindSpeed = speed;
-            sample.RelativeWindDirectionLocal = Vector3.Forward;
+            sample.GridVelocity = velocity;
+            sample.ComposeRelativeWind(windDirection, windSpeed, Matrix.Identity);
             return sample;
         }
     }
