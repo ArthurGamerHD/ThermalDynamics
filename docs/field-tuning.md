@@ -253,6 +253,43 @@ against one. The same argument applies to the plushies at the top of the table, 
 different problem: 1 kg of steel at conductivity 50 is conduction-stiff, and a material definition
 would fix them outright.
 
+## The same finding over 1,698 ships instead of one save
+
+The three runs above are one world. The corpus is a population, and until now it could not answer
+this: the ship screening steps nothing, and the substep demand it reported was conduction-only for
+exactly that reason — see [A12](backlog.md). With that fixed it measures every ship in two worlds.
+
+```bash
+dotnet run --project Thermodynamics.Sim -- screen
+```
+
+| | vacuum | sea level |
+| --- | ---: | ---: |
+| median ship | 2.4 | 2.7 |
+| p95 | 3.4 | **16.7** |
+| worst | 4.3 | **17.2** |
+
+**The air column is bimodal rather than long-tailed**, and what sets each ship's demand says why:
+
+| block | ships | share | median demand | worst |
+| --- | ---: | ---: | ---: | ---: |
+| `SmallLight` | 580 | 34.2 % | **16.1** | 17.2 |
+| `SmallBlockArmorBlock` | 437 | 25.7 % | 2.3 | 2.9 |
+| `LargeBlockLight_1corner` | 130 | 7.7 % | **11.0** | 12.7 |
+| `SmallBlockArmorInvCorner2Tip` | 95 | 5.6 % | 2.4 | 2.7 |
+| `SmallBlockArmorInvCorner2Base` | 75 | 4.4 % | 2.4 | 2.9 |
+| `LargeCameraBlock` | 16 | 0.9 % | 5.6 | 6.5 |
+
+**Two ships in five have their substep count set by a light fitting**, at six to seven times what
+the armour around it asks for. The rest are set by an armour block at 2.3, which is what a hull
+costs when nothing decorative is on its skin. There is no continuum between the two: a builder
+either put a light on the outside or did not, and that single choice is worth a factor of six in
+what the ship costs to simulate over a planet.
+
+That is the population the exposed-area decision above would be made for. It is still not applied,
+for the reason given there — it changes how the block exchanges heat — but the question is no
+longer "how much would this matter on the one save that was dumped".
+
 ## What the caps would buy
 
 From the run's own projection, over 205 grids and 123,784 blocks:

@@ -98,6 +98,8 @@ namespace Thermodynamics.Harness
             Band(sb, "substep demand", profiles, delegate (ShipProfile p) { return p.PeakSubstepDemand; });
             Band(sb, "substep demand, air", profiles, delegate (ShipProfile p) { return p.PeakSubstepDemandInAir; });
             sb.AppendLine();
+            StiffestBlocks(sb, profiles);
+            sb.AppendLine();
 
             // ---- the panel ----------------------------------------------------------------------
 
@@ -141,6 +143,63 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
+        /// <summary>
+        /// What sets each ship's substep count in air, counted over the corpus.
+        ///
+        /// The desk equivalent of a telemetry dump's stiffness table, and the reason the air
+        /// distribution has two humps in it rather than a tail: a ship's demand is set by whichever
+        /// single block on it is lightest for its exposed area, so the population divides by which
+        /// fitting the builder happened to use rather than by anything about the hull.
+        /// </summary>
+        private static void StiffestBlocks(StringBuilder sb, List<ShipProfile> profiles)
+        {
+            Dictionary<string, List<float>> byBlock = new Dictionary<string, List<float>>();
+
+            for (int i = 0; i < profiles.Count; i++)
+            {
+                string name = profiles[i].StiffestBlockInAir;
+                if (string.IsNullOrEmpty(name)) continue;
+
+                List<float> demands;
+                if (!byBlock.TryGetValue(name, out demands))
+                {
+                    demands = new List<float>();
+                    byBlock[name] = demands;
+                }
+
+                demands.Add(profiles[i].PeakSubstepDemandInAir);
+            }
+
+            List<KeyValuePair<string, List<float>>> ranked =
+                new List<KeyValuePair<string, List<float>>>(byBlock);
+            ranked.Sort(delegate (KeyValuePair<string, List<float>> a, KeyValuePair<string, List<float>> b)
+            {
+                return b.Value.Count.CompareTo(a.Value.Count);
+            });
+
+            sb.AppendLine("  what sets each ship's substep count in air");
+            sb.AppendLine("    block                              ships   share   median   worst");
+
+            int shown = ranked.Count < TopStiffestBlocks ? ranked.Count : TopStiffestBlocks;
+            for (int i = 0; i < shown; i++)
+            {
+                List<float> demands = ranked[i].Value;
+                demands.Sort();
+
+                sb.Append("    ").Append(Trim(ranked[i].Key, 33).PadRight(34));
+                sb.Append(demands.Count.ToString("n0").PadLeft(7));
+                sb.Append((100f * demands.Count / profiles.Count).ToString("n1").PadLeft(7)).Append(" %");
+                sb.Append(At(demands, 0.5f).ToString("n1").PadLeft(8));
+                sb.Append(At(demands, 1f).ToString("n1").PadLeft(8));
+                sb.AppendLine();
+            }
+
+            sb.AppendLine();
+        }
+
+        /// <summary>How many block subtypes the table above names before it stops.</summary>
+        private const int TopStiffestBlocks = 12;
+
         private static void Band(StringBuilder sb, string label, List<ShipProfile> profiles,
             Func<ShipProfile, float> property)
         {
@@ -148,7 +207,7 @@ namespace Thermodynamics.Harness
             for (int i = 0; i < profiles.Count; i++) values.Add(property(profiles[i]));
             values.Sort();
 
-            sb.Append("    ").Append(label.PadRight(16));
+            sb.Append("    ").Append(label.PadRight(22));
             sb.Append("min ").Append(At(values, 0f).ToString("n1").PadLeft(10));
             sb.Append("   p50 ").Append(At(values, 0.5f).ToString("n1").PadLeft(10));
             sb.Append("   p95 ").Append(At(values, 0.95f).ToString("n1").PadLeft(10));
