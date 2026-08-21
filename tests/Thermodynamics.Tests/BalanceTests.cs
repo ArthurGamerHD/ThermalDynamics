@@ -24,6 +24,7 @@ namespace Thermodynamics.Tests
     /// editing a definition moves these tests. That is the point: a tuning change that inverts a
     /// conclusion should have to say so out loud.
     /// </summary>
+    [Trait("speed", "slow")]
     public class BalanceTests
     {
         // ---- the reference data ------------------------------------------------------------

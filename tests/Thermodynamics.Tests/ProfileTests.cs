@@ -17,6 +17,7 @@ namespace Thermodynamics.Tests
     /// is run with the environment on and checked for staying in the world, and the defect that
     /// made that necessary has a test of its own.
     /// </summary>
+    [Trait("speed", "slow")]
     public class ProfileTests
     {
         private readonly ITestOutputHelper output;

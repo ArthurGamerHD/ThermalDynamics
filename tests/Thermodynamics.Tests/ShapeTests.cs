@@ -18,6 +18,7 @@ namespace Thermodynamics.Tests
     ///
     /// These tests run the same assertions across <see cref="GridShapes.Catalogue"/>.
     /// </summary>
+    [Trait("speed", "slow")]
     public class ShapeTests
     {
         public static IEnumerable<object[]> AllShapes()

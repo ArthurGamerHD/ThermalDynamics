@@ -16,6 +16,7 @@ namespace Thermodynamics.Tests
     /// last few pin defects that are currently *present*, so that fixing one shows up as a test
     /// that has to change rather than as a number nobody was watching.
     /// </summary>
+    [Trait("speed", "slow")]
     public class ProfileSuiteTests
     {
         /// <summary>

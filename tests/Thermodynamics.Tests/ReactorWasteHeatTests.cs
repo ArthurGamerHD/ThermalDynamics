@@ -20,6 +20,7 @@ namespace Thermodynamics.Tests
     /// Figures come from <see cref="ReactorLab"/>, which reads the shipped XML at run time, so a
     /// tuning change moves these tests rather than sliding past them.
     /// </summary>
+    [Trait("speed", "slow")]
     public class ReactorWasteHeatTests
     {
         /// <summary>

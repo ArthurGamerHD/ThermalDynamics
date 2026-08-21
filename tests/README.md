@@ -81,7 +81,8 @@ sufficient. See [development.md](../docs/development.md#repo-conventions) for th
 ```bash
 cd tests
 
-dotnet test                                    # the whole suite (1,305 tests)
+dotnet test                                    # the whole suite, about five minutes
+dotnet test --filter "speed!=slow"             # the fast lane, under a minute
 dotnet run --project Thermodynamics.Sim -- list
 dotnet run --project Thermodynamics.Sim -- run reactor
 dotnet run --project Thermodynamics.Sim -- run all --csv out/
@@ -95,6 +96,11 @@ SE_BIN=/path/to/SpaceEngineers/Bin64 dotnet test
 
 The probe order is `$SE_BIN`, the default Steam path, then the mod's own
 `bin/Release/net472` output.
+
+The nine suites that dominate the run — each a scenario battery stepping whole ships for tens of
+seconds — carry `[Trait("speed", "slow")]`, so the fast lane covers everything else: the unit and
+model tests that catch most regressions. The full run remains the gate; the fast lane is for the
+edit loop.
 
 ## Scenarios
 

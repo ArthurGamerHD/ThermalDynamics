@@ -15,6 +15,7 @@ namespace Thermodynamics.Tests
     /// carrying 288 pipe blocks, four pumps, eight radiators and four heat pumps, and could not say
     /// whether any of it moved a watt.
     /// </summary>
+    [Trait("speed", "slow")]
     public class CoolingScenarioClaimTests
     {
         /// <summary>

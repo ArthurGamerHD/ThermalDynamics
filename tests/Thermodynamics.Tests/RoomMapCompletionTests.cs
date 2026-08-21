@@ -26,6 +26,7 @@ namespace Thermodynamics.Tests
     /// grid of eight hundred thousand.
     /// </para>
     /// </summary>
+    [Trait("speed", "slow")]
     public class RoomMapCompletionTests
     {
         /// <summary>

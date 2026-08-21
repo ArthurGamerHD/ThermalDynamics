@@ -26,6 +26,7 @@ namespace Thermodynamics.Tests
     /// does is a correctness question and belongs here.
     /// </para>
     /// </summary>
+    [Trait("speed", "slow")]
     public class CriticalTemperatureTests
     {
         private static ThermalSettings Settings(int cap = 0)

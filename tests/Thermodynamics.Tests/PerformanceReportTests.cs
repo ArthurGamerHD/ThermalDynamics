@@ -16,6 +16,7 @@ namespace Thermodynamics.Tests
     /// else, which is why these are ordinary tests rather than something a person remembers to
     /// check.
     /// </summary>
+    [Trait("speed", "slow")]
     public class PerformanceReportTests
     {
         /// <summary>Small enough to run in the ordinary suite; the shape is the same at any size.</summary>
