@@ -138,6 +138,69 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
+        /// <summary>
+        /// Every block on every ship with no exit at all — no exposed face and no conduction.
+        ///
+        /// Kept beside the hot-spot dump because it is the same question asked of the whole corpus
+        /// rather than of one block: a sealed block heats without bound and has no symptom but its
+        /// temperature, so finding them by hand means noticing an odd number.
+        /// </summary>
+        public static string SealedReport(string path)
+        {
+            StringBuilder sb = new StringBuilder();
+
+            string root = path ?? Blueprints.DefaultPath();
+            if (root == null) return "No blueprints.\n";
+
+            CorpusLab.Summary corpus = CorpusLab.Scan(root);
+            Dictionary<string, int> counts = new Dictionary<string, int>();
+            int total = 0;
+
+            foreach (Blueprints.Ship ship in corpus.Usable)
+            {
+                ThermalSimulation simulation = ship.Build();
+                ThermalSolver solver = simulation.Solver;
+                if (solver.Nodes.Count < 2) continue;
+
+                for (int i = 0; i < solver.Nodes.Count; i++)
+                {
+                    ThermalNode node = solver.Nodes[i];
+                    if (node.ExposedArea > 0f || solver.NodeConductanceTotal(i) > 0f) continue;
+
+                    int count;
+                    counts.TryGetValue(node.Block.Name, out count);
+                    counts[node.Block.Name] = count + 1;
+                    total++;
+                }
+            }
+
+            sb.Append("SEALED BLOCKS  ").Append(total).AppendLine(" across the corpus");
+            sb.AppendLine();
+
+            List<KeyValuePair<string, int>> rows = new List<KeyValuePair<string, int>>(counts);
+            rows.Sort(delegate (KeyValuePair<string, int> a, KeyValuePair<string, int> b)
+            {
+                return b.Value.CompareTo(a.Value);
+            });
+
+            foreach (KeyValuePair<string, int> row in rows)
+            {
+                GameBlocks.Definition definition;
+                string detail = "";
+                if (GameBlocks.BySubtype().TryGetValue(row.Key, out definition))
+                {
+                    detail = "  " + definition.Size + "  mounts declared: " + definition.HasDeclaredMounts
+                        + "  airtight: " + (definition.Airtight.HasValue
+                            ? definition.Airtight.Value.ToString() : "unstated");
+                }
+
+                sb.Append("  ").Append(row.Value.ToString().PadLeft(5)).Append("  ")
+                    .Append(row.Key.PadRight(34)).AppendLine(detail);
+            }
+
+            return sb.ToString();
+        }
+
         private static List<Row> Rows(ThermalSimulation simulation)
         {
             ThermalSolver solver = simulation.Solver;

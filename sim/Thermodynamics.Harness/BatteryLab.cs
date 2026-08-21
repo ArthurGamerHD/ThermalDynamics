@@ -51,7 +51,8 @@ namespace Thermodynamics.Harness
             }, mode);
         }
 
-        public static string Report(string path, int panelSize, LabMode mode = LabMode.Parallel)
+        public static string Report(string path, int panelSize, LabMode mode = LabMode.Parallel,
+            bool everyShip = false)
         {
             StringBuilder sb = new StringBuilder();
 
@@ -78,10 +79,20 @@ namespace Thermodynamics.Harness
             for (int i = 0; i < corpus.Usable.Count; i++) byName[corpus.Usable[i].Name] = corpus.Usable[i];
 
             List<Blueprints.Ship> ships = new List<Blueprints.Ship>();
-            foreach (Specimens.Scored scored in panel)
+            if (everyShip)
             {
-                Blueprints.Ship ship;
-                if (byName.TryGetValue(scored.Ship.Name, out ship)) ships.Add(ship);
+                // The whole corpus. Expensive by design and paid once: it is the only way to check
+                // the claim the panel rests on, which is that a ship's neighbours in feature space
+                // behave as it does.
+                ships.AddRange(corpus.Usable);
+            }
+            else
+            {
+                foreach (Specimens.Scored scored in panel)
+                {
+                    Blueprints.Ship ship;
+                    if (byName.TryGetValue(scored.Ship.Name, out ship)) ships.Add(ship);
+                }
             }
 
             List<Battery.Scenario> scenarios = Battery.All();
