@@ -160,6 +160,13 @@ namespace Thermodynamics.Harness
             /// <summary>
             /// Hottest block a ship reached under its own power, K, and what it was rated for.
             /// Two sessions failed to reach a critical temperature; this is how close they came.
+            ///
+            /// <para>
+            /// Placed in the population since: under full electrical load 938.9 K is the **64th
+            /// percentile** of 8,142 workshop hulls' peaks, and **43.2 %** of them put a block over
+            /// critical. So two sessions ending short of critical is what most ships do rather than
+            /// a lucky pair — the claim survives, and it was never as strong as it read.
+            /// </para>
             /// </summary>
             public const float HottestObserved = 938.9f;
             public const float HottestRating = 1050f;
