@@ -15,12 +15,9 @@ using VRageMath;
 namespace Thermodynamics
 {
     /// <summary>
-    /// Reads the world into an <see cref="EnvironmentSample"/>: ambient conditions, the sun, the
-    /// wind, and whether anything is in the way of the light.
-    ///
-    /// The sun direction is one value for the whole session and occlusion changes slowly, so both
-    /// are cached rather than recomputed per grid per step. The raycast behind occlusion is the
-    /// most expensive operation a grid performs.
+    /// Reads the world into an <see cref="EnvironmentSample"/>: ambient conditions, the sun, the wind,
+    /// and whether anything is in the way of the light. The occlusion raycast is the most expensive
+    /// thing a grid does, so it runs on an interval. See environment.md.
     /// </summary>
     public partial class ThermalGrid
     {
@@ -401,15 +398,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Looks up where the ground is and what it is made of, and caches both.
-        ///
-        /// One voxel query answers both questions — the surface material and the surface's distance
-        /// from the planet's centre — so they share a lookup and a cache. Caching the second makes
-        /// depth a subtraction between refreshes: the grid's radius moves and the ground does not,
-        /// and any movement large enough to invalidate that has already triggered a resample.
-        ///
-        /// Refreshed regardless of <c>ClimateGroundInfluence</c>, which scales only the material's
-        /// temperature offset; underground temperature depends on the surface height alone.
+        /// Looks up where the ground is and what it is made of, in one voxel query, and caches both:
+        /// depth is then a subtraction between refreshes. Refreshed regardless of
+        /// <c>ClimateGroundInfluence</c>, which scales only the material's temperature offset.
         /// </summary>
         private void RefreshSurface(MyPlanet planet, ref Vector3D position)
         {
@@ -638,17 +629,9 @@ namespace Thermodynamics
         private const double WindVectorScale = 0.6d;
 
         /// <summary>
-        /// The relative wind this grid is flying through, drawn from the grid, when
-        /// <see cref="Settings.DebugWindRaycast"/> is on.
-        ///
-        /// It is the *relative* wind rather than the field's, which is the whole reason this is a
-        /// separate drawing from the wind map: a ship at speed makes most of its own weather, and
-        /// what heats the leading face is the difference between the two. Parked beside a map arrow
-        /// the two agree; flying, they should not.
-        ///
-        /// Coloured on the friction threshold, since that is the number this vector decides: green
-        /// below it, red once the grid is fast enough through the air for the leading face to start
-        /// heating.
+        /// The *relative* wind this grid is flying through — the field minus the grid's own velocity,
+        /// which is what heats the leading face and what makes this a different drawing from the wind
+        /// map. Coloured on the friction threshold. See configuration.md, Presentation.
         /// </summary>
         private static void DrawWindVector(ref Vector3D position, ref Vector3 relative, float speed)
         {
@@ -705,12 +688,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Casts from several points spread through the grid and returns the share that cannot see
-        /// the sun.
-        ///
-        /// Each sample is a full query: candidates along one ray are not candidates along another,
-        /// and reusing one list would miss an occluder covering part of the grid, which is the
-        /// reason for sampling more than once. Cost is linear in the sample count.
+        /// Casts from several points spread through the grid and returns the share that cannot see the
+        /// sun. Each sample is a full query — candidates along one ray are not candidates along
+        /// another — so cost is linear in the sample count.
         /// </summary>
         private float MeasureOcclusion(ref Vector3D position, ref EnvironmentSample sample)
         {
@@ -812,15 +792,9 @@ namespace Thermodynamics
         private static readonly List<Vector3D> SamplePoints = new List<Vector3D>();
 
         /// <summary>
-        /// Finds the grids near enough to shadow this one and passes them to the solver in this
-        /// grid's cell space.
-        ///
-        /// The geometry is folded into one matrix per occluder — this grid's cells to metres, its
-        /// metres to world, world to the occluder's metres, and its metres to its cells — so the
-        /// shadow walk never handles two lattices.
-        ///
-        /// Runs on the occlusion interval rather than per step, and only when the relative pose has
-        /// changed; docked grids never move relative to each other.
+        /// Finds the grids near enough to shadow this one, folding each into one matrix from this
+        /// grid's cells to that one's, so the shadow walk never handles two lattices. Runs on the
+        /// occlusion interval and only when the relative pose moved; docked grids never do.
         /// </summary>
         private void RefreshShadowOccluders(ref Vector3D position, ref EnvironmentSample sample)
         {

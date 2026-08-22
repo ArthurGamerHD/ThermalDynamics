@@ -445,11 +445,6 @@ namespace Thermodynamics
                 SetValue(setting, shipped.GetValue(setting));
             }
 
-            // The profile's definition overlay goes with its settings: a preset that grants three
-            // substeps needs definitions that are stable at three, and no setting can fix a
-            // stiffness that belongs to a definition. Chosen before the values are applied so the
-            // rebuild below reads the right ones.
-
             Frequency = bundle.Frequency;
             SimulationSpeed = bundle.SimulationSpeed;
             HeatTimeScale = bundle.HeatTimeScale;
@@ -462,8 +457,8 @@ namespace Thermodynamics
 
             Apply();
 
-            // Block properties are cached per definition, so a new overlay reaches nothing until
-            // the cache is dropped and the grids rebuild against it.
+            // The world's own loop and planet values are laid over the definitions at cache time, so
+            // a profile that moved one reaches nothing until the cache is dropped.
             ThermalBlockCatalog.Clear();
             RebuildGrids();
 
@@ -471,8 +466,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Rebuilds every live grid's view of the definitions, after something changed what a
-        /// definition says. Not cheap, and not something that happens outside a profile change.
+        /// Rebuilds every live grid's view of the definitions, as expensive as a world load per grid
+        /// and reached only by a profile change.
         /// </summary>
         private static void RebuildGrids()
         {

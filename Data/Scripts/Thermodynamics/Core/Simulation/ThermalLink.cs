@@ -4,12 +4,9 @@ using VRageMath;
 namespace Thermodynamics.Core
 {
     /// <summary>
-    /// A conduction path between two nodes, with a single symmetric conductance in W/K.
-    ///
-    /// One conductance shared by both ends is what makes the exchange energy-conserving: the watts
-    /// leaving one node are exactly the watts entering the other. Deriving a coefficient per node
-    /// from that node's own geometry would let the two halves disagree and create or destroy heat
-    /// at every asymmetric joint.
+    /// A conduction path between two nodes, with a single symmetric conductance in W/K — one figure
+    /// shared by both ends, which is what makes the exchange energy-conserving.
+    /// See thermal-model.md, The three invariants.
     /// </summary>
     public struct ThermalLink
     {
@@ -32,18 +29,10 @@ namespace Thermodynamics.Core
     }
 
     /// <summary>
-    /// Builds conduction links between blocks.
-    ///
-    /// Every query here is answered from the two blocks' bounds and their per-face surface
-    /// summaries, in constant time. Nothing walks a block's cells.
-    ///
-    /// <para>
-    /// Counting mounted cell faces directly would iterate every cell of block A and, for each of its
-    /// six faces, search every cell of block B for a matching mount: O(cellsA * 6 * cellsB). That is
-    /// tolerable for one- and two-cell blocks, but on a lattice fine enough for Space Engineers 2's
-    /// smallest blocks a five-metre block occupies around eight thousand cells, and one such pair
-    /// would cost hundreds of millions of operations per topology rebuild.
-    /// </para>
+    /// Builds conduction links between blocks. Every query is answered from the two blocks' bounds and
+    /// their per-face surface summaries in constant time; nothing walks a block's cells, which on an
+    /// SE2 lattice would be eight thousand of them per five-metre block.
+    /// See scale-design.md, Cell-centric to boundary-centric.
     /// </summary>
     public static class ConductionBuilder
     {
@@ -62,10 +51,9 @@ namespace Thermodynamics.Core
         /// heat conducts through.
         /// </summary>
         /// <remarks>
-        /// Mount coverage is tracked per face as a fraction, so where a face is uniformly
-        /// mounted or uniformly bare the answer is exact. Where both sides are only partly
-        /// mounted the fractions are combined as independent, which is the neutral assumption
-        /// when the model no longer records which individual cells carry the mount.
+        /// Exact where a face is uniformly mounted or uniformly bare. Where both sides are partly
+        /// mounted the fractions combine as independent, since the model records coverage per face
+        /// rather than per cell. See known-issues.md, Deliberate limits.
         /// </remarks>
         public static int CountContactFaces(BlockInstance a, BlockInstance b)
         {
@@ -95,10 +83,9 @@ namespace Thermodynamics.Core
         /// W/(m K). Result is symmetric by construction.
         ///
         /// <para>
-        /// Both terms scale with the blocks' real dimensions, so a joint between a small block and a
-        /// large one is described correctly: the contact area is the overlap of the two faces, and
-        /// the larger block's greater depth makes it the slower conductor. This is what allows one
-        /// grid to mix block sizes.
+        /// Both terms scale with the blocks' real dimensions, which is what allows one grid to mix
+        /// block sizes: the contact area is the overlap of the two faces, and the larger block's
+        /// greater depth makes it the slower conductor.
         /// </para>
         /// </summary>
         public static float Conductance(

@@ -50,18 +50,10 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Classifies a whole grid from three figures the solver already publishes, so a grid that
-        /// has gone numerically bad can be caught without walking it.
-        ///
-        /// <paramref name="environmentWatts"/> and <paramref name="heatGainWatts"/> are sums over
-        /// every node, accumulated on the stepping path whether or not anything is collecting. A
-        /// NaN or an infinity at any node propagates into them, so testing the two of them tests
-        /// the grid — which is what makes this affordable where <see cref="Classify"/> is not.
-        ///
-        /// The one case it cannot see is a bad temperature on a node with no exposed face, which
-        /// contributes to neither sum. Per-node classification is still the sampled path's job;
-        /// this is the always-on floor beneath it, and it covers the failure that matters, which is
-        /// the grid-wide one. A whole grid went NaN at once when its buffers grew mid-step.
+        /// Classifies a whole grid from three figures the solver already publishes, so a grid that has
+        /// gone numerically bad is caught without walking it. A NaN at any node propagates into the
+        /// two watt sums. The one case it cannot see is a bad temperature on a node with no exposed
+        /// face. See telemetry.md, A grid that has gone numerically bad is also a fault.
         /// </summary>
         /// <param name="hottestTemperature">
         /// The hottest node's temperature, or 0 when the grid has no nodes. A NaN never wins a
@@ -159,17 +151,9 @@ namespace Thermodynamics
     }
 
     /// <summary>
-    /// Every anomaly and fault the session has seen, one record per kind.
-    ///
-    /// The rule this exists to hold is the one that was wrong for a long time: **an observation is
-    /// recorded only while collection is running, and a fault is recorded always.** Collection is a
-    /// cost paid on healthy frames and is rightly opt-in; a caught exception costs nothing until the
-    /// mod has already failed, and telemetry being off is exactly the state a player's world is in
-    /// when it does. Gating the two together meant every <c>catch</c> in the simulation adapter
-    /// discarded its exception in an ordinary world.
-    ///
-    /// Free of any Space Engineers type, like the classifier above it, so the rule can be tested
-    /// outside the game rather than argued about.
+    /// Every anomaly and fault the session has seen, one record per kind, holding one rule: **an
+    /// observation is recorded only while collection is running, and a fault is recorded always.**
+    /// Free of any Space Engineers type, so that rule can be tested rather than argued about.
     /// </summary>
     public class AnomalyRegistry
     {
@@ -201,9 +185,8 @@ namespace Thermodynamics
         /// <param name="collecting">Whether telemetry collection is running.</param>
         /// <returns>
         /// True when the caller should write this to the game log: the first occurrence of a fault
-        /// kind, and nothing else. A throw inside the step runs once per grid per frame, so logging
-        /// every one would bury the rest of the log in the same six stack frames — the count still
-        /// accumulates, and both the report and the closing summary carry it.
+        /// kind, and nothing else. A throw inside the step fires once per grid per frame, and the
+        /// count still accumulates for the report and the closing summary.
         /// </returns>
         public bool Record(string kind, string example, bool fault, bool collecting, double seconds)
         {
@@ -260,12 +243,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// One block of text naming every fault of the session and how often each fired, or null
-        /// when there were none.
-        ///
-        /// Without it a fault that fired ten thousand times reads in the log exactly like one that
-        /// fired once, since only the first of each kind is logged as it happens. On a world that
-        /// never turned collection on — every world, by default — this is the only output there is.
+        /// One block of text naming every fault of the session and how often each fired, or null when
+        /// there were none. Only the first of each kind is logged as it happens, so without this a
+        /// fault that fired ten thousand times reads exactly like one that fired once.
         /// </summary>
         public string FaultSummary(bool collecting)
         {

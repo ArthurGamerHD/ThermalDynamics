@@ -15,16 +15,10 @@ using VRageMath;
 namespace Thermodynamics
 {
     /// <summary>
-    /// The adapter between one Space Engineers grid and one <see cref="ThermalSimulation"/>.
-    ///
-    /// The simulation knows nothing about the game: it takes a block layout, an environment sample
-    /// and a frame length, and returns temperatures and overheat events. Everything on the game
-    /// side of that boundary — definitions, entity events, raycasts, damage, storage — lives here
-    /// and in the partials beside it.
-    ///
-    /// The component polls on the ten-frame tick rather than every frame. Step pacing belongs to
-    /// the simulation (<see cref="SimulationScheduler"/>), so polling faster would only add entity
-    /// update callbacks.
+    /// The adapter between one Space Engineers grid and one <see cref="ThermalSimulation"/>: the game
+    /// side of a boundary the simulation knows nothing about. Driven every frame from
+    /// <see cref="ThermalGridScheduler"/> rather than from the entity's own callback.
+    /// See architecture.md, The adapter.
     /// </summary>
     [MyEntityComponentDescriptor(typeof(MyObjectBuilder_CubeGrid), true)]
     public partial class ThermalGrid : MyGameLogicComponent
@@ -59,12 +53,8 @@ namespace Thermodynamics
             new Dictionary<Vector3I, ThermalBlock>(Vector3I.Comparer);
 
         /// <summary>
-        /// The same blocks in a list, so the mass sweep can resume where it stopped.
-        ///
-        /// A dictionary cannot be walked a slice at a time, and the sweep must be resumable to
-        /// avoid a pass over every block landing inside one tick. Kept in step with the dictionary
-        /// on every add and remove, with each block holding its own slot so a removal is a swap
-        /// rather than a search.
+        /// The same blocks in a list, so the mass sweep can resume where it stopped — a dictionary
+        /// cannot be walked a slice at a time. Each block holds its own slot, so a removal is a swap.
         /// </summary>
         private readonly List<ThermalBlock> sweepOrder = new List<ThermalBlock>();
 
@@ -72,13 +62,9 @@ namespace Thermodynamics
         private int massSweepCursor;
 
         /// <summary>
-        /// Temperatures of recently removed blocks, so a section cut off the grid keeps its heat
-        /// when it becomes its own grid, and rebuilding a block does not reset it.
-        ///
-        /// An entry is consumed when its position is built on again. Most never are, so the map is
-        /// dropped wholesale once it exceeds what a split could plausibly need; otherwise a grid
-        /// being ground down would accumulate one entry per destroyed block for the life of the
-        /// world.
+        /// Temperatures of recently removed blocks, so a section cut off the grid keeps its heat and
+        /// rebuilding a block does not reset it. Dropped wholesale past what a split could plausibly
+        /// need, or a grid being ground down accumulates one entry per block for the world's life.
         /// </summary>
         public readonly Dictionary<Vector3I, float> RecentlyRemoved =
             new Dictionary<Vector3I, float>(Vector3I.Comparer);
@@ -389,16 +375,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Refreshes the simulation's view of a block after its geometry or mounting changed.
-        /// Rebuilds the conduction graph and the coolant loops with it.
-        /// </summary>
-        /// <summary>
-        /// Rebuilds this grid's view of the definitions, after a profile's overlay changed what a
-        /// definition says.
-        ///
-        /// Every block's thermal properties come from a cache keyed by definition, and the nodes
-        /// hold what that cache handed them, so nothing short of rebuilding reaches them. This is
-        /// as expensive as a world load for the grid and happens only when a profile changes.
+        /// Rebuilds this grid's view of the definitions. Thermal properties come from a cache keyed by
+        /// definition and the nodes hold what that cache handed them, so nothing short of a rebuild
+        /// reaches them. As expensive as a world load for the grid; only a profile change calls it.
         /// </summary>
         public void RefreshDefinitions()
         {
@@ -446,12 +425,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Carries temperatures onto a section that has just split off.
-        ///
-        /// The blocks were removed from the parent this frame, so the parent holds their heat in
-        /// <see cref="RecentlyRemoved"/>. Event order is not under a mod's control, so both
-        /// orderings are handled: a block the child already holds is set directly, and one it has
-        /// not built yet is handed over for <see cref="StartingTemperature"/> to apply on arrival.
+        /// Carries temperatures onto a section that has just split off, out of the parent's
+        /// <see cref="RecentlyRemoved"/>. Event order is not a mod's to control, so both orderings are
+        /// handled: set directly if the child holds the block, handed over if it does not yet.
         /// </summary>
         private void GridSplit(MyCubeGrid parent, MyCubeGrid child)
         {
