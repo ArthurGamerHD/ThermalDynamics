@@ -230,6 +230,25 @@ namespace Thermodynamics.Harness
             /// </summary>
             public const float AirRatioP50 = 1.73f;
             public const float AirRatioP90 = 5.78f;
+
+            /// <summary>
+            /// The cap curve, over every block of every ship — 2.4 million blocks — against
+            /// <see cref="Field.RaisedAtCap8"/> and its siblings, which came from one dump's 189
+            /// stepping grids.
+            ///
+            /// <para>
+            /// **They agree where the choice is made and diverge where it is not.** At a cap of 8
+            /// the corpus says 1.59 % of blocks are held back against the dump's 1.16, and at 4,
+            /// 7.20 against 6.01 — near enough that the shipped cap's reach is confirmed rather
+            /// than corrected. At 2 and 1 the dump understates it by half again: 35.5 % against
+            /// 23.7, and 52.5 % against 39.1. A single save is a single builder's habits, and the
+            /// aggressive end of the curve is where habits show.
+            /// </para>
+            /// </summary>
+            public const float FlooredAtCap8 = 0.0159f;
+            public const float FlooredAtCap4 = 0.0720f;
+            public const float FlooredAtCap2 = 0.3554f;
+            public const float FlooredAtCap1 = 0.5253f;
         }
 
         private static BlockModel[] models;

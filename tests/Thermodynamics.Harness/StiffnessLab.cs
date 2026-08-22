@@ -59,7 +59,17 @@ namespace Thermodynamics.Harness
 
             /// <summary>The subtype that set <see cref="Air"/> — what there is to tune.</summary>
             public string StiffestInAir;
+
+            /// <summary>Nodes on the ship, and how many of them each cap would hold back.</summary>
+            public int Nodes;
+            public int[] FlooredAtCap;
         }
+
+        /// <summary>
+        /// The per-block caps to project, and the four a field dump reported so the two can be laid
+        /// side by side. <c>MaxSubstepsPerBlock</c> is chosen from this curve.
+        /// </summary>
+        public static readonly int[] Caps = { 8, 4, 2, 1 };
 
         private static ThermalSettings Settings()
         {
@@ -74,10 +84,12 @@ namespace Thermodynamics.Harness
         /// sides are measured by different code is not a comparison.
         /// </summary>
         public static void MeasureSolver(ThermalSolver solver, ref EnvironmentState air,
-            ref float vacuum, ref float inAir, ref string stiffest)
+            ref float vacuum, ref float inAir, ref string stiffest, int[] flooredAtCap, ref int nodes)
         {
             for (int i = 0; i < solver.Nodes.Count; i++)
             {
+                nodes++;
+
                 float dry = solver.NodeSubstepDemand(i);
                 if (dry > vacuum) vacuum = dry;
 
@@ -86,6 +98,15 @@ namespace Thermodynamics.Harness
                 {
                     inAir = wet;
                     stiffest = solver.Nodes[i].Block.Name;
+                }
+
+                // A per-block cap holds a node back when the node asks for more substeps than the
+                // cap grants, so the share of blocks a cap reaches is a count over this demand —
+                // and it is the curve MaxSubstepsPerBlock is chosen from.
+                if (flooredAtCap == null) continue;
+                for (int c = 0; c < Caps.Length; c++)
+                {
+                    if (wet > Caps[c]) flooredAtCap[c]++;
                 }
             }
         }
@@ -112,7 +133,9 @@ namespace Thermodynamics.Harness
             EnvironmentState air = SeaLevelAir(settings);
             float vacuum = 0f, inAir = 0f;
             string stiffest = "";
-            MeasureSolver(simulation.Solver, ref air, ref vacuum, ref inAir, ref stiffest);
+            int[] floored = new int[Caps.Length];
+            int nodes = 0;
+            MeasureSolver(simulation.Solver, ref air, ref vacuum, ref inAir, ref stiffest, floored, ref nodes);
 
             return new Row
             {
@@ -122,6 +145,8 @@ namespace Thermodynamics.Harness
                 Vacuum = vacuum,
                 Air = inAir,
                 StiffestInAir = stiffest,
+                Nodes = nodes,
+                FlooredAtCap = floored,
             };
         }
 
@@ -134,10 +159,13 @@ namespace Thermodynamics.Harness
             EnvironmentState air = SeaLevelAir(settings);
             float vacuum = 0f, inAir = 0f;
             string stiffest = "";
+            int[] floored = new int[Caps.Length];
+            int nodes = 0;
 
             for (int g = 0; g < assembly.Simulations.Count; g++)
             {
-                MeasureSolver(assembly.Simulations[g].Solver, ref air, ref vacuum, ref inAir, ref stiffest);
+                MeasureSolver(assembly.Simulations[g].Solver, ref air, ref vacuum, ref inAir,
+                    ref stiffest, floored, ref nodes);
             }
 
             return new Row
@@ -148,6 +176,8 @@ namespace Thermodynamics.Harness
                 Vacuum = vacuum,
                 Air = inAir,
                 StiffestInAir = stiffest,
+                Nodes = nodes,
+                FlooredAtCap = floored,
             };
         }
 
@@ -274,6 +304,34 @@ namespace Thermodynamics.Harness
                 .Append("   at the ")
                 .Append((100d * ShareBelow(air, Harness.Census.Field.MostDemand)).ToString("n1"))
                 .AppendLine(" percentile of the corpus in air");
+
+            sb.AppendLine();
+            sb.AppendLine("  what a per-block cap would hold back, over every block of every ship");
+            sb.AppendLine("    cap    corpus   field dump   (share of blocks floored, in air)");
+
+            long totalNodes = 0;
+            long[] flooredTotal = new long[Caps.Length];
+            for (int i = 0; i < rows.Count; i++)
+            {
+                if (rows[i] == null || rows[i].FlooredAtCap == null) continue;
+                totalNodes += rows[i].Nodes;
+                for (int c = 0; c < Caps.Length; c++) flooredTotal[c] += rows[i].FlooredAtCap[c];
+            }
+
+            float[] field =
+            {
+                Harness.Census.Field.RaisedAtCap8, Harness.Census.Field.RaisedAtCap4,
+                Harness.Census.Field.RaisedAtCap2, Harness.Census.Field.RaisedAtCap1,
+            };
+
+            for (int c = 0; c < Caps.Length; c++)
+            {
+                double share = totalNodes == 0 ? 0d : (double)flooredTotal[c] / totalNodes;
+                sb.Append("    ").Append(Caps[c].ToString().PadLeft(3));
+                sb.Append((100d * share).ToString("n2").PadLeft(10)).Append(" %");
+                sb.Append((100d * field[c]).ToString("n2").PadLeft(11)).Append(" %");
+                sb.AppendLine();
+            }
 
             sb.AppendLine();
             sb.AppendLine("  what sets a real ship's substep count in air");

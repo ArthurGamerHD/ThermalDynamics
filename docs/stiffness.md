@@ -679,6 +679,26 @@ change in convection, exposure, air density or wind, and those are most of this 
 correcting it moves every performance figure this repository has published and that is a decision
 rather than a repair. The test fails when someone fixes it, which is the point.
 
+### The cap curve holds where the cap is actually set
+
+`MaxSubstepsPerBlock` is chosen from how much of a hull a cap holds back, and that curve came from
+the 189 stepping grids of one telemetry dump. Over **2.4 million blocks of 8,102 workshop ships**:
+
+| per-block cap | corpus | one field dump |
+| ---: | ---: | ---: |
+| 8 | **1.59 %** | 1.16 % |
+| 4 | **7.20 %** | 6.01 % |
+| 2 | **35.54 %** | 23.68 % |
+| 1 | **52.53 %** | 39.10 % |
+
+**They agree where the choice is made and part company where it is not.** At the caps anyone would
+ship the dump was within half a percentage point, so the reach of a shipped cap is confirmed rather
+than corrected. At 1 and 2 it understates the reach by half again — one save is one builder's
+habits, and the aggressive end of the curve is where habits show.
+
+`TheFieldCapCurveMatchesTheCorpusWhereTheCapIsActuallySet` holds the agreement at the top, because
+if that ever parts company the shipped cap was chosen against a population it does not describe.
+
 ## What was measured and found not to matter
 
 **Diagnostics.** Telemetry switches `CollectDiagnostics` on, which adds a per-node clear, five

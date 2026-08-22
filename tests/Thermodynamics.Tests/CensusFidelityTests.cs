@@ -246,6 +246,45 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// The cap curve a single save reported is the curve real ships have, where it matters.
+        ///
+        /// <para>
+        /// `MaxSubstepsPerBlock` is chosen from this curve, and it was chosen from 189 stepping
+        /// grids of one telemetry dump. Over 2.4 million blocks of 8,102 workshop ships the two
+        /// agree closely at the caps anyone would ship — 1.59 % against 1.16 at a cap of 8, 7.20
+        /// against 6.01 at 4 — and part company at 1 and 2, where the dump understates the reach
+        /// by half again. One save is one builder's habits, and the aggressive end of the curve is
+        /// where habits show.
+        /// </para>
+        ///
+        /// <para>
+        /// Asserted as agreement at the top and divergence at the bottom, because both are
+        /// findings: if the top ever parts company, the shipped cap was chosen against a
+        /// population it does not describe.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheFieldCapCurveMatchesTheCorpusWhereTheCapIsActuallySet()
+        {
+            Assert.True(Census.Corpus.FlooredAtCap8 < Census.Field.RaisedAtCap8 * 2f,
+                "a cap of 8 holds back " + (100f * Census.Corpus.FlooredAtCap8).ToString("n2")
+                + " % of real blocks against the dump's "
+                + (100f * Census.Field.RaisedAtCap8).ToString("n2")
+                + " %; the shipped cap was chosen on a curve the population no longer has");
+
+            Assert.True(Census.Corpus.FlooredAtCap4 < Census.Field.RaisedAtCap4 * 2f,
+                "a cap of 4 holds back " + (100f * Census.Corpus.FlooredAtCap4).ToString("n2")
+                + " % of real blocks against the dump's "
+                + (100f * Census.Field.RaisedAtCap4).ToString("n2") + " %");
+
+            // The curve is monotonic in the cap, which is the one thing about it that is arithmetic
+            // rather than measurement.
+            Assert.True(Census.Corpus.FlooredAtCap1 > Census.Corpus.FlooredAtCap2);
+            Assert.True(Census.Corpus.FlooredAtCap2 > Census.Corpus.FlooredAtCap4);
+            Assert.True(Census.Corpus.FlooredAtCap4 > Census.Corpus.FlooredAtCap8);
+        }
+
+        /// <summary>
         /// The tail is what sets the substep count, so a hull that is too small to contain any of
         /// it measures the wrong thing. The picker walks the distribution rather than sampling it
         /// for exactly this reason.
