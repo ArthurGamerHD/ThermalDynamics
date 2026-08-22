@@ -30,12 +30,46 @@ def number(row, key):
         return None
 
 
-def load(name):
+# The key that identifies a ship. A workshop id alone is not enough: fourteen corpus blueprints
+# sit outside a numbered workshop folder and all of them get id 0.
+KEY = ("ship", "workshop_id")
+
+
+def load(name, *extra_key):
+    """One row per ship, or per ship and scenario — duplicates dropped, and counted.
+
+    **A resumed run re-emits the batch it was interrupted in.** ``THERMAL_CORPUS_SKIP`` resumes by
+    skipping files already done, and the skip is counted in files while the writing is done per
+    ship, so the ships between the last flush and the kill are written twice. The 2026-08-21 dataset
+    carries ten of them, fifty rows. That is a tenth of a per cent and it changes no finding here,
+    but a population statistic that silently double-weights part of its population is the exact
+    failure this whole lab exists to prevent, so the duplicates come out and the count is printed.
+    """
     path = os.path.join(DATA, name + ".csv")
     if not os.path.exists(path):
         return []
     with open(path) as handle:
-        return list(csv.DictReader(handle))
+        rows = list(csv.DictReader(handle))
+
+    key = KEY + extra_key
+    if not rows or any(k not in rows[0] for k in key):
+        return rows
+
+    seen = set()
+    unique = []
+    for row in rows:
+        identity = tuple(row[k] for k in key)
+        if identity in seen:
+            continue
+        seen.add(identity)
+        unique.append(row)
+
+    dropped = len(rows) - len(unique)
+    if dropped:
+        print(f"note: {name}.csv held {dropped:,} duplicate rows "
+              f"(a resumed run re-emits its interrupted batch); they are excluded")
+
+    return unique
 
 
 def pct(part, whole):
@@ -53,7 +87,7 @@ def percentiles(values):
     return {"min": values[0], "p50": at(0.5), "p95": at(0.95), "p99": at(0.99), "max": values[-1]}
 
 
-outcomes = load("outcomes")
+outcomes = load("outcomes", "scenario")
 ships = load("ships")
 
 by_scenario = {}
