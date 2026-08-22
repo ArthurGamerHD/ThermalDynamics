@@ -4,26 +4,10 @@ using VRageMath;
 namespace Thermodynamics.Core
 {
     /// <summary>
-    /// One bit per cell of a box, for membership over a dense region.
-    ///
-    /// <para>
-    /// A <c>HashSet&lt;Vector3I&gt;</c> costs about thirty-one bytes per cell — a bucket, a hash
-    /// code, a next pointer, the twelve-byte vector, and load-factor slack. That suits a sparse set
-    /// scattered through space, but a flood fill accumulates every cell of its bounding box, so by
-    /// the end it holds the whole volume.
-    /// </para>
-    ///
-    /// <para>
-    /// This is 248 times smaller than the set it replaces. The room mapper's visited set was the
-    /// mod's peak allocation: 121 MB of a 400 MB peak on a 127,000-block grid, scaling with the
-    /// bounding box rather than the grid, so a mostly empty hull paid for the empty space.
-    /// </para>
-    ///
-    /// <para>
-    /// The constraint is that the region must be known in advance and indexable, which a flood fill
-    /// over a padded bounding box satisfies. Cells outside it are not members; callers already
-    /// bounds-check before asking, since a fill that wandered outside its box would not terminate.
-    /// </para>
+    /// One bit per cell of a box, for membership over a dense region: 248 times smaller than the
+    /// <c>HashSet&lt;Vector3I&gt;</c> it replaces, which was the mod's peak allocation. The region has
+    /// to be known in advance and indexable, which a flood fill over a padded bounding box satisfies;
+    /// cells outside it are not members. See memory.md, 1a.
     /// </summary>
     public class CellBitset
     {

@@ -19,13 +19,9 @@ namespace Thermodynamics.Core
         private readonly List<BlockInstance> blocks = new List<BlockInstance>();
 
         /// <summary>
-        /// Where each block sits in <see cref="blocks"/>, so a removal does not have to search for
-        /// it. <c>List.Remove</c> is a linear scan followed by a shift of everything after the hole,
-        /// paid once per block removed.
-        ///
-        /// It is also the grid's index by key, which is why there is no second dictionary from key
-        /// to block: one held exactly the same keys as this and answered the same question one
-        /// indirection sooner, for a whole <c>Dictionary&lt;long, BlockInstance&gt;</c> per grid.
+        /// Where each block sits in <see cref="blocks"/>, so a removal is a swap rather than a scan and
+        /// a shift. Also the grid's only index by key: a second dictionary held the same keys and
+        /// answered the same question one indirection sooner. See memory.md, 1e.
         /// </summary>
         private readonly Dictionary<long, int> blockSlots = new Dictionary<long, int>();
 
@@ -93,15 +89,8 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Adds a block. Throws when any of its cells is already occupied, which would silently
-        /// corrupt the surface map.
-        /// </summary>
-        /// <summary>
-        /// The block occupying a cell, or null.
-        ///
-        /// A read-only probe. The solver walks its own link lists rather than the grid, so nothing
-        /// on a hot path needs this; it is here so a diagnostic can ask what a block's neighbour is
-        /// without rebuilding the map to find out.
+        /// The block occupying a cell, or null. A read-only probe: the solver walks its own link lists,
+        /// so nothing on a hot path needs this.
         /// </summary>
         public BlockInstance At(Vector3I cell)
         {

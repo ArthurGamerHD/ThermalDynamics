@@ -14,17 +14,10 @@ using VRage.Utils;
 namespace Thermodynamics
 {
     /// <summary>
-    /// The electrical half of a heat pump.
-    ///
-    /// The simulation derives the power the pump wants from the Carnot relation and the two
-    /// temperatures, which only the solver holds. This component turns that figure into a load on
-    /// the grid: it gives the block a resource sink, reports the pump's request to it, and reads
-    /// back how much the grid supplied.
-    ///
-    /// The sink is created here rather than declared in the block definition because Space Engineers
-    /// has no definition field for one on an upgrade module. It is added during <see cref="Init"/>,
-    /// before the block joins the grid's resource system, which is what registers it with the
-    /// distributor.
+    /// The electrical half of a heat pump: it gives the block a resource sink, reports the demand the
+    /// solver derived to it, and reads back what the grid supplied. The sink is created in
+    /// <see cref="Init"/> rather than declared, because an upgrade module has no definition field for
+    /// one. See known-issues.md, Open defects.
     /// </summary>
     [MyEntityComponentDescriptor(typeof(MyObjectBuilder_UpgradeModule), false,
         "Gauge_LG_HeatPump", "Gauge_SG_HeatPump")]
@@ -37,12 +30,8 @@ namespace Thermodynamics
         private MyResourceSinkComponent sink;
 
         /// <summary>
-        /// How much of its rating the pump is allowed to draw, 0..1, replicated both ways.
-        ///
-        /// <see cref="Core.HeatPumpDevice.PowerSetting"/> has existed since the device was
-        /// written, is read by its power demand and printed by the terminal as "throttled N%" —
-        /// and nothing wrote it, so it could only ever read 100%. The game has no model for a
-        /// custom slider's value, so it is carried here.
+        /// How much of its rating the pump is allowed to draw, 0..1, replicated both ways. Carried here
+        /// because the game has no model for a custom slider's value.
         /// </summary>
         private NetSync<float> powerSetting;
 

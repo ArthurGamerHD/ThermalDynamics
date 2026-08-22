@@ -7,24 +7,11 @@ using VRageMath;
 namespace Thermodynamics
 {
     /// <summary>
-    /// Placing and dialling point heat sources from chat, so the mechanism can be *seen*.
-    ///
-    /// <para>
-    /// <see cref="ThermalHeatSources"/> has been reachable only through the mod API since it was
-    /// written: another mod can register a source, and nobody without one can put a bonfire in
-    /// front of a ship and watch the hull warm up. That makes the most physically interesting
-    /// thing the mod exposes impossible to try, impossible to demonstrate, and awkward to build
-    /// against — a modder writing a thermal missile has no way to check the heat arrives before
-    /// shipping the missile.
-    /// </para>
-    ///
-    /// <para>
-    /// Everything here drives the same <see cref="ThermalHeatSources"/> entry points the API uses,
-    /// so a source placed from chat and one registered by another mod are the same object reaching
-    /// the solver by the same path. That is what makes this a debug tool rather than a second
-    /// implementation to keep in step. The reading of the command itself lives in
-    /// <see cref="HeatSourceCommand"/>, which has no game reference and is tested directly.
-    /// </para>
+    /// Placing and dialling point heat sources from chat, so the mechanism can be seen without writing
+    /// a second mod against it. Drives the same <see cref="ThermalHeatSources"/> entry points the API
+    /// does, which is what makes it a debug tool rather than a second implementation; the command
+    /// parsing is in <see cref="HeatSourceCommand"/>, which has no game reference.
+    /// See api.md, Heat sources.
     /// </summary>
     public static class ThermalHeatSourceDebug
     {

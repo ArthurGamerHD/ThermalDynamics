@@ -3,24 +3,11 @@ using System.Collections.Generic;
 namespace Thermodynamics.Core
 {
     /// <summary>
-    /// The thermal effect of the weather over a grid: its temperature offset, how much sunlight it
-    /// admits, how hard it blows, and how much faster it removes heat from a hull.
-    ///
-    /// Three of the four are authored by the game. Each weather in <c>WeatherEffects.sbc</c> carries
-    /// a <c>TemperatureModifier</c>, a <c>SolarOutputModifier</c> and a <c>WindOutputModifier</c>.
-    /// Those are the values in the table below, converted to this scale: the multipliers pass
-    /// through unchanged, and <c>TemperatureModifier</c>, a factor on the game's 0..1 comfort
-    /// figure, becomes kelvin as <c>clamp(modifier - 1, -3, 3) * 6 K</c>, so heavy snow's -2
-    /// becomes -18 K and a sandstorm's 3 becomes +12 K.
-    ///
-    /// Convection has no authored source: nothing in the definitions records that rain is wet, and
-    /// humid air removes heat from a hull faster than dry air at the same speed, so that column is
-    /// a balance choice as <see cref="GroundTemperature"/> is.
-    ///
-    /// Matched on a keyword in the name rather than the exact subtype, as the ground table is: the
-    /// base game has thirty-three weathers, most of them a handful of kinds with a prefix
-    /// (<c>AlienRainHeavy</c>, <c>MarsStormLight</c>), and mods add their own. A name containing
-    /// <c>light</c> takes half the departure from calm, matching the game's own light/heavy pairs.
+    /// The thermal effect of the weather over a grid. Three of its four columns are the game's own
+    /// authored modifiers converted to this scale; convection is a balance choice, since nothing in a
+    /// definition records that rain is wet. Matched on a keyword in the name rather than the exact
+    /// subtype, so a mod's <c>AlienRainHeavy</c> gets rain behaviour without annotating anything.
+    /// See environment.md, Weather.
     /// </summary>
     public static class WeatherResponse
     {
