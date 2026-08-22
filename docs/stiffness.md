@@ -690,6 +690,27 @@ population at both ends.
 > change had already been made on the strength of the wrong figure and has been reverted — a
 > benchmark fixture is not something to move on a number nobody has checked twice.
 
+### The census hull is a 96th-percentile ship for heat
+
+The population answers a second question the two field ships could not. Both of the census's
+generation constants come from that one ship, and both sit near the top of the corpus:
+
+| | census | percentile of 8,141 real ships |
+| --- | ---: | ---: |
+| share of blocks making heat | 0.109 | **87th** |
+| watts each one makes | 111 kW | **88th** |
+| **waste heat per block** | **12.1 kW** | **96th** |
+
+They multiply. A real hull under full electrical load makes **335 W a block** at the median and
+6.1 kW at the ninetieth percentile; the census hull makes 12.1 kW — thirty-six times the median
+ship.
+
+**This reaches no stiffness figure.** Substep demand is capacity, conduction and exposure, and no
+watt appears in it, so everything above this section stands. It reaches every *temperature* figure.
+A benchmark hull that runs hot is a reasonable choice for a worst case and a poor one for "what a
+ship does", and which of the two the census is meant to be is a decision rather than a defect —
+`TheCensusHullMakesFarMoreHeatThanARealShip` records it and fails if the answer changes quietly.
+
 ### The cap curve holds where the cap is actually set
 
 `MaxSubstepsPerBlock` is chosen from how much of a hull a cap holds back, and that curve came from

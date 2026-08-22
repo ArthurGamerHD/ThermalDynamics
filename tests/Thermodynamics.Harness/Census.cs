@@ -253,6 +253,40 @@ namespace Thermodynamics.Harness
             /// <summary>Exposed faces on the block that sets a real ship's air peak, mean.</summary>
             public const float StiffestFacesMean = 5.26f;
 
+            // ---- what a real ship makes, against what the census hull makes -------------------
+
+            /// <summary>
+            /// **The census hull is a 96th-percentile ship for heat, and it is worth knowing which
+            /// claims that reaches.**
+            ///
+            /// <para>
+            /// Both of the census's generation constants come from the same single field ship, and
+            /// both sit near the top of the corpus: a producer share of 0.109 is the 87th
+            /// percentile of 8,141 real hulls and 111 kW a producer is the 88th. They multiply.
+            /// The census hull makes **12.1 kW of waste heat per block** against a real median of
+            /// **335 W** and a ninetieth percentile of 6.1 kW — the 96th percentile, thirty-six
+            /// times the median ship.
+            /// </para>
+            ///
+            /// <para>
+            /// This does not touch a *stiffness* figure: substep demand is capacity, conduction and
+            /// exposure, and no watt appears in it. It touches every *temperature* figure. A
+            /// benchmark hull that runs hot is a reasonable choice for a worst case and a poor one
+            /// for "what a ship does", and which of the two the census is meant to be is a decision
+            /// rather than a defect — so this is recorded rather than corrected.
+            /// </para>
+            /// </summary>
+            public const float ProducerSharePercentile = 86.8f;
+            public const float ProducerWattsPercentile = 88.0f;
+            public const float WastePerBlockPercentile = 96.4f;
+
+            /// <summary>Waste heat per block under full electrical load, W, over real ships.</summary>
+            public const float WastePerBlockP50 = 335f;
+            public const float WastePerBlockP90 = 6056f;
+
+            /// <summary>The census hull's own: its share times its watts a producer.</summary>
+            public const float CensusWastePerBlock = 12099f;
+
             /// <summary>
             /// The cap curve, over every block of every ship — 2.4 million blocks — against
             /// <see cref="Field.RaisedAtCap8"/> and its siblings, which came from one dump's 189

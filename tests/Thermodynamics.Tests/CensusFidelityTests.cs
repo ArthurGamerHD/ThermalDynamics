@@ -192,6 +192,42 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// The census hull runs far hotter than a real ship, and the arithmetic of that stays put.
+        ///
+        /// <para>
+        /// Its two generation constants come from one field ship and both sit near the top of the
+        /// corpus — a producer share at the 87th percentile and watts a producer at the 88th — and
+        /// they multiply into 12.1 kW of waste per block against a real median of 335 W. That is
+        /// the 96th percentile of 8,141 workshop hulls.
+        /// </para>
+        ///
+        /// <para>
+        /// Pinned as a *characterisation*, not a target. It reaches no stiffness figure — substep
+        /// demand is capacity, conduction and exposure, and no watt appears in it — and every
+        /// temperature figure. Whether the benchmark hull should be a worst case or a typical ship
+        /// is a decision; this fails if the answer changes without anyone saying so.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheCensusHullMakesFarMoreHeatThanARealShip()
+        {
+            float perBlock = Census.ProducerShare * Census.ProducerWatts;
+
+            Assert.Equal(Census.Corpus.CensusWastePerBlock, perBlock, 0);
+
+            Assert.True(perBlock > Census.Corpus.WastePerBlockP90,
+                "the census hull now makes " + perBlock.ToString("n0")
+                + " W of waste per block, below the ninetieth percentile of real ships ("
+                + Census.Corpus.WastePerBlockP90.ToString("n0")
+                + "). If the tiers have been softened toward a typical ship, every temperature"
+                + " figure in this repository describes something different and the pages quoting"
+                + " them need re-reading.");
+
+            Assert.True(Census.Corpus.WastePerBlockP50 < Census.Corpus.WastePerBlockP90,
+                "the recorded population figures are no longer ordered");
+        }
+
+        /// <summary>
         /// The two figures a live session reported are ordinary ships, which is what makes them
         /// usable evidence at all.
         ///
