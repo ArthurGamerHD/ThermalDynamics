@@ -9,15 +9,9 @@ namespace Thermodynamics.Core
     public class LoopThermalProperties
     {
         /// <summary>
-        /// Coolant mass carried by each pipe block in the ring, kg. The loop's total is this times
-        /// its length.
-        ///
-        /// Per pipe rather than per loop, which it used to be. A fixed mass per loop meant a longer
-        /// ring divided the same fluid into smaller parcels, so every parcel got stiffer as a player
-        /// added plumbing — and the whole ring coupled harder to the grid while holding no more
-        /// coolant, which made length a free cooling multiplier. Per pipe, the segment capacity and
-        /// the contact area both scale together: a longer ring is a bigger thermal buffer rather than
-        /// a better cooler, and its solver cost per pipe is constant.
+        /// Coolant mass carried by each pipe block in the ring, kg; the loop's total is this times its
+        /// length. Per pipe rather than per loop, so segment capacity and contact area scale together
+        /// and a longer ring is a bigger buffer rather than a free cooling multiplier.
         /// </summary>
         public float CoolantMassPerPipe = 50f;
 
@@ -40,31 +34,17 @@ namespace Thermodynamics.Core
         public float SinkContactMultiplier = 1f;
 
         /// <summary>
-        /// How fast the coolant moves on a **large grid** with one pump at full power, metres per
-        /// second.
-        ///
-        /// The advection rate, and the reason a stopped pump stops cooling rather than slowing it:
-        /// coolant only reaches a radiator on the far side of the ring if something carries it there.
-        /// Independent of how much pipe a player laid, so the rate — and the substeps it demands —
-        /// do not grow with the plumbing.
-        ///
-        /// In metres per second because that is the unit the terminal reports and the only one
-        /// anybody has intuition for. The solver works in parcels — one pipe block of fluid — and
-        /// <see cref="CoolantLoop.RefreshFlow"/> converts by dividing by the cell size.
+        /// How fast the coolant moves on a **large grid** with one pump at full power, m/s — the unit
+        /// the terminal reports, converted to the solver's parcels by
+        /// <see cref="CoolantLoop.RefreshFlow"/>. The advection rate, and the reason a stopped pump
+        /// stops cooling rather than slowing it.
         /// </summary>
         public float LargeGridFlowRate = 10f;
 
         /// <summary>
-        /// The same, for a **small grid**.
-        ///
-        /// Split from the large-grid figure because it is a balance dial rather than a physical
-        /// constant: a small-grid pump is a much smaller machine driving a much shorter ring, and
-        /// whether it should push its coolant as fast as a capital ship's is a judgement, not a
-        /// measurement. One number for both took that choice away from whoever is tuning.
-        ///
-        /// Note what the shared parcel model does with a difference here. A small-grid pipe is a
-        /// fifth as long, so the same metres per second is five times the parcel rate — the ring
-        /// laps far more often, and approaches a well-mixed loop sooner.
+        /// The same, for a **small grid**. Split because it is a balance dial rather than a physical
+        /// constant — and because a small-grid pipe is a fifth as long, so the same metres per second
+        /// is five times the parcel rate and approaches a well-mixed ring sooner.
         /// </summary>
         public float SmallGridFlowRate = 10f;
 

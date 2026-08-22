@@ -4,20 +4,10 @@ using VRageMath;
 namespace Thermodynamics.Core
 {
     /// <summary>
-    /// A wind field over a planet, which the game does not provide.
-    ///
-    /// <c>MyPlanet.GetWindSpeed</c> returns the planet definition's maximum wind speed scaled by
-    /// air density: a constant for a given altitude, identical at the pole and the equator, with no
-    /// direction. On an earthlike world that is 80 m/s at sea level — a rating that wind turbines
-    /// are balanced against rather than a wind speed.
-    ///
-    /// Used directly it places a parked grid in a permanent 290 km/h wind, tripping the friction
-    /// threshold and running convection at nearly twice its still-air rate everywhere.
-    ///
-    /// The game's figure is therefore treated as a ceiling, and this field decides how much of it
-    /// blows and in which direction. The pattern follows Earth's: easterly trades either side of
-    /// the equator, westerlies in the middle latitudes, easterlies again at the poles. It is not a
-    /// simulation — it is a steady, cheap, position-dependent map.
+    /// A wind field over a planet, which the game does not provide: it has one number per altitude,
+    /// with no latitude and no direction, and used directly it parks every grid in a permanent
+    /// 290 km/h wind. That figure is taken as a ceiling and this decides how much of it blows and
+    /// where. A steady position-dependent map, not a simulation. See environment.md, Wind.
     /// </summary>
     public static class WindField
     {
@@ -71,14 +61,10 @@ namespace Thermodynamics.Core
             float latitude = (float)Math.Asin(sine);
             float distance = Math.Abs(latitude);
 
-            // Three bands per hemisphere, as on Earth: trades blowing west out to 30 degrees,
-            // westerlies to 60, polar easterlies beyond. Taken on distance from the equator, so both
-            // hemispheres carry westerlies in their middle latitudes.
-            //
-            // The band is expressed as a bearing rather than a pair of components. Mixing a fixed
-            // sideways term into a fading one and normalising makes the wind jump at every band
-            // edge, because near the calms the sideways term is all that remains. Rotating the
-            // bearing instead keeps the direction continuous across the whole pattern.
+            // Three bands per hemisphere, as on Earth, taken on distance from the equator. Expressed
+            // as a bearing rather than a pair of components: mixing a fixed sideways term into a
+            // fading one makes the wind jump at every band edge, where the sideways term is all that
+            // remains. Rotating the bearing keeps the direction continuous.
             double bearing = (Math.PI / 2d) + ((Math.PI / 2d) * Math.Sin(distance * 6d));
 
             Vector3 alongMeridian = latitude < 0f ? -north : north;

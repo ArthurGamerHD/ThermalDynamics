@@ -4,22 +4,11 @@ using VRageMath;
 namespace Thermodynamics.Core
 {
     /// <summary>
-    /// The wind expressed the way someone standing in it would describe it: a bearing relative to
-    /// where they are facing, and the head and cross components that bearing resolves into.
-    ///
-    /// <see cref="WindField"/> answers where the wind blows in world space, which is the right
-    /// answer for the solver and a useless one for a player — a world vector says nothing about
-    /// whether the gale is in your face or behind you. Everything here is that same vector turned
-    /// into the viewer's frame, and it is kept apart from the drawing so it can be tested without a
-    /// session.
-    ///
-    /// The wind in this model is always tangent to the surface, so every angle here is taken on the
-    /// horizontal plane and a vertical component is neither computed nor drawn.
-    ///
-    /// **A bearing points where the wind is going, not where it comes from.** Meteorology names a
-    /// wind for the direction it arrives from — a northerly blows south — and that convention is
-    /// wrong for this readout: the question a pilot has is which way they are being pushed, and an
-    /// arrow that points at the drift answers it without being converted first.
+    /// The wind in the viewer's frame: a bearing relative to where they face, and the head and cross
+    /// components it resolves into. Kept apart from the drawing so it can be tested without a session.
+    /// Every angle is on the horizontal plane, since the wind is tangent to the surface.
+    /// **A bearing points where the wind is going**, which is the opposite of meteorology's convention
+    /// and the right one for a readout answering which way you are being pushed.
     /// </summary>
     public static class WindCompass
     {

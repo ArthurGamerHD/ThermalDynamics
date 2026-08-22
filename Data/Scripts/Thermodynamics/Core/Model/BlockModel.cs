@@ -35,23 +35,16 @@ namespace Thermodynamics.Core
         public int[] LocalSurfaces;
 
         /// <summary>
-        /// The same bits for a block whose state has stopped it sealing, such as an open door.
-        ///
-        /// Null for every block that seals identically open and closed, which is nearly all of
-        /// them. A second bit set rather than a flag because a door's sealing is not uniform: the
-        /// game seals a closed door's walk-through face by door rule, and seals its side faces from
-        /// the definition whether it is open or shut.
+        /// The same bits for a block whose state has stopped it sealing, such as an open door. Null
+        /// for nearly every block. A second bit set rather than a flag, because a door's sealing is not
+        /// uniform: its walk-through face seals by door rule and its sides from the definition.
         /// </summary>
         public int[] LocalSurfacesWhenOpen;
 
         /// <summary>
-        /// True when this block has an open state, meaning it is a door. Nothing else can change what
-        /// it seals between one moment and the next, and a block that cannot is unaffected by
-        /// <see cref="BlockInstance.IsSealedByDoorState"/> whatever that flag is set to.
-        ///
-        /// This is the only way for a block to be a door. Allowing any block to be held open and
-        /// seal nothing would let a block's live surfaces and its structure disagree with no way to
-        /// tell which was intended.
+        /// True when this block has an open state, meaning it is a door — the only way to be one.
+        /// A block that has none is unaffected by <see cref="BlockInstance.IsSealedByDoorState"/>
+        /// whatever that flag says, so its live surfaces and its structure cannot disagree.
         /// </summary>
         public bool HasOpenState
         {
@@ -219,13 +212,10 @@ namespace Thermodynamics.Core
             return localCell.X + (sx * localCell.Y) + (sx * sy * localCell.Z);
         }
 
-        /// <summary>Enumerates every block-local cell in a stable order.</summary>
         /// <summary>
-        /// A block's six mount and seal fractions in grid space, for one orientation.
-        ///
-        /// Shared by every instance of this model in this orientation, since the values depend on
-        /// nothing else. Held per model rather than per instance: there are at most twenty-four
-        /// distinct copies per block type, against four <c>float[6]</c> arrays per placed block.
+        /// A block's six mount and seal fractions in grid space, for one orientation. Shared per model
+        /// rather than held per instance: at most twenty-four copies per block type, against four
+        /// <c>float[6]</c> arrays per placed block. See memory.md, 1c.
         /// </summary>
         public class FaceFractions
         {
@@ -241,12 +231,9 @@ namespace Thermodynamics.Core
         private readonly FaceFractions[] fractionsByOrientation = new FaceFractions[36];
 
         /// <summary>
-        /// The face fractions for one orientation of this model, building them on first use.
-        ///
-        /// Two threads can arrive concurrently, since the game builds pasted and projected grids on
-        /// workers, and both are allowed to build. They compute identical values from identical
-        /// inputs, the losing copy is collected, and the reference is published by a single aligned
-        /// write. Cheaper than a lock on a path every block placement takes.
+        /// The face fractions for one orientation of this model, built on first use. Two threads may
+        /// arrive together and both are allowed to build: the values are identical, and the reference
+        /// is published by one aligned write. Cheaper than a lock on the placement path.
         /// </summary>
         public FaceFractions FractionsFor(BlockOrientation orientation)
         {

@@ -1,19 +1,10 @@
 namespace Thermodynamics.Core
 {
     /// <summary>
-    /// How much work the one-shot stages did, counted rather than timed.
-    ///
-    /// The stage timings in <see cref="ISimulationProfiler"/> measure elapsed time, which depends on
-    /// the machine, the build and the rest of the load, so a test asserting on milliseconds is
-    /// either too loose to catch anything or fails on other hardware.
-    ///
-    /// These counters measure elements visited, which is deterministic and so testable: that placing
-    /// one block must not visit a hundred thousand nodes is a claim about the algorithm. They also
-    /// disambiguate a telemetry report — a slow topology stage with a node-visit count equal to the
-    /// grid size is a full rebuild, while the same stage with a count of forty is a slow machine.
-    ///
-    /// Every counter is incremented once per pass, or once per node inside a loop that already walks
-    /// every node. None is incremented per link per substep, so the innermost loop is untouched.
+    /// How much work the one-shot stages did, counted rather than timed: a millisecond threshold is a
+    /// claim about the machine, and "placing one block must not visit a hundred thousand nodes" is a
+    /// claim about the algorithm. Nothing is incremented per link per substep.
+    /// See load-and-hitching.md, Catching it again.
     /// </summary>
     public class SimulationWork
     {
@@ -59,25 +50,16 @@ namespace Thermodynamics.Core
         public long SolverSubsteps;
 
         /// <summary>
-        /// Per-step passes over every node that are not substeps: mirroring the node objects into
-        /// the flat rows, and the stability estimate that sets the substep count.
-        ///
-        /// Both are fixed costs of a step rather than of the physics in it, and a step that runs
-        /// either of them twice is doing a full node walk for an answer it already had. On a grid
-        /// taking three substeps the fixed part is roughly half the step, so the count matters as
-        /// much as the timing does.
+        /// Per-step passes over every node that are not substeps: the node mirror, and the stability
+        /// estimate. A step that runs either twice is doing a full node walk for an answer it already
+        /// had, which on a three-substep grid is half the step.
         /// </summary>
         public long NodeStateSyncs;
         public long StabilityEstimates;
 
         /// <summary>
-        /// Node walks that filled the per-step environment rows — the convection, solar, friction
-        /// and fixed-source terms, and the relaxation factor when the clamp is live.
-        ///
-        /// One per step is correct: their inputs are fixed for the step's length, so the first
-        /// substep computes them and every later one reads them. The count is what says so
-        /// structurally, where the timing only says the first substep is dearer than the rest. A
-        /// step that fills twice has lost its cache to something that moved under it.
+        /// Node walks that filled the per-step environment rows. One per step is correct, and the count
+        /// is what says so structurally where a timing only says the first substep is dearer.
         /// </summary>
         public long EnvironmentRowFills;
 
