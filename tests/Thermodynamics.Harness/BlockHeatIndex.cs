@@ -40,6 +40,15 @@ namespace Thermodynamics.Harness
         /// </summary>
         public const float AmbientKelvin = 293.15f;
 
+        /// <summary>
+        /// The clock the pace figures are quoted against: the shipped <c>HeatTimeScale</c>.
+        ///
+        /// Every seconds-to-critical here is proportional to it, so a world running another value
+        /// scales them by the ratio. It is named rather than read from a settings instance because
+        /// this class is a property of the definitions and must not depend on a session.
+        /// </summary>
+        public const float PaceHeatTimeScale = 225f;
+
         private static readonly float NeighbourConductivity =
             BlockMaterials.Steel.Conductivity * ThermalConstants.ConductionScale;
 
@@ -97,6 +106,35 @@ namespace Thermodynamics.Harness
             /// block exports. Zero for a block that is self-sufficient.
             /// </summary>
             public float HullAreaNeeded;
+
+            /// <summary>
+            /// Heat capacity at the shipped <c>HeatTimeScale</c>, J/K. This is the simulated
+            /// figure rather than the physical one: the solver divides every capacity by that
+            /// dial, so a block's real thermal mass is this times the dial.
+            /// </summary>
+            public float HeatCapacity;
+
+            /// <summary>
+            /// Seconds from ambient to its own critical temperature, alone in the dark, shedding
+            /// only through its own skin.
+            ///
+            /// <para>
+            /// **The index says where a block ends up; this says how long it takes to get there,
+            /// and balance is a question about both.** A block whose equilibrium sits just over
+            /// critical crosses slowly and gives a player time to react; one whose equilibrium is
+            /// ten times critical crosses in seconds and reads as an instant kill, and the two are
+            /// indistinguishable in <see cref="Index"/>.
+            /// </para>
+            ///
+            /// <para>
+            /// Infinite where <see cref="EquilibriumKelvin"/> is at or below critical — the block
+            /// never gets there on its own, which is the same condition as
+            /// <see cref="SelfIndex"/> at or below 1. Conduction is excluded for the same reason it
+            /// is excluded from those two: this is the block on its own, and what a hull does for
+            /// it is the hull's measurement.
+            /// </para>
+            /// </summary>
+            public float SecondsToCritical;
 
             public bool Impossible
             {
@@ -197,6 +235,11 @@ namespace Thermodynamics.Harness
             float hullFlux = BlockMaterials.Steel.Emissivity * ThermalConstants.StefanBoltzmann
                 * (Pow4(400f) - Pow4(ThermalConstants.MinimumTemperature));
 
+            // ---- pace: how long it takes to get there ------------------------------------------
+            // The destination and the pace are different questions and the index only answers the
+            // first. Capacity is the solver's own, so the seconds are the seconds a player waits.
+            float capacity = rating.Mass * thermal.SpecificHeat / PaceHeatTimeScale;
+
             return new Reading
             {
                 Subtype = rating.SubtypeId,
@@ -216,7 +259,61 @@ namespace Thermodynamics.Harness
                     ? (float)Math.Pow(watts / (area * thermal.Emissivity
                         * ThermalConstants.StefanBoltzmann), 0.25d)
                     : float.PositiveInfinity,
+                HeatCapacity = capacity,
+                SecondsToCritical = SecondsToReach(capacity, watts,
+                    thermal.Emissivity * ThermalConstants.StefanBoltzmann * area, critical),
             };
+        }
+
+        /// <summary>
+        /// Seconds for a lump of heat capacity <paramref name="capacity"/> to climb from ambient to
+        /// <paramref name="target"/> while making <paramref name="watts"/> and radiating through a
+        /// skin of <paramref name="radiativeCoefficient"/> = emissivity x sigma x area.
+        ///
+        /// <para>
+        /// Integrated in temperature rather than in time — <c>t = integral of C/net(T) dT</c> —
+        /// because that has no timestep to argue about and lands on the exact answer for a smooth
+        /// integrand. Simpson's rule over a fixed number of intervals, so the figure is
+        /// reproducible to the bit.
+        /// </para>
+        ///
+        /// <para>
+        /// Returns infinity when the net rate reaches zero before the target does, which is exactly
+        /// the case of a block whose equilibrium is below its own limit. Returns zero for a block
+        /// that is already at or above the target.
+        /// </para>
+        /// </summary>
+        public static float SecondsToReach(float capacity, float watts, float radiativeCoefficient,
+            float target)
+        {
+            if (capacity <= 0f || watts <= 0f) return float.PositiveInfinity;
+            if (target <= AmbientKelvin) return 0f;
+
+            const int Intervals = 2048;                     // even, as Simpson requires
+            double ambient4 = Pow4(AmbientKelvin);
+            double width = (target - AmbientKelvin) / (double)Intervals;
+            double total = 0d;
+
+            for (int i = 0; i <= Intervals; i++)
+            {
+                double temperature = AmbientKelvin + (i * width);
+                double net = watts - (radiativeCoefficient * (Pow4d(temperature) - ambient4));
+
+                // The net rate falls monotonically with temperature, so the first non-positive
+                // sample is the equilibrium and nothing past it is reachable.
+                if (net <= 0d) return float.PositiveInfinity;
+
+                double weight = (i == 0 || i == Intervals) ? 1d : ((i % 2) == 1 ? 4d : 2d);
+                total += weight * (capacity / net);
+            }
+
+            return (float)(total * width / 3d);
+        }
+
+        private static double Pow4d(double value)
+        {
+            double square = value * value;
+            return square * square;
         }
 
         /// <summary>

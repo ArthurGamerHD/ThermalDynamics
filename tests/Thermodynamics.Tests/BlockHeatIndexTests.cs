@@ -153,18 +153,113 @@ namespace Thermodynamics.Tests
                 "waste divided by the self index should be what its own skin sheds");
         }
 
+        /// <summary>
+        /// The pace integrator against the one case that has a closed form: with nothing radiating,
+        /// a lump of capacity C making W watts crosses dT in <c>C * dT / W</c> seconds exactly.
+        ///
+        /// This is the calibration for every other pace figure in the table. It needs no game
+        /// install because it is arithmetic, which is the point — a number the whole balance
+        /// argument rests on should be checkable without a corpus, a session or Space Engineers.
+        /// </summary>
+        [Fact]
+        public void WithNothingRadiatingThePaceIsTheAdiabaticClosedForm()
+        {
+            const float Capacity = 5000f;                        // J/K
+            const float Watts = 250f;
+            float target = BlockHeatIndex.AmbientKelvin + 400f;
+
+            float expected = Capacity * 400f / Watts;            // 8,000 s
+            float measured = BlockHeatIndex.SecondsToReach(Capacity, Watts, 0f, target);
+
+            Assert.Equal(expected, measured, 1);
+
+            // It is linear in both, which is what makes it usable as a balance dial: halving a
+            // block's waste heat doubles the seconds a player has.
+            Assert.Equal(expected * 2f,
+                BlockHeatIndex.SecondsToReach(Capacity * 2f, Watts, 0f, target), 1);
+            Assert.Equal(expected / 2f,
+                BlockHeatIndex.SecondsToReach(Capacity, Watts * 2f, 0f, target), 1);
+        }
+
+        /// <summary>
+        /// A block whose equilibrium is below the target never reaches it, and the integrator must
+        /// say so rather than returning a large number.
+        ///
+        /// The two are the same statement — an equilibrium below critical is a self index at or
+        /// below 1 — so this is the consistency the table is read on: no row may be finite in the
+        /// pace column while claiming it settles below its own limit.
+        /// </summary>
+        [Fact]
+        public void APaceIsInfiniteExactlyWhereTheEquilibriumIsBelowTheTarget()
+        {
+            const float Capacity = 5000f;
+            const float Watts = 250f;
+
+            // Pick the coefficient that puts equilibrium at ambient + 200, then ask for ambient+400.
+            float equilibrium = BlockHeatIndex.AmbientKelvin + 200f;
+            float ambient4 = (float)Math.Pow(BlockHeatIndex.AmbientKelvin, 4);
+            float coefficient = Watts / ((float)Math.Pow(equilibrium, 4) - ambient4);
+
+            Assert.True(float.IsPositiveInfinity(BlockHeatIndex.SecondsToReach(
+                Capacity, Watts, coefficient, BlockHeatIndex.AmbientKelvin + 400f)),
+                "a target above equilibrium is never reached");
+
+            // Just under equilibrium it is finite, and slower than the adiabatic climb to the same
+            // temperature, because the skin is taking some of the heat away the whole way up.
+            float below = BlockHeatIndex.SecondsToReach(
+                Capacity, Watts, coefficient, BlockHeatIndex.AmbientKelvin + 150f);
+            Assert.True(below > 0f && !float.IsInfinity(below), "below equilibrium is reachable");
+            Assert.True(below > Capacity * 150f / Watts,
+                "radiating on the way up can only make the climb longer");
+        }
+
+        /// <summary>
+        /// Every shipped block's pace agrees with its own self index: finite above 1, infinite at
+        /// or below it. Nothing else in the table cross-checks the two columns, and a report whose
+        /// two halves disagree is worse than one with a single half.
+        /// </summary>
+        [Fact]
+        public void EveryBlocksPaceAgreesWithItsSelfIndex()
+        {
+            if (!GameBlocks.IsInstalled) return;
+
+            List<BlockHeatIndex.Reading> readings = BlockHeatIndex.All();
+            Assert.True(readings.Count > 0, "no block in the installed game reported any waste heat");
+
+            List<string> disagree = new List<string>();
+
+            foreach (BlockHeatIndex.Reading r in readings)
+            {
+                bool selfSufficient = r.SelfIndex <= 1f;
+                bool never = float.IsInfinity(r.SecondsToCritical);
+
+                // The two are computed from the same watts, area and emissivity, so they can only
+                // part company within a rounding of the boundary. Blocks sitting on it are exempt.
+                if (selfSufficient == never) continue;
+                if (Math.Abs(r.SelfIndex - 1f) < 0.02f) continue;
+
+                disagree.Add(r.Subtype + ": self index " + r.SelfIndex.ToString("n3")
+                    + " but seconds to critical "
+                    + (never ? "never" : r.SecondsToCritical.ToString("n1")));
+            }
+
+            Assert.True(disagree.Count == 0,
+                "pace and self index disagree on:\n  " + string.Join("\n  ", disagree));
+        }
+
         /// <summary>Writes the whole table when a data directory is set, for the report to read.</summary>
         private void Report(List<BlockHeatIndex.Reading> readings)
         {
-            output.WriteLine(string.Format("{0,-40}{1,8}{2,8}{3,12}{4,12}{5,10}",
-                "block", "index", "self", "waste MW", "can shed MW", "crit K"));
+            output.WriteLine(string.Format("{0,-40}{1,8}{2,8}{3,12}{4,12}{5,10}{6,10}",
+                "block", "index", "self", "waste MW", "can shed MW", "crit K", "s to crit"));
 
             for (int i = 0; i < readings.Count && i < 20; i++)
             {
                 BlockHeatIndex.Reading r = readings[i];
-                output.WriteLine(string.Format("{0,-40}{1,8:n2}{2,8:n1}{3,12:n2}{4,12:n2}{5,10:n0}",
+                output.WriteLine(string.Format("{0,-40}{1,8:n2}{2,8:n1}{3,12:n2}{4,12:n2}{5,10:n0}{6,10}",
                     r.Subtype, r.Index, r.SelfIndex, r.Watts / 1e6f,
-                    (r.RadiatedWatts + r.ConductedWatts) / 1e6f, r.CriticalKelvin));
+                    (r.RadiatedWatts + r.ConductedWatts) / 1e6f, r.CriticalKelvin,
+                    float.IsInfinity(r.SecondsToCritical) ? "never" : r.SecondsToCritical.ToString("n1")));
             }
 
             string directory = Environment.GetEnvironmentVariable("THERMAL_CORPUS_DATA");
@@ -172,7 +267,8 @@ namespace Thermodynamics.Tests
 
             StringBuilder csv = new StringBuilder();
             csv.AppendLine("subtype,type_id,large,source,waste_w,area_m2,emissivity,critical_k,"
-                + "radiated_w,conducted_w,index,self_index,hull_area_needed_m2,equilibrium_k");
+                + "radiated_w,conducted_w,index,self_index,hull_area_needed_m2,equilibrium_k,"
+                + "capacity_j_per_k,seconds_to_critical");
 
             foreach (BlockHeatIndex.Reading r in readings)
             {
@@ -183,6 +279,8 @@ namespace Thermodynamics.Tests
                    .Append(Num(r.RadiatedWatts)).Append(',').Append(Num(r.ConductedWatts)).Append(',')
                    .Append(Num(r.Index)).Append(',').Append(Num(r.SelfIndex)).Append(',')
                    .Append(Num(r.HullAreaNeeded)).Append(',').Append(Num(r.EquilibriumKelvin))
+                   .Append(',').Append(Num(r.HeatCapacity)).Append(',')
+                   .Append(Num(r.SecondsToCritical))
                    .AppendLine();
             }
 
