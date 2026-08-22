@@ -4,39 +4,10 @@ using VRageMath;
 namespace Thermodynamics.Core
 {
     /// <summary>
-    /// What the shape of the ground does to the wind blowing over it.
-    ///
-    /// Three effects, which between them are most of what a person standing outside actually
-    /// notices, and none of which the game's own wind figure has any concept of:
-    ///
-    /// <list type="bullet">
-    /// <item><b>Speed-up.</b> Air driven over a rise is squeezed between the hill and the flow above
-    /// it and has to accelerate. Linearised flow theory — Jackson and Hunt, the basis of every wind
-    /// atlas since — gives a fractional speed-up of roughly <c>2H/L</c> for a hill of height H and
-    /// half-length L, which is why a summit commonly runs two to three times the wind of the valley
-    /// under it. Wind loading codes cap the figure they will admit from this; so does
-    /// <see cref="MaximumSpeedUp"/>.</item>
-    ///
-    /// <item><b>Sheltering.</b> Behind a ridge is a wind shadow, and the deeper the obstruction sits
-    /// in the upwind sky the less wind arrives. This is measured here the way snow science measures
-    /// it: the greatest upward angle from the site to the terrain upwind of it.</item>
-    ///
-    /// <item><b>Channelling.</b> A valley steers the wind along itself almost regardless of what the
-    /// wind was doing before it arrived, and a narrowing valley accelerates the flow through it. The
-    /// steering is the larger effect by far, and it is the one that makes terrain legible from the
-    /// air: wind that follows the ground looks like weather, and wind that ignores it looks like a
-    /// texture laid over a landscape.</item>
-    /// </list>
-    ///
-    /// <para><b>The terrain is read as a ring of samples around the site.</b> Eight compass bearings
-    /// at two radii, each giving the ground's height relative to the site's own — negative where the
-    /// land falls away, positive where it rises. That is sixteen height lookups, which is what makes
-    /// this affordable per grid, and it is enough to answer all three questions: the mean of the ring
-    /// is exposure, the upwind arc is shelter, and the ring's second harmonic is the valley
-    /// axis.</para>
-    ///
-    /// <para>It is not a flow solver, and nothing here conserves mass. It is the same bargain the
-    /// rest of this model makes: the shapes a player can see, at a cost a game can pay.</para>
+    /// What the shape of the ground does to the wind blowing over it: speed-up, sheltering and
+    /// channelling. All three are read off one ring of sixteen height samples around the site — its
+    /// mean is exposure, its upwind arc is shelter, its second harmonic is the valley axis. Not a
+    /// flow solver, and nothing here conserves mass. See environment.md, Terrain.
     /// </summary>
     public static class WindTerrain
     {
@@ -96,12 +67,9 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// How much this site stands above the land around it, as a slope: the mean fall from the
-        /// site to its outer ring, divided by that ring's radius.
-        ///
-        /// Positive on a rise, negative in a hollow, and near zero on a plain or on an even slope —
-        /// a hillside is not sheltered by being a hillside, and this correctly says so, because the
-        /// ground rises as much on one side as it falls on the other.
+        /// How much this site stands above the land around it, as a slope. Positive on a rise,
+        /// negative in a hollow, near zero on a plain — and on an even hillside, which is not
+        /// sheltered by being one.
         /// </summary>
         /// <param name="heights">
         /// Ground height at each sample relative to the site's own ground, m.
@@ -137,12 +105,8 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// The speed multiplier left after whatever stands upwind, 0..1.
-        ///
-        /// The upwind direction is taken from where the wind is coming from, the samples straddling
-        /// that bearing are interpolated, and the largest upward angle over both radii decides. A
-        /// near obstruction shelters more than a far one of the same height, which falls out of
-        /// using the angle rather than the height.
+        /// The speed multiplier left after whatever stands upwind, 0..1: the largest upward angle over
+        /// both radii, which is why a near obstruction shelters more than a far one of the same height.
         /// </summary>
         /// <param name="heights">Relative heights, as for <see cref="Relief"/>.</param>
         /// <param name="innerRadius">Radius of the inner ring, m.</param>
@@ -184,26 +148,11 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// The direction the wind actually takes here, after the ground has had its say.
-        ///
-        /// The ring's second harmonic is fitted — <c>h(θ) ≈ mean + A·cos(2(θ − φ))</c> — which is the
-        /// shape a valley or a ridge makes when you walk a circle round a point in one: high on two
-        /// opposite sides, low on the other two. φ is the bearing of the high sides, so the valley
-        /// runs across it, and A over the radius is how steeply it is walled.
-        ///
-        /// A second harmonic rather than picking the lowest of four opposite pairs, because the pairs
-        /// quantise the answer to 45° and a wind that snaps between eight directions as you walk
-        /// looks like a bug. The fit is continuous in both the terrain and the bearing.
-        ///
-        /// The axis has no sense of its own — a valley runs both ways — so the end nearer the
-        /// oncoming wind is the one taken. Wind blowing across a valley is turned to run along it,
-        /// which way along being decided by which way it was already leaning.
-        ///
-        /// The rule is <b>turn toward the lowest ground</b>, and it is worth stating that way because
-        /// a ridge is not simply a valley upside down. In a valley the lowest ground lies along the
-        /// floor, so the wind runs along it. On a ridge crest the lowest ground is down either side,
-        /// so the wind is left crossing the ridge — which is what air over a ridge does. One rule,
-        /// two landforms, two different and correct answers.
+        /// The direction the wind actually takes here, from the ring's second harmonic
+        /// <c>h(θ) ≈ mean + A·cos(2(θ − φ))</c> — the shape a valley or a ridge makes. A harmonic
+        /// rather than the lowest of four opposite pairs, which would quantise the answer to 45°.
+        /// The rule is <b>turn toward the lowest ground</b>, which gives a valley an along-floor wind
+        /// and a ridge crest a crossing one. See environment.md, Terrain.
         /// </summary>
         /// <param name="strength">
         /// How much of the effect to apply, 0..1, for a caller that wants to turn it down.
@@ -261,18 +210,10 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Which way the ground falls away from here, and how steeply.
-        ///
-        /// The ring's <b>first</b> harmonic — <c>h(θ) ≈ mean + A·cos(θ − φ)</c> — where φ is the
-        /// bearing of the highest ground around the site, so downhill is the opposite of it. That is
-        /// a different shape from the second harmonic <see cref="Channel"/> fits: a valley is high on
-        /// two opposite sides and has no first harmonic at all, while a hillside is high on one side
-        /// and has no second. Fitting both means a site on the wall of a valley gets an along-valley
-        /// axis *and* a fall line, which is what it really has.
-        ///
-        /// It costs eight multiply-adds over heights that are already in memory. The expensive part
-        /// of knowing about terrain — the sixteen surface lookups — is already paid by the time this
-        /// is called, which is what makes slope winds essentially free.
+        /// Which way the ground falls away from here, and how steeply: the ring's <b>first</b>
+        /// harmonic, which a valley has none of where <see cref="Channel"/>'s second has none on a
+        /// hillside. Costs eight multiply-adds over heights already in memory.
+        /// See environment.md, Slope winds.
         /// </summary>
         /// <param name="slope">
         /// How steeply it falls, as a gradient: the harmonic's amplitude over the ring radius. Zero

@@ -3,38 +3,11 @@ using System;
 namespace Thermodynamics.Core
 {
     /// <summary>
-    /// How wind changes with height above the ground, and with the time of day.
-    ///
-    /// <see cref="WindField"/> answers what the wind does across a planet. This answers what it does
-    /// in the first kilometre above one point of it, which is where every grid in the game actually
-    /// sits and where the game's own figure — the planet's maximum scaled linearly by air density —
-    /// says nothing at all.
-    ///
-    /// <para><b>The vertical profile.</b> In the atmospheric surface layer, wind follows a
-    /// logarithmic profile: <c>u(z) = (u*/κ)·ln(z/z₀)</c>, where z₀ is the roughness length, roughly
-    /// a tenth of the height of whatever covers the ground. Expressed as a multiplier against a
-    /// reference height — 10 m, the meteorological standard — that is
-    /// <c>ln((z+z₀)/z₀) / ln((z_ref+z₀)/z₀)</c>, which is what this computes. It is steep near the
-    /// ground and flattens fast: over open country a block at 2 m sees about three quarters of the
-    /// 10 m wind, and one at 100 m about a third more than it.</para>
-    ///
-    /// <para>The logarithm cannot keep climbing forever. It holds only through the surface layer;
-    /// above the boundary layer the wind is set by the pressure field rather than by the ground, so
-    /// the profile is flattened at a gradient height. **Wind therefore strengthens with altitude for
-    /// a time and then stops** — and above that, the game's own air density is already taking the
-    /// ceiling down to nothing, so the whole curve is a rise, a plateau, and a fall.</para>
-    ///
-    /// <para><b>The diurnal cycle,</b> which is the part that surprises people. Surface wind and
-    /// wind aloft run in opposite directions over a day. By day the sun heats the ground, convection
-    /// mixes the boundary layer, and momentum from aloft is dragged down to the surface: **surface
-    /// wind peaks in the afternoon**. After sunset the ground cools, the mixing stops, and the air
-    /// above decouples from the friction that was holding it back — it accelerates into a
-    /// **nocturnal low-level jet** while the surface below goes calm. The two are anticorrelated,
-    /// and they cross over at a height of a few tens of metres where the daily variation vanishes.
-    /// A player who lands at dusk and walks out into still air, then flies to two hundred metres and
-    /// meets a gale, is seeing the real thing.</para>
-    ///
-    /// <para>Everything here is a multiplier, pure, and free of the game.</para>
+    /// How wind changes with height above the ground and with the time of day, in the first kilometre
+    /// where every grid actually sits. A logarithmic surface-layer profile flattened at a gradient
+    /// height, and a daily cycle that runs one way at the surface and the other above the crossover.
+    /// Everything here is a pure multiplier. See environment.md, The vertical profile and The daily
+    /// cycle.
     /// </summary>
     public static class WindProfile
     {
@@ -82,14 +55,9 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// How much of the day's heating has accumulated, 0..1, given the sun's height now and the
-        /// value this returned last time.
-        ///
-        /// It is the sun's elevation put through the same first-order lag the ambient temperature
-        /// uses, and for the same reason: the mixing that brings wind down to the surface is driven
-        /// by the ground being warm, and the ground is warmest well after noon. Sharing the lag is
-        /// what makes the windiest part of the afternoon line up with the warmest part, rather than
-        /// with the sun's own high point.
+        /// How much of the day's heating has accumulated, 0..1: the sun's elevation through the same
+        /// first-order lag the ambient temperature uses, which is what lines the windiest part of the
+        /// afternoon up with the warmest.
         /// </summary>
         /// <param name="previous">What this returned last step, or a negative number on the first.</param>
         /// <param name="sunElevationSine">Sine of the sun's angle above the horizon.</param>
@@ -126,14 +94,9 @@ namespace Thermodynamics.Core
         /// fully reversed by twice it, the jet.
         /// </param>
         /// <param name="boundary">
-        /// Top of the boundary layer, m — the same gradient height the profile flattens at. The
-        /// daily cycle is a boundary-layer phenomenon: it is the ground heating and cooling that
-        /// drives it, and air that has left the ground's influence does not have one. Fades to
-        /// nothing between this height and twice it.
-        ///
-        /// This is not a detail. Without it the reversal saturates and never returns, so a ship at
-        /// seven kilometres reads a nocturnal jet twelve times higher than any jet has ever been —
-        /// which is exactly what a field dump found it doing.
+        /// Top of the boundary layer, m. The daily cycle is driven by the ground, so it fades to
+        /// nothing between this height and twice it — without which the reversal saturates and a ship
+        /// at seven kilometres reads a jet twelve times higher than any jet has ever been.
         /// </param>
         public static float Diurnal(
             float heating, float height, float amplitude, float crossover, float boundary)

@@ -10,16 +10,9 @@ using VRageMath;
 namespace Thermodynamics
 {
     /// <summary>
-    /// Turns the collected telemetry into files in world storage, plus a condensed summary in
-    /// the game log.
-    ///
-    /// Three artefacts are produced:
-    ///   Thermodynamics_Telemetry_&lt;stamp&gt;.log   the full human-readable report
-    ///   Thermodynamics_BlockTypes_&lt;stamp&gt;.csv  one row per block definition
-    ///   Thermodynamics_Grids_&lt;stamp&gt;.csv       one row per grid
-    ///
-    /// The CSVs allow one session to be diffed against another, or against the model in tests/,
-    /// without parsing the prose report.
+    /// Turns the collected telemetry into files in world storage — a prose report and a CSV per
+    /// block definition and per grid, so one session can be diffed against another without parsing
+    /// the prose. See telemetry.md, Output.
     /// </summary>
     public static class TelemetryReport
     {
@@ -118,12 +111,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// What the grid's plumbing and heat pumps achieved.
-        ///
-        /// Printed only when the grid carries some, so a report on a ship with no cooling gear says
-        /// nothing rather than printing a page of dashes. Every line here answers a question a
-        /// temperature cannot: whether the fluid is carrying heat, whether a pump is moving any, and
-        /// for a pump that is not, which of the three fixable reasons applies.
+        /// What the grid's plumbing and heat pumps achieved, printed only when it carries some. For an
+        /// idle pump, which of the three fixable reasons applies.
         /// </summary>
         private static void AppendCoolantAndPumps(StringBuilder sb, GridTelemetry g)
         {
@@ -265,12 +254,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Every compartment on the grid: those this model mapped, and those only the game holds.
-        ///
-        /// A compartment in the second list is sealed as far as the game is concerned — its vent
-        /// reports pressurised — while this model treats the cells as outdoors and runs no air in
-        /// them. Each is identified by the vent standing in it, which is the only name a player can
-        /// read from a terminal, and by the block subtypes across the faces this model leaves open.
+        /// Every compartment on the grid: those this model mapped, and those only the game holds —
+        /// each named by the vent standing in it and by the subtypes across the faces this model
+        /// leaves open. See telemetry.md, Room dump.
         /// </summary>
         private static void WriteRooms(StringBuilder sb, GridTelemetry g)
         {
@@ -421,12 +407,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// The world the mod ran in: the engine's own settings, the mods loaded beside it, and any
-        /// setting that overrides one of this mod's.
-        ///
-        /// Printed before the mod's own settings because it outranks them. A world with
-        /// DestructibleBlocks off discards every gram of heat damage the model applied, and a dump
-        /// read without that fact reads as a model that damages nothing.
+        /// The world the mod ran in, printed before the mod's own settings because it outranks them:
+        /// a world with DestructibleBlocks off discards every gram of heat damage the model applied.
         /// </summary>
         private static void WriteWorld(StringBuilder sb)
         {
@@ -619,14 +601,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Figures as the Cost table saw them, kept so the consistency section can re-take them
-        /// after every other section is written and report whether they moved.
-        ///
-        /// A report is built from one list in one call, so these should not move. They have been
-        /// observed to: a field dump showed a merged total at 62 % of the sum of the per-grid rows
-        /// in the same file. Either the record list grew mid-report — grids register from worker
-        /// threads — or the aggregates ran over a shorter list. Recording both ends distinguishes
-        /// the two.
+        /// Figures as the Cost table saw them, so the consistency section can re-take them after every
+        /// other section is written and report whether they moved. They have been observed to.
+        /// See telemetry.md, Whether the report agrees with itself.
         /// </summary>
         private static int costRecords;
         private static long costCalls;
@@ -755,12 +732,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Cost per frame across every grid, and the worst frames of the session.
-        ///
-        /// The first section to read for a stutter report. Every other cost figure is per grid,
-        /// while a stutter is per frame: twenty grids each costing two acceptable milliseconds on
-        /// the same frame produce a forty-millisecond frame with no per-grid row out of range. The
-        /// worst frames are printed in full, including what each stage touched.
+        /// Cost per frame across every grid, and the worst frames in full. The first section to read
+        /// for a stutter, because every other figure here is per grid and a stutter is per frame.
+        /// See telemetry.md, Frame cost and hitching.
         /// </summary>
         private static void WriteFrames(StringBuilder sb)
         {
@@ -875,26 +849,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// The substep count, what sets it, and what capping it would save.
-        ///
-        /// <para>
-        /// A solver step is divided into as many substeps as the stiffest element on the grid needs
-        /// to stay stable, and every other element pays for all of them, so a grid's cost is its
-        /// elements times a substep count set by one block.
-        /// </para>
-        ///
-        /// <para>
-        /// Reports demand alongside grant, since the two diverge in two ways —
-        /// <c>MaxSubsteps</c> refuses substeps and <c>MaxElementVisitsPerStep</c> shortens the step —
-        /// and demand keeps moving after both have bound.
-        /// </para>
-        /// </summary>
-        /// <summary>
-        /// What the block overlay cost, on the frames it drew.
-        ///
-        /// Printed only when it drew, so a session that never opened it says nothing. The overlay
-        /// runs on the render thread and simulates nothing, so its cost appears nowhere in the Cost
-        /// table: a frame it stalls otherwise reads as a simulation that stalled.
+        /// What the block overlay cost, on the frames it drew. It runs on the render thread and
+        /// simulates nothing, so its cost appears nowhere in the Cost table — a frame it stalls would
+        /// otherwise read as a simulation that stalled. See telemetry.md, What the block overlay costs.
         /// </summary>
         private static void WriteOverlay(StringBuilder sb)
         {
@@ -995,12 +952,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Block definitions ranked by substep demand, across every grid in the world.
-        ///
-        /// The per-grid view names one block; this names the definitions, which is what a definition
-        /// author or server operator can act on. Demand is not a property of the definition alone —
-        /// it depends on what the block is mounted to and whether it is exposed — so the spread is
-        /// reported alongside the peak.
+        /// Block definitions ranked by substep demand across every grid, which is what a definition
+        /// author can act on. Demand is not a property of the definition alone, so the spread is
+        /// reported beside the peak. See stiffness.md.
         /// </summary>
         private static void WriteStiffestBlockTypes(StringBuilder sb)
         {
@@ -1165,23 +1119,10 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Checks the report against itself.
-        ///
-        /// Every aggregate in the file sums the same list of grid records at different points
-        /// during the build, and the CSVs are a further pass after the text is finished, so all of
-        /// them must agree. A field dump has shown them disagreeing by a factor of 1.6 across every
-        /// counter.
-        ///
-        /// This section re-takes the Cost table's figures after everything else is written and
-        /// checks two invariants:
-        ///
-        /// <list type="bullet">
-        /// <item>the record list must not change while the report is built;</item>
-        /// <item>a grid cannot tick more often than the session frames, since both happen once each
-        /// in the same <c>Simulate</c> call.</item>
-        /// </list>
-        ///
-        /// A line beginning <c>!!</c> indicates a defect in the telemetry, not in the simulation.
+        /// Checks the report against itself: the record list must not change while it is built, and a
+        /// grid cannot tick more often than the session frames. A line beginning <c>!!</c> is a defect
+        /// in the telemetry rather than in the simulation.
+        /// See telemetry.md, Whether the report agrees with itself.
         /// </summary>
         private static void WriteConsistency(StringBuilder sb)
         {
@@ -1700,14 +1641,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Every face of every block the session saw, and why the model treats it as exposed or not.
-        ///
-        /// One row per block face, six per block: the question this file answers is about a single
-        /// face on a single block — which of the three rejection rules excluded it — which no
-        /// aggregate can express.
-        ///
-        /// Read from the telemetry records rather than the live grids, since the report is usually
-        /// written while the world is closing. Each record captured its faces at its final snapshot.
+        /// One row per block face: which of the three rejection rules excluded it, which no aggregate
+        /// can express. Read from the telemetry records rather than the live grids, since a report is
+        /// usually written while the world is closing. See telemetry.md, Surface dump.
         /// </summary>
         private static string BuildSurfaceCsv()
         {

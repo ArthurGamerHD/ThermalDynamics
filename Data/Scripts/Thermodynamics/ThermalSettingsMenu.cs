@@ -12,31 +12,10 @@ using VRage.Utils;
 namespace Thermodynamics
 {
     /// <summary>
-    /// The settings menu, built on the Rich HUD Framework.
-    ///
-    /// Every value in the config file is reachable here: the menu is generated from
-    /// <see cref="Settings.Names"/> rather than written by hand, so a setting added to the config
-    /// appears without a corresponding menu edit. A name the layout table does not mention still
-    /// gets a control, under an "Other" category, so an unlisted setting is still editable.
-    ///
-    /// Editing follows the same rule as <c>/thermal set</c>: the config is server side, so on a
-    /// multiplayer client every simulation control is disabled and only the client-side
-    /// presentation switches are editable.
-    ///
-    /// <para>
-    /// <b>There is no Save button and no Reset button.</b> A change is applied to the running
-    /// session as it is made and written to the config about a second later, by
-    /// <see cref="Settings.SaveIfPending"/>. A menu that asks you to confirm what you already did
-    /// asks you to do it twice, and a setting that reverts on reload because a button was missed
-    /// is worse than either. Starting over is a profile, since a profile sets every world setting.
-    /// </para>
-    ///
-    /// <para>
-    /// The layout is a tree rather than one scroll: pages at the root for the readouts and the
-    /// debug switches, then folders of pages for the settings themselves. The framework's sizes
-    /// decide the shape of a page — a tile is a fixed 300x250 box that masks whatever does not
-    /// fit, and a group is a fixed-height row scrolling sideways through its tiles.
-    /// </para>
+    /// The settings menu, built on the Rich HUD Framework and generated from
+    /// <see cref="Settings.Names"/>, so a setting added to the config appears without a menu edit.
+    /// No Save button and no Reset button: every change saves itself, and a profile is the reset.
+    /// See configuration.md, The settings menu.
     /// </summary>
     public static class ThermalSettingsMenu
     {
@@ -204,13 +183,8 @@ namespace Thermodynamics
         private static Settings shipped;
 
         /// <summary>
-        /// The status page: the one place in this menu where a sentence survives.
-        ///
-        /// Everything else here is a <see cref="TerminalLabel"/>, which the framework draws as one
-        /// centred line and clips at both ends — a paragraph put in one arrives with its beginning
-        /// and its end cut off. A <see cref="TextPage"/> wraps and scrolls, so the full warning,
-        /// the names of every changed setting and the sync digest live here, and the labels on the
-        /// overview stay short enough to read.
+        /// The status page: the one place in this menu where a sentence survives, because a
+        /// <see cref="TextPage"/> wraps where a <see cref="TerminalLabel"/> clips at both ends.
         /// </summary>
         private static TextPage statusPage;
 
@@ -271,20 +245,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Pages, and which sections each one carries.
-        ///
-        /// One page per job rather than one page for everything. Forty-five settings on a single
-        /// scroll is a list to be searched by eye; an administrator arrives wanting the solver, or
-        /// the environment, and should be one click from it. The framework lists pages down the
-        /// side, so this is navigation the menu previously had and did not use.
-        /// </summary>
-        /// <summary>
-        /// One page of the menu: its name, and the settings on it.
-        ///
-        /// Named explicitly rather than derived from the mechanism sections, because the split that
-        /// matters to someone tuning a world does not follow the code's own categories. The solver
-        /// section holds both "what a step costs" and "how fast heat moves", which are different
-        /// questions, asked by different people, on different days.
+        /// One page of the menu: its name, and the settings on it. Named explicitly rather than
+        /// derived from the mechanism sections, because the split that matters to someone tuning a
+        /// world does not follow the code's own categories.
         /// </summary>
         private struct Leaf
         {
@@ -386,13 +349,9 @@ namespace Thermodynamics
         };
 
         /// <summary>
-        /// A line for a page whose settings do not yet fill it, saying where the rest of that
-        /// system's numbers currently live.
-        ///
-        /// A page with one switch on it looks broken. It is not — it is a system whose remaining
-        /// dials are in a definition file the menu does not reach yet, and saying so is better
-        /// than leaving a reader to wonder. Each of these disappears as its file is brought in;
-        /// see [configuration.md](../../../../docs/configuration.md#the-settings-surface-and-where-it-is-going).
+        /// A line for a page whose settings do not yet fill it, saying where the rest of that system's
+        /// numbers live — a page with one switch on it otherwise looks broken. Each disappears as its
+        /// definition file is brought in. See configuration.md, Where the settings surface is going.
         /// </summary>
         private static readonly Dictionary<string, string> PageNotes = new Dictionary<string, string>
         {
@@ -419,12 +378,8 @@ namespace Thermodynamics
             "EnableTelemetry", "TelemetrySampleStride", "TelemetryPlanetProbes");
 
         /// <summary>
-        /// Live figures per page, refreshed with everything else.
-        ///
-        /// Several short labels rather than one long one. A <see cref="TerminalLabel"/> is a single
-        /// centred line that clips at both ends rather than wrapping — in game, a sentence of any
-        /// length arrives with its beginning and its end cut off — so every figure gets its own
-        /// line and every line stays inside about twenty-two characters.
+        /// Live figures per page, one short label each: a <see cref="TerminalLabel"/> clips at both
+        /// ends rather than wrapping, so every line stays inside about twenty-two characters.
         /// </summary>
         private static readonly Dictionary<string, List<TerminalLabel>> Readouts =
             new Dictionary<string, List<TerminalLabel>>();
@@ -613,12 +568,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// The page the menu opens on: what state the world is in, and the two actions that change
-        /// all of it at once.
-        ///
-        /// An administrator's first two questions are "what has been changed here" and "what is
-        /// this world set to", and neither was answerable from a wall of sliders — every value was
-        /// shown, and none of them said whether it was the shipped one.
+        /// The page the menu opens on: which profile this world matches, how much has been changed
+        /// from the shipped values, and the two actions that change all of it at once.
         /// </summary>
         private static ControlPage BuildOverview(bool local, bool editable)
         {
@@ -724,12 +675,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Brings every label on the page back in step with the settings.
-        ///
-        /// Called after anything that can move a value from outside a single control — a profile, a
-        /// reset, or the server sending new settings — because the framework's controls read their
-        /// values through a getter but their *names* are fixed at construction, and the name is
-        /// where this menu says what has been changed.
+        /// Brings every label back in step with the settings, after anything that moves a value from
+        /// outside one control. The framework's controls read a value through a getter but fix their
+        /// *name* at construction, and the name is where this menu marks what has changed.
         /// </summary>
         public static void Refresh()
         {
@@ -926,12 +874,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Combinations worth saying out loud, because each one is a setting quietly cancelling
-        /// another and none of them is visible from the two controls involved.
-        /// </summary>
-        /// <summary>
-        /// The same conflict as a label, in the space a label has. The sentence is on the status
-        /// page; this is only the flag that sends you there.
+        /// The conflict as a label, in the space a label has. The sentence is on the status page;
+        /// this is only the flag that sends you there.
         /// </summary>
         private static string WarningShort()
         {
@@ -1016,12 +960,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Lays one section out as columns of three controls, side by side across the page.
-        ///
-        /// The framework's fixed sizes determine this: a tile is a 300x250 box that masks whatever
-        /// does not fit, giving three controls per column, and a group is a fixed-height row holding
-        /// about three tiles across the page's width. One column per row would waste two thirds of
-        /// the width.
+        /// Lays one section out as columns of three controls. The framework's tile is a fixed 300x250
+        /// box that masks what does not fit, and its group is a fixed-height row of about three.
         /// </summary>
         private static void AddSection(ControlPage target, string name, List<string> members, bool editable)
         {
@@ -1251,12 +1191,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Whether this machine may offer a control for a setting at all.
-        ///
-        /// A client owns its presentation switches outright. Everything else is world state, which
-        /// a client can now ask the server to change — so the control is offered when this player
-        /// is permitted to ask. The server checks again on arrival and its answer is the one that
-        /// counts; this only avoids presenting a dial that will be refused.
+        /// Whether this machine may offer a control for a setting at all. The server checks again on
+        /// arrival and its answer is the one that counts; this only avoids offering a dial that will
+        /// be refused. See configuration.md, Changing settings from a client.
         /// </summary>
         private static bool CanEdit(string name)
         {
@@ -1267,13 +1204,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Whether a setting's range is one a slider cannot usefully divide.
-        ///
-        /// A slider offers something like two hundred distinguishable positions across its range.
-        /// Wider than that and a whole position is a meaningless jump — the step budget moves ten
-        /// thousand element visits at a time. Finer than a tenth and every position rounds to the
-        /// same displayed number, which is the friction scale's problem: its entire range is a
-        /// hundredth.
+        /// Whether a setting's range is one a slider cannot usefully divide — about two hundred
+        /// positions, so a four-million span jumps and a hundredth-wide one never moves.
         /// </summary>
         private static bool NeedsTyping(Entry entry)
         {
@@ -1281,12 +1213,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// A setting typed rather than dragged.
-        ///
-        /// The range is offered in the tooltip rather than enforced here: it is what the slider
-        /// would have spanned, not what the setting will accept, and a typed value is checked by
-        /// the same clamp the chat command and the mod API go through. Someone who wants a step
-        /// budget of nine million can have one, and finds out what it costs.
+        /// A setting typed rather than dragged. The tooltip's range is what the slider would have
+        /// spanned, not a limit: a typed value goes through the same clamp as the chat command.
         /// </summary>
         private static TerminalControlBase NumberField(string name, Entry entry, bool enabled)
         {
