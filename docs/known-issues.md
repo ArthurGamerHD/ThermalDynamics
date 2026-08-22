@@ -571,6 +571,45 @@ question; that it should be an unsurvivable one for every hull that mounts a dri
 G2 holds at 65.6 % on ships with no drive at all, well past its 20 % gate, so the criterion is not
 resting on this block.
 
+**What actually causes a hot spot is local watts per local square metre.** The census now measures
+arrangement, not just totals: burial depth in conduction hops out from the nearest radiating node,
+the Clark-Evans nearest-neighbour index of the heat sources, watt-weighted spread about their
+centroid, and the worst watts-per-exposed-area found in any 5x5x5 neighbourhood. Correlated against
+the hot spot (peak minus mean) with total waste heat partialled out — which has to be done, because
+every raw correlation here is mostly "this ship makes more heat" — the ranking is:
+
+| term | partial rho vs hot spot | vs peak |
+| --- | --- | --- |
+| worst local W/m2 | **+0.369** | **+0.552** |
+| spread of sources about their centroid | −0.216 | −0.406 |
+| conductance away from the hottest source | −0.137 | −0.116 |
+| mean burial depth of the sources | +0.111 | +0.018 |
+| **Clark-Evans clumping index** | **−0.033** | **+0.076** |
+
+**The clumping index does not work and that is worth recording.** It measures how evenly spaced the
+sources are, and evenness is not the mechanism: two 5 MW generators ten metres apart score as
+dispersed and still cook the bay they share. Local power against local radiating area is the thing a
+block actually experiences, and it is an order of magnitude more predictive. Anyone reaching for a
+spatial statistic here should reach for that one.
+
+Banded, the local figure is a design rule rather than a correlation — share of ships losing a block
+under full electrical load:
+
+| worst local W/m2 | ships | lose a block | median peak |
+| --- | --- | --- | --- |
+| under 500 | 1,604 | 0.7 % | 245 K |
+| 500 – 2,000 | 1,202 | 6.9 % | 545 K |
+| 2,000 – 10,000 | 2,356 | 42.7 % | 656 K |
+| 10,000 – 50,000 | 1,447 | 93.2 % | 1,287 K |
+| over 200,000 | 629 | 98.9 % | 2,541 K |
+
+**Spreading the generators helps, up to a point.** Within matched bands of total waste heat, the
+most-spread third against the tightest third: at 100 kW–1 MW, 21.7 % lose a block against 45.2 %;
+at 1–10 MW, 61.6 % against 91.5 %. Past about 10 MW installed it stops mattering — 98 % to 100 %
+either way — so arrangement buys a builder a great deal in the middle of the range and nothing at
+the top. The raw banding of spread says the opposite, because spread correlates with hull size and
+so with total heat; it has to be read within a waste band or not at all.
+
 Both readings are subject to the censoring limit above. `tools/corpus/verdict.py` computes the
 criteria and reports the censored share alongside them.
 

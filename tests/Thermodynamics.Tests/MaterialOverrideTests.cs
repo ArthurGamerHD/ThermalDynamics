@@ -35,7 +35,7 @@ namespace Thermodynamics.Tests
 
                 Assert.True(baseHeat > 0f, "the baseline block has no specific heat to scale");
 
-                Blueprints.MaterialOverride = source => new BlockThermalProperties
+                Blueprints.MaterialOverride = (typeId, subtype, source) => new BlockThermalProperties
                 {
                     Conductivity = source.Conductivity,
                     SpecificHeat = source.SpecificHeat * 4f,
@@ -56,6 +56,66 @@ namespace Thermodynamics.Tests
                 // between, so an override that stuck would contaminate every later measurement.
                 Blueprints.MaterialOverride = null;
                 Assert.Equal(baseHeat, Blueprints.Model(definition).Thermal.SpecificHeat, 3);
+            }
+            finally
+            {
+                Blueprints.MaterialOverride = null;
+            }
+        }
+
+        /// <summary>
+        /// That a dial aimed at one block type moves that type and leaves everything else alone.
+        ///
+        /// Per-type dials are how a balance change is actually shipped — the survey named a short
+        /// list of types carrying the tail, and moving all of them plus every other block in the
+        /// game is a different question. A targeted override that quietly applied to everything
+        /// would read as an enormously effective dial.
+        /// </summary>
+        [Fact]
+        public void ADialAimedAtOneTypeLeavesTheRestAlone()
+        {
+            if (!GameBlocks.IsInstalled) return;
+
+            Dictionary<string, GameBlocks.Definition> definitions = GameBlocks.BySubtype();
+
+            GameBlocks.Definition target = null;
+            GameBlocks.Definition other = null;
+            foreach (KeyValuePair<string, GameBlocks.Definition> entry in definitions)
+            {
+                GameBlocks.Definition definition = entry.Value;
+                if (definition.Components.Count == 0) continue;
+
+                if (target == null && definition.TypeId == "Thrust") target = definition;
+                else if (other == null && definition.TypeId == "CubeBlock") other = definition;
+            }
+
+            if (target == null || other == null) return;
+
+            try
+            {
+                Blueprints.MaterialOverride = null;
+                float targetBefore = Blueprints.Model(target).Thermal.SpecificHeat;
+                float otherBefore = Blueprints.Model(other).Thermal.SpecificHeat;
+
+                Blueprints.MaterialOverride = (typeId, subtype, source) =>
+                {
+                    if (typeId != "Thrust") return source;
+
+                    return new BlockThermalProperties
+                    {
+                        Conductivity = source.Conductivity,
+                        SpecificHeat = source.SpecificHeat * 3f,
+                        Emissivity = source.Emissivity,
+                        ExposedSurfaceMultiplier = source.ExposedSurfaceMultiplier,
+                        ProducerWasteEnergy = source.ProducerWasteEnergy,
+                        ConsumerWasteEnergy = source.ConsumerWasteEnergy,
+                        CriticalTemperature = source.CriticalTemperature,
+                        OverheatDamagePerKelvin = source.OverheatDamagePerKelvin,
+                    };
+                };
+
+                Assert.Equal(targetBefore * 3f, Blueprints.Model(target).Thermal.SpecificHeat, 3);
+                Assert.Equal(otherBefore, Blueprints.Model(other).Thermal.SpecificHeat, 3);
             }
             finally
             {

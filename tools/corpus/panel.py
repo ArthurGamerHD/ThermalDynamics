@@ -27,6 +27,9 @@ TARGET = sys.argv[3] if len(sys.argv) > 3 else "tools/corpus/panel.csv"
 # files. Falls back to the survey's own directory when not given one.
 SHIPS = os.path.join(os.path.dirname(OUTCOMES), "ships.csv")
 
+# The per-type dials need hulls that actually mount the type, or they measure nothing at all.
+COMPOSITION = os.path.join(os.path.dirname(CENSUS), "composition.csv")
+
 # Scenarios that must exist for a ship to be eligible: a panel member has to be measurable in
 # every state the sweep will put it in, or its rows are holes in the response surface.
 REQUIRED = {"idle", "vacuum-sunlit", "full-electrical", "burn-forward", "recovery"}
@@ -44,6 +47,19 @@ def key_of(row):
 
 
 census = {key_of(r): r for r in csv.DictReader(open(CENSUS))}
+
+# Which hulls carry each offending type, and how much of their heat it is.
+share = {}
+if os.path.exists(COMPOSITION):
+    for r in csv.DictReader(open(COMPOSITION)):
+        k = key_of(r)
+        by_type = share.setdefault(k, {})
+        for name, match in (("jumpdrive", "JumpDrive"), ("engine", "HydrogenEngine"),
+                            ("reactor", "Reactor"), ("thrust", "Thrust")):
+            if match.lower() in r["subtype"].lower():
+                by_type[name] = by_type.get(name, 0.0) + number(r, "waste_full_w")
+else:
+    print(f"warning: {COMPOSITION} not found — the per-type rules will select nothing")
 
 paths = {}
 if os.path.exists(SHIPS):
@@ -170,6 +186,42 @@ take("control-small", "never critical in any scenario, small grid — must stay 
      by(lambda k: number(census[k], "waste_full_w"),
         where=lambda k: small(k) and powered(k) and affordable(k) and critical_count(k) == 0), 3)
 
+# ---- the offending types, so the per-type dials have somewhere to act -------------------------
+# A dial aimed at jump drives measures nothing on a panel with no jump drives. Each of these picks
+# the hulls where that type carries the most heat, so the dial has the largest lever to show.
+def carries(name):
+    return lambda k: share.get(k, {}).get(name, 0.0) > 0.0
+
+
+def carried(name):
+    return lambda k: share.get(k, {}).get(name, 0.0)
+
+
+take("jumpdrive-heavy", "most heat from jump drives — 67 % of the corpus's load heat is this block",
+     by(carried("jumpdrive"), where=lambda k: carries("jumpdrive")(k) and affordable(k)), 2)
+take("engine-heavy", "most heat from hydrogen engines — hottest block on a third of runaway rows",
+     by(carried("engine"), where=lambda k: carries("engine")(k) and affordable(k)), 2)
+take("reactor-heavy", "most heat from reactors — the dial that ships at 0.01",
+     by(carried("reactor"), where=lambda k: carries("reactor")(k) and affordable(k)), 2)
+
+# ---- how the heat is arranged, which is what a hot spot is about -------------------------------
+# The census measures clumping and burial depth; the panel carries the extremes of both so a dial
+# can be judged against arrangement rather than only against totals.
+if any("clumping" in r for r in census.values()):
+    take("clumped", "heat sources stacked in one place — the lowest clumping index",
+         by(lambda k: -number(census[k], "clumping"),
+            where=lambda k: powered(k) and affordable(k)
+            and number(census[k], "clumping") > 0), 2)
+    take("dispersed", "heat spread more evenly than chance — the highest clumping index",
+         by(lambda k: number(census[k], "clumping"),
+            where=lambda k: powered(k) and affordable(k)), 2)
+    take("deep", "heat buried furthest from anything that radiates, in conduction hops",
+         by(lambda k: number(census[k], "heat_depth_mean"),
+            where=lambda k: powered(k) and affordable(k)), 2)
+    take("dense-surface", "most watts per square metre of hull — the whole-ship density",
+         by(lambda k: number(census[k], "w_per_m2"),
+            where=lambda k: powered(k) and affordable(k)), 2)
+
 # ---- thrust and sun, so the friction and solar dials have somewhere to land ------------------
 take("thrust-heavy", "most installed thrust — the dial for friction and burn heating",
      by(lambda k: number(census[k], "thrust_n"), where=affordable), 2)
@@ -179,6 +231,7 @@ take("broad-face", "most exposed area outright — the sun dial acts hardest her
 
 # ---- write it out ---------------------------------------------------------------------------
 columns = ["ship", "workshop_id", "path", "rule", "why", "large", "blocks", "buried_share",
+           "clumping", "heat_depth_mean", "w_per_m2", "local_w_per_m2_max", "heat_spread_m",
            "exposed_area_m2", "exposure_m2_per_kw", "capacity_j_per_k_per_w",
            "installed_power_w", "waste_full_w", "thrust_n",
            "idle_peak_k", "load_peak_k", "burn_peak_k", "scenarios_critical",
@@ -192,6 +245,11 @@ for k, (rule, note) in picked.items():
         "rule": rule, "why": note,
         "large": int(number(c, "large")), "blocks": int(number(c, "blocks")),
         "buried_share": round(number(c, "buried_share"), 3),
+        "clumping": round(number(c, "clumping"), 3),
+        "heat_depth_mean": round(number(c, "heat_depth_mean"), 2),
+        "w_per_m2": round(number(c, "w_per_m2"), 2),
+        "local_w_per_m2_max": round(number(c, "local_w_per_m2_max"), 1),
+        "heat_spread_m": round(number(c, "heat_spread_m"), 1),
         "exposed_area_m2": round(number(c, "exposed_area_m2"), 1),
         "exposure_m2_per_kw": round(number(c, "exposure_m2_per_kw"), 3),
         "capacity_j_per_k_per_w": round(number(c, "capacity_j_per_k_per_w"), 3),

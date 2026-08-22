@@ -65,8 +65,11 @@ namespace Thermodynamics.Harness
 
             public string[] Scenarios;
 
+            /// <summary>The block type this dial acts on, or null where it acts on every block.</summary>
+            public string OnlyType;
+
             /// <summary>Rewrites a block's materials for this level, or null for a world dial.</summary>
-            public Func<float, Func<BlockThermalProperties, BlockThermalProperties>> Material;
+            public Func<float, Func<string, string, BlockThermalProperties, BlockThermalProperties>> Material;
 
             /// <summary>Rewrites the world for this level, or null for a block dial.</summary>
             public Action<ThermalSettings, float> World;
@@ -89,7 +92,7 @@ namespace Thermodynamics.Harness
                 return settings.Derive();
             }
 
-            public Func<BlockThermalProperties, BlockThermalProperties> Material()
+            public Func<string, string, BlockThermalProperties, BlockThermalProperties> Material()
             {
                 return Knob.Material == null ? null : Knob.Material(Level);
             }
@@ -122,12 +125,33 @@ namespace Thermodynamics.Harness
             };
         }
 
-        /// <summary>Builds a block dial from a setter, so each knob below is one line of intent.</summary>
-        private static Func<float, Func<BlockThermalProperties, BlockThermalProperties>> Block(
+        /// <summary>Builds a dial that acts on every block, so each knob below is one line of intent.</summary>
+        private static Func<float, Func<string, string, BlockThermalProperties, BlockThermalProperties>> Block(
             Action<BlockThermalProperties, float> set)
         {
-            return level => source =>
+            return level => (typeId, subtype, source) =>
             {
+                BlockThermalProperties copy = Copy(source);
+                set(copy, level);
+                return copy;
+            };
+        }
+
+        /// <summary>
+        /// Builds a dial that acts on one block type and leaves the rest of the game alone.
+        ///
+        /// This is the shape most balance changes actually take. A global multiplier asks what
+        /// happens if every block in the game changes at once, which is almost never what anyone
+        /// wants to ship; the survey found a short list of types carrying the tail, and the useful
+        /// question is what moving those does.
+        /// </summary>
+        private static Func<float, Func<string, string, BlockThermalProperties, BlockThermalProperties>> OnlyOn(
+            string typeId, Action<BlockThermalProperties, float> set)
+        {
+            return level => (blockType, subtype, source) =>
+            {
+                if (!string.Equals(blockType, typeId, StringComparison.Ordinal)) return source;
+
                 BlockThermalProperties copy = Copy(source);
                 set(copy, level);
                 return copy;
@@ -217,6 +241,71 @@ namespace Thermodynamics.Harness
                 Multiplier = true, Shipped = 1f, Levels = new[] { 0.5f, 0.75f, 1f, 1.5f, 2f },
                 Scenarios = Core,
                 Material = Block((p, x) => p.CriticalTemperature *= x),
+            });
+
+            // ---- the offenders, one type at a time -----------------------------------------------
+            //
+            // The survey and the census between them name the types that carry the tail:
+            // LargeJumpDrive is 67 % of the corpus's full-load heat and every ship that mounts one
+            // loses a block; LargeHydrogenEngine is hottest on 34 % of runaway rows against 4 % of
+            // rows overall; thrusters and reactors follow. These are the dials a balance pass would
+            // actually reach for, because they move the offenders without touching everything else.
+
+            float[] cuts = { 0.1f, 0.25f, 0.5f, 1f, 2f };
+
+            knobs.Add(new Knob
+            {
+                Name = "jumpdrive-waste",
+                Intent = "waste fraction of jump drives alone — 67 % of the corpus's load heat",
+                Multiplier = true, Shipped = 1f, Levels = cuts, Scenarios = Core,
+                OnlyType = "JumpDrive",
+                Material = OnlyOn("JumpDrive", (p, x) => p.ConsumerWasteEnergy *= x),
+            });
+
+            knobs.Add(new Knob
+            {
+                Name = "jumpdrive-capacity",
+                Intent = "heat capacity of jump drives alone — how long one takes to cook",
+                Multiplier = true, Shipped = 1f, Levels = new[] { 1f, 2f, 4f, 8f }, Scenarios = Core,
+                OnlyType = "JumpDrive",
+                Material = OnlyOn("JumpDrive", (p, x) => p.SpecificHeat *= x),
+            });
+
+            knobs.Add(new Knob
+            {
+                Name = "engine-waste",
+                Intent = "waste fraction of hydrogen engines alone — ships at 0.60",
+                Multiplier = true, Shipped = 1f, Levels = cuts, Scenarios = Core,
+                OnlyType = "HydrogenEngine",
+                Material = OnlyOn("HydrogenEngine", (p, x) => p.ProducerWasteEnergy *= x),
+            });
+
+            knobs.Add(new Knob
+            {
+                Name = "engine-conductivity",
+                Intent = "how fast a hydrogen engine sheds into its neighbours",
+                Multiplier = true, Shipped = 1f, Levels = new[] { 1f, 2f, 4f, 8f }, Scenarios = Core,
+                OnlyType = "HydrogenEngine",
+                Material = OnlyOn("HydrogenEngine", (p, x) => p.Conductivity *= x),
+            });
+
+            knobs.Add(new Knob
+            {
+                Name = "thruster-waste",
+                Intent = "waste fraction of thrusters alone — charged against thrust, not draw",
+                Multiplier = true, Shipped = 1f, Levels = cuts, Scenarios = Core,
+                OnlyType = "Thrust",
+                Material = OnlyOn("Thrust", (p, x) => p.ConsumerWasteEnergy *= x),
+            });
+
+            knobs.Add(new Knob
+            {
+                Name = "reactor-waste",
+                Intent = "waste fraction of reactors alone — ships at 0.01",
+                Multiplier = true, Shipped = 1f, Levels = new[] { 0.5f, 1f, 2f, 4f, 8f },
+                Scenarios = Core,
+                OnlyType = "Reactor",
+                Material = OnlyOn("Reactor", (p, x) => p.ProducerWasteEnergy *= x),
             });
 
             // ---- the world dials ---------------------------------------------------------------

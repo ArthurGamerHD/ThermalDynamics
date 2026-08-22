@@ -88,7 +88,8 @@ namespace Thermodynamics.Tests
         /// curve rather than as an error.
         /// </summary>
         private static void Run(string knob, float level, bool shipped, string[] wanted,
-            ThermalSettings settings, Func<BlockThermalProperties, BlockThermalProperties> material,
+            ThermalSettings settings,
+            Func<string, string, BlockThermalProperties, BlockThermalProperties> material,
             List<Blueprints.Ship> ships, Dictionary<string, Battery.Scenario> scenarios)
         {
             List<string> rows = new List<string>();

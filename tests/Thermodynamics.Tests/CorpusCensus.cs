@@ -65,6 +65,15 @@ namespace Thermodynamics.Tests
 
             Assert.True(withExposure > 0, "not one ship reported any exposed area");
             Assert.True(withPower > 0, "not one ship reported any installed power");
+
+            // The geometry terms are what the hot-spot question rests on, and a broken link graph
+            // or an unapplied load would write a full-looking file of zeroes for all of them.
+            int withSources = 0;
+            foreach (Censused ship in results)
+            {
+                if (Positive(ship.Row.Split(','), HeatSourcesColumn)) withSources++;
+            }
+            Assert.True(withSources > 0, "not one ship reported a single heat source");
         }
 
         /// <summary>Column of <c>exposed_area_m2</c> in <see cref="Header"/>.</summary>
@@ -72,6 +81,9 @@ namespace Thermodynamics.Tests
 
         /// <summary>Column of <c>installed_power_w</c> in <see cref="Header"/>.</summary>
         private const int InstalledPowerColumn = 16;
+
+        /// <summary>Column of <c>heat_sources</c>, the first of the geometry terms.</summary>
+        private const int HeatSourcesColumn = 31;
 
         private static bool Positive(string[] fields, int column)
         {
@@ -88,7 +100,9 @@ namespace Thermodynamics.Tests
             + "armor_n,producer_n,installed_power_w,store_n,store_power_w,"
             + "thruster_n,thrust_n,tool_n,consumer_n,consumer_draw_w,other_n,"
             + "waste_idle_w,waste_full_w,waste_burn_w,"
-            + "exposure_m2_per_kw,capacity_j_per_k_per_w,top_source,top_source_w,top_source_n";
+            + "exposure_m2_per_kw,capacity_j_per_k_per_w,top_source,top_source_w,top_source_n,"
+            + "heat_sources,w_per_m2,max_depth,heat_depth_mean,heat_depth_max,clumping,heat_gini,"
+            + "local_w_max,local_w_per_m2_max,heat_spread_m,hottest_conductance_w_per_k";
 
         public const string CompositionHeader =
             "ship,workshop_id,subtype,type_id,count,waste_full_w,share_of_waste";
@@ -192,8 +206,13 @@ namespace Thermodynamics.Tests
             float idle = ShipLoad.Apply(assembly, ShipLoad.State.Idle);
             float burn = ShipLoad.Apply(assembly, ShipLoad.State.Burn(Face.Forward));
 
-            // Full last, so the per-block figures the composition rows read are the full-load ones.
+            // Full last, so the per-block figures the composition rows and the geometry read are
+            // the full-load ones.
             float full = ShipLoad.Apply(assembly, ShipLoad.State.Full);
+
+            // Where the heat is put, rather than how much of it there is. Measured after the load
+            // is applied, because every figure in it reads HeatGenerationWatts.
+            HeatGeometry.Result geometry = HeatGeometry.Measure(assembly, ship.Large);
 
             Dictionary<string, double> wasteBySubtype = new Dictionary<string, double>();
             foreach (ThermalNode node in assembly.Nodes)
@@ -263,7 +282,18 @@ namespace Thermodynamics.Tests
             row.Append(CorpusRecord.Text(topSource)).Append(',');
             row.Append(CorpusRecord.Num((float)topWatts)).Append(',');
             row.Append(topSource.Length == 0 || !counts.ContainsKey(topSource)
-                ? 0 : counts[topSource]);
+                ? 0 : counts[topSource]).Append(',');
+            row.Append(geometry.Sources).Append(',');
+            row.Append(CorpusRecord.Num((float)geometry.WattsPerSquareMetre)).Append(',');
+            row.Append(geometry.MaxDepth).Append(',');
+            row.Append(CorpusRecord.Num((float)geometry.HeatDepthMean)).Append(',');
+            row.Append(geometry.HeatDepthMax).Append(',');
+            row.Append(CorpusRecord.Num((float)geometry.Clumping)).Append(',');
+            row.Append(CorpusRecord.Num((float)geometry.Gini)).Append(',');
+            row.Append(CorpusRecord.Num((float)geometry.LocalWattsMax)).Append(',');
+            row.Append(CorpusRecord.Num((float)geometry.LocalWattsPerAreaMax)).Append(',');
+            row.Append(CorpusRecord.Num((float)geometry.SpreadMetres)).Append(',');
+            row.Append(CorpusRecord.Num((float)geometry.HottestSourceConductance));
 
             censused.Row = row.ToString();
 

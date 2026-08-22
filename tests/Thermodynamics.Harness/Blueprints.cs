@@ -458,11 +458,20 @@ namespace Thermodynamics.Harness
         /// across a few thousand distinct types, so this is the difference between a pass that runs
         /// and one that does not.
         /// </summary>
-        private static Func<BlockThermalProperties, BlockThermalProperties> materialOverride;
+        private static Func<string, string, BlockThermalProperties, BlockThermalProperties> materialOverride;
 
         /// <summary>
-        /// Rewrites every block's thermal properties as its model is built, for a sweep that has to
-        /// ask what one material dial does to a real hull.
+        /// Rewrites a block's thermal properties as its model is built, for a sweep that has to ask
+        /// what one material dial does to a real hull.
+        ///
+        /// <para>
+        /// **It is handed the block's type and subtype, and that is what makes per-type dials
+        /// possible.** A global multiplier can only ask "what if every block in the game changed",
+        /// which is rarely the question: the survey found a short list of types carrying most of the
+        /// tail — LargeJumpDrive alone is 67 % of the corpus's load heat — so the useful dial is the
+        /// one that moves those and leaves the rest of the game alone. The first version of this
+        /// hook took only the properties, and could not express that.
+        /// </para>
         ///
         /// <para>
         /// **Setting it empties the model cache**, which is the whole difficulty. Models are built
@@ -481,7 +490,7 @@ namespace Thermodynamics.Harness
         /// and clears it.
         /// </para>
         /// </summary>
-        public static Func<BlockThermalProperties, BlockThermalProperties> MaterialOverride
+        public static Func<string, string, BlockThermalProperties, BlockThermalProperties> MaterialOverride
         {
             get { return materialOverride; }
             set
@@ -503,8 +512,8 @@ namespace Thermodynamics.Harness
             // Catalog, which has had an override for as long as the profiles have existed; corpus
             // ships are built here and had none, so every block-level dial — heat capacity,
             // emissivity, conductivity, the waste fractions — was unmeasurable on a real hull.
-            Func<BlockThermalProperties, BlockThermalProperties> material = materialOverride;
-            if (material != null) thermal = material(thermal);
+            Func<string, string, BlockThermalProperties, BlockThermalProperties> material = materialOverride;
+            if (material != null) thermal = material(definition.TypeId, definition.SubtypeId, thermal);
 
             model = BlockModel.Solid(definition.SubtypeId, definition.Size, definition.Mass, thermal);
 
