@@ -360,9 +360,15 @@ claimed and had drifted a long way from. On the three 42,051-block ships a field
 11 substeps and 85–150 ms a tick, the same number now buys about four substeps.
 
 What this retires is the claim that only grids past a hundred thousand blocks reach the default. A
-step's cost is size times stiffness: `TheShippedAllowanceBindsOnAStiffMidSizeGrid` pins an
-8,904-node rig whose substep costs 56,395 element visits, which the allowance shortens to about
-three quarters of real time.
+step's cost is size times stiffness, and `TheShippedAllowanceFitsThisGridAndABiggerStepDoesNot`
+pins both halves of that on one 8,904-node rig. Counting links alone, its 20,779 links bought 48
+substeps against a demand of 23, so the budget did nothing at all. Counting nodes as well, one
+substep over that rig costs 56,395 element visits and the same allowance buys 17 — which still
+covers the 11.6 the shipped eight steps a second asks for. Whether the allowance binds is
+therefore a question about the step **rate** rather than about block count: at four steps a second
+the same grid asks 23.2 of each step, and the allowance shortens it to between a half and all of
+real time. Shortened rather than clamped — each step keeps its accuracy and simulated time is what
+is traded.
 
 A world whose config predates the rename takes the new default rather than importing its old
 number, which would be a value in the wrong unit; the load path logs when it drops one.

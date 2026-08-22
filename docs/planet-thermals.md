@@ -116,12 +116,19 @@ dotnet run --project tests/Thermodynamics.Sim -- planets --write Data/Planets.xm
 ```
 
 `TheShippedPlanetsFileIsWhatThisCodeGenerates` fails if the file on disk drifts from what the code
-produces. That is deliberate: the reasoning behind every figure lives in code beside a test, and a
-number that cannot be regenerated is a number nobody can check. Other tests hold that every entry
-carries every property the mod reads (a missing one silently takes a reader default), that the
-fallback entry is byte-for-byte the earthlike climate the mod always shipped, and that no combination
-of definition inputs — including ones no shipped world uses — produces a negative, NaN or inverted
-climate.
+produces, and names the first line that differs. That is deliberate: the reasoning behind every
+figure lives in code beside a test, and a number that cannot be regenerated is a number nobody can
+check.
+
+> This page claimed that check existed for some time before it did. The file is what the mod
+> reads, so the tests around it read the file rather than the generator, and no one had put the two
+> side by side — they happened to agree. Regenerating after a change to `PlanetLab` is now
+> something the suite insists on rather than something to remember.
+
+Other tests hold that every entry carries every property the mod reads (a missing one silently
+takes a reader default), that the fallback entry is byte-for-byte the earthlike climate the mod
+always shipped, and that no combination of definition inputs — including ones no shipped world
+uses — produces a negative, NaN or inverted climate.
 
 ## 6. What happens when the file does not reach the mod
 

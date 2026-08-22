@@ -356,6 +356,100 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// The first three words of a camel-case name — "TheShippedPlanetsFile" from
+        /// <c>TheShippedPlanetsFileIsCompleteAndReadable</c>.
+        /// </summary>
+        private static string CamelPrefix(string name, int words)
+        {
+            MatchCollection parts = Regex.Matches(name, @"[A-Z][a-z0-9]*");
+            if (parts.Count < words) return null;
+
+            System.Text.StringBuilder prefix = new System.Text.StringBuilder();
+            for (int i = 0; i < words; i++) prefix.Append(parts[i].Value);
+            return prefix.ToString();
+        }
+
+        /// <summary>
+        /// A test the documentation names by name has not been renamed out from under it.
+        ///
+        /// <para>
+        /// Citing a test is how a page turns a claim into evidence, and it is the citation rather
+        /// than the claim that rots: the test gets renamed, the page keeps the old name, and a
+        /// reader who goes looking finds nothing and cannot tell whether the check was removed or
+        /// merely moved. Two had gone that way and both were worse than a dead link. One named a
+        /// test that had been renamed <em>and</em> had reversed its conclusion — the page said the
+        /// shipped budget bound on a mid-size grid where the test says it fits. The other promised
+        /// that the shipped <c>Planets.xml</c> was checked against the code that generates it, and
+        /// no such check existed; the file and the generator happened to agree.
+        /// </para>
+        ///
+        /// <para>
+        /// Flagged only when a real test shares the name's first three words, which is what a
+        /// rename looks like. A looser rule cannot work: the pages are full of backticked
+        /// camel-case names that are settings, engine API members and exception types, and none of
+        /// those is declared in this repository either.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void NoPageNamesATestThatHasBeenRenamed()
+        {
+            HashSet<string> declared = new HashSet<string>(StringComparer.Ordinal);
+            List<string> testNames = new List<string>();
+
+            foreach (string file in Directory.GetFiles(
+                Path.Combine(RepoRoot(), "tests", "Thermodynamics.Tests"), "*.cs"))
+            {
+                string source = File.ReadAllText(file);
+
+                foreach (Match match in Regex.Matches(source,
+                    @"public\s+(?:async\s+)?(?:void|Task)\s+(\w+)\s*\("))
+                {
+                    declared.Add(match.Groups[1].Value);
+                    testNames.Add(match.Groups[1].Value);
+                }
+
+                foreach (Match match in Regex.Matches(source, TestClassPattern))
+                {
+                    declared.Add(match.Groups[1].Value);
+                }
+            }
+
+            Assert.True(testNames.Count > 1000,
+                "only " + testNames.Count + " test names were found, so this test is looking in the"
+                + " wrong place and would pass whatever a page claimed");
+
+            Dictionary<string, string> byPrefix = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (string name in testNames)
+            {
+                string prefix = CamelPrefix(name, 3);
+                if (prefix != null && !byPrefix.ContainsKey(prefix)) byPrefix[prefix] = name;
+            }
+
+            List<string> renamed = new List<string>();
+
+            foreach (string file in MarkdownFiles())
+            {
+                foreach (Match match in Regex.Matches(File.ReadAllText(file),
+                    @"`([A-Z][a-z0-9]*(?:[A-Z][a-z0-9]*){3,})`"))
+                {
+                    string cited = match.Groups[1].Value;
+                    if (declared.Contains(cited)) continue;
+
+                    string prefix = CamelPrefix(cited, 3);
+                    string actual;
+                    if (prefix == null || !byPrefix.TryGetValue(prefix, out actual)) continue;
+
+                    renamed.Add(Relative(file) + ": " + cited + " — did the page mean " + actual + "?");
+                }
+            }
+
+            renamed.Sort(StringComparer.Ordinal);
+            Assert.True(renamed.Count == 0,
+                "documentation naming tests that have been renamed:\n  "
+                + string.Join("\n  ", renamed.ToArray()));
+        }
+
+        /// <summary>
         /// Every class that holds tests says what it is for.
         ///
         /// <para>

@@ -281,8 +281,56 @@ namespace Thermodynamics.Tests
         // ---- the generated file --------------------------------------------------------------------
 
         /// <summary>
-        /// Data/Planets.xml is the source of truth, so this checks the file rather than comparing it
-        /// to the generator. PlanetLab is a one-time rebalance tool, not the authority.
+        /// The shipped file is byte-for-byte what the code that explains it produces.
+        ///
+        /// <para>
+        /// <c>planet-thermals.md</c> §5 said this was checked and it was not. The claim is worth
+        /// making true rather than retracting: every figure in that file is derived from a world's
+        /// own generator definition, the departures from the derivation are written into it beside
+        /// the entries they affect, and a number that cannot be regenerated from the reasoning
+        /// behind it is a number nobody can check. Without this, a change to
+        /// <see cref="PlanetLab"/> that was never written out would leave the reasoning and the
+        /// shipped climates describing different worlds.
+        /// </para>
+        ///
+        /// <para>
+        /// It is the file the mod reads, so the cases below still read the file rather than the
+        /// generator — the point of this one is that there is no difference to read.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheShippedPlanetsFileIsWhatThisCodeGenerates()
+        {
+            string path = Path.Combine(RepoRoot(), "Data", "Planets.xml");
+            string onDisk = File.ReadAllText(path);
+            string generated = PlanetLab.Xml();
+
+            if (onDisk == generated) return;
+
+            // Name the first line that differs: the file is six hundred lines and a diff of the
+            // whole of it in an assertion message is not readable.
+            string[] a = onDisk.Replace("\r\n", "\n").Split('\n');
+            string[] b = generated.Replace("\r\n", "\n").Split('\n');
+
+            for (int i = 0; i < a.Length && i < b.Length; i++)
+            {
+                if (a[i] == b[i]) continue;
+
+                Assert.Fail("Data/Planets.xml has drifted from PlanetLab.Xml() at line " + (i + 1)
+                    + ".\n  on disk:    " + a[i]
+                    + "\n  generated:  " + b[i]
+                    + "\nRegenerate with: dotnet run --project Thermodynamics.Sim -- planets"
+                    + " --write ../Data/Planets.xml");
+            }
+
+            Assert.Fail("Data/Planets.xml has " + a.Length + " lines against the generator's "
+                + b.Length + "; regenerate it.");
+        }
+
+        /// <summary>
+        /// Data/Planets.xml is what the mod reads, so this checks the file itself rather than
+        /// the generator — <see cref="TheShippedPlanetsFileIsWhatThisCodeGenerates"/> is what
+        /// holds the two together.
         /// </summary>
         [Fact]
         public void TheShippedPlanetsFileIsCompleteAndReadable()
