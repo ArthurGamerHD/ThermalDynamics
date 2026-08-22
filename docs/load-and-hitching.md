@@ -3,7 +3,7 @@
 What the simulation costs as a grid grows, measured rather than extrapolated; what makes a large
 grid stutter; and what live worlds cost when the same questions are asked of them.
 
-> The rules argued here are stated canonically in [rules.md](rules.md): `M4` `M5` `M7` `E3`.
+> The rules argued here are stated canonically in [rules.md](rules.md): `M4` `M5` `M7` `E3` `D7`.
 
 | Looking for | Go to |
 | --- | --- |
@@ -279,14 +279,14 @@ bookkeeping.
 
 ---
 
-## The findings
+## What keeps the spike proportional
 
-Ten causes of hitching, each stated as what the code does now, with the measurement that shows what
-the fix was worth. What each one used to do is in the body, because a before/after figure is the
-evidence — the dates are in the [change log](#change-log).
+Ten properties the code holds, each with the measurement that shows what it is worth. Each is a
+place a tick once cost the whole grid for a change that touched one block, so each carries the
+figure it replaced: a before-and-after is the evidence that the property holds, and the dates are in
+the [change log](#change-log).
 
-
-### 1. Placing a block costs its own degree, not the whole graph — *fixed*
+### 1. Placing a block costs its own degree, not the whole graph
 
 Placing one block marked the graph stale and the next tick rebuilt every link on the ship. On a
 million blocks that is 456 ms for one block.
@@ -304,7 +304,7 @@ that the graph it builds is the same graph a full rebuild produces.
 block whose mounting changed, a new adjacency source. Removal is the one that matters and is
 listed under [what is still open](#what-is-still-open).
 
-### 2. The room mapper's budget bounds its scan — *fixed*
+### 2. The room mapper's budget bounds its scan
 
 The flood fill is budgeted so no tick pays for the whole grid. The walk between one room and the
 next was not: it counted as a single unit of budget however far it went, and across a pass that
@@ -317,7 +317,7 @@ is bounded.
 The load test asserting the budget was respected passed throughout, because it read the counter
 that was not counting the scan. **A budget test is only as good as what it counts.**
 
-### 3. The exposure refresh is budgeted — *fixed*
+### 3. The exposure refresh is budgeted
 
 It walked every node on the grid on the tick a room pass published — the same tick as the
 mapper's own worst call, which is how one tick came to cost 109 ms on a grid whose steady cost is
@@ -326,14 +326,14 @@ twenty. It is resumable now, in slices scaled off the node count.
 Some nodes read the previous map for a few ticks. That is not a new inaccuracy: it is the map they
 had been reading for the several hundred ticks the pass took to build.
 
-### 4. A search that finds nothing costs nothing — *fixed*
+### 4. A search that finds nothing costs nothing
 
 The coolant loop search and the heat pump rebuild each walked every block asking a question almost
 every block answers no to, on every topology change. The grid counts them as they are placed, so a
 ship with no plumbing — nearly every ship — skips two passes over a million blocks for an integer
 test.
 
-### 5. The mass sweep is a rota, not a walk over every block — *fixed*
+### 5. The mass sweep is a rota, not a walk over every block
 
 Block mass changes with build progress and damage and the game raises no event for either, so the
 only way to notice is to look. It looked at every block on the grid, every eight steps, asking the
@@ -343,7 +343,7 @@ whole every eight steps.
 This is the one finding the synthetic benchmarks cannot see — a harness has no game blocks to ask
 — which is why the load numbers are not the whole story and telemetry from a real session is.
 
-### 6. Removing a block costs its own degree — *fixed*
+### 6. Removing a block costs its own degree
 
 The companion to finding 1, and the harder direction. A removed block's links have to be *found*
 before they can be dropped, and scanning the link list for them is proportional to the grid. Its
@@ -365,7 +365,7 @@ so a stale index there would have poured a room's heat into whichever block inhe
 that builds and grinds in a generated order and compares the graph against a rebuild after every
 single change.
 
-### 7. A step's cost is stable when nothing changes — *fixed*
+### 7. A step's cost is stable when nothing changes
 
 A step's cost is its substep count times its links, and the substep count is set by the stiffest
 node on the grid, which moves as the grid heats. On a 127k hull that produced a step costing 15 ms
@@ -383,7 +383,7 @@ lurches. `ThermalSimulation.SimulationRate` reports how much of real time a grid
 with, so a slow grid says so rather than being mysterious. The default is about one 60 fps
 frame's worth of link visits; grids below roughly a hundred thousand blocks never reach it.
 
-### 8. Publishing the shadow map touches only what changed — *fixed*
+### 8. Publishing the shadow map touches only what changed
 
 The self-shadow walk was budgeted. Publishing its answer was not: a completed pass called a loop
 over every node on the grid, six faces each — 760,000 shadow lookups on a 127k hull — from inside
@@ -393,7 +393,7 @@ The same shape of mistake as the room mapper's, and the same fix: the refresh is
 steps. It is advanced inside the pass rather than at the top of a step, so a grid small enough for
 the budget to cover in one go still finishes in the same substep that completed the pass.
 
-### 9. Grids are staggered across frames — *fixed*
+### 9. Grids are staggered across frames
 
 The one the benchmarks could never have found, because they run a single grid.
 
@@ -409,19 +409,18 @@ the work inside each of them — one 42,051-block ship on its own frame is a stu
 of the other two hundred can fix. Finding 10 replaced it, and `ThermalGridScheduler` now simply
 gives every grid a share of every frame.
 
-**This is a correction, not a discovery.** Earlier in the same session this was investigated by
-reading `MyDistributedTypeUpdater<MyEntity>(10)` in the engine assemblies, which computes
-`m_step = ceil(Count / UpdateInterval)` and walks a slice per frame — and concluded, in a
-committed document, that the engine already staggered and there was nothing to do. The reading was
-plausible and the conclusion was wrong. The measurement settled it in one line: 1,392 of 13,915.
-
-The wrong version of that conclusion was the more dangerous kind, too. Had the fix been written on
-the original belief it would have been *invisible* — a stagger applied on top of a stagger that
-was not there would simply have worked, and nobody would have learned that the premise was false.
+> **The engine does not stagger this, whatever the source reads like.**
+> `MyDistributedTypeUpdater<MyEntity>(10)` computes `m_step = ceil(Count / UpdateInterval)` and
+> walks a slice per frame, which reads exactly like a stagger and is why the conclusion "the engine
+> already does this" was reached from the assemblies and written down. The measurement settled it in
+> one line: 1,392 frames of 13,915. Had the fix been written on the original belief it would have
+> been *invisible* — a stagger applied on top of a stagger that was not there simply works, and
+> nobody learns the premise was false. This is `D7`'s other half: measure before believing a
+> subsystem is innocent as well as before believing it is guilty.
 
 ---
 
-### 10. A step is spread across the frames of its window — *fixed*
+### 10. A step is spread across the frames of its window
 
 The one the earlier findings kept circling without naming.
 
@@ -570,12 +569,6 @@ multirate stepping, all designed in [scale-design.md](scale-design.md) and none 
 > took the same step from 623 ms to 118 ms and the per-visit rate to 4.7 ns. What is left may well
 > be near the floor; the claim has been wrong once and is not being made again without a
 > measurement that isolates it.
-
-~~**Removing a block still rebuilds the whole graph.**~~ **Done**, and this paragraph outlived the
-fix by contradicting finding 6 above. `RemoveNodeIncremental` unpicks a node's links through the
-intrusive `nodeFirstLink` chains, moves one node into the hole and repairs every holder of a node
-index through `RepointNode`, so removal costs the node's degree. `RefreshBlock` now takes the same
-route for a block whose mounting changed, and `DropLinksOf` is shared between them.
 
 **Memory is about 1.8 KB a block**, against the ~110 bytes a node budgeted in
 [scale-design.md §6](scale-design.md#6-data-structures). Half of what a grid retains is indexed by
@@ -732,6 +725,7 @@ reasoning that produced it was sound and the premise was not.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Put the ten spike findings in the present tense: each is a property the code holds rather than a thing that was fixed, and the *fixed* marker on all ten of them said only that none was outstanding. Removed the struck-through *Removing a block still rebuilds the whole graph* from [What is still open](#what-is-still-open), which contradicted finding 6 four screens above it. |
 | 2026-08-22 | Corrected the figures in the sentence reading the ladder's own divergence: it quoted a tick of 42 ms against a full step of 103, which matches neither the current table (25.87 against 118.20) nor the pre-refresh one named two paragraphs later (55 against 623). A figure on a page comes from the dataset the page is about (`E5`). |
 | 2026-08-22 | Absorbed `field-tuning.md`: its three live runs are the field half of this page's question and now sit beside the lab half. Its decorative-block stiffness findings moved to [stiffness.md](stiffness.md) and its `Frequency` sweep to [configuration.md](configuration.md#frequency-is-not-the-cost-dial-it-looks-like), each to the page that already owned the subject. Added the standard header and this log. |
 | 2026-08-20 | Calibrated the step budget against a real world, and resolved it by fixing the counting rather than the default: at `links + 4 × nodes` the unchanged 1,000,000 grants 3.9 substeps where link-only counting granted 11. Measured a fleet of 242 grids in atmosphere. |

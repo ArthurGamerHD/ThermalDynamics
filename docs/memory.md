@@ -44,11 +44,11 @@ decides whether one of them can be loaded at all.
 
 ## Where it goes
 
-Measured at 126,731 blocks. The first two columns are the original armour-and-grating benchmark
-hull before and after the four changes in §1; the third is the same measurement on the hull the
-benchmarks build **now**.
+Measured at 126,731 blocks. The first two columns are the original armour-and-grating benchmark hull
+before and after the four §1 changes measured on it; the third is the same measurement on the hull
+the benchmarks build **now**, which also carries 1e.
 
-| Structure | armour hull, before | armour hull, after §1 | census hull, today | Scales with |
+| Structure | armour hull, before | armour hull, after 1a–1d | census hull, today | Scales with |
 | --- | ---: | ---: | ---: | --- |
 | `BlockInstance` | 456 | 240 | **240** | blocks, and their **cells** |
 | `GridModel` indexes | 122 | 122 | **86** | blocks, and their **cells** |
@@ -102,11 +102,13 @@ everything else stays put. Five times the blocks is the least of it — see §8.
 
 ---
 
-## What has been done
+## What the five local changes bought
 
-Four changes, all local, together worth 60 % of what a grid retained and 71 % of its peak.
+All five are in force, and together they are worth 60 % of what a grid retained and 71 % of its
+peak. Each carries the figure it replaced, because a before-and-after is the evidence that the
+structure is the shape this page says it is.
 
-### 1a. The mapper's visited set is a bitset — *done*
+### 1a. The mapper's visited set is a bitset
 
 A flood fill accumulates, by the end of a pass, every cell of its bounding box. It held them in a
 `HashSet<Vector3I>`, which spends about 31 bytes a cell once buckets, hash codes and load factor
@@ -123,7 +125,7 @@ dense in, which is exactly what a bitset is for.
 At a million blocks the same change is worth about 440 MB, because it scales with the bounding box
 rather than with the ship.
 
-### 1b. Open air is counted, not stored — *done*
+### 1b. Open air is counted, not stored
 
 `RoomMap` kept a `HashSet<Vector3I>` of every cell classified as open air: about nine tenths of the
 bounding box, 1.3 million of 1.5 million cells here, held at roughly forty bytes each to record the
@@ -140,7 +142,7 @@ on the armour hull, whose interior was one open region. On the census hull the s
 the same 1,094 bytes a block of open air, and what is left behind it is the 128 bytes of *rooms*
 that the armour hull did not have. See the note under the table.
 
-### 1c. Face fractions are shared per model and orientation — *done*
+### 1c. Face fractions are shared per model and orientation
 
 Every `BlockInstance` allocated four `float[6]` arrays for its mount and seal fractions — 192 of
 its 456 bytes — and filled them with the same twenty-four numbers as every identically placed block
@@ -150,13 +152,24 @@ twenty-four per block type, so they are built once and shared. The door state th
 
 **Best return per line changed**: `BlockInstance` went from 456 to 240 bytes a block.
 
-### 1d. Solver arrays grow by a quarter, not by double — *done*
+### 1d. Solver arrays grow by a quarter, not by double
 
 `EnsureBuffers` allocated `nodes.Count * 2`. Around fourteen arrays are indexed by node, so a
 settled grid carried a whole spare copy of each. Doubling is the right growth policy for something
 appended to in a tight loop; these grow when a block is placed, which is not that.
 
 ---
+
+### 1e. A grid keeps one index on a block key, not two
+
+`GridModel` kept `blocksByKey` and `blockSlots` as separate dictionaries on the same key, the
+second added for O(1) removal. A slot *is* a block, so the key map was redundant: it is gone, and
+`GetByKey` goes through the slot map to the flat list. Folding the two into a struct, which is what
+this was first written down as, was never needed.
+`bench memory --size 126731` reads the *GridModel indexes* row at **86 B/block against 120**, and
+the retained total at 1,061 against 1,095. `LookupByKeySurvivesARemovalFromTheMiddle` pins the one
+thing the change put at risk: the slot map is the structure a removal rewrites, moving the list's
+last entry into the hole.
 
 ## What is worth doing next
 
@@ -206,16 +219,6 @@ and the debug overlay. `CollectDiagnostics` is false in ordinary play, so a ship
 paying 32 bytes a node to store nothing. A side array, allocated when diagnostics are switched on
 and dropped when they are switched off, costs a null check on a path that already has one.
 
-### ~~6. Fold the block slot map into the block key map~~ — **done, 34 B/block**
-
-`GridModel` kept `blocksByKey` and `blockSlots` as separate dictionaries on the same key, the
-second added for O(1) removal. It did not need folding into a struct: a slot *is* a block, so the
-key map was redundant and is gone, and `GetByKey` now goes through the slot map to the flat list.
-`bench memory --size 126731` reads the *GridModel indexes* row at **86 B/block against 120**, and
-the retained total at 1,061 against 1,095. `LookupByKeySurvivesARemovalFromTheMiddle` pins the one
-thing the change put at risk: the slot map is the structure a removal rewrites, moving the list's
-last entry into the hole.
-
 ### 8. For SE2: blocks as boxes, not cells — the only one that matters at that scale
 
 Everything above is a fraction of a fixed per-block cost. This one is a multiplier.
@@ -248,8 +251,8 @@ where one exists. [scale-design.md](scale-design.md#room-mapping-is-the-one-that
 
 | | 126k blocks retained | 500k retained | SE2 outlook |
 | --- | ---: | ---: | --- |
-| armour hull, before §1 | 279 MB (2,311 B/block) | — | hopeless |
-| armour hull, after §1 | 113 MB (932 B/block) | 459 MB (952 B/block) | still needs §8 and §9 |
+| armour hull, before 1a–1d | 279 MB (2,311 B/block) | — | hopeless |
+| armour hull, after 1a–1d | 113 MB (932 B/block) | 459 MB (952 B/block) | still needs §8 and §9 |
 | **census hull, today** | **126 MB (1,023 B/block)** | **552 MB (1,141 B/block)** | still needs §8 and §9 |
 | after 2, 3, 4 and 5 | ~90 MB (~730 B/block) | ~390 MB (~800 B/block) | unchanged |
 
@@ -258,7 +261,7 @@ is still indexed by *enclosed* volume, which is why the third row climbs with gr
 second did not: a bigger ship is a larger fraction rooms. Everything else on the page is honest
 per-node and per-block state.
 
-Items 2 to 6 are local changes with no design work behind them and would take another 20 %. They
+Items 2 to 5 are local changes with no design work behind them and would take another 20 %. They
 do not change the SE2 picture, because that is not about constants — it is about which things are
 counted per cell, which is §8 and §9.
 
@@ -268,6 +271,7 @@ counted per cell, which is §8 and §9.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Put the five completed changes in the present tense — each is a structure the code has, not a thing that was done — and moved the fifth up beside the other four instead of leaving it struck through in the list of what is still worth doing. |
 | 2026-08-22 | Added the standard header and this change log. |
 | 2026-08-21 | Held a room's cells in a list, and dropped a grid's second index on the key it already had — 34 B/block and 38 B/block back respectively. Corrected a page measured on a hull that no longer exists. |
 | 2026-08-18 | Corrected the largest row: the page had called bounding volume its biggest cost after that had stopped being true. Took 60% of what a grid holds with four local changes. Opened the page by measuring where a grid's memory goes, and corrected the 2.5 GB figure it first reported — that was `GetTotalMemory` without a collection and counted garbage. |

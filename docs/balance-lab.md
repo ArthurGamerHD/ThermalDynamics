@@ -272,9 +272,9 @@ Two filters apply whatever the route:
   way to tell whether the block that failed to resolve was a decorative panel or the reactor.
 * **Designs, not fragments.** Ships under 25 blocks are cockpits, doors and test rigs.
 
-## What exists now
+## The pieces
 
-| Piece | State |
+| Piece | What it does |
 | --- | --- |
 | [`GameBlocks`](../tests/Thermodynamics.Harness/GameBlocks.cs) | Reads every definition out of the installed game — size, mounts, sealing, build cost. |
 | [`Blueprints`](../tests/Thermodynamics.Harness/Blueprints.cs) | Turns a `bp.sbc` into ships the solver can run. Models are derived and shared across the corpus. |
@@ -287,10 +287,9 @@ Two filters apply whatever the route:
 | [`Battery`](../tests/Thermodynamics.Harness/Battery.cs), [`ScenarioOutcome`](../tests/Thermodynamics.Harness/ScenarioOutcome.cs) | Step 3. `-- battery`. |
 | Steps 0 and 4 | Criteria written above; the settings sweep is designed and unbuilt. |
 
-Measured on the 16 blueprints already subscribed on the development machine: 140 ships, 1 modded,
-107 under the size floor, **32 usable** totalling 25,893 blocks, from 26 up to 9,378 blocks each.
-The yield is low because a subscription list is mostly mods; a corpus acquired as blueprints
-deliberately will do far better.
+The corpus these run against is 9,981 blueprints yielding **8,142 hulls**, of which 8,132 are
+distinct name-and-id pairs. A subscription list yields far less — mostly mods, and mostly under the
+size floor — which is why the acquisition route matters.
 
 ## Specimens
 
@@ -357,142 +356,52 @@ Two other things made it faster without touching accuracy: runs stop on equilibr
 the clock — most are flat long before their ceiling — and the definition caches are built once
 before the workers start rather than by whichever arrives first. Screening 32 ships is now 0.1 s.
 
-## The first full cycle
-
-Thirty-two ships through twenty scenarios — 640 runs, 432 s wall clock, 0.68 s a run on 31 workers.
-
-| Scenario | Peak K | Mean K | Worst hot spot | Ships over critical |
-| --- | --- | --- | --- | --- |
-| `vacuum-shadow` / `idle` | 470 | 154 | 152 | **0 of 32** |
-| `vacuum-sunlit` | 476 | 210 | 148 | 0 of 32 |
-| `surface-hot-noon` | 377 | 295 | 78 | 0 of 32 |
-| `surface-cold-night` | 365 | 279 | 82 | 0 of 32 |
-| `underground` | 362 | 280 | 78 | 0 of 32 |
-| `full-electrical` | 2,507 | 277 | 2,076 | 9 of 32 |
-| `all-peak` | 4,033 | 491 | 3,187 | 17 of 32 |
-| `burn-down` | 3,141 | 339 | 2,661 | 16 of 32 |
-| `burn-left` | 1,687 | 320 | 1,304 | 14 of 32 |
-| `flight-100` | 2,582 | 307 | 2,274 | 4 of 32 |
-| `reentry` | 381 | 312 | 67 | 0 of 32 |
-| `recovery` | 470 | 162 | 177 | **0 of 32** |
-
-Read against the criteria, and **provisionally**, because the counts are contaminated by the sealed
-gyro below:
-
-* **G1 holds.** Not one ship in thirty-two goes critical at rest, in any environment — vacuum,
-  sunlit, hot surface, cold night, underground. The target was under 1 %.
-* **G2 appears to hold.** Between a quarter and a half of ships reach critical under sustained load,
-  against a target of at least 20 %. This is the criterion I expected to fail.
-* **G5 holds.** Every ship recovers: `recovery` is 0 of 32 over critical, back to a 162 K mean.
-* **G3, G4, G6** need the cooled comparison, the correlation analysis and the settings sweep, none
-  of which are built.
-
-The corpus is thirty-two subscribed ships, so none of this is a population claim. It says the
-pipeline works end to end and the criteria are computable, which is what a first cycle is for.
-
-## Sealed blocks: three harness faults, not a mod defect
+## A block with no exit is the lab's own failure mode
 
 A block with no exposed face and no conduction has nowhere at all to send its heat. It climbs until
 the run stops — no exception, no NaN, no warning, just a number nobody has a prior for. It is the
-single most misleading failure this lab can produce, and it produced it three times.
+single most misleading result this lab can produce, and every instance of it so far has been the
+harness reading a definition wrongly rather than the mod being wrong. That is `D1`, and it is why
+`ScreeningTests` carries the standing form of each:
 
-**All three were the harness reading a definition wrongly**, and each looked exactly like physics:
-
-| Fault | What it did |
+| What a definition says | What it does not mean |
 | --- | --- |
-| A gyro's `ForceMagnitude` is torque, not thrust | 33.6 MW of waste heat from one gyro; a hull at 342,510 K |
-| A definition with no `MountPoints` read as mounting nowhere | Batteries built with no conduction and no exposure |
-| A block that does not seal had its mounts zeroed as well | The same, for every non-airtight block that leaves its mounts to the model — batteries, decoys |
+| a `ForceMagnitude` element | thrust in newtons — on a gyro it is torque in newton-metres, and reading it as thrust turned one gyro into 33.6 MW and a hull into 342,510 K |
+| no `MountPoints` | a block that mounts nowhere — six per cent of the game's definitions leave them out and let the game derive them from model geometry, and an undeclared set means every face mounts |
+| a rated input *and* a rated output | both at once — a store covers a shortfall, and counting it as a co-generator drawing its full rating at the same time doubles a ship's load |
+| a block that does not seal | a block with no mounts — sealing and mounting are separate properties, and filling the mount bits from a definition that declared none zeroes them |
 
-The last one is the subtle one and it was hiding behind the fix for the second. Sealing and mounting
-are separate properties; entering the "write the surface bits by hand" branch *because a block does
-not seal*, and then filling the mount bits from a definition that declared none, zeroed them. The
-two halves have to be written from the same source.
+`hotspot` is the tool for asking why a block is the hottest thing on a ship: it dumps the top of the
+distribution with the three figures that decide where each landed — what it generates, what it can
+radiate through its own faces, and what it can conduct into its neighbours. A large generation
+against a small conductance and no exposure is a *layout* result; a generation with **no** exit at
+all is a defect.
 
-**An earlier version of this document called this a systemic defect in the mod's conduction rule.
-That was wrong** — it was three harness bugs stacked, and the evidence for the claim was the
-symptom rather than the mechanism. What settled it was asking the model directly: a synthetic grid
-with two disconnected blocks reports all six faces exposed, exactly as it should, which no amount of
-staring at corpus temperatures would have shown.
-
-Sealed blocks went 76 → 24 across the corpus with the third fix, and the 24 that remain are
-**all on one ship**, `UNSC Panama` — 0.002 % of 1.15 million blocks. Those are armour cubes that
-mount on every face, have no neighbour in any direction, and still report no exposed face, which
-the synthetic case says should be impossible. **That one is unexplained and still open.**
-
-`SealedBlocksAreRare` bounds it rather than asserting zero, so a regression to anything like the
-earlier scale fails while the one unexplained ship does not hold the suite hostage.
-
-## Where the numbers stand
-
-After three harness faults were found and fixed — the gyro torque, the sealed blocks, the
-double-counted stores — the battery reads coherently for the first time. On the 9,378-block Atlas:
-
-| Scenario | Peak K | Mean K | made kW | vented kW | Verdict |
-| --- | --- | --- | --- | --- | --- |
-| `idle` | 298 | 156 | 71 | 406 | **G1 holds** — a parked ship sits at room temperature and sheds |
-| `full-electrical` | 2,507 | 431 | 44,070 | 44,018 | 268 blocks over critical |
-| `all-peak` | 2,574 | 815 | 175,313 | 175,256 | the impossible ceiling |
-| `burn-forward` | 1,461 | 352 | 23,207 | 23,202 | hottest block is a hydrogen thruster |
-| `reentry` | 348 | 305 | 89,992 | 89,956 | 89 MW of friction, shed as fast as it arrives |
-| `recovery` | 368 | 213 | 71 | 1,356 | **G5 holds** — throttled to idle, it comes back |
-
-**`made` and `vented` now agree to within a tenth of a per cent in every loaded case.** That is the
-strongest evidence the model is behaving: the grids are reaching real equilibrium rather than
-climbing until the clock runs out. Substep demand is met throughout.
-
-Corpus-wide thermal stress is now p50 532 W/m², p95 1,476, max 3,451 — down from p50 1,335 / max
-9,367 before the fixes, and from p50 17,893 at the very first run.
-
-**What is left is a balance question rather than a defect.** The remaining hot spot is seven
-`LargeJumpDrive` charging at 32 MW each; at a 0.15 loss fraction that is 33.6 MW inside one
-compartment, and the gyros beside them reach 2,507 K by conduction rather than by anything they do
-themselves. Whether that fraction is right is now the kind of question the lab was built to answer.
+**Sealed blocks are bounded rather than asserted to zero.** Twenty-four remain across the corpus,
+all on one ship, `UNSC Panama` — 0.002 % of 1.15 million blocks. They are armour cubes that mount on
+every face, have no neighbour in any direction, and still report no exposed face, which a synthetic
+grid of two disconnected blocks says should be impossible. That one is unexplained and open;
+`CorpusSurvey` holds the bound so a regression to the earlier scale fails while one ship does not
+hold the suite hostage.
 
 ## Open questions
 
 * **The fetcher has never run against a real key.** Its failure paths are checked — a missing key,
   a rejected key and a missing account name all report and stop cleanly — but whether the query
   parameters return what is wanted can only be settled by a run.
-* ~~Is one unresolved block too strict?~~ **Decided: it stays strict.** A softer rule keyed on
-  whether the unresolved blocks carry power would raise yield, at the cost of the corpus measuring
-  *nearly* vanilla balance. Revisit only if the real yield turns out to be unusably low.
+* **Does the panel reproduce the corpus?** The claim in [Specimens](#specimens) is a hypothesis:
+  that two ships close together in feature space behave the same way under the battery. Settling it
+  needs one full battery run over a whole corpus and a comparison against the panel's verdicts —
+  which is the expensive thing the panel exists to avoid, so it is paid once.
 * **Whether `Census` should be replaced or kept beside the corpus.** Its tiers are a hypothesis the
   corpus can now test; if they hold, that is worth knowing, and if they do not, every scale figure
   taken on them wants re-reading.
-* ~~Ships reach hundreds of thousands of kelvin under load.~~ **Diagnosed, and it was the
-  harness.** Gyros carry a `ForceMagnitude` element and it means *torque in newton-metres*, not
-  thrust in newtons — a large gyro reads 3.36e7 and a prototech one 2.016e8, against a real draw of
-  ten kilowatts. Reading it off every block that has the element turned one gyro into 33.6 MW of
-  waste heat and drove a 9,378-block hull to 342,510 K. It looked exactly like solver instability
-  and would have been written up as one. **The substep demand being met throughout is what gave it
-  away** — 2.7 against 3 granted, 18.3 against 19 — so the integrator was never short of what it
-  asked for. `all-peak` on the same hull now reads 15,751 K and the hottest block is a hydrogen
-  thruster, which is what the model says should run hot. `OnlyAThrusterCarriesThrust` pins it.
-* ~~Batteries may be the next one.~~ **Two more harness faults, both found by the same method.**
-  The 7,634 K battery had `faces 0`, `area 0` and **`W/K out 0`** — no exit of any kind, radiative
-  or conductive. A thermally sealed box heats without bound and without any symptom but the
-  temperature.
-  * **A definition that lists no mount points is not a block that mounts nowhere.** Six per cent of
-    the game's definitions leave `MountPoints` out and let the game derive them from model
-    geometry; `LargeBlockBatteryBlock` is one. Reading that silence as "no mounts" gave the block
-    no conduction links and no exposed faces. Now an undeclared set means every face mounts, which
-    is what `BlockModel.Solid` already assumed.
-  * **A store is never charging and discharging at once.** A battery rates 12 MW in *and* 12 MW
-    out, and both were being counted: every battery on a ship stood beside the reactors as a
-    co-generator while also drawing its full rating. Generators now carry the load and stores cover
-    only a shortfall.
-
-  Together these moved the Atlas from 7,634 K to **2,507 K** at full electrical load, and idle from
-  412 K to **298 K**. `ABlockThatDeclaresNoMountPointsStillConducts` and
-  `AStoreIsNotBothChargingAndDischarging` pin them.
-
-* **Does the panel reproduce the corpus?** The claim in [Specimens](#specimens), unchecked. It needs
-  one full battery run over a whole corpus to settle, and that run is the expensive thing the panel
-  exists to avoid — so it is paid once.
-* **Subgrids.** A blueprint's rotor and piston subgrids are read as separate ships today. They are
-  thermally connected in game, through the bridges `ThermalBridges` builds, and the lab does not
-  reassemble them.
+* **Subgrids are read as separate ships.** A blueprint's rotor and piston subgrids are thermally
+  connected in game, through the bridges `ThermalBridges` builds, and the lab does not reassemble
+  them.
+* **One unexplained ship in the sealed-block bound**, above.
+* **The 25-block size floor is an unexamined constant.** It has never been varied to see whether it
+  changes a population figure.
 
 ---
 
@@ -500,6 +409,7 @@ themselves. Whether that fraction is right is now the kind of question the lab w
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Finished the split this page began: the three sections still narrating what an early run found are gone. *The first full cycle* reported 32 subscribed ships as a provisional read of G1, G2 and G5, which the 8,142-hull survey in [balance.md](balance.md#the-population) has since answered over a population — quoting the small run beside the large one is `E4` in slow motion. *Where the numbers stand* was the same 32-ship run on one hull. *Sealed blocks: three harness faults* narrated three defects that are fixed and pinned; what survives is the standing hazard, restated as what a definition does **not** mean, which is the form `D1` and `ScreeningTests` hold it in. Three struck-through entries left *Open questions*, and *What exists now* stopped quoting a 32-ship yield as the corpus. |
 | 2026-08-22 | Moved the readings of the corpus datasets to [balance.md](balance.md), so this page is the lab's design and that one is what the lab found. Added the standard header and this change log. |
 | 2026-08-22 | Answered G3 by fitting cooling to ships people actually built, and said which half of the cooling criterion the ladder answers and which it does not. |
 | 2026-08-21 | Measured the speed limit the mod is actually played at. |

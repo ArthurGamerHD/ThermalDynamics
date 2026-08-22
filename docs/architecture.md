@@ -118,7 +118,7 @@ simulation *steps* is `SimulationScheduler`'s business — `Frequency × Simulat
 second, with fractional credit carried between frames. The scheduler is driven from the session
 component rather than from the grid entity, because `MyCubeGrid` clears `EACH_FRAME` from its own
 update flags whenever its scheduled-work queue empties. See
-[load-and-hitching.md](load-and-hitching.md#the-findings) for what the spreading is worth.
+[load-and-hitching.md](load-and-hitching.md#what-keeps-the-spike-proportional) for what the spreading is worth.
 
 ## Grid lifecycle
 
