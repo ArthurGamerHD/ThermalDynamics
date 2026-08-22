@@ -54,7 +54,7 @@ subject — **E**vidence, **M**ethod, **D**efect, **C**ode, **R**epository, **O*
 | **Conditional** | It holds inside a stated scope and is silent outside it. Written as an absolute, each of these forbids ordinary correct work — the scope *is* the rule, and quoting the sentence without it is the failure mode. |
 | **Low value** | It is not earning its keep: it costs more than it prevents, it restates rules that already exist, or it works around a defect that is cheaper to fix than to obey. Each names its disposition. |
 
-A rule is not low value merely because nothing checks it. Eighteen of the fifty load-bearing
+A rule is not low value merely because nothing checks it. Seventeen of the fifty load-bearing
 rules are unchecked and stay load-bearing, because the failure they prevent is severe and silent —
 restructuring `Models/` is caught by nothing and costs a re-export of every block model. The
 category is about what the rule buys, not about who enforces it.
@@ -196,9 +196,9 @@ under [low value](#low-value) so a citation to them does not dangle.
 | **R8** | Every setting is documented, wired, and read by something | load-bearing | P5 | `ConfigurationDocTests` `SettingsWiringTests` |
 | **R9** | The API page is part of the contract | load-bearing | P5 P9 | `EveryModApiEntryIsDocumented` |
 | **R10** | Every test class says what it is for | load-bearing | P5 | `EveryTestClassSaysWhatItIsFor` |
-| **R11** | A check is cited only if it runs | load-bearing | P5 | partly |
+| **R11** | A check is cited only if it runs | load-bearing | P5 | `EveryCheckCitedByTheRulesPageResolves` |
 | **R12** | A page states its scope, describes the present, and logs its changes | load-bearing | P3 | partly |
-| **R13** | A standing rule is stated here once, and argued elsewhere | load-bearing | P5 | — |
+| **R13** | A standing rule is stated here once, and argued elsewhere | load-bearing | P5 | `EveryRuleCitedByAPageExists` |
 | **O1** | Every long run is capped | load-bearing | P13 | — |
 | **O2** | A run with no bounded duration gets no hang timeout | conditional | P13 | — |
 | **O3** | Long sweeps resume, and progress is measured in bytes | load-bearing | P13 | — |
@@ -208,7 +208,7 @@ under [low value](#low-value) so a citation to them does not dangle.
 | **J2** | *Light, isolated, tested, open* | low value | — | absorbed into `C4` `C5` `C7` `R9` |
 | **J3** | The corpus filters are strict, and their cost is recorded | conditional | P1 | `BlueprintTests` |
 
-Fifty load-bearing, seven conditional, four low value. Eighteen of the load-bearing rules have no
+Fifty load-bearing, seven conditional, four low value. Seventeen of the load-bearing rules have no
 automated check, and say so.
 
 ---
@@ -628,10 +628,12 @@ so a two-word citation like a file name is invisible to it, and a name that neve
 is invisible unless it happens to look like a rename.
 
 *Applies to:* the *Checked by* field on this page, and any page that names a test as evidence.
-*Checked by:* partly — `NoPageNamesATestThatHasBeenRenamed` covers renames of long names only.
-*Retires when:* a documentation test asserts that every name in a *Checked by* field resolves to a
-live case, a live method or a build setting. That is the same shape as the tests that already
-exist and would have caught all three.
+*Checked by:* `EveryCheckCitedByTheRulesPageResolves`, which resolves every name in a *Checked by*
+field to a live test case, a class holding one, a type or member the code refers to somewhere other
+than its own declaration, or a file that exists. It would have caught all three stale citations.
+Two limits it states rather than hides: it reads this page's fields only, not every page that names
+a test, and *referred to somewhere* is not *reached at run time*, so a helper called only by another
+dead helper still resolves.
 *From:* new with the extraction; see [what the extraction changed](#what-the-extraction-changed).
 
 #### R13 — A standing rule is stated here once, and argued elsewhere
@@ -647,9 +649,11 @@ was a rule. Restating a rule in two places is the same defect in slower motion �
 as authoritative, and the drift between them is silent in both directions.
 
 *Applies to:* every page, and every rule.
-*Checked by:* — nothing yet reads a page's rules banner.
-*Retires when:* nothing retires it. A check that every identifier cited in a banner resolves to a
-rule on this page would move it from convention to enforcement.
+*Checked by:* `EveryRuleCitedByAPageExists` reads each page's banner and fails on a citation this
+page does not state, and on a banner that cites nothing. `TheRulesPageIndexesEveryRuleItStates`
+holds the page's own halves together: a rule stated here is indexed here and follows from a
+principle, unless it is filed as low value. Neither can see a rule that has never been written
+down, which is what the audit is for.
 *From:* [development.md](development.md#documentation-conventions); the assembly of this page.
 
 ### P6 — A comparison holds everything but the subject equal
@@ -1229,6 +1233,7 @@ is right and this page is stale; say so and fix it here.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Put this page under the checks it asks of every other page. `EveryCheckCitedByTheRulesPageResolves` resolves every name in a *Checked by* field to something that runs, which retires `R11`'s unchecked state and closes [backlog](backlog.md) F10; `EveryRuleCitedByAPageExists` fails on a page citing a rule this one does not state; `TheRulesPageIndexesEveryRuleItStates` holds the index, the body and the principle table together. Each was run against a deliberate violation before being believed. |
 | 2026-08-22 | Read every page in the tree against the rule list and added the six rules it was missing: `C9` `C10` `D7` `D8` `R12` `R13`, each of which existed only in the one page or the one type summary that needed it. Widened `P7` from *the game is the authority on what compiles* to *the game is the authority*, which is where `C9` and `C10` belong. Recorded the necessity and sufficiency tests the principle list was put through in [Testing the reduction](#testing-the-reduction). Corrected `O4`, which quoted 135 test classes against a project that now holds more than 150; the figure is now stated without a hand-typed count, per `E5`. |
 | 2026-08-22 | Repointed the *From* fields at the pages that absorbed the ones they cited: `corpus-shape.md` into [balance.md](balance.md), `iterations.md` into [benchmarks.md](benchmarks.md). Added this change log. The rule inventory itself is unchanged; [What the extraction changed](#what-the-extraction-changed) is the record of the revision that produced it. |
 | 2026-08-22 | Extracted the standing rules from the eleven pages that each stated one in passing, reduced them to fourteen principles, and classified every rule as load-bearing, conditional or low value. Marked the sixteen load-bearing rules that nothing checks as unchecked rather than leaving the gap implicit. |

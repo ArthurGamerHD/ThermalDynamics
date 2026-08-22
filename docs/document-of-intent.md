@@ -47,6 +47,35 @@ that a second mod can make heat mean something without forking this one — see
 
 ---
 
+## What the README is for
+
+**The [README](../README.md) is the mod's front page for players, not the repository's front page
+for developers.** It is written to be copied whole into the Steam workshop description or handed
+over as a guide, and to be read end to end by someone who has never opened a source file — so it
+explains what the mod does, what it adds, and how to configure it, in that order and in plain
+language.
+
+It carries one technical section on purpose: **instructions for modders who want to build on this
+framework.** That is the API and what a second mod can do with it, written for someone who has
+decided to write code against this one. Both audiences are served by the same page because both
+arrive at the same place — a workshop item — and neither should have to be told to go and read a
+repository.
+
+**What it is not.** It does not explain how the mod works inside. No solver, no substeps, no
+architecture, no measurements, and no defence of a design decision. Everything of that kind lives on
+the pages this one sits among, reached through the README's
+[documentation index](../README.md#documentation) rather than summarised in the README itself: a
+paragraph about the integrator is a paragraph a workshop reader skips and a developer would rather
+read in full elsewhere.
+
+**It therefore does not behave the way a repository README does.** The conventions in
+[development.md](development.md#documentation-conventions) hold — it states its scope, describes the
+present, and keeps a change log — but the audience test overrides the developer one wherever they
+disagree: a section earns its place by being something a player or a modder needs, not by being what
+a repository is conventionally expected to publish.
+
+---
+
 ## How a player perceives heat
 
 Legibility is the first of the three commitments above, and it has three layers. **Only the first is
@@ -489,6 +518,7 @@ about intent rather than a decision on the developer's behalf.
 | **"Light: a grid's cost is one pass over its links per substep"** against the measured per-node cost of the environment pass. | **The measurement wins and the goal is unchanged.** The step budget already counts `links + 4 × nodes`. The README's wording predates the measurement and understates what a substep does. |
 | **`MaxSubstepsPerBlock 6` recommended in the field** against the shipped default of `0` (off). | **The shipped default stands, and the recommendation is weaker than it was.** Re-measured at the shipped `Frequency 8`, a cap of 6 buys 1.6× rather than 3.4× — the original table was taken at `Frequency 4` and read as if it were the default. Still a clear win, no longer a dramatic one, and open as [backlog](backlog.md) C3. |
 | **Natural feedback against the Light goal.** The README says *"every readout, diagnostic and overlay is off unless something is reading it"*. [Natural feedback](#natural-feedback--not-built) is the first presentation feature meant to be **on** by default — a player who has not opened anything is exactly who it is for. | **Both stand, and the resolution is a definition rather than a compromise.** Feedback that only runs when a block is near its limit *is* "something reading it" — the reader is the block's own state, not a player with a panel open. What it must not do is cost anything on a ship where nothing is hot, which makes the trigger a threshold test on a ratio the solver already computes, and `C7` still applies: it needs its own switch like every other mechanism. |
+| **The README's stated audience against what it currently carries.** The README is meant to be pasteable into the workshop and readable by a non-technical player, with one section for modders. It currently also carries a repository layout tree, a building-and-testing section and the documentation index — three sections written for somebody who has cloned the repository. | **The intent is newer than the page, and the page has not been changed to match it.** Nothing is wrong with the content; it is in the wrong place for the audience the page is for. Moving the layout and the build instructions under [development.md](development.md) and reducing the documentation index to one link is the change this asks for, and it is not made here. |
 | **The census hull as "a worst case" against "what a ship does".** It makes 12.1 kW a block against a real median of 335 W — the 96th percentile. | **Undecided, and recorded as such in the code.** `TheCensusHullMakesFarMoreHeatThanARealShip` pins the figure and fails if it changes quietly. It reaches every temperature figure and no stiffness figure. |
 
 ---
@@ -549,6 +579,7 @@ very different warnings on very different blocks.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Recorded what the README is for: a workshop-pasteable front page for players, with one section for modders building on the framework, and deliberately not an explanation of how the mod works inside. Recorded the conflict this creates with the three developer-facing sections the page carries today. |
 | 2026-08-22 | Renamed from `document_of_intent.md` to match the kebab-case every other page uses. **Answered all eight areas that had no stated intent**, which are now stated in the body: cooling is designed in but a vanilla ship still has to survive; the scale target is 10⁶ blocks at `SimulationSpeed` 1.0 with ~250,000 as the realistic figure and uncapped stress bounds; a coolant loop costs power and makes waste heat, because a pump is a motor; an unattended grid gets the same simulation as an attended one, with the saving available as a switch; the mod is balanced for vanilla play in the knowledge that worlds get modded; the warning is a cockpit-only lead cue with a linear visual ramp keyed to each block's threshold; every thermal property is a dial; and a client is owed the minimum traffic that keeps the world coherent, with drift tolerated. Added the principle those answers share — **fidelity is the default and a saving is a switch** — which is what P14 leaves undecided once a difference *is* perceptible. The voids section is replaced by the six smaller questions the answers left open. |
 | 2026-08-22 | Recorded four intents stated by the developer after this page was first written. **A thermal camera is wanted** — it had been recorded here and in [known-issues.md](known-issues.md) as a deliberate limit on the grounds that mods get no shader, which is a statement about difficulty rather than about intent. Added [How a player perceives heat](#how-a-player-perceives-heat), covering the three layers of it: instruments that belong to the game's HUD rather than sit on top of it, natural feedback through subtle audio and in-world visuals, and thermal vision as an open problem with no known route. Added the threading target to [Performance intent](#performance-intent): use as much of the CPU as possible while taking as little of the game thread as possible. Void 6 is rewritten — the form of a warning is now stated, and its timing is what remains undefined. |
 | 2026-08-22 | Created, by gathering the statements of intent scattered across the README's design goals, `rules.md`'s judgement rules, the balance criteria, the deliberate limits, the profile ladder and the developer's standing instructions, and reconciling each against what the code does. Seven conflicts are resolved against the implementation; eight areas are recorded as having no stated intent at all. Two figures were corrected on the way: the median time to critical at idle is 104.5 s rather than the 112 s the register's prose carried, and the damage-timing finding it belonged to — dropped in an earlier merge — is restored to [balance.md](balance.md#damage-arrives-too-fast-to-be-played-around). |

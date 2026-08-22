@@ -10,8 +10,8 @@ namespace Thermodynamics.Tests
     /// The documentation is checked the way the code is.
     ///
     /// <para>
-    /// Twenty-six pages under `docs/`, two READMEs and a tools page cross-reference each other
-    /// several hundred times, and every one of those references is a claim that a file, a heading
+    /// Every page under `docs/`, two READMEs and a tools page cross-reference each other several
+    /// hundred times, and every one of those references is a claim that a file, a heading, a rule
     /// or a scenario exists. Nothing was checking them. A rename of `sim/` to `tests/` left nine
     /// dead links behind, three pages had fallen out of the README's index entirely, and three
     /// more pointed at helper scripts in a parent folder that stopped existing when this mod
@@ -713,6 +713,309 @@ namespace Thermodynamics.Tests
             Assert.True(missing.Count == 0,
                 "pages under docs/ that the README's documentation table does not list:\n  "
                 + string.Join("\n  ", missing.ToArray()));
+        }
+        // --- The rules page ------------------------------------------------------------------
+        //
+        // The rules this repository is bound by are stated in one place, `docs/rules.md`, and
+        // argued in the page that holds the evidence for each (`R13`). Three things can rot in
+        // that arrangement without anything looking wrong: a page can cite a rule that no longer
+        // exists, the page's own index can drift from the rules it states, and a *Checked by*
+        // field can name a check that has stopped running. The third is the one that already
+        // happened — three citations named a file rather than a class, the wrong class, and a
+        // case that had been demoted to an uncalled helper — and an unchecked rule that reads as
+        // checked is worse than one marked unchecked, because it ends the search (`R11`).
+
+        private static string RulesPage()
+        {
+            return File.ReadAllText(Path.Combine(RepoRoot(), "docs", "rules.md"));
+        }
+
+        /// <summary>Every rule identifier the rules page states, taken from its own headings.</summary>
+        private static HashSet<string> StatedRules()
+        {
+            HashSet<string> rules = new HashSet<string>(StringComparer.Ordinal);
+            foreach (Match m in Regex.Matches(RulesPage(), @"(?m)^#{3,4}\s+([EMDCROJ]\d{1,2})\s+—"))
+            {
+                rules.Add(m.Groups[1].Value);
+            }
+
+            return rules;
+        }
+
+        /// <summary>
+        /// Every rule a page cites in its banner is a rule that exists.
+        ///
+        /// <para>
+        /// A page that argues a standing rule opens with "The rules argued here are stated
+        /// canonically in rules.md", naming each by identifier. That banner is the join between
+        /// the page with the evidence and the page with the sentence, and a citation to a rule
+        /// that has been renamed, absorbed or dropped reads exactly like one that resolves.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void EveryRuleCitedByAPageExists()
+        {
+            HashSet<string> stated = StatedRules();
+            Assert.True(stated.Count > 40,
+                "only " + stated.Count + " rules were read out of docs/rules.md, so this test is"
+                + " parsing the page wrongly and would pass whatever any page cited");
+
+            List<string> dangling = new List<string>();
+            int banners = 0;
+
+            foreach (string file in MarkdownFiles())
+            {
+                string relative = Relative(file);
+                if (relative == "docs/rules.md") continue;
+
+                string[] lines = File.ReadAllLines(file);
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    if (lines[i].IndexOf("stated canonically in", StringComparison.Ordinal) < 0) continue;
+
+                    // The banner is a blockquote and may wrap over several lines.
+                    StringBuilder banner = new StringBuilder(lines[i]);
+                    for (int j = i + 1; j < lines.Length && lines[j].StartsWith(">", StringComparison.Ordinal); j++)
+                    {
+                        banner.Append(' ').Append(lines[j]);
+                    }
+
+                    banners++;
+                    int cited = 0;
+                    foreach (Match m in Regex.Matches(banner.ToString(), @"`([EMDCROJ]\d{1,2})`"))
+                    {
+                        cited++;
+                        if (!stated.Contains(m.Groups[1].Value))
+                        {
+                            dangling.Add(relative + " cites `" + m.Groups[1].Value + "`");
+                        }
+                    }
+
+                    Assert.True(cited > 0,
+                        relative + " says its rules are stated canonically in rules.md and then"
+                        + " names none of them by identifier");
+                    break;
+                }
+            }
+
+            Assert.True(banners > 10,
+                "only " + banners + " pages carry a rules banner, so this test found almost"
+                + " nothing to check and would pass on a page citing a rule that never existed");
+
+            dangling.Sort(StringComparer.Ordinal);
+            Assert.True(dangling.Count == 0,
+                "rules cited by a page that docs/rules.md does not state:\n  "
+                + string.Join("\n  ", dangling.ToArray()));
+        }
+
+        /// <summary>
+        /// The rules page indexes every rule it states, and states every rule it indexes.
+        ///
+        /// <para>
+        /// The index is what a reader scans and the body is what they then read, so a rule present
+        /// in one and not the other is either invisible or a dangling row — and both look like an
+        /// ordinary page. Every rule also belongs to exactly one principle, except the four filed
+        /// as low value, which name their disposition instead.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheRulesPageIndexesEveryRuleItStates()
+        {
+            string page = RulesPage();
+
+            HashSet<string> stated = StatedRules();
+            HashSet<string> indexed = new HashSet<string>(StringComparer.Ordinal);
+            HashSet<string> lowValue = new HashSet<string>(StringComparer.Ordinal);
+
+            foreach (Match m in Regex.Matches(page, @"(?m)^\|\s*\*\*([EMDCROJ]\d{1,2})\*\*\s*\|([^|]*)\|([^|]*)\|"))
+            {
+                indexed.Add(m.Groups[1].Value);
+                if (m.Groups[3].Value.IndexOf("low value", StringComparison.Ordinal) >= 0)
+                {
+                    lowValue.Add(m.Groups[1].Value);
+                }
+            }
+
+            Assert.True(indexed.Count > 40,
+                "only " + indexed.Count + " rules were read out of the index, so this test is"
+                + " parsing the page wrongly");
+
+            List<string> unstated = new List<string>(indexed);
+            unstated.RemoveAll(stated.Contains);
+            unstated.Sort(StringComparer.Ordinal);
+            Assert.True(unstated.Count == 0,
+                "rules the index lists that the page never states:\n  "
+                + string.Join("\n  ", unstated.ToArray()));
+
+            List<string> unindexed = new List<string>(stated);
+            unindexed.RemoveAll(indexed.Contains);
+            unindexed.Sort(StringComparer.Ordinal);
+            Assert.True(unindexed.Count == 0,
+                "rules the page states that the index does not list:\n  "
+                + string.Join("\n  ", unindexed.ToArray()));
+
+            // Every rule that is still a rule follows from one of the principles.
+            HashSet<string> underAPrinciple = new HashSet<string>(StringComparer.Ordinal);
+            foreach (Match row in Regex.Matches(page, @"(?m)^\|\s*\*\*(P\d{1,2})\*\*\s*\|(.*)$"))
+            {
+                foreach (Match cited in Regex.Matches(row.Groups[2].Value, @"`([EMDCROJ]\d{1,2})`"))
+                {
+                    underAPrinciple.Add(cited.Groups[1].Value);
+                }
+            }
+
+            List<string> orphaned = new List<string>();
+            foreach (string rule in stated)
+            {
+                if (lowValue.Contains(rule)) continue;
+                if (!underAPrinciple.Contains(rule)) orphaned.Add(rule);
+            }
+
+            orphaned.Sort(StringComparer.Ordinal);
+            Assert.True(orphaned.Count == 0,
+                "rules that follow from no principle in the table:\n  "
+                + string.Join("\n  ", orphaned.ToArray()));
+        }
+
+        /// <summary>Every source file a citation could name: the mod, the tests, the tools, the build.</summary>
+        private static string CodeText()
+        {
+            if (_codeText != null) return _codeText;
+
+            StringBuilder all = new StringBuilder();
+            string[] patterns = { "*.cs", "*.csproj", "*.props", "*.json", "*.py", "*.sh" };
+            foreach (string pattern in patterns)
+            {
+                foreach (string file in Directory.GetFiles(RepoRoot(), pattern, SearchOption.AllDirectories))
+                {
+                    string relative = Relative(file);
+                    if (relative.Contains("/bin/") || relative.Contains("/obj/")) continue;
+                    if (relative.StartsWith("out/", StringComparison.Ordinal)) continue;
+                    all.Append(File.ReadAllText(file)).Append('\n');
+                }
+            }
+
+            _codeText = all.ToString();
+            return _codeText;
+        }
+
+        private static string _codeText;
+
+        /// <summary>Test methods that actually run: a name carrying [Fact] or [Theory].</summary>
+        private static HashSet<string> LiveCases()
+        {
+            HashSet<string> cases = new HashSet<string>(StringComparer.Ordinal);
+            string tests = Path.Combine(RepoRoot(), "tests");
+
+            foreach (string file in Directory.GetFiles(tests, "*.cs", SearchOption.AllDirectories))
+            {
+                string relative = Relative(file);
+                if (relative.Contains("/bin/") || relative.Contains("/obj/")) continue;
+
+                string text = File.ReadAllText(file);
+                string current = null;
+
+                foreach (Match m in Regex.Matches(text,
+                    @"(?m)^\s*(?:public|internal)\s+(?:sealed\s+|static\s+|partial\s+|abstract\s+)*class\s+([A-Za-z0-9_]+)"
+                    + @"|\[(?:Fact|Theory)[^\]]*\][\s\S]{0,400}?\bpublic\s+(?:async\s+)?[A-Za-z0-9_<>,\[\]\. ]+?\s([A-Za-z0-9_]+)\s*\("))
+                {
+                    if (m.Groups[1].Success)
+                    {
+                        current = m.Groups[1].Value;
+                    }
+                    else if (m.Groups[2].Success)
+                    {
+                        cases.Add(m.Groups[2].Value);
+                        if (current != null) cases.Add(current);       // the class runs too
+                    }
+                }
+            }
+
+            return cases;
+        }
+
+        /// <summary>
+        /// Every check the rules page cites resolves to something that runs.
+        ///
+        /// <para>
+        /// This is `R11`. A name resolves when it is a live test case or a class holding one; when
+        /// it is a type or member the code refers to somewhere other than its own declaration; or
+        /// when it is a file that exists. The middle test is what catches the failure that produced
+        /// the rule: `SealedBlocksAreRare` was cited as the check on a defect bound months after it
+        /// had been demoted from a test case to an `internal static` helper nothing calls. It still
+        /// compiled, it still read as enforcement, and it never ran again.
+        /// </para>
+        ///
+        /// <para>
+        /// The limit of the test is that "referred to somewhere" is not "reached at run time": a
+        /// helper called only by another dead helper resolves here. It catches a name with no
+        /// caller at all, which is the shape every stale citation on the page has had.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void EveryCheckCitedByTheRulesPageResolves()
+        {
+            string[] lines = File.ReadAllLines(Path.Combine(RepoRoot(), "docs", "rules.md"));
+            HashSet<string> live = LiveCases();
+            string code = CodeText();
+
+            Assert.True(live.Count > 500,
+                "only " + live.Count + " live test names were found, so this test is not reading"
+                + " the suite and would pass on a citation to nothing");
+
+            List<string> unresolved = new List<string>();
+            int cited = 0;
+
+            for (int i = 0; i < lines.Length; i++)
+            {
+                if (!lines[i].StartsWith("*Checked by:*", StringComparison.Ordinal)) continue;
+
+                StringBuilder field = new StringBuilder(lines[i]);
+                for (int j = i + 1; j < lines.Length; j++)
+                {
+                    if (lines[j].Length == 0 || lines[j].StartsWith("*", StringComparison.Ordinal)) break;
+                    field.Append(' ').Append(lines[j]);
+                }
+
+                foreach (Match m in Regex.Matches(field.ToString(), @"`([^`]+)`"))
+                {
+                    string name = m.Groups[1].Value;
+
+                    // A file, by path or by name.
+                    if (name.Contains("/") || Regex.IsMatch(name, @"\.[a-z]{1,6}$"))
+                    {
+                        cited++;
+                        string path = Path.Combine(RepoRoot(), name.Replace('/', Path.DirectorySeparatorChar));
+                        if (File.Exists(path)) continue;
+                        if (Directory.GetFiles(RepoRoot(), Path.GetFileName(name), SearchOption.AllDirectories).Length > 0) continue;
+                        unresolved.Add(name + " — no such file");
+                        continue;
+                    }
+
+                    // Anything else is a citation only if it is written like an identifier.
+                    if (!Regex.IsMatch(name, @"^[A-Z][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$")) continue;
+
+                    cited++;
+                    string leaf = name.Substring(name.LastIndexOf('.') + 1);
+                    if (live.Contains(leaf)) continue;
+
+                    // A type or member the code refers to somewhere other than where it is declared.
+                    if (Regex.Matches(code, @"\b" + Regex.Escape(leaf) + @"\b").Count > 1) continue;
+
+                    unresolved.Add(name + " — declared nowhere, or declared and never used");
+                }
+
+                i++;
+            }
+
+            Assert.True(cited > 30,
+                "only " + cited + " checks were read out of the rules page's *Checked by* fields,"
+                + " so this test is parsing them wrongly");
+
+            unresolved.Sort(StringComparer.Ordinal);
+            Assert.True(unresolved.Count == 0,
+                "checks docs/rules.md cites that do not resolve to anything that runs (R11):\n  "
+                + string.Join("\n  ", unresolved.ToArray()));
         }
     }
 }
