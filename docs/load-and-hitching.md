@@ -182,7 +182,8 @@ step of the whole configured length with as many substeps as the grid's stiffnes
 is what a tick actually pays once `MaxElementVisitsPerStep` has shortened the step to fit, and `cap`
 is how many substeps that leaves. Below about a hundred thousand blocks the budget never binds and
 the two agree. Above it they diverge, and that divergence is the trade being made: at a million
-blocks a tick pays 42 ms instead of 103, and simulated time advances more slowly to pay for it.
+blocks a tick pays **25.87 ms instead of the full step's 118.20**, and simulated time advances more
+slowly to pay for it — `cap` is 1 substep against the 12 the grid's stiffness asks for.
 
 **The solver scales, and it now scales flat.** Cost per link visit was 7.8 ns at 8k and 18.4 ns at
 a million — a doubling across a working set growing from ten megabytes to a gigabyte, read at the
@@ -731,6 +732,7 @@ reasoning that produced it was sound and the premise was not.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Corrected the figures in the sentence reading the ladder's own divergence: it quoted a tick of 42 ms against a full step of 103, which matches neither the current table (25.87 against 118.20) nor the pre-refresh one named two paragraphs later (55 against 623). A figure on a page comes from the dataset the page is about (`E5`). |
 | 2026-08-22 | Absorbed `field-tuning.md`: its three live runs are the field half of this page's question and now sit beside the lab half. Its decorative-block stiffness findings moved to [stiffness.md](stiffness.md) and its `Frequency` sweep to [configuration.md](configuration.md#frequency-is-not-the-cost-dial-it-looks-like), each to the page that already owned the subject. Added the standard header and this log. |
 | 2026-08-20 | Calibrated the step budget against a real world, and resolved it by fixing the counting rather than the default: at `links + 4 × nodes` the unchanged 1,000,000 grants 3.9 substeps where link-only counting granted 11. Measured a fleet of 242 grids in atmosphere. |
 | 2026-08-19 | Spread a step across the frames of its window instead of landing it whole on one, and staggered every grid in the world off the same frame. Stopped the room map giving up silently on a large grid. |

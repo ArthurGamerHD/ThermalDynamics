@@ -311,7 +311,7 @@ This is a balance decision rather than a defect, and it is the one the survey mo
 It is also the sharpest tension with the stated goals: `G5` holds as written — recovery is bounded —
 while the reason given for it, *"a player must be able to react to a warning"*, does not survive a
 median of 8.9 seconds. See
-[document_of_intent.md](document_of_intent.md#where-the-goals-and-the-code-disagree).
+[document-of-intent.md](document-of-intent.md#where-the-goals-and-the-code-disagree).
 
 ### One block type decides the load criterion
 

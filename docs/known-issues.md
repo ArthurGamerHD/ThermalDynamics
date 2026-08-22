@@ -178,7 +178,7 @@ part of that work worth keeping, since a debug view *wants* to see through a hul
 
 **This is an obstacle rather than a decision**, and it was recorded here as a deliberate limit for a
 while, which was wrong: the difficulty is real and the intent to have one stands. The routes worth
-investigating are in [document_of_intent.md](document_of_intent.md#thermal-vision--wanted-method-unknown),
+investigating are in [document-of-intent.md](document-of-intent.md#thermal-vision--wanted-method-unknown),
 and none of them is straightforward. Tracked as [backlog](backlog.md) B24.
 
 **Nothing gives a player feedback without an instrument.** There is no sound emitter, no particle
@@ -508,7 +508,7 @@ counters rather than milliseconds so it holds on any machine.
 
 | Date | Change |
 | --- | --- |
-| 2026-08-22 | Moved the thermal view out of the deliberate limits. It was filed there on the grounds that mods get no shader — which is a statement about difficulty, not a simplification taken on purpose, and a limit is only a limit when it is chosen (`D6`). It is an open problem, and the intent to have one is stated in [document_of_intent.md](document_of_intent.md#thermal-vision--wanted-method-unknown). Recorded the absence of any non-instrument feedback beside it. |
+| 2026-08-22 | Moved the thermal view out of the deliberate limits. It was filed there on the grounds that mods get no shader — which is a statement about difficulty, not a simplification taken on purpose, and a limit is only a limit when it is chosen (`D6`). It is an open problem, and the intent to have one is stated in [document-of-intent.md](document-of-intent.md#thermal-vision--wanted-method-unknown). Recorded the absence of any non-instrument feedback beside it. |
 | 2026-08-22 | Absorbed `bugs-and-performance.md`, the record of the first extraction pass. Every one of its thirty-two findings is resolved in the current code — including the eleven whose headings carried no *fixed* marker, each re-verified against the source during this pass — so the page survives as the dated entries below and the patterns above rather than as a defect list. Restructured around the shape of each failure rather than its subsystem; promoted the deliberate limits to the top; moved the corpus balance findings to [balance.md](balance.md), which is where the dataset they come from is described. Removed two limits that the per-room gas-system read had already retired ("a room with no air vent holds no air" and "pressurisation is only known through air vents") and corrected a third: block `Conductivity` is real W/(m·K), and it is the *coolant loop's* that is still a 0…1 quality. Merged the two sections both titled "Fixed, worth remembering". |
 | 2026-08-21 | Recorded the buffer-growth NaN, the unguarded shape caches on the block-placement path, and the substep mass floor computing from its own previous answer. Recorded the censoring limit that makes every peak above critical a statement about the harness. |
 | 2026-08-20 | Recorded that every reactor in the game made no heat, and that all eighteen of the mod's own `Cubes.xml` entries were filed under a TypeId that does not exist. Recorded the step budget counting links but not nodes, and the exposure test that buried a face bolted to an open lattice. |
