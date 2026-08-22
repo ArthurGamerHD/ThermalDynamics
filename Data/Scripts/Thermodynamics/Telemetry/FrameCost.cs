@@ -34,12 +34,9 @@ namespace Thermodynamics
         public long RoomCellsVisited;
 
         /// <summary>
-        /// What the frame cost that no stage claimed: pacing, the scheduler's walk over every grid,
-        /// and anything not yet instrumented.
-        ///
-        /// Derived rather than measured, so it cannot drift from the rows above it. A negative
-        /// figure would mean two stages timed the same milliseconds, which is a defect in the
-        /// instrumentation and is shown rather than clamped away.
+        /// What the frame cost that no stage claimed. Derived rather than measured, so it cannot drift
+        /// from the rows above it, and a negative figure — two stages timing the same milliseconds —
+        /// is shown rather than clamped away.
         /// </summary>
         public double UnattributedMs
         {
@@ -82,19 +79,10 @@ namespace Thermodynamics
     }
 
     /// <summary>
-    /// What the mod costs per frame across every grid, and which frames were the worst.
-    ///
-    /// Every other telemetry figure is per grid, while a stutter is per frame: twenty grids each
-    /// costing an acceptable two milliseconds on the same frame produce a forty-millisecond frame
-    /// that no per-grid figure shows. Grids tick on the ten-frame cadence and the engine calls them
-    /// together, so this is the default shape of the cost.
-    ///
-    /// The worst frames are kept in full rather than summarised. A mean shows the mod is cheap and a
-    /// maximum shows one frame was not; only the full sample identifies what that frame was doing.
-    ///
-    /// Bounded by design: the worst sixteen frames of a session, one struct each, plus a histogram.
-    /// No per-frame history is kept, which for a session running hours would exceed the simulation's
-    /// own memory.
+    /// What the mod costs per frame across every grid, and which frames were the worst — the one
+    /// figure here that is not per grid, because a stutter is not. The worst sixteen are kept in full
+    /// rather than summarised, since only the full sample says what that frame was doing. Bounded by
+    /// design: no per-frame history. See telemetry.md, Frame cost and hitching.
     /// </summary>
     public class FrameCostTracker
     {

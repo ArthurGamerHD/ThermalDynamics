@@ -76,13 +76,10 @@ namespace Thermodynamics.Core
     }
 
     /// <summary>
-    /// One placed heat pump, resolved against the grid: the node it draws from, the node it
-    /// rejects into, and what it managed last step.
-    ///
-    /// A pump moves heat up a gradient, which nothing else in the model does, and pays for it with
-    /// electricity at a price set by the Carnot relation: nearly free across a small difference and
-    /// prohibitive across a large one. That relation bounds the block — each further kelvin costs
-    /// more, so the pump's electrical limit binds long before absolute zero is reached.
+    /// One placed heat pump, resolved against the grid: the node it draws from, the node it rejects
+    /// into, and what it managed last step. The only thing here that moves heat *up* a gradient, at a
+    /// price set by Carnot — which is why nothing clamps the cold side at a floor.
+    /// See thermal-model.md, Heat pumps.
     /// </summary>
     public class HeatPumpDevice
     {
@@ -114,14 +111,9 @@ namespace Thermodynamics.Core
         public float PowerAvailable = 1f;
 
         /// <summary>
-        /// Share of its rating the player has asked this pump to draw, 0..1. The terminal's slider.
-        ///
-        /// Distinct from <see cref="PowerAvailable"/>, which is what the grid could supply: this is
-        /// what the block was told to want. A pump throttled to a quarter draws a quarter and lifts
-        /// what a quarter buys at the current gap, which is the lever a player has for spending power
-        /// on cooling only when cooling is what they need.
-        ///
-        /// Defaults to full so a pump works the moment it is built and a harness needs no host.
+        /// Share of its rating the player has asked this pump to draw, 0..1 — the terminal's slider,
+        /// and distinct from <see cref="PowerAvailable"/>, which is what the grid could supply.
+        /// Defaults to full, so a pump works the moment it is built and a harness needs no host.
         /// </summary>
         public float PowerSetting = 1f;
 
@@ -164,17 +156,10 @@ namespace Thermodynamics.Core
         public bool LastWasLimited;
 
         /// <summary>
-        /// How much wider the gap between the two sides could be and still let the pump reach its full
-        /// rated output, K. Negative when the gap is already too wide for that.
-        ///
-        /// The pump reaches its rating while <c>coefficient x power &gt;= rating</c>, and the
-        /// coefficient is <c>fraction x Tcold / gap</c>, so the widest gap that still saturates it is
-        /// <c>fraction x Tcold x power / rating</c>. This is that figure minus the gap actually being
-        /// worked across.
-        ///
-        /// It is the one number that tells a player what to change. A pump at half output is not
-        /// obviously fixable from "half output"; a pump reading −48 K is forty-eight degrees of gap
-        /// away from full output, and either side can be moved to close it.
+        /// How much wider the gap could be and still let the pump reach its full rated output, K;
+        /// negative when it is already too wide. <c>fraction x Tcold x power / rating</c>, less the gap
+        /// being worked across — the one figure a player can act on.
+        /// See blocks.md, The terminal readout.
         /// </summary>
         public float LastOptimalMarginKelvin;
 

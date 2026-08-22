@@ -72,21 +72,10 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Conductance in W/K for a contact between two blocks.
-        ///
-        /// Two conductors in series: heat travels from the centre of block A to the interface,
-        /// then from the interface to the centre of block B.
-        /// <code>
-        ///   G = A_contact / (L_a / k_a + L_b / k_b)
-        /// </code>
-        /// with L the half-depth of each block along the contact axis and k its conductivity in
-        /// W/(m K). Result is symmetric by construction.
-        ///
-        /// <para>
-        /// Both terms scale with the blocks' real dimensions, which is what allows one grid to mix
-        /// block sizes: the contact area is the overlap of the two faces, and the larger block's
-        /// greater depth makes it the slower conductor.
-        /// </para>
+        /// Conductance in W/K for a contact between two blocks: two conductors in series, centre to
+        /// interface to centre, <c>G = A_contact / (L_a / k_a + L_b / k_b)</c>. Symmetric by
+        /// construction, and scaling with real dimensions, which is what lets one grid mix block
+        /// sizes. See thermal-model.md, Conduction.
         /// </summary>
         public static float Conductance(
             float latticeSize, BlockInstance a, BlockInstance b, int contactFaces, int axis)

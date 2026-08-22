@@ -26,16 +26,10 @@ namespace Thermodynamics.Core
     }
 
     /// <summary>
-    /// What a block is thermally, derived from what it is built out of.
-    ///
-    /// Material properties — conductivity, specific heat, emissivity, critical temperature — follow
-    /// from the build components the game publishes for every block, so a modded block gets
-    /// properties describing it rather than describing armour.
-    ///
-    /// Functional properties — the waste fractions, the exposed-area multiplier, the damage rate —
-    /// follow from what a block does with power, which its build cost cannot say. Those live in
-    /// <c>Data/Cubes.xml</c> as per-type entries, so a player can override them without touching
-    /// code; this class no longer holds an opinion about any of them.
+    /// What a block is thermally, derived from what it is built out of. Material properties follow
+    /// from the components the game already publishes; the functional ones follow from what a block
+    /// does with power, which its build cost cannot say, and live in <c>Data/Cubes.xml</c> per type.
+    /// See definitions.md, Where a block's properties come from.
     /// </summary>
     public static class BlockThermalDerivation
     {
@@ -49,25 +43,11 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// The material half: a mass-weighted blend over the block's components.
-        ///
-        /// **Specific heat is exact.** Heat capacity is additive, so the capacity of a block is the
-        /// sum of its components' capacities and the mass-weighted mean specific heat is the right
-        /// answer rather than an approximation of one.
-        ///
-        /// **Conductivity and critical temperature are approximations, deliberately.** Conduction
-        /// through a composite depends on how the phases are arranged — a copper wire through a
-        /// steel block is not the same as copper powder mixed into it — and nothing in a build cost
-        /// says which. A mass-weighted mean is monotone, cheap and has no arrangement to get wrong.
-        /// Critical temperature is the same choice for a different reason: the honest rule is that
-        /// a block fails when its weakest significant part fails, but taken literally that puts
-        /// every block containing a single computer at the silicon limit, which is a cliff rather
-        /// than a gradient. Weighting by mass lets a component that dominates a block dominate its
-        /// limit, and lets one small part of it not.
-        ///
-        /// **Emissivity is neither.** It is a property of the surface, not of the bulk, so a block
-        /// radiates like whatever it is clad in. Cladding is taken as the heaviest component, on
-        /// the grounds that what a block is mostly made of is usually what you can see.
+        /// The material half: a mass-weighted blend over the block's components. **Specific heat is
+        /// exact**, since capacity is additive. **Conductivity and critical temperature are
+        /// approximations**, deliberately — a build cost does not say how the phases are arranged.
+        /// **Emissivity is neither**: it belongs to the surface, so it comes from the heaviest
+        /// component. See definitions.md, Where a block's properties come from.
         /// </summary>
         public static BlockThermalProperties Material(IList<BlockComponent> components)
         {

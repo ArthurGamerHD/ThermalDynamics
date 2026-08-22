@@ -11,28 +11,12 @@ using VRageMath;
 namespace Thermodynamics
 {
     /// <summary>
-    /// Regular wind readings from fixed points all over a planet, taken whether or not anything is
-    /// standing there.
-    ///
-    /// <para><b>Why this can exist at all:</b> the wind field is a pure function of position, the
-    /// weather and the hour. Nothing about it depends on a grid, so there is no reason the only
-    /// places it gets measured should be the handful of spots somebody happened to park in. The
-    /// first field run made the case: three minutes of samples between 5° and 30° of latitude, on
-    /// ground gentle enough that the terrain model never did anything, from which almost nothing
-    /// about the model could be concluded.</para>
-    ///
-    /// <para>A lattice of probes answers all of that in one pass. Every latitude including the poles
-    /// and the equator, several heights each so the diurnal crossover and the nocturnal jet are
-    /// visible, sampled right through the day — and the ground under each probe is real terrain
-    /// rather than whatever was under the landing pad.</para>
-    ///
-    /// <para>Each probe runs the same <see cref="WindSolver.Solve"/> the grids do, so this measures
-    /// the model rather than a description of it, and writes the same columns
-    /// <c>Thermodynamics.Harness.WindLab</c> writes offline — so a probe sweep, a grid's own
-    /// telemetry and a modelled day are all directly comparable.</para>
-    ///
-    /// <para>Off unless telemetry is on and <see cref="Settings.TelemetryPlanetProbes"/> is set.
-    /// Server side: it reads the world rather than anyone's screen.</para>
+    /// Regular wind and climate readings from fixed points all over a planet, taken whether or not
+    /// anything is standing there — the field is a pure function of position, weather and hour, so
+    /// there is no reason the only places it is measured are the ones somebody parked in. Each probe
+    /// runs the same <see cref="WindSolver.Solve"/> the grids do and writes the same columns the
+    /// offline lab does. Server side, off unless <see cref="Settings.TelemetryPlanetProbes"/> is set.
+    /// See environment.md, Measuring it.
     /// </summary>
     public static class PlanetProbes
     {

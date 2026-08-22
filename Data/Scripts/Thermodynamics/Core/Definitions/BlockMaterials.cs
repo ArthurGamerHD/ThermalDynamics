@@ -22,13 +22,9 @@ namespace Thermodynamics.Core
         public float Emissivity;
 
         /// <summary>
-        /// Kelvin at which the material stops doing its job — not its melting point.
-        ///
-        /// Steel melts at 1,700 K and has lost half its yield strength by 850. Motor windings are
-        /// limited by their insulation, not their copper. Silicon runs to about 425. A block's
-        /// critical temperature is derived from these, so this is where the interesting spread
-        /// between block types comes from: a block full of electronics is genuinely more fragile
-        /// than a block of steel, and now says so.
+        /// Kelvin at which the material stops doing its job — **not its melting point**. Steel melts at
+        /// 1,700 K and has lost half its yield strength by 850; a motor winding is limited by its
+        /// insulation and silicon by about 425. This is where the spread between block types comes from.
         /// </summary>
         public float ServiceLimit;
 
@@ -43,19 +39,11 @@ namespace Thermodynamics.Core
     }
 
     /// <summary>
-    /// The material properties of every component Space Engineers builds blocks out of.
-    ///
-    /// This is the basis for <see cref="BlockThermalDerivation"/>, and through it for every value in
-    /// `Data/Cubes.xml`. A block's thermal properties were previously an opinion per block type;
-    /// they are now a consequence of what the block is built from, which is a fact the game already
-    /// publishes and which no one has to maintain by hand.
-    ///
-    /// Real figures are ordinary engineering references — mild steel 50 W/(m K) and 466 J/(kg K),
-    /// soda-lime glass 1.0 and 840, copper 400 and 385, lithium-ion cells about 1,000 J/(kg K).
-    /// Where a component is invented, so are its numbers, and <see cref="BlockMaterial.Invented"/>
-    /// says which.
-    ///
-    /// Free of any Space Engineers type, so the whole derivation is testable outside a session.
+    /// The material properties of every component Space Engineers builds blocks out of, and so the
+    /// basis of <see cref="BlockThermalDerivation"/>. Real figures are ordinary engineering
+    /// references; where a component is invented so are its numbers, and
+    /// <see cref="BlockMaterial.Invented"/> says which. Free of any Space Engineers type, so the whole
+    /// derivation is testable outside a session.
     /// </summary>
     public static class BlockMaterials
     {
