@@ -3,6 +3,15 @@
 Settings live in `ThermodynamicsConfig.cfg` in world storage, written with defaults the first time
 a world loads and regenerated when `Version` does not match.
 
+> The rules argued here are stated canonically in [rules.md](rules.md): `R8` `C7` `C8`.
+
+| Looking for | Go to |
+| --- | --- |
+| Per-block, per-planet and per-loop properties | [definitions.md](definitions.md) |
+| The five presets and how they differ | [profiles.md](profiles.md) |
+| What each setting is scaling | [thermal-model.md](thermal-model.md), [environment.md](environment.md) |
+| Driving settings from another mod | [api.md](api.md#settings) |
+
 Every setting can also be changed while the world is running. A change is written into the settings
 object every grid already holds and picked up on the next step: heat capacities are rescaled,
 coolant loops and room air are rebuilt, and each mechanism reads its own switch. Nothing is written
@@ -208,6 +217,52 @@ the 189 stepping grids of the field dump, by the substeps each asked for:
 Eighty per cent of grids, and better than ninety-nine per cent of the blocks, are above one
 substep — which is the regime where `Frequency` cancels out of the bill entirely. That is what
 `MaxSubstepsPerBlock` is for.
+
+**Measured, not just derived.** `dotnet run --project Thermodynamics.Sim -- frequency` sweeps a
+289-block grid with a real stiffness spread, `MaxSubsteps` high enough that the estimate is always
+granted, warmed up and best-of-three:
+
+| Freq | Substeps/step | Substeps/s | Demanded | ms/step | **ms/sim second** | Settled K |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 14.00 | 14.0 | 13.4 | 0.0375 | **0.038** | 945.3 |
+| 2 | 7.00 | 14.0 | 6.7 | 0.0193 | 0.039 | 945.3 |
+| 3 | 5.00 | 15.0 | 4.5 | 0.0140 | 0.042 | 945.3 |
+| 4 | 4.00 | 16.0 | 3.3 | 0.0111 | 0.044 | 945.3 |
+| 6 | 3.00 | 18.0 | 2.2 | 0.0091 | 0.055 | 945.3 |
+| 8 | 2.00 | 16.0 | 1.7 | 0.0065 | 0.052 | 945.3 |
+| 12 | 2.00 | 24.0 | 1.1 | 0.0065 | 0.078 | 945.3 |
+| 16 | 1.00 | 16.0 | 0.8 | 0.0040 | 0.064 | 945.3 |
+| 24 | 1.00 | 24.0 | 0.6 | 0.0041 | 0.099 | 945.3 |
+| 32 | 1.00 | 32.0 | 0.4 | 0.0039 | 0.126 | 945.3 |
+| 60 | 1.00 | 60.0 | 0.2 | 0.0039 | 0.234 | 945.3 |
+
+`substeps/s` sits at 14–16 from Frequency 1 to 8: that column is the grid's stiffness rather than a
+setting. Past that it gets *worse*, because **substeps are an integer**. At Frequency 12 the estimate
+asks for 1.1 and pays 2 — 24 substeps a second against a true demand of 13 — while at Frequency 16
+it asks for 0.8, pays 1, and drops back to 16. **The curve is not monotonic**, and every frequency
+whose demand lands just above an integer pays for a whole substep it does not need.
+
+**It is not a propagation dial either.** Time for the source to reach 90% of its total rise is 18 s
+at every frequency from 1 to 60, and the settled temperature is 945.3 K on all eleven rows. A
+sixty-fold change in step rate moves neither the transient nor the equilibrium measurably — which is
+what substepping is for: the integrated transfer over a second is the same however the second is
+chopped up.
+
+**The exception is when substeps are refused.** With `MaxSubsteps` at 1 the step is deliberately too
+long and the overshoot clamp decides how much crosses — the most a substep can carry, by definition.
+There each step moves a fixed maximum and more steps a second really does move more heat. That is
+propagation bought by being wrong, and it is the arcade profile's whole method.
+
+**So what should it be?** Not 1, despite the table: `Frequency` is also how often damage lands, how
+often the HUD moves, and how quickly a change is felt. What the sweep rules out is the idea that
+raising it buys performance. The shipped 4 is a reasonable middle — 16 substeps a second against a
+floor of 14, about 12% above the cheapest possible, in exchange for four times the responsiveness of
+Frequency 1.
+
+Note that the two settings are not independent. At `Frequency 4` the test ship demands 3.3 substeps
+a step, which is why `MaxSubsteps 6` is comfortably sufficient; at `Frequency 2` demand doubles to
+about 6.7 and starts clipping that cap. **Lowering `Frequency` for performance would quietly cost
+accuracy at the cap rather than saving anything.**
 
 ### `MaxSubstepsPerBlock`
 
@@ -503,7 +558,7 @@ Move one and it wins from then on, across every loop definition in the world.
 
 These ship in [`Planets.xml`](../Data/Planets.xml) and follow the same rule: one entry ships, so
 these address it, and a world with several authored planet types still reads them from the file
-until a value is moved off its shipped figure. See [planet-climate.md](planet-climate.md) for the
+until a value is moved off its shipped figure. See [environment.md](environment.md) for the
 model they parameterise.
 
 | Setting | Default | Effect |
@@ -512,7 +567,7 @@ model they parameterise.
 | `PlanetNightTemperature` | 283.15 K | Equatorial night air. |
 | `PlanetPoleTemperatureDrop` | 40 K | Span from equator to pole, interpolated on cos(latitude). |
 | `PlanetAmbientLapseRate` | 4 K/km | How fast the air cools with altitude. |
-| `PlanetAmbientLagSeconds` | 45 s | First-order lag on the ambient target, which is what makes the day peak after noon. Absolute seconds against a day that is not — see [planet-climate.md](planet-climate.md#open). |
+| `PlanetAmbientLagSeconds` | 45 s | First-order lag on the ambient target, which is what makes the day peak after noon. Absolute seconds against a day that is not — see [environment.md](environment.md#limits-and-open-questions). |
 | `PlanetConvectionCoefficient` | 50 W/(m²·K) | Convective coupling in full atmosphere, scaled down with air density and up with wind. |
 | `PlanetSolarDecay` | 0.5 | How fast sunlight is attenuated through the atmosphere. |
 | `PlanetUndergroundTemperature` | 280 K | The rock's own temperature below the damping depth and above the deadzone. |
@@ -540,7 +595,7 @@ predictable near equilibrium at the cost of making cheap, small-gap cooling less
 
 The game's own wind figure is `MaxWindSpeed × airDensity` — one number per planet, scaled linearly
 by altitude, identical at the pole and the equator, with no direction and no time of day. These
-settings drive the model that replaces it. See [wind-model.md](wind-model.md) for what each one is
+settings drive the model that replaces it. See [environment.md](environment.md) for what each one is
 and where it comes from.
 
 | Setting | Default | Effect |
@@ -576,7 +631,7 @@ that is a readout for playing rather than a diagnostic for debugging.
 
 The game has no wind field — `MyPlanet.GetWindSpeed` returns the planet definition's maximum scaled
 by air density, the same figure at the pole and the equator — so this mod invents one, and until
-this view there was no way to look at it. See [planet-climate.md](planet-climate.md#wind) for what
+this view there was no way to look at it. See [environment.md](environment.md#wind) for what
 the field is; this is how you see it.
 
 **Local** drapes arrows over the ground itself, out to five kilometres in every direction — a disc of
@@ -778,3 +833,122 @@ report says so.
 
 Block tuning — conductivity, specific heat, critical temperatures — is not in this file. It lives in
 the definition XML; see [definitions.md](definitions.md).
+
+---
+
+## The settings surface, and where it is going
+
+The menu, the config file and the definition files are one surface to a player and three to the
+code. A player asking "how fast does coolant move" is asking a settings question, and the answer
+lives in a file the settings menu did not mention until recently. This section is the plan for
+closing that, written against the built menu in game rather than against the API.
+
+### What the first built menu got wrong
+
+Measured against a screenshot of it running, not against intent. **The first five are fixed** —
+status text is a wrapping page rather than a clipping label, page names fit the rail, root pages
+render clear of folders, categories size to their contents, and there is no overflow row. **The
+last two are fixed too**: every change saves itself a second later, and a profile sets every world
+setting rather than patching nine of them.
+
+| Fault | Cause |
+| --- | --- |
+| Status text arrived with both ends cut off | a `TerminalLabel` is one centred line that clips rather than wrapping |
+| `Cost and stabilit` in the rail | a page name clips at about seventeen characters |
+| Debug drew on top of the World row | a root page added *after* a folder renders against the folder's row |
+| Half-empty tiles | a category is a fixed tall band whatever is in it |
+| `Systems (cont.)` | an overflow row named after the fact that it overflowed |
+| Save and Reset as buttons | a menu asking you to confirm what you already did |
+| A profile changed nine settings | it read as a full preset and behaved as a patch |
+
+### A page per system, with its own switch on it — done
+
+**The Mechanisms page is gone.** Four switches sitting together because they are all switches is
+filing by part of speech. `EnableConvection` belongs at the top of the convection page, above the
+convection dials, where switching it off visibly greys what it governs.
+
+| Folder | Pages |
+| --- | --- |
+| Solver | Cost limits · Pace |
+| Heat transfer | Conduction · Radiation · Convection · Solar · Occlusion |
+| Ship systems | Coolant loops · Heat pumps · Room air · Waste heat · Friction · Overheat damage · Point sources |
+| World | Climate · Weather · Underground |
+| — | Overview · Status · Debug |
+
+`SolarSelfShadowing` sits under Occlusion, where it belongs — it is what a grid does to itself. It
+was under Solar because that is where its *setting name* starts, which is the code's filing system
+rather than a reader's.
+
+### The definition files as part of the menu — done for loops and planets
+
+| File | Entries | Values | State |
+| --- | ---: | ---: | --- |
+| `Loops.xml` | 1 | 8 | **Done.** Every value is a world setting, on the Coolant loops page — including `LargeGridFlowRate`, the coolant flow rate the menu used to be missing. |
+| `Planets.xml` | 1 shipped | 11 | **Done.** On the Climate and Underground pages, applied per grid on a planet change. |
+| `Cubes.xml` | 54 | 8 each | **Open, and different in kind.** 432 values, and the interesting ones belong to the block a player is looking at rather than to a list they scroll. Properties are cached per definition in `ThermalBlockCatalog`, so changing one at runtime needs the cache invalidated and every node of that type refreshed. |
+
+A mod folder is read-only in a workshop install, so none of this writes the XML. It writes a
+**per-world override layer** into world storage, applied over what the definitions loaded, and
+replicated to clients like every other setting. A value equal to the shipped one is left alone, so
+an untouched world still gets whatever the file and the profile's overlay say; move one and it wins.
+
+Block overrides cover any subtype rather than a fixed list, which is what other mods' blocks need.
+Profile overlays remain the mechanism for per-subtype block properties, which a flat setting cannot
+express.
+
+### What is left
+
+**Status becomes the panel worth opening.** Today it lists what changed, which the Overview already
+counts. It should be the mod's own report:
+
+* **Cost**, per stage rather than as one number: topology, room mapping, exposure, solver, room
+  pressure, with the same figures the telemetry report carries.
+* **Load**, as a projection rather than an instant: substeps demanded against granted, what the
+  per-block cap is flooring, and what a change to the caps would cost — the sweep
+  [load-and-hitching.md](load-and-hitching.md#in-the-field) does by hand.
+* **Faults**: settings that cancel each other, grids running below real time, compartments the game
+  seals and this model does not, pumps in a ring that oppose each other, definition entries that
+  fell back to the default because their `TypeId` was wrong. **Every one of these has been a real
+  defect at least once, and each was found by reading a dump rather than by the mod saying so.**
+
+Its form is still open and wants prototypes rather than a decision on paper. Rich HUD has no chart
+control: a sparkline can be drawn as text in a `TextPage`, which is cheap and honest; a real plot
+means a custom HUD element, which is a different size of job.
+
+**The config file follows the menu.** The file is flat — every element in one list, in the order
+they were added. If the menu is organised by system then the file should be too, because they are
+read by the same person for the same reason:
+
+```xml
+<Solver>
+  <Frequency>4</Frequency>
+  <MaxSubsteps>16</MaxSubsteps>
+</Solver>
+<CoolantLoops enabled="true">
+  <LargeGridFlowRate>10</LargeGridFlowRate>
+</CoolantLoops>
+```
+
+Two things this must not break:
+
+* **A world's existing values.** Defaults live on the fields, so a reader that finds nothing leaves
+  them alone — which means a restructure silently resets every tuned world unless the old flat shape
+  is read first and migrated. That is the whole risk of this step.
+* **The names.** `/thermal set`, the mod API and the sync all address settings by name. Grouping may
+  change where a name sits in the file; it must not change the name.
+
+Each step stands alone and each is separately revertible, which is why the file restructure — the
+one with a migration risk — is late rather than first.
+
+---
+
+## Change log
+
+| Date | Change |
+| --- | --- |
+| 2026-08-22 | Absorbed `settings-redesign.md`, whose subject is this page's subject, as [The settings surface](#the-settings-surface-and-where-it-is-going), with the completed steps restated as what the menu now is rather than as a plan. Took the `Frequency` sweep from `field-tuning.md` into the section that already argued the arithmetic, so the derivation and the measurement sit together. Added the standard header and this log. |
+| 2026-08-22 | Brought the loop and planet definitions into the menu as world settings, replicated and reachable from `/thermal set` and the mod API. |
+| 2026-08-19 | Documented the twenty-one settings the reference had never listed — the whole `Loop*` and `Planet*` families, `MaxSubsteps` and `ClampEnvironmentOvershoot` — and added `ConfigurationDocTests`, which fails when a setting exists in one place and not the other. Let an admin change world settings from a client, over a secure channel rather than the shared one. |
+| 2026-08-18 | Added the five profiles as a ladder on two axes, and fixed the clamp defect that had to be fixed before they were safe. |
+| 2026-08-17 | Moved the settings menu onto Rich HUD at Ctrl+Shift+S. |
+| 2026-08-12 | Opened the reference against `ThermodynamicsConfig.cfg`. |

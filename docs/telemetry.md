@@ -3,13 +3,22 @@
 A data collection module for the live mod. It observes the running simulation and writes a
 report on demand or when the world closes.
 
-It exists to answer the questions in [bugs-and-performance.md](bugs-and-performance.md) with
+It exists to answer the questions in [known-issues.md](known-issues.md) with
 measurements from real play rather than from a synthetic benchmark: what temperature blocks
 actually sit at, which definitions are mistuned, what each stage of the update costs, and
 whether real grids are stiffer than the integrator can follow.
 
 **It is off by default.** `EnableTelemetry` defaults to `false`, so a shipped world pays a
 handful of static bool reads and nothing else.
+
+> The rules argued here are stated canonically in [rules.md](rules.md): `C4` `C7` `D4` `E3`.
+
+| Looking for | Go to |
+| --- | --- |
+| What the figures mean | [thermal-model.md](thermal-model.md), [environment.md](environment.md) |
+| The settings that switch each dump on | [configuration.md](configuration.md#telemetry) |
+| What the reports have been used to find | [known-issues.md](known-issues.md) |
+| The repeatable offline report | [benchmarks.md](benchmarks.md) |
 
 ## Turning it on
 
@@ -142,7 +151,7 @@ per grid:
 > stiff hull, and a different multiple on every grid, since substeps move with stiffness
 > and settings. Any dump taken before that date over-reports it, and not by a constant.
 > The solver now files one event per block per step; see
-> [benchmarks.md](benchmarks.md#a-burning-block-filed-one-overheat-event-per-substep).
+> [benchmarks.md](benchmarks.md#one-overheat-event-per-block-per-step).
 * a **rotating slice** of nodes, `1/stride` of the grid, feeding the per-definition statistics
   and the anomaly detector. Every node is seen once per `stride` steps, so full per-block
   coverage costs one pass spread over four steps rather than a pass every step;
@@ -172,7 +181,7 @@ share of each frame from the session component, with each grid spreading its sol
 frames of its own simulation window. The figure to read is therefore `mean` against `worst` rather
 than how the grids are divided up — the division no longer varies. In the TestWorld1 dump, 29,386
 of 29,387 frames did work. See
-[engine-api-notes.md](engine-api-notes.md#entity-updates-are-not-staggered-across-frames--measured).
+[engine-notes.md](engine-notes.md#entity-updates-are-not-staggered-across-frames--measured).
 
 The report gives, under `Cost`:
 
@@ -652,7 +661,7 @@ affordable: only the first and last example of each kind are kept, however many 
 
 Sections of the report are written from whichever thread caught the event. The game builds pasted
 and projected grids on worker threads, so the registries behind grids, block types and anomalies
-are locked; see F1 and F2 in [bugs-and-performance.md](bugs-and-performance.md) for what happened
+are locked; see F1 and F2 in [known-issues.md](known-issues.md) for what happened
 before they were.
 
 ## Coolant loops and heat pumps
@@ -768,3 +777,15 @@ rest.
 <EnableTelemetry>false</EnableTelemetry>
 <TelemetrySampleStride>4</TelemetrySampleStride>
 ```
+
+---
+
+## Change log
+
+| Date | Change |
+| --- | --- |
+| 2026-08-22 | Added the standard header and this change log. |
+| 2026-08-21 | Gave every substep count the step length it was counted against, and filed one overheat event per block per step rather than per substep — which had been multiplying the reported critical-block count by the grid's substep demand. |
+| 2026-08-20 | Recorded faults whether or not collection is running, and caught a grid that has gone numerically bad without collection on. Measured the per-grid visit instead of inferring it, and attributed the eighth of a grid's update that had belonged to nothing. |
+| 2026-08-19 | Reported the convection coefficient after the atmosphere blend rather than before it, showed what a grid vents against what it makes, and measured the room pressure sweep. |
+| 2026-08-12 | Opened the module: off by default, switchable at runtime, and costing a handful of static bool reads when off. |

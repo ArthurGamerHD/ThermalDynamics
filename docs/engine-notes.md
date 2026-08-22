@@ -1,14 +1,26 @@
-# Engine API notes
+# Engine notes
 
-A survey of the Space Engineers assemblies in
-`~/Steam/SteamLibrary/steamapps/common/SpaceEngineers/Bin64`, looking for things this mod either
-reimplements by hand or could be taking advantage of.
+What the two Space Engineers engines actually provide: the SE1 APIs this mod either reimplements by
+hand or could be taking advantage of, and what an SE2 adapter would bind to.
 
-Every API quoted here was **compile-verified**: a probe file using all of it builds at
-`LangVersion 6` / `net48` against the real DLLs, so the namespaces, accessibility and signatures
-are correct as written. Where behaviour rather than existence is in question, that is called out.
+**Every SE1 API quoted here is compile-verified.** A probe file using all of it builds at
+`LangVersion 6` / `net48` against the real DLLs, so the namespaces, accessibility and signatures are
+correct as written; where *behaviour* rather than existence is in question, that is called out.
+**Everything in the SE2 half marked Verified was read by reflection** over the real assemblies with
+`System.Reflection.MetadataLoadContext`; everything marked Inferred is reasoning from shipped
+content and is flagged where it matters.
+
+| Looking for | Go to |
+| --- | --- |
+| The design these findings feed | [scale-design.md](scale-design.md) |
+| What the mod builds against, and how | [development.md](development.md) |
+| The equations these APIs supply inputs to | [thermal-model.md](thermal-model.md), [environment.md](environment.md) |
 
 ---
+
+# Part 1 — Space Engineers 1
+
+Surveyed in `~/Steam/SteamLibrary/steamapps/common/SpaceEngineers/Bin64`.
 
 ## Build corrections
 
@@ -35,7 +47,7 @@ Reference points:
 
 ---
 
-## 1. The game already computes airtight rooms — **highest value**
+## The game already computes airtight rooms — **highest value**
 
 `ThermalGridMapper` is 725 lines that classify every cell as external, sealed structure, or an
 interior room, restarting the whole flood fill on every block change. The engine already does
@@ -69,7 +81,7 @@ bool airtight = MyGridGasSystem.IsAirtightBlock(block, cell, normal);   // Sandb
 
 What this could replace: the surface bit flags, the external flood fill, the room detection, and
 the per-block `BeginCrawl` restart that is finding **P1** in
-[bugs-and-performance.md](bugs-and-performance.md). `GetOxygenRoomForCubeGridPosition` is an O(1)
+[known-issues.md](known-issues.md). `GetOxygenRoomForCubeGridPosition` is an O(1)
 lookup where the mod currently maintains its own dictionary and queue machinery.
 
 It also unlocks something the mod cannot currently model at all: `OxygenLevel` and
@@ -85,7 +97,7 @@ sealed interior faces simply dropping out of the exposed count.
   gas system cares about pressure, the thermal model cares about line of sight to vacuum; they
   agree in the normal case but may differ for open lattice blocks.
 
-## 2. Parallelism is available to mods
+## Parallelism is available to mods
 
 `ThermalGridSimulation.ProcessCellsSequentially` carries the comment *"parallel processing not
 available in Space Engineers"*. That is not correct:
@@ -107,7 +119,7 @@ split is *solve in parallel, apply on the game thread* via `InvokeOnGameThread`.
 Worth measuring before adopting — 8 000 blocks currently solve in 0.128 ms/step, which may
 already be below the threshold where thread hand-off pays for itself.
 
-## 3. Planets already describe their own climate
+## Planets already describe their own climate
 
 [Data/Planets.xml](../Data/Planets.xml) defines only the `DefaultThermodynamics` fallback, so
 **every planet in the game is treated as Earthlike** — 283–294 K, `SolarDecay` 0.5. The vanilla
@@ -151,7 +163,7 @@ without anyone authoring a line of XML, and modded planets get sensible defaults
 `SolarRadiationProtectionFactor` is the engine's version of the mod's `SolarDecay`, and
 `GetHeightFromSurface` is what the `//TODO: implement underground core temparatures` needs.
 
-## 4. Block mass and build state can be tracked
+## Block mass and build state can be tracked
 
 `ThermalCell.PrecalculateVariables` reads `Block.Mass` once at construction and never again, so a
 half-built or heavily damaged block keeps the thermal mass of a complete one.
@@ -174,7 +186,7 @@ grid.OnBlockIntegrityChanged += slim => node.RefreshThermalMass();
 `ThermalNode.RefreshThermalMass()` in `Core/` already exists for exactly this; it just needs
 wiring.
 
-## 5. Damage should go through the damage system properly
+## Damage should go through the damage system properly
 
 The mod calls `Block.DoDamage(amount, hash, sync: false)`, so every machine computes and applies
 its own damage independently. The full signature supports server-authoritative damage:
@@ -197,7 +209,7 @@ system.RegisterDestroyHandler(0, (target, info) => { });
 Registering a documented `Thermal` damage type is what lets shield and armour mods interoperate
 with this one instead of fighting it.
 
-## 6. Grid events that coalesce
+## Grid events that coalesce
 
 The mod restarts its room crawl from `OnBlockAdded` / `OnBlockRemoved`, i.e. once per block. The
 engine offers a settled-state event:
@@ -212,7 +224,7 @@ grid.OnGridBlockDamaged += (slim, damage, hit, attacker) => { };
 the affected grids passed as arguments — a natural place to trigger one coalesced rebuild per
 grid per batch of changes.
 
-## 7. Cheaper update cadence
+## Cheaper update cadence
 
 `ThermalGrid.Init` requests `MyEntityUpdateEnum.EACH_FRAME` for every grid, so every grid runs
 scheduling logic 60 times a second to perform 4 solver steps. The enum has coarser options:
@@ -227,7 +239,7 @@ That is a 10× cut in per-grid dispatch overhead for free, and it composes with 
 `SimulationScheduler` in `Core/`, which already accumulates fractional step credit and therefore
 does not care how often it is polled.
 
-## 8. Terminal readout without a HUD dependency
+## Terminal readout without a HUD dependency
 
 The mod requires Rich HUD Master for all of its on-screen text. Per-block information has a
 first-party route:
@@ -246,7 +258,7 @@ still the right tool for the always-on cockpit overlay, but the per-block readou
 `MyAPIGateway.TerminalControls` is also available if you want a per-block thermal limit slider or
 a "vent coolant" action.
 
-## 9. The Definition Extensions dependency is optional
+## The Definition Extensions dependency is optional
 
 Mods can register their own definition types, so the thermal properties could be read from the
 mod's own SBCs without a third-party mod in the load order:
@@ -259,7 +271,7 @@ without depending on this one — so this is a trade, not a straight win. Worth 
 dependency currently means a missing Definition Extensions install throws inside
 `ThermalCellDefinition.GetDefinition` rather than degrading.
 
-## 10. Richer weather data
+## Richer weather data
 
 **Partly taken up.** The mod now uses `MyVisualScriptLogicProvider.GetWeather(position)`, which
 returns the effect's subtype name and is on the same whitelisted class as the intensity call it
@@ -293,7 +305,7 @@ MySectorWeatherComponent.RotationInterval                     // the sun's perio
 All instance members on a session component in `Sandbox.Game.SessionComponents`, with the same
 whitelist question. `RotationInterval` is the interesting one: it would let `AmbientLagSeconds` be
 expressed as a share of a day rather than as absolute seconds, which is the outstanding defect in
-[planet-climate.md](planet-climate.md#open).
+[environment.md](environment.md#limits-and-open-questions).
 
 ---
 
@@ -368,3 +380,293 @@ This is the same property recorded under "never assign `NeedsUpdate`" in
 is the other half: not *depending* on them either. Anything that must happen on a schedule the mod
 controls belongs on the session component's per-frame call, which nothing else edits.
 
+
+---
+
+# Part 2 — Space Engineers 2
+
+Surveyed in `~/Steam/SteamLibrary/steamapps/common/SpaceEngineers2/Game2`, gathered for the question
+"can the thermal model serve both games". Version stamp seen in shipped `.def` files: **Game2
+2.0.1.2232** (some older assets say 2.0.1.1811).
+
+## Platform
+
+| | SE1 | SE2 |
+| --- | --- | --- |
+| Runtime | `net48`, `LangVersion 6` (script compiler) | **`net9.0`** |
+| Math namespace | `VRageMath` (VRage.Math.dll) | **`Keen.VRage.Library.Mathematics`** (VRage.Library.dll) |
+| Integer vector | `Vector3I` | `Vector3I` — same name, different namespace |
+| Architecture | `MyGameLogicComponent` on entities | **DCS**, Keen's ECS: `Keen.VRage.DCS.Components.Entity` + `GameComponent` |
+| Grid type | `MyCubeGrid` | `CubeGridComponent` |
+| Block type | `IMySlimBlock` / `MyCubeBlock` | `CubeBlockComponent` (a component on an `Entity`) |
+| Mod API | `Sandbox.ModAPI` + whitelist | **none public yet** |
+
+There is no `VRage.Math.dll` in SE2 at all.
+
+### Modding status
+
+Only UGC *management* types are public (`Keen.Game2.Client.UI.Shared.UGC.Mods.*` — view models
+and configuration). `VRage.Scripting` contains `ScriptWhitelist`, `IScriptWhitelistProvider`,
+`WhitelistDiagnosticAnalyzer` and `ScriptCompiler`, so a scripting surface is clearly planned,
+but nothing equivalent to `Sandbox.ModAPI` exists today. **An SE2 adapter cannot be written
+yet.** This does not affect the model design, only when it can be hosted.
+
+---
+
+## Blocks live on an integer lattice — but at many scales
+
+This is the finding that drives the redesign.
+
+### Verified
+
+`CubeBlockComponent`:
+
+```csharp
+BoundingBoxI      AABB;                     // integer AABB in grid space
+IntegerOrientation BlockOrientation;
+BoundingBox       LocalBounds;              // float
+CubeBlockDefinition Definition;
+CubeGridComponent Grid;
+float             AbsoluteHealth, HealthIntegrity, EffectiveIntegrity;
+float             BuildProgress, EffectiveBuildProgress;
+float             EffectivePermeability;    // note: float, not bool
+bool              Generated;
+```
+
+`CubeBlockDefinition`:
+
+```csharp
+float                             Mass;
+BoundingBoxI                      BoundingBox;
+ImmutableArray<BoundingBoxI>      OccupiedGridCellsGroups;   // cells as BOXES, not a cell list
+BlockSizeDefinition               RelativeBlockSize;
+bool                              Permeability;
+float                             GetBlockPermeability(float buildProgress);
+ListDictionaryReader<Base6Directions.Direction, MountPointsGroupData> MountPointsGroupsPerDirection;
+float                             DisplaySize;
+float?                            DisplaySizeOverride;
+CubeBlockDensityDefinition        Density;
+CubeBlockFragilityDefinition      Fragility;
+float                             DeformationResistance, DestructionThreshold, WeakThreshold;
+OccupiedGridCellsEnumerator       GetTransformedOccupiedCellGroups(RelativeTransform);
+(BoundingBoxI, IntegerOrientation) ComputeBlockBoundsAndRotation(RelativeTransform);
+```
+
+`BlockSizeDefinition.RelativeBlockSize` is an **`Int32`**. Four are shipped, in
+`GameData/Vanilla/Content/UI/Screens/GScreen/BlockSizes/`, with values **1, 2, 3, 4**. These are
+size *tiers* (linear, not powers of two).
+
+### Inferred
+
+`GameData/Vanilla/Content` groups blocks into directories named for a number, and those numbers
+line up with centimetres:
+
+| Directory | Block defs | Reading |
+| --- | --- | --- |
+| `25` | 4 | 0.25 m |
+| `50` | 47 | 0.5 m |
+| `100` | 1 | 1.0 m |
+| `125` | 8 | 1.25 m |
+| `150` | 1 | 1.5 m |
+| `250` | 102 | 2.5 m |
+| `350` | 3 | 3.5 m |
+| `500` | 14 | 5.0 m |
+
+(Armour, for example, ships in `Armors/Half Long Slope/250/` and `.../50/` — the same 2.5 m and
+0.5 m as SE1's large and small grid, plus six more sizes.)
+
+The GCD of that set is **25 cm**, so a single common lattice exists at 0.25 m. `AABB` and
+`OccupiedGridCellsGroups` being `BoundingBoxI` is consistent with all blocks being expressed on
+one lattice.
+
+*Not verified:* that the lattice really is 0.25 m rather than each `RelativeBlockSize` tier
+having its own coordinate space, and whether all eight sizes can genuinely coexist on one grid.
+`GameData` also contains a stray `"CellSize": 64` whose meaning was not tracked down (likely
+voxel or texture, not block lattice). **Confirm both in game before committing.**
+
+### Why it matters
+
+If the lattice is 0.25 m, a 5 m block spans **20 × 20 × 20 = 8 000 lattice cells**. The current
+model stores one dictionary entry per occupied cell in `GridModel.blocksByCell` *and* one in
+`SurfaceMap.states`, and `BlockInstance` materialises a `Vector3I[]` of every cell it occupies.
+One 5 m block would cost 16 000 dictionary entries and an 8 000-element array.
+
+**Per-cell enumeration is not survivable in SE2.** That is the single constraint the redesign has
+to answer.
+
+Note also `OccupiedGridCellsGroups` is an array of *boxes*, not a cell list — Keen made the same
+call. The engine never enumerates a block's cells either.
+
+---
+
+## The octree
+
+`Keen.Game2.Simulation.WorldObjects.CubeGrids.BlockOctrees.BlockOctreeComponent`
+— `Component`, implements `ICubeBlockStorage` and `IInSceneListener`.
+
+```csharp
+// ICubeBlockStorage
+bool  IsPositionEmpty(Vector3I);
+bool  IsAreaEmpty(BoundingBoxI);
+void  GetCubeBlocks(BoundingBoxI, BufferReference<CubeBlockComponent>);
+void  GetConnectedCubeBlocks(BoundingBoxI, Vector3I, CubeBlockComponent, BufferReference<CubeBlockComponent>);
+CubeBlockComponent TryGetCubeBlock(Vector3I);
+Span<CubeBlockComponent> GetAllCubeBlocks();
+BoundingBoxI Boundary { get; }
+int CubeBlockCount { get; }
+```
+
+Internals worth knowing:
+
+```csharp
+FreeList<BlockOctreeNode>   _nodes;
+FreeList<CubeBlockComponent> _cubeBlocks;
+FreeList<BlockShape>        _largeIndex;
+UnionFind                   _disconnectedGroups;
+HashSet<ulong>              _dirtyEdges;        // Pack2NodesAndDirection(int, int, Direction)
+HashSet<int>                _dirtyNodes;
+
+struct BlockOctreeNode { bool IsEmpty; int LeafData; int FirstChild; /* packed in TheeOneInt */ }
+struct BlockShape       { int Block; int Shape; }   // leaf → block index + shape index
+
+bool HasBlockConnection(Vector3I, Base6Directions.Direction);
+bool CanTraverse(Vector3I, Base6Directions.Direction);
+void ComputeConnectivity(int);
+void UpdateDirtyNeighborConnections();
+```
+
+Two things follow.
+
+**The octree is a spatial index, not a replacement for the lattice.** Queries are still
+`Vector3I` and `BoundingBoxI`. The tree exists so that a 5 m block is *one leaf* instead of 8 000
+cells, and so range queries do not scan empty space.
+
+**The engine already maintains a block adjacency graph.** `ComputeConnectivity`,
+`TryConnectNodes`, `GroupFaceSharingNeighbors`, `_dirtyEdges` keyed on (nodeA, nodeB, direction),
+union-find for split detection — that is structurally the same graph `ThermalSolver.links` is.
+`HasBlockConnection(cell, direction)` and `GetConnectedCubeBlocks(...)` expose it.
+
+The mod should **query** that graph, not rebuild one.
+
+---
+
+## Grid-level API
+
+```csharp
+// CubeGridComponent
+ICubeBlockStorage CubeBlockStorage { get; }
+Entity            GetBlock(Vector3I);
+WorldTransform    GetWorldTransform(Vector3I);
+bool              IsAreaEmpty(BoundingBoxI);
+void              CommitBlockChanges();
+void              RemoveBlock(CubeBlockComponent);
+void              BlockDestroyed(CubeBlockComponent);
+void              BlockHealthChanged(CubeBlockComponent);
+void              BlockBuildProgressChanged(CubeBlockComponent);
+void              BlockColliderChanged(CubeBlockComponent);
+void              GridsConnectionChanged(CubeGridComponent, CubeGridComponent,
+                                         ImmutableArray<ConnectionGroupDefinition>, bool);
+IEnumerable<Entity> GetAllGridsInShip();
+void VisitAllBlocksWithComponent<T, TVisitor>(ref TVisitor, bool);
+void VisitAllBlocksWithComponent<T>(Action<T>, bool);
+```
+
+Compared with SE1 this is strictly better for this mod:
+
+* `CommitBlockChanges` is the batch-settled signal. SE1 finding **P1** (room map restarts once per
+  block) exists because SE1 has no such hook; SE2 hands it over.
+* `BlockHealthChanged` / `BlockBuildProgressChanged` are exactly what
+  `ThermalNode.RefreshThermalMass()` needs, and SE1 only offers `OnBlockIntegrityChanged`.
+* `GridsConnectionChanged` replaces the per-piston/per-rotor `AttachedEntityChanged` hooks.
+
+`VisitAllBlocksWithComponent<T, TVisitor>(ref TVisitor, bool)` — a **by-ref struct visitor** — is
+the house idiom. SE2 code is allocation-averse throughout (`FreeList<T>`, `PooledList<T>`,
+`BufferReference<T>`, `Span<T>`, `ListReader<T>`). A mod that allocates per block per frame will
+look wrong there.
+
+---
+
+## Permeability replaces airtightness
+
+SE1 airtightness is a boolean per face, and `ThermalGridMapper` reimplements the engine's rule.
+
+SE2 has `CubeBlockDefinition.Permeability` (bool), `GetBlockPermeability(float buildProgress)`
+(float), and `CubeBlockComponent.EffectivePermeability` (float). Sealing is **continuous and
+build-progress dependent** — a half-welded wall is partly leaky.
+
+For the thermal model this is an opportunity rather than a problem: an exposure *fraction* per
+face is strictly more general than an exposed/not-exposed bit, and it degrades to the SE1 boolean
+by treating it as 0 or 1. Designing the model around a float exposure factor costs nothing in SE1
+and buys SE2 for free.
+
+---
+
+## What is tested today
+
+`Se2LatticeTests` and `CoreIsolationTests` hold the SE2-facing properties, so a change that breaks
+them fails the build rather than being discovered when an adapter is written.
+
+| Test | Property |
+| --- | --- |
+| `TheCoreReferencesNothingButMathsAndTheFramework` | the simulation depends on `VRage.Math` and the framework, nothing else |
+| `NoPublicApiInTheCoreSpeaksAGameType` | and no game type reaches its public surface indirectly either |
+| `AHostCanDriveTheSimulationThroughTheCoreAlone` | layout in, sample in, temperatures out — written the way an adapter would write it |
+| `GeometryIsAnsweredFromBoundsAndNotFromCells` | contact, face, surface and depth for a pair of 64-million-cell boxes, exact and in under a millisecond |
+| `ContactBetweenDifferentSizesIsTheOverlapAndIsSymmetric` | a 0.5 m block on a 5 m face shares four cells, both ways round |
+| `EveryBlockSizeSe2ShipsCoexistsOnOneLattice` | all eight shipped sizes on one 0.25 m grid, linked and simulated |
+| `AJointBetweenTheSmallestAndLargestBlockConservesEnergy` | the 1-cell to 20-cell joint, which is the asymmetry the old model leaked at |
+| `TheSubstepEstimateRespondsToTheBlockSizeRatio` | the 1/size² stiffness reaches the integrator |
+| `OverALongStepTheSmallBlockForcesMoreSubstepsThanTheLargeOne` | and turns into substeps rather than staying a number |
+| `TheStiffestPairingOnTheLatticeStaysBounded` | 400 steps of the worst pairing without diverging |
+| `IncrementalTopologyHoldsOnAMixedSizeLattice` | placing blocks one at a time builds the same graph as building whole |
+| `GrindingAMixedSizeLatticeLeavesTheSameGraphAsARebuild` | and removing them unpicks it correctly |
+| `ASpreadStepIsIdenticalOnAMixedSizeLattice` | a step spread across frames is bit-identical on mixed sizes |
+
+The last three exist because the solver was rebuilt around incremental topology and frame-spread
+stepping while this document was open, and neither change had been exercised on anything but
+one-cell blocks.
+
+**What none of them claim is that SE2 is supported.** They cover the *model*: the geometry, the
+integrator and the graph all work from integer AABBs and are indifferent to a block's volume. The
+*storage* is not there — `GridModel`, `SurfaceMap` and `BlockInstance` still hold one entry per
+occupied cell, so one 5 m block costs 16,000 dictionary entries and an 8,000-element array. That is
+[the block-storage section of scale-design.md](scale-design.md#cell-centric--boundary-centric) and it is the whole remaining distance.
+
+## Reproducing this survey
+
+```bash
+# net9.0 console app, PackageReference System.Reflection.MetadataLoadContext 9.0.0
+var files = Directory.GetFiles(@"...\SpaceEngineers2\Game2", "*.dll");
+var mlc = new MetadataLoadContext(new PathAssemblyResolver(
+    files.Concat(Directory.GetFiles(Path.GetDirectoryName(typeof(object).Assembly.Location), "*.dll"))));
+// then LoadFromAssemblyPath + GetTypes, catching ReflectionTypeLoadException and using e.Types
+```
+
+Most SE2 types of interest are `internal`, so enumerate with
+`BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly`.
+Shipped content is JSON `.def` files under `GameData/Vanilla/Content`, keyed by `$Type` naming the
+object-builder type.
+
+---
+
+## Open questions to settle in game
+
+1. Is the shared lattice really 0.25 m? Read `CubeBlockComponent.AABB` for a 0.5 m and a 5 m block
+   on the same grid and compare extents.
+2. Can all eight block sizes coexist on one grid, or does `RelativeBlockSize` partition them?
+3. What is the largest block size a modder can define — is 4 a hard tier cap?
+4. Does SE2 have a pressurisation/room system, and does it expose rooms the way SE1's
+   `IMyGridGasSystem` does? If so the room mapper can be deleted in both games.
+5. What does `"CellSize": 64` in `GameData` refer to?
+
+---
+
+## Change log
+
+| Date | Change |
+| --- | --- |
+| 2026-08-22 | Merged `engine-api-notes.md` and `se2-research.md` into this page as Parts 1 and 2: both answer "what does the engine give us", and the design that consumes them treats them as one survey. Dropped the section numbering in favour of named anchors. Added the standard header and this log. |
+| 2026-08-20 | Wrote down what the engine gives and what was invented, which is what the wind and climate models are justified against. |
+| 2026-08-19 | Measured that entity updates are **not** staggered across frames, and that `MyCubeGrid` clears `EACH_FRAME` from its own update flags — the two engine behaviours the scheduler had been assuming its way around. |
+| 2026-08-18 | Added the SE2 lattice and octree findings, and what is testable today. |
+| 2026-08-12 | Opened both surveys: the ten SE1 APIs worth using, with the airtight-room system as the highest-value one, and the first reflection pass over the SE2 assemblies. |

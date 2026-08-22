@@ -737,7 +737,7 @@ namespace Thermodynamics.Tests
         /// recording: demand is proportional to step length, so the shipped eight steps a second
         /// asks for 11.6 substeps and fits, while four steps a second asks for 23.2 and does not.
         /// Raising the rate is a legitimate way out of a budget, at the price of per-step overhead
-        /// — the frequency sweep in docs/field-tuning.md measures that trade.
+        /// — the frequency sweep in docs/configuration.md measures that trade.
         /// </summary>
         [Fact]
         public void TheShippedAllowanceFitsThisGridAndABiggerStepDoesNot()

@@ -3,6 +3,16 @@
 A rig for deciding what good balance *is*, from a population of real ships rather than from a
 hull this repository built for itself.
 
+> The rules argued here are stated canonically in [rules.md](rules.md): `E1` `E2` `E7` `E8`
+> `M1` `M2` `M3` `M8` `M10` `D1` `O5` `R3` `J3`.
+
+| Looking for | Go to |
+| --- | --- |
+| What the lab has found | [balance.md](balance.md) |
+| The tooling that reads its output | [tools/corpus/README.md](../tools/corpus/README.md) |
+| The harness the lab runs on | [tests/README.md](../tests/README.md) |
+| The censoring every peak is subject to | [known-issues.md](known-issues.md#deliberate-limits) |
+
 ## Why
 
 Every number this mod ships was chosen against a synthetic rig. [`Census`](../tests/Thermodynamics.Harness/Census.cs)
@@ -71,7 +81,7 @@ A finished ship does not leave a ring of empty cells around the thing that gets 
 > this lab built rings without requesting one, which couples a ring to a hot block through ordinary
 > block-to-block conduction — the bolted case with extra pipes. It reported a median of 0.13 % over
 > 108 fits. Requiring the sink halved what could be fitted and doubled what it bought. That is the
-> 1,000 W/K against 167 in [balance.md](balance.md#the-finding), arriving as a retrofit result.
+> 1,000 W/K against 167 in [balance.md](balance.md#the-three-findings), arriving as a retrofit result.
 
 So the mechanic is real and the ships people have built cannot receive it. That is a balance
 decision rather than a defect — whether cooling should be fittable to a finished hull, or whether
@@ -483,3 +493,14 @@ themselves. Whether that fraction is right is now the kind of question the lab w
 * **Subgrids.** A blueprint's rotor and piston subgrids are read as separate ships today. They are
   thermally connected in game, through the bridges `ThermalBridges` builds, and the lab does not
   reassemble them.
+
+---
+
+## Change log
+
+| Date | Change |
+| --- | --- |
+| 2026-08-22 | Moved the readings of the corpus datasets to [balance.md](balance.md), so this page is the lab's design and that one is what the lab found. Added the standard header and this change log. |
+| 2026-08-22 | Answered G3 by fitting cooling to ships people actually built, and said which half of the cooling criterion the ladder answers and which it does not. |
+| 2026-08-21 | Measured the speed limit the mod is actually played at. |
+| 2026-08-20 | Isolated wind from velocity and composed them where the game does. Measured a ship's stiffness in the world it flies in. Opened the lab: the criteria written down before any data was collected, the staging from cheap screening to the full battery, and the corpus acquisition. |

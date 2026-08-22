@@ -392,7 +392,7 @@ namespace Thermodynamics
         /// A page with one switch on it looks broken. It is not — it is a system whose remaining
         /// dials are in a definition file the menu does not reach yet, and saying so is better
         /// than leaving a reader to wonder. Each of these disappears as its file is brought in;
-        /// see [settings-redesign.md](../../../../docs/settings-redesign.md).
+        /// see [configuration.md](../../../../docs/configuration.md#the-settings-surface-and-where-it-is-going).
         /// </summary>
         private static readonly Dictionary<string, string> PageNotes = new Dictionary<string, string>
         {

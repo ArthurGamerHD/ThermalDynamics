@@ -1,482 +1,25 @@
 # Known issues and limits
 
-Current as of the review that added room air, thresholds, point heat sources and the mod API. Split into defects, unfinished work, and limits that are deliberate.
-
-## Fixed, worth remembering
-
-**Every reactor in the game made no heat, and the whole suite was green over it.** `Cubes.xml` gave
-the `Reactor` type `ProducerWasteEnergy` 0 and `ConsumerWasteEnergy` 0.25. A reactor delivers power
-through `MyResourceSourceComponent`, so only the producer fraction can ever reach it: the largest
-heat source a ship has was inert, and the single most interesting thing the mod simulates never
-happened in an ordinary world.
-
-Worth remembering for its shape rather than its fix. Nothing in the solver was wrong, so no test of
-the solver could see it — the simulation correctly integrated a load of zero. Which of the two
-fractions applies is decided by the game's component wiring, not by the definition, so an entry can
-be internally consistent and still be attached to nothing. The check that catches it now asserts on
-the *type's* producer fraction rather than on any block's behaviour, because behaviour was never
-the thing that broke. See [balance.md](balance.md#reactor-waste-heat).
-
-**A grid welded past its buffer capacity went NaN, whole.** The per-node arrays — temperatures,
-mirrored heat capacities, the watts a substep is accumulating — grow when the node count passes
-their capacity, and growing reallocates every one of them. They are refilled by `SyncNodeState`,
-which runs when a step *begins*. A step already in flight carried on over the zeroed rows, divided
-its watts by a heat capacity of zero, and published the result onto every block on the grid.
-
-The trigger is a block placed on a frame the step is not finished with, on a grid with no headroom
-left in its buffers. A step spans fifteen frames at the shipped settings, so the window is most of
-the time; the buffers grow by a quarter plus sixteen, so a ship being welded crosses the boundary
-regularly. `BufferGrowthTests` reproduces it in twenty milliseconds.
-
-The step is now abandoned when the buffers grow, exactly as it already was for a block removal or a
-graph rebuild. Nothing is lost but the watts that substep had accumulated. Worth remembering for
-the shape of it: three call sites documented the invariant *"a step in flight is abandoned when the
-grid changes shape"* and the fourth, which changes the grid's shape most violently, did not.
-
-**Every block this mod ships ran on the default thermal properties, in game only.** All eighteen
-of the mod's own entries in [Cubes.xml](../Data/Cubes.xml) declared themselves under
-`<TypeId>CubeBlocks</TypeId>`. There is no such object builder type — the blocks are `CubeBlock`
-(pipes, radiators) and `UpgradeModule` (pumps, heat pumps) — so Definition Extensions matched none
-of them and `ThermalCellDefinition.GetDefinition` took its fallback path to
-`DefaultThermodynamics` for all eighteen. The whole file was inert for the mod's own blocks while
-the three vanilla entries beside it, authored under `Thrust` and `Reactor`, worked; a live dump
-showed `LargeBlockSmallHydrogenThrustReskin` with its authored emissivity 0.15 and critical 1050 K
-on the same page as `Gauge_LG_Radiator` reporting 0.125 and 900 K.
-
-What it cost, per block:
-
-| Block | Authored | Ran as |
-| --- | --- | --- |
-| Radiator | emissivity 0.35, area ×1.25, specific heat 900 | 0.125, ×1, 450 |
-| Heat pump | waste 0 / 0 | 0.05 / 0.05 |
-| Coolant pipes | conductivity 1 | 0.6 |
-
-The radiator is the block that mattered: emissivity and the area multiplier *are* the block, so it
-was shedding at 28 % of the authored rate with none of the area bonus and radiating no better than
-the armour around it. The heat pump was worse than wrong — the solver already puts every watt it
-draws into the hot side, so a 0.05 consumer fraction on a pump drawing its full 20 kW invented
-1 kW of heat a second time. The live dump reported exactly that: `heat generation W 1,000.00`
-against `power consumed W 20,000` on a block whose definition asks for zero.
-
-**No test could see it.** The solver suite builds its own `BlockThermalProperties` in code and was
-right about every equation; the numbers it was handed in game came from a file nobody parsed
-offline. `ShippedDefinitionTests` now reads the shipped XML and cross-checks each entry's `TypeId`
-against the block's own `.sbc`, that every shipped block has an entry at all, that the radiator
-beats the default entry on both properties it exists for, and that the heat pump's waste
-fractions are zero. The radiator assertions compare against the default entry rather than against
-literals, because silently *becoming* the default is the failure being guarded.
-
-**The substep mass floor was computed from its own previous answer, and its diagnostic read zero
-whenever it was working.** `ApplyThermalMassFloor` raises a light block's *integration* capacity so
-it stops demanding more substeps than `MaxSubstepsPerBlock` allows. It compared each node against
-the mirrored row `nodeThermalMass[i]` — but `SyncNodeState` only refreshes a row whose node is
-dirty, so on a settled grid the row still held the floor this same pass wrote last step. Two
-consequences, one cosmetic and one not:
-
-* `FlooredNodes`, reported as **blocks raised by cap**, counted only the nodes a pass *moved*. After
-  the first step there were none, so it read `0` on every step while the floor was doing all of its
-  work. A live dump reported `blocks raised by cap 0 / 0 / 0` on the same page as its own projection
-  that the configured cap of 3 raises 804 blocks on that ship.
-* Because the pass could only ever raise, the floor became a high-water mark: it was re-raised
-  against its own previous output rather than sized from the block. A 20 kg fitting on heavy armour
-  settled at **1.94 substeps demanded against a cap of 3** — damped harder than the cap ever asked
-  for, which is wasted accuracy in the other direction.
-
-Both come from the same line. The floor is now sized from `nodes[i].ThermalMass`, as the coolant
-loop and room air passes immediately below it always were, and `FlooredNodes` counts the nodes
-standing above their real capacity rather than the ones one pass happened to move.
-
-**The behavioural half of this is smaller than it looks, and worth stating so nobody re-derives an
-alarm from it.** A node's stability rate is conduction plus radiation, and on a real ship
-conduction dominates — the live dump attributes 100 % of its substep demand to conduction.
-Conduction is temperature-independent, so the stale row usually held the same floor the block
-deserved. Measured on a 16 kg fitting in light armour, a grid that had been at 1200 K and one that
-never left 400 K integrated **bit-identically** from the same state. The ratchet is real, is fixed,
-and was inert wherever conduction sets the floor.
-
-`SubstepFloorTests` gains `TheFlooredCountHoldsForAsLongAsTheFloorDoes` and
-`AFlooredGridDemandsExactlyItsCapAndNotLess`; both were confirmed to fail against the previous
-arithmetic. The second reads the raw demand through `NodeSubstepDemand`, which divides by the
-block's real capacity, so the floor is not being asked to confirm its own work.
-
-**A settings toggle with a menu entry, a config field, a label and no reader.** `DebugWindRaycast`
-has been in the file, in `Names()`, in `ClientOwned` and on the Debug page reading "Draw wind vector"
-since the wind field was written, and nothing anywhere in the codebase read it. Switching it on drew
-nothing. It is the same shape as the coolant pump's inert switch and was found the same way — by
-grepping for readers of a setting rather than by using it — which is worth remembering as a check
-worth running over the whole settings list, not just this one.
-
-It now draws what the label promised, and the distinction it draws is the useful one: the *relative*
-wind, per grid, which is the field minus the grid's own velocity. Parked, it agrees with an arrow of
-the new wind map; at speed it should not, and the difference is exactly what heats a leading face.
-Green below `FrictionAtSpeedsAbove` and red above it, since that threshold is the thing this vector
-decides.
-
-**Never assign `NeedsUpdate` from a game logic component that asked for entity updates.**
-`[MyEntityComponentDescriptor(typeof(MyObjectBuilder_CubeGrid), true)]` makes the component's
-`NeedsUpdate` property the *grid entity's* update flags. Assigning to it clears whatever the grid
-set for itself, and `MyCubeGrid` re-arms `EACH_FRAME` only when its scheduled-update queue goes from
-empty to non-empty — so clearing it once stops that queue being drained for the rest of the session.
-The visible symptom was ship control: `MyGroupControlSystem` recalculates the controlling cockpit
-from that queue, so sitting down gave "Someone else is using this ship!" forever. Use `|=`, and stop
-work with a flag of your own rather than by taking the entity's updates away.
-
-## Unfinished
-
-**A mechanism tested only through the door nobody uses is untested.** Room air was correct
-everywhere it was exercised and inert everywhere it ran. Every test and the mod API set a room's
-pressure through `ThermalSimulation.SetRoomPressure`, which rebuilds the room's links to the blocks
-bounding it, seeds air appearing for the first time from the temperature of those walls, and
-recomputes the conductance totals. The game's own sweep assigned `room.Pressure` directly and called
-`RefreshThermalMass` by hand — the only caller in the codebase that did — so in a live world a
-pressurised room got its air mass, **no links at all**, and whatever temperature the last rebuild
-left behind, which for a ship in vacuum is 2.7 K. The whole suite passed over a feature that did nothing in game.
-The sweep now goes through the solver, and `RoomAirCouplingTests` pins the two properties that
-differed. The room dump reports a `links` column so air with mass and no coupling says so.
-
-**A vent reported to one room and it was not always the right one.** `ReadVents` stopped at the
-first room found on the first cell of the vent, so a vent in a bulkhead between two compartments
-gave one of them air and the other nothing — decided by the order the six faces are indexed in.
-Measured on a ship with two vents in the same bulkhead: an eight-cell space took the air and the
-thirty-cell cabin, with both vents on it and the game reporting it sealed and 99% full, ran at zero
-pressure. A vent now reports to every room it touches. That over-reports where a vent serves only
-one side and the game exposes no way to ask which room a vent is on; it is bounded by each room
-still being tested against `IsRoomAtPositionAirtight` on its own.
-
-**A vent can only speak for the room it stands in, and this model's rooms are smaller than the
-game's.** Pressurisation read the air vents and gave air to the compartments a vent physically
-touched. The game's rooms are the whole connected volume — its sealing test is finer than a cell and
-splits nothing where this splits often — so a cabin joined through an open doorway to a vented one
-is full in the game and was in hard vacuum here. Measured: twelve mapped rooms on one ship, the game
-holding air in nine of them, two with a vent against them, seven left empty. The level now comes
-from `IMyCubeGrid.GasSystem.GetOxygenRoomForCubeGridPosition` per room, which answers for every
-compartment whether or not anything is bolted to it; the vents are the fallback when the gas system
-cannot be read.
-
-**Sealed is not full, and a diagnostic that confuses the two is worse than none.** The first
-version of the dry-room flag asked `IsRoomAtPositionAirtight` and `IMyAirVent.IsPressurized`, both
-of which answer *is this room sealed*, and treated the answer as *should this room have air*. On a
-ship in vacuum every sealed cupboard nobody had piped air into came back airtight and empty —
-correct in both models — so eight of twelve compartments were flagged as faults and painted magenta
-in the overlay, burying the one that mattered. The test is now the game's own oxygen level, read
-per room from `IMyCubeGrid.GasSystem`, and lives in `RoomPressure.Disagrees` with tests on it
-rather than inline in a struct property.
-
-**This model and the game can disagree about what is sealed, and losing that argument is silent.**
-Sealing here comes from each definition's pressurisation table read cell by cell; the game's test
-knows the real shape of a sloped block. Where they differ the flood fill walks in from outside, the
-compartment stops existing, and because pressurisation is only ever asked about rooms the map
-already found, nothing notices. **Measured, and on the ship that prompted it the map was right** —
-12 compartments found, zero held only by the game, 11 of 12 agreeing with
-`IsRoomAtPositionAirtight`. The comparison is now run every dump and reported per compartment, so
-the next disagreement is a number rather than a guess. See
-[surface-mapping.md](surface-mapping.md#where-the-audit-was-not-enough).
-
-**The ambient lag is in absolute seconds and a day is not.** `AmbientLagSeconds` is 45 seconds of
-play. Against a four-minute sun rotation that attenuates the day-night swing to 46% of its intended
-size; against the default two-hour rotation it does almost nothing. It is physically a fraction of a
-day. `MySectorWeatherComponent.RotationInterval` is the sun's period and would let it be expressed
-that way, if that type proves reachable under the mod whitelist — see
-[engine-api-notes.md](engine-api-notes.md). Until then it is a per-planet figure in
-[Planets.xml](../Data/Planets.xml) that a short-day world has to know to change.
-
-**The underground core gradient is out of reach in ordinary play.** Below `SealevelDeadzone` the
-rock warms toward `CoreTemperature`, and the shipped deadzone is 2 km below sea level — deeper than
-SE's voxels go. The model is right and the tuning lever is documented, but as shipped, every
-reachable depth reads a flat `UndergroundTemperature`. Whether the default deadzone should be a few
-hundred metres instead is an open balance question, not a code one.
-
-**Radiators cannot be inline loop segments.** A radiator sheds heat when a pipe's sink face is
-pressed against it, which works and is what the `radiator` scenario measures. It has no coolant
-ports of its own, so a loop cannot run *through* one. The block is 1×5×2 with mount points only on
-its top and bottom, so adding ports needs the port geometry checked against the model.
-
-**Network replication covers settings and pump controls, not temperatures.** `SENetworkAPI` 2.0 is
-initialised on channel `30323` and three properties are registered on it: the world's settings, and
-the two pump throttles.
-
-The settings property is seeded with the loaded settings at construction rather than left at null,
-because **a null value is never transmitted** — a property sitting at null answers a joining
-client's fetch with silence, and since the server publishes only when a setting *changes*, a world
-where nobody touched the config would leave every client on the shipped defaults for the whole
-session. The same shape as the bug being fixed, one layer up.
-
-A received value is **copied into the live settings object rather than swapped for it**. A grid
-takes its core settings once, at construction — `new ThermalSimulation(Settings.Instance.ToCore(),
-Model)` — and notices later changes only through that object's `Revision`, so replacing
-`Settings.Instance` would leave every grid already on the client running the settings it was born
-with. The copy goes through `Settings.Names()`, the same list the settings menu uses, minus
-`Settings.ClientOwned` — the four presentation switches a client owns for itself, since a server
-has no business choosing which overlay is on someone else's screen. That leaves 44 of the 49
-serialized fields replicated; the fifth is the config file's `Version`, which describes the file
-rather than the world.
-
-The settings one closed a silent divergence rather than adding a feature. Only the server can read
-the config file — `CanReadWorldStorage` returns false on a client, and its comment already said
-clients "take the server's settings rather than their own file" — but nothing delivered them, so a
-client simulated on the shipped defaults while the server ran whatever profile it had been given.
-Two machines integrating different physics from the same inputs is a worse divergence than the one
-this entry was written about.
-
-What remains is the original one. Clients run their own simulation from the same inputs and reach the same answers,
-but nothing reconciles them: a client that joins mid-session starts from saved temperatures, and
-divergence is never corrected. Damage and settings are server authoritative, so the divergence is
-cosmetic, but it is real.
-
-**The settings menu could not change anything from a multiplayer client — fixed.** The Rich HUD menu
-edits the same server-side config the chat commands do, so on a client every simulation control was
-disabled and only the four presentation switches worked.
-
-A client at space master or above now asks the server instead: the menu and `/thermal set` both
-route through `SettingsRequests`, the server checks the asker's promote level and applies the
-change, and the answer comes back as a chat line. An accepted change replicates to everyone through
-the ordinary settings sync.
-
-**The request does not travel on the mod's shared network channel, and that is deliberate.**
-SENetworkAPI registers the game's non-secure message handler, so every sender id it reports is a
-field the sender wrote — a modified client can claim to be anyone, and the API's own documentation
-says not to gate admin actions on it. This uses the engine's
-`RegisterSecureMessageHandler` on a channel one above the shared one, where the transport supplies
-the sender identity and a from-the-server flag that cannot be forged. Replies are ignored unless
-that flag is set, so a client cannot fake the server's answer to another client.
-
-**The heat pump's electrical hookup is only checkable in game.** The simulation half is under test
-offline. The half that makes it cost anything — a `MyResourceSinkComponent` attached in code during
-`Init`, because an upgrade module has no definition field for one — cannot be exercised without a
-session, so whether the grid's resource distributor picks the sink up is unverified.
-
-**The heat pump changed block type.** It was a `CubeBlock` and is now an `UpgradeModule`, because
-only a functional block has a terminal to switch it from. A grid saved with the old block loses it
-on load. Nothing was lost by doing it: the old block had no behaviour at all.
-
-## Fixed, worth remembering
-
-**One file format read by two parsers will drift, and the drift is silent in both directions.**
-Block thermal properties are read twice: `ThermalCellDefinition` asks Definition Extensions for
-them in a live session, and `ShippedBlocks` reads the XML directly so the harness can build from
-what the mod ships. Neither can be the other — the first needs a session and the second must run
-without one — and they had drifted apart in both directions at once.
-
-`HeatSourceWatts`, the term for a block that is hot because of what it *is* rather than because of
-power crossing it, was only ever known to the offline reader. It has a class of tests, a place in
-the properties type, a clamp and a conservation proof, and a mod author declaring a smouldering
-wreck would have got 1,234 W in every test in this repository and **0 W in a world**. The test
-that existed to prevent exactly this checked one parser and said in its own summary why that
-mattered.
-
-`ExcludeFromSimulation` went the other way: the in-game reader has always read it and the offline
-one never did, so a block type excluded in `Cubes.xml` would have been simulated by every
-benchmark, every corpus run and every scenario, and by nothing in a game. It cost nothing so far
-only because no shipped entry excludes anything.
-
-Both are fixed, and `BothParsersKnowTheSamePropertyNames` compares the two name lists in both
-directions. It is textual, because the in-game reader cannot be linked into the test project —
-which is the same reason the two parsers exist, and therefore the reason a check on them has to be.
-
-**Config defaults belong on the fields, not in a factory method.** A world's config file has no
-element for a setting added after that file was written, and the XML reader leaves such fields at
-`default(T)` — so every setting added since a world was first loaded ran as `false` or `0` in that
-world, silently. A test world reported `SolarOcclusionPlanets False`, `SolarTerrainRange 0` and a
-room overlay span of one kelvin while its owner had changed none of them. Bumping the file version
-would only have papered over it, and thrown away real customisation each time. The defaults now
-live on the field declarations, where a reader that finds nothing leaves them alone.
-
-**A scale applied to a lagged value compounds against the lag.** Ambient chased its target with a
-45-second first-order lag and was then multiplied by an air-density factor — but the *scaled* value
-was what the next step chased from, so the factor reapplied every step. The steady state is
-`f·k / (1 − f + f·k)` with `k = 1 − e^(−dt/τ)`, which at `f = 0.977`, `dt = 1/6 s` and `τ = 45 s` is
-14% of the intended temperature rather than 98%. A snowfield 5.6 km up reported 36 K for an entire
-session while two sea-level sites nearby were correct to a tenth of a kelvin, because their density
-rounded `f` to 1.0000 and hid it. Everything that decides a temperature now produces a *target*, and
-the lag is applied to that target exactly once, last. Pinned by
-`ThinAirDoesNotCompoundAgainstTheLag`.
-
-**A lag needs to know it has no history.** The same ambient started each session at the
-`VacuumTemperature` its state was seeded with and took three minutes of play to reach the real
-climate, dragging every block on every grid with it — one measured grid fell from 257 K to 103 K in
-nineteen seconds. `ClimateModel.Follow` guarded against this with `if (current <= 0f) return
-target`, which never fired, because 2.7 is not zero. A guard against an uninitialised value has to
-test whether the value was initialised, not whether it looks unreasonable.
-
-**The game has no wind field, and its wind speed is a rating.** `MyPlanet.GetWindSpeed` returns the
-planet definition's maximum wind scaled by air density — a constant per altitude, the same at every
-latitude and longitude, with no direction. It is what wind turbines are balanced against. Used as a
-wind it read 80 m/s over a parked ship on an earthlike world, which tripped friction heating and
-doubled convection; the mod now treats it as a ceiling and supplies its own field. Nothing in the
-API exposes a real local wind, so the field is invented rather than read.
-
-**Two shape caches on the block-placement path were unguarded.** `ThermalBlockCatalog` locks its
-model dictionary and deliberately builds outside that lock, so as not to serialise the worker
-threads the game pastes grids on — and what it builds calls into `ThermalCoolantShapes.Get` and
-`ThermalHeatPumpShapes.Get`, both of which wrote to a plain `Dictionary` with no lock at all. A
-field dump logged three `NullReferenceException`s out of `Dictionary.Insert` in the first tenth of
-a second of a world load, which is what two threads writing one bucket looks like from the far
-side; every block of those types silently failed to become a node. Both caches now take a lock on
-the same discipline as the catalogue: probe under the lock, build outside it, publish under it.
-
-## Suspected defects
-
-**Convection was reported before the atmosphere blend, not after — fixed, and it was only ever a
-reporting fault.** A field dump showed `convection W/m2K 50.0` beside `air density 0.0000` at
-44 km, which reads as a hull convecting in a vacuum. It was not.
-`EnvironmentState.ConvectionCoefficient` is the planet's figure scaled by wind and weather, and the
-solver blends it by `AtmosphereFactor` at the point of transfer — because the same factor weights
-radiation *down* as it weights convection *up*, so the blend belongs where the two meet
-([thermal-model.md](thermal-model.md#convection)). Everything that reported convection read the
-unblended number.
-
-Measured on one 200 kW block, the transfer was correct throughout: convective watts fall 50,000 →
-49,401 → 30,562 → 412 → 0 as density falls 1 → 0.25 → 0.01 → 0.0001 → 0, while radiation rises to
-take over. `EnvironmentState.EffectiveConvectionCoefficient` is now what the telemetry and the
-climate dump report, and `ConvectiveWattsFallWithTheAir` holds the reported figure to the
-behaviour.
-
-**Worth recording because the first attempt at this got it wrong.** Reading the coefficient's
-construction alone, it looks as though density never enters convection, and applying the factor
-there is an obvious-looking fix — it is a *second* application, and would have squared the blend:
-0.47 instead of 0.68 at quarter density. The stability estimator's `ConvectionCoefficient *
-AtmosphereFactor` reads like corroboration and is actually the same single application, in the one
-other place that needs it. A settled-temperature test written to catch the imagined defect failed
-against correct code, which is what exposed the mistake: **thinner air does not make a block
-hotter** over most of the range, because thin air is also much colder — 294 K at sea level against
-101 K at a twentieth — and a weak coupling to a cold sink beats a strong coupling to a warm one.
-The same block settles at 321 K at sea level, 241 K at a twentieth, and 553 K only in true vacuum.
-`ASettledTemperatureIsNotMonotonicInAirDensity` pins that so the alarm is not re-derived.
-
-**A face bolted to a block that does not seal was counted as buried — fixed.** Exposure rejected
-any cell face where two mount surfaces met, regardless of what the neighbour was. The ordering is
-what made that wrong: the sealing test runs first, so every joint against a block that seals was
-already gone, and the mount test could only ever reach faces bolted to something that does *not*
-seal — a grating, a catwalk, a ladder. The room mapper calls the cell beyond one of those
-external, because air floods through it, and exposure threw the face away anyway. A hull panel
-with a catwalk bolted flat against it therefore lost 100% of its radiation and solar gain while
-the mod's own room map said it was outdoors.
-
-The mount test is gone. A face against an open lattice now radiates and takes sunlight, and the
-joint conducts as it always did — both are true of a real catwalk. `FaceExposure.Mounted` survives
-as a *subset* of `Exposed` rather than a rejection, so the surface dump's `mounted` column now
-answers how much of a ship conducts and radiates through the same face; the audit's rejection
-counts sum to the cell count without it. `AFaceAgainstAnOpenLatticeRadiatesAndIsCountedAsBolted`
-replaces the characterisation test, and
-`ASealingNeighbourStillBuriesTheFaceWhateverItsMounts` pins the ordering argument the fix rests
-on — a solid hull cannot be opened up by this change.
-
-**The step budget counted link visits but not node visits — fixed, and measured first.**
-`MaxElementVisitsPerStep`, formerly `MaxLinkVisitsPerStep`, bounds a step by substeps times links,
-while the environment pass is per node per substep — radiation, convection, solar with six face
-weights each — which the budget could not see. A grid with few links per node therefore got a more
-generous allowance than one with many, for the same real cost.
-
-The weight was measured rather than guessed. Shapes spanning zero to three links per node, each
-timed with the environment off and on so exposure could be separated from link count by
-differencing: a node is worth **2.8 links at four thousand nodes, 3.3 at a hundred thousand and 7.5
-at a quarter of a million**, and an exposed face between a tenth and a half of a link. Per-link cost
-is flat across a hundredfold size range because links stream; per-node cost triples because the
-node state stops fitting in cache. See [element-cost.md](element-cost.md).
-
-The budget now counts `links + 4 × nodes` and ignores faces, four being the low end of the range
-over the sizes where the bound binds at all. The default value is unchanged at 1,000,000 and the
-unit change alone tightens it: at the 18.35 ns per weighted element a field dump measured, that
-allowance is **18.3 ms of solver work per step**, which is what this setting's documentation always
-claimed and had drifted a long way from. On the three 42,051-block ships a field report measured at
-11 substeps and 85–150 ms a tick, the same number now buys about four substeps.
-
-What this retires is the claim that only grids past a hundred thousand blocks reach the default. A
-step's cost is size times stiffness, and `TheShippedAllowanceFitsThisGridAndABiggerStepDoesNot`
-pins both halves of that on one 8,904-node rig. Counting links alone, its 20,779 links bought 48
-substeps against a demand of 23, so the budget did nothing at all. Counting nodes as well, one
-substep over that rig costs 56,395 element visits and the same allowance buys 17 — which still
-covers the 11.6 the shipped eight steps a second asks for. Whether the allowance binds is
-therefore a question about the step **rate** rather than about block count: at four steps a second
-the same grid asks 23.2 of each step, and the allowance shortens it to between a half and all of
-real time. Shortened rather than clamped — each step keeps its accuracy and simulated time is what
-is traded.
-
-A world whose config predates the rename takes the new default rather than importing its old
-number, which would be a value in the wrong unit; the load path logs when it drops one.
-
-**A grid holds about 1.8 KB a block, against a design budget of ~110 bytes a node**
-([scale-design.md §6](scale-design.md#6-data-structures)). Measured at 126,731 blocks: 213 MB
-retained, 278 MB peak. Half of the retained figure is indexed by *bounding volume* rather than by
-block, so a hull pays for the empty space it encloses. The earlier figure quoted here — 2.5 GB at a
-million blocks — was `GetTotalMemory` without a collection and counted garbage; the peak was real,
-the retained figure was not. [memory.md](memory.md) has the breakdown and six local changes that
-roughly halve it, none of which help SE2, where the problem is that three structures are indexed
-per cell rather than per block.
-
-**Block storage is still per cell, which is what stands between the model and SE2.** The geometry,
-the conduction graph and the integrator all work from integer AABBs and cost the same whatever a
-block's volume — `Se2LatticeTests` pins that. `GridModel.blocksByCell`, `SurfaceMap.states` and
-`BlockInstance.Cells` do not: they are one entry per occupied cell, so a 5 m block on SE2's 0.25 m
-lattice would cost 16,000 dictionary entries and an 8,000-element array. See
-[model-redesign.md §2](model-redesign.md).
-
-**The room map floods the bounding volume, which a hull fills about a fifteenth of.** It is
-budgeted, so the cost is ticks rather than a stall — but at a million blocks it is 7,000 ticks to
-converge, which is twenty minutes on a stale map. Bounded and wrong is better than unbounded and
-wrong; it is still wrong. See [model-redesign.md §4](model-redesign.md).
-
-**A block whose mounting changed kept stale conduction links — fixed, and it was the opposite of
-what this entry used to claim.** `RefreshBlock` did not rebuild the conduction graph. It did not
-touch it: it refreshed the surface bits and set the topology flag, and the flag's handler only
-rebuilds links when a full rebuild is already due or nodes are queued for their first link, which
-a refresh sets neither of. Contact area is the product of both ends' mount fractions, so every
-link touching a refreshed block went on carrying a conductance derived from geometry the block no
-longer had, for the rest of the session. Meanwhile the *expensive* half of the flag — a full room
-flood fill — was charged on every call.
-
-Both halves are now proportional to what changed. `ThermalSolver.RefreshBlockLinks` drops the
-node's links through the same intrusive chains removal walks and requeues it for the incremental
-link build a placed block takes, which costs the node's degree. The remap is asked for only when
-the block's *structural* sealing bits actually moved, or when a door's live bits moved and the
-mapper has no portal for it; a change to mounting alone re-resolves venting and recounts that one
-block's exposed faces. The dirty flag is split accordingly — `MarkTopologyDirty` for anything that
-can move a wall, `MarkLayoutDirty` for anything that cannot.
-
-`BlockRefreshTests` pins it. `ReorientingABlockRebuildsTheJointsItsMountsDecide` and its inverse
-turn a block whose mounts are on two faces only and check the joint appears and disappears; both
-were confirmed to fail against the previous arithmetic, as was
-`RefreshingABlockCostsItsOwnDegreeRatherThanTheGrid`, which holds the repair to one node's links
-rather than the grid's.
-
-**`SweepRoomPressure` is per room per cadence, unbudgeted** — measured, instrumented, and cheaper
-than it was. It makes two game API calls per compartment every eight steps, bounded by compartment
-count rather than block count. Every other whole-grid pass in the mod is a rota or a budgeted
-slice; this is the one that is not.
-
-**What a field dump says about it** (TestWorld1, 2026-08-19 20:44, 118.5 s, six grids, 7,976
-blocks): the sweep was *unattributed* — the cost table splits a grid's update into topology, room
-mapping, exposure, solver and solar occlusion, and the sweep runs in `AfterSteps`, outside all of
-them. Backing it out of the totals leaves **64 ms in 118.5 s, 0.054 % of real time**, and that
-remainder also holds the mass sweep, overheat damage, threshold crossings, the heat-pump publish
-and the hottest-node scan. On twelve compartments the sweep is a fraction of a fraction.
-
-**The vent fallback was the part that mattered, and it ran every sweep.** `ReadVents` walks every
-vent on the grid, and it fired whenever any single compartment went unanswered by the gas system.
-The dump shows compartment 7 reporting `seal no` with no gas reading at all — a room this model
-finds and the game does not seal — so the fallback ran on every sweep of the session. That is the
-normal state of most ships, since this model's rooms are finer than the game's.
-
-It cannot change an answer for such a room: `RoomPressure.Level` empties anything the game does
-not seal, whatever a vent reports. The sweep now asks `RoomPressure.NeedsVentFallback` first, which
-is true only for a room that could hold air and that nothing has answered for, so an unsealed
-compartment no longer buys a walk over the grid's vents. A world with oxygen or pressurisation
-disabled now skips the gas system and the vents entirely rather than reading both and discarding
-the result.
-
-The rota is **deliberately not built**. The measurement says it is a station-scale risk with no
-evidence behind it, and the sweep is now timed as `of which room pressure` with counters for
-compartments visited, game calls made, vent scans and vents walked — so the next dump from a large
-station answers the question with a number rather than an argument.
-
-**The first step of a grid's life is several times an ordinary one** — 28.3 ms above a 13.2 ms tick
-at half a million blocks, and 53 ms above a 26 ms tick at a million — from first touch of every
-flat array and the first fill of every mirrored row. It happens once, immediately after a world
-load that took four seconds, so it is a warm-up rather than a stutter. It is still the largest
-number in the distribution at the top rung, and it grew relative to the tick as the tick shrank:
-the ticks either side of it got three to five times cheaper and the first touch did not.
+What this mod deliberately does not model, what is still open, and the failure patterns worth
+carrying forward. Open work is tracked one line each in [backlog.md](backlog.md); this page carries
+the argument behind each entry.
+
+> The rules argued here are stated canonically in [rules.md](rules.md): `E2` `E9` `D3` `D5` `D6`,
+> and the principle P14 the deliberate limits follow from.
+
+| Looking for | Go to |
+| --- | --- |
+| Every open item, categorised, one line each | [backlog.md](backlog.md) |
+| What the model does now | [thermal-model.md](thermal-model.md) |
+| What a grid costs, and what makes it stutter | [benchmarks.md](benchmarks.md), [load-and-hitching.md](load-and-hitching.md) |
+| What the corpus survey found about balance | [balance.md](balance.md) |
+
+---
 
 ## Deliberate limits
+
+Each of these is a simplification taken on purpose, with the price written down. A limit is not a
+defect; a limit nobody wrote down is.
 
 **The lab never destroys a block, so a peak temperature above critical is not a prediction.** The
 solver raises an `OverheatEvent` when a node passes its critical temperature, but applying that
@@ -485,47 +28,38 @@ In the lab an overheating block is therefore never removed: it keeps generating,
 neighbours, and keeps climbing for whatever remains of the clock. In game it would be gone in
 seconds and would stop producing.
 
-That censors every number drawn from the right tail. The 2026-08-21 corpus survey reports one ship
-at 541,648 K and a parked mobile base at 31,151 K; neither is a temperature the mod can reach,
-because the block that got there does not survive to be measured. Read any peak above critical as
-"this block dies" and nothing further, and treat the population's peak statistics — p95, p99, max —
-as describing the harness rather than the mod. `over_critical`, `over_share` and
-`seconds_to_critical` are unaffected: they are decided at the crossing, before the divergence
-matters.
+That censors every number drawn from the right tail. The corpus survey reports one ship at
+541,648 K and a parked mobile base at 31,151 K; neither is a temperature the mod can reach, because
+the block that got there does not survive to be measured. **Read any peak above critical as "this
+block dies" and nothing further**, and treat the population's peak statistics — p95, p99, max — as
+describing the harness rather than the mod. `over_critical`, `over_share` and `seconds_to_critical`
+are unaffected: they are decided at the crossing, before the divergence matters.
 
 Closing it properly means the harness modelling destruction — removing the node, re-deriving the
 graph, and stopping the source — which is a solver-wide change to answer a question the censored
-reading already answers. Recorded as a limit instead.
+reading already answers.
 
 **Planet and asteroid shadow is per grid; only other grids shade individual faces.** A grid's own
 shadow is per face (`SolarSelfShadowing`) and so is another grid's (`SolarGridShadows = full`), but a
 planet's or an asteroid's dims the whole grid by the share of sampled rays that were blocked
 (`SolarOcclusionSamples`). A capital ship crossing a terminator therefore ramps rather than
-switching, but never carries a shadow edge across its own hull. Per-block would need the ray count to
-scale with block count, which is a different order of cost from what is there.
-
-**A room with no air vent holds no air.** The game exposes a room's oxygen level through vents and
-nowhere else, so a sealed compartment that was never piped is indistinguishable from one that cannot
-be measured, and is treated as empty. It costs that compartment the heat capacity of its air; the
-walls still conduct and radiate as they should.
+switching, but never carries a shadow edge across its own hull. Per-block would need the ray count
+to scale with block count, which is a different order of cost from what is there.
 
 **Point sources are not occluded.** A registered heat source heats through walls and through other
 ships. Occlusion is left to the host, which can simply not register a source it knows is hidden.
-
-**Pressurisation is only known through air vents.** The game exposes room pressure nowhere else a
-mod can reach. A sealed compartment with no vent holds no air as far as this mod is concerned.
 
 **A room that changes shape loses its air temperature.** Rooms are matched across rebuilds by their
 lowest cell. Building inside a compartment gives it a fresh air mass at the temperature of its
 walls. The same key carries air across a save, so a compartment rebuilt while the world was closed
 comes back at the temperature of its walls rather than the one it was saved at.
 
-**There is no thermal view.** A heat overlay was built and removed: mods get no shader, no
-post-process and no frame buffer, so the only way to recolour the world is to blank it and redraw
-every body as a billboard. That gives coarse terrain, discs for asteroids, and nothing at all for
-anything the mod does not draw. Seeing temperature is the terminal readout, the cockpit summary, the
-crosshair readout and the x-ray block overlay instead — the overlay keeps the part of that work that
-was worth keeping, since a debug view *wants* to see through the hull.
+**There is no thermal view.** Mods get no shader, no post-process and no frame buffer, so the only
+way to recolour the world is to blank it and redraw every body as a billboard — which gives coarse
+terrain, discs for asteroids, and nothing at all for anything the mod does not draw. Seeing
+temperature is the terminal readout, the cockpit summary, the crosshair readout and the x-ray block
+overlay instead; the overlay keeps the part of that work that was worth keeping, since a debug view
+*wants* to see through the hull.
 
 **Build state does not change a block's thermal properties.** A block at 10% construction has the
 same mass, heat capacity, conductivity and mounting as a finished one, and nothing notifies the
@@ -539,174 +73,434 @@ so this can be revisited by hooking build state to it, and nothing else would ne
 **Emissivity is used as absorptivity.** The grey-body assumption. A block cannot be made shiny to
 the sun and black to space.
 
-**`Conductivity` is a 0..1 quality value, not W/(m·K).** It is multiplied by a reference 200 W/(m·K)
-to get real units. Definitions describe a block's material by specific heat, which is real, and its
-conduction by a quality, which is not.
+**A coolant loop's `Conductivity` is a 0…1 quality against a 200 W/(m·K) reference**, where a
+block's is the real W/(m·K) figure a materials table gives. The fluid-to-wall path is convective,
+and its honest dial is a heat transfer coefficient in W/(m²·K) — a change to the loop equations
+rather than to a number. See [definitions.md](definitions.md#conductivity-is-in-real-wmk).
 
 **Mount coverage is combined as independent fractions.** Where both sides of a joint are only partly
 mounted, the bolted area is `coverage_a × coverage_b`. The model records coverage per face, not per
 cell, so it cannot know whether two partial mounts line up.
+
+**Radiators cannot be inline loop segments.** A radiator sheds heat when a pipe's sink face is
+pressed against it, which works and is what the `radiator` scenario measures. It has no coolant
+ports of its own, so a loop cannot run *through* one. The block is 1×5×2 with mount points only on
+its top and bottom, so adding ports needs the port geometry checked against the model.
+
+**The underground core gradient is out of reach in ordinary play.** Below `SealevelDeadzone` the
+rock warms toward `CoreTemperature`, and the shipped deadzone is 2 km below sea level — deeper than
+SE's voxels go. The model is right and the tuning lever is documented; as shipped, every reachable
+depth reads a flat `UndergroundTemperature`. Whether the default should be a few hundred metres is a
+balance question, not a code one.
+
+---
+
+## Open defects
+
+**Temperatures are not reconciled between server and clients.** Clients run their own simulation
+from the same inputs and reach the same answers, but nothing reconciles them: a client that joins
+mid-session starts from saved temperatures, and divergence is never corrected. Damage and settings
+are server authoritative, so the divergence is cosmetic — but it is real.
+
+Settings and pump controls *are* replicated. `SENetworkAPI` 2.0 runs on channel `30323` with three
+properties on it: the world's settings and the two pump throttles.
+
+The settings property is seeded with the loaded settings at construction rather than left at null,
+because **a null value is never transmitted** — a property sitting at null answers a joining
+client's fetch with silence, and since the server publishes only when a setting *changes*, a world
+where nobody touched the config would leave every client on the shipped defaults for the whole
+session.
+
+A received value is **copied into the live settings object rather than swapped for it**. A grid
+takes its core settings once, at construction — `new ThermalSimulation(Settings.Instance.ToCore(),
+Model)` — and notices later changes only through that object's `Revision`, so replacing
+`Settings.Instance` would leave every grid already on the client running the settings it was born
+with. The copy goes through `Settings.Names()`, the same list the settings menu uses, minus
+`Settings.ClientOwned` — the four presentation switches a client owns for itself, since a server has
+no business choosing which overlay is on someone else's screen. That leaves 44 of the 49 serialized
+fields replicated; the fifth is the config file's `Version`, which describes the file rather than
+the world.
+
+**Admin changes from a client travel on their own secure channel, deliberately.** SENetworkAPI
+registers the game's non-secure message handler, so every sender id it reports is a field the sender
+wrote — a modified client can claim to be anyone, and the API's own documentation says not to gate
+admin actions on it. Settings requests use the engine's `RegisterSecureMessageHandler` on a channel
+one above the shared one, where the transport supplies the sender identity and a from-the-server
+flag that cannot be forged. Replies are ignored unless that flag is set, so a client cannot fake the
+server's answer to another client.
+
+**The heat pump's electrical hookup is only checkable in game.** The simulation half is under test
+offline. The half that makes it cost anything — a `MyResourceSinkComponent` attached in code during
+`Init`, because an upgrade module has no definition field for one — cannot be exercised without a
+session, so whether the grid's resource distributor picks the sink up is unverified.
+
+**A grid saved with the old heat pump block loses it on load.** The heat pump was a `CubeBlock` and
+is now an `UpgradeModule`, because only a functional block has a terminal to switch it from. Nothing
+was lost by doing it: the old block had no behaviour at all.
+
+**`SweepRoomPressure` is per room per cadence, unbudgeted** — measured, instrumented, and cheaper
+than it was. It makes two game API calls per compartment every eight steps, bounded by compartment
+count rather than block count. Every other whole-grid pass in the mod is a rota or a budgeted slice;
+this is the one that is not.
+
+A field dump (six grids, 7,976 blocks, 118.5 s) puts it below the noise: the sweep runs in
+`AfterSteps`, outside every row of the cost table, and backing it out of the totals leaves **64 ms
+in 118.5 s — 0.054% of real time** for the sweep *plus* the mass sweep, overheat damage, threshold
+crossings, the heat-pump publish and the hottest-node scan together. The rota is **deliberately not
+built**: the measurement says it is a station-scale risk with no evidence behind it, and the sweep
+is now timed as `of which room pressure` with counters for compartments visited, game calls made,
+vent scans and vents walked — so the next dump from a large station answers the question with a
+number rather than an argument.
+
+**The first step of a grid's life is several times an ordinary one** — 28.3 ms above a 13.2 ms tick
+at half a million blocks, and 53 ms above a 26 ms tick at a million — from first touch of every flat
+array and the first fill of every mirrored row. It happens once, immediately after a world load that
+took four seconds, so it is a warm-up rather than a stutter. It is still the largest number in the
+distribution at the top rung, and it grew relative to the tick as the tick shrank: the ticks either
+side of it got three to five times cheaper and the first touch did not.
+
+**A grid holds about 1.8 KB a block, against a design budget of ~110 bytes a node.** Measured at
+126,731 blocks: 213 MB retained, 278 MB peak. Half of the retained figure is indexed by *bounding
+volume* rather than by block, so a hull pays for the empty space it encloses. [memory.md](memory.md)
+has the breakdown and the changes that roughly halve it — none of which help SE2, where the problem
+is that three structures are indexed per cell rather than per block.
+
+**Block storage is still per cell, which is what stands between the model and SE2.** The geometry,
+the conduction graph and the integrator all work from integer AABBs and cost the same whatever a
+block's volume — `Se2LatticeTests` pins that. `GridModel.blocksByCell`, `SurfaceMap.states` and
+`BlockInstance.Cells` do not: they are one entry per occupied cell, so a 5 m block on SE2's 0.25 m
+lattice would cost 16,000 dictionary entries and an 8,000-element array. See
+[scale-design.md](scale-design.md#cell-centric--boundary-centric).
+
+**The room map floods the bounding volume, which a hull fills about a fifteenth of.** It is
+budgeted, so the cost is ticks rather than a stall — but at a million blocks it is 7,000 ticks to
+converge, which is twenty minutes on a stale map. Bounded and wrong is better than unbounded and
+wrong; it is still wrong. See [scale-design.md](scale-design.md#room-mapping-is-the-one-that-has-to-change-shape).
 
 **The cost of terrain occlusion has never been measured in game.** It is ten height lookups per
 sample per interval for grids near a surface, which should be well under the voxel raycast it sits
 beside, but no dump has confirmed it. The `solar occlusion` timing in a telemetry report is where it
 would show.
 
-## Balance findings from the corpus survey
+---
 
-The 2026-08-21 sweep of 8,142 ships is the first complete population measurement, and the four
-measurable criteria pass on shipped defaults. Two things it measured are not visible in that pass.
+## Failure patterns worth remembering
 
-> **Quote the figures from `verdict.py`, not from here or from memory.** The corpus is 8,142 hulls
-> and 8,132 distinct name-and-id pairs and 8,054 distinct names, and every statistic is computed
-> over one of the three. `verdict.py` itself carried "7,899 of 8,142 recover" written in by hand
-> against an actual 7,889 of 8,132 — both halves wrong, in a script whose entire purpose is that a
-> run's numbers come from the run. It computes that line now.
+Each of these is stated as the rule it produced. The defect that produced it is the evidence, and
+the date it was found is in the [change log](#change-log). They are grouped by the shape of the
+failure rather than by the subsystem, because the shape is what repeats.
 
-**Damage arrives too fast to be played around.** Of ships that overheat at all, the median loses its
-first block 9 s into full electrical load and 6 s into a forward burn; the tenth percentile is three
-to four seconds. The same measure at idle is 112 s, with nothing in between — ships are either
-thermally inert or they fail almost immediately.
+### A mechanism can be correct everywhere it is exercised and inert everywhere it runs
 
-These are seconds of play, not of physical time: `HeatTimeScale` is 225, so a block's heat capacity
-is divided by 225 and nine seconds at the controls is about thirty-four minutes of real heating.
-That compression is the point of the dial — heat is meant to happen on a human scale — and the
-survey is the first measurement of where it actually put the hottest designs. Lowering the dial is
-not the answer, because it moves the inert ships too and the spread between the two groups is only
-about twelve-fold. What separates them is per-block: a producer whose waste watts are large against
-its own heat capacity crosses critical almost immediately whatever the clock says. Heat is meant to be a resource a player reasons
-about, and a consequence landing inside ten seconds is closer to the block simply exploding when
-switched on. This is a balance decision rather than a defect, and it is the one the survey most
-clearly asks for.
+**Room air was tested only through the door nobody used.** Every test and the mod API set a room's
+pressure through `ThermalSimulation.SetRoomPressure`, which rebuilds the room's links to the blocks
+bounding it, seeds air appearing for the first time from the temperature of those walls, and
+recomputes the conductance totals. The game's own sweep assigned `room.Pressure` directly and called
+`RefreshThermalMass` by hand — the only caller in the codebase that did — so in a live world a
+pressurised room got its air mass, **no links at all**, and whatever temperature the last rebuild
+left behind, which for a ship in vacuum is 2.7 K. The whole suite passed over a feature that did
+nothing in game. The room dump now reports a `links` column, so air with mass and no coupling says
+so.
 
-**The heat strands in one or two blocks, usually the same ones.** Runaway rows carry a median of two
-blocks above critical against a hull sitting near its median temperature — *humpback 38* peaks at
-164,570 K with a median of 360 K. `LargeHydrogenEngine` is the hottest block on 34 % of runaway rows
-while being hottest on 4 % of rows overall; with `LargeJumpDrive` and the large thrusters, a short
-list of types accounts for most of the tail. That makes it tunable on perhaps a dozen definitions —
-waste-heat fraction, thermal mass, or conductance to neighbours — without touching the solver.
+**Every block this mod ships ran on the default thermal properties, in game only.** All eighteen of
+the mod's own entries in [Cubes.xml](../Data/Cubes.xml) declared themselves under
+`<TypeId>CubeBlocks</TypeId>`. There is no such object builder type — the blocks are `CubeBlock`
+(pipes, radiators) and `UpgradeModule` (pumps, heat pumps) — so Definition Extensions matched none of
+them and every one took the fallback path to `DefaultThermodynamics`:
 
-**One block type decides the load criterion.** `LargeJumpDrive` is 67 % of all the waste heat the
-corpus makes at full electrical load — 10,567 of them across 2,183 ships at 4.8 MW each — and its
-effect on the outcome is binary. Of the 2,255 ships carrying one — membership read from
-`composition.csv`, not inferred from whichever block ended up hottest — **100.0 % reach 400 K and
-100.0 % lose a block**; of the 5,887 without, 65.6 % and 21.5 %. At idle the two groups are
-indistinguishable (0.2 % critical either way, medians of 179 and 177 K), because a jump drive is
-classed as a tool and tools are off when parked.
-
-The mechanism is the load state rather than the block: `ShipLoad.State.Full` sets `Tools = 1`, so
-every drive on the hull charges at its full 32 MW draw for the whole 1,800 s clock, and 15 % of that
-is heat. A real drive charges and then stops. G2 is not invalidated — it holds at 67.1 % on ships
-with no drive at all, well past its 20 % gate — but "44 % of the corpus loses a block under load" is
-really "every jump-drive ship, plus 22 % of everyone else", and any tuning read off the aggregate
-will be tuning for one block. Whether charging a drive *should* be a thermal event is a design
-question; that it should be an unsurvivable one for every hull that mounts a drive is probably not.
-
-G2 holds at 65.6 % on ships with no drive at all, well past its 20 % gate, so the criterion is not
-resting on this block.
-
-**What actually causes a hot spot is local watts per local square metre.** The census now measures
-arrangement, not just totals: burial depth in conduction hops out from the nearest radiating node,
-the Clark-Evans nearest-neighbour index of the heat sources, watt-weighted spread about their
-centroid, and the worst watts-per-exposed-area found in any 5x5x5 neighbourhood. Correlated against
-the hot spot (peak minus mean) with total waste heat partialled out — which has to be done, because
-every raw correlation here is mostly "this ship makes more heat" — the ranking is:
-
-| term | partial rho vs hot spot | vs peak |
+| Block | Authored | Ran as |
 | --- | --- | --- |
-| worst local W/m2 | **+0.369** | **+0.552** |
-| spread of sources about their centroid | −0.216 | −0.406 |
-| conductance away from the hottest source | −0.137 | −0.116 |
-| mean burial depth of the sources | +0.111 | +0.018 |
-| **Clark-Evans clumping index** | **−0.033** | **+0.076** |
+| Radiator | emissivity 0.35, area ×1.25, specific heat 900 | 0.125, ×1, 450 |
+| Heat pump | waste 0 / 0 | 0.05 / 0.05 |
+| Coolant pipes | conductivity 1 | 0.6 |
 
-**The clumping index does not work and that is worth recording.** It measures how evenly spaced the
-sources are, and evenness is not the mechanism: two 5 MW generators ten metres apart score as
-dispersed and still cook the bay they share. Local power against local radiating area is the thing a
-block actually experiences, and it is an order of magnitude more predictive. Anyone reaching for a
-spatial statistic here should reach for that one.
+The radiator is the block that mattered: emissivity and the area multiplier *are* the block, so it
+was shedding at 28% of the authored rate with none of the area bonus. The heat pump was worse than
+wrong — the solver already puts every watt it draws into the hot side, so a 0.05 consumer fraction
+on a pump drawing its full 20 kW invented 1 kW of heat a second time.
 
-Banded, the local figure is a design rule rather than a correlation — share of ships losing a block
-under full electrical load:
+**No test could see it**, because the solver suite builds its own `BlockThermalProperties` in code
+and was right about every equation; the numbers it was handed in game came from a file nobody parsed
+offline. `ShippedDefinitionTests` now reads the shipped XML and cross-checks each entry's `TypeId`
+against the block's own `.sbc`. Its radiator assertions compare against the default entry rather
+than against literals, because silently *becoming* the default is the failure being guarded.
 
-| worst local W/m2 | ships | lose a block | median peak |
-| --- | --- | --- | --- |
-| under 500 | 1,604 | 0.7 % | 245 K |
-| 500 – 2,000 | 1,202 | 6.9 % | 545 K |
-| 2,000 – 10,000 | 2,356 | 42.7 % | 656 K |
-| 10,000 – 50,000 | 1,447 | 93.2 % | 1,287 K |
-| over 200,000 | 629 | 98.9 % | 2,541 K |
+**A settings toggle can have a menu entry, a config field, a label and no reader.**
+`DebugWindRaycast` sat in the file, in `Names()`, in `ClientOwned` and on the Debug page reading
+"Draw wind vector" from the day the wind field was written, and nothing anywhere read it. Switching
+it on drew nothing. Found by grepping for *readers* of a setting rather than by using it — which is
+the check worth running over the whole settings list, and is now `SettingsWiringTests`.
 
-**Spreading the generators helps, up to a point.** Within matched bands of total waste heat, the
-most-spread third against the tightest third: at 100 kW–1 MW, 21.7 % lose a block against 45.2 %;
-at 1–10 MW, 61.6 % against 91.5 %. Past about 10 MW installed it stops mattering — 98 % to 100 %
-either way — so arrangement buys a builder a great deal in the middle of the range and nothing at
-the top. The raw banding of spread says the opposite, because spread correlates with hull size and
-so with total heat; it has to be read within a waste band or not at all.
+### One definition read by two parsers drifts, silently, in both directions
 
-**One number says whether a block can survive itself.** `BlockHeatIndex` computes, from the
-definition alone and with no simulation, the heat a block makes at full rating over the most it
-could possibly shed while staying at its own critical temperature. The denominator is deliberately
-the best case that exists — every face radiating to deep space *and* every face bolted to armour
-held at ambient, both at once. Two numbers come out:
+Block thermal properties are read twice: `ThermalCellDefinition` asks Definition Extensions for them
+in a live session, and `ShippedBlocks` reads the XML directly so the harness can build from what the
+mod ships. Neither can be the other — the first needs a session and the second must run without one.
 
-- **index** — against radiation and conduction together. Above 1 the block is impossible: no hull,
-  no arrangement and no cooling saves it, and only the definition can be changed.
-- **self index** — against its own skin alone. Above 1 the block cannot cool itself and depends
-  entirely on exporting into the hull, which is a much weaker position than it sounds.
+`HeatSourceWatts`, the term for a block that is hot because of what it *is* rather than because of
+power crossing it, was only ever known to the offline reader: it has a class of tests, a place in
+the properties type, a clamp and a conservation proof, and a mod author declaring a smouldering
+wreck would have got 1,234 W in every test in this repository and **0 W in a world**.
+`ExcludeFromSimulation` went the other way — the in-game reader has always read it and the offline
+one never did, so a block type excluded in `Cubes.xml` would have been simulated by every benchmark,
+every corpus run and every scenario, and by nothing in a game.
 
-Four of the game's 323 heat-making blocks are impossible, and 72 cannot cool themselves. Banded
-against the corpus, the index predicts the outcome well enough to use as a gate:
+`BothParsersKnowTheSamePropertyNames` compares the two name lists in both directions. It is textual,
+because the in-game reader cannot be linked into the test project — which is the same reason the two
+parsers exist, and therefore the reason a check on them has to be.
 
-| worst index on the ship | ships | lose a block |
-| --- | --- | --- |
-| under 0.25 | 3,458 | 8.8 % |
-| 0.25 – 0.50 | 1,639 | 47.0 % |
-| 0.50 – 0.75 | 2,059 | 84.6 % |
-| 0.75 – 1.00 | 39 | 100.0 % |
-| over 1 | 799 | 82.6 % |
+### A number can be right in the solver and attached to nothing
 
-**0.5 is the practical threshold and 1.0 the theoretical one.** `BlockHeatIndexTests` gates on the
-set of blocks above 1, so a new block or a changed waste fraction that crosses the line fails the
-suite, and fixing one means taking it off the list.
+**Every reactor in the game made no heat, and the whole suite was green over it.** `Cubes.xml` gave
+the `Reactor` type `ProducerWasteEnergy` 0 and `ConsumerWasteEnergy` 0.25. A reactor delivers power
+through `MyResourceSourceComponent`, so only the producer fraction can ever reach it: the largest
+heat source a ship has was inert.
 
-**`LargePrototechReactor` is a definition accident and the worst block in the game.** Keen gives it
-the TypeId `HydrogenEngine`, so the derivation charges a 400 MW plant a combustion engine's 0.60
-waste fraction: 240 MW of heat out of a 3x2x2 block, an index of 17.9 and a self index of 46. At the
-reactor family's own 0.01 it would make 4 MW and be unremarkable. This is the same shape as the
-reactor-waste bug already recorded above — the derivation keys on the type, and the type is decided
-by the game's wiring rather than by what the block is called. It needs a per-subtype override.
+Nothing in the solver was wrong, so no test of the solver could see it — the simulation correctly
+integrated a load of zero. Which of the two fractions applies is decided by the game's component
+wiring, not by the definition, so an entry can be internally consistent and still be attached to
+nothing. The check that catches it asserts on the *type's* producer fraction rather than on any
+block's behaviour, because behaviour was never the thing that broke. See
+[balance.md](balance.md#reactor-waste-heat).
 
-**The jump drive is not impossible, and that correction matters.** Its index is 0.75: bolted to
-armour that stays at ambient it survives, because superconductors conduct extremely well. Its *self*
-index is 7.4 — its own skin sheds an eighth of what it makes — so it lives or dies on the hull
-taking the rest. The hull never does. Of 2,179 corpus ships carrying one, 909 have more than the
-19,068 m2 of 400 K armour the index says is needed to absorb its export, and **all 909 still lose a
-block**, because total hull area is irrelevant when the heat cannot travel: block-to-block
-conductance is about 112 W/K, so moving megawatts even one block needs thousands of kelvin. Area has
-to be *near* the source to count.
+**`LargePrototechReactor` is the same shape, unfixed.** The game gives it the TypeId
+`HydrogenEngine`, so the derivation charges a 400 MW plant a combustion engine's 0.60 waste
+fraction: 240 MW of heat out of a 3×2×2 block. It needs a per-subtype override — see
+[backlog.md](backlog.md).
 
-Both readings are subject to the censoring limit above. `tools/corpus/verdict.py` computes the
-criteria and reports the censored share alongside them.
+### A diagnostic that reports zero while working is worse than no diagnostic
+
+**The substep mass floor was computed from its own previous answer.** `ApplyThermalMassFloor` raises
+a light block's *integration* capacity so it stops demanding more substeps than `MaxSubstepsPerBlock`
+allows. It compared each node against the mirrored row `nodeThermalMass[i]` — but `SyncNodeState`
+only refreshes a row whose node is dirty, so on a settled grid the row still held the floor this
+same pass wrote last step. Two consequences:
+
+* `FlooredNodes`, reported as **blocks raised by cap**, counted only the nodes a pass *moved*. After
+  the first step there were none, so it read `0` on every step while the floor was doing all of its
+  work — on the same page as its own projection that the configured cap of 3 raises 804 blocks.
+* Because the pass could only ever raise, the floor became a high-water mark, re-raised against its
+  own previous output rather than sized from the block. A 20 kg fitting on heavy armour settled at
+  **1.94 substeps demanded against a cap of 3** — wasted accuracy in the other direction.
+
+**The behavioural half is smaller than it looks, and worth stating so nobody re-derives an alarm
+from it.** A node's stability rate is conduction plus radiation, and on a real ship conduction
+dominates — a live dump attributes 100% of its substep demand to conduction. Conduction is
+temperature-independent, so the stale row usually held the same floor the block deserved: a 16 kg
+fitting in light armour on a grid that had been at 1200 K and one that never left 400 K integrated
+**bit-identically**. The ratchet was real, is fixed, and was inert wherever conduction sets the
+floor.
+
+`AFlooredGridDemandsExactlyItsCapAndNotLess` reads the raw demand through `NodeSubstepDemand`, which
+divides by the block's real capacity, so the floor is not asked to confirm its own work.
+
+**Convection was reported before the atmosphere blend, not after** — a reporting fault only, and the
+first attempt at fixing it was wrong. A field dump showed `convection W/m2K 50.0` beside
+`air density 0.0000` at 44 km, which reads as a hull convecting in a vacuum. It was not:
+`EnvironmentState.ConvectionCoefficient` is the planet's figure scaled by wind and weather, and the
+solver blends it by `AtmosphereFactor` at the point of transfer, because the same factor weights
+radiation *down* as it weights convection *up*. Measured on one 200 kW block, the transfer was
+correct throughout — convective watts fall 50,000 → 49,401 → 30,562 → 412 → 0 as density falls
+1 → 0.25 → 0.01 → 0.0001 → 0, while radiation rises to take over.
+
+Applying the factor at the coefficient would have been a *second* application and squared the blend:
+0.47 instead of 0.68 at quarter density. A settled-temperature test written to catch the imagined
+defect failed against correct code, which is what exposed the mistake — **thinner air does not make
+a block hotter** over most of the range, because thin air is also much colder (294 K at sea level
+against 101 K at a twentieth), and a weak coupling to a cold sink beats a strong coupling to a warm
+one. The same block settles at 321 K at sea level, 241 K at a twentieth, and 553 K only in true
+vacuum. `ASettledTemperatureIsNotMonotonicInAirDensity` pins that so the alarm is not re-derived.
+
+### An invariant documented at three call sites will be missing from the fourth
+
+**A grid welded past its buffer capacity went NaN, whole.** The per-node arrays — temperatures,
+mirrored heat capacities, the watts a substep is accumulating — grow when the node count passes
+their capacity, and growing reallocates every one of them. They are refilled by `SyncNodeState`,
+which runs when a step *begins*. A step already in flight carried on over the zeroed rows, divided
+its watts by a heat capacity of zero, and published the result onto every block on the grid.
+
+The trigger is a block placed on a frame the step is not finished with, on a grid with no headroom
+left in its buffers. A step spans fifteen frames at the shipped settings, so the window is most of
+the time; the buffers grow by a quarter plus sixteen, so a ship being welded crosses the boundary
+regularly. `BufferGrowthTests` reproduces it in twenty milliseconds. Three call sites documented
+*"a step in flight is abandoned when the grid changes shape"* and the fourth, which changes the
+grid's shape most violently, did not.
+
+### Two models of the same thing disagree, and losing the argument is silent
+
+**This model's rooms are pieces of the game's.** Sealing here comes from each definition's
+pressurisation table read cell by cell; the game's test knows the real shape of a sloped block. Where
+they differ the flood fill walks in from outside, the compartment stops existing, and because
+pressurisation is only ever asked about rooms the map already found, nothing notices.
+
+Three separate defects came out of that gap, each measured before it was fixed:
+
+* **A vent could only speak for the room it stands in.** Pressurisation read the air vents and gave
+  air to the compartments a vent physically touched. Measured: twelve mapped rooms on one ship, the
+  game holding air in nine, two with a vent against them, seven left empty. The level now comes from
+  `IMyCubeGrid.GasSystem.GetOxygenRoomForCubeGridPosition` per room, which answers for every
+  compartment whether or not anything is bolted to it; the vents are the fallback when the gas
+  system cannot be read.
+* **A vent reported to one room and it was not always the right one.** `ReadVents` stopped at the
+  first room found on the first cell of the vent, so a vent in a bulkhead between two compartments
+  gave one of them air and the other nothing — decided by the order the six faces are indexed in.
+  Measured on a ship with two vents in the same bulkhead: an eight-cell space took the air and the
+  thirty-cell cabin, with both vents on it and the game reporting it sealed and 99% full, ran at
+  zero pressure. A vent now reports to every room it touches.
+* **Sealed is not full.** The first version of the dry-room flag asked `IsRoomAtPositionAirtight`
+  and `IMyAirVent.IsPressurized`, both of which answer *is this room sealed*, and treated the answer
+  as *should this room have air*. On a ship in vacuum every sealed cupboard nobody had piped air
+  into came back airtight and empty — correct in both models — so eight of twelve compartments were
+  flagged as faults and painted magenta, burying the one that mattered.
+
+**When the comparison was finally run, the map was right**: 12 compartments found, zero held only by
+the game, 11 of 12 agreeing with `IsRoomAtPositionAirtight`. That is the argument for measuring
+before fixing — the sealing test looked guilty from the counts alone and was not. The comparison now
+runs every dump and is reported per compartment. See
+[thermal-model.md](thermal-model.md#diagnostics).
+
+### A guard has to test what it claims to test
+
+**A lag needs to know it has no history.** Ambient started each session at the `VacuumTemperature`
+its state was seeded with and took three minutes of play to reach the real climate, dragging every
+block on every grid with it — one measured grid fell from 257 K to 103 K in nineteen seconds.
+`ClimateModel.Follow` guarded against this with `if (current <= 0f) return target`, which never
+fired, because 2.7 is not zero. A guard against an uninitialised value has to test whether the value
+*was* initialised, not whether it looks unreasonable.
+
+**A scale applied to a lagged value compounds against the lag.** Ambient chased its target with a
+45-second first-order lag and was then multiplied by an air-density factor — but the *scaled* value
+was what the next step chased from, so the factor reapplied every step. A snowfield 5.6 km up
+reported 36 K for an entire session while two sea-level sites nearby were correct to a tenth of a
+kelvin, because their density rounded the factor to 1.0000 and hid it. Everything that decides a
+temperature now produces a *target*, and the lag is applied to that target exactly once, last.
+Pinned by `ThinAirDoesNotCompoundAgainstTheLag`. The arithmetic is in
+[environment.md](environment.md#ambient-temperature).
+
+**Config defaults belong on the fields, not in a factory method.** A world's config file has no
+element for a setting added after that file was written, and the XML reader leaves such fields at
+`default(T)` — so every setting added since a world was first loaded ran as `false` or `0` in that
+world, silently. A test world reported `SolarOcclusionPlanets False`, `SolarTerrainRange 0` and a
+room overlay span of one kelvin while its owner had changed none of them. Bumping the file version
+would only have papered over it, and thrown away real customisation each time. The defaults now live
+on the field declarations, where a reader that finds nothing leaves them alone.
+
+### Block placement is not a main-thread-only path
+
+The game builds pasted and projected grids on worker threads, so everything reachable from
+`ThermalGrid.AddBlock` runs concurrently with itself. Four separate unguarded collections were found
+that way, and the field symptom is always the same: `NullReferenceException` out of
+`Dictionary.Insert`, and every block of the affected type silently failing to become a node.
+
+**Two shape caches on the block-placement path were unguarded.** `ThermalBlockCatalog` locks its
+model dictionary and deliberately builds outside that lock, so as not to serialise the worker
+threads the game pastes grids on — and what it builds calls into `ThermalCoolantShapes.Get` and
+`ThermalHeatPumpShapes.Get`, both of which wrote to a plain `Dictionary` with no lock at all. A
+field dump logged three such exceptions in the first tenth of a second of a world load. Both caches
+now take a lock on the same discipline as the catalogue: probe under the lock, build outside it,
+publish under it.
+
+The same fact produced the definition catalog's shared scratch list and the shared telemetry
+registries, both fixed the same way.
+
+### Assigning `NeedsUpdate` from a grid logic component breaks ship control
+
+`[MyEntityComponentDescriptor(typeof(MyObjectBuilder_CubeGrid), true)]` makes the component's
+`NeedsUpdate` property the *grid entity's* update flags. Assigning to it clears whatever the grid set
+for itself, and `MyCubeGrid` re-arms `EACH_FRAME` only when its scheduled-update queue goes from
+empty to non-empty — so clearing it once stops that queue being drained for the rest of the session.
+The visible symptom is ship control: `MyGroupControlSystem` recalculates the controlling cockpit from
+that queue, so sitting down gives "Someone else is using this ship!" forever.
+
+**Use `|=`, and stop work with a flag of your own rather than by taking the entity's updates away.**
+
+### A repair has to cost what changed, and no more
+
+**A block whose mounting changed kept stale conduction links** — and it was the opposite of what a
+first reading suggested. `RefreshBlock` did not rebuild the conduction graph. It did not touch it: it
+refreshed the surface bits and set the topology flag, and the flag's handler only rebuilds links when
+a full rebuild is already due or nodes are queued for their first link, which a refresh sets neither
+of. Contact area is the product of both ends' mount fractions, so every link touching a refreshed
+block went on carrying a conductance derived from geometry the block no longer had, for the rest of
+the session. Meanwhile the *expensive* half of the flag — a full room flood fill — was charged on
+every call.
+
+Both halves are now proportional to what changed. `ThermalSolver.RefreshBlockLinks` drops the node's
+links through the same intrusive chains removal walks and requeues it for the incremental link build
+a placed block takes, which costs the node's degree. The remap is asked for only when the block's
+*structural* sealing bits actually moved, or when a door's live bits moved and the mapper has no
+portal for it. The dirty flag is split accordingly — `MarkTopologyDirty` for anything that can move a
+wall, `MarkLayoutDirty` for anything that cannot. `RefreshingABlockCostsItsOwnDegreeRatherThanTheGrid`
+holds the repair to one node's links.
+
+### The step budget has to count everything a step does
+
+`MaxElementVisitsPerStep`, formerly `MaxLinkVisitsPerStep`, bounded a step by substeps times links,
+while the environment pass is per node per substep — radiation, convection, solar with six face
+weights each — which the budget could not see. A grid with few links per node therefore got a more
+generous allowance than one with many, for the same real cost.
+
+The weight was measured rather than guessed: a node is worth **2.8 links at four thousand nodes, 3.3
+at a hundred thousand and 7.5 at a quarter of a million**, and an exposed face between a tenth and a
+half of a link. Per-link cost is flat across a hundredfold size range because links stream; per-node
+cost triples because the node state stops fitting in cache. See
+[benchmarks.md](benchmarks.md#what-a-substep-costs).
+
+The budget now counts `links + 4 × nodes` and ignores faces, four being the low end of the range over
+the sizes where the bound binds at all. **The unit change alone tightens it:** at the 18.35 ns per
+weighted element a field dump measured, the unchanged default of 1,000,000 is 18.3 ms of solver work
+per step, which is what this setting's documentation always claimed and had drifted a long way from.
+
+What this retires is the claim that only grids past a hundred thousand blocks reach the default. A
+step's cost is size times stiffness, and `TheShippedAllowanceFitsThisGridAndABiggerStepDoesNot` pins
+both halves on one 8,904-node rig: counting links alone, its 20,779 links bought 48 substeps against
+a demand of 23, so the budget did nothing at all; counting nodes as well, one substep over that rig
+costs 56,395 element visits and the same allowance buys 17 — which still covers the 11.6 the shipped
+eight steps a second asks for. **Whether the allowance binds is a question about the step rate
+rather than about block count.** A world whose config predates the rename takes the new default
+rather than importing its old number, which would be a value in the wrong unit; the load path logs
+when it drops one.
+
+### A face bolted to something that does not seal is still exposed
+
+Exposure rejected any cell face where two mount surfaces met, regardless of what the neighbour was.
+The ordering is what made that wrong: the sealing test runs first, so every joint against a block
+that seals was already gone, and the mount test could only ever reach faces bolted to something that
+does *not* seal — a grating, a catwalk, a ladder. The room mapper calls the cell beyond one of those
+external, because air floods through it, and exposure threw the face away anyway. **A hull panel with
+a catwalk bolted flat against it lost 100% of its radiation and solar gain while the mod's own room
+map said it was outdoors.**
+
+The mount test is gone. `FaceExposure.Mounted` survives as a *subset* of `Exposed` rather than a
+rejection, so the surface dump's `mounted` column answers how much of a ship conducts and radiates
+through the same face. `ASealingNeighbourStillBuriesTheFaceWhateverItsMounts` pins the ordering
+argument the fix rests on — a solid hull cannot be opened up by this change.
+
+---
 
 ## Testing gaps
 
-The test suite covers the model thoroughly and the adapter barely — `HostAdapterTests` exercises
-what can be reached without a session, and the rest of `Game/` is only exercised in the game. In
-particular the vent sweep, the terminal readout and the mod API's delegate table have no automated
-coverage. The wind map and the wind indicator join that list: the arithmetic under them is in
-`WindCompass` and pinned by `WindCompassTests` — including the handedness, which is the half a
-drawing cannot argue with — but whether an arrow lands where it should on screen is answerable only
-by looking at one. The API's *shape* is checkable without a session and is
-worth pinning down.
+The suite covers the model thoroughly and the adapter barely. `HostAdapterTests` exercises what can
+be reached without a session; the rest of `Game/` is exercised only in the game.
 
-The load tests in `tests/Thermodynamics.Tests/LoadTests.cs` close part of that gap for cost rather
-than for correctness, and they assert work counters rather than milliseconds so they hold on any
-machine. What they cannot reach is the adapter: the mass sweep asks the game for a block's mass,
-and a harness has no game block to ask, so the rota that bounds it is covered only by arithmetic
-tests on its slice function.
+| Gap | Why it is hard | What would close it |
+| --- | --- | --- |
+| The vent sweep, the terminal readout and the mod API's delegate table | need a live session | the API's *shape* is checkable without one and is worth pinning |
+| The wind map and the wind indicator | whether an arrow lands where it should on screen is answerable only by looking | the arithmetic under them is in `WindCompass` and pinned by `WindCompassTests`, including the handedness — the half a drawing cannot argue with |
+| The mass sweep's rota | the sweep asks the game for a block's mass, and a harness has no game block to ask | covered today only by arithmetic tests on its slice function |
 
-`docs/bugs-and-performance.md` records findings from earlier stress work at eight thousand blocks;
-entries there that are still open are the performance ones, not the correctness ones.
-[load-and-hitching.md](load-and-hitching.md) is the same exercise repeated at a million, and
-supersedes its performance section.
+`LoadTests` closes part of the adapter gap for cost rather than for correctness, and asserts work
+counters rather than milliseconds so it holds on any machine.
+
+---
+
+## Change log
+
+| Date | Change |
+| --- | --- |
+| 2026-08-22 | Absorbed `bugs-and-performance.md`, the record of the first extraction pass. Every one of its thirty-two findings is resolved in the current code — including the eleven whose headings carried no *fixed* marker, each re-verified against the source during this pass — so the page survives as the dated entries below and the patterns above rather than as a defect list. Restructured around the shape of each failure rather than its subsystem; promoted the deliberate limits to the top; moved the corpus balance findings to [balance.md](balance.md), which is where the dataset they come from is described. Removed two limits that the per-room gas-system read had already retired ("a room with no air vent holds no air" and "pressurisation is only known through air vents") and corrected a third: block `Conductivity` is real W/(m·K), and it is the *coolant loop's* that is still a 0…1 quality. Merged the two sections both titled "Fixed, worth remembering". |
+| 2026-08-21 | Recorded the buffer-growth NaN, the unguarded shape caches on the block-placement path, and the substep mass floor computing from its own previous answer. Recorded the censoring limit that makes every peak above critical a statement about the harness. |
+| 2026-08-20 | Recorded that every reactor in the game made no heat, and that all eighteen of the mod's own `Cubes.xml` entries were filed under a TypeId that does not exist. Recorded the step budget counting links but not nodes, and the exposure test that buried a face bolted to an open lattice. |
+| 2026-08-19 | Recorded the three room-air defects — links never built through the game's sweep, a vent reporting to one room of two, and a vent speaking only for the room it stands in — and the reporting fault that showed convection before the atmosphere blend. |
+| 2026-08-18 | Recorded the ambient scale compounding against the lag, and the lag with no history test. |
+| 2026-08-12 | Opened the register against the pre-rewrite implementation: 32 findings across model physics, code and performance, from extracting the simulation into `tests/` and putting it under test. The model defects — conduction ignoring thermal mass, conduction not conserving energy, friction computed and discarded, damage scaling with the update rate, specific heat 250× below physical — are what made a rewrite worth doing rather than a patch. |

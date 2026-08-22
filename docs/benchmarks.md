@@ -3,6 +3,16 @@
 One command that measures what the simulation costs — by size, by feature, and by configuration —
 and knows how to compare itself against an earlier run.
 
+> The rules argued here are stated canonically in [rules.md](rules.md): `E3` `E6` `M4` `M5`
+> `M6` `M11` `C4` `C7`.
+
+| Looking for | Go to |
+| --- | --- |
+| What a grid costs as it grows, and what makes it stutter | [load-and-hitching.md](load-and-hitching.md) |
+| Why a handful of light fittings sets a capital ship's cost | [stiffness.md](stiffness.md) |
+| Where a grid's memory goes | [memory.md](memory.md) |
+| The equations being timed | [thermal-model.md](thermal-model.md) |
+
 ```bash
 cd tests
 dotnet run --project Thermodynamics.Sim -- bench report --size 32000 --max 125000 --csv benchmarks
@@ -55,7 +65,7 @@ Blocks, links, build time, step time, substeps granted, substeps demanded, cost 
 second and cost per element visit, at each rung. The two substep columns matter separately:
 *granted* is what `MaxSubsteps` allowed, *demanded* is what the grid asked for, and the gap between
 them is accuracy given up. In flight the gap is widest — see
-[the environments section](#the-environments--and-why-the-old-numbers-were-the-cheap-case).
+[the environments section](#the-environments).
 
 | rung | blocks | links | step | demanded | per element visit |
 | --- | ---: | ---: | ---: | ---: | ---: |
@@ -68,7 +78,7 @@ climb from 2.8 to 6.1. The climb was the two passes that reached through the nod
 heap on every visit; both now read flat arrays, and what is left scales with the elements rather
 than with how far apart they landed in memory.
 
-### The environments — and why the old numbers were the cheap case
+### The environments
 
 Every shape in every world, because which is worst depends on which world:
 
@@ -344,15 +354,16 @@ against 0.9682 ms, inside the noise floor.
 > ran in the cheap configuration and printed it under a name that said otherwise. The flag now
 > reaches the solver, and this section measures both configurations whether or not it is passed.
 
-### A burning block filed one overheat event per substep
+### One overheat event per block per step
 
-The damage check runs in the apply pass, and the apply pass runs once per substep. So a block over
-its rating filed an event every substep: on a 2,223-node scorched hull taking twelve substeps,
-26,676 events for 2,223 burning blocks, and on a census hull at twenty-six substeps **29,224
-events for 1,124 blocks**.
+Damage is accumulated per node and filed once when the step ends, so `CriticalBlocks` is a count of
+blocks.
 
-The total damage was right, because every consumer sums it. Three things that read the list rather
-than summing it were not:
+The damage check runs in the apply pass and the apply pass runs once per substep, so filing there
+instead multiplies every count by the substep demand: on a 2,223-node scorched hull taking twelve
+substeps, 26,676 events for 2,223 burning blocks; on a census hull at twenty-six substeps, **29,224
+events for 1,124 blocks**. The total damage stays right, because every consumer sums it. Three
+things that read the list rather than summing it do not:
 
 * **`CriticalBlocks` is `Overheats.Count`**, and it is reported as a count of blocks — in the debug
   panel, the cockpit HUD, the settings menu, the mod API and the telemetry report's `critical
@@ -376,17 +387,17 @@ inside one step reports the figure a player would recognise. And an **abandoned 
 damage**: the substeps that ran had already filed their events, so a step whose temperatures were
 discarded could still burn a block for a temperature nothing ever published.
 
-### The row fill read every face weight twice
+### The row fill reads each face weight once
 
 The first substep of a step fills the per-node environment rows every later substep reads. Two of
-those rows are six-term sums over a node's faces — the wind weighting the convection factor and
-the friction row share, and the lit weighting the solar row wants — and both read the same six
-face weights.
+those rows are six-term sums over a node's faces — the wind weighting the convection factor and the
+friction row share, and the lit weighting the solar row wants — and both read the same six face
+weights.
 
-They read them **twice**. The two sums were two calls with a row store between them, and nothing
-can share loads across that store: `nodeFaceWeights`, `nodeConvectionRow` and `nodeSolarRow` are
-all `float[]` fields, so a compiler has to assume a store to one may be a store to another and
-reload the weights. Hoisting the six into locals says they did not move.
+**Reading them once needs the six hoisted into locals.** Written as two calls with a row store
+between them, nothing can share loads across that store: `nodeFaceWeights`, `nodeConvectionRow` and
+`nodeSolarRow` are all `float[]` fields, so a compiler has to assume a store to one may be a store
+to another and reload the weights.
 
 `bench rowfill` measures the fill directly, and the vacuum row is the control:
 
@@ -470,12 +481,12 @@ it per link end regardless.
 > relaxation row, so the gap is not purely that row. It is the right order and the wrong number to
 > quote to two figures.
 
-### The watts row was cleared and then written
+### The watts row is written, not cleared and then written
 
-A substep zeroed `nodeWatts` with a memset, then the environment pass walked every node adding
-into it, then conduction scattered into it, then apply read it. The first of those four had
-nothing to do: the environment pass reaches every node before anything else reads the row, so it
-can write the row outright and the clear is dead work by construction.
+The environment pass reaches every node before anything else reads `nodeWatts`, so it writes the
+row outright. Zeroing it with a memset first — then having the environment pass add into it, then
+conduction scatter into it, then apply read it — makes the first of those four passes dead work by
+construction.
 
 `bench wattsclear` says what removing it is worth, up a ladder chosen so the row crosses each
 level of the cache:
@@ -628,8 +639,8 @@ order between repeats and re-seed the spread before each.
 ## What each pass cost
 
 A single comparison says whether one change was a regression. It cannot say whether a year of
-changes has been a drift. [iterations.md](iterations.md) keeps one row per pass over this
-repository — the suite's size and duration, and the headline step figures — so the trend is
+changes has been a drift. [The iteration log](#the-iteration-log) below keeps one row per pass over
+this repository — the suite's size and duration, and the headline step figures — so the trend is
 readable without reconstructing it from commit messages.
 
 ## Reading a comparison
@@ -677,7 +688,7 @@ several per cent.
 
 The report is only as good as the hull it measures, and for most of this project's life that hull
 was wrong — see
-[load-and-hitching.md](load-and-hitching.md#the-ladder-was-measured-on-the-wrong-ship). Everything
+[load-and-hitching.md](load-and-hitching.md#the-ladder-is-measured-on-a-census-hull-not-an-armour-cube). Everything
 is now built from [`Census`](../tests/Thermodynamics.Harness/Census.cs), the block population of a
 real ship read out of a telemetry dump, and `CensusFidelityTests` fails if it drifts away from the
 field observations recorded beside it.
@@ -686,3 +697,223 @@ field observations recorded beside it.
 records what those ships were observed to do. When a new report lands, update the tiers to the new
 population and the field constants to the new observations, and the fidelity tests will say whether
 the synthetic ship still resembles the real one.
+
+---
+
+## What a substep costs
+
+The step budget bounds a step at `links + 4 × nodes` element visits. That weighting is measured
+rather than assumed, because a substep runs both a conduction pass that is per *link* and an
+environment pass that is per *node*, and counting one of them grants two grids of the same link
+count and different shapes the same allowance for different work.
+
+```bash
+cd tests
+dotnet run --project Thermodynamics.Sim -- bench elements --nodes 100000 --seconds 4
+dotnet run --project Thermodynamics.Sim -- bench elements --nodes 250000 --seconds 4 \
+    --shapes stick,comb,plate,hollow,box --csv out/bench
+```
+
+### Method, and two things it has to get right
+
+Shapes are chosen for their **link-to-node ratio** rather than for realism: isolated blocks touch
+nothing, a stick is a chain, a plate is two-dimensional, a hollow box is a shell, and a solid box
+approaches three links per node. The whole substep is timed and the coefficients fitted by least
+squares through the origin. The `ship` shape is held out of every fit and predicted from it, which
+is the only honest check that the coefficients describe anything.
+
+**A single fit does not work, and the reason is geometric.** Fitting `cost = a·nodes + b·links` with
+the environment on gives 0.37 ns a link, a negative r², and a solid box measuring *cheaper* than a
+stick with a third of the links. On a cube lattice every cell face is either bonded or exposed, so
+`faces ≈ 6·nodes − 2·links`: exposure and link count are nearly collinear across any family of
+shapes, and the box is cheaper because its interior blocks have no exposed faces to integrate. The
+environment is therefore separated by **differencing** — each shape measured twice, with radiation,
+convection and solar off and on.
+
+**A substep figure has to be measured where substeps dominate.** At the shipped `HeatTimeScale`
+these grids demand *one* substep a step, so a per-substep number is really the per-step overhead —
+array syncing, environment sampling, write-back — which is an order of magnitude larger than the
+per-element work and is charged once a step. The lab runs at `HeatTimeScale` 20,000, which puts
+every connected shape at 27–81 substeps a step. The `dust` shape cannot be driven there at all:
+with no links it has no conduction stiffness, so it stays at one substep and is excluded from the
+fits. Leaving it in drives the per-link coefficient negative.
+
+### What it measures
+
+Best of three per condition, .NET 9.
+
+| Nodes | ns per node | ns per link | Env adds, per node | **A node is worth** | An exposed face |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 4,000 | 2.63 | 1.45 | 1.37 | **2.8 links** | 0.14 links |
+| 60,000 | 2.60 | 2.85 | 1.58 | **1.5 links** | 0.14 links |
+| 100,000 | 6.1–6.6 | 2.6–2.9 | 1.8–3.4 | **3.3 links** (2.9–3.7, n=3) | ~0.19 links |
+| 250,000 | 13.2–13.9 | 1.8–2.2 | 1.4–2.3 | **7.5 links** (6.6–9.0, n=3) | ~0.4 links |
+| 500,000 | 15.0 | 1.67 | 7.0 | ~13 links (one noisy run) | ~0 |
+
+Conduction fits well — r² 0.88 to 0.99, and the held-out ship predicted within 1–15%. The
+environment fit is much weaker, r² 0.08 to 0.72, for a reason that is itself the third finding.
+
+### Three conclusions
+
+**1. A node is not free, and it is not one link either.** At the sizes where the budget binds it is
+worth three to eight links. On the field ship's ratio of 2.4 links per node, counting links alone
+under-charges a step by about 2.4× at 100k blocks and 4× at 250k.
+
+**2. The weight rises with grid size, because nodes are the working set.** Per-link cost is flat at
+1.5–2.9 ns across a hundredfold size range — links stream. Per-node cost goes 2.6 → 6.4 → 13.4 ns as
+the node state stops fitting in cache. This is why one constant cannot serve every grid, and why it
+does not need to: the weight only has to be right from 100k up, where it measures **3 to 8**.
+
+**3. Exposure is not what the budget is missing.** An exposed face costs 0.1–0.5 of a link, and the
+environment fit's poor r² says the same thing from the other side: most of the environment pass is
+per node — sampling, the radiation terms' setup, the write-back — and only the loop inside it scales
+with exposure. A budget that counts nodes and links and ignores faces loses very little.
+
+**Four is chosen at the low end of the measured 3-to-8 range**, at the size where the budget first
+binds. A grid past a quarter of a million blocks is still slightly under-charged, which errs toward
+letting a large grid run rather than throttling it on a machine that could have kept up. See
+[load-and-hitching.md](load-and-hitching.md#calibrating-the-step-budget-against-a-real-world) for
+what the default buys in game.
+
+> **Absolute nanoseconds here do not transfer to the game.** The harness is .NET 9 and the game is
+> .NET 4.8; a field dump measured 34.8 ns per element against roughly 1.9–2.0 ns here — and both
+> figures move with the solver, so the ratio is only meaningful between a dump and a harness run on
+> the same tree. The *ratios* are arithmetic per element rather than throughput, which is why the
+> lab reports link-equivalents, and `AWeightIsLinksPerNodeAndSurvivesAChangeOfUnits` pins that they
+> do not move when the machine does.
+
+---
+
+## The iteration log
+
+One row per pass over this repository, so a change over many sessions reads as a trend rather than
+being reconstructed from commit messages. Each row records what the suite cost to run and what the
+solver cost to step, taken at the end of that pass.
+
+> The rule argued here is stated canonically in [rules.md](rules.md): `M7`.
+
+**Read the columns for their shape, not their absolute value.** Suite duration and step figures both
+belong to the machine that took them; a row taken elsewhere is not comparable to its neighbours. The
+calibration and noise columns are what say whether two rows may be read against each other at all —
+a run taken at several times the usual noise moves the smallest figures by several per cent.
+
+The benchmark baseline itself is versioned at
+[`tests/benchmarks/performance.csv`](../tests/benchmarks/performance.csv), so any figure in the
+report can be recovered for any row here by reading that file at the row's commit.
+
+### The suite
+
+| # | Date | Commit | Tests | Duration | Note |
+| ---: | --- | --- | ---: | ---: | --- |
+| 0 | 2026-08-20 | `b0a8496` | 1,017 | 45 s | the state that session started from |
+| 1 | 2026-08-20 | `57d1807` | 1,020 | 45 s | +3, `FixedSourceRowTests` |
+| 2 | 2026-08-20 | `78d736f` | 1,020 | 45 s | no test added or removed; five suites moved onto one fixture |
+| 3 | 2026-08-20 | `9aaf3d2` | 1,026 | 44 s | +6: `StepTermsTests`, and a flight case for the bit-identity suite |
+| — | | `9aaf3d2..55a6935` | | | **36 commits recorded no row.** The wind model, per-planet climate, block derivation from build components, the blueprint corpus and the balance lab all landed between rows 3 and 4. |
+| 4 | 2026-08-21 | `55a6935` | 1,285 | 2 m 11 s | +259 across those 36 commits and this one; added `DumpAuditTests` and the field-dump fixture |
+| 5 | 2026-08-20 | `b7ccf75` | 1,358 | 5 m 4 s | +73: world settings, the overlay budget, the descent, the planet-definition merge, `RescanGate`, the burial audit. Nine slow suites now carry `speed=slow`. |
+| 6 | 2026-08-20 | `f411f7d` | 1,359 | **50 s** | one ungated corpus test was 4 m 57 s of every run since the fixture landed; rows 4 and 5 carry it. The `speed!=slow` lane is 14 s. |
+| — | | `f411f7d..c18e3e4` | | | **20 commits recorded no row.** The wind burial audit, the per-planet climates, the block heat index, the balance bench and the first full corpus survey landed between rows 6 and 7. |
+| 7 | 2026-08-22 | `c18e3e4` | 1,467 | 51 s | +108 across those 20 commits |
+| 8 | 2026-08-22 | *(the 2026-08-22 pass)* | 1,528 | 50 s | +61. A defragmentation pass and then a validation one: shipped code is **343 lines shorter** with nothing left in it that nothing calls, and the ground truth every benchmark rests on moved from two ships in a vanished session to 8,102 workshop hulls measured in the lab. |
+| 9 | 2026-08-22 | *(the documentation pass)* | 1,529 | — | +1, `EveryPageHasAChangeLog`. Documentation only: 31 pages merged to 21, every page given a change log, and six published figures corrected. **No duration**, because the run was taken on a different machine from rows 6–8 and a figure that cannot be compared to its neighbours is worse on this table than a dash. No shipped solver code changed, so there is no solver row below. |
+
+### The solver
+
+Headline figures from `bench report --size 32000 --max 125000`, on a 32,800-block census hull in
+flight unless the row says otherwise.
+
+| # | Commit | Calibration | Noise | Ladder 8k | Ladder 32k | Every feature on | Convection isolated | Env pass, ns/node |
+| ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 0 | `b0a8496` | 89.3 ms | 0.065 ms | 1.211 ms | 3.834 ms | 3.831 ms | 1.902 ms | 2.29 |
+| 1 | `57d1807` | 86.2 ms | 0.014 ms | 1.129 ms | 3.603 ms | 3.595 ms | 1.661 ms | 2.11 |
+| 2 | `78d736f` | — | — | — | — | — | — | — |
+| 3 | `9aaf3d2` | 86.2 ms | 0.043 ms | 1.119 ms | 3.544 ms | 3.550 ms | 1.617 ms | 2.11 |
+| 4 | `55a6935` | 87.4 ms | 0.038 ms | 1.134 ms | 3.621 ms | 3.613 ms | 1.680 ms | 2.17 |
+| 5 | `b7ccf75` | 105.6 ms | 0.206 ms | 1.210 ms | 4.198 ms | 4.282 ms | 1.951 ms | 2.41 |
+| 7 | `c18e3e4` | 85.8 ms | 0.057 ms | 1.095 ms | 3.490 ms | 3.496 ms | 1.616 ms | 2.02 |
+| 8 | *(the 2026-08-22 pass)* | 84.0 ms | 0.075 ms | 1.085 ms | 3.461 ms | 3.510 ms | 1.636 ms | 2.02 |
+
+Row 2 changed no shipped code, so its solver figures are row 1's.
+
+**Row 3's noise column is three times row 1's**, and row 1's is the quietest run this machine has
+recorded. Differences of a few per cent between those two rows are not readable.
+
+**Row 4 is row 3 on a slightly slower machine.** Calibration is up 1.4% and every column with it, by
+1.4–3.9%, in the same direction and roughly the same proportion — which is what a machine looks
+like, not what a change looks like. The two rows are comparable in the one way that matters:
+`substeps demanded` on both ladder rungs is identical to six decimal places, so the census hull's
+stiffness has not moved and the columns measure the same work.
+
+**Row 5 was taken on a loud machine and its solver columns are not readable against row 4.**
+Calibration is up 21% and noise is five times row 4's; a re-take mid-pass moved every column
+together. Nothing in that pass touched the per-node path, so the 14–19% across the board is the
+machine.
+
+**Rows 7 and 8 were taken back to back on one machine, which is the only way that pass's figures
+mean anything.** The committed baseline is pinned at row 3, two hundred commits back, so a diff
+against it spans everything since — including the change that stopped filing an overheat event per
+substep, which belongs to a commit before that pass began. Measured against its own start instead —
+the same report at `c18e3e4` and at the tip, twenty minutes apart on an idle machine — **the pass
+moved nothing.** Six rows are named as regressions and every one is inside or barely above a noise
+floor that is itself up 30% between the two runs; the ladder rows did not move enough to be named.
+
+`tests/benchmarks/performance.csv` is deliberately left at row 3: re-recording a baseline for a pass
+that moved no solver code would bake that run's machine state into every future comparison.
+
+### Where a pass moves something the columns cannot see
+
+| # | Figure | Before | After |
+| ---: | --- | ---: | ---: |
+| 3 | `optimized`, per simulated second | 2.100 ms | **1.873 ms** |
+| 3 | `simlite`, per simulated second | 2.081 ms | **1.868 ms** |
+| 3 | `simulation`, per simulated second | 4.201 ms | **3.916 ms** |
+| 3 | substep cap 1, step | 0.668 ms | **0.619 ms** |
+| 3 | substep cap 4, step | 1.210 ms | **1.165 ms** |
+| 3 | step shape, fixed per step | 0.535 ms | **0.494 ms** |
+| 8 | `GridModel` indexes, B/block at 126,731 | 120 | **86** |
+| 8 | `RoomMap` retained, B/block at 126,731 | 166 | **128** |
+| 8 | `RoomMap` retained, B/block at 505,566 | 309 | **229** |
+| 8 | retained total, B/block at 126,731 | 1,095 | **1,023** |
+
+**Row 8's second half changed no code the columns can see and changed what the columns mean.** The
+census hull is the instrument every figure above is taken on, and it was held to `Census.Field` —
+21.35 and 31.25 substeps, from two ships in two live sessions. `StiffnessLab` asks the same question
+of 8,102 real workshop blueprints in four minutes. The field figures survive, landing at the 63rd
+and 85th percentile. What they could not show is that the population is **bimodal** — a light sets
+the substep count on 45% of hulls at a median of 28.5, and armour on the rest at 4.8, with almost
+nothing between — and that the census hull sits in the trough between them, feeling a little less of
+the air than a typical hull because its stiffest block is less exposed. It also placed the hull's
+*heat*: 12.1 kW a block against a real median of 335 W, the 96th percentile, which reaches every
+temperature figure and no stiffness one. See
+[stiffness.md](stiffness.md#the-same-question-asked-of-eight-thousand-real-ships).
+
+### Recording a row
+
+**Measure the pass against its own start, not against the committed baseline.** That file is pinned
+at row 3, so a diff against it spans every commit since and attributes all of them to the pass that
+ran it. Build the pass's starting commit in a worktree, take a report from it into a scratch
+directory, then run the tip's report with `--baseline` pointing at that. Twenty minutes apart on one
+idle machine is what makes the two comparable, and it is the only way to say a pass moved nothing.
+
+```bash
+cd tests
+dotnet test                                                                   # tests, duration
+dotnet run --project Thermodynamics.Sim -- bench report --size 32000 --max 125000 --csv benchmarks
+dotnet run --project Thermodynamics.Sim -- bench elements                     # ns per node
+```
+
+Take it on a quiet machine and check the noise row before committing. A row whose noise column is
+several times its neighbours' should be re-taken rather than explained.
+
+---
+
+## Change log
+
+| Date | Change |
+| --- | --- |
+| 2026-08-22 | Absorbed `element-cost.md` as [What a substep costs](#what-a-substep-costs) — the measurement behind the step budget's weighting belongs beside the report that uses it — and `iterations.md` as [The iteration log](#the-iteration-log), which is this report's own trend over time. Converted the three optimisation findings to present tense, with the state they replaced kept in their before/after tables. |
+| 2026-08-21 | Filed one overheat event per block per step rather than per substep, which had been multiplying every reported critical-block count by the grid's substep demand and OOM-killing a 4,000-tick driven run at 14 GB. Read a node's six face weights once in the row fill instead of twice (−12.4% on the fill in air). Let the environment pass write the watts row instead of clearing it first (+0.6% at half a million blocks — a bandwidth effect, not an instruction one). Gave every substep count the step length it was counted against. |
+| 2026-08-20 | Re-recorded the baseline against the fixed-source row, and stopped the first substep filling rows nothing reads. Corrected what being measured was thought to cost. |
+| 2026-08-19 | Measured what a substep spends per node, per link and per exposed face, which is what changed the step budget's unit from links to `links + 4 × nodes`. |
+| 2026-08-18 | Opened the report: one command producing a table for a person and a CSV keyed on `section / case / metric` for a diff, with the case key as the contract and `PerformanceReportTests` asserting it. |

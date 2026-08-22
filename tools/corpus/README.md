@@ -5,6 +5,8 @@ run of 2026-08-21 is in `out/corpus-2026-08-21`, its census in `out/census-2026-
 sweep in `out/knobs-2026-08-21`. None of those directories is committed — they are gigabytes — so
 each of these prints what it found and renders without the parts that are absent.
 
+> The rules argued here are stated canonically in [rules.md](../../docs/rules.md): `E5` `M10`.
+
 ```
 python3 tools/corpus/verdict.py out/corpus-2026-08-21     # the criteria, on the terminal
 ./tools/corpus/build-report.sh out/corpus-2026-08-21      # the survey as one page
@@ -46,3 +48,13 @@ went on saying 36. A reader who catches one wrong count stops believing the righ
 **Read the peak columns with the censoring in mind.** The harness never destroys an overheating
 block, so anything above critical kept generating for the rest of the clock. See the deliberate
 limit in [known-issues.md](../../docs/known-issues.md).
+
+---
+
+## Change log
+
+| Date | Change |
+| --- | --- |
+| 2026-08-22 | Added this change log. |
+| 2026-08-22 | Made every recorded corpus figure read by something, and closed the pass. |
+| 2026-08-21 | Opened the page against the 2026-08-21 datasets: what each script reads, what it prints, and why the panel's every pick names its own rule. |

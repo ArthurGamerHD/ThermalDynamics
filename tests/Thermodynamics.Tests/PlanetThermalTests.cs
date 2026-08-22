@@ -284,7 +284,7 @@ namespace Thermodynamics.Tests
         /// The shipped file is byte-for-byte what the code that explains it produces.
         ///
         /// <para>
-        /// <c>planet-thermals.md</c> §5 said this was checked and it was not. The claim is worth
+        /// <c>environment.md</c>, "The file is generated", said this was checked and it was not. The claim is worth
         /// making true rather than retracting: every figure in that file is derived from a world's
         /// own generator definition, the departures from the derivation are written into it beside
         /// the entries they affect, and a number that cannot be regenerated from the reasoning

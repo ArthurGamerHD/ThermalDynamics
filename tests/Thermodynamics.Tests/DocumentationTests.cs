@@ -621,6 +621,73 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// Every page carries a change log, and history lives in it rather than in the prose.
+        ///
+        /// <para>
+        /// The documentation standard is in `development.md`: a page describes what the code does
+        /// now, in the present tense, and every revision — including a correction to something this
+        /// repository previously published — is a dated row at the bottom. Without the log there is
+        /// nowhere for that history to go, so it stays in the body and the page slowly stops being
+        /// a description of the code and becomes a record of how it got here. Two pages had reached
+        /// that state before this check existed, and one of them said so in its own opening
+        /// sentence.
+        /// </para>
+        ///
+        /// <para>
+        /// Vendored third-party documentation is exempt: it is replaced wholesale rather than
+        /// edited (`R6`), so imposing this repository's shape on it would guarantee a conflict on
+        /// the next update.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void EveryPageHasAChangeLog()
+        {
+            List<string> missing = new List<string>();
+            List<string> undated = new List<string>();
+            int checked_ = 0;
+
+            foreach (string file in MarkdownFiles())
+            {
+                string relative = Relative(file);
+
+                // Vendored: replaced, never edited.
+                if (relative.Contains("RichHudFramework")) continue;
+                if (relative.Contains("NetworkAPI")) continue;
+
+                checked_++;
+                string text = File.ReadAllText(file);
+
+                if (!Regex.IsMatch(text, @"(?m)^##\s+Change log\s*$"))
+                {
+                    missing.Add(relative);
+                    continue;
+                }
+
+                // The log is the last section, and it holds at least one dated row.
+                string log = text.Substring(text.LastIndexOf("## Change log", StringComparison.Ordinal));
+                if (!Regex.IsMatch(log, @"(?m)^\|\s*\d{4}-\d{2}-\d{2}\s*\|"))
+                {
+                    undated.Add(relative);
+                }
+            }
+
+            Assert.True(checked_ > 20,
+                "only " + checked_ + " pages were checked, so this test is looking in the wrong"
+                + " place and would pass whatever the documentation said");
+
+            missing.Sort(StringComparer.Ordinal);
+            undated.Sort(StringComparer.Ordinal);
+
+            Assert.True(missing.Count == 0,
+                "pages with no \"## Change log\" section (see docs/development.md, Documentation"
+                + " conventions):\n  " + string.Join("\n  ", missing.ToArray()));
+
+            Assert.True(undated.Count == 0,
+                "pages whose change log holds no dated `| YYYY-MM-DD |` row:\n  "
+                + string.Join("\n  ", undated.ToArray()));
+        }
+
+        /// <summary>
         /// Every page under `docs/` is reachable from the README's index.
         ///
         /// <para>

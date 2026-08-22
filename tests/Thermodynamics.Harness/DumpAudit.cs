@@ -317,7 +317,7 @@ namespace Thermodynamics.Harness
         {
             CheckResult check = new CheckResult();
             check.Name = "a wholly buried grid is in no wind";
-            check.Where = "docs/wind-model.md, Under the surface; backlog A15";
+            check.Where = "docs/environment.md, Under the surface; backlog A15";
 
             string[] needs = { "wind_speed", "wind_burial" };
             if (!table.Require(needs, check)) return check;
@@ -351,7 +351,7 @@ namespace Thermodynamics.Harness
         {
             CheckResult check = new CheckResult();
             check.Name = "slope wind is what adds to the composed speed";
-            check.Where = "docs/wind-model.md, B15";
+            check.Where = "docs/environment.md, Slope winds; backlog B15";
             check.Observation = true;
 
             string[] needs = { "wind_speed", "wind_ceiling", "wind_band_share", "wind_profile", "wind_speedup", "wind_shelter" };
@@ -463,7 +463,7 @@ namespace Thermodynamics.Harness
         {
             CheckResult check = new CheckResult();
             check.Name = "a positive depth means a buried grid";
-            check.Where = "docs/planet-climate.md, Underground";
+            check.Where = "docs/environment.md, Underground";
 
             string[] needs = { "depth_m", "underground" };
             if (!table.Require(needs, check)) return check;
@@ -495,7 +495,7 @@ namespace Thermodynamics.Harness
         {
             CheckResult check = new CheckResult();
             check.Name = "a weather's offset scales with its intensity";
-            check.Where = "docs/planet-climate.md, Weather";
+            check.Where = "docs/environment.md, Weather";
 
             string[] needs = { "weather", "weather_intensity", "weather_ambient_k" };
             if (!table.Require(needs, check)) return check;

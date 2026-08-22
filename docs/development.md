@@ -1,5 +1,15 @@
 # Development
 
+> The rules argued here are stated canonically in [rules.md](rules.md): `C1` `C2` `C3` `C4`
+> `M9` `R2` `R3` `R4` `R5` `R6`, and the principles P7, P11 and P12 they follow from.
+
+| Looking for | Go to |
+| --- | --- |
+| How the two halves fit together | [architecture.md](architecture.md) |
+| Running the tests and scenarios | [tests/README.md](../tests/README.md) |
+| What the engine provides | [engine-notes.md](engine-notes.md) |
+| Open work | [backlog.md](backlog.md) |
+
 ## Prerequisites
 
 * Space Engineers installed (the project references DLLs from `Bin64/` directly).
@@ -32,7 +42,7 @@ Adjust them for another machine. Two things about that reference set are easy to
 
 XML documentation ships next to the DLLs for `Sandbox.Game`, `VRage.Game`, `VRage` and others,
 so IntelliSense will show the engine's own docs once the references resolve. See
-[engine-api-notes.md](engine-api-notes.md) for a survey of what is available.
+[engine-notes.md](engine-notes.md) for a survey of what is available.
 [.gitignore](../.gitignore) drops `bin/`, `obj/`, `.vs/` and `out/`; it lists `*.csproj`, `*.sln`
 and `*.props` and then un-ignores them again, because the mod project and the test projects are
 both built from checked-in files.
@@ -77,6 +87,32 @@ Script changes take effect on world reload. Definition XML changes also require 
 * [metadata.mod](../metadata.mod) and [modinfo.sbmi](../modinfo.sbmi) carry the workshop
   identity — `modinfo.sbmi` holds the Steam workshop id `2985582372`. Do not regenerate them,
   or the mod will publish as a new item.
+
+## Documentation conventions
+
+Every page under `docs/`, and every README, follows one shape. The point is that a reader can pick
+up any page and know where to look, and that a page cannot quietly become a historical document
+while still reading as a description of the code.
+
+1. **A title, then one paragraph saying what the page covers and what it does not.** A page that
+   cannot state its scope in a paragraph is two pages.
+2. **A rules banner where the page argues a standing rule**, citing it by identifier — the rule is
+   stated canonically in [rules.md](rules.md) and argued at length here, never the other way round.
+3. **A "Looking for / Go to" table** where a reader might reasonably be on the wrong page. This is
+   what stops the same subject being explained twice in two places.
+4. **The body in the present tense**, describing what the code does now. **Not** what it used to do,
+   what was tried, or what a past session found. A measurement's before/after table is present-tense
+   evidence and stays; the narrative around it does not.
+5. **Most important information first.** What the thing *is* precedes how it was arrived at; the
+   evidence and the engine survey that justify a model come after the model.
+6. **A `## Change log` last**, newest first, one row per date: `| Date | Change |`. This is the only
+   place historical revisions belong. Entries record what changed and why, including corrections to
+   things this repository previously published — a finding corrected somewhere other than where it
+   was published is not corrected (`E10`).
+
+Checks that hold this in place: `EveryDocumentIsInTheIndex`, `EveryPageHasAChangeLog`,
+`EveryRelativeLinkResolves`, `EveryAnchorNamesAHeading`, `NoPageNamesATestThatHasBeenRenamed` and
+`EveryQuotedSuiteSizeIsCurrent`.
 
 ## Do not restructure `Models/`
 
@@ -192,3 +228,15 @@ the command line or the environment and redacts it from anything it prints; noth
 file. The only personal data in the repository is the developer's own paths in `Generic.csproj`,
 which should be parameterised the way [tests/Directory.Build.props](../tests/Directory.Build.props)
 already parameterises the game location.
+
+---
+
+## Change log
+
+| Date | Change |
+| --- | --- |
+| 2026-08-22 | Added the standard header and this change log. The documentation conventions this repository follows are stated in [Documentation conventions](#documentation-conventions) below. |
+| 2026-08-21 | Checked the documentation's own links and fixed the sixteen that were dead. |
+| 2026-08-20 | Moved build output outside the mod folder, so the repository stays publishable with no cleanup step. Added auditing a field dump rather than reading one. |
+| 2026-08-17 | Moved the readouts off Text HUD API onto Rich HUD, and recorded the dependency as optional. |
+| 2026-08-12 | Opened the page on the rebuilt mod. |

@@ -3,6 +3,15 @@
 Thermal Dynamics is meant to be built on. Everything the simulation knows is readable, everything
 it does is switchable, and both heat sources and temperature events can be driven from another mod.
 
+> The rule argued here is stated canonically in [rules.md](rules.md): `R9`, and the principle
+> P9 it follows from.
+
+| Looking for | Go to |
+| --- | --- |
+| What the values mean physically | [thermal-model.md](thermal-model.md) |
+| The settings these calls address by name | [configuration.md](configuration.md) |
+| Block, planet and loop properties | [definitions.md](definitions.md) |
+
 Space Engineers mods cannot reference one another's assemblies, so the contract is a dictionary of
 delegates passed by mod message. Bind to it once and hold the delegates you need.
 
@@ -150,3 +159,14 @@ game session, and its two seams are meant to be used:
 * Delegate signatures use whitelisted types only, so scripts and mods can both bind.
 * Keys will not change meaning within a major version. New keys may be added; missing keys mean an
   older build, so test for null after casting.
+
+---
+
+## Change log
+
+| Date | Change |
+| --- | --- |
+| 2026-08-22 | Added the standard header and this change log. |
+| 2026-08-21 | Checked every link on this page against the files and headings it names. |
+| 2026-08-19 | Added what a grid vents against what it makes. Renamed the definition dials that said the wrong thing, and the API entries with them. |
+| 2026-08-13 | Opened the page as the contract: `EveryModApiEntryIsDocumented` fails when the delegate table carries a key this page does not name. |

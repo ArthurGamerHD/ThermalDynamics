@@ -187,7 +187,7 @@ namespace Thermodynamics.Core
         /// its nodes weighted by what a node is worth.
         ///
         /// Nodes are counted because a substep runs the environment pass once per node, which the
-        /// old link-only count could not see — see [element-cost.md](../../../../docs/element-cost.md).
+        /// old link-only count could not see — see [benchmarks.md](../../../../docs/benchmarks.md#what-a-substep-costs).
         /// Exposed faces are deliberately not counted: measured at a tenth to a half of a link
         /// each, they are inside the noise of the two terms that are here.
         /// </summary>

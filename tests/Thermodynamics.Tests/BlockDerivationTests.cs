@@ -108,7 +108,7 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// The defect this fixes outright, from docs/field-tuning.md: a plushie was simulated as a
+        /// The defect this fixes outright, from docs/stiffness.md: a plushie was simulated as a
         /// kilogram of steel with a heat capacity of 2 J/K, which made it the stiffest object on a
         /// fleet and set the substep count for whole capital ships. Fabric is nearly an insulator
         /// and holds a great deal of heat per kilogram, and now says so.

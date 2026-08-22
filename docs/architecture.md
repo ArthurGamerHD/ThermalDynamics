@@ -11,6 +11,15 @@ The model is what [`tests/`](../tests) builds and tests outside the game; the ad
 compiles around it. Everything the game supplies crosses one of three boundaries — block layout, an
 environment sample, and results out — and nothing else.
 
+> The rules argued here are stated canonically in [rules.md](rules.md): `C5` `P9`.
+
+| Looking for | Go to |
+| --- | --- |
+| The equations the model evaluates | [thermal-model.md](thermal-model.md) |
+| What the adapter samples from the world | [environment.md](environment.md) |
+| Where the design is going | [scale-design.md](scale-design.md) |
+| Building and deploying it | [development.md](development.md) |
+
 ## The model
 
 | Area | Types |
@@ -160,3 +169,15 @@ settings changes and debug block colouring.
 Other mods bind to the delegate table in [ThermalApi.cs](../Data/Scripts/Thermodynamics/ThermalApi.cs);
 see [api.md](api.md). A host that wants to drive the model directly implements `IBlockAdjacency` and
 pumps `ThermalSimulation` — which is exactly what the test harness does.
+
+---
+
+## Change log
+
+| Date | Change |
+| --- | --- |
+| 2026-08-22 | Added the standard header and this change log. |
+| 2026-08-20 | Brought the page onto the blueprint-running path and the publishable mod folder. |
+| 2026-08-18 | Spread a step across the frames of its window rather than landing it whole on one frame, and documented the scheduler that does it. |
+| 2026-08-17 | Documented the Rich HUD readouts, the settings menu and the x-ray block overlay that replaced thermal vision. |
+| 2026-08-12 | Opened the page on the rebuilt mod: the model and the adapter, and the three boundaries between them. |

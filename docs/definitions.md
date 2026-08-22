@@ -15,6 +15,15 @@ Planets.xml
 Loops.xml
 ```
 
+> The rules argued here are stated canonically in [rules.md](rules.md): `D3` `R8`.
+
+| Looking for | Go to |
+| --- | --- |
+| Where the shipped planet figures come from | [environment.md](environment.md#planet-properties) |
+| What each property does physically | [thermal-model.md](thermal-model.md) |
+| World settings, as against per-definition values | [configuration.md](configuration.md) |
+| What a block is worth once tuned | [balance.md](balance.md) |
+
 ## Group: `ThermalBlockProperties`
 
 Read by `ThermalCellDefinition.GetDefinition`
@@ -221,11 +230,14 @@ Weather is **not** in this group. The mod reads the weather's name from the game
 [WeatherResponse](../Data/Scripts/Thermodynamics/Core/Definitions/WeatherResponse.cs), whose figures
 are derived from Keen's own `WeatherEffects.sbc`, so a mod adding a weather called `RainHeavier`
 gets rain behaviour without annotating anything. See
-[thermal-model.md](thermal-model.md#weather).
+[environment.md](environment.md#weather).
 
 Per-planet values are set by adding a definition with that planet's `SubtypeId`. The shipped
-[Data/Planets.xml](../Data/Planets.xml) only defines the fallback, so **every** planet currently
-uses Earthlike numbers.
+[Data/Planets.xml](../Data/Planets.xml) carries **nine entries** — the `DefaultThermodynamics`
+fallback plus one for each of Alien, EarthLike, Europa, Mars, Moon, Pertam, Titan and Triton — each
+derived from that world's own generator definition rather than typed. **The file is generated**;
+see [environment.md](environment.md#planet-properties) for the derivation, the three worlds whose
+shipped entries depart from it, and how to regenerate it.
 
 ## Group: `ThermalLoopProperties`
 
@@ -288,3 +300,15 @@ Tuning guidance:
 * Set `ExcludeFromSimulation` to `true` for decorative, zero-mass or projector-only blocks.
 * Waste-energy fractions above ~0.3 make a block a serious heat source; the vanilla default is
   0.05.
+
+---
+
+## Change log
+
+| Date | Change |
+| --- | --- |
+| 2026-08-22 | Corrected the claim that `Data/Planets.xml` defines only the fallback, so every planet runs Earthlike numbers. The file carries nine entries — `DefaultThermodynamics` plus one per shipped world — generated from each world's own generator definition. Added the standard header and this change log. |
+| 2026-08-22 | Checked all three definition readers against this reference rather than only the block one, and put the newly working heat-source property in it. |
+| 2026-08-20 | Let the derivation reach every vanilla block. |
+| 2026-08-19 | Renamed the definition dials that said the wrong thing, gave each grid size its own coolant flow rate, and gave the decorative blocks definitions of their own. |
+| 2026-08-12 | Took specific heat in real J/(kg·K), with pace as one explicit setting. |

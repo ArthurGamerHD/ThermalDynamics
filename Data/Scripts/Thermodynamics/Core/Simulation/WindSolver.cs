@@ -26,7 +26,7 @@ namespace Thermodynamics.Core
         {
             /// <summary>
             /// The game's own figure here: <c>MaxWindSpeed × airDensity</c>. Used as the per-planet
-            /// scale and nothing else — see docs/wind-model.md for why it cannot be used as a wind.
+            /// scale and nothing else — see docs/environment.md for why it cannot be used as a wind.
             /// </summary>
             public float Ceiling;
 

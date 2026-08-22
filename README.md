@@ -17,7 +17,7 @@ into atmosphere and into the air of sealed rooms, arrives from the sun, and — 
 * **Isolated.** Every mechanism has its own switch, and switching one off removes exactly its own
   cost. Switches take effect on the next step, with no reload.
 * **Tested.** The simulation is a pure library with no dependency on the game session, built and
-  tested outside it — 1,471 tests, 33 deterministic scenarios and a load benchmark that goes to a
+  tested outside it — 1,529 tests, 33 deterministic scenarios and a load benchmark that goes to a
   million blocks in one grid.
 * **Open.** Everything the simulation knows is readable and everything it does is drivable from
   another mod, through a delegate table passed by mod message. See [docs/api.md](docs/api.md).
@@ -76,39 +76,56 @@ into atmosphere and into the air of sealed rooms, arrives from the sun, and — 
 
 ## Documentation
 
+Every page opens with what it covers and closes with a change log; history lives there rather than
+in the prose.
+
+**Start here**
+
 | Document | Contents |
 | --- | --- |
+| [docs/rules.md](docs/rules.md) | The standing rules, in one place: fourteen principles, the rules that follow from them, and whether each is load-bearing, conditional or not worth keeping. |
 | [docs/architecture.md](docs/architecture.md) | Component layout, update order, grid lifecycle, persistence. |
-| [docs/thermal-model.md](docs/thermal-model.md) | Every equation the simulation evaluates, with its source. |
-| [docs/planet-climate.md](docs/planet-climate.md) | How a planet's air is decided, what it measured at, and what is still open. |
-| [docs/surface-mapping.md](docs/surface-mapping.md) | Surface bit format, the room flood fill, portals, and room air. |
-| [docs/api.md](docs/api.md) | The mod API: reading, writing, heat sources, thresholds, settings. |
-| [docs/definitions.md](docs/definitions.md) | Block, planet and loop properties, and how to add support for another mod's blocks. |
-| [docs/blocks.md](docs/blocks.md) | The blocks and items this mod ships, and the coolant loop build rules. |
-| [docs/configuration.md](docs/configuration.md) | Every setting, its default, the profiles, and the runtime commands. |
-| [docs/planet-thermals.md](docs/planet-thermals.md) | What the engine says about a planet's temperature, and where every figure in Planets.xml comes from. |
-| [docs/wind-model.md](docs/wind-model.md) | What the engine's wind actually computes, what real wind does, and the model that replaces it. |
-| [docs/telemetry.md](docs/telemetry.md) | Session data collection and what the report contains. |
-| [docs/development.md](docs/development.md) | Building, deploying, repo layout, conventions. |
-| [docs/known-issues.md](docs/known-issues.md) | Confirmed defects, unfinished systems and deliberate limits. |
-| [docs/balance-lab.md](docs/balance-lab.md) | Deciding good balance from a population of real ships: criteria, staging, and the corpus. |
-| [docs/balance.md](docs/balance.md) | Every block this mod ships, costed against the vanilla blocks it competes with. |
-| [docs/corpus-shape.md](docs/corpus-shape.md) | What the corpus datasets say when read for balance, and what they cannot answer. |
-| [docs/field-tuning.md](docs/field-tuning.md) | Live runs against the harness: what a real world's telemetry changed. |
 | [docs/backlog.md](docs/backlog.md) | Every open item across these documents, categorised, one line each. |
-| [docs/bugs-and-performance.md](docs/bugs-and-performance.md) | Findings from putting the simulation under test. |
-| [docs/engine-api-notes.md](docs/engine-api-notes.md) | Engine APIs this mod reimplements by hand, and what it could use instead. |
-| [docs/se2-research.md](docs/se2-research.md) | What the Space Engineers 2 assemblies contain, and what an SE2 adapter would bind to. |
-| [docs/model-redesign.md](docs/model-redesign.md) | Feature inventory and the data-structure changes behind the current model. |
-| [docs/scale-design.md](docs/scale-design.md) | Design for grids up to a million blocks. |
+
+**The simulation**
+
+| Document | Contents |
+| --- | --- |
+| [docs/thermal-model.md](docs/thermal-model.md) | Every equation the simulation evaluates, and the surface geometry every area term reads. |
+| [docs/environment.md](docs/environment.md) | The air, ground, sun and wind outside a grid: how each is computed and what evidence stands behind it. |
+| [docs/scale-design.md](docs/scale-design.md) | Where the model is going: variable block sizes, and grids to a million blocks. |
+
+**Using it**
+
+| Document | Contents |
+| --- | --- |
+| [docs/blocks.md](docs/blocks.md) | The blocks and items this mod ships, and the coolant loop build rules. |
+| [docs/configuration.md](docs/configuration.md) | Every setting, its default, the runtime commands, and where the settings surface is going. |
+| [docs/profiles.md](docs/profiles.md) | The five presets, as a ladder on two axes. |
+| [docs/definitions.md](docs/definitions.md) | Block, planet and loop properties, and how to add support for another mod's blocks. |
+| [docs/api.md](docs/api.md) | The mod API: reading, writing, heat sources, thresholds, settings. |
+
+**Measurement and evidence**
+
+| Document | Contents |
+| --- | --- |
+| [docs/telemetry.md](docs/telemetry.md) | Session data collection and what the report contains. |
+| [docs/benchmarks.md](docs/benchmarks.md) | The performance report: cost by size, feature and configuration; what a substep costs; and the trend across passes. |
+| [docs/load-and-hitching.md](docs/load-and-hitching.md) | What a grid costs as it grows, what makes it stutter, and what live worlds measure. |
+| [docs/stiffness.md](docs/stiffness.md) | Why a handful of light fittings sets the cost of a capital ship, and what to do about it. |
 | [docs/memory.md](docs/memory.md) | Where a grid's memory goes, and what can be given back. |
-| [docs/load-and-hitching.md](docs/load-and-hitching.md) | What a grid costs as it grows, what was making it stutter, and what still does. |
-| [docs/benchmarks.md](docs/benchmarks.md) | The performance report: cost by size, by feature and by configuration, and how to diff two runs. |
-| [docs/iterations.md](docs/iterations.md) | What the suite and the solver cost at the end of each pass over the repository, so a trend is readable across sessions. |
-| [docs/settings-redesign.md](docs/settings-redesign.md) | The plan for the menu, the config file and the definition files as one surface. |
-| [docs/element-cost.md](docs/element-cost.md) | What a substep spends per node, per link and per exposed face, and what the step budget should charge. |
-| [docs/stiffness.md](docs/stiffness.md) | Why a handful of light fittings set the cost of a capital ship, and what to do about it. |
+| [docs/balance-lab.md](docs/balance-lab.md) | Deciding good balance from a population of real ships: criteria, staging, and the corpus. |
+| [docs/balance.md](docs/balance.md) | Every block costed against the vanilla blocks it competes with, and what 8,132 real ships say about the targets. |
+
+**Working on it**
+
+| Document | Contents |
+| --- | --- |
+| [docs/development.md](docs/development.md) | Building, deploying, repo layout, conventions. |
+| [docs/known-issues.md](docs/known-issues.md) | Deliberate limits, open defects, and the failure patterns worth carrying forward. |
+| [docs/engine-notes.md](docs/engine-notes.md) | What both engines actually provide, and what an SE2 adapter would bind to. |
 | [tests/README.md](tests/README.md) | The isolated simulation environment: running the tests and scenarios. |
+| [tools/corpus/README.md](tools/corpus/README.md) | The corpus tooling: the verdict script and the report builder. |
 
 ## Building and testing
 
@@ -118,7 +135,7 @@ game compiles it. The projects under [tests/](tests) link the same files so it c
 profiled outside the game:
 
 ```bash
-cd tests && dotnet test                                  # 1,471 tests
+cd tests && dotnet test                                  # 1,529 tests
 dotnet run --project Thermodynamics.Sim -- run all     # scenario suite
 dotnet run --project Thermodynamics.Sim -- bench scale # cost from 8k to 1M blocks
 ```
@@ -149,3 +166,14 @@ ThermalDynamics/
 ├── tests/                          Isolated build, tests and scenarios
 └── docs/                         This documentation
 ```
+
+---
+
+## Change log
+
+| Date | Change |
+| --- | --- |
+| 2026-08-22 | Rebuilt the documentation index around what a reader is trying to do rather than the order pages were written, after a defragmentation pass took the documentation from 31 pages to 21. Every page now opens with its scope and closes with a change log; the conventions are in [docs/development.md](docs/development.md#documentation-conventions) and checked by `EveryPageHasAChangeLog`. |
+| 2026-08-21 | Made the quoted suite size a claim the suite checks, and fixed the sixteen dead documentation links a first check found. |
+| 2026-08-20 | Pointed the READMEs at the corpus and the lab. |
+| 2026-08-12 | Opened the repository. |

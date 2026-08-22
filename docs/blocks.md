@@ -8,6 +8,13 @@ descriptions are localisation keys resolved from
 Both grid sizes are provided for every functional block, prefixed `Gauge_LG_` (large) and
 `Gauge_SG_` (small).
 
+| Looking for | Go to |
+| --- | --- |
+| Whether a block is worth building | [balance.md](balance.md) |
+| The equations behind each block | [thermal-model.md](thermal-model.md) |
+| The properties each block declares | [definitions.md](definitions.md) |
+| The settings that scale them | [configuration.md](configuration.md) |
+
 ## Coolant pipes
 
 | Subtype | Type | Size (LG / SG) | Sink faces |
@@ -229,7 +236,7 @@ that is struggling is usually not the one being flown.
 **Every figure is a count, not a clock.** Milliseconds depend on the machine and on what else is
 running, so two players comparing notes would be comparing hardware. Substeps, link visits and
 floored blocks are properties of what has been *built*, so they mean the same thing to everyone and
-read directly against [field-tuning.md](field-tuning.md).
+read directly against [load-and-hitching.md](load-and-hitching.md#in-the-field).
 
 Two lines carry colour, and only when they mean trouble:
 
@@ -242,7 +249,7 @@ Two lines carry colour, and only when they mean trouble:
 `substeps` reads *granted / demanded* and `clock` reads `HeatTimeScale / Frequency`, whose ratio is
 the safety rail described in [configuration.md](configuration.md). `floored` is how many blocks the
 per-block cap is holding back — on a real ship that is usually the lightest fittings, and
-[field-tuning.md](field-tuning.md) is about getting it down.
+[stiffness.md](stiffness.md) is about getting it down.
 
 Both HUD elements are drawn by the Rich HUD Framework; without Rich HUD Master the framework never
 registers and no text appears. The extinguisher's temperature billboard is drawn through the mod API
@@ -330,3 +337,14 @@ faces it would have radiated from, which is what the `radiator` scenario measure
 block behind them, for an electrical cost set by Carnot. They pair naturally with a radiator on the
 hot side: the pump concentrates a ship's heat somewhere it can be shed, which is the one thing
 radiators alone cannot do when the thing you need cooled is already cooler than its surroundings.
+
+---
+
+## Change log
+
+| Date | Change |
+| --- | --- |
+| 2026-08-22 | Added the standard header and this change log. |
+| 2026-08-19 | Corrected two claims on this page that measurement contradicted, and answered two build questions with measurements rather than intuition: several small loops do **not** beat one big one, and a heat pump does work as air conditioning through a wall. Let pumps drive a ring either way, so a backwards pump still works. Reported a coolant block's loop — and why it has none — in its own terminal, and reported flow in metres per second. |
+| 2026-08-17 | Moved the readouts off Text HUD API onto Rich HUD, and replaced thermal vision with the x-ray block overlay. |
+| 2026-08-12 | Opened the page against `Data/CubeBlocks/`. |

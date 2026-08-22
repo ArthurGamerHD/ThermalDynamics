@@ -3,6 +3,16 @@
 Runs the thermal simulation outside Space Engineers, so it can be built, tested, profiled and
 debugged in seconds instead of by loading a world.
 
+> The rules argued here are stated canonically in [rules.md](../docs/rules.md): `E7` `D2` `D4`
+> `D5` `C1` `C2` `C5` `M11` `R10`.
+
+| Looking for | Go to |
+| --- | --- |
+| What the simulation does | [thermal-model.md](../docs/thermal-model.md) |
+| Building and deploying the mod | [development.md](../docs/development.md) |
+| The performance report and the scale ladder | [benchmarks.md](../docs/benchmarks.md) |
+| The balance lab this harness runs | [balance-lab.md](../docs/balance-lab.md) |
+
 ## Layout
 
 > **Hulls are built from a measured block census.**
@@ -480,7 +490,7 @@ PipeFitter.BuildRing(builder, ring);      // pump goes on the first straight run
 
 ## Test coverage
 
-1,528 tests. **What each class is for is stated in its own summary, not here** —
+1,529 tests. **What each class is for is stated in its own summary, not here** —
 the index below says where to look, and `EveryTestClassSaysWhatItIsFor` fails when a class arrives
 without saying. This table is checked by `EveryTestClassIsInTheIndex`, so a suite cannot be added
 and left off it.
@@ -523,3 +533,14 @@ and left off it.
 
 > **Two divergence defects are pinned as present**, so that fixing either fails a test rather than
 > moving a number nobody is watching.
+
+---
+
+## Change log
+
+| Date | Change |
+| --- | --- |
+| 2026-08-22 | Added the standard header and this change log. |
+| 2026-08-22 | Fitted cooling to ships people actually built, closing the retrofit gap the balance criteria depended on. |
+| 2026-08-21 | Brought the quoted suite size onto something the suite checks, so a count in prose cannot silently become a historical curiosity. Gated the one corpus test that was running ungated — 4 m 57 s of every run since its fixture landed. |
+| 2026-08-20 | Opened the page as the suite's index: every class of tests filed under a subject, checked by `EveryTestClassIsInTheIndex`, with what each suite is *for* living in its own summary where it cannot drift from the code. |

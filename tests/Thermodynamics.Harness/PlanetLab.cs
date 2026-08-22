@@ -279,7 +279,7 @@ namespace Thermodynamics.Harness
             sb.Append("  Regenerate with the sim's planets command; see tests/README.md.\n\n");
             sb.Append("  Every figure below is derived from the world's own generator definition by\n");
             sb.Append("  Thermodynamics.Core.PlanetThermalDerivation. What each derivation is and why is\n");
-            sb.Append("  documented there and in docs/planet-thermals.md; the per-entry comments here say\n");
+            sb.Append("  documented there and in docs/environment.md; the per-entry comments here say\n");
             sb.Append("  what the engine supplied and what came out.\n");
             sb.Append("-->\n");
             sb.Append("<Definitions xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\">\n");

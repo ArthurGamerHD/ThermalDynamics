@@ -1,11 +1,16 @@
 # Load and hitching
 
-What the simulation costs as a grid grows, measured rather than extrapolated, and what was
-changed to stop a large grid stuttering.
+What the simulation costs as a grid grows, measured rather than extrapolated; what makes a large
+grid stutter; and what live worlds cost when the same questions are asked of them.
 
-Companion to [scale-design.md](scale-design.md), which is the design for a million blocks and
-still mostly unbuilt, and to [bugs-and-performance.md](bugs-and-performance.md), which is the
-record of an earlier investigation at eight thousand.
+> The rules argued here are stated canonically in [rules.md](rules.md): `M4` `M5` `M7` `E3`.
+
+| Looking for | Go to |
+| --- | --- |
+| The design for a million blocks, still mostly unbuilt | [scale-design.md](scale-design.md) |
+| Why a handful of light fittings sets a capital ship's cost | [stiffness.md](stiffness.md) |
+| The repeatable cost report, and what a substep costs | [benchmarks.md](benchmarks.md) |
+| Where a grid's memory goes | [memory.md](memory.md) |
 
 > **Read [stiffness.md](stiffness.md) beside the ladder below.** Every figure on this page was
 > measured on a synthetic ship whose lightest block is a 200 kg grating, and a field dump has
@@ -117,7 +122,7 @@ All figures from this machine, release build, single thread, ship shape.
 
 Measured on hulls built from the block [`Census`](../tests/Thermodynamics.Harness/Census.cs) — the
 population of a real ship, rather than the heavy armour and gratings this ladder used to use. See
-[the note below](#the-ladder-was-measured-on-the-wrong-ship) for what that changed and why the
+[the note below](#the-ladder-is-measured-on-a-census-hull-not-an-armour-cube) for what that changed and why the
 figures moved so much.
 
 | blocks | links | bbox | exposed | build | topology | rooms | exposure | full step | sub | tick | cap | resident |
@@ -187,7 +192,7 @@ and the per-mechanism watt diagnostics — into memory that got further apart as
 now read or write flat arrays. Nothing in the conduction pass was ever superlinear, and the part
 that looked like it was has gone.
 
-### The ladder was measured on the wrong ship
+### The ladder is measured on a census hull, not an armour cube
 
 Every figure above moved when the hulls did, and the full step at a million blocks moved by six
 times — from 102 ms to 623 ms. Nothing about the solver changed. What changed is the ship.
@@ -275,7 +280,12 @@ bookkeeping.
 
 ## The findings
 
-### 1. A block placed rebuilt the whole conduction graph — *fixed*
+Ten causes of hitching, each stated as what the code does now, with the measurement that shows what
+the fix was worth. What each one used to do is in the body, because a before/after figure is the
+evidence — the dates are in the [change log](#change-log).
+
+
+### 1. Placing a block costs its own degree, not the whole graph — *fixed*
 
 Placing one block marked the graph stale and the next tick rebuilt every link on the ship. On a
 million blocks that is 456 ms for one block.
@@ -293,7 +303,7 @@ that the graph it builds is the same graph a full rebuild produces.
 block whose mounting changed, a new adjacency source. Removal is the one that matters and is
 listed under [what is still open](#what-is-still-open).
 
-### 2. The room mapper's budget did not bound its scan — *fixed*
+### 2. The room mapper's budget bounds its scan — *fixed*
 
 The flood fill is budgeted so no tick pays for the whole grid. The walk between one room and the
 next was not: it counted as a single unit of budget however far it went, and across a pass that
@@ -306,7 +316,7 @@ is bounded.
 The load test asserting the budget was respected passed throughout, because it read the counter
 that was not counting the scan. **A budget test is only as good as what it counts.**
 
-### 3. The exposure refresh had no budget at all — *fixed*
+### 3. The exposure refresh is budgeted — *fixed*
 
 It walked every node on the grid on the tick a room pass published — the same tick as the
 mapper's own worst call, which is how one tick came to cost 109 ms on a grid whose steady cost is
@@ -315,14 +325,14 @@ twenty. It is resumable now, in slices scaled off the node count.
 Some nodes read the previous map for a few ticks. That is not a new inaccuracy: it is the map they
 had been reading for the several hundred ticks the pass took to build.
 
-### 4. Two searches walked the grid to find nothing — *fixed*
+### 4. A search that finds nothing costs nothing — *fixed*
 
 The coolant loop search and the heat pump rebuild each walked every block asking a question almost
 every block answers no to, on every topology change. The grid counts them as they are placed, so a
 ship with no plumbing — nearly every ship — skips two passes over a million blocks for an integer
 test.
 
-### 5. The mass sweep walked every block every eight steps — *fixed*
+### 5. The mass sweep is a rota, not a walk over every block — *fixed*
 
 Block mass changes with build progress and damage and the game raises no event for either, so the
 only way to notice is to look. It looked at every block on the grid, every eight steps, asking the
@@ -332,7 +342,7 @@ whole every eight steps.
 This is the one finding the synthetic benchmarks cannot see — a harness has no game blocks to ask
 — which is why the load numbers are not the whole story and telemetry from a real session is.
 
-### 6. Removing a block rebuilt the whole conduction graph — *fixed*
+### 6. Removing a block costs its own degree — *fixed*
 
 The companion to finding 1, and the harder direction. A removed block's links have to be *found*
 before they can be dropped, and scanning the link list for them is proportional to the grid. Its
@@ -354,7 +364,7 @@ so a stale index there would have poured a room's heat into whichever block inhe
 that builds and grinds in a generated order and compares the graph against a rebuild after every
 single change.
 
-### 7. A step's cost varied five-fold with nothing visible changing — *fixed*
+### 7. A step's cost is stable when nothing changes — *fixed*
 
 A step's cost is its substep count times its links, and the substep count is set by the stiffest
 node on the grid, which moves as the grid heats. On a 127k hull that produced a step costing 15 ms
@@ -372,7 +382,7 @@ lurches. `ThermalSimulation.SimulationRate` reports how much of real time a grid
 with, so a slow grid says so rather than being mysterious. The default is about one 60 fps
 frame's worth of link visits; grids below roughly a hundred thousand blocks never reach it.
 
-### 8. Publishing the shadow map walked every node — *fixed*
+### 8. Publishing the shadow map touches only what changed — *fixed*
 
 The self-shadow walk was budgeted. Publishing its answer was not: a completed pass called a loop
 over every node on the grid, six faces each — 760,000 shadow lookups on a 127k hull — from inside
@@ -382,7 +392,35 @@ The same shape of mistake as the room mapper's, and the same fix: the refresh is
 steps. It is advanced inside the pass rather than at the top of a step, so a grid small enough for
 the budget to cover in one go still finishes in the same substep that completed the pass.
 
-### 10. A step landed whole on one frame instead of being spread over its window — *fixed*
+### 9. Grids are staggered across frames — *fixed*
+
+The one the benchmarks could never have found, because they run a single grid.
+
+A field run of a 203-grid save: of 13,915 frames, **1,392 did any thermal work at all** — one in
+ten, exactly — and each of the worst frames carried **183 grids**. Those frames averaged 117 ms,
+worst 611 ms, and two in three exceeded a 60 fps frame. The session total was 20 % of real time,
+which is a throughput number and a survivable one. Arriving in one lump every tenth frame is what
+made it a stutter.
+
+The first fix for this gave each grid one of ten phases and ticked one phase per frame, balanced by
+block count. It helped and it was the wrong shape: it spread *grids*, and what needed spreading was
+the work inside each of them — one 42,051-block ship on its own frame is a stutter no arrangement
+of the other two hundred can fix. Finding 10 replaced it, and `ThermalGridScheduler` now simply
+gives every grid a share of every frame.
+
+**This is a correction, not a discovery.** Earlier in the same session this was investigated by
+reading `MyDistributedTypeUpdater<MyEntity>(10)` in the engine assemblies, which computes
+`m_step = ceil(Count / UpdateInterval)` and walks a slice per frame — and concluded, in a
+committed document, that the engine already staggered and there was nothing to do. The reading was
+plausible and the conclusion was wrong. The measurement settled it in one line: 1,392 of 13,915.
+
+The wrong version of that conclusion was the more dangerous kind, too. Had the fix been written on
+the original belief it would have been *invisible* — a stagger applied on top of a stagger that
+was not there would simply have worked, and nobody would have learned that the premise was false.
+
+---
+
+### 10. A step is spread across the frames of its window — *fixed*
 
 The one the earlier findings kept circling without naming.
 
@@ -423,34 +461,6 @@ Per frame at half a million blocks, 900 frames:
 The two columns are different units on purpose: before, a tick was the only thing that happened
 and it happened every ten frames. What is comparable is that ten frames' worth of the new figure
 is about 13 ms against 24 ms of the old, and none of it arrives in a lump.
-
-### 9. Every grid in the world ticked on the same frame — *fixed*
-
-The one the benchmarks could never have found, because they run a single grid.
-
-A field run of a 203-grid save: of 13,915 frames, **1,392 did any thermal work at all** — one in
-ten, exactly — and each of the worst frames carried **183 grids**. Those frames averaged 117 ms,
-worst 611 ms, and two in three exceeded a 60 fps frame. The session total was 20 % of real time,
-which is a throughput number and a survivable one. Arriving in one lump every tenth frame is what
-made it a stutter.
-
-The first fix for this gave each grid one of ten phases and ticked one phase per frame, balanced by
-block count. It helped and it was the wrong shape: it spread *grids*, and what needed spreading was
-the work inside each of them — one 42,051-block ship on its own frame is a stutter no arrangement
-of the other two hundred can fix. Finding 10 replaced it, and `ThermalGridScheduler` now simply
-gives every grid a share of every frame.
-
-**This is a correction, not a discovery.** Earlier in the same session this was investigated by
-reading `MyDistributedTypeUpdater<MyEntity>(10)` in the engine assemblies, which computes
-`m_step = ceil(Count / UpdateInterval)` and walks a slice per frame — and concluded, in a
-committed document, that the engine already staggered and there was nothing to do. The reading was
-plausible and the conclusion was wrong. The measurement settled it in one line: 1,392 of 13,915.
-
-The wrong version of that conclusion was the more dangerous kind, too. Had the fix been written on
-the original belief it would have been *invisible* — a stagger applied on top of a stagger that
-was not there would simply have worked, and nobody would have learned that the premise was false.
-
----
 
 ## Catching it again
 
@@ -530,13 +540,13 @@ generous.** A value nearer 200,000 would put those ships at 2 substeps and a tic
 the cost of simulation rate they are already trading away. The right value is a judgement about
 that trade, and it is per world, which is why it is a setting.
 
-### How it was resolved
+### How it is resolved
 
 The counting was fixed rather than only documented. A node's cost was measured against a link's
 across shapes spanning zero to three links per node — a node is worth 3.3 links at a hundred
 thousand nodes and 7.5 at a quarter of a million, an exposed face a tenth to a half of one — and
 the budget now counts `links + 4 × nodes` under the name `MaxElementVisitsPerStep`. See
-[element-cost.md](element-cost.md).
+[benchmarks.md](benchmarks.md#what-a-substep-costs).
 
 **The default did not need moving after all, because the unit change did the work.** These ships
 cost `90,136 + 4 × 42,051 = 258,340` element visits a substep, so the same 1,000,000 now grants
@@ -585,3 +595,143 @@ mid-session takes the same path.
 **`SweepRoomPressure` is still per room per cadence**, with two game API calls each. Bounded by
 compartment count rather than block count, so it is small on a ship and unmeasured on a station
 with thousands of rooms.
+
+---
+
+## In the field
+
+Three live runs against real worlds. The lab measures a synthetic ship on a quiet machine; these
+measure what a session actually costs, and they are what set the shipped substep caps.
+
+### A six-grid test world, at `MaxSubstepsPerBlock 3`
+
+296 s, six 1,300-block large grids, `MaxSubsteps 3` / `MaxSubstepsPerBlock 3`.
+
+| | |
+| --- | --- |
+| total measured | **~1.8%** of real time |
+| solver alone | 1.63% |
+| mean frame | 0.304 ms |
+| worst frame | 25.8 ms |
+| frames over a 60 fps budget | **2 of 17,352** (0.01%) |
+| block updates / real second | 31,145 |
+| ns per element visit | 50.4 |
+
+Both over-budget frames are in the first eight seconds — build and load, not steady state. Drift is
+0.2–0.6 K per minute against a 3 K per minute tolerance, no grid records a critical event, and total
+heat damage is zero. **The tuning question is therefore not how to make it cheaper but what to spend
+the headroom on.**
+
+> The `total measured` figures are approximate because the report that produced them summed the grid
+> update into the session frame that already contained it, reading 3.62% and 4.70%. The session
+> frame is very nearly all grid update, so the true totals are close to half those. They cannot be
+> recovered exactly without re-running. `solver alone` was never affected.
+
+What the headroom buys, from the run's own cap sweep:
+
+| Cap | Blocks floored | Share | Saving | Solver cost |
+| --- | ---: | ---: | ---: | ---: |
+| off | 0 | — | — | 11.6% of real time |
+| 8 | 60 | 0.75% | 62.5% | 4.3% |
+| 6 | 84 | 1.05% | 71.9% | 3.3% |
+| **3** (in force) | 732 | 9.18% | 86.0% | **1.6%** |
+| 1 | 3,009 | 37.7% | 95.3% | 0.5% |
+
+**`MaxSubsteps` must move with `MaxSubstepsPerBlock`.** At these settings the per-block cap reduces
+demand from 21.35 to exactly 3.00 and `MaxSubsteps 3` grants it, so nothing is refused —
+`clamped_steps` is 0, and that is the two caps agreeing rather than luck. Raising the per-block cap
+to 6 without raising `MaxSubsteps` to at least 6 starts refusing steps, which is the failure mode
+[profiles.md](profiles.md) describes.
+
+### The same world at `MaxSubstepsPerBlock 6`
+
+Same world, same ship, same build; only the two caps moved. 118.5 s.
+
+| | cap 3 | cap 6 |
+| --- | --- | --- |
+| blocks floored per grid | 121.97 (9.0%) | **14.0 (1.03%)** |
+| `demand_configured` | 3.000 | 6.000 |
+| `clamped_steps` | 0 | **0** |
+| substeps per step | 3.00 | 6.00 |
+| solver share of real time | 1.63% | 2.17% |
+| total measured | ~1.8% | ~2.4% |
+| ns per element visit | 50.4 | **34.3** |
+| worst peak-to-mean drift | 2.89 K | **1.07 K** |
+| frames over 60 fps | 2 of 17,352 | 2 of 6,801 |
+
+**It costs a third more, not double.** Twice the substep passes come out at 1.33× the solver time,
+because the cost of a single pass falls 32% — 0.2314 ms to 0.1576 ms, and 50.4 ns per element visit
+to 34.3. More substeps over the same node set is a tighter loop with less per-step setup and better
+locality; the arithmetic per visit is unchanged, so this is cache behaviour rather than a saving in
+work.
+
+**The answer does not move, only its resolution.** Peak temperatures are within 2 K on every grid
+(883–908 K against 885–910 K), so the extra substeps buy the same physics with nine tenths of the
+previously under-resolved blocks resolved properly, and drift more than halves on the way.
+
+**Cap 6 is the right place to stop.** Cap 8 floors ten blocks a grid instead of fourteen, cap 16
+floors two, and uncapped floors none at roughly 3.5× the substep passes — affordable, but buying
+perhaps a tenth of a kelvin of drift on a figure already three times inside tolerance.
+
+### A fleet in atmosphere
+
+505.6 s, 242 grids of which 205 profiled, 123,784 blocks, the largest 44,632 cells. `Frequency 8`,
+`MaxSubsteps 64`, `MaxSubstepsPerBlock 0`, `MaxElementVisitsPerStep 1,000,000`. Two capital hulls,
+several dropships, a food truck, and a lot of small grids.
+
+| | |
+| --- | ---: |
+| total measured | 29.9% of real time |
+| solver alone | 25.9% |
+| mean frame | 5.30 ms |
+| worst frame | 416.6 ms |
+| frames over a 60 fps budget | 494 of 27,744 (1.78%) |
+| substeps per step | 3.04 |
+| ns per element visit | 18.9 |
+| steps clamped by the substep cap | 0 |
+| grids below real time | 2, slowest at 15.1% |
+
+Nothing overheated: zero critical events, zero heat damage, peak 307 K on the hottest hull. **The
+demand figures are what cost the 25.9%, not what threatened the ships.**
+
+What the caps would buy over those 205 grids:
+
+| Cap | Blocks raised | Share | Element visits saved | Speedup |
+| --- | ---: | ---: | ---: | ---: |
+| off | 0 | — | — | — |
+| 16 | 3 | 0.00% | 9.6% | 1.11× |
+| 8 | 209 | 0.17% | 24.2% | 1.32× |
+| **6** | 777 | 0.63% | 35.4% | 1.55× |
+| 4 | 1,530 | 1.24% | 46.7% | 1.88× |
+| 3 | 4,913 | 3.97% | 57.0% | 2.32× |
+
+`MaxSubstepsPerBlock 6` remains the recommendation and this fleet does not change it: 0.63% of
+blocks floored for a third of the solver's work. What has changed is **what the cap stands in for**.
+It no longer covers blocks whose materials are wrong — 12,764 blocks, 10.3% of the fleet, are stiff
+mostly through radiation and convection, and the cap reaches those too. That is a more visible trade
+than capping a conduction estimate: it changes how a block exchanges with the sky rather than with
+what it is bolted to.
+
+**Why the decorative definitions only half worked** — and why a fix that is right in vacuum is
+nearly inert in air — is [stiffness.md](stiffness.md), which is where that finding belongs and where
+the same question is asked of eight thousand ships rather than one save.
+
+### One correction worth keeping
+
+A settings file reporting `Version 6` against a branch at 4 looked like a run taken against the
+wrong build. It was not: there are **two settings types with independent version numbers** —
+`Core/Settings/ThermalSettings.cs` is the solver's, and `Data/Scripts/Thermodynamics/Settings.cs` is
+the game-side one the `.cfg` is written from. Every field that looked missing was present. The
+tuning conclusions stood without qualification, and the near-retraction is recorded because the
+reasoning that produced it was sound and the premise was not.
+
+---
+
+## Change log
+
+| Date | Change |
+| --- | --- |
+| 2026-08-22 | Absorbed `field-tuning.md`: its three live runs are the field half of this page's question and now sit beside the lab half. Its decorative-block stiffness findings moved to [stiffness.md](stiffness.md) and its `Frequency` sweep to [configuration.md](configuration.md#frequency-is-not-the-cost-dial-it-looks-like), each to the page that already owned the subject. Added the standard header and this log. |
+| 2026-08-20 | Calibrated the step budget against a real world, and resolved it by fixing the counting rather than the default: at `links + 4 × nodes` the unchanged 1,000,000 grants 3.9 substeps where link-only counting granted 11. Measured a fleet of 242 grids in atmosphere. |
+| 2026-08-19 | Spread a step across the frames of its window instead of landing it whole on one, and staggered every grid in the world off the same frame. Stopped the room map giving up silently on a large grid. |
+| 2026-08-18 | Opened the page: the ladder to a million blocks, the per-tick distributions, and the nine spike findings — a block placed rebuilding the whole conduction graph, the room mapper's unbounded scan, the exposure refresh with no budget, two searches walking the grid to find nothing, the mass sweep walking every block, and removal rebuilding the graph. Established the distinction the whole exercise rests on: steady cost and hitching are different problems with different fixes. |

@@ -1,11 +1,17 @@
 # Stiffness is the cost
 
-What the 199-grid field dump of 18 August says about where the time goes, and why the next
-optimisation is not a faster loop.
+Why a handful of light fittings sets the simulation cost of a capital ship, what that costs across
+eight thousand real hulls, and what can be done about it. This page is about the **steady** cost,
+which is the only thing left once the spikes are proportional to what changed.
 
-Companion to [load-and-hitching.md](load-and-hitching.md), which made the spikes proportional to
-what changed, and to [scale-design.md](scale-design.md), which designed the machinery this page
-argues is now needed. This page is about the **steady** cost, which is the only thing left.
+> The rules argued here are stated canonically in [rules.md](rules.md): `E2` `E3` `E6` `M11` `D1`.
+
+| Looking for | Go to |
+| --- | --- |
+| What made the spikes proportional, and what a live world costs | [load-and-hitching.md](load-and-hitching.md) |
+| The machinery this page argues is needed | [scale-design.md](scale-design.md) |
+| The repeatable cost report | [benchmarks.md](benchmarks.md) |
+| The settings that cap it | [configuration.md](configuration.md#maxsubstepsperblock) |
 
 ---
 
@@ -69,7 +75,7 @@ is those three, and the first of them is now `MaxSubstepsPerBlock`.
 
 Measured two ways, and they agree.
 
-### The harness could not reproduce it, and that is a finding in itself
+### The harness cannot reproduce it from a synthetic hull, which is itself a finding
 
 `ΣG / C` per node on the standard ship shape the benchmarks use — heavy armour with one grating
 fitting in eight:
@@ -348,7 +354,7 @@ it was measured at and is conservative by a factor of two for the rate that ship
 > every *substep*, and the harness's batched path keeps every step's events for a whole run, so
 > this sweep held on the order of 440 million records. The solver now accumulates a block's damage
 > and files one event a step. Same run, same 12 GB cap, completes. See
-> [benchmarks.md](benchmarks.md#a-burning-block-filed-one-overheat-event-per-substep).
+> [benchmarks.md](benchmarks.md#one-overheat-event-per-block-per-step).
 
 **Down to a cap of 6 at `Frequency 4`, and a cap of 3 at `Frequency 8`, the peak is unmoved.**
 Below that it is not, and the sign says why: the capped hull is *cooler*, which is what a hull that
@@ -457,7 +463,7 @@ grating in eight rather than a light in a thousand, or SE2's small blocks — be
 count matters as much as the stiffness.
 
 This is [scale-design §3.3](scale-design.md#33-lumping--the-memory-and-precision-win) and
-[model-redesign §5(c)](model-redesign.md), which recommended it and could not say how much it was
+[scale-design.md](scale-design.md#variable-block-size-breaks-the-integrator), which recommended it and could not say how much it was
 worth. Now we can: on this fleet, a few per cent over a setting that already exists.
 
 **What it needs designing:** which pairs qualify (mass ratio, coupling constant, both not heat
@@ -591,7 +597,7 @@ catalogue's lightest block was a 200 kg grating, so the benchmark ship asked for
 where a real ship asks for 21 to 31. Every scale figure in this repository was measured on a hull
 an order of magnitude softer than the ships it was meant to describe — the scale ladder's full
 step at a million blocks was six times cheaper than it should have been. Closed by the census.
-See [load-and-hitching.md](load-and-hitching.md#the-ladder-was-measured-on-the-wrong-ship).
+See [load-and-hitching.md](load-and-hitching.md#the-ladder-is-measured-on-a-census-hull-not-an-armour-cube).
 
 **Population: closed, by measuring it.** The harness's blocks were 3,300 kg armour, 200 kg
 gratings and one 16 kg fitting — a gap where a real ship has hundreds of armour corners, tips and
@@ -731,7 +737,7 @@ habits, and the aggressive end of the curve is where habits show.
 `TheFieldCapCurveMatchesTheCorpusWhereTheCapIsActuallySet` holds the agreement at the top, because
 if that ever parts company the shipped cap was chosen against a population it does not describe.
 
-## What was measured and found not to matter
+## What is measured and found not to matter
 
 **Diagnostics.** Telemetry switches `CollectDiagnostics` on, which adds a per-node clear, five
 field writes per exposed node per substep, and two random-access read-modify-writes per link into
@@ -743,3 +749,69 @@ keeping in mind for a .NET 4.8 runtime with a colder cache, not worth acting on.
 The uncharged part is still a real if small defect — `ClearConductionDiagnostics` walks every node
 per substep and `SubstepWork` does not count it, so a diagnostics-on grid paces itself slightly
 slow.
+
+---
+
+## Giving the light fittings a definition fixes the conduction half only
+
+`Cubes.xml` had no entry for any decorative or electronic type, so every light, neon tube and camera
+fell through to `DefaultThermodynamics` and inherited **mild steel's 50 W/(m·K)** on a 16 kg body.
+That is what made the least massive block on a ship the stiffest thing on it. Four per-type entries
+now say what these blocks are made of — a light is a plastic housing around a glass lens, and
+plastic is about 0.2 W/(m·K) against steel's 50:
+
+| Type | Conductivity | Specific heat | Conduction demand before | After |
+| --- | ---: | ---: | ---: | ---: |
+| `InteriorLight` | 2 | 900 | 21.4 | **0.43** |
+| `ReflectorLight` | 2 | 900 | — | — |
+| `EmissiveBlock` | 1 | 840 | 5.8 | **0.06** |
+| `CameraBlock` | 5 | 800 | 9.3 | **0.52** |
+
+**In vacuum the definitions do what they were written to do. In air they very nearly do not.**
+`DecorativeStiffnessTests` reproduces it on one 16 kg fitting bolted to an armour bar:
+
+| | Demand | Conduction share |
+| --- | ---: | ---: |
+| steel, vacuum | 6.56 | 71% |
+| light definition, vacuum | **1.00** | 18% |
+| steel, air | 31.68 | 15% |
+| light definition, air | **13.68** | 1% |
+
+A block's stability demand is its conductance over its heat capacity, and the conductance has two
+halves: what it is bolted to, and what its exposed surface exchanges with the sky. **The definitions
+address the first.** In dense air, convection over the cell's exposed area is already 85% of a steel
+fitting's rate, so removing the conduction half removes almost nothing.
+
+The prediction that the definitions would take uncapped demand from 21.4 substeps to about 5.6 was
+arithmetic on `conductivity / (mass × specific heat)` — the conduction term alone. It was right
+about that term and silent about the one that dominates. A fleet flying in air averaging 0.73
+density at 93 W/(m²·K) convection is what made it visible; two earlier runs in thinner air did not.
+
+### The knob that reaches the other half is exposed area
+
+A `SmallLight` on a large grid presents 23.6 m² of exposed surface against 64 J/K of heat capacity,
+because **exposed area comes from the cell a block occupies rather than from the block**. A light
+fitting is not a 2.5 m cube of radiating and convecting surface. `ExposedSurfaceMultiplier` is the
+per-type knob for exactly this, and every decorative entry leaves it at 1. At 0.1 the test fitting
+falls from 13.68 substeps to below the armour it is bolted to — a factor of nine on the term that is
+left.
+
+**Not applied.** It also changes how much heat the block exchanges with its surroundings, so it is a
+balance decision rather than a free one, and the figure is recorded so the decision can be made
+against one.
+
+The plushies at the top of a fleet's stiffness table are a different problem: 1 kg of steel at
+conductivity 50 is conduction-stiff, and a material definition would fix them outright.
+
+---
+
+## Change log
+
+| Date | Change |
+| --- | --- |
+| 2026-08-22 | Took the decorative-block findings from `field-tuning.md` — the definitions fixing the conduction half only, and exposed area as the knob that reaches the other half — since this page is where that subject lives. Added the standard header and this log. |
+| 2026-08-22 | Corrected a finding published two commits earlier: it divided a hull's air peak by its vacuum peak, which are two different blocks, and reported the census hull as insensitive to air. The benchmark fixture changed on it is reverted and the lab now reports the same-block ratio as its own column. **Take an aggregate of a ratio, never a ratio of aggregates.** |
+| 2026-08-22 | Established that the census hull is a 96th-percentile ship for heat and sits in the trough between the population's two stiffness modes, and said so where every figure taken on it is quoted. |
+| 2026-08-21 | Asked the same question of 8,102 real workshop hulls rather than one save, which found the population is bimodal — a light sets the substep count on 45% of hulls at a median of 28.5, armour on the rest at 4.8, with almost nothing between. |
+| 2026-08-20 | Measured a ship's stiffness in the world it flies in rather than in vacuum, which is what showed the air term dominating. |
+| 2026-08-18 | Opened the page from the 199-grid field dump: the stiffness is a thin tail, the harness could not reproduce it, and none of the settings that existed could help. Built the per-block substep cap and measured it. |

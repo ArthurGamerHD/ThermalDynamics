@@ -13,7 +13,7 @@ namespace Thermodynamics.Tests
     ///
     /// It now counts element visits: links, plus nodes weighted by
     /// <see cref="ThermalSettings.NodeCostInLinks"/>, measured in
-    /// [element-cost.md](../../docs/element-cost.md).
+    /// [benchmarks.md](../../docs/benchmarks.md#what-a-substep-costs).
     /// </summary>
     public class StepBudgetTests
     {

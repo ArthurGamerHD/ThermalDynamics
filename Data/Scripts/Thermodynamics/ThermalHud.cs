@@ -203,7 +203,7 @@ namespace Thermodynamics
         /// what else is running, so they are the wrong thing to leave on screen: two players
         /// comparing notes would be comparing hardware. Substeps, link visits and floored blocks are
         /// properties of what has been built, so they mean the same thing to everyone and can be
-        /// read against the figures in docs/field-tuning.md directly.
+        /// read against the figures in docs/load-and-hitching.md directly.
         ///
         /// Toggled with ctrl+shift+P, and off by default.
         /// </summary>

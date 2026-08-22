@@ -171,7 +171,7 @@ namespace Thermodynamics.Core
             // Fabric and stuffing. Almost an insulator, and it holds a great deal of heat for its
             // mass. Also the fix for a real defect: a plushie was being simulated as a kilogram of
             // steel with a heat capacity of 2 J/K, which made it the stiffest object on a fleet and
-            // set the substep count for whole capital ships. See docs/field-tuning.md.
+            // set the substep count for whole capital ships. See docs/stiffness.md.
             Add(t, "EngineerPlushie", 0.05f, 1300f, 0.95f, 500f);
             Add(t, "EngineerPlushieSE2", 0.05f, 1300f, 0.95f, 500f);
             Add(t, "SabiroidPlushie", 0.05f, 1300f, 0.95f, 500f);

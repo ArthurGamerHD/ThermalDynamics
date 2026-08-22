@@ -11,7 +11,7 @@ namespace Thermodynamics.Tests
     /// Space Engineers 2 keeps blocks in a different shape, and the simulation has to survive it.
     ///
     /// <para>
-    /// The finding that drives this is in <c>docs/se2-research.md</c>: SE2 blocks are integer
+    /// The finding that drives this is in <c>docs/engine-notes.md</c>: SE2 blocks are integer
     /// <c>BoundingBoxI</c> on a single fine lattice, and eight block sizes ship — 0.25, 0.5, 1.0,
     /// 1.25, 1.5, 2.5, 3.5 and 5.0 m. Their greatest common divisor is 25 cm, so on one lattice a
     /// 5 m block spans <b>20 x 20 x 20 = 8,000 cells</b>, against the one cell an SE1 large-grid
@@ -34,7 +34,7 @@ namespace Thermodynamics.Tests
     /// still one dictionary entry per occupied cell in <c>GridModel</c> and <c>SurfaceMap</c>, and
     /// <c>BlockInstance</c> still materialises a <c>Vector3I[]</c> of every cell — 8,000 of them
     /// for one 5 m block. That is the open item in
-    /// <c>docs/model-redesign.md §0</c>, and it is a storage problem rather than a model one.
+    /// <c>docs/scale-design.md</c>, Implementation status,, and it is a storage problem rather than a model one.
     /// </para>
     /// </summary>
     public class Se2LatticeTests
@@ -216,7 +216,7 @@ namespace Thermodynamics.Tests
         /// A tiny block bolted to a huge one is stiffer than two huge ones, and the integrator's
         /// own estimate has to see it.
         ///
-        /// This is the effect <c>docs/model-redesign.md §5</c> warns about: conductance over
+        /// This is the effect <c>docs/scale-design.md</c>, Variable block size breaks the integrator, warns about: conductance over
         /// capacity goes as one over size squared, so across SE2's range of block sizes the
         /// stiffest pairing is far harder to integrate than the gentlest. If the estimate did not
         /// respond to that, a mixed-size grid would be integrated at whatever step suited its

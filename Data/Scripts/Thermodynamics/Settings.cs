@@ -151,7 +151,7 @@ namespace Thermodynamics
         /// environment pass a substep runs per node. A world's config written before the rename
         /// has no element for this field and takes the default, deliberately: the old number
         /// meant something else, so carrying it over would import a value into the wrong unit.
-        /// See [element-cost.md](../../../docs/element-cost.md).
+        /// See [benchmarks.md](../../../docs/benchmarks.md#what-a-substep-costs).
         /// </summary>
         [ProtoMember(35)] public int MaxElementVisitsPerStep = 1000000;
 

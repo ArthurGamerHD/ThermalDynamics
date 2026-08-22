@@ -118,7 +118,7 @@ namespace Thermodynamics.Core
                 case Optimized:
                     // Simulation's physics with the cost dials tuned: the same real-time pace, and
                     // therefore the same temperatures at the same moments, bought with the caps the
-                    // field tuning settled on — see field-tuning.md. What it gives up is headroom
+                    // field tuning settled on — see load-and-hitching.md. What it gives up is headroom
                     // on a grid stiff enough to need it, not fidelity on an ordinary one.
                     settings.Frequency = 4;
                     settings.SimulationSpeed = 1f;

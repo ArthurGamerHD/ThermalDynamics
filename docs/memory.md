@@ -6,6 +6,8 @@ Companion to [load-and-hitching.md](load-and-hitching.md), which covers time rat
 to [scale-design.md §6](scale-design.md#6-data-structures), which budgets ~110 bytes a node for a
 million-block grid. This page is about the distance between that budget and where the code is.
 
+> The rules argued here are stated canonically in [rules.md](rules.md): `E3` `M4` `M7`.
+
 Reproduce with `bench memory --size N`, from `tests/`. Build first: `dotnet run --no-build`
 against a stale output is how two of the figures below were first reported as unchanged by a change
 that halved them.
@@ -228,7 +230,7 @@ Keen did not make that choice: `CubeBlockDefinition.OccupiedGridCellsGroups` is 
 *geometry* — contact area, face area, depth and exposure all fall out of two integer AABBs in
 constant time, and `Se2LatticeTests` holds that. It is only the *indexing* that still walks cells.
 
-This is [model-redesign.md §2](model-redesign.md), and it is the difference between the model
+This is [scale-design.md](scale-design.md#cell-centric--boundary-centric), and it is the difference between the model
 supporting SE2 and the storage refusing to.
 
 ### 9. For SE2: the room map off the block lattice
@@ -238,7 +240,7 @@ The bounding-volume rows scale with the cube of lattice resolution. The same shi
 mapper's set is gigabytes.
 
 The flood fill has to run on a coarser lattice than the blocks, or on the host's own gas system
-where one exists. [model-redesign.md §4](model-redesign.md) sets this out; nothing here changes it.
+where one exists. [scale-design.md](scale-design.md#room-mapping-is-the-one-that-has-to-change-shape) sets this out; nothing here changes it.
 
 ---
 
@@ -259,3 +261,13 @@ per-node and per-block state.
 Items 2 to 6 are local changes with no design work behind them and would take another 20 %. They
 do not change the SE2 picture, because that is not about constants — it is about which things are
 counted per cell, which is §8 and §9.
+
+---
+
+## Change log
+
+| Date | Change |
+| --- | --- |
+| 2026-08-22 | Added the standard header and this change log. |
+| 2026-08-21 | Held a room's cells in a list, and dropped a grid's second index on the key it already had — 34 B/block and 38 B/block back respectively. Corrected a page measured on a hull that no longer exists. |
+| 2026-08-18 | Corrected the largest row: the page had called bounding volume its biggest cost after that had stopped being true. Took 60% of what a grid holds with four local changes. Opened the page by measuring where a grid's memory goes, and corrected the 2.5 GB figure it first reported — that was `GetTotalMemory` without a collection and counted garbage. |

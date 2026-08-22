@@ -252,7 +252,7 @@ namespace Thermodynamics.Core
         /// fitting in cache while the link arrays go on streaming. Measured across shapes chosen
         /// for their link-to-node ratio, a node is worth 2.8 links at four thousand nodes, 3.3 at
         /// a hundred thousand and 7.5 at a quarter of a million — see
-        /// [element-cost.md](../../../../docs/element-cost.md).
+        /// [benchmarks.md](../../../../docs/benchmarks.md#what-a-substep-costs).
         ///
         /// Four is the low end of the range over the sizes where the budget binds at all. A grid
         /// past a quarter of a million blocks is therefore charged slightly less than it costs,

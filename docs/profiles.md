@@ -11,6 +11,14 @@ to *cheap and quick*, with the pace of heat as a second axis crossing it.
 | `responsive` | as simulation | tuned (225) | Simulation with the clock run fast. How the mod is meant to be played. |
 | `arcade` | as optimized | tuned (225) | Responsive's pace at optimized's price. |
 
+> The rules argued here are stated canonically in [rules.md](rules.md): `M1` `M6` `C7`.
+
+| Looking for | Go to |
+| --- | --- |
+| Every setting a profile sets | [configuration.md](configuration.md) |
+| Why the substep caps are where they are | [stiffness.md](stiffness.md) |
+| What the profiles cost | [benchmarks.md](benchmarks.md) |
+
 **`HeatTimeScale` is the clock, and 1 is real.** It divides every heat capacity, so anything above 1
 is thermal time running fast: a real ship at real heat capacity takes hours to change temperature,
 which is why the mod ships at 225 and why `simulation` — the profile that claims pure realism —
@@ -120,7 +128,7 @@ integrator is refused what it asks for by six orders of magnitude.
 with more substeps — 2.4×10¹⁵ K against 7×10⁴. Something in the coolant path is genuinely unstable
 rather than merely starved.
 
-### The loop path had a stiffness ceiling — fixed
+### The loop path's stiffness ceiling — *fixed*
 
 Found by asking whether the coolant pipes could go back to copper. They cannot, and the reason is
 the same defect. `CoolantFlowTests.SpreadAcrossAHeatedRing` deliberately runs **one substep across a
@@ -209,3 +217,13 @@ separately rather than reported as defects — otherwise four correct results bu
   resistance, conductive fluid coupling, well-mixed room air, capped waste fractions, and thruster
   heat with no exhaust. `physical` is as real as the *equations* allow, which is not the same as
   real.
+
+---
+
+## Change log
+
+| Date | Change |
+| --- | --- |
+| 2026-08-22 | Added the standard header and this change log. |
+| 2026-08-21 | Moved a block's function out of code and into `Cubes.xml`, which deleted the per-profile definition overlays. |
+| 2026-08-19 | Made the profiles a ladder on two axes rather than a list, established that `simulation` means real time and that real time is cheap, and gave each profile the definitions its settings are safe with. Pinned the loop path's stiffness ceiling — the defect that had to be fixed before the profiles were safe. |

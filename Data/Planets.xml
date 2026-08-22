@@ -6,7 +6,7 @@
 
   Every figure below is derived from the world's own generator definition by
   Thermodynamics.Core.PlanetThermalDerivation. What each derivation is and why is
-  documented there and in docs/planet-thermals.md; the per-entry comments here say
+  documented there and in docs/environment.md; the per-entry comments here say
   what the engine supplied and what came out.
 -->
 <Definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
