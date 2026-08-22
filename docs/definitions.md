@@ -31,6 +31,20 @@ Read by `ThermalCellDefinition.GetDefinition`
 | `ConsumerWasteEnergy` | Decimal | `≥ 0` | Fraction of *consumed* power converted to heat. |
 | `CriticalTemperature` | Decimal | `≥ 0` | Kelvin above which the block takes damage. |
 | `OverheatDamagePerKelvin` | Decimal | `≥ 0` | Damage per Kelvin of overshoot, per second. |
+| `HeatSourceWatts` | Decimal | `≥ 0` | Watts the block makes because of **what it is**, not because of power crossing it — decay heat in spent fuel, a forge, a wreck still burning. Every other heat term is a fraction of watts passing through, which describes a reactor and a thruster and nothing else. [Omitted, and correctly so, by every block that is not one](#every-property-but-one-must-be-declared). |
+
+### Every property but one must be declared
+
+An omitted property arrives as **zero**, not as the value of the entry it stands in for, and zero
+is catastrophic for all but one of them: a block with no `SpecificHeat` reaches any temperature
+instantly, and one with no `CriticalTemperature` is above critical the moment it is placed. A
+*type* entry is the exception in the other direction — it declares only what a block's function
+decides and leaves the materials to the component derivation, which is what the `Declared` bitmask
+is for.
+
+`HeatSourceWatts` is the one property where omission is the right default: zero watts of intrinsic
+heat is exactly what a block that is not a heat source should have.
+`ShippedDefinitionTests.EveryEntryInCubesDeclaresEveryPropertyTheGameReads` holds the rest.
 
 ### Retired property names
 

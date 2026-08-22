@@ -520,6 +520,63 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// Every block property the game reads is in the definitions reference, and the reference
+        /// names none that it does not.
+        ///
+        /// <para>
+        /// `definitions.md` is what a third-party mod author writes a definition from, so a
+        /// property missing from it is a feature nobody outside this repository can use, and one
+        /// listed that does not exist is an afternoon spent wondering why a number does nothing.
+        /// `HeatSourceWatts` was the first: implemented, tested, and in neither the reference nor
+        /// the in-game reader.
+        /// </para>
+        ///
+        /// <para>
+        /// Both name lists are read as text — the reader for the same reason
+        /// `ConfigurationDocTests` reads `Settings.cs` that way, and the table because a markdown
+        /// table has no other form.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void EveryBlockPropertyTheGameReadsIsInTheReference()
+        {
+            string reader = File.ReadAllText(Path.Combine(RepoRoot(),
+                "Data", "Scripts", "Thermodynamics", "Definitions", "ThermalCellDefinition.cs"));
+
+            HashSet<string> read = new HashSet<string>(StringComparer.Ordinal);
+            foreach (Match match in Regex.Matches(reader, @"GetOrCompute\(""(\w+)""\)"))
+            {
+                read.Add(match.Groups[1].Value);
+            }
+
+            // The group the properties live in, not a property.
+            read.Remove("ThermalBlockProperties");
+
+            Assert.True(read.Count > 8,
+                "only " + read.Count + " property names were found in the reader, so this test is"
+                + " no longer looking at it");
+
+            string doc = File.ReadAllText(Path.Combine(RepoRoot(), "docs", "definitions.md"));
+
+            HashSet<string> documented = new HashSet<string>(StringComparer.Ordinal);
+            foreach (Match match in Regex.Matches(doc, @"(?m)^\|\s*`(\w+)`"))
+            {
+                documented.Add(match.Groups[1].Value);
+            }
+
+            List<string> missing = new List<string>();
+            foreach (string name in read)
+            {
+                if (!documented.Contains(name)) missing.Add(name);
+            }
+
+            missing.Sort(StringComparer.Ordinal);
+            Assert.True(missing.Count == 0,
+                "block properties the game reads and docs/definitions.md does not list:\n  "
+                + string.Join("\n  ", missing.ToArray()));
+        }
+
+        /// <summary>
         /// Every page under `docs/` is reachable from the README's index.
         ///
         /// <para>
