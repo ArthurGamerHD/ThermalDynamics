@@ -1,0 +1,292 @@
+<script>
+"use strict";
+const D = JSON.parse(document.getElementById("corpus-data").textContent);
+const SC = D.scenarios, SHIPS = D.ships, WID = D.workshop, BLK = D.blocks, R = D.rows;
+// row layout: 0 ship 1 scen 2 blocks 3 peak 4 median 5 overN 6 overPct 7 tcrit 8 demand 9 granted 10 genW 11 hot 12 settle
+const HUE = ["var(--s1)","var(--s2)","var(--s3)","var(--s4)","var(--s5)"];
+const state = { mode:"shipped", tcrit:900, warm:400, minb:0, on:SC.map(()=>true), q:"", sort:"peak", dir:-1 };
+// "shipped" reads the per-block critical temperatures the run actually used (column overN).
+// "proxy" is the slider: a single global threshold on peak. It is not a re-simulation.
+const isOver = r => state.mode === "shipped" ? r[5] > 0 : r[3] > state.tcrit;
+const overLabel = () => state.mode === "shipped" ? "its own critical temperature" : state.tcrit + " K";
+
+const $ = s => document.querySelector(s);
+const fmt = n => n>=1e6 ? (n/1e6).toFixed(n>=1e7?0:1)+"M" : n>=1e3 ? Math.round(n).toLocaleString() : n>=10 ? Math.round(n) : n.toFixed(1);
+const pct = (a,b) => b ? 100*a/b : 0;
+const p = (arr,q) => { if(!arr.length) return 0; const s=[...arr].sort((a,b)=>a-b); return s[Math.min(s.length-1,Math.floor(q*s.length))]; };
+
+/* ---------------- tooltip ---------------- */
+const tip = $("#tip");
+function showTip(e, html){
+  tip.innerHTML = html; tip.style.opacity = 1;
+  const r = tip.getBoundingClientRect();
+  let x = e.clientX + 14, y = e.clientY + 14;
+  if (x + r.width > innerWidth - 8) x = e.clientX - r.width - 14;
+  if (y + r.height > innerHeight - 8) y = e.clientY - r.height - 14;
+  tip.style.left = x+"px"; tip.style.top = y+"px";
+}
+const hideTip = () => tip.style.opacity = 0;
+function hoverable(el, html){
+  el.addEventListener("mousemove", e => showTip(e, html));
+  el.addEventListener("mouseleave", hideTip);
+}
+
+/* ---------------- filtering ---------------- */
+function matches(i){
+  if (!state.q) return true;
+  return SHIPS[i].toLowerCase().includes(state.q) || String(WID[i]).includes(state.q);
+}
+function rows(){
+  return R.filter(r => state.on[r[1]] && r[2] >= state.minb && matches(r[0]));
+}
+function rowsScen(name){
+  const k = SC.indexOf(name);
+  return R.filter(r => r[1]===k && r[2] >= state.minb && matches(r[0]));
+}
+
+/* ---------------- verdicts ---------------- */
+function verdicts(){
+  const T = state.tcrit, W = state.warm;
+  const idle = rowsScen("idle");
+  const load = rowsScen("full-electrical");
+  const rec  = rowsScen("recovery");
+  const all  = rows();
+  const out = [];
+
+  const g1n = idle.filter(isOver).length;
+  const g1 = pct(g1n, idle.length);
+  out.push({ tag:"G1", claim:"Idle is safe.", v: idle.length ? (g1<=1 ? "pass":"fail") : "unknown",
+    meas: g1.toFixed(2)+" %", detail: `${g1n.toLocaleString()} of ${idle.length.toLocaleString()} parked ships put a block over ${overLabel()}`,
+    gate:"fails above ~1 % of the corpus" });
+
+  const g2n = load.filter(r=>r[3] >= W).length;
+  const g2 = pct(g2n, load.length);
+  out.push({ tag:"G2", claim:"Load bites.", v: load.length ? (g2>=20 ? "pass":"fail") : "unknown",
+    meas: g2.toFixed(1)+" %", detail: `${g2n.toLocaleString()} of ${load.length.toLocaleString()} reach ${W} K under full electrical load`,
+    gate:"fails below ~20 % ever getting warm" });
+
+  const g5n = rec.filter(r=>!isOver(r)).length;
+  const g5 = pct(g5n, rec.length);
+  out.push({ tag:"G5", claim:"No death spiral.", v: rec.length ? (g5>95 ? "pass":"fail") : "unknown",
+    meas: g5.toFixed(1)+" %", detail: `${g5n.toLocaleString()} of ${rec.length.toLocaleString()} settle back under ${overLabel()} once the load stops`,
+    gate:"fails below 95 % recovering" });
+
+  const dem = all.map(r=>r[8]), gr = all.map(r=>r[9]);
+  const d99 = p(dem,0.99), cap = gr.length ? Math.max(...gr) : 0;
+  out.push({ tag:"G6", claim:"Affordable to solve.", v: all.length ? (d99<=cap ? "pass":"fail") : "unknown",
+    meas: d99.toFixed(1)+" / "+cap.toFixed(0), detail:`p99 substep demand against the highest the shipped caps grant; median ${p(dem,0.5).toFixed(1)}, max ${(gr.length?Math.max(...dem):0).toFixed(1)}`,
+    gate:"fails when p99 demand exceeds the cap" });
+
+  out.push({ tag:"G3", claim:"Cooling works.", v:"unknown", meas:"not measured",
+    detail:"No ship in the corpus carries a radiator or a loop — the filter rejects non-vanilla blocks. Needs the retrofit pass.",
+    gate:"fails when a standard cooling fit barely moves the peak" });
+  out.push({ tag:"G4", claim:"Design decides, not size.", v:"unknown", meas:"not measured",
+    detail:"Needs exposed area per watt per ship, which this dataset does not carry. Block count alone correlates at Spearman +0.012.",
+    gate:"fails when block count predicts heat better than exposure" });
+
+  $("#verdicts").innerHTML = out.map(o => `
+    <div class="vcard" data-v="${o.v}">
+      <div class="vtop"><span class="vtag">${o.tag}</span>
+        <span class="vstate">${o.v==="pass"?"HOLDS":o.v==="fail"?"FAILS":"UNANSWERED"}</span></div>
+      <div class="vclaim">${o.claim}</div>
+      <div class="vmeas">${o.meas}</div>
+      <div class="vdetail">${o.detail}</div>
+      <div class="vgate">${o.gate}</div>
+    </div>`).join("");
+  $("#crit-basis").textContent = state.mode === "shipped"
+    ? "judged at the shipped per-block criticals"
+    : `proxy: a single ${state.tcrit} K threshold`;
+  $("#proxy-note").hidden = state.mode === "shipped";
+}
+
+/* ---------------- small-multiple histograms ---------------- */
+const LO = 30, HI = 1e6, NB = 30;
+const lg = v => Math.log10(Math.max(LO, Math.min(HI, v)));
+const binOf = v => Math.min(NB-1, Math.floor((lg(v)-lg(LO)) / (lg(HI)-lg(LO)) * NB));
+
+function smalls(){
+  const host = $("#smalls"); host.innerHTML = "";
+  SC.forEach((name, k) => {
+    const rs = rowsScen(name);
+    const bins = new Array(NB).fill(0);
+    rs.forEach(r => bins[binOf(r[3])]++);
+    const max = Math.max(1, ...bins);
+    const W = 240, H = 96, PB = 16;
+    const bw = W / NB;
+    const med = rs.length ? p(rs.map(r=>r[3]), 0.5) : 0;
+    const over = rs.filter(isOver).length;
+    const xOf = v => (lg(v)-lg(LO))/(lg(HI)-lg(LO)) * W;
+
+    let bars = "";
+    bins.forEach((c,i) => {
+      if (!c) return;
+      const h = Math.max(1.5, (c/max) * (H-PB));
+      const lo = Math.pow(10, lg(LO) + (i/NB)*(lg(HI)-lg(LO)));
+      const hi = Math.pow(10, lg(LO) + ((i+1)/NB)*(lg(HI)-lg(LO)));
+      const hot = lo >= state.tcrit;
+      bars += `<rect class="bar" x="${(i*bw+1).toFixed(2)}" y="${(H-PB-h).toFixed(2)}" width="${(bw-2).toFixed(2)}" height="${h.toFixed(2)}" rx="1.5"
+        fill="${HUE[k]}" opacity="${hot?0.42:1}" data-c="${c}" data-lo="${Math.round(lo)}" data-hi="${Math.round(hi)}"></rect>`;
+    });
+    const ticks = [100,1000,10000,100000].map(t =>
+      `<text class="ax" x="${xOf(t).toFixed(1)}" y="${H-4}" text-anchor="middle">${t>=1000?(t/1000)+"k":t}</text>`).join("");
+    const cx = xOf(state.tcrit);
+    const rule = cx>0 && cx<W ? `<line x1="${cx.toFixed(1)}" y1="0" x2="${cx.toFixed(1)}" y2="${H-PB}"
+      stroke="var(--ink-3)" stroke-width="1" stroke-dasharray="3 3"></line>` : "";
+
+    const el = document.createElement("div");
+    el.className = "sm";
+    el.innerHTML = `
+      <div class="sm-h"><span class="sm-name"><i style="background:${HUE[k]}"></i>${name}</span>
+        <span class="sm-stat">${rs.length.toLocaleString()}</span></div>
+      <div class="sm-big">${fmt(med)} K</div>
+      <div class="sm-sub">median peak &middot; ${pct(over,rs.length).toFixed(1)} % lose a block</div>
+      <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${name}: median peak ${fmt(med)} K, ${pct(over,rs.length).toFixed(1)} percent over threshold">
+        <line class="axisline" x1="0" y1="${H-PB}" x2="${W}" y2="${H-PB}"></line>
+        ${bars}${rule}${ticks}
+      </svg>`;
+    el.querySelectorAll("rect.bar").forEach(b => hoverable(b,
+      `<span class="tl">${name}</span><b>${(+b.dataset.c).toLocaleString()}</b> ships<br>peak <b>${(+b.dataset.lo).toLocaleString()}</b>&ndash;<b>${(+b.dataset.hi).toLocaleString()}</b> K`));
+    host.appendChild(el);
+  });
+}
+
+/* ---------------- time-to-critical ---------------- */
+function ttc(){
+  const W = 480, H = 250, L = 44, B = 34, T = 10, RGT = 12;
+  const pw = W-L-RGT, ph = H-B-T;
+  const xs = v => L + (Math.log10(Math.max(1,v)) / Math.log10(1800)) * pw;
+  const ys = v => T + ph - (v/100)*ph;
+
+  let paths = "", dots = "";
+  SC.forEach((name,k) => {
+    if (!state.on[k]) return;
+    const rs = rowsScen(name);
+    if (!rs.length) return;
+    const hit = rs.filter(r=>r[7] >= 0).map(r=>r[7]).sort((a,b)=>a-b);
+    const pts = [];
+    for (let s=1; s<=1800; s = s<10 ? s+1 : s<100 ? s+5 : s<600 ? s+25 : s+100){
+      let c = 0; while (c<hit.length && hit[c] <= s) c++;
+      pts.push([xs(s), ys(pct(c, rs.length))]);
+    }
+    paths += `<path d="${pts.map((q,i)=>(i?"L":"M")+q[0].toFixed(1)+" "+q[1].toFixed(1)).join(" ")}"
+      fill="none" stroke="${HUE[k]}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></path>`;
+    const end = pts[pts.length-1];
+    dots += `<circle cx="${end[0].toFixed(1)}" cy="${end[1].toFixed(1)}" r="3.5" fill="${HUE[k]}" stroke="var(--surface)" stroke-width="2"></circle>`;
+    const fin = pct(hit.length, rs.length);
+    if (fin > 4) dots += `<text class="ax" x="${(end[0]-6).toFixed(1)}" y="${(end[1]-8).toFixed(1)}" text-anchor="end" fill="${HUE[k]}" style="font-size:10px;font-weight:600">${name}</text>`;
+  });
+
+  const yg = [0,25,50,75,100].map(v =>
+    `<line class="gridline" x1="${L}" y1="${ys(v)}" x2="${W-RGT}" y2="${ys(v)}"></line>
+     <text class="ax" x="${L-8}" y="${ys(v)+3}" text-anchor="end">${v}%</text>`).join("");
+  const xg = [1,10,60,300,1800].map(v =>
+    `<text class="ax" x="${xs(v).toFixed(1)}" y="${H-B+16}" text-anchor="middle">${v>=60?(v/60)+" min":v+" s"}</text>`).join("");
+
+  $("#ttc").innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img"
+    aria-label="Cumulative share of ships that have lost a block, by elapsed second, per scenario">
+    ${yg}${xg}
+    <line class="axisline" x1="${L}" y1="${ys(0)}" x2="${W-RGT}" y2="${ys(0)}"></line>
+    ${paths}${dots}
+    <text class="ax" x="${L}" y="${H-2}" style="font-size:9px">elapsed simulated time &middot; log</text>
+  </svg>`;
+}
+
+/* ---------------- block leaderboard ---------------- */
+function lead(){
+  const counts = new Map();
+  rows().forEach(r => { if (isOver(r)) counts.set(r[11], (counts.get(r[11])||0)+1); });
+  const top = [...counts.entries()].sort((a,b)=>b[1]-a[1]).slice(0,10);
+  if (!top.length){ $("#lead").innerHTML = `<p class="snote" style="margin:0">No ship in the current filter loses a block.</p>`; return; }
+  const max = top[0][1];
+  const total = [...counts.values()].reduce((a,b)=>a+b,0);
+  const rowsHtml = top.map(([bi,c]) => {
+    const w = (c/max)*100;
+    return `<div class="lb-row" data-n="${c}" data-b="${BLK[bi]}" data-s="${pct(c,total).toFixed(1)}">
+      <span class="lb-name">${BLK[bi]}</span>
+      <span class="lb-track"><span class="lb-fill" style="width:${w.toFixed(1)}%"></span></span>
+      <span class="lb-num num">${c.toLocaleString()}</span></div>`;
+  }).join("");
+  $("#lead").innerHTML = `<div class="lb">${rowsHtml}</div>
+    <p class="snote" style="margin:14px 0 0; font-size:.8rem">${total.toLocaleString()} runs losing at least one block &middot; top ten block types are ${pct(top.reduce((a,b)=>a+b[1],0), total).toFixed(0)} % of them</p>`;
+  $("#lead").querySelectorAll(".lb-row").forEach(el => hoverable(el,
+    `<span class="tl">${el.dataset.b}</span><b>${(+el.dataset.n).toLocaleString()}</b> runs where this was the hottest block<br><b>${el.dataset.s}%</b> of all runs over threshold`));
+}
+
+/* ---------------- table ---------------- */
+const KEY = { name:r=>SHIPS[r[0]].toLowerCase(), blocks:r=>r[2], scen:r=>r[1], peak:r=>r[3],
+  median:r=>r[4], over:r=>r[5], overPct:r=>r[6], tcrit:r=>r[7]<0?1e9:r[7], hot:r=>BLK[r[11]] };
+function table(){
+  const rs = rows();
+  const f = KEY[state.sort];
+  rs.sort((a,b)=>{ const x=f(a), y=f(b); return (x<y?-1:x>y?1:0) * state.dir; });
+  const show = rs.slice(0,300);
+  const body = show.map(r => {
+    const hot = isOver(r);
+    return `<tr>
+      <td><span class="sev"><i style="background:${hot?"var(--bad)":"var(--good)"}"></i>${SHIPS[r[0]]}</span></td>
+      <td class="n">${r[2].toLocaleString()}</td>
+      <td class="n" style="color:${HUE[r[1]]}">${SC[r[1]]}</td>
+      <td class="n"><b>${fmt(r[3])}</b></td>
+      <td class="n">${fmt(r[4])}</td>
+      <td class="n">${r[5].toLocaleString()}</td>
+      <td class="n">${r[6].toFixed(2)}</td>
+      <td class="n">${r[7]<0 ? "&mdash;" : r[7]+" s"}</td>
+      <td class="n" style="text-align:left">${BLK[r[11]]}</td>
+    </tr>`; }).join("");
+  $("#tbl tbody").innerHTML = body || `<tr><td colspan="9" style="color:var(--ink-3);padding:22px">Nothing matches this filter.</td></tr>`;
+  $("#tbl-count").textContent = rs.length.toLocaleString() + " rows";
+  $("#tbl-more").textContent = rs.length > 300 ? `Showing the first 300 of ${rs.length.toLocaleString()} rows in this filter. Narrow the filter or search for a ship to see the rest.` : "";
+  document.querySelectorAll("#tbl th").forEach(th => {
+    if (th.dataset.k === state.sort) th.setAttribute("aria-sort", state.dir<0?"descending":"ascending");
+    else th.removeAttribute("aria-sort");
+  });
+}
+
+/* ---------------- wiring ---------------- */
+function render(){
+  $("#pv-filtered").textContent = rows().length.toLocaleString();
+  verdicts(); smalls(); ttc(); lead(); table();
+}
+function chips(){
+  $("#scen-chips").innerHTML = SC.map((s,i) =>
+    `<button class="chip" type="button" role="switch" aria-pressed="true" data-i="${i}" style="color:${HUE[i]}">
+      <span class="dot"></span><span style="color:var(--ink)">${s}</span></button>`).join("");
+  $("#scen-chips").addEventListener("click", e => {
+    const b = e.target.closest(".chip"); if(!b) return;
+    const i = +b.dataset.i; state.on[i] = !state.on[i];
+    b.setAttribute("aria-pressed", state.on[i]); render();
+  });
+}
+function bindRange(id, key, fmtv){
+  const el = $("#"+id), out = $("#"+id+"-v");
+  el.addEventListener("input", () => {
+    state[key] = +el.value; out.textContent = fmtv(+el.value);
+    if (key === "tcrit") state.mode = "proxy";
+    render();
+  });
+  out.textContent = fmtv(+el.value);
+}
+bindRange("tcrit","tcrit", v=>v+" K");
+bindRange("warm","warm", v=>v+" K");
+bindRange("minb","minb", v=>v.toLocaleString()+" blocks");
+$("#q").addEventListener("input", e => { state.q = e.target.value.trim().toLowerCase(); render(); });
+document.querySelectorAll("#tbl th").forEach(th => th.addEventListener("click", () => {
+  const k = th.dataset.k;
+  if (state.sort === k) state.dir *= -1; else { state.sort = k; state.dir = (k==="name"||k==="hot") ? 1 : -1; }
+  table();
+}));
+$("#reset").addEventListener("click", () => {
+  state.mode="shipped"; state.tcrit=900; state.warm=400; state.minb=0; state.q=""; state.on=SC.map(()=>true);
+  $("#tcrit").value=900; $("#tcrit-v").textContent="900 K";
+  $("#warm").value=400; $("#warm-v").textContent="400 K";
+  $("#minb").value=0; $("#minb-v").textContent="0 blocks";
+  $("#q").value="";
+  document.querySelectorAll("#scen-chips .chip").forEach(b=>b.setAttribute("aria-pressed","true"));
+  render();
+});
+$("#back").addEventListener("click", () => {
+  state.mode = "shipped"; state.tcrit = 900;
+  $("#tcrit").value = 900; $("#tcrit-v").textContent = "900 K"; render();
+});
+chips(); render();
+</script>

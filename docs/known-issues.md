@@ -532,7 +532,15 @@ measurable criteria pass on shipped defaults. Two things it measured are not vis
 **Damage arrives too fast to be played around.** Of ships that overheat at all, the median loses its
 first block 9 s into full electrical load and 6 s into a forward burn; the tenth percentile is three
 to four seconds. The same measure at idle is 112 s, with nothing in between — ships are either
-thermally inert or they fail almost immediately. Heat is meant to be a resource a player reasons
+thermally inert or they fail almost immediately.
+
+These are seconds of play, not of physical time: `HeatTimeScale` is 225, so a block's heat capacity
+is divided by 225 and nine seconds at the controls is about thirty-four minutes of real heating.
+That compression is the point of the dial — heat is meant to happen on a human scale — and the
+survey is the first measurement of where it actually put the hottest designs. Lowering the dial is
+not the answer, because it moves the inert ships too and the spread between the two groups is only
+about twelve-fold. What separates them is per-block: a producer whose waste watts are large against
+its own heat capacity crosses critical almost immediately whatever the clock says. Heat is meant to be a resource a player reasons
 about, and a consequence landing inside ten seconds is closer to the block simply exploding when
 switched on. This is a balance decision rather than a defect, and it is the one the survey most
 clearly asks for.

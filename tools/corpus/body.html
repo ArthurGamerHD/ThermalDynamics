@@ -1,0 +1,181 @@
+<div class="wrap">
+
+<header class="top">
+  <p class="eyebrow">Balance survey &middot; run of 21 August 2026 &middot; shipped profile</p>
+  <h1>What 8,142 ships do<br>when you switch them on</h1>
+  <p class="dek">Every published blueprint in the corpus, built and simulated under five scenarios on
+  an equal clock. This page recomputes the balance criteria live: move the thresholds and watch
+  which claims survive. The four measurable criteria pass on shipped defaults &mdash; and two
+  findings below argue that passing is not the same as being right.</p>
+  <div class="provenance">
+    <div class="prov"><b class="num">8,142</b><span>ships</span></div>
+    <div class="prov"><b class="num">40,710</b><span>outcome rows</span></div>
+    <div class="prov"><b class="num">5</b><span>scenarios</span></div>
+    <div class="prov"><b class="num">1,800&thinsp;s</b><span>equal clock &middot; 225&times; heat scale</span></div>
+    <div class="prov"><b class="num" id="pv-filtered">&mdash;</b><span>in current filter</span></div>
+  </div>
+</header>
+
+<div class="rail">
+  <div class="rail-in">
+    <div class="ctl">
+      <label for="tcrit">Critical temperature <b class="num" id="tcrit-v">900 K</b></label>
+      <input type="range" id="tcrit" min="400" max="3000" step="25" value="900">
+    </div>
+    <div class="ctl">
+      <label for="warm">&ldquo;Load bites&rdquo; threshold <b class="num" id="warm-v">400 K</b></label>
+      <input type="range" id="warm" min="320" max="1200" step="10" value="400">
+    </div>
+    <div class="ctl">
+      <label for="minb">Minimum ship size <b class="num" id="minb-v">0 blocks</b></label>
+      <input type="range" id="minb" min="0" max="4000" step="50" value="0">
+    </div>
+    <div class="ctl">
+      <label>Scenarios</label>
+      <div class="chips" id="scen-chips"></div>
+    </div>
+    <div class="ctl">
+      <label for="q">Find a ship</label>
+      <input type="search" id="q" placeholder="name or workshop id" autocomplete="off">
+    </div>
+    <div class="ctl">
+      <label>&nbsp;</label>
+      <button class="ghost" id="reset" type="button">Reset</button>
+    </div>
+  </div>
+</div>
+
+<section>
+  <div class="shead"><h2>The criteria</h2>
+    <p class="eyebrow" id="crit-basis">judged at 900 K</p></div>
+  <p class="snote">These were written down before the data was collected, so a run that fails them is
+  a finding rather than a reason to move a threshold. G1, G2 and G5 are recomputed against the
+  critical temperature you set; G6 does not depend on it. G3 and G4 are not answerable from this
+  dataset and say so rather than being quietly skipped.</p>
+  <p class="proxy-note" id="proxy-note" hidden>You have moved the critical temperature, so G1 and G5
+  are now judged against a single global threshold instead of the per-block criticals the run
+  actually used. That is a proxy for re-tuning, not a re-simulation &mdash; it cannot show how a
+  changed threshold would alter the heat flow. <button class="ghost" type="button" id="back">Back to measured</button></p>
+  <div class="verdicts" id="verdicts"></div>
+</section>
+
+<section>
+  <div class="shead"><h2>Where each scenario lands</h2>
+    <p class="eyebrow">peak block temperature &middot; log scale</p></div>
+  <p class="snote">One panel per scenario, each the distribution of the hottest block on every ship.
+  The dashed rule is your critical temperature; everything to its right is a ship losing blocks.
+  The long right tail is not physics &mdash; see the first finding.</p>
+  <div class="smalls" id="smalls"></div>
+</section>
+
+<div class="grid2">
+  <section style="margin-bottom:0">
+    <div class="shead"><h2>How fast damage arrives</h2></div>
+    <p class="snote">Share of ships that have lost at least one block by a given second, at the
+    <em>shipped</em> critical temperatures &mdash; this curve is measured, not recomputed, so the
+    slider above does not move it.</p>
+    <div class="panel"><div id="ttc"></div></div>
+  </section>
+  <section style="margin-bottom:0">
+    <div class="shead"><h2>Which blocks run away</h2></div>
+    <p class="snote">The hottest block on each ship, counted only where that ship exceeded your
+    critical temperature. This is the balance lever: a handful of block types drive nearly all of it.</p>
+    <div class="panel"><div id="lead"></div></div>
+  </section>
+</div>
+
+<section style="margin-top:52px">
+  <div class="shead"><h2>Findings</h2><p class="eyebrow">from this run</p></div>
+  <p class="snote">Three things the data says that the passing criteria do not.</p>
+
+  <div class="finding" data-sev="bad">
+    <h3>Peak temperature above critical is a lab artifact, not a prediction</h3>
+    <p>The solver raises an overheat event when a block passes its critical temperature, but
+    <em>applying</em> that damage lives only in the game layer &mdash; <code>DoDamage</code> is called
+    from <code>ThermalGridSimulation</code>, which the harness never runs. In the lab an overheating
+    block is never destroyed, so it keeps generating heat and keeps climbing for the rest of the
+    clock. In game it would be gone within seconds and would stop producing.</p>
+    <p>That invalidates the entire right tail. A ship reported at 541,648&nbsp;K did not get hot; it
+    ran an undamped source for 1,800&nbsp;s that the real game would have removed almost immediately.
+    Every peak above critical should be read as &ldquo;this block dies&rdquo; and nothing more, and
+    the population statistics that quote peak &mdash; p95, p99, max &mdash; describe the lab, not the mod.</p>
+    <p class="ev">21.6&nbsp;% of rows exceed 900&nbsp;K &middot; 3.9&nbsp;% exceed 2,000&nbsp;K &middot;
+    1,076 of 8,054 ships have at least one runaway scenario &middot; 83.5&nbsp;% of runaway rows never
+    settle within the clock</p>
+  </div>
+
+  <div class="finding" data-sev="bad">
+    <h3>Damage arrives in seconds, so there is no window to react</h3>
+    <p>Under full electrical load the median ship that overheats at all loses its first block after
+    <b class="num">9&nbsp;s</b>; burning forward, after <b class="num">6&nbsp;s</b>. The tenth
+    percentile is three to four seconds. Heat is meant to be a resource a player reasons about, but a
+    consequence that lands this fast is not a resource &mdash; it is a trap, indistinguishable from
+    the block simply exploding when switched on.</p>
+    <p>The distribution is also bimodal in a telling way: at idle the same measure is
+    <b class="num">112&nbsp;s</b>. Nothing in between. Ships are either thermally inert or they fail
+    instantly, which is exactly the shape that leaves no room for play.</p>
+    <p>These are seconds of play, not of physical time &mdash; <code>HeatTimeScale</code> is 225, so
+    nine seconds at the controls is about thirty-four minutes of real heating. The compression is
+    deliberate; this run is the first measurement of where it left the hottest designs. Turning the
+    dial down is not the fix, because it slows the inert ships equally and the gap between the two
+    groups is only about twelvefold. What separates them is per-block: a producer whose waste watts
+    are large against its own heat capacity crosses critical almost at once, whatever the clock says.</p>
+    <p class="ev">time to first critical block, ships that reach it &middot; full-electrical median 9&nbsp;s
+    (p10 4&nbsp;s) &middot; burn-forward median 6&nbsp;s (p10 3&nbsp;s) &middot; idle median 112&nbsp;s</p>
+  </div>
+
+  <div class="finding" data-sev="warn">
+    <h3>The heat concentrates in one or two blocks, and it is usually the same block</h3>
+    <p>Runaway rows carry a median of <b class="num">2</b> blocks above critical while the rest of
+    the hull sits near its median temperature &mdash; on <em>humpback&nbsp;38</em> the peak is
+    164,570&nbsp;K against a median of 360&nbsp;K. The heat is not spreading; it is stranded in the
+    block that made it, with no conduction path fast enough to move it and no exposed face to radiate it.</p>
+    <p><code>LargeHydrogenEngine</code> is the hottest block on 34&nbsp;% of runaway rows while being
+    the hottest on only 4&nbsp;% of rows overall. Alongside <code>LargeJumpDrive</code> and the large
+    thrusters, a short list of block types accounts for most of the tail. That makes this tunable
+    without touching the solver: waste-heat fraction, thermal mass, or conductance to neighbours, on
+    perhaps a dozen definitions.</p>
+    <p class="ev">median hotspot blocks on runaway rows: 2 &middot; on ordinary rows: 610 &middot;
+    58 parked ships generate over 1&nbsp;MW at idle, one at 24&nbsp;MW</p>
+  </div>
+</section>
+
+<section>
+  <div class="shead"><h2>Every ship</h2>
+    <p class="eyebrow" id="tbl-count">&mdash;</p></div>
+  <p class="snote">Sorted worst-first by default. Click a column to re-sort; the search box above
+  filters by name or workshop id. This is also the accessible view of every chart on the page.</p>
+  <div class="panel scroll"><table id="tbl">
+    <thead><tr>
+      <th data-k="name">Ship</th>
+      <th data-k="blocks">Blocks</th>
+      <th data-k="scen">Scenario</th>
+      <th data-k="peak">Peak K</th>
+      <th data-k="median">Median K</th>
+      <th data-k="over">Blocks lost</th>
+      <th data-k="overPct">% of hull</th>
+      <th data-k="tcrit">First loss</th>
+      <th data-k="hot">Hottest block</th>
+    </tr></thead>
+    <tbody></tbody>
+  </table></div>
+  <p class="snote" style="margin-top:12px" id="tbl-more"></p>
+</section>
+
+<footer>
+  <h3>How to read this</h3>
+  <p><b>Blocks lost</b> and <b>first loss</b> are measured at the shipped per-block critical
+  temperatures and do not move with the slider. <b>Peak</b>, and every criterion computed from it,
+  are recomputed against the threshold you set &mdash; that is a proxy for re-tuning critical
+  temperature uniformly, not a re-simulation, and it cannot tell you what a changed threshold would
+  do to the heat flow itself. Only a re-run can do that.</p>
+  <p>The corpus is walked largest-first, so any partial result is drawn from capital hulls and reads
+  wildly high. These figures are from a complete run. <b>G3</b> (cooling works) needs a retrofit pass,
+  because the corpus filter rejects any ship carrying a non-vanilla block and therefore no ship here
+  has a radiator. <b>G4</b> (design decides, not size) needs exposed area per watt, which this
+  dataset does not carry; block count alone correlates with heat at Spearman +0.012, so the variance
+  lives somewhere a builder controls.</p>
+</footer>
+
+</div>
+<div id="tip" role="status" aria-live="polite"></div>
