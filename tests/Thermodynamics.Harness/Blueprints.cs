@@ -461,33 +461,14 @@ namespace Thermodynamics.Harness
         private static Func<string, string, BlockThermalProperties, BlockThermalProperties> materialOverride;
 
         /// <summary>
-        /// Rewrites a block's thermal properties as its model is built, for a sweep that has to ask
-        /// what one material dial does to a real hull.
+        /// Rewrites a block's thermal properties as its model is built, for a sweep asking what one
+        /// dial does to a real hull. Handed the type and subtype, so a dial can move one family and
+        /// leave the rest of the game alone.
         ///
         /// <para>
-        /// **It is handed the block's type and subtype, and that is what makes per-type dials
-        /// possible.** A global multiplier can only ask "what if every block in the game changed",
-        /// which is rarely the question: the survey found a short list of types carrying most of the
-        /// tail — LargeJumpDrive alone is 67 % of the corpus's load heat — so the useful dial is the
-        /// one that moves those and leaves the rest of the game alone. The first version of this
-        /// hook took only the properties, and could not express that.
-        /// </para>
-        ///
-        /// <para>
-        /// **Setting it empties the model cache**, which is the whole difficulty. Models are built
-        /// once and shared because a corpus places millions of blocks across a few thousand types,
-        /// and the derived properties are baked into them — so an override installed after the
-        /// first ship was built would silently apply to nothing, and a sweep would report that
-        /// every dial does nothing. Clearing here means the next ship rebuilds against the new
-        /// override.
-        /// </para>
-        ///
-        /// <para>
-        /// **Set it between passes, never during one.** The cache is concurrent and the sweep is
-        /// parallel; emptying it while workers are building would have them race to rebuild the
-        /// same types, which is wasteful rather than wrong, but a change of override mid-pass would
-        /// mix two worlds into one measurement, which is wrong. Every caller sets it, runs a pass,
-        /// and clears it.
+        /// **Setting it empties the model cache**, without which an override installed after the first
+        /// ship applies to nothing. **Set it between passes, never during one**: a change mid-pass
+        /// mixes two worlds into one measurement.
         /// </para>
         /// </summary>
         public static Func<string, string, BlockThermalProperties, BlockThermalProperties> MaterialOverride

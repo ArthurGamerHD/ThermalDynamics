@@ -8,31 +8,16 @@ using VRageMath;
 namespace Thermodynamics.Harness
 {
     /// <summary>
-    /// A whole planet's wind, modelled at a desk.
-    ///
-    /// <para>The wind field is a pure function of position, weather and the hour — nothing about it
-    /// needs a session, a grid or a running game. So the whole of it can be evaluated offline, over
-    /// every latitude at once and over a full day in a second, which is the difference between
-    /// testing a change to the model in a minute and testing it in a play session.</para>
-    ///
-    /// <para><b>It runs the shipped code, not a copy of it.</b> Every sample goes through
-    /// <see cref="WindSolver.Solve"/>, the same call the game makes, with the same
-    /// <see cref="WindField"/>, <see cref="WindProfile"/> and <see cref="WindTerrain"/> underneath.
-    /// The only things modelled here are the planet and its ground: the engine's own wind figure,
-    /// reproduced from its decompiled source, and a heightmap to stand in for voxels. A difference
-    /// between this and a field dump is therefore a difference in the world, not in a second
-    /// implementation that drifted.</para>
-    ///
-    /// <para>The output columns match the game's environment CSV one for one, so a modelled run and
-    /// a measured run can be put side by side without translating anything.</para>
+    /// A whole planet's wind, modelled at a desk — every latitude and a full day in a second, because
+    /// the field is a pure function of position, weather and the hour. **It runs the shipped code, not
+    /// a copy**: every sample goes through <see cref="WindSolver.Solve"/>, and only the planet and its
+    /// ground are modelled here. The columns match the game's environment CSV one for one.
+    /// See environment.md, Measuring it.
     /// </summary>
     public static class WindLab
     {
         /// <summary>
-        /// A planet, built the way the engine builds one.
-        ///
-        /// <para>Everything derived here is derived by the engine's own arithmetic, read out of
-        /// <c>Sandbox.Game.dll</c>:</para>
+        /// A planet, built by the engine's own arithmetic read out of <c>Sandbox.Game.dll</c>:
         ///
         /// <code>
         /// maxHillHeight      = HillParams.Max * radius
@@ -42,17 +27,9 @@ namespace Thermodynamics.Harness
         /// AtmosphereAltitude = maxHillHeight * Atmosphere.LimitAltitude
         /// </code>
         ///
-        /// <para><b>Everything about a Space Engineers planet is a fraction of its radius,</b> and
-        /// that radius is about a hundredth of a real one. An earthlike world is 120 km across where
-        /// Earth is 12,742 km, and its hills run to 12% of its radius where Earth's run to 0.14% of
-        /// hers. SE terrain is therefore roughly <b>eighty times steeper than real terrain</b>
-        /// relative to the world it sits on, and everything the wind model does with slope is
-        /// correspondingly louder here than the literature it came from would suggest.</para>
-        ///
-        /// <para>The atmosphere is the same story: on an earthlike world it is <c>0.12 × 2 = 24%</c>
-        /// of the radius, against 0.2% for Earth's. And because it is a multiple of the hill height
-        /// rather than a figure of its own, a world with tall mountains and a low
-        /// <c>LimitAltitude</c> — Triton — has <b>peaks that stand above its own atmosphere</b>.</para>
+        /// <para>**Everything about a Space Engineers planet is a fraction of its radius**, and that
+        /// radius is about a hundredth of a real one, which is why every borrowed constant lands
+        /// oddly. See environment.md, World size.</para>
         /// </summary>
         public class Planet
         {

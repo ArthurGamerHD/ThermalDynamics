@@ -7,25 +7,10 @@ using VRageMath;
 namespace Thermodynamics.Tests
 {
     /// <summary>
-    /// Whether the synthetic ship still resembles the real one.
-    ///
-    /// <para>
-    /// Every performance figure this repository publishes is measured on a hull the harness
-    /// builds, and for most of the project's life that hull was heavy armour with a grating in
-    /// eight. It was wrong in the one way that mattered: a step takes as many substeps as the
-    /// <em>stiffest</em> block needs, so the cost of a grid is decided by its lightest block, and
-    /// the lightest block in that catalogue was twelve times heavier than a real ship's. The
-    /// benchmark asked for three substeps where a field ship asks for twenty-one to thirty-one.
-    /// Nobody noticed for as long as there was nothing to compare against.
-    /// </para>
-    ///
-    /// <para>
-    /// So these are not tests of the simulation. They are tests of the <em>measuring
-    /// instrument</em>: they hold <see cref="Census"/> against the field observations recorded in
-    /// <c>Census.Field</c>, and they fail when the two drift apart. When a new dump arrives, edit
-    /// the tiers to the new population and <c>Census.Field</c> to what that population was
-    /// observed to do; whatever these then say is the honest state of the harness.
-    /// </para>
+    /// Whether the synthetic ship still resembles the real one — **tests of the measuring instrument
+    /// rather than of the simulation**. They hold <see cref="Census"/> against the field observations
+    /// recorded beside it and fail when the two drift apart; refresh both together when a dump arrives
+    /// (`M11`). See stiffness.md, How close the synthetic tests are to a real ship.
     /// </summary>
     public class CensusFidelityTests
     {
@@ -193,20 +178,9 @@ namespace Thermodynamics.Tests
 
         /// <summary>
         /// The census hull runs far hotter than a real ship, and the arithmetic of that stays put.
-        ///
-        /// <para>
-        /// Its two generation constants come from one field ship and both sit near the top of the
-        /// corpus — a producer share at the 87th percentile and watts a producer at the 88th — and
-        /// they multiply into 12.1 kW of waste per block against a real median of 335 W. That is
-        /// the 96th percentile of 8,141 workshop hulls.
-        /// </para>
-        ///
-        /// <para>
-        /// Pinned as a *characterisation*, not a target. It reaches no stiffness figure — substep
-        /// demand is capacity, conduction and exposure, and no watt appears in it — and every
-        /// temperature figure. Whether the benchmark hull should be a worst case or a typical ship
-        /// is a decision; this fails if the answer changes without anyone saying so.
-        /// </para>
+        /// Pinned as a **characterisation, not a target**: whether the benchmark hull should be a worst
+        /// case or a typical ship is a decision, and this fails if the answer changes without anyone
+        /// saying so. See stiffness.md, The census hull is a 96th-percentile ship for heat.
         /// </summary>
         [Fact]
         public void TheCensusHullMakesFarMoreHeatThanARealShip()
@@ -282,22 +256,10 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// The cap curve a single save reported is the curve real ships have, where it matters.
-        ///
-        /// <para>
-        /// `MaxSubstepsPerBlock` is chosen from this curve, and it was chosen from 189 stepping
-        /// grids of one telemetry dump. Over 2.4 million blocks of 8,102 workshop ships the two
-        /// agree closely at the caps anyone would ship — 1.59 % against 1.16 at a cap of 8, 7.20
-        /// against 6.01 at 4 — and part company at 1 and 2, where the dump understates the reach
-        /// by half again. One save is one builder's habits, and the aggressive end of the curve is
-        /// where habits show.
-        /// </para>
-        ///
-        /// <para>
-        /// Asserted as agreement at the top and divergence at the bottom, because both are
-        /// findings: if the top ever parts company, the shipped cap was chosen against a
-        /// population it does not describe.
-        /// </para>
+        /// The cap curve a single save reported is the curve real ships have, **where it matters**:
+        /// agreement is asserted at the caps anyone would ship and divergence below them, because both
+        /// are findings. If the top ever parts company, the shipped cap was chosen against a population
+        /// it does not describe. See stiffness.md, The cap curve holds where the cap is actually set.
         /// </summary>
         [Fact]
         public void TheFieldCapCurveMatchesTheCorpusWhereTheCapIsActuallySet()
@@ -321,20 +283,10 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// The recorded corpus figures are a coherent set of measurements.
-        ///
-        /// <para>
-        /// `Census.Corpus` is a transcription of a four-minute run, and a transcription nobody
-        /// reads drifts — which is the whole reason `Census.Field`'s cap shares were being written
-        /// out twice. So every figure in it is read by something, and the something is the one
-        /// check a transcription can fail on its own: quantiles that are out of order, a census
-        /// figure that does not sit where the prose beside it says, a percentile outside 0..100.
-        /// </para>
-        ///
-        /// <para>
-        /// It cannot tell a mistyped digit from a real measurement. It can tell a *set* of figures
-        /// that no dataset could have produced, which is what a bad transcription looks like.
-        /// </para>
+        /// The recorded corpus figures are a coherent set of measurements, which is the one check a
+        /// transcription can fail on its own: quantiles out of order, a percentile outside 0..100, a
+        /// census figure not where the prose beside it says. **It cannot tell a mistyped digit from a
+        /// measurement**; it can tell a set no dataset could have produced (`E5`, `D3`).
         /// </summary>
         [Fact]
         public void TheRecordedCorpusFiguresAreInternallyConsistent()

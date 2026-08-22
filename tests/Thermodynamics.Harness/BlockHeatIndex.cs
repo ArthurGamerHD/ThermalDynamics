@@ -6,29 +6,11 @@ using VRageMath;
 namespace Thermodynamics.Harness
 {
     /// <summary>
-    /// One number per block: the heat it makes at full rating, over the most heat it could possibly
-    /// shed while staying at its own critical temperature.
-    ///
-    /// <para>
-    /// **Above 1, the block cooks itself and no build can prevent it.** The denominator is
-    /// deliberately the best case that exists — every face exposed to deep space, and every face
-    /// simultaneously bolted to armour held at ambient, so the block is getting both escape routes
-    /// at once and at their most generous. A block that still cannot break even against that has no
-    /// arrangement, no hull and no amount of surrounding cooling that saves it; the only fixes are
-    /// to the definition. Below 1 the block is survivable in principle and the build decides.
-    /// </para>
-    ///
-    /// <para>
-    /// The index is a ratio of watts, so it reads directly as a prescription: 7.2 means the waste
-    /// heat has to come down 7.2-fold, or the shedding has to go up by as much, before the block is
-    /// even theoretically viable.
-    /// </para>
-    ///
-    /// <para>
-    /// **It is computed from the definition alone** — no simulation, no corpus, no scenario. That is
-    /// what makes it a gate: a new block, or a changed waste fraction, can be checked the moment it
-    /// is written, and the corpus is then only needed to confirm the consequence.
-    /// </para>
+    /// One number per block: the heat it makes at full rating over the most it could possibly shed at
+    /// its own critical temperature, where the denominator is deliberately the best case that exists.
+    /// **Above 1 the block cooks itself and only the definition can be changed.** Computed from the
+    /// definition alone, which is what makes it a gate.
+    /// See balance.md, One number says whether a block can survive itself.
     /// </summary>
     public static class BlockHeatIndex
     {
@@ -115,24 +97,11 @@ namespace Thermodynamics.Harness
             public float HeatCapacity;
 
             /// <summary>
-            /// Seconds from ambient to its own critical temperature, alone in the dark, shedding
-            /// only through its own skin.
-            ///
-            /// <para>
-            /// **The index says where a block ends up; this says how long it takes to get there,
-            /// and balance is a question about both.** A block whose equilibrium sits just over
-            /// critical crosses slowly and gives a player time to react; one whose equilibrium is
-            /// ten times critical crosses in seconds and reads as an instant kill, and the two are
-            /// indistinguishable in <see cref="Index"/>.
-            /// </para>
-            ///
-            /// <para>
-            /// Infinite where <see cref="EquilibriumKelvin"/> is at or below critical — the block
-            /// never gets there on its own, which is the same condition as
-            /// <see cref="SelfIndex"/> at or below 1. Conduction is excluded for the same reason it
-            /// is excluded from those two: this is the block on its own, and what a hull does for
-            /// it is the hull's measurement.
-            /// </para>
+            /// Seconds from ambient to its own critical temperature, alone in the dark. **The index
+            /// says where a block ends up and this says how long it takes**, which
+            /// <see cref="Index"/> cannot distinguish. Infinite where the equilibrium is at or below
+            /// critical; conduction is excluded, since this is the block on its own.
+            /// See balance.md, No block lands in the 2–5 minute window.
             /// </summary>
             public float SecondsToCritical;
 

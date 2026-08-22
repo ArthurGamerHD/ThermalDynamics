@@ -8,37 +8,15 @@ namespace Thermodynamics.Harness
 {
     /// <summary>
     /// **What is the best thing you can bolt to a reactor, and how far does adding more of it get
-    /// you?**
+    /// you?** The largest reactor the game ships, at plate rating, in shadow, against every block with
+    /// a plausible claim to being the best cooling in the game, one to thirty-two.
     ///
     /// <para>
-    /// <see cref="BalanceLab"/> already asks a narrow version of this — the shipped radiator against
-    /// an armour slab of the same volume — and answers it on a synthetic heater. That comparison
-    /// decides whether the radiator beats *doing nothing in particular*. It does not decide whether
-    /// the radiator beats the best thing a player could build without the mod installed, which is
-    /// the question that says whether these blocks earn their place.
-    /// </para>
-    ///
-    /// <para>
-    /// So: one heat source, held fixed and driven at its plate rating, and every block that has a
-    /// plausible claim to being the best cooling in the game mounted against it the same way, in
-    /// steadily increasing numbers. The source is the largest reactor the installed game has,
-    /// because a cooling block's worth is decided at the top of the load range, not the middle.
-    /// </para>
-    ///
-    /// <para>
-    /// **The candidates are chosen by the model, not by taste.** Radiative cooling scales with
-    /// exposed area and emissivity, so the shortlist is every block whose thermal derivation gives
-    /// it more surface than an ordinary cube of the same size — heat vents at three times, exhausts
-    /// at two, thrusters and turbines and ladders at one and a half — plus the mod's own radiator,
-    /// plus a plain armour cube as the control. If something with an ordinary surface beats the
-    /// radiator, that is a finding about the model rather than about the block.
-    /// </para>
-    ///
-    /// <para>
-    /// **Coolant loops and heat pumps are deliberately absent.** They are not per-block coolers and
-    /// a ladder is the wrong shape for them: one pipe cools nothing, because a loop needs a ring, a
-    /// pump and a sink face before it moves a watt. <see cref="BalanceLab"/>'s coolant ring table
-    /// is where ring length belongs.
+    /// **The candidates are chosen by the model, not by taste**: every block whose derivation gives it
+    /// more surface than an ordinary cube of the same size, plus the mod's radiator and a plain armour
+    /// cube as the control. Loops and pumps are deliberately absent — one pipe cools nothing, so a
+    /// ladder is the wrong shape for them.
+    /// See balance.md, The same question asked of the whole game.
     /// </para>
     /// </summary>
     public static class CoolingLadder
