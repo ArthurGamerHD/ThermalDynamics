@@ -10,7 +10,7 @@ using VRage.Utils;
 namespace Thermodynamics
 {
     [ProtoContract]
-    public class ThermalLoopDefintion
+    public class ThermalLoopDefinition
     {
         private static readonly MyStringId GroupId = MyStringId.GetOrCompute("ThermalLoopProperties");
         // Renamed from "Mass" deliberately. The figure changed meaning from kilograms per loop to
@@ -85,9 +85,9 @@ namespace Thermodynamics
         [ProtoMember(30)]
         public float StagnantTransferFraction = 1f;
 
-        public static ThermalLoopDefintion GetDefinition(MyDefinitionId defId)
+        public static ThermalLoopDefinition GetDefinition(MyDefinitionId defId)
         {
-            ThermalLoopDefintion def = new ThermalLoopDefintion();
+            ThermalLoopDefinition def = new ThermalLoopDefinition();
             DefinitionExtensionsAPI lookup = Session.Definitions;
 
             double dvalue;

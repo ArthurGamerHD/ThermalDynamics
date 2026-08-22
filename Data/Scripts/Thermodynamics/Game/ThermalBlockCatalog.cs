@@ -377,7 +377,7 @@ namespace Thermodynamics
         }
 
         /// <summary>Copies a loop definition into the model's own type.</summary>
-        public static LoopThermalProperties ToLoopProperties(ThermalLoopDefintion definition)
+        public static LoopThermalProperties ToLoopProperties(ThermalLoopDefinition definition)
         {
             LoopThermalProperties properties = new LoopThermalProperties();
             if (definition == null) return properties.Clamp();

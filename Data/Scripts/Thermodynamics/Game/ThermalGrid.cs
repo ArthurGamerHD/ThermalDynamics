@@ -217,7 +217,7 @@ namespace Thermodynamics
             }
 
             Simulation.LoopProperties = ThermalBlockCatalog.ToLoopProperties(
-                ThermalLoopDefintion.GetDefinition(ThermalLoopDefintion.DefaultLoopDefinitionId));
+                ThermalLoopDefinition.GetDefinition(ThermalLoopDefinition.DefaultLoopDefinitionId));
 
             AddExistingBlocks();
 
@@ -407,7 +407,7 @@ namespace Thermodynamics
             try
             {
                 Simulation.LoopProperties = ThermalBlockCatalog.ToLoopProperties(
-                    ThermalLoopDefintion.GetDefinition(ThermalLoopDefintion.DefaultLoopDefinitionId));
+                    ThermalLoopDefinition.GetDefinition(ThermalLoopDefinition.DefaultLoopDefinitionId));
 
                 // The planet's properties are cached per entity and rebuilt on the next sample.
                 PlanetProperties.Clear();
