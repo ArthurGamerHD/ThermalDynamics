@@ -292,7 +292,7 @@ it cannot be quoted without a `Frequency`: a cap of N at `Frequency` 8 reaches t
 cap of 2N at `Frequency` 4. **The value is chosen by how many blocks it reaches, not by the error** —
 the error stays far below anything a player can see across the whole useful range, while the
 population the cap reaches moves suddenly once it stops being a handful of fittings and starts being
-ordinary armour. [stiffness.md](stiffness.md#1-a-per-block-substep-cap--built-measured-off-by-default)
+ordinary armour. [stiffness.md](stiffness.md#1-a-per-block-substep-cap--the-one-that-is-built)
 carries the sweep at both shipped step lengths, driven and diffusing, and the population argument
 that puts the knee in 2–4.
 
@@ -810,7 +810,7 @@ one with a migration risk — is late rather than first.
 
 | Date | Change |
 | --- | --- |
-| 2026-08-22 | Gave up this page's second account of the profiles to [profiles.md](profiles.md), which is the page about them: the measured cost ladder, *Where the extremes lie* and *Designing your own* all moved, and with them a duplicate of the `HeatTimeScale` substep-demand table. What stays here is the four settings each preset sets. Replaced `MaxSubstepsPerBlock`'s sweep table with a pointer to [stiffness.md](stiffness.md#1-a-per-block-substep-cap--built-measured-off-by-default), which carries the same sweep at both shipped step lengths — the copy here had the same floored-block counts against different speeds and errors, which is a table that had drifted from the one it was taken from. Cut *The settings surface, and where it is going* down to what is left of it: three of its five subsections described the menu this page already documents two screens above. |
+| 2026-08-22 | Gave up this page's second account of the profiles to [profiles.md](profiles.md), which is the page about them: the measured cost ladder, *Where the extremes lie* and *Designing your own* all moved, and with them a duplicate of the `HeatTimeScale` substep-demand table. What stays here is the four settings each preset sets. Replaced `MaxSubstepsPerBlock`'s sweep table with a pointer to [stiffness.md](stiffness.md#1-a-per-block-substep-cap--the-one-that-is-built), which carries the same sweep at both shipped step lengths — the copy here had the same floored-block counts against different speeds and errors, which is a table that had drifted from the one it was taken from. Cut *The settings surface, and where it is going* down to what is left of it: three of its five subsections described the menu this page already documents two screens above. |
 | 2026-08-22 | Corrected two statements about `Frequency` that contradicted this page's own reference table: the prose called 4 the shipped value where the table says 8, and read a rig's demand as though it were the shipped configuration. The nested-config example showed a `MaxSubsteps` of 16 rather than the shipped 64. |
 | 2026-08-22 | Absorbed `settings-redesign.md`, whose subject is this page's subject, as [The settings surface](#where-the-settings-surface-is-going), with the completed steps restated as what the menu now is rather than as a plan. Took the `Frequency` sweep from `field-tuning.md` into the section that already argued the arithmetic, so the derivation and the measurement sit together. Added the standard header and this log. |
 | 2026-08-22 | Brought the loop and planet definitions into the menu as world settings, replicated and reachable from `/thermal set` and the mod API. |

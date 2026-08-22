@@ -195,7 +195,7 @@ paying off: when half a percent of the blocks are the problem, the cheapest thin
 exactly those blocks collects nearly the whole prize, and the general machinery has to justify
 itself against a much smaller remainder than it expected to.
 
-### 1. A per-block substep cap — built, measured, off by default
+### 1. A per-block substep cap — the one that is built
 
 `MaxSubstepsPerBlock` is the setting. Zero, the default, leaves every block's heat capacity alone
 and the solver is bit-identical to what it was. Set to N, the mirrored heat capacity of any node
@@ -264,13 +264,9 @@ much of the integrator:
 | 2 | 2.00 | 139 | 4.5x | 9,283 (21.5 %) | 1.898 K | 0.450 K |
 | 1 | 1.00 | 108 | 5.8x | 14,138 (32.7 %) | 5.915 K | 1.518 K |
 
-> **This page used to carry the second table alone, under no step length, and read it as if it
-> described the default.** It does not: `Frequency` had moved to 8 and the table had not, so every
-> speed-up quoted here was about twice what a `simulation` or `responsive` world would see, and
-> the cap of 6 that `optimized` ships was being credited with 3.4x rather than its own 2.8x. The
-> floored-block counts are what identified it — they reproduce *exactly*, row for row, one cap
-> apart — and `bench floor` now takes `--frequency` and prints the step length above the table so
-> the mistake cannot be made silently again.
+`bench floor` takes `--frequency` and prints the step length above the table, because a cap table
+under no step length reads as though it described the default and is out by a factor of two if it
+does not.
 
 The two tables are the same measurement at two step lengths, and they line up: a cap of N at
 Frequency 8 raises the same blocks as a cap of 2N at Frequency 4, because both leave the same
@@ -344,10 +340,10 @@ and therefore agreeing that they are the same experiment at two step lengths. Th
 line up one cap apart exactly as the diffusing sweep does: Frequency 8 at cap 2 reads −0.909 K
 against Frequency 4 at cap 4's −0.93 K, and cap 1 reads −8.305 K against cap 2's −8.33 K.
 
-**So the safe cap at the shipped rate is lower than this page used to say.** The Frequency 4 table
-puts the first visible movement at cap 4; at Frequency 8 the peak is unmoved down to **cap 3**, and
-cap 4 costs +0.085 K for twice the throughput. The advice "above about 6" was correct for the rate
-it was measured at and is conservative by a factor of two for the rate that ships.
+**The safe cap moves with the rate.** The `Frequency` 4 table puts the first visible movement at
+cap 4; at `Frequency` 8 the peak is unmoved down to **cap 3**, and cap 4 costs +0.085 K for twice
+the throughput. A recommendation quoted without its rate is conservative by a factor of two at one
+end and unsafe at the other.
 
 > **This table could not be produced at all until the overheat list was fixed.** `bench floor
 > --driven --ticks 4000` was OOM-killed at 14 GB, twice: a burning block filed an overheat event
@@ -364,14 +360,13 @@ seconds at the quarter-second step, and 8 K short at the eighth-second one.
 
 That matters more than the number suggests, because **overheat damage is a threshold crossing**.
 A hull that will eventually burn but takes twice as long to get there is a different game from one
-that burns on schedule. An earlier and smaller measurement — 8,904 blocks settling at 764 K —
-showed the peak identical at every cap, and concluded too readily that the equilibrium argument
-was safe at any setting. It is safe in the limit; the limit is further away than a test that runs
-for five hundred seconds can see.
+that burns on schedule.
 
-The honest statement is therefore narrower than the one this page used to make: **the cap does not
-change where a hull settles, and above about 6 it does not visibly change when it gets there
-either.** Below 6 it delays the approach, in proportion to how much mass it added.
+So the claim is narrow, and deliberately: **the cap does not change where a hull settles, and above
+about 6 it does not visibly change when it gets there either.** Below 6 it delays the approach, in
+proportion to how much mass it added. The equilibrium argument is safe *in the limit*, and the limit
+is further away than a five-hundred-second run can see — which is why the driven tables above are
+read for their sign rather than only their magnitude.
 
 ### At a million blocks it helps and is not enough
 
@@ -532,56 +527,6 @@ to whether anyone is watching.
 
 ---
 
-## A number in the report that does not add up
-
-The Cost table and the per-grid records disagree, and it matters because the headline "share of
-real time" comes from the smaller one.
-
-| | Cost table | sum of the per-grid rows |
-| --- | ---: | ---: |
-| grid simulation | 73,454 ms | **119,182 ms** |
-| solver | 67,681 ms | **109,812 ms** |
-| simulation steps | 48,747 | **82,572** |
-| node updates | 46,089,881 | **77,392,060** |
-
-The per-grid rows in the log and the rows in `Thermodynamics_Grids_*.csv` are identical to the
-last decimal, so those two views agree with each other. The Cost table claims to be a merge of
-exactly those records — `WritePerformance` walks `Telemetry.Grids` and merges each
-`SimulationTime` — and comes out at 62 % of their sum. The three capital ships alone are 95,894 ms
-of it, more than the merged total.
-
-The session counters are off by the same kind of factor (`FramesObserved` 3,989 against 6,672 calls
-to every grid's tick), and the ratios are not identical across counters — 1.62 for milliseconds,
-1.69 for steps and node updates — which is the signature of two different windows rather than one
-dropped set of records.
-
-Two readings fit, and they differ by a lot. Either the merge is dropping work, in which case 119 s
-of simulation in the reported 263 s window is **45 % of real time** rather than the 28 % the Cost
-table implies; or the per-grid records cover a longer window than the session clock — the grids
-report lifetimes of 429 s against a 263 s session — in which case the share is right and the
-per-grid rows cannot be added to it. Both cannot be true, and the report does not say which it is.
-
-It is the first thing to fix, because every other number on this page is read against it — and
-reading the code did not settle it. `TimingStat.Merge` is arithmetically correct and now has a
-test summing two hundred stats to prove it; the Cost table walks the same list the CSV does; and
-between the two sections nothing runs that could tick a grid.
-
-So the report now checks itself instead. A **Consistency** section re-takes the Cost table's own
-figures after every other section is written and prints both, along with each record's first and
-last session frame, and states the two invariants in a form that can fail loudly:
-
-* the record list must not change while the report is built;
-* a grid cannot tick more often than the session is framed, because both happen once each in the
-  same `Simulate` call.
-
-The most likely cause it is aimed at is `Telemetry.Reset`, which zeroes the session clock and
-clears the registry while every live grid still holds the record it was handed — so a record can
-outlive the clock its timestamps were taken from, which is exactly how a grid comes to report a
-429-second lifetime inside a 263-second session. `Reset` now detaches those references with the
-list. Whether that was the cause is what the next dump will say.
-
----
-
 ## How close the synthetic tests are to a real ship
 
 Four differences, three now measured and one closed.
@@ -688,13 +633,10 @@ them. So the hull is a little less air-sensitive than a typical ship. It is a fi
 recording, not a defect, and `TheCensusHullFeelsAirLikeARealHullDoes` holds it inside the
 population at both ends.
 
-> **This was published as a defect first, and the defect was in the measurement.** The first
-> version divided the hull's *air peak* by its *vacuum peak* and got 1.02, which reads as a hull
-> that does not notice air at all. Those are two different blocks: the air peak is an exposed
-> fitting and the vacuum peak is a buried heavy block that conducts hard and does not care about
-> air. Two peaks are not a ratio. Asked of the same block, the census hull is ordinary. A fixture
-> change had already been made on the strength of the wrong figure and has been reverted — a
-> benchmark fixture is not something to move on a number nobody has checked twice.
+> **It has to be the same block, and that is `E6`.** A hull's *air peak* over its *vacuum peak* is
+> 1.02, which reads as a hull that does not notice air at all — and describes no block, because the
+> air peak is an exposed fitting and the vacuum peak is a buried heavy block that conducts hard and
+> does not care about air. The lab reports the same-block ratio as its own column for that reason.
 
 ### The census hull is a 96th-percentile ship for heat
 
@@ -809,6 +751,7 @@ conductivity 50 is conduction-stiff, and a material definition would fix them ou
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Gave up *A number in the report that does not add up* to [telemetry.md](telemetry.md#whether-the-report-agrees-with-itself), which carries the same defect, the invariants the Consistency section now states and the fix — this page was a second, older account of a report it does not own. Moved four historical asides into this log, keeping what each of them was *for*: that a cap table has to name its step length, that a recommendation quoted without its rate is out by two, that the equilibrium claim is safe only in the limit, and that a ratio is formed from two measurements of the same block (`E6`). |
 | 2026-08-22 | Took the decorative-block findings from `field-tuning.md` — the definitions fixing the conduction half only, and exposed area as the knob that reaches the other half — since this page is where that subject lives. Added the standard header and this log. |
 | 2026-08-22 | Corrected a finding published two commits earlier: it divided a hull's air peak by its vacuum peak, which are two different blocks, and reported the census hull as insensitive to air. The benchmark fixture changed on it is reverted and the lab now reports the same-block ratio as its own column. **Take an aggregate of a ratio, never a ratio of aggregates.** |
 | 2026-08-22 | Established that the census hull is a 96th-percentile ship for heat and sits in the trough between the population's two stiffness modes, and said so where every figure taken on it is quoted. |
