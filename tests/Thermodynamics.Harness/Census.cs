@@ -6,32 +6,14 @@ using VRageMath;
 namespace Thermodynamics.Harness
 {
     /// <summary>
-    /// The block mix of a real ship, measured, so that a synthetic hull behaves like one.
+    /// The block mix of a real ship, measured, so a synthetic hull behaves like one: the block-type
+    /// table of one 1,381-block ship's telemetry dump, bucketed by heat capacity. A hull's cost is set
+    /// by its *lightest* block, so both the substep demand and the *shape* of the distribution matter.
     ///
     /// <para>
-    /// The benchmarks used to build a ship out of 3,300 kg heavy armour with one 200 kg grating in
-    /// eight, and that hull was wrong in the one way that mattered most. A step is divided into as
-    /// many substeps as the <em>stiffest</em> block needs, so the cost of a grid is decided by its
-    /// lightest block and not by its average one — and the lightest block in that catalogue was
-    /// twelve times heavier than the lightest block on a real ship. The benchmark hull asked for
-    /// 2.25 substeps where a field dump measured 21 to 31, which means every scale figure this
-    /// repository ever published was taken on a ship an order of magnitude softer than the ones it
-    /// claimed to describe.
-    /// </para>
-    ///
-    /// <para>
-    /// The tiers below are the block population of a 1,381-block ship, taken from the block-type
-    /// table of the telemetry dump of 19 August 2026 and bucketed by heat capacity. They are not a
-    /// guess at what a ship contains; they are what one contained. A hull built from them asks for
-    /// about the substeps a real hull asks for, and — more subtly — has the same *shape* of
-    /// distribution, which is what decides how many blocks a substep cap reaches.
-    /// </para>
-    ///
-    /// <para>
-    /// Refine this as more dumps arrive. One ship is one ship: the tiers are a better hypothesis
-    /// than heavy armour and gratings, not a census of Space Engineers. What should stay true is
-    /// the method — read the population out of a field report and build against it, rather than
-    /// choosing blocks that make a benchmark convenient.
+    /// **One ship is one ship.** Refresh the tiers and the field observations beside them together as
+    /// dumps arrive (`M11`); <see cref="Corpus"/> is the same measurement over 8,102 workshop hulls.
+    /// See stiffness.md, and benchmarks.md, Keeping it honest.
     /// </para>
     /// </summary>
     public static class Census
@@ -173,29 +155,11 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
-        /// The same quantities over **8,102 real workshop blueprints**, measured in this lab.
-        ///
-        /// <para>
-        /// <see cref="Field"/> is two ships from two live sessions. Two is not a population, and a
-        /// figure a running game reported cannot be re-examined: the ships are gone, the world is
-        /// gone, and what else was true of them is unrecorded. These are the same measurement over
-        /// the corpus, taken by <c>StiffnessLab</c> — every input visible, and reproducible in four
-        /// minutes with <c>dotnet run --project Thermodynamics.Sim -- stiffness</c>.
-        /// </para>
-        ///
-        /// <para>
-        /// <b>The field figures survive the comparison.</b> The two ships a session reported land
-        /// at the 63rd and 85th percentile of the real population, so they were ordinary ships
-        /// rather than outliers. What they could not show is the shape around them.
-        /// </para>
-        ///
-        /// <para>
-        /// Quoted for a quarter-second step, which is <c>Frequency 4</c> — the basis
-        /// <see cref="Field"/> was taken on. Demand is proportional to step length, so the shipped
-        /// <c>Frequency 8</c> asks half of every figure here. In still sea-level air at noon, which
-        /// is a *lower* bound: the field sessions flew in wind, and wind raises the convection
-        /// these numbers are mostly made of.
-        /// </para>
+        /// The same quantities over **8,102 real workshop blueprints**, taken by <c>StiffnessLab</c>
+        /// where <see cref="Field"/> is two ships from two vanished sessions. Quoted for a
+        /// quarter-second step — <c>Frequency 4</c>, the basis <see cref="Field"/> used — in still
+        /// sea-level air at noon, which is a *lower* bound.
+        /// See stiffness.md, The same question asked of eight thousand real ships.
         /// </summary>
         public static class Corpus
         {
@@ -228,23 +192,9 @@ namespace Thermodynamics.Harness
             public const float LitShare = 0.450f;
 
             /// <summary>
-            /// How much stiffer air makes the block that sets a hull's air peak: **the same
-            /// block's** air demand over its own vacuum demand.
-            ///
-            /// <para>
-            /// <b>Measured wrongly the first time, and the wrong figure was published.</b> The
-            /// first version divided the hull's air peak by the hull's vacuum peak, which is
-            /// frequently a different block — a buried heavy one that conducts hard and does not
-            /// care about air. That read the census hull at 1.02 and called it insensitive to air
-            /// when the block itself is half again stiffer in air than out of it. Two peaks are
-            /// not a ratio.
-            /// </para>
-            ///
-            /// <para>
-            /// Correctly measured, the census hull is <em>inside</em> the population it describes:
-            /// 1.20 to 1.50 against a real median of 2.34, between the tenth and fiftieth
-            /// percentile. Low, and not an outlier.
-            /// </para>
+            /// How much stiffer air makes the block that sets a hull's air peak: **the same block's**
+            /// air demand over its own vacuum demand, since two peaks are not a ratio (`E6`). The
+            /// census hull is inside the population at 1.20–1.50 against a real median of 2.34.
             /// </summary>
             public const float AirRatioP10 = 1.04f;
             public const float AirRatioP50 = 2.34f;
@@ -263,25 +213,10 @@ namespace Thermodynamics.Harness
             // ---- what a real ship makes, against what the census hull makes -------------------
 
             /// <summary>
-            /// **The census hull is a 96th-percentile ship for heat, and it is worth knowing which
-            /// claims that reaches.**
-            ///
-            /// <para>
-            /// Both of the census's generation constants come from the same single field ship, and
-            /// both sit near the top of the corpus: a producer share of 0.109 is the 87th
-            /// percentile of 8,141 real hulls and 111 kW a producer is the 88th. They multiply.
-            /// The census hull makes **12.1 kW of waste heat per block** against a real median of
-            /// **335 W** and a ninetieth percentile of 6.1 kW — the 96th percentile, thirty-six
-            /// times the median ship.
-            /// </para>
-            ///
-            /// <para>
-            /// This does not touch a *stiffness* figure: substep demand is capacity, conduction and
-            /// exposure, and no watt appears in it. It touches every *temperature* figure. A
-            /// benchmark hull that runs hot is a reasonable choice for a worst case and a poor one
-            /// for "what a ship does", and which of the two the census is meant to be is a decision
-            /// rather than a defect — so this is recorded rather than corrected.
-            /// </para>
+            /// **The census hull is a 96th-percentile ship for heat.** It reaches no stiffness figure —
+            /// no watt appears in substep demand — and every temperature figure. Recorded rather than
+            /// corrected, since a hot hull is a fair worst case and a poor "what a ship does".
+            /// See stiffness.md, The census hull is a 96th-percentile ship for heat.
             /// </summary>
             public const float ProducerSharePercentile = 86.8f;
             public const float ProducerWattsPercentile = 88.0f;
@@ -295,18 +230,10 @@ namespace Thermodynamics.Harness
             public const float CensusWastePerBlock = 12099f;
 
             /// <summary>
-            /// The cap curve, over every block of every ship — 2.4 million blocks — against
-            /// <see cref="Field.RaisedAtCap8"/> and its siblings, which came from one dump's 189
-            /// stepping grids.
-            ///
-            /// <para>
-            /// **They agree where the choice is made and diverge where it is not.** At a cap of 8
-            /// the corpus says 1.59 % of blocks are held back against the dump's 1.16, and at 4,
-            /// 7.20 against 6.01 — near enough that the shipped cap's reach is confirmed rather
-            /// than corrected. At 2 and 1 the dump understates it by half again: 35.5 % against
-            /// 23.7, and 52.5 % against 39.1. A single save is a single builder's habits, and the
-            /// aggressive end of the curve is where habits show.
-            /// </para>
+            /// The cap curve over 2.4 million blocks, against <see cref="Field.RaisedAtCap8"/> and its
+            /// siblings from one dump. **They agree where the choice is made and diverge where it is
+            /// not**, which is what confirms the shipped cap's reach.
+            /// See stiffness.md, The cap curve holds where the cap is actually set.
             /// </summary>
             public const float FlooredAtCap8 = 0.0159f;
             public const float FlooredAtCap4 = 0.0720f;

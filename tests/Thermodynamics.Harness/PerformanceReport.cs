@@ -33,25 +33,10 @@ namespace Thermodynamics.Harness
     }
 
     /// <summary>
-    /// A performance report: what the simulation costs, broken down by size, by feature and by
-    /// configuration, in a form two runs can be compared with.
-    ///
-    /// <para>
-    /// The benchmarks this repository already had answer "how does one thing scale". What they
-    /// could not answer is "did the change I just made cost anything", because every figure lived
-    /// in a different command, in a different format, and was compared by reading two terminals.
-    /// This produces one artefact per run — a table for a human and a CSV for a diff — and knows
-    /// how to compare itself against an earlier one.
-    /// </para>
-    ///
-    /// <para>
-    /// The feature breakdown is deliberately two-sided. <b>Marginal</b> cost is what turning a
-    /// feature off saves with everything else on: what you would get back by removing it from a
-    /// working configuration. <b>Isolated</b> cost is what it costs with everything else off:
-    /// what the feature does on its own. They are different numbers whenever features interact,
-    /// and the gap between them is usually the interesting part — radiation and convection share
-    /// a pass, so switching one off saves far less than its isolated cost suggests.
-    /// </para>
+    /// A performance report: what the simulation costs by size, by feature and by configuration, as one
+    /// artefact per run — a table for a person and a CSV keyed for a diff. The feature breakdown is
+    /// deliberately two-sided, **marginal** and **isolated**, and the gap between them is usually the
+    /// interesting part. See benchmarks.md.
     /// </summary>
     public static class PerformanceReport
     {
@@ -86,22 +71,10 @@ namespace Thermodynamics.Harness
         private static readonly int[] Caps = { 0, 16, 8, 4, 2, 1 };
 
         /// <summary>
-        /// The world every feature and configuration case is measured in.
-        ///
-        /// <para>
-        /// Deliberately the worst one, and it used to be the best. Every benchmark in this
-        /// repository ran in vacuum, where <c>AtmosphereFactor</c> is zero — so convection was
-        /// switched off by the environment rather than by the setting, friction never engaged, and
-        /// both read "costs nothing" in a report that had never run them. A hull in atmosphere at
-        /// speed asks for about twice the substeps of the same hull in vacuum, so the cheap case
-        /// was also the one being quoted.
-        /// </para>
-        ///
-        /// <para>
-        /// Flight rather than a parked base because friction only engages above
-        /// <c>FrictionAtSpeedsAbove</c>, and a benchmark that never crosses it is measuring a
-        /// branch rather than a feature.
-        /// </para>
+        /// The world every feature and configuration case is measured in: **deliberately the worst of
+        /// the nine**. In vacuum <c>AtmosphereFactor</c> is zero, so convection and friction read as
+        /// costing nothing in a report that never ran them, and flight rather than a parked base
+        /// because friction engages only above its threshold. See benchmarks.md, The environments.
         /// </summary>
         private static EnvironmentSample Worst()
         {
@@ -347,37 +320,12 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
-        /// A step split into the part that scales with substeps and the part that does not.
-        ///
-        /// <para>
-        /// A step is one lot of per-step work — mirroring the node state, estimating the substep
-        /// count, applying the mass floor, publishing the result — plus one lot of per-substep work
-        /// for each substep. Those two scale differently, and a single millisecond figure hides
-        /// which of them a change moved. Two points at known substep counts separate them.
-        /// </para>
-        ///
-        /// <para>
-        /// It matters most at the cheap end of the profile ladder. At nineteen substeps the fixed
-        /// part is about an eighth of a step; at one substep, which is what `simulation`,
-        /// `optimized` and `simlite` all run, it is most of it. A change that halves the substep
-        /// cost does nothing for those three.
-        /// </para>
-        ///
-        /// <para>
-        /// Fitted through the `cap 4` and `cap 16` rows because both are clamp-free: the per-block
-        /// mass floor raises the stiff blocks rather than refusing them substeps, so neither point
-        /// carries clamp cost the other does not. Fitting through `cap 1` would put a clamped point
-        /// against an unclamped one and attribute the difference to the fixed term.
-        /// </para>
-        ///
-        /// <para>
-        /// **The fitted intercept is not the prologue and write-back, and used to be read as if it
-        /// were.** A step has three terms, not two: the work before and after it integrates, the
-        /// first substep, which fills the per-step environment rows every later substep reads, and
-        /// every substep after that. A two-point fit has nowhere to put the first substep's extra
-        /// and charges it to the intercept. The three rows below measure the two ends directly, so
-        /// what the fit is actually made of is on the page rather than assumed.
-        /// </para>
+        /// A step split into the part that scales with substeps and the part that does not, fitted
+        /// through the `cap 4` and `cap 16` rows because both are clamp-free — `cap 1` would put a
+        /// clamped point against an unclamped one. **A step has three terms, not two**, so the fitted
+        /// intercept carries the first substep's row fill as well as the prologue;
+        /// <see cref="StepTerms"/> measures the ends directly.
+        /// See benchmarks.md, The shape of a step.
         /// </summary>
         private static void StepShape(List<ReportRow> rows, string shape, int size, int ticks,
             double[] stepMs, float[] substeps)
@@ -405,23 +353,10 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
-        /// The three terms a step is made of, two of them measured rather than fitted.
-        ///
-        /// <para>
-        /// Run at `cap 1`, where the step is one substep and the three terms are separable without
-        /// any fit at all: the prologue is what the solver charges to answer how many substeps it
-        /// needs, the write-back is the last stage of the step machine driven on its own clock, and
-        /// what is left is one substep with the row fill in it.
-        /// </para>
-        ///
-        /// <para>
-        /// <b>`cap 1` refuses the grid the substeps it asks for, so the row fill measured here is
-        /// the clamped one.</b> The relaxation row is read only by the clamped conduction loop and
-        /// so is written only while that clamp is live, which costs a float divide per node —
-        /// measured at 0.9 to 1.4 ns a node by <c>bench rowfill</c>, a third of the fill. A grid
-        /// granted its substeps fills three rows here rather than four and pays about half. Both
-        /// are real; they are answers to different questions, and the row below says which.
-        /// </para>
+        /// The three terms a step is made of, measured at `cap 1` where they separate without a fit.
+        /// **`cap 1` is a refused grid, so the row fill measured here is the clamped one** — about
+        /// twice what a grid granted its substeps pays, because the relaxation row is written only
+        /// while the clamp is live. See benchmarks.md, The fill is two different fills.
         /// </summary>
         private static void StepTerms(List<ReportRow> rows, string shape, int size, int ticks,
             double[] stepMs, double perSubstep)
@@ -497,33 +432,11 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
-        /// The conduction overshoot clamp, measured against itself in both regimes it has.
-        ///
-        /// <para>
-        /// The clamp is skipped on any step where it cannot bind, which is settled once per step
-        /// from the substep length. That is a saving in one regime and a cost in the other, and a
-        /// single figure would hide whichever one the case happened to land in. So each regime is
-        /// measured twice — with the test and without it — and the two rows sit next to each other.
-        /// </para>
-        ///
-        /// <para>
-        /// <b>resolved</b> is a grid granted the substeps it demands, which is what the substep
-        /// count is chosen to guarantee and therefore the ordinary case. Nothing can overshoot, the
-        /// test says so, and the clamped arithmetic is skipped.
-        /// </para>
-        ///
-        /// <para>
-        /// <b>refused</b> is the worst case for the test and the reason it is measured: four
-        /// substeps against a hull demanding twenty, with no per-block cap to raise the stiff
-        /// blocks out of trouble. The clamp binds, the answer is yes, and the pass that established
-        /// that bought nothing. It is cheap because it returns on the first element that can bind,
-        /// but cheap is a claim and this row is the evidence.
-        /// </para>
-        ///
-        /// <para>
-        /// The <c>clamp live</c> rows are what keep the pair honest: 0 against 1 is what says the
-        /// two cases are in different regimes rather than being the same measurement twice.
-        /// </para>
+        /// The conduction overshoot clamp, measured against itself in **both** regimes — resolved,
+        /// where skipping it is a saving, and refused, where the test buys nothing — because one
+        /// figure would hide whichever case it landed in. The <c>clamp live</c> rows are what say the
+        /// two are different regimes rather than one measurement printed twice.
+        /// See benchmarks.md, The overshoot clamp A/B.
         /// </summary>
         private static void OvershootClamp(List<ReportRow> rows, string shape, int size, int ticks,
             Action<string> log)
@@ -535,22 +448,10 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
-        /// What being measured costs.
-        ///
-        /// <para>
-        /// The per-mechanism watt figures — radiation, convection, solar, friction and conduction
-        /// per block — are diagnostics that nothing in the simulation reads. They are produced for
-        /// a telemetry report, for a client with the crosshair readout up, or for a debug overlay,
-        /// and they are five writes into the node object per node per substep plus two more per
-        /// link. A dedicated server in ordinary play writes none of them.
-        /// </para>
-        ///
-        /// <para>
-        /// Every field dump in this repository was taken with them on, because taking a dump is
-        /// what turns them on. So the figures a dump reports are the expensive configuration, and
-        /// this row is what makes the two comparable rather than leaving a reader to assume they
-        /// already are.
-        /// </para>
+        /// What being measured costs. Every field dump in this repository was taken with the
+        /// per-mechanism watt figures on, because taking a dump is what turns them on, so this row is
+        /// what makes a dump and a benchmark comparable rather than leaving a reader to assume they
+        /// already are. See benchmarks.md, What being measured costs.
         /// </summary>
         private static void Diagnostics(List<ReportRow> rows, string shape, int size, int ticks,
             Action<string> log)

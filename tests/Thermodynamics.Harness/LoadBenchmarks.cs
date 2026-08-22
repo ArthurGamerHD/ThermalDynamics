@@ -130,24 +130,10 @@ namespace Thermodynamics.Harness
     }
 
     /// <summary>
-    /// Synthetic load benchmarks.
-    ///
-    /// The scenario library answers questions about the physics; these answer questions about
-    /// the cost of running it, at sizes nobody would sit through in a game session. They exist
-    /// for one target: a grid of a million blocks that ticks without stalling, accepting a lower
-    /// simulation rate to get there but not accepting a stutter.
-    ///
-    /// Two figures matter and they are not the same figure:
-    ///
-    /// <list type="bullet">
-    /// <item><b>Steady cost</b> — what a tick costs when nothing is changing. Sets how much of
-    /// the frame the mod takes, and degrades gracefully: twice the cost is half the simulation
-    /// rate, which a player experiences as heat moving more slowly.</item>
-    /// <item><b>Spike cost</b> — what a tick costs when something changed. Sets whether the game
-    /// stutters, which a player experiences as the game being broken. A single block placed
-    /// today invalidates the conduction graph, the coolant loops, the heat pumps and the whole
-    /// room map, so this is the number the target depends on.</item>
-    /// </list>
+    /// Synthetic load benchmarks: what the simulation costs rather than what it does, at sizes nobody
+    /// would sit through in a session. **Steady cost and spike cost are different figures with
+    /// different failure modes** and the distinction is what every measurement here rests on.
+    /// See load-and-hitching.md, The distinction the whole exercise rests on.
     /// </summary>
     public static class LoadBenchmarks
     {
@@ -336,20 +322,9 @@ namespace Thermodynamics.Harness
         // ---- frame pacing ------------------------------------------------------------------
 
         /// <summary>
-        /// Ticks a settled grid the way the host does, then disturbs it the way a player does,
-        /// and records what every tick cost.
-        ///
-        /// The disturbances are the point. A benchmark that only ticks a finished ship measures
-        /// the case that was never the problem; what stutters is the frame a block is welded, a
-        /// door cycles or a section is shot away.
-        /// </summary>
-        /// <summary>
-        /// Whether the benchmarks turn on the solver's per-mechanism watt figures.
-        ///
-        /// Those are five floats per node per substep that nothing in the simulation reads — they
-        /// exist for the telemetry report and the debug overlay. Switching telemetry on in a live
-        /// world switches them on too, so every field measurement includes the cost of being
-        /// measured, and knowing how much matters when reading one.
+        /// Whether the benchmarks turn on the solver's per-mechanism watt figures, which nothing in the
+        /// simulation reads. Taking a telemetry dump turns them on, so every field measurement includes
+        /// the cost of being measured. See benchmarks.md, What being measured costs.
         /// </summary>
         public static bool CollectDiagnostics;
 
@@ -683,22 +658,11 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
-        /// How fast heat crosses a grid, and what that speed costs.
-        ///
-        /// <para>
-        /// A run of blocks with one end pinned hot. Heat diffuses along it, and the measurement is
-        /// how many blocks the front has crossed after a fixed number of real seconds — which is
-        /// exactly what a player means by responsiveness, and is comparable across any settings.
-        /// </para>
-        ///
-        /// <para>
-        /// The reason this is the right experiment is the overshoot clamp. Every exchange is capped
-        /// at the energy that would equalise its pair, so <b>one substep can move heat at most one
-        /// block</b> however violent the settings. Propagation speed therefore has a hard ceiling
-        /// of one block per substep, and substeps are precisely what a step costs — so
-        /// responsiveness and cost are not two dials to balance but the same dial seen from two
-        /// sides. Finding where that ceiling actually sits, rather than assuming it, is the point.
-        /// </para>
+        /// How fast heat crosses a grid, and what that speed costs: blocks crossed along a held-hot run
+        /// after a fixed number of real seconds, which is what a player means by responsiveness and is
+        /// comparable across any settings. **One substep can move heat at most one block**, so
+        /// responsiveness and cost are one dial seen from two sides.
+        /// See profiles.md, Designing your own.
         /// </summary>
         public static ReachRow Reach(string label, int frequency, float speed, float heatTimeScale,
             int maxSubsteps, float realSeconds, int length)
@@ -844,19 +808,10 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
-        /// Whether slowing the simulation and speeding up heat transfer buys anything.
-        ///
-        /// The proposal is to halve <c>SimulationSpeed</c> and double <c>HeatTimeScale</c> so heat
-        /// keeps the same pace against the wall clock for half the cost. The arithmetic says the
-        /// two cancel: a step costs its substeps, the substep count a grid needs is proportional to
-        /// the step length times the stiffness, and <c>HeatTimeScale</c> <em>is</em> the stiffness —
-        /// so substeps per real second come to <c>SimulationSpeed x HeatTimeScale</c> and
-        /// <c>Frequency</c> drops out entirely.
-        ///
-        /// That only holds while a grid is substep-limited. One that already solves in a single
-        /// substep cannot be given fewer, so for that grid the trade is real and the saving is the
-        /// whole factor. Which case a world is in is a measurement, not an opinion, so this runs
-        /// the pairings and reports both the cost and what the heat actually did.
+        /// Whether halving <c>SimulationSpeed</c> and doubling <c>HeatTimeScale</c> buys anything. The
+        /// arithmetic says the two cancel while a grid is substep-limited and that the trade is real
+        /// when it is not, so this runs the pairings and reports both the cost and what the heat did.
+        /// See configuration.md, Trading simulation speed for heat transfer.
         /// </summary>
         public static List<PaceRow> Pace(string shape, int targetCells, float realSeconds)
         {
@@ -1440,22 +1395,11 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
-        /// What <c>MaxSubstepsPerBlock</c> buys and what it costs, swept across caps.
-        ///
-        /// <para>
-        /// The hull is built from the measured block <see cref="Census"/>, which is what makes
-        /// this comparable to a real ship at all: a step is divided into as many substeps as the
-        /// stiffest block needs, so the answer is decided by the lightest block on the hull and
-        /// not by its average one. The census ship asks for about 23 substeps against a field
-        /// range of 21 to 31, and — more subtly — reproduces the *shape* of the population, which
-        /// is what decides how many blocks a given cap reaches.
-        /// </para>
-        ///
-        /// <para>
-        /// Accuracy is measured against the uncapped run rather than against an analytic answer,
-        /// because the question is not whether the integrator is right — that is what the rest of
-        /// the suite is for — but how far the approximation moves it, and on which blocks.
-        /// </para>
+        /// What <c>MaxSubstepsPerBlock</c> buys and what it costs, swept across caps. Built from the
+        /// block <see cref="Census"/>, whose *shape* is what decides how many blocks a cap reaches, and
+        /// measured against the uncapped run rather than an analytic answer, because the question is
+        /// how far the approximation moves it and on which blocks.
+        /// See stiffness.md, A per-block substep cap.
         /// </summary>
         public static List<FloorRow> SubstepFloor(string shape, int size, int steps,
             IList<int> caps, Action<string> log = null, bool driven = false, int frequency = 0)

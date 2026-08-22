@@ -6,26 +6,13 @@ using Xunit;
 namespace Thermodynamics.Tests
 {
     /// <summary>
-    /// The blueprint corpus, read once and shared by every test that wants it.
-    ///
-    /// <para>
-    /// **Opt-in.** These tests read thousands of other people's ships off a corpus that is
-    /// gigabytes, lives outside the repository and is fetched rather than authored, and they take
-    /// minutes. A suite that everyone runs on every change cannot depend on any of that, so they
-    /// stand down unless <c>THERMAL_CORPUS_TESTS</c> is set — the same shape as the guards that
-    /// stand down without a game install.
-    /// </para>
+    /// The blueprint corpus, read once and shared by every test that wants it. **Opt-in**, behind
+    /// <c>THERMAL_CORPUS_TESTS</c>, because it reads gigabytes that live outside the repository and
+    /// takes minutes.
     ///
     /// <code>
     ///     THERMAL_CORPUS_TESTS=1 dotnet test --filter LabInvariantTests
     /// </code>
-    ///
-    /// <para>
-    /// **Once.** Three classes wanted the corpus and each scanned it for itself, one of them once
-    /// per test method: seven full recursive walks and re-parses of a corpus that runs to tens of
-    /// gigabytes, to run a handful of ships. That cost is why the samples downstream are as small
-    /// as they are, so it is paid here once and the ships handed out afterwards.
-    /// </para>
     /// </summary>
     internal static class CorpusFixture
     {
@@ -133,33 +120,9 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// The ships a corpus test should run: **every one of them**, unless told otherwise.
-        ///
-        /// <para>
-        /// A corpus exists to replace "one ship is one ship" with a population, and a test that
-        /// takes a dozen off the front of it has quietly gone back to the hypothesis. Worse, the
-        /// list is sorted largest first, so any fixed slice is an extreme of the distribution — the
-        /// twelve biggest hulls, or the two smallest — and which ships those are moves every time
-        /// the corpus grows. So the default is the whole thing.
-        /// </para>
-        ///
-        /// <para>
-        /// <c>THERMAL_CORPUS_SHIPS</c> caps it for a quick pass. The cap is a stride rather than a
-        /// prefix, so a capped run is still spread from the largest ship to the smallest instead of
-        /// being all capital hulls.
-        /// </para>
-        /// </summary>
-        /// <summary>
-        /// Files to skip from the front, for resuming a sweep that was interrupted.
-        ///
-        /// <para>
-        /// A pass over ten thousand ships runs for hours, and an interruption at hour eight — a
-        /// hang detector firing on a test that is merely slow, a machine rebooted, a decision to
-        /// change something — should not mean re-simulating everything already measured. The
-        /// dataset is written per ship, so the rows survive; this is what lets the next run pick up
-        /// where the last one stopped. The corpus order is deterministic (sorted largest first), so
-        /// a skip of N means exactly the N files already done.
-        /// </para>
+        /// Files to skip from the front, so an interrupted sweep resumes rather than re-simulating what
+        /// it already measured (`O3`). The corpus order is deterministic and largest first, so a skip
+        /// of N is exactly the N files already done.
         /// </summary>
         private static int Skip()
         {
@@ -342,33 +305,10 @@ namespace Thermodynamics.Tests
 
         /// <summary>
         /// Every ship in the corpus, one at a time, across every worker — **no batches and no
-        /// barrier**.
-        ///
-        /// <para>
-        /// The batched shape read a hundred and twenty ships, ran them all, and waited for the
-        /// slowest before reading the next hundred and twenty. Ships differ in cost by three orders
-        /// of magnitude, so most of the machine spent its time at that barrier waiting for one
-        /// capital hull: measured mid-run, ten threads of sixty-three were busy and the sweep was
-        /// using thirty per cent of the box. Here a worker that finishes a ship takes the next one
-        /// immediately, so nothing waits for anything.
-        /// </para>
-        ///
-        /// <para>
-        /// **It also removes the re-parsing.** <see cref="BatteryLab"/> hands each ship-and-scenario
-        /// pair to a worker and calls <c>Reload()</c> — a full re-read of the blueprint from disk —
-        /// because those workers would otherwise share one ship's block instances and write their
-        /// loads onto each other. Here the ship *is* the unit of work: one worker owns it, runs
-        /// whatever scenarios the caller asks for in sequence, and lets it go. Nothing is shared, so
-        /// nothing has to be re-read. That is one parse per ship in place of one per ship per
-        /// scenario.
-        /// </para>
-        ///
-        /// <para>
-        /// Memory is bounded by the ships in flight rather than by a batch, which is strictly less
-        /// than before. The heaviest files still queue for a slot, because the corpus is walked
-        /// largest first and thirty workers each opening a quarter-gigabyte blueprint at the same
-        /// moment is how the earlier runs died.
-        /// </para>
+        /// barrier**, since ships differ in cost by three orders of magnitude and a barrier leaves the
+        /// machine waiting on one capital hull. The ship is the unit of work, so one worker owns it and
+        /// nothing has to be re-parsed per scenario (`M3`). The heaviest files still queue for a parse
+        /// slot. See balance-lab.md, Running the lab.
         /// </summary>
         public static List<T> Sweep<T>(string label, Func<Blueprints.Ship, T> work) where T : class
         {
@@ -488,22 +428,10 @@ namespace Thermodynamics.Tests
         private const long HeavyBatchBytes = 256L * 1024L * 1024L;
 
         /// <summary>
-        /// How many heavy batches may be parsed at once, across every walk in the run.
-        ///
-        /// <para>
-        /// **The walks are in lockstep and that is the danger.** Each one is its own test class so
-        /// they start together, and each reads the same corpus in the same largest-first order — so
-        /// at the moment the run begins, all of them reach for the same 1.85 GB blueprint at the
-        /// same time. An XML document costs several times its file on the heap, so eight concurrent
-        /// reads of that one file want more memory than the machine has. Measured: 27 GB inside the
-        /// first minute, still climbing, before anything had been simulated.
-        /// </para>
-        ///
-        /// <para>
-        /// The batch byte budget bounds one walk. This bounds their sum, which is the quantity that
-        /// actually has to fit. Only heavy batches queue — the median blueprint is a megabyte, so
-        /// once the walks are past the giants nothing waits here at all.
-        /// </para>
+        /// How many heavy batches may be parsed at once **across every walk in the run**, which is the
+        /// quantity that has to fit: the walks start together and read the same corpus largest-first,
+        /// so all of them reach for the same 1.85 GB blueprint at once. Only heavy batches queue
+        /// (`O1`, `O5`).
         /// </summary>
         private static readonly System.Threading.SemaphoreSlim ParseSlots =
             new System.Threading.SemaphoreSlim(4, 4);
