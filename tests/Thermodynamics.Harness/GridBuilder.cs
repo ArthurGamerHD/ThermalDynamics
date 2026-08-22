@@ -120,10 +120,6 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
-        /// Wraps the grid in a fully built simulation with every block registered and every
-        /// derived structure computed.
-        /// </summary>
-        /// <summary>
         /// Takes a block back out, of the model and of the builder's own list.
         ///
         /// Removing straight from <see cref="Grid"/> is not enough and is quietly wrong:

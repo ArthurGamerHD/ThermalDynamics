@@ -69,10 +69,6 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// The same step, one run whole and one run a few elements at a time, must land on the
-        /// same temperature in every block — to the bit.
-        /// </summary>
-        /// <summary>
         /// Reading the simulation must not move it, and a step now spans many frames, so
         /// "observing between steps" is no longer a thing that exists — telemetry profiles a grid
         /// while a step is part way through one.

@@ -135,14 +135,6 @@ namespace Thermodynamics.Tests
         // ---- the loader ----------------------------------------------------------------------
 
         /// <summary>
-        /// Every shipped block's mass is the sum of its components, and no component is unpriced.
-        ///
-        /// A zero here would not throw and would not look wrong in a report — it would just make
-        /// the block weightless, which in this simulation means it has no heat capacity and reaches
-        /// any temperature instantly. Adding a component to a definition that <see cref="Vanilla"/>
-        /// does not price is the way that happens.
-        /// </summary>
-        /// <summary>
         /// The transcribed build costs still match the installed game.
         ///
         /// These matter more than the masses beside them now: a block's thermal properties are

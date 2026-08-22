@@ -169,9 +169,6 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// Every property the game reads. An entry must carry all of them.
-        /// </summary>
         /// <summary>What a type entry declares: the properties a block's function decides.</summary>
         private static readonly string[] FunctionProperties =
         {

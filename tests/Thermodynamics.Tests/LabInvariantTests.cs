@@ -265,19 +265,6 @@ namespace Thermodynamics.Tests
         // ---- what a finished run must satisfy --------------------------------------------------
 
         /// <summary>
-        /// **At equilibrium a grid sheds exactly what it makes.**
-        ///
-        /// This is the strongest structural check the lab has, and the one that finally said the
-        /// model was behaving: after the three faults were fixed, made and vented agreed to within
-        /// a tenth of a per cent on every loaded scenario, where before they had not. A grid whose
-        /// made exceeds its vented at the end of a settled run is still climbing, which means it
-        /// either has not settled or has heat going somewhere it cannot leave.
-        ///
-        /// Restricted to shadow scenarios, where the environment is purely a sink — a sunlit hull
-        /// legitimately absorbs more than it sheds, and <c>VentedWatts</c> reads zero rather than
-        /// going negative while it does.
-        /// </summary>
-        /// <summary>
         /// The share of what a ship makes that its hull may still be storing or giving up before it
         /// counts as finished.
         ///

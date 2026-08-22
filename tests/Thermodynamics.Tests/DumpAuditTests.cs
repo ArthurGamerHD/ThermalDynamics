@@ -549,10 +549,6 @@ namespace Thermodynamics.Tests
             Assert.Equal(1, Check(DumpAudit.Run(Write(still)), "convection is reported").Hits);
         }
 
-        /// <summary>
-        /// A flying grid carries the negative of its height in the depth column, which is not a
-        /// defect. Only a positive depth on a grid the game does not call buried is.
-        /// </summary>
         /// <summary>The A15 fault as the audit sees it: buried whole, still blowing.</summary>
         [Fact]
         public void WindOnAWhollyBuriedGridFails()

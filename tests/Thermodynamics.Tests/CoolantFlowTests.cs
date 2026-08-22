@@ -455,10 +455,6 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// The spread across parcels of a ring heated at one point, after it has settled. A ring that
-        /// transports evens out; one that aliases does not.
-        /// </summary>
-        /// <summary>
         /// **A fixed defect, guarded.** The loop path used to have a stiffness ceiling.
         ///
         /// <c>SpreadAcrossAHeatedRing</c> deliberately runs one substep across a whole second and

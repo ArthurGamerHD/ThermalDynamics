@@ -73,10 +73,6 @@ namespace Thermodynamics.Harness
             return this;
         }
 
-        /// <summary>
-        /// Advances the simulation, recording a sample every
-        /// <paramref name="sampleIntervalSeconds"/> of simulated time.
-        /// </summary>
         /// <summary>Whether the solver's ambient is a climate it reached, rather than its seed.</summary>
         private bool hasAmbientHistory;
 
