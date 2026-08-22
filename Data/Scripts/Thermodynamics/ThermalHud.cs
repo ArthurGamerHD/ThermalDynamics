@@ -17,15 +17,9 @@ using static VRageRender.MyBillboard;
 namespace Thermodynamics
 {
     /// <summary>
-    /// The in-world readouts: a temperature billboard over the block the extinguisher is aimed
-    /// at, and a grid summary in the cockpit.
-    ///
-    /// Client only, driven at draw rate rather than step rate, and every path first tests whether
-    /// it has anything to draw.
-    ///
-    /// The text is drawn by the Rich HUD Framework, as the settings menu and debug readout are. The
-    /// billboard is not: it is a world-space quad drawn through the mod API, so aiming the
-    /// extinguisher still shows a temperature-coloured block without the framework, but no number.
+    /// The in-world readouts: a temperature billboard over the block the extinguisher is aimed at, and
+    /// a grid summary in the cockpit. Client only, at draw rate. The text needs Rich HUD; the
+    /// billboard is a world-space quad through the mod API and does not. See blocks.md.
     /// </summary>
     public static class ThermalHud
     {
@@ -192,20 +186,10 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// The performance panel: what the simulation is doing right now, across every live grid.
-        ///
-        /// It replaced a panel that appeared only while a player was seated in a block and showed
-        /// five temperature lines. That is the wrong shape for the question people actually have,
-        /// which is whether the mod is costing them frames and why — and it cannot be answered from
-        /// a cockpit, because the grid that is struggling is usually not the one being flown.
-        ///
-        /// **Every figure here is a count, not a clock.** Milliseconds depend on the machine and on
-        /// what else is running, so they are the wrong thing to leave on screen: two players
-        /// comparing notes would be comparing hardware. Substeps, link visits and floored blocks are
-        /// properties of what has been built, so they mean the same thing to everyone and can be
-        /// read against the figures in docs/load-and-hitching.md directly.
-        ///
-        /// Toggled with ctrl+shift+P, and off by default.
+        /// The performance panel: what the simulation is doing right now across every live grid.
+        /// **Every figure here is a count, not a clock**, so two players comparing notes are not
+        /// comparing hardware. Ctrl+Shift+P, off by default.
+        /// See blocks.md, The performance panel.
         /// </summary>
         private static void DrawGridHud()
         {
@@ -390,19 +374,10 @@ namespace Thermodynamics
         private static readonly MyStringId NeedleMaterial = MyStringId.GetOrCompute("Square");
 
         /// <summary>
-        /// A compass needle for the wind, under the crosshair, with its speed under that.
-        ///
-        /// Screen up is the way the player faces, so the needle points where the wind is pushing
-        /// them: straight up is a tailwind, straight down is a wind in the face, and a needle lying
-        /// on its side is the crosswind that carries a ship off its line. That convention is the
-        /// opposite of the meteorological one, where a wind is named for where it comes from, and it
-        /// is chosen because the question here is which way you are being pushed rather than what to
-        /// call the weather.
-        ///
-        /// **In a cockpit this shows the wind the ship is flying through, not the wind over the
-        /// ground.** They are the same thing parked and quite different at speed, and the relative
-        /// one is what the solver heats the hull with, so it is the one worth showing. On foot there
-        /// is no grid to ask and the field's own wind is used.
+        /// A compass needle for the wind under the crosshair. Screen up is the way the player faces, so
+        /// the needle points where the wind is pushing them — the opposite of the meteorological
+        /// convention. In a cockpit it is the *relative* wind, which is what heats the hull.
+        /// See configuration.md, The wind indicator.
         /// </summary>
         private static void DrawWindNeedle()
         {

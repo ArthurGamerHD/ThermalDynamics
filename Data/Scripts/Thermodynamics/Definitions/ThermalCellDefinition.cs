@@ -25,14 +25,9 @@ namespace Thermodynamics
         private static readonly MyStringId HeatSourceWattsId = MyStringId.GetOrCompute("HeatSourceWatts");
 
         /// <summary>
-        /// Names these properties used to carry, still read when the current name is absent.
-        ///
-        /// Definition Extensions matches on the name string, so a rename that does not keep the old
-        /// one silently reverts every third-party definition to the defaults — no error, no log
-        /// line, just a mod whose blocks quietly stop being what they say they are. That is the
-        /// same failure the whole of <c>ShippedDefinitionTests</c> exists because of.
-        ///
-        /// New definitions should use the current names; these stay so old ones keep working.
+        /// Names these properties used to carry, still read when the current name is absent: Definition
+        /// Extensions matches on the string, so dropping one silently reverts every third-party
+        /// definition to the defaults. See definitions.md, Retired property names.
         /// </summary>
         private static readonly MyStringId LegacyIgnoreId = MyStringId.GetOrCompute("IgnoreThermals");
         private static readonly MyStringId LegacyExposedSurfaceId = MyStringId.GetOrCompute("SurfaceAreaScaler");
@@ -86,29 +81,17 @@ namespace Thermodynamics
         public float OverheatDamagePerKelvin;
 
         /// <summary>
-        /// Watts a block makes because of what it is, rather than because of power crossing it, W.
-        ///
-        /// Decay heat in spent fuel, a forge, a wreck still burning: things with no power draw to
-        /// take a waste fraction of. Omitted by every block that is not one, and omission is the
-        /// correct default here — unlike every other property, zero is what a block that is not a
-        /// heat source should have.
+        /// Watts a block makes because of what it is rather than because of power crossing it, W —
+        /// decay heat, a forge, a wreck still burning. The one property where omission is the right
+        /// default. See definitions.md, Every property but one must be declared.
         /// </summary>
         [ProtoMember(50)]
         public float HeatSourceWatts;
 
         /// <summary>
-        /// Which properties an actual definition declared, one bit per property.
-        ///
-        /// The lookup resolves one definition id and reads every property from it, with no merge
-        /// into the entry it stands in for, and the fields above have no initialisers. So a
-        /// property nobody declared is zero — and a zero <c>SpecificHeat</c> is a block with no
-        /// heat capacity, while a zero <c>CriticalTemperature</c> is a block above critical from
-        /// the moment it is placed.
-        ///
-        /// Recording what was declared is what lets <c>ThermalBlockCatalog</c> fill the rest from
-        /// <see cref="BlockThermalDerivation"/> rather than from zeros, so a partial entry means
-        /// "change these and derive the rest" — which is what an author writing three lines always
-        /// meant by it.
+        /// Which properties an actual definition declared, one bit per property. An undeclared one
+        /// arrives as zero, so this is what lets <c>ThermalBlockCatalog</c> fill the rest from the
+        /// derivation rather than from zeros. See definitions.md, Lookup and fallback.
         /// </summary>
         public DeclaredProperties Declared;
 
@@ -143,12 +126,9 @@ namespace Thermodynamics
             Type,
 
             /// <summary>
-            /// The environment-wide default: "nothing here knows anything about this block".
-            ///
-            /// It describes mild steel, because before the component derivation existed that was
-            /// the only honest guess. It no longer is — the block's own build cost is a better
-            /// description of it than a global constant can be — so landing here is now taken as
-            /// *no* answer rather than as an answer, and the derivation is left standing.
+            /// The environment-wide default: nothing here knows anything about this block. Taken as
+            /// *no* answer rather than as an answer, since a block's own build cost describes it
+            /// better than a global constant can.
             /// </summary>
             Fallback,
         }

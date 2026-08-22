@@ -58,15 +58,10 @@ namespace Thermodynamics.Core
         public float GroundSwing;
 
         /// <summary>
-        /// The weather over the grid at full strength, held separately from its intensity because
-        /// the two come from different sources: the weather is a cached name lookup, the intensity
-        /// is recomputed by the game as the front moves.
-        ///
-        /// A default-constructed <see cref="WeatherResponse.Weather"/> is not calm: every multiplier
-        /// in it is zero, which would extinguish the sun. This does not arise in practice because a
-        /// sample naming no weather also reports zero intensity, which softens any weather to
-        /// <see cref="WeatherResponse.Calm"/>. A caller setting an intensity directly must also set
-        /// this from <see cref="WeatherResponse.For"/>.
+        /// The weather over the grid at full strength, held apart from its intensity because the two
+        /// come from different sources. **A default-constructed one is not calm** — every multiplier in
+        /// it is zero, which would extinguish the sun — so a caller setting an intensity directly must
+        /// also set this from <see cref="WeatherResponse.For"/>.
         /// </summary>
         public WeatherResponse.Weather Weather;
 
@@ -109,15 +104,9 @@ namespace Thermodynamics.Core
         public bool IsSolarOccluded;
 
         /// <summary>
-        /// Share of the grid the sun cannot reach, 0..1, from whatever stands between it and the
-        /// sun: a planet, a voxel, or another grid.
-        ///
-        /// A fraction rather than a flag because a grid is not a point: a large grid crossing a
-        /// terminator or emerging from behind an asteroid is partly lit throughout, which a flag
-        /// would render as a step change.
-        ///
-        /// <see cref="IsSolarOccluded"/> is the fully shadowed case, retained because most of the
-        /// model only needs to know whether there is any sun at all.
+        /// Share of the grid the sun cannot reach, 0..1. A fraction rather than a flag because a grid
+        /// is not a point, and a flag renders a terminator crossing as a step change.
+        /// <see cref="IsSolarOccluded"/> is the fully shadowed case.
         /// </summary>
         public float SolarOcclusion;
 
@@ -171,12 +160,9 @@ namespace Thermodynamics.Core
         public float RelativeWindSpeed;
 
         /// <summary>
-        /// Point heat sources other than the sun, each reduced by the host to a local direction and
-        /// an irradiance at this grid. Null when there are none.
-        ///
-        /// The host owns the buffer and may reuse it between samples, so the array may be longer
-        /// than <see cref="HeatSourceCount"/>. Occlusion is also the host's responsibility: an
-        /// occluded source is omitted.
+        /// Point heat sources other than the sun, each reduced by the host to a local direction and an
+        /// irradiance at this grid. The host owns the buffer, so it may be longer than
+        /// <see cref="HeatSourceCount"/>, and owns occlusion: an occluded source is omitted.
         /// </summary>
         public HeatSourceState[] HeatSources;
 

@@ -4,33 +4,10 @@ using VRageMath;
 namespace Thermodynamics.Core
 {
     /// <summary>
-    /// Slope winds: air running up a mountain by day and draining back down it at night.
-    ///
-    /// <para>This is a different mechanism from everything else in
-    /// <see cref="WindTerrain"/>. Speed-up, sheltering and channelling are <b>mechanical</b> — they
-    /// are what the ground does to wind that was already blowing. A slope wind is <b>thermal</b>:
-    /// the ground makes it, out of nothing, and it blows even when the air is otherwise still.</para>
-    ///
-    /// <list type="bullet">
-    /// <item><b>Anabatic, by day.</b> Sunlight heats a slope, the air against it warms, becomes
-    /// buoyant, and rises <i>along the ground</i> rather than straight up — so the flow is toward the
-    /// summit. Typically 3–5 m/s, hundreds of metres deep, starting after sunrise and strongest in
-    /// the afternoon.</item>
-    /// <item><b>Katabatic, by night.</b> The slope radiates its heat to the sky, the air against it
-    /// cools and grows dense, and gravity drains it downhill to pool in the valley. Typically
-    /// 3–8 m/s — much more where it runs over ice — and <b>much shallower</b>, 10 to 100 m, roughly
-    /// a twentieth of the drop it has fallen.</item>
-    /// </list>
-    ///
-    /// <para><b>The condition that matters most for a game:</b> both are weak-wind phenomena. They
-    /// form under calm, clear, high-pressure conditions, and a real synoptic wind simply overruns
-    /// them. So this fades out as the ambient wind rises — which is also what keeps it from
-    /// compounding into the storm case that already runs too strong.</para>
-    ///
-    /// <para>Pure, and cheap by construction: the fall line comes from
-    /// <see cref="WindTerrain.Downhill"/>, which is eight multiply-adds over heights already in
-    /// memory, and the time of day comes from the heating figure the diurnal profile already
-    /// computes. No new terrain lookups, no new state.</para>
+    /// Slope winds: air running up a mountain by day and draining back down it at night. **Thermal
+    /// rather than mechanical** — the ground makes this one out of nothing, so it blows on a still
+    /// day, and a real wind overruns it, so it fades as the ambient rises. Cheap by construction: the
+    /// fall line and the hour are both already in memory. See environment.md, Slope winds.
     /// </summary>
     public static class WindSlope
     {
