@@ -1172,22 +1172,6 @@ namespace Thermodynamics.Harness
             public int Gen2;
             public double AllocatedMb;
 
-            /// <summary>
-            /// The largest thing that lands in one tick. This is the stall a player sees, and
-            /// the figure the whole exercise is trying to drive down.
-            /// </summary>
-            public double WorstStageMs
-            {
-                get
-                {
-                    double worst = TopologyMs;
-                    if (RoomMappingMs > worst) worst = RoomMappingMs;
-                    if (ExposureMs > worst) worst = ExposureMs;
-                    if (SolverMs > worst) worst = SolverMs;
-                    return worst;
-                }
-            }
-
             public string Describe()
             {
                 return "worst tick " + WorstTickMs.ToString("n1") + " ms over " + Ticks

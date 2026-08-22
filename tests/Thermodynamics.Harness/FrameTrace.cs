@@ -68,11 +68,6 @@ namespace Thermodynamics.Harness
             }
         }
 
-        public double MeanMs
-        {
-            get { return samples.Count == 0 ? 0d : TotalMs / samples.Count; }
-        }
-
         /// <summary>
         /// The value below which <paramref name="fraction"/> of ticks fall, by nearest rank on a
         /// sorted copy. Sorting a few thousand doubles per benchmark is free next to the

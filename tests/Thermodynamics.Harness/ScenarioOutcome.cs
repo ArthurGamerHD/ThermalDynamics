@@ -145,9 +145,6 @@ namespace Thermodynamics.Harness
         public float SubstepsDemanded;
         public int SubstepsGranted;
 
-        /// <summary>Share of the grid's energy the run gained or lost that it should not have.</summary>
-        public float EnergyDrift;
-
         public override string ToString()
         {
             return Ship + " / " + Scenario + ": " + PeakKelvin.ToString("n0") + " K peak";

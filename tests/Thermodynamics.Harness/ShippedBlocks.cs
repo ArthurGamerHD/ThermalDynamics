@@ -148,23 +148,6 @@ namespace Thermodynamics.Harness
             }
         }
 
-        /// <summary>
-        /// The raw type entry for an object-builder type, or the environment default.
-        ///
-        /// A type entry declares only what a block's function decides, so the material fields here
-        /// are placeholders. Use <see cref="DeriveWithFunction"/> to ask what a real block gets.
-        /// </summary>
-        public static BlockThermalProperties ThermalForType(string typeId)
-        {
-            All();
-            BlockThermalProperties properties;
-            lock (Gate)
-            {
-                if (byTypeCache != null && byTypeCache.TryGetValue(typeId, out properties)) return properties;
-                return fallbackCache ?? BlockThermalProperties.Default();
-            }
-        }
-
         public static Definition Get(string subtype)
         {
             Definition definition;

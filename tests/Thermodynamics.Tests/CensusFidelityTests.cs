@@ -86,11 +86,17 @@ namespace Thermodynamics.Tests
         /// light block and nothing else in the tail would reproduce the substep count above and
         /// still be useless for choosing a cap, because every cap would touch one block.
         /// </summary>
+        /// <remarks>
+        /// The shares come from <c>Census.Field</c> rather than being written out again here. They
+        /// were written out again here, and that is the whole failure mode this class exists to
+        /// prevent one level down: a field observation recorded in two places, one of which is
+        /// updated when a dump arrives.
+        /// </remarks>
         [Theory]
-        [InlineData(8, 0.0116f)]
-        [InlineData(4, 0.0601f)]
-        [InlineData(2, 0.2368f)]
-        [InlineData(1, 0.3910f)]
+        [InlineData(8, Census.Field.RaisedAtCap8)]
+        [InlineData(4, Census.Field.RaisedAtCap4)]
+        [InlineData(2, Census.Field.RaisedAtCap2)]
+        [InlineData(1, Census.Field.RaisedAtCap1)]
         public void ACapReachesAboutAsMuchOfTheHullAsItReachesOfAFieldShip(int cap, float fieldShare)
         {
             ThermalSimulation simulation = Hull(4000, cap);
@@ -171,7 +177,8 @@ namespace Thermodynamics.Tests
                 if (nodes[i].Temperature > peak) peak = nodes[i].Temperature;
             }
 
-            Assert.True(peak > 400f, "the census ship barely warmed, peak " + peak.ToString("n0") + " K");
+            Assert.True(peak > 400f, "the census ship barely warmed, peak " + peak.ToString("n0")
+                + " K, against " + Census.Field.HottestObserved + " K a field ship reached");
             Assert.True(peak < Census.Field.HottestRating,
                 "the census ship reached " + peak.ToString("n0")
                 + " K, past the " + Census.Field.HottestRating

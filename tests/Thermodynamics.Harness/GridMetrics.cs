@@ -203,21 +203,5 @@ namespace Thermodynamics.Harness
                 NodeCount, LinkCount, LinksPerNode, BoundingVolume, BoundingFillRatio,
                 ExposedFraction, Diameter, ComponentCount);
         }
-
-        /// <summary>A fixed-width row for tabular output, matching <see cref="Header"/>.</summary>
-        public string ToRow(string name)
-        {
-            return string.Format(
-                "{0,-12} {1,7} {2,8} {3,6:F2} {4,9:P0} {5,9:P0} {6,7} {7,6}",
-                name, NodeCount, LinkCount, LinksPerNode, BoundingFillRatio,
-                ExposedFraction, Diameter, ComponentCount);
-        }
-
-        public static string Header()
-        {
-            return string.Format(
-                "{0,-12} {1,7} {2,8} {3,6} {4,9} {5,9} {6,7} {7,6}",
-                "shape", "nodes", "links", "l/n", "fill", "exposed", "diam", "parts");
-        }
     }
 }
