@@ -398,6 +398,99 @@ function drawHotspots(){
   }).join("");
 }
 
+/* ---------------- the block heat index ----------------
+   Independent of everything else on the page: computed from the definitions, with no simulation,
+   so it stays valid when the corpus is re-run. The bands below join it back to the corpus by the
+   worst index any block a ship carries scores. */
+const HI = {}; (D.heatIndexCols || []).forEach((c,i) => HI[c] = i);
+const heatIndex = D.heatIndex || [];
+const byBlockName = new Map();
+heatIndex.forEach(r => byBlockName.set(r[HI.subtype], r));
+
+/** Worst index aboard, taken from the census where the packer computed it over the ship's whole
+    composition. An earlier version inferred it from the hottest block plus the census top source,
+    which missed every other block aboard and put the 0.25–0.50 band at 90 % losing a block where
+    the honest figure is 47 %. */
+const worstAboard = shipIdx => {
+  const c = censusByShip.get(shipIdx);
+  return c ? (c[CE.worstIndex] || 0) : 0;
+};
+
+let heatSort = "index", heatDir = -1;
+
+function drawHeatIndex(){
+  if (!heatIndex.length){
+    $("#hi-count").textContent = "not built";
+    return;
+  }
+
+  const impossible = heatIndex.filter(r => r[HI.index] > 1);
+  const cannotSelfCool = heatIndex.filter(r => r[HI.selfIndex] > 1);
+  $("#hi-count").textContent = `${heatIndex.length} heat-making blocks · `
+    + `${impossible.length} impossible · ${cannotSelfCool.length} cannot cool themselves`;
+
+  $("#hi-bad tbody").innerHTML = impossible.map(r =>
+    `<tr><td><span class="sev"><i style="background:var(--bad)"></i>${r[HI.subtype]}</span></td>
+      <td class="n"><b>${r[HI.index].toFixed(2)}</b></td>
+      <td class="n">${r[HI.selfIndex].toFixed(1)}</td>
+      <td class="n">${fmt(r[HI.wasteW])}W</td></tr>`).join("")
+    || `<tr><td colspan="4" style="color:var(--ink-3)">None — every block can shed its own heat.</td></tr>`;
+
+  // bands against the corpus
+  const rows = scenarioRows("full-electrical");
+  const edges = [0.25, 0.5, 0.75, 1];
+  const out = [];
+  for (let i = 0; i <= edges.length; i++){
+    const lo = i === 0 ? 0 : edges[i-1];
+    const hi = i === edges.length ? Infinity : edges[i];
+    const sel = rows.filter(r => { const w = worstAboard(r[O.ship]); return w >= lo && w < hi; });
+    if (sel.length < 25) continue;
+    out.push({
+      label: hi === Infinity ? `over ${lo}` : `${lo} – ${hi}`,
+      n: sel.length,
+      lost: pct(sel.filter(isOver).length, sel.length),
+      peak: med(sel.map(r => r[O.peak])),
+    });
+  }
+  $("#hi-bands tbody").innerHTML = out.map(b => {
+    const tone = b.lost > 80 ? "var(--bad)" : b.lost > 30 ? "var(--warn)" : "var(--good)";
+    return `<tr><td>${b.label}</td><td class="n">${b.n.toLocaleString()}</td>
+      <td class="n"><span class="sev"><i style="background:${tone}"></i>${b.lost.toFixed(1)}%</span></td>
+      <td class="n">${fmt(b.peak)} K</td></tr>`;
+  }).join("");
+
+  // the full table
+  const list = [...heatIndex].filter(r =>
+    !state.q || r[HI.subtype].toLowerCase().includes(state.q));
+  list.sort((a,b) => {
+    const x = a[HI[heatSort]], y = b[HI[heatSort]];
+    return (typeof x === "string" ? x.localeCompare(y) : x - y) * heatDir;
+  });
+  const show = list.slice(0, 60);
+  $("#hi-table tbody").innerHTML = show.map(r => {
+    const tone = r[HI.index] > 1 ? "var(--bad)" : r[HI.index] > 0.5 ? "var(--warn)" : "var(--good)";
+    return `<tr>
+      <td><span class="sev"><i style="background:${tone}"></i>${r[HI.subtype]}</span></td>
+      <td class="n" style="text-align:left">${r[HI.typeId]}</td>
+      <td class="n"><b>${r[HI.index].toFixed(2)}</b></td>
+      <td class="n">${r[HI.selfIndex].toFixed(1)}</td>
+      <td class="n">${fmt(r[HI.wasteW])}W</td>
+      <td class="n">${r[HI.criticalK].toFixed(0)} K</td>
+      <td class="n">${r[HI.areaM2].toFixed(0)} m²</td>
+      <td class="n">${r[HI.hullAreaNeeded] > 0 ? fmt(r[HI.hullAreaNeeded]) + " m²" : "—"}</td>
+    </tr>`;
+  }).join("");
+  $("#hi-more").textContent = list.length > 60
+    ? `Showing the 60 worst of ${list.length} heat-making blocks. Search above to find one.` : "";
+}
+
+document.querySelectorAll("#hi-table th").forEach(th => th.addEventListener("click", () => {
+  const k = th.dataset.k;
+  if (heatSort === k) heatDir *= -1;
+  else { heatSort = k; heatDir = (k === "subtype" || k === "typeId") ? 1 : -1; }
+  drawHeatIndex();
+}));
+
 /* ---------------- the panel ---------------- */
 function severity(p){
   if (p[P.scenariosCritical] >= 3) return "hot";
@@ -606,7 +699,7 @@ function render(){
   corrCache = null;
   $("#pv-knobs").textContent = D.knobs.length ? D.knobs.length.toLocaleString() : "pending";
   verdicts(); drawCorrelations(); drawHeat(); drawJumpDrives(); drawHotspots();
-  drawFleet(); drawKnobs();
+  drawHeatIndex(); drawFleet(); drawKnobs();
 }
 
 $("#grid-chips").innerHTML = [["all","every ship"],["large","large grid"],["small","small grid"]]

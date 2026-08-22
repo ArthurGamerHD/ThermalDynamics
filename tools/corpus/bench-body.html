@@ -116,6 +116,45 @@
   </div>
 </section>
 
+<!-- ================= the block index ================= -->
+<section>
+  <div class="shead"><h2>Can a block survive itself?</h2>
+    <p class="eyebrow" id="hi-count">&mdash;</p></div>
+  <p class="snote">One number per block, computed from the definition alone with no simulation: the
+  heat it makes at full rating over the most it could possibly shed while staying at its own
+  critical temperature. The denominator is the best case that exists &mdash; every face radiating to
+  deep space <em>and</em> every face bolted to armour held at ambient, both at once &mdash; so a
+  block above <b>1</b> has no hull, no arrangement and no cooling that saves it. Only the definition
+  can change.</p>
+  <p class="snote">The second column is the same ratio against its own skin alone. Above 1 there,
+  the block cannot cool itself and depends on the hull taking the rest &mdash; which is a weaker
+  position than it sounds, because heat only reaches hull area that is near it.</p>
+  <div class="grid2">
+    <div class="panel">
+      <h3 style="margin-bottom:4px">What the index predicts</h3>
+      <p class="snote" style="margin-bottom:14px; font-size:.83rem">Corpus ships banded by the worst
+      index any block they carry scores. 0.5 is the practical threshold; 1 is the theoretical one.</p>
+      <div class="scroll"><table id="hi-bands"><thead><tr>
+        <th>worst index aboard</th><th>ships</th><th>lose a block</th><th>median peak</th>
+      </tr></thead><tbody></tbody></table></div>
+    </div>
+    <div class="panel">
+      <h3 style="margin-bottom:4px">Impossible blocks</h3>
+      <p class="snote" style="margin-bottom:14px; font-size:.83rem">Every block in the game that
+      cannot shed its own heat under any arrangement whatsoever.</p>
+      <div class="scroll"><table id="hi-bad"><thead><tr>
+        <th>block</th><th>index</th><th>self</th><th>waste</th>
+      </tr></thead><tbody></tbody></table></div>
+    </div>
+  </div>
+  <div class="panel scroll" style="margin-top:16px"><table id="hi-table"><thead><tr>
+    <th data-k="subtype">Block</th><th data-k="typeId">Type</th><th data-k="index">Index</th>
+    <th data-k="selfIndex">Self</th><th data-k="wasteW">Waste</th><th data-k="criticalK">Critical</th>
+    <th data-k="areaM2">Own area</th><th data-k="hullAreaNeeded">Hull needed</th>
+  </tr></thead><tbody></tbody></table></div>
+  <p class="snote" style="margin-top:12px" id="hi-more"></p>
+</section>
+
 <!-- ================= the panel ================= -->
 <section>
   <div class="shead"><h2>The standing panel</h2>
@@ -175,6 +214,38 @@
     heat capacity and waste fraction act on the starved one. A single global multiplier tuned on the
     aggregate will overshoot one population to reach the other.</p>
     <p class="ev">8,132 ships joined on name and workshop id &middot; 4,068 large, 4,064 small</p>
+  </div>
+
+  <div class="finding" data-sev="bad">
+    <h3>The worst block in the game is a definition accident</h3>
+    <p><code>LargePrototechReactor</code> carries the TypeId <code>HydrogenEngine</code> in the
+    game's own definition, so the derivation charges a 400&nbsp;MW plant a combustion engine's
+    <b class="num">0.60</b> waste fraction. That is <b class="num">240&nbsp;MW</b> of heat out of a
+    3&times;2&times;2 block: an index of <b class="num">17.9</b>, twelve times worse than anything
+    else, and a self index of 46. At the reactor family's own 0.01 it would make 4&nbsp;MW and be
+    unremarkable.</p>
+    <p>This is the same shape as the reactor-waste bug already on record: the derivation table keys
+    on the block's <em>type</em>, and the type is decided by the game's component wiring rather than
+    by what the block is called. A definition can be internally consistent and still be attached to
+    the wrong family. It needs a per-subtype override, which is the cheapest fix on this page.</p>
+    <p class="ev">found by the index, not by the corpus &mdash; it is checkable from the definition
+    in milliseconds</p>
+  </div>
+
+  <div class="finding" data-sev="warn">
+    <h3>A jump drive is survivable in principle and never in practice</h3>
+    <p>Its index is <b class="num">0.75</b>: bolted to armour that stays at ambient it survives,
+    because superconductors conduct extremely well. Its <em>self</em> index is
+    <b class="num">7.4</b> &mdash; its own skin sheds an eighth of what it makes &mdash; so it lives
+    or dies on the hull absorbing the rest.</p>
+    <p>The hull never does. Of 2,179 corpus ships carrying one, <b class="num">909</b> have more than
+    the 19,068&nbsp;m&sup2; of 400&nbsp;K armour the index says is needed to absorb its export, and
+    <b class="num">all 909 still lose a block</b>. Total hull area is irrelevant when the heat cannot
+    travel: block-to-block conductance is about 112&nbsp;W/K, so moving megawatts even one block
+    needs thousands of kelvin. Area only counts if it is <em>near</em> the source &mdash; which is
+    the local-density finding arriving from the other direction.</p>
+    <p class="ev">index 0.75, self index 7.4, 19,068 m&sup2; of hull required per drive &middot;
+    909 ships have it &middot; 909 fail anyway</p>
   </div>
 
   <div class="finding" data-sev="warn">

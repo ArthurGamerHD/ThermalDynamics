@@ -25,6 +25,7 @@ import sys
 SURVEY = sys.argv[1] if len(sys.argv) > 1 else "out/corpus-2026-08-21"
 CENSUS = sys.argv[2] if len(sys.argv) > 2 else "out/census-2026-08-21"
 KNOBS = sys.argv[3] if len(sys.argv) > 3 else "out/knobs-2026-08-21"
+BLOCKHEAT = "out/blockheat/blockheat.csv"
 TARGET = sys.argv[4] if len(sys.argv) > 4 else "out/bench.json"
 PANEL = "tools/corpus/panel.csv"
 
@@ -56,9 +57,10 @@ census = rows(os.path.join(CENSUS, "census.csv"))
 composition = rows(os.path.join(CENSUS, "composition.csv"))
 knobs = rows(os.path.join(KNOBS, "knobs.csv"))
 panel = rows(PANEL)
+blockheat = rows(BLOCKHEAT)
 
 print(f"survey {len(survey):,}  census {len(census):,}  composition {len(composition):,}  "
-      f"knobs {len(knobs):,}  panel {len(panel):,}")
+      f"knobs {len(knobs):,}  panel {len(panel):,}  blockheat {len(blockheat):,}")
 
 # ---- shared name tables ---------------------------------------------------------------------
 # **A ship is a name and a workshop id together, never a name alone.** The corpus holds ships whose
@@ -95,6 +97,22 @@ outcomes = [[
     r2(number(r, "hotspot_k")),
 ] for r in survey if key_of(r) in shi]
 
+# **The worst index any block a ship carries scores** — from the full composition, not from the
+# one or two block names the outcome rows happen to mention. Inferring it from the hottest block
+# plus the census top source misclassified badly: it put the 0.25–0.50 band at 90 % losing a block
+# where the honest figure is 47 %, because it silently missed every other block aboard.
+index_by_block = {r["subtype"]: (number(r, "index"), number(r, "self_index")) for r in blockheat}
+worst_index = {}
+worst_self = {}
+for r in composition:
+    k = key_of(r)
+    entry = index_by_block.get(r["subtype"])
+    if not entry or k not in shi:
+        continue
+    i = shi[k]
+    worst_index[i] = max(worst_index.get(i, 0.0), entry[0])
+    worst_self[i] = max(worst_self.get(i, 0.0), entry[1])
+
 # ---- the census -------------------------------------------------------------------------------
 CENSUS_KEEP = [
     ("large", int), ("blocks", int), ("grids", int), ("rooms", int),
@@ -115,7 +133,10 @@ CENSUS_KEEP = [
     ("hottest_conductance_w_per_k", lambda v: r2(v, 2)),
 ]
 census_rows = [[shi[key_of(r)]] + [cast(number(r, name)) for name, cast in CENSUS_KEEP]
-               + [bi.get(r.get("top_source", ""), -1)] for r in census if key_of(r) in shi]
+               + [bi.get(r.get("top_source", ""), -1),
+                  r2(worst_index.get(shi[key_of(r)], 0.0), 4),
+                  r2(worst_self.get(shi[key_of(r)], 0.0), 3)]
+               for r in census if key_of(r) in shi]
 
 # ---- composition, two ways ---------------------------------------------------------------------
 # Corpus-wide: where the heat is made, one row per block type.
@@ -172,6 +193,19 @@ knob_rows = [[
     r2(number(r, "seconds_to_settle"), 1), r2(number(r, "substeps_demanded")),
 ] for r in knobs if key_of(r) in shi]
 
+# ---- the per-block index ----------------------------------------------------------------------
+# Computed from the definitions with no simulation at all, so it is independent of everything else
+# here and is the one table that stays valid when the corpus is re-run.
+heat_index = [[
+    r["subtype"], r["type_id"], int(number(r, "large")), r["source"],
+    int(number(r, "waste_w")), r2(number(r, "area_m2"), 1), r2(number(r, "critical_k"), 1),
+    int(number(r, "radiated_w")), int(number(r, "conducted_w")),
+    r2(number(r, "index"), 4), r2(number(r, "self_index"), 3),
+    int(number(r, "hull_area_needed_m2")),
+] for r in blockheat]
+heat_index.sort(key=lambda row: -row[9])
+
+
 payload = {
     "scenarios": scenarios,
     "ships": ships,
@@ -181,7 +215,8 @@ payload = {
     "outcomeCols": ["ship", "scen", "blocks", "peak", "median", "overN", "overPct",
                     "tcrit", "demand", "granted", "genW", "hot", "hotspot"],
     "outcomes": outcomes,
-    "censusCols": ["ship"] + [name for name, _ in CENSUS_KEEP] + ["topSource"],
+    "censusCols": ["ship"] + [name for name, _ in CENSUS_KEEP]
+                  + ["topSource", "worstIndex", "worstSelfIndex"],
     "census": census_rows,
     "heatByBlock": heat_by_block,
     "heatByBlockCols": ["block", "watts", "count", "ships"],
@@ -197,6 +232,9 @@ payload = {
     "knobCols": ["knob", "level", "shipped", "scen", "ship", "large", "peak", "median",
                  "overN", "tcrit", "settle", "demand"],
     "knobs": knob_rows,
+    "heatIndexCols": ["subtype", "typeId", "large", "source", "wasteW", "areaM2", "criticalK",
+                      "radiatedW", "conductedW", "index", "selfIndex", "hullAreaNeeded"],
+    "heatIndex": heat_index,
 }
 
 os.makedirs(os.path.dirname(TARGET) or ".", exist_ok=True)
