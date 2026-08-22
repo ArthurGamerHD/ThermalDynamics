@@ -1903,9 +1903,9 @@ namespace Thermodynamics
             {
                 if (stat.Count == 0) return "-";
 
-                return Tools.KelvinToCelsius(stat.SafeMin).ToString("n1") + " / "
-                    + Tools.KelvinToCelsius((float)stat.Mean).ToString("n1") + " / "
-                    + Tools.KelvinToCelsius(stat.SafeMax).ToString("n1")
+                return ThermalConstants.KelvinToCelsius(stat.SafeMin).ToString("n1") + " / "
+                    + ThermalConstants.KelvinToCelsius((float)stat.Mean).ToString("n1") + " / "
+                    + ThermalConstants.KelvinToCelsius(stat.SafeMax).ToString("n1")
                     + " (n " + stat.Count + ")";
             }
         }
@@ -1952,7 +1952,7 @@ namespace Thermodynamics
                     Csv(sb, row.AirDensity);
                     Csv(sb, row.AtmosphereFactor);
                     Csv(sb, row.AmbientKelvin);
-                    Csv(sb, Tools.KelvinToCelsius(row.AmbientKelvin));
+                    Csv(sb, ThermalConstants.KelvinToCelsius(row.AmbientKelvin));
                     Csv(sb, row.Underground ? 1 : 0);
                     Csv(sb, row.Depth);
 

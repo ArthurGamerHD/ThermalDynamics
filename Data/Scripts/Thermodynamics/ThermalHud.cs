@@ -188,7 +188,7 @@ namespace Thermodynamics
                 if (neighbour != null) DrawBillboard(thermals, neighbour, matrix);
             }
 
-            ToolText.Append(Tools.KelvinToCelsiusString(bound.Node.Temperature));
+            ToolText.Append(TemperatureScale.ToCelsiusString(bound.Node.Temperature));
         }
 
         /// <summary>
@@ -286,10 +286,10 @@ namespace Thermodynamics
             Pair(text, "vented", Watts(vented), "made", Watts(made),
                 made > vented ? Warning : (GlyphFormat?)null);
 
-            Pair(text, "ambient", Tools.KelvinToCelsiusString(ambient),
-                "peak", peak == float.MinValue ? "-" : Tools.KelvinToCelsiusString(peak),
+            Pair(text, "ambient", TemperatureScale.ToCelsiusString(ambient),
+                "peak", peak == float.MinValue ? "-" : TemperatureScale.ToCelsiusString(peak),
                 peak == float.MinValue ? (GlyphFormat?)null : new GlyphFormat(
-                    ColorExtensions.HSVtoColor(Tools.GetTemperatureColor(peak)),
+                    ColorExtensions.HSVtoColor(TemperatureScale.ToHsv(peak)),
                     TextAlignment.Left, 0.95f));
 
             Pair(text, "critical", critical.ToString(), "clock",
@@ -551,7 +551,7 @@ namespace Thermodynamics
 
             float averageBlockLength = Vector3I.DistanceManhattan(bound.Block.Max + 1, bound.Block.Min) * 0.33f;
 
-            Color color = ColorExtensions.HSVtoColor(Tools.GetTemperatureColor(bound.Node.Temperature));
+            Color color = ColorExtensions.HSVtoColor(TemperatureScale.ToHsv(bound.Node.Temperature));
 
             float distance = 0.01f;
             position = cameraMatrix.Translation + (position - cameraMatrix.Translation) * distance;

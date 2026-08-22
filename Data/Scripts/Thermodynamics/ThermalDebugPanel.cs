@@ -128,7 +128,7 @@ namespace Thermodynamics
                 .Append(thermals.BlockCount).Append(" blocks\n");
 
             EnvironmentState state = thermals.LastState;
-            Text.Append("ambient ").Append(Tools.KelvinToCelsiusString(state.AmbientTemperature))
+            Text.Append("ambient ").Append(TemperatureScale.ToCelsiusString(state.AmbientTemperature))
                 .Append("   steps ").Append(thermals.StepsRun).Append('\n');
             Text.Append('\n');
 
@@ -165,9 +165,9 @@ namespace Thermodynamics
 
             if (count == 0) return;
 
-            Text.Append("coldest  ").Append(Tools.KelvinToCelsiusString(min)).Append('\n');
-            Text.Append("mean     ").Append(Tools.KelvinToCelsiusString(total / count)).Append('\n');
-            Text.Append("hottest  ").Append(Tools.KelvinToCelsiusString(max)).Append('\n');
+            Text.Append("coldest  ").Append(TemperatureScale.ToCelsiusString(min)).Append('\n');
+            Text.Append("mean     ").Append(TemperatureScale.ToCelsiusString(total / count)).Append('\n');
+            Text.Append("hottest  ").Append(TemperatureScale.ToCelsiusString(max)).Append('\n');
 
             ThermalNode hottest = thermals.HottestNode;
             if (hottest != null)
@@ -347,7 +347,7 @@ namespace Thermodynamics
                 Text.Append(room.RoomIndex.ToString().PadRight(6))
                     .Append(room.CellCount.ToString().PadRight(8))
                     .Append((room.HasAir
-                        ? Tools.KelvinToCelsiusString(room.Temperature)
+                        ? TemperatureScale.ToCelsiusString(room.Temperature)
                         : "—").PadRight(11))
                     .Append(((room.Pressure * 100f).ToString("n0") + "%").PadRight(6))
                     .Append(map.IsVented(room.RoomIndex) ? "vented" : "sealed")

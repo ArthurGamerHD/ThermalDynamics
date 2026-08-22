@@ -267,8 +267,8 @@ The rewritten model blends a floor into the directional term
 
 ### C1. `LargestFace` under-reports for most non-cubic blocks — **high** — *fixed in the live mod*
 
-[ToolHelper.cs:40](../Data/Scripts/Thermodynamics/ToolHelper.cs#L40) seeds both running maxima at
-1 and only updates the runner-up when a new maximum arrives:
+`ToolHelper.LargestFace` seeded both running maxima at 1 and only updated the runner-up when a
+new maximum arrived:
 
 ```csharp
 int s1 = 1, s2 = 1;
@@ -286,11 +286,12 @@ twice the rate of the same radiator turned 90°.
 
 *Confirmed by* `GridMathTests.LargestFaceAreaFixesTheOriginalOrderDependentResult`.
 
-**Fixed** — `LargestFace` now divides the volume by the smallest dimension, which is
-order independent by construction and matches
-[`GridMath.LargestFaceArea`](../Data/Scripts/Thermodynamics/Core/Util/GridMath.cs) in the
-rewrite. Of the blocks this mod ships only the two radiators (1×5×2) change: they conduct at
-half their previous rate, in every orientation. Vanilla and third-party non-cubic blocks are
+**Fixed** — [`GridMath.LargestFaceArea`](../Data/Scripts/Thermodynamics/Core/Util/GridMath.cs)
+divides the volume by the smallest dimension, which is order independent by construction, and
+`ToolHelper` has since been deleted; the original is kept verbatim as
+[`LegacyFormulas.LargestFace`](../tests/Thermodynamics.Tests/LegacyFormulas.cs) so the test can
+still demonstrate the difference. Of the blocks this mod ships only the two radiators (1×5×2)
+change: they conduct at half their previous rate, in every orientation. Vanilla and third-party non-cubic blocks are
 affected wherever their largest dimension precedes their second largest.
 
 ### C2. `RemoveNeighbor` can throw — **high** — *fixed in the live mod*

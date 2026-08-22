@@ -3,6 +3,7 @@ using Sandbox.Common.ObjectBuilders;
 using Sandbox.Game.EntityComponents;
 using Sandbox.ModAPI;
 using SENetworkAPI;
+using Thermodynamics.Core;
 using VRage.Game;
 using VRage.Game.Components;
 using VRage.Game.ModAPI;
@@ -54,7 +55,7 @@ namespace Thermodynamics
         /// <summary>Watts the pump wants. Set by <see cref="ThermalGrid"/> after each step.</summary>
         public void SetDemandWatts(float watts)
         {
-            float megawatts = watts > 0f ? watts * Tools.WattToMW : 0f;
+            float megawatts = watts > 0f ? watts * ThermalConstants.WattsToMegawatts : 0f;
 
             // Update the resource system only when the figure changed. A pump holding steady is the
             // common case, and re-registering its draw every step is wasted work.
@@ -170,7 +171,7 @@ namespace Thermodynamics
         /// </summary>
         private float MaxDrawMegawatts()
         {
-            return ThermalHeatPumpShapes.MaxPowerWatts(BlockSubtype()) * Tools.WattToMW;
+            return ThermalHeatPumpShapes.MaxPowerWatts(BlockSubtype()) * ThermalConstants.WattsToMegawatts;
         }
 
         private string BlockSubtype()

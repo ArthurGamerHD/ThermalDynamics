@@ -20,8 +20,15 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// The dot product between the direction to the body and the direction to the sun below which
-        /// the body eclipses the sun. A fitted curve, chosen for the terminator width it produces.
+        /// The dot product between the direction to the body and the direction to the sun below
+        /// which the body eclipses the sun — the observer's horizon, expressed as a dot product.
+        ///
+        /// A fitted curve rather than a derivation, chosen for the terminator width it produces.
+        /// Far from a body its apparent size is near zero and the threshold sits at -1, so only a
+        /// sun directly behind the body is blocked. Close to the surface the apparent size
+        /// approaches pi and the threshold rises toward <c>-1 + 0.85*pi^3</c>, so most of the sky
+        /// is below ground. Nothing about the cube or the 0.85 is physical; they are what put
+        /// sunset in the right place at the radii Space Engineers uses.
         /// </summary>
         public static double OcclusionThreshold(double visualSize)
         {

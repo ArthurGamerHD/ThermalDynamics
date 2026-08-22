@@ -6,6 +6,7 @@ using RichHudFramework.Client;
 using RichHudFramework.UI;
 using RichHudFramework.UI.Client;
 using Sandbox.ModAPI;
+using Thermodynamics.Core;
 using VRage.Utils;
 
 namespace Thermodynamics
@@ -821,13 +822,13 @@ namespace Thermodynamics
                         + (100d * rate).ToString("n0") + "% rate");
 
                 Fill("Pace",
-                    "hottest " + Tools.KelvinToCelsiusString(hottest),
+                    "hottest " + TemperatureScale.ToCelsiusString(hottest),
                     critical + " over critical",
                     Watts(vented) + " out, " + Watts(made) + " in");
 
                 Fill("Overview",
                     grids + " grids, " + blocks.ToString("n0") + " blocks",
-                    "hottest " + Tools.KelvinToCelsiusString(hottest),
+                    "hottest " + TemperatureScale.ToCelsiusString(hottest),
                     Watts(vented) + " out, " + Watts(made) + " in");
             }
 

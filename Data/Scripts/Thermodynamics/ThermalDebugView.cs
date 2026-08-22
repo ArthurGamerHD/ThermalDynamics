@@ -381,7 +381,7 @@ namespace Thermodynamics
                     // W/m2 rather than watts: irradiance is the per-face quantity. The panel
                     // reports total watts.
                     Color colour = ColorExtensions.HSVtoColor(
-                        Tools.GetTemperatureColor(irradiance, 1400f, 1f, 1000f));
+                        TemperatureScale.ToHsv(irradiance, 1400f, 1f, 1000f));
                     colour.A = (byte)(SurfaceAlpha * 255f);
 
                     Vector3 localLeft, localUp;
@@ -637,7 +637,7 @@ namespace Thermodynamics
 
             float span = max - min;
             Color colour = ColorExtensions.HSVtoColor(
-                Tools.GetTemperatureColor(kelvin - min, span, span * 0.05f, span * 0.9f));
+                TemperatureScale.ToHsv(kelvin - min, span, span * 0.05f, span * 0.9f));
 
             colour.A = (byte)(RoomFillAlpha * 255f);
             return colour;
@@ -670,16 +670,16 @@ namespace Thermodynamics
             switch (Current)
             {
                 case Mode.SolarWatts:
-                    hsv = Tools.GetTemperatureColor(Math.Abs(node.LastSolarWatts), 20000, 100, 5000);
+                    hsv = TemperatureScale.ToHsv(Math.Abs(node.LastSolarWatts), 20000, 100, 5000);
                     break;
                 case Mode.ExposedFaces:
-                    hsv = Tools.GetTemperatureColor(node.TotalExposedFaces, 6, 0, 6);
+                    hsv = TemperatureScale.ToHsv(node.TotalExposedFaces, 6, 0, 6);
                     break;
                 case Mode.FrictionWatts:
-                    hsv = Tools.GetTemperatureColor(Math.Abs(node.LastFrictionWatts), 20000, 100, 5000);
+                    hsv = TemperatureScale.ToHsv(Math.Abs(node.LastFrictionWatts), 20000, 100, 5000);
                     break;
                 default:
-                    hsv = Tools.GetTemperatureColor(node.Temperature);
+                    hsv = TemperatureScale.ToHsv(node.Temperature);
                     break;
             }
 

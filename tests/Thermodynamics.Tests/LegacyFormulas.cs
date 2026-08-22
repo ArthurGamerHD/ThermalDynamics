@@ -28,6 +28,37 @@ namespace Thermodynamics.Tests
             return s1 * s2;
         }
 
+        /// <summary>
+        /// <c>Tools.GetTemperatureColor</c> as written, before the ramp moved into
+        /// <see cref="Thermodynamics.Core.TemperatureScale"/>. Reproduced verbatim, including the
+        /// unguarded divisions: the caller supplies the low, high and max of the ramp, and nothing
+        /// stopped two of them being equal.
+        /// </summary>
+        public static Vector3 TemperatureColor(float temp, float max, float low, float high)
+        {
+            float t = Math.Max(0, Math.Min(max, temp));
+
+            float h = 240f / 360f;
+            float s = 1;
+            float v = 0.5f;
+
+            if (t < low)
+            {
+                v = (1.5f * (t / low)) - 1;
+            }
+            else if (t < high)
+            {
+                h = (240f - ((t - low) / (high - low) * 240f)) / 360f;
+            }
+            else
+            {
+                h = 0;
+                s = 1 - (2 * ((t - high) / (max - high)));
+            }
+
+            return new Vector3(h, s, v);
+        }
+
         /// <summary>A cell's per-neighbour conduction coefficient, as the original computed it.</summary>
         public sealed class Cell
         {

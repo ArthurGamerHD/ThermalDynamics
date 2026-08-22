@@ -119,6 +119,60 @@ namespace Thermodynamics.Tests
             Assert.False(float.IsNaN(colour.Y) || float.IsInfinity(colour.Y));
             Assert.False(float.IsNaN(colour.Z) || float.IsInfinity(colour.Z));
         }
+
+        /// <summary>
+        /// The ramp the overlays used before it moved into the core produced the same colour
+        /// wherever it produced a colour at all.
+        ///
+        /// <para>
+        /// Two implementations of one ramp lived side by side: <c>Tools.GetTemperatureColor</c>
+        /// in the game layer and <see cref="TemperatureScale.ToHsv"/> in the core, identical line
+        /// for line except that the core one clamps its anchors first. Only the game-layer copy
+        /// had callers, and only the core one had tests. This walks the four ramps the overlays
+        /// actually ask for and asserts the two agree on every sample.
+        /// </para>
+        /// </summary>
+        [Theory]
+        [InlineData(1000f, 267f, 500f)]      // the default ramp: a block's temperature
+        [InlineData(1400f, 1f, 1000f)]       // solar irradiance on a face
+        [InlineData(20000f, 100f, 5000f)]    // solar and friction watts
+        [InlineData(100f, 5f, 90f)]          // room air, whose span is fitted per frame
+        public void TheCoreRampReproducesTheOneTheOverlaysUsedToCarry(float max, float low, float high)
+        {
+            for (float t = -50f; t <= max * 1.2f; t += max / 200f)
+            {
+                Vector3 legacy = LegacyFormulas.TemperatureColor(t, max, low, high);
+                Vector3 current = TemperatureScale.ToHsv(t, max, low, high);
+
+                Assert.Equal(legacy.X, current.X, 5);
+                Assert.Equal(legacy.Y, current.Y, 5);
+                Assert.Equal(legacy.Z, current.Z, 5);
+            }
+        }
+
+        /// <summary>
+        /// The one place the two ramps disagree, and the reason the move was worth making.
+        ///
+        /// <para>
+        /// The exposed-faces overlay asks for <c>(value, max: 6, low: 0, high: 6)</c>, so a block
+        /// with all six faces exposed lands on <c>t == high == max</c> and the legacy ramp
+        /// evaluates <c>1 - 2 * (0 / 0)</c>. Saturation came back NaN, and the blocks the overlay
+        /// exists to find — the most exposed ones on the hull — were the ones it could not colour.
+        /// The core ramp separates a degenerate <c>max</c> from <c>high</c> before dividing, and
+        /// returns full saturation.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void AFullyExposedBlockUsedToColourToNaN()
+        {
+            Vector3 legacy = LegacyFormulas.TemperatureColor(6f, 6f, 0f, 6f);
+            Assert.True(float.IsNaN(legacy.Y));
+
+            Vector3 current = TemperatureScale.ToHsv(6f, 6f, 0f, 6f);
+            Assert.False(float.IsNaN(current.X) || float.IsNaN(current.Y) || float.IsNaN(current.Z));
+            Assert.Equal(0f, current.X, 5);
+            Assert.Equal(1f, current.Y, 5);
+        }
     }
 
     public class OcclusionMathTests

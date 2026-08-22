@@ -757,15 +757,12 @@ namespace Thermodynamics
                 {
                     if (settings.SolarOcclusionPlanets)
                     {
-                        Vector3D toGrid = position - planet.PositionComp.WorldMatrixRef.Translation;
-                        double distance = toGrid.Length();
-                        if (distance <= 0) continue;
+                        occluded = OcclusionMath.IsOccludedBySphere(
+                            position,
+                            planet.PositionComp.WorldMatrixRef.Translation,
+                            planet.AverageRadius,
+                            sample.SunDirection);
 
-                        double dot = Vector3D.Dot(toGrid / distance, sample.SunDirection);
-                        double horizon = Tools.GetLargestOcclusionDotProduct(
-                            Tools.GetVisualSize(distance, planet.AverageRadius));
-
-                        occluded = dot < horizon;
                         if (occluded) continue;
                     }
 

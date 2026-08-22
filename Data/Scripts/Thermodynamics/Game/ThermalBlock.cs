@@ -244,7 +244,7 @@ namespace Thermodynamics
             if (Carries(source.ResourceTypes))
             {
                 Instance.PowerProducedWatts =
-                    source.CurrentOutputByType(MyResourceDistributorComponent.ElectricityId) * Tools.MWtoWatt;
+                    source.CurrentOutputByType(MyResourceDistributorComponent.ElectricityId) * ThermalConstants.MegawattsToWatts;
             }
 
             RefreshHeat();
@@ -261,7 +261,7 @@ namespace Thermodynamics
             if (Carries(sink.AcceptedResources))
             {
                 Instance.PowerConsumedWatts =
-                    sink.CurrentInputByType(MyResourceDistributorComponent.ElectricityId) * Tools.MWtoWatt;
+                    sink.CurrentInputByType(MyResourceDistributorComponent.ElectricityId) * ThermalConstants.MegawattsToWatts;
             }
 
             RefreshHeat();
@@ -316,7 +316,7 @@ namespace Thermodynamics
             {
                 if (resource != MyResourceDistributorComponent.ElectricityId) return;
 
-                Instance.PowerProducedWatts = component.CurrentOutputByType(resource) * Tools.MWtoWatt;
+                Instance.PowerProducedWatts = component.CurrentOutputByType(resource) * ThermalConstants.MegawattsToWatts;
                 RefreshHeat();
             }
             catch (Exception e)
@@ -331,7 +331,7 @@ namespace Thermodynamics
             {
                 if (resource != MyResourceDistributorComponent.ElectricityId) return;
 
-                Instance.PowerConsumedWatts = component.CurrentInputByType(resource) * Tools.MWtoWatt;
+                Instance.PowerConsumedWatts = component.CurrentInputByType(resource) * ThermalConstants.MegawattsToWatts;
                 RefreshHeat();
             }
             catch (Exception e)

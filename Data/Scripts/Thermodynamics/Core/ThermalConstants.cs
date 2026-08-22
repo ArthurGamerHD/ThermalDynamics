@@ -12,6 +12,7 @@ namespace Thermodynamics.Core
         public const float StefanBoltzmann = 0.00000005670374419f;
 
         public const float MegawattsToWatts = 1000000f;
+        public const float WattsToMegawatts = 1f / MegawattsToWatts;
         public const float KilowattsToWatts = 1000f;
 
         /// <summary>Offset between Kelvin and Celsius.</summary>
