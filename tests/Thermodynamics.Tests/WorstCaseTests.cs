@@ -111,9 +111,16 @@ namespace Thermodynamics.Tests
         /// A hull driven through its heat producers leaves most of itself under its rating, so the
         /// check that decides whether a block is burning fails on nearly every node — the ordinary
         /// case. `scorched` puts every node over every rating in the catalogue and holds it there,
-        /// so the expensive branch is taken on every node of every substep. One event per node per
-        /// substep is the bound, and this asserts the scenario reaches it rather than merely
-        /// aiming at it.
+        /// so the expensive branch is taken on every node of every substep, which is the bound.
+        ///
+        /// <para>
+        /// This used to assert that by counting events, against <c>nodes × substeps</c>. The
+        /// solver now accumulates a block's damage across the substeps and files one event a step,
+        /// so the count is a count of blocks and no longer scales with the substeps taken — see
+        /// <c>OverheatEventTests</c>. What is asserted instead is the thing the scenario is for:
+        /// <em>every</em> node is burning, on a step that takes more than one substep, and it
+        /// stays that way.
+        /// </para>
         /// </summary>
         [Fact]
         public void AScorchedHullBurnsOnEveryNodeOfEverySubstep()
@@ -124,14 +131,17 @@ namespace Thermodynamics.Tests
 
             built.Simulation.StepExact(1, Worlds.Shadow());
 
-            int expected = built.Nodes * built.Simulation.Solver.LastSubsteps;
-            Assert.Equal(expected, built.Simulation.Solver.Overheats.Count);
+            Assert.True(built.Simulation.Solver.LastSubsteps > 1,
+                "the scorched hull took one substep, so the damage check is not being run"
+                + " repeatedly and this is not the worst case it is meant to be");
+
+            Assert.Equal(built.Nodes, built.Simulation.Solver.Overheats.Count);
 
             // And it stays there. Held at temperature rather than driven to it, or the hull
             // radiates itself cold in one substep and the rest of the run measures the ordinary
             // case with extra steps.
             for (int i = 0; i < 20; i++) built.Simulation.StepExact(1, Worlds.Shadow());
-            Assert.Equal(expected, built.Simulation.Solver.Overheats.Count);
+            Assert.Equal(built.Nodes, built.Simulation.Solver.Overheats.Count);
         }
 
         /// <summary>

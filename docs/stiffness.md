@@ -319,38 +319,42 @@ the same quarter-second step as the second table above, and not the shipped defa
 > is the benchmark saying it is deterministic: the hull, the sources and the seeded state are all
 > derived rather than sampled, so two runs differ only by the clock.
 
-At the shipped `Frequency 8`, over **125** simulated seconds rather than 500 — see the note below
-for why not 500:
+At the shipped `Frequency 8`, over the same 500 simulated seconds:
 
 | cap | speed | blocks raised of 43,232 | peak K | peak error | worst error |
 | ---: | ---: | ---: | ---: | ---: | ---: |
-| off | 1.0x | 0 | 1,146.7 | — | — |
-| 16 | 1.0x | 0 | 1,146.7 | 0.000 K | 0 |
-| 8 | 1.3x | 172 | 1,146.7 | +0.010 K | 0.046 K |
-| **6** | **1.6x** | 459 | 1,146.7 | −0.019 K | 0.141 K |
-| 4 | 2.2x | 461 | 1,146.6 | −0.092 K | 0.480 K |
-| 3 | 2.5x | 1,450 | 1,146.6 | −0.172 K | 0.824 K |
-| 2 | 3.2x | 3,648 | 1,145.5 | −1.280 K | 2.084 K |
-| 1 | 4.0x | 9,283 | 1,137.1 | −9.675 K | 10.870 K |
+| off | 1.0x | 0 | 2,345.5 | — | — |
+| 32 | 1.0x | 0 | 2,345.5 | 0.000 K | 0 |
+| 16 | 1.0x | 0 | 2,345.5 | 0.000 K | 0 |
+| 8 | 1.3x | 172 | 2,345.6 | +0.124 K | 0.138 K |
+| 6 | 1.6x | 459 | 2,345.6 | +0.137 K | 0.167 K |
+| **4** | **2.0x** | 461 | 2,345.6 | +0.085 K | 0.167 K |
+| 3 | 2.5x | 1,450 | 2,345.5 | +0.006 K | 0.261 K |
+| 2 | 3.1x | 3,648 | 2,344.6 | −0.909 K | 1.200 K |
+| 1 | 4.1x | 9,283 | 2,337.2 | −8.305 K | 9.068 K |
 
-The shape is the same and the peak is unmoved down to a cap of 6, which is the conclusion that
-matters. **The two driven tables are not comparable row for row**: this one is a quarter of the
-simulated time, so its hull is a quarter of the way up a climb that ends far higher, and the late
-transient the 500-second run exists to show is precisely what a 125-second run cannot see.
+**Both tables reach 2,345.5 K uncapped**, which is the two runs agreeing on where the hull settles
+and therefore agreeing that they are the same experiment at two step lengths. The peak errors then
+line up one cap apart exactly as the diffusing sweep does: Frequency 8 at cap 2 reads −0.909 K
+against Frequency 4 at cap 4's −0.93 K, and cap 1 reads −8.305 K against cap 2's −8.33 K.
 
-> **Why not 500 seconds.** `bench floor --driven --ticks 4000` was **OOM-killed at 14 GB**, twice,
-> on the second cap of nine. It is not a large-hull problem: `ThermalSimulation.RunSteps` clears
-> the overheat list once for the whole batch and then appends every step's events to it, so a
-> driven run accumulates `steps × substeps × overheating blocks` records — about 440 million on
-> this hull at 4,000 steps. The shipped mod does not do this; its frame-paced path clears the list
-> at the top of each step, and only the harness's `StepExact` batches. Filed as D19. Until it is
-> fixed the long driven table cannot be reproduced at all, which is worth knowing before anyone
-> quotes the 500-second one.
+**So the safe cap at the shipped rate is lower than this page used to say.** The Frequency 4 table
+puts the first visible movement at cap 4; at Frequency 8 the peak is unmoved down to **cap 3**, and
+cap 4 costs +0.085 K for twice the throughput. The advice "above about 6" was correct for the rate
+it was measured at and is conservative by a factor of two for the rate that ships.
 
-**Down to a cap of 6 the peak is unmoved.** Below that it is not, and the sign says why: the
-capped hull is *cooler*, which is what a hull that has not finished climbing looks like. The cap
-adds heat capacity, and a hull with more capacity takes longer to reach the same place — at cap 1
-it is 35 K short after five hundred simulated seconds.
+> **This table could not be produced at all until the overheat list was fixed.** `bench floor
+> --driven --ticks 4000` was OOM-killed at 14 GB, twice: a burning block filed an overheat event
+> every *substep*, and the harness's batched path keeps every step's events for a whole run, so
+> this sweep held on the order of 440 million records. The solver now accumulates a block's damage
+> and files one event a step. Same run, same 12 GB cap, completes. See
+> [benchmarks.md](benchmarks.md#a-burning-block-filed-one-overheat-event-per-substep).
+
+**Down to a cap of 6 at `Frequency 4`, and a cap of 3 at `Frequency 8`, the peak is unmoved.**
+Below that it is not, and the sign says why: the capped hull is *cooler*, which is what a hull that
+has not finished climbing looks like. The cap adds heat capacity, and a hull with more capacity
+takes longer to reach the same place — at cap 1 it is 35 K short after five hundred simulated
+seconds at the quarter-second step, and 8 K short at the eighth-second one.
 
 That matters more than the number suggests, because **overheat damage is a threshold crossing**.
 A hull that will eventually burn but takes twice as long to get there is a different game from one

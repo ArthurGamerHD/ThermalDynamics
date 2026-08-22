@@ -135,6 +135,14 @@ The solver steps a whole grid at once, so there is no per-block callback to pay 
 per grid:
 
 * solver-level figures — substeps, whether the step clamped, node count, critical blocks;
+
+> **`critical blocks` was a count of events, not of blocks, until 2026-08-21.** The damage
+> check runs once per substep, and a block over its rating filed an event each time, so the
+> column read the block count multiplied by the substep count — twenty-six times on a
+> stiff hull, and a different multiple on every grid, since substeps move with stiffness
+> and settings. Any dump taken before that date over-reports it, and not by a constant.
+> The solver now files one event per block per step; see
+> [benchmarks.md](benchmarks.md#a-burning-block-filed-one-overheat-event-per-substep).
 * a **rotating slice** of nodes, `1/stride` of the grid, feeding the per-definition statistics
   and the anomaly detector. Every node is seen once per `stride` steps, so full per-block
   coverage costs one pass spread over four steps rather than a pass every step;

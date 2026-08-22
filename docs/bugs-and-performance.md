@@ -560,8 +560,9 @@ and multirate stepping so cold structure steps at a fraction of the rate its hot
 2. ~~**C1, M3, M4**~~ — **done**. `LargestFace` is order independent, friction is applied to the
    block, and damage is scaled by the update length. All three shift balance — radiators conduct
    at half their old rate, fast atmospheric flight now actually heats the leading face, and
-   overheating destroys blocks 4× slower at the default `Frequency = 4` — so the retune of
-   `Cubes.xml` these imply is still outstanding.
+   overheating destroys blocks 4× slower at `Frequency = 4` — so the retune of
+   `Cubes.xml` these imply is still outstanding. (`Frequency` was the default when this was
+   written and is now 8, which halves that figure again; the rate is part of the claim.)
 3. ~~**P1**, **M1**, **M2**, **C4**–**C7**, **C10**, **M5**~~ — **done** with the rewrite. Room
    mapping coalesces, conduction is one symmetric conductance per joint, the v2 save format keeps
    the fraction and reads v1, loops are keyed by signature, and `Settings.Load` is called from
@@ -573,8 +574,8 @@ and multirate stepping so cold structure steps at a fraction of the rate its hot
    than the path around it.
 6. **The retune of `Cubes.xml`** that C1, M3 and M4 imply — radiators conduct at half their old
    rate, fast flight now heats the leading face, and overheating destroys blocks 4× slower at
-   the default `Frequency = 4`. Still outstanding, and it is a balance decision rather than a
-   defect.
+   `Frequency = 4` — which is no longer the default, and the shipped 8 halves it again. Still
+   outstanding, and it is a balance decision rather than a defect.
 7. ~~**The cost of scale**~~ — **mostly done**, and measured properly rather than extrapolated.
    See [load-and-hitching.md](load-and-hitching.md). The one-shot rebuilds got what this asked
    for and more: placing and removing a block are now incremental rather than budgeted, the room

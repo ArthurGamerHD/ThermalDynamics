@@ -327,6 +327,31 @@ namespace Thermodynamics.Core
 
         private readonly List<OverheatEvent> overheats = new List<OverheatEvent>();
 
+        /// <summary>
+        /// Heat damage owed by each node this step, and the hottest it got while owing it.
+        ///
+        /// <para>
+        /// The damage check runs in the apply pass, which runs once per substep, so a block over
+        /// its rating used to file an event every substep: 29,224 events for 1,124 burning blocks
+        /// on a hull taking twenty-six of them. The total was right, because every consumer sums
+        /// it — but <c>ThermalGridSimulation</c> read the length as a count of blocks, and called
+        /// <c>DoDamage</c> and the telemetry hook once per event, so a burning grid made
+        /// twenty-six engine calls a step for each block instead of one.
+        /// </para>
+        ///
+        /// <para>
+        /// Damage is accumulated here instead and filed once when the step ends. The sum is the
+        /// same, the count is a count of blocks, and the harness's batched path — which keeps
+        /// every step's events for a whole run — holds a twenty-sixth as many.
+        /// </para>
+        /// </summary>
+        private float[] nodeOverheatDamage = new float[0];
+        private float[] nodeOverheatPeak = new float[0];
+
+        /// <summary>Nodes with damage owed this step, so clearing costs the burning set rather
+        /// than the grid.</summary>
+        private readonly List<int> overheated = new List<int>();
+
         private readonly ThermalThresholds thresholds = new ThermalThresholds();
         private readonly List<ThresholdCrossing> crossings = new List<ThresholdCrossing>();
         private readonly int[] exposureScratch = new int[Face.Count];
@@ -2278,6 +2303,36 @@ namespace Thermodynamics.Core
                 + (nodeFaceWeights[b + 5] * weights[5]);
         }
 
+        /// <summary>
+        /// Files one event per block that owes damage, at the end of a step.
+        ///
+        /// The temperature carried is the hottest the block reached while over its rating rather
+        /// than whichever substep ran last — a block that peaks and then cools within one step
+        /// would otherwise report the cooler figure, which is the one a player would not
+        /// recognise.
+        /// </summary>
+        private void PublishOverheats()
+        {
+            for (int i = 0; i < overheated.Count; i++)
+            {
+                int index = overheated[i];
+                overheats.Add(new OverheatEvent(
+                    nodes[index].Block, nodeOverheatPeak[index], nodeOverheatDamage[index]));
+            }
+        }
+
+        /// <summary>Drops the damage owed, without filing it. Used when a step is discarded.</summary>
+        private void ClearOverheatAccumulator()
+        {
+            for (int i = 0; i < overheated.Count; i++)
+            {
+                nodeOverheatDamage[overheated[i]] = 0f;
+                nodeOverheatPeak[overheated[i]] = 0f;
+            }
+
+            overheated.Clear();
+        }
+
         private void ClearEnvironmentDiagnostics()
         {
             for (int i = 0; i < nodes.Count; i++)
@@ -2593,13 +2648,15 @@ namespace Thermodynamics.Core
                 float critical = nodeCritical[i];
                 if (critical <= 0f || updated <= critical) continue;
 
-                ThermalNode node = nodes[i];
-                float damage = (updated - critical) * node.Thermal.OverheatDamagePerKelvin;
+                float damage = (updated - critical) * nodes[i].Thermal.OverheatDamagePerKelvin;
                 if (perSecond) damage *= h;
-                if (damage > 0f)
-                {
-                    overheats.Add(new OverheatEvent(node.Block, updated, damage));
-                }
+                if (damage <= 0f) continue;
+
+                // Accumulated rather than filed: this runs every substep, and the event is about
+                // the step. See nodeOverheatDamage.
+                if (nodeOverheatDamage[i] == 0f) overheated.Add(i);
+                nodeOverheatDamage[i] += damage;
+                if (updated > nodeOverheatPeak[i]) nodeOverheatPeak[i] = updated;
             }
         }
 
@@ -3327,6 +3384,8 @@ namespace Thermodynamics.Core
                 nodeFrictionRow = new float[size];
                 nodeConvectionRow = new float[size];
                 nodeSourceRow = new float[size];
+                nodeOverheatDamage = new float[size];
+                nodeOverheatPeak = new float[size];
                 environmentRowsValid = false;
                 nodeFaceWeights = new float[size * Face.Count];
                 nodeSunLit = new float[size * Face.Count];

@@ -344,6 +344,38 @@ against 0.9682 ms, inside the noise floor.
 > ran in the cheap configuration and printed it under a name that said otherwise. The flag now
 > reaches the solver, and this section measures both configurations whether or not it is passed.
 
+### A burning block filed one overheat event per substep
+
+The damage check runs in the apply pass, and the apply pass runs once per substep. So a block over
+its rating filed an event every substep: on a 2,223-node scorched hull taking twelve substeps,
+26,676 events for 2,223 burning blocks, and on a census hull at twenty-six substeps **29,224
+events for 1,124 blocks**.
+
+The total damage was right, because every consumer sums it. Three things that read the list rather
+than summing it were not:
+
+* **`CriticalBlocks` is `Overheats.Count`**, and it is reported as a count of blocks — in the debug
+  panel, the cockpit HUD, the settings menu, the mod API and the telemetry report's `critical
+  blocks` column. All of them were showing the block count multiplied by the substep count, which
+  moves with grid stiffness and settings, so the figure was not even wrong by a constant.
+* **`ApplyOverheatDamage` resolved the block and called `DoDamage` once per event.** A burning grid
+  made twenty-six engine calls and twenty-six dictionary lookups a step for each block, where one
+  would do — and filed twenty-six telemetry records.
+* **The harness's batched step path keeps every step's events for a whole run**, so the substep
+  factor multiplied a list already proportional to run length. `bench floor --driven --ticks 4000`
+  on a 43,232-block hull was **OOM-killed at 14 GB**, twice, holding on the order of 440 million
+  records.
+
+Damage is now accumulated per node and filed once when the step ends. The sum a block takes is
+unchanged — `OverheatEventTests` checks the batched total against the same run stepped one at a
+time — and the count is a count of blocks.
+
+Two smaller things fell out of it. The event carries **the hottest temperature the block reached
+while over its rating** rather than whichever substep filed last, so a block that peaks and cools
+inside one step reports the figure a player would recognise. And an **abandoned step now owes no
+damage**: the substeps that ran had already filed their events, so a step whose temperatures were
+discarded could still burn a block for a temperature nothing ever published.
+
 ### The row fill read every face weight twice
 
 The first substep of a step fills the per-node environment rows every later substep reads. Two of

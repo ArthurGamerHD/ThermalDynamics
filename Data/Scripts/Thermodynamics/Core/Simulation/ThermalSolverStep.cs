@@ -270,6 +270,7 @@ namespace Thermodynamics.Core
             InvalidateEnvironmentRows();
 
             overheats.Clear();
+            ClearOverheatAccumulator();
             crossings.Clear();
 
             int substeps = ClampSubsteps(required);
@@ -500,6 +501,9 @@ namespace Thermodynamics.Core
                 loops[l].EndStep(stepDeltaSeconds);
             }
 
+            // Every substep has run, so what each burning block owes for this step is complete.
+            PublishOverheats();
+
             stage = StepStage.Publish;
             stageCursor = 0;
             publishHottest = -1;
@@ -602,6 +606,12 @@ namespace Thermodynamics.Core
         public void AbandonStep()
         {
             if (stage == StepStage.Idle) return;
+
+            // An abandoned step publishes no temperatures, so it owes no damage either. The
+            // substeps that did run had filed their events directly before damage was
+            // accumulated, which meant a discarded step could still burn a block for a
+            // temperature nothing ever saw.
+            ClearOverheatAccumulator();
 
             for (int p = 0; p < heatPumps.Count; p++)
             {
