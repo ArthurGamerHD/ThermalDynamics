@@ -612,6 +612,73 @@ all vary by an order of magnitude with hull shape
 game blocks at all, so the mass sweep, the power and thrust events and the room pressure API are
 absent from every synthetic figure.
 
+## The same question asked of eight thousand real ships
+
+Everything above rests on two ships in two live sessions. A figure a running game reported is the
+one kind of evidence that cannot be re-examined — the ships are gone, the world is gone, and what
+else was true of them is unrecorded — so the same measurement was taken in the lab over the
+workshop corpus, where every input is visible and the run repeats in four minutes:
+
+```bash
+dotnet run --project Thermodynamics.Sim -- stiffness            # 8,102 ships, ~4 min
+dotnet run --project Thermodynamics.Sim -- stiffness --csv out/ # one row per ship
+```
+
+Nothing is stepped: a block's stiffness is a property of the grid it is bolted into and the world
+it is asked about, so it can be read straight off a built ship. Everything below is **substeps
+demanded of a quarter-second step**, which is `Frequency 4` and the basis the field figures were
+taken on; the shipped `Frequency 8` asks half of each. The air is still, at sea level, at noon —
+the field sessions flew in wind, and wind raises the convection these numbers are mostly made of,
+so these are a lower bound.
+
+| | min | p10 | p50 | p90 | p95 | max |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| vacuum | 0.01 | 3.71 | 4.79 | 6.34 | 6.54 | 8.64 |
+| **air** | 0.16 | 4.26 | **6.61** | 33.09 | 33.30 | 34.45 |
+
+**The two field ships hold up.** 21.35 lands at the 63rd percentile of the corpus in air and 31.25
+at the 85th. They were ordinary ships, which is what makes them usable evidence — had either
+landed in the last percent, everything built on them would have been built on an outlier.
+
+### The population has two modes and almost nothing between them
+
+A median of 6.61 with a ninetieth percentile of 33.09 is not a long tail. It is two populations:
+
+| what sets the ship's substep count | ships | share | median in air |
+| --- | ---: | ---: | ---: |
+| a light or a camera | 3,645 | **45.0 %** | **28.51** |
+| armour or structure | 4,457 | 55.0 % | **4.81** |
+
+Between 8 and 28 substeps there are about six per cent of ships. **So there is no such thing as a
+typical ship's stiffness**, and any statement of the form "a real ship asks for about *n*"
+describes at most half the workshop. What decides which half is whether the builder put a light on
+the outside — `SmallLight` alone sets the count on 34.8 % of all hulls.
+
+That is the same finding [C9 in the backlog](backlog.md) reached from one save, now measured over
+a population, and it is why the per-block cap is the lever this page argues for: the two modes are
+separated by a handful of block types, not by ship design.
+
+### The census hull is stiff for the wrong reason
+
+The hull every benchmark here is built on lands at 23.39 in air — the 65th percentile, and *in the
+trough between the two modes*, a value about six per cent of real ships have. That alone would be
+a fair choice for a benchmark. What is not fair is how it gets there:
+
+| | air ÷ vacuum |
+| --- | ---: |
+| a real ship, median | **1.73** |
+| a real ship, p90 | **5.78** |
+| the census hull | **1.02** |
+
+A real light-limited ship is stiff because of what its exposed fitting exchanges with the air. The
+census hull is stiff because of what its blocks conduct into each other, and air barely moves it.
+It arrives at a realistic number by a mechanism no real ship uses — so it will not respond to a
+change in convection, exposure, air density or wind, and those are most of this mod.
+
+`TheCensusHullBarelyNoticesAirAndARealShipDoes` pins it as **present rather than fixed**, because
+correcting it moves every performance figure this repository has published and that is a decision
+rather than a repair. The test fails when someone fixes it, which is the point.
+
 ## What was measured and found not to matter
 
 **Diagnostics.** Telemetry switches `CollectDiagnostics` on, which adds a per-node clear, five

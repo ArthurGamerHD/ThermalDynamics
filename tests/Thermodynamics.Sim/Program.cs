@@ -98,6 +98,21 @@ namespace Thermodynamics.Sim
                     return 0;
                 }
 
+                case "stiffness":
+                {
+                    Console.Write(StiffnessLab.Report(ValueAfter(args, "--path"), LabRun.ModeOf(args)));
+
+                    string stiffCsv = ValueAfter(args, "--csv");
+                    if (stiffCsv != null && StiffnessLab.LastRows != null)
+                    {
+                        Directory.CreateDirectory(stiffCsv);
+                        string file = Path.Combine(stiffCsv, "stiffness.csv");
+                        File.WriteAllText(file, StiffnessLab.Csv(StiffnessLab.LastRows));
+                        Console.WriteLine("wrote " + file);
+                    }
+                    return 0;
+                }
+
                 case "screen":
                 {
                     int panel;
@@ -894,6 +909,8 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  corpus [--path <dir>]   real ships read from blueprints, and what they are made of");
             Console.WriteLine("  corpus-fetch            build a corpus from the workshop; --key, --user, --top, --out");
             Console.WriteLine("    --list-only               list to a manifest without downloading anything");
+            Console.WriteLine("  stiffness [--path <dir>] what real ships demand of a step, against the census hull");
+            Console.WriteLine("    --csv <dir>               one row per ship, so the distribution can be read");
             Console.WriteLine("  screen [--path <dir>]   measure every ship, and cut the corpus to a panel");
             Console.WriteLine("    --panel N                 how many specimens to select");
             Console.WriteLine("  battery [--panel N]     every specimen through every scenario");

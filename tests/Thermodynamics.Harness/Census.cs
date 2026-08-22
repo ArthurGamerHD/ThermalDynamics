@@ -165,6 +165,73 @@ namespace Thermodynamics.Harness
             public const float HottestRating = 1050f;
         }
 
+        /// <summary>
+        /// The same quantities over **8,102 real workshop blueprints**, measured in this lab.
+        ///
+        /// <para>
+        /// <see cref="Field"/> is two ships from two live sessions. Two is not a population, and a
+        /// figure a running game reported cannot be re-examined: the ships are gone, the world is
+        /// gone, and what else was true of them is unrecorded. These are the same measurement over
+        /// the corpus, taken by <c>StiffnessLab</c> — every input visible, and reproducible in four
+        /// minutes with <c>dotnet run --project Thermodynamics.Sim -- stiffness</c>.
+        /// </para>
+        ///
+        /// <para>
+        /// <b>The field figures survive the comparison.</b> The two ships a session reported land
+        /// at the 63rd and 85th percentile of the real population, so they were ordinary ships
+        /// rather than outliers. What they could not show is the shape around them.
+        /// </para>
+        ///
+        /// <para>
+        /// Quoted for a quarter-second step, which is <c>Frequency 4</c> — the basis
+        /// <see cref="Field"/> was taken on. Demand is proportional to step length, so the shipped
+        /// <c>Frequency 8</c> asks half of every figure here. In still sea-level air at noon, which
+        /// is a *lower* bound: the field sessions flew in wind, and wind raises the convection
+        /// these numbers are mostly made of.
+        /// </para>
+        /// </summary>
+        public static class Corpus
+        {
+            /// <summary>Ships measured. Of 9,989 blueprints; the rest are modded, tiny or unreadable.</summary>
+            public const int Ships = 8102;
+
+            // In air. The percentiles either side of the median are close together and the ones
+            // above it are far apart, which is the bimodality below rather than a long tail.
+            public const float AirP10 = 4.26f;
+            public const float AirP50 = 6.61f;
+            public const float AirP90 = 33.09f;
+            public const float AirMax = 34.45f;
+
+            /// <summary>In vacuum, where the same ships are three to five times softer.</summary>
+            public const float VacuumP50 = 4.79f;
+            public const float VacuumP90 = 6.34f;
+            public const float VacuumMax = 8.64f;
+
+            /// <summary>
+            /// **The population has two modes and nothing much between them.**
+            ///
+            /// A ship's substep count is set by a light or a camera on 45 % of hulls and by armour
+            /// or structure on the rest, and the two groups do not overlap: 28.51 against 4.81 at
+            /// the median. Between 8 and 28 substeps there are about six per cent of ships. A
+            /// single figure describing "a typical ship" therefore describes almost nobody, which
+            /// is the thing two field observations could not have shown.
+            /// </summary>
+            public const float LitP50 = 28.51f;
+            public const float StructuralP50 = 4.81f;
+            public const float LitShare = 0.450f;
+
+            /// <summary>
+            /// How much stiffer air makes a real ship: the median hull demands 1.73 times what it
+            /// does in vacuum, and the ninetieth percentile 5.78 times.
+            ///
+            /// This is the figure the census hull does not reproduce. Its own ratio is 1.02 — it is
+            /// conductively stiff where a real light-limited ship is convectively stiff, so it
+            /// arrives at a realistic air figure by a mechanism no real ship uses.
+            /// </summary>
+            public const float AirRatioP50 = 1.73f;
+            public const float AirRatioP90 = 5.78f;
+        }
+
         private static BlockModel[] models;
 
         /// <summary>One block model per tier, built once.</summary>

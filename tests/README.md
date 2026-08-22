@@ -262,6 +262,30 @@ It never handles a password — log the account in once with `steamcmd +login <u
 SteamCMD caches it. See [balance-lab.md](../docs/balance-lab.md) for what the lab is for and how it
 is staged.
 
+## Stiffness against real ships
+
+`stiffness` asks the question every performance figure in this repository rests on — what does a
+ship's stiffest block demand of a step — of the workshop corpus rather than of a hull the harness
+built or a session that has ended.
+
+```bash
+dotnet run --project Thermodynamics.Sim -- stiffness              # 8,102 ships, about four minutes
+dotnet run --project Thermodynamics.Sim -- stiffness --csv out/   # one row per ship
+```
+
+Nothing is stepped: stiffness is a property of a built grid and the world it is asked about. The
+lab streams the corpus in batches and keeps one row per ship, because a blueprint is held in memory
+as every grid and every block in it and a fifty-gigabyte corpus parsed all at once is how an
+uncapped run took this machine down. Blueprints over 64 MB of XML are skipped and **counted**, as
+is everything else that does not reach the table.
+
+It found three things two field observations could not have. The field figures are ordinary ships —
+63rd and 85th percentile. The population is **bimodal**: a light or camera sets the count on 45 %
+of hulls at a median of 28.5 substeps, armour on the rest at 4.8, and almost nothing sits between.
+And the census hull, which every benchmark is built on, lands in the trough between the two modes
+and gets there by conducting rather than by convecting — its air-to-vacuum ratio is 1.02 against a
+real ship's 1.73. See [stiffness.md](../docs/stiffness.md#the-same-question-asked-of-eight-thousand-real-ships).
+
 ## Screening and the battery
 
 `screen` measures every ship in a corpus without stepping it, and cuts the population to a panel of
@@ -437,7 +461,7 @@ PipeFitter.BuildRing(builder, ring);      // pump goes on the first straight run
 
 ## Test coverage
 
-1,518 tests. **What each class is for is stated in its own summary, not here** —
+1,522 tests. **What each class is for is stated in its own summary, not here** —
 the index below says where to look, and `EveryTestClassSaysWhatItIsFor` fails when a class arrives
 without saying. This table is checked by `EveryTestClassIsInTheIndex`, so a suite cannot be added
 and left off it.

@@ -116,6 +116,135 @@ namespace Thermodynamics.Tests
                 + "% of the field ship");
         }
 
+        // ---- against the corpus, rather than against two ships ---------------------------------
+
+        /// <summary>
+        /// The census hull, measured the way a real workshop ship is measured.
+        ///
+        /// <para>
+        /// <see cref="StiffnessLab"/> asks one question of a built grid — what does its stiffest
+        /// block demand of a step, in this world — and asks it of the census hull and of a
+        /// blueprint by the same code. A comparison whose two sides are measured by different code
+        /// is not a comparison.
+        /// </para>
+        /// </summary>
+        private static StiffnessLab.Row CensusHull()
+        {
+            return StiffnessLab.Census(4000);
+        }
+
+        /// <summary>
+        /// The hull lands inside the population it is meant to represent.
+        ///
+        /// <para>
+        /// This is the assertion `Census.Field` could not make. Two ships from two live sessions
+        /// can say "a real ship demands about twenty"; they cannot say whether twenty is ordinary,
+        /// and the answer turns out to be that it is neither ordinary nor extreme — it is between
+        /// the two things real ships do.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheCensusHullIsAsStiffAsRealShipsAreInAir()
+        {
+            StiffnessLab.Row hull = CensusHull();
+
+            Assert.True(hull.Air > Census.Corpus.AirP10 && hull.Air < Census.Corpus.AirMax,
+                "the census hull demands " + hull.Air.ToString("n2")
+                + " substeps of a quarter-second step in air, against a corpus of "
+                + Census.Corpus.Ships.ToString("n0") + " real ships spanning "
+                + Census.Corpus.AirP10 + " to " + Census.Corpus.AirMax
+                + "; the harness has left the population it is meant to describe");
+        }
+
+        /// <summary>
+        /// **The census hull is stiff for the wrong reason, and that is the finding this class
+        /// exists to keep visible.**
+        ///
+        /// <para>
+        /// A real ship's stiffness is mostly what its lightest exposed block exchanges with the
+        /// air over its own area: the median hull demands 1.73 times in air what it does in
+        /// vacuum, and the ninetieth percentile 5.78 times. The census hull's ratio is 1.02. It
+        /// reaches a realistic air figure through conduction alone, so it will not respond to any
+        /// change that touches convection, exposure or air density — and those are most of this
+        /// mod.
+        /// </para>
+        ///
+        /// <para>
+        /// Pinned as *present* rather than fixed, because correcting it moves every performance
+        /// figure this repository has published and that is a decision rather than a repair. It
+        /// fails when someone fixes it, which is the point: the fix should be noticed.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheCensusHullBarelyNoticesAirAndARealShipDoes()
+        {
+            StiffnessLab.Row hull = CensusHull();
+            Assert.True(hull.Vacuum > 0f);
+
+            float ratio = hull.Air / hull.Vacuum;
+
+            Assert.True(ratio < 1.2f,
+                "the census hull's air-to-vacuum stiffness ratio is now " + ratio.ToString("n2")
+                + ", against 1.02 when this was recorded. If it has risen toward the corpus median"
+                + " of " + Census.Corpus.AirRatioP50 + " the hull has been made convectively stiff"
+                + " like a real ship, which is a fix — retake the benchmark baseline and rewrite"
+                + " this test as the assertion that it stays that way");
+        }
+
+        /// <summary>
+        /// The two figures a live session reported are ordinary ships, which is what makes them
+        /// usable evidence at all.
+        ///
+        /// <para>
+        /// They were the only evidence for a long time. Now they can be placed: 21.35 at the 63rd
+        /// percentile of the corpus in air and 31.25 at the 85th. Had either landed in the last
+        /// percent, everything built on them would have been built on an outlier.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheFieldObservationsAreOrdinaryShips()
+        {
+            Assert.True(Census.Field.LeastDemand > Census.Corpus.AirP10
+                        && Census.Field.LeastDemand < Census.Corpus.AirMax,
+                "the quieter field ship at " + Census.Field.LeastDemand
+                + " is outside the corpus range " + Census.Corpus.AirP10
+                + " to " + Census.Corpus.AirMax);
+
+            Assert.True(Census.Field.MostDemand > Census.Corpus.AirP10
+                        && Census.Field.MostDemand < Census.Corpus.AirMax,
+                "the stiffer field ship at " + Census.Field.MostDemand
+                + " is outside the corpus range " + Census.Corpus.AirP10
+                + " to " + Census.Corpus.AirMax);
+        }
+
+        /// <summary>
+        /// The population's two modes are far enough apart that a single number describes neither.
+        ///
+        /// <para>
+        /// Guards the claim the constants encode rather than the constants themselves: if a
+        /// re-measurement ever brings the two modes together, every statement in this repository
+        /// about "a typical ship's stiffness" becomes sayable and several of them should be
+        /// rewritten.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheTwoModesOfTheCorpusAreFarApart()
+        {
+            Assert.True(Census.Corpus.LitP50 > Census.Corpus.StructuralP50 * 4f,
+                "a light-limited ship demands " + Census.Corpus.LitP50 + " against a structure"
+                + "-limited ship's " + Census.Corpus.StructuralP50
+                + "; the population is no longer two groups and a median now means something");
+
+            Assert.True(Census.Corpus.LitShare > 0.2f && Census.Corpus.LitShare < 0.8f,
+                "a light sets the substep count on " + (100f * Census.Corpus.LitShare).ToString("n0")
+                + "% of ships, which is no longer a split population");
+
+            // The median sits with the structural mode, so quoting it as "a typical ship" describes
+            // the softer half only.
+            Assert.True(Census.Corpus.AirP50 < Census.Corpus.LitP50 * 0.5f,
+                "the corpus median has moved into the lit mode");
+        }
+
         /// <summary>
         /// The tail is what sets the substep count, so a hull that is too small to contain any of
         /// it measures the wrong thing. The picker walks the distribution rather than sampling it
