@@ -54,7 +54,7 @@ subject — **E**vidence, **M**ethod, **D**efect, **C**ode, **R**epository, **O*
 | **Conditional** | It holds inside a stated scope and is silent outside it. Written as an absolute, each of these forbids ordinary correct work — the scope *is* the rule, and quoting the sentence without it is the failure mode. |
 | **Low value** | It is not earning its keep: it costs more than it prevents, it restates rules that already exist, or it works around a defect that is cheaper to fix than to obey. Each names its disposition. |
 
-A rule is not low value merely because nothing checks it. Sixteen of the forty-five load-bearing
+A rule is not low value merely because nothing checks it. Eighteen of the fifty load-bearing
 rules are unchecked and stay load-bearing, because the failure they prevent is severe and silent —
 restructuring `Models/` is caught by nothing and costs a re-export of every block model. The
 category is about what the rule buys, not about who enforces it.
@@ -65,17 +65,19 @@ category is about what the rule buys, not about who enforces it.
 
 Fourteen principles account for every rule on this page. They are the reduction: if the rule list
 were lost, these are what would have to be re-derived, and each rule below is one of them applied
-to a specific artefact.
+to a specific artefact. Six rules have been added since the reduction and every one of them landed
+under a principle that already existed, which is the only evidence available that the fourteen are
+the right fourteen — see [testing the reduction](#testing-the-reduction).
 
 | # | Principle | Rules |
 | --- | --- | --- |
 | **P1** | **A figure carries its scope.** A number without its population, its basis and its clock is not a number; a sample stands for a population only by a written rule. | `E2` `E3` `E6` `M10` `M11` `J3` |
 | **P2** | **What the instrument could not see is part of the result.** Censoring, the noise floor, an unfinished sweep and a check that judged nothing are all the same failure: reading a blind spot as a value. | `E4` `E8` `E9` `M4` `M5` |
-| **P3** | **The claim is fixed before the data and corrected in place after.** A criterion that can move once the numbers are in is not a criterion; a finding that is corrected somewhere other than where it was published is not corrected. | `E1` `E10` `E11` `M9` `D5` |
-| **P4** | **Nothing is its own oracle.** A test that asks the model the same question twice agrees with whatever the model does; a harness fault looks exactly like physics. | `E7` `D1` `D4` |
-| **P5** | **One definition, and at least one consumer.** Two definitions drift, and the drift is silent in both directions; zero consumers means the thing does not exist however well it is written and tested. | `E5` `D2` `D3` `M6` `R7` `R8` `R9` `R10` `R11` |
+| **P3** | **The claim is fixed before the data and corrected in place after.** A criterion that can move once the numbers are in is not a criterion; a finding that is corrected somewhere other than where it was published is not corrected. | `E1` `E10` `E11` `M9` `D5` `R12` |
+| **P4** | **Nothing is its own oracle.** A test that asks the model the same question twice agrees with whatever the model does; a harness fault looks exactly like physics. | `E7` `D1` `D4` `D7` `D8` |
+| **P5** | **One definition, and at least one consumer.** Two definitions drift, and the drift is silent in both directions; zero consumers means the thing does not exist however well it is written and tested. | `E5` `D2` `D3` `M6` `R7` `R8` `R9` `R10` `R11` `R13` |
 | **P6** | **A comparison holds everything but the subject equal.** Two numbers are comparable only when the stop criterion, the machine, the key and the baseline were the same. | `M1` `M2` `M3` `M7` |
-| **P7** | **The game is the authority on what compiles.** The local build and the suite are an approximation of a compiler and a whitelist neither of them can see. | `C1` `C2` `C3` |
+| **P7** | **The game is the authority.** The local build and the suite are an approximation of a compiler and a whitelist neither of them can see, and where the game already answers a question — what is sealed, what is destroyed — the mod reads that answer instead of forming its own. | `C1` `C2` `C3` `C9` `C10` |
 | **P8** | **Off means off, and costs nothing.** A mechanism nobody is using must cost nothing, and the way to turn it off must be unambiguous. | `C4` `C7` `C8` |
 | **P9** | **The core is a library the game happens to call.** That is what makes it testable in seconds, profilable, drivable by other mods and portable to another engine. | `C5` `R9` |
 | **P10** | **The solver's three invariants are the definition of correctness.** Order independence, energy conservation, boundedness — everything else is tuning. | `C6` |
@@ -83,6 +85,55 @@ to a specific artefact.
 | **P12** | **Do not edit what this repository cannot regenerate.** Model binaries, workshop identity and vendored code have their source of truth outside this tree. | `R4` `R5` `R6` |
 | **P13** | **A long run is designed for its own death.** It will be killed — by the OOM killer, a timeout, a mistake or a power cut — so cap it, resume it, and never let a timer guess its duration. | `O1` `O2` `O3` `O5` |
 | **P14** | **Unobservable fidelity is cost.** Take the cheap form where the difference cannot be perceived, say what it gives up, and write the price down. | `D6` `M8` `O4` |
+
+### Testing the reduction
+
+Two questions decide whether fourteen is the reduction rather than a number that happened. Is each
+principle **necessary** — does it generate a rule none of the others generates? And is the set
+**sufficient** — does every rule follow from one of them?
+
+Necessity was tested by attempting the two mergers that look available from the table.
+
+* **P1 with P2.** Both say a figure is incomplete without its extent, and a merged principle would
+  read *a measurement carries what it covered and what it could not see*. Rejected: the failure
+  modes are opposites. P1 fails by mislabelling a scope somebody knew about — the wrong population,
+  the wrong clock. P2 fails by reading a scope nobody looked at — a censored tail, a noise floor, a
+  sweep that stopped, a check that judged nothing. Merged they make an eleven-rule principle whose
+  second half reads as a qualification of the first, and the second half is the one that gets
+  forgotten.
+* **P7 with P11 and P12.** All three are about authority sitting outside this repository: the
+  game's compiler, the workshop the repository publishes to, the model exporter and the upstream
+  authors. Rejected: the shared idea generates no rule. What is actionable is the difference —
+  *the game decides*, *everything here ships*, *do not touch what you cannot rebuild* — and a
+  principle that has to be unpacked into three before it can be applied is a heading, not a
+  principle.
+
+One merger did succeed, and it came from the completeness audit rather than from the table. `C9`
+and `C10` arrived needing *the game decides what is sealed* and *the server decides what is
+destroyed*. Neither is about compiling, and both are the same idea P7 already held, so P7 widened
+from **the game is the authority on what compiles** to **the game is the authority**. That is the
+one piece of evidence available that the fourteen are the right fourteen: six rules were added to
+this page after the reduction, from four sources that had never been read for rules, and every one
+of them landed under a principle that already existed.
+
+Sufficiency was tested by reading every markdown file in the tree for a sentence a change could
+violate, and matching each against a rule. Most matched. Six did not:
+
+| Added | Was stated only in |
+| --- | --- |
+| `C9` the game's answer is read, never overridden | [document-of-intent.md](document-of-intent.md#what-this-mod-deliberately-is-not) and `RoomPressure`'s summary |
+| `C10` the server is authoritative over damage | [document-of-intent.md](document-of-intent.md#what-the-mod-owes-a-multiplayer-client) and one comment in `ThermalGridSimulation` |
+| `D7` measure before replacing what the counts accuse | [document-of-intent.md](document-of-intent.md#what-correctness-means), as one of two standing instructions from the developer |
+| `D8` an optimisation is pinned against the code it replaced | [tests/README.md](../tests/README.md), as the title of a row in the suite index |
+| `R12` a page states its scope, describes the present, and logs its changes | [development.md](development.md#documentation-conventions) |
+| `R13` a standing rule is stated here once, and argued elsewhere | [development.md](development.md#documentation-conventions), as an aside inside `R12`'s convention |
+
+Two things that audit cannot do. It reads the tree, so a rule that lives only in someone's head is
+invisible to it — which is how the operational rules `O1` to `O5` came to be written down late, and
+they were recovered from notes rather than from the repository. And it cannot tell a rule from a
+finding stated forcefully: the pages are full of bolded sentences that are conclusions about heat
+rather than constraints on work, and the test applied to each was the one at the top of this
+page — *would breaking it be noticed?*
 
 Three rules from the previous revision are gone as rules, absorbed into the principles above:
 they stated a premise rather than something a change could violate. `R1` is P11, `J1` is P14, and
@@ -123,6 +174,8 @@ under [low value](#low-value) so a citation to them does not dangle.
 | **D4** | Test the state before the first step, and the artefacts the mod writes | load-bearing | P4 | `DumpAuditTests` `FieldDumpTests` |
 | **D5** | A known defect is pinned by a test, not only described | load-bearing | P3 | `CorpusSurvey` |
 | **D6** | A deliberate simplification is recorded as a limit | load-bearing | P14 | — |
+| **D7** | Measure before replacing what the counts accuse | conditional | P4 | — |
+| **D8** | An optimisation is pinned against the code it replaced | load-bearing | P4 | `SolverAb` and the five bit-identity suites |
 | **C1** | C# 6 only | load-bearing | P7 | `LangVersion` on the core project |
 | **C2** | The whitelist covers types the local build accepts | load-bearing | P7 | — |
 | **C3** | Target `net48`, and never reference the native assembly | load-bearing | P7 | the build |
@@ -131,6 +184,8 @@ under [low value](#low-value) so a citation to them does not dangle.
 | **C6** | The solver's three invariants hold | load-bearing | P10 | `ConductionTests` `StabilityTests` `ConductionClampGateTests` |
 | **C7** | Every mechanism has a switch that removes its own cost | load-bearing | P8 | `FeatureToggleTests` |
 | **C8** | Absent and empty mean the same thing | load-bearing | P8 | — |
+| **C9** | The game's own answer is read, never overridden | load-bearing | P7 | `RoomPressureTests` |
+| **C10** | The server is authoritative over damage | load-bearing | P7 | — |
 | **R1** | *The repository is the mod folder* | low value | P11 | absorbed into P11 |
 | **R2** | Build output and the corpus live outside it | load-bearing | P11 | `Directory.Build.props` |
 | **R3** | No credential is written into the tree | load-bearing | P11 | — |
@@ -142,6 +197,8 @@ under [low value](#low-value) so a citation to them does not dangle.
 | **R9** | The API page is part of the contract | load-bearing | P5 P9 | `EveryModApiEntryIsDocumented` |
 | **R10** | Every test class says what it is for | load-bearing | P5 | `EveryTestClassSaysWhatItIsFor` |
 | **R11** | A check is cited only if it runs | load-bearing | P5 | partly |
+| **R12** | A page states its scope, describes the present, and logs its changes | load-bearing | P3 | partly |
+| **R13** | A standing rule is stated here once, and argued elsewhere | load-bearing | P5 | — |
 | **O1** | Every long run is capped | load-bearing | P13 | — |
 | **O2** | A run with no bounded duration gets no hang timeout | conditional | P13 | — |
 | **O3** | Long sweeps resume, and progress is measured in bytes | load-bearing | P13 | — |
@@ -151,8 +208,8 @@ under [low value](#low-value) so a citation to them does not dangle.
 | **J2** | *Light, isolated, tested, open* | low value | — | absorbed into `C4` `C5` `C7` `R9` |
 | **J3** | The corpus filters are strict, and their cost is recorded | conditional | P1 | `BlueprintTests` |
 
-Forty-five load-bearing, six conditional, four low value. Sixteen of the load-bearing rules have
-no automated check, and say so.
+Fifty load-bearing, seven conditional, four low value. Eighteen of the load-bearing rules have no
+automated check, and say so.
 
 ---
 
@@ -348,6 +405,23 @@ on a regression to the earlier scale without letting one unexplained ship hold t
 rather than in the standalone walk that used to carry it.
 *From:* [tests/README.md](../tests/README.md), [known-issues.md](known-issues.md).
 
+#### R12 — A page states its scope, describes the present, and logs its changes
+
+**Every page opens by saying what it covers and what it does not, its body is in the present tense,
+and the only place a revision is recorded is a `## Change log` at the end.**
+
+A page that narrates what was tried reads as a description of the code long after it has stopped
+being one, and nothing about it looks wrong — the prose is accurate about a repository that no
+longer exists. Present tense is what makes that drift visible, and the change log is where `E10`'s
+correction goes: a finding corrected somewhere other than where it was published is not corrected.
+A measurement's before-and-after table is present-tense evidence and stays; the story around it
+does not. A page that cannot state its scope in a paragraph is two pages.
+
+*Applies to:* every markdown file in the tree, this one included.
+*Checked by:* `EveryPageHasAChangeLog` and `EveryDocumentIsInTheIndex`. The scope paragraph and the
+present tense are judgement — nothing reads prose for tense.
+*From:* [development.md](development.md#documentation-conventions).
+
 ### P4 — Nothing is its own oracle
 
 #### E7 — Check a claim against something that is not the model
@@ -398,6 +472,28 @@ measures a grid *after* stepping it, and nothing read the report the mod writes 
 *Applies to:* new instrumentation, new report rows, and anything read outside a step.
 *Checked by:* `DumpAuditTests`, `FieldDumpTests`.
 *From:* [tests/README.md](../tests/README.md).
+
+#### D8 — An optimisation is pinned against the code it replaced
+
+**A change whose stated purpose is cost rather than behaviour is asserted bit-identical to what it
+replaced, on a fixture that proves it exercised something.**
+
+The old code is the only oracle that answers the question actually being asked — *did this change
+anything?* — and a benchmark cannot answer it, because a figure that moved and a figure that broke
+look the same. Five suites are held to this shape: the precomputed environment rows, the fixed
+source row, the gated conduction clamp, the batched diagnostics and a step spread across frames.
+
+The second half is the half that is easy to leave out. `Hulls.Driven` asserts its own
+postconditions — producers running, temperatures spanning at least 100 K — because two runs of a
+hull that built nothing agree perfectly, and agreement is the whole assertion. That is `E8` at the
+one place where a passing comparison is least trustworthy.
+
+*Applies to:* any rewrite offered as a saving.
+*Checked by:* `SolverAb.AssertIdentical` and the suites that call it —
+`PrecomputedEnvironmentTests`, `FixedSourceRowTests`, `WattsClearFusionTests`,
+`ConductionClampGateTests`, `DiagnosticBatchingTests`, `SpreadStepTests` — over `Hulls.Driven`,
+which checks the fixture it built.
+*From:* [tests/README.md](../tests/README.md), [benchmarks.md](benchmarks.md).
 
 ### P5 — One definition, and at least one consumer
 
@@ -538,6 +634,24 @@ live case, a live method or a build setting. That is the same shape as the tests
 exist and would have caught all three.
 *From:* new with the extraction; see [what the extraction changed](#what-the-extraction-changed).
 
+#### R13 — A standing rule is stated here once, and argued elsewhere
+
+**A page that depends on a rule cites it by identifier and does not restate it. This page holds the
+sentence; the page that has the evidence holds the argument.**
+
+This is `D3` applied to prose, and it is why this page exists. A rule written into the one document
+its author happened to be writing is a rule the next reader finds by accident: eleven pages each
+stated one in passing, several operational rules lived only in notes outside the tree, and two
+notes contradicted each other outright over `--blame-hang-timeout` because neither knew the other
+was a rule. Restating a rule in two places is the same defect in slower motion — both copies read
+as authoritative, and the drift between them is silent in both directions.
+
+*Applies to:* every page, and every rule.
+*Checked by:* — nothing yet reads a page's rules banner.
+*Retires when:* nothing retires it. A check that every identifier cited in a banner resolves to a
+rule on this page would move it from convention to enforcement.
+*From:* [development.md](development.md#documentation-conventions); the assembly of this page.
+
 ### P6 — A comparison holds everything but the subject equal
 
 #### M2 — Parallel for values, linear for durations
@@ -565,10 +679,11 @@ and attributes all of them to whoever ran it.
 *Checked by:* — procedure.
 *From:* [benchmarks.md](benchmarks.md#the-iteration-log).
 
-### P7 — The game is the authority on what compiles
+### P7 — The game is the authority
 
-Breaking one of these does not fail a test here. It fails at world load, in someone else's
-session.
+Breaking one of these does not fail a test here. It fails at world load, or in someone else's
+session. The first three are the compiler and the whitelist; the last two are the game answering a
+question this mod could answer for itself and should not.
 
 #### C1 — C# 6 only
 
@@ -604,6 +719,43 @@ fail to resolve at 4.7.2. `VRage.Native.dll` is unmanaged and produces `MSB3246`
 *Applies to:* the compile-check project and the test projects.
 *Checked by:* the build.
 *From:* [development.md](development.md).
+
+#### C9 — The game's own answer is read, never overridden
+
+**Where the game already decides something — whether a room is sealed, how much oxygen it holds —
+this model reads that answer rather than forming its own, and every source may veto air while none
+may require it.**
+
+Three things can empty a room: a world with oxygen or pressurisation off, the game's own sealing
+test, and the vents. Each is a veto and none is a requirement. The asymmetry is not tidiness. Air
+is heat capacity, so a room wrongly given air warms and cools as a mass of gas that every bounding
+surface exchanges with, while a room wrongly denied air loses only some interior inertia — the two
+errors are not the same size. The models disagree by construction, because this model's rooms are
+pieces of the game's and its cells are coarser than a sloped block, so what matters is the
+direction of a disagreement rather than its existence.
+
+*Applies to:* room pressure, and anything else the game already answers.
+*Checked by:* `RoomPressureTests` — one case per veto — and `RoomAirPressureTests`, which reports
+the one direction that is a fault: air in the game and none here.
+*From:* [document-of-intent.md](document-of-intent.md#what-this-mod-deliberately-is-not),
+[thermal-model.md](thermal-model.md), and `RoomPressure`'s own summary.
+
+#### C10 — The server is authoritative over damage
+
+**Clients run the same simulation from the same inputs and never apply what it concludes.**
+
+Temperatures are deliberately not reconciled — the mod sends as little as it can and tolerates
+drift — which makes damage the one conclusion that must not be reached twice. A client that
+applied its own overheat damage would not throw, would not desync visibly, and would destroy blocks
+a server that disagreed by a degree was keeping.
+
+*Applies to:* overheat damage, and any future conclusion with a world-visible consequence.
+*Checked by:* — nothing. The guard is one `IsServer` early-out in
+`ThermalGridSimulation.ApplyOverheatDamage`, and the suite runs no session.
+*Retires when:* nothing retires it. How far a client may drift before it is corrected is still
+undecided, and that question does not touch this rule.
+*From:* [document-of-intent.md](document-of-intent.md#what-the-mod-owes-a-multiplayer-client),
+[known-issues.md](known-issues.md).
 
 ### P8 — Off means off, and costs nothing
 
@@ -828,8 +980,32 @@ run for. A ship is not symmetric, so both thrust and travel expand to six direct
 
 ## Conditional
 
-Six rules hold only inside a stated scope. Every one of them was first written as an absolute,
+Seven rules hold only inside a stated scope. Every one of them was first written as an absolute,
 and written that way each forbids work that is ordinary and correct. The scope is the rule.
+
+### D7 — Measure before replacing what the counts accuse
+
+**A subsystem suspected on aggregate counts is compared against ground truth before it is
+changed.**
+
+More than one thing here has looked guilty from the counts alone and been innocent. The room map
+is the standing example: it was suspected of losing compartments, on a count of rooms that looked
+too low, and when the comparison was finally run it was right about twelve of twelve. A rewrite
+would have been judged against nothing, would have passed, and would have replaced working code
+with a change nobody could argue about afterwards.
+
+The counts are worth trusting as a place to look and not as a verdict, which is `D1` seen from the
+other side: `D1` is disbelieving a number that looks right, this is disbelieving one that looks
+wrong.
+
+*Applies to:* a suspicion raised by aggregates rather than by a reproduction.
+*Checked by:* — judgement.
+*From:* [document-of-intent.md](document-of-intent.md#what-correctness-means), one of two standing
+instructions from the developer; [known-issues.md](known-issues.md).
+
+**Why conditional.** As an absolute it forbids ordinary correct work: a crash with a stack trace, a
+dead link, a typo in a label are all fixed on sight, and nothing is bought by measuring first. The
+rule bites exactly where the evidence is a count and the proposed fix is a replacement.
 
 ### E2 — Measure the population, not the specimen
 
@@ -966,7 +1142,8 @@ isolation of four opt-in walks that most runs never execute. Measured on 2026-08
 serial against 16.7 s at eight threads, with the same passing count in every configuration and ten
 for ten in a parallel burn-in.
 
-*Applies to:* the opt-in corpus walks — but the mechanism applies to all 135 test classes.
+*Applies to:* the opt-in corpus walks — but the mechanism applies to every test class in the
+project.
 *Checked by:* `xunit.runner.json`, more broadly than the rule needs.
 *Retires when:* the walks move into a collection that disables parallelism for itself and the
 project-wide setting comes off. The narrower form already exists in the suite: `LoadTests`
@@ -1034,13 +1211,14 @@ measurement taken the same day it was written down.
 ## Where these came from
 
 Nothing on this page is invented here except `E11`, `C8` and `R11`, and those are generalisations
-of defects the tree already records. The rest was assembled from [development.md](development.md),
+of defects the tree already records. The rest was assembled from
+[document-of-intent.md](document-of-intent.md), [development.md](development.md),
 [balance-lab.md](balance-lab.md), [benchmarks.md](benchmarks.md), [benchmarks.md](benchmarks.md#the-iteration-log),
 [known-issues.md](known-issues.md), [balance.md](balance.md),
 [configuration.md](configuration.md), [api.md](api.md), [tests/README.md](../tests/README.md),
-[tools/corpus/README.md](../tools/corpus/README.md), the summaries of the test classes named
-above, and a set of session notes kept outside the repository — which is where several of the
-operational rules lived and nowhere else.
+[tools/corpus/README.md](../tools/corpus/README.md), the summaries of the test classes and core
+types named above, and a set of session notes kept outside the repository — which is where several
+of the operational rules lived and nowhere else.
 
 Those pages keep the argument and the evidence. When a rule and its source disagree, the source
 is right and this page is stale; say so and fix it here.
@@ -1051,5 +1229,6 @@ is right and this page is stale; say so and fix it here.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Read every page in the tree against the rule list and added the six rules it was missing: `C9` `C10` `D7` `D8` `R12` `R13`, each of which existed only in the one page or the one type summary that needed it. Widened `P7` from *the game is the authority on what compiles* to *the game is the authority*, which is where `C9` and `C10` belong. Recorded the necessity and sufficiency tests the principle list was put through in [Testing the reduction](#testing-the-reduction). Corrected `O4`, which quoted 135 test classes against a project that now holds more than 150; the figure is now stated without a hand-typed count, per `E5`. |
 | 2026-08-22 | Repointed the *From* fields at the pages that absorbed the ones they cited: `corpus-shape.md` into [balance.md](balance.md), `iterations.md` into [benchmarks.md](benchmarks.md). Added this change log. The rule inventory itself is unchanged; [What the extraction changed](#what-the-extraction-changed) is the record of the revision that produced it. |
 | 2026-08-22 | Extracted the standing rules from the eleven pages that each stated one in passing, reduced them to fourteen principles, and classified every rule as load-bearing, conditional or low value. Marked the sixteen load-bearing rules that nothing checks as unchecked rather than leaving the gap implicit. |
