@@ -369,7 +369,7 @@ fractions are chosen for their consequences and say so. Both are dials; they dif
 sensible starting value looks like.
 
 This is why the settings and the definition files are converging into one surface — see
-[configuration.md](configuration.md#the-settings-surface-and-where-it-is-going). A player asking how
+[configuration.md](configuration.md#where-the-settings-surface-is-going). A player asking how
 fast coolant moves is asking a balance question, and it should not matter to them which file the
 answer lives in.
 
