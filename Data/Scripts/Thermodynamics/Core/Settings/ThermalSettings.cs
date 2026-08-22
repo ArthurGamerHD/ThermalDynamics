@@ -14,10 +14,7 @@ namespace Thermodynamics.Core
         public int Version = CurrentVersion;
 
         // ---- feature switches -------------------------------------------------------------
-        //
-        // Each mechanism is independently switchable and each switch takes effect on the next step,
-        // so a server can disable one without a reload. A switch is read only by the stage it
-        // belongs to, so disabling it removes exactly that stage's cost.
+        // Read only by the stage each belongs to, so switching one off removes exactly its cost.
 
         /// <summary>Master switch for radiation and convection against the environment.</summary>
         public bool EnableEnvironment = true;
@@ -35,14 +32,8 @@ namespace Thermodynamics.Core
         public bool EnableSolarHeat = true;
 
         /// <summary>
-        /// Whether a grid shadows itself.
-        ///
-        /// When off, a face is lit whenever it points at the sun regardless of what the grid has
-        /// built in front of it. When on, a <see cref="SunShadowMap"/> is kept per grid and a face
-        /// takes sunlight only if no part of the grid stands between it and the sun.
-        ///
-        /// Costs one pass over the grid's cells whenever the sun has moved appreciably, so it
-        /// scales with grid size rather than step rate.
+        /// Whether a grid shadows itself, through a per-grid <see cref="SunShadowMap"/>.
+        /// See configuration.md, What self-shadowing costs.
         /// </summary>
         public bool SolarSelfShadowing = true;
 
@@ -65,16 +56,8 @@ namespace Thermodynamics.Core
         public bool EnableCoolantLoops = true;
 
         /// <summary>
-        /// When true, a loop's fluid is one well-mixed mass instead of one parcel per pipe.
-        ///
-        /// The well-mixed model is the older one. It is cheaper — one temperature and one integration
-        /// per ring rather than one per pipe — and it is wrong in a way that matters for gameplay:
-        /// heat crosses from a reactor to a radiator on the far side of the ship instantly, whether
-        /// anything is circulating or not, so a pump's only possible effect is to exist. Segmented
-        /// fluid is the default because a stopped pump ought to stop cooling.
-        ///
-        /// Kept switchable rather than deleted so the two can be measured against each other on the
-        /// same grid, and so a very large station can buy back the difference if it ever needs to.
+        /// A loop's fluid as one well-mixed mass rather than one parcel per pipe.
+        /// See thermal-model.md, Coolant loops.
         /// </summary>
         public bool WellMixedCoolant = false;
 
@@ -93,15 +76,12 @@ namespace Thermodynamics.Core
         // ---- rates ------------------------------------------------------------------------
 
         /// <summary>
-        /// Simulation steps per simulated second. Sets the integration step to 1/Frequency.
-        /// Higher is more accurate and more expensive.
+        /// Solver steps per simulated second; the integration step is 1/Frequency.
+        /// See configuration.md, Frequency is not the cost dial it looks like.
         /// </summary>
         /// <remarks>
-        /// The shipped defaults are the <c>responsive</c> profile, value for value. A fresh world
-        /// therefore reads "profile: responsive" rather than "custom", and applying that profile
-        /// changes nothing — which is what makes it honest to call it the default rather than a
-        /// preset that happens to be nearby. <c>DefaultsMatchTheResponsiveProfile</c> holds them
-        /// together.
+        /// The shipped defaults are the <c>responsive</c> profile value for value, held together by
+        /// <c>DefaultsMatchTheResponsiveProfile</c>.
         /// </remarks>
         public int Frequency = 8;
 
@@ -113,19 +93,8 @@ namespace Thermodynamics.Core
         public float SimulationSpeed = 1f;
 
         /// <summary>
-        /// Factor by which thermal time runs faster than real physics.
-        ///
-        /// Block definitions carry real specific heats in J/(kg K) — steel is about 450 — under
-        /// which a hot hull takes hours to cool. Every heat capacity is divided by this value,
-        /// which is equivalent to running thermal time at that multiple: all rates scale together,
-        /// so equilibrium temperatures, the balance between conduction and radiation, and the
-        /// ratios between block types are unchanged.
-        ///
-        /// The cost is that coupling per unit capacity rises with it, so the solver takes more
-        /// substeps, and a high value on a grid of light blocks is what drives a step to clamp.
-        /// Both are reported in the telemetry.
-        ///
-        /// 1 is fully physical. The shipped default of 225 divides steel's 450 J/(kg K) to 2.
+        /// Factor by which thermal time runs faster than real physics; divides every heat capacity.
+        /// 1 is fully physical. See configuration.md, Time and pace.
         /// </summary>
         public float HeatTimeScale = 225f;
 
@@ -160,18 +129,14 @@ namespace Thermodynamics.Core
         // ---- heat pumps -------------------------------------------------------------------
 
         /// <summary>
-        /// Fraction of the Carnot limit a heat pump achieves, 0..1. A real domestic heat pump
-        /// manages about 0.4; 1 would be thermodynamically perfect.
-        ///
-        /// The primary balance lever for the block. It scales the coefficient of performance but
-        /// not the shape of the Carnot cost curve.
+        /// Fraction of the Carnot limit a heat pump achieves, 0..1, and the block's whole balance.
+        /// See configuration.md, Heat pumps.
         /// </summary>
         public float HeatPumpCarnotFraction = 0.4f;
 
         /// <summary>
-        /// Ceiling on the coefficient of performance. The Carnot figure diverges as the two sides
-        /// converge, so without a ceiling a pump across a negligible difference would lift
-        /// unbounded heat; a real machine is compressor-limited well before that.
+        /// Ceiling on the coefficient of performance, which Carnot's figure has none of.
+        /// See configuration.md, Heat pumps.
         /// </summary>
         public float HeatPumpMaxCoefficient = 8f;
 
@@ -185,112 +150,34 @@ namespace Thermodynamics.Core
         public bool ClampConductionOvershoot = true;
 
         /// <summary>
-        /// Clamp radiation and convection so a node cannot overshoot the ambient it exchanges with,
-        /// as <see cref="ClampConductionOvershoot"/> does for a pair of blocks.
-        ///
-        /// Without it the integrator is only conditionally stable, on a condition the substep
-        /// estimate is trusted to meet — but <see cref="MaxSubsteps"/> exists to refuse that
-        /// estimate, and a clamped step then has an unguarded environment term. Measured at
-        /// <c>HeatTimeScale 3600</c> with one substep, node temperatures diverged past 1e22 K
-        /// while conduction, which had a clamp, stayed bounded.
-        ///
-        /// The cap is the same rule as the conduction one: within a substep a node cannot radiate
-        /// past the temperature it radiates towards, since that is where the exchange reverses.
-        /// Where substeps are generous it never binds. It is what makes the low-substep profiles
-        /// usable.
+        /// Clamp radiation and convection at ambient, as <see cref="ClampConductionOvershoot"/> does
+        /// for a pair of blocks. See profiles.md, Designing your own.
         /// </summary>
         public bool ClampEnvironmentOvershoot = true;
 
         /// <summary>
-        /// Most substeps one solver step may divide itself into.
-        ///
-        /// The stability estimate asks for as many as the stiffest node on the grid needs; this is
-        /// the ceiling on granting that. Reaching it is reported as a clamped step. A clamped step
-        /// is approximate rather than wrong: every exchange is still capped at the energy that
-        /// equalises its pair, so the integrator stays bounded and conserves energy at any setting.
-        /// What is lost is the shape of the curve between two temperatures, not the temperatures
-        /// it settles between.
-        ///
-        /// A simulation-oriented world sets this high enough never to bind. A low value — down to
-        /// one substep per step, every link equalising once — moves the most heat for the least
-        /// arithmetic.
+        /// Ceiling on the substeps the stability estimate may be granted. Reaching it is reported as
+        /// a clamped step. See configuration.md, Solver.
         /// </summary>
         public int MaxSubsteps = 64;
 
         /// <summary>
-        /// Most element visits one solver step may make — substeps times the elements a substep
-        /// touches — before the step is shortened to fit. Zero removes the bound. Trades
-        /// simulation rate for frame smoothness.
-        ///
-        /// An element visit is one link, or one node weighted by <see cref="NodeCostInLinks"/>: a
-        /// substep walks both, and a node's visit costs several times a link's. This was counted
-        /// in link visits alone until it was measured, which under-charged a ship-shaped grid by
-        /// two to four times and under-charged a sparsely linked one by more.
-        ///
-        /// A step's cost is its substep count times that, and the substep count is set by the
-        /// stiffest node on the grid, which moves as the grid heats. Unbounded, that makes an
-        /// otherwise steady large grid produce occasional steps several times the median cost.
-        ///
-        /// A step that would exceed the bound is made shorter rather than coarser. Coarsening the
-        /// substeps would take steps too large for the grid's stiffness and rely on the overshoot
-        /// clamps, losing accuracy. Shortening advances less simulated time at the same accuracy,
-        /// so an oversized grid runs at a reduced rate smoothly rather than at full rate in bursts.
-        ///
-        /// The default is unchanged in value and tighter in effect, which is the point: on the
-        /// three 42,051-block ships a field report measured at 11 substeps a step and 85–150 ms a
-        /// tick, the same 1,000,000 now buys about 4 substeps. Grids below about a hundred
-        /// thousand blocks still never reach it.
+        /// Most element visits one step may make — one per link, plus <see cref="NodeCostInLinks"/>
+        /// per node — before the step is made shorter rather than coarser. Zero removes the bound.
+        /// See configuration.md, Solver.
         /// </summary>
         public int MaxElementVisitsPerStep = 1000000;
 
         /// <summary>
-        /// What one node is worth, in links, when a step's cost is counted.
-        ///
-        /// A substep visits every link once and every node once, and a node's visit is the more
-        /// expensive of the two: the environment pass integrates radiation as a fourth power,
-        /// convection and solar, and above about a hundred thousand blocks the node state stops
-        /// fitting in cache while the link arrays go on streaming. Measured across shapes chosen
-        /// for their link-to-node ratio, a node is worth 2.8 links at four thousand nodes, 3.3 at
-        /// a hundred thousand and 7.5 at a quarter of a million — see
-        /// [benchmarks.md](../../../../docs/benchmarks.md#what-a-substep-costs).
-        ///
-        /// Four is the low end of the range over the sizes where the budget binds at all. A grid
-        /// past a quarter of a million blocks is therefore charged slightly less than it costs,
-        /// which errs towards letting a large grid run rather than throttling it on a machine that
-        /// could have kept up.
+        /// What one node is worth, in links, when a step's cost is counted. Measured rather than
+        /// chosen: see benchmarks.md, What a substep costs.
         /// </summary>
         public const int NodeCostInLinks = 4;
 
         /// <summary>
-        /// Most substeps any single block may demand of the whole grid before its heat capacity is
-        /// floored. Zero leaves every block's real capacity in place.
-        ///
-        /// <para>
-        /// A step is divided into as many substeps as the stiffest node on the grid needs, and
-        /// every other node pays for them. On a large hull that demand typically comes from a tiny
-        /// minority of very light blocks: measured on a 42,051-block ship, forty-three 16 kg
-        /// fittings at 32 J/K demanded twenty-eight substeps while the surrounding armour demanded
-        /// one, holding the whole grid to 35 % of real time.
-        /// </para>
-        ///
-        /// <para>
-        /// Such a block reaches its neighbour's temperature in tens of milliseconds, so across a
-        /// quarter-second step it does not carry an independent temperature. This raises its
-        /// capacity to the least value that keeps its demand within the cap.
-        /// </para>
-        ///
-        /// <para>
-        /// The cost is that block's own transient: it warms and cools more slowly than its real
-        /// mass would. Its steady state is unaffected, since steady state is where the watts cancel
-        /// and does not depend on capacity, and no other block changes. The floor applies to
-        /// conduction stiffness only; environment coupling can still demand more substeps, since
-        /// that is a response to a real gradient rather than an artefact of block size.
-        /// </para>
-        ///
-        /// <para>
-        /// Expressed in substeps rather than kilograms so it keeps its meaning when
-        /// <see cref="Frequency"/> changes: a shorter step lowers the floor and the cap holds.
-        /// </para>
+        /// Most substeps any single block may demand of the whole grid before its integration
+        /// capacity is floored. Zero leaves every block's real capacity in place.
+        /// See stiffness.md, A per-block substep cap.
         /// </summary>
         public int MaxSubstepsPerBlock = 0;
 
