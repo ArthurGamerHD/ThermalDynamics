@@ -344,6 +344,43 @@ against 0.9682 ms, inside the noise floor.
 > ran in the cheap configuration and printed it under a name that said otherwise. The flag now
 > reaches the solver, and this section measures both configurations whether or not it is passed.
 
+### The watts row was cleared and then written
+
+A substep zeroed `nodeWatts` with a memset, then the environment pass walked every node adding
+into it, then conduction scattered into it, then apply read it. The first of those four had
+nothing to do: the environment pass reaches every node before anything else reads the row, so it
+can write the row outright and the clear is dead work by construction.
+
+`bench wattsclear` says what removing it is worth, up a ladder chosen so the row crosses each
+level of the cache:
+
+| blocks | nodes | row | cleared | fused | saved |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 2,000 | 2,223 | 8 KB | 0.251 ms | 0.251 ms | −0.0 % |
+| 8,000 | 8,904 | 34 KB | 1.141 ms | 1.139 ms | 0.2 % |
+| 32,000 | 32,800 | 128 KB | 3.640 ms | 3.624 ms | 0.4 % |
+| 125,000 | 126,731 | 495 KB | 16.983 ms | 16.930 ms | 0.3 % |
+| 500,000 | 505,566 | 1,974 KB | 69.016 ms | 68.611 ms | **0.6 %** |
+
+**It is a small saving, and it grows with size, which is the signature of bandwidth rather than
+instructions.** At 2,000 nodes the row is 8 KB and stays in L1 between the two walks, so the
+second walk is nearly free and there is nothing to recover. At half a million it is 2 MB, does not
+fit in L2, and the clear is a genuine second trip to memory.
+
+**The first version of this lab measured the change at −1.1 % to +2.8 % and the ladder had no
+shape.** It built two simulations, one per path, and timed each — so the two arms were two
+allocations at two addresses with two cache colourings, and whichever hull happened to land better
+carried a difference larger than the one being looked for. The lab now proves equivalence on two
+hulls and takes its timings from **one** hull with the flag flipped between blocks: one layout,
+one warm cache, the flag the only thing that moves. That is what turned a scatter into a ladder.
+
+The saving is not the reason the change is worth having. A memset that is *nearly* redundant is a
+correctness defect at any price, so `WattsClearFusionTests` pins the ordering claim it rests on —
+that the environment pass reaches every node, including buried ones, including the case where the
+environment is switched off and there is nothing to write, and including when the pass is sliced
+across frames. Both halves of that were checked by breaking them: removing the
+generation-only clear fails one test, and accumulating instead of assigning fails eight.
+
 ### The scenarios
 
 A plain hull in a plain world does not reach air in the compartments, plumbing on the ship, or

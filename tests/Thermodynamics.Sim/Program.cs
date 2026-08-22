@@ -653,6 +653,40 @@ namespace Thermodynamics.Sim
                     return 0;
                 }
 
+                case "wattsclear":
+                {
+                    List<int> clearLadder = new List<int>();
+                    foreach (int rung in WattsClearLab.DefaultSizes)
+                    {
+                        if (rung <= max) clearLadder.Add(rung);
+                    }
+                    if (clearLadder.Count == 0) clearLadder.Add(max);
+
+                    int clearSteps = ticks > 0 ? ticks : 20;
+                    string clearOut = csvDirectory ?? "out";
+
+                    Console.WriteLine();
+                    Console.WriteLine("== watts clear ==");
+                    Console.WriteLine("  A substep zeroed the watts row and then had the"
+                        + " environment pass add into it.");
+                    Console.WriteLine("  That pass visits every node before anything reads the row,"
+                        + " so it can write the row outright.");
+                    Console.WriteLine("  The ladder says whether removing the memset is worth"
+                        + " instructions, bandwidth, or nothing.");
+                    Console.WriteLine();
+
+                    List<WattsClearLab.Row> clearRows = WattsClearLab.Run(clearLadder, clearSteps,
+                        message => Console.Error.WriteLine("  " + message));
+
+                    Console.WriteLine(WattsClearLab.Table(clearRows));
+
+                    Directory.CreateDirectory(clearOut);
+                    string clearPath = Path.Combine(clearOut, "wattsclear.csv");
+                    File.WriteAllText(clearPath, WattsClearLab.Csv(clearRows));
+                    Console.WriteLine("csv -> " + clearPath);
+                    return 0;
+                }
+
                 case "steppath":
                 {
                     List<int> ladder = new List<int>();
@@ -843,6 +877,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  bench spike --size N    one block placed, split by stage");
             Console.WriteLine("  bench steppath          a step at the solver, against a step through the host");
             Console.WriteLine("  bench smallgrids        what one grid costs before any of its blocks do");
+            Console.WriteLine("  bench wattsclear        what zeroing the watts row costs, up a size ladder");
             Console.WriteLine("  bench pace  --size N    does slowing sim and raising transfer save anything");
             Console.WriteLine("  bench reach --length N  how fast heat crosses a grid, against what it costs");
             Console.WriteLine("  bench profiles          the named profiles, measured side by side");

@@ -116,6 +116,20 @@ namespace Thermodynamics.Core
         /// </summary>
         public bool DiagnosticsOnEverySubstep;
 
+        /// <summary>
+        /// Set false to clear the watts row with its own memset before the environment pass runs,
+        /// rather than letting that pass write the row outright.
+        ///
+        /// <para>
+        /// The environment pass is the first thing to touch <c>nodeWatts</c> after a substep
+        /// begins, and it visits every node, so the row it reads is always the zero the clear
+        /// just wrote. Assigning instead of accumulating makes the clear redundant and saves a
+        /// second walk of the array per substep. Test hook: <c>WattsClearFusionTests</c> runs the
+        /// same grid both ways and compares temperatures bit for bit.
+        /// </para>
+        /// </summary>
+        public bool FuseWattsClear = true;
+
         /// <summary>True while a step has been begun and not yet finished.</summary>
         public bool StepInFlight
         {
@@ -367,7 +381,10 @@ namespace Thermodynamics.Core
             // Decremented at the end of the apply stage, so it counts this substep as well.
             diagnosticsSubstep = CollectDiagnostics && (DiagnosticsOnEverySubstep || substepsLeft <= 1);
 
-            Array.Clear(nodeWatts, 0, nodeCount);
+            // The environment pass assigns this row rather than accumulating onto it, so on the
+            // fused path the memset is dead work: every node it zeroed is overwritten before
+            // anything reads it. Kept behind the switch so the two can be compared.
+            if (!FuseWattsClear) Array.Clear(nodeWatts, 0, nodeCount);
             for (int i = 0; i < loops.Count; i++) loops[i].ClearSegmentWatts();
             for (int i = 0; i < roomAir.Count; i++) roomWatts[i] = 0f;
 

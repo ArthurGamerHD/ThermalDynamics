@@ -1904,10 +1904,16 @@ namespace Thermodynamics.Core
                     for (int i = from; i < to; i++)
                     {
                         float generation = nodeGeneration[i];
-                        nodeWatts[i] += generation;
+                        nodeWatts[i] = generation;
                         generated += generation;
                     }
                     heatGainAccumulator += generated;
+                }
+                else
+                {
+                    // Nothing to write, but the row still has to start this substep at zero and
+                    // the fused path has not cleared it.
+                    Array.Clear(nodeWatts, from, to - from);
                 }
                 if (diagnostics)
                 {
@@ -1958,7 +1964,7 @@ namespace Thermodynamics.Core
                     }
 
                     float buried = nodeSourceRow[i];
-                    nodeWatts[i] += buried;
+                    nodeWatts[i] = buried;
                     heatGainAccumulator += buried;
                     if (diagnostics) ClearEnvironmentDiagnostics(i);
                     continue;
@@ -1999,7 +2005,8 @@ namespace Thermodynamics.Core
                     nodeSourceRow[i] = (generating ? nodeGeneration[i] : 0f) + solar + friction;
                 }
 
-                float watts = nodeSourceRow[i];
+                float source = nodeSourceRow[i];
+                float watts = source;
 
                 if (environmentEnabled)
                 {
@@ -2045,13 +2052,13 @@ namespace Thermodynamics.Core
                     watts += relaxation;
                 }
 
-                nodeWatts[i] += watts;
+                nodeWatts[i] = watts;
 
                 // Two adds against a pass that has already computed all four figures. The
                 // environment half is signed, so a grid absorbing more than it sheds reads
                 // positive and the venting figure derived from it reads zero.
                 environmentWattsAccumulator += radiationWatts + convectionWatts;
-                heatGainAccumulator += nodeSourceRow[i];
+                heatGainAccumulator += source;
 
                 if (!diagnostics) continue;
 
