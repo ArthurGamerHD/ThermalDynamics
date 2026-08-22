@@ -15,8 +15,6 @@ namespace Thermodynamics
     [MySessionComponentDescriptor(MyUpdateOrder.NoUpdate)]
     public class PlanetManager : MySessionComponentBase
     {
-        public static readonly double SunSize = 0.045f;
-        public static readonly double Denominator = 1 - SunSize;
         public static readonly PlanetDefinition NullDef = new PlanetDefinition();
 
         public class Planet
@@ -57,14 +55,6 @@ namespace Thermodynamics
             }
         }
 
-        public class ExternalForceData
-        {
-            public Vector3D Gravity = Vector3D.Zero;
-            public Vector3D WindDirection = Vector3D.Zero;
-            public float WindSpeed;
-            public float AtmosphericPressure;
-        }
- 
         private static List<Planet> Planets = new List<Planet>();
 
         public override void Init(MyObjectBuilder_SessionComponent sessionComponent)
@@ -94,36 +84,6 @@ namespace Thermodynamics
             Planets.RemoveAll(p => p.Entity.EntityId == ent.EntityId);
         }
 
-
-        /// <summary>
-        /// The gravity force vector applied at a location, and the total air pressure there.
-        /// </summary>
-        public static ExternalForceData GetExternalForces(Vector3D worldPosition)
-        {
-            ExternalForceData data = new ExternalForceData();
-
-            Planet planet = null;
-            double distance = double.MaxValue;
-            foreach (Planet p in Planets)
-            {
-                data.Gravity += p.GravityComponent.GetWorldGravity(worldPosition);
-
-                double d = (p.Position - worldPosition).LengthSquared();
-                if (d < distance)
-                {
-                    planet = p;
-                    distance = d;
-                }
-            }
-
-            if (planet?.Entity.HasAtmosphere == true)
-            {
-                data.AtmosphericPressure = planet.Entity.GetAirDensity(worldPosition);
-                data.WindSpeed = planet.Entity.GetWindSpeed(worldPosition);
-            }
-
-            return data;
-        }
 
         /// <summary>The planet nearest a world position, or null when there is none.</summary>
         public static Planet GetClosestPlanet(Vector3D position) 

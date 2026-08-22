@@ -131,12 +131,6 @@ namespace Thermodynamics.Core
             get { return frontier.Count; }
         }
 
-        /// <summary>Cells the current pass has already classified.</summary>
-        public int VisitedCells
-        {
-            get { return visited.Count; }
-        }
-
         /// <summary>
         /// Marks the map stale. Cheap and idempotent: many calls before the next
         /// <see cref="Step"/> collapse into a single restart.

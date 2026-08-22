@@ -25,12 +25,7 @@ namespace Thermodynamics.Core
         public const int NeighbourMountShift = 18;
 
         public const int SelfAirtightMask = 0x3F;
-        public const int NeighbourAirtightMask = 0x3F << NeighbourAirtightShift;
         public const int SelfMountMask = 0x3F << SelfMountShift;
-        public const int NeighbourMountMask = 0x3F << NeighbourMountShift;
-
-        /// <summary>All six self faces sealed: a fully airtight cell.</summary>
-        public const int FullySealed = SelfAirtightMask;
 
         public static bool SelfAirtight(int state, int face)
         {
@@ -60,16 +55,6 @@ namespace Thermodynamics.Core
         public static int WithSelfMount(int state, int face, bool value)
         {
             return Set(state, SelfMountShift + face, value);
-        }
-
-        public static int WithNeighbourAirtight(int state, int face, bool value)
-        {
-            return Set(state, NeighbourAirtightShift + face, value);
-        }
-
-        public static int WithNeighbourMount(int state, int face, bool value)
-        {
-            return Set(state, NeighbourMountShift + face, value);
         }
 
         /// <summary>Strips the derived neighbour half, keeping only what the block itself declares.</summary>

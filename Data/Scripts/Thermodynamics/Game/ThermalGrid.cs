@@ -597,12 +597,6 @@ namespace Thermodynamics
             bound.SweepSlot = -1;
         }
 
-        /// <summary>Blocks in the mass-sweep rota. Diagnostic only.</summary>
-        public int SweepOrderCount
-        {
-            get { return sweepOrder.Count; }
-        }
-
         /// <summary>
         /// The bound block whose minimum cell is <paramref name="min"/>, or null.
         ///
@@ -629,13 +623,6 @@ namespace Thermodynamics
             if (instance == null) return null;
 
             return Get(instance.Position);
-        }
-
-        /// <summary>Temperature at a grid position in Kelvin, or 0 when nothing is there.</summary>
-        public float TemperatureAt(Vector3I position)
-        {
-            ThermalBlock bound = GetAtCell(position);
-            return (bound == null || bound.Node == null) ? 0f : bound.Node.Temperature;
         }
     }
 }

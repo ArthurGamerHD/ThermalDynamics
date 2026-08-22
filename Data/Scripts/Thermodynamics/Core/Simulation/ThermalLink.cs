@@ -58,16 +58,6 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Total shared area between two blocks, in lattice cell faces, whether bolted or not.
-        /// </summary>
-        public static int SharedContactCells(BlockInstance a, BlockInstance b)
-        {
-            int face = ContactFace(a, b);
-            if (face < 0) return 0;
-            return BoxGeometry.ContactCells(a.Min, a.MaxExclusive, b.Min, b.MaxExclusive, Face.Axis(face));
-        }
-
-        /// <summary>
         /// Shared area where both blocks carry a mount surface across the joint. This is the area
         /// heat conducts through.
         /// </summary>
@@ -91,16 +81,6 @@ namespace Thermodynamics.Core
             int bolted = (int)Math.Round(shared * coverage);
             if (bolted < 1 && coverage > 0f) bolted = 1;
             return bolted;
-        }
-
-        /// <summary>
-        /// The axis two blocks abut on, for picking the conduction depth. Defaults to Z when
-        /// they do not touch.
-        /// </summary>
-        public static int ContactAxis(BlockInstance a, BlockInstance b)
-        {
-            int face = ContactFace(a, b);
-            return face < 0 ? 2 : Face.Axis(face);
         }
 
         /// <summary>

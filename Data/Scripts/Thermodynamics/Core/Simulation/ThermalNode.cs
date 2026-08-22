@@ -165,27 +165,6 @@ namespace Thermodynamics.Core
             StateDirty = true;
         }
 
-        /// <summary>
-        /// Average effectiveness of this node's exposed faces against a direction, 0..1.
-        /// A face pointing straight into the direction contributes 1, a face at right angles 0.
-        /// </summary>
-        public float DirectionalIntensity(ref Vector3 directionLocal)
-        {
-            if (TotalExposedFaces == 0) return 0f;
-
-            float intensity = 0f;
-            for (int face = 0; face < Face.Count; face++)
-            {
-                int count = ExposedFaces[face];
-                if (count == 0) continue;
-
-                float dot = Vector3.Dot(Face.Normals[face], directionLocal);
-                if (dot > 0f) intensity += dot * count;
-            }
-
-            return intensity / TotalExposedFaces;
-        }
-
         /// <summary>Total stored energy above absolute zero, J. Used by conservation checks.</summary>
         public float Energy
         {

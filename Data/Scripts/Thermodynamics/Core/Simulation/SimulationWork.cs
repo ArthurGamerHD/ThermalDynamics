@@ -150,18 +150,5 @@ namespace Thermodynamics.Core
             copy.StepAdvances = StepAdvances;
             return copy;
         }
-
-        /// <summary>
-        /// Total elements a rebuild touched across every stage. The stages are counted separately
-        /// because they are addressed separately, but a single frame pays their sum.
-        /// </summary>
-        public long TotalRebuildVisits
-        {
-            get
-            {
-                return TopologyNodeVisits + ExposureNodeVisits + RoomAirRoomVisits
-                    + LoopSearchCells + HeatPumpNodeVisits + RoomCellsVisited;
-            }
-        }
     }
 }

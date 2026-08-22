@@ -134,12 +134,6 @@ namespace Thermodynamics.Core
         /// <summary>Fractional travel not yet worth a whole parcel of rotation.</summary>
         private float travelled;
 
-        /// <summary>Parcels the coolant has been carried since the loop formed. Diagnostic.</summary>
-        public float ParcelsTravelled
-        {
-            get { return travelled; }
-        }
-
         /// <summary>
         /// Sets the temperature of the coolant currently inside pipe <paramref name="pipeIndex"/>, K.
         ///

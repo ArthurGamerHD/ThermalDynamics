@@ -178,15 +178,6 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Work one substep makes on the grid as it stands. Public so a host can size a budget
-        /// before any step has begun.
-        /// </summary>
-        public long SubstepWorkUnits
-        {
-            get { return SubstepWork(nodes.Count, links.Count, 0); }
-        }
-
-        /// <summary>
         /// Advances the whole grid by <paramref name="deltaSeconds"/> of simulated time in one call.
         ///
         /// Used by tests and scenarios, which need reproducible time rather than frame pacing. Also
