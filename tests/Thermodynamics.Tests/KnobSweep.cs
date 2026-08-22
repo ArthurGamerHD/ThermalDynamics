@@ -47,8 +47,14 @@ namespace Thermodynamics.Tests
         {
             if (CorpusFixture.Files().Count == 0) return;
 
+            // **Past the corpus opt-in, a missing panel is a fault rather than a reason to stand
+            // down.** The first full run of this sweep returned green in 355 ms because the panel
+            // was not found, which is the same silent-no-op failure the material override guards
+            // against: a sweep that measures nothing must not report success.
             List<PanelShip> panel = Panel();
-            if (panel.Count == 0) return;
+            Assert.True(panel.Count > 0,
+                "the corpus is opted in but no panel was read. Build one with "
+                + "tools/corpus/panel.py, or point THERMAL_PANEL at it.");
 
             List<Blueprints.Ship> ships = Load(panel);
             Assert.True(ships.Count > 0, "the panel named ships but none of them could be read");
@@ -231,17 +237,27 @@ namespace Thermodynamics.Tests
             return fields;
         }
 
-        /// <summary>Walks up for a repository-relative path, as the rest of the harness does.</summary>
+        /// <summary>
+        /// A repository-relative path, found the way the rest of the harness finds its data.
+        ///
+        /// **Walking up from the assembly does not work here.** Directory.Build.props sends build
+        /// output to a sibling <c>ThermalDynamics.build/</c> so that artifacts never land in the
+        /// published mod folder, so no ancestor of the running assembly is the repository. A first
+        /// version of this walked up ten levels, found nothing, and the sweep returned green in
+        /// 355 ms having measured exactly nothing. <see cref="ShippedBlocks.RepoRoot"/> already
+        /// handles the relocated case by falling back to this source file's compiled-in path.
+        /// </summary>
         private static string Find(string relative)
         {
-            string directory = AppDomain.CurrentDomain.BaseDirectory;
-            for (int i = 0; i < 10 && directory != null; i++)
+            try
             {
-                string candidate = Path.Combine(directory, relative);
-                if (File.Exists(candidate)) return candidate;
-                directory = Path.GetDirectoryName(directory);
+                string candidate = Path.Combine(ShippedBlocks.RepoRoot(), relative);
+                return File.Exists(candidate) ? candidate : null;
             }
-            return null;
+            catch
+            {
+                return null;
+            }
         }
 
         /// <summary>
