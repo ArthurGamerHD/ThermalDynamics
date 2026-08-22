@@ -437,7 +437,7 @@ PipeFitter.BuildRing(builder, ring);      // pump goes on the first straight run
 
 ## Test coverage
 
-1,509 tests. **What each class is for is stated in its own summary, not here** —
+1,512 tests. **What each class is for is stated in its own summary, not here** —
 the index below says where to look, and `EveryTestClassSaysWhatItIsFor` fails when a class arrives
 without saying. This table is checked by `EveryTestClassIsInTheIndex`, so a suite cannot be added
 and left off it.
@@ -461,7 +461,7 @@ and left off it.
 | **End to end, and the host boundary** | `SimulationIntegrationTests` `ScenarioTests` `ScenarioClaimTests` `HostAdapterTests` `CoreIsolationTests` |
 | **Balance, and the ships it is decided on** | `BalanceTests` `CoolingLadderTests` `BlockHeatIndexTests` `DecorativeStiffnessTests` `ElementCostFitTests` `ScreeningTests` `BlueprintTests` `WorstCaseTests` `LabRunTests` `LabInvariantTests` |
 | **Corpus walks** (opt-in, `THERMAL_CORPUS_TESTS`) | `CorpusSurvey` `CorpusCensus` `KnobSweep` `SunlightPanelWalk` `BlockAccountingWalk` `DeterminismWalk` |
-| **The documentation itself** | `DocumentationTests` `ConfigurationDocTests` |
+| **The documentation itself** | `DocumentationTests` `ConfigurationDocTests` `SimCommandTests` |
 
 > **The bit-identity suites share one fixture.** Five of them pin an optimisation against the
 > thing it replaced — the precomputed environment rows, the fixed source row, the gated

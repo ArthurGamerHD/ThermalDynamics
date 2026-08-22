@@ -901,8 +901,13 @@ namespace Thermodynamics.Sim
             Console.WriteLine("    --all                     every usable ship, not just the panel");
             Console.WriteLine("  hotspot --ship <name>   why one block on one ship is the hottest thing on it");
             Console.WriteLine("    --scenario <name> --top N");
+            Console.WriteLine("  sealed [--path <dir>]   blocks with nowhere at all to send their heat");
             Console.WriteLine("  dump [--path <dir>]     audit a field telemetry dump against the model's own claims");
             Console.WriteLine("  descent [--csv <dir>]   surface to core: sun, wind, rock damping and planet heat");
+            Console.WriteLine("  planets                 every shipped world's climate, and where each figure came from");
+            Console.WriteLine("    --xml | --write <path>    the generated Planets.xml");
+            Console.WriteLine("  wind                    a day of wind over one world; --planet, --weather, --csv");
+            Console.WriteLine("    scenarios                 the model on every world, at every size and corner");
             Console.WriteLine();
             Console.WriteLine("  bench scale             cost per stage as the grid grows");
             Console.WriteLine("  bench hitch --size N    per-tick cost, with a block welded mid-run");
@@ -919,6 +924,9 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  bench reach --length N  how fast heat crosses a grid, against what it costs");
             Console.WriteLine("  bench profiles          the named profiles, measured side by side");
             Console.WriteLine("  bench memory --size N   where a grid's memory goes, by structure");
+            Console.WriteLine("  bench coolant           the segmented fluid model against the well-mixed one");
+            Console.WriteLine("  bench elements          what a substep spends per node and per link");
+            Console.WriteLine("  bench stability --seconds N   how far the clock can be pushed before a step diverges");
             Console.WriteLine("    --shape ship|cube|truss   --max N   --ticks N   --csv <dir>");
             Console.WriteLine("    --diagnostics             as telemetry runs it: per-node watts on");
         }
