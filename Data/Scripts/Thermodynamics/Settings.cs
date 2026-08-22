@@ -22,16 +22,9 @@ namespace Thermodynamics
     }
 
     /// <summary>
-    /// The world's configuration file, and the bridge from it to the simulation's settings.
-    ///
-    /// This type is the serialised form only: it owns the XML shape, the defaults and the file, and
-    /// converts into <see cref="Core.ThermalSettings"/>, which is what every grid reads.
-    /// <see cref="Apply"/> writes through to the same instance the grids already hold, so a value
-    /// changed mid-session takes effect on the next step without a reload.
-    ///
-    /// Every field is reachable by name through <see cref="GetValue"/> and <see cref="SetValue"/>,
-    /// which the chat commands, terminal controls and mod API all use. Booleans read and write as
-    /// 0 and 1, so one accessor pair covers the whole file.
+    /// The world's configuration file: the serialised shape, the defaults, and the write-through into
+    /// the <see cref="Core.ThermalSettings"/> instance every grid already holds. Every field is
+    /// reachable by name, booleans as 0 and 1. See configuration.md.
     /// </summary>
     [ProtoContract]
     public class Settings
@@ -94,15 +87,8 @@ namespace Thermodynamics
 
         /// <summary>
         /// Fidelity of shadows cast by other grids: none, one ray, or projected geometry.
-        ///
-        /// <see cref="GridShadowMode.Basic"/> casts one ray towards the sun; if another grid is in
-        /// the way the whole grid dims by that sample's share. Costs one ray against the occluder's
-        /// blocks per sample.
-        ///
-        /// <see cref="GridShadowMode.Full"/> projects the shadow onto the faces it covers, so a
-        /// station overhead darkens only the hull beneath it. Costs a walk through the occluder's
-        /// blocks per face of this grid, on the shadow pass rather than per step, and requires
-        /// <see cref="SolarSelfShadowing"/> for that pass.
+        /// <see cref="GridShadowMode.Full"/> needs <see cref="SolarSelfShadowing"/>, whose pass it
+        /// rides on. See configuration.md, External shadow.
         /// </summary>
         [ProtoMember(77)] public int SolarGridShadows = (int)GridShadowMode.Full;
 
@@ -138,20 +124,10 @@ namespace Thermodynamics
         [ProtoMember(34)] public float HeatTimeScale = 225f;
 
         /// <summary>
-        /// Most link visits one solver step may make before it is shortened to fit. Zero removes the
-        /// bound. See the core setting of the same name: it trades simulation rate for frame
-        /// smoothness on large grids by advancing less simulated time rather than by coarsening the
-        /// substeps, so accuracy is unaffected.
-        /// </summary>
-        /// <summary>
-        /// Most element visits one solver step may make — substeps times its links plus its nodes
-        /// weighted by what a node costs. Zero removes the bound.
-        ///
-        /// This was <c>MaxLinkVisitsPerStep</c> and counted links alone, which could not see the
-        /// environment pass a substep runs per node. A world's config written before the rename
-        /// has no element for this field and takes the default, deliberately: the old number
-        /// meant something else, so carrying it over would import a value into the wrong unit.
-        /// See [benchmarks.md](../../../docs/benchmarks.md#what-a-substep-costs).
+        /// Most element visits one solver step may make — substeps times its links plus its weighted
+        /// nodes. Zero removes the bound. A config predating the rename from
+        /// <c>MaxLinkVisitsPerStep</c> takes the default deliberately, since the old number was in a
+        /// different unit. See configuration.md, Solver.
         /// </summary>
         [ProtoMember(35)] public int MaxElementVisitsPerStep = 1000000;
 
@@ -162,12 +138,8 @@ namespace Thermodynamics
         [ProtoMember(36)] public int MaxSubsteps = 64;
 
         /// <summary>
-        /// Most substeps any single block may demand of the whole grid before its heat capacity is
-        /// floored. Zero leaves every block's real capacity in place.
-        ///
-        /// See the core setting of the same name. A few dozen very light blocks can otherwise set
-        /// the substep count for a whole capital ship; the cost of the floor is those blocks' own
-        /// transients.
+        /// Most substeps any single block may demand of the whole grid before its integration capacity
+        /// is floored. Zero leaves every block's real capacity in place. See stiffness.md.
         /// </summary>
         [ProtoMember(84)] public int MaxSubstepsPerBlock = 0;
 
@@ -201,14 +173,8 @@ namespace Thermodynamics
         [ProtoMember(83)] public float ClimateWeatherInfluence = 1f;
 
         // ---- coolant loops -----------------------------------------------------------------
-        //
-        // These live in Loops.xml, which the settings menu never showed, so "how fast does coolant
-        // move" was a settings question whose answer was in a file nobody could reach from the
-        // game. They are world settings now: saved, replicated and editable like any other.
-        //
-        // A value equal to the shipped one is left alone rather than written over the definition,
-        // so a world nobody has touched still gets whatever Loops.xml and the profile's overlay
-        // say. Change one and it wins from then on.
+        // Loops.xml as world settings. A value still equal to the shipped one is left alone rather
+        // than written over the definition; move one and it wins from then on.
 
         /// <summary>Coolant carried by one pipe block, kg. More is more capacity for the same coupling.</summary>
         [ProtoMember(85)] public float LoopCoolantMassPerPipe = 50f;
@@ -340,14 +306,9 @@ namespace Thermodynamics
         [ProtoMember(112)] public int DebugWindOverlay = 0;
 
         /// <summary>
-        /// The wind indicator beside the crosshair: a needle for the direction and a figure for the
-        /// speed, whenever there is wind where the player is.
-        ///
-        /// On by default, unlike everything else on this page, because it is the one entry here that
-        /// is not a diagnostic — wind pushes a ship about and heats its leading face, and a player
-        /// has no other way to know it is there. It draws nothing in space, nothing in still air and
-        /// nothing while a menu is open, so leaving it on costs a player who does not want it very
-        /// little. Client side.
+        /// The wind needle and speed under the crosshair. Client side, and the one entry here on by
+        /// default: it is a readout for playing rather than a diagnostic.
+        /// See configuration.md, The wind indicator.
         /// </summary>
         [ProtoMember(113)] public bool DebugWindIndicator = true;
 
@@ -370,25 +331,16 @@ namespace Thermodynamics
         [ProtoMember(81)] public int TelemetrySampleStride = 4;
 
         /// <summary>
-        /// Solver steps between planet-wide wind sweeps, or 0 for none.
-        ///
-        /// A sweep reads the wind at 72 fixed points around the planet — every latitude from −80° to
-        /// +80° including the equator, eight longitudes each — at five heights, whether or not
-        /// anything is standing there. It is the only way to see the model's behaviour with latitude
-        /// and with height without parking a fleet, and it costs nothing per sample: the terrain
-        /// under each probe is read once and the rest is arithmetic.
-        ///
-        /// Needs <see cref="EnableTelemetry"/>. 360 is a sweep every minute at the shipped clock.
+        /// Solver steps between planet-wide wind and climate sweeps, or 0 for none. Needs
+        /// <see cref="EnableTelemetry"/>; 360 is a sweep a minute at the shipped clock.
+        /// See environment.md, Measuring it.
         /// </summary>
         [ProtoMember(110)] public int TelemetryPlanetProbes = 0;
 
         /// <summary>
-        /// A fresh configuration.
-        ///
-        /// Defaults are declared as field initialisers rather than assigned here. A config file
-        /// written before a setting existed carries no element for it and the XML reader leaves the
-        /// field as found, so field initialisers are what make a newly added setting load at its
-        /// default rather than at false or zero.
+        /// A fresh configuration. Defaults live on the field initialisers, not here: a config written
+        /// before a setting existed carries no element for it, and a reader that finds nothing must
+        /// leave the field alone. See known-issues.md, A guard has to test what it claims to test.
         /// </summary>
         public static Settings GetDefaults()
         {
@@ -603,13 +555,8 @@ namespace Thermodynamics
         // ---- access by name ----------------------------------------------------------------
 
         /// <summary>
-        /// The settings a client owns for itself: what it draws on its own screen. Everything else
-        /// in <see cref="Names"/> is world state belonging to the server.
-        ///
-        /// Held here rather than only in the settings menu because two things need the same
-        /// answer — the menu, deciding what a client may edit, and the replication, deciding what
-        /// the server may overwrite. A server pushing its own overlay choice onto every player's
-        /// screen is the failure this prevents.
+        /// The settings a client owns for itself; everything else in <see cref="Names"/> is world
+        /// state. One list, because the menu and the replication have to agree on the answer.
         /// </summary>
         public static readonly HashSet<string> ClientOwned = new HashSet<string>
         {
@@ -961,13 +908,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// True when a setting has changed since the file was last written.
-        ///
-        /// Every change is saved, rather than waiting for someone to press a button — a menu that
-        /// asks you to confirm what you already did is asking you to do it twice, and a setting
-        /// that reverts on reload because the button was missed is worse than either. The write
-        /// itself is deferred a moment by <see cref="FlushPending"/> so that dragging a slider is
-        /// one write rather than one per pixel.
+        /// True when a setting has changed since the file was last written. Every change saves itself;
+        /// <see cref="FlushPending"/> defers the write a moment so dragging a slider is one write.
         /// </summary>
         public static bool SavePending;
 

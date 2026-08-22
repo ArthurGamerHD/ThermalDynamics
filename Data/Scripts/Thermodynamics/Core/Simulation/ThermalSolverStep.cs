@@ -3,23 +3,10 @@ using System;
 namespace Thermodynamics.Core
 {
     /// <summary>
-    /// One solver step, spread across the frames of its simulation window.
-    ///
-    /// <para>
-    /// A grid advances by one step every <c>1 / StepsPerSecond</c> of a second, about fifteen
-    /// rendered frames at the default settings. Running the whole step on one of those frames costs
-    /// the same total as spreading it evenly but arrives as a stutter, so the work is divided
-    /// across the window.
-    /// </para>
-    ///
-    /// <para>
-    /// Spreading is exact rather than approximate, and does not advance any block ahead of any
-    /// other. A substep is an accumulation: every exchange is computed from the temperatures at the
-    /// start of the substep, summed into a watts buffer, and applied to all nodes together at the
-    /// end. A sum may be computed in any order and in any number of pieces without changing its
-    /// value, so only the arithmetic is divided. <c>SpreadStepTests</c> asserts the result is
-    /// identical to computing the step in one call.
-    /// </para>
+    /// One solver step, spread across the frames of its simulation window. Only the arithmetic is
+    /// divided — a substep is a sum, and a sum has the same value in any number of pieces — so the
+    /// result is bit-identical to one call, which <c>SpreadStepTests</c> asserts.
+    /// See load-and-hitching.md, 10.
     /// </summary>
     public partial class ThermalSolver
     {
@@ -61,16 +48,10 @@ namespace Thermodynamics.Core
         private float publishPeak;
 
         /// <summary>
-        /// Node and link counts as they were when the step began.
-        ///
-        /// A step spans many frames and a block may be placed during one of them. The passes walk
-        /// the counts they started with, so a node appended mid-step is excluded from this step —
-        /// its mirrored row is unsynced and its thermal mass is zero, which would produce NaN — and
-        /// joins the next one.
-        ///
-        /// A change that moves an index rather than appending, such as a removal or a graph
-        /// rebuild, abandons the step instead: no snapshot can repair a buffer whose entries now
-        /// refer to different blocks.
+        /// Node and link counts as they were when the step began, so a block placed mid-step joins the
+        /// next one rather than being integrated against an unsynced row. A change that *moves* an
+        /// index abandons the step instead. See known-issues.md, An invariant documented at three call
+        /// sites.
         /// </summary>
         private int stepNodeCount;
         private int stepLinkCount;
@@ -92,20 +73,9 @@ namespace Thermodynamics.Core
         public bool GateConductionClamp = true;
 
         /// <summary>
-        /// Whether this substep writes the per-mechanism watt diagnostics onto the node objects.
-        ///
-        /// <para>
-        /// Those figures are overwritten by each substep and read between steps, so only the last
-        /// substep's writes are ever observed — the earlier ones are five stores into a node object
-        /// and two into another, per element, thrown away by the next substep. Switching them on
-        /// nearly doubled a step: 3.93 ms to 7.51 ms on a 32,800-block hull.
-        /// </para>
-        ///
-        /// <para>
-        /// Every telemetry dump is taken with them on, because taking a dump is what turns them on,
-        /// so this is not a corner of the configuration space — it is the configuration every
-        /// field measurement in this repository was made in.
-        /// </para>
+        /// Whether this substep writes the per-mechanism watt diagnostics onto the node objects. Only
+        /// the last substep's writes are ever observed, so only it pays.
+        /// See benchmarks.md, What being measured costs.
         /// </summary>
         private bool diagnosticsSubstep;
 
@@ -117,16 +87,9 @@ namespace Thermodynamics.Core
         public bool DiagnosticsOnEverySubstep;
 
         /// <summary>
-        /// Set false to clear the watts row with its own memset before the environment pass runs,
-        /// rather than letting that pass write the row outright.
-        ///
-        /// <para>
-        /// The environment pass is the first thing to touch <c>nodeWatts</c> after a substep
-        /// begins, and it visits every node, so the row it reads is always the zero the clear
-        /// just wrote. Assigning instead of accumulating makes the clear redundant and saves a
-        /// second walk of the array per substep. Test hook: <c>WattsClearFusionTests</c> runs the
-        /// same grid both ways and compares temperatures bit for bit.
-        /// </para>
+        /// Set false to clear the watts row with its own memset rather than letting the environment
+        /// pass write it outright. A test hook: <c>WattsClearFusionTests</c> pins the ordering claim
+        /// the fusion rests on. See benchmarks.md, The watts row is written.
         /// </summary>
         public bool FuseWattsClear = true;
 
@@ -137,16 +100,9 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Element visits one whole step will make, from the substep count and the size of the grid.
-        /// A host divides this by the frames in its window to size each frame's slice.
-        ///
-        /// Exact rather than approximate: it is the number the stages will charge, summed ahead of
-        /// time. An estimate below the real figure would make every step overrun its window by the
-        /// same proportion, so a grid configured for four steps a second would run slower.
-        ///
-        /// It is not a cost model. A link visit and a node visit differ in real cost; what matters
-        /// is that the budget is spent in the units it was measured in, so the pacing divides
-        /// evenly.
+        /// Element visits one whole step will make; a host divides it by the frames in its window to
+        /// size each slice. Exact rather than modelled — it is what the stages will charge, summed
+        /// ahead of time — so the pacing divides evenly.
         /// </summary>
         public long StepWorkUnits { get; private set; }
 
@@ -208,22 +164,10 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Starts a step whose stability estimate the caller has already taken, at this step
-        /// length and against this environment.
-        ///
-        /// <para>
-        /// The estimate is a walk over every node cubing a temperature, and the whole prologue
-        /// around it — mirroring the node objects, re-summing the conductance totals, applying the
-        /// mass floor — is another. A host that has to know how long a step it can afford before
-        /// starting one runs all of it, and then ran it again here for an answer that had not
-        /// moved. Passing the estimate back in is what makes a step's fixed cost one walk rather
-        /// than two.
-        /// </para>
-        ///
-        /// <para>
-        /// A negative <paramref name="knownRequired"/> means the caller has no estimate, and this
-        /// takes its own.
-        /// </para>
+        /// Starts a step whose stability estimate the caller has already taken, at this step length
+        /// and against this environment — which is what makes a step's fixed cost one walk over the
+        /// nodes rather than two. A negative <paramref name="knownRequired"/> means no estimate.
+        /// See benchmarks.md, The two step paths.
         /// </summary>
         public bool BeginStep(float deltaSeconds, EnvironmentState environment, float knownRequired)
         {
@@ -504,13 +448,8 @@ namespace Thermodynamics.Core
 
         /// <summary>
         /// Copies the step's results onto the node objects, which are the simulation's public face.
-        ///
-        /// The reported change is measured against the start of the step rather than the last
-        /// substep, since every consumer — the HUD's rate of change, the anomaly classifier, the
-        /// per-type distribution — describes one step. Measured per substep, a six-substep grid
-        /// would report about a sixth of the movement it made.
-        ///
-        /// The hottest node is found in the same loop for one comparison per node.
+        /// The reported change is measured against the start of the step, not the last substep, since
+        /// every consumer describes one step. The hottest node is found in the same loop.
         /// </summary>
         private long AdvancePublish(long budget)
         {
@@ -568,13 +507,9 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// How far a cursor may advance under a budget, clamped to the elements remaining.
-        ///
-        /// Computed as the smaller of the budget and the remaining room rather than as
-        /// <c>cursor + budget</c> clamped afterwards: the budget may be <see cref="long.MaxValue"/>,
-        /// which <see cref="Step"/> passes to run a step in one call, and adding a non-zero cursor
-        /// to that overflows to a negative index. The cursor is non-zero on that path when an
-        /// unbounded call finishes a step a paced one left part way through a stage.
+        /// How far a cursor may advance under a budget. The smaller of the budget and the room left,
+        /// never <c>cursor + budget</c> clamped afterwards: <see cref="Step"/> passes
+        /// <see cref="long.MaxValue"/>, which a non-zero cursor overflows to a negative index.
         /// </summary>
         private int Advance(int count, long budget)
         {
@@ -587,12 +522,8 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Abandons a step in flight, discarding whatever it had accumulated.
-        ///
-        /// No temperature is lost: a substep's watts are applied together at its end, so an
-        /// abandoned step leaves every temperature where the last completed substep left it. Called
-        /// when the grid changes shape under a step, which moves node indices and invalidates the
-        /// half-summed buffers.
+        /// Abandons a step in flight. No temperature is lost — a substep's watts are applied together
+        /// at its end — so this leaves every temperature where the last completed substep left it.
         /// </summary>
         public void AbandonStep()
         {

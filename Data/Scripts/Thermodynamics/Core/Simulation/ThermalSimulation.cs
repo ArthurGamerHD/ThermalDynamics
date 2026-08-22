@@ -5,12 +5,8 @@ using VRageMath;
 namespace Thermodynamics.Core
 {
     /// <summary>
-    /// One grid's complete thermal simulation: block layout, surface map, room mapping, solver,
-    /// coolant loops and scheduling, wired together.
-    ///
-    /// This is the entire surface a host needs: mirror block changes in and call
-    /// <see cref="Update"/> once a frame. The game adapter and the test harness both drive it
-    /// this way.
+    /// One grid's complete thermal simulation, and the entire surface a host needs: mirror block
+    /// changes in and call <see cref="Update"/> once a frame. See architecture.md, The model.
     /// </summary>
     public class ThermalSimulation
     {
@@ -183,13 +179,8 @@ namespace Thermodynamics.Core
 
         /// <summary>
         /// What one substep over this grid costs, in the units
-        /// <see cref="ThermalSettings.MaxElementVisitsPerStep"/> is expressed in: its links, plus
-        /// its nodes weighted by what a node is worth.
-        ///
-        /// Nodes are counted because a substep runs the environment pass once per node, which the
-        /// old link-only count could not see — see [benchmarks.md](../../../../docs/benchmarks.md#what-a-substep-costs).
-        /// Exposed faces are deliberately not counted: measured at a tenth to a half of a link
-        /// each, they are inside the noise of the two terms that are here.
+        /// <see cref="ThermalSettings.MaxElementVisitsPerStep"/> is expressed in: links plus weighted
+        /// nodes. Faces are deliberately not counted. See benchmarks.md, What a substep costs.
         /// </summary>
         public long SubstepCost
         {
@@ -234,15 +225,9 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// The same decision over an estimate the caller has already taken, reporting the demand
-        /// that survives the shortening.
-        ///
-        /// <para>
-        /// The estimate is proportional to step length, so shortening the step scales it by the
-        /// same ratio. That is what lets one walk over the nodes answer both questions a step
-        /// asks — how long it may be, and how many substeps it then needs — instead of the two
-        /// walks the two questions used to cost.
-        /// </para>
+        /// The same decision over an estimate the caller has already taken. The estimate is
+        /// proportional to step length, so one walk over the nodes answers both of a step's
+        /// questions: how long it may be, and how many substeps it then needs.
         /// </summary>
         private float AffordableStepSeconds(float seconds, float required, out float demand)
         {
@@ -268,22 +253,9 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Smallest slice of a step worth handing to the stage machine, in element visits.
-        ///
-        /// <para>
-        /// Pacing exists so one grid's step does not arrive as a lump. It has a floor because the
-        /// entry into a resumable pass costs the same whatever it carries: a grid whose whole step
-        /// is a dozen element visits was re-entering it once a frame for the eight frames of its
-        /// window, and paying more for the entries than for the physics. Measured at 43-50 % of
-        /// such a grid's step.
-        /// </para>
-        ///
-        /// <para>
-        /// The figure bounds the lump this can produce rather than the saving it makes. At the
-        /// measured cost of an element visit in game it is roughly forty microseconds of one
-        /// grid's work, which is below the resolution of a frame; a grid large enough for the
-        /// floor to be a meaningful share of its step is far too large for it to bind.
-        /// </para>
+        /// Smallest slice of a step worth handing to the stage machine, in element visits. Entering a
+        /// resumable pass costs the same whatever it carries, so a tiny grid otherwise pays more for
+        /// the entries than the physics. See benchmarks.md, Below eight hundred blocks.
         /// </summary>
         private const long MinimumSliceWork = 2048;
 
@@ -296,12 +268,9 @@ namespace Thermodynamics.Core
         private double workCredit;
 
         /// <summary>
-        /// Call interval the budgeted passes were sized against: a ten-frame tick.
-        ///
-        /// Those budgets are per call, and the host calls every frame, so applying them directly
-        /// would run the room mapper and the exposure refresh ten times faster and ten times more
-        /// expensively. Scaling by the caller's actual frame length holds the rate constant and
-        /// independent of call frequency.
+        /// Call interval the budgeted passes were sized against: a ten-frame tick. Their budgets are
+        /// per call and the host calls every frame, so scaling by the caller's frame length is what
+        /// holds their rate independent of call frequency.
         /// </summary>
         private const float BudgetReferenceSeconds = 10f / 60f;
 
@@ -402,17 +371,10 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Call after a change to an existing block's geometry or mounting.
-        ///
-        /// Repairs everything that reads from the block's surfaces: the surface map, the
-        /// conduction links touching it, the coolant loops and heat pumps that bind to its ports,
-        /// and its own exposed faces. All of it is proportional to the block and its neighbours.
-        ///
-        /// The exception is sealing. What a block seals decides the shape of the rooms around it,
-        /// which only the flood fill can find, so a change to the sealing bits asks for a remap
-        /// and a change to mounting alone does not. Door state has its own path in
-        /// <see cref="RefreshBlockSealing"/>, which never needs the remap because a door is
-        /// already held as a portal between the same two rooms whether it is open or shut.
+        /// Call after a change to an existing block's geometry or mounting. Repairs the surface map,
+        /// the links touching the block, the loops and pumps bound to its ports and its own exposed
+        /// faces, all proportional to the block and its neighbours. Only a change to *sealing* asks
+        /// for a remap. See known-issues.md, A repair has to cost what changed.
         /// </summary>
         public void RefreshBlock(BlockInstance block)
         {
@@ -483,14 +445,9 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Call after a change that alters only what a block seals, such as a door opening or
-        /// closing.
-        ///
-        /// Does not remap the grid: the rooms either side of a door are the same rooms whether it
-        /// is open or shut, and the mapper already holds the door as a portal between them. The
-        /// work is to update the live surface bits, re-resolve which rooms reach open air through
-        /// their portals, and refresh exposure for the blocks facing the rooms that changed —
-        /// proportional to the doors and affected rooms rather than to the grid.
+        /// Call after a change that alters only what a block seals, such as a door cycling. Costs the
+        /// grid's doors and the affected rooms rather than a remap, because the mapper already holds
+        /// a door as a portal. See thermal-model.md, Portals and venting.
         /// </summary>
         public void RefreshBlockSealing(BlockInstance block)
         {
@@ -563,12 +520,10 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// The heat pump a block drives, or null when the block is not a pump.
-        ///
-        /// The host owns whether a pump runs, since it holds the terminal switch and the grid's
-        /// power state. Set <see cref="HeatPumpDevice.Enabled"/> and
-        /// <see cref="HeatPumpDevice.PowerAvailable"/> on the returned device, and read
-        /// <see cref="HeatPumpDevice.LastPowerWatts"/> back to bill for the power drawn.
+        /// The heat pump a block drives, or null when the block is not a pump. The host owns whether
+        /// it runs: set <see cref="HeatPumpDevice.Enabled"/> and
+        /// <see cref="HeatPumpDevice.PowerAvailable"/>, read <see cref="HeatPumpDevice.LastPowerWatts"/>
+        /// back to bill for it.
         /// </summary>
         public HeatPumpDevice GetHeatPump(BlockInstance block)
         {
@@ -628,12 +583,9 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Reapplies settings changed after the simulation was built.
-        ///
-        /// Most settings are read from the shared object each step and need no action. Three do
-        /// not: heat capacities are cached per node, and coolant loops and room air are built or
-        /// skipped according to a switch. Guarded by a revision comparison, so every setting can
-        /// be changed live for the cost of one integer compare per update.
+        /// Reapplies the three settings a step does not simply read: cached heat capacities, and
+        /// whether coolant loops and room air exist at all. Guarded by a revision compare, so live
+        /// settings cost one integer comparison an update.
         /// </summary>
         private void ApplySettingsIfChanged()
         {
@@ -812,17 +764,8 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Performs this frame's share of the current step, and starts the next one when it
-        /// completes.
-        ///
-        /// A step covers <c>1 / StepsPerSecond</c> of a second — fifteen frames at the default
-        /// settings — and is spread evenly across them rather than run whole on one. Each frame is
-        /// given the fraction of the step its own length represents:
-        /// <c>frameSeconds * StepsPerSecond</c>.
-        ///
-        /// <c>Frequency</c> and <c>SimulationSpeed</c> are the factors of <c>StepsPerSecond</c>,
-        /// so raising either makes every frame do proportionally more work rather than making
-        /// whole steps arrive more often.
+        /// Performs this frame's share of the current step — <c>frameSeconds * StepsPerSecond</c> of
+        /// it — and starts the next when it completes. See load-and-hitching.md, 10.
         /// </summary>
         private void AdvanceSolver(float frameSeconds, EnvironmentSample sample)
         {
@@ -861,15 +804,9 @@ namespace Thermodynamics.Core
             long budget = (long)workCredit;
             if (budget <= 0) return;
 
-            // Banked rather than spent while the slice would be smaller than it is worth
-            // dispatching. Re-entering the stage machine costs the same whether it carries one
-            // element visit or a thousand, and a grid small enough that its whole step fits inside
-            // the floor pays that entry on every frame of its window to integrate a handful of
-            // blocks. Banking leaves the rate untouched — the credit accrues at the same speed and
-            // nothing is discarded — and lands the work in one piece instead of eight.
-            //
-            // Never more than the step has left to do, or a step whose whole cost is under the
-            // floor would bank credit it can never spend.
+            // Banked rather than spent while the slice is smaller than it is worth dispatching, and
+            // never above what the step has left, or a step under the floor would bank credit it can
+            // never spend. The rate is untouched; the work lands in one piece.
             long floor = MinimumSliceWork;
             if (floor > solver.StepWorkRemaining) floor = solver.StepWorkRemaining;
             if (budget < floor) return;
@@ -962,12 +899,9 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Restores temperatures. Unknown positions are ignored, so a blueprint that lost blocks
-        /// still loads.
-        ///
-        /// Room air is restored onto the rooms already in the map, so this must run after the map
-        /// exists; the host calls it immediately after <see cref="RebuildAll"/>. A room whose shape
-        /// changed while the world was closed is treated as a new room and starts from its walls.
+        /// Restores temperatures; unknown positions are ignored, so a blueprint that lost blocks still
+        /// loads. Must run after <see cref="RebuildAll"/>, since room air is restored onto rooms the
+        /// map already holds. See architecture.md, Persistence.
         /// </summary>
         /// <returns>Number of blocks restored.</returns>
         public int Load(string data)

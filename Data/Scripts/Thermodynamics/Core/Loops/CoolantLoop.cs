@@ -25,40 +25,15 @@ namespace Thermodynamics.Core
     }
 
     /// <summary>
-    /// A closed run of coolant pipes, carrying one parcel of fluid per pipe block.
+    /// A closed run of coolant pipes, carrying one parcel of fluid per pipe block. A parcel exchanges
+    /// heat only with its own pipe and that pipe's sink faces, so heat reaches the far side of the
+    /// ring only by being <see cref="Advect"/>ed there.
     ///
-    /// The fluid used to be a single well-mixed mass: one temperature for the whole ring, linked to
-    /// every pipe and every sink face at once. That made a pump unnecessary to the physics — heat
-    /// crossed from a reactor to a radiator on the far side of the ship instantly, whether anything
-    /// was circulating or not — so "pump off" could only be modelled by deleting the loop, which
-    /// deleted the heat it held with it.
-    ///
-    /// Now each pipe holds its own parcel at its own temperature. A parcel exchanges heat only with
-    /// its own pipe and the blocks on that pipe's sink faces; the only way heat reaches the far side
-    /// of the ring is for the fluid to be <see cref="Advect"/>ed there. So a stopped pump leaves the
-    /// coolant beside a reactor to saturate while the coolant at the radiator stays cold, which is
-    /// what a stopped pump does, and the ring keeps every joule it was holding.
-    ///
-    /// Transport is advective rather than diffusive on purpose. Diffusion around a ring of N parcels
-    /// mixes in time proportional to N squared, so a long ring would need a conductance high enough
-    /// to make the solver unusably stiff. Advection carries a parcel N places in time proportional
-    /// to N.
-    ///
-    /// And the fluid does not move: the ring's *origin* does. Parcels sit in a fixed array and each
-    /// pipe reads the parcel currently passing through it, offset by a rotation this class advances
-    /// once per substep. Because a pipe's own index is a whole number, rounding that offset collapses
-    /// to an integer shift shared by every pipe, which is a bijection at any speed — two pipes can
-    /// never land on one parcel, and none is ever skipped. Three things follow:
-    ///
-    /// <list type="bullet">
-    /// <item>Carrying the fluid costs one float add per substep instead of a pass over the ring.</item>
-    /// <item>It is exactly conservative, because it only relabels which parcel sits where. There is no
-    /// stability limit on flow speed at all, where blending each parcel into the next was stable only
-    /// below one parcel per substep.</item>
-    /// <item>It is plug flow with no numerical diffusion. A blended scheme smears a hot pulse as it
-    /// travels; this carries it intact, and the only thing that smooths it is exchange with the pipes
-    /// it passes through — which is the physical mechanism rather than an artefact of the scheme.</item>
-    /// </list>
+    /// <para>
+    /// The fluid does not move; the ring's *origin* does. Parcels sit in a fixed array and each pipe
+    /// reads the parcel passing through it, offset by a rotation this class advances once a substep.
+    /// See thermal-model.md, Coolant loops.
+    /// </para>
     /// </summary>
     public class CoolantLoop
     {
@@ -71,12 +46,8 @@ namespace Thermodynamics.Core
         public LoopThermalProperties Properties;
 
         /// <summary>
-        /// Mean coolant temperature over the whole ring, K.
-        ///
-        /// Reading it averages the parcels; writing it sets every parcel to that value. Kept as a
-        /// single number because that is what a readout, a save file and a report all want — the
-        /// distribution around the ring is a transient that circulation re-establishes in seconds,
-        /// while the mean carries the energy.
+        /// Mean coolant temperature over the whole ring, K. Reading it averages the parcels; writing
+        /// it sets every parcel to that value, which is what a readout, a save file and a report want.
         /// </summary>
         public float Temperature
         {
@@ -230,19 +201,9 @@ namespace Thermodynamics.Core
         public readonly List<CoolantPump> Pumps = new List<CoolantPump>();
 
         /// <summary>
-        /// Recomputes <see cref="FlowSegmentsPerSecond"/> from the pumps in the ring.
-        ///
-        /// Flow goes as the square root of the pumps' combined demand, not the sum. That is the real
-        /// behaviour of pumps in parallel against a fixed circuit: pressure loss in turbulent flow
-        /// rises with the square of flow rate, so doubling the pumping doubles the head and multiplies
-        /// the flow by about 1.41. Four pumps carry twice one pump's flow, not four times.
-        ///
-        /// It is also the behaviour worth having in a game: a second pump is a real gain and a
-        /// meaningful redundancy, and the tenth is nearly free to leave switched off.
-        ///
-        /// Demands are signed by which way each pump faces, so they subtract where pumps oppose each
-        /// other and the square root is taken of what is left. A ring driven backwards works exactly
-        /// as well as one driven forwards; a ring whose pumps cancel does not circulate at all.
+        /// Recomputes <see cref="FlowSegmentsPerSecond"/> from the pumps in the ring: the square root
+        /// of their combined demand, signed by which way each faces so opposed pumps subtract.
+        /// See thermal-model.md, Coolant loops.
         /// </summary>
         public void RefreshFlow()
         {
@@ -445,14 +406,10 @@ namespace Thermodynamics.Core
             else Array.Clear(segmentWatts, 0, segmentWatts.Length);
         }
 
-        /// <summary>Applies watts to one parcel over <paramref name="h"/> seconds.</summary>
         /// <summary>
-        /// Applies watts to parcel <paramref name="parcel"/> directly.
-        ///
-        /// Indexed by parcel rather than by pipe, and so is <see cref="SegmentWatts"/>: the two models
-        /// differ in how many parcels a ring has, so accumulating against pipes would need one of them
-        /// special-cased. Accumulating against parcels means eight pipes feeding one parcel is simply
-        /// what the well-mixed ring does.
+        /// Applies watts to one parcel over <paramref name="h"/> seconds. Indexed by parcel rather
+        /// than by pipe, so that eight pipes feeding one parcel is simply what a well-mixed ring does
+        /// rather than a special case.
         /// </summary>
         internal void ApplyParcelWatts(int parcel, float watts, float h, float effectiveMass)
         {
@@ -465,24 +422,9 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Carries the fluid one step around the ring.
-        ///
-        /// First-order upwind: each parcel gives up a fraction of its temperature to the next and
-        /// takes the same fraction from the previous. Because every parcel has the same capacity, the
-        /// sum of temperatures is unchanged by construction, so this moves heat without creating or
-        /// destroying any — which a scheme with uneven parcels would not.
-        ///
-        /// <paramref name="h"/> times the flow rate is the fraction, and it is clamped at one parcel:
-        /// past that the scheme would be pulling from fluid that has already moved on. The solver
-        /// demands enough substeps to stay under that, so the clamp is a backstop rather than the
-        /// normal path.
-        /// </summary>
-        /// <summary>
         /// When set, the ring carries one parcel instead of one per pipe: the older well-mixed fluid,
-        /// where every pipe and every sink reads and writes a single temperature and heat crosses the
-        /// ring instantly whether anything is circulating or not.
-        ///
-        /// See <see cref="ThermalSettings.WellMixedCoolant"/> for why it is still here.
+        /// where heat crosses the ring instantly whether anything is circulating or not.
+        /// See <see cref="ThermalSettings.WellMixedCoolant"/>.
         /// </summary>
         public bool WellMixed
         {
@@ -499,27 +441,10 @@ namespace Thermodynamics.Core
         private bool wellMixed;
 
         /// <summary>
-        /// Carries the coolant round the ring for <paramref name="h"/> seconds.
-        ///
-        /// Below one parcel per substep this is a pure rotation: a parcel moves less than a pipe's
-        /// length, so it exchanges with the pipe it is in and that pipe changes at most once. Above
-        /// one parcel per substep it cannot be, and the reason is subtle enough to be worth stating.
-        ///
-        /// A rotation advancing by a constant <c>k</c> parcels per substep means pipe <c>i</c> only
-        /// ever reads parcels in the subgroup <c>k</c> generates modulo N. Whenever <c>gcd(k, N) &gt; 1</c>
-        /// the ring silently splits into that many disjoint sets: with eight parcels moving two per
-        /// substep, even pipes only ever meet even parcels, so heat from a sink on one could never
-        /// reach a radiator on the other. Measured at a one second step, a pipe saw four of eight
-        /// parcels at two per substep, two of eight at four, and **one of eight at eight** — the ring
-        /// frozen solid at maximum pump speed, while every figure about it looked healthy.
-        ///
-        /// The fix comes from asking what fast flow physically means at a coarse step. If the fluid
-        /// laps the ring several times between samples, the step cannot resolve where any of it is —
-        /// and a ring circulating far faster than it is observed *is* well mixed on that timescale. So
-        /// the correct limit as flow rises is the well-mixed model, not an aliased one. Mixing toward
-        /// the ring's mean with strength <c>1 - 1/parcels</c> gives exactly that: nothing at one parcel
-        /// per substep, half at two, and complete as the rate runs away. It also destroys the aliasing
-        /// outright, because mixing couples every parcel to every other.
+        /// Carries the coolant round the ring for <paramref name="h"/> seconds: a pure rotation below
+        /// one parcel per substep, and above it a rotation plus mixing toward the ring's mean at
+        /// <c>1 - 1/parcels</c>, which is both the physical limit and what removes the aliasing a bare
+        /// rotation would suffer. See thermal-model.md, Coolant loops.
         /// </summary>
         public void Advect(float h)
         {
