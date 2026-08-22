@@ -635,7 +635,7 @@ What the headroom buys, from the run's own cap sweep:
 demand from 21.35 to exactly 3.00 and `MaxSubsteps 3` grants it, so nothing is refused —
 `clamped_steps` is 0, and that is the two caps agreeing rather than luck. Raising the per-block cap
 to 6 without raising `MaxSubsteps` to at least 6 starts refusing steps, which is the failure mode
-[profiles.md](profiles.md) describes.
+[realism.md](realism.md#failure-and-what-actually-causes-it) measures.
 
 ### The same world at `MaxSubstepsPerBlock 6`
 

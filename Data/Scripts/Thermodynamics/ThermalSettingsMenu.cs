@@ -14,7 +14,7 @@ namespace Thermodynamics
     /// <summary>
     /// The settings menu, built on the Rich HUD Framework and generated from
     /// <see cref="Settings.Names"/>, so a setting added to the config appears without a menu edit.
-    /// No Save button and no Reset button: every change saves itself, and a profile is the reset.
+    /// No Save button: every change saves itself. One Defaults button, on Overview, for starting over.
     /// See configuration.md, The settings menu.
     /// </summary>
     public static class ThermalSettingsMenu
@@ -173,7 +173,7 @@ namespace Thermodynamics
 
         /// <summary>
         /// Every setting's control, by setting name, so a change made anywhere — a slider, a
-        /// profile, a reset, or the server pushing new values — can be reflected in all of them
+        /// the Defaults button or the server pushing new values — can be reflected in all of them
         /// rather than only the one that was touched.
         /// </summary>
         private static readonly Dictionary<string, TerminalControlBase> Controls =
@@ -189,7 +189,6 @@ namespace Thermodynamics
         private static TextPage statusPage;
 
         private static TerminalLabel statusLabel;
-        private static TerminalLabel profileLabel;
         private static TerminalLabel warningLabel;
 
         /// <summary>
@@ -568,19 +567,17 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// The page the menu opens on: which profile this world matches, how much has been changed
-        /// from the shipped values, and the two actions that change all of it at once.
+        /// The page the menu opens on: how much of this world differs from the shipped values, which
+        /// settings cancel each other, and the one action that returns all of it at once.
         /// </summary>
         private static ControlPage BuildOverview(bool local, bool editable)
         {
             ControlPage overview = new ControlPage { Name = "Overview" };
 
             statusLabel = new TerminalLabel { Name = "" };
-            profileLabel = new TerminalLabel { Name = "" };
             warningLabel = new TerminalLabel { Name = "" };
 
             ControlTile state = new ControlTile();
-            state.Add(profileLabel);
             state.Add(statusLabel);
             state.Add(warningLabel);
 
@@ -609,69 +606,50 @@ namespace Thermodynamics
             summary.Add(state);
             summary.Add(facts);
             overview.Add(summary);
+            overview.Add(DefaultsCategory(local));
 
-            overview.Add(ProfileCategory(local));
             return overview;
         }
 
         /// <summary>
-        /// The five shipped profiles as buttons, with what each one is for.
+        /// One button returning every world setting to the shipped value.
         ///
-        /// They existed only as a chat command, which meant the menu could show a world tuned by a
-        /// profile without ever mentioning that profiles were how you got there.
+        /// The menu carries no per-control reset and no Save button, because a change applies as it is
+        /// made and reaches the config file a second later. Starting over is the one case that needs
+        /// an action of its own.
         /// </summary>
-        private static ControlCategory ProfileCategory(bool local)
+        private static ControlCategory DefaultsCategory(bool local)
         {
             ControlCategory group = new ControlCategory
             {
-                HeaderText = "Profiles",
+                HeaderText = "Start over",
                 SubheaderText = local
-                    ? "A profile sets every world setting, so 'default' is also how you start over"
+                    ? "Returns every world setting to the value a fresh install ships"
                     : "Applied by the server; ask an administrator",
             };
 
-            ControlTile tile = new ControlTile();
-            int perTile = 0;
-
-            for (int i = 0; i < Core.ThermalProfiles.Names.Length; i++)
+            TerminalButton button = new TerminalButton
             {
-                string profile = Core.ThermalProfiles.Names[i];
+                Name = "Defaults",
+                ToolTip = Tip("Returns every world setting to the shipped value. What is drawn on"
+                    + " your own screen is left alone."),
+                Enabled = local,
+            };
+            button.ControlChangedHandler = (sender, args) => RestoreDefaults();
 
-                TerminalButton button = new TerminalButton
-                {
-                    Name = profile,
-                    ToolTip = Tip(Core.ThermalProfiles.Describe(profile)),
-                    Enabled = local,
-                };
-                button.ControlChangedHandler = (sender, args) => ApplyProfile(profile);
-
-                tile.Add(button);
-                perTile++;
-
-                if (perTile == ControlsPerTile)
-                {
-                    group.Add(tile);
-                    tile = new ControlTile();
-                    perTile = 0;
-                }
-            }
-
-            if (perTile > 0) group.Add(tile);
+            ControlTile tile = new ControlTile();
+            tile.Add(button);
+            group.Add(tile);
             return group;
         }
 
-        private static void ApplyProfile(string profile)
+        private static void RestoreDefaults()
         {
-            if (!Settings.Instance.ApplyProfile(profile))
-            {
-                MyAPIGateway.Utilities.ShowNotification(
-                    "Thermodynamics: no profile called " + profile, 3000, "Red");
-                return;
-            }
-
+            Settings.Instance.RestoreDefaults();
             Refresh();
+
             MyAPIGateway.Utilities.ShowNotification(
-                "Thermodynamics: profile " + profile + " applied (unsaved)", 3000, "White");
+                "Thermodynamics: every world setting back to its shipped value", 3000, "White");
         }
 
         /// <summary>
@@ -704,8 +682,7 @@ namespace Thermodynamics
                     ? "all shipped defaults"
                     : "changed: " + changed + " of " + names.Count;
 
-                profileLabel.Name = "profile: " + (MatchingProfile() ?? "custom");
-
+    
                 string warning = Warning();
                 warningLabel.Name = warning.Length == 0 ? "no conflicts" : "! " + WarningShort();
 
@@ -841,39 +818,6 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Which shipped profile this world currently matches, or null when it matches none.
-        ///
-        /// Only the nine values a profile sets are compared, so a world on the arcade profile with
-        /// a different vacuum temperature still reads as arcade — which is what an administrator
-        /// means by the question.
-        /// </summary>
-        private static string MatchingProfile()
-        {
-            for (int i = 0; i < Core.ThermalProfiles.Names.Length; i++)
-            {
-                string name = Core.ThermalProfiles.Names[i];
-
-                Core.ThermalSettings bundle = new Core.ThermalSettings();
-                if (!Core.ThermalProfiles.Apply(bundle, name)) continue;
-
-                Settings mine = Settings.Instance;
-                if (bundle.Frequency != mine.Frequency) continue;
-                if (bundle.SimulationSpeed != mine.SimulationSpeed) continue;
-                if (bundle.HeatTimeScale != mine.HeatTimeScale) continue;
-                if (bundle.MaxSubsteps != mine.MaxSubsteps) continue;
-                if (bundle.MaxSubstepsPerBlock != mine.MaxSubstepsPerBlock) continue;
-                if (bundle.ClampConductionOvershoot != mine.ClampConductionOvershoot) continue;
-                if (bundle.ClampEnvironmentOvershoot != mine.ClampEnvironmentOvershoot) continue;
-                if (bundle.EnableRoomAir != mine.EnableRoomAir) continue;
-                if (bundle.SolarSelfShadowing != mine.SolarSelfShadowing) continue;
-
-                return name;
-            }
-
-            return null;
-        }
-
-        /// <summary>
         /// The conflict as a label, in the space a label has. The sentence is on the status page;
         /// this is only the flag that sends you there.
         /// </summary>
@@ -902,7 +846,6 @@ namespace Thermodynamics
 
             StringBuilder text = new StringBuilder();
 
-            text.Append("Profile: ").Append(MatchingProfile() ?? "custom").Append('\n');
             text.Append("Settings changed from the shipped defaults: ")
                 .Append(changed).Append(" of ").Append(names.Count).Append('\n');
             text.Append("Settings digest: ").Append(SettingsSync.Fingerprint())

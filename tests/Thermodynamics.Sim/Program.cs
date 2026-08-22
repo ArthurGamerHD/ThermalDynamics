@@ -546,45 +546,6 @@ namespace Thermodynamics.Sim
                     return 0;
                 }
 
-                case "profiles":
-                {
-                    float seconds = OptionInt(args, "--seconds", 20);
-                    int length = OptionInt(args, "--length", 200);
-
-                    List<LoadBenchmarks.ReachRow> reach = new List<LoadBenchmarks.ReachRow>();
-                    List<LoadBenchmarks.StabilityRow> stable = new List<LoadBenchmarks.StabilityRow>();
-
-                    for (int i = 0; i < ThermalProfiles.Names.Length; i++)
-                    {
-                        string profile = ThermalProfiles.Names[i];
-
-                        ThermalSettings forReach = new ThermalSettings();
-                        ThermalProfiles.Apply(forReach, profile);
-                        reach.Add(LoadBenchmarks.Reach(profile, forReach, seconds, length));
-
-                        ThermalSettings forStability = new ThermalSettings();
-                        ThermalProfiles.Apply(forStability, profile);
-                        forStability.MaxElementVisitsPerStep = 0;
-                        forStability.Derive();
-                        stable.Add(LoadBenchmarks.Stability(profile, forStability, seconds));
-                    }
-
-                    Console.WriteLine();
-                    Console.WriteLine("== profiles ==");
-                    Console.WriteLine();
-                    for (int i = 0; i < ThermalProfiles.Names.Length; i++)
-                    {
-                        Console.WriteLine("  " + ThermalProfiles.Names[i].PadRight(12)
-                            + ThermalProfiles.Describe(ThermalProfiles.Names[i]));
-                    }
-                    Console.WriteLine();
-                    Console.WriteLine("  how fast heat crosses " + length + " blocks, conduction only:");
-                    Console.WriteLine(LoadBenchmarks.ReachTable(reach));
-                    Console.WriteLine("  and how each behaves with the environment on:");
-                    Console.WriteLine(LoadBenchmarks.StabilityTable(stable));
-                    return 0;
-                }
-
                 case "stability":
                 {
                     float seconds = OptionInt(args, "--seconds", 20);
@@ -958,7 +919,6 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  bench rowfill           what the first substep of a step pays over a later one");
             Console.WriteLine("  bench pace  --size N    does slowing sim and raising transfer save anything");
             Console.WriteLine("  bench reach --length N  how fast heat crosses a grid, against what it costs");
-            Console.WriteLine("  bench profiles          the named profiles, measured side by side");
             Console.WriteLine("  bench memory --size N   where a grid's memory goes, by structure");
             Console.WriteLine("  bench coolant           the segmented fluid model against the well-mixed one");
             Console.WriteLine("  bench elements          what a substep spends per node and per link");

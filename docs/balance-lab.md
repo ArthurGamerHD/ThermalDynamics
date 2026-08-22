@@ -212,10 +212,9 @@ own reactors wants radiators. The temperature alone says none of that.
 
 ### 4. Sweep the settings space (expensive, small sample)
 
-Roughly 50 ships spanning the strata, across a settings space rather than the five named profiles.
-The output is not one answer but a **region**: every settings vector that satisfies G1–G6, with
-its cost. The named profiles are then points chosen inside that region for different tastes, which
-is what the user asked for and what [profiles.md](profiles.md) currently asserts without evidence.
+Roughly 50 ships spanning the strata, across a settings space. The output is not one answer but a
+**region**: every settings vector that satisfies G1–G6, with its cost. The shipped configuration
+should be a point inside it, and today that is asserted rather than measured.
 
 Axes worth sweeping: `HeatTimeScale`, `MaxSubsteps`, `MaxSubstepsPerBlock`,
 `MaxElementVisitsPerStep`, and the definition-side dials the derivation exposes — the waste

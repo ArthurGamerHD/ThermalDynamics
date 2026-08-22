@@ -281,11 +281,12 @@ core is contention rather than speed — and no number carries a note saying whi
 modes produce identical matrices; only the clock differs. See
 [balance-lab.md](../docs/balance-lab.md#running-the-lab-parallel-and-linear).
 
-## Balance profiles
+## How far the model is from physics
 
 `profiles`, `sweep` and `features` are the whole-system counterpart to `balance`: not "is this block
-worth building" but "is this world configuration worth running". They live in the harness and change
-nothing that ships.
+worth building" but "how far is this model from physics, and what does each departure cost". They
+live in the harness, change nothing that ships, and are the only thing in the repository still called
+a profile.
 
 ```bash
 dotnet run --project Thermodynamics.Sim -- profiles          # one rig, four worlds
@@ -294,8 +295,8 @@ dotnet run --project Thermodynamics.Sim -- features          # mechanism switche
 ```
 
 Realism turns out to be the cheapest configuration and the least responsive; the substep estimate
-explains nearly every failure; and both the arcade profile and the shipped default diverge on cases
-a player can build. See [profiles.md](../docs/profiles.md).
+explains nearly every failure; and both the arcade end of the comparison and the shipped default
+diverge on cases a player can build. See [realism.md](../docs/realism.md).
 
 ## Load benchmarks
 
@@ -325,7 +326,7 @@ dotnet run --project Thermodynamics.Sim -- bench report --baseline benchmarks/pe
 | `weld` | A block welded every tick for 120 ticks — sustained construction, which never gets a quiet tick to recover in. |
 | `hitch` | 300 ticks of a settled grid with one block welded and one ground off. Reports median, p95, p99, max and the spike ratio. |
 | `load` | Building the simulation for a grid this size, which a player sees as the loading screen or as a blueprint paste. |
-| `report` | Everything at once, as a diffable CSV — including the worst cases a plain hull never reaches: air in the compartments, plumbing, blocks past their rating, three hull shapes in three worlds, and fleets of up to a hundred grids. Every scenario row carries what it actually built, so one that builds nothing cannot report a cost of zero. Also: the ladder, every feature measured both marginally and in isolation, every profile, and the substep cap across its range — plus a noise floor so a reader can tell a small cost from no cost. `--baseline <csv>` compares against an earlier run. See [benchmarks.md](../docs/benchmarks.md). |
+| `report` | Everything at once, as a diffable CSV — including the worst cases a plain hull never reaches: air in the compartments, plumbing, blocks past their rating, three hull shapes in three worlds, and fleets of up to a hundred grids. Every scenario row carries what it actually built, so one that builds nothing cannot report a cost of zero. Also: the ladder, every feature measured both marginally and in isolation, and the substep cap across its range — plus a noise floor so a reader can tell a small cost from no cost. `--baseline <csv>` compares against an earlier run. See [benchmarks.md](../docs/benchmarks.md). |
 | `floor --driven` | The same sweep on a ship held at temperature by forty 250 kW sources instead of by a seeded spread — the case that says whether a player would notice, and the one that reports the peak temperature overheat damage is decided by. |
 | `coolant` | The segmented fluid model against the well-mixed one it replaced, on the same grid, at rising amounts of pipe. |
 | `steppath` | The same step driven straight at the solver and then through the host's entry point, at three substep caps. Everything else here drives the solver, so work the host does around a step is invisible to it — which is how a duplicate stability estimate survived a section written to attribute fixed cost. Both timed runs re-seed the temperature spread; conduction skips a link whose ends agree, so whichever runs second on a flatter grid reads cheaper for no reason but its order. |
@@ -426,7 +427,7 @@ PipeFitter.BuildRing(builder, ring);      // pump goes on the first straight run
 
 ## Test coverage
 
-1,533 tests. **What each class is for is stated in its own summary, not here** —
+1,520 tests. **What each class is for is stated in its own summary, not here** —
 the index below says where to look, and `EveryTestClassSaysWhatItIsFor` fails when a class arrives
 without saying. This table is checked by `EveryTestClassIsInTheIndex`, so a suite cannot be added
 and left off it.
@@ -443,7 +444,7 @@ and left off it.
 | **Coolant loops and heat pumps** | `CoolantLoopTests` `CoolantFlowTests` `CoolantFaultTests` `PipeFitterTests` `HeatPumpTests` `CoolingScenarioClaimTests` |
 | **What a step costs, and what it must not change** | `LoadTests` `StepBudgetTests` `StepFixedCostTests` `StepPacingTests` `StepTermsTests` `SpreadStepTests` `PaceEquivalenceTests` `SweepSliceTests` `BufferGrowthTests` `IncrementalTopologyTests` `BlockRefreshTests` `CostRollupTests` `SolverReportingTests` `StressFindingsTests` |
 | **Bit-identity: an optimisation against what it replaced** | `PrecomputedEnvironmentTests` `FixedSourceRowTests` `WattsClearFusionTests` `ConductionClampGateTests` `DiagnosticBatchingTests` |
-| **Settings, storage and definitions** | `SettingsTests` `SettingsDefaultsTests` `SettingsWiringTests` `StorageCodecTests` `SchedulerTests` `DefinitionTests` `DefinitionFileTests` `ShippedDefinitionTests` `BlockDerivationTests` `MaterialOverrideTests` `FeatureToggleTests` `ProfileTests` `ProfileSuiteTests` `WorldSettingsTests` |
+| **Settings, storage and definitions** | `SettingsTests` `SettingsDefaultsTests` `SettingsWiringTests` `StorageCodecTests` `SchedulerTests` `DefinitionTests` `DefinitionFileTests` `ShippedDefinitionTests` `BlockDerivationTests` `MaterialOverrideTests` `FeatureToggleTests` `DefaultSettingsTests` `ProfileSuiteTests` `WorldSettingsTests` |
 | **Readouts a player sees** | `TemperatureScaleTests` `UnitsTests` |
 | **Telemetry, reports and overlays** | `RunningStatTests` `HistogramTests` `TimingStatTests` `TelemetryFormatTests` `TelemetryAnomalyTests` `SampleGateTests` `GridHealthTests` `AnomalyRegistryTests` `FrameCostTests` `ProfilerTests` `RescanGateTests` `OverlayBudgetTests` `PerformanceReportTests` `BenchmarkBaselineTests` |
 | **Field dumps: the mod checked against a world** | `DumpAuditTests` `FieldDumpTests` `CensusFidelityTests` |

@@ -171,35 +171,20 @@ scenario is for — see below.
 
 ### The configurations
 
-Each named profile, and the substep cap across its useful range, reported as cost per simulated
-second — the unit that does not move when the step length does.
+The substep cap across its useful range, reported as cost per simulated second — the unit that does
+not move when the step length does. There is one shipped configuration, so there is nothing else in
+this section: the cap is the only dial that trades accuracy for throughput on a stiff grid, and every
+other row of the report is already measured on the defaults.
 
-The profile rows say something the profile table in [configuration.md](configuration.md) does not.
-Measured in flight, on a hull with air moving over it:
+The shipped configuration is **resolved** — it is granted every substep the stability estimate asks
+for, because `MaxSubsteps` is 64 and `MaxSubstepsPerBlock` is off — so the overshoot clamps never
+engage and nothing is being driven towards ambient rather than integrated towards it. What a refused
+grid costs instead is [the overshoot clamp A/B](#the-overshoot-clamp-ab) below, and
+[realism.md](realism.md#failure-and-what-actually-causes-it) is where a deliberately starved
+configuration is measured.
 
-| profile | demanded | granted | clamped | per simulated second |
-| --- | ---: | ---: | --- | ---: |
-| simulation | 0.08 | 1 | no | 3.92 ms |
-| optimized | 0.17 | 1 | no | 1.87 ms |
-| simlite | 0.17 | 1 | no | 1.87 ms |
-| responsive | 18.5 | 19 | no | 28.5 ms |
-| arcade | **36.9** | 6 | **yes** | 10.4 ms |
-
-`arcade` is the only profile in this measurement that does not resolve what it is integrating: it
-asks for 37 substeps, is granted 6, and the overshoot clamps carry the difference. That is bounded —
-the clamps are exactly what makes it bounded — but the blocks past their limit are being driven
-towards ambient rather than integrated towards it.
-
-`responsive`, the shipped default, is resolved and costs 30.1 ms per simulated second on a
-32,800-block hull in flight. `simulation` and the two cut-down profiles run real time, which needs
-one substep and costs proportionately little.
-
-> These figures moved by a factor of two against every earlier version of this document, in both
-> directions and for two unrelated reasons: `substeps demanded` was rescaled when the element-visit
-> budget was corrected, and `per simulated second` halved when the overshoot clamp stopped running
-> on steps where it cannot bind. Figures quoted here from before either change are not comparable
-> with these. `BenchmarkBaselineTests` now fails when the committed baseline's keys drift from the
-> report's, which is the class of rot that made the older numbers hard to place.
+> `BenchmarkBaselineTests` fails when the committed baseline's keys drift from the report's, which is
+> the class of rot that made older figures on this page hard to place.
 
 ### The shape of a step
 
@@ -222,9 +207,10 @@ hull in flight:
 Measured on the solver path, which until recently paid one prologue where the host paid two. See
 [the two step paths](#the-two-step-paths) below.
 
-**At one substep the fixed part is three quarters of a step**, and one substep is what `simulation`,
-`optimized` and `simlite` all run. A change that halves the per-substep cost does nothing for those
-three, which is worth knowing before optimising for them.
+**At one substep the fixed part is three quarters of a step.** A grid soft enough to need only one —
+which in the field is debris rather than ships — pays almost nothing but that fixed part, so a change
+that halves the per-substep cost does nothing for it. Worth knowing before optimising for the wrong
+end of the population.
 
 > Fitting through `cap 1` instead would put a clamped point against an unclamped one and attribute
 > the difference to the fixed term.
@@ -256,8 +242,8 @@ Two things came out of measuring it. The relaxation row was filled on every step
 the clamped conduction loop, which on a grid granted its substeps never runs — a store per node per
 step that nothing looked at. And the wind weighting, a six-face sum, was computed twice per node in
 the fill: once for the convection factor and once for the friction row, both of them live in air at
-speed. Removing the two took the one-substep profiles down about a tenth: `optimized` 2.10 ms to
-1.87 ms a simulated second, `simlite` 2.08 to 1.87, `simulation` 4.20 to 3.92.
+speed. Removing the two took a one-substep configuration down about a tenth — 2.10 ms to 1.87 ms a
+simulated second on the cheapest of them, and 4.20 to 3.92 on the dearest.
 
 `StepTermsTests` pins the structural fact a stopwatch cannot: the rows are filled once a step
 however many substeps it is cut into and however many frames it is spread over, and once a substep
@@ -325,8 +311,9 @@ the two track each other, and the low-noise runs read as zero. The test returns 
 element that can bind, so a grid where the answer is yes stops almost immediately — it is one
 comparison, not a pass.
 
-Worth deciding whether `arcade` should scale `HeatTimeScale` down in an atmosphere, or whether
-being pinned to ambient is the intended arcade behaviour.
+A configuration refused its substeps this badly is not one that ships — see
+[realism.md](realism.md#failure-and-what-actually-causes-it), where the starved end of the
+comparison is measured on purpose.
 
 ### What being measured costs
 
@@ -913,6 +900,7 @@ several times its neighbours' should be re-taken rather than explained.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Dropped the profile rows from [The configurations](#the-configurations) and from the report, with the five settings profiles they measured. The section is the substep cap alone now, and the committed baseline was re-recorded because its keys changed (`M6`). **The re-recording is this machine on a loud day** — calibration 109.4 ms against row 3's 86.2, noise 0.129 ms against 0.025 — so the file's *timings* are not comparable to the figures quoted on this page, and its keys, which is all `BenchmarkBaselineTests` reads, are. |
 | 2026-08-22 | Recorded row 10 of [the iteration log](#the-iteration-log), and marked its duration as not comparable rather than leaving a reader to compare it (`M7`). |
 | 2026-08-22 | Absorbed `element-cost.md` as [What a substep costs](#what-a-substep-costs) — the measurement behind the step budget's weighting belongs beside the report that uses it — and `iterations.md` as [The iteration log](#the-iteration-log), which is this report's own trend over time. Converted the three optimisation findings to present tense, with the state they replaced kept in their before/after tables. |
 | 2026-08-21 | Filed one overheat event per block per step rather than per substep, which had been multiplying every reported critical-block count by the grid's substep demand and OOM-killing a 4,000-tick driven run at 14 GB. Read a node's six face weights once in the row fill instead of twice (−12.4% on the fill in air). Let the environment pass write the watts row instead of clearing it first (+0.6% at half a million blocks — a bandwidth effect, not an instruction one). Gave every substep count the step length it was counted against. |

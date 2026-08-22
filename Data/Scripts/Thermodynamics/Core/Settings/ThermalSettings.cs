@@ -79,11 +79,7 @@ namespace Thermodynamics.Core
         /// Solver steps per simulated second; the integration step is 1/Frequency.
         /// See configuration.md, Frequency is not the cost dial it looks like.
         /// </summary>
-        /// <remarks>
-        /// The shipped defaults are the <c>responsive</c> profile value for value, held together by
-        /// <c>DefaultsMatchTheResponsiveProfile</c>.
-        /// </remarks>
-        public int Frequency = 8;
+        public int Frequency = 4;
 
         /// <summary>
         /// Multiplier on how fast heat evolves relative to real time. Applied by running more steps
@@ -166,7 +162,15 @@ namespace Thermodynamics.Core
         /// per node — before the step is made shorter rather than coarser. Zero removes the bound.
         /// See configuration.md, Solver.
         /// </summary>
-        public int MaxElementVisitsPerStep = 1000000;
+        /// <remarks>
+        /// **This bounds a step, and smoothness is a property of a frame.** A frame does
+        /// <c>budget * frameSeconds * StepsPerSecond</c> of work, so the two are related by
+        /// <see cref="Frequency"/>: at half the step rate a step spans twice as many frames and the
+        /// same budget costs half as much per frame. The figure moved with <c>Frequency</c> from 8 to
+        /// 4 for that reason — 2,000,000 at four steps a second is the per-frame cost 1,000,000 was at
+        /// eight, and it keeps the bound off the grids it was never meant to reach.
+        /// </remarks>
+        public int MaxElementVisitsPerStep = 2000000;
 
         /// <summary>
         /// What one node is worth, in links, when a step's cost is counted. Measured rather than

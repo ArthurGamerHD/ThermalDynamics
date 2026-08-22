@@ -243,7 +243,7 @@ The core speaks no game type, so it builds and runs outside the session in secon
 makes it testable, profilable, drivable by another mod, and portable to another engine — the four
 are one property, not four.
 
-**Checked by** `C5` (`CoreIsolationTests`). The suite is 1,533 tests, 33 deterministic scenarios and
+**Checked by** `C5` (`CoreIsolationTests`). The suite is 1,520 tests, 33 deterministic scenarios and
 a load benchmark that reaches a million blocks in one grid.
 
 ### Open — the API is part of the contract
@@ -379,13 +379,16 @@ answer lives in.
 
 ### The pace the mod is meant to be played at
 
-`HeatTimeScale` is the clock and 1 is real. **A fresh world runs `responsive`** — full integration
-accuracy with the clock at 225 — because real thermal time is physically honest and far too slow to
-play. Dividing every heat capacity by *k* is exactly running thermal time at *k*×, so equilibrium
+`HeatTimeScale` is the clock and 1 is real. **A world runs the clock at 225** — with full
+integration accuracy, since real thermal time is physically honest and far too slow to play.
+Dividing every heat capacity by *k* is exactly running thermal time at *k*×, so equilibrium
 temperatures and every ratio between mechanisms are untouched; only the clock moves.
 
-The five profiles are a ladder on two axes rather than five unrelated tunings: how faithfully the
-simulation is integrated, and how fast heat is made to move. See [profiles.md](profiles.md).
+**There is one configuration, and it is the most faithful one the model has.** Presets were tried and
+removed: a preset makes a block's behaviour depend on which one a world happens to run, and it puts
+an approximation in front of a player who did not ask for one. What a world may still do is move an
+individual setting. See [configuration.md](configuration.md), and [realism.md](realism.md) for how
+far the model is from physics whatever the settings say.
 
 ---
 

@@ -272,7 +272,7 @@ Two caveats apply to every figure below:
 
 ### The shape, in one table
 
-Deduplicated, shipped profile, `HeatTimeScale` 225. Seconds are simulated seconds; at
+Deduplicated, shipped settings, `HeatTimeScale` 225. Seconds are simulated seconds; at
 `SimulationSpeed` 1 they are the seconds a player waits.
 
 | Scenario | peak p50 | critical | s to critical p50 | settle p50 | substeps p50/p95/p99 |

@@ -703,18 +703,23 @@ namespace Thermodynamics.Tests
         /// What the shipped allowance does to a stiff mid-size grid, and what it takes to make it
         /// bind.
         ///
-        /// Counting links alone, this rig's 20,779 links bought 48 substeps against a demand of
-        /// 23, so the budget did nothing. Counting nodes as well, a substep over its 8,904 nodes
-        /// costs 56,395 element visits and the same allowance buys 17.
+        /// <para>
+        /// Counting links alone, this rig's 20,779 links bought 48 substeps against a demand of 23, so
+        /// the budget did nothing. Counting nodes as well, a substep over its 8,904 nodes costs 56,395
+        /// element visits, and whether the allowance covers that is a question about the step *rate*:
+        /// demand is proportional to step length, so the shipped four steps a second asks for about
+        /// 23 substeps where eight would ask for 12.
+        /// </para>
         ///
-        /// Whether that binds is then a question about the step *rate*, which is the part worth
-        /// recording: demand is proportional to step length, so the shipped eight steps a second
-        /// asks for 11.6 substeps and fits, while four steps a second asks for 23.2 and does not.
-        /// Raising the rate is a legitimate way out of a budget, at the price of per-step overhead
-        /// — the frequency sweep in docs/configuration.md measures that trade.
+        /// <para>
+        /// **The budget bounds a step and smoothness is a property of a frame**, and the two are
+        /// related by <c>Frequency</c> — a frame does <c>budget * frameSeconds * StepsPerSecond</c> of
+        /// work. So the shipped allowance covers this rig at the shipped rate, and halving it, which is
+        /// what the old figure came to at this rate, does not.
+        /// </para>
         /// </summary>
         [Fact]
-        public void TheShippedAllowanceFitsThisGridAndABiggerStepDoesNot()
+        public void TheShippedAllowanceFitsThisGridAndAHalvedOneDoesNot()
         {
             ThermalSimulation shipped = Build(Small);
             while (shipped.HasPendingWork) shipped.Update(LoadBenchmarks.TickSeconds, Space());
@@ -728,7 +733,7 @@ namespace Thermodynamics.Tests
                 shipped.Update(LoadBenchmarks.TickSeconds, Space());
             }
 
-            output.WriteLine("shipped rate: cost " + shipped.SubstepCost.ToString("n0")
+            output.WriteLine("shipped: cost " + shipped.SubstepCost.ToString("n0")
                 + ", demand " + shipped.Solver.LastRequiredSubsteps.ToString("n2")
                 + ", budget " + shipped.SubstepBudget.ToString("n0")
                 + ", rate " + (100d * shipped.SimulationRate).ToString("n1") + "%.");
@@ -738,30 +743,31 @@ namespace Thermodynamics.Tests
             Assert.True(shipped.SubstepCost > shipped.Solver.LinkCount * 2);
             Assert.Equal(1d, shipped.SimulationRate, 6);
 
-            // The same grid at half the step rate asks twice as much of each step, and the same
-            // allowance no longer covers it.
-            ThermalSimulation slower = Build(Small);
-            while (slower.HasPendingWork) slower.Update(LoadBenchmarks.TickSeconds, Space());
-            LoadBenchmarks.SeedSpread(slower);
+            // Half the allowance no longer covers it — which is the figure the default carried when
+            // the shipped rate was eight steps a second, and the reason it moved with the rate.
+            ThermalSimulation tighter = Build(Small);
+            while (tighter.HasPendingWork) tighter.Update(LoadBenchmarks.TickSeconds, Space());
+            LoadBenchmarks.SeedSpread(tighter);
 
-            slower.Settings.Frequency = 4;
-            slower.Settings.MaxSubsteps = 4096;
-            slower.Settings.Derive();
+            tighter.Settings.MaxElementVisitsPerStep = shipped.Settings.MaxElementVisitsPerStep / 2;
+            tighter.Settings.MaxSubsteps = 4096;
+            tighter.Settings.Derive();
 
             for (int tick = 0; tick < 60; tick++)
             {
-                slower.Update(LoadBenchmarks.TickSeconds, Space());
+                tighter.Update(LoadBenchmarks.TickSeconds, Space());
             }
 
-            output.WriteLine("half rate: demand " + slower.Solver.LastRequiredSubsteps.ToString("n2")
-                + ", budget " + slower.SubstepBudget.ToString("n0")
-                + ", rate " + (100d * slower.SimulationRate).ToString("n1") + "%.");
+            output.WriteLine("half the allowance: demand "
+                + tighter.Solver.LastRequiredSubsteps.ToString("n2")
+                + ", budget " + tighter.SubstepBudget.ToString("n0")
+                + ", rate " + (100d * tighter.SimulationRate).ToString("n1") + "%.");
 
             // Shortened, not clamped: the accuracy of each step is preserved and simulated time is
             // what gets traded.
-            Assert.False(slower.Solver.LastStepWasClamped);
-            Assert.True(slower.SimulationRate < 1d);
-            Assert.True(slower.SimulationRate > 0.5d);
+            Assert.False(tighter.Solver.LastStepWasClamped);
+            Assert.True(tighter.SimulationRate < 1d);
+            Assert.True(tighter.SimulationRate > 0.5d);
         }
 
         // ---- wall clock, loosely ------------------------------------------------------------

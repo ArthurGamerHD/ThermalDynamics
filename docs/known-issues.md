@@ -457,19 +457,18 @@ cost triples because the node state stops fitting in cache. See
 [benchmarks.md](benchmarks.md#what-a-substep-costs).
 
 The budget now counts `links + 4 × nodes` and ignores faces, four being the low end of the range over
-the sizes where the bound binds at all. **The unit change alone tightens it:** at the 18.35 ns per
-weighted element a field dump measured, the unchanged default of 1,000,000 is 18.3 ms of solver work
-per step, which is what this setting's documentation always claimed and had drifted a long way from.
+the sizes where the bound binds at all.
 
 What this retires is the claim that only grids past a hundred thousand blocks reach the default. A
-step's cost is size times stiffness, and `TheShippedAllowanceFitsThisGridAndABiggerStepDoesNot` pins
+step's cost is size times stiffness, and `TheShippedAllowanceFitsThisGridAndAHalvedOneDoesNot` pins
 both halves on one 8,904-node rig: counting links alone, its 20,779 links bought 48 substeps against
 a demand of 23, so the budget did nothing at all; counting nodes as well, one substep over that rig
-costs 56,395 element visits and the same allowance buys 17 — which still covers the 11.6 the shipped
-eight steps a second asks for. **Whether the allowance binds is a question about the step rate
-rather than about block count.** A world whose config predates the rename takes the new default
-rather than importing its old number, which would be a value in the wrong unit; the load path logs
-when it drops one.
+costs 56,395 element visits. **Whether the allowance binds is a question about the step rate rather
+than about block count** — the same rig asks 23 substeps at the shipped quarter-second step and about
+12 at an eighth-second one, which is why the allowance moved with `Frequency` and why halving it now
+throttles this grid. A world whose config predates the rename takes the new default rather than
+importing its old number, which would be a value in the wrong unit; the load path logs when it drops
+one.
 
 ### A face bolted to something that does not seal is still exposed
 
@@ -508,6 +507,7 @@ counters rather than milliseconds so it holds on any machine.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Repointed the step-budget paragraph at the renamed test and at the shipped rate, which moved from eight steps a second to four when the settings profiles were removed. |
 | 2026-08-22 | Moved the thermal view out of the deliberate limits. It was filed there on the grounds that mods get no shader — which is a statement about difficulty, not a simplification taken on purpose, and a limit is only a limit when it is chosen (`D6`). It is an open problem, and the intent to have one is stated in [document-of-intent.md](document-of-intent.md#thermal-vision--wanted-method-unknown). Recorded the absence of any non-instrument feedback beside it. |
 | 2026-08-22 | Absorbed `bugs-and-performance.md`, the record of the first extraction pass. Every one of its thirty-two findings is resolved in the current code — including the eleven whose headings carried no *fixed* marker, each re-verified against the source during this pass — so the page survives as the dated entries below and the patterns above rather than as a defect list. Restructured around the shape of each failure rather than its subsystem; promoted the deliberate limits to the top; moved the corpus balance findings to [balance.md](balance.md), which is where the dataset they come from is described. Removed two limits that the per-room gas-system read had already retired ("a room with no air vent holds no air" and "pressurisation is only known through air vents") and corrected a third: block `Conductivity` is real W/(m·K), and it is the *coolant loop's* that is still a 0…1 quality. Merged the two sections both titled "Fixed, worth remembering". |
 | 2026-08-21 | Recorded the buffer-growth NaN, the unguarded shape caches on the block-placement path, and the substep mass floor computing from its own previous answer. Recorded the censoring limit that makes every peak above critical a statement about the harness. |

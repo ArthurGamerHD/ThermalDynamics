@@ -5,22 +5,22 @@ using Thermodynamics.Core;
 namespace Thermodynamics.Harness
 {
     /// <summary>
-    /// Whole-system balance profiles, as simulated environments rather than as shipped settings.
+    /// **How physically true the model is**, as a simulated environment rather than as a setting — the
+    /// axis the mod itself has no dial for, because <c>HeatTimeScale</c> makes it deliberately 225
+    /// times faster than the world and nothing shipped can turn that off.
     ///
-    /// <see cref="ThermalProfiles"/> in the core ships five bundles, and every one of them tunes
-    /// the same axis: how accurately a step is integrated. All five run <c>HeatTimeScale = 225</c>,
-    /// so even <c>simulation</c> — the accuracy-first profile — is a faithful integration of a
-    /// model that is deliberately 225 times faster than the world. There is no dial anywhere that
-    /// asks how *physically true* the model is, because until now nothing needed one.
+    /// <para>
+    /// This carries every knob that moves the balance, not just the integration ones: the two pace
+    /// scales, the environment constants, which mechanisms run, how the coolant is modelled and what
+    /// a reactor's waste heat is. **Nothing here changes the shipped configuration** — the conduction
+    /// pace is expressed by scaling the materials the harness builds with, so the core needs no new
+    /// setting to be measured against.
+    /// </para>
     ///
-    /// This is that axis, built here so it can be measured before anything is decided. A profile
-    /// carries every knob that changes the balance of the mod, not just the integration ones:
-    /// the two pace scales, the environment constants, which mechanisms run, how the coolant is
-    /// modelled and what a reactor's waste heat actually is.
-    ///
-    /// **Nothing here changes the shipped configuration.** The conduction pace is expressed by
-    /// scaling the conductivity of the materials the harness builds with, which reaches the same
-    /// number the solver would see, so the core needs no new setting to be measured against.
+    /// <para>
+    /// This is the only thing in the repository still called a profile. The five shipped presets are
+    /// gone; there is one configuration, and <see cref="Shipped"/> reads it rather than restating it.
+    /// </para>
     /// </summary>
     public class BalanceProfile
     {
@@ -167,17 +167,23 @@ namespace Thermodynamics.Harness
             };
         }
 
-        /// <summary>What the mod ships today, for the comparison to have a middle.</summary>
+        /// <summary>
+        /// What the mod ships today, for the comparison to have a middle — **read off
+        /// <see cref="ThermalSettings"/> rather than restated here**, which is the only way the two
+        /// cannot drift. They had: this carried <c>MaxSubsteps 16</c> against a shipped 64.
+        /// </summary>
         public static BalanceProfile Shipped()
         {
+            ThermalSettings shipped = new ThermalSettings();
+
             return new BalanceProfile
             {
                 Name = "shipped",
                 Intent = "the current default",
-                HeatTimeScale = 225f,
+                HeatTimeScale = shipped.HeatTimeScale,
                 ConductionPace = ThermalConstants.ConductionScale,
-                Frequency = 4,
-                MaxSubsteps = 16,
+                Frequency = shipped.Frequency,
+                MaxSubsteps = shipped.MaxSubsteps,
             };
         }
 

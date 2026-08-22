@@ -114,7 +114,7 @@ namespace Thermodynamics.Harness
             List<ReportRow> rows = new List<ReportRow>();
 
             // The JIT compiles on first use, so the first thing measured is always the compiler.
-            Measure(Configure(0, null, true), shape, 1000, 4);
+            Measure(Configure(0, true), shape, 1000, 4);
 
             if (log != null) log("machine");
             Environment(rows);
@@ -163,7 +163,7 @@ namespace Thermodynamics.Harness
             Add(rows, "machine", "host", "64 bit", System.Environment.Is64BitProcess ? 1 : 0, "", false);
 
             Stopwatch watch = Stopwatch.StartNew();
-            ThermalSimulation calibration = Build(Configure(0, null, true), "ship", 4000);
+            ThermalSimulation calibration = Build(Configure(0, true), "ship", 4000);
             LoadBenchmarks.SeedSpread(calibration);
 
             EnvironmentState state = EnvironmentSolver.Solve(
@@ -189,7 +189,7 @@ namespace Thermodynamics.Harness
         {
             if (log != null) log("noise floor");
 
-            ThermalSettings settings = Configure(0, null, true);
+            ThermalSettings settings = Configure(0, true);
 
             double least = double.MaxValue;
             double most = 0;
@@ -213,7 +213,7 @@ namespace Thermodynamics.Harness
                 int size = sizes[i];
                 if (log != null) log("  ladder " + size.ToString("n0"));
 
-                ThermalSettings settings = Configure(0, null, true);
+                ThermalSettings settings = Configure(0, true);
 
                 Stopwatch build = Stopwatch.StartNew();
                 ThermalSimulation simulation = Build(settings, shape, size);
@@ -241,10 +241,10 @@ namespace Thermodynamics.Harness
         private static void FeatureBreakdown(List<ReportRow> rows, string shape, int size, int ticks,
             Action<string> log)
         {
-            Sample whole = Measure(Configure(0, null, true), shape, size, ticks);
+            Sample whole = Measure(Configure(0, true), shape, size, ticks);
             Add(rows, "features", "everything on", "step", whole.StepMs, "ms");
 
-            Sample bare = Measure(Configure(0, null, false), shape, size, ticks);
+            Sample bare = Measure(Configure(0, false), shape, size, ticks);
             Add(rows, "features", "everything off", "step", bare.StepMs, "ms");
 
             for (int i = 0; i < Features.Length; i++)
@@ -254,13 +254,13 @@ namespace Thermodynamics.Harness
 
                 // Marginal: everything on, this one off. What removing it from a working
                 // configuration gives back.
-                ThermalSettings without = Configure(0, null, true);
+                ThermalSettings without = Configure(0, true);
                 feature.Set(without, false);
                 without.Derive();
                 Sample removed = Measure(without, shape, size, ticks);
 
                 // Isolated: everything off, this one on. What the feature does by itself.
-                ThermalSettings only = Configure(0, null, false);
+                ThermalSettings only = Configure(0, false);
                 feature.Set(only, true);
                 only.Derive();
                 Sample alone = Measure(only, shape, size, ticks);
@@ -276,25 +276,12 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
-        /// The configurations a server actually runs: the named profiles, and the substep cap
-        /// across its useful range.
+        /// The one configuration a server runs, and the substep cap across its useful range — the
+        /// only dial that trades accuracy for throughput on a stiff grid.
         /// </summary>
         private static void Configurations(List<ReportRow> rows, string shape, int size, int ticks,
             Action<string> log)
         {
-            for (int i = 0; i < ThermalProfiles.Names.Length; i++)
-            {
-                string profile = ThermalProfiles.Names[i];
-                if (log != null) log("  profile " + profile);
-
-                Sample sample = Measure(Configure(0, profile, true), shape, size, ticks);
-
-                Add(rows, "profiles", profile, "per simulated second", sample.MsPerSimulatedSecond, "ms");
-                Add(rows, "profiles", profile, "substeps granted", sample.Substeps, "", false);
-                Add(rows, "profiles", profile, "substeps demanded", sample.Demand, "", false);
-                Add(rows, "profiles", profile, "clamped", sample.Clamped ? 1 : 0, "", false);
-            }
-
             double[] stepMs = new double[Caps.Length];
             float[] substeps = new float[Caps.Length];
 
@@ -303,7 +290,7 @@ namespace Thermodynamics.Harness
                 int cap = Caps[i];
                 if (log != null) log("  cap " + cap);
 
-                Sample sample = Measure(Configure(cap, null, true), shape, size, ticks);
+                Sample sample = Measure(Configure(cap, true), shape, size, ticks);
                 string name = cap == 0 ? "cap off" : "cap " + cap;
 
                 stepMs[i] = sample.StepMs;
@@ -364,7 +351,7 @@ namespace Thermodynamics.Harness
             int one = IndexOfCap(1);
             if (one < 0) return;
 
-            ThermalSettings settings = Configure(1, null, true);
+            ThermalSettings settings = Configure(1, true);
             ThermalSimulation simulation = Build(settings, shape, size);
             LoadBenchmarks.SeedSpread(simulation);
             Census.DriveCensus(simulation);
@@ -462,10 +449,10 @@ namespace Thermodynamics.Harness
             try
             {
                 LoadBenchmarks.CollectDiagnostics = false;
-                Sample off = Measure(Configure(0, null, true), shape, size, ticks);
+                Sample off = Measure(Configure(0, true), shape, size, ticks);
 
                 LoadBenchmarks.CollectDiagnostics = true;
-                Sample on = Measure(Configure(0, null, true), shape, size, ticks);
+                Sample on = Measure(Configure(0, true), shape, size, ticks);
 
                 Add(rows, "diagnostics", "per-mechanism watts", "step, off", off.StepMs, "ms");
                 Add(rows, "diagnostics", "per-mechanism watts", "step, on", on.StepMs, "ms");
@@ -475,7 +462,7 @@ namespace Thermodynamics.Harness
                 // The batching, measured against itself. `every substep` is what the solver used
                 // to do; the difference between it and `step, on` is what is saved by writing only
                 // the substep anything reads.
-                Sample all = Measure(Configure(0, null, true), shape, size, ticks,
+                Sample all = Measure(Configure(0, true), shape, size, ticks,
                     null, null, true, everySubstep: true);
 
                 Add(rows, "diagnostics", "per-mechanism watts", "step, every substep", all.StepMs, "ms");
@@ -491,7 +478,7 @@ namespace Thermodynamics.Harness
 
                 // The worst case for batching: one substep, so the last substep is the only
                 // substep and there is nothing to skip.
-                ThermalSettings single = Configure(0, null, true);
+                ThermalSettings single = Configure(0, true);
                 single.MaxSubsteps = 1;
                 single.Derive();
 
@@ -512,11 +499,11 @@ namespace Thermodynamics.Harness
         {
             if (log != null) log("  clamp " + name);
 
-            ThermalSettings gated = Configure(0, null, true);
+            ThermalSettings gated = Configure(0, true);
             gated.MaxSubsteps = maxSubsteps;
             gated.Derive();
 
-            ThermalSettings ungated = Configure(0, null, true);
+            ThermalSettings ungated = Configure(0, true);
             ungated.MaxSubsteps = maxSubsteps;
             ungated.Derive();
 
@@ -554,7 +541,7 @@ namespace Thermodynamics.Harness
                 {
                     if (log != null) log("  " + Shapes[s] + " in " + WorldNames[w]);
 
-                    Sample sample = Measure(Configure(0, null, true), Shapes[s], Size, ticks,
+                    Sample sample = Measure(Configure(0, true), Shapes[s], Size, ticks,
                         null, World(WorldNames[w]));
 
                     string name = Shapes[s] + " " + WorldNames[w];
@@ -577,15 +564,15 @@ namespace Thermodynamics.Harness
         {
             const int Size = 8000;
 
-            Measured(rows, "plain", WorstCases.Hull("ship", Size, Configure(0, null, true)), ticks, log);
-            Measured(rows, "pressurised", WorstCases.Pressurised("ship", Size, Configure(0, null, true)), ticks, log);
-            Measured(rows, "plumbed", WorstCases.Plumbed("ship", Size, 8, Configure(0, null, true)), ticks, log);
-            Measured(rows, "burning", WorstCases.Burning("ship", Size, Configure(0, null, true)), ticks, log);
+            Measured(rows, "plain", WorstCases.Hull("ship", Size, Configure(0, true)), ticks, log);
+            Measured(rows, "pressurised", WorstCases.Pressurised("ship", Size, Configure(0, true)), ticks, log);
+            Measured(rows, "plumbed", WorstCases.Plumbed("ship", Size, 8, Configure(0, true)), ticks, log);
+            Measured(rows, "burning", WorstCases.Burning("ship", Size, Configure(0, true)), ticks, log);
 
             // The bound on the damage check rather than its ordinary cost: burning a ship through
             // its producers leaves most of the hull under its rating, so the expensive branch is
             // rarely taken. This takes it on every node of every substep.
-            Measured(rows, "scorched", WorstCases.Scorched("ship", Size, Configure(0, null, true)), ticks, log);
+            Measured(rows, "scorched", WorstCases.Scorched("ship", Size, Configure(0, true)), ticks, log);
         }
 
         private static void Measured(List<ReportRow> rows, string name, WorstCases.Built built,
@@ -647,7 +634,7 @@ namespace Thermodynamics.Harness
                 if (log != null) log("  fleet of " + counts[c]);
 
                 List<WorstCases.Built> fleet =
-                    WorstCases.Fleet("ship", Total, counts[c], Configure(0, null, true));
+                    WorstCases.Fleet("ship", Total, counts[c], Configure(0, true));
 
                 EnvironmentSample sample = Worst();
                 WorstCases.StepFleet(fleet, sample, 2);
@@ -708,17 +695,12 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
-        /// Settings for one case: a substep cap, an optional named profile, and whether the
-        /// features start on or off.
+        /// Settings for one case: the shipped defaults, a substep cap, and whether the features start
+        /// on or off.
         /// </summary>
-        private static ThermalSettings Configure(int cap, string profile, bool featuresOn)
+        private static ThermalSettings Configure(int cap, bool featuresOn)
         {
             ThermalSettings settings = new ThermalSettings();
-            // Settings only. A profile's definition overlay is deliberately not read here: a
-            // comparison is about settings, and one that also swapped the definitions underneath
-            // would be measuring two things at once and could not say which moved. The game side
-            // enforces the same rule: every profile now reads one set of definitions.
-            if (profile != null) ThermalProfiles.Apply(settings, profile);
 
             if (!featuresOn)
             {

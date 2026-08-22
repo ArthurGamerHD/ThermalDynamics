@@ -232,10 +232,11 @@ uncapped run.
 
 **Read the step length first.** A step of `dt` needs `dt · r_max / safety` substeps, so the demand
 — and with it which blocks a given cap reaches and what that cap is worth — is *proportional to
-the step length*. There is no single table here; there is one per step length, and the two that
-matter are the two the shipped profiles run at.
+the step length*. There is no single table here; there is one per step length. **The shipped
+`Frequency` is 4**, so the second table is the one a default world reads; the first is kept because
+raising the rate is a legitimate way out of a budget and this is what it costs.
 
-`simulation` and `responsive` run **Frequency 8**, an eighth-second step:
+At **Frequency 8**, an eighth-second step:
 
 | cap | substeps | ms | speed | blocks raised of 43,232 | worst error | rms error |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -249,8 +250,7 @@ matter are the two the shipped profiles run at.
 | 2 | 2.00 | 235 | 3.0x | 3,648 (8.4 %) | 0.606 K | 0.152 K |
 | 1 | 1.00 | 191 | 3.6x | 9,283 (21.5 %) | 1.887 K | 0.449 K |
 
-`optimized`, `arcade` and `simlite` run **Frequency 4**, a quarter-second step, and ask twice as
-much of the integrator:
+At the shipped **Frequency 4**, a quarter-second step, which asks twice as much of the integrator:
 
 | cap | substeps | ms | speed | blocks raised of 43,232 | worst error | rms error |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -303,8 +303,8 @@ heat moved per millisecond, depending on which of the two you were unhappy about
 The sweep above diffuses a seeded spread. A ship held at temperature by its own power — which is
 what a field ship is — is the case that decides whether a player ever sees it, and it is what
 `bench floor --driven` measures: the census share of heat producers, at the census wattage, run
-until the hull settles. On a 43,232-block hull over 500 simulated seconds, **at `Frequency 4`** —
-the same quarter-second step as the second table above, and not the shipped default:
+until the hull settles. On a 43,232-block hull over 500 simulated seconds, at the shipped
+**`Frequency 4`** — the same quarter-second step as the second table above:
 
 | cap | speed | blocks raised of 43,232 | peak K | peak error | worst error |
 | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -321,7 +321,7 @@ the same quarter-second step as the second table above, and not the shipped defa
 > is the benchmark saying it is deterministic: the hull, the sources and the seeded state are all
 > derived rather than sampled, so two runs differ only by the clock.
 
-At the shipped `Frequency 8`, over the same 500 simulated seconds:
+At `Frequency 8`, over the same 500 simulated seconds:
 
 | cap | speed | blocks raised of 43,232 | peak K | peak error | worst error |
 | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -352,7 +352,8 @@ end and unsafe at the other.
 > and files one event a step. Same run, same 12 GB cap, completes. See
 > [benchmarks.md](benchmarks.md#one-overheat-event-per-block-per-step).
 
-**Down to a cap of 6 at `Frequency 4`, and a cap of 3 at `Frequency 8`, the peak is unmoved.**
+**Down to a cap of 6 at the shipped `Frequency 4`, and a cap of 3 at `Frequency 8`, the peak is
+unmoved.**
 Below that it is not, and the sign says why: the capped hull is *cooler*, which is what a hull that
 has not finished climbing looks like. The cap adds heat capacity, and a hull with more capacity
 takes longer to reach the same place — at cap 1 it is 35 K short after five hundred simulated
@@ -577,8 +578,8 @@ dotnet run --project Thermodynamics.Sim -- stiffness --csv out/ # one row per sh
 
 Nothing is stepped: a block's stiffness is a property of the grid it is bolted into and the world
 it is asked about, so it can be read straight off a built ship. Everything below is **substeps
-demanded of a quarter-second step**, which is `Frequency 4` and the basis the field figures were
-taken on; the shipped `Frequency 8` asks half of each. The air is still, at sea level, at noon —
+demanded of a quarter-second step**, which is the shipped `Frequency 4` and the basis the field
+figures were taken on; `Frequency 8` would ask half of each. The air is still, at sea level, at noon —
 the field sessions flew in wind, and wind raises the convection these numbers are mostly made of,
 so these are a lower bound.
 
@@ -751,6 +752,7 @@ conductivity 50 is conduction-stiff, and a material definition would fix them ou
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Labelled the two cap tables by their step length alone, and named the shipped one. They were labelled by which settings profiles ran at each rate, and the profiles are gone; the shipped `Frequency` is 4, so the quarter-second table is now the one a default world reads. |
 | 2026-08-22 | Gave up *A number in the report that does not add up* to [telemetry.md](telemetry.md#whether-the-report-agrees-with-itself), which carries the same defect, the invariants the Consistency section now states and the fix — this page was a second, older account of a report it does not own. Moved four historical asides into this log, keeping what each of them was *for*: that a cap table has to name its step length, that a recommendation quoted without its rate is out by two, that the equilibrium claim is safe only in the limit, and that a ratio is formed from two measurements of the same block (`E6`). |
 | 2026-08-22 | Took the decorative-block findings from `field-tuning.md` — the definitions fixing the conduction half only, and exposed area as the knob that reaches the other half — since this page is where that subject lives. Added the standard header and this log. |
 | 2026-08-22 | Corrected a finding published two commits earlier: it divided a hull's air peak by its vacuum peak, which are two different blocks, and reported the census hull as insensitive to air. The benchmark fixture changed on it is reverted and the lab now reports the same-block ratio as its own column. **Take an aggregate of a ratio, never a ratio of aggregates.** |

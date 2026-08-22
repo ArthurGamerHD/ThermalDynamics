@@ -8,7 +8,7 @@ a world loads and regenerated when `Version` does not match.
 | Looking for | Go to |
 | --- | --- |
 | Per-block, per-planet and per-loop properties | [definitions.md](definitions.md) |
-| The five presets and how they differ | [profiles.md](profiles.md) |
+| How far the model is from physics | [realism.md](realism.md) |
 | What each setting is scaling | [thermal-model.md](thermal-model.md), [environment.md](environment.md) |
 | Driving settings from another mod | [api.md](api.md#settings) |
 
@@ -84,8 +84,7 @@ The range in a typed field's tooltip is what the slider *would* have spanned, no
 value goes through the same clamp as `/thermal set` and the mod API, so a step budget of nine
 million is yours to try. Anything unreadable puts the setting's own value back rather than guessing.
 
-**Overview** answers the two questions a wall of sliders cannot — which profile this world matches,
-worked out by comparing the nine values a profile sets, and how many settings differ from the
+**Overview** answers the question a wall of sliders cannot — how many settings differ from the
 shipped defaults, each of them dotted in front of its label on its own page. It flags a conflict in
 three words; **Status** spells it out, lists every changed setting with the shipped value beside it,
 and carries the settings digest for comparing against the server.
@@ -95,18 +94,19 @@ produced them: **Cost limits** shows substeps granted against substeps asked for
 the cap floored, **Pace** shows the hottest block and what the world is venting against what it
 makes, and **Debug** shows which overlay is up and whether telemetry is recording.
 
-It also carries the five profiles as buttons — profiles were previously reachable only from chat,
-so the menu could show a world tuned by one without ever mentioning they existed. It is built on
-the [Rich HUD Framework](https://github.com/ZachHembree/RichHudFramework.Client) and needs the
+Overview also carries the menu's one bulk action, a **Defaults** button that returns every world
+setting to the value a fresh install ships. The four presentation switches are left alone: what is
+drawn on a player's own screen is theirs. The menu is built on the
+[Rich HUD Framework](https://github.com/ZachHembree/RichHudFramework.Client) and needs the
 **Rich HUD Master** mod (`1965654081`) to be enabled; without it the keystroke says so and the chat
 commands remain the way in.
 
-**Settings save themselves, and there is no Reset.** A change applies to the running session as
-you make it and reaches the config file about a second later, so a value you can see on screen is
-the value the world has and the value it will still have after a reload. A menu that asks you to
-confirm what you already did is asking you to do it twice, and a setting that reverts on reload
-because a button was missed is worse than either. Starting over is a profile: applying one sets
-every world setting.
+**Settings save themselves, and there is no per-control Reset.** A change applies to the running
+session as you make it and reaches the config file about a second later, so a value you can see on
+screen is the value the world has and the value it will still have after a reload. A menu that asks
+you to confirm what you already did is asking you to do it twice, and a setting that reverts on
+reload because a button was missed is worse than either. Starting over is the one case that needs an
+action of its own, which is what Defaults is.
 
 Two columns because that is what the page is wide enough for: the framework's tiles are a fixed
 300x250, so a third column would have to be scrolled to sideways.
@@ -251,18 +251,19 @@ chopped up.
 **The exception is when substeps are refused.** With `MaxSubsteps` at 1 the step is deliberately too
 long and the overshoot clamp decides how much crosses — the most a substep can carry, by definition.
 There each step moves a fixed maximum and more steps a second really does move more heat. That is
-propagation bought by being wrong, and it is the arcade profile's whole method.
+propagation bought by being wrong, and the shipped `MaxSubsteps` of 64 is what keeps this world out
+of it.
 
 **So what should it be?** Not 1, despite the table: `Frequency` is also how often damage lands, how
 often the HUD moves, and how quickly a change is felt. What the sweep rules out is the idea that
-raising it buys performance. **The shipped value is 8**, which on this rig is 16 substeps a second
-against a floor of 14 — about 12% above the cheapest possible, in exchange for eight times the
-responsiveness of Frequency 1.
+raising it buys performance. **The shipped value is 4** — a quarter-second step, which is the basis
+every substep figure in this documentation is quoted on, and four times a second of responsiveness.
 
-Note that the two settings are not independent. Demand *per step* is proportional to step length,
-so the same rig that asks 3.3 substeps at `Frequency 4` asks about 6.7 at `Frequency 2` — enough to
-clip a `MaxSubsteps` of 6, which is what the field world ran. **Lowering `Frequency` for performance
-would quietly cost accuracy at the cap rather than saving anything.**
+Two things depend on it and move with it. Demand *per step* is proportional to step length, so this
+rig asks 3.3 substeps at `Frequency 4` and about 6.7 at `Frequency 2` — enough to clip a small
+`MaxSubsteps`, though not the shipped 64. And a step is spread across the frames of its own window,
+so **halving `Frequency` halves the per-frame cost of a given step budget**; that is why
+`MaxElementVisitsPerStep` is 2,000,000 rather than the 1,000,000 it carried at `Frequency` 8.
 
 ### `MaxSubstepsPerBlock`
 
@@ -359,24 +360,51 @@ The four presentation switches — the debug text, the two raycast overlays and 
 are deliberately outside the digest. A client owns what is drawn on its own screen, so those are
 allowed to differ and a server does not overwrite them.
 
-## Profiles
+## What the dials trade against each other
 
-Five presets, laid out as a graphics menu lays them out: a ladder on two axes, where the simulation
-is integrated and how fast heat is made to move. `/thermal profile` lists them, `/thermal profile
-arcade` applies one live, and a profile sets **every** world setting — so applying one is also how
-you start over. A fresh world runs `responsive`.
+There is one configuration and no presets, so tuning a world is moving individual settings — and two
+relationships bound what any move can buy. Neither can be tuned around.
 
-| Profile | `Frequency` | `HeatTimeScale` | `MaxSubsteps` | `MaxSubstepsPerBlock` |
-| --- | ---: | ---: | ---: | ---: |
-| `simulation` | 8 | **1** | 64 | off |
-| `optimized` | 4 | **1** | 6 | 6 |
-| `simlite` | 4 | **1** | 3 | 3 |
-| `responsive` | 8 | 225 | 64 | off |
-| `arcade` | 4 | 225 | 6 | 6 |
+**Heat spreads as the square root of the arithmetic you spend on it.** Diffusion is a square-root
+process: a front crosses blocks at a rate proportional to `sqrt(substeps per second)`, while cost is
+proportional to substeps per second outright. Measured, holding everything else: 1 substep/s gave
+0.5 blocks/s, 4 gave 1.0, 8 gave 1.4, 16 gave 2.0 — square root to two figures. **Doubling how
+responsive a world feels costs four times as much.**
 
-**[profiles.md](profiles.md) is the ladder in full** — what each one costs, what it moves, why real
-time turns out to be the cheapest thing to integrate, and the two relationships to design another
-against. A profile carries settings only; every profile reads the same definitions.
+**But where you spend the substeps changes the exchange rate by about three times.** There are two
+ways to move more heat per second. The accurate one raises `HeatTimeScale` and grants the extra
+substeps its stiffness demands. The approximate one raises `HeatTimeScale` *and refuses* the substeps
+with `MaxSubsteps`, letting the overshoot clamps decide how much crosses — which is the most a
+substep can carry, by definition. Measured: the clamped route delivered 0.125 blocks/s per substep/s
+against 0.045 for the accurate one. **The shipped configuration takes the accurate route**, which is
+what `MaxSubsteps 64` is for.
+
+**The far end is a wall, not a slope.** Past roughly `HeatTimeScale / Frequency = 4000` the clamps
+are carrying the entire step and blocks start being driven to the ambient floor. The shipped ratio is
+56. `Validate()` warns above 4,000, and the settings menu shows it.
+
+So, knob by knob:
+
+* **`Frequency` sets responsiveness and cost together — but only while `MaxSubsteps` is 1**, or the
+  grid is soft enough that the estimate never rises above one substep. On a grid stiff enough to ask
+  for real substeps it cancels out of the cost entirely; reach for `MaxSubstepsPerBlock` there
+  instead. See [above](#frequency-is-not-the-cost-dial-it-looks-like).
+* **`HeatTimeScale` sets how much a substep carries.** Raise it until the clamps engage; past that it
+  buys nothing, because the clamp is already moving all it can.
+* **`MaxSubsteps` chooses accuracy or speed.** High means the estimate is always granted and nothing
+  clamps, which is what ships. `1` means every step is deliberately too long and the clamps carry it.
+* **Keep `HeatTimeScale / Frequency` under 4000.** This is the safety rail. Everything else is taste.
+* **`EnableRoomAir` and `SolarSelfShadowing` are the two mechanisms that cost most** for what a player
+  notices, and both ship on.
+
+Both clamps must stay on for any of this. `ClampConductionOvershoot` and `ClampEnvironmentOvershoot`
+are what make a deliberately-too-long step bounded instead of divergent — with them off, a fast clock
+at one substep reaches 10^22 K in twenty seconds.
+
+**Starting over is one action.** The settings menu's Overview carries a **Defaults** button that
+returns every world setting to the value a fresh install ships, leaving the four presentation
+switches alone. There is no per-control reset and no Save button, because a change applies as it is
+made and reaches the config file a second later.
 
 ## Trading simulation speed for heat transfer
 
@@ -423,14 +451,14 @@ will not move it much.
 
 | Setting | Default | Effect |
 | --- | --- | --- |
-| `Frequency` | 8 | Solver steps per simulated second. The integration step is `1/Frequency`. Whether lowering it cuts cost depends on the grid — see below. |
+| `Frequency` | 4 | Solver steps per simulated second. The integration step is `1/Frequency`, so 4 is a quarter-second step — the basis every substep figure in this documentation is quoted on. Whether lowering it cuts cost depends on the grid — see below. |
 | `SimulationSpeed` | 1 | Simulated seconds per real second, applied by running more steps rather than longer ones. Linear in CPU. |
 | `HeatTimeScale` | 225 | How much faster than real physics heat moves. Divides every heat capacity. |
-| `MaxElementVisitsPerStep` | 1000000 | Most element visits one step may make — substeps times its links plus four times its nodes — before the step is shortened to fit. 0 removes the bound. See below. |
+| `MaxElementVisitsPerStep` | 2000000 | Most element visits one step may make — substeps times its links plus four times its nodes — before the step is shortened to fit. 0 removes the bound. **Moves with `Frequency`**: a step is spread across the frames of its window, so this figure and the step rate together set the per-frame cost. See below. |
 | `MaxSubstepsPerBlock` | 0 (off) | Most substeps any single block may demand of the whole grid before it is treated as heavier than it is. The cheapest large win there is on a real ship. See below. |
 | `MaxSubsteps` | 64 | Most substeps one step may be cut into, whatever the grid asks for. A grid refused here integrates a step too long for its stiffest block, and the overshoot clamps carry the difference. |
 | `ClampConductionOvershoot` | `true` | Caps each exchange at the energy that equalises the pair. Off reproduces the original unbounded solver. Skipped, at no change to the result, on any step short enough that no element can overshoot — see [benchmarks.md](benchmarks.md#the-overshoot-clamp-ab). |
-| `ClampEnvironmentOvershoot` | `true` | The same for radiation and convection: neither may carry a block past ambient in one substep. This is what bounds a profile whose step is deliberately far too long. |
+| `ClampEnvironmentOvershoot` | `true` | The same for radiation and convection: neither may carry a block past ambient in one substep. This is what bounds a step that is deliberately far too long. |
 | `DamageIsPerSecond` | `true` | Overheat damage per second of simulated time. Off applies it per step, which makes damage scale with `Frequency`. |
 
 ## Environment
@@ -810,11 +838,14 @@ one with a migration risk — is late rather than first.
 
 | Date | Change |
 | --- | --- |
-| 2026-08-22 | Gave up this page's second account of the profiles to [profiles.md](profiles.md), which is the page about them: the measured cost ladder, *Where the extremes lie* and *Designing your own* all moved, and with them a duplicate of the `HeatTimeScale` substep-demand table. What stays here is the four settings each preset sets. Replaced `MaxSubstepsPerBlock`'s sweep table with a pointer to [stiffness.md](stiffness.md#1-a-per-block-substep-cap--the-one-that-is-built), which carries the same sweep at both shipped step lengths — the copy here had the same floored-block counts against different speeds and errors, which is a table that had drifted from the one it was taken from. Cut *The settings surface, and where it is going* down to what is left of it: three of its five subsections described the menu this page already documents two screens above. |
+| 2026-08-22 | **Removed the five settings profiles.** There is one configuration now, and it is the most faithful one the model has: every mechanism on, no approximation switched on for anybody, `SimulationSpeed` 1 and `Frequency` **4** against the 8 it shipped at. `MaxSubstepsPerBlock` stays 0 and `MaxSubsteps` 64, so nothing is refused the substeps it asks for. `/thermal profile` is gone and the menu's profile buttons are one **Defaults** button, which is what applying a profile was actually being used for. `TheDefaultsAreTheMostFaithfulConfiguration` holds the claim so it cannot quietly stop being true. |
+| 2026-08-22 | Moved `MaxElementVisitsPerStep` from 1,000,000 to **2,000,000** with `Frequency`, keeping the per-frame cost identical rather than the per-step one. A step is spread across the frames of its own window, and a frame does `budget × frameSeconds × Frequency` of work, so halving the rate halves what a given budget costs per frame — and leaving the budget alone would have throttled an 8,904-block ship to 73 % of real time where it previously ran at 100 %, which is an approximation nobody asked for. Old value kept visible here (`E11`). |
+| 2026-08-22 | The tuning guidance that went to `profiles.md` last pass comes back as [What the dials trade against each other](#what-the-dials-trade-against-each-other), which is settings guidance and now has nowhere else to be. |
+| 2026-08-22 | Gave up this page's second account of the profiles to [realism.md](realism.md), which is the page about them: the measured cost ladder, *Where the extremes lie* and *Designing your own* all moved, and with them a duplicate of the `HeatTimeScale` substep-demand table. What stays here is the four settings each preset sets. Replaced `MaxSubstepsPerBlock`'s sweep table with a pointer to [stiffness.md](stiffness.md#1-a-per-block-substep-cap--the-one-that-is-built), which carries the same sweep at both shipped step lengths — the copy here had the same floored-block counts against different speeds and errors, which is a table that had drifted from the one it was taken from. Cut *The settings surface, and where it is going* down to what is left of it: three of its five subsections described the menu this page already documents two screens above. |
 | 2026-08-22 | Corrected two statements about `Frequency` that contradicted this page's own reference table: the prose called 4 the shipped value where the table says 8, and read a rig's demand as though it were the shipped configuration. The nested-config example showed a `MaxSubsteps` of 16 rather than the shipped 64. |
 | 2026-08-22 | Absorbed `settings-redesign.md`, whose subject is this page's subject, as [The settings surface](#where-the-settings-surface-is-going), with the completed steps restated as what the menu now is rather than as a plan. Took the `Frequency` sweep from `field-tuning.md` into the section that already argued the arithmetic, so the derivation and the measurement sit together. Added the standard header and this log. |
 | 2026-08-22 | Brought the loop and planet definitions into the menu as world settings, replicated and reachable from `/thermal set` and the mod API. |
 | 2026-08-19 | Documented the twenty-one settings the reference had never listed — the whole `Loop*` and `Planet*` families, `MaxSubsteps` and `ClampEnvironmentOvershoot` — and added `ConfigurationDocTests`, which fails when a setting exists in one place and not the other. Let an admin change world settings from a client, over a secure channel rather than the shared one. |
-| 2026-08-18 | Added the five profiles as a ladder on two axes, and fixed the clamp defect that had to be fixed before they were safe. |
+| 2026-08-18 | Added the five profiles as a ladder on two axes, and fixed the clamp defect that had to be fixed before they were safe. *(The profiles were removed on 2026-08-22; the clamp fix stands — see [realism.md](realism.md).)* |
 | 2026-08-17 | Moved the settings menu onto Rich HUD at Ctrl+Shift+S. |
 | 2026-08-12 | Opened the reference against `ThermodynamicsConfig.cfg`. |

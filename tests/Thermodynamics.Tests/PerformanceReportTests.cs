@@ -109,7 +109,6 @@ namespace Thermodynamics.Tests
             Assert.Contains("machine", sections);
             Assert.Contains("ladder", sections);
             Assert.Contains("features", sections);
-            Assert.Contains("profiles", sections);
             Assert.Contains("substep cap", sections);
             Assert.Contains("overshoot clamp", sections);
             Assert.Contains("diagnostics", sections);
@@ -126,16 +125,6 @@ namespace Thermodynamics.Tests
                 Assert.Contains(expected, features);
             }
 
-            for (int i = 0; i < ThermalProfiles.Names.Length; i++)
-            {
-                bool found = false;
-                for (int r = 0; r < rows.Count; r++)
-                {
-                    if (rows[r].Section == "profiles" && rows[r].Case == ThermalProfiles.Names[i]) found = true;
-                }
-
-                Assert.True(found, "profile " + ThermalProfiles.Names[i] + " is not in the report");
-            }
         }
 
         [Fact]

@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
+using System.Text;
 using System.Xml.Serialization;
 using ProtoBuf;
 using Sandbox.ModAPI;
@@ -114,12 +116,16 @@ namespace Thermodynamics
         /// <summary>
         /// Clamp radiation and convection so a node cannot overshoot ambient in one substep. See the
         /// core setting of the same name: it bounds the integrator when <see cref="MaxSubsteps"/>
-        /// refuses the substeps the stability estimate demanded, and so makes a high-transfer,
-        /// low-substep profile safe.
+        /// refuses the substeps the stability estimate demanded.
         /// </summary>
         [ProtoMember(37)] public bool ClampEnvironmentOvershoot = true;
         [ProtoMember(31)] public bool DamageIsPerSecond = true;
-        [ProtoMember(32)] public int Frequency = 8;
+
+        /// <summary>
+        /// Solver steps per simulated second. Four is a quarter-second step, which is the basis every
+        /// substep figure in the documentation is quoted on.
+        /// </summary>
+        [ProtoMember(32)] public int Frequency = 4;
         [ProtoMember(33)] public float SimulationSpeed = 1f;
         [ProtoMember(34)] public float HeatTimeScale = 225f;
 
@@ -129,7 +135,7 @@ namespace Thermodynamics
         /// <c>MaxLinkVisitsPerStep</c> takes the default deliberately, since the old number was in a
         /// different unit. See configuration.md, Solver.
         /// </summary>
-        [ProtoMember(35)] public int MaxElementVisitsPerStep = 1000000;
+        [ProtoMember(35)] public int MaxElementVisitsPerStep = 2000000;
 
         /// <summary>
         /// Most substeps one solver step may divide itself into. See the core setting of the same
@@ -417,62 +423,71 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Applies one of the named profiles in <see cref="Core.ThermalProfiles"/>.
+        /// Returns every world setting to the value a fresh install ships, in one action.
         ///
-        /// Applied to a core settings object and read back rather than duplicated here, so a
-        /// profile that gains a field cannot be half-applied in game while its tests still pass.
+        /// The four presentation switches are left alone: what is drawn on a player's own screen is
+        /// theirs, not the world's. This is the menu's only bulk action, and the reason it needs no
+        /// Reset button beside every control.
         /// </summary>
-        /// <returns>False when the name is not a known profile.</returns>
-        public bool ApplyProfile(string name)
+        public void RestoreDefaults()
         {
-            Core.ThermalSettings bundle = new Core.ThermalSettings();
-            if (!Core.ThermalProfiles.Apply(bundle, name)) return false;
-
-            // A profile is the whole world, not a patch on it. Everything the profile does not
-            // speak for goes back to the shipped value first, so applying one twice with tinkering
-            // in between lands in the same place both times — and so that `default` is a reset,
-            // which is why the menu no longer carries a separate reset button.
             Settings shipped = GetDefaults();
             List<string> names = Names();
 
             for (int i = 0; i < names.Count; i++)
             {
                 string setting = names[i];
-
-                // What is drawn on a player's own screen is theirs; a profile is world balance.
                 if (ClientOwned.Contains(setting)) continue;
 
                 SetValue(setting, shipped.GetValue(setting));
             }
 
-            Frequency = bundle.Frequency;
-            SimulationSpeed = bundle.SimulationSpeed;
-            HeatTimeScale = bundle.HeatTimeScale;
-            MaxSubsteps = bundle.MaxSubsteps;
-            MaxSubstepsPerBlock = bundle.MaxSubstepsPerBlock;
-            ClampConductionOvershoot = bundle.ClampConductionOvershoot;
-            ClampEnvironmentOvershoot = bundle.ClampEnvironmentOvershoot;
-            EnableRoomAir = bundle.EnableRoomAir;
-            SolarSelfShadowing = bundle.SolarSelfShadowing;
-
             Apply();
-
-            // The world's own loop and planet values are laid over the definitions at cache time, so
-            // a profile that moved one reaches nothing until the cache is dropped.
-            ThermalBlockCatalog.Clear();
-            RebuildGrids();
-
-            return true;
         }
 
         /// <summary>
-        /// Rebuilds every live grid's view of the definitions, as expensive as a world load per grid
-        /// and reached only by a profile change.
+        /// The world's own loop and planet values, snapshotted so <see cref="Apply"/> can tell when one
+        /// has actually moved.
+        ///
+        /// Those nineteen are laid over the definitions when a block model is cached, so a change to
+        /// one reaches a running world only by dropping that cache and rebuilding every grid — which
+        /// is as expensive as a world load and must not run on every slider tick.
+        /// </summary>
+        private string definitionState;
+
+        /// <summary>
+        /// The loop and planet values as one string, for comparison. Their exact figures do not
+        /// matter here; only whether any of them changed since the last <see cref="Apply"/>.
+        /// </summary>
+        private string DefinitionState()
+        {
+            StringBuilder state = new StringBuilder();
+            List<string> names = Names();
+
+            for (int i = 0; i < names.Count; i++)
+            {
+                string name = names[i];
+                if (!name.StartsWith("Loop", StringComparison.Ordinal)
+                    && !name.StartsWith("Planet", StringComparison.Ordinal)) continue;
+
+                state.Append(name).Append('=')
+                     .Append(GetValue(name).ToString("R", CultureInfo.InvariantCulture)).Append(';');
+            }
+
+            return state.ToString();
+        }
+
+        /// <summary>
+        /// Rebuilds every live grid's view of the definitions, after a loop or planet value moved.
+        /// As expensive as a world load per grid, which is why <see cref="Apply"/> reaches it only
+        /// when <see cref="DefinitionState"/> says something changed.
         /// </summary>
         private static void RebuildGrids()
         {
             try
             {
+                ThermalBlockCatalog.Clear();
+
                 IList<ThermalGrid> grids = ThermalGrid.LiveGrids;
                 for (int i = 0; grids != null && i < grids.Count; i++)
                 {
@@ -481,7 +496,7 @@ namespace Thermodynamics
             }
             catch (Exception e)
             {
-                MyLog.Default.Info("[" + Name + "] failed to rebuild grids after a profile change\n" + e);
+                MyLog.Default.Info("[" + Name + "] failed to rebuild grids after a definition change\n" + e);
             }
         }
 
@@ -538,6 +553,14 @@ namespace Thermodynamics
             core.Derive();
 
             Telemetry.SampleStride = TelemetrySampleStride;
+
+            // The loop and planet values are laid over the definitions at cache time, so moving one
+            // reaches nothing already built until the cache is dropped. Only on a real change: this
+            // runs on every set, every slider tick and every settings sync.
+            string state = DefinitionState();
+            bool moved = definitionState != null && definitionState != state;
+            definitionState = state;
+            if (moved) RebuildGrids();
         }
 
         /// <summary>Solver steps per real second. Used by readouts that report rates.</summary>
