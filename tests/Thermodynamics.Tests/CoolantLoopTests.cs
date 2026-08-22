@@ -463,9 +463,8 @@ namespace Thermodynamics.Tests
             return total;
         }
 
-        /// <summary>A ring of the given rectangle with one sink face down onto a 900 K armour block.</summary>
         /// <summary>
-        /// A ring with a sink face genuinely against the hot block.
+        /// A ring of the given rectangle with a sink face genuinely against the hot block below it.
         ///
         /// The sink index matters: every rectangle's first straight run is index 1, which is where
         /// <c>PipeFitter</c> puts the pump, and a pump carries no sink ports. Asking for a sink there

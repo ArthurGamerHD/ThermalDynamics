@@ -611,6 +611,75 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// No doc comment describes something that is not there.
+        ///
+        /// <para>
+        /// A member moved or deleted leaves its <c>&lt;summary&gt;</c> behind, and the comment comes to
+        /// rest on whatever is below it. Nothing complains: it compiles, it reads as documentation, and
+        /// it describes a different thing or no thing at all. Twenty-three had accumulated that way,
+        /// several of them still describing algorithms the code had replaced — a coolant advection
+        /// scheme, a retired setting's unit, a per-profile definition overlay that no longer exists.
+        /// </para>
+        ///
+        /// <para>
+        /// Two <c>&lt;summary&gt;</c> blocks in a row is the signature, because C# allows only one per
+        /// member: the first belongs to something that is gone. It is a narrow test — an orphan that
+        /// lands somewhere with no comment of its own is invisible to it — and narrow and cheap beats
+        /// nothing, which is what checked this before. Run against a deliberate orphan in both
+        /// spellings before being believed; the first version caught only the multi-line one.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void NoDocCommentDescribesSomethingThatIsNotThere()
+        {
+            string[] roots =
+            {
+                Path.Combine(RepoRoot(), "Data", "Scripts", "Thermodynamics"),
+                Path.Combine(RepoRoot(), "tests"),
+            };
+
+            List<string> orphans = new List<string>();
+            int files = 0;
+
+            foreach (string root in roots)
+            {
+                foreach (string file in Directory.GetFiles(root, "*.cs", SearchOption.AllDirectories))
+                {
+                    string relative = Relative(file);
+
+                    // Vendored code is replaced, never edited (`R6`), and build output is not source.
+                    if (relative.Contains("RichHudFramework")) continue;
+                    if (relative.Contains("NetworkAPI")) continue;
+                    if (relative.Contains("/bin/") || relative.Contains("/obj/")) continue;
+
+                    files++;
+                    string[] lines = File.ReadAllLines(file);
+
+                    for (int i = 0; i + 1 < lines.Length; i++)
+                    {
+                        // Either form of a closed summary: its own line, or a one-line comment that
+                        // opens and closes on the same line.
+                        string current = lines[i].Trim();
+                        if (!current.StartsWith("///", StringComparison.Ordinal)) continue;
+                        if (!current.EndsWith("</summary>", StringComparison.Ordinal)) continue;
+                        if (!lines[i + 1].Trim().StartsWith("/// <summary>", StringComparison.Ordinal)) continue;
+
+                        orphans.Add(relative + ":" + (i + 1));
+                    }
+                }
+            }
+
+            Assert.True(files > 200,
+                "only " + files + " source files were read, so this test is looking in the wrong"
+                + " place and would pass whatever the tree said");
+
+            orphans.Sort(StringComparer.Ordinal);
+            Assert.True(orphans.Count == 0,
+                "doc comments closed and immediately reopened, which means the first one belongs to a"
+                + " member that is no longer there:\n  " + string.Join("\n  ", orphans.ToArray()));
+        }
+
+        /// <summary>
         /// Every page under `docs/` is reachable from the README's index.
         ///
         /// <para>

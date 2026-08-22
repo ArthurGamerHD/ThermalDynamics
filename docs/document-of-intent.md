@@ -13,7 +13,7 @@ Where there is no intent at all, this page says that too, because an undeclared 
 whoever touches the file next.
 
 > The rules argued here are stated canonically in [rules.md](rules.md): `E3` `E5` `E10` `E11` `D6`
-> `D7` `C9` `C10`, and the principles P3, P7, P10 and P14 they follow from.
+> `D7` `C9` `C10` `R14`, and the principles P3, P7, P10 and P14 they follow from.
 
 | Looking for | Go to |
 | --- | --- |
@@ -85,6 +85,10 @@ argued at length and found by someone who is not already looking at that line.
 
 So a comment is worth writing in two places — on a definition, and over a chunk of code that is
 genuinely complex or abstract. Code that is neither is read faster without one.
+
+This is `R14`, and the check on it catches the failure the length limit prevents: a comment that
+argues a topic is maintained against a subject it does not sit beside, and one whose subject is
+deleted stays behind and describes whatever is below it.
 
 Three tests, in the developer's words:
 

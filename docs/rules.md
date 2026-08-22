@@ -75,7 +75,7 @@ the right fourteen — see [testing the reduction](#testing-the-reduction).
 | **P2** | **What the instrument could not see is part of the result.** Censoring, the noise floor, an unfinished sweep and a check that judged nothing are all the same failure: reading a blind spot as a value. | `E4` `E8` `E9` `M4` `M5` |
 | **P3** | **The claim is fixed before the data and corrected in place after.** A criterion that can move once the numbers are in is not a criterion; a finding that is corrected somewhere other than where it was published is not corrected. | `E1` `E10` `E11` `M9` `D5` `R12` |
 | **P4** | **Nothing is its own oracle.** A test that asks the model the same question twice agrees with whatever the model does; a harness fault looks exactly like physics. | `E7` `D1` `D4` `D7` `D8` |
-| **P5** | **One definition, and at least one consumer.** Two definitions drift, and the drift is silent in both directions; zero consumers means the thing does not exist however well it is written and tested. | `E5` `D2` `D3` `M6` `R7` `R8` `R9` `R10` `R11` `R13` |
+| **P5** | **One definition, and at least one consumer.** Two definitions drift, and the drift is silent in both directions; zero consumers means the thing does not exist however well it is written and tested. | `E5` `D2` `D3` `M6` `R7` `R8` `R9` `R10` `R11` `R13` `R14` |
 | **P6** | **A comparison holds everything but the subject equal.** Two numbers are comparable only when the stop criterion, the machine, the key and the baseline were the same. | `M1` `M2` `M3` `M7` |
 | **P7** | **The game is the authority.** The local build and the suite are an approximation of a compiler and a whitelist neither of them can see, and where the game already answers a question — what is sealed, what is destroyed — the mod reads that answer instead of forming its own. | `C1` `C2` `C3` `C9` `C10` |
 | **P8** | **Off means off, and costs nothing.** A mechanism nobody is using must cost nothing, and the way to turn it off must be unambiguous. | `C4` `C7` `C8` |
@@ -199,6 +199,7 @@ under [low value](#low-value) so a citation to them does not dangle.
 | **R11** | A check is cited only if it runs | load-bearing | P5 | `EveryCheckCitedByTheRulesPageResolves` |
 | **R12** | A page states its scope, describes the present, and logs its changes | load-bearing | P3 | partly |
 | **R13** | A standing rule is stated here once, and argued elsewhere | load-bearing | P5 | `EveryRuleCitedByAPageExists` |
+| **R14** | A comment names something that is there | load-bearing | P5 | `NoDocCommentDescribesSomethingThatIsNotThere` |
 | **O1** | Every long run is capped | load-bearing | P13 | — |
 | **O2** | A run with no bounded duration gets no hang timeout | conditional | P13 | — |
 | **O3** | Long sweeps resume, and progress is measured in bytes | load-bearing | P13 | — |
@@ -208,8 +209,8 @@ under [low value](#low-value) so a citation to them does not dangle.
 | **J2** | *Light, isolated, tested, open* | low value | — | absorbed into `C4` `C5` `C7` `R9` |
 | **J3** | The corpus filters are strict, and their cost is recorded | conditional | P1 | `BlueprintTests` |
 
-Fifty load-bearing, seven conditional, four low value. Seventeen of the load-bearing rules have no
-automated check, and say so.
+Fifty-one load-bearing, seven conditional, four low value. Seventeen of the load-bearing rules have
+no automated check, and say so.
 
 ---
 
@@ -655,6 +656,30 @@ holds the page's own halves together: a rule stated here is indexed here and fol
 principle, unless it is filed as low value. Neither can see a rule that has never been written
 down, which is what the audit is for.
 *From:* [development.md](development.md#documentation-conventions); the assembly of this page.
+
+#### R14 — A comment names something that is there
+
+**A comment describes a definition that exists, in the space a name needs; where it would argue,
+it names the page that argues.**
+
+A member moved or deleted leaves its comment behind, and the comment comes to rest on whatever is
+below it. Nothing complains: it compiles, it reads as documentation, and it describes a different
+thing or no thing at all. Twenty-three had accumulated, several still describing code that had been
+replaced — a coolant advection scheme that is now a rotation, a setting renamed into a different
+unit, a per-profile definition overlay that no longer exists. That is `D2`'s defect class in prose:
+written, accurate-looking, and attached to nothing.
+
+The length limit is the other half and it is what prevents the first. A comment that argues a topic
+has to be maintained against a subject it does not sit next to, so it rots where a name does not —
+and the argument belongs on a page, where it can be found by somebody who is not already looking at
+that line.
+
+*Applies to:* every comment under `Data/Scripts` and `tests`, excluding vendored code.
+*Checked by:* `NoDocCommentDescribesSomethingThatIsNotThere`, which fails on two `<summary>` blocks
+in a row — the signature of an orphan, since C# allows one per member. It states rather than hides
+its limit: an orphan landing somewhere with no comment of its own is invisible to it. Nothing checks
+the length, which is judgement.
+*From:* [document-of-intent.md](document-of-intent.md#what-a-code-comment-is-for).
 
 ### P6 — A comparison holds everything but the subject equal
 
@@ -1195,6 +1220,7 @@ right and this page is stale**; say so and fix it here.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Added `R14`, from the standard [document-of-intent.md](document-of-intent.md#what-a-code-comment-is-for) states and a pass that applied it: twenty-four comments were found describing a member that no longer exists, having come to rest on the one below. `NoDocCommentDescribesSomethingThatIsNotThere` catches the shape, and was run against a deliberate orphan in both spellings before being believed — the first version caught only one of the two and missed a real orphan in `CoolantLoopTests`. |
 | 2026-08-22 | Moved *What the extraction changed* into this log, where a record of a revision belongs (`R12`). It held four things, each still true and each now recorded once. **Three *Checked by* citations named something that does not run:** `C6` cited `PhysicsTests`, which is a file whose classes are `ConductionTests` and `StabilityTests`; `D1` attributed three invariants to `LabInvariantTests` that live in `ScreeningTests`; and `D5` cited `SealedBlocksAreRare`, which commit `991d4d9` demoted to an uncalled helper when `CorpusSurvey` absorbed the standalone walks. `R11` is the rule those three produced. **`E1` and `E8` overstated `verdict.py`**, which prints `HOLDS`, `FAILS` or `?` and exits zero either way — both fields now say reported rather than checked. **Two rules came out of the reduction rather than an incident:** `E11` closes `E1`'s hole, and `C8` generalises the gate whose off position cannot be spelled. **Three rules stopped being rules and one changed category** — `R1`, `J1` and `J2` are premises rather than things a change can violate, and `O4` was reclassified low value against a measurement taken the same day. All four dispositions are in [Low value](#low-value). |
 | 2026-08-22 | Put this page under the checks it asks of every other page. `EveryCheckCitedByTheRulesPageResolves` resolves every name in a *Checked by* field to something that runs, which retires `R11`'s unchecked state and closes [backlog](backlog.md) F10; `EveryRuleCitedByAPageExists` fails on a page citing a rule this one does not state; `TheRulesPageIndexesEveryRuleItStates` holds the index, the body and the principle table together. Each was run against a deliberate violation before being believed. |
 | 2026-08-22 | Read every page in the tree against the rule list and added the six rules it was missing: `C9` `C10` `D7` `D8` `R12` `R13`, each of which existed only in the one page or the one type summary that needed it. Widened `P7` from *the game is the authority on what compiles* to *the game is the authority*, which is where `C9` and `C10` belong. Recorded the necessity and sufficiency tests the principle list was put through in [Testing the reduction](#testing-the-reduction). Corrected `O4`, which quoted 135 test classes against a project that now holds more than 150; the figure is now stated without a hand-typed count, per `E5`. |
