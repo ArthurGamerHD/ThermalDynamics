@@ -554,10 +554,11 @@ waste-heat fraction, thermal mass, or conductance to neighbours — without touc
 
 **One block type decides the load criterion.** `LargeJumpDrive` is 67 % of all the waste heat the
 corpus makes at full electrical load — 10,567 of them across 2,183 ships at 4.8 MW each — and its
-effect on the outcome is binary. Of the 2,249 ships carrying one, **100.0 % reach 400 K and 100.0 %
-lose a block**; of the 5,745 without, 67.1 % and 22.0 %. At idle the two groups are
-indistinguishable (0.2 % critical, 179 K median in both), because a jump drive is classed as a tool
-and tools are off when parked.
+effect on the outcome is binary. Of the 2,255 ships carrying one — membership read from
+`composition.csv`, not inferred from whichever block ended up hottest — **100.0 % reach 400 K and
+100.0 % lose a block**; of the 5,887 without, 65.6 % and 21.5 %. At idle the two groups are
+indistinguishable (0.2 % critical either way, medians of 179 and 177 K), because a jump drive is
+classed as a tool and tools are off when parked.
 
 The mechanism is the load state rather than the block: `ShipLoad.State.Full` sets `Tools = 1`, so
 every drive on the hull charges at its full 32 MW draw for the whole 1,800 s clock, and 15 % of that
@@ -566,6 +567,9 @@ with no drive at all, well past its 20 % gate — but "44 % of the corpus loses 
 really "every jump-drive ship, plus 22 % of everyone else", and any tuning read off the aggregate
 will be tuning for one block. Whether charging a drive *should* be a thermal event is a design
 question; that it should be an unsurvivable one for every hull that mounts a drive is probably not.
+
+G2 holds at 65.6 % on ships with no drive at all, well past its 20 % gate, so the criterion is not
+resting on this block.
 
 Both readings are subject to the censoring limit above. `tools/corpus/verdict.py` computes the
 criteria and reports the censored share alongside them.

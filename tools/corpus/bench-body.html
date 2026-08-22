@@ -1,0 +1,177 @@
+<div class="wrap">
+
+<header class="top">
+  <p class="eyebrow">Balance bench &middot; 21 August 2026 &middot; survey, census and dial sweep</p>
+  <h1>Every dial, and what<br>it does to 8,141 ships</h1>
+  <p class="dek">Three passes over the whole workshop corpus. The <b>survey</b> measured what ships
+  do; the <b>census</b> measured what they are made of, which is what finally answered whether
+  design or size decides; and the <b>sweep</b> moves one balance dial at a time across a standing
+  panel so each one has a measured response curve instead of an argument. The aim of this page is a
+  defensible range for every dial.</p>
+  <div class="provenance">
+    <div class="prov"><b class="num">8,141</b><span>ships</span></div>
+    <div class="prov"><b class="num">40,710</b><span>survey rows</span></div>
+    <div class="prov"><b class="num">109,312</b><span>composition rows</span></div>
+    <div class="prov"><b class="num">36</b><span>panel ships</span></div>
+    <div class="prov"><b class="num" id="pv-knobs">&mdash;</b><span>sweep rows</span></div>
+  </div>
+</header>
+
+<div class="rail">
+  <div class="rail-in">
+    <div class="ctl">
+      <label>Grid size</label>
+      <div class="chips" id="grid-chips"></div>
+    </div>
+    <div class="ctl">
+      <label for="tcrit">Critical temperature <b class="num" id="tcrit-v">measured</b></label>
+      <input type="range" id="tcrit" min="400" max="3000" step="25" value="900">
+    </div>
+    <div class="ctl">
+      <label for="q">Find a ship</label>
+      <input type="search" id="q" placeholder="name or workshop id" autocomplete="off">
+    </div>
+    <div class="ctl">
+      <label>&nbsp;</label>
+      <button class="ghost" id="reset" type="button">Reset</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= criteria ================= -->
+<section>
+  <div class="shead"><h2>The six criteria</h2>
+    <p class="eyebrow" id="crit-basis">at the shipped per-block criticals</p></div>
+  <p class="snote">Written down before any data was collected, so a run that fails them is a finding
+  rather than a reason to move a threshold. Five are now measurable: the census supplied the two
+  terms G4 was missing. G3 still needs a retrofit pass, because the corpus filter rejects any ship
+  carrying a non-vanilla block and so no ship here has a radiator.</p>
+  <p class="proxy-note" id="proxy-note" hidden>You have moved the critical temperature, so the
+  criteria are judged against one global threshold rather than the per-block criticals the runs
+  actually used. That is a proxy for re-tuning, not a re-simulation.
+  <button class="ghost" type="button" id="back">Back to measured</button></p>
+  <div class="verdicts" id="verdicts"></div>
+</section>
+
+<!-- ================= failure modes ================= -->
+<section>
+  <div class="shead"><h2>Design decides &mdash; but differently at each scale</h2>
+    <p class="eyebrow">rank correlation against peak under load</p></div>
+  <p class="snote">Each bar is how strongly one property of a hull predicts how hot it gets under
+  full electrical load, across every ship the census and survey share, joined on name and workshop id together. Size terms are greyed.
+  Switch grid size in the bar above: the two populations fail by different mechanisms, and a dial
+  that fixes one will not fix the other.</p>
+  <div class="panel"><div class="corr" id="corr"></div>
+    <p class="snote" style="margin:16px 0 0; font-size:.8rem" id="corr-note"></p>
+  </div>
+</section>
+
+<!-- ================= where the heat is ================= -->
+<section>
+  <div class="shead"><h2>Where the corpus makes its heat</h2>
+    <p class="eyebrow">full electrical load</p></div>
+  <p class="snote">Every block type that produces waste heat, by its share of the total the corpus
+  makes with everything switched on. This is the tuning surface: a type high on this list is a
+  place where one definition moves the whole population.</p>
+  <div class="grid2">
+    <div class="panel"><div id="heat"></div></div>
+    <div class="panel" id="jd-panel"></div>
+  </div>
+</section>
+
+<!-- ================= the panel ================= -->
+<section>
+  <div class="shead"><h2>The standing panel</h2>
+    <p class="eyebrow" id="panel-count">&mdash;</p></div>
+  <p class="snote">Thirty-six ships, each chosen by a named rule so the panel can be audited rather
+  than trusted. It carries both grid sizes, both failure modes, the hulls that are critical in
+  exactly one scenario &mdash; where a moved dial changes a verdict rather than a number &mdash; and
+  controls that must stay safe whatever else is done. Each card shows what the hull is made of,
+  ranked by the heat each block type contributes.</p>
+  <div class="chips" id="rule-chips" style="margin-bottom:18px"></div>
+  <div class="fleet" id="fleet"></div>
+</section>
+
+<!-- ================= knob sweep ================= -->
+<section>
+  <div class="shead"><h2>What each dial actually does</h2>
+    <p class="eyebrow">one at a time, over the panel</p></div>
+  <p class="snote">Pick a dial to see its measured response curve. Each point is the panel's median
+  at that level; the marked point is what the mod ships today. The readout predicts what moving to
+  the level under the cursor would do, against the shipped baseline.</p>
+  <div id="knob-area"></div>
+</section>
+
+<!-- ================= findings ================= -->
+<section>
+  <div class="shead"><h2>Findings</h2><p class="eyebrow">from these three passes</p></div>
+
+  <div class="finding" data-sev="bad">
+    <h3>One block type decides the load criterion</h3>
+    <p><code>LargeJumpDrive</code> is <b class="num">67&nbsp;%</b> of all the waste heat the corpus
+    makes at full electrical load &mdash; 10,567 of them across 2,183 ships at 4.8&nbsp;MW each
+    &mdash; and its effect is binary. Of the 2,255 ships carrying one, <b class="num">100.0&nbsp;%</b>
+    reach 400&nbsp;K and <b class="num">100.0&nbsp;%</b> lose a block. Of the 5,887 without,
+    65.6&nbsp;% and 21.5&nbsp;%. At idle the two groups are indistinguishable &mdash; 0.2&nbsp;%
+    critical either way, medians of 179 and 177&nbsp;K &mdash; because a drive is classed as a tool, and tools
+    are off when parked.</p>
+    <p>The mechanism is the load state rather than the block. <code>Full</code> sets
+    <code>Tools&nbsp;=&nbsp;1</code>, so every drive on the hull charges at its full 32&nbsp;MW draw
+    for the whole 1,800&nbsp;s clock and 15&nbsp;% of that is heat; a real drive charges and then
+    stops. G2 is not invalidated &mdash; it holds at 65.6&nbsp;% on ships with no drive at all, well
+    past its 20&nbsp;% gate &mdash; but any tuning read off the aggregate is tuning for one block.
+    Whether charging a drive <em>should</em> be a thermal event is a design question; that it should
+    be unsurvivable for every hull that mounts one is probably not.</p>
+    <p class="ev">jump-drive ships 100.0 % critical (n=2,255) &middot; others 21.5 % (n=5,887)
+    &middot; both 0.2 % at idle &middot; median peak 1,574 K against 511 K</p>
+  </div>
+
+  <div class="finding" data-sev="warn">
+    <h3>Large hulls fail by burial; small hulls fail by having nothing to shed with</h3>
+    <p>Split by grid size, the same correlation table tells two different stories. On large grids
+    buried share is a strong predictor (<b class="num">+0.571</b>) and size still carries
+    <b class="num">+0.488</b> &mdash; capital hulls wrap their machinery in themselves. On small
+    grids burial barely registers (<b class="num">+0.145</b>) and size almost drops out
+    (<b class="num">+0.285</b>); what decides is radiating surface per kilowatt and heat capacity per
+    watt, both at <b class="num">&minus;0.84</b>.</p>
+    <p>That is two different fixes. Conduction and exposed-surface dials act on the buried case;
+    heat capacity and waste fraction act on the starved one. A single global multiplier tuned on the
+    aggregate will overshoot one population to reach the other.</p>
+    <p class="ev">8,132 ships joined on name and workshop id &middot; 4,068 large, 4,064 small</p>
+  </div>
+
+  <div class="finding" data-sev="note">
+    <h3>Heat capacity and emissivity are orthogonal, which makes them tunable separately</h3>
+    <p>Measured on the panel: scaling heat capacity moves <em>when</em> and not <em>where</em>. Time
+    to the first lost block tracks it almost exactly &mdash; one ship goes 2, 4, 7, 14, 28 seconds
+    across a sixteenfold range &mdash; while its peak stays pinned. Scaling emissivity does the
+    reverse: the peak falls and the blocks lost drop sharply, while the time hardly moves.</p>
+    <p>So the survey's two complaints have separate dials. "Damage arrives in six seconds" is a heat
+    capacity question. "Ships reach absurd temperatures" is an emissivity and exposure question. The
+    one place this breaks down is a buried block, where emissivity does nothing at all &mdash; a
+    hull with no exposed face has nothing to radiate from, whatever its surface is set to.</p>
+    <p class="ev">from the dial sweep &middot; see the response curves above</p>
+  </div>
+</section>
+
+<footer>
+  <h3>What this can and cannot tell you</h3>
+  <p><b>The dials are swept one at a time</b>, so what you get is a set of partial derivatives and
+  not a model of the whole space. Two dials moved together will not in general do what their curves
+  added together say: emissivity and exposed area multiply inside the radiation term, and heat
+  capacity trades against waste fraction inside the time constant. The curves are for finding the
+  range a dial should live in, and for ranking dials against one another. Treat anything past that
+  as a ballpark and confirm it with a run.</p>
+  <p><b>Peaks above critical are censored.</b> The harness never destroys an overheating block, so
+  past critical it keeps generating and keeps climbing for the rest of the clock. Read those as
+  "this block dies" and nothing more. Times to critical are decided at the crossing and are
+  unaffected, which is why the findings rest on them.</p>
+  <p><b>Timings are seconds of play.</b> <code>HeatTimeScale</code> is 225, so nine seconds at the
+  controls is about thirty-four minutes of real heating.</p>
+  <p><b>G3 is still unanswered.</b> No ship in the corpus carries a radiator or a coolant loop,
+  because the corpus filter rejects any ship with a non-vanilla block. It needs a retrofit pass that
+  fits a standard cooling kit and re-runs the panel.</p>
+</footer>
+
+</div>
+<div id="tip" role="status" aria-live="polite"></div>

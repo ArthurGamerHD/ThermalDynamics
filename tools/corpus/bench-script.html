@@ -1,0 +1,516 @@
+<script>
+"use strict";
+const D = JSON.parse(document.getElementById("bench-data").textContent);
+const SC = D.scenarios, SHIPS = D.ships, WID = D.workshop, BLK = D.blocks;
+const HUE = ["var(--s1)", "var(--s2)", "var(--s3)", "var(--s4)", "var(--s5)"];
+
+/* Column indices, resolved by name so a change to the packer cannot silently shift a column. */
+const ix = (cols, name) => cols.indexOf(name);
+const OC = D.outcomeCols, CC = D.censusCols, PC = D.panelCols, KC = D.knobCols;
+const O = { ship: ix(OC,"ship"), scen: ix(OC,"scen"), blocks: ix(OC,"blocks"), peak: ix(OC,"peak"),
+  median: ix(OC,"median"), overN: ix(OC,"overN"), tcrit: ix(OC,"tcrit"),
+  demand: ix(OC,"demand"), granted: ix(OC,"granted"), hot: ix(OC,"hot") };
+const K = {}; KC.forEach((c,i) => K[c] = i);
+const P = {}; PC.forEach((c,i) => P[c] = i);
+const CE = {}; CC.forEach((c,i) => CE[c] = i);
+
+const state = { mode:"measured", tcrit:900, grid:"all", q:"", rule:"all",
+  knob: D.knobNames.length ? D.knobNames.find(n => n !== "environment") || D.knobNames[0] : null,
+  hoverLevel: null };
+
+const $ = s => document.querySelector(s);
+const pct = (a,b) => b ? 100*a/b : 0;
+const fmt = n => n>=1e9 ? (n/1e9).toFixed(1)+"G" : n>=1e6 ? (n/1e6).toFixed(n>=1e7?0:1)+"M"
+  : n>=1e3 ? Math.round(n).toLocaleString() : n>=10 ? Math.round(n) : n.toFixed(1);
+const med = a => { if(!a.length) return 0; const s=[...a].sort((x,y)=>x-y); return s[s.length>>1]; };
+const quant = (a,q) => { if(!a.length) return 0; const s=[...a].sort((x,y)=>x-y);
+  return s[Math.min(s.length-1, Math.floor(q*s.length))]; };
+
+/* ---------------- tooltip ---------------- */
+const tip = $("#tip");
+function showTip(e, html){
+  tip.innerHTML = html; tip.style.opacity = 1;
+  const r = tip.getBoundingClientRect();
+  let x = e.clientX + 14, y = e.clientY + 14;
+  if (x + r.width > innerWidth - 8) x = e.clientX - r.width - 14;
+  if (y + r.height > innerHeight - 8) y = e.clientY - r.height - 14;
+  tip.style.left = x + "px"; tip.style.top = y + "px";
+}
+const hideTip = () => tip.style.opacity = 0;
+function hoverable(el, html){
+  el.addEventListener("mousemove", e => showTip(e, typeof html === "function" ? html() : html));
+  el.addEventListener("mouseleave", hideTip);
+}
+
+/* ---------------- indexes ---------------- */
+const censusByShip = new Map();
+D.census.forEach(r => censusByShip.set(r[CE.ship], r));
+
+const bySceneName = {};
+SC.forEach((s,i) => bySceneName[s] = i);
+const outcomesByScenario = {};
+D.outcomes.forEach(r => (outcomesByScenario[r[O.scen]] ||= []).push(r));
+
+const matches = shipIdx => !state.q
+  || SHIPS[shipIdx].toLowerCase().includes(state.q)
+  || String(WID[shipIdx]).includes(state.q);
+
+function gridOk(shipIdx){
+  if (state.grid === "all") return true;
+  const c = censusByShip.get(shipIdx);
+  if (!c) return true;
+  return state.grid === "large" ? c[CE.large] === 1 : c[CE.large] === 0;
+}
+
+function scenarioRows(name){
+  const rows = outcomesByScenario[bySceneName[name]] || [];
+  return rows.filter(r => gridOk(r[O.ship]) && matches(r[O.ship]));
+}
+
+const isOver = r => state.mode === "measured" ? r[O.overN] > 0 : r[O.peak] > state.tcrit;
+const overLabel = () => state.mode === "measured" ? "its own critical temperature" : state.tcrit+" K";
+
+/* ---------------- criteria ---------------- */
+function verdicts(){
+  const idle = scenarioRows("idle"), load = scenarioRows("full-electrical"),
+        rec = scenarioRows("recovery");
+  const all = D.outcomes.filter(r => gridOk(r[O.ship]) && matches(r[O.ship]));
+  const out = [];
+
+  const g1n = idle.filter(isOver).length;
+  out.push({ tag:"G1", claim:"Idle is safe.", v: idle.length ? (pct(g1n,idle.length)<=1?"pass":"fail") : "unknown",
+    meas: pct(g1n, idle.length).toFixed(2)+" %",
+    detail:`${g1n.toLocaleString()} of ${idle.length.toLocaleString()} parked ships put a block over ${overLabel()}`,
+    gate:"fails above ~1 % of the corpus" });
+
+  const g2n = load.filter(r => r[O.peak] >= 400).length;
+  out.push({ tag:"G2", claim:"Load bites.", v: load.length ? (pct(g2n,load.length)>=20?"pass":"fail") : "unknown",
+    meas: pct(g2n, load.length).toFixed(1)+" %",
+    detail:`${g2n.toLocaleString()} of ${load.length.toLocaleString()} reach 400 K under full electrical load`,
+    gate:"fails below ~20 % ever getting warm" });
+
+  out.push({ tag:"G3", claim:"Cooling works.", v:"unknown", meas:"not measured",
+    detail:"No corpus ship carries a radiator or a loop — the filter rejects non-vanilla blocks. Needs the retrofit pass.",
+    gate:"fails when a standard cooling fit barely moves the peak" });
+
+  // G4 is answerable now: the census supplied exposure and installed heat.
+  const g4 = correlations();
+  const design = Math.max(...g4.filter(c => !c.size).map(c => Math.abs(c.rho)));
+  const size = Math.max(...g4.filter(c => c.size).map(c => Math.abs(c.rho)));
+  out.push({ tag:"G4", claim:"Design decides, not size.", v: design > size ? "pass" : "fail",
+    meas: design.toFixed(2)+" vs "+size.toFixed(2),
+    detail:`strongest design term against strongest size term, rank correlation with peak under load`,
+    gate:"fails when a size term predicts heat better than every design term" });
+
+  const g5n = rec.filter(r => !isOver(r)).length;
+  out.push({ tag:"G5", claim:"No death spiral.", v: rec.length ? (pct(g5n,rec.length)>95?"pass":"fail") : "unknown",
+    meas: pct(g5n, rec.length).toFixed(1)+" %",
+    detail:`${g5n.toLocaleString()} of ${rec.length.toLocaleString()} settle back once the load stops`,
+    gate:"fails below 95 % recovering" });
+
+  const demand = all.map(r => r[O.demand]), granted = all.map(r => r[O.granted]);
+  const d99 = quant(demand, 0.99), cap = granted.length ? Math.max(...granted) : 0;
+  out.push({ tag:"G6", claim:"Affordable to solve.", v: all.length ? (d99<=cap?"pass":"fail") : "unknown",
+    meas: d99.toFixed(1)+" / "+cap.toFixed(0),
+    detail:`p99 substep demand against the highest the shipped caps grant; median ${quant(demand,0.5).toFixed(1)}`,
+    gate:"fails when p99 demand exceeds the cap" });
+
+  $("#verdicts").innerHTML = out.map(o => `
+    <div class="vcard" data-v="${o.v}">
+      <div class="vtop"><span class="vtag">${o.tag}</span>
+        <span class="vstate">${o.v==="pass"?"HOLDS":o.v==="fail"?"FAILS":"UNANSWERED"}</span></div>
+      <div class="vclaim">${o.claim}</div>
+      <div class="vmeas">${o.meas}</div>
+      <div class="vdetail">${o.detail}</div>
+      <div class="vgate">${o.gate}</div>
+    </div>`).join("");
+
+  $("#crit-basis").textContent = state.mode === "measured"
+    ? "at the shipped per-block criticals" : `proxy: one ${state.tcrit} K threshold`;
+  $("#proxy-note").hidden = state.mode === "measured";
+}
+
+/* ---------------- correlations (Spearman) ---------------- */
+function spearman(pairs){
+  const n = pairs.length;
+  if (n < 3) return 0;
+  const rank = key => {
+    const order = pairs.map((p,i) => i).sort((a,b) => pairs[a][key] - pairs[b][key]);
+    const r = new Array(n);
+    let i = 0;
+    while (i < n){
+      let j = i;
+      while (j+1 < n && pairs[order[j+1]][key] === pairs[order[i]][key]) j++;
+      const avg = (i + j) / 2 + 1;
+      for (let k = i; k <= j; k++) r[order[k]] = avg;
+      i = j + 1;
+    }
+    return r;
+  };
+  const rx = rank(0), ry = rank(1);
+  const mx = rx.reduce((a,b)=>a+b,0)/n, my = ry.reduce((a,b)=>a+b,0)/n;
+  let num = 0, dx = 0, dy = 0;
+  for (let i = 0; i < n; i++){
+    const a = rx[i]-mx, b = ry[i]-my;
+    num += a*b; dx += a*a; dy += b*b;
+  }
+  return dx && dy ? num / Math.sqrt(dx*dy) : 0;
+}
+
+const TERMS = [
+  { name:"installed waste heat", size:false, get:c => c[CE.waste_full_w] },
+  { name:"waste heat per block", size:false, get:c => c[CE.waste_full_w] / Math.max(1, c[CE.blocks]) },
+  { name:"exposed area per kW", size:false, get:c => c[CE.exposure_m2_per_kw] },
+  { name:"heat capacity per watt", size:false, get:c => c[CE.capacity_j_per_k_per_w] },
+  { name:"buried share", size:false, get:c => c[CE.buried_share] },
+  { name:"installed power", size:false, get:c => c[CE.installed_power_w] },
+  { name:"block count", size:true, get:c => c[CE.blocks] },
+  { name:"exposed area", size:true, get:c => c[CE.exposed_area_m2] },
+];
+
+let corrCache = null, corrKey = "";
+function correlations(){
+  const key = state.grid + "|" + state.q;
+  if (corrCache && corrKey === key) return corrCache;
+
+  const load = scenarioRows("full-electrical");
+  const out = TERMS.map(t => {
+    const pairs = [];
+    for (const r of load){
+      const c = censusByShip.get(r[O.ship]);
+      if (!c) continue;
+      pairs.push([t.get(c), r[O.peak]]);
+    }
+    return { name:t.name, size:t.size, rho: spearman(pairs), n: pairs.length };
+  });
+  corrCache = out; corrKey = key;
+  return out;
+}
+
+function drawCorrelations(){
+  const data = correlations();
+  const host = $("#corr");
+  host.innerHTML = data.map(c => {
+    const w = Math.abs(c.rho) * 50;
+    const left = c.rho >= 0 ? 50 : 50 - w;
+    const colour = c.size ? "var(--ink-3)" : (c.rho >= 0 ? "var(--s2)" : "var(--s1)");
+    return `<div class="corr-row">
+      <span class="corr-name${c.size ? " size" : ""}">${c.name}</span>
+      <span class="corr-axis"><span class="corr-zero"></span>
+        <span class="corr-fill" style="left:${left}%;width:${w}%;background:${colour}"></span></span>
+      <span class="corr-val">${c.rho >= 0 ? "+" : ""}${c.rho.toFixed(3)}</span>
+    </div>`;
+  }).join("");
+
+  const n = data[0] ? data[0].n : 0;
+  const design = data.filter(c => !c.size).reduce((a,c) => Math.max(a, Math.abs(c.rho)), 0);
+  const size = data.filter(c => c.size).reduce((a,c) => Math.max(a, Math.abs(c.rho)), 0);
+  $("#corr-note").textContent = `${n.toLocaleString()} ships · strongest design term ${design.toFixed(3)},`
+    + ` strongest size term ${size.toFixed(3)} · positive means hotter`;
+}
+
+/* ---------------- where the heat is ---------------- */
+function drawHeat(){
+  const rows = D.heatByBlock.slice(0, 12);
+  const total = D.heatByBlock.reduce((a,r) => a + r[1], 0);
+  const max = rows.length ? rows[0][1] : 1;
+  $("#heat").innerHTML = `<div class="lb">` + rows.map(r => {
+    const [b, watts, count, ships] = r;
+    return `<div class="lb-row" data-b="${BLK[b]}" data-w="${watts}" data-c="${count}" data-s="${ships}"
+        data-p="${pct(watts,total).toFixed(1)}">
+      <span class="lb-name">${BLK[b]}</span>
+      <span class="lb-track"><span class="lb-fill" style="width:${(watts/max*100).toFixed(1)}%"></span></span>
+      <span class="lb-num num">${pct(watts,total).toFixed(1)}%</span></div>`;
+  }).join("") + `</div>
+    <p class="snote" style="margin:14px 0 0; font-size:.8rem">${fmt(total)}W made across the corpus
+    with everything on · top twelve types are ${pct(rows.reduce((a,r)=>a+r[1],0), total).toFixed(0)} % of it</p>`;
+  $("#heat").querySelectorAll(".lb-row").forEach(el => hoverable(el,
+    `<span class="tl">${el.dataset.b}</span><b>${el.dataset.p}%</b> of corpus waste heat<br>
+     <b>${(+el.dataset.c).toLocaleString()}</b> installed across <b>${(+el.dataset.s).toLocaleString()}</b> ships<br>
+     <b>${fmt((+el.dataset.w)/Math.max(1,+el.dataset.c))}W</b> each at full load`));
+}
+
+/* The jump-drive split, computed live so it follows the grid filter. */
+function drawJumpDrives(){
+  const load = scenarioRows("full-electrical");
+
+  // **Membership, not a proxy.** hasDrive is built in the packer from composition.csv — every ship
+  // that mounts a drive, whether or not the drive ended up being its hottest block. Inferring it
+  // from the hottest-block column instead put 2,118 ships in the group where 2,249 belong, and this
+  // split is a finding rather than a decoration.
+  const withDrive = [], without = [];
+  for (const r of load) (D.hasDrive[r[O.ship]] ? withDrive : without).push(r);
+  const stat = rows => ({
+    n: rows.length,
+    warm: pct(rows.filter(r => r[O.peak] >= 400).length, rows.length),
+    lost: pct(rows.filter(isOver).length, rows.length),
+    med: med(rows.map(r => r[O.peak])),
+  });
+  const a = stat(withDrive), b = stat(without);
+  $("#jd-panel").innerHTML = `
+    <h3 style="margin-bottom:4px">Ships whose hottest block is a jump drive</h3>
+    <p class="snote" style="margin-bottom:16px; font-size:.83rem">Split of the same population, under
+    full electrical load. A drive is classed as a tool, so it is off at idle and flat out here.</p>
+    <div class="predict" style="margin:0">
+      <div class="pred"><span>with a drive</span><b>${a.lost.toFixed(1)}%</b><i class="up">lose a block</i></div>
+      <div class="pred"><span>without</span><b>${b.lost.toFixed(1)}%</b><i class="down">lose a block</i></div>
+      <div class="pred"><span>median peak, with</span><b>${fmt(a.med)} K</b><i>n=${a.n.toLocaleString()}</i></div>
+      <div class="pred"><span>median peak, without</span><b>${fmt(b.med)} K</b><i>n=${b.n.toLocaleString()}</i></div>
+    </div>`;
+}
+
+/* ---------------- the panel ---------------- */
+function severity(p){
+  if (p[P.scenariosCritical] >= 3) return "hot";
+  if (p[P.scenariosCritical] >= 1) return "edge";
+  return "safe";
+}
+
+function drawFleet(){
+  const rows = D.panel.filter(p =>
+    (state.rule === "all" || D.panelRules[p[P.rule]] === state.rule)
+    && (state.grid === "all" || (state.grid === "large") === (p[P.large] === 1))
+    && matches(p[P.ship]));
+  rows.sort((a,b) => b[P.loadK] - a[P.loadK]);
+
+  $("#panel-count").textContent = rows.length + " of " + D.panel.length + " ships";
+  $("#fleet").innerHTML = rows.map(p => {
+    const comp = D.panelComposition[p[P.ship]] || [];
+    const top = comp.length ? comp[0][2] : 0;
+    const bars = comp.slice(0,4).map(c =>
+      `<div class="pc-bar"><span>${BLK[c[0]]}</span>
+        <span class="pc-track"><span class="pc-fill" style="width:${top?Math.max(4,c[2]/top*100):0}%"></span></span>
+        <span class="pc-pct">${c[1]}&times;</span></div>`).join("");
+    const tc = p[P.loadTcrit];
+    return `<div class="pcard" data-sev="${severity(p)}">
+      <div class="pc-top"><span class="pc-rule">${D.panelRules[p[P.rule]]}</span>
+        <span class="pc-grid">${p[P.large] ? "LARGE" : "SMALL"}</span></div>
+      <div class="pc-name">${SHIPS[p[P.ship]]}</div>
+      <div class="pc-why">${D.panelWhy[p[P.rule]]}</div>
+      <div class="pc-stats">
+        <div class="pc-stat"><b>${p[P.blocks].toLocaleString()}</b><span>blocks</span></div>
+        <div class="pc-stat"><b>${(p[P.buried]*100).toFixed(0)}%</b><span>buried</span></div>
+        <div class="pc-stat"><b>${fmt(p[P.wasteW])}W</b><span>waste, full</span></div>
+        <div class="pc-stat"><b>${fmt(p[P.idleK])} K</b><span>idle peak</span></div>
+        <div class="pc-stat"><b>${fmt(p[P.loadK])} K</b><span>load peak</span></div>
+        <div class="pc-stat"><b>${tc >= 0 ? tc + " s" : "—"}</b><span>first loss</span></div>
+      </div>
+      ${comp.length ? `<div class="pc-comp"><span class="pc-comp-h">heat by block type</span>${bars}</div>` : ""}
+    </div>`;
+  }).join("") || `<p class="snote">No panel ship matches this filter.</p>`;
+}
+
+/* ---------------- knob response curves ---------------- */
+const knobRowsByName = {};
+D.knobs.forEach(r => (knobRowsByName[D.knobNames[r[K.knob]]] ||= []).push(r));
+
+const KNOB_INTENT = {
+  "specific-heat": "how long a block takes to move — the time constant",
+  "emissivity": "radiating strength, and solar absorption with it",
+  "conductivity": "how fast heat leaves the block that made it",
+  "exposed-surface": "radiating area per block, apart from emissivity",
+  "producer-waste": "share of generated power that becomes heat",
+  "consumer-waste": "share of drawn power that becomes heat",
+  "critical-temperature": "where damage begins — moves the verdict, not the heat",
+  "heat-time-scale": "seconds of physical time per second of play",
+  "solar-energy": "watts per square metre from the sun",
+  "vacuum-temperature": "the floor a hull radiates towards",
+  "friction-scale": "how hard airflow heats the leading face",
+  "friction-threshold": "the speed friction starts at, m/s",
+  "environment": "each world at the shipped settings — a control, not a dial",
+};
+
+/** Median outcome per level for one knob, over whichever panel ships pass the filter. */
+function curve(name){
+  const rows = (knobRowsByName[name] || []).filter(r =>
+    (state.grid === "all" || (state.grid === "large") === (r[K.large] === 1))
+    && (r[K.ship] < 0 || matches(r[K.ship])));
+  const levels = new Map();
+  for (const r of rows){
+    const k = r[K.level];
+    if (!levels.has(k)) levels.set(k, { level:k, shipped:r[K.shipped] === 1, peak:[], tcrit:[], over:[], demand:[] });
+    const e = levels.get(k);
+    e.peak.push(r[K.peak]);
+    e.over.push(r[K.overN] > 0 ? 1 : 0);
+    e.demand.push(r[K.demand]);
+    if (r[K.tcrit] >= 0) e.tcrit.push(r[K.tcrit]);
+  }
+  return [...levels.values()].sort((a,b) => a.level - b.level).map(e => ({
+    level: e.level, shipped: e.shipped, n: e.peak.length,
+    peak: med(e.peak),
+    lost: pct(e.over.reduce((a,b)=>a+b,0), e.over.length),
+    tcrit: e.tcrit.length ? med(e.tcrit) : null,
+    demand: med(e.demand),
+  }));
+}
+
+function drawKnobs(){
+  const host = $("#knob-area");
+  if (!D.knobs.length){
+    host.innerHTML = `<div class="pending"><b>The dial sweep has not been packed into this page yet.</b><br>
+      Thirteen dials over the 36-ship panel is about three hours; run
+      <code>KnobSweep</code> and repack. Everything above is from the survey and the census, which are complete.</div>`;
+    return;
+  }
+
+  const names = D.knobNames.filter(n => n !== "environment");
+  host.innerHTML = `<div class="knobgrid">
+      <div class="knoblist" id="knoblist"></div>
+      <div><div class="panel">
+        <div id="predict"></div>
+        <div id="curve"></div>
+        <div class="legend">
+          <span><i style="background:var(--s2)"></i>median peak, K</span>
+          <span><i style="background:var(--s1)"></i>median seconds to first loss</span>
+          <span><i style="background:var(--s4)"></i>share of runs losing a block</span>
+        </div>
+      </div></div>
+    </div>`;
+
+  $("#knoblist").innerHTML = names.map(n =>
+    `<button class="knobbtn" type="button" role="switch" aria-pressed="${n===state.knob}" data-k="${n}">
+      <b>${n}</b><span>${KNOB_INTENT[n] || ""}</span></button>`).join("");
+  $("#knoblist").addEventListener("click", e => {
+    const b = e.target.closest(".knobbtn");
+    if (!b) return;
+    state.knob = b.dataset.k; state.hoverLevel = null; drawKnobs();
+  });
+
+  drawCurve();
+}
+
+function drawCurve(){
+  const name = state.knob;
+  const pts = curve(name);
+  if (!pts.length){ $("#curve").innerHTML = `<p class="snote">No rows for this dial in the current filter.</p>`; return; }
+
+  const base = pts.find(p => p.shipped) || pts[Math.floor(pts.length/2)];
+  const shown = state.hoverLevel != null
+    ? (pts.find(p => p.level === state.hoverLevel) || base) : base;
+
+  const delta = (now, was, invert) => {
+    if (!was) return `<i class="flat">—</i>`;
+    const d = 100 * (now - was) / was;
+    if (Math.abs(d) < 0.5) return `<i class="flat">unchanged</i>`;
+    const worse = invert ? d < 0 : d > 0;
+    return `<i class="${worse ? "up" : "down"}">${d > 0 ? "+" : ""}${d.toFixed(0)}% vs shipped</i>`;
+  };
+
+  $("#predict").innerHTML = `
+    <div class="predict">
+      <div class="pred"><span>${name} at</span><b>${shown.level}</b>
+        <i class="flat">${shown.shipped ? "shipped value" : "shipped is " + base.level}</i></div>
+      <div class="pred"><span>median peak</span><b>${fmt(shown.peak)} K</b>${delta(shown.peak, base.peak, false)}</div>
+      <div class="pred"><span>first loss after</span><b>${shown.tcrit != null ? shown.tcrit + " s" : "—"}</b>
+        ${shown.tcrit != null && base.tcrit != null ? delta(shown.tcrit, base.tcrit, true) : `<i class="flat">—</i>`}</div>
+      <div class="pred"><span>runs losing a block</span><b>${shown.lost.toFixed(0)}%</b>${delta(shown.lost, base.lost, false)}</div>
+      <div class="pred"><span>substeps demanded</span><b>${shown.demand.toFixed(1)}</b>${delta(shown.demand, base.demand, false)}</div>
+    </div>`;
+
+  // Three series on one plot would need three scales, so each is drawn against its own maximum and
+  // the axis is labelled per series rather than shared — the numbers live in the readout above.
+  const W = 620, H = 260, L = 46, R = 16, T = 14, B = 40;
+  const pw = W - L - R, ph = H - T - B;
+  const n = pts.length;
+  const x = i => L + (n === 1 ? pw/2 : (i / (n-1)) * pw);
+
+  const series = [
+    { key:"peak", colour:"var(--s2)" },
+    { key:"tcrit", colour:"var(--s1)" },
+    { key:"lost", colour:"var(--s4)" },
+  ];
+
+  let paths = "", dots = "";
+  for (const s of series){
+    const vals = pts.map(p => p[s.key]).filter(v => v != null);
+    if (!vals.length) continue;
+    const max = Math.max(...vals) || 1;
+    const y = v => T + ph - (v / max) * ph;
+    const d = pts.map((p,i) => p[s.key] == null ? null : `${x(i).toFixed(1)} ${y(p[s.key]).toFixed(1)}`)
+      .filter(Boolean).map((c,i) => (i ? "L" : "M") + c).join(" ");
+    paths += `<path d="${d}" fill="none" stroke="${s.colour}" stroke-width="2"
+      stroke-linejoin="round" stroke-linecap="round"></path>`;
+    pts.forEach((p,i) => {
+      if (p[s.key] == null) return;
+      dots += `<circle cx="${x(i).toFixed(1)}" cy="${y(p[s.key]).toFixed(1)}"
+        r="${p.shipped ? 5 : 3.5}" fill="${p.shipped ? "var(--surface)" : s.colour}"
+        stroke="${s.colour}" stroke-width="2"></circle>`;
+    });
+  }
+
+  const ticks = pts.map((p,i) =>
+    `<text class="ax" x="${x(i).toFixed(1)}" y="${H-B+16}" text-anchor="middle"
+      ${p.shipped ? 'style="font-weight:600"' : ""}>${p.level}</text>`).join("");
+  const hits = pts.map((p,i) => {
+    const half = n === 1 ? pw/2 : pw / (n-1) / 2;
+    return `<rect x="${(x(i)-half).toFixed(1)}" y="${T}" width="${(half*2).toFixed(1)}" height="${ph}"
+      fill="transparent" data-level="${p.level}" style="cursor:pointer"></rect>`;
+  }).join("");
+
+  $("#curve").innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img"
+    aria-label="Response of the panel to ${name}: median peak, seconds to first loss, and share losing a block">
+    <line class="axisline" x1="${L}" y1="${T+ph}" x2="${W-R}" y2="${T+ph}"></line>
+    ${paths}${dots}${ticks}${hits}
+    <text class="ax" x="${L}" y="${H-6}" style="font-size:9px">${name} · hollow point is the shipped value</text>
+  </svg>`;
+
+  $("#curve").querySelectorAll("rect[data-level]").forEach(r => {
+    r.addEventListener("mouseenter", () => { state.hoverLevel = +r.dataset.level; drawCurve(); });
+  });
+  $("#curve").addEventListener("mouseleave", () => {
+    if (state.hoverLevel !== null){ state.hoverLevel = null; drawCurve(); }
+  }, { once:true });
+}
+
+/* ---------------- wiring ---------------- */
+function render(){
+  corrCache = null;
+  $("#pv-knobs").textContent = D.knobs.length ? D.knobs.length.toLocaleString() : "pending";
+  verdicts(); drawCorrelations(); drawHeat(); drawJumpDrives(); drawFleet(); drawKnobs();
+}
+
+$("#grid-chips").innerHTML = [["all","every ship"],["large","large grid"],["small","small grid"]]
+  .map(([v,label]) => `<button class="chip" type="button" role="switch"
+     aria-pressed="${v==="all"}" data-g="${v}"><span>${label}</span></button>`).join("");
+$("#grid-chips").addEventListener("click", e => {
+  const b = e.target.closest(".chip"); if (!b) return;
+  state.grid = b.dataset.g;
+  document.querySelectorAll("#grid-chips .chip").forEach(c =>
+    c.setAttribute("aria-pressed", c.dataset.g === state.grid));
+  render();
+});
+
+const rules = ["all", ...D.panelRules];
+$("#rule-chips").innerHTML = rules.map(r => `<button class="chip" type="button" role="switch"
+  aria-pressed="${r==="all"}" data-r="${r}"><span>${r === "all" ? "every rule" : r}</span></button>`).join("");
+$("#rule-chips").addEventListener("click", e => {
+  const b = e.target.closest(".chip"); if (!b) return;
+  state.rule = b.dataset.r;
+  document.querySelectorAll("#rule-chips .chip").forEach(c =>
+    c.setAttribute("aria-pressed", c.dataset.r === state.rule));
+  drawFleet();
+});
+
+$("#tcrit").addEventListener("input", e => {
+  state.tcrit = +e.target.value; state.mode = "proxy";
+  $("#tcrit-v").textContent = state.tcrit + " K";
+  render();
+});
+$("#back").addEventListener("click", () => {
+  state.mode = "measured"; state.tcrit = 900;
+  $("#tcrit").value = 900; $("#tcrit-v").textContent = "measured";
+  render();
+});
+$("#q").addEventListener("input", e => { state.q = e.target.value.trim().toLowerCase(); render(); });
+$("#reset").addEventListener("click", () => {
+  state.mode = "measured"; state.tcrit = 900; state.grid = "all"; state.q = ""; state.rule = "all";
+  $("#tcrit").value = 900; $("#tcrit-v").textContent = "measured"; $("#q").value = "";
+  document.querySelectorAll("#grid-chips .chip").forEach(c =>
+    c.setAttribute("aria-pressed", c.dataset.g === "all"));
+  document.querySelectorAll("#rule-chips .chip").forEach(c =>
+    c.setAttribute("aria-pressed", c.dataset.r === "all"));
+  render();
+});
+
+render();
+</script>
