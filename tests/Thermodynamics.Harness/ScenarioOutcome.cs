@@ -88,6 +88,41 @@ namespace Thermodynamics.Harness
         /// <summary>Fastest rate of change seen at the peak block, K/s.</summary>
         public float PeakRateKelvinPerSecond;
 
+        /// <summary>
+        /// What it takes to raise the whole assembly by a degree, J/K — every node's thermal mass
+        /// added up. The conversion between a drifting bulk temperature and the watts that drift
+        /// represents.
+        /// </summary>
+        public float ThermalMass;
+
+        /// <summary>
+        /// How fast the ship as a whole was still moving over the last stretch of the run, K/s.
+        /// Negative is cooling. Near zero means the whole hull has stopped, not just its hottest
+        /// block. NaN when the run was too short to have a last stretch.
+        ///
+        /// <para>
+        /// <see cref="SecondsToSettle"/> watches one block, so it says a ship has settled while
+        /// thousands of tonnes of armour are still cooling off. Anything that reads the end of a
+        /// run as an equilibrium needs this to be small before it can believe it.
+        /// </para>
+        /// </summary>
+        public float BulkDriftKelvinPerSecond = float.NaN;
+
+        /// <summary>
+        /// The same drift as watts: <see cref="ThermalMass"/> times
+        /// <see cref="BulkDriftKelvinPerSecond"/>, which is the rate the hull is putting heat into
+        /// store or taking it back out. Negative is a hull still giving heat up.
+        ///
+        /// <para>
+        /// Kelvin alone cannot say whether a ship has settled, because the same hundredth of a
+        /// degree a minute is nothing on a capital hull and most of the budget on an interceptor.
+        /// Watts can: this is the term that has to be small next to what the ship makes before
+        /// made and vented can be expected to agree, and it is measured from the stored heat rather
+        /// than from the same ledger those two come from.
+        /// </para>
+        /// </summary>
+        public float BulkDriftWatts = float.NaN;
+
         /// <summary>Watts the grid was making and shedding when the run ended.</summary>
         public float MadeWatts;
         public float VentedWatts;
@@ -166,6 +201,7 @@ namespace Thermodynamics.Harness
                 if (kelvin > critical) outcome.BlocksOverCritical++;
                 if (critical - kelvin < margin) margin = critical - kelvin;
 
+                outcome.ThermalMass += node.ThermalMass;
                 outcome.RadiationWatts += node.LastRadiationWatts;
                 outcome.ConvectionWatts += node.LastConvectionWatts;
                 outcome.SolarWatts += node.LastSolarWatts;

@@ -81,25 +81,7 @@ namespace Thermodynamics.Tests
         [Fact]
         public void ParallelAndLinearProduceTheSameMatrix()
         {
-            if (!GameBlocks.IsInstalled) return;
-
-            // Opt-in: the corpus is gigabytes, lives outside the repository and is fetched rather
-            // than authored, so the default suite does not depend on it.
-            if (Environment.GetEnvironmentVariable("THERMAL_CORPUS_TESTS") == null) return;
-
-            string workshop = Blueprints.DefaultPath();
-            if (workshop == null) return;
-
-            CorpusLab.Summary corpus = CorpusLab.Scan(workshop);
-            if (corpus.Usable.Count < 2) return;
-
-            // The two smallest usable ships: the invariant has nothing to do with size, and the
-            // suite should not pay for a nine-thousand-block hull to prove it.
-            List<Blueprints.Ship> ships = new List<Blueprints.Ship>
-            {
-                corpus.Usable[corpus.Usable.Count - 1],
-                corpus.Usable[corpus.Usable.Count - 2],
-            };
+            if (CorpusFixture.Files().Count == 0) return;
 
             List<Battery.Scenario> scenarios = new List<Battery.Scenario>();
             foreach (Battery.Scenario scenario in Battery.All())
@@ -107,10 +89,31 @@ namespace Thermodynamics.Tests
                 if (scenario.Name == "idle" || scenario.Name == "burn-forward") scenarios.Add(scenario);
             }
 
+            // **A sample, and deliberately not the corpus.** Every other corpus test walks all ten
+            // thousand ships, and this one must not: half of it is the linear lab, which is one
+            // core by definition, so walking the population here would put a single-threaded pass
+            // over ten thousand ships in front of every other test on the machine. It would be the
+            // longest thing in the run by a wide margin and it would not answer a harder question.
+            //
+            // What the fault needs is contention, not population. The bug is that simulations built
+            // from one ship share that ship's BlockInstance objects while ShipLoad writes the load
+            // onto them, so two scenarios running at once overwrite each other's watts. Sixty real
+            // hulls being built and loaded across thirty-odd workers is that condition; ten
+            // thousand is the same condition for longer. Spread across the size range rather than
+            // taken off one end, because the old version took the two smallest ships in the corpus
+            // and four jobs on a thirty-core machine is the narrowest window a race could have.
+            List<Blueprints.Ship> ships = CorpusFixture.Spread(Sample);
+            if (ships.Count == 0) return;
+
             List<ScenarioOutcome> parallel = BatteryLab.Run(ships, scenarios, null, LabMode.Parallel);
             List<ScenarioOutcome> linear = BatteryLab.Run(ships, scenarios, null, LabMode.Linear);
 
-            Assert.Equal(linear.Count, parallel.Count);
+            // Pinned to what was asked for, not merely to each other. The lab drops a job that
+            // throws rather than failing the pass, so two empty matrices satisfy an equality
+            // between them and the loop below never runs.
+            int expected = ships.Count * scenarios.Count;
+            Assert.Equal(expected, linear.Count);
+            Assert.Equal(expected, parallel.Count);
 
             for (int i = 0; i < linear.Count; i++)
             {
@@ -122,5 +125,11 @@ namespace Thermodynamics.Tests
                 Assert.Equal(linear[i].HottestBlock, parallel[i].HottestBlock);
             }
         }
+
+        /// <summary>
+        /// Ships to put through both modes. Enough concurrent work to collide, few enough that the
+        /// serial reference stays cheap.
+        /// </summary>
+        private const int Sample = 60;
     }
 }

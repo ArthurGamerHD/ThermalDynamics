@@ -37,19 +37,9 @@ namespace Thermodynamics.Tests
         ///
         ///     THERMAL_CORPUS_TESTS=1 dotnet test --filter LabInvariantTests
         /// </summary>
-        private static List<Blueprints.Ship> Corpus()
+        private static List<string> Corpus()
         {
-            if (Environment.GetEnvironmentVariable("THERMAL_CORPUS_TESTS") == null)
-            {
-                return new List<Blueprints.Ship>();
-            }
-
-            if (!GameBlocks.IsInstalled) return new List<Blueprints.Ship>();
-
-            string root = Blueprints.DefaultPath();
-            if (root == null) return new List<Blueprints.Ship>();
-
-            return CorpusLab.Scan(root).Usable;
+            return CorpusFixture.Files();
         }
 
         // ---- what a definition may say ---------------------------------------------------------
@@ -126,35 +116,26 @@ namespace Thermodynamics.Tests
         /// matters — the worst of those three faults produced three times as many, across a third
         /// of the ships.
         /// </summary>
-        [Fact]
-        public void SealedBlocksAreRare()
+        internal static void SealedBlocksAreRare()
         {
-            List<Blueprints.Ship> corpus = Corpus();
+            List<string> corpus = Corpus();
             if (corpus.Count == 0) return;
 
             long sealedBlocks = 0;
             long blocks = 0;
             HashSet<string> ships = new HashSet<string>();
 
-            foreach (Blueprints.Ship ship in corpus)
+            // Building a ship is the expensive half of this test and ships share nothing, so the
+            // build fans out and only the tallying is done here.
+            // The population this pass measured, kept. Finding which hulls are exceptional is the
+            // reason to walk ten thousand ships, and it cannot be done after the fact from a pass
+            // that only recorded whether the assertion held. Written per ship so an interrupted
+            // run still leaves behind everything it had reached.
+            foreach (Sealed count in CorpusFixture.Sweep("sealed-blocks", CountSealed))
             {
-                ShipAssembly assembly = ship.Build();
-                blocks += assembly.NodeCount;
-
-                for (int g = 0; g < assembly.Simulations.Count; g++)
-                {
-                    ThermalSolver solver = assembly.Simulations[g].Solver;
-                    if (solver.Nodes.Count < 2) continue;
-
-                    for (int i = 0; i < solver.Nodes.Count; i++)
-                    {
-                        if (solver.Nodes[i].ExposedArea > 0f) continue;
-                        if (solver.NodeConductanceTotal(i) > 0f) continue;
-
-                        sealedBlocks++;
-                        ships.Add(ship.Name);
-                    }
-                }
+                blocks += count.Blocks;
+                sealedBlocks += count.SealedBlocks;
+                if (count.SealedBlocks > 0) ships.Add(count.Ship);
             }
 
             if (blocks == 0) return;
@@ -167,6 +148,52 @@ namespace Thermodynamics.Tests
                 + "Something has started dropping mount surfaces again.");
         }
 
+        /// <summary>One ship's scenario outcomes, carried back from a sweep worker.</summary>
+        private class Balance
+        {
+            public readonly List<ScenarioOutcome> Outcomes = new List<ScenarioOutcome>();
+        }
+
+        /// <summary>One ship's contribution to the sealed-block tally.</summary>
+        private class Sealed
+        {
+            public string Ship;
+            public long Blocks;
+            public long SealedBlocks;
+            public string Row;
+        }
+
+        /// <summary>Builds one ship and counts the blocks with nowhere to send their heat.</summary>
+        private static Sealed CountSealed(Blueprints.Ship ship)
+        {
+            ShipAssembly assembly = ship.Build();
+            Sealed count = new Sealed { Ship = ship.Name, Blocks = assembly.NodeCount };
+
+            for (int g = 0; g < assembly.Simulations.Count; g++)
+            {
+                ThermalSolver solver = assembly.Simulations[g].Solver;
+                if (solver.Nodes.Count < 2) continue;
+
+                for (int i = 0; i < solver.Nodes.Count; i++)
+                {
+                    if (solver.Nodes[i].ExposedArea > 0f) continue;
+                    if (solver.NodeConductanceTotal(i) > 0f) continue;
+
+                    count.SealedBlocks++;
+                }
+            }
+
+            if (CorpusRecord.On)
+            {
+                List<string> row = new List<string>();
+                row.Add(CorpusRecord.ShipRow(ship, assembly.NodeCount, assembly.Bridges.Count,
+                    assembly.RoomCount, count.SealedBlocks, false, assembly.NodeCount == ship.Blocks));
+                CorpusRecord.Write("ships", CorpusRecord.ShipHeader, row);
+            }
+
+            return count;
+        }
+
         /// <summary>
         /// A blueprint's blocks are all accounted for: placed, or explicitly counted as unknown.
         ///
@@ -174,8 +201,7 @@ namespace Thermodynamics.Tests
         /// answers a different question from the one asked — a hull missing a third of its armour
         /// is cooler than the real thing and nothing says so.
         /// </summary>
-        [Fact]
-        public void EveryBlockInABlueprintIsEitherPlacedOrCountedAsUnknown()
+        internal static void EveryBlockInABlueprintIsEitherPlacedOrCountedAsUnknown()
         {
             // Behind the corpus opt-in like every other test here that reads it. This one missed
             // the gate and re-read the whole corpus twice per file on every run of the suite:
@@ -186,25 +212,32 @@ namespace Thermodynamics.Tests
             string root = Blueprints.DefaultPath();
             if (root == null) return;
 
-            List<string> wrong = new List<string>();
-
-            foreach (string file in Blueprints.Files(root))
-            {
-                List<Blueprints.Ship> ships = Blueprints.Read(file);
-                if (ships.Count == 0) continue;
-
-                int accounted = 0;
-                foreach (Blueprints.Ship ship in ships) accounted += ship.Blocks + ship.UnknownBlocks;
-
-                int inFile = CountBlocks(file);
-                if (inFile != accounted)
-                {
-                    wrong.Add(System.IO.Path.GetFileName(System.IO.Path.GetDirectoryName(file))
-                        + ": " + inFile + " blocks in the file, " + accounted + " accounted for");
-                }
-            }
+            // Two XML loads per file — the parse and the raw count — over every file in the corpus.
+            // Serially that is twenty thousand parses on one thread; the files are independent.
+            List<string> wrong = LabRun.MapMany(Blueprints.Files(root), Account, LabMode.Parallel);
 
             Assert.Empty(wrong);
+        }
+
+        /// <summary>Checks one file's raw block count against what the reader accounted for.</summary>
+        private static List<string> Account(string file)
+        {
+            List<string> wrong = new List<string>();
+
+            List<Blueprints.Ship> ships = Blueprints.Read(file);
+            if (ships.Count == 0) return wrong;
+
+            int accounted = 0;
+            foreach (Blueprints.Ship ship in ships) accounted += ship.Blocks + ship.UnknownBlocks;
+
+            int inFile = CountBlocks(file);
+            if (inFile != accounted)
+            {
+                wrong.Add(System.IO.Path.GetFileName(System.IO.Path.GetDirectoryName(file))
+                    + ": " + inFile + " blocks in the file, " + accounted + " accounted for");
+            }
+
+            return wrong;
         }
 
         private static int CountBlocks(string file)
@@ -245,35 +278,87 @@ namespace Thermodynamics.Tests
         /// legitimately absorbs more than it sheds, and <c>VentedWatts</c> reads zero rather than
         /// going negative while it does.
         /// </summary>
-        [Fact]
-        public void ASettledGridShedsWhatItMakes()
+        /// <summary>
+        /// The share of what a ship makes that its hull may still be storing or giving up before it
+        /// counts as finished.
+        ///
+        /// Necessarily tighter than <see cref="Agreement"/>: a hull admitted while still moving at
+        /// the width of the assertion could satisfy the assertion by drifting, which would be a
+        /// test that measures the guard.
+        /// </summary>
+        private const float BulkFlat = 0.01f;
+
+        /// <summary>How near made and vented must be, as a share of made.</summary>
+        private const float Agreement = 0.05f;
+
+        internal static void ASettledGridShedsWhatItMakes()
         {
-            List<Blueprints.Ship> corpus = Corpus();
+            List<string> corpus = Corpus();
             if (corpus.Count == 0) return;
 
+            // The ceiling, and one directional burn. all-peak is every consumer, every tool, every
+            // thruster in every direction and every reactor at its plate rating, which is the
+            // largest number of watts a hull can be made to put through itself: the balance is
+            // hardest to satisfy there and a slip in the ledger has the most room to show. Neither
+            // says much on an idle ship, whose made watts round to nothing and which the loop below
+            // discards anyway.
             List<Battery.Scenario> scenarios = new List<Battery.Scenario>();
             foreach (Battery.Scenario scenario in Battery.All())
             {
-                if (scenario.Name == "full-electrical" || scenario.Name == "burn-forward")
+                if (scenario.Name == "all-peak" || scenario.Name == "burn-forward")
                 {
                     scenarios.Add(scenario);
                 }
             }
 
-            // A ship with no sealed block in it. One that has one can never balance — the sealed
-            // block absorbs without limit — so running this on an arbitrary hull measures the open
-            // defect above rather than the invariant here.
-            List<Blueprints.Ship> ships = new List<Blueprints.Ship>();
-            foreach (Blueprints.Ship candidate in corpus)
+            // Every ship in the corpus, one worker per ship. Ships carrying a sealed block are the
+            // one exclusion: a sealed block absorbs without limit, so such a hull can never balance
+            // and running it here measures the open defect above rather than the invariant.
+            List<string> unbalanced = new List<string>();
+            int judged = 0;
+            int ran = 0;
+
+            List<Balance> results = CorpusFixture.Sweep("settled-balance", delegate (Blueprints.Ship ship)
             {
-                if (!HasSealedBlock(candidate)) { ships.Add(candidate); break; }
+                if (HasSealedBlock(ship)) return null;
+
+                Balance balance = new Balance();
+                foreach (Battery.Scenario scenario in scenarios)
+                {
+                    balance.Outcomes.Add(Battery.Run(ship, scenario));
+                }
+
+                // Recorded here rather than after the sweep. A walk over ten thousand ships runs
+                // for hours, and writing the dataset only once it finishes means an interruption
+                // at hour three leaves nothing behind at all.
+                CorpusRecord.Outcomes("settled-balance", balance.Outcomes);
+                return balance;
+            });
+
+            foreach (Balance balance in results)
+            {
+                ran += balance.Outcomes.Count;
+                judged += Judge(balance.Outcomes, unbalanced);
             }
 
-            if (ships.Count == 0) return;
+            Assert.Empty(unbalanced);
 
-            List<ScenarioOutcome> outcomes = BatteryLab.Run(ships, scenarios);
+            // A run in which every outcome was discarded proves nothing, and every discard above
+            // is a plausible thing to happen to the whole corpus at once — ships that never settle,
+            // ships that melt, runs too short to measure a drift. Without this the test reports
+            // success for having looked at nothing.
+            Assert.True(judged > 0,
+                "no outcome in the corpus reached equilibrium, so the balance was never checked. "
+                + ran + " runs, all discarded.");
+        }
 
-            List<string> unbalanced = new List<string>();
+        /// <summary>
+        /// Checks one batch of outcomes and returns how many of them were actually in a position to
+        /// be checked. Anything unbalanced is appended to <paramref name="unbalanced"/>.
+        /// </summary>
+        private static int Judge(List<ScenarioOutcome> outcomes, List<string> unbalanced)
+        {
+            int judged = 0;
 
             foreach (ScenarioOutcome outcome in outcomes)
             {
@@ -285,10 +370,27 @@ namespace Thermodynamics.Tests
                 // over critical are the tell: they are the ones still going.
                 if (outcome.BlocksOverCritical > 0) continue;
 
+                // Nor has one whose hull is still cooling. The run stops when the hottest block
+                // stops, and on a heavy ship that is minutes into a cooldown that takes an hour:
+                // the armour goes on dumping stored heat, so vented runs far above made and the
+                // difference is not a fault but a hull that was never asked to finish. Ask the bulk
+                // whether it has, and say nothing about the ones that have not.
+                //
+                // In watts rather than Kelvin, because a hundredth of a degree a minute is nothing
+                // on a capital hull and most of the heat budget on an interceptor. This is not the
+                // assertion in disguise: the drift is read from the stored heat, and the two watt
+                // figures below are read from the solver's ledger, so a ship that is genuinely
+                // still cooling is dropped here while one whose ledger has started lying keeps its
+                // small drift, is admitted, and fails.
+                if (float.IsNaN(outcome.BulkDriftWatts)) continue;       // too short to tell
+                if (System.Math.Abs(outcome.BulkDriftWatts) > BulkFlat * outcome.MadeWatts) continue;
+
+                judged++;
+
                 float difference = System.Math.Abs(outcome.MadeWatts - outcome.VentedWatts);
                 float share = difference / outcome.MadeWatts;
 
-                if (share > 0.05f)
+                if (share > Agreement)
                 {
                     unbalanced.Add(outcome.Ship + " / " + outcome.Scenario + ": made "
                         + outcome.MadeWatts.ToString("n0") + " W, vented "
@@ -296,7 +398,7 @@ namespace Thermodynamics.Tests
                 }
             }
 
-            Assert.Empty(unbalanced);
+            return judged;
         }
 
         /// <summary>
@@ -369,10 +471,9 @@ namespace Thermodynamics.Tests
         /// constant moves every figure and leaves the ordering alone; a wrong *classification*
         /// breaks the ordering.
         /// </summary>
-        [Fact]
-        public void MoreLoadIsNeverCooler()
+        internal static void MoreLoadIsNeverCooler()
         {
-            List<Blueprints.Ship> corpus = Corpus();
+            List<string> corpus = Corpus();
             if (corpus.Count == 0) return;
 
             Dictionary<string, Battery.Scenario> byName = new Dictionary<string, Battery.Scenario>();
@@ -383,28 +484,88 @@ namespace Thermodynamics.Tests
                 byName["idle"], byName["full-electrical"], byName["all-peak"],
             };
 
-            List<Blueprints.Ship> ships = new List<Blueprints.Ship> { corpus[0] };
-            List<ScenarioOutcome> outcomes = BatteryLab.Run(ships, ladder);
+            // The whole corpus rather than the largest ship in it. The claim is universal, and the
+            // hull it used to be asked of was the heaviest one there — the least sensitive ship
+            // available, because the most thermal mass moves least for a given change in load, and
+            // a hull that happens to carry no example of a misclassified block cannot show that the
+            // block was misclassified.
+            List<string> wrong = new List<string>();
 
-            Assert.Equal(3, outcomes.Count);
-
-            for (int i = 1; i < outcomes.Count; i++)
+            // One worker per ship, running the ladder in order on a hull it owns outright.
+            List<Balance> results = CorpusFixture.Sweep("load-ladder", delegate (Blueprints.Ship ship)
             {
-                Assert.True(outcomes[i].PeakKelvin >= outcomes[i - 1].PeakKelvin - 1f,
-                    outcomes[i].Scenario + " peaks at " + outcomes[i].PeakKelvin.ToString("n0")
-                    + " K, below " + outcomes[i - 1].Scenario + "'s "
-                    + outcomes[i - 1].PeakKelvin.ToString("n0") + " K");
+                Balance balance = new Balance();
+                foreach (Battery.Scenario rung in ladder) balance.Outcomes.Add(Battery.Run(ship, rung));
+                CorpusRecord.Outcomes("load-ladder", balance.Outcomes);
+                return balance;
+            });
+
+            Assert.True(results.Count > 0);
+
+            foreach (Balance balance in results)
+            {
+                List<ScenarioOutcome> rungs = Ordered(balance.Outcomes, ladder);
+
+                for (int i = 1; i < rungs.Count; i++)
+                {
+                    if (rungs[i].PeakKelvin >= rungs[i - 1].PeakKelvin - 1f) continue;
+
+                    wrong.Add(rungs[i].Ship + ": " + rungs[i].Scenario + " peaks at "
+                        + rungs[i].PeakKelvin.ToString("n0") + " K, below "
+                        + rungs[i - 1].Scenario + "'s "
+                        + rungs[i - 1].PeakKelvin.ToString("n0") + " K");
+                }
             }
+
+            Assert.Empty(wrong);
+        }
+
+        /// <summary>Outcomes grouped by the ship that produced them.</summary>
+        private static Dictionary<string, List<ScenarioOutcome>> ByShip(List<ScenarioOutcome> outcomes)
+        {
+            Dictionary<string, List<ScenarioOutcome>> byShip =
+                new Dictionary<string, List<ScenarioOutcome>>();
+
+            foreach (ScenarioOutcome outcome in outcomes)
+            {
+                if (!byShip.ContainsKey(outcome.Ship))
+                {
+                    byShip[outcome.Ship] = new List<ScenarioOutcome>();
+                }
+
+                byShip[outcome.Ship].Add(outcome);
+            }
+
+            return byShip;
+        }
+
+        /// <summary>
+        /// One ship's outcomes, put back into the order the scenarios were asked for. The lab is
+        /// free to return its rows in any order, and a ladder read out of order is not a ladder.
+        /// </summary>
+        private static List<ScenarioOutcome> Ordered(List<ScenarioOutcome> outcomes,
+            List<Battery.Scenario> scenarios)
+        {
+            List<ScenarioOutcome> ordered = new List<ScenarioOutcome>();
+
+            foreach (Battery.Scenario scenario in scenarios)
+            {
+                foreach (ScenarioOutcome outcome in outcomes)
+                {
+                    if (outcome.Scenario == scenario.Name) ordered.Add(outcome);
+                }
+            }
+
+            return ordered;
         }
 
         /// <summary>
         /// The sun only ever adds. A hull held to it cannot be cooler than the same hull in shadow,
         /// and if it is, the solar path has its sign or its facing wrong.
         /// </summary>
-        [Fact]
-        public void SunlightNeverCools()
+        internal static void SunlightNeverCools()
         {
-            List<Blueprints.Ship> corpus = Corpus();
+            List<string> corpus = Corpus();
             if (corpus.Count == 0) return;
 
             Dictionary<string, Battery.Scenario> byName = new Dictionary<string, Battery.Scenario>();
@@ -415,13 +576,47 @@ namespace Thermodynamics.Tests
                 byName["vacuum-shadow"], byName["vacuum-sunlit"],
             };
 
-            List<Blueprints.Ship> ships = new List<Blueprints.Ship> { corpus[corpus.Count - 1] };
-            List<ScenarioOutcome> outcomes = BatteryLab.Run(ships, pair);
+            // Every ship, not the smallest one in the corpus.
+            List<string> cooled = new List<string>();
+            int warmed = 0;
+            int ships = 0;
 
-            Assert.Equal(2, outcomes.Count);
-            Assert.True(outcomes[1].MeanKelvin >= outcomes[0].MeanKelvin - 1f,
-                "a sunlit hull averaged " + outcomes[1].MeanKelvin.ToString("n0")
-                + " K against " + outcomes[0].MeanKelvin.ToString("n0") + " K in shadow");
+            List<Balance> results = CorpusFixture.Sweep("sunlight", delegate (Blueprints.Ship ship)
+            {
+                Balance balance = new Balance();
+                foreach (Battery.Scenario scenario in pair) balance.Outcomes.Add(Battery.Run(ship, scenario));
+                CorpusRecord.Outcomes("sunlight", balance.Outcomes);
+                return balance;
+            });
+
+            ships = results.Count;
+
+            foreach (Balance balance in results)
+            {
+                List<ScenarioOutcome> both = Ordered(balance.Outcomes, pair);
+                if (both.Count < 2) continue;
+
+                float shadow = both[0].MeanKelvin;
+                float sunlit = both[1].MeanKelvin;
+
+                if (sunlit < shadow - 1f)
+                {
+                    cooled.Add(both[0].Ship + ": sunlit averaged " + sunlit.ToString("n0")
+                        + " K against " + shadow.ToString("n0") + " K in shadow");
+                }
+
+                if (sunlit > shadow + 1f) warmed++;
+            }
+
+            Assert.True(ships > 0);
+            Assert.Empty(cooled);
+
+            // "Never cooler" is also satisfied by a sun that does nothing at all, which is what a
+            // solar path that silently stopped contributing would look like. Somewhere in a corpus
+            // this size a hull has to have been warmed by it.
+            Assert.True(warmed > 0,
+                "no ship in the corpus was warmed by being put in the sun, so the solar path may "
+                + "not be contributing at all.");
         }
 
         /// <summary>
@@ -431,26 +626,71 @@ namespace Thermodynamics.Tests
         /// concurrent runs, this one guards state left behind *between sequential* runs — a cache
         /// that keeps a load, a model mutated in place, a static that remembers the last ship.
         /// </summary>
-        [Fact]
-        public void RunningTheSameThingTwiceGivesTheSameAnswer()
+        internal static void RunningTheSameThingTwiceGivesTheSameAnswer()
         {
-            List<Blueprints.Ship> corpus = Corpus();
+            List<string> corpus = Corpus();
             if (corpus.Count == 0) return;
 
-            Battery.Scenario scenario = null;
-            foreach (Battery.Scenario candidate in Battery.All())
+            List<string> drifted = new List<string>();
+            int ships = 0;
+
+            // **Across ships, not one after another.** Each ship's four runs have to stay in order —
+            // the whole point is that one scenario contaminates the *next* one — but ships are
+            // independent of each other, and a plain foreach here put four full simulations of
+            // every hull in the corpus onto a single thread while thirty-one workers idled. The
+            // ordering that matters is inside the lambda; the concurrency is between lambdas.
+            List<List<string>> reports = CorpusFixture.Sweep("determinism", Compare);
+            foreach (List<string> report in reports)
             {
-                if (candidate.Name == "full-electrical") scenario = candidate;
+                ships++;
+                drifted.AddRange(report);
             }
 
-            Blueprints.Ship ship = corpus[corpus.Count - 1];
+            Assert.True(ships > 0);
+            Assert.Empty(drifted);
+        }
+
+        /// <summary>
+        /// Runs one ship three times with another scenario in the middle, and once more against a
+        /// copy read fresh off disk, and reports whatever disagreed.
+        ///
+        /// Three runs, because two of the same scenario back to back is the one sequence that
+        /// cannot detect the fault this is here for. Every simulation built from a ship shares that
+        /// ship's <c>BlockInstance</c> objects and <c>ShipLoad</c> writes the load onto them, so a
+        /// scenario that leaves something behind contaminates the *next* scenario, not a repeat of
+        /// itself — a repeat re-derives the same wrong state from the same mutated instances and
+        /// agrees with itself perfectly.
+        /// </summary>
+        internal static List<string> Compare(Blueprints.Ship ship)
+        {
+            Dictionary<string, Battery.Scenario> byName = new Dictionary<string, Battery.Scenario>();
+            foreach (Battery.Scenario candidate in Battery.All()) byName[candidate.Name] = candidate;
+
+            Battery.Scenario scenario = byName["full-electrical"];
+            Battery.Scenario between = byName["burn-forward"];
+
+            List<string> drifted = new List<string>();
 
             ScenarioOutcome first = Battery.Run(ship, scenario);
-            ScenarioOutcome second = Battery.Run(ship, scenario);
+            Battery.Run(ship, between);
+            ScenarioOutcome third = Battery.Run(ship, scenario);
 
-            Assert.Equal(first.PeakKelvin, second.PeakKelvin, 3);
-            Assert.Equal(first.MeanKelvin, second.MeanKelvin, 3);
-            Assert.Equal(first.HottestBlock, second.HottestBlock);
+            // And against a copy read fresh off disk, which is the only version of this ship that
+            // no run has touched.
+            ScenarioOutcome clean = Battery.Run(ship.Reload(), scenario);
+
+            if (Differs(first, third)) drifted.Add(ship.Name + ": changed after another scenario ran");
+            if (Differs(first, clean)) drifted.Add(ship.Name + ": differs from a freshly read copy");
+
+            return drifted;
+        }
+
+        /// <summary>Whether two runs of the same ship and scenario disagree.</summary>
+        private static bool Differs(ScenarioOutcome a, ScenarioOutcome b)
+        {
+            if (a.HottestBlock != b.HottestBlock) return true;
+            if (System.Math.Abs(a.PeakKelvin - b.PeakKelvin) > 0.001f) return true;
+            return System.Math.Abs(a.MeanKelvin - b.MeanKelvin) > 0.001f;
         }
     }
 }

@@ -28,6 +28,9 @@ namespace Thermodynamics.Harness
             public int TooSmall;
             public long Blocks;
 
+            /// <summary>Files that could not be read at all, and what stopped each one.</summary>
+            public Dictionary<string, string> Unreadable = new Dictionary<string, string>(StringComparer.Ordinal);
+
             /// <summary>Usable ships, largest first.</summary>
             public List<Blueprints.Ship> Usable = new List<Blueprints.Ship>();
 
@@ -71,6 +74,8 @@ namespace Thermodynamics.Harness
                 }
             }
 
+            summary.Unreadable = Blueprints.Unreadable();
+
             summary.Usable.Sort(delegate (Blueprints.Ship a, Blueprints.Ship b)
             {
                 return b.Blocks.CompareTo(a.Blocks);
@@ -105,9 +110,29 @@ namespace Thermodynamics.Harness
             sb.Append("  modded, rejected    ").AppendLine(summary.Modded.ToString("n0"));
             sb.Append("  under ").Append(MinimumBlocks).Append(" blocks     ")
                 .AppendLine(summary.TooSmall.ToString("n0"));
+            sb.Append("  unreadable          ").AppendLine(summary.Unreadable.Count.ToString("n0"));
             sb.Append("  usable              ").AppendLine(summary.Vanilla.ToString("n0"));
             sb.Append("  blocks in corpus    ").AppendLine(summary.Blocks.ToString("n0"));
             sb.AppendLine();
+
+            if (summary.Unreadable.Count > 0)
+            {
+                sb.AppendLine("  files no parser could read");
+                int shown = 0;
+                foreach (KeyValuePair<string, string> failure in summary.Unreadable)
+                {
+                    if (shown++ == 10)
+                    {
+                        sb.Append("    and ").Append(summary.Unreadable.Count - 10)
+                            .AppendLine(" more");
+                        break;
+                    }
+
+                    sb.Append("    ").AppendLine(System.IO.Path.GetFileName(
+                        System.IO.Path.GetDirectoryName(failure.Key)) + "  " + failure.Value);
+                }
+                sb.AppendLine();
+            }
 
             if (summary.Usable.Count > 0)
             {

@@ -21,3 +21,6 @@
 # remain so an older checkout that still has them does not commit them.
 corpus/
 *.build/
+
+# vstest blame dumps: multi-gigabyte, and this folder is published to the workshop
+TestResults/

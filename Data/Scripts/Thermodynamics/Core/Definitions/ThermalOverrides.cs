@@ -173,6 +173,7 @@ namespace Thermodynamics.Core
                 case "ConsumerWasteEnergy": p.ConsumerWasteEnergy = value.Value; return true;
                 case "CriticalTemperature": p.CriticalTemperature = value.Value; return true;
                 case "OverheatDamagePerKelvin": p.OverheatDamagePerKelvin = value.Value; return true;
+                case "HeatSourceWatts": p.HeatSourceWatts = value.Value; return true;
                 case "ExcludeFromSimulation": p.ExcludeFromSimulation = value.Value > 0.5f; return true;
                 default: return false;
             }

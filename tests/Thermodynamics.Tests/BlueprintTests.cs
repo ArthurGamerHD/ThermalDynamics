@@ -164,38 +164,130 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// **Two blocks in one cell is a file to skip, not a corpus to abandon.**
+        ///
+        /// The reader promises never to throw, because a corpus of ten thousand files will contain
+        /// some that no parser should die on — but the guard sat on the XML load alone, and
+        /// everything after it ran bare. A real workshop blueprint puts two armour blocks in the
+        /// same cell; <c>GridModel</c> refuses the second, and the exception came up through the
+        /// parse and took down the scan of the whole corpus. Every corpus test failed on it, none
+        /// of them anywhere near their own subject.
+        ///
+        /// A file that cannot be read yields no ships and is recorded as unreadable, so the skip
+        /// is visible in the corpus report rather than being a silent hole in the population.
+        /// </summary>
+        [Fact]
+        public void ABlueprintWithTwoBlocksInOneCellIsSkippedRatherThanThrown()
+        {
+            if (!GameBlocks.IsInstalled) return;
+
+            string file = WriteBlueprint(
+                Block("LargeBlockArmorBlock", 0, 0, 0) +
+                Block("LargeHeavyBlockArmorBlock", 0, 0, 0));
+
+            Assert.Empty(Blueprints.Read(file));
+            Assert.True(Blueprints.Unreadable().ContainsKey(file),
+                "the file should have been recorded as unreadable");
+        }
+
+        /// <summary>
         /// The end of the chain: a ship read from a real subscribed blueprint builds a simulation
         /// that steps. Everything the lab does rests on this, and it is the one thing a synthetic
         /// blueprint cannot check — real ships have subgrids, rotors, oddly shaped blocks and
         /// twenty years of accumulated definition quirks in them.
         /// </summary>
-        [Fact]
-        public void ARealSubscribedShipBuildsASimulationThatSteps()
+        // Retired as a standalone corpus walk: CorpusSurvey builds every ship, checks the
+        // node-count accounting, probes that it steps, and counts joints, rooms and small grids
+        // as part of its single pass. The synthetic tests in this class are untouched.
+        internal static void ARealSubscribedShipBuildsASimulationThatSteps()
         {
-            if (!GameBlocks.IsInstalled) return;
+            if (CorpusFixture.Files().Count == 0) return;
 
-            // Opt-in: the corpus is gigabytes, lives outside the repository and is fetched rather
-            // than authored, so the default suite does not depend on it.
-            if (Environment.GetEnvironmentVariable("THERMAL_CORPUS_TESTS") == null) return;
+            List<string> wrong = new List<string>();
+            int stepped = 0;
+            int withJoints = 0;
+            int smallGrid = 0;
+            int withRooms = 0;
 
-            string workshop = Blueprints.DefaultPath();
-            if (workshop == null) return;
+            // Building a hull and stepping it a minute is the whole cost of this test, and ships
+            // share nothing with each other, so it fans out and only the tallying happens here.
+            foreach (Built built in CorpusFixture.Sweep("real-ships", Inspect))
+            {
+                if (built.Complaint != null) wrong.Add(built.Complaint);
+                if (built.SmallGrid) smallGrid++;
+                if (built.Stepped) stepped++;
+                if (built.Joints) withJoints++;
+                if (built.Rooms) withRooms++;
+            }
 
-            CorpusLab.Summary corpus = CorpusLab.Scan(workshop);
-            if (corpus.Usable.Count == 0) return;
+            Assert.Empty(wrong);
 
-            Blueprints.Ship ship = corpus.Usable[0];
+            Assert.True(stepped > 0,
+                "no ship in the corpus changed temperature over sixty seconds, so the step path "
+                + "may not be running at all.");
 
+            Assert.True(withJoints > 0,
+                "not one ship in the corpus resolved a mechanical joint. Subgrids are common "
+                + "enough that this means the joint linker has stopped finding them.");
+
+            // Small grids multiply every mass by roughly a hundredth, so a grid-size misread is
+            // one of the loudest possible faults and one nothing else on real ships would see.
+            Assert.True(smallGrid > 0,
+                "not one small-grid ship in the corpus. Either the corpus is unrepresentative or "
+                + "small grids have stopped being read.");
+
+            // Same argument for sealed interiors: rooms are where the air model attaches, and a
+            // corpus of built ships with no room in any of them means the room mapper is silent.
+            Assert.True(withRooms > 0,
+                "not one ship in the corpus mapped a sealed room.");
+        }
+
+        /// <summary>What one real ship turned out to be once it was built and stepped.</summary>
+        private class Built
+        {
+            public string Complaint;
+            public bool SmallGrid;
+            public bool Stepped;
+            public bool Joints;
+            public bool Rooms;
+        }
+
+        /// <summary>Builds one corpus ship, steps it a minute in shadow, and reports what it is.</summary>
+        private static Built Inspect(Blueprints.Ship ship)
+        {
+            Built built = new Built { SmallGrid = !ship.Large };
             ShipAssembly assembly = ship.Build();
+
+            // **Every block the reader counted has to have become a node.** The parser proves its
+            // own count against the raw XML elsewhere, and the runner proves the nodes it has can
+            // be stepped — but nobody stood between the two, and that gap is exactly where a hull
+            // quietly loses a third of its armour. GridBuilder.Place returns no success signal, so
+            // a rejected block is counted by the reader and absent from the solver with nothing to
+            // say so.
+            if (assembly.NodeCount != ship.Blocks)
+            {
+                built.Complaint = ship.Name + " read " + ship.Blocks + " blocks and built "
+                    + assembly.NodeCount + " nodes";
+                return built;
+            }
 
             AssemblyRunner runner = new AssemblyRunner(assembly);
             runner.Environment = t => Worlds.Shadow();
-            runner.Run(60f);
 
-            Assert.True(assembly.NodeCount > 0,
-                ship.Name + " built no nodes from " + ship.Blocks + " blocks");
-            Assert.True(runner.Hottest[runner.Hottest.Count - 1] > 0f,
-                ship.Name + " reports no temperature after stepping");
+            // The old version of this test asserted the hottest block was above zero Kelvin after
+            // one sample, which every block satisfies at its build temperature of 293.15 K whether
+            // the solver stepped or not. A temperature that moved is the thing worth asserting.
+            float before = assembly.Hottest() == null ? 0f : assembly.Hottest().Temperature;
+            runner.Run(60f);
+            built.Stepped = runner.Hottest[runner.Hottest.Count - 1] != before;
+
+            // Subgrids are the reason a real ship is worth testing at all — a rotor head or a
+            // piston tip is a separate grid, and the bridge between them is the only path heat has
+            // across the joint. The corpus is full of them; if it suddenly is not, the joint linker
+            // has stopped resolving.
+            built.Joints = assembly.Bridges.Count > 0;
+            built.Rooms = assembly.RoomCount > 0;
+            return built;
         }
     }
 }

@@ -80,7 +80,21 @@ namespace Thermodynamics.Harness
             else
             {
                 ParallelOptions options = new ParallelOptions { MaxDegreeOfParallelism = Workers };
-                Parallel.For(0, items.Count, options, i => { slots[i] = Attempt(items[i], work); });
+
+                // One item per chunk. The default range partitioner hands a worker a contiguous
+                // block of indices on the assumption that items cost about the same, and corpus
+                // ships do not: the largest blueprint here is some eighteen hundred times the
+                // median. A worker dealt a run of big hulls finishes long after the rest, and the
+                // pass waits for it.
+                Parallel.ForEach(System.Collections.Concurrent.Partitioner.Create(0, items.Count, 1),
+                    options,
+                    range =>
+                    {
+                        for (int i = range.Item1; i < range.Item2; i++)
+                        {
+                            slots[i] = Attempt(items[i], work);
+                        }
+                    });
             }
 
             List<TResult> results = new List<TResult>(items.Count);

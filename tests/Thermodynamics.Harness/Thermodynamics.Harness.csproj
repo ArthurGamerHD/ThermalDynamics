@@ -20,6 +20,8 @@
   <ItemGroup>
     <Compile Include="$(GameSourceRoot)ThermalCoolantShapes.cs" LinkBase="Game" />
     <Compile Include="$(GameSourceRoot)ThermalHeatPumpShapes.cs" LinkBase="Game" />
+    <Compile Include="$(GameSourceRoot)HeatSourceCommand.cs" LinkBase="Game" />
+    <Compile Include="$(GameSourceRoot)HeatSourceMath.cs" LinkBase="Game" />
   </ItemGroup>
 
   <ItemGroup>

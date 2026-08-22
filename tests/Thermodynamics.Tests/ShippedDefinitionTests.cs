@@ -181,6 +181,12 @@ namespace Thermodynamics.Tests
             "ConsumerWasteEnergy",
             "CriticalTemperature",
             "OverheatDamagePerKelvin",
+
+            // HeatSourceWatts is deliberately absent. The rule this list encodes is "the game reads
+            // an omitted property as 0, and 0 is catastrophic" — a block with no SpecificHeat
+            // reaches any temperature instantly, one with no CriticalTemperature is damaged from
+            // placement. Zero watts of intrinsic heat is exactly what a block that is not a heat
+            // source should have, so omission is the correct default rather than a trap.
         };
 
         /// <summary>

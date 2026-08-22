@@ -42,6 +42,18 @@ namespace Thermodynamics.Harness
             /// <summary>Share of weapon and tool blocks running.</summary>
             public float Tools = 1f;
 
+            /// <summary>
+            /// Run every generator at its plate rating rather than at what the ship is asking for.
+            ///
+            /// Producers normally follow demand, which is the ordinary case and the one worth
+            /// reporting — but it means a hull with 300 MW of reactors and 2 MW of draw makes the
+            /// waste heat of 2 MW, and a ceiling that leaves 298 MW of it on the table is not a
+            /// ceiling. Where the question is the most heat a ship can be made to produce, the
+            /// answer takes whichever side is larger: everything it can burn, or everything it can
+            /// draw.
+            /// </summary>
+            public bool ProducersAtRating;
+
             public static State Idle
             {
                 get { return new State { Consumers = IdleFraction, Thrust = 0f, Tools = 0f }; }
@@ -58,13 +70,24 @@ namespace Thermodynamics.Harness
             }
 
             /// <summary>
-            /// Everything at once, in every direction. Physically impossible — a ship cannot burn
-            /// six ways — and included deliberately as the absolute ceiling, which is the right rig
-            /// for asking where heat *concentrates* rather than what a ship really reaches.
+            /// Everything at once, in every direction, with the reactors flat out. Physically
+            /// impossible — a ship cannot burn six ways, and nothing is drawing what the reactors
+            /// are making — and included deliberately as the absolute ceiling, which is the right
+            /// rig for asking where heat *concentrates* rather than what a ship really reaches.
             /// </summary>
             public static State Everything
             {
-                get { return new State { Consumers = 1f, Thrust = 1f, ThrustDirection = null, Tools = 1f }; }
+                get
+                {
+                    return new State
+                    {
+                        Consumers = 1f,
+                        Thrust = 1f,
+                        ThrustDirection = null,
+                        Tools = 1f,
+                        ProducersAtRating = true,
+                    };
+                }
             }
         }
 
@@ -133,18 +156,22 @@ namespace Thermodynamics.Harness
                 demand += block.PowerConsumedWatts;
             }
 
-            // Generators take the load in proportion to their rating, up to what they have.
+            // Generators take the load in proportion to their rating, up to what they have — or
+            // all of it, where the state is after the ceiling rather than after the ordinary case.
             float fromGenerators = demand < installed ? demand : installed;
+            if (state.ProducersAtRating) fromGenerators = installed;
             Share(definitions, generators, installed, fromGenerators);
 
             // Only a shortfall reaches the stores. A ship whose reactors cover its draw has its
-            // batteries sitting there, which is what they do.
-            float shortfall = demand - fromGenerators;
+            // batteries sitting there, which is what they do — unless the question is the ceiling,
+            // where every store is discharging flat out beside the reactors. A hull that carries
+            // batteries and no reactor has no other way to reach its own maximum.
+            float reserve = 0f;
+            for (int i = 0; i < stores.Count; i++) reserve += definitions[stores[i].Name].PowerOutputWatts;
+
+            float shortfall = state.ProducersAtRating ? reserve : demand - fromGenerators;
             if (shortfall > 0f)
             {
-                float reserve = 0f;
-                for (int i = 0; i < stores.Count; i++) reserve += definitions[stores[i].Name].PowerOutputWatts;
-
                 Share(definitions, stores, reserve, shortfall < reserve ? shortfall : reserve);
             }
 

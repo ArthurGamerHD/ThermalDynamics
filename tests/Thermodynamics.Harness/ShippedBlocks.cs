@@ -386,6 +386,7 @@ namespace Thermodynamics.Harness
                     case "SurfaceAreaScaler": properties.ExposedSurfaceMultiplier = number; break;
                     case "ProducerWasteEnergy": properties.ProducerWasteEnergy = number; break;
                     case "ConsumerWasteEnergy": properties.ConsumerWasteEnergy = number; break;
+                    case "HeatSourceWatts": properties.HeatSourceWatts = number; break;
                     case "CriticalTemperature": properties.CriticalTemperature = number; break;
                     case "OverheatDamagePerKelvin":
                     case "CriticalTemperatureScaler": properties.OverheatDamagePerKelvin = number; break;

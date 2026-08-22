@@ -264,6 +264,52 @@ namespace Thermodynamics.Harness
         /// </summary>
         public static List<Ship> Read(string path)
         {
+            try
+            {
+                return ReadFile(path);
+            }
+            catch (Exception error)
+            {
+                // The contract above is "never throws", and for a long time it was kept only
+                // against a malformed file: the guard sat on XDocument.Load and everything after
+                // it — resolving definitions, placing blocks into a grid — ran unprotected. A
+                // single real blueprint in the workshop puts two blocks in one cell, GridModel
+                // refuses it, and the exception came up through the parse and killed the scan of
+                // the entire corpus. Ten thousand ships were lost to one of them.
+                //
+                // A file nobody can read is a fact about that file. It is recorded and skipped.
+                lock (UnreadableGate)
+                {
+                    unreadable[path] = error.GetType().Name + ": " + error.Message;
+                }
+
+                return new List<Ship>();
+            }
+        }
+
+        private static readonly object UnreadableGate = new object();
+
+        private static readonly Dictionary<string, string> unreadable =
+            new Dictionary<string, string>(StringComparer.Ordinal);
+
+        /// <summary>
+        /// The files that could not be read, and what stopped them — one entry per path, in no
+        /// particular order.
+        ///
+        /// A silent skip is how a corpus quietly stops being the population it is reported to be,
+        /// so the skips are kept rather than swallowed and the scan reports them alongside the
+        /// ships that were modded or too small.
+        /// </summary>
+        public static Dictionary<string, string> Unreadable()
+        {
+            lock (UnreadableGate)
+            {
+                return new Dictionary<string, string>(unreadable, StringComparer.Ordinal);
+            }
+        }
+
+        private static List<Ship> ReadFile(string path)
+        {
             List<Ship> ships = new List<Ship>();
 
             XDocument document;
@@ -395,11 +441,17 @@ namespace Thermodynamics.Harness
             return large ? "LargeBlockArmorBlock" : "SmallBlockArmorBlock";
         }
 
-        private static readonly Dictionary<string, BlockModel> Models =
-            new Dictionary<string, BlockModel>(StringComparer.Ordinal);
-
-        /// <summary>Guards <see cref="Models"/>, which every worker reads while parsing.</summary>
-        private static readonly object ModelLock = new object();
+        /// <summary>
+        /// Models by subtype, read by every worker on every block it places.
+        ///
+        /// Concurrent rather than lock-guarded: this is consulted once per placed block, so a
+        /// corpus pass takes the lock on the order of a billion times across thirty-odd threads,
+        /// and a single monitor in that position is a queue rather than a cache. Reads here are
+        /// lock-free and a duplicate build on first sight of a subtype is harmless — the models are
+        /// value-like, and whichever one lands first is the one everyone gets.
+        /// </summary>
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, BlockModel> Models =
+            new System.Collections.Concurrent.ConcurrentDictionary<string, BlockModel>(StringComparer.Ordinal);
 
         /// <summary>
         /// The model for a definition, built once and shared. A corpus places millions of blocks
@@ -409,10 +461,7 @@ namespace Thermodynamics.Harness
         public static BlockModel Model(GameBlocks.Definition definition)
         {
             BlockModel model;
-            lock (ModelLock)
-            {
-                if (Models.TryGetValue(definition.SubtypeId, out model)) return model;
-            }
+            if (Models.TryGetValue(definition.SubtypeId, out model)) return model;
 
             model = BlockModel.Solid(definition.SubtypeId, definition.Size, definition.Mass,
                 BlockThermalDerivation.Derive(definition.Components, definition.TypeId));
@@ -453,14 +502,7 @@ namespace Thermodynamics.Harness
                 }
             }
 
-            lock (ModelLock)
-            {
-                BlockModel existing;
-                if (Models.TryGetValue(definition.SubtypeId, out existing)) return existing;
-
-                Models[definition.SubtypeId] = model;
-            }
-            return model;
+            return Models.GetOrAdd(definition.SubtypeId, model);
         }
 
         private static Vector3I ParseCell(XElement element)

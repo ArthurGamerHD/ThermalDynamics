@@ -28,6 +28,14 @@
   </PropertyGroup>
 
   <PropertyGroup>
+    <!--
+      Server GC. The corpus passes parse tens of gigabytes of XML across thirty-one workers, which
+      is about as allocation-heavy as .NET workloads get, and workstation GC stops every one of
+      those workers on a single collector thread. Concurrent is off because server GC's background
+      mode buys nothing for a batch job and costs a core.
+    -->
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>

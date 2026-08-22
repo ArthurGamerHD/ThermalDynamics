@@ -160,7 +160,8 @@ namespace Thermodynamics.Core
             float produced = Math.Max(0f, Block.PowerProducedWatts) * Thermal.ProducerWasteEnergy;
             float consumed = (Math.Max(0f, Block.PowerConsumedWatts) + Math.Max(0f, Block.ThrustWatts))
                 * Thermal.ConsumerWasteEnergy;
-            HeatGenerationWatts = produced + consumed;
+            // A block may be hot because of what it is, not only because of the power crossing it.
+            HeatGenerationWatts = produced + consumed + Math.Max(0f, Thermal.HeatSourceWatts);
             StateDirty = true;
         }
 

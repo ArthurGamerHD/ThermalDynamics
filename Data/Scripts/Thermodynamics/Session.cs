@@ -166,6 +166,7 @@ namespace Thermodynamics
             // The planet-wide wind sweep. Once per frame at most, never per grid, and it returns
             // immediately unless telemetry and the probe interval are both on.
             PlanetProbes.Step(ThermalGrid.TickSeconds);
+            ThermalHeatSourceDebug.Update(ThermalGrid.TickSeconds);
 
             if (_frame % 10 == 0)
             {
@@ -296,6 +297,13 @@ namespace Thermodynamics
             if (lowered == "menu")
             {
                 ThermalSettingsMenu.Open();
+                return;
+            }
+
+            if (lowered == "heat" || lowered.StartsWith("heat "))
+            {
+                Reply(ThermalHeatSourceDebug.Run(argument.Length > 4
+                    ? argument.Substring(4).Trim() : ""));
                 return;
             }
 

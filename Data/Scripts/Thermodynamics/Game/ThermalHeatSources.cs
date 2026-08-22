@@ -152,19 +152,16 @@ namespace Thermodynamics
 
                 if (source.Watts <= 0f) continue;
 
-                Vector3D delta = source.WorldPosition - gridCentre;
-                double distanceSquared = delta.LengthSquared();
-                if (distanceSquared > source.Range * (double)source.Range) continue;
+                // The arithmetic lives in HeatSourceMath, which has no game reference and is
+                // tested directly — the inverse square, the near-field clamp and the range cutoff
+                // are the parts of this mechanism that can be silently wrong.
+                float irradiance = HeatSourceMath.Irradiance(
+                    source.WorldPosition, source.Watts, source.Range, gridCentre);
 
-                // Clamped at one metre: below that the inverse square law diverges, so a source at
-                // zero distance delivers its full output and no more.
-                if (distanceSquared < 1.0) distanceSquared = 1.0;
-
-                float irradiance = (float)(source.Watts / (4.0 * Math.PI * distanceSquared));
                 if (irradiance <= 0f) continue;
 
-                Vector3D direction = Vector3D.Normalize(delta);
-                Vector3 local = (Vector3)Vector3D.TransformNormal(direction, worldToLocal);
+                Vector3 local = HeatSourceMath.Direction(
+                    source.WorldPosition, gridCentre, ref worldToLocal);
 
                 if (buffer == null || written >= buffer.Length)
                 {

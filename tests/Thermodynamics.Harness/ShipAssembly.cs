@@ -159,6 +159,35 @@ namespace Thermodynamics.Harness
             }
         }
 
+        /// <summary>
+        /// The temperature of the assembly as one lump: every node averaged, weighted by what it
+        /// takes to heat it.
+        ///
+        /// The hottest block is the wrong thing to ask whether a ship has finished moving. A
+        /// reactor reaches its working temperature in minutes while the thousands of tonnes of
+        /// armour around it are still shedding what they started with, and the difference is not
+        /// small — it is the whole balance between what a ship makes and what it vents. Weighting
+        /// by thermal mass is what makes this the stored heat rather than a count of blocks: a
+        /// heavy armour cube and an interior light both move the plain mean by the same amount, and
+        /// only one of them holds any of the energy.
+        /// </summary>
+        public float BulkKelvin
+        {
+            get
+            {
+                float energy = 0f;
+                float mass = 0f;
+
+                foreach (ThermalNode node in Nodes)
+                {
+                    energy += node.Energy;
+                    mass += node.ThermalMass;
+                }
+
+                return mass > 0f ? energy / mass : 0f;
+            }
+        }
+
         /// <summary>Sealed compartments across every grid.</summary>
         public int RoomCount
         {
@@ -229,6 +258,12 @@ namespace Thermodynamics.Harness
         /// <summary>Hottest temperature seen at the end of each sample, in order.</summary>
         public readonly List<float> Hottest = new List<float>();
 
+        /// <summary>
+        /// <see cref="ShipAssembly.BulkKelvin"/> at the end of each sample, in order — the same
+        /// history as <see cref="Hottest"/> for the ship as a whole rather than its worst block.
+        /// </summary>
+        public readonly List<float> Bulk = new List<float>();
+
         /// <summary>Whether any grid reported a block above its critical temperature.</summary>
         public bool AnyOverheating
         {
@@ -263,6 +298,7 @@ namespace Thermodynamics.Harness
 
             ThermalNode hottest = assembly.Hottest();
             Hottest.Add(hottest == null ? 0f : hottest.Temperature);
+            Bulk.Add(assembly.BulkKelvin);
         }
     }
 }

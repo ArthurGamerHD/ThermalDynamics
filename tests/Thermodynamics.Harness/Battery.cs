@@ -346,6 +346,35 @@ namespace Thermodynamics.Harness
             }
 
             outcome.PeakRateKelvinPerSecond = fastest;
+
+            BulkDrift(outcome, runner);
+        }
+
+        /// <summary>Samples at the end of a run across which the bulk is asked to hold still.</summary>
+        public const int BulkWindow = 3;
+
+        /// <summary>
+        /// How fast the ship as a whole was still moving when the run ended.
+        ///
+        /// The run stops when the hottest block stops, which on a large hull happens long before
+        /// the armour has finished shedding what it started with. Reading the bulk temperature
+        /// across the last few samples is what tells the difference between a ship that has settled
+        /// and one whose worst block merely has.
+        ///
+        /// The window is a net rate rather than a worst step because the quantity wanted is the
+        /// heat actually going into store or coming out of it, and a single noisy step between two
+        /// substep counts is not that.
+        /// </summary>
+        private static void BulkDrift(ScenarioOutcome outcome, AssemblyRunner runner)
+        {
+            List<float> samples = runner.Bulk;
+            if (samples.Count < BulkWindow + 1) return;
+
+            float first = samples[samples.Count - 1 - BulkWindow];
+            float last = samples[samples.Count - 1];
+
+            outcome.BulkDriftKelvinPerSecond = (last - first) / (BulkWindow * Chunk);
+            outcome.BulkDriftWatts = outcome.ThermalMass * outcome.BulkDriftKelvinPerSecond;
         }
     }
 }

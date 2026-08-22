@@ -1,0 +1,174 @@
+using System;
+using System.Globalization;
+
+namespace Thermodynamics
+{
+    /// <summary>
+    /// Reading a <c>/thermal heat</c> command, with nothing of the game in it.
+    ///
+    /// <para>
+    /// The half of the debug tool that can be wrong is this half. Placing a source is one call into
+    /// a registry that is already tested; working out that <c>pulse 5M 30</c> means five megawatts
+    /// for thirty seconds — and that <c>5</c> means five watts rather than five megawatts, and that
+    /// a missing argument is a usage message rather than a zero-watt source nobody can see — is
+    /// where a typo becomes a modder wondering why their bonfire does nothing.
+    /// </para>
+    ///
+    /// <para>
+    /// So the parse is separated from the doing, and lives here with no <c>Sandbox.*</c> reference,
+    /// which is what lets the test harness link it directly. It is the same arrangement the shape
+    /// tables use, and for the same reason: a table that goes wrong silently is worth testing
+    /// against the real thing rather than a copy.
+    /// </para>
+    /// </summary>
+    public static class HeatSourceCommand
+    {
+        public enum Verb
+        {
+            Help,
+            Place,
+            Pulse,
+            Set,
+            Remove,
+            List,
+            Clear,
+        }
+
+        /// <summary>A parsed command, or <see cref="Verb.Help"/> with a reason.</summary>
+        public struct Parsed
+        {
+            public Verb Verb;
+            public float Watts;
+            public float Seconds;
+            public float Range;
+            public int Id;
+
+            /// <summary>Why the parse failed, when it did. Null on success.</summary>
+            public string Error;
+        }
+
+        /// <summary>Range in metres when a command does not say.</summary>
+        public const float DefaultRange = 200f;
+
+        public static Parsed Parse(string argument)
+        {
+            Parsed parsed = new Parsed { Range = DefaultRange };
+
+            string[] parts = (argument ?? "").Trim()
+                .Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+            if (parts.Length == 0 || parts[0] == "help")
+            {
+                parsed.Verb = Verb.Help;
+                return parsed;
+            }
+
+            switch (parts[0])
+            {
+                case "list": parsed.Verb = Verb.List; return parsed;
+                case "clear": parsed.Verb = Verb.Clear; return parsed;
+
+                case "remove":
+                    parsed.Verb = Verb.Remove;
+                    if (parts.Length < 2 || !TryId(parts[1], out parsed.Id))
+                    {
+                        return Fail("usage: /thermal heat remove <id>");
+                    }
+                    return parsed;
+
+                case "set":
+                    parsed.Verb = Verb.Set;
+                    if (parts.Length < 3 || !TryId(parts[1], out parsed.Id)
+                        || !TryWatts(parts[2], out parsed.Watts))
+                    {
+                        return Fail("usage: /thermal heat set <id> <watts>");
+                    }
+                    return parsed;
+
+                case "pulse":
+                    parsed.Verb = Verb.Pulse;
+                    if (parts.Length < 3 || !TryWatts(parts[1], out parsed.Watts)
+                        || !TryWatts(parts[2], out parsed.Seconds))
+                    {
+                        return Fail("usage: /thermal heat pulse <watts> <seconds> [range]");
+                    }
+                    if (parsed.Seconds <= 0f) return Fail("a pulse needs a positive duration");
+                    if (parsed.Watts <= 0f) return Fail("watts must be above zero");
+                    if (parts.Length > 3) parsed.Range = RangeOr(parts[3], DefaultRange);
+                    return parsed;
+            }
+
+            parsed.Verb = Verb.Place;
+            if (!TryWatts(parts[0], out parsed.Watts)) return Fail("unrecognised: " + parts[0]);
+            if (parsed.Watts <= 0f) return Fail("watts must be above zero");
+            if (parts.Length > 1) parsed.Range = RangeOr(parts[1], DefaultRange);
+            return parsed;
+        }
+
+        private static Parsed Fail(string message)
+        {
+            return new Parsed { Verb = Verb.Help, Range = DefaultRange, Error = message };
+        }
+
+        /// <summary>
+        /// Watts with an optional magnitude suffix, because a useful bonfire is megawatts and
+        /// nobody wants to count the zeroes.
+        /// </summary>
+        public static bool TryWatts(string text, out float watts)
+        {
+            watts = 0f;
+            if (string.IsNullOrEmpty(text)) return false;
+
+            float scale = 1f;
+            char last = text[text.Length - 1];
+
+            if (last == 'k' || last == 'K') scale = 1e3f;
+            else if (last == 'm' || last == 'M') scale = 1e6f;
+            else if (last == 'g' || last == 'G') scale = 1e9f;
+
+            string number = scale > 1f ? text.Substring(0, text.Length - 1) : text;
+            if (number.Length == 0) return false;
+
+            float value;
+            if (!float.TryParse(number, NumberStyles.Float, CultureInfo.InvariantCulture, out value))
+            {
+                return false;
+            }
+
+            watts = value * scale;
+            return true;
+        }
+
+        private static bool TryId(string text, out int id)
+        {
+            return int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out id);
+        }
+
+        private static float RangeOr(string text, float fallback)
+        {
+            float range;
+            return TryWatts(text, out range) && range > 0f ? range : fallback;
+        }
+
+        /// <summary>Watts in the unit a person would say them in.</summary>
+        public static string Describe(float watts)
+        {
+            if (watts >= 1e9f) return (watts / 1e9f).ToString("n2", CultureInfo.InvariantCulture) + " GW";
+            if (watts >= 1e6f) return (watts / 1e6f).ToString("n2", CultureInfo.InvariantCulture) + " MW";
+            if (watts >= 1e3f) return (watts / 1e3f).ToString("n2", CultureInfo.InvariantCulture) + " kW";
+            return watts.ToString("n0", CultureInfo.InvariantCulture) + " W";
+        }
+
+        public static string Help()
+        {
+            return "heat commands:\n"
+                + "  /thermal heat <watts> [range]           place a steady source ahead of you\n"
+                + "  /thermal heat pulse <watts> <s> [range] place one that expires\n"
+                + "  /thermal heat set <id> <watts>          dial one up or down\n"
+                + "  /thermal heat remove <id>               remove one\n"
+                + "  /thermal heat list                      what is registered\n"
+                + "  /thermal heat clear                     remove everything\n"
+                + "  watts accept k, M and G suffixes: 5M is five megawatts";
+        }
+    }
+}
