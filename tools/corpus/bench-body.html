@@ -79,6 +79,43 @@
   </div>
 </section>
 
+<!-- ================= hot spots ================= -->
+<section>
+  <div class="shead"><h2>What makes a hot spot</h2>
+    <p class="eyebrow">arrangement, with total heat held constant</p></div>
+  <p class="snote">A hull's totals cannot explain why heat strands in two blocks: two ships with the
+  same installed power and the same exposed area behave completely differently depending on whether
+  the generators line the skin or stack in one bay. The census measures the arrangement &mdash;
+  burial in conduction hops, spread about the watt-weighted centroid, and the worst watts per
+  exposed square metre in any 5&times;5&times;5 neighbourhood.</p>
+  <p class="snote"><b>Every raw correlation here is mostly &ldquo;this ship makes more heat&rdquo;</b>,
+  so total waste is partialled out below. What survives that is arrangement.</p>
+  <div class="panel"><div class="corr" id="hcorr"></div>
+    <p class="snote" style="margin:16px 0 0; font-size:.8rem">partial rank correlation against the
+    hot spot (peak minus mean) under full electrical load, with total waste heat removed</p>
+  </div>
+
+  <div class="grid2" style="margin-top:16px">
+    <div class="panel">
+      <h3 style="margin-bottom:4px">The design rule</h3>
+      <p class="snote" style="margin-bottom:14px; font-size:.83rem">Share of ships losing at least
+      one block, banded by the worst local watts per square metre anywhere on the hull.</p>
+      <div class="scroll"><table id="density"><thead><tr>
+        <th>worst local W/m&sup2;</th><th>ships</th><th>lose a block</th><th>median peak</th>
+      </tr></thead><tbody></tbody></table></div>
+    </div>
+    <div class="panel">
+      <h3 style="margin-bottom:4px">Spreading it out, at matched heat</h3>
+      <p class="snote" style="margin-bottom:14px; font-size:.83rem">Within each band of total waste
+      heat, the tightest third of hulls against the most spread third. Read raw, spread looks like it
+      makes ships hotter &mdash; that is hull size leaking through, so it has to be read inside a band.</p>
+      <div class="scroll"><table id="spread"><thead><tr>
+        <th>total waste</th><th>tightest third</th><th>most spread</th><th>n</th>
+      </tr></thead><tbody></tbody></table></div>
+    </div>
+  </div>
+</section>
+
 <!-- ================= the panel ================= -->
 <section>
   <div class="shead"><h2>The standing panel</h2>
@@ -138,6 +175,27 @@
     heat capacity and waste fraction act on the starved one. A single global multiplier tuned on the
     aggregate will overshoot one population to reach the other.</p>
     <p class="ev">8,132 ships joined on name and workshop id &middot; 4,068 large, 4,064 small</p>
+  </div>
+
+  <div class="finding" data-sev="warn">
+    <h3>The clumping index does not work &mdash; local density does</h3>
+    <p>The obvious spatial statistic for &ldquo;how clustered are the generators&rdquo; is the
+    Clark-Evans nearest-neighbour index, and measured against the hot spot with total heat partialled
+    out it lands at <b class="num">&minus;0.033</b>. It is useless. Evenness of spacing is not the
+    mechanism: two 5&nbsp;MW generators ten metres apart score as dispersed and still cook the bay
+    they share.</p>
+    <p>What works is <b>local watts against local radiating area</b> &mdash;
+    <b class="num">+0.369</b> against the hot spot and <b class="num">+0.552</b> against the peak,
+    an order of magnitude more predictive. That is the quantity a block actually experiences, and it
+    bands into a usable rule: under 500&nbsp;W/m&sup2; locally, 0.7&nbsp;% of ships lose a block;
+    between 10,000 and 50,000, 93.2&nbsp;%.</p>
+    <p>Spreading the sources out helps, but only in the middle of the range. At matched total heat,
+    the most-spread third loses a block 21.7&nbsp;% of the time against 45.2&nbsp;% for the tightest
+    at 100&nbsp;kW&ndash;1&nbsp;MW, and 61.6&nbsp;% against 91.5&nbsp;% at 1&ndash;10&nbsp;MW. Past
+    about 10&nbsp;MW installed it is 98&ndash;100&nbsp;% either way: arrangement buys a builder a
+    great deal until it buys nothing.</p>
+    <p class="ev">partial rank correlations, total waste heat removed &middot; 7,703 ships with a
+    real load &middot; bands above</p>
   </div>
 
   <div class="finding" data-sev="note">

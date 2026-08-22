@@ -92,6 +92,7 @@ outcomes = [[
     int(number(r, "seconds_to_critical", -1)),
     r2(number(r, "substeps_demanded")), r2(number(r, "substeps_granted"), 1),
     int(number(r, "generation_w")), bi[r["hottest_block"]],
+    r2(number(r, "hotspot_k")),
 ] for r in survey if key_of(r) in shi]
 
 # ---- the census -------------------------------------------------------------------------------
@@ -105,6 +106,13 @@ CENSUS_KEEP = [
     ("tool_n", int), ("consumer_n", int), ("consumer_draw_w", int), ("other_n", int),
     ("waste_idle_w", int), ("waste_full_w", int), ("waste_burn_w", int),
     ("exposure_m2_per_kw", lambda v: r2(v, 3)), ("capacity_j_per_k_per_w", lambda v: r2(v, 3)),
+    # ---- arrangement, which is what a hot spot is about -------------------------------------
+    ("heat_sources", int), ("w_per_m2", lambda v: r2(v, 2)),
+    ("max_depth", int), ("heat_depth_mean", lambda v: r2(v, 3)), ("heat_depth_max", int),
+    ("clumping", lambda v: r2(v, 3)), ("heat_gini", lambda v: r2(v, 4)),
+    ("local_w_max", int), ("local_w_per_m2_max", lambda v: r2(v, 1)),
+    ("heat_spread_m", lambda v: r2(v, 2)),
+    ("hottest_conductance_w_per_k", lambda v: r2(v, 2)),
 ]
 census_rows = [[shi[key_of(r)]] + [cast(number(r, name)) for name, cast in CENSUS_KEEP]
                + [bi.get(r.get("top_source", ""), -1)] for r in census if key_of(r) in shi]
@@ -171,7 +179,7 @@ payload = {
     "hasDrive": has_drive,
     "blocks": blocks,
     "outcomeCols": ["ship", "scen", "blocks", "peak", "median", "overN", "overPct",
-                    "tcrit", "demand", "granted", "genW", "hot"],
+                    "tcrit", "demand", "granted", "genW", "hot", "hotspot"],
     "outcomes": outcomes,
     "censusCols": ["ship"] + [name for name, _ in CENSUS_KEEP] + ["topSource"],
     "census": census_rows,

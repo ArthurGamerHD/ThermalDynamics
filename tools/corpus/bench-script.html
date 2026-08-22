@@ -9,7 +9,8 @@ const ix = (cols, name) => cols.indexOf(name);
 const OC = D.outcomeCols, CC = D.censusCols, PC = D.panelCols, KC = D.knobCols;
 const O = { ship: ix(OC,"ship"), scen: ix(OC,"scen"), blocks: ix(OC,"blocks"), peak: ix(OC,"peak"),
   median: ix(OC,"median"), overN: ix(OC,"overN"), tcrit: ix(OC,"tcrit"),
-  demand: ix(OC,"demand"), granted: ix(OC,"granted"), hot: ix(OC,"hot") };
+  demand: ix(OC,"demand"), granted: ix(OC,"granted"), hot: ix(OC,"hot"),
+  hotspot: ix(OC,"hotspot") };
 const K = {}; KC.forEach((c,i) => K[c] = i);
 const P = {}; PC.forEach((c,i) => P[c] = i);
 const CE = {}; CC.forEach((c,i) => CE[c] = i);
@@ -259,6 +260,144 @@ function drawJumpDrives(){
     </div>`;
 }
 
+/* ---------------- hot spots: arrangement, with total heat partialled out ----------------
+   Every raw correlation in this data is mostly "this ship makes more heat", so the control is not
+   optional. Both the term and the target are rank-transformed and residualised against total waste
+   heat before they are compared; what is left is arrangement. */
+function rankOf(values){
+  const n = values.length;
+  const order = values.map((_,i) => i).sort((a,b) => values[a] - values[b]);
+  const r = new Array(n);
+  let i = 0;
+  while (i < n){
+    let j = i;
+    while (j+1 < n && values[order[j+1]] === values[order[i]]) j++;
+    const avg = (i + j) / 2 + 1;
+    for (let k = i; k <= j; k++) r[order[k]] = avg;
+    i = j + 1;
+  }
+  return r;
+}
+function pearson(a, b){
+  const n = a.length;
+  const ma = a.reduce((x,y)=>x+y,0)/n, mb = b.reduce((x,y)=>x+y,0)/n;
+  let num = 0, da = 0, db = 0;
+  for (let i = 0; i < n; i++){
+    const x = a[i]-ma, y = b[i]-mb;
+    num += x*y; da += x*x; db += y*y;
+  }
+  return da && db ? num / Math.sqrt(da*db) : 0;
+}
+function residualise(values, control){
+  const r = rankOf(values);
+  const n = r.length;
+  const m = r.reduce((a,b)=>a+b,0)/n;
+  const sd = Math.sqrt(r.reduce((a,b)=>a+(b-m)*(b-m),0)) || 1;
+  const z = r.map(v => (v-m)/sd);
+  const b = pearson(control, z);
+  return z.map((v,i) => v - b*control[i]);
+}
+
+const GEO_TERMS = [
+  { name:"worst local W/m²", col:"local_w_per_m2_max" },
+  { name:"spread of sources", col:"heat_spread_m" },
+  { name:"conductance from hottest", col:"hottest_conductance_w_per_k" },
+  { name:"mean burial depth", col:"heat_depth_mean" },
+  { name:"whole-hull W/m²", col:"w_per_m2" },
+  { name:"deepest heat source", col:"heat_depth_max" },
+  { name:"buried share", col:"buried_share" },
+  { name:"clumping index", col:"clumping" },
+  { name:"block count", col:"blocks", size:true },
+];
+
+/** Ships under load that carry a real load, paired with their census row. */
+function loaded(){
+  const out = [];
+  for (const r of scenarioRows("full-electrical")){
+    const c = censusByShip.get(r[O.ship]);
+    if (c && c[CE.waste_full_w] > 1000) out.push([c, r]);
+  }
+  return out;
+}
+
+function drawHotspots(){
+  const rows = loaded();
+  if (rows.length < 50){
+    $("#hcorr").innerHTML = `<p class="snote">Too few ships in this filter to partial anything out.</p>`;
+    $("#density tbody").innerHTML = ""; $("#spread tbody").innerHTML = "";
+    return;
+  }
+
+  // the control: total waste heat, rank-transformed and standardised once
+  const ctrlRank = rankOf(rows.map(p => p[0][CE.waste_full_w]));
+  const cm = ctrlRank.reduce((a,b)=>a+b,0)/ctrlRank.length;
+  const csd = Math.sqrt(ctrlRank.reduce((a,b)=>a+(b-cm)*(b-cm),0)) || 1;
+  const control = ctrlRank.map(v => (v-cm)/csd);
+
+  const target = residualise(rows.map(p => p[1][O.hotspot]), control);
+
+  const results = GEO_TERMS.map(t => {
+    const vals = t.col === "blocks" ? rows.map(p => p[0][CE.blocks])
+      : rows.map(p => p[0][CE[t.col]]);
+    return { name:t.name, size:!!t.size, rho: pearson(residualise(vals, control), target) };
+  }).sort((a,b) => Math.abs(b.rho) - Math.abs(a.rho));
+
+  $("#hcorr").innerHTML = results.map(c => {
+    const w = Math.min(50, Math.abs(c.rho) * 100);
+    const left = c.rho >= 0 ? 50 : 50 - w;
+    const colour = c.size ? "var(--ink-3)" : (c.rho >= 0 ? "var(--s2)" : "var(--s1)");
+    return `<div class="corr-row">
+      <span class="corr-name${c.size ? " size" : ""}">${c.name}</span>
+      <span class="corr-axis"><span class="corr-zero"></span>
+        <span class="corr-fill" style="left:${left}%;width:${w}%;background:${colour}"></span></span>
+      <span class="corr-val">${c.rho >= 0 ? "+" : ""}${c.rho.toFixed(3)}</span>
+    </div>`;
+  }).join("");
+
+  // ---- the density bands -----------------------------------------------------------------
+  const edges = [500, 2000, 10000, 50000, 200000];
+  const bands = [];
+  for (let i = 0; i <= edges.length; i++){
+    const lo = i === 0 ? 0 : edges[i-1];
+    const hi = i === edges.length ? Infinity : edges[i];
+    const sel = rows.filter(p => p[0][CE.local_w_per_m2_max] >= lo && p[0][CE.local_w_per_m2_max] < hi);
+    if (sel.length < 20) continue;
+    bands.push({
+      label: hi === Infinity ? `over ${lo.toLocaleString()}` : `${lo.toLocaleString()} – ${hi.toLocaleString()}`,
+      n: sel.length,
+      lost: pct(sel.filter(p => isOver(p[1])).length, sel.length),
+      peak: med(sel.map(p => p[1][O.peak])),
+    });
+  }
+  $("#density tbody").innerHTML = bands.map(b => {
+    const tone = b.lost > 80 ? "var(--bad)" : b.lost > 30 ? "var(--warn)" : "var(--good)";
+    return `<tr><td>${b.label}</td><td class="n">${b.n.toLocaleString()}</td>
+      <td class="n"><span class="sev"><i style="background:${tone}"></i>${b.lost.toFixed(1)}%</span></td>
+      <td class="n">${fmt(b.peak)} K</td></tr>`;
+  }).join("");
+
+  // ---- spread, inside matched waste bands -------------------------------------------------
+  const wbands = [[1e3,1e5,"1 kW – 100 kW"],[1e5,1e6,"100 kW – 1 MW"],
+                  [1e6,1e7,"1 MW – 10 MW"],[1e7,1e12,"over 10 MW"]];
+  const spreadRows = [];
+  for (const [lo,hi,label] of wbands){
+    const sel = rows.filter(p => p[0][CE.waste_full_w] >= lo && p[0][CE.waste_full_w] < hi)
+      .sort((a,b) => a[0][CE.heat_spread_m] - b[0][CE.heat_spread_m]);
+    if (sel.length < 60) continue;
+    const third = Math.floor(sel.length/3);
+    const lost = g => pct(g.filter(p => isOver(p[1])).length, g.length);
+    spreadRows.push({ label, n: sel.length,
+      tight: lost(sel.slice(0, third)), wide: lost(sel.slice(2*third)) });
+  }
+  $("#spread tbody").innerHTML = spreadRows.map(r => {
+    const better = r.wide < r.tight;
+    return `<tr><td>${r.label}</td>
+      <td class="n">${r.tight.toFixed(1)}%</td>
+      <td class="n"><span class="sev"><i style="background:${better?"var(--good)":"var(--ink-3)"}"></i>${r.wide.toFixed(1)}%</span></td>
+      <td class="n">${r.n.toLocaleString()}</td></tr>`;
+  }).join("");
+}
+
 /* ---------------- the panel ---------------- */
 function severity(p){
   if (p[P.scenariosCritical] >= 3) return "hot";
@@ -466,7 +605,8 @@ function drawCurve(){
 function render(){
   corrCache = null;
   $("#pv-knobs").textContent = D.knobs.length ? D.knobs.length.toLocaleString() : "pending";
-  verdicts(); drawCorrelations(); drawHeat(); drawJumpDrives(); drawFleet(); drawKnobs();
+  verdicts(); drawCorrelations(); drawHeat(); drawJumpDrives(); drawHotspots();
+  drawFleet(); drawKnobs();
 }
 
 $("#grid-chips").innerHTML = [["all","every ship"],["large","large grid"],["small","small grid"]]
