@@ -197,6 +197,44 @@ namespace Thermodynamics.Tests
             Assert.Null(grid.GetAtCell(new Vector3I(0, 3, 0)));
         }
 
+        /// <summary>
+        /// The key index survives the slot shuffling a removal does.
+        ///
+        /// <para>
+        /// A grid used to carry two dictionaries on the same key: one from key to block, and one
+        /// from key to the block's slot in the flat list, added later so a removal did not have to
+        /// scan for it. The first was redundant — a slot is a block — and cost a whole
+        /// <c>Dictionary&lt;long, BlockInstance&gt;</c> per grid. Removing it puts the lookup
+        /// behind the slot map, and the slot map is the structure a removal rewrites: taking a
+        /// block out moves the list's last entry into the hole. This walks a removal from the
+        /// middle and asks the surviving blocks for themselves.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void LookupByKeySurvivesARemovalFromTheMiddle()
+        {
+            GridModel grid = new GridModel(2.5f);
+
+            BlockInstance[] placed = new BlockInstance[5];
+            for (int i = 0; i < placed.Length; i++)
+            {
+                placed[i] = grid.Add(Catalog.LightArmor(), new Vector3I(i, 0, 0));
+                Assert.Same(placed[i], grid.GetByKey(placed[i].Key));
+            }
+
+            Assert.True(grid.Remove(placed[1]));
+            Assert.Null(grid.GetByKey(placed[1].Key));
+
+            // Including the block that was moved into the hole, which is the last one placed.
+            Assert.Same(placed[0], grid.GetByKey(placed[0].Key));
+            Assert.Same(placed[2], grid.GetByKey(placed[2].Key));
+            Assert.Same(placed[3], grid.GetByKey(placed[3].Key));
+            Assert.Same(placed[4], grid.GetByKey(placed[4].Key));
+
+            Assert.Equal(4, grid.BlockCount);
+            Assert.Null(grid.GetByKey(long.MaxValue));
+        }
+
         [Fact]
         public void OverlappingPlacementIsRejected()
         {

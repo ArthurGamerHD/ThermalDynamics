@@ -1010,7 +1010,7 @@ namespace Thermodynamics.Harness
 
             long afterGrid = Settled();
             rows.Add(Row("GridModel indexes", afterGrid - afterInstances, blocks, blocks,
-                "by cell, by key, by slot, and the flat list"));
+                "by cell, by slot, and the flat list"));
 
             // 3. surfaces
             ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), grid);

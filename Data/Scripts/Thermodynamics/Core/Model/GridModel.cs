@@ -16,14 +16,16 @@ namespace Thermodynamics.Core
         private readonly Dictionary<Vector3I, BlockInstance> blocksByCell =
             new Dictionary<Vector3I, BlockInstance>(Vector3I.Comparer);
 
-        private readonly Dictionary<long, BlockInstance> blocksByKey = new Dictionary<long, BlockInstance>();
-
         private readonly List<BlockInstance> blocks = new List<BlockInstance>();
 
         /// <summary>
         /// Where each block sits in <see cref="blocks"/>, so a removal does not have to search for
         /// it. <c>List.Remove</c> is a linear scan followed by a shift of everything after the hole,
         /// paid once per block removed.
+        ///
+        /// It is also the grid's index by key, which is why there is no second dictionary from key
+        /// to block: one held exactly the same keys as this and answered the same question one
+        /// indirection sooner, for a whole <c>Dictionary&lt;long, BlockInstance&gt;</c> per grid.
         /// </summary>
         private readonly Dictionary<long, int> blockSlots = new Dictionary<long, int>();
 
@@ -127,7 +129,6 @@ namespace Thermodynamics.Core
                 Grow(cells[i]);
             }
 
-            blocksByKey[block.Key] = block;
             blockSlots[block.Key] = blocks.Count;
             blocks.Add(block);
             if (block.HasStateDependentSealing) stateDependent.Add(block);
@@ -149,7 +150,7 @@ namespace Thermodynamics.Core
 
         public bool Remove(BlockInstance block)
         {
-            if (block == null || !blocksByKey.ContainsKey(block.Key)) return false;
+            if (block == null || !blockSlots.ContainsKey(block.Key)) return false;
 
             Vector3I[] cells = block.Cells;
             for (int i = 0; i < cells.Length; i++)
@@ -161,7 +162,6 @@ namespace Thermodynamics.Core
                 }
             }
 
-            blocksByKey.Remove(block.Key);
             RemoveSlot(block);
             if (block.HasStateDependentSealing) stateDependent.Remove(block);
             if (block.Model.Coolant != null) coolantBlocks--;
@@ -218,10 +218,11 @@ namespace Thermodynamics.Core
             return blocksByCell.TryGetValue(cell, out block) ? block : null;
         }
 
+        /// <summary>The block with this position key, or null when the grid does not carry it.</summary>
         public BlockInstance GetByKey(long key)
         {
-            BlockInstance block;
-            return blocksByKey.TryGetValue(key, out block) ? block : null;
+            int slot;
+            return blockSlots.TryGetValue(key, out slot) ? blocks[slot] : null;
         }
 
         public bool IsOccupied(Vector3I cell)

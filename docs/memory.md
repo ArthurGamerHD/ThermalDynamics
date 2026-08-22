@@ -159,10 +159,15 @@ and the debug overlay. `CollectDiagnostics` is false in ordinary play, so a ship
 paying 32 bytes a node to store nothing. A side array, allocated when diagnostics are switched on
 and dropped when they are switched off, costs a null check on a path that already has one.
 
-### 6. Fold the block slot map into the block key map — ~30 B/block
+### ~~6. Fold the block slot map into the block key map~~ — **done, 34 B/block**
 
-`GridModel` keeps `blocksByKey` and `blockSlots` as separate dictionaries on the same key, the
-second added for O(1) removal. One dictionary to a small struct holds both.
+`GridModel` kept `blocksByKey` and `blockSlots` as separate dictionaries on the same key, the
+second added for O(1) removal. It did not need folding into a struct: a slot *is* a block, so the
+key map was redundant and is gone, and `GetByKey` now goes through the slot map to the flat list.
+`bench memory --size 126731` reads the *GridModel indexes* row at **86 B/block against 120**, and
+the retained total at 1,061 against 1,095. `LookupByKeySurvivesARemovalFromTheMiddle` pins the one
+thing the change put at risk: the slot map is the structure a removal rewrites, moving the list's
+last entry into the hole.
 
 ### 8. For SE2: blocks as boxes, not cells — the only one that matters at that scale
 
