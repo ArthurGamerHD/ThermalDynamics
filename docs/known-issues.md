@@ -251,6 +251,28 @@ on load. Nothing was lost by doing it: the old block had no behaviour at all.
 
 ## Fixed, worth remembering
 
+**One file format read by two parsers will drift, and the drift is silent in both directions.**
+Block thermal properties are read twice: `ThermalCellDefinition` asks Definition Extensions for
+them in a live session, and `ShippedBlocks` reads the XML directly so the harness can build from
+what the mod ships. Neither can be the other — the first needs a session and the second must run
+without one — and they had drifted apart in both directions at once.
+
+`HeatSourceWatts`, the term for a block that is hot because of what it *is* rather than because of
+power crossing it, was only ever known to the offline reader. It has a class of tests, a place in
+the properties type, a clamp and a conservation proof, and a mod author declaring a smouldering
+wreck would have got 1,234 W in every test in this repository and **0 W in a world**. The test
+that existed to prevent exactly this checked one parser and said in its own summary why that
+mattered.
+
+`ExcludeFromSimulation` went the other way: the in-game reader has always read it and the offline
+one never did, so a block type excluded in `Cubes.xml` would have been simulated by every
+benchmark, every corpus run and every scenario, and by nothing in a game. It cost nothing so far
+only because no shipped entry excludes anything.
+
+Both are fixed, and `BothParsersKnowTheSamePropertyNames` compares the two name lists in both
+directions. It is textual, because the in-game reader cannot be linked into the test project —
+which is the same reason the two parsers exist, and therefore the reason a check on them has to be.
+
 **Config defaults belong on the fields, not in a factory method.** A world's config file has no
 element for a setting added after that file was written, and the XML reader leaves such fields at
 `default(T)` — so every setting added since a world was first loaded ran as `false` or `0` in that

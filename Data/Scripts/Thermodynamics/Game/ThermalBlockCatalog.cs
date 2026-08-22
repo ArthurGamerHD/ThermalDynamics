@@ -351,6 +351,8 @@ namespace Thermodynamics
                 properties.CriticalTemperature = definition.CriticalTemperature;
             if (definition.WasDeclared(ThermalCellDefinition.DeclaredProperties.OverheatDamagePerKelvin))
                 properties.OverheatDamagePerKelvin = definition.OverheatDamagePerKelvin;
+            if (definition.WasDeclared(ThermalCellDefinition.DeclaredProperties.HeatSourceWatts))
+                properties.HeatSourceWatts = definition.HeatSourceWatts;
 
             return properties.Clamp();
         }

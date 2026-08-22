@@ -22,6 +22,7 @@ namespace Thermodynamics
         private static readonly MyStringId ConsumerWasteEnergyId = MyStringId.GetOrCompute("ConsumerWasteEnergy");
         private static readonly MyStringId CriticalTemperatureId = MyStringId.GetOrCompute("CriticalTemperature");
         private static readonly MyStringId CriticalTemperatureScalerId = MyStringId.GetOrCompute("OverheatDamagePerKelvin");
+        private static readonly MyStringId HeatSourceWattsId = MyStringId.GetOrCompute("HeatSourceWatts");
 
         /// <summary>
         /// Names these properties used to carry, still read when the current name is absent.
@@ -85,6 +86,17 @@ namespace Thermodynamics
         public float OverheatDamagePerKelvin;
 
         /// <summary>
+        /// Watts a block makes because of what it is, rather than because of power crossing it, W.
+        ///
+        /// Decay heat in spent fuel, a forge, a wreck still burning: things with no power draw to
+        /// take a waste fraction of. Omitted by every block that is not one, and omission is the
+        /// correct default here — unlike every other property, zero is what a block that is not a
+        /// heat source should have.
+        /// </summary>
+        [ProtoMember(50)]
+        public float HeatSourceWatts;
+
+        /// <summary>
         /// Which properties an actual definition declared, one bit per property.
         ///
         /// The lookup resolves one definition id and reads every property from it, with no merge
@@ -113,6 +125,7 @@ namespace Thermodynamics
             CriticalTemperature = 64,
             OverheatDamagePerKelvin = 128,
             ExcludeFromSimulation = 256,
+            HeatSourceWatts = 512,
         }
 
         public bool WasDeclared(DeclaredProperties property)
@@ -222,6 +235,12 @@ namespace Thermodynamics
                 def.Declared |= DeclaredProperties.OverheatDamagePerKelvin;
             }
 
+            if (lookup.TryGetDouble(defId, GroupId, HeatSourceWattsId, out dvalue))
+            {
+                def.HeatSourceWatts = (float)dvalue;
+                def.Declared |= DeclaredProperties.HeatSourceWatts;
+            }
+
             def.Conductivity = Math.Max(0, def.Conductivity);
 
             def.SpecificHeat = Math.Max(0, def.SpecificHeat);
@@ -237,6 +256,8 @@ namespace Thermodynamics
             def.CriticalTemperature = Math.Max(0, def.CriticalTemperature);
 
             def.OverheatDamagePerKelvin = Math.Max(0, def.OverheatDamagePerKelvin);
+
+            def.HeatSourceWatts = Math.Max(0, def.HeatSourceWatts);
 
             return def;
         }

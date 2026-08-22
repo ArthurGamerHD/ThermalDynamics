@@ -253,6 +253,81 @@ namespace Thermodynamics.Tests
             Assert.Equal(1234f, parsed.HeatSourceWatts);
         }
 
+        /// <summary>
+        /// The parser that runs in game knows every property name the offline one does.
+        ///
+        /// <para>
+        /// There are two readers of the same file format and they are not one piece of code:
+        /// `ThermalCellDefinition` reads a live definition through Definition Extensions and
+        /// cannot be linked here, and `ShippedBlocks` reads the XML directly so the harness can
+        /// build from what the mod ships. A name one knows and the other does not is a property
+        /// that behaves one way in every test in this repository and another way in the game.
+        /// </para>
+        ///
+        /// <para>
+        /// <c>HeatSourceWatts</c> was exactly that for as long as it existed. The test above
+        /// checked the offline reader and its own summary said why that mattered; nothing checked
+        /// the other side, and the other side had never been given the name. A mod author
+        /// declaring a smouldering wreck got 1,234 W here and 0 W in a world.
+        /// </para>
+        ///
+        /// <para>
+        /// Textual, because the in-game reader cannot be loaded into this project — the same
+        /// arrangement `ConfigurationDocTests` uses on `Settings.cs`, and enough for the failure
+        /// it guards against, which is a name present in one list and absent from the other.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void BothParsersKnowTheSamePropertyNames()
+        {
+            string source = System.IO.File.ReadAllText(System.IO.Path.Combine(
+                ShippedBlocks.RepoRoot(), "Data", "Scripts", "Thermodynamics",
+                "Definitions", "ThermalCellDefinition.cs"));
+
+            // Names the in-game reader asks Definition Extensions for.
+            HashSet<string> inGame = new HashSet<string>();
+            foreach (System.Text.RegularExpressions.Match match in
+                System.Text.RegularExpressions.Regex.Matches(source, "GetOrCompute\\(\"(\\w+)\"\\)"))
+            {
+                inGame.Add(match.Groups[1].Value);
+            }
+
+            Assert.True(inGame.Count > 8,
+                "only " + inGame.Count + " names were found in the in-game reader, so this test is"
+                + " no longer reading it");
+
+            // The group name is not a property, and every other name is one.
+            inGame.Remove("ThermalBlockProperties");
+
+            string offline = System.IO.File.ReadAllText(System.IO.Path.Combine(
+                ShippedBlocks.RepoRoot(), "tests", "Thermodynamics.Harness", "ShippedBlocks.cs"));
+
+            List<string> unknown = new List<string>();
+            foreach (string name in inGame)
+            {
+                if (offline.IndexOf("\"" + name + "\"", StringComparison.Ordinal) < 0) unknown.Add(name);
+            }
+
+            unknown.Sort(StringComparer.Ordinal);
+            Assert.True(unknown.Count == 0,
+                "properties the game reads and the harness does not:\n  "
+                + string.Join("\n  ", unknown.ToArray()));
+
+            // And the other direction, which is the one that was wrong.
+            List<string> ungame = new List<string>();
+            foreach (System.Text.RegularExpressions.Match match in
+                System.Text.RegularExpressions.Regex.Matches(offline, "case \"(\\w+)\":\\s*properties\\."))
+            {
+                string name = match.Groups[1].Value;
+                if (!inGame.Contains(name)) ungame.Add(name);
+            }
+
+            ungame.Sort(StringComparer.Ordinal);
+            Assert.True(ungame.Count == 0,
+                "properties the harness reads and the game does not, so they work in every test"
+                + " here and in no world:\n  " + string.Join("\n  ", ungame.ToArray()));
+        }
+
         /// <summary>A negative declaration is clamped rather than cooling the block.</summary>
         [Fact]
         public void ANegativeDeclarationCannotCoolABlock()

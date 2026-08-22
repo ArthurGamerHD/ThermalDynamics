@@ -427,6 +427,18 @@ namespace Thermodynamics.Harness
                 string raw = (string)value.Attribute("Value");
                 if (name == null || raw == null) continue;
 
+                // Not a number, and the one property that decides whether a block is simulated at
+                // all. The in-game reader has always read it; this one never did, so a type
+                // excluded in Cubes.xml would have been simulated by every measurement in this
+                // repository and by nothing in a world. No shipped entry excludes anything today,
+                // which is why it cost nothing so far.
+                if (name == "ExcludeFromSimulation" || name == "IgnoreThermals")
+                {
+                    bool excluded;
+                    if (bool.TryParse(raw, out excluded)) properties.ExcludeFromSimulation = excluded;
+                    continue;
+                }
+
                 float number;
                 if (!float.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out number)) continue;
 
