@@ -610,6 +610,48 @@ either way — so arrangement buys a builder a great deal in the middle of the r
 the top. The raw banding of spread says the opposite, because spread correlates with hull size and
 so with total heat; it has to be read within a waste band or not at all.
 
+**One number says whether a block can survive itself.** `BlockHeatIndex` computes, from the
+definition alone and with no simulation, the heat a block makes at full rating over the most it
+could possibly shed while staying at its own critical temperature. The denominator is deliberately
+the best case that exists — every face radiating to deep space *and* every face bolted to armour
+held at ambient, both at once. Two numbers come out:
+
+- **index** — against radiation and conduction together. Above 1 the block is impossible: no hull,
+  no arrangement and no cooling saves it, and only the definition can be changed.
+- **self index** — against its own skin alone. Above 1 the block cannot cool itself and depends
+  entirely on exporting into the hull, which is a much weaker position than it sounds.
+
+Four of the game's 323 heat-making blocks are impossible, and 72 cannot cool themselves. Banded
+against the corpus, the index predicts the outcome well enough to use as a gate:
+
+| worst index on the ship | ships | lose a block |
+| --- | --- | --- |
+| under 0.25 | 3,458 | 8.8 % |
+| 0.25 – 0.50 | 1,639 | 47.0 % |
+| 0.50 – 0.75 | 2,059 | 84.6 % |
+| 0.75 – 1.00 | 39 | 100.0 % |
+| over 1 | 799 | 82.6 % |
+
+**0.5 is the practical threshold and 1.0 the theoretical one.** `BlockHeatIndexTests` gates on the
+set of blocks above 1, so a new block or a changed waste fraction that crosses the line fails the
+suite, and fixing one means taking it off the list.
+
+**`LargePrototechReactor` is a definition accident and the worst block in the game.** Keen gives it
+the TypeId `HydrogenEngine`, so the derivation charges a 400 MW plant a combustion engine's 0.60
+waste fraction: 240 MW of heat out of a 3x2x2 block, an index of 17.9 and a self index of 46. At the
+reactor family's own 0.01 it would make 4 MW and be unremarkable. This is the same shape as the
+reactor-waste bug already recorded above — the derivation keys on the type, and the type is decided
+by the game's wiring rather than by what the block is called. It needs a per-subtype override.
+
+**The jump drive is not impossible, and that correction matters.** Its index is 0.75: bolted to
+armour that stays at ambient it survives, because superconductors conduct extremely well. Its *self*
+index is 7.4 — its own skin sheds an eighth of what it makes — so it lives or dies on the hull
+taking the rest. The hull never does. Of 2,179 corpus ships carrying one, 909 have more than the
+19,068 m2 of 400 K armour the index says is needed to absorb its export, and **all 909 still lose a
+block**, because total hull area is irrelevant when the heat cannot travel: block-to-block
+conductance is about 112 W/K, so moving megawatts even one block needs thousands of kelvin. Area has
+to be *near* the source to count.
+
 Both readings are subject to the censoring limit above. `tools/corpus/verdict.py` computes the
 criteria and reports the censored share alongside them.
 
