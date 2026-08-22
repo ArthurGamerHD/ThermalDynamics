@@ -28,7 +28,7 @@ can be recovered for any row here by reading that file at the row's commit.
 | 6 | 2026-08-20 | `f411f7d` | 1,359 | **50 s** | one ungated corpus test was 4 m 57 s of every run since the fixture landed; rows 4 and 5 carry it. The `speed!=slow` lane is 14 s. |
 | — | | `f411f7d..c18e3e4` | | | **20 commits recorded no row.** The wind burial audit, the per-planet climates, the block heat index, the balance bench and the first full corpus survey landed between rows 6 and 7. |
 | 7 | 2026-08-22 | `c18e3e4` | 1,467 | 51 s | where this pass started; +108 across those 20 commits |
-| 8 | 2026-08-22 | *(this pass)* | 1,526 | 50 s | +59. A defragmentation pass, and then a validation one: shipped code is **343 lines shorter** with nothing left in it that nothing calls, and the ground truth every benchmark rests on moved from two ships in a vanished session to 8,102 workshop hulls measured in the lab. |
+| 8 | 2026-08-22 | *(this pass)* | 1,528 | 50 s | +61. A defragmentation pass and then a validation one: shipped code is **343 lines shorter** with nothing left in it that nothing calls, and the ground truth every benchmark rests on moved from two ships in a vanished session to 8,102 workshop hulls measured in the lab. |
 
 ## The solver
 
@@ -89,7 +89,15 @@ question of 8,102 real workshop blueprints in four minutes. The field figures su
 the 63rd and 85th percentile. What they could not show is that the population is **bimodal** — a
 light sets the substep count on 45 % of hulls at a median of 28.5 and armour on the rest at 4.8,
 with almost nothing between — and that the census hull sits in the trough between them, feeling a
-little less of the air than a typical hull because its stiffest block is less exposed. See [stiffness.md](stiffness.md#the-same-question-asked-of-eight-thousand-real-ships).
+little less of the air than a typical hull because its stiffest block is less exposed. It also
+placed the hull's *heat*: 12.1 kW a block against a real median of 335 W, the 96th percentile, which
+reaches every temperature figure and no stiffness one.
+
+**One finding in this pass was published wrong and corrected two commits later.** It divided a
+hull's air peak by its vacuum peak — two different blocks — and reported the census hull as
+insensitive to air, and a benchmark fixture was changed on it before the error was found. The
+fixture change is reverted and the lab reports the same-block ratio as its own column. Take an
+aggregate of a ratio, never a ratio of aggregates. See [stiffness.md](stiffness.md#the-same-question-asked-of-eight-thousand-real-ships).
 
 Where a pass moves something the columns above cannot see, it gets a row here.
 

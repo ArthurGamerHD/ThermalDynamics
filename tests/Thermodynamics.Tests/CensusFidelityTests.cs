@@ -321,6 +321,70 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// The recorded corpus figures are a coherent set of measurements.
+        ///
+        /// <para>
+        /// `Census.Corpus` is a transcription of a four-minute run, and a transcription nobody
+        /// reads drifts — which is the whole reason `Census.Field`'s cap shares were being written
+        /// out twice. So every figure in it is read by something, and the something is the one
+        /// check a transcription can fail on its own: quantiles that are out of order, a census
+        /// figure that does not sit where the prose beside it says, a percentile outside 0..100.
+        /// </para>
+        ///
+        /// <para>
+        /// It cannot tell a mistyped digit from a real measurement. It can tell a *set* of figures
+        /// that no dataset could have produced, which is what a bad transcription looks like.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheRecordedCorpusFiguresAreInternallyConsistent()
+        {
+            // Distributions run the way distributions run.
+            Assert.True(Census.Corpus.AirP10 < Census.Corpus.AirP50);
+            Assert.True(Census.Corpus.AirP50 < Census.Corpus.AirP90);
+            Assert.True(Census.Corpus.AirP90 < Census.Corpus.AirMax);
+
+            Assert.True(Census.Corpus.VacuumP50 < Census.Corpus.VacuumP90);
+            Assert.True(Census.Corpus.VacuumP90 < Census.Corpus.VacuumMax);
+
+            Assert.True(Census.Corpus.AirRatioP10 < Census.Corpus.AirRatioP50);
+            Assert.True(Census.Corpus.AirRatioP50 < Census.Corpus.AirRatioP90);
+
+            // Air makes a ship stiffer, never softer, at every point of the distribution.
+            Assert.True(Census.Corpus.AirRatioP10 >= 1f,
+                "a ratio below one would mean air made a block softer");
+            Assert.True(Census.Corpus.AirP50 > Census.Corpus.VacuumP50,
+                "the corpus is no longer stiffer in air than in vacuum at the median");
+
+            // The census hull's own air sensitivity is where the prose beside it says: inside the
+            // population and below its median.
+            Assert.InRange(Census.Corpus.CensusAirRatio,
+                Census.Corpus.AirRatioP10, Census.Corpus.AirRatioP50);
+
+            // The two modes, and the median sitting with the softer one.
+            Assert.True(Census.Corpus.StructuralP50 < Census.Corpus.AirP50);
+            Assert.True(Census.Corpus.LitP50 > Census.Corpus.AirP50);
+
+            // A real ship's stiffest block is exposed; six faces is all there are.
+            Assert.InRange(Census.Corpus.StiffestFacesMean, 1f, 6f);
+
+            // Percentiles are percentiles, and the compound one is above both of its factors
+            // because they multiply.
+            Assert.InRange(Census.Corpus.ProducerSharePercentile, 0f, 100f);
+            Assert.InRange(Census.Corpus.ProducerWattsPercentile, 0f, 100f);
+            Assert.InRange(Census.Corpus.WastePerBlockPercentile, 0f, 100f);
+            Assert.True(Census.Corpus.WastePerBlockPercentile > Census.Corpus.ProducerSharePercentile);
+            Assert.True(Census.Corpus.WastePerBlockPercentile > Census.Corpus.ProducerWattsPercentile);
+
+            // Cap shares fall as the cap rises, and none is a share outside 0..1.
+            Assert.InRange(Census.Corpus.FlooredAtCap8, 0f, 1f);
+            Assert.InRange(Census.Corpus.FlooredAtCap1, 0f, 1f);
+
+            Assert.True(Census.Corpus.Ships > 1000,
+                "only " + Census.Corpus.Ships + " ships are recorded, which is not a population");
+        }
+
+        /// <summary>
         /// The tail is what sets the substep count, so a hull that is too small to contain any of
         /// it measures the wrong thing. The picker walks the distribution rather than sampling it
         /// for exactly this reason.
