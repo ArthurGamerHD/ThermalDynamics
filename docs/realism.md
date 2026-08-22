@@ -62,9 +62,9 @@ this page.
 ## What the comparison found
 
 **Realism is the cheapest thing here, not the most expensive.** `physical` asks 1.00 substeps
-against `shipped`'s 5.40 and costs 8,152 link visits a second against 60,374 — real heat capacities
+against `shipped`'s 7.22 and costs 8,152 link visits a second against 97,308 — real heat capacities
 are 225 times larger, so the grid is 225 times softer. Every substep this mod spends exists because
-of `HeatTimeScale`. What realism costs is *responsiveness*: 0.11 K/s against 23 K/s, which is the
+of `HeatTimeScale`. What realism costs is *responsiveness*: 0.11 K/s against 22.9 K/s, which is the
 one number that makes the clock have to be a lie.
 
 **`HeatTimeScale` is equilibrium-neutral and `ConductionScale` is not.** A 225× clock change moves
@@ -73,9 +73,9 @@ kelvin across the scenario library. One is a pace dial; the other silently redis
 sits. They have been treated as the same kind of thing and they are not.
 
 **The candidate is not a free win.** On one rig it looked like it beat `shipped` on every axis. Across
-the library it runs far hotter — 7,502 K against 3,661 on `reactor` — because real conduction spreads
-heat less and the source keeps it. Adopting it means rebalancing critical temperatures and radiator
-sizing with it.
+the library it runs far hotter — 15,588 K against 7,621 on `x-overloaded` — because real conduction
+spreads heat less and the source keeps it. Adopting it means rebalancing critical temperatures and
+radiator sizing with it.
 
 ## Failure, and what actually causes it
 
@@ -86,16 +86,22 @@ wrong it is; the question is what it does about it.
 | --- | --- | --- | --- |
 | physical | 1.00 | 0 | 1 |
 | candidate | 4.15 | 31 | 2 |
-| shipped | 5.40 | 47 | 1 |
-| arcade | 1.00 | **30,900,640** | **14** |
+| shipped | 7.22 | 47 | 1 |
+| arcade | 1.00 | **21,101,200** | **6** |
 
-**Starvation is the dominant cause.** Granting `arcade` 64 substeps instead of 1, at the same clock,
-drops its divergences from 14 to 5. It is not that the profile is approximate — it is that the
-integrator is refused what it asks for by six orders of magnitude.
+**Starvation is what breaks `arcade`.** Granting it 64 substeps instead of 1, at the same clock,
+dropped its divergences from 14 to 5. It is not that the profile is approximate — it is that the
+integrator is refused what it asks for by seven orders of magnitude. Every `arcade` divergence in
+the sweep is 100% starved.
 
-**But not the only cause.** The five that survive are loop-bearing, and `loop-faults` gets *worse*
-with more substeps — 2.4×10¹⁵ K against 7×10⁴. Something in the coolant path is genuinely unstable
-rather than merely starved.
+**Starvation explains nothing anywhere else.** `candidate` is starved 49% on `x-burning-ship` and
+peaks at 11,280 K; `shipped` is starved 0% on the same rig and peaks at 11,279 K. One kelvin apart,
+with the substeps granted in one case and refused in the other. Whatever is wrong there does not
+care how finely the second is cut.
+
+**And starvation was never the only cause.** The five arcade divergences that survived the extra
+substeps were loop-bearing, and `loop-faults` got *worse* with more of them — 2.4×10¹⁵ K against
+7×10⁴. Something in the coolant path was genuinely unstable rather than merely starved.
 
 ### The loop path has a stiffness ceiling, and the clamp was what set it
 
@@ -129,8 +135,8 @@ stayed under it and copper did not.
 The fix is one aggregate limit per parcel, the same shape as `RelaxationFactor` for conduction —
 `mass / (h × total conductance on that parcel)`, with the worst parcel setting the ring's factor.
 The same case now settles at **0.8 K instead of 291,360**, the pipes are copper again, and the
-sweep's arcade divergences fell from **14 to 7 — every loop-bearing one**, including
-`loop-stiffness` at 2.4×10¹⁰ K. The seven survivors are all non-loop.
+sweep's arcade divergences fell to the **6 in the table above — every loop-bearing one went**,
+including `loop-stiffness` at 2.4×10¹⁰ K. The six survivors carry no coolant loop at all.
 
 Guarded by `TheLoopPathSurvivesAVeryConductivePipe` at copper and at four times copper, and by
 `ArcadeNoLongerDivergesOnTheEverythingRig`.
@@ -145,12 +151,15 @@ Two hypotheses were tested and both were wrong, which is recorded here so they a
 ### The shipped default diverges too, on a ship a player can build
 
 ```
-shipped   x-burning-ship   11,280 K   49% starved   68,288 over critical   DIVERGED
+shipped     x-burning-ship   11,279 K   0% starved   4268 over critical   DIVERGED
+candidate   x-burning-ship   11,280 K  49% starved   4268 over critical   DIVERGED
 ```
 
-On a burning 4,000-block ship the current default is refused half the substeps it asks for, passes
-10,000 K, and never settles. This is not an arcade problem that arcade made visible; it is a
-divergence problem that arcade made loud. Pinned by
+On a burning 4,000-block ship the current default passes 10,000 K and never settles — with every
+substep it asks for granted. The published account of this used to be starvation, and the pair
+above is what falsified it: `candidate` is refused half its substeps on the same rig and lands one
+kelvin away. The cause is still open. This is not an arcade problem that arcade made visible; it is
+a divergence problem that arcade made loud. Pinned by
 `ProfileSuiteTests.TheShippedProfileStillDivergesOnABurningShip`, which is written to **fail when
 the defect is fixed**.
 
@@ -174,7 +183,7 @@ separately rather than reported as defects — otherwise four correct results bu
 ## Known limits of this suite
 
 * **Scenario run lengths are fixed to the shipped clock.** A world 225× slower is still climbing
-  when a run ends: 67 of 136 cells are untrustworthy, mostly `physical`'s. Run lengths would have to
+  when a run ends: 59 of 136 cells are untrustworthy, mostly `physical`'s. Run lengths would have to
   scale with `HeatTimeScale` for that column to mean anything. The report marks them rather than
   letting a transient read as an equilibrium.
 * **The divergence flag is a 10,000 K threshold**, so it catches both genuine runaway and
@@ -193,6 +202,7 @@ separately rather than reported as defects — otherwise four correct results bu
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Re-measured every figure here against one sweep, after `shipped` began reading the real defaults. The correction that matters: the shipped default's divergence on `x-burning-ship` was published as starvation, and it is not — it diverges with 0% of its substeps refused, one kelvin from `candidate`, which is refused 49%. |
 | 2026-08-22 | Became this page. The five shipped presets are gone — see [configuration.md](configuration.md#change-log) — and what is left is the half of the old `profiles.md` that was never about them: the harness's realism comparison, what it found, and the two divergences it pins. `shipped` now reads `ThermalSettings` rather than restating it, which is how it came to carry `MaxSubsteps 16` against a shipped 64. |
 | 2026-08-22 | Corrected the account of the shipped bundles, which named a `minimal` profile that does not exist and said all five ran `HeatTimeScale` 225 when three ran 1. |
 | 2026-08-21 | Moved a block's function out of code and into `Cubes.xml`, which deleted the per-profile definition overlays. |

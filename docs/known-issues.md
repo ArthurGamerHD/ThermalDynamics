@@ -90,6 +90,14 @@ balance question, not a code one.
 
 ## Open defects
 
+**The shipped defaults diverge on a burning 4,000-block ship, and starvation is not why.** In the
+realism sweep, `x-burning-ship` passes 10,000 K and never settles under the shipped configuration
+with **0% of its substeps refused** — every substep the solver asks for is granted. The published
+explanation used to be starvation; the `candidate` profile falsified it by reaching 11,280 K on the
+same rig while being refused 49%, one kelvin from shipped's 11,279. The cause is open. Pinned by
+`ProfileSuiteTests.TheShippedProfileStillDivergesOnABurningShip`, written to fail when it is fixed;
+the figures and the falsification are in [realism.md](realism.md#failure-and-what-actually-causes-it).
+
 **Temperatures are not reconciled between server and clients.** Clients run their own simulation
 from the same inputs and reach the same answers, but nothing reconciles them: a client that joins
 mid-session starts from saved temperatures, and divergence is never corrected. Damage and settings
@@ -507,6 +515,7 @@ counters rather than milliseconds so it holds on any machine.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Filed the burning-ship divergence as an open defect. It had been carried on [realism.md](realism.md) as a starved-integrator finding; re-measuring it showed 0% starved, so the explanation is withdrawn and the defect stands with its cause unknown. |
 | 2026-08-22 | Repointed the step-budget paragraph at the renamed test and at the shipped rate, which moved from eight steps a second to four when the settings profiles were removed. |
 | 2026-08-22 | Moved the thermal view out of the deliberate limits. It was filed there on the grounds that mods get no shader — which is a statement about difficulty, not a simplification taken on purpose, and a limit is only a limit when it is chosen (`D6`). It is an open problem, and the intent to have one is stated in [document-of-intent.md](document-of-intent.md#thermal-vision--wanted-method-unknown). Recorded the absence of any non-instrument feedback beside it. |
 | 2026-08-22 | Absorbed `bugs-and-performance.md`, the record of the first extraction pass. Every one of its thirty-two findings is resolved in the current code — including the eleven whose headings carried no *fixed* marker, each re-verified against the source during this pass — so the page survives as the dated entries below and the patterns above rather than as a defect list. Restructured around the shape of each failure rather than its subsystem; promoted the deliberate limits to the top; moved the corpus balance findings to [balance.md](balance.md), which is where the dataset they come from is described. Removed two limits that the per-room gas-system read had already retired ("a room with no air vent holds no air" and "pressurisation is only known through air vents") and corrected a third: block `Conductivity` is real W/(m·K), and it is the *coolant loop's* that is still a 0…1 quality. Merged the two sections both titled "Fixed, worth remembering". |
