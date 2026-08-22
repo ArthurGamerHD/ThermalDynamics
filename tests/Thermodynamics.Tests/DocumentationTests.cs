@@ -211,6 +211,88 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// Counts the test cases in this assembly the way the runner does: one per `[Fact]`, and
+        /// one per data row for a `[Theory]`.
+        /// </summary>
+        private static int TestCaseCount()
+        {
+            int count = 0;
+
+            foreach (Type type in typeof(DocumentationTests).Assembly.GetTypes())
+            {
+                if (!type.IsPublic || type.IsAbstract) continue;
+
+                foreach (System.Reflection.MethodInfo method in type.GetMethods(
+                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance
+                    | System.Reflection.BindingFlags.DeclaredOnly))
+                {
+                    object[] facts = method.GetCustomAttributes(typeof(FactAttribute), true);
+                    if (facts.Length == 0) continue;
+
+                    object[] data = method.GetCustomAttributes(typeof(Xunit.Sdk.DataAttribute), true);
+                    if (data.Length == 0) { count++; continue; }
+
+                    foreach (Xunit.Sdk.DataAttribute source in data)
+                    {
+                        foreach (object[] row in source.GetData(method)) { count++; }
+                    }
+                }
+            }
+
+            return count;
+        }
+
+        /// <summary>
+        /// The suite's size, wherever a page quotes it, is the size the suite actually is.
+        ///
+        /// <para>
+        /// Three pages advertised "1,026 tests" and one advertised 1,179 while the runner was
+        /// reporting 1,467. A count in prose is the first thing to rot, because nothing fails when
+        /// it does, and a reader has no way to tell a figure that is one commit old from one that
+        /// is four hundred commits old.
+        /// </para>
+        ///
+        /// <para>
+        /// The tolerance is deliberately one-sided and loose: a page may quote a round figure
+        /// slightly below the true one — "over 1,450" is a fair thing to write — but it may never
+        /// quote more tests than exist, and it may not fall more than a tenth behind. That is wide
+        /// enough that ordinary commits do not have to edit prose, and tight enough that a figure
+        /// cannot silently become a historical curiosity.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void EveryQuotedSuiteSizeIsCurrent()
+        {
+            int actual = TestCaseCount();
+            Assert.True(actual > 1000,
+                "only " + actual + " test cases were counted by reflection, so this test is not"
+                + " seeing the suite and would pass whatever a page claimed");
+
+            List<string> wrong = new List<string>();
+
+            foreach (string file in MarkdownFiles())
+            {
+                foreach (Match match in Regex.Matches(File.ReadAllText(file),
+                    @"([\d][\d,]*)\s+tests\b"))
+                {
+                    int quoted = int.Parse(match.Groups[1].Value.Replace(",", ""));
+                    if (quoted < 500) continue;          // not a suite size — a count of something else
+
+                    if (quoted > actual || quoted < actual - actual / 10)
+                    {
+                        wrong.Add(Relative(file) + ": quoted " + match.Groups[1].Value
+                            + " tests against " + actual + " actual");
+                    }
+                }
+            }
+
+            wrong.Sort(StringComparer.Ordinal);
+            Assert.True(wrong.Count == 0,
+                "pages quoting a suite size that is no longer true (the current count is "
+                + actual + "):\n  " + string.Join("\n  ", wrong.ToArray()));
+        }
+
+        /// <summary>
         /// Every page under `docs/` is reachable from the README's index.
         ///
         /// <para>

@@ -139,7 +139,7 @@ the *source* component, so only the producer fraction can ever apply to it. The 
 on a ship was inert, and the `LOAD` table showed every reactor in the game at 0 W. Thrusters were
 never affected — they consume, so their 0.25 applied.
 
-Nothing in the solver was wrong. The number it was handed was, which is why a suite of 1,179 tests
+Nothing in the solver was wrong. The number it was handed was, which is why the whole suite
 stayed green over it.
 
 ### Why the fraction could not be picked by analogy
