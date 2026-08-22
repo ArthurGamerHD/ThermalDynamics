@@ -41,13 +41,41 @@ is a finding rather than an excuse to move a threshold.
 | **G5** | **No death spiral.** A ship past critical that throttles to idle returns below critical in bounded time. | recovery time unbounded, or damage continues after the load stops | A player must be able to react to a warning. |
 | **G6** | **Affordable across the population.** Substep demand and step cost at p95/p99 of the corpus, not at the mean. | p99 substep demand exceeds what the shipped caps grant | The census hull is one point; the tail is what stutters. |
 
-**G3 is half answered, and the half that is answered fails.** *Bolting* cooling to a heat source
-moves nothing: the `coolers` ladder puts every block in the game with a claim to being good cooling
-against the largest reactor it ships, and the best takes 3.1 % off while the mod's own radiator
-takes 0.24 % — see [balance.md](balance.md#the-same-question-asked-of-the-whole-game). That is one
-of the two fits a player can make, on a synthetic rig. The other is a *plumbed* fit — a ring, a
-pump and sink faces — on a corpus hull, and it is still unmeasured, which is why G3 is still open.
-The distinction matters: the two differ by six times on the joint alone.
+**G3 is answered, and the answer is that the two fits fail in opposite ways.** `retrofit` parses a
+real workshop hull, runs it under full electrical load to find where its heat actually is, and puts
+the mod's own blocks in the cells that hull left free — so the constraint a player is under is part
+of the measurement rather than assumed away.
+
+```bash
+dotnet run --project Thermodynamics.Sim -- retrofit --ships 500 --csv out/
+```
+
+Over 427 real ships, 332 of which got warm enough under load for cooling them to mean anything:
+
+| fit | fits on | median | p90 | helped >1 % | hurt >1 % |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| **bolted** — radiators against the hot block | 281 of 332 | **−0.11 %** | 2.45 % | 60 | **85** |
+| **plumbed** — a ring, a pump and a sink face | **49 of 332** | **+1.35 %** | 8.94 % | 26 | 5 |
+
+**Bolting fits nearly everywhere and does not work.** It makes more ships worse than better, by the
+mechanism [blocks.md](blocks.md) states and the `coolers` ladder found on a rig: a block against a
+face is a face that was radiating to the sky and now radiates into a neighbour. The worst hull here
+went from 2,941 K to 4,319 K for having seven radiators bolted to its jump drive.
+
+**Plumbing works and hardly ever fits.** Where a ring lands it helps five ships for every one it
+hurts, and its ninetieth percentile is nearly four times the bolted one — but a closed loop of free
+cells with one of them face-adjacent to the hot block exists on **fifteen per cent** of warm hulls.
+A finished ship does not leave a ring of empty cells around the thing that gets hot.
+
+> **The sink face is the whole difference, and leaving it out inverts the result.** The first run of
+> this lab built rings without requesting one, which couples a ring to a hot block through ordinary
+> block-to-block conduction — the bolted case with extra pipes. It reported a median of 0.13 % over
+> 108 fits. Requiring the sink halved what could be fitted and doubled what it bought. That is the
+> 1,000 W/K against 167 in [balance.md](balance.md#the-finding), arriving as a retrofit result.
+
+So the mechanic is real and the ships people have built cannot receive it. That is a balance
+decision rather than a defect — whether cooling should be fittable to a finished hull, or whether
+it is something you design in — and it is the one G3 was asked to surface.
 
 **G6 is not a balance criterion and is here on purpose.** The corpus answers the open questions in
 [stiffness.md](stiffness.md) and the D-series of the [backlog](backlog.md) — lumping, multirate,

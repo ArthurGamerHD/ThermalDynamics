@@ -278,11 +278,41 @@ namespace Thermodynamics.Harness
         {
             if (width < 2 || depth < 2) throw new ArgumentException("A rectangle ring needs sides of at least two");
 
+            return Rectangle(origin, width, depth, new Vector3I(1, 0, 0), new Vector3I(0, 0, 1));
+        }
+
+        /// <summary>A rectangular ring in the XY plane, with one corner at <paramref name="origin"/>.</summary>
+        public static List<Vector3I> RectangleXY(Vector3I origin, int width, int height)
+        {
+            return Rectangle(origin, width, height, new Vector3I(1, 0, 0), new Vector3I(0, 1, 0));
+        }
+
+        /// <summary>A rectangular ring in the YZ plane, with one corner at <paramref name="origin"/>.</summary>
+        public static List<Vector3I> RectangleYZ(Vector3I origin, int height, int depth)
+        {
+            return Rectangle(origin, height, depth, new Vector3I(0, 1, 0), new Vector3I(0, 0, 1));
+        }
+
+        /// <summary>
+        /// The ring itself, in whichever plane the two axes span.
+        ///
+        /// <para>
+        /// Three planes rather than one because a retrofit takes the room a finished hull happens
+        /// to leave, and a hull does not leave it in the plane the harness prefers. The cells come
+        /// back in ring order — each adjacent to the next and the last adjacent to the first —
+        /// which is what <see cref="BuildRing"/> needs to orient the ports.
+        /// </para>
+        /// </summary>
+        private static List<Vector3I> Rectangle(Vector3I origin, int along, int across,
+            Vector3I first, Vector3I second)
+        {
+            if (along < 2 || across < 2) throw new ArgumentException("A rectangle ring needs sides of at least two");
+
             List<Vector3I> cells = new List<Vector3I>();
-            for (int x = 0; x < width; x++) cells.Add(origin + new Vector3I(x, 0, 0));
-            for (int z = 1; z < depth; z++) cells.Add(origin + new Vector3I(width - 1, 0, z));
-            for (int x = width - 2; x >= 0; x--) cells.Add(origin + new Vector3I(x, 0, depth - 1));
-            for (int z = depth - 2; z >= 1; z--) cells.Add(origin + new Vector3I(0, 0, z));
+            for (int a = 0; a < along; a++) cells.Add(origin + (first * a));
+            for (int b = 1; b < across; b++) cells.Add(origin + (first * (along - 1)) + (second * b));
+            for (int a = along - 2; a >= 0; a--) cells.Add(origin + (first * a) + (second * (across - 1)));
+            for (int b = across - 2; b >= 1; b--) cells.Add(origin + (second * b));
             return cells;
         }
     }

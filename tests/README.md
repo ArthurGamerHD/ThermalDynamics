@@ -262,6 +262,23 @@ It never handles a password — log the account in once with `steamcmd +login <u
 SteamCMD caches it. See [balance-lab.md](../docs/balance-lab.md) for what the lab is for and how it
 is staged.
 
+## Fitting cooling to ships people built
+
+`retrofit` is criterion G3 of the balance lab, and the reason it stayed open: no corpus ship carries
+a radiator, because the reader rejects a blueprint with a modded block in it and this mod's blocks
+are modded blocks. So the cooling is fitted here instead — a real hull is parsed, run under load to
+find where its heat is, and the mod's blocks go into the cells that hull left free.
+
+```bash
+dotnet run --project Thermodynamics.Sim -- retrofit --ships 500 --csv out/
+```
+
+Two fits, because the model prices them six times apart: **bolted**, radiators against the hot
+block, and **plumbed**, a ring with a pump and a sink face on it. They fail in opposite ways.
+Bolting fits on 281 of 332 warm ships and makes more of them worse than better. Plumbing helps five
+ships for every one it hurts — and fits on 49. See
+[balance-lab.md](../docs/balance-lab.md#0-define-good-balance-before-collecting-anything).
+
 ## Stiffness against real ships
 
 `stiffness` asks the question every performance figure in this repository rests on — what does a
@@ -461,7 +478,7 @@ PipeFitter.BuildRing(builder, ring);      // pump goes on the first straight run
 
 ## Test coverage
 
-1,522 tests. **What each class is for is stated in its own summary, not here** —
+1,525 tests. **What each class is for is stated in its own summary, not here** —
 the index below says where to look, and `EveryTestClassSaysWhatItIsFor` fails when a class arrives
 without saying. This table is checked by `EveryTestClassIsInTheIndex`, so a suite cannot be added
 and left off it.
@@ -483,7 +500,7 @@ and left off it.
 | **Telemetry, reports and overlays** | `RunningStatTests` `HistogramTests` `TimingStatTests` `TelemetryFormatTests` `TelemetryAnomalyTests` `SampleGateTests` `GridHealthTests` `AnomalyRegistryTests` `FrameCostTests` `ProfilerTests` `RescanGateTests` `OverlayBudgetTests` `PerformanceReportTests` `BenchmarkBaselineTests` |
 | **Field dumps: the mod checked against a world** | `DumpAuditTests` `FieldDumpTests` `CensusFidelityTests` |
 | **End to end, and the host boundary** | `SimulationIntegrationTests` `ScenarioTests` `ScenarioClaimTests` `HostAdapterTests` `CoreIsolationTests` |
-| **Balance, and the ships it is decided on** | `BalanceTests` `CoolingLadderTests` `BlockHeatIndexTests` `DecorativeStiffnessTests` `ElementCostFitTests` `ScreeningTests` `BlueprintTests` `WorstCaseTests` `LabRunTests` `LabInvariantTests` |
+| **Balance, and the ships it is decided on** | `BalanceTests` `CoolingLadderTests` `RetrofitTests` `BlockHeatIndexTests` `DecorativeStiffnessTests` `ElementCostFitTests` `ScreeningTests` `BlueprintTests` `WorstCaseTests` `LabRunTests` `LabInvariantTests` |
 | **Corpus walks** (opt-in, `THERMAL_CORPUS_TESTS`) | `CorpusSurvey` `CorpusCensus` `KnobSweep` `SunlightPanelWalk` `BlockAccountingWalk` `DeterminismWalk` |
 | **The documentation itself** | `DocumentationTests` `ConfigurationDocTests` `SimCommandTests` |
 

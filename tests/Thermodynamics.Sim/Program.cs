@@ -98,6 +98,24 @@ namespace Thermodynamics.Sim
                     return 0;
                 }
 
+                case "retrofit":
+                {
+                    int retrofitShips;
+                    int.TryParse(ValueAfter(args, "--ships") ?? "200", out retrofitShips);
+                    Console.Write(RetrofitLab.Report(
+                        ValueAfter(args, "--path"), retrofitShips, LabRun.ModeOf(args)));
+
+                    string retrofitCsv = ValueAfter(args, "--csv");
+                    if (retrofitCsv != null && RetrofitLab.LastRows != null)
+                    {
+                        Directory.CreateDirectory(retrofitCsv);
+                        string file = Path.Combine(retrofitCsv, "retrofit.csv");
+                        File.WriteAllText(file, RetrofitLab.Csv(RetrofitLab.LastRows));
+                        Console.WriteLine("wrote " + file);
+                    }
+                    return 0;
+                }
+
                 case "stiffness":
                 {
                     Console.Write(StiffnessLab.Report(ValueAfter(args, "--path"), LabRun.ModeOf(args)));
@@ -909,6 +927,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  corpus [--path <dir>]   real ships read from blueprints, and what they are made of");
             Console.WriteLine("  corpus-fetch            build a corpus from the workshop; --key, --user, --top, --out");
             Console.WriteLine("    --list-only               list to a manifest without downloading anything");
+            Console.WriteLine("  retrofit [--ships N]    fit cooling to real ships and measure what it buys");
             Console.WriteLine("  stiffness [--path <dir>] what real ships demand of a step, against the census hull");
             Console.WriteLine("    --csv <dir>               one row per ship, so the distribution can be read");
             Console.WriteLine("  screen [--path <dir>]   measure every ship, and cut the corpus to a panel");
