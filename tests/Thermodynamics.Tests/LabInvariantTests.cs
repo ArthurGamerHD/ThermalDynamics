@@ -160,7 +160,6 @@ namespace Thermodynamics.Tests
             public string Ship;
             public long Blocks;
             public long SealedBlocks;
-            public string Row;
         }
 
         /// <summary>Builds one ship and counts the blocks with nowhere to send their heat.</summary>

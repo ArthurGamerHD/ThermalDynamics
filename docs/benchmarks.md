@@ -406,6 +406,38 @@ in the fill. The uncapped fill — what a grid granted its substeps actually pay
 same hull. **Both are right; they are answers to different questions**, and the report's label does
 not say which one it is asking.
 
+#### The relaxation row's cost is the row, not the divide — tried and dropped
+
+The relaxation factor is `mass / (h * conductance)`, clamped to one, and it is computed for every
+node while the clamp is live. The divide looked like the cost, and it can be skipped exactly:
+`mass / (h*G) >= 1` precisely when `mass >= h*G`, since a true quotient at or above one cannot
+round below one and a quotient just below one that rounds up to one is returned as one by either
+form. So the comparison decides the unbound case without paying for the divide, bit for bit.
+
+**Only 1.1 % to 4.8 % of nodes are bound**, which `bench rowfill` now reports — so more than
+ninety-five per cent of the divides were being discarded, and the change should have been worth
+about a nanosecond a node against a fill of six.
+
+**It measured as nothing.** Against three runs of the unchanged tree, the gated version came out
+1.8 % faster in flight, 2.3 % faster in an atmosphere and 0.6 % slower in vacuum, against a
+run-to-run spread of 4 % to 6 % on those same rows. The change was not kept.
+
+The uncapped rows are what make that a conclusion rather than a shrug. They do not fill the
+relaxation row at all, so the change cannot reach them — and they moved by ±3 % across the same
+runs. An instrument whose untouched control drifts as far as its treatment has not measured the
+treatment.
+
+**What the row does cost is about 1 ns a node**, which is the gap between the capped and uncapped
+rows above. Since the divide is not it, what is left is the two loads and the store: reading
+`nodeConductanceTotal[i]` and `nodeThermalMass[i]`, and writing `nodeRelaxation[i]`. That is worth
+recording because it says where a future attempt should aim — **not at the arithmetic, but at not
+writing the row.** It is all ones for ninety-five per cent of nodes, and the conduction loop reads
+it per link end regardless.
+
+> A caveat on that 1 ns. The capped and uncapped rows differ in substep count as well as in the
+> relaxation row, so the gap is not purely that row. It is the right order and the wrong number to
+> quote to two figures.
+
 ### The watts row was cleared and then written
 
 A substep zeroed `nodeWatts` with a memset, then the environment pass walked every node adding

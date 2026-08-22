@@ -57,6 +57,15 @@ namespace Thermodynamics.Harness
             /// </summary>
             public bool ClampLive;
 
+            /// <summary>
+            /// Share of nodes whose own substep demand exceeds what the step granted, which is
+            /// exactly the set the relaxation factor comes out below one for.
+            ///
+            /// It is what says whether skipping the divide for an unbound node can be worth
+            /// anything: at a hundred per cent there is nothing to skip.
+            /// </summary>
+            public double BoundPercent;
+
             /// <summary>A step with the rows filled once and read by every later substep.</summary>
             public double CachedMs;
 
@@ -159,6 +168,7 @@ namespace Thermodynamics.Harness
             row.Nodes = simulation.Solver.Nodes.Count;
             row.Substeps = simulation.Solver.LastSubsteps;
             row.ClampLive = simulation.Solver.ConductionClampLive;
+            row.BoundPercent = BoundShare(simulation, state, row.Substeps);
 
             double cached = double.MaxValue;
             double every = double.MaxValue;
@@ -194,6 +204,28 @@ namespace Thermodynamics.Harness
             return row;
         }
 
+        /// <summary>
+        /// The share of nodes that cannot be integrated stably in the substeps this step granted.
+        ///
+        /// <c>NodeSubstepDemand</c> is what the solver's own estimate is built from, so this counts
+        /// the same set the clamp relaxes rather than a proxy for it.
+        /// </summary>
+        private static double BoundShare(ThermalSimulation simulation, EnvironmentState state,
+            int granted)
+        {
+            ThermalSolver solver = simulation.Solver;
+            int nodes = solver.Nodes.Count;
+            if (nodes <= 0) return 0d;
+
+            int bound = 0;
+            for (int i = 0; i < nodes; i++)
+            {
+                if (solver.NodeSubstepDemand(i, ref state) > granted) bound++;
+            }
+
+            return 100d * bound / nodes;
+        }
+
         private static double Time(ThermalSimulation simulation, EnvironmentState state, int ticks,
             bool precompute)
         {
@@ -210,18 +242,18 @@ namespace Thermodynamics.Harness
         public static string Table(IList<Row> rows)
         {
             StringBuilder text = new StringBuilder();
-            text.AppendLine("  world         cap  substeps  clamp      cached   every fill"
-                + "     one fill   ns/node   of a step");
+            text.AppendLine("  world         cap  substeps  clamp    bound      cached"
+                + "   every fill     one fill   ns/node   of a step");
 
             for (int i = 0; i < rows.Count; i++)
             {
                 Row row = rows[i];
                 text.AppendLine(string.Format(CultureInfo.InvariantCulture,
-                    "  {0,-10}  {1,3}  {2,8:n0}  {3,-5}  {4,8:n3}ms  {5,8:n3}ms  {6,8:n4}ms"
-                    + "  {7,8:n3}  {8,8:n1}%",
+                    "  {0,-10}  {1,3}  {2,8:n0}  {3,-5}  {4,5:n1}%  {5,8:n3}ms  {6,8:n3}ms"
+                    + "  {7,8:n4}ms  {8,8:n3}  {9,8:n1}%",
                     row.World, row.Cap > 0 ? row.Cap.ToString() : "-", row.Substeps,
-                    row.ClampLive ? "live" : "off", row.CachedMs, row.EveryFillMs,
-                    row.FillMs, row.FillNsPerNode, row.ShareOfStep));
+                    row.ClampLive ? "live" : "off", row.BoundPercent, row.CachedMs,
+                    row.EveryFillMs, row.FillMs, row.FillNsPerNode, row.ShareOfStep));
             }
 
             return text.ToString();
@@ -230,8 +262,8 @@ namespace Thermodynamics.Harness
         public static string Csv(IList<Row> rows)
         {
             StringBuilder text = new StringBuilder();
-            text.AppendLine("world,cap,nodes,substeps,clamp_live,cached_ms,every_fill_ms,"
-                + "fill_ms,fill_ns_per_node,share_of_step_percent");
+            text.AppendLine("world,cap,nodes,substeps,clamp_live,bound_percent,cached_ms,"
+                + "every_fill_ms,fill_ms,fill_ns_per_node,share_of_step_percent");
 
             for (int i = 0; i < rows.Count; i++)
             {
@@ -242,6 +274,7 @@ namespace Thermodynamics.Harness
                     row.Nodes.ToString(CultureInfo.InvariantCulture),
                     row.Substeps.ToString(CultureInfo.InvariantCulture),
                     row.ClampLive ? "yes" : "no",
+                    row.BoundPercent.ToString("r", CultureInfo.InvariantCulture),
                     row.CachedMs.ToString("r", CultureInfo.InvariantCulture),
                     row.EveryFillMs.ToString("r", CultureInfo.InvariantCulture),
                     row.FillMs.ToString("r", CultureInfo.InvariantCulture),
