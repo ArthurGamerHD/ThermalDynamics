@@ -185,6 +185,29 @@ rings across their ranges. The conclusions are pinned by `BalanceTests`. See
 [balance.md](../docs/balance.md); the short version is that a coolant sink face couples six times
 harder than a bolt joint, and no surface property comes close to being worth as much.
 
+## What cooling is worth bolting on
+
+`coolers` is the end-of-the-argument version of the block balance question. `balance` changes one
+dial on one panel; this stacks **every block in the game with a plausible claim to being the best
+cooling in it** against the largest reactor the game ships, at its plate rating, in shadow, one to
+thirty-two.
+
+```bash
+dotnet run --project Thermodynamics.Sim -- coolers
+```
+
+The answer is that nothing solves a reactor by being bolted to it: the best in the game takes 3 %
+off, the mod's own radiator takes 0.24 %, and a plain armour block and a large thruster both make
+it hotter — a block against a face is a face that was radiating to the sky and now radiates into a
+neighbour. That is the measured form of `blocks.md`'s "plumb it, do not bolt it".
+
+The **top K** column separates the two ways the ladder goes flat. A stack that saturated is hot at
+its far end; a stack the heat never reached is *colder than it was built*, having radiated to the
+sky instead — which is what an exhaust pipe or a wind turbine above the first one does, because
+they cannot be stacked in a way that conducts. Without that column the two read identically.
+`CoolingLadderTests` pins the conclusions rather than the figures; see
+[balance.md](../docs/balance.md#the-same-question-asked-of-the-whole-game).
+
 ## Reactor waste heat
 
 `reactors` answers the one balance question `balance` cannot: what fraction of a reactor's output
@@ -414,7 +437,7 @@ PipeFitter.BuildRing(builder, ring);      // pump goes on the first straight run
 
 ## Test coverage
 
-1,486 tests. **What each class is for is stated in its own summary, not here** —
+1,509 tests. **What each class is for is stated in its own summary, not here** —
 the index below says where to look, and `EveryTestClassSaysWhatItIsFor` fails when a class arrives
 without saying. This table is checked by `EveryTestClassIsInTheIndex`, so a suite cannot be added
 and left off it.
@@ -436,7 +459,7 @@ and left off it.
 | **Telemetry, reports and overlays** | `RunningStatTests` `HistogramTests` `TimingStatTests` `TelemetryFormatTests` `TelemetryAnomalyTests` `SampleGateTests` `GridHealthTests` `AnomalyRegistryTests` `FrameCostTests` `ProfilerTests` `RescanGateTests` `OverlayBudgetTests` `PerformanceReportTests` `BenchmarkBaselineTests` |
 | **Field dumps: the mod checked against a world** | `DumpAuditTests` `FieldDumpTests` `CensusFidelityTests` |
 | **End to end, and the host boundary** | `SimulationIntegrationTests` `ScenarioTests` `ScenarioClaimTests` `HostAdapterTests` `CoreIsolationTests` |
-| **Balance, and the ships it is decided on** | `BalanceTests` `BlockHeatIndexTests` `DecorativeStiffnessTests` `ElementCostFitTests` `ScreeningTests` `BlueprintTests` `WorstCaseTests` `LabRunTests` `LabInvariantTests` |
+| **Balance, and the ships it is decided on** | `BalanceTests` `CoolingLadderTests` `BlockHeatIndexTests` `DecorativeStiffnessTests` `ElementCostFitTests` `ScreeningTests` `BlueprintTests` `WorstCaseTests` `LabRunTests` `LabInvariantTests` |
 | **Corpus walks** (opt-in, `THERMAL_CORPUS_TESTS`) | `CorpusSurvey` `CorpusCensus` `KnobSweep` `SunlightPanelWalk` `BlockAccountingWalk` `DeterminismWalk` |
 | **The documentation itself** | `DocumentationTests` `ConfigurationDocTests` |
 

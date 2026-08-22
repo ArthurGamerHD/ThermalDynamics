@@ -78,6 +78,17 @@ namespace Thermodynamics.Harness
 
             /// <summary>Kelvin the previous rung on the ladder did not already save.</summary>
             public float Marginal;
+
+            /// <summary>
+            /// The far end of the stack, K, and the column that says which kind of flat a flat
+            /// ladder is.
+            ///
+            /// A stack that has saturated is hot at the top: the heat reached it and there was
+            /// nowhere further to send it. A stack that is not bolted together sits at the
+            /// temperature it was built at, having never received a watt — which reads in the
+            /// saving column exactly like saturation and is a different fact about the block.
+            /// </summary>
+            public float TopKelvin;
         }
 
         /// <summary>
@@ -108,10 +119,10 @@ namespace Thermodynamics.Harness
             string[] vanilla =
             {
                 "LargeHeatVentBlock",     // 3x surface: the best the game gives away
-                "LargeBlockExhaustPipe",  // 2x
+                "LargeExhaustPipe",       // 2x
                 "LargeBlockLargeThrust",  // 1.5x, and one a ship already carries
                 "LargeBlockWindTurbine",  // 1.5x
-                "LargeShipUsableLadder",  // 1.5x, and nearly free
+                "LadderShaft",            // 1.5x, and nearly free
                 "LargeBlockArmorBlock",   // 1x: the control
             };
 
@@ -182,11 +193,13 @@ namespace Thermodynamics.Harness
 
             int height = Math.Max(1, reactor.Size.Y);
             float mass = 0f;
+            BlockInstance top = null;
 
             for (int i = 0; i < count; i++)
             {
                 builder.Place(cooler, new Vector3I(0, height, 0));
                 mass += builder.Last.Mass;
+                top = builder.Last;
                 height += Math.Max(1, cooler.Size.Y);
             }
 
@@ -211,6 +224,9 @@ namespace Thermodynamics.Harness
                 VentedWatts = simulation.VentedWatts,
                 Mass = mass,
             };
+
+            ThermalNode far = top == null ? null : simulation.Solver.GetNode(top);
+            row.TopKelvin = far == null ? 0f : far.Temperature;
 
             row.Saved = bare - row.SourceKelvin;
             return row;
@@ -265,17 +281,22 @@ namespace Thermodynamics.Harness
                 .AppendLine("against it");
             sb.Append("  bare, it settles at ").Append(bare.ToString("n0")).AppendLine(" K");
             sb.AppendLine();
-            sb.AppendLine("  block                       n   source K   saved K   per tonne   marginal   vented kW");
+            sb.AppendLine("  block                       n   source K   saved K   per tonne   marginal      top K");
 
             foreach (Row row in rows)
             {
                 sb.Append("  ").Append(row.Block.PadRight(26));
                 sb.Append(row.Count.ToString().PadLeft(3));
-                sb.Append(row.SourceKelvin.ToString("n0").PadLeft(11));
-                sb.Append(row.Saved.ToString("n0").PadLeft(10));
-                sb.Append(row.SavedPerTonne.ToString("n2").PadLeft(12));
-                sb.Append(row.Marginal.ToString("n0").PadLeft(11));
-                sb.Append((row.VentedWatts / 1000f).ToString("n0").PadLeft(12));
+                sb.Append(row.SourceKelvin.ToString("n1").PadLeft(11));
+
+                // Two places on the saving and three on the marginal, because a bolted stack of
+                // radiators saves a fraction of a kelvin per block and whole kelvin cannot tell
+                // that from nothing at all. Reading the column as flat was the first thing this
+                // table did after it was wired up, and it was the rounding rather than the physics.
+                sb.Append(row.Saved.ToString("n2").PadLeft(10));
+                sb.Append(row.SavedPerTonne.ToString("n3").PadLeft(12));
+                sb.Append(row.Marginal.ToString("n3").PadLeft(11));
+                sb.Append(row.TopKelvin.ToString("n1").PadLeft(11));
                 sb.AppendLine();
             }
 
@@ -290,7 +311,10 @@ namespace Thermodynamics.Harness
             sb.AppendLine();
             sb.Append("  A candidate that beats the radiator is a finding about the radiator. ")
                 .AppendLine("A row whose");
-            sb.AppendLine("  marginal saving has gone flat is the point past which more of it buys nothing.");
+            sb.AppendLine("  marginal saving has gone flat is the point past which more of it buys nothing —");
+            sb.Append("  and the top K column says which flat it is: hot at the far end means the ")
+                .AppendLine("stack");
+            sb.AppendLine("  saturated, cold means the heat never reached it.");
             return sb.ToString();
         }
     }

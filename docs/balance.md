@@ -79,6 +79,48 @@ the surface, and the two nearly cancel.
 **So: the radiator is not a block you bolt to a hot thing. It is a block you plumb.** That is worth
 saying in `blocks.md` more loudly than it currently is.
 
+### The same question asked of the whole game
+
+That table changes one dial on one panel. The `coolers` ladder asks the end-of-the-argument
+version: the largest reactor the game ships, at its plate rating, in shadow, with **every block
+that has a plausible claim to being the best cooling in the game** stacked against it in a column,
+one to thirty-two. The candidates are chosen by the derivation rather than by taste — anything
+whose thermal properties give it more surface than an ordinary cube of the same size — plus the
+mod's radiator and a plain armour block as the control.
+
+```bash
+dotnet run --project Thermodynamics.Sim -- coolers
+```
+
+The bare reactor settles at **889.9 K**. What bolting things to it buys, at the count where each
+stops improving:
+
+| Bolted on | Best saving | Of 889.9 K |
+| --- | ---: | ---: |
+| Wind turbine | 27.2 K | 3.1 % |
+| Exhaust pipe | 3.7 K | 0.4 % |
+| **`Gauge_LG_Radiator`** | **2.1 K** | **0.24 %** |
+| Heat vent | 0.4 K | 0.05 % |
+| Ladder shaft | 0.3 K | 0.03 % |
+| Armour cube *(control)* | **−0.6 K** | worse |
+| Large thruster | **−16.6 K** | worse |
+
+**Nothing in the game solves a reactor by being bolted to it**, and two things make it worse — a
+block against a face is a face that was radiating to the sky and now radiates into a neighbour.
+The mod's own radiator is beaten by an exhaust pipe and by a wind turbine, both of which win on
+having more exposed surface *and* a shorter path to the joint; the radiator's five-cell height is
+the same handicap the panel-depth row above measures. `CoolingLadderTests` pins the conclusions,
+not the figures.
+
+**A stack saturates by about eight.** Thirty-two radiators save no more than eight do, and the
+far-end column says why: the top of a thirty-two stack sits at 61 K, having shed to the sky
+everything the joints below could deliver. It is a fin, and it has a length.
+
+> **Two candidates cannot be stacked at all**, and the far-end column is what says so rather than
+> leaving it to look like saturation. An exhaust pipe and a wind turbine above the first one come
+> back at 34 K and 17 K — *below* the 293 K they were built at — so no heat ever reached them.
+> Their n > 1 rows are a fact about the block rather than a rung on a ladder.
+
 ### The radiator still earns its place
 
 Against a slab of ordinary light armour of the same shape, in the same position, on the same load:
