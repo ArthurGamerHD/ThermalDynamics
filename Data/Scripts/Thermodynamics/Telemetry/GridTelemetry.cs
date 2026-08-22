@@ -7,16 +7,11 @@ using VRageMath;
 
 namespace Thermodynamics
 {
-    /// <summary>One block face, and the model's account of whether it is open to the sky.</summary>
     /// <summary>
-    /// One compartment, whether this model mapped it or only the game holds it.
-    ///
-    /// Both kinds share one row type so a reader sees every compartment on the grid in one table
-    /// rather than joining two by hand.
-    ///
-    /// Every figure is copied from <see cref="ThermalGrid.RoomVerdict"/> and
-    /// <see cref="ThermalGrid.LostRoom"/>. Nothing here queries the game; the room scan does that
-    /// once and this formats its result.
+    /// One compartment, whether this model mapped it or only the game holds it — one row type for
+    /// both, so a reader sees every compartment in one table. Copied from
+    /// <see cref="ThermalGrid.RoomVerdict"/> and <see cref="ThermalGrid.LostRoom"/>; nothing here
+    /// queries the game.
     /// </summary>
     public struct RoomRow
     {
@@ -98,12 +93,9 @@ namespace Thermodynamics
     }
 
     /// <summary>
-    /// One raw reading of the world at a grid, for balancing a planet's climate.
-    ///
-    /// Kept unaggregated: balancing means comparing a measurement against what it should be at that
-    /// altitude, latitude and hour, none of which survive an average. Each row carries the grid's
-    /// position, the world's readings, this model's interpretation of them, and the game's own
-    /// weather figures.
+    /// One raw reading of the world at a grid, kept unaggregated: balancing means comparing against
+    /// what should hold at that altitude, latitude and hour, none of which survive an average.
+    /// See environment.md, The columns.
     /// </summary>
     public struct EnvironmentRow
     {
@@ -194,14 +186,8 @@ namespace Thermodynamics
     }
 
     /// <summary>
-    /// Everything observed about one grid over that grid's lifetime.
-    ///
-    /// A record outlives its grid: <see cref="Close"/> takes a final snapshot and drops the entity
-    /// reference, but the record stays in the registry so a grid destroyed mid-session still
-    /// appears in the report.
-    ///
-    /// Never reached when telemetry is off; the caller checks <see cref="Telemetry.Enabled"/> and
-    /// the record is not created.
+    /// Everything observed about one grid over its lifetime. A record outlives its grid, so one
+    /// destroyed mid-session still appears in the report. Never created when telemetry is off.
     /// </summary>
     public class GridTelemetry
     {
@@ -216,13 +202,8 @@ namespace Thermodynamics
         public bool IsClosed;
 
         /// <summary>
-        /// First and last session frame this record was ticked on.
-        ///
-        /// A record cannot tick more often than the session frames, since both happen in the same
-        /// <c>Simulate</c> call, so <c>SimulationTime.Calls</c> must fit within
-        /// <c>LastTickFrame - FirstTickFrame + 1</c>, which must fit within
-        /// <c>Telemetry.FramesObserved</c>. Recorded so a report that violates this can be
-        /// diagnosed from the file rather than inferred from totals.
+        /// First and last session frame this record was ticked on, so the consistency section can
+        /// check that its calls fit inside them and they inside the session's frames.
         /// </summary>
         public long FirstTickFrame = -1;
         public long LastTickFrame = -1;
@@ -331,12 +312,9 @@ namespace Thermodynamics
         public long SurfaceRecalcs;
 
         /// <summary>
-        /// Room pressure sweeps run, compartments visited by them, game API calls made, and how
-        /// often the vent fallback was needed — plus the vents it walked when it was.
-        ///
-        /// Counted rather than only timed, because the question this answers is whether the sweep
-        /// scales with a station's compartment count, and a millisecond figure on a twelve-room
-        /// ship cannot answer it.
+        /// Room pressure sweeps, compartments visited, game calls made, and how often the vent
+        /// fallback fired. Counted rather than only timed: the open question is whether the sweep
+        /// scales with a station's compartment count. See backlog A4.
         /// </summary>
         public long RoomPressureSweeps;
         public long RoomPressureRoomVisits;
@@ -366,12 +344,9 @@ namespace Thermodynamics
         public long ClampedSteps;
 
         /// <summary>
-        /// Fraction of real time this grid's simulation keeps up with, 0..1, and the simulated
-        /// seconds it declined to advance.
-        ///
-        /// Below one means the work budget is binding: the grid is too large to simulate at full
-        /// rate and is taking shorter steps rather than coarser ones. That is the intended trade,
-        /// but it also changes how long the grid takes to cool, so it is reported.
+        /// Fraction of real time this grid's simulation keeps up with, 0..1, and the simulated seconds
+        /// it declined to advance. Below one is the work budget binding — the intended trade, and one
+        /// that changes how long the grid takes to cool, so it is reported.
         /// </summary>
         public readonly RunningStat SimulationRate = new RunningStat();
         public double SimulatedSecondsSkipped;

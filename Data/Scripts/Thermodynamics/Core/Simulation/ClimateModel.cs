@@ -3,26 +3,11 @@ using System;
 namespace Thermodynamics.Core
 {
     /// <summary>
-    /// Target air temperature outside a grid, from its position on the planet and the sun's height.
-    ///
-    /// Five terms contribute, each separately switchable:
-    ///
-    /// <list type="bullet">
-    /// <item>Latitude, since the poles receive sunlight at a glancing angle year round.</item>
-    /// <item>Surface material, which shifts both the mean temperature and the day-night swing.</item>
-    /// <item>Lag, since air takes hours to respond to the sun; without it the hottest moment of the
-    /// day falls exactly at noon.</item>
-    /// <item>Altitude, since air cools as it thins.</item>
-    /// <item>Depth, since the day-night swing is damped out within tens of metres of rock and the
-    /// planet's own heat dominates below that.</item>
-    /// </list>
-    ///
-    /// Every function here returns a target. Nothing integrates and nothing retains state:
-    /// <see cref="Follow"/> is the only function that takes a previous value, and it is applied
-    /// last, to the target the rest of the class produced. Applying any scale to the running
-    /// ambient instead of to its target compounds that scale against the lag on every step — a
-    /// factor of 0.977 applied four times a second against a 45 second lag settles at 14 % of the
-    /// intended temperature rather than 98 %.
+    /// Target air temperature outside a grid, from latitude, surface material, altitude and depth.
+    /// Every function here returns a *target* and retains no state; <see cref="Follow"/> is the only
+    /// one that takes a previous value, and it is applied last, to a finished target. Scaling the
+    /// running ambient instead compounds against the lag on every step.
+    /// See environment.md, Ambient temperature.
     /// </summary>
     public static class ClimateModel
     {
@@ -94,10 +79,8 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// The same target, cooled for altitude above sea level.
-        ///
-        /// Air cools as it rises and expands, at roughly 6.5 K per kilometre on Earth. This is the
-        /// term that makes a mountain colder than the plain below it.
+        /// The same target, cooled for altitude above sea level — the term that makes a mountain
+        /// colder than the plain below it.
         /// </summary>
         /// <param name="target">Ambient at this latitude and hour at sea level, K.</param>
         /// <param name="altitude">Metres above the planet's mean radius. Negative below it.</param>
@@ -111,16 +94,10 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// How much of the climate survives at this air density.
-        ///
-        /// Much flatter than <see cref="EnvironmentSolver.AtmosphereFactor"/>, which convection and
-        /// solar decay use. Those scale with the amount of air present; ambient temperature does
-        /// not — the top of Earth's troposphere holds a third of sea level's air at 217 K, not a
-        /// third of 288 K. Altitude's effect on temperature is <see cref="Lapse"/>; density decides
-        /// only when there ceases to be air to have a temperature at all.
-        ///
-        /// 1 - (1 - d)^8: 99.9 % at two thirds density, half at a twelfth, and vacuum only when the
-        /// air is.
+        /// How much of the climate survives at this air density: <c>1 - (1 - d)^8</c>. Much flatter
+        /// than <see cref="EnvironmentSolver.AtmosphereFactor"/>, because thin air is still air with
+        /// a temperature — altitude's effect on temperature is <see cref="Lapse"/>.
+        /// See environment.md, Altitude and density are two facts, not one.
         /// </summary>
         public static float AmbientDensityFactor(float airDensity)
         {
@@ -142,15 +119,10 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Ambient below the surface, K.
-        ///
-        /// Two effects apply, at very different scales. The day-night swing is damped with depth
-        /// until, within a few tens of metres, only the planet's underground figure remains. Below
-        /// <see cref="PlanetThermalProperties.SealevelDeadzone"/> the rock then warms towards
-        /// <see cref="PlanetThermalProperties.CoreTemperature"/>, reaching it at the centre.
-        ///
-        /// The deadzone is measured from sea level rather than from the surface, so a tunnel bored
-        /// into a mountainside stays cold however deep it goes.
+        /// Ambient below the surface, K: the day's swing damped out over tens of metres, and below
+        /// <see cref="PlanetThermalProperties.SealevelDeadzone"/> — measured from sea level, so a
+        /// tunnel into a mountainside stays cold — the rock warming toward the core.
+        /// See environment.md, Underground.
         /// </summary>
         /// <param name="planet">The world's own figures.</param>
         /// <param name="surface">Ambient in the open air directly above, K.</param>

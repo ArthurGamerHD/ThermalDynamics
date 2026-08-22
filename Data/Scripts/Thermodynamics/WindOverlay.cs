@@ -11,30 +11,9 @@ using VRageMath;
 namespace Thermodynamics
 {
     /// <summary>
-    /// The wind field, drawn.
-    ///
-    /// <see cref="WindField"/> invents a circulation the game does not have — easterly trades either
-    /// side of the equator, westerlies in the middle latitudes, easterlies again at the poles, over
-    /// a per-position speed variation — and until now nothing drew any of it. The only way to see
-    /// the wind was a single number in a debug dump, which tells you what the wind is where you are
-    /// standing and nothing at all about the pattern it belongs to. A pattern that cannot be seen
-    /// cannot be judged, so it also could not be changed with any confidence.
-    ///
-    /// Two views, because the field has two scales and one drawing cannot hold both:
-    ///
-    /// * **Local** — arrows lying on the ground itself, out to five kilometres in every direction.
-    ///   Terrain-following rather than floating at the player's altitude, so the field reads as
-    ///   weather over a landscape and each arrow belongs to a place you can walk to. Five kilometres
-    ///   is chosen against the field's own 900 m variation scale: it takes several turnovers of that
-    ///   variation to see it as a pattern rather than as one gust, and a lattice small enough to fit
-    ///   on a landing pad shows a single value repeated.
-    /// * **Planet** — arrows over the whole globe on a latitude and longitude lattice, at a scale
-    ///   where the bands are the thing you see. This is the view that answers "how does wind flow on
-    ///   planets", and the one to fly out and look at before asking for a change to the pattern.
-    ///
-    /// Client side, drawn per frame as transparent geometry, sampled on an interval. Nothing here
-    /// touches the simulation: it calls the same field functions the solver does and draws the
-    /// answers, so what you are looking at is what the grids are flying through.
+    /// The wind field, drawn: a local disc of arrows on the ground and a lattice over the whole globe,
+    /// because the field has two scales and one drawing cannot hold both. Client side, and it calls
+    /// the same field functions the solver does. See configuration.md, The wind map.
     /// </summary>
     public static class WindOverlay
     {
@@ -375,21 +354,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// A disc of arrows lying on the ground, five kilometres across, laid out from a snapped
+        /// Begins the local lattice: a disc of arrows five kilometres across, laid out from a snapped
         /// anchor so it belongs to the landscape rather than to the player.
-        ///
-        /// Each point is projected onto the terrain under it and lifted clear by a few metres, which
-        /// is the one call in this file that is not cheap — a surface lookup per arrow — and the
-        /// reason the local lattice resamples on its own long interval and only when the player
-        /// crosses a whole cell.
-        ///
-        /// A disc rather than a square: the corners of a square lattice reach half again as far as
-        /// its edges, which is a third more arrows spent on making the field look square.
-        ///
-        /// Arrows follow the ground, so terrain hides the ones behind it. From standing height most
-        /// of a five kilometre field is below the horizon and behind hills — that is the field being
-        /// drawn honestly rather than a fault, and it is why this view is worth gaining some
-        /// altitude for.
         /// </summary>
         private static void StartLocalBuild(
             PlanetManager.Planet planet, float weather, float weatherWind)
@@ -433,23 +399,10 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// One slice of the local lattice: a disc of arrows lying on the ground, five kilometres
-        /// across, laid out from a snapped anchor so it belongs to the landscape rather than to the
-        /// player.
-        ///
-        /// Each point is projected onto the terrain under it and lifted clear by a few metres, and
-        /// that surface lookup is the one call in this file that is not cheap. At this radius there
-        /// are about thirteen hundred of them, which is why they are spread over frames rather than
-        /// spent in the one that asked: a debug view that stutters every time you cross a lattice
-        /// cell is one nobody leaves on while flying, which is the only way to watch a wind field.
-        ///
-        /// A disc rather than a square. The corners of a square lattice reach half again as far as
-        /// its edges, which is a third more arrows — and a third more terrain lookups — spent on
-        /// making the field look square.
-        ///
-        /// Arrows follow the ground, so terrain hides the ones behind it. From standing height most
-        /// of a five kilometre field is below the horizon and behind hills; that is the field being
-        /// drawn honestly rather than a fault, and it is why this view is worth gaining altitude for.
+        /// One slice of the local lattice. The terrain lookup per arrow is the one call here that is
+        /// not cheap and there are about thirteen hundred of them, so the build is spread over frames.
+        /// A disc rather than a square, whose corners reach half again as far as its edges.
+        /// See configuration.md, The wind map.
         /// </summary>
         private static void StepLocalBuild(PlanetManager.Planet planet)
         {
@@ -649,14 +602,9 @@ namespace Thermodynamics
 
             Vector4 colour = Colour(arrow.Share).ToVector4();
 
-            // Width is held on the screen rather than in the world. A local lattice spans two orders
-            // of magnitude of distance — the arrow at your feet and the one five kilometres away are
-            // the same arrow — and a fixed width in metres draws one as a slab and loses the other
-            // entirely.
-            //
-            // Bounded at both ends. The floor keeps a near arrow from thinning to a thread; the cap
-            // is the arrow's own length, so one too far away to read shrinks away rather than
-            // swelling into a blob wider than it is long.
+            // Width is held on the screen rather than in the world, because one lattice spans two
+            // orders of magnitude of distance. Floored so a near arrow is not a thread, capped at the
+            // arrow's own length so a far one shrinks away rather than swelling into a blob.
             double thickness = Math.Max(
                 arrowThickness, Vector3D.Distance(eye, arrow.Position) * ScreenThickness);
             if (thickness > length * 0.15d) thickness = length * 0.15d;

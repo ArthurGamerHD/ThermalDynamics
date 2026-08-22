@@ -5,37 +5,14 @@ namespace Thermodynamics.Core
     /// <summary>
     /// Thermal properties worked out from a planet's own generator definition.
     ///
-    /// <para>Every planet in this mod used to run on one entry — <c>DefaultThermodynamics</c>, an
-    /// earthlike climate — so the Moon, Titan and Pertam were all 294 K by day and 283 K by night.
-    /// The game's own definitions already say a great deal about what a world is like; this reads
-    /// them and turns them into the mod's figures, so a planet nobody has authored an entry for still
-    /// gets a climate that belongs to it.</para>
+    /// <para>Reads five things the engine supplies — the surface temperature enum, gravity, air
+    /// density, the solar protection factor and whether the air is breathable — and turns them into
+    /// this mod's figures, so a planet nobody has authored an entry for still gets a climate that
+    /// belongs to it. The engine supplies no orbital distance, so the temperature enum is the anchor
+    /// rather than a solar constant.</para>
     ///
-    /// <para>What the engine actually supplies, and what each thing is worth:</para>
-    ///
-    /// <list type="bullet">
-    /// <item><c>DefaultSurfaceTemperature</c> — a five-level enum, <c>ExtremeFreeze</c> to
-    /// <c>ExtremeHot</c>, which the engine turns into 0, 0.25, 0.5, 0.75 or 1 on a comfort scale.
-    /// It is the only statement the game makes about how hot a world is, and it is the anchor
-    /// here.</item>
-    /// <item><c>SurfaceGravity</c> — real, and the lapse rate is <c>g/c_p</c>, so this is a
-    /// derivation rather than a guess.</item>
-    /// <item><c>Atmosphere.Density</c> — sets how much of the day-night swing the air damps out, how
-    /// much heat gets carried from equator to pole, and what convection is worth.</item>
-    /// <item><c>SolarRadiationProtectionFactor</c> — the engine's own figure for how much the
-    /// atmosphere stands between the sun and the ground.</item>
-    /// <item><c>Breathable</c> — a composition hint, and nothing better exists. Breathable air is
-    /// taken as nitrogen and oxygen, and anything else as carbon dioxide, which changes
-    /// <c>c_p</c> and therefore the lapse rate.</item>
-    /// </list>
-    ///
-    /// <para><b>What the engine does not supply is orbital distance.</b> Space Engineers has one
-    /// sun and no concept of how far a planet sits from it, so a world cannot be cold *because* it is
-    /// far away. <c>DefaultSurfaceTemperature</c> is the whole of the game's answer, and everything
-    /// here is anchored to it rather than to a solar constant.</para>
-    ///
-    /// <para>Pure, and free of the game so it can be tested and so the same code can generate the
-    /// shipped <c>Planets.xml</c> offline.</para>
+    /// <para>Pure, and free of the game, so the same code generates the shipped <c>Planets.xml</c>
+    /// offline. See environment.md, The derivation.</para>
     /// </summary>
     public static class PlanetThermalDerivation
     {
@@ -80,23 +57,10 @@ namespace Thermodynamics.Core
         // ---- the five levels, in kelvin --------------------------------------------------------
 
         /// <summary>
-        /// Mean surface temperature for each of the engine's five levels, K.
-        ///
-        /// Authored rather than derived, because the levels are the game's own vocabulary and
-        /// nothing in the engine turns them into kelvin. Each is anchored to a real body so the
-        /// scale means something:
-        ///
-        /// <list type="bullet">
-        /// <item><b>100 K</b> — Titan is 94 K and Europa 102 K.</item>
-        /// <item><b>215 K</b> — Mars's measured mean.</item>
-        /// <item><b>288 K</b> — Earth's.</item>
-        /// <item><b>325 K</b> — a hot desert world; Earth's hottest surface air is about 330 K.</item>
-        /// <item><b>450 K</b> — between Mercury's day side at 440 K and Venus's 737 K: a world you
-        /// cannot stand on.</item>
-        /// </list>
-        ///
-        /// They are not evenly spaced, and interpolating between them linearly would put
-        /// <c>Cozy</c> at 275 K, which is freezing. The five anchors are the model.
+        /// Mean surface temperature for each of the engine's five levels, K: Titan, Mars, Earth, a hot
+        /// desert, and between Mercury's day side and Venus. Authored rather than derived, because
+        /// nothing in the engine turns its enum into kelvin, and deliberately not evenly spaced — the
+        /// five anchors are the model. See environment.md, Its inputs.
         /// </summary>
         public static readonly float[] LevelTemperatures = { 100f, 215f, 288f, 325f, 450f };
 
@@ -216,12 +180,8 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Fraction of the sun a full atmosphere absorbs, 0..1.
-        ///
-        /// The engine's <c>SolarRadiationProtectionFactor</c> scaled to that range. An earthlike
-        /// world authors 1.8, which comes out at 0.30 — close to the quarter to a third of incoming
-        /// sunlight that Earth's atmosphere really does absorb and scatter before it reaches the
-        /// ground. Mars's 0.2 comes out at 0.03.
+        /// Fraction of the sun a full atmosphere absorbs, 0..1: the engine's
+        /// <c>SolarRadiationProtectionFactor</c> scaled to that range.
         /// </summary>
         public static float SolarDecay(float protection, float air)
         {
@@ -248,12 +208,9 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Everything, from one definition.
-        ///
-        /// The four figures this does not derive — damping depth, core temperature, the sea-level
-        /// deadzone, and the underground temperature's relationship to the surface — are carried
-        /// through from the defaults, because nothing in a planet generator definition says anything
-        /// about a planet's interior.
+        /// Everything, from one definition. The four interior figures — damping depth, core
+        /// temperature, the deadzone and the underground temperature — carry through from the
+        /// defaults, because a planet generator definition says nothing about a planet's inside.
         /// </summary>
         public static PlanetThermalProperties Derive(Engine engine)
         {

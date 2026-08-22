@@ -11,13 +11,9 @@ using VRageMath;
 namespace Thermodynamics
 {
     /// <summary>
-    /// Turns Space Engineers block definitions into the simulation's <see cref="BlockModel"/>,
-    /// once per definition for the life of the session.
-    ///
-    /// The definition half of the game adapter. Everything expensive about describing a block —
-    /// reading the Definition Extensions properties, walking the pressurisation table, intersecting
-    /// mount rectangles — happens here, per block type. Placing a block is then a dictionary lookup
-    /// and a rotation.
+    /// Turns Space Engineers block definitions into the simulation's <see cref="BlockModel"/>, once
+    /// per definition per session, so placing a block is a dictionary lookup and a rotation.
+    /// See architecture.md, Definition loading.
     /// </summary>
     public static class ThermalBlockCatalog
     {
@@ -25,17 +21,9 @@ namespace Thermodynamics
             new Dictionary<MyDefinitionId, BlockModel>(MyDefinitionId.Comparer);
 
         /// <summary>
-        /// Guards <see cref="Models"/> and the counters beside it.
-        ///
-        /// Block placement is not main-thread-only: the game builds pasted and projected grids on
-        /// worker threads, so <see cref="Get"/> runs concurrently with itself. An unguarded
-        /// <c>Dictionary</c> torn by two writers throws out of the reader — a field run pasting
-        /// twenty capital ships lost 442 blocks to <c>ArgumentOutOfRangeException</c> raised inside
-        /// <c>List.EnsureCapacity</c> on a shared scratch list.
-        ///
-        /// The lock is affordable because this is a cache: it is taken once per block type per
-        /// session on the miss path and for a dictionary probe on the hit path, never per step or
-        /// per cell.
+        /// Guards <see cref="Models"/> and the counters beside it. Block placement is not
+        /// main-thread-only — the game builds pasted and projected grids on worker threads.
+        /// See known-issues.md, Block placement is not a main-thread-only path.
         /// </summary>
         private static readonly object ModelLock = new object();
 
@@ -230,17 +218,10 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Whether one face of one cell of the definition seals when the block is complete and, for a
-        /// door, closed.
-        ///
-        /// Mirrors <c>MyGridGasSystem.IsAirtightBlock</c>: the pressurisation table first, then the
-        /// per-family rule for a door. The table alone is insufficient — an airtight sliding door's
-        /// mount points along the way through are the narrow frame either side, which does not cover
-        /// the face, so the table marks it unpressurised while the game seals it by door rule.
-        /// Reading only the table leaves every room containing a door unsealed.
-        ///
-        /// The open state belongs to the placed block, through
-        /// <see cref="BlockInstance.IsSealedByDoorState"/> and the model's open surface set.
+        /// Whether one face of one cell seals when the block is complete and, for a door, closed.
+        /// Mirrors <c>MyGridGasSystem.IsAirtightBlock</c>: the pressurisation table, then the
+        /// per-family door rule, without which every room holding a door reads unsealed. The open
+        /// state belongs to the placed block, through <see cref="BlockInstance.IsSealedByDoorState"/>.
         /// </summary>
         private static bool Seals(MyCubeBlockDefinition definition, Vector3I localCell, int face, DoorKind door)
         {
@@ -300,21 +281,11 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// The thermal properties of a block: what its build components make it, with whatever a
-        /// definition actually declared laid over the top.
-        ///
-        /// **Derivation is the floor, not the fallback of last resort.** A block starts as the
-        /// blend of the materials it is built out of — see <see cref="BlockThermalDerivation"/> —
-        /// so a window is glass, a battery is lithium, a medical bay is mostly water, and a plushie
-        /// is fabric, without anyone having authored a line for any of them. Only then is the
-        /// ModExtensions entry applied, property by property, and only for the properties it
-        /// declared.
-        ///
-        /// That ordering does three things at once. It gives every block in the game and in every
-        /// other mod properties that describe it rather than properties that describe armour; it
-        /// turns a partial entry into "change these, derive the rest" instead of "and zero the
-        /// rest"; and it leaves `Cubes.xml` free to carry only deliberate deviations, which is what
-        /// a tuning file should contain.
+        /// The thermal properties of a block: the blend of the materials its build components make it,
+        /// with whatever a definition actually declared laid over the top, property by property.
+        /// Derivation is the floor rather than the fallback of last resort, which is what turns a
+        /// partial entry into "change these, derive the rest".
+        /// See definitions.md, Where a block's properties come from.
         /// </summary>
         public static BlockThermalProperties ToThermalProperties(
             ThermalCellDefinition definition, MyCubeBlockDefinition block = null)
@@ -436,14 +407,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Overlays the world's own coolant values onto a loop definition, for the ones that have
-        /// been moved from what a fresh install ships with.
-        ///
-        /// Comparing against the shipped figure rather than carrying a sentinel keeps the settings
-        /// file readable — every value in it is a real number someone can edit — at the price of a
-        /// world being unable to *deliberately* set a value back to the shipped one and have the
-        /// definition stop applying. Since those are the same number, nothing observable turns on
-        /// the difference.
+        /// Overlays the world's own coolant values onto a loop definition, for the ones moved off what
+        /// a fresh install ships. Compared against the shipped figure rather than carrying a sentinel,
+        /// so every value in the settings file is a real number someone can edit.
         /// </summary>
         private static void ApplyWorldLoopValues(LoopThermalProperties properties)
         {

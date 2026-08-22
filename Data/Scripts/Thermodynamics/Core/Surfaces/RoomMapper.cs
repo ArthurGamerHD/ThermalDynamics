@@ -6,11 +6,8 @@ namespace Thermodynamics.Core
 {
     /// <summary>
     /// Incrementally classifies every cell in a grid's bounding box as external space, sealed
-    /// structure, or part of an enclosed room.
-    ///
-    /// The pass is resumable: <see cref="Step"/> does a bounded amount of work and returns, so a
-    /// large grid spreads its mapping across frames. Restart requests are coalesced, so welding
-    /// a thousand blocks in one second costs one pass, not a thousand.
+    /// structure, or part of an enclosed room. Resumable, and restart requests coalesce.
+    /// See thermal-model.md, The room map.
     /// </summary>
     public class RoomMapper
     {
@@ -26,12 +23,8 @@ namespace Thermodynamics.Core
 
         private readonly Queue<Vector3I> frontier = new Queue<Vector3I>();
         /// <summary>
-        /// Cells this pass has already classified, one bit each over the search box.
-        ///
-        /// A bitset rather than a hash set: by the end of a pass this holds every cell of the
-        /// bounding box, and at about thirty-one bytes per cell a hash set was the mod's peak
-        /// allocation — 121 MB of a 400 MB peak on a 127,000-block grid. It also scales with the
-        /// box rather than the grid, so a mostly empty hull pays for the empty space.
+        /// Cells this pass has already classified, one bit each over the search box — a set the region
+        /// is dense in, which is what a bitset is for. See memory.md, 1a.
         /// </summary>
         private readonly CellBitset visited = new CellBitset();
 
@@ -159,26 +152,10 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Runs the whole pass to completion. For tests and load-time mapping; gameplay code should
-        /// use the budgeted <see cref="Step"/>.
-        ///
-        /// <para>
-        /// The limit is a guard against a pass that never finishes, not a budget. It used to be a
-        /// flat twenty million cell visits, which a grid of about seven hundred thousand blocks
-        /// exceeds — and exceeding it returned without publishing anything, leaving
-        /// <see cref="RoomMap.AllExternal"/> in place. A hull that large therefore finished its load
-        /// with no rooms and every interior block classified as facing open space: 95 % of blocks
-        /// exposed against 34 % on the same shape one rung smaller, every one of them radiating and
-        /// convecting to the sky, and no compartment holding air. It self-corrected only once the
-        /// budgeted per-tick path had walked the same flood again, thousands of ticks later.
-        /// </para>
-        ///
-        /// <para>
-        /// The flood cannot visit a cell twice — <c>visited</c> is a bitset over the search bounds
-        /// and the interior scan walks each cell once — so the work is bounded by the search volume
-        /// and a limit derived from it can never bind on a grid that is going to finish. That is
-        /// what a guard should be: unreachable unless something is actually wrong.
-        /// </para>
+        /// Runs the whole pass to completion. For tests and load-time mapping; gameplay code uses the
+        /// budgeted <see cref="Step"/>. The limit is a guard against a pass that never finishes rather
+        /// than a budget, and is derived from the volume so it cannot bind on one that will.
+        /// See load-and-hitching.md, The room map gave up above seven hundred thousand blocks.
         /// </summary>
         /// <param name="safetyLimit">
         /// Cell visits to allow, or zero to derive one from the search volume.
@@ -199,12 +176,9 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Cell visits to allow for one pass over the bounds it is about to walk.
-        ///
-        /// Four times the volume: the external flood and the interior scan each cover it once, and
-        /// the factor leaves room for the frontier bookkeeping charged alongside them. Saturating
-        /// rather than overflowing — a bounding volume large enough to overflow an <c>int</c> is
-        /// exactly the case a flat limit got wrong.
+        /// Cell visits to allow for one pass over the bounds it is about to walk: four times the
+        /// volume, saturating rather than overflowing — a volume large enough to overflow an
+        /// <c>int</c> is exactly the case a flat limit got wrong.
         /// </summary>
         private long SafetyLimitFromBounds()
         {
@@ -373,13 +347,10 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Advances the scan cursor to the next cell no pass has classified.
-        ///
-        /// Charged against the tick's budget cell by cell. The walk crosses every cell of the
-        /// bounding box over the course of a pass, so charging a whole walk between two rooms as one
-        /// unit lets a single tick absorb an unbounded sweep — on a 127k grid, the tick finishing
-        /// the pass swept the tail of a 1.5-million-cell box in one go for 77 ms. Charging per cell
-        /// makes a pass take more ticks, each of them bounded.
+        /// Advances the scan cursor to the next cell no pass has classified, charged against the tick's
+        /// budget **cell by cell**: the walk between two rooms crosses the whole bounding box, so
+        /// charging it as one unit lets a single tick absorb an unbounded sweep.
+        /// See load-and-hitching.md, 2.
         /// </summary>
         private ScanResult AdvanceScanToNextUnvisited(ref int spent, int budget)
         {

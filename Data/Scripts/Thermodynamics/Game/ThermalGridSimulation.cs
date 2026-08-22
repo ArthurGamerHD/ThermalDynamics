@@ -29,16 +29,9 @@ namespace Thermodynamics
         private const int MassSweepInterval = 8;
 
         /// <summary>
-        /// Most blocks the mass sweep visits in one tick.
-        ///
-        /// Mass changes with build progress and damage, neither of which the game raises an event
-        /// for, so the only way to detect a change is to poll. Without a cap that poll is a pass
-        /// over every block on the grid inside one tick, querying the game for each block's mass.
-        ///
-        /// The cap makes it a rota. A grid under the cap is still swept completely every
-        /// <see cref="MassSweepInterval"/> steps; a larger one takes proportionally longer, about a
-        /// minute for a million blocks. A thermal mass that lags by that much is not observable; a
-        /// stall every eight steps is.
+        /// Most blocks the mass sweep visits in one tick, which makes it a rota rather than a pass.
+        /// A grid under the cap is still swept whole every <see cref="MassSweepInterval"/> steps.
+        /// See load-and-hitching.md, 5.
         /// </summary>
         private const int MassSweepCap = 4096;
 
@@ -46,21 +39,9 @@ namespace Thermodynamics
         private int stepsSinceMassSweep;
 
         /// <summary>
-        /// Intentionally empty: the entity's ten-frame callback does not drive this mod.
-        ///
-        /// The engine calls every grid's ten-frame update on the same frame, so a world of two
-        /// hundred grids would do all of its thermal work on one frame in ten. Measured on a
-        /// 203-grid save, 1,392 of 13,915 frames did any work, averaging 117 ms each, with two in
-        /// three exceeding a 60 fps frame budget — the same total cost that spreads to about twelve
-        /// milliseconds a frame.
-        ///
-        /// Instead <see cref="ThermalGridScheduler"/> gives every grid a share of every frame from
-        /// the session component, and each grid spreads its solver step across the frames of its
-        /// simulation window.
-        ///
-        /// Requesting a per-frame entity callback is not a usable alternative: <c>MyCubeGrid</c>
-        /// clears <c>EACH_FRAME</c> from its update flags whenever its scheduled-work queue empties,
-        /// so a mod depending on that flag silently stops running.
+        /// Intentionally empty: the engine fires every grid's ten-frame update on the same frame, so
+        /// <see cref="ThermalGridScheduler"/> drives this mod from the session component instead.
+        /// See load-and-hitching.md, 9.
         /// </summary>
         public override void UpdateBeforeSimulation10()
         {
@@ -174,13 +155,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// The two stages the host drives around a step, timed.
-        ///
-        /// Both sit inside a grid's update and neither is inside the simulation, so neither was
-        /// reported by any row of the cost table. On a field dump that left an eighth of grid
-        /// simulation unattributed, and the steady-state worst frames almost entirely so.
-        ///
-        /// Timed only while telemetry collects, like every other stage.
+        /// The two stages the host drives around a step, timed. Both sit inside a grid's update and
+        /// outside the simulation, so neither reached a row of the cost table until they did.
         /// </summary>
         private EnvironmentSample TimedSample()
         {
@@ -292,17 +268,9 @@ namespace Thermodynamics
         private TelemetryAnomalyKind lastHealth;
 
         /// <summary>
-        /// Tests whether this grid has gone numerically bad, on every world, whether or not
-        /// telemetry is collecting.
-        ///
-        /// A NaN or a runaway is the failure that destroys a save rather than degrading a frame,
-        /// and until now it was visible only through the per-node sampling walk — which runs only
-        /// while collection is on, which is never, by default. So the one class of bug worst worth
-        /// catching was the one nothing in an ordinary world was looking for.
-        ///
-        /// The cost is three float tests every fourth step, on figures the solver has already
-        /// summed. Nothing is walked and nothing is allocated. A grid that is healthy and stays
-        /// healthy never reaches the registry at all.
+        /// Tests whether this grid has gone numerically bad, on every world, whether or not telemetry
+        /// is collecting — three float tests every fourth step on figures the solver already summed.
+        /// See telemetry.md, A grid that has gone numerically bad is also a fault.
         /// </summary>
         private void CheckHealth()
         {
@@ -401,12 +369,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Carries each coolant pump's switch and speed setting into the loop model, which has
-        /// always read both and never been given either.
-        ///
-        /// Walked through the loops rather than through a registry of pump blocks, because a pump
-        /// only matters when it belongs to a ring: a pump standing on its own drives nothing, and
-        /// the loops already hold exactly the pumps that do.
+        /// Carries each coolant pump's switch and speed into the loop model. Walked through the loops
+        /// rather than a registry of pumps, since a pump outside a ring drives nothing.
         /// </summary>
         private void PushCoolantPumpState()
         {
@@ -474,20 +438,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Sets how full of air each room is, from the game's own answers.
-        ///
-        /// Three conditions empty a room, none of them owned by this mod: the world may have oxygen
-        /// or pressurisation disabled; the game's sealing test may disagree with this model's, since
-        /// it knows the true shape of a sloped block where this knows only a cell, and it wins; or
-        /// the room may hold no air.
-        ///
-        /// The fill level comes per room from the game's gas system through
-        /// <see cref="ThermalGrid.GameOxygenAt"/>. The game's rooms are whole connected volumes
-        /// rather than this model's pieces of them, so a cabin with no vent of its own but joined
-        /// through a doorway to one that has is reported full.
-        ///
-        /// Air vents are the fallback where the gas system cannot be read. That path can only see
-        /// compartments a vent physically touches.
+        /// Sets how full of air each room is, from the game's own answers: three vetoes, no
+        /// requirement, and the fill level read per room from the gas system. Air vents are the
+        /// fallback where that cannot be read. See thermal-model.md, Room air.
         /// </summary>
         private void SweepRoomPressure()
         {
@@ -604,17 +557,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Collects what each vent reports about the rooms it opens into, keyed by room index.
-        ///
-        /// A vent sits in a wall, so its room is on whichever side has one, and a vent set to
-        /// depressurise empties its room whatever level it currently reads.
-        ///
-        /// Reports to every room the vent touches. The game exposes no way to ask which room a vent
-        /// actually serves, so a vent in a bulkhead between two compartments would otherwise supply
-        /// one of them and not the other, decided by face iteration order. Over-reporting is
-        /// bounded: each room is still tested with <c>IsRoomAtPositionAirtight</c> before it is
-        /// given anything, so the worst case is air in a compartment the game also calls sealed and
-        /// that has a working vent against it.
+        /// Collects what each vent reports about the rooms it opens into, reporting to *every* room it
+        /// touches: the game exposes no way to ask which one a vent serves, and face iteration order
+        /// is not an answer. Each room is still tested for sealing before it is given anything.
         /// </summary>
         private void ReadVents()
         {

@@ -1,16 +1,9 @@
 namespace Thermodynamics.Core
 {
     /// <summary>
-    /// How full of air a room is, decided from the game's answers rather than this model's.
-    ///
-    /// Pressurisation belongs to the game: a world can have oxygen disabled, a world with oxygen can
-    /// have pressurisation disabled, and with both enabled, whether a room holds air is the game's
-    /// own sealing test, which accounts for every block shape and door state. This type only
-    /// combines those answers.
-    ///
-    /// Each answer can veto air and none can require it. Air is heat capacity, so a room wrongly
-    /// given air warms and cools as if it held a mass of gas that every bounding surface exchanges
-    /// with, while wrongly denying air only costs the interior some thermal inertia.
+    /// How full of air a room is, combined from the game's answers rather than decided by this model.
+    /// Each answer can veto air and none can require it, because the two errors are not the same
+    /// size. See thermal-model.md, Room air, and rules.md `C9`.
     /// </summary>
     public static class RoomPressure
     {
@@ -38,14 +31,8 @@ namespace Thermodynamics.Core
 
         /// <summary>
         /// Whether a room's air level is still undecided after the gas system has answered, and so
-        /// needs the air vents read as a fallback.
-        ///
-        /// Both vetoes are checked first, which is the point of asking: a world with no
-        /// pressurisation, and a room the game does not call sealed, both give
-        /// <see cref="Level"/> zero whatever a vent says. Reading vents for such a room cannot
-        /// change an answer, and the vent read is a walk over every vent on the grid — so one
-        /// compartment finer than the game's own sealing test used to buy that walk on every
-        /// sweep, permanently, on most ships.
+        /// needs the vents read as a fallback. Both vetoes are checked first, since neither answer can
+        /// be changed by a vent and the vent read walks every vent on the grid.
         /// </summary>
         public static bool NeedsVentFallback(
             bool worldPressurised, bool sealedByGame, float reportedLevel)
