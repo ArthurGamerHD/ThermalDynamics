@@ -32,7 +32,17 @@ namespace Thermodynamics.Core
         private Vector3I searchMin;
         private Vector3I searchMaxExclusive;
         private readonly HashSet<Vector3I> solid = new HashSet<Vector3I>(Vector3I.Comparer);
-        private readonly List<HashSet<Vector3I>> rooms = new List<HashSet<Vector3I>>();
+        /// <summary>
+        /// The cells of each room, in the order the flood reached them.
+        ///
+        /// Lists rather than sets. Nothing asks a room whether it contains a cell — that question
+        /// goes to <see cref="roomIndexByCell"/>, which answers it for every room at once — so the
+        /// only things asked of these are their length and their contents in turn, and a set pays
+        /// about seventeen bytes a cell over a list for a lookup nobody performs. The flood cannot
+        /// offer the same cell twice: every <c>AddToRoom</c> is behind a visited bitset that was
+        /// tested and set in the same breath, so there is nothing for a set to deduplicate either.
+        /// </summary>
+        private readonly List<List<Vector3I>> rooms = new List<List<Vector3I>>();
         private readonly Dictionary<Vector3I, int> roomIndexByCell = new Dictionary<Vector3I, int>(Vector3I.Comparer);
 
         private readonly List<RoomPortal> portals = new List<RoomPortal>();
@@ -86,7 +96,8 @@ namespace Thermodynamics.Core
             get { return externalCount == 0 && solid.Count == 0 && roomIndexByCell.Count == 0; }
         }
 
-        public IList<HashSet<Vector3I>> Rooms
+        /// <summary>The cells of each room. Read in order; never searched.</summary>
+        public IList<List<Vector3I>> Rooms
         {
             get { return rooms; }
         }
@@ -224,7 +235,7 @@ namespace Thermodynamics.Core
 
         internal int BeginRoom()
         {
-            rooms.Add(new HashSet<Vector3I>(Vector3I.Comparer));
+            rooms.Add(new List<Vector3I>());
             return rooms.Count - 1;
         }
 
@@ -317,11 +328,28 @@ namespace Thermodynamics.Core
             return GridMath.Contains(searchMin, searchMaxExclusive, cell);
         }
 
+        /// <summary>
+        /// Called once when a pass completes. Drops the rooms the flood opened and never filled,
+        /// then hands back the spare capacity in the rest.
+        ///
+        /// A list doubles as it grows, so a finished room carries up to as much empty capacity as
+        /// it does cells — on a large hull that is tens of megabytes of nothing, held for as long
+        /// as the grid exists. The map is immutable from here, so the trim can never be undone by
+        /// a later add.
+        ///
+        /// Assigning <c>Capacity</c> rather than calling <c>TrimExcess</c>, which declines to do
+        /// anything unless the list is under ninety per cent full and therefore leaves the common
+        /// case — a room that stopped just past a doubling — carrying its slack.
+        /// </summary>
         internal void DropEmptyRooms()
         {
             for (int i = rooms.Count - 1; i >= 0; i--)
             {
-                if (rooms[i].Count != 0) continue;
+                if (rooms[i].Count != 0)
+                {
+                    rooms[i].Capacity = rooms[i].Count;
+                    continue;
+                }
 
                 rooms.RemoveAt(i);
                 List<Vector3I> affected = new List<Vector3I>();

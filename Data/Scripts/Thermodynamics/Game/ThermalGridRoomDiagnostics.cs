@@ -258,12 +258,12 @@ namespace Thermodynamics
         /// </summary>
         private void ScanRoomVerdicts(RoomMap map)
         {
-            IList<HashSet<Vector3I>> rooms = map.Rooms;
+            IList<List<Vector3I>> rooms = map.Rooms;
             IList<RoomAirNode> air = Simulation.RoomAir;
 
             for (int i = 0; i < rooms.Count; i++)
             {
-                HashSet<Vector3I> cells = rooms[i];
+                HashSet<Vector3I> cells = AsSet(rooms[i]);
 
                 RoomVerdict verdict = new RoomVerdict();
                 verdict.Vented = map.IsVented(i);
@@ -286,6 +286,33 @@ namespace Thermodynamics
 
                 roomVerdicts.Add(verdict);
             }
+        }
+
+        /// <summary>
+        /// One room's cells as a set, for the vent tests below.
+        ///
+        /// <para>
+        /// A mapped room holds its cells as a list, because the map answers "which room is this
+        /// cell in" from its own index and nothing else searches a room. The vent tests do search
+        /// one — a vent touches a room when any face of any of its cells lands inside it — and they
+        /// run once per vent per room, so a linear search would be quadratic in the size of the
+        /// compartment. Building the set here bounds the cost of that at one room rather than
+        /// keeping every room as a set for the life of the grid, which is what this used to do and
+        /// what it cost tens of megabytes on a large hull to do.
+        /// </para>
+        ///
+        /// <para>
+        /// Reused between rooms. The scan is single-threaded and the set does not outlive the room
+        /// it describes.
+        /// </para>
+        /// </summary>
+        private readonly HashSet<Vector3I> roomCellScratch = new HashSet<Vector3I>(Vector3I.Comparer);
+
+        private HashSet<Vector3I> AsSet(List<Vector3I> cells)
+        {
+            roomCellScratch.Clear();
+            for (int i = 0; i < cells.Count; i++) roomCellScratch.Add(cells[i]);
+            return roomCellScratch;
         }
 
         /// <summary>The lexicographically smallest cell, matching <see cref="RoomAirNode.Anchor"/>.</summary>

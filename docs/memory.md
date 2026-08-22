@@ -6,7 +6,13 @@ Companion to [load-and-hitching.md](load-and-hitching.md), which covers time rat
 to [scale-design.md §6](scale-design.md#6-data-structures), which budgets ~110 bytes a node for a
 million-block grid. This page is about the distance between that budget and where the code is.
 
-Reproduce with `bench memory --size N`.
+Reproduce with `bench memory --size N`, from `tests/`. Build first: `dotnet run --no-build`
+against a stale output is how two of the figures below were first reported as unchanged by a change
+that halved them.
+
+**A figure here belongs to the hull it was taken on, not only to the code.** The benchmark hull was
+replaced in the middle of this page's history, and the row that moved most moved because of that
+rather than because of anything in the solver. Every table below says which hull it is.
 
 ---
 
@@ -36,23 +42,44 @@ decides whether one of them can be loaded at all.
 
 ## Where it goes
 
-Measured at 126,731 blocks, before and after the four changes in §1:
+Measured at 126,731 blocks. The first two columns are the original armour-and-grating benchmark
+hull before and after the four changes in §1; the third is the same measurement on the hull the
+benchmarks build **now**.
 
-| Structure | B/block before | B/block now | Scales with |
-| --- | ---: | ---: | --- |
-| `BlockInstance` | 456 | **240** | blocks, and their **cells** |
-| `GridModel` indexes | 122 | 122 | blocks, and their **cells** |
-| `SurfaceMap` | 69 | 69 | **cells** |
-| Solver | 537 | **468** | nodes and links |
-| `RoomMap` retained | 1,126 | **32** | ~~bounding volume~~ rooms and structure |
-| **Total retained** | **2,311** | **932** | |
-| **Total peak** | **3,309** | **960** | |
+| Structure | armour hull, before | armour hull, after §1 | census hull, today | Scales with |
+| --- | ---: | ---: | ---: | --- |
+| `BlockInstance` | 456 | 240 | **240** | blocks, and their **cells** |
+| `GridModel` indexes | 122 | 122 | **86** | blocks, and their **cells** |
+| `SurfaceMap` | 69 | 69 | **68** | **cells** |
+| Solver | 537 | 468 | **501** | nodes and links |
+| `RoomMap` retained | 1,126 | 32 | **128** | structure, and cells **in rooms** |
+| **Total retained** | **2,311** | **932** | **1,023** | |
+| **Total peak** | **3,309** | **960** | **1,179** | |
 
-In megabytes at that size: 279 MB retained and 400 MB peak became **113 MB and 116 MB**. At
-505,566 blocks it measures 952 B/block retained against 932 at 126,731 — **flat**, where it used
-to climb, because nothing significant is indexed by bounding volume any more. The gap between
-retained and peak has all but closed too: there is no longer a transient that dwarfs what the grid
-holds.
+In megabytes at that size: 279 MB retained and 400 MB peak became 113 MB and 116 MB on the armour
+hull, and are **126 MB and 145 MB** on the census hull.
+
+> **The third column is not a regression, and reading it as one wasted an afternoon.** The
+> benchmark hull changed: it used to be heavy armour with a grating in eight, and it is now a
+> measured block census from a telemetry dump — the change argued in
+> [load-and-hitching.md](load-and-hitching.md), made because a hull's substep cost is set by its
+> *lightest* block. The armour hull sealed everywhere, so its interior classified as one open
+> region and the map stored nothing but the solid shell: 3.9 MB, which is a `HashSet` of 128,820
+> cells and nothing else. The census hull's interior maps as **41 enclosed rooms of 280,645
+> cells**, and room cells are stored where external cells are only counted. The same code, on a
+> ship that has compartments.
+>
+> The two solver figures differ for a different reason and a real one: the precomputed environment
+> rows and the fixed source row are per-node arrays that did not exist when the second column was
+> taken. That is 33 B/block bought deliberately, and
+> [`bench report`](benchmarks.md) is where the time it buys is recorded.
+
+**Per-block cost is no longer flat with grid size.** At 505,566 blocks the census hull measures
+1,141 B/block retained against 1,023 at 126,731, and the whole of that difference is the room map:
+128 B/block against 229. Room cells scale with the enclosed *volume* of a ship rather than with the
+number of blocks in it, and a bigger ship encloses disproportionately more. §4 is the row that
+matters now, and §1b's answer — count the cells instead of storing them — does not reach it,
+because a room cell has to be enumerable.
 
 **Bounding volume used to be the whole story and now is not.** A hull encloses about fifteen times
 more empty space than it has blocks, and two of the structures above were indexed by that space
@@ -106,7 +133,10 @@ the game seals and this model does not. It walks the box directly instead, in sc
 more repeatable than a hash set's ordering was. It is a diagnostic, it stops at a cell limit, and
 it only runs when something is asking.
 
-**The largest single saving on this page**: the room map went from 1,126 to 32 bytes a block.
+**The largest single saving on this page**: the room map went from 1,126 to 32 bytes a block —
+on the armour hull, whose interior was one open region. On the census hull the same change is worth
+the same 1,094 bytes a block of open air, and what is left behind it is the 128 bytes of *rooms*
+that the armour hull did not have. See the note under the table.
 
 ### 1c. Face fractions are shared per model and orientation — *done*
 
@@ -128,8 +158,10 @@ appended to in a tight loop; these grow when a block is placed, which is not tha
 
 ## What is worth doing next
 
-The solver is now the largest consumer at 468 bytes a block — half the total — and it is all
-per-node rather than per-volume, so it is a different kind of problem from the ones above.
+The solver is the largest consumer at 501 bytes a block — half the total — and it is all per-node
+rather than per-volume, so it is a different kind of problem from the ones above. The room map is
+second at 128 B/block and it is the only row that still climbs with grid size, so on a large ship
+it is first.
 
 ### 2. Drop the solver's node lookup dictionary — ~36 B/block
 
@@ -145,12 +177,25 @@ small counts — and the solver mirrors six floats of face weights and six of su
 it. The counts fit in one packed `int`, the weights are derivable from them, and the sun-lit array
 is only meaningful when self-shadowing is switched on.
 
-### 4. Rooms as one cell array with per-room ranges — ~20 MB at 126k
+### 4. Rooms as one cell array with per-room ranges — **half done**; ~9 MB at 126k left
 
-Room cells are held twice: once in `List<HashSet<Vector3I>> rooms` and once in
-`Dictionary<Vector3I, int> roomIndexByCell`. A single `Vector3I[]` of all room cells, sorted by
-room, with an `int[]` of range starts, holds the same information once — 12 bytes a cell against
-about 70 for the two.
+Room cells are held twice: once per room, and once in `Dictionary<Vector3I, int> roomIndexByCell`.
+
+The per-room half is done. Those were `HashSet<Vector3I>` and are now `List<Vector3I>`, trimmed
+when the pass completes, because **nothing ever asked a room whether it contained a cell** — that
+question goes to `roomIndexByCell`, which answers it for every room at once. A set was paying about
+seventeen bytes a cell for a lookup nobody performed. Worth 38 B/block at 126k blocks and 80 at
+500k, where the room map is the row that dominates.
+
+The one caller that did search a room is the room *diagnostic*, which asks whether a vent opens
+onto a compartment. It builds a set for one room at a time and reuses it, so the cost is bounded by
+the largest compartment during a scan rather than by every compartment for the life of the grid.
+
+What is left is `roomIndexByCell`: about 31 bytes for every cell in a room, 8.7 MB at 126k blocks
+and 47 MB at 500k. A single `Vector3I[]` of all room cells sorted by room, with an `int[]` of range
+starts, holds both halves once at 12 bytes a cell — but the dictionary answers `RegionOf` on the
+exposure path, so replacing it means giving that lookup a different shape rather than deleting
+it.
 
 ### 5. Move the node diagnostics out of the node — ~24 B/block
 
@@ -201,12 +246,15 @@ where one exists. [model-redesign.md §4](model-redesign.md) sets this out; noth
 
 | | 126k blocks retained | 500k retained | SE2 outlook |
 | --- | ---: | ---: | --- |
-| before | 279 MB (2,311 B/block) | — | hopeless |
-| **now** | **113 MB (932 B/block)** | **459 MB (952 B/block)** | still needs §8 and §9 |
-| after 2–6 | ~90 MB (~770 B/block) | | unchanged |
+| armour hull, before §1 | 279 MB (2,311 B/block) | — | hopeless |
+| armour hull, after §1 | 113 MB (932 B/block) | 459 MB (952 B/block) | still needs §8 and §9 |
+| **census hull, today** | **126 MB (1,023 B/block)** | **552 MB (1,141 B/block)** | still needs §8 and §9 |
+| after 2, 3, 4 and 5 | ~90 MB (~730 B/block) | ~390 MB (~800 B/block) | unchanged |
 
-Per-block cost is flat across a fourfold size increase now, which it was not before. What remains
-is honest per-node and per-block state rather than an index of empty space.
+Nothing is indexed by *bounding volume* any more, which is what the second row was celebrating. It
+is still indexed by *enclosed* volume, which is why the third row climbs with grid size where the
+second did not: a bigger ship is a larger fraction rooms. Everything else on the page is honest
+per-node and per-block state.
 
 Items 2 to 6 are local changes with no design work behind them and would take another 20 %. They
 do not change the SE2 picture, because that is not about constants — it is about which things are

@@ -457,7 +457,7 @@ namespace Thermodynamics
             float min = Settings.Instance.RoomOverlayMinKelvin;
             float max = Settings.Instance.RoomOverlayMaxKelvin;
 
-            IList<HashSet<Vector3I>> rooms = map.Rooms;
+            IList<List<Vector3I>> rooms = map.Rooms;
 
             for (int room = 0; room < rooms.Count; room++)
             {

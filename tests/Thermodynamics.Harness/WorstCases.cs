@@ -82,7 +82,7 @@ namespace Thermodynamics.Harness
         {
             Built built = Hull(shape, size, settings);
 
-            IList<HashSet<Vector3I>> rooms = built.Simulation.Rooms.Map.Rooms;
+            IList<List<Vector3I>> rooms = built.Simulation.Rooms.Map.Rooms;
             for (int r = 0; r < rooms.Count; r++)
             {
                 foreach (Vector3I cell in rooms[r])

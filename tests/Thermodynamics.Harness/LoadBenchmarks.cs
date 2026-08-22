@@ -1052,8 +1052,15 @@ namespace Thermodynamics.Harness
 
             long afterRooms = Settled();
 
+            // Which part of the volume the map is holding, because the answer decides whether this
+            // row scales with the ship or with the box around it. External cells are a count; solid
+            // and room cells are stored, so a hull whose interior maps as rooms costs far more here
+            // than one whose interior maps as open air, at the same block count.
+            RoomMap map = simulation.Rooms.Map;
             rows.Add(Row("RoomMap retained", afterRooms - afterSolver, volume, blocks,
-                "the published map: solid, external and per-room cell sets"));
+                "stored: " + map.SolidCellCount.ToString("n0") + " solid + "
+                + map.RoomCellCount.ToString("n0") + " cells in " + map.RoomCount.ToString("n0")
+                + " rooms; counted, not stored: " + map.ExternalCellCount.ToString("n0") + " external"));
             rows.Add(Row("RoomMapper peak", peak - afterSolver, volume, blocks,
                 "high-water mark while a pass runs — a visited set over the whole bounding box"));
 

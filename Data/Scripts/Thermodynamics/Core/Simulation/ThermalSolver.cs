@@ -1268,7 +1268,7 @@ namespace Thermodynamics.Core
                 {
                     if (rooms.IsVented(r)) continue;
 
-                    HashSet<Vector3I> cells = rooms.Rooms[r];
+                    List<Vector3I> cells = rooms.Rooms[r];
                     if (cells.Count == 0) continue;
 
                     RoomAirNode air = new RoomAirNode();
@@ -1388,7 +1388,7 @@ namespace Thermodynamics.Core
             return restored;
         }
 
-        private static Vector3I LowestCell(HashSet<Vector3I> cells)
+        private static Vector3I LowestCell(List<Vector3I> cells)
         {
             bool first = true;
             Vector3I lowest = Vector3I.Zero;
