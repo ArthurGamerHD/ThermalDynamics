@@ -54,13 +54,6 @@ lowest cell. Building inside a compartment gives it a fresh air mass at the temp
 walls. The same key carries air across a save, so a compartment rebuilt while the world was closed
 comes back at the temperature of its walls rather than the one it was saved at.
 
-**There is no thermal view.** Mods get no shader, no post-process and no frame buffer, so the only
-way to recolour the world is to blank it and redraw every body as a billboard — which gives coarse
-terrain, discs for asteroids, and nothing at all for anything the mod does not draw. Seeing
-temperature is the terminal readout, the cockpit summary, the crosshair readout and the x-ray block
-overlay instead; the overlay keeps the part of that work that was worth keeping, since a debug view
-*wants* to see through the hull.
-
 **Build state does not change a block's thermal properties.** A block at 10% construction has the
 same mass, heat capacity, conductivity and mounting as a finished one, and nothing notifies the
 simulation when a block finishes building. This is a deliberate simplification rather than an
@@ -176,6 +169,23 @@ lattice would cost 16,000 dictionary entries and an 8,000-element array. See
 budgeted, so the cost is ticks rather than a stall — but at a million blocks it is 7,000 ticks to
 converge, which is twenty minutes on a stale map. Bounded and wrong is better than unbounded and
 wrong; it is still wrong. See [scale-design.md](scale-design.md#room-mapping-is-the-one-that-has-to-change-shape).
+
+**There is no thermal view, and one is wanted.** Mods get no shader, no post-process and no frame
+buffer, so the only way to recolour the world is to blank it and redraw every body as a billboard —
+which gives coarse terrain, discs for asteroids, and nothing at all for anything the mod does not
+draw. An earlier heat overlay was built on that basis and removed; the x-ray block overlay keeps the
+part of that work worth keeping, since a debug view *wants* to see through a hull.
+
+**This is an obstacle rather than a decision**, and it was recorded here as a deliberate limit for a
+while, which was wrong: the difficulty is real and the intent to have one stands. The routes worth
+investigating are in [document_of_intent.md](document_of_intent.md#thermal-vision--wanted-method-unknown),
+and none of them is straightforward. Tracked as [backlog](backlog.md) B24.
+
+**Nothing gives a player feedback without an instrument.** There is no sound emitter, no particle
+effect and no emissive code anywhere in the mod, so a ship that is overheating looks and sounds
+exactly like one that is not until somebody opens a terminal. Against a measured **8.9 s** median
+from full electrical load to critical, that is the gap between a warning and a post-mortem. Tracked
+as [backlog](backlog.md) B25.
 
 **The cost of terrain occlusion has never been measured in game.** It is ten height lookups per
 sample per interval for grids near a surface, which should be well under the voxel raycast it sits
@@ -498,6 +508,7 @@ counters rather than milliseconds so it holds on any machine.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Moved the thermal view out of the deliberate limits. It was filed there on the grounds that mods get no shader — which is a statement about difficulty, not a simplification taken on purpose, and a limit is only a limit when it is chosen (`D6`). It is an open problem, and the intent to have one is stated in [document_of_intent.md](document_of_intent.md#thermal-vision--wanted-method-unknown). Recorded the absence of any non-instrument feedback beside it. |
 | 2026-08-22 | Absorbed `bugs-and-performance.md`, the record of the first extraction pass. Every one of its thirty-two findings is resolved in the current code — including the eleven whose headings carried no *fixed* marker, each re-verified against the source during this pass — so the page survives as the dated entries below and the patterns above rather than as a defect list. Restructured around the shape of each failure rather than its subsystem; promoted the deliberate limits to the top; moved the corpus balance findings to [balance.md](balance.md), which is where the dataset they come from is described. Removed two limits that the per-room gas-system read had already retired ("a room with no air vent holds no air" and "pressurisation is only known through air vents") and corrected a third: block `Conductivity` is real W/(m·K), and it is the *coolant loop's* that is still a 0…1 quality. Merged the two sections both titled "Fixed, worth remembering". |
 | 2026-08-21 | Recorded the buffer-growth NaN, the unguarded shape caches on the block-placement path, and the substep mass floor computing from its own previous answer. Recorded the censoring limit that makes every peak above critical a statement about the harness. |
 | 2026-08-20 | Recorded that every reactor in the game made no heat, and that all eighteen of the mod's own `Cubes.xml` entries were filed under a TypeId that does not exist. Recorded the step budget counting links but not nodes, and the exposure test that buried a face bolted to an open lattice. |

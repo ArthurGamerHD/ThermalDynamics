@@ -47,6 +47,63 @@ that a second mod can make heat mean something without forking this one — see
 
 ---
 
+## How a player perceives heat
+
+Legibility is the first of the three commitments above, and it has three layers. **Only the first is
+built.**
+
+### Instruments — built
+
+The terminal panel per block, the cockpit summary, the crosshair readout, the x-ray block overlay
+and the room view. These answer a question a player already knows to ask.
+
+**The intent for all of them is that they belong to the game's HUD rather than sit on top of it.**
+The readouts are drawn through Rich HUD so they can adopt the game's own placement, scaling and
+styling, and the goal is that a player reads a temperature the same way they read a power figure —
+without a mod-shaped panel announcing itself. Anything that looks bolted on has failed this even if
+every number in it is right.
+
+### Natural feedback — not built
+
+**A player should learn their ship is overheating without looking at an instrument.** This is the
+layer that makes heat a felt resource rather than a readout, and none of it exists: there is no
+sound emitter and no particle or emissive code anywhere in the mod.
+
+Two channels, and the intent for both is *subtlety*:
+
+* **Audio.** Not alarms. The sounds a hot structure actually makes — ticking and pinging as metal
+  expands, the stress of a joint under a gradient — so a player hears something is wrong before
+  anything has told them. A warning klaxon is the fallback for the case the subtle cue has already
+  failed, not the design.
+* **Visual, in the world rather than on the screen.** Air distorting around a hot block in
+  atmosphere, and a block glowing as its temperature climbs. Both are properties of the object a
+  player is looking at, which is what makes them read as physics instead of as UI.
+
+Where this sits against the model is settled and cheap: every block already has a temperature every
+step, and `CriticalTemperature` already exists per definition, so the trigger is a ratio the solver
+computes anyway. **What is unstated is the threshold and the pacing** — see
+[void 6](#6-when-does-a-warning-start-and-how-long-is-it-meant-to-last).
+
+### Thermal vision — wanted, method unknown
+
+**A thermal camera view is an aspiration, not a rejected idea.** An earlier heat overlay was built
+and removed, and the limit recorded from it — *mods get no shader, no post-process and no frame
+buffer* — is true and is the obstacle rather than the answer. The x-ray block overlay keeps the part
+of that work worth keeping, since a debug view *wants* to see through a hull, but it is a debug view
+and not the thing.
+
+**The route is genuinely unknown and is expected to be indirect.** Candidates worth investigating,
+none of them straightforward: whether any shader or material parameter is reachable from a mod at
+all; billboards or transparent materials, which is how the extinguisher overlay already draws;
+particle effects as a rendering surface; and per-block emissive, which is the one path the engine
+definitely exposes and which overlaps with the glow described above.
+
+This is the one place where the [governing prior](#the-governing-prior-game-mod-first) does not
+settle the question. The prior says take the cheap form where the difference cannot be perceived —
+here the difference is *entirely* perception, so the cheap form is not obviously the right one.
+
+---
+
 ## The governing prior: game mod first
 
 > *Where a simplification costs nothing a player can perceive and avoids real expense, take the
@@ -184,6 +241,33 @@ resumable; a step is spread across the frames of its window rather than landing 
 game. Nothing in the design for it is built — see [scale-design.md](scale-design.md), and see
 [the voids below](#where-intent-is-absent-or-ill-defined) for whether that target is meant literally.
 
+### Use the machine, and stay off the game thread
+
+**The mod should use as much of the CPU as it can while taking as little of the main thread as
+possible.** The two halves are one goal: the game's simulation stability is set by what happens on
+its own thread, so work moved off it buys frame-time stability *and* lets this mod do more.
+
+This is a target, not a description. **Nothing in the mod is threaded today** — every grid solves on
+the game thread — and the design has been kept ready for it rather than built:
+
+* **The solver is already safe to split.** Order independence is one of the three invariants: every
+  exchange reads start-of-step temperatures and writes into an accumulator, so no node sees
+  another's new value and iteration order cannot change the result. That property was kept for
+  correctness and pays for parallelism for free.
+* **The engine allows it.** `MyAPIGateway.Parallel` offers `For`, `ForEach`, `Do` and `Start`,
+  backed by `ParallelTasks`. See [engine-notes.md](engine-notes.md#parallelism-is-available-to-mods).
+* **The shape is decided by what may race.** Reads must not race with the game mutating a grid, so
+  the natural split is *solve in parallel, apply on the game thread* through `InvokeOnGameThread`.
+
+**Where the payoff is depends on size, and the measurements point in opposite directions.** Eight
+thousand blocks solve in 0.128 ms a step, which may already be under the cost of a thread hand-off;
+a 242-grid fleet spent 25.9% of real time in the solver, and a million-block step is 118 ms and
+atomic. Per-grid parallelism across many grids and per-grid splitting of one huge grid are different
+changes, and the fleet figure argues for the first before the second.
+
+Two things must survive it, and both are already rules: the three invariants (`C6`), and that
+nothing allocates on the stepping path (`C4`).
+
 **A long run is designed for its own death** (P13): capped, resumable, streaming, and counting what
 it did not measure. This is intent about the harness rather than the mod, and it exists because an
 uncapped corpus sweep has taken a machine down.
@@ -210,13 +294,15 @@ occupied cell, which is what a 0.25 m lattice cannot afford. See
 Recorded so nobody rediscovers a decision as a bug. Each carries its price in
 [known-issues.md](known-issues.md#deliberate-limits).
 
+**A thermal camera is not on this list.** It was, on the grounds that mods get no shader and no
+frame buffer. That is a statement about difficulty, not about intent — it is wanted. See
+[Thermal vision](#thermal-vision--wanted-method-unknown).
+
 * **Not a per-block radiative transfer model.** Emissivity doubles as absorptivity; a block cannot
   be shiny to the sun and black to space.
 * **Not a build-state simulator.** A block at 10% construction carries its full thermal properties.
   The machinery to change that exists and the difference would be invisible next to the heat a
   block's neighbours carry.
-* **Not a thermal camera.** Mods get no shader and no frame buffer, so seeing temperature is the
-  terminal readout, the cockpit summary, the crosshair readout and the x-ray overlay.
 * **Not a destruction model, in the lab.** The harness never removes an overheating block, so every
   peak above critical describes the harness rather than the mod. Crossing times are unaffected.
 * **Not authoritative over the game's own systems.** Room pressure is the game's answer, not this
@@ -238,6 +324,7 @@ about intent rather than a decision on the developer's behalf.
 | **"The radiator is a block you plumb"** against the retrofit measurement, where a plumbed ring fits on **15%** of warm hulls and bolting — which fits nearly everywhere — makes more ships worse than better. | **Both are correct and they describe different questions.** The physics is settled: a sink face carries 1,000 W/K against a bolt joint's 167. What is open is whether cooling should be *fittable to a finished hull* or designed in from the start. That is an undeclared intent — see below. |
 | **"Light: a grid's cost is one pass over its links per substep"** against the measured per-node cost of the environment pass. | **The measurement wins and the goal is unchanged.** The step budget already counts `links + 4 × nodes`. The README's wording predates the measurement and understates what a substep does. |
 | **`MaxSubstepsPerBlock 6` recommended in the field** against the shipped default of `0` (off). | **The shipped default stands, and the recommendation is weaker than it was.** Re-measured at the shipped `Frequency 8`, a cap of 6 buys 1.6× rather than 3.4× — the original table was taken at `Frequency 4` and read as if it were the default. Still a clear win, no longer a dramatic one, and open as [backlog](backlog.md) C3. |
+| **Natural feedback against the Light goal.** The README says *"every readout, diagnostic and overlay is off unless something is reading it"*. [Natural feedback](#natural-feedback--not-built) is the first presentation feature meant to be **on** by default — a player who has not opened anything is exactly who it is for. | **Both stand, and the resolution is a definition rather than a compromise.** Feedback that only runs when a block is near its limit *is* "something reading it" — the reader is the block's own state, not a player with a panel open. What it must not do is cost anything on a ship where nothing is hot, which makes the trigger a threshold test on a ratio the solver already computes, and `C7` still applies: it needs its own switch like every other mechanism. |
 | **The census hull as "a worst case" against "what a ship does".** It makes 12.1 kW a block against a real median of 335 W — the 96th percentile. | **Undecided, and recorded as such in the code.** `TheCensusHullMakesFarMoreHeatThanARealShip` pins the figure and fails if it changes quietly. It reaches every temperature figure and no stiffness figure. |
 
 ---
@@ -298,13 +385,24 @@ Relatedly, the servers this mod is played on commonly run a 300 m/s speed limit 
 100, which multiplies the friction term by 27 and the cooling term by 1.37. **Whether the mod is
 balanced for vanilla or for the servers it is played on is unstated.**
 
-### 6. What is a "warning" supposed to look like?
+### 6. When does a warning start, and how long is it meant to last?
 
-`G5` and the purpose statement both rest on a player reacting to a warning, and **nothing defines
-one**. Critical temperature is a threshold with damage on the far side; there is no stated
-intent for a band below it, how a player is told, or how much time the telling is meant to buy.
-The measured 8.9 s median makes this the load-bearing gap behind the first row of the conflicts
-table.
+**The *form* is now stated and the *timing* is not.** A player is to be told through
+[natural feedback](#natural-feedback--not-built) — sound and in-world visuals — before any
+instrument is consulted. What nothing states is when that begins and how much time it is meant to
+buy:
+
+* **Where the band starts.** Critical temperature is a threshold with damage on the far side.
+  Nothing says at what fraction of it a block should begin to tick, glow or shimmer — and the
+  fraction is the whole design, because heat rises as the fourth power falls away, so a band chosen
+  as a percentage of critical is not a band chosen as a number of seconds.
+* **How long it should last.** `G5` rests on a player reacting, and the measured median is **8.9 s**
+  from the start of full electrical load to critical. If the intended warning is to be useful it has
+  to open well inside that, which makes this the load-bearing gap behind the first row of the
+  [conflicts table](#where-the-goals-and-the-code-disagree) rather than a cosmetic question.
+* **What it costs when nothing is overheating.** Every other presentation feature in this mod is off
+  unless something is reading it (`C7`). Natural feedback is the first that is meant to be *on* by
+  default, which puts it against the Light goal in a way no overlay is.
 
 ### 7. Is a definition a description of a material, or a balance dial?
 
@@ -330,4 +428,5 @@ to make a decision the server will not agree with.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Recorded four intents stated by the developer after this page was first written. **A thermal camera is wanted** — it had been recorded here and in [known-issues.md](known-issues.md) as a deliberate limit on the grounds that mods get no shader, which is a statement about difficulty rather than about intent. Added [How a player perceives heat](#how-a-player-perceives-heat), covering the three layers of it: instruments that belong to the game's HUD rather than sit on top of it, natural feedback through subtle audio and in-world visuals, and thermal vision as an open problem with no known route. Added the threading target to [Performance intent](#performance-intent): use as much of the CPU as possible while taking as little of the game thread as possible. Void 6 is rewritten — the form of a warning is now stated, and its timing is what remains undefined. |
 | 2026-08-22 | Created, by gathering the statements of intent scattered across the README's design goals, `rules.md`'s judgement rules, the balance criteria, the deliberate limits, the profile ladder and the developer's standing instructions, and reconciling each against what the code does. Seven conflicts are resolved against the implementation; eight areas are recorded as having no stated intent at all. Two figures were corrected on the way: the median time to critical at idle is 104.5 s rather than the 112 s the register's prose carried, and the damage-timing finding it belonged to — dropped in an earlier merge — is restored to [balance.md](balance.md#damage-arrives-too-fast-to-be-played-around). |
