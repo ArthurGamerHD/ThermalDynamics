@@ -178,62 +178,39 @@ The columns match the environment dump's, so a descent flown in game can be laid
 modelled one. It found the wind fault A15 — a buried grid was still in the ground-level wind — and
 it is where the unmodelled rock contact (A16) is visible.
 
-## Block balance
+## The balance commands
 
-`balance` is neither a scenario nor a benchmark: it costs every block the mod ships and measures it
-against the vanilla blocks it competes with, reading the shipped `.sbc` and `Cubes.xml` at run time
-rather than from a hand-written catalogue.
+Five commands, none of them a scenario or a benchmark. Each answers one balance question, each
+reads the shipped definitions at run time rather than a hand-written catalogue, and each has its
+conclusions pinned by a test and argued on a page. **The findings are on those pages** — this table
+is what to run and where to read the answer.
+
+| Command | The question | Pinned by | Argued in |
+| --- | --- | --- | --- |
+| `balance [--csv out/]` | What is every block this mod ships worth against the vanilla blocks it competes with? Five tables: every block costed and measured, what the vanilla heat sources put in, what a panel delivers end to end, which dial moves that number, and the heat pump and coolant rings across their ranges. | `BalanceTests` | [balance.md](../docs/balance.md#block-balance) |
+| `coolers` | Which block in the whole game is the best cooling in it, stacked one to thirty-two against the largest reactor at plate rating, in shadow? | `CoolingLadderTests` | [balance.md](../docs/balance.md#the-same-question-asked-of-the-whole-game) |
+| `reactors` | What fraction of a reactor's output should become heat, across three orders of magnitude of rating? Every vanilla reactor at six fractions and three loads, in two rigs — **bare** in shadow on a 2.7 K sky, and **skinned** under one cell of light armour. | `ReactorWasteHeatTests` | [balance.md](../docs/balance.md#reactor-waste-heat) |
+| `retrofit --ships 500 [--csv out/]` | Can cooling be fitted to ships people actually built? A real hull is parsed, run under load to find where its heat is, and the mod's blocks go into the cells that hull left free — bolted and plumbed. | `RetrofitTests` | [balance-lab.md](../docs/balance-lab.md#0-define-good-balance-before-collecting-anything) |
+| `stiffness [--csv out/]` | What does a ship's stiffest block demand of a step, asked of 8,102 workshop hulls rather than one save? Nothing is stepped: stiffness is a property of a built grid and the world it is asked about. | `DecorativeStiffnessTests` | [stiffness.md](../docs/stiffness.md#the-same-question-asked-of-eight-thousand-real-ships) |
 
 ```bash
-dotnet run --project Thermodynamics.Sim -- balance
 dotnet run --project Thermodynamics.Sim -- balance --csv out/
-```
-
-It reports five tables — every block costed and measured, what the vanilla heat sources put in, what
-a panel delivers end to end, which dial actually moves that number, and the heat pump and coolant
-rings across their ranges. The conclusions are pinned by `BalanceTests`. See
-[balance.md](../docs/balance.md); the short version is that a coolant sink face couples six times
-harder than a bolt joint, and no surface property comes close to being worth as much.
-
-## What cooling is worth bolting on
-
-`coolers` is the end-of-the-argument version of the block balance question. `balance` changes one
-dial on one panel; this stacks **every block in the game with a plausible claim to being the best
-cooling in it** against the largest reactor the game ships, at its plate rating, in shadow, one to
-thirty-two.
-
-```bash
 dotnet run --project Thermodynamics.Sim -- coolers
-```
-
-The answer is that nothing solves a reactor by being bolted to it: the best in the game takes 3 %
-off, the mod's own radiator takes 0.24 %, and a plain armour block and a large thruster both make
-it hotter — a block against a face is a face that was radiating to the sky and now radiates into a
-neighbour. That is the measured form of `blocks.md`'s "plumb it, do not bolt it".
-
-The **top K** column separates the two ways the ladder goes flat. A stack that saturated is hot at
-its far end; a stack the heat never reached is *colder than it was built*, having radiated to the
-sky instead — which is what an exhaust pipe or a wind turbine above the first one does, because
-they cannot be stacked in a way that conducts. Without that column the two read identically.
-`CoolingLadderTests` pins the conclusions rather than the figures; see
-[balance.md](../docs/balance.md#the-same-question-asked-of-the-whole-game).
-
-## Reactor waste heat
-
-`reactors` answers the one balance question `balance` cannot: what fraction of a reactor's output
-should become heat. The fraction spans three orders of magnitude of rated output — 0.5 MW on a
-small-grid small generator against 300 MW on a large-grid large one — so it cannot be picked by
-analogy with the thruster's.
-
-```bash
 dotnet run --project Thermodynamics.Sim -- reactors
+dotnet run --project Thermodynamics.Sim -- retrofit --ships 500 --csv out/
+dotnet run --project Thermodynamics.Sim -- stiffness --csv out/     # ~4 min
 ```
 
-Every vanilla reactor at six candidate fractions and three loads, in two rigs: **bare** in shadow
-with every face on a 2.7 K sky, which is the coolest a reactor can possibly run, and **skinned**
-under one cell of light armour, which is how one is actually installed. The shipped 0.01 is the
-fraction where the bare column survives everywhere and the skinned column does not. Pinned by
-`ReactorWasteHeatTests`; argued in [balance.md](../docs/balance.md#reactor-waste-heat).
+Two things about how these read the world are the harness's business rather than the finding's.
+
+**`coolers` carries a top-K column**, because a stack goes flat two ways and they read identically
+without it: a stack that saturated is hot at its far end, and a stack the heat never reached is
+*colder than it was built*, having radiated to the sky instead.
+
+**`stiffness` streams the corpus in batches and counts what it skipped.** A blueprint is held in
+memory as every grid and every block in it, so a fifty-gigabyte corpus parsed at once is how an
+uncapped run takes a machine down. Blueprints over 64 MB of XML are skipped and **counted**, as is
+everything else that does not reach the table (`O5`).
 
 ## The block catalog
 
@@ -272,49 +249,6 @@ It never handles a password — log the account in once with `steamcmd +login <u
 SteamCMD caches it. See [balance-lab.md](../docs/balance-lab.md) for what the lab is for and how it
 is staged.
 
-## Fitting cooling to ships people built
-
-`retrofit` is criterion G3 of the balance lab, and the reason it stayed open: no corpus ship carries
-a radiator, because the reader rejects a blueprint with a modded block in it and this mod's blocks
-are modded blocks. So the cooling is fitted here instead — a real hull is parsed, run under load to
-find where its heat is, and the mod's blocks go into the cells that hull left free.
-
-```bash
-dotnet run --project Thermodynamics.Sim -- retrofit --ships 500 --csv out/
-```
-
-Two fits, because the model prices them six times apart: **bolted**, radiators against the hot
-block, and **plumbed**, a ring with a pump and a sink face on it. They fail in opposite ways.
-Bolting fits on 281 of 332 warm ships and makes more of them worse than better. Plumbing helps five
-ships for every one it hurts — and fits on 49. See
-[balance-lab.md](../docs/balance-lab.md#0-define-good-balance-before-collecting-anything).
-
-## Stiffness against real ships
-
-`stiffness` asks the question every performance figure in this repository rests on — what does a
-ship's stiffest block demand of a step — of the workshop corpus rather than of a hull the harness
-built or a session that has ended.
-
-```bash
-dotnet run --project Thermodynamics.Sim -- stiffness              # 8,102 ships, about four minutes
-dotnet run --project Thermodynamics.Sim -- stiffness --csv out/   # one row per ship
-```
-
-Nothing is stepped: stiffness is a property of a built grid and the world it is asked about. The
-lab streams the corpus in batches and keeps one row per ship, because a blueprint is held in memory
-as every grid and every block in it and a fifty-gigabyte corpus parsed all at once is how an
-uncapped run took this machine down. Blueprints over 64 MB of XML are skipped and **counted**, as
-is everything else that does not reach the table.
-
-It found three things two field observations could not have. The field figures are ordinary ships —
-63rd and 85th percentile. The population is **bimodal**: a light or camera sets the count on 45 %
-of hulls at a median of 28.5 substeps, armour on the rest at 4.8, and almost nothing sits between.
-And the census hull, which every benchmark is built on, lands in the trough between the two modes —
-a fair choice for a benchmark — while feeling a little less of the air than a typical ship: the
-same block is 1.20–1.50 times stiffer in air against a real median of 2.34, because its stiffest
-block has one or two exposed faces where a real ship's has 5.26. See
-[stiffness.md](../docs/stiffness.md#the-same-question-asked-of-eight-thousand-real-ships).
-
 ## Screening and the battery
 
 `screen` measures every ship in a corpus without stepping it, and cuts the population to a panel of
@@ -335,8 +269,10 @@ dotnet run --project Thermodynamics.Sim -- hotspot --ship Atlas --scenario full-
 
 It dumps the blocks at the top of the distribution with the three figures that decide where each
 landed — what it generates, what it can radiate through its own faces, and what it can conduct into
-its neighbours. A large generation against a small conductance and no exposure is a *layout* result;
-a generation with **no** exit at all is a defect. Three harness faults were found that way.
+its neighbours. See
+[balance-lab.md](../docs/balance-lab.md#a-block-with-no-exit-is-the-labs-own-failure-mode) for what
+those three separate, and why a block with no exit is the lab's own failure mode rather than a
+physics result.
 
 **`--linear` matters.** Balance collection runs concurrently, because a settling problem is a pure
 function of a ship and a scenario and nothing about a temperature changes because another core was
@@ -540,6 +476,7 @@ and left off it.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Condensed the five balance commands from a section each to one table. Each of them restated a conclusion argued in full on [balance.md](../docs/balance.md), [balance-lab.md](../docs/balance-lab.md) or [stiffness.md](../docs/stiffness.md), which is how the reactor fraction below came to be wrong here and right there. This page is now what to run and where the answer is argued, and keeps only what is the harness's own business rather than the finding's. |
 | 2026-08-22 | Corrected the reactor's shipped waste fraction, quoted here and on [thermal-model.md](../docs/thermal-model.md) as 0.02 against the 0.01 in `Cubes.xml` and on [balance.md](../docs/balance.md#reactor-waste-heat). |
 | 2026-08-22 | Added the standard header and this change log. |
 | 2026-08-22 | Fitted cooling to ships people actually built, closing the retrofit gap the balance criteria depended on. |
