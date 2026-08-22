@@ -23,17 +23,10 @@ namespace Thermodynamics.Core
     }
 
     /// <summary>
-    /// Merging what a planet's definition said into what the model already believed.
-    ///
-    /// A definition is read field by field out of a lookup that answers or does not, and what it
-    /// does not answer used to arrive as zero and be copied over the model's own default. Zero day
-    /// and night temperatures are the vacuum figure, so a planet whose thermal group did not load —
-    /// or a planet pack authoring three values of eleven — produced a world where ships in
-    /// breathable air cooled to space and convected at nothing. A field dump recorded exactly that
-    /// on an earthlike world: 2.7 K ambient at 0.93 air density, and 232,000 points of heat damage
-    /// behind it.
-    ///
-    /// Pure, so what a partial definition does is a test rather than a session.
+    /// Merging what a planet's definition said into what the model already believed: **only the fields
+    /// a read actually supplied**, since a definition that did not load would otherwise write zeros
+    /// over the defaults and make an earthlike world a vacuum. Pure, so what a partial definition does
+    /// is a test rather than a session. See environment.md, When the file does not reach the mod.
     /// </summary>
     public static class PlanetProperties
     {

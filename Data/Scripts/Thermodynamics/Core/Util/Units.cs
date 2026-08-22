@@ -4,16 +4,9 @@ using System.Globalization;
 namespace Thermodynamics.Core
 {
     /// <summary>
-    /// Quantities written the way a person reads them.
-    ///
-    /// <para>
-    /// One convention, in one place. There were four copies of the watt formatter — the cockpit
-    /// panel, the settings menu, the debug panel and the chat command — and they had drifted into
-    /// three different conventions: one decimal place or two, a gigawatt tier or none, the current
-    /// culture or the invariant one. A ship's heat balance was therefore quoted at a different
-    /// precision depending on which readout a player happened to open, and above a gigawatt one of
-    /// them said "1,500.0 MW" where another said "1.50 GW".
-    /// </para>
+    /// Quantities written the way a person reads them: one convention, in one place, because four
+    /// copies of the watt formatter drifted into three and a heat balance read differently depending
+    /// on which readout a player opened.
     /// </summary>
     public static class Units
     {

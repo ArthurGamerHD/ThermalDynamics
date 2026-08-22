@@ -25,18 +25,10 @@ namespace Thermodynamics
             private PlanetDefinition definition = NullDef;
 
             /// <summary>
-            /// This planet's thermal definition, or null until the definition lookup can answer.
-            ///
-            /// The lookup is a mod-to-mod API that initialises on a message, so the first grid to
-            /// tick may ask before it exists. A null answer is kept rather than cached, and the
-            /// caller asks again next time — the alternative is a whole session run against the
-            /// blank definition of a planet that has one.
-            ///
-            /// Keyed by the *generator*, not the entity. A planet entity's own DefinitionId is
-            /// <c>MyObjectBuilder_Planet/(null)</c> — a field dump's game log has it verbatim — so
-            /// looking that up matched nothing and every planet fell through to the fallback. The
-            /// generator's id is <c>PlanetGeneratorDefinition/EarthLike</c>, which is what
-            /// Planets.xml keys its entries on.
+            /// This planet's thermal definition, or null until the lookup can answer — a null is never
+            /// cached, since the lookup is a mod-to-mod API that initialises on a message. Keyed by the
+            /// *generator*: a planet entity's own DefinitionId is <c>MyObjectBuilder_Planet/(null)</c>.
+            /// See environment.md, When the file does not reach the mod.
             /// </summary>
             public PlanetDefinition Definition() 
             {

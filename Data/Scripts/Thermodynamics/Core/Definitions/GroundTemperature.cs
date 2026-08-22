@@ -3,18 +3,10 @@ using System.Collections.Generic;
 namespace Thermodynamics.Core
 {
     /// <summary>
-    /// Temperature offset the surface material contributes to the air above it, K.
-    ///
-    /// The game reports which voxel material a grid is parked on; this table maps that name to a
-    /// temperature offset and a day-night swing multiplier. Snow and ice are cold, sand is hot, and
-    /// rock and grass are close to the planet's own figures.
-    ///
-    /// Matched on the name containing a keyword rather than on the exact subtype, since worlds and
-    /// mods name their materials differently (Sand_02, SandDesert, Desert_Sand). An exact match
-    /// would silently stop working on a third-party planet.
-    ///
-    /// These values are balance choices rather than measurements, which is why the whole table is
-    /// scaled by one setting and can be disabled with it.
+    /// Temperature offset and day-night swing the surface material contributes to the air above it.
+    /// Matched on a keyword in the material name rather than the exact subtype, since an exact match
+    /// stops working silently on a third-party planet. **Balance choices rather than measurements**,
+    /// which is why one setting scales the whole table. See environment.md, Ambient temperature.
     /// </summary>
     public static class GroundTemperature
     {

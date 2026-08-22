@@ -4,17 +4,10 @@ using VRageMath;
 namespace Thermodynamics.Core
 {
     /// <summary>
-    /// Points to cast from when testing whether the sun reaches a grid.
-    ///
-    /// One ray from the grid's centre answers for a point. A large grid crossing a planet's
-    /// terminator is then fully lit or fully dark according to that ray alone, flipping the moment
-    /// the centre crosses. Sampling several points spread through the grid turns that step into a
-    /// ramp at a cost of one ray each.
-    ///
-    /// The centre comes first, so a sample count of one behaves exactly as a single centre ray. The
-    /// remaining points are the corners of a box inset inside the grid's bounds; a ray from the
-    /// exact corner of the bounding box would start in empty space beside the grid, where an
-    /// occluder shadowing the whole hull can be missed.
+    /// Points to cast from when testing whether the sun reaches a grid: the centre first, so one
+    /// sample behaves exactly as a single centre ray, then the corners of a box **inset** inside the
+    /// grid's bounds — a ray from the exact corner starts in empty space beside the hull.
+    /// See configuration.md, External shadow.
     /// </summary>
     public static class SolarOcclusionSampler
     {

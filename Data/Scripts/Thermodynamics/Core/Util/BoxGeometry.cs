@@ -4,16 +4,9 @@ using VRageMath;
 namespace Thermodynamics.Core
 {
     /// <summary>
-    /// Analytic geometry on integer, axis-aligned block bounds.
-    ///
-    /// Every function here is O(1) in the size of the blocks involved. Answering these questions by
-    /// enumerating a block's occupied cells is affordable for one- and two-cell blocks and not for
-    /// blocks spanning tens of cells on a side.
-    ///
-    /// Bounds are half-open — <c>min</c> inclusive, <c>maxExclusive</c> exclusive — matching
-    /// <see cref="BlockInstance.Min"/> and <see cref="BlockInstance.MaxExclusive"/>. Areas are
-    /// counted in lattice cell faces, so they remain correct when one grid mixes block sizes: a
-    /// block twice as wide covers four times as many cell faces.
+    /// Analytic geometry on integer, axis-aligned block bounds — every function O(1) in the size of the
+    /// blocks, which is what lets one grid mix block sizes. Bounds are half-open and areas are counted
+    /// in lattice cell faces. See scale-design.md, Cell-centric to boundary-centric.
     /// </summary>
     public static class BoxGeometry
     {

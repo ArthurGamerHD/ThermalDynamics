@@ -5,19 +5,9 @@ using VRageMath;
 namespace Thermodynamics.Core
 {
     /// <summary>
-    /// Rooms the game holds and this map does not.
-    ///
-    /// The room mapper decides sealing from the surface bits, which come from each block
-    /// definition's pressurisation table read cell by cell. The game decides it from its own
-    /// sealing test, which knows the true shape of a sloped block where this knows only a cell.
-    /// Where the two disagree the model loses a compartment: the flood fill walks in from outside,
-    /// the cells classify as external, no room is created, and nothing queries the game about a room
-    /// that was never found — so the compartment appears in no overlay and no report.
-    ///
-    /// This locates them. Every cell the map calls external is offered to the game, the airtight
-    /// ones are grouped into connected regions, and each region is a compartment the model lost.
-    /// Diagnostic only: it is read by the report and the overlay, and the fix belongs in the
-    /// surface bits.
+    /// Rooms the game holds and this map does not: every cell the map calls external is offered to the
+    /// game, and each connected airtight region is a compartment the model lost. Diagnostic only —
+    /// the fix belongs in the surface bits. See thermal-model.md, Diagnostics.
     /// </summary>
     public static class UnmappedRooms
     {

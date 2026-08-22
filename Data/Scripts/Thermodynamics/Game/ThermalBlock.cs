@@ -391,10 +391,6 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Re-reads the block's mass. Build progress and damage both change it, and thermal mass is
-        /// the denominator of every temperature change.
-        /// </summary>
-        /// <summary>
         /// This block's place in its grid's mass-sweep rota, or -1 when it is not in one.
         /// Maintained by <see cref="ThermalGrid"/>; nothing else should write it.
         /// </summary>
@@ -415,12 +411,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Re-reads this block's thermal properties from the catalogue, after a profile's overlay
-        /// changed what its definition says.
-        ///
-        /// The model holds the properties by reference through <see cref="BlockInstance.Model"/>,
-        /// so a rebuilt catalogue entry reaches this block only by asking for it again — and the
-        /// node's cached capacity and generation are derived from it, so both are recomputed.
+        /// Re-reads this block's thermal properties from the catalogue. The model holds them by
+        /// reference, so a rebuilt entry reaches the block only by asking again, and the node's cached
+        /// capacity and generation are derived from it.
         /// </summary>
         public void RefreshProperties()
         {

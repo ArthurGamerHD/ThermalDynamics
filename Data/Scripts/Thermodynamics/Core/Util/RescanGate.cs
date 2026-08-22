@@ -1,16 +1,9 @@
 namespace Thermodynamics.Core
 {
     /// <summary>
-    /// A periodic scan that runs only when its subject has changed since the last one.
-    ///
-    /// The lost-room scan is the case it was written for: a diagnostic that walks a grid's unmapped
-    /// space with one call into the game per external cell, on a slow cadence, for as long as
-    /// telemetry is collecting. Its answer is a function of the room map, and a fleet at anchor
-    /// does not remap — so on a 292-grid dump it was re-deriving the same answer for every grid
-    /// every thirty seconds, all inside one frame's after-step.
-    ///
-    /// The version is whatever the caller's subject counts with: a completed-pass count, a build
-    /// number, a revision. Equal means nothing to find.
+    /// A periodic scan that runs only when its subject has changed since the last one. The version is
+    /// whatever the caller counts with — a completed-pass count, a build number, a revision — and
+    /// equal means there is nothing to find.
     /// </summary>
     public class RescanGate
     {

@@ -11,16 +11,10 @@ using VRageMath;
 namespace Thermodynamics
 {
     /// <summary>
-    /// The numeric readout accompanying the debug overlay, for the grid being looked at in the
-    /// currently selected view.
-    ///
-    /// The overlay locates values by colouring geometry; this reports their magnitudes. Each view
-    /// has its own set of figures, chosen to disambiguate the picture on screen — the solar view
-    /// reports occlusion, since a uniformly cold grid at noon is either shadowed or has solar
-    /// heating disabled.
-    ///
-    /// Aggregates are swept from the node list, costing a pass over the grid. That pass runs a few
-    /// times a second rather than per frame.
+    /// The numeric readout beside the debug overlay: the overlay locates values by colouring geometry
+    /// and this reports their magnitudes, with a set of figures per view chosen to disambiguate the
+    /// picture. Swept from the node list a few times a second rather than per frame.
+    /// See configuration.md, The block overlay.
     /// </summary>
     public static class ThermalDebugPanel
     {

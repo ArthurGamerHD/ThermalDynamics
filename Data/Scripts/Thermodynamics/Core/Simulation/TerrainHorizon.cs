@@ -4,18 +4,10 @@ using VRageMath;
 namespace Thermodynamics.Core
 {
     /// <summary>
-    /// Whether planetary terrain stands between a point and the sun.
-    ///
-    /// The planet test treats a world as a smooth sphere, which covers night and orbit but not local
-    /// relief: a base in a canyon stays in shadow for some time after the sphere test reports it
-    /// lit, and a grid parked against a cliff can be shaded all day.
-    ///
-    /// This walks out along the sun ray and tests at each step whether the ray is still above the
-    /// terrain. A standard horizon walk, and cheap for the same reason the sphere test is: it reads
-    /// only the ground height at a point and never touches physics.
-    ///
-    /// Samples are spaced geometrically, since nearby terrain accounts for almost all real shadowing
-    /// and geometric spacing concentrates the samples there.
+    /// Whether planetary terrain stands between a point and the sun — everything the smooth-sphere
+    /// planet test ignores, such as the canyon a base sits in. A horizon walk out along the sun ray,
+    /// reading only ground heights and never physics, sampled geometrically because nearby terrain is
+    /// almost all of the real shadowing. See configuration.md, External shadow.
     /// </summary>
     public static class TerrainHorizon
     {
