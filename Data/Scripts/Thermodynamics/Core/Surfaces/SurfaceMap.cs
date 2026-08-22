@@ -16,13 +16,9 @@ namespace Thermodynamics.Core
         private readonly Dictionary<Vector3I, int> states = new Dictionary<Vector3I, int>(Vector3I.Comparer);
 
         /// <summary>
-        /// The same cells as <see cref="states"/>, with every block read as if its state were
-        /// sealing, so a door is taken as shut.
-        ///
-        /// Two layers because two callers ask different questions. Exposure asks what is sealing
-        /// now, since an open doorway radiates. The room mapper asks how the grid is built, since a
-        /// door cycling must not change the grid's shape and force a new flood fill. Both layers are
-        /// written from the same block in the same call, never independently.
+        /// The same cells as <see cref="states"/> with every door read as shut, because exposure asks
+        /// what is sealing now and the room mapper asks how the grid is built. Written from the same
+        /// block in the same call, never independently. See thermal-model.md, Two layers.
         /// </summary>
         private readonly Dictionary<Vector3I, int> structure = new Dictionary<Vector3I, int>(Vector3I.Comparer);
 
@@ -197,13 +193,9 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Counts, per face direction, how many of a block's cell faces are open to the outside.
-        ///
-        /// A face counts when it lies on the block's boundary, the space beyond is external, and
-        /// the neighbour does not seal against it. A mount joint does not disqualify a face: a
-        /// joint against a sealing block is already rejected by the sealing test, so the only
-        /// joints left are against blocks that do not seal, and those do not stop a face seeing
-        /// the sky.
+        /// Counts, per face direction, how many of a block's cell faces are open to the outside: on the
+        /// boundary, external beyond, and not sealed against. A mount joint is deliberately not a
+        /// rejection. See thermal-model.md, Exposure.
         /// </summary>
         public void GetExposedFaces(BlockInstance block, RoomMap rooms, int[] resultsByFace)
         {
@@ -250,15 +242,9 @@ namespace Thermodynamics.Core
                         // Something on the other side seals this face off.
                         if (CellSurface.NeighbourAirtight(state, face)) continue;
 
-                        // A mount joint is deliberately *not* a rejection. Every joint against a
-                        // block that seals is already gone above, so the only faces a mount test
-                        // could reach are those bolted to something that does not seal — a
-                        // grating, a catwalk, a ladder. Air floods through those, which is why the
-                        // room map calls the space beyond external; a hull panel under a catwalk
-                        // still radiates and still takes sunlight. The joint conducts as well,
-                        // which is what a catwalk bolted to a hull actually does.
-                        //
-                        // The space beyond must reach the outside.
+                        // The space beyond must reach the outside. A mount joint is deliberately not
+                        // tested: the sealing test above already took every joint that buries a face,
+                        // so a mount test could only reach a hull panel under a catwalk.
                         if (rooms != null && !rooms.IsExternal(neighbour)) continue;
 
                         count++;
@@ -270,16 +256,9 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Counts, per room, how many of a block's cell faces look into that room's air.
-        ///
-        /// A different test from <see cref="GetExposedFaces"/>: a face is exposed when it can
-        /// radiate to the sky, but it contacts room air whenever there is air on the other side,
-        /// sealed or not — the inner skin of a bulkhead both seals the compartment and warms it. So
-        /// this requires only that the neighbouring cell hold no block and belong to a room
-        /// currently holding air.
-        ///
-        /// The caller owns and clears <paramref name="results"/>. A block bounds one or two rooms,
-        /// so a short list is used rather than a dictionary.
+        /// Counts, per room, how many of a block's cell faces look into that room's air — a different
+        /// test from <see cref="GetExposedFaces"/>, since a bulkhead's inner skin both seals the
+        /// compartment and warms it. The caller owns and clears <paramref name="results"/>.
         /// </summary>
         public void GetRoomContacts(BlockInstance block, RoomMap rooms, List<RoomContact> results)
         {

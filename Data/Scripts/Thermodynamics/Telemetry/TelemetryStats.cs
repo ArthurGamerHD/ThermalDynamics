@@ -267,34 +267,18 @@ namespace Thermodynamics
     }
 
     /// <summary>
-    /// What the mod cost against the session clock, from timings that nest inside one another.
-    ///
-    /// <para>
-    /// The cost table measures the same work at several depths. <c>session frame</c> wraps the
-    /// session component's whole per-frame call, which is what drives every grid, so
-    /// <c>grid simulation</c> is contained by it, and the <c>of which</c> rows are contained by
-    /// that in turn. Only paths the engine enters independently are roots: the frame itself, and
-    /// the save and load callbacks, which the engine raises outside the frame.
-    /// </para>
-    ///
-    /// <para>
-    /// Summing a row and the row it sits inside charges the same milliseconds twice. Doing that to
-    /// <c>grid simulation</c>, which accounts for nearly all of a frame, reported a mod costing a
-    /// third of real time as costing two thirds of it — and would report one costing 60 % as
-    /// costing more than all the time there was.
-    /// </para>
+    /// What the mod cost against the session clock, from timings that nest inside one another. Only
+    /// paths the engine enters independently are roots — the session frame, and the save and load
+    /// callbacks it raises outside one — because summing a row and the row containing it charges the
+    /// same milliseconds twice. See telemetry.md, What the stages leave over.
     /// </summary>
     public static class CostRollup
     {
         /// <summary>
-        /// Total wall clock the mod is responsible for, over the roots only.
-        ///
-        /// It takes no grid-simulation argument by construction: the figure is nested inside
-        /// <paramref name="sessionFrame"/> and there is no correct way to add it.
-        ///
-        /// <para><paramref name="build"/> is a root for the opposite reason: a grid's one-off build
-        /// runs from the entity's own callback, so nothing else here contains it. It was left out
-        /// of the total entirely until it was given a row.</para>
+        /// Total wall clock the mod is responsible for, over the roots only. It takes no
+        /// grid-simulation argument by construction, since that nests inside
+        /// <paramref name="sessionFrame"/>; <paramref name="build"/> is a root because a grid's one-off
+        /// build runs from the entity's own callback and nothing here contains it.
         /// </summary>
         public static double MeasuredMilliseconds(
             double sessionFrame, double save, double load, double build)
@@ -303,12 +287,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// What a parent row cost that none of its children claimed.
-        ///
-        /// Reported rather than clamped. A large positive figure means work nobody has instrumented
-        /// — which is what a field dump showed for the observation that runs around a step — and a
-        /// negative one means two children timed the same milliseconds, which is a defect in the
-        /// instrumentation and is not made to disappear by taking a maximum with zero.
+        /// What a parent row cost that none of its children claimed, reported rather than clamped: a
+        /// large positive figure is work nobody instrumented, and a negative one is two children
+        /// timing the same milliseconds, which a maximum with zero would hide.
         /// </summary>
         public static double Unattributed(double parent, double children)
         {

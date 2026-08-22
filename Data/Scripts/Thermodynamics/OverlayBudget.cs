@@ -4,23 +4,10 @@ using VRageMath;
 namespace Thermodynamics
 {
     /// <summary>
-    /// How much of a grid the block overlay draws.
-    ///
-    /// Every box is six transparent quads and twelve lines, drawn every frame with no occlusion
-    /// test, so a capital ship of forty thousand blocks asks the renderer for over half a million
-    /// billboards a frame and the game stops being playable. Two mechanisms bound that.
-    ///
-    /// **Off-screen boxes are dropped.** The overlay scales each box about the eye onto a band in
-    /// front of the near plane, which preserves where a block appears but not whether it appears at
-    /// all: a block behind the player's shoulder still costs its billboards. A box outside the
-    /// camera's cone contributes nothing to the picture, so it is not drawn. This changes no pixel.
-    ///
-    /// **What is left is bounded by a radius.** When a grid still exceeds the budget, the nearest
-    /// part of it is drawn and the radius is fitted, frame by frame, to whatever keeps the count
-    /// near the budget. It converges in a few frames after the camera moves, and lifts back to
-    /// unbounded on a grid small enough not to need it.
-    ///
-    /// Free of any Space Engineers type beyond VRage.Math, so the fit and the cull are testable.
+    /// How much of a grid the block overlay draws, bounded two ways: boxes outside the camera's cone
+    /// are dropped, which changes no pixel, and what is left is held to <c>DebugOverlayMaxBoxes</c> by
+    /// a radius fitted each frame. Free of any Space Engineers type beyond VRage.Math, so both are
+    /// testable. See configuration.md, The block overlay.
     /// </summary>
     public class OverlayBudget
     {
@@ -82,13 +69,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Whether a box centred <paramref name="distance"/> metres from the eye is drawn, counting
-        /// the decision. Call once per candidate, after the view cull.
-        ///
-        /// The radius decides; the box count is a hard stop behind it, holding the frame's cost
-        /// while the radius is still being fitted. Counting what fell inside the radius either way
-        /// is what the fit reads, so a frame the hard stop bound still measures the volume rather
-        /// than the stop.
+        /// Whether a box centred <paramref name="distance"/> metres from the eye is drawn, counting the
+        /// decision. The radius decides and the box count is a hard stop behind it; what fell inside
+        /// the radius is counted either way, so the fit measures the volume rather than the stop.
         /// </summary>
         public bool Accept(double distance)
         {
@@ -156,13 +139,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Whether a box of the given radius, centred at <paramref name="delta"/> from the eye, is
-        /// inside the camera's view cone.
-        ///
-        /// The cone is the one that contains the frustum, so this only rejects boxes that are
-        /// certainly off screen — a box just outside a corner of the screen is kept. Exact
-        /// sphere-against-cone: the box's bounding sphere is outside when its distance from the cone
-        /// surface, measured in the plane through the axis and the box, exceeds its own radius.
+        /// Whether a box of the given radius at <paramref name="delta"/> from the eye is inside the
+        /// camera's view cone — the cone containing the frustum, so this rejects only what is
+        /// certainly off screen. Exact sphere-against-cone.
         /// </summary>
         public static bool InView(
             ref Vector3D delta, double boxRadius, ref Vector3D forward, double sinHalfAngle, double cosHalfAngle)

@@ -12,15 +12,9 @@ using VRage.Utils;
 namespace Thermodynamics
 {
     /// <summary>
-    /// Thermal readouts in the terminal.
-    ///
-    /// Every functional block reports its own temperature, what is acting on it, and its grid's
-    /// summary in the terminal's detail info panel. The only readout requiring no third-party HUD
-    /// library and no held key.
-    ///
-    /// Written to the detail panel rather than a control because the content is a paragraph. A
-    /// terminal text box is a one-line editable field: given fifteen lines it renders about one and
-    /// a half and clips the rest.
+    /// Thermal readouts in the terminal's detail info panel — the only readout needing no HUD library
+    /// and no held key. The detail panel rather than a control, because a terminal text box is a
+    /// one-line field that clips a paragraph. See blocks.md, The terminal readout.
     /// </summary>
     public static class ThermalTerminal
     {
@@ -73,13 +67,8 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Adds the throttle slider to a coolant pump or a heat pump.
-        ///
-        /// Both devices have carried a 0..1 setting since they were written — a pump's speed and a
-        /// heat pump's share of its rating — read by the flow and power arithmetic, printed by the
-        /// panel below, and settable by nothing at all. The controls are built once and shown on
-        /// the blocks they belong to, which is how the terminal API expects a mod to add one: a
-        /// control is global to a block *interface*, so it carries its own visibility test.
+        /// Adds the throttle slider to a coolant pump or a heat pump. Built once and carrying its own
+        /// visibility test, because a terminal control is global to a block *interface*.
         /// </summary>
         private static void AppendThrottle(IMyTerminalBlock block, List<IMyTerminalControl> controls)
         {
@@ -244,12 +233,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// The block's thermal state, for the terminal's detail pane.
-        ///
-        /// Written to be dense and to say only what applies to the block in front of you. The pane is
-        /// a few lines tall and shares them with whatever else the block reports, so a line that reads
-        /// "Waste heat: 0.0 kW" on a block that generates none is a line spent telling you nothing.
-        /// Every section below is conditional on being relevant to this block.
+        /// The block's thermal state, for the terminal's detail pane. Every section is conditional: the
+        /// pane is a few lines tall and shares them, so a line reading "Waste heat: 0.0 kW" on a block
+        /// that makes none is a line spent saying nothing.
         /// </summary>
         private static StringBuilder Describe(IMyTerminalBlock block)
         {
@@ -351,14 +337,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// What this coolant block's loop is doing, or why it has none. Nothing for a block with no
-        /// plumbing.
-        ///
-        /// The coolant temperature is given as a range rather than a figure, because with the fluid
-        /// carried round in parcels a ring is not one temperature: the spread between the coolant
-        /// arriving somewhere hot and the coolant leaving somewhere cold is what says whether the loop
-        /// is circulating. A wide spread on a running pump means the flow cannot keep up; a wide
-        /// spread with no flow means nothing is circulating at all.
+        /// What this coolant block's loop is doing, or why it has none. The coolant temperature is a
+        /// range rather than a figure, because a ring carried in parcels is not one temperature and
+        /// the spread is what says whether it is circulating.
         /// </summary>
         private static void AppendCoolant(ThermalBlock bound)
         {
