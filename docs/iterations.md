@@ -28,7 +28,7 @@ can be recovered for any row here by reading that file at the row's commit.
 | 6 | 2026-08-20 | `f411f7d` | 1,359 | **50 s** | one ungated corpus test was 4 m 57 s of every run since the fixture landed; rows 4 and 5 carry it. The `speed!=slow` lane is 14 s. |
 | — | | `f411f7d..c18e3e4` | | | **20 commits recorded no row.** The wind burial audit, the per-planet climates, the block heat index, the balance bench and the first full corpus survey landed between rows 6 and 7. |
 | 7 | 2026-08-22 | `c18e3e4` | 1,467 | 51 s | where this pass started; +108 across those 20 commits |
-| 8 | 2026-08-22 | *(this pass)* | 1,512 | 51 s | +45. A defragmentation pass: shipped code is **366 lines shorter**, and every test added is a check on something that had drifted rather than a new claim about the physics. |
+| 8 | 2026-08-22 | *(this pass)* | 1,517 | 52 s | +50. A defragmentation pass: shipped code is **343 lines shorter** with nothing left in it that nothing calls, and nearly every test added checks something that had drifted rather than making a new claim about the physics. |
 
 ## The solver
 
