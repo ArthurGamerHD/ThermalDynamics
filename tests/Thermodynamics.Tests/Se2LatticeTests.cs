@@ -8,33 +8,14 @@ using VRageMath;
 namespace Thermodynamics.Tests
 {
     /// <summary>
-    /// Space Engineers 2 keeps blocks in a different shape, and the simulation has to survive it.
+    /// The one constraint SE2's lattice imposes: **nothing whose cost matters may be proportional to a
+    /// block's volume**, since a 5 m block spans 8,000 cells there against one here. Contact area,
+    /// face area, surface area and conduction depth all fall out of two integer AABBs, and these pin
+    /// that end to end on mixed-size grids.
     ///
     /// <para>
-    /// The finding that drives this is in <c>docs/engine-notes.md</c>: SE2 blocks are integer
-    /// <c>BoundingBoxI</c> on a single fine lattice, and eight block sizes ship — 0.25, 0.5, 1.0,
-    /// 1.25, 1.5, 2.5, 3.5 and 5.0 m. Their greatest common divisor is 25 cm, so on one lattice a
-    /// 5 m block spans <b>20 x 20 x 20 = 8,000 cells</b>, against the one cell an SE1 large-grid
-    /// armour block spans. Keen's own definitions store occupied cells as <em>boxes</em> rather
-    /// than as a list, and the engine never enumerates a block's cells.
-    /// </para>
-    ///
-    /// <para>
-    /// So the constraint is not "support a smaller grid size". It is that <b>nothing whose cost
-    /// matters may be proportional to a block's volume</b>. The geometry answers that: contact
-    /// area, face area, surface area and conduction depth all fall out of two integer AABBs in
-    /// constant time. These tests pin that, pin the mixed-size lattice working end to end, and —
-    /// because this suite was written while the solver was being rebuilt around incremental
-    /// topology and a step spread across frames — pin that those changes hold on SE2-shaped grids
-    /// and not only on the one-cell blocks the rest of the suite is built from.
-    /// </para>
-    ///
-    /// <para>
-    /// What these do <em>not</em> claim is that SE2 is supported today. Block <em>storage</em> is
-    /// still one dictionary entry per occupied cell in <c>GridModel</c> and <c>SurfaceMap</c>, and
-    /// <c>BlockInstance</c> still materialises a <c>Vector3I[]</c> of every cell — 8,000 of them
-    /// for one 5 m block. That is the open item in
-    /// <c>docs/scale-design.md</c>, Implementation status,, and it is a storage problem rather than a model one.
+    /// **They do not claim SE2 is supported.** Block *storage* is still per cell, which is the open
+    /// item — see engine-notes.md and scale-design.md, Implementation status.
     /// </para>
     /// </summary>
     public class Se2LatticeTests

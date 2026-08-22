@@ -254,28 +254,11 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// The parser that runs in game knows every property name the offline one does.
-        ///
-        /// <para>
-        /// There are two readers of the same file format and they are not one piece of code:
-        /// `ThermalCellDefinition` reads a live definition through Definition Extensions and
-        /// cannot be linked here, and `ShippedBlocks` reads the XML directly so the harness can
-        /// build from what the mod ships. A name one knows and the other does not is a property
-        /// that behaves one way in every test in this repository and another way in the game.
-        /// </para>
-        ///
-        /// <para>
-        /// <c>HeatSourceWatts</c> was exactly that for as long as it existed. The test above
-        /// checked the offline reader and its own summary said why that mattered; nothing checked
-        /// the other side, and the other side had never been given the name. A mod author
-        /// declaring a smouldering wreck got 1,234 W here and 0 W in a world.
-        /// </para>
-        ///
-        /// <para>
-        /// Textual, because the in-game reader cannot be loaded into this project — the same
-        /// arrangement `ConfigurationDocTests` uses on `Settings.cs`, and enough for the failure
-        /// it guards against, which is a name present in one list and absent from the other.
-        /// </para>
+        /// The parser that runs in game knows every property name the offline one does, in both
+        /// directions (`D3`). A name one reader has and the other does not is a property that behaves
+        /// one way in every test here and another way in a world. Textual, because the in-game reader
+        /// cannot be linked into this project — which is the same reason the two readers exist.
+        /// See known-issues.md, One definition read by two parsers drifts.
         /// </summary>
         [Fact]
         public void BothParsersKnowTheSamePropertyNames()

@@ -8,33 +8,15 @@ namespace Thermodynamics.Tests
 {
     /// <summary>
     /// One pass over every ship in the corpus: built once, run through each distinct scenario once,
-    /// with every physical invariant evaluated against the shared outcomes and every violation
-    /// reported by name.
+    /// with every invariant evaluated against the shared outcomes and every violation reported by
+    /// name (`M8`). Five stepped runs a ship where separate walks cost twelve, most of the difference
+    /// being scenarios that are the same simulation under two names.
     ///
     /// <para>
-    /// **Why one pass.** The invariants used to be separate walks, and each one independently
-    /// re-parsed, re-built and re-simulated all eight thousand ships. Measured against the data
-    /// they produced, the overlap was worse than the duplication: <c>idle</c> and
-    /// <c>vacuum-shadow</c> are the same simulation under two names — identical to the millikelvin
-    /// across every ship run under both — and three other scenarios were each simulated by two
-    /// different walks. Twelve stepped runs per ship where five carry all the information.
-    /// </para>
-    ///
-    /// <para>
-    /// **Why <c>all-peak</c> is not here.** It runs every consumer, every tool, every thruster in
-    /// all six directions and every reactor at plate rating — a state no ship can be in. Across
-    /// 135 banked corpus rows it put 96 % of ships over critical, and of 79 rows the balance
-    /// invariant received, it could judge 3: a grid with melting blocks never settles, so the
-    /// ceiling scenario starved the very invariant it was run for. It remains in
-    /// <see cref="Battery"/> for synthetic rigs, where "where does heat concentrate" is the
-    /// question; on a population it answers nothing.
-    /// </para>
-    ///
-    /// <para>
-    /// The cost of merging is that a failure here does not name a walk. It does better: each
-    /// invariant collects its violations into its own named list, all of them are asserted at the
-    /// end, and the message says which claims broke on which ships — including several at once,
-    /// which the separate walks could never report from a single run.
+    /// **<c>all-peak</c> is deliberately absent**: it puts 96 % of ships over critical, and a melting
+    /// grid never settles, so it starves the balance invariant it would be run for. Every invariant
+    /// here asserts a non-zero judged count (`E8`).
+    /// See balance-lab.md, and balance.md, The population.
     /// </para>
     /// </summary>
     public class CorpusSurvey

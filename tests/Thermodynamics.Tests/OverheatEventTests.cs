@@ -5,34 +5,14 @@ using Thermodynamics.Harness;
 namespace Thermodynamics.Tests
 {
     /// <summary>
-    /// One overheating block produces <b>one</b> overheat event a step, not one per substep.
+    /// One overheating block produces <b>one</b> overheat event a step, not one per substep — because
+    /// three consumers read the list's length as a count of blocks rather than summing it, and the
+    /// harness's batched path keeps every step's events for a whole run.
     ///
     /// <para>
-    /// The damage check runs inside the apply pass, which runs once per substep, so a block over
-    /// its rating used to file an event every time — eleven of them on a grid taking eleven
-    /// substeps. The total damage was right, because the consumers sum it, but three things that
-    /// read the list rather than summing it were not:
-    /// </para>
-    ///
-    /// <list type="bullet">
-    /// <item><c>ThermalGridSimulation.CriticalBlocks</c>, which is <c>Overheats.Count</c> and is
-    /// reported as a count of blocks.</item>
-    /// <item><c>ApplyOverheatDamage</c>, which resolved the block and called <c>DoDamage</c> once
-    /// per event — eleven engine calls a step for one burning block, and eleven telemetry
-    /// records.</item>
-    /// <item><c>ScenarioRunner</c>'s <c>OverheatingBlocks</c> column, same figure.</item>
-    /// </list>
-    ///
-    /// <para>
-    /// And the harness's batched step path keeps every step's events for the whole run, so the
-    /// substep factor multiplied a list that was already proportional to run length. A driven
-    /// 4,000-step sweep on a 43,232-block hull was OOM-killed at 14 GB.
-    /// </para>
-    ///
-    /// <para>
-    /// The fix is to accumulate per node and file once when the step ends. That must not change
-    /// what a block actually takes, so the first test here is the one that matters: total damage
-    /// over a run, against the same run before the change.
+    /// The first test here is the one that matters: **total damage over a run must not change**, since
+    /// that is what the accumulation could have broken (`D8`).
+    /// See benchmarks.md, One overheat event per block per step.
     /// </para>
     /// </summary>
     public class OverheatEventTests

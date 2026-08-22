@@ -9,37 +9,15 @@ using VRageMath;
 namespace Thermodynamics.Harness
 {
     /// <summary>
-    /// What a substep costs, split into what it spends per node, per conduction link and per
-    /// exposed face.
-    ///
-    /// The step budget bounds a step by <c>MaxElementVisitsPerStep</c> — substeps times links — while
-    /// a substep also runs the environment pass, which is per node and scales with how much of
-    /// that node is exposed. The budget cannot see any of that, so two grids with the same link
-    /// count and different shapes are granted the same budget for very different work. This lab
-    /// measures the coefficients so the budget can charge for what a substep actually does.
+    /// What a substep costs, split into what it spends per node, per conduction link and per exposed
+    /// face — the coefficients <c>MaxElementVisitsPerStep</c> charges in.
     ///
     /// <para>
-    /// **Two fits, not one, and the reason is worth stating.** The first attempt fitted
-    /// <c>cost = a*nodes + b*links</c> with the environment on and produced nonsense — 0.37 ns a
-    /// link, a negative r², and a solid box measuring *cheaper* than a stick with a third of the
-    /// links. On a cube lattice every cell face is either bonded or exposed, so
-    /// <c>faces ≈ 6*nodes − 2*links</c>: exposure and link count are very nearly collinear across
-    /// any family of shapes, and no fit can separate them. The box was not cheaper because links
-    /// are free; it was cheaper because its interior blocks have no exposed faces to integrate.
-    /// </para>
-    ///
-    /// <para>
-    /// So the environment is separated by *differencing* instead. Each shape is measured twice,
-    /// once with radiation, convection and solar off and once with them on. The conduction-only
-    /// figure fits nodes and links, which are independent. The difference between the two fits
-    /// exposed faces alone, through the origin. Each fit then has one job and no collinearity.
-    /// </para>
-    ///
-    /// <para>
-    /// **This machine is not the game.** The harness is .NET 9 and the game is .NET 4.8, and a
-    /// field report has measured the same solver about three times slower in game. What transfers
-    /// is the *ratios*, which are arithmetic per element rather than throughput, and the ratios
-    /// are what a budget needs. Absolute nanoseconds here are a floor, not a prediction.
+    /// **Two fits, not one.** On a cube lattice <c>faces ≈ 6*nodes − 2*links</c>, so exposure and link
+    /// count are collinear and no single fit can separate them; the environment is separated by
+    /// differencing each shape measured twice instead. **Absolute nanoseconds here are a floor, not a
+    /// prediction** — the harness is .NET 9 and the game is .NET 4.8, so only the ratios transfer.
+    /// See benchmarks.md, What a substep costs.
     /// </para>
     /// </summary>
     public static class ElementCostLab
