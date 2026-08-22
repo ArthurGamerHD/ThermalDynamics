@@ -41,7 +41,7 @@ namespace Thermodynamics.Tests
         {
             foreach (string typeId in ProducerTypes)
             {
-                BlockThermalDerivation.BlockFunction function = BlockThermalDerivation.FunctionOf(typeId);
+                ShippedBlocks.Function function = ShippedBlocks.FunctionOf(typeId);
 
                 Assert.True(function.ProducerWasteEnergy > 0f,
                     typeId + " carries ProducerWasteEnergy " + function.ProducerWasteEnergy

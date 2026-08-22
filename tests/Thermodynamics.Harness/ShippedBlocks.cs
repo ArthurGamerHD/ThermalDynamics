@@ -149,12 +149,10 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
-        /// The properties a block of this object-builder type resolves to when it has no entry of
-        /// its own — the mod's per-type entry if Cubes.xml carries one, otherwise the environment
-        /// default.
+        /// The raw type entry for an object-builder type, or the environment default.
         ///
-        /// This is how every vanilla block in the game is handed thermal properties without being
-        /// named, so it is also the only honest way to ask what a vanilla reactor will be given.
+        /// A type entry declares only what a block's function decides, so the material fields here
+        /// are placeholders. Use <see cref="DeriveWithFunction"/> to ask what a real block gets.
         /// </summary>
         public static BlockThermalProperties ThermalForType(string typeId)
         {
@@ -298,6 +296,61 @@ namespace Thermodynamics.Harness
             return definition;
         }
 
+        /// <summary>What a block type does with power, from its Cubes.xml type entry.</summary>
+        public struct Function
+        {
+            public float ProducerWasteEnergy;
+            public float ConsumerWasteEnergy;
+            public float ExposedSurfaceMultiplier;
+            public float OverheatDamagePerKelvin;
+        }
+
+        /// <summary>The function of a type with no entry: an ordinary block that trickles.</summary>
+        public static readonly Function Ordinary = new Function
+        {
+            ProducerWasteEnergy = 0.05f,
+            ConsumerWasteEnergy = 0.05f,
+            ExposedSurfaceMultiplier = 1f,
+            OverheatDamagePerKelvin = 1f,
+        };
+
+        private static Dictionary<string, Function> functionCache;
+
+        /// <summary>
+        /// The function of a block type, or <see cref="Ordinary"/> when Cubes.xml names none.
+        ///
+        /// This is the harness's half of what Definition Extensions does in the game: the values
+        /// used to be a table in <c>BlockThermalDerivation</c> and are now data, so both sides read
+        /// the same file and a player can override either.
+        /// </summary>
+        public static Function FunctionOf(string typeId)
+        {
+            All();
+            Function function;
+            return typeId != null && functionCache.TryGetValue(typeId, out function)
+                ? function : Ordinary;
+        }
+
+        /// <summary>Every type Cubes.xml gives a function to.</summary>
+        public static ICollection<string> FunctionTypes()
+        {
+            All();
+            return functionCache.Keys;
+        }
+
+        /// <summary>A block's material properties with its type's function laid over them.</summary>
+        public static BlockThermalProperties DeriveWithFunction(IList<BlockComponent> components,
+            string typeId)
+        {
+            BlockThermalProperties properties = BlockThermalDerivation.Derive(components);
+            Function function = FunctionOf(typeId);
+            properties.ProducerWasteEnergy = function.ProducerWasteEnergy;
+            properties.ConsumerWasteEnergy = function.ConsumerWasteEnergy;
+            properties.ExposedSurfaceMultiplier = function.ExposedSurfaceMultiplier;
+            properties.OverheatDamagePerKelvin = function.OverheatDamagePerKelvin;
+            return properties.Clamp();
+        }
+
         /// <summary>
         /// Attaches thermal properties from Cubes.xml, resolving as the game's Definition
         /// Extensions do: a block's own entry if it has one, otherwise the entry for its object
@@ -309,6 +362,8 @@ namespace Thermodynamics.Harness
                 new Dictionary<string, BlockThermalProperties>(StringComparer.Ordinal);
             Dictionary<string, BlockThermalProperties> byType =
                 new Dictionary<string, BlockThermalProperties>(StringComparer.Ordinal);
+            Dictionary<string, Function> functions =
+                new Dictionary<string, Function>(StringComparer.Ordinal);
             BlockThermalProperties fallback = null;
 
             XDocument cubes = XDocument.Load(Path.Combine(RepoRoot(), "Data", "Cubes.xml"));
@@ -325,7 +380,17 @@ namespace Thermodynamics.Harness
                 if (subtype == "DefaultThermodynamics")
                 {
                     if (type == "EnvironmentDefinition") fallback = properties;
-                    else byType[type] = properties;
+                    else
+                    {
+                        byType[type] = properties;
+                        functions[type] = new Function
+                        {
+                            ProducerWasteEnergy = properties.ProducerWasteEnergy,
+                            ConsumerWasteEnergy = properties.ConsumerWasteEnergy,
+                            ExposedSurfaceMultiplier = properties.ExposedSurfaceMultiplier,
+                            OverheatDamagePerKelvin = properties.OverheatDamagePerKelvin,
+                        };
+                    }
                 }
                 else
                 {
@@ -335,6 +400,7 @@ namespace Thermodynamics.Harness
 
             if (fallback == null) fallback = BlockThermalProperties.Default();
             byTypeCache = byType;
+            functionCache = functions;
             fallbackCache = fallback;
 
             foreach (Definition definition in blocks.Values)
@@ -354,6 +420,12 @@ namespace Thermodynamics.Harness
                     definition.Thermal = fallback;
                 }
             }
+        }
+
+        /// <summary>The offline parser, for a test that checks it knows a property.</summary>
+        public static BlockThermalProperties ParseThermalForTest(XElement definition)
+        {
+            return ParseThermal(definition);
         }
 
         private static BlockThermalProperties ParseThermal(XElement definition)

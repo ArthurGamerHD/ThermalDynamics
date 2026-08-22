@@ -271,9 +271,8 @@ namespace Thermodynamics
 
             // The planet's own thermal properties, which Data/Planets.xml now supplies per world
             // rather than one earthlike entry standing in for all eight.
-            PlanetThermalProperties properties = ThermalBlockCatalog.ToPlanetProperties(
-                planet.Definition(),
-                entity.DefinitionId.HasValue ? entity.DefinitionId.Value.SubtypeName : "");
+            PlanetThermalProperties properties =
+                ThermalBlockCatalog.ToPlanetProperties(planet.Definition());
 
             for (int s = 0; s < Sites.Count; s++)
             {

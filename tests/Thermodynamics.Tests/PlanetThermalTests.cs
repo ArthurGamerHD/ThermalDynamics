@@ -4,6 +4,7 @@ using System.IO;
 using System.Text.RegularExpressions;
 using Thermodynamics.Core;
 using Thermodynamics.Harness;
+using System.Xml.Linq;
 using Xunit;
 
 namespace Thermodynamics.Tests
@@ -279,20 +280,58 @@ namespace Thermodynamics.Tests
 
         // ---- the generated file --------------------------------------------------------------------
 
+        /// <summary>
+        /// Data/Planets.xml is the source of truth, so this checks the file rather than comparing it
+        /// to the generator. PlanetLab is a one-time rebalance tool, not the authority.
+        /// </summary>
         [Fact]
-        public void TheShippedPlanetsFileIsWhatThisCodeGenerates()
+        public void TheShippedPlanetsFileIsCompleteAndReadable()
         {
-            // Data/Planets.xml is generated, not typed. If someone edits it by hand this fails, which
-            // is the point: the reasoning lives in code beside these tests, and a figure that cannot
-            // be regenerated is a figure nobody can check.
             string path = Path.Combine(RepoRoot(), "Data", "Planets.xml");
-            string onDisk = File.ReadAllText(path).Replace("\r\n", "\n");
-            string generated = PlanetLab.Xml().Replace("\r\n", "\n");
+            string onDisk = File.ReadAllText(path);
 
-            Assert.True(onDisk == generated,
-                "Data/Planets.xml has drifted from PlanetLab.Xml(). Regenerate it with:\n"
-                + "  dotnet run --project tests/Thermodynamics.Sim -- planets --write Data/Planets.xml");
+            Assert.Contains("<SubtypeId>DefaultThermodynamics</SubtypeId>", onDisk);
+
+            List<PlanetLab.World> worlds = PlanetLab.Vanilla();
+            for (int i = 0; i < worlds.Count; i++)
+            {
+                Assert.Contains("<SubtypeId>" + worlds[i].Subtype + "</SubtypeId>", onDisk);
+            }
+
+            // Every entry has to carry every property the game reads, for the reason Cubes.xml does:
+            // an omitted value arrives as zero rather than as the fallback's number.
+            foreach (XElement definition in XDocument.Parse(onDisk).Descendants("Definition"))
+            {
+                string subtype = (string)definition.Element("Id").Element("SubtypeId");
+                HashSet<string> declared = new HashSet<string>();
+                foreach (XElement value in definition.Descendants("Decimal"))
+                {
+                    XAttribute key = value.Attribute("Name");
+                    if (key != null) declared.Add(key.Value);
+                }
+
+                foreach (string required in PlanetProperties)
+                {
+                    Assert.True(declared.Contains(required), subtype + " omits " + required);
+                }
+            }
         }
+
+        /// <summary>Every property a planet entry must carry.</summary>
+        private static readonly string[] PlanetProperties =
+        {
+            "DayTemperature",
+            "NightTemperature",
+            "PoleTemperatureDrop",
+            "AmbientLagSeconds",
+            "AmbientLapseRate",
+            "UndergroundTemperature",
+            "UndergroundDampingDepth",
+            "CoreTemperature",
+            "SealevelDeadzone",
+            "SolarDecay",
+            "ConvectionCoefficient",
+        };
 
         [Fact]
         public void TheFileCarriesAnEntryForEveryShippedWorldPlusTheFallback()

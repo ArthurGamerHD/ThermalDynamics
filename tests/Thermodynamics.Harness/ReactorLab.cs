@@ -83,7 +83,7 @@ namespace Thermodynamics.Harness
         /// </summary>
         public static List<Row> Shipped()
         {
-            return SweepAt(new float[] { BlockThermalDerivation.FunctionOf("Reactor").ProducerWasteEnergy });
+            return SweepAt(new float[] { ShippedBlocks.FunctionOf("Reactor").ProducerWasteEnergy });
         }
 
         /// <summary>

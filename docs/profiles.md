@@ -43,48 +43,21 @@ Settings alone cannot make a coarse profile stable. A block's demand on the inte
 conductance over its heat capacity, so a 16 kg light fitting with a metal's conductivity asks for
 twenty substeps while the armour around it asks for one — and a profile granting three is
 integrating that block outside the range its own physics is stable in. `MaxSubstepsPerBlock` floors
-exactly those blocks, which is a tolerance; an overlay is a balance.
+exactly those blocks, which is a tolerance rather than a balance.
 
-Each profile may ship a **definition overlay** in `Profiles/<name>.xml`, applied over what
-`Cubes.xml`, `Planets.xml` and `Loops.xml` loaded:
+There is **one balance for every profile.** A profile carries settings — how often the solver
+runs, how many substeps it may take, which mechanisms are on — and nothing else. It cannot change a
+block's properties.
 
-| Profile | Overlay |
-| --- | --- |
-| `simulation` | **none, deliberately** |
-| `optimized` | decorative and electronic blocks given the materials they are actually made of |
-| `arcade` | the same as optimized |
-| `simlite` | that, plus a raised fallback specific heat and more coolant per pipe |
-| `responsive` | none — it grants the substeps to resolve its own pace |
+Profiles used to ship a definition overlay in `Profiles/<name>.xml`, applied over the loaded
+definitions at runtime. That was a mistake: it meant a block's numbers depended on which profile a
+world happened to run, so `Data/Cubes.xml` was not the answer to "what is this block", and a modder
+reading or overriding it could be silently overruled. The four block families those overlays
+softened — lights, neon, cameras — are now folded into `Cubes.xml` as type entries and apply
+everywhere.
 
-**The files live outside `Data/`**, and that is not tidiness: everything under `Data/` is loaded by
-the game and scanned by Definition Extensions, so a second `Cubes.xml` there would collide with the
-first. The mod reads these itself and applies them over the loaded definitions.
-
-**`simulation` has no overlay and must not get one.** It runs the shipped definitions exactly, which
-is what makes it the reference every other configuration is measured against — and what stops a
-benchmark quietly becoming a comparison between two sets of definitions rather than between two
-settings. `ThermalProfileOverlays.Benchmarking` forces that state, and the performance report never
-reads an overlay.
-
-An overlay states only what it changes. A `Block` entry with no subtype reaches every block,
-including the ones no definition file mentions — which on an ordinary world is most of them, and is
-where a stiffness problem usually lives. A named subtype refines that, and later entries win. A
-misspelled property is reported in the log rather than silently doing nothing.
-
-`ProfileTests` holds the ladder to account: each fast profile must carry heat further than the one
-it is built from, and `arcade` must reach within a tenth of `responsive`, since it is meant to be
-the same physics tuned rather than different physics. That check is made at the fast pace on
-purpose — at real time both numbers are nearly zero and would prove nothing.
-
-Where [balance.md](balance.md) asks whether a block is worth building, this asks whether a *world
-configuration* is worth running. Three commands:
-
-```bash
-cd tests
-dotnet run --project Thermodynamics.Sim -- profiles              # one rig, four worlds
-dotnet run --project Thermodynamics.Sim -- sweep --csv out/      # every scenario and worst case
-dotnet run --project Thermodynamics.Sim -- features              # mechanism switches in combination
-```
+`Data/Cubes.xml`, `Data/Loops.xml` and `Data/Planets.xml` are the sources of truth at all times.
+A rebalance edits those files once; nothing rewrites them while the game runs.
 
 ## Two different things are called a profile
 

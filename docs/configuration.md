@@ -304,11 +304,11 @@ Their nineteen values are world settings now — saved, replicated, reachable fr
 the mod API, and laid out on the **Coolant loops**, **Climate** and **Underground** pages.
 
 They behave as an override rather than a copy. A value still equal to what a fresh install ships
-leaves the definition alone, so an untouched world reads whatever `Loops.xml`, `Planets.xml` and
-the active profile's overlay say. Move one and it wins from then on, for that world.
+leaves the definition alone, so an untouched world reads whatever `Loops.xml` and `Planets.xml`
+say. Move one and it wins from then on, for that world.
 
-`Cubes.xml` is not here: its properties are per block subtype, which a flat setting cannot express.
-A profile's overlay reaches those, and editing them per world is the next step.
+`Cubes.xml` is not here: its properties are per block subtype, which a flat setting cannot
+express. Edit the file itself.
 
 ## Checking a client has the server's settings
 
@@ -355,8 +355,8 @@ demand on a 150-block hull is 0.00 at scale 1, 0.90 at 225 and 14.40 at 3,600. R
 cheapest thing to integrate, which is why the accurate profiles are not the expensive ones — on
 this ladder accuracy costs patience, and pace costs frames.
 
-See [profiles.md](profiles.md) for the ladder in full, including the definition overlay each
-profile brings with it.
+See [profiles.md](profiles.md) for the ladder in full. A profile carries settings only; every
+profile reads the same definitions.
 
 > The Cost column tracks `Frequency` exactly, and that is a property of what it was measured on
 > rather than of `Frequency`. Both figures come from a 200-block conduction run where every node
@@ -488,9 +488,8 @@ These ship in [`Loops.xml`](../Data/Loops.xml), which the settings menu never sh
 does coolant move" was a settings question whose answer lived in a file nobody could reach from the
 game. They are world settings: saved, replicated and editable like any other.
 
-**A value left at its shipped figure does not override the definition.** The file, and whatever a
-profile's overlay does to it, still decides. Move one and it wins from then on, across every loop
-definition in the world.
+**A value left at its shipped figure does not override the definition.** The file still decides.
+Move one and it wins from then on, across every loop definition in the world.
 
 | Setting | Default | Effect |
 | --- | --- | --- |

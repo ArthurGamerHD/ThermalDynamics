@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Xml.Linq;
+using Thermodynamics.Harness;
 using Xunit;
 
 namespace Thermodynamics.Tests
@@ -171,6 +172,15 @@ namespace Thermodynamics.Tests
         /// <summary>
         /// Every property the game reads. An entry must carry all of them.
         /// </summary>
+        /// <summary>What a type entry declares: the properties a block's function decides.</summary>
+        private static readonly string[] FunctionProperties =
+        {
+            "ProducerWasteEnergy",
+            "ConsumerWasteEnergy",
+            "ExposedSurfaceMultiplier",
+            "OverheatDamagePerKelvin",
+        };
+
         private static readonly string[] RequiredProperties =
         {
             "Conductivity",
@@ -193,19 +203,14 @@ namespace Thermodynamics.Tests
         /// **An entry in Cubes.xml must be complete, because a property it omits reads as zero and
         /// not as the value of the entry it is standing in for.**
         ///
-        /// <c>ThermalCellDefinition.GetDefinition</c> resolves one definition id — the exact
-        /// subtype, else the type's <c>DefaultThermodynamics</c>, else the environment default —
-        /// and then reads every property from that one id. There is no merge with the parent. Its
-        /// fields have no initialisers, so a property the chosen entry does not declare stays at
-        /// zero: a block with no <c>SpecificHeat</c> has no heat capacity and reaches any
-        /// temperature instantly, and one with no <c>CriticalTemperature</c> is above critical from
-        /// the moment it is placed and takes damage forever.
+        /// <c>ThermalCellDefinition</c>'s fields have no initialisers, so a property an entry does
+        /// not declare arrives as zero — a block with no SpecificHeat reaches any temperature
+        /// instantly, one with no CriticalTemperature is above critical the moment it is placed.
         ///
-        /// Nothing else can catch this. The offline loader in <c>ShippedBlocks</c> starts from
-        /// <c>BlockThermalProperties.Default()</c>, whose fields are *not* zero, so an incomplete
-        /// entry loads as a sensible block in every test in this repository and as a broken one in
-        /// the game. The two parsers disagreeing is the hazard; this test is the only place the
-        /// game's rule is stated.
+        /// <c>ToThermalProperties</c> guards every field with <c>WasDeclared</c>, so an omission
+        /// leaves the derived value standing rather than zeroing it. That is what lets a type entry
+        /// declare only the four properties a block's function decides. A subtype entry is a
+        /// complete description of one block and still has to carry everything.
         /// </summary>
         [Fact]
         public void EveryEntryInCubesDeclaresEveryPropertyTheGameReads()
@@ -221,6 +226,10 @@ namespace Thermodynamics.Tests
                 string type = (string)id.Element("TypeId");
                 string name = type + "/" + subtype;
 
+                // A type entry sets what a block's function decides and leaves the rest derived.
+                bool typeEntry = subtype == "DefaultThermodynamics" && type != "EnvironmentDefinition";
+                string[] required = typeEntry ? FunctionProperties : RequiredProperties;
+
                 foreach (XElement group in definition.Descendants("Group"))
                 {
                     XAttribute groupName = group.Attribute("Name");
@@ -233,17 +242,56 @@ namespace Thermodynamics.Tests
                         if (key != null) declared.Add(key.Value);
                     }
 
-                    foreach (string required in RequiredProperties)
+                    foreach (string property in required)
                     {
-                        if (!declared.Contains(required))
+                        if (!declared.Contains(property))
                         {
-                            incomplete.Add(name + " omits " + required + ", which the game reads as 0");
+                            incomplete.Add(name + " omits " + property + ", which the game reads as 0");
                         }
                     }
+
+                    // A type entry may also correct its family's materials, which is what a light
+                    // fitting needs: its build cost is mostly the steel plate it mounts on, so the
+                    // mass-weighted derivation calls a plastic housing a metal one.
                 }
             }
 
             Assert.Empty(incomplete);
+        }
+
+        /// <summary>
+        /// Cubes.xml is now the only place a block's function is written, so the file is
+        /// load-bearing: a missing or malformed type entry would silently return every block in
+        /// the game to the ordinary 0.05 trickle.
+        /// </summary>
+        [Fact]
+        public void TheTypeEntriesStillCarryTheNumbersTheCodeTableHeld()
+        {
+            Dictionary<string, float[]> expected = new Dictionary<string, float[]>
+            {
+                // producer, consumer, area, damage
+                { "Reactor", new[] { 0.01f, 0.01f, 1f, 0.25f } },
+                { "HydrogenEngine", new[] { 0.60f, 0.05f, 1f, 0.5f } },
+                { "BatteryBlock", new[] { 0.03f, 0.03f, 1f, 1f } },
+                { "JumpDrive", new[] { 0f, 0.15f, 1f, 2f } },
+                { "Thrust", new[] { 0f, 0.25f, 1.5f, 1f } },
+                { "InteriorLight", new[] { 0f, 0.9f, 1f, 1f } },
+                { "Gyro", new[] { 0f, 0.15f, 1f, 1f } },
+                { "Warhead", new[] { 0f, 0.05f, 1f, 4f } },
+                { "HeatVentBlock", new[] { 0f, 0.3f, 3f, 1f } },
+            };
+
+            foreach (KeyValuePair<string, float[]> entry in expected)
+            {
+                ShippedBlocks.Function f = ShippedBlocks.FunctionOf(entry.Key);
+                Assert.Equal(entry.Value[0], f.ProducerWasteEnergy, 4);
+                Assert.Equal(entry.Value[1], f.ConsumerWasteEnergy, 4);
+                Assert.Equal(entry.Value[2], f.ExposedSurfaceMultiplier, 4);
+                Assert.Equal(entry.Value[3], f.OverheatDamagePerKelvin, 4);
+            }
+
+            // The whole table, not just the sample above.
+            Assert.Equal(95, ShippedBlocks.FunctionTypes().Count);
         }
 
         /// <summary>

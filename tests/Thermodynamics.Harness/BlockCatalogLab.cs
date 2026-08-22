@@ -70,7 +70,7 @@ namespace Thermodynamics.Harness
                 {
                     TypeId = type.Key,
                     Subtypes = type.Value.Count,
-                    Properties = BlockThermalDerivation.Derive(components, type.Key),
+                    Properties = ShippedBlocks.DeriveWithFunction(components, type.Key),
                     Composition = Composition(components),
                 };
 
@@ -78,7 +78,7 @@ namespace Thermodynamics.Harness
                 {
                     if (block.Components.Count == 0) continue;
 
-                    BlockThermalProperties own = BlockThermalDerivation.Derive(block.Components, type.Key);
+                    BlockThermalProperties own = ShippedBlocks.DeriveWithFunction(block.Components, type.Key);
                     string reason = Deviation(row.Properties, own);
                     if (reason == null) continue;
 

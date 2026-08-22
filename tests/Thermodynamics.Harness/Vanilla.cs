@@ -130,7 +130,7 @@ namespace Thermodynamics.Harness
             /// <summary>What this block is thermally, derived from its build cost and its type.</summary>
             public BlockThermalProperties Thermal
             {
-                get { return BlockThermalDerivation.Derive(Components, TypeId); }
+                get { return ShippedBlocks.DeriveWithFunction(Components, TypeId); }
             }
 
             public int CellCount

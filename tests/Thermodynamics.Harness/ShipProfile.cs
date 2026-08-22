@@ -261,10 +261,10 @@ namespace Thermodynamics.Harness
             float fromStores = shortfall < profile.StoreReserveWatts ? shortfall : profile.StoreReserveWatts;
 
             profile.WasteWatts =
-                (fromGenerators * BlockThermalDerivation.FunctionOf("Reactor").ProducerWasteEnergy)
-                + (fromStores * BlockThermalDerivation.FunctionOf("BatteryBlock").ProducerWasteEnergy)
+                (fromGenerators * ShippedBlocks.FunctionOf("Reactor").ProducerWasteEnergy)
+                + (fromStores * ShippedBlocks.FunctionOf("BatteryBlock").ProducerWasteEnergy)
                 + profile.ConsumerWasteWatts
-                + (thrust * BlockThermalDerivation.FunctionOf("Thrust").ConsumerWasteEnergy);
+                + (thrust * ShippedBlocks.FunctionOf("Thrust").ConsumerWasteEnergy);
 
             profile.ExposedFraction = assembly.NodeCount == 0
                 ? 0f
@@ -316,8 +316,8 @@ namespace Thermodynamics.Harness
             GameBlocks.Definition definition;
             if (!GameBlocks.BySubtype().TryGetValue(block.Name, out definition)) return;
 
-            BlockThermalDerivation.BlockFunction function =
-                BlockThermalDerivation.FunctionOf(definition.TypeId);
+            ShippedBlocks.Function function =
+                ShippedBlocks.FunctionOf(definition.TypeId);
 
             if (definition.TypeId == "HeatVentBlock") profile.HeatVents++;
 

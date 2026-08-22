@@ -135,8 +135,7 @@ namespace Thermodynamics
             model.Name = id.SubtypeName;
             if (string.IsNullOrEmpty(model.Name)) model.Name = id.TypeId.ToString();
 
-            model.Thermal = ToThermalProperties(
-                ThermalCellDefinition.GetDefinition(id), id.SubtypeName, definition);
+            model.Thermal = ToThermalProperties(ThermalCellDefinition.GetDefinition(id), definition);
 
             if (definition == null)
             {
@@ -318,9 +317,11 @@ namespace Thermodynamics
         /// a tuning file should contain.
         /// </summary>
         public static BlockThermalProperties ToThermalProperties(
-            ThermalCellDefinition definition, string subtype = "", MyCubeBlockDefinition block = null)
+            ThermalCellDefinition definition, MyCubeBlockDefinition block = null)
         {
-            BlockThermalProperties properties = BlockThermalDerivation.Derive(ComponentsOf(block), TypeNameOf(block));
+            // Materials from the build cost; the block's function comes from its type entry in
+            // Cubes.xml, which GetDefinition resolves below.
+            BlockThermalProperties properties = BlockThermalDerivation.Derive(ComponentsOf(block));
 
             // Landing on the environment-wide default means no entry anywhere named this block.
             // That entry describes mild steel, which was the best guess available before the block's
@@ -351,11 +352,6 @@ namespace Thermodynamics
             if (definition.WasDeclared(ThermalCellDefinition.DeclaredProperties.OverheatDamagePerKelvin))
                 properties.OverheatDamagePerKelvin = definition.OverheatDamagePerKelvin;
 
-            // The profile's overlay lands here, where properties are built from a definition, so
-            // it is paid once per definition rather than once per block — and so a block reads one
-            // set of properties whatever route it arrived by.
-            ThermalProfileOverlays.Apply(properties, subtype);
-
             return properties.Clamp();
         }
 
@@ -380,16 +376,6 @@ namespace Thermodynamics
             return components;
         }
 
-        /// <summary>The object builder type a block is, without the prefix the derivation's table omits.</summary>
-        private static string TypeNameOf(MyCubeBlockDefinition block)
-        {
-            if (block == null) return null;
-
-            string name = block.Id.TypeId.ToString();
-            const string Prefix = "MyObjectBuilder_";
-            return name.StartsWith(Prefix) ? name.Substring(Prefix.Length) : name;
-        }
-
         /// <summary>Copies a loop definition into the model's own type.</summary>
         public static LoopThermalProperties ToLoopProperties(ThermalLoopDefintion definition)
         {
@@ -405,19 +391,16 @@ namespace Thermodynamics
             properties.SmallGridFlowRate = definition.SmallGridFlowRate;
             properties.StagnantTransferFraction = definition.StagnantTransferFraction;
 
-            ThermalProfileOverlays.Apply(properties);
-
             // The world's own values last, and only where they have been moved. An untouched world
-            // still gets whatever Loops.xml and the profile's overlay say; the moment someone sets
-            // a flow rate in the menu, that is the flow rate.
+            // still gets whatever Loops.xml says; the moment someone sets a flow rate in the menu,
+            // that is the flow rate.
             ApplyWorldLoopValues(properties);
 
             return properties.Clamp();
         }
 
         /// <summary>Copies a planet definition into the model's own type.</summary>
-        public static PlanetThermalProperties ToPlanetProperties(
-            PlanetDefinition definition, string subtype = "")
+        public static PlanetThermalProperties ToPlanetProperties(PlanetDefinition definition)
         {
             // Seeded with the model's own defaults, which describe an earthlike world. A definition
             // overrides only what it actually carried: a planet with no thermal group at all, or a
@@ -445,7 +428,6 @@ namespace Thermodynamics
 
             properties = PlanetProperties.Merge(properties, read, definition.Supplied);
 
-            ThermalProfileOverlays.Apply(properties, subtype);
             ApplyWorldPlanetValues(properties);
 
             return properties.Clamp();

@@ -805,7 +805,7 @@ namespace Thermodynamics.Harness
             // Settings only. A profile's definition overlay is deliberately not read here: a
             // comparison is about settings, and one that also swapped the definitions underneath
             // would be measuring two things at once and could not say which moved. The game side
-            // enforces the same rule through ThermalProfileOverlays.Benchmarking.
+            // enforces the same rule: every profile now reads one set of definitions.
             if (profile != null) ThermalProfiles.Apply(settings, profile);
 
             if (!featuresOn)

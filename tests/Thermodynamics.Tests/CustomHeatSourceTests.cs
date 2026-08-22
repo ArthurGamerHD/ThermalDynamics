@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Thermodynamics.Core;
 using Thermodynamics.Harness;
 using VRageMath;
+using System.Xml.Linq;
 using Xunit;
 
 namespace Thermodynamics.Tests
@@ -231,27 +232,25 @@ namespace Thermodynamics.Tests
         // ---- it is declarable the way every other property is ----------------------------------
 
         /// <summary>
-        /// The property is readable from a definition override, which is the only way a mod author
-        /// can reach it. Both parsers must agree: the game's <c>ThermalOverrides</c> and the
-        /// harness's offline loader in <c>ShippedBlocks</c>. A property only one of them knows is a
-        /// property that behaves differently in tests than in the game, which is the exact hazard
-        /// <c>EveryEntryInCubesDeclaresEveryPropertyTheGameReads</c> exists to name.
+        /// The harness's offline loader reads HeatSourceWatts out of Cubes.xml. A property the two
+        /// parsers disagree about behaves differently in tests than in the game.
         /// </summary>
         [Fact]
-        public void TheGameParserReadsTheProperty()
+        public void TheOfflineParserReadsTheProperty()
         {
             BlockThermalProperties properties = BlockThermalProperties.Default();
             Assert.Equal(0f, properties.HeatSourceWatts);
 
-            // Built the way the game builds it: an overlay holding one block entry with one Set.
-            ThermalOverlay overlay = new ThermalOverlay();
-            BlockOverride entry = new BlockOverride { Subtype = "Smoulder" };
-            entry.Values.Add(new ThermalOverride("HeatSourceWatts", 1234f));
-            overlay.Blocks.Add(entry);
+            XElement definition = XElement.Parse(
+                "<Definition><Id><TypeId>CubeBlock</TypeId><SubtypeId>Smoulder</SubtypeId></Id>"
+                + "<ModExtensions><Group Name=\"ThermalBlockProperties\">"
+                + "<Bool Name=\"ExcludeFromSimulation\" Value=\"false\" />"
+                + "<Decimal Name=\"HeatSourceWatts\" Value=\"1234\" />"
+                + "</Group></ModExtensions></Definition>");
 
-            Assert.True(overlay.ApplyTo(properties, "Smoulder"),
-                "the game's override parser does not know HeatSourceWatts");
-            Assert.Equal(1234f, properties.HeatSourceWatts);
+            BlockThermalProperties parsed = ShippedBlocks.ParseThermalForTest(definition);
+            Assert.NotNull(parsed);
+            Assert.Equal(1234f, parsed.HeatSourceWatts);
         }
 
         /// <summary>A negative declaration is clamped rather than cooling the block.</summary>

@@ -1,30 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-	Deliberate deviations from the derived thermal properties.
+	Thermal properties. Anything not declared here is derived from a block's build components by
+	BlockThermalDerivation, blending the material figures in BlockMaterials by mass.
 
-	A block's properties are no longer written here. They are derived from its build components by
-	BlockThermalDerivation, which blends the real material figures in BlockMaterials by mass, so
-	every block in the game and in every other mod gets properties describing what it is actually
-	made of. The sim harness's "blocks" command prints the whole table.
+	Three tiers, most specific first: a block's own subtype entry, then its type's
+	DefaultThermodynamics entry, then the environment-wide default for a block with no priced
+	components at all.
 
-	This file is what overrides that, and it holds two things:
+	An entry may declare as few properties as it likes; whatever it omits stays derived. Type
+	entries below declare only the four a block's function decides, so conductivity, specific heat,
+	emissivity and critical temperature still come from what the block is made of.
 
-	  * the blocks this mod ships, whose properties are design decisions rather than consequences
-	    of a build cost - a radiator's emissivity and area scaler are the block's whole purpose;
-	  * the environment-wide default, which now applies only to a block with no priced components
-	    at all. Landing on it is treated as "nothing knows anything about this block", so it does
-	    not override a derivation that does.
-
-	An entry may declare as few properties as it likes: whatever it omits is derived rather than
-	zeroed. The entries below are complete because they are deliberate throughout, and
-	EveryEntryInCubesDeclaresEveryPropertyTheGameReads keeps them that way.
-
-	Units are real. SpecificHeat is J/(kg K) - the number a materials table gives, so steel is
-	about 466 and aluminium about 900. Conductivity is W/(m K): mild steel 50, glass 1, copper 400.
-	Emissivity is a 0..1 grey-body figure. A real ship at real heat capacity takes hours to change
-	temperature, so the simulation divides every capacity by the HeatTimeScale setting (default
-	225) to reach a playable pace. That factor is global: it moves the clock without changing any
-	equilibrium temperature or the balance between block types.
+	Units are real: SpecificHeat J/(kg K), Conductivity W/(m K), Emissivity 0..1. The HeatTimeScale
+	setting divides every capacity to reach a playable pace without moving any equilibrium.
 -->
 <Definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
 	<CubeBlocks>
@@ -50,6 +38,1482 @@
 			</ModExtensions>
 		</Definition>
 
+		<!--
+		Per-type defaults. A block with no entry of its own takes its type's numbers here;
+		anything a type does not declare stays derived from the block's build components.
+		-->
+
+		<!--Power producers.-->
+		<Definition>
+			<Id>
+				<TypeId>Reactor</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<!--Measured: at 0.02 the two smaller reactors cook themselves bare in vacuum.-->
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0.01" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.01" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="0.25" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>HydrogenEngine</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<!--A combustion engine sheds most of what it burns as heat.-->
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0.6" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="0.5" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>BatteryBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<!--A store is efficient; round-trip losses are a few per cent.-->
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0.03" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.03" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>SolarPanel</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<!--The solar path already put that energy in, so charging it again would double count.-->
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>WindTurbine</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<!--An open frame carries more surface than the cell it occupies.-->
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1.5" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<!--Thrust.-->
+		<Definition>
+			<Id>
+				<TypeId>Thrust</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<!--Charged against thrust rather than draw, which is what makes a hydrogen thruster run hot.-->
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.25" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1.5" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<!--Lighting: a lamp is almost all waste heat.-->
+		<Definition>
+			<Id>
+				<TypeId>InteriorLight</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<!--Nearly all of a lamp's draw leaves as heat, not as light.-->
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--A lamp is a plastic housing around a lens; its build cost is mostly the plate it mounts on.-->
+					<Decimal Name="Conductivity" Value="2" />
+					<Decimal Name="SpecificHeat" Value="900" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>ReflectorLight</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="Conductivity" Value="2" />
+					<Decimal Name="SpecificHeat" Value="900" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>EmissiveBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="Conductivity" Value="1" />
+					<Decimal Name="SpecificHeat" Value="840" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>Searchlight</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<!--Electronics: small draws, but nearly all of each becomes heat.-->
+		<Definition>
+			<Id>
+				<TypeId>MyProgrammableBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>TimerBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>SensorBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>CameraBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="Conductivity" Value="5" />
+					<Decimal Name="SpecificHeat" Value="800" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>OreDetector</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>TextPanel</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>LCDPanelsBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>ButtonPanel</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>TerminalBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>RemoteControl</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>EventControllerBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>PathRecorderBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>BasicMissionBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>FlightMovementBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>DefensiveCombatBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>OffensiveCombatBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>EmotionControllerBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>TurretControlBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>Projector</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>Jukebox</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>SoundBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>StoreBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>VendingMachine</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>ContractBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>Decoy</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>RadioAntenna</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.8" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>Beacon</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.8" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>BroadcastController</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.8" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>TransponderBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.8" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>LaserAntenna</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<!--A tight beam carries some of the energy away.-->
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.5" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<!--Machinery that does work.-->
+		<Definition>
+			<Id>
+				<TypeId>MotorStator</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.1" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>MotorAdvancedStator</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.1" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>MotorSuspension</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.1" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>PistonBase</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.1" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>ExtendedPistonBase</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.1" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>Gyro</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<!--ForceMagnitude on a gyro is torque, not thrust, so heat is charged against its draw.-->
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.15" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>Drill</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.2" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>ShipGrinder</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.2" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>ShipWelder</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.2" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>Refinery</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<!--Smelting is mostly waste.-->
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.7" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>Assembler</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.6" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>OxygenGenerator</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.6" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>SurvivalKit</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.6" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>AirVent</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.5" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>OxygenTank</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.1" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<!--Field generators: the energy stays in the block.-->
+		<Definition>
+			<Id>
+				<TypeId>GravityGenerator</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<!--A field does no work on anything that carries the energy away.-->
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.8" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>GravityGeneratorSphere</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.8" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>VirtualMass</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.8" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>SafeZoneBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.8" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>SpaceBall</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.8" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>JumpDrive</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<!--Storage is efficient; the dump is not.-->
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.15" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="2" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<!--Weapons.-->
+		<Definition>
+			<Id>
+				<TypeId>SmallGatlingGun</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.3" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>LargeGatlingTurret</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.3" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>InteriorTurret</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.3" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>SmallMissileLauncher</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.2" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>SmallMissileLauncherReload</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.2" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>LargeMissileTurret</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.2" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>Warhead</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<!--Reaching critical should be dramatic rather than gradual.-->
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="4" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<!--Blocks whose shape gives them more or less surface than their cell.-->
+		<Definition>
+			<Id>
+				<TypeId>HeatVentBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<!--A vent is finned, so it radiates from far more than its cell.-->
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.3" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="3" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>Ladder2</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1.5" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>Passage</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1.2" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>ExhaustBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.2" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="2" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>Parachute</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<!--A packed canopy is mostly hidden.-->
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="0.5" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>OxygenFarm</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.3" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1.2" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>Planter</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.1" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1.2" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<!--Life support and interiors.-->
+		<Definition>
+			<Id>
+				<TypeId>CryoChamber</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.6" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>MedicalRoom</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.6" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>Kitchen</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.8" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<!--Inert fittings: no function of their own beyond a trickle.-->
+		<Definition>
+			<Id>
+				<TypeId>CargoContainer</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>Conveyor</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>ConveyorConnector</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>ConveyorSorter</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.1" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>Collector</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.1" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>Door</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>AirtightHangarDoor</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>AirtightSlideDoor</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>LandingGear</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>ShipConnector</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>MergeBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>Wheel</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>MotorRotor</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>MotorAdvancedRotor</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>PistonTop</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>Cockpit</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<!--Screens and life support, not structure.-->
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.2" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>TargetDummyBlock</TypeId>
+				<SubtypeId>DefaultThermodynamics</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
+				</Group>
+			</ModExtensions>
+		</Definition>
+
+		<!--The blocks this mod ships, whose properties are the point of the block.-->
 		<Definition>
 			<Id>
 				<TypeId>CubeBlock</TypeId>

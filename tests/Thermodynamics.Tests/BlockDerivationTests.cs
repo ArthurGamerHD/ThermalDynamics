@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Thermodynamics.Core;
+using Thermodynamics.Harness;
 using Xunit;
 
 namespace Thermodynamics.Tests
@@ -162,8 +163,8 @@ namespace Thermodynamics.Tests
         {
             List<BlockComponent> same = Of(Part("SteelPlate", 10, 20f));
 
-            BlockThermalProperties thruster = BlockThermalDerivation.Derive(same, "Thrust");
-            BlockThermalProperties girder = BlockThermalDerivation.Derive(same, "CubeBlock");
+            BlockThermalProperties thruster = ShippedBlocks.DeriveWithFunction(same, "Thrust");
+            BlockThermalProperties girder = ShippedBlocks.DeriveWithFunction(same, "CubeBlock");
 
             Assert.Equal(thruster.SpecificHeat, girder.SpecificHeat, 3);
             Assert.True(thruster.ConsumerWasteEnergy > girder.ConsumerWasteEnergy);
@@ -181,7 +182,7 @@ namespace Thermodynamics.Tests
         [InlineData("BatteryBlock")]
         public void EveryProducerTypeConvertsSomeOfItsOutput(string typeId)
         {
-            Assert.True(BlockThermalDerivation.FunctionOf(typeId).ProducerWasteEnergy > 0f,
+            Assert.True(ShippedBlocks.FunctionOf(typeId).ProducerWasteEnergy > 0f,
                 typeId + " produces power and makes no heat doing it");
         }
 
@@ -194,8 +195,8 @@ namespace Thermodynamics.Tests
         public void ACombustionEngineRunsHotterThanAReactorPerWatt()
         {
             Assert.True(
-                BlockThermalDerivation.FunctionOf("HydrogenEngine").ProducerWasteEnergy >
-                BlockThermalDerivation.FunctionOf("Reactor").ProducerWasteEnergy);
+                ShippedBlocks.FunctionOf("HydrogenEngine").ProducerWasteEnergy >
+                ShippedBlocks.FunctionOf("Reactor").ProducerWasteEnergy);
         }
 
         /// <summary>
@@ -205,9 +206,9 @@ namespace Thermodynamics.Tests
         [Fact]
         public void NoFunctionCreatesEnergyFromNothing()
         {
-            foreach (string typeId in BlockThermalDerivation.FunctionTypes)
+            foreach (string typeId in ShippedBlocks.FunctionTypes())
             {
-                BlockThermalDerivation.BlockFunction f = BlockThermalDerivation.FunctionOf(typeId);
+                ShippedBlocks.Function f = ShippedBlocks.FunctionOf(typeId);
 
                 Assert.True(f.ProducerWasteEnergy <= 1f, typeId + " producer fraction " + f.ProducerWasteEnergy);
                 Assert.True(f.ConsumerWasteEnergy <= 1f, typeId + " consumer fraction " + f.ConsumerWasteEnergy);
@@ -226,7 +227,7 @@ namespace Thermodynamics.Tests
         {
             foreach (string component in BlockMaterials.Names)
             {
-                BlockThermalProperties p = BlockThermalDerivation.Derive(
+                BlockThermalProperties p = ShippedBlocks.DeriveWithFunction(
                     Of(Part(component, 10, 20f)), "CubeBlock");
 
                 Assert.Empty(p.Validate());

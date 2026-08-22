@@ -497,7 +497,6 @@ namespace Thermodynamics
             // substeps needs definitions that are stable at three, and no setting can fix a
             // stiffness that belongs to a definition. Chosen before the values are applied so the
             // rebuild below reads the right ones.
-            ThermalProfileOverlays.Use(name);
 
             Frequency = bundle.Frequency;
             SimulationSpeed = bundle.SimulationSpeed;
