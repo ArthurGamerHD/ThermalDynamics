@@ -1,7 +1,20 @@
 # Balance profiles
 
 Five presets, in the shape a graphics menu uses: a ladder from *everything on, cost ignored* down
-to *cheap and quick*, with the pace of heat as a second axis crossing it.
+to *cheap and quick*, with the pace of heat as a second axis crossing it. This page is what the
+profiles are, what each costs and how to design another; the settings they set are defined one by
+one in [configuration.md](configuration.md).
+
+> The rules argued here are stated canonically in [rules.md](rules.md): `M1` `M6` `C7`.
+
+| Looking for | Go to |
+| --- | --- |
+| What each setting a profile sets actually does | [configuration.md](configuration.md) |
+| Why the substep caps are where they are | [stiffness.md](stiffness.md) |
+| What the profiles cost in a full report | [benchmarks.md](benchmarks.md#the-configurations) |
+
+`/thermal profile` lists them, `/thermal profile arcade` applies one live, and the settings menu
+carries them as buttons. A fresh world runs `responsive`.
 
 | Profile | Integration | Pace | For |
 | --- | --- | --- | --- |
@@ -11,13 +24,44 @@ to *cheap and quick*, with the pace of heat as a second axis crossing it.
 | `responsive` | as simulation | tuned (225) | Simulation with the clock run fast. How the mod is meant to be played. |
 | `arcade` | as optimized | tuned (225) | Responsive's pace at optimized's price. |
 
-> The rules argued here are stated canonically in [rules.md](rules.md): `M1` `M6` `C7`.
+**A profile is the whole world, not a patch on it.** Applying one returns every setting it does not
+speak for to the shipped value first, so applying the same profile twice with tinkering in between
+lands in the same place both times. That is also why the settings menu has no reset button: a
+profile *is* the reset.
 
-| Looking for | Go to |
-| --- | --- |
-| Every setting a profile sets | [configuration.md](configuration.md) |
-| Why the substep caps are where they are | [stiffness.md](stiffness.md) |
-| What the profiles cost | [benchmarks.md](benchmarks.md) |
+## What each one costs, and moves
+
+Measured by `bench profiles --seconds 8`: blocks crossed along a held-hot 200-block run, work as
+element visits per real second, and the solver's own milliseconds per simulated second.
+
+| Profile | Freq | HeatTimeScale | MaxSubsteps | Blocks crossed | Work/s | ms/s |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `simulation` | 8 | **1** | 64 | 0.0 | 3,192 | 0.58 |
+| `optimized` | 4 | **1** | 6 | 0.0 | 1,596 | 0.13 |
+| `simlite` | 4 | **1** | 3 | 0.0 | 1,596 | 0.04 |
+| `responsive` | 8 | 225 | 64 | 0.1 | 3,192 | 0.07 |
+| `arcade` | 4 | 225 | 6 | 0.1 | 1,596 | 0.04 |
+
+**Read the first three rows' zero honestly.** It is not a rounding artefact: at `HeatTimeScale` 1 a
+ship changes temperature at the rate a ship does, and eight seconds of play moves heat across no
+blocks at all. The same run with the environment on leaves a hot spot 768 K above its hull on those
+profiles and 10 K above it on the two that run the clock fast. That is the whole difference between
+the reference and a way to play.
+
+> **The `Work/s` column tracks `Frequency` exactly, and that is a property of what it was measured
+> on rather than of `Frequency`.** Both figures come from a 200-block conduction run where every
+> node has at most two neighbours and the substep estimate sits at or below one — the regime where a
+> step costs one pass whatever its length. On a stiff grid the estimate is far above one and the
+> column would be flat in `Frequency` instead; see
+> [configuration.md](configuration.md#frequency-is-not-the-cost-dial-it-looks-like).
+
+**The shipped default is the worst point on this table**, and that is worth saying plainly: it is
+outrun by every other profile including the cheapest one. It spends its budget on accuracy — a low
+`HeatTimeScale` with substeps to spare — and accuracy is not what most of the settings are for. It
+stays the default because a simulation mod that quietly stops being a simulation is a worse surprise
+than a slow one, but a world that wants heat to *do* something should not be on it.
+
+## The two axes
 
 **`HeatTimeScale` is the clock, and 1 is real.** It divides every heat capacity, so anything above 1
 is thermal time running fast: a real ship at real heat capacity takes hours to change temperature,
@@ -36,14 +80,52 @@ multiplies substep demand by 225. Measured on a 150-block hull with a 200 kW rea
 
 Accuracy on this ladder costs patience, not frames. What costs frames is the pace.
 
-Two axes, and every profile is a point on both. `simulation`, `optimized` and `simlite` run at real
-time and descend in how finely that is integrated; `responsive` and `arcade` are `simulation` and
-`optimized` with the clock run fast.
+Every profile is a point on both axes. `simulation`, `optimized` and `simlite` run at real time and
+descend in how finely that is integrated; `responsive` and `arcade` are `simulation` and `optimized`
+with the clock run fast.
 
-**A profile is the whole world, not a patch on it.** Applying one returns every setting it does not
-speak for to the shipped value first, so applying the same profile twice with tinkering in between
-lands in the same place both times. That is also why the settings menu has no reset button: a
-profile *is* the reset.
+## Designing your own
+
+Two relationships bound everything, and neither can be tuned around.
+
+**Heat spreads as the square root of the arithmetic you spend on it.** Diffusion is a square-root
+process: a front crosses blocks at a rate proportional to `sqrt(substeps per second)`, while cost
+is proportional to substeps per second outright. Measured, holding everything else: 1 substep/s
+gave 0.5 blocks/s, 4 gave 1.0, 8 gave 1.4, 16 gave 2.0 — square root to two figures. **Doubling
+how responsive a world feels costs four times as much.**
+
+**But where you spend the substeps changes the exchange rate by about three times.** There are two
+ways to move more heat per second. The accurate one raises `HeatTimeScale` and grants the extra
+substeps its stiffness demands. The approximate one raises `HeatTimeScale` *and refuses* the
+substeps with `MaxSubsteps`, letting the overshoot clamps decide how much crosses — which is the
+most a substep can carry, by definition. Measured: the clamped route delivered 0.125 blocks/s per
+substep/s against 0.045 for the accurate one. If the shape of the curve between two temperatures
+does not matter to your world, do not pay for it.
+
+**The far end is a wall, not a slope.** Past roughly `HeatTimeScale / Frequency = 4000` the clamps
+are carrying the entire step and blocks start being driven to the ambient floor. `arcade` sits at
+3,333 deliberately. `Validate()` warns above 4,000, and the settings menu shows it.
+
+So, knob by knob:
+
+* **`Frequency` sets responsiveness and cost together — but only while `MaxSubsteps` is 1**, or the
+  grid is soft enough that the estimate never rises above one substep. That is the regime every
+  profile above was tuned in. On a grid stiff enough to ask for real substeps it cancels out of the
+  cost entirely; reach for `MaxSubstepsPerBlock` there instead. See
+  [configuration.md](configuration.md#frequency-is-not-the-cost-dial-it-looks-like).
+* **`HeatTimeScale` sets how much a substep carries.** Raise it until the clamps engage; past that
+  it buys nothing, because the clamp is already moving all it can. `arcade` at 20,000 and the same
+  profile at 1,000,000 reach identically far.
+* **`MaxSubsteps` chooses accuracy or speed.** High means the estimate is always granted and
+  nothing clamps. `1` means every step is deliberately too long and the clamps carry it.
+* **Keep `HeatTimeScale / Frequency` under 4000.** This is the safety rail. Everything else is
+  taste.
+* **`EnableRoomAir` and `SolarSelfShadowing` are the two mechanisms that cost most** for what a
+  player notices.
+
+Both clamps must stay on for any of this. `ClampConductionOvershoot` and
+`ClampEnvironmentOvershoot` are what make a deliberately-too-long step bounded instead of
+divergent — with them off, `arcade` reaches 10^22 K in twenty seconds.
 
 ## Each profile brings its own definitions
 
@@ -69,10 +151,9 @@ A rebalance edits those files once; nothing rewrites them while the game runs.
 
 ## Two different things are called a profile
 
-[`ThermalProfiles`](../Data/Scripts/Thermodynamics/Core/Settings/ThermalProfiles.cs) ships five
-bundles — `simulation` through `minimal` — and every one of them tunes the same axis: **how
-accurately a step is integrated**. All five run `HeatTimeScale = 225`, so even `simulation` is a
-faithful integration of a model that is deliberately 225 times faster than the world.
+[`ThermalProfiles`](../Data/Scripts/Thermodynamics/Core/Settings/ThermalProfiles.cs) ships the five
+world presets above. They are settings only: `Frequency`, the two substep caps, the visit budget,
+`HeatTimeScale` and which mechanisms run.
 
 [`BalanceProfile`](../tests/Thermodynamics.Harness/BalanceProfiles.cs) is the other axis: **how
 physically true the model is**. It lives in the harness, changes nothing that ships, and carries
@@ -128,10 +209,10 @@ integrator is refused what it asks for by six orders of magnitude.
 with more substeps — 2.4×10¹⁵ K against 7×10⁴. Something in the coolant path is genuinely unstable
 rather than merely starved.
 
-### The loop path's stiffness ceiling — *fixed*
+### The loop path has a stiffness ceiling, and the clamp was what set it
 
-Found by asking whether the coolant pipes could go back to copper. They cannot, and the reason is
-the same defect. `CoolantFlowTests.SpreadAcrossAHeatedRing` deliberately runs **one substep across a
+The question that found it was whether the coolant pipes could go back to copper. They cannot, and
+the reason is the same defect. `CoolantFlowTests.SpreadAcrossAHeatedRing` deliberately runs **one substep across a
 whole second** and relies on the overshoot clamps to bound it. They do, up to a point — and then
 they do not:
 
@@ -143,10 +224,10 @@ The edge is between 360 and 480. Copper sits at 960 — 2.7× past it — and th
 291,360 K. Brass at 264 is comfortably clear, which is why the shipped pipes are brass and why
 `Cubes.xml` calls that a compromise rather than a materials decision.
 
-**This was a millisecond-long reproduction of the arcade loop divergence**, in a test that had been
+**That is a millisecond-long reproduction of the arcade loop divergence**, in a test that had been
 in the suite all along.
 
-**The cause was the clamp, not the material.** `AccumulateLoops` bounded each link with
+**The cause is the clamp, not the material.** `AccumulateLoops` bounded each link with
 `ClampExchange`, which limits one exchange to the energy that would equalise *that pair*. Correct
 for a pair, and wrong for a parcel carrying more than one link: two links each allowed to equalise
 deliver twice the energy equalising takes, so the parcel overshoots past its neighbours and the
@@ -173,7 +254,7 @@ Two hypotheses were tested and both were wrong, which is recorded here so they a
 * *The well-mixed ring puts every pipe link onto one parcel.* It does, but switching it off makes
   arcade's divergences slightly **worse** (14 → 16), so it is not the mechanism.
 
-### The shipped default diverges too
+### The shipped default diverges too, on a ship a player can build
 
 ```
 shipped   x-burning-ship   11,280 K   49% starved   68,288 over critical   DIVERGED
@@ -224,6 +305,7 @@ separately rather than reported as defects — otherwise four correct results bu
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Corrected [Two different things are called a profile](#two-different-things-are-called-a-profile), which named the shipped bundles as "`simulation` through `minimal`" and said all five run `HeatTimeScale = 225`. There is no `minimal` profile in `ThermalProfiles`, and three of the five run `HeatTimeScale` **1** — which is the whole point of the ladder this page opens with, contradicted two sections below it. Took the profile ladder's cost table and both halves of [Designing your own](#designing-your-own) out of [configuration.md](configuration.md), which was carrying a second account of this page's subject — including the same `HeatTimeScale` substep-demand table, twice over. That page now defines the settings and this one is what the presets are. |
 | 2026-08-22 | Added the standard header and this change log. |
 | 2026-08-21 | Moved a block's function out of code and into `Cubes.xml`, which deleted the per-profile definition overlays. |
 | 2026-08-19 | Made the profiles a ladder on two axes rather than a list, established that `simulation` means real time and that real time is cheap, and gave each profile the definitions its settings are safe with. Pinned the loop path's stiffness ceiling — the defect that had to be fixed before the profiles were safe. |

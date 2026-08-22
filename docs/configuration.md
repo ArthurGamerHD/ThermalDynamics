@@ -268,9 +268,9 @@ would quietly cost accuracy at the cap rather than saving anything.**
 
 A step is divided into as many substeps as the **stiffest** block on the grid needs, and every
 other block pays for all of them. On a real ship that stiffest block is almost never anything
-interesting. Measured on a 42,051-block capital ship: forty-three sixteen-kilogram light fittings
-asked for twenty-eight substeps, the five hundred kilogram armour around them asked for one, and
-the ship ran at 35 % of real time to pay for the lights.
+interesting: on a 42,051-block capital ship, forty-three sixteen-kilogram light fittings asked for
+twenty-eight substeps while the five hundred kilogram armour around them asked for one, and the ship
+ran at 35 % of real time to pay for the lights.
 
 Physically, a 32 J/K fitting bolted to armour reaches the armour's temperature in about eighteen
 milliseconds. At a quarter-second step it is not an independent temperature at all — it is a
@@ -287,43 +287,24 @@ the difference decays as the grid settles rather than accumulating. Everything t
 to is untouched, and the block's real heat capacity is still what the terminal, the overlay and
 the mod API report.
 
-Measured on a synthetic ship carrying the same proportion of fittings, over fifty simulated
-seconds with temperatures spread across 500 K:
-
-| `MaxSubstepsPerBlock` | substeps | speed | blocks affected of 43,232 | worst error |
-| ---: | ---: | ---: | ---: | ---: |
-| off | 23.0 | 1.0x | 0 | — |
-| 16 | 16 | 1.4x | 172 (0.4 %) | 0.03 K |
-| 8 | 8 | 2.6x | 461 (1.1 %) | 0.14 K |
-| 6 | 6 | 3.4x | 1,450 (3.4 %) | 0.22 K |
-| **4** | 4 | **4.7x** | 3,648 (8.4 %) | 0.36 K |
-| 3 | 3 | 6.1x | 5,219 (12.1 %) | 0.59 K |
-| 2 | 2 | 7.1x | 9,283 (21.5 %) | 1.50 K |
-| 1 | 1 | **11.0x** | 14,138 (32.7 %) | 5.00 K |
-
-**The value is chosen by how many blocks it reaches, not by the error.** The error barely moves
-between 16 and 2 and stays far below anything a player can see; what changes suddenly is the
-population. Above the knee the cap is a handful of fittings; below it, it is re-massing ordinary
-armour. On a real ship the knee sits somewhere in 2–4 — a telemetry dump reports the exact figure
-for *your* world, per grid, for every candidate cap.
-
-**A field dump found the uncapped configuration is already approximating.** A 1,293-block ship
-with its thrusters lit asked for 21.35 substeps against a `MaxSubsteps` of 16, and every one of
-its 1,867 steps was clamped — the overshoot clamps carrying the difference, which is bounded but
-not accurate. Setting `MaxSubstepsPerBlock` to 16 there costs nothing and stops the clamping
-outright, because it makes the demand fit the ceiling rather than leaning on a clamp to survive
-being refused. Setting it to 8 stops the clamping *and* runs at 2.6 times the rate.
+**A cap is a statement about a node's time constant against the step, not a number of substeps**, so
+it cannot be quoted without a `Frequency`: a cap of N at `Frequency` 8 reaches the same blocks as a
+cap of 2N at `Frequency` 4. **The value is chosen by how many blocks it reaches, not by the error** —
+the error stays far below anything a player can see across the whole useful range, while the
+population the cap reaches moves suddenly once it stops being a handful of fittings and starts being
+ordinary armour. [stiffness.md](stiffness.md#1-a-per-block-substep-cap--built-measured-off-by-default)
+carries the sweep at both shipped step lengths, driven and diffusing, and the population argument
+that puts the knee in 2–4.
 
 Hence a rule worth remembering: **while `MaxSubstepsPerBlock <= MaxSubsteps` the overshoot clamps
-never engage**, and every step is genuinely short enough for the grid it is integrating.
+never engage**, and every step is genuinely short enough for the grid it is integrating. Raising one
+without the other starts refusing steps instead.
 
 It is off by default because it is an approximation, and a mod that models heat should not make
 one on a player's behalf without being asked. On a world with large ships in it, turning it on is
 the single largest thing that can be done for frame time — and unlike `MaxElementVisitsPerStep`, it
 buys the throughput back rather than trading it away: a ship that stops needing more substeps than
 the visit budget allows stops being throttled at all.
-
-Reproduce the table with `dotnet run --project Thermodynamics.Sim -- bench floor --size 42000`.
 
 **It does not have to be guessed.** A telemetry dump taken with the cap off reports, per grid and
 for the world, exactly what each cap would do to the substep count and how many blocks it would
@@ -380,92 +361,24 @@ allowed to differ and a server does not overwrite them.
 
 ## Profiles
 
-Five presets, laid out as a graphics menu lays them out: a ladder on two axes, where the
-simulation is integrated and how fast heat is made to move. `/thermal profile` lists them,
-`/thermal profile arcade` applies one live, and a profile sets **every** world setting — so
-applying one is also how you start over. A fresh world runs `responsive`.
+Five presets, laid out as a graphics menu lays them out: a ladder on two axes, where the simulation
+is integrated and how fast heat is made to move. `/thermal profile` lists them, `/thermal profile
+arcade` applies one live, and a profile sets **every** world setting — so applying one is also how
+you start over. A fresh world runs `responsive`.
 
-| Profile | Freq | HeatTimeScale | MaxSubsteps | Blocks crossed | Work/s | ms/s | For |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| `simulation` | 8 | **1** | 64 | 0.0 | 3,192 | 0.58 | Real time, real physics. The reference, not a way to play. |
-| `optimized` | 4 | **1** | 6 | 0.0 | 1,596 | 0.13 | Real time with the cost dials tuned. |
-| `simlite` | 4 | **1** | 3 | 0.0 | 1,596 | 0.04 | Real time, knowingly approximate. |
-| `responsive` | 8 | 225 | 64 | 0.1 | 3,192 | 0.07 | **The default.** Simulation with the clock run fast. |
-| `arcade` | 4 | 225 | 6 | 0.1 | 1,596 | 0.04 | Responsive's pace at optimized's price. |
+| Profile | `Frequency` | `HeatTimeScale` | `MaxSubsteps` | `MaxSubstepsPerBlock` |
+| --- | ---: | ---: | ---: | ---: |
+| `simulation` | 8 | **1** | 64 | off |
+| `optimized` | 4 | **1** | 6 | 6 |
+| `simlite` | 4 | **1** | 3 | 3 |
+| `responsive` | 8 | 225 | 64 | off |
+| `arcade` | 4 | 225 | 6 | 6 |
 
-*Measured by `bench profiles --seconds 8`: blocks crossed along a held-hot 200-block run, work as
-element visits per real second, and the solver's own milliseconds per simulated second.*
+**[profiles.md](profiles.md) is the ladder in full** — what each one costs, what it moves, why real
+time turns out to be the cheapest thing to integrate, and the two relationships to design another
+against. A profile carries settings only; every profile reads the same definitions.
 
-**Read the first three rows' zero honestly.** It is not a rounding artefact: at `HeatTimeScale` 1 a
-ship changes temperature at the rate a ship does, and eight seconds of play moves heat across no
-blocks at all. The same run with the environment on leaves a hot spot 768 K above its hull on those
-profiles and 10 K above it on the two that run the clock fast. That is the whole difference between
-the reference and a way to play.
-
-**`HeatTimeScale` is also the stiffness dial**, because it divides every heat capacity: substep
-demand on a 150-block hull is 0.00 at scale 1, 0.90 at 225 and 14.40 at 3,600. Real time is the
-cheapest thing to integrate, which is why the accurate profiles are not the expensive ones — on
-this ladder accuracy costs patience, and pace costs frames.
-
-See [profiles.md](profiles.md) for the ladder in full. A profile carries settings only; every
-profile reads the same definitions.
-
-> The Cost column tracks `Frequency` exactly, and that is a property of what it was measured on
-> rather than of `Frequency`. Both figures come from a 200-block conduction run where every node
-> has at most two neighbours and the substep estimate sits at or below one — the regime where a
-> step costs one pass whatever its length. On a stiff grid the estimate is far above one and the
-> column would be flat in `Frequency` instead. See
-> [`Frequency` is not the cost dial it looks like](#frequency-is-not-the-cost-dial-it-looks-like).
-
-**The shipped default is the worst point on this table**, and that is worth saying plainly: it is
-outrun by every other profile including the cheapest one. It spends its budget on accuracy — a low
-`HeatTimeScale` with substeps to spare — and accuracy is not what most of the settings above are
-for. It stays the default because a simulation mod that quietly stops being a simulation is a
-worse surprise than a slow one, but a world that wants heat to *do* something should not be on it.
-
-### Where the extremes lie
-
-Two relationships bound everything, and neither can be tuned around.
-
-**Heat spreads as the square root of the arithmetic you spend on it.** Diffusion is a square-root
-process: a front crosses blocks at a rate proportional to `sqrt(substeps per second)`, while cost
-is proportional to substeps per second outright. Measured, holding everything else: 1 substep/s
-gave 0.5 blocks/s, 4 gave 1.0, 8 gave 1.4, 16 gave 2.0 — square root to two figures. **Doubling
-how responsive a world feels costs four times as much.**
-
-**But where you spend the substeps changes the exchange rate by about three times.** There are two
-ways to move more heat per second. The accurate one raises `HeatTimeScale` and grants the extra
-substeps its stiffness demands. The approximate one raises `HeatTimeScale` *and refuses* the
-substeps with `MaxSubsteps`, letting the overshoot clamps decide how much crosses — which is the
-most a substep can carry, by definition. Measured: the clamped route delivered 0.125 blocks/s per
-substep/s against 0.045 for the accurate one. If the shape of the curve between two temperatures
-does not matter to your world, do not pay for it.
-
-**The far end is a wall, not a slope.** Past roughly `HeatTimeScale / Frequency = 4000` the clamps
-are carrying the entire step and blocks start being driven to the ambient floor. `arcade` sits at
-3,333 deliberately. `Validate()` warns above 4,000, and the settings menu will show it.
-
-### Designing your own
-
-* **`Frequency` sets responsiveness and cost together — but only while `MaxSubsteps` is 1**, or
-  the grid is soft enough that the estimate never rises above one substep. That is the regime
-  every profile above was tuned in. On a grid stiff enough to ask for real substeps it cancels out
-  of the cost entirely; reach for `MaxSubstepsPerBlock` there instead.
-* **`HeatTimeScale` sets how much a substep carries.** Raise it until the clamps engage; past that
-  it buys nothing, because the clamp is already moving all it can. `arcade` at 20,000 and the same
-  profile at 1,000,000 reach identically far.
-* **`MaxSubsteps` chooses accuracy or speed.** High means the estimate is always granted and
-  nothing clamps. `1` means every step is deliberately too long and the clamps carry it.
-* **Keep `HeatTimeScale / Frequency` under 4000.** This is the safety rail. Everything else is
-  taste.
-* **`EnableRoomAir` and `SolarSelfShadowing` are the two mechanisms that cost most** for what a
-  player notices; `minimal` turns both off.
-
-Both clamps must stay on for any of this. `ClampConductionOvershoot` and
-`ClampEnvironmentOvershoot` are what make a deliberately-too-long step bounded instead of
-divergent — with them off, `arcade` reaches 10^22 K in twenty seconds.
-
-### Trading simulation speed for heat transfer
+## Trading simulation speed for heat transfer
 
 A natural idea, and worth knowing what it does before reaching for it: halve `SimulationSpeed` and
 double `HeatTimeScale`, so half as many steps run each second but heat moves twice as fast in
@@ -836,67 +749,18 @@ the definition XML; see [definitions.md](definitions.md).
 
 ---
 
-## The settings surface, and where it is going
+## Where the settings surface is going
 
 The menu, the config file and the definition files are one surface to a player and three to the
-code. A player asking "how fast does coolant move" is asking a settings question, and the answer
-lives in a file the settings menu did not mention until recently. This section is the plan for
-closing that, written against the built menu in game rather than against the API.
+code. Two of the three definition files are settings now — [the loop and planet values](#the-definition-files-from-the-menu)
+— and what is left is the third, the config file's own shape, and a Status page worth opening.
 
-### What the first built menu got wrong
-
-Measured against a screenshot of it running, not against intent. **The first five are fixed** —
-status text is a wrapping page rather than a clipping label, page names fit the rail, root pages
-render clear of folders, categories size to their contents, and there is no overflow row. **The
-last two are fixed too**: every change saves itself a second later, and a profile sets every world
-setting rather than patching nine of them.
-
-| Fault | Cause |
-| --- | --- |
-| Status text arrived with both ends cut off | a `TerminalLabel` is one centred line that clips rather than wrapping |
-| `Cost and stabilit` in the rail | a page name clips at about seventeen characters |
-| Debug drew on top of the World row | a root page added *after* a folder renders against the folder's row |
-| Half-empty tiles | a category is a fixed tall band whatever is in it |
-| `Systems (cont.)` | an overflow row named after the fact that it overflowed |
-| Save and Reset as buttons | a menu asking you to confirm what you already did |
-| A profile changed nine settings | it read as a full preset and behaved as a patch |
-
-### A page per system, with its own switch on it — done
-
-**The Mechanisms page is gone.** Four switches sitting together because they are all switches is
-filing by part of speech. `EnableConvection` belongs at the top of the convection page, above the
-convection dials, where switching it off visibly greys what it governs.
-
-| Folder | Pages |
-| --- | --- |
-| Solver | Cost limits · Pace |
-| Heat transfer | Conduction · Radiation · Convection · Solar · Occlusion |
-| Ship systems | Coolant loops · Heat pumps · Room air · Waste heat · Friction · Overheat damage · Point sources |
-| World | Climate · Weather · Underground |
-| — | Overview · Status · Debug |
-
-`SolarSelfShadowing` sits under Occlusion, where it belongs — it is what a grid does to itself. It
-was under Solar because that is where its *setting name* starts, which is the code's filing system
-rather than a reader's.
-
-### The definition files as part of the menu — done for loops and planets
-
-| File | Entries | Values | State |
-| --- | ---: | ---: | --- |
-| `Loops.xml` | 1 | 8 | **Done.** Every value is a world setting, on the Coolant loops page — including `LargeGridFlowRate`, the coolant flow rate the menu used to be missing. |
-| `Planets.xml` | 1 shipped | 11 | **Done.** On the Climate and Underground pages, applied per grid on a planet change. |
-| `Cubes.xml` | 54 | 8 each | **Open, and different in kind.** 432 values, and the interesting ones belong to the block a player is looking at rather than to a list they scroll. Properties are cached per definition in `ThermalBlockCatalog`, so changing one at runtime needs the cache invalidated and every node of that type refreshed. |
-
-A mod folder is read-only in a workshop install, so none of this writes the XML. It writes a
-**per-world override layer** into world storage, applied over what the definitions loaded, and
-replicated to clients like every other setting. A value equal to the shipped one is left alone, so
-an untouched world still gets whatever the file and the profile's overlay say; move one and it wins.
-
-Block overrides cover any subtype rather than a fixed list, which is what other mods' blocks need.
-Profile overlays remain the mechanism for per-subtype block properties, which a flat setting cannot
-express.
-
-### What is left
+**Per-subtype block overrides.** `Cubes.xml` is 54 entries of 8 values, and it is different in kind
+from the other two: 432 values, whose interesting ones belong to the block a player is looking at
+rather than to a list they scroll. Properties are cached per definition in `ThermalBlockCatalog`, so
+changing one at runtime needs the cache invalidated and every node of that type refreshed. A mod
+folder is read-only in a workshop install, so this writes a per-world override layer into world
+storage like the other two, covering any subtype rather than a fixed list.
 
 **Status becomes the panel worth opening.** Today it lists what changed, which the Overview already
 counts. It should be the mod's own report:
@@ -921,7 +785,7 @@ read by the same person for the same reason:
 
 ```xml
 <Solver>
-  <Frequency>4</Frequency>
+  <Frequency>8</Frequency>
   <MaxSubsteps>64</MaxSubsteps>
 </Solver>
 <CoolantLoops enabled="true">
@@ -946,6 +810,7 @@ one with a migration risk — is late rather than first.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Gave up this page's second account of the profiles to [profiles.md](profiles.md), which is the page about them: the measured cost ladder, *Where the extremes lie* and *Designing your own* all moved, and with them a duplicate of the `HeatTimeScale` substep-demand table. What stays here is the four settings each preset sets. Replaced `MaxSubstepsPerBlock`'s sweep table with a pointer to [stiffness.md](stiffness.md#1-a-per-block-substep-cap--built-measured-off-by-default), which carries the same sweep at both shipped step lengths — the copy here had the same floored-block counts against different speeds and errors, which is a table that had drifted from the one it was taken from. Cut *The settings surface, and where it is going* down to what is left of it: three of its five subsections described the menu this page already documents two screens above. |
 | 2026-08-22 | Corrected two statements about `Frequency` that contradicted this page's own reference table: the prose called 4 the shipped value where the table says 8, and read a rig's demand as though it were the shipped configuration. The nested-config example showed a `MaxSubsteps` of 16 rather than the shipped 64. |
 | 2026-08-22 | Absorbed `settings-redesign.md`, whose subject is this page's subject, as [The settings surface](#the-settings-surface-and-where-it-is-going), with the completed steps restated as what the menu now is rather than as a plan. Took the `Frequency` sweep from `field-tuning.md` into the section that already argued the arithmetic, so the derivation and the measurement sit together. Added the standard header and this log. |
 | 2026-08-22 | Brought the loop and planet definitions into the menu as world settings, replicated and reachable from `/thermal set` and the mod API. |

@@ -183,6 +183,10 @@ Measured by the `air-conditioning` scenario: a sealed cabin with a 60 kW reactor
 The terminal shows what it is moving, what it is drawing, and the coefficient between them. A pump
 with nothing bolted to one of its faces says so rather than silently doing nothing.
 
+A pump pairs naturally with a radiator on its hot side: it concentrates a ship's heat somewhere that
+can be shed, which is the one thing radiators alone cannot do when the block you need cooled is
+already cooler than what surrounds it.
+
 The efficiency fraction and the cap are tuned for the whole mod in
 [configuration.md](configuration.md#heat-pumps); the two ratings are per block and live in
 [ThermalHeatPumpShapes](../Data/Scripts/Thermodynamics/Game/ThermalHeatPumpShapes.cs).
@@ -325,25 +329,13 @@ fields: a text box handed fifteen lines shows one and a half and clips the rest.
 [ThermalTerminal.cs](../Data/Scripts/Thermodynamics/ThermalTerminal.cs) needs no HUD framework at
 all, so it is the readout that works in any world.
 
-## Radiators and the heat pump
-
-`Gauge_LG_Radiator` / `Gauge_SG_Radiator` are ordinary blocks with aluminium's specific heat, high
-emissivity (0.35 against the 0.125 default) and a surface-area multiplier of 1.25. They have no
-coolant ports: a loop sheds heat through one by pressing a pipe's sink face against it, and the
-panel then radiates from its own exposed faces. Bolting a radiator flat against the hull removes the
-faces it would have radiated from, which is what the `radiator` scenario measures.
-
-`Gauge_LG_HeatPump` / `Gauge_SG_HeatPump` move heat from the block on their front face into the
-block behind them, for an electrical cost set by Carnot. They pair naturally with a radiator on the
-hot side: the pump concentrates a ship's heat somewhere it can be shed, which is the one thing
-radiators alone cannot do when the thing you need cooled is already cooler than its surroundings.
-
 ---
 
 ## Change log
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Removed a trailing *Radiators and the heat pump* section that restated the [Radiator](#radiator) and [Heat pump](#heat-pump) sections above it in weaker form — the emissivity, the multiplier, the absent coolant ports and the Carnot cost were each already stated once. The one thing it said that they did not, that a pump pairs with a radiator on its hot side, moved into the heat pump's own section. |
 | 2026-08-22 | Added the standard header and this change log. |
 | 2026-08-19 | Corrected two claims on this page that measurement contradicted, and answered two build questions with measurements rather than intuition: several small loops do **not** beat one big one, and a heat pump does work as air conditioning through a wall. Let pumps drive a ring either way, so a backwards pump still works. Reported a coolant block's loop — and why it has none — in its own terminal, and reported flow in metres per second. |
 | 2026-08-17 | Moved the readouts off Text HUD API onto Rich HUD, and replaced thermal vision with the x-ray block overlay. |
