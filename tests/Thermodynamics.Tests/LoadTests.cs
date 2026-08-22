@@ -9,46 +9,20 @@ using Xunit.Abstractions;
 namespace Thermodynamics.Tests
 {
     /// <summary>
-    /// What an update costs, asserted rather than eyeballed.
-    ///
-    /// The load benchmarks in the harness produce a table someone has to read. These are the
-    /// same measurements turned into a claim that fails the build, so a change that makes a
-    /// large grid stutter is caught by the suite instead of by a player.
-    ///
-    /// Almost every assertion here is on a <see cref="SimulationWork"/> counter rather than on a
-    /// stopwatch. A millisecond threshold is a statement about the machine that ran it; a claim
-    /// that placing one block must not visit every node on the grid is a statement about the
-    /// algorithm, and it holds identically on a laptop, a build server and a dedicated host.
-    /// The handful of wall-clock tests that remain are there to catch a change of the order of
-    /// magnitude, and their ceilings are set loose enough to say so.
-    ///
-    /// Every test writes its figures to the test output, so a run of the suite is also a
-    /// performance report — which is the point of having them here rather than in a benchmark
-    /// nobody runs.
-    /// </summary>
-    /// <summary>
-    /// Keeps the timed tests off the same cores as the rest of the suite.
-    ///
-    /// xUnit runs collections in parallel, and a stopwatch reading taken while thirty other
-    /// tests are saturating the machine measures the machine, not the code. The first run of
-    /// these reported the cost per link visit growing 1.7x across four times the blocks and then
-    /// 3.2x on the next run, from the same binary — all of the difference was scheduling. A
-    /// collection that disables parallelisation runs alone, which is what a measurement needs.
+    /// Keeps the timed tests off the same cores as the rest of the suite. A stopwatch reading taken
+    /// while thirty other tests saturate the machine measures the machine: the first run of these
+    /// reported 1.7x and then 3.2x from the same binary, all of it scheduling.
     /// </summary>
     [CollectionDefinition("load", DisableParallelization = true)]
     public class LoadCollection { }
 
-    [Collection("load")]
     /// <summary>
-    /// What an update costs, asserted on work counters rather than on a stopwatch.
-    ///
-    /// <para>
-    /// A timing test on a shared machine measures the machine. These count visits instead: a settled
-    /// grid rebuilds nothing, a placed block links the block and not the grid, a burst of welding
-    /// costs the burst, every budgeted pass respects its budget, and observing any of it changes none
-    /// of it.
-    /// </para>
+    /// What an update costs, asserted on work counters rather than on a stopwatch — a millisecond
+    /// threshold is a claim about the machine, and "placing one block must not visit every node" is a
+    /// claim about the algorithm. Every test writes its figures to the test output, so a suite run is
+    /// also a performance report. See load-and-hitching.md, Catching it again.
     /// </summary>
+    [Collection("load")]
     public class LoadTests
     {
         /// <summary>Grid sizes the suite can afford. The benchmarks go to a million.</summary>

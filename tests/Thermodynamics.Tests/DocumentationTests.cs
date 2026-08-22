@@ -7,22 +7,10 @@ using System.Text.RegularExpressions;
 namespace Thermodynamics.Tests
 {
     /// <summary>
-    /// The documentation is checked the way the code is.
-    ///
-    /// <para>
-    /// Every page under `docs/`, two READMEs and a tools page cross-reference each other several
-    /// hundred times, and every one of those references is a claim that a file, a heading, a rule
-    /// or a scenario exists. Nothing was checking them. A rename of `sim/` to `tests/` left nine
-    /// dead links behind, three pages had fallen out of the README's index entirely, and three
-    /// more pointed at helper scripts in a parent folder that stopped existing when this mod
-    /// became its own repository.
-    /// </para>
-    ///
-    /// <para>
-    /// A dead link is worse than a missing one: it reads as though somebody checked. These tests
-    /// are textual and cheap, and they fail on exactly the drift that a reader discovers by
-    /// clicking.
-    /// </para>
+    /// The documentation is checked the way the code is: every cross-reference between the pages is a
+    /// claim that a file, a heading, a rule or a test exists, and **a dead link is worse than a missing
+    /// one, because it reads as though somebody checked**. Textual and cheap.
+    /// Holds `R7`, `R10`, `R12`, `R13` and half of `E5`.
     /// </summary>
     public class DocumentationTests
     {
@@ -243,22 +231,9 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// The suite's size, wherever a page quotes it, is the size the suite actually is.
-        ///
-        /// <para>
-        /// Three pages advertised "1,026 tests" and one advertised 1,179 while the runner was
-        /// reporting 1,467. A count in prose is the first thing to rot, because nothing fails when
-        /// it does, and a reader has no way to tell a figure that is one commit old from one that
-        /// is four hundred commits old.
-        /// </para>
-        ///
-        /// <para>
-        /// The tolerance is deliberately one-sided and loose: a page may quote a round figure
-        /// slightly below the true one — "over 1,450" is a fair thing to write — but it may never
-        /// quote more tests than exist, and it may not fall more than a tenth behind. That is wide
-        /// enough that ordinary commits do not have to edit prose, and tight enough that a figure
-        /// cannot silently become a historical curiosity.
-        /// </para>
+        /// The suite's size, wherever a page quotes it, is the size the suite actually is (`E5`). The
+        /// tolerance is one-sided and loose: a page may round down, may never quote more tests than
+        /// exist, and may not fall more than a tenth behind.
         /// </summary>
         [Fact]
         public void EveryQuotedSuiteSizeIsCurrent()
@@ -370,25 +345,11 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// A test the documentation names by name has not been renamed out from under it.
-        ///
-        /// <para>
-        /// Citing a test is how a page turns a claim into evidence, and it is the citation rather
-        /// than the claim that rots: the test gets renamed, the page keeps the old name, and a
-        /// reader who goes looking finds nothing and cannot tell whether the check was removed or
-        /// merely moved. Two had gone that way and both were worse than a dead link. One named a
-        /// test that had been renamed <em>and</em> had reversed its conclusion — the page said the
-        /// shipped budget bound on a mid-size grid where the test says it fits. The other promised
-        /// that the shipped <c>Planets.xml</c> was checked against the code that generates it, and
-        /// no such check existed; the file and the generator happened to agree.
-        /// </para>
-        ///
-        /// <para>
-        /// Flagged only when a real test shares the name's first three words, which is what a
-        /// rename looks like. A looser rule cannot work: the pages are full of backticked
-        /// camel-case names that are settings, engine API members and exception types, and none of
-        /// those is declared in this repository either.
-        /// </para>
+        /// A test the documentation names by name has not been renamed out from under it (`R7`).
+        /// Flagged only when a real test shares the name's first three words, which is what a rename
+        /// looks like; a looser rule cannot work, because the pages are full of backticked camel-case
+        /// names that are settings, engine members and exception types.
+        /// `EveryCheckCitedByTheRulesPageResolves` is the stricter check, over one page.
         /// </summary>
         [Fact]
         public void NoPageNamesATestThatHasBeenRenamed()
@@ -450,21 +411,9 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// Every class that holds tests says what it is for.
-        ///
-        /// <para>
-        /// A test method's name states what it asserts; nothing states why the group of them
-        /// exists, what fixture they share, or which of them is the one with a defect behind it.
-        /// Twenty-nine classes — the oldest and most foundational, conduction and orientation and
-        /// the save format among them — carried no summary at all, so the only way to learn what a
-        /// suite was protecting was to read every case in it and guess.
-        /// </para>
-        ///
-        /// <para>
-        /// Checked from the source rather than by reflection, because an XML doc comment is not
-        /// compiled into the assembly unless documentation generation is switched on, and a check
-        /// that silently stops looking is worse than no check.
-        /// </para>
+        /// Every class that holds tests says what it is for (`R10`). Read from the source rather than by
+        /// reflection: a doc comment is not compiled into the assembly unless documentation generation
+        /// is on, and a check that silently stops looking is worse than no check.
         /// </summary>
         [Fact]
         public void EveryTestClassSaysWhatItIsFor()
@@ -520,22 +469,10 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// Every block property the game reads is in the definitions reference, and the reference
-        /// names none that it does not.
-        ///
-        /// <para>
-        /// `definitions.md` is what a third-party mod author writes a definition from, so a
-        /// property missing from it is a feature nobody outside this repository can use, and one
-        /// listed that does not exist is an afternoon spent wondering why a number does nothing.
-        /// `HeatSourceWatts` was the first: implemented, tested, and in neither the reference nor
-        /// the in-game reader.
-        /// </para>
-        ///
-        /// <para>
-        /// Both name lists are read as text — the reader for the same reason
-        /// `ConfigurationDocTests` reads `Settings.cs` that way, and the table because a markdown
-        /// table has no other form.
-        /// </para>
+        /// Every block property the game reads is in the definitions reference, and the reference names
+        /// none that it does not (`D2`, `D3`). `definitions.md` is what a third-party author writes a
+        /// definition from, so a property missing from it is a feature nobody outside this repository
+        /// can use. Both name lists are read as text.
         /// </summary>
         [Theory]
         [InlineData("ThermalCellDefinition.cs", "ThermalBlockProperties", 8)]
@@ -621,23 +558,9 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// Every page carries a change log, and history lives in it rather than in the prose.
-        ///
-        /// <para>
-        /// The documentation standard is in `development.md`: a page describes what the code does
-        /// now, in the present tense, and every revision — including a correction to something this
-        /// repository previously published — is a dated row at the bottom. Without the log there is
-        /// nowhere for that history to go, so it stays in the body and the page slowly stops being
-        /// a description of the code and becomes a record of how it got here. Two pages had reached
-        /// that state before this check existed, and one of them said so in its own opening
-        /// sentence.
-        /// </para>
-        ///
-        /// <para>
-        /// Vendored third-party documentation is exempt: it is replaced wholesale rather than
-        /// edited (`R6`), so imposing this repository's shape on it would guarantee a conflict on
-        /// the next update.
-        /// </para>
+        /// Every page carries a change log, so history has somewhere to go other than the prose
+        /// (`R12`). Vendored documentation is exempt, since it is replaced wholesale rather than
+        /// edited (`R6`).
         /// </summary>
         [Fact]
         public void EveryPageHasAChangeLog()
@@ -935,22 +858,10 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// Every check the rules page cites resolves to something that runs.
-        ///
-        /// <para>
-        /// This is `R11`. A name resolves when it is a live test case or a class holding one; when
-        /// it is a type or member the code refers to somewhere other than its own declaration; or
-        /// when it is a file that exists. The middle test is what catches the failure that produced
-        /// the rule: `SealedBlocksAreRare` was cited as the check on a defect bound months after it
-        /// had been demoted from a test case to an `internal static` helper nothing calls. It still
-        /// compiled, it still read as enforcement, and it never ran again.
-        /// </para>
-        ///
-        /// <para>
-        /// The limit of the test is that "referred to somewhere" is not "reached at run time": a
-        /// helper called only by another dead helper resolves here. It catches a name with no
-        /// caller at all, which is the shape every stale citation on the page has had.
-        /// </para>
+        /// Every check the rules page cites resolves to something that runs (`R11`): a live test case,
+        /// a class holding one, a member the code refers to somewhere other than its own declaration,
+        /// or a file that exists. **"Referred to somewhere" is not "reached at run time"** — a helper
+        /// called only by another dead helper resolves here.
         /// </summary>
         [Fact]
         public void EveryCheckCitedByTheRulesPageResolves()
