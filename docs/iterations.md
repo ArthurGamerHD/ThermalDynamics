@@ -26,6 +26,9 @@ can be recovered for any row here by reading that file at the row's commit.
 | 4 | 2026-08-21 | `55a6935` | 1,285 | 2 m 11 s | +259 across those 36 commits and this one; this pass added `DumpAuditTests` and the field-dump fixture |
 | 5 | 2026-08-20 | `b7ccf75` | 1,358 | 5 m 4 s | +73: world settings, the overlay budget, the descent, the planet-definition merge, `RescanGate`, and the burial audit. Nine slow suites now carry `speed=slow`. |
 | 6 | 2026-08-20 | `f411f7d` | 1,359 | **50 s** | one ungated corpus test was 4 m 57 s of every run since the fixture landed; rows 4 and 5 carry it. The `speed!=slow` lane is 14 s. |
+| — | | `f411f7d..c18e3e4` | | | **20 commits recorded no row.** The wind burial audit, the per-planet climates, the block heat index, the balance bench and the first full corpus survey landed between rows 6 and 7. |
+| 7 | 2026-08-22 | `c18e3e4` | 1,467 | 51 s | where this pass started; +108 across those 20 commits |
+| 8 | 2026-08-22 | *(this pass)* | 1,512 | 51 s | +45. A defragmentation pass: shipped code is **366 lines shorter**, and every test added is a check on something that had drifted rather than a new claim about the physics. |
 
 ## The solver
 
@@ -40,6 +43,8 @@ flight unless the row says otherwise.
 | 3 | `9aaf3d2` | 86.2 ms | 0.043 ms | 1.119 ms | 3.544 ms | 3.550 ms | 1.617 ms | 2.11 |
 | 4 | `55a6935` | 87.4 ms | 0.038 ms | 1.134 ms | 3.621 ms | 3.613 ms | 1.680 ms | 2.17 |
 | 5 | `b7ccf75` | 105.6 ms | 0.206 ms | 1.210 ms | 4.198 ms | 4.282 ms | 1.951 ms | 2.41 |
+| 7 | `c18e3e4` | 85.8 ms | 0.057 ms | 1.095 ms | 3.490 ms | 3.496 ms | 1.616 ms | 2.02 |
+| 8 | *(this pass)* | 84.0 ms | 0.075 ms | 1.085 ms | 3.461 ms | 3.510 ms | 1.636 ms | 2.02 |
 
 Row 2 changed no shipped code, so its solver figures are row 1's.
 
@@ -61,6 +66,22 @@ game adapter, which the harness does not compile, so no benchmark here can see i
 `tests/benchmarks/performance.csv` is deliberately left at row 3: re-recording a baseline for a
 pass that moved no solver code would bake this run's machine state into every future comparison.
 
+**Rows 7 and 8 were taken back to back on one machine, which is the only way this pass's figures
+mean anything.** Row 6's baseline is `9aaf3d2`, two hundred commits back, so a diff against the
+committed `performance.csv` spans everything since — including the change that stopped filing an
+overheat event per substep, which shows as a 95 % fall in event counts and belongs to a commit
+before this pass began. So the pass was measured against *its own start* instead: the same report
+run at `c18e3e4` and at the tip, twenty minutes apart, on an idle machine.
+
+Against that, **the pass moved nothing.** Six rows are named as regressions and every one is
+inside or barely above a noise floor that is itself up 30 % between the two runs: the largest is
+`step shape / fixed per step` at 0.047 ms against a 0.075 ms spread. The ladder rows did not move
+enough to be named at all. That is the expected result — the code this pass deleted was code
+nothing called, and the two structures it changed, a grid's key index and a room's cell list, are
+touched when a block is placed and when a mapping pass completes, not inside a substep.
+
+`tests/benchmarks/performance.csv` is deliberately left at row 3, for the reason row 4 gives.
+
 Where a pass moves something the columns above cannot see, it gets a row here.
 
 | # | figure | before | after |
@@ -71,6 +92,10 @@ Where a pass moves something the columns above cannot see, it gets a row here.
 | 3 | substep cap 1, step | 0.668 ms | **0.619 ms** |
 | 3 | substep cap 4, step | 1.210 ms | **1.165 ms** |
 | 3 | step shape, fixed per step | 0.535 ms | **0.494 ms** |
+| 8 | `GridModel` indexes, B/block at 126,731 | 120 | **86** |
+| 8 | `RoomMap` retained, B/block at 126,731 | 166 | **128** |
+| 8 | `RoomMap` retained, B/block at 505,566 | 309 | **229** |
+| 8 | retained total, B/block at 126,731 | 1,095 | **1,023** |
 
 **Row 5 was taken on a loud machine and its solver columns are not readable against row 4.**
 Calibration is up 21 % and noise is five times row 4's; a re-take mid-pass moved every column
@@ -79,6 +104,13 @@ environment solve, once a step per grid — so the 14-19 % across the board is t
 on a quiet one before reading a trend from it.
 
 ## Recording a row
+
+**Measure the pass against its own start, not against the committed baseline.** That file is
+pinned at row 3, so a diff against it spans every commit since and attributes all of them to the
+pass that ran it. Build the pass's starting commit in a worktree, take a report from it into a
+scratch directory, then run the tip's report with `--baseline` pointing at that. Twenty minutes
+apart on one idle machine is what makes the two comparable, and it is the only way to say a pass
+moved nothing.
 
 ```bash
 cd tests
