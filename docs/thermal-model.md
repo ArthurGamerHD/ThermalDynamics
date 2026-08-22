@@ -73,7 +73,8 @@ These are the definition of correctness; everything else is tuning.
 | **Boundedness** | With `ClampConductionOvershoot` on, every pairwise exchange is capped at the energy that brings the pair to their shared equilibrium: `E_max = ΔT × (m_a m_b) / (m_a + m_b)`. | `StabilityTests`, `ConductionClampGateTests` |
 
 Substepping keeps the answer accurate; the clamp keeps it sane when substepping alone cannot.
-Reaching `MaxSubsteps` (16) is reported as `LastStepWasClamped` and appears in the telemetry.
+Reaching `MaxSubsteps` (64 as shipped) is reported as `LastStepWasClamped` and appears in the
+telemetry.
 
 ---
 
@@ -645,6 +646,7 @@ several tests compare against it so the differences stay pinned rather than reme
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Corrected the substep cap quoted beside `LastStepWasClamped`: it read 16 and ships 64. |
 | 2026-08-22 | Absorbed `surface-mapping.md`, whose subject is the geometry every area term on this page reads. Moved the environment equations to [environment.md](environment.md), leaving one home for them instead of two. Converted to present tense, with the defect narratives moved to [known-issues.md](known-issues.md) and this log. Promoted the three solver invariants into a table of their own. |
 | 2026-08-20 | Made reactors generate the heat they always should have: which waste fraction applies is decided by the game's component, not by the definition, so a reactor's consumer fraction was dead text. Added the check over producer types by name. |
 | 2026-08-19 | Took block conductivity in real W/(m·K) rather than a 0..1 quality figure. Reported the convection coefficient after the atmosphere blend rather than before it. |

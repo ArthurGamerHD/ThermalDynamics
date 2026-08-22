@@ -246,7 +246,8 @@ So `G/C ∝ 1/size²`. **Small blocks are quadratically stiffer.**
 | SE1 large ↔ small grid (never mixed today) | 5× | 25× |
 | SE2 0.25 m ↔ 5 m block, **on the same grid** | 20× | **400×** |
 
-`ThermalSolver.MaxSubsteps = 16` would clamp permanently on any SE2 grid mixing sizes.
+A `MaxSubsteps` of 64, as shipped, would clamp permanently on any SE2 grid mixing sizes — the
+ratio above is 400×, so no cap a grid can afford closes it.
 `ClampExchange` keeps the result *bounded* — it will not blow up — but bounded is not accurate,
 and `LastStepWasClamped` would be true forever.
 
@@ -772,6 +773,7 @@ sleeping and chunking are least effective.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Corrected the substep cap in the integrator argument: it named 16, which was the default when the section was written and is now 64. The argument is unchanged — a 400× stiffness ratio exceeds any cap a grid can afford. |
 | 2026-08-22 | Merged `model-redesign.md` into this page as Part 1: both documents are design for the same model, and the data structures, room mapping and per-cell storage arguments were being made twice. Replaced the numbered section references with named links, so a cross-reference survives a section being added. Corrected three stale notes carried in from the older page — per-block self-shadowing is built and switchable rather than unimplemented, the sun raycast is on an interval, and specific heat is real J/(kg·K) rather than 250× below physical. Added the standard header and this log. |
 | 2026-08-18 | Recorded the measured effect of boundary-centric geometry: contact area for one joint is flat at ~13 ns whatever the block size, against 987 µs at 16³ cells for the cell-walking form. |
 | 2026-08-12 | Opened both design documents: the one idea (stop enumerating cells, work on block boundaries) and the three structural changes scale needs (chunking, activity tracking, lumping), with multirate stepping unifying two of them. |

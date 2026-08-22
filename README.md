@@ -83,6 +83,7 @@ in the prose.
 
 | Document | Contents |
 | --- | --- |
+| [docs/document_of_intent.md](docs/document_of_intent.md) | What the mod is for and the goals it is measured against, where those goals conflict with the code, and where no intent has been stated at all. |
 | [docs/rules.md](docs/rules.md) | The standing rules, in one place: fourteen principles, the rules that follow from them, and whether each is load-bearing, conditional or not worth keeping. |
 | [docs/architecture.md](docs/architecture.md) | Component layout, update order, grid lifecycle, persistence. |
 | [docs/backlog.md](docs/backlog.md) | Every open item across these documents, categorised, one line each. |

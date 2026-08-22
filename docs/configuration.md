@@ -255,14 +255,14 @@ propagation bought by being wrong, and it is the arcade profile's whole method.
 
 **So what should it be?** Not 1, despite the table: `Frequency` is also how often damage lands, how
 often the HUD moves, and how quickly a change is felt. What the sweep rules out is the idea that
-raising it buys performance. The shipped 4 is a reasonable middle — 16 substeps a second against a
-floor of 14, about 12% above the cheapest possible, in exchange for four times the responsiveness of
-Frequency 1.
+raising it buys performance. **The shipped value is 8**, which on this rig is 16 substeps a second
+against a floor of 14 — about 12% above the cheapest possible, in exchange for eight times the
+responsiveness of Frequency 1.
 
-Note that the two settings are not independent. At `Frequency 4` the test ship demands 3.3 substeps
-a step, which is why `MaxSubsteps 6` is comfortably sufficient; at `Frequency 2` demand doubles to
-about 6.7 and starts clipping that cap. **Lowering `Frequency` for performance would quietly cost
-accuracy at the cap rather than saving anything.**
+Note that the two settings are not independent. Demand *per step* is proportional to step length,
+so the same rig that asks 3.3 substeps at `Frequency 4` asks about 6.7 at `Frequency 2` — enough to
+clip a `MaxSubsteps` of 6, which is what the field world ran. **Lowering `Frequency` for performance
+would quietly cost accuracy at the cap rather than saving anything.**
 
 ### `MaxSubstepsPerBlock`
 
@@ -922,7 +922,7 @@ read by the same person for the same reason:
 ```xml
 <Solver>
   <Frequency>4</Frequency>
-  <MaxSubsteps>16</MaxSubsteps>
+  <MaxSubsteps>64</MaxSubsteps>
 </Solver>
 <CoolantLoops enabled="true">
   <LargeGridFlowRate>10</LargeGridFlowRate>
@@ -946,6 +946,7 @@ one with a migration risk — is late rather than first.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Corrected two statements about `Frequency` that contradicted this page's own reference table: the prose called 4 the shipped value where the table says 8, and read a rig's demand as though it were the shipped configuration. The nested-config example showed a `MaxSubsteps` of 16 rather than the shipped 64. |
 | 2026-08-22 | Absorbed `settings-redesign.md`, whose subject is this page's subject, as [The settings surface](#the-settings-surface-and-where-it-is-going), with the completed steps restated as what the menu now is rather than as a plan. Took the `Frequency` sweep from `field-tuning.md` into the section that already argued the arithmetic, so the derivation and the measurement sit together. Added the standard header and this log. |
 | 2026-08-22 | Brought the loop and planet definitions into the menu as world settings, replicated and reachable from `/thermal set` and the mod API. |
 | 2026-08-19 | Documented the twenty-one settings the reference had never listed — the whole `Loop*` and `Planet*` families, `MaxSubsteps` and `ClampEnvironmentOvershoot` — and added `ConfigurationDocTests`, which fails when a setting exists in one place and not the other. Let an admin change world settings from a client, over a secure channel rather than the shared one. |

@@ -35,8 +35,8 @@ namespace Thermodynamics.Core
         ///
         /// A ladder rather than five unrelated tunings, on two axes: how faithfully the simulation
         /// is integrated, and how fast heat is made to move. Simulation, optimized and simlite
-        /// share the tuned pace and descend in accuracy; responsive and arcade are simulation and
-        /// optimized with the pace raised.
+        /// share the <em>real</em> pace (HeatTimeScale 1) and descend in accuracy; responsive and
+        /// arcade are simulation and optimized with that pace raised to the tuned 225.
         /// </summary>
         public static readonly string[] Names =
         {

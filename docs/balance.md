@@ -286,6 +286,33 @@ Deduplicated, shipped profile, `HeatTimeScale` 225. Seconds are simulated second
 **The distribution is bimodal, not spread.** A ship either sits near ambient indefinitely or runs
 away in under ten seconds, and the 2–5 minute window the balance target asks for lands in the gap.
 
+### Damage arrives too fast to be played around
+
+Of the ships that cross critical at all, seconds from the start of the run to the crossing —
+computed over the deduplicated outcomes, counting only ships that cross:
+
+| Scenario | Ships crossing | p10 | Median |
+| --- | ---: | ---: | ---: |
+| `idle` | 18 | 17.6 s | 104.5 s |
+| `full-electrical` | 3,516 | 3.5 s | **8.9 s** |
+| `burn-forward` | 5,481 | 2.9 s | **5.6 s** |
+
+**These are seconds of play, not of physical time.** `HeatTimeScale` is 225, so nine seconds at the
+controls is about thirty-four minutes of real heating. That compression is the point of the dial —
+heat is meant to happen on a human scale — and this is the first measurement of where it put the
+hottest designs.
+
+**Lowering the dial is not the answer**, because it moves the inert ships too and the spread between
+the two groups is only about twelvefold. What separates them is per-block: a producer whose waste
+watts are large against its own heat capacity crosses critical almost immediately whatever the clock
+says.
+
+This is a balance decision rather than a defect, and it is the one the survey most clearly asks for.
+It is also the sharpest tension with the stated goals: `G5` holds as written — recovery is bounded —
+while the reason given for it, *"a player must be able to react to a warning"*, does not survive a
+median of 8.9 seconds. See
+[document_of_intent.md](document_of_intent.md#where-the-goals-and-the-code-disagree).
+
 ### One block type decides the load criterion
 
 The jump drive's effect on the outcome is binary, and the figures depend on which population is
@@ -608,6 +635,7 @@ See [backlog.md](backlog.md) for the five ways a full sweep dies.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Restored the damage-timing finding, which the merge of `corpus-shape.md` and the register had dropped, and corrected its idle figure: the median time to critical at idle is **104.5 s**, matching this page's own shape table, where the prose had carried 112 s — one of the eighteen values rather than their median. |
 | 2026-08-22 | Merged `corpus-shape.md` and the corpus findings from `known-issues.md` into this page, so the block-level argument and the population that tests it sit together. **Corrected the jump-drive figures**, which stood at three different values across three pages: recomputed from `composition.csv` and `outcomes.csv`, `LargeJumpDrive` alone is 10,567 blocks on 2,183 ships and 67.1% of full-load waste, while all `JumpDrive` subtypes together are 10,954 on 2,253 and 71.3% — both previous figures were right over populations neither page named. The outcome split is 2,249 ships carrying one against 5,883 without, at 100.0% and 65.5% reaching 400 K; the register had 2,255/5,887 and quoted G2 as both 67.1% and 65.6% in adjacent paragraphs. **Corrected the local-W/m² banding table**, which dropped 894 of 8,132 ships and omitted the 50,000–200,000 band entirely. The block-index tables, the cooling ladder and the reactor sweep were re-verified against the datasets and are unchanged. |
 | 2026-08-22 | Fitted cooling to ships people actually built, and said which half of the cooling criterion the ladder answers and which it does not. |
 | 2026-08-21 | Read the first complete corpus survey — 8,142 ships — for balance: the bimodal distribution, the per-block failure, the local-W/m² rule, and the block heat index as a gate. Recorded that the clumping index does not predict hot spots and the local figure does. |
