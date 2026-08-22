@@ -356,8 +356,8 @@ commit, naming what was wrong and what the number actually is.**
 
 The alternative is a document that is right on its newest page and wrong on the one a reader
 found first. Two corrections in an earlier pass followed this shape: a ratio that was not a ratio,
-and a verdict script quoting a figure it could compute. This page has now been corrected the same
-way — see [what the extraction changed](#what-the-extraction-changed).
+and a verdict script quoting a figure it could compute. This page is held to it too, and its own
+corrections are in the [change log](#change-log).
 
 *Applies to:* anything already written down, including this page.
 *Checked by:* — judgement.
@@ -378,7 +378,7 @@ diff as the numbers it now admits is a result.
 in a pinned defect test.
 *Checked by:* — judgement. A commit touching both a threshold and a dataset is the shape to look
 for in review.
-*From:* new with the extraction; the gap it closes is `E1`'s.
+*From:* the gap it closes is `E1`'s.
 
 #### M9 — A scenario's conclusion is pinned so it cannot invert
 
@@ -634,7 +634,7 @@ than its own declaration, or a file that exists. It would have caught all three 
 Two limits it states rather than hides: it reads this page's fields only, not every page that names
 a test, and *referred to somewhere* is not *reached at run time*, so a helper called only by another
 dead helper still resolves.
-*From:* new with the extraction; see [what the extraction changed](#what-the-extraction-changed).
+*From:* the three stale citations above, generalised.
 
 #### R13 — A standing rule is stated here once, and argued elsewhere
 
@@ -799,7 +799,7 @@ switched on by somebody trying to switch it off.
 *Applies to:* every environment variable and configuration value used as a gate.
 *Checked by:* — nothing. `IsNullOrEmpty` at the two sites in `CorpusFixture` and
 `LabInvariantTests` is the fix.
-*From:* new with the extraction; [backlog.md](backlog.md) H3.
+*From:* [backlog.md](backlog.md) H3, generalised.
 
 ### P9 — The core is a library the game happens to call
 
@@ -1179,53 +1179,15 @@ mod on the [README](../README.md); it is not a rule.
 
 ---
 
-## What the extraction changed
-
-Under `E10`, the corrections are recorded where the claims were, and named here.
-
-**Three *Checked by* citations named something that does not run.** `C6` cited `PhysicsTests`,
-which is a file — the classes in it are `ConductionTests` and `StabilityTests`. `D1` attributed
-three invariants to `LabInvariantTests` that live in `ScreeningTests`. `D5` cited
-`SealedBlocksAreRare`, which commit `991d4d9` demoted from a test case to an uncalled
-`internal static` helper when `CorpusSurvey` absorbed the standalone walks; the claim is still
-checked, by the survey, but not by the thing the page named. `R11` is the new rule those three
-produced.
-
-**`E1` and `E8` overstated what `verdict.py` does.** It prints `HOLDS`, `FAILS` or `?` and exits
-zero in every case. It reports; it does not check. The enforcement `E8` describes is in
-`CorpusSurvey`, which asserts a non-zero judged count. Both fields now say which is which.
-
-**Two new rules came out of the reduction, not out of an incident.** `E11` closes the hole in
-`E1`: a criterion fixed before the data and quietly relaxed afterwards has been fitted to the
-data by a slower route. `C8` generalises an open defect — a gate whose off position cannot be
-spelled the obvious way will be switched on by somebody trying to switch it off.
-
-**Five retired invariants are dead code in the test project.** `LabInvariantTests.SealedBlocksAreRare`,
-`LabInvariantTests.ASettledGridShedsWhatItMakes`, `LabInvariantTests.MoreLoadIsNeverCooler`,
-`LabInvariantTests.SunlightNeverCools` and
-`BlueprintTests.ARealSubscribedShipBuildsASimulationThatSteps` have no caller anywhere in the
-tree. Their claims live on in `CorpusSurvey`; the bodies do not
-run. That is `D2`'s defect class, found by `D2`'s own method, and it is in
-[backlog.md](backlog.md).
-
-**Three rules stopped being rules and one changed category.** `R1`, `J1` and `J2` are principles
-or summaries rather than things a change can violate. `O4` is reclassified low value against a
-measurement taken the same day it was written down.
-
 ## Where these came from
 
-Nothing on this page is invented here except `E11`, `C8` and `R11`, and those are generalisations
-of defects the tree already records. The rest was assembled from
-[document-of-intent.md](document-of-intent.md), [development.md](development.md),
-[balance-lab.md](balance-lab.md), [benchmarks.md](benchmarks.md), [benchmarks.md](benchmarks.md#the-iteration-log),
-[known-issues.md](known-issues.md), [balance.md](balance.md),
-[configuration.md](configuration.md), [api.md](api.md), [tests/README.md](../tests/README.md),
-[tools/corpus/README.md](../tools/corpus/README.md), the summaries of the test classes and core
-types named above, and a set of session notes kept outside the repository — which is where several
-of the operational rules lived and nowhere else.
+Nothing on this page is invented here except `E11`, `C8` and `R11`, and those are generalisations of
+defects the tree already records. Every other rule was already written down somewhere — in a page,
+in a test class's own summary, in the header of a tools page, or in a note kept outside the tree —
+and that was the problem it exists to fix. Each rule's *From* field names where it came from.
 
-Those pages keep the argument and the evidence. When a rule and its source disagree, the source
-is right and this page is stale; say so and fix it here.
+Those pages keep the argument and the evidence. **When a rule and its source disagree, the source is
+right and this page is stale**; say so and fix it here.
 
 ---
 
@@ -1233,7 +1195,8 @@ is right and this page is stale; say so and fix it here.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Moved *What the extraction changed* into this log, where a record of a revision belongs (`R12`). It held four things, each still true and each now recorded once. **Three *Checked by* citations named something that does not run:** `C6` cited `PhysicsTests`, which is a file whose classes are `ConductionTests` and `StabilityTests`; `D1` attributed three invariants to `LabInvariantTests` that live in `ScreeningTests`; and `D5` cited `SealedBlocksAreRare`, which commit `991d4d9` demoted to an uncalled helper when `CorpusSurvey` absorbed the standalone walks. `R11` is the rule those three produced. **`E1` and `E8` overstated `verdict.py`**, which prints `HOLDS`, `FAILS` or `?` and exits zero either way — both fields now say reported rather than checked. **Two rules came out of the reduction rather than an incident:** `E11` closes `E1`'s hole, and `C8` generalises the gate whose off position cannot be spelled. **Three rules stopped being rules and one changed category** — `R1`, `J1` and `J2` are premises rather than things a change can violate, and `O4` was reclassified low value against a measurement taken the same day. All four dispositions are in [Low value](#low-value). |
 | 2026-08-22 | Put this page under the checks it asks of every other page. `EveryCheckCitedByTheRulesPageResolves` resolves every name in a *Checked by* field to something that runs, which retires `R11`'s unchecked state and closes [backlog](backlog.md) F10; `EveryRuleCitedByAPageExists` fails on a page citing a rule this one does not state; `TheRulesPageIndexesEveryRuleItStates` holds the index, the body and the principle table together. Each was run against a deliberate violation before being believed. |
 | 2026-08-22 | Read every page in the tree against the rule list and added the six rules it was missing: `C9` `C10` `D7` `D8` `R12` `R13`, each of which existed only in the one page or the one type summary that needed it. Widened `P7` from *the game is the authority on what compiles* to *the game is the authority*, which is where `C9` and `C10` belong. Recorded the necessity and sufficiency tests the principle list was put through in [Testing the reduction](#testing-the-reduction). Corrected `O4`, which quoted 135 test classes against a project that now holds more than 150; the figure is now stated without a hand-typed count, per `E5`. |
-| 2026-08-22 | Repointed the *From* fields at the pages that absorbed the ones they cited: `corpus-shape.md` into [balance.md](balance.md), `iterations.md` into [benchmarks.md](benchmarks.md). Added this change log. The rule inventory itself is unchanged; [What the extraction changed](#what-the-extraction-changed) is the record of the revision that produced it. |
+| 2026-08-22 | Repointed the *From* fields at the pages that absorbed the ones they cited: `corpus-shape.md` into [balance.md](balance.md), `iterations.md` into [benchmarks.md](benchmarks.md). Added this change log. The rule inventory itself is unchanged. |
 | 2026-08-22 | Extracted the standing rules from the eleven pages that each stated one in passing, reduced them to fourteen principles, and classified every rule as load-bearing, conditional or low value. Marked the sixteen load-bearing rules that nothing checks as unchecked rather than leaving the gap implicit. |
