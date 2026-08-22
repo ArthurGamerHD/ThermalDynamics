@@ -86,24 +86,21 @@ produced them: **Cost limits** shows substeps granted against substeps asked for
 the cap floored, **Pace** shows the hottest block and what the world is venting against what it
 makes, and **Debug** shows which overlay is up and whether telemetry is recording.
 
-It also carries Save, Reset and the five profiles as buttons — profiles were previously reachable
-only from chat, so the menu could show a world tuned by one without ever mentioning they existed. It is built on the [Rich HUD
-Framework](https://github.com/ZachHembree/RichHudFramework.Client) and needs the **Rich HUD Master**
-mod (`1965654081`) to be enabled; without it the keystroke says so and the chat commands remain the
-way in.
+It also carries the five profiles as buttons — profiles were previously reachable only from chat,
+so the menu could show a world tuned by one without ever mentioning they existed. It is built on
+the [Rich HUD Framework](https://github.com/ZachHembree/RichHudFramework.Client) and needs the
+**Rich HUD Master** mod (`1965654081`) to be enabled; without it the keystroke says so and the chat
+commands remain the way in.
 
-**Settings save themselves.** Every change is written to the config file about a second
-later — a menu that asks you to confirm what you already did is asking you to do it twice,
-and a setting that reverts on reload because a button was missed is worse than either.
-There is no reset button either: a profile sets every world setting, so applying one is how
-you start over.
+**Settings save themselves, and there is no Reset.** A change applies to the running session as
+you make it and reaches the config file about a second later, so a value you can see on screen is
+the value the world has and the value it will still have after a reload. A menu that asks you to
+confirm what you already did is asking you to do it twice, and a setting that reverts on reload
+because a button was missed is worse than either. Starting over is a profile: applying one sets
+every world setting.
 
 Two columns because that is what the page is wide enough for: the framework's tiles are a fixed
 300x250, so a third column would have to be scrolled to sideways.
-
-Changes apply to the running session as you make them. Nothing is written to the config file until
-Save, so a session can be experimented with and abandoned by not pressing it — and Reset puts the
-values back without saving either.
 
 The menu is generated from the same name list the chat commands and the mod API use, so a setting
 added to the config file appears in it without anyone maintaining a second list. A setting the

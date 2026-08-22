@@ -22,8 +22,6 @@ namespace Thermodynamics.Core
         /// </summary>
         public const int WideStrideBits = 21;
         private const long WideStride = 1L << WideStrideBits;
-        private const long WideHalfStride = WideStride / 2;
-        private const long WideMask = WideStride - 1;
 
         /// <summary>
         /// The legacy 32-bit position key, bit-compatible with <c>Vector3I.Flatten()</c> so existing

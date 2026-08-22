@@ -2258,21 +2258,6 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// <see cref="Weighted"/> with each face's share scaled by the fraction of that face the
-        /// sun reaches.
-        /// </summary>
-        private float WeightedLit(int node, float[] weights)
-        {
-            int b = node * Face.Count;
-            return (nodeFaceWeights[b] * nodeSunLit[b] * weights[0])
-                + (nodeFaceWeights[b + 1] * nodeSunLit[b + 1] * weights[1])
-                + (nodeFaceWeights[b + 2] * nodeSunLit[b + 2] * weights[2])
-                + (nodeFaceWeights[b + 3] * nodeSunLit[b + 3] * weights[3])
-                + (nodeFaceWeights[b + 4] * nodeSunLit[b + 4] * weights[4])
-                + (nodeFaceWeights[b + 5] * nodeSunLit[b + 5] * weights[5]);
-        }
-
-        /// <summary>
         /// A direction's intensity on this node: the per-face weights of a resolved direction,
         /// each scaled by that face's share of the node's exposed area.
         /// </summary>

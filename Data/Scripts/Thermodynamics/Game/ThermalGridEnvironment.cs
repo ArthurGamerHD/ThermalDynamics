@@ -524,7 +524,7 @@ namespace Thermodynamics
             // Read only when the ground gets a say at all, since it is sixteen surface lookups.
             inputs.Terrain =
                 settings.WindTerrainInfluence > 0f && settings.WindTerrainRadius > 0f
-                    && height < settings.WindGradientHeight
+                    && height < settings.WindGradientHeight * TerrainFadesBy
                     && ReadTerrain(planet, ref position, up, axis, settings.WindTerrainRadius)
                 ? windTerrain : null;
 

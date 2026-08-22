@@ -21,11 +21,22 @@ namespace Thermodynamics
     ///
     /// Editing follows the same rule as <c>/thermal set</c>: the config is server side, so on a
     /// multiplayer client every simulation control is disabled and only the client-side
-    /// presentation switches are editable. Nothing is written to disk until Save is pressed.
+    /// presentation switches are editable.
     ///
-    /// The page is a single column: Save and Reset first, then short titled groups. The framework's
-    /// sizes determine this — a tile is a fixed 300x250 box that masks whatever does not fit, and a
-    /// group is a fixed-height row scrolling sideways through its tiles.
+    /// <para>
+    /// <b>There is no Save button and no Reset button.</b> A change is applied to the running
+    /// session as it is made and written to the config about a second later, by
+    /// <see cref="Settings.SaveIfPending"/>. A menu that asks you to confirm what you already did
+    /// asks you to do it twice, and a setting that reverts on reload because a button was missed
+    /// is worse than either. Starting over is a profile, since a profile sets every world setting.
+    /// </para>
+    ///
+    /// <para>
+    /// The layout is a tree rather than one scroll: pages at the root for the readouts and the
+    /// debug switches, then folders of pages for the settings themselves. The framework's sizes
+    /// decide the shape of a page — a tile is a fixed 300x250 box that masks whatever does not
+    /// fit, and a group is a fixed-height row scrolling sideways through its tiles.
+    /// </para>
     /// </summary>
     public static class ThermalSettingsMenu
     {
@@ -1095,32 +1106,6 @@ namespace Thermodynamics
             { Other, "Not yet described" },
         };
 
-        /// <summary>
-        /// Restores every setting the player is allowed to change, which on a client is the
-        /// presentation switches only, so a client reset cannot alter server-owned world state.
-        /// </summary>
-        private static void ResetAll()
-        {
-            Settings fresh = Settings.GetDefaults();
-            List<string> names = Settings.Names();
-
-            int changed = 0;
-            for (int i = 0; i < names.Count; i++)
-            {
-                string name = names[i];
-                if (!CanEdit(name)) continue;
-
-                Settings.Instance.SetValue(name, fresh.GetValue(name));
-                changed++;
-            }
-
-            Settings.Instance.Apply();
-            Refresh();
-
-            MyAPIGateway.Utilities.ShowNotification(
-                "Thermodynamics: " + changed + " settings back to defaults (unsaved)", 3000, "White");
-        }
-
         private static TerminalControlBase Control(string name, bool editable)
         {
             TerminalControlBase built = BuildControl(name, editable);
@@ -1359,12 +1344,6 @@ namespace Thermodynamics
         private static ToolTip Tip(string text)
         {
             return new ToolTip { text = new RichText(text) };
-        }
-
-        private static string SectionOf(string name)
-        {
-            Entry entry;
-            return Layout.TryGetValue(name, out entry) ? entry.Category : Other;
         }
 
         /// <summary>
