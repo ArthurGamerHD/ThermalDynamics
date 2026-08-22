@@ -195,7 +195,7 @@ Two are about the sun rather than about heat flow:
 | Change what the game tells a block | `ThermalBlock.Attach` |
 | Per-block sun shadowing | `ThermalNode`'s directional weighting is the hook; the solver resolves the sun into six per-face weights once per step |
 | New instrumentation | `ISimulationProfiler` for a stage, `GridTelemetry` for a figure, `TelemetryReport` for a row |
-| Multiplayer sync | `SENetworkAPI` is already initialised in `Session.Init` with channel `30323`; no commands are registered yet |
+| Multiplayer sync | `SettingsSync` for anything the whole world shares, a `NetSync<T>` on the block's own component for anything one block owns, and `SettingsRequests` — on the engine's *secure* handler — for anything gated on who is asking. See [architecture.md](architecture.md#networking) |
 
 
 ## Publishing
@@ -235,6 +235,7 @@ already parameterises the game location.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Corrected the multiplayer row, which said no commands were registered on the network channel; three replicated properties and a second secure channel exist. |
 | 2026-08-22 | Added the standard header and this change log. The documentation conventions this repository follows are stated in [Documentation conventions](#documentation-conventions) below. |
 | 2026-08-21 | Checked the documentation's own links and fixed the sixteen that were dead. |
 | 2026-08-20 | Moved build output outside the mod folder, so the repository stays publishable with no cleanup step. Added auditing a field dump rather than reading one. |

@@ -261,7 +261,7 @@ watts = produced × ProducerWasteEnergy + (consumed + thrust) × ConsumerWasteEn
 Both fractions are balance figures rather than efficiencies. The reactor's is the clearest case:
 Space Engineers rates a 3×3×3 block at 300 MW, so a real plant's efficiency applied to it would
 destroy every large reactor in the game in a build no player could improve. See
-[balance.md](balance.md#reactor-waste-heat) for how the shipped 0.02 was measured.
+[balance.md](balance.md#reactor-waste-heat) for how the shipped 0.01 was measured.
 
 ### Coolant loops
 
@@ -646,6 +646,7 @@ several tests compare against it so the differences stay pinned rather than reme
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Corrected the reactor's shipped waste fraction, which this page and [tests/README.md](../tests/README.md) both quoted as 0.02 against the 0.01 in `Cubes.xml` and on [balance.md](balance.md#reactor-waste-heat). 0.02 is the value the sweep rejected: it puts a 300 MW reactor past critical *bare* in vacuum, which is a state no build can improve on. |
 | 2026-08-22 | Corrected the substep cap quoted beside `LastStepWasClamped`: it read 16 and ships 64. |
 | 2026-08-22 | Absorbed `surface-mapping.md`, whose subject is the geometry every area term on this page reads. Moved the environment equations to [environment.md](environment.md), leaving one home for them instead of two. Converted to present tense, with the defect narratives moved to [known-issues.md](known-issues.md) and this log. Promoted the three solver invariants into a table of their own. |
 | 2026-08-20 | Made reactors generate the heat they always should have: which waste fraction applies is decided by the game's component, not by the definition, so a reactor's consumer fraction was dead text. Added the check over producer types by name. |

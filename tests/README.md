@@ -231,7 +231,7 @@ dotnet run --project Thermodynamics.Sim -- reactors
 
 Every vanilla reactor at six candidate fractions and three loads, in two rigs: **bare** in shadow
 with every face on a 2.7 K sky, which is the coolest a reactor can possibly run, and **skinned**
-under one cell of light armour, which is how one is actually installed. The shipped 0.02 is the
+under one cell of light armour, which is how one is actually installed. The shipped 0.01 is the
 fraction where the bare column survives everywhere and the skinned column does not. Pinned by
 `ReactorWasteHeatTests`; argued in [balance.md](../docs/balance.md#reactor-waste-heat).
 
@@ -540,6 +540,7 @@ and left off it.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Corrected the reactor's shipped waste fraction, quoted here and on [thermal-model.md](../docs/thermal-model.md) as 0.02 against the 0.01 in `Cubes.xml` and on [balance.md](../docs/balance.md#reactor-waste-heat). |
 | 2026-08-22 | Added the standard header and this change log. |
 | 2026-08-22 | Fitted cooling to ships people actually built, closing the retrofit gap the balance criteria depended on. |
 | 2026-08-21 | Brought the quoted suite size onto something the suite checks, so a count in prose cannot silently become a historical curiosity. Gated the one corpus test that was running ungated — 4 m 57 s of every run since its fixture landed. |

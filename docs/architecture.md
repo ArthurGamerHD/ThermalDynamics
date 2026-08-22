@@ -56,6 +56,11 @@ temperatures, overheat events and threshold crossings.
 | [Game/ThermalHeatPumpBlock.cs](../Data/Scripts/Thermodynamics/Game/ThermalHeatPumpBlock.cs) | `MyGameLogicComponent` | The electrical half of a heat pump: the resource sink it draws through, and the switch that runs it. |
 | [Game/ThermalBridges.cs](../Data/Scripts/Thermodynamics/Game/ThermalBridges.cs) | static | Conduction across a rotor or piston, between two grids. |
 | [Game/ThermalHeatSources.cs](../Data/Scripts/Thermodynamics/Game/ThermalHeatSources.cs) | static | Registered point heat sources, and their irradiance at a grid. |
+| [Game/ThermalGridScheduler.cs](../Data/Scripts/Thermodynamics/Game/ThermalGridScheduler.cs) | static | Gives every grid its share of every frame, so a step is spread rather than landed whole. |
+| [Game/ThermalGridRoomDiagnostics.cs](../Data/Scripts/Thermodynamics/Game/ThermalGridRoomDiagnostics.cs) | `partial` | The room and surface dumps, and the comparison against the game's own sealing test. |
+| [Game/ThermalCoolantPumpBlock.cs](../Data/Scripts/Thermodynamics/Game/ThermalCoolantPumpBlock.cs) | `MyGameLogicComponent` | A coolant pump's terminal switch and speed, replicated as a `NetSync<float>`. |
+| [Game/HeatSourceCommand.cs](../Data/Scripts/Thermodynamics/Game/HeatSourceCommand.cs), [Game/HeatSourceMath.cs](../Data/Scripts/Thermodynamics/Game/HeatSourceMath.cs), [Game/ThermalHeatSourceDebug.cs](../Data/Scripts/Thermodynamics/Game/ThermalHeatSourceDebug.cs) | static | Driving and drawing point sources from chat, for exercising the API path in a session. |
+| [Game/PlanetProbes.cs](../Data/Scripts/Thermodynamics/Game/PlanetProbes.cs) | static | The 72-point planet-wide climate and wind sweep. See [environment.md](environment.md#measuring-it). |
 | [ThermalApi.cs](../Data/Scripts/Thermodynamics/ThermalApi.cs) | static | The mod-facing delegate table. See [api.md](api.md). |
 | [ThermalTerminal.cs](../Data/Scripts/Thermodynamics/ThermalTerminal.cs) | static | Thermal readout in every block's terminal. |
 | [ThermalHud.cs](../Data/Scripts/Thermodynamics/ThermalHud.cs) | static | Cockpit summary and extinguisher readout, on Rich HUD, plus the extinguisher billboard. |
@@ -64,6 +69,10 @@ temperatures, overheat events and threshold crossings.
 | [ThermalDebugPanel.cs](../Data/Scripts/Thermodynamics/ThermalDebugPanel.cs) | static | The Rich HUD readout beside the overlay: per-view figures for the grid being drawn. |
 | [Debug.cs](../Data/Scripts/Thermodynamics/Debug.cs) | static | The crosshair readout. |
 | [Settings.cs](../Data/Scripts/Thermodynamics/Settings.cs) | class | Config file, defaults, access by name, and the write-through to the model's settings. |
+| [SettingsSync.cs](../Data/Scripts/Thermodynamics/SettingsSync.cs) | static | Replicates the world's settings to every client, over `SENetworkAPI`. |
+| [SettingsRequests.cs](../Data/Scripts/Thermodynamics/SettingsRequests.cs) | static | An administrator changing a setting from a client, over the engine's secure handler. |
+| [WindOverlay.cs](../Data/Scripts/Thermodynamics/WindOverlay.cs) | static | The wind map and the crosshair wind needle, cycled with Ctrl+Shift+W. |
+| [OverlayBudget.cs](../Data/Scripts/Thermodynamics/OverlayBudget.cs) | static | Fits the block overlay's draw radius to `DebugOverlayMaxBoxes` each frame. |
 | [Definitions/](../Data/Scripts/Thermodynamics/Definitions) | classes | Typed readers over Definition Extensions. |
 | [Telemetry/](../Data/Scripts/Thermodynamics/Telemetry) | static + records | Data collection. See [telemetry.md](telemetry.md). |
 | [DefinitionExtensionsAPI.cs](../Data/Scripts/Thermodynamics/DefinitionExtensionsAPI.cs), [NetworkAPI/](../Data/Scripts/Thermodynamics/NetworkAPI), [RichHudFramework/](../Data/Scripts/Thermodynamics/RichHudFramework) | vendored | Third-party API clients. Do not edit; replace wholesale when upstream updates. |
@@ -82,8 +91,7 @@ Session.Draw()                          client only
   ├─ ThermalDebugView.Draw()            client only, off unless a mode is selected
   └─ ThermalDebugPanel.Update()         the readout beside it; sweeps the grid a few times a second
 
-per grid, every 10th frame:
-ThermalGridScheduler.Tick()   — every frame, every grid
+ThermalGridScheduler.Tick()             every frame, every grid
   ├─ scheduler.WouldStep()?             no  → skip sampling entirely
   ├─ Sample()                           planet, air, wind, sun, occlusion, heat sources
   ├─ push heat pump state                switch and available power, before the step spends it
@@ -104,9 +112,13 @@ ThermalGridScheduler.Tick()   — every frame, every grid
        └─ debug colouring               only while a debug toggle is on
 ```
 
-The grid polls on the ten-frame tick. How often the simulation *steps* is `SimulationScheduler`'s
-business — `Frequency × SimulationSpeed` steps per real second, with fractional credit carried
-between ticks — so polling faster would only add entity update callbacks.
+Every grid is visited every frame and does the share of its current step that one frame is of the
+step's window, so the cost of a step is spread rather than landing whole on one frame. How often the
+simulation *steps* is `SimulationScheduler`'s business — `Frequency × SimulationSpeed` steps per real
+second, with fractional credit carried between frames. The scheduler is driven from the session
+component rather than from the grid entity, because `MyCubeGrid` clears `EACH_FRAME` from its own
+update flags whenever its scheduled-work queue empties. See
+[load-and-hitching.md](load-and-hitching.md#the-findings) for what the spreading is worth.
 
 ## Grid lifecycle
 
@@ -159,10 +171,19 @@ Placing a block is then a dictionary hit and a rotation. See [definitions.md](de
 
 ## Networking
 
-`SENetworkAPI` is initialised in `Session.Init` with channel `30323`, but no commands or `NetSync`
-properties are registered. The simulation is server-authoritative with no replication: clients run
-their own `ThermalGrid` components from the same inputs, and only the server applies damage,
-settings changes and debug block colouring.
+The simulation itself is not replicated. Clients run their own `ThermalGrid` components from the same
+inputs and reach their own temperatures; only the server applies overheat damage, so the one
+conclusion with a world-visible consequence is never reached twice.
+
+What *is* replicated travels two ways, and the split is deliberate:
+
+| Channel | Carries | Why this channel |
+| --- | --- | --- |
+| `SENetworkAPI`, `30323` | The world's settings ([SettingsSync.cs](../Data/Scripts/Thermodynamics/SettingsSync.cs)) and the two block throttles — a coolant pump's speed and a heat pump's power limit | Ordinary state, server → client, seeded at construction so a joining client's fetch is answered |
+| The engine's secure handler, `30324` | An administrator's request to change a setting from a client ([SettingsRequests.cs](../Data/Scripts/Thermodynamics/SettingsRequests.cs)) | SENetworkAPI's sender id is a field the sender wrote; a promote-level check cannot be gated on it |
+
+See [configuration.md](configuration.md#changing-settings-from-a-client) for the request path and
+[known-issues.md](known-issues.md#open-defects) for what the unreconciled temperatures cost.
 
 ## Extending it
 
@@ -176,6 +197,7 @@ pumps `ThermalSimulation` — which is exactly what the test harness does.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Corrected two statements this page had gone on making after the code stopped supporting them. **Networking** said no `NetSync` property and no command was registered and that nothing replicates; three properties and a second, secure channel exist, and the section now says what each carries and why the split. **Update order** filed the per-grid block under "every 10th frame" while naming the scheduler that runs every grid every frame two lines below. Completed the adapter table, which named 22 of the 33 files under `Data/Scripts/Thermodynamics` — the scheduler, the settings sync and request paths, the room diagnostics, the coolant pump block, the wind overlay, the overlay budget, the planet probes and the three heat-source debug files were all absent. |
 | 2026-08-22 | Added the standard header and this change log. |
 | 2026-08-20 | Brought the page onto the blueprint-running path and the publishable mod folder. |
 | 2026-08-18 | Spread a step across the frames of its window rather than landing it whole on one frame, and documented the scheduler that does it. |
