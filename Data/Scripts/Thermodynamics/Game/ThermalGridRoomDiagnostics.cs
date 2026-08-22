@@ -11,19 +11,10 @@ using VRageMath;
 namespace Thermodynamics
 {
     /// <summary>
-    /// Compares this model's room map against the game's own sealing test.
-    ///
-    /// The two may legitimately disagree: this model reads each definition's pressurisation table
-    /// cell by cell, while the game knows the true shape of a sloped block. The failure mode this
-    /// detects is a compartment lost silently — the flood fill walks in from outside, no room is
-    /// created, and since pressurisation is only queried for rooms this model already found,
-    /// nothing observes that the game has the room sealed and a vent in it reporting full.
-    ///
-    /// Every cell the map calls external is offered to the game, and each connected group the game
-    /// calls airtight is a room this model lost. Each is identified by the air vent standing in it,
-    /// which is the name a player can quote from a terminal.
-    ///
-    /// Runs only when the room overlay is up or telemetry is on, and then on its own slow cadence.
+    /// Compares this model's room map against the game's own sealing test, which is finer than a cell.
+    /// Every cell the map calls external is offered to the game, and each connected group it calls
+    /// airtight is a compartment this model lost silently. Runs only when the room overlay is up or
+    /// telemetry is on. See thermal-model.md, Diagnostics.
     /// </summary>
     public partial class ThermalGrid
     {
@@ -140,12 +131,8 @@ namespace Thermodynamics
         private Func<Vector3I, bool> airtightProbe;
 
         /// <summary>
-        /// The cadence, and the room map revision the last scan answered for.
-        ///
-        /// A lost compartment is a property of the map: until the mapper completes another pass
-        /// there is nothing new to find. A 292-grid dump re-derived the same answer for every grid
-        /// every thirty seconds, all inside one frame's after-step, and one frame in the
-        /// 2026-08-21 dump spent 108 of its 111 milliseconds there.
+        /// The cadence, and the room map revision the last scan answered for: a lost compartment is a
+        /// property of the map, so until the mapper completes another pass there is nothing to find.
         /// </summary>
         private readonly RescanGate lostRoomScan = new RescanGate(LostRoomScanInterval);
 
@@ -289,22 +276,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// One room's cells as a set, for the vent tests below.
-        ///
-        /// <para>
-        /// A mapped room holds its cells as a list, because the map answers "which room is this
-        /// cell in" from its own index and nothing else searches a room. The vent tests do search
-        /// one — a vent touches a room when any face of any of its cells lands inside it — and they
-        /// run once per vent per room, so a linear search would be quadratic in the size of the
-        /// compartment. Building the set here bounds the cost of that at one room rather than
-        /// keeping every room as a set for the life of the grid, which is what this used to do and
-        /// what it cost tens of megabytes on a large hull to do.
-        /// </para>
-        ///
-        /// <para>
-        /// Reused between rooms. The scan is single-threaded and the set does not outlive the room
-        /// it describes.
-        /// </para>
+        /// One room's cells as a set, for the vent tests below — the only caller that searches a room,
+        /// so the set is built here and reused rather than every room being kept as one for the life
+        /// of the grid. See memory.md, 4.
         /// </summary>
         private readonly HashSet<Vector3I> roomCellScratch = new HashSet<Vector3I>(Vector3I.Comparer);
 
@@ -411,11 +385,8 @@ namespace Thermodynamics
 
         /// <summary>
         /// The game's oxygen level in whatever room it holds at this cell, 0..1, or -1 when it holds
-        /// none there or cannot be asked. This is the call the pressurisation sweep makes per room.
-        ///
-        /// The game's rooms are coarser than this model's, since its sealing test is finer than a
-        /// cell, so a compartment this model split into several pieces returns the same level for
-        /// all of them.
+        /// none there or cannot be asked. Its rooms are coarser than this model's, so a compartment
+        /// split into several pieces here returns the same level for all of them.
         /// </summary>
         public float GameOxygenAt(Vector3I cell)
         {

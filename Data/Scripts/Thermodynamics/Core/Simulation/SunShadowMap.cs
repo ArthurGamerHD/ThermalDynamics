@@ -5,30 +5,11 @@ using VRageMath;
 namespace Thermodynamics.Core
 {
     /// <summary>
-    /// Which of a grid's own cells the sun can reach.
-    ///
-    /// Without this, a face is lit whenever it points at the sun, whatever the grid has built in
-    /// front of it — a wall inside a doorway recess, a block under an overhang, the far side of a
-    /// hangar.
-    ///
-    /// Resolved per face rather than per cell. A wall two cells thick has an inner layer whose side
-    /// faces are as open to the sky as the outer layer's; testing whether the cell can see the sun
-    /// would shadow all of them and leave a solid hull lit along a single row of blocks. What is
-    /// traced is the empty cell just outside each face, which is where the face's surface sits.
-    ///
-    /// The walk steps one cell at a time from there towards the sun until it leaves the grid's
-    /// bounds. Crossing anything solid shadows that face. Exact at cell resolution.
-    ///
-    /// A cheaper structure — project every cell onto a plane facing the sun, bucket it, keep the
-    /// nearest — was implemented and rejected. Buckets are axis-aligned and the sun is not, so a
-    /// column crossing the grid diagonally scatters across neighbouring buckets: it leaks sunlight
-    /// onto shadowed cells, and the tolerance that closes the leak invents shadows on cells in the
-    /// open. Measured against a real grid at an oblique sun and against seven test geometries at
-    /// eight sun angles, every parameterisation erred in both directions at once.
-    ///
-    /// The walk is therefore budgeted across ticks like the room mapper's flood fill, with the last
-    /// completed answer readable while the next is built. A pass starts only when the sun has moved
-    /// appreciably or the grid's blocks have changed.
+    /// Which of a grid's own cells the sun can reach, resolved **per face** — the empty cell just
+    /// outside each one, where its surface sits. Asked per cell instead, a solid hull ends up lit
+    /// along a single row. A voxel walk from there toward the sun, exact at cell resolution, budgeted
+    /// across ticks with the last completed answer readable meanwhile.
+    /// See thermal-model.md, Solar and point sources.
     /// </summary>
     public class SunShadowMap
     {
@@ -228,12 +209,9 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// True when nothing on the grid stands between this cell of air and the sun.
-        ///
-        /// A cell no completed pass has seen returns true — an unbuilt map, or a cell built since
-        /// the last pass, means not known to be shadowed, and the fallback is the unshadowed model.
-        /// A false shadow would cool a block standing in full sunlight, while a missing shadow only
-        /// reproduces the behaviour with self-shadowing disabled.
+        /// True when nothing on the grid stands between this cell of air and the sun. A cell no
+        /// completed pass has seen returns true, because a missing shadow only reproduces the model
+        /// with self-shadowing off, where a false one cools a block standing in full sunlight.
         /// </summary>
         public bool IsLit(Vector3I cell)
         {
@@ -298,14 +276,6 @@ namespace Thermodynamics.Core
             return cells == 0 ? 1f : lit / (float)cells;
         }
 
-        /// <summary>
-        /// Walks from a cell towards the sun until the ray leaves the grid's bounding box, and
-        /// reports whether anything solid was in the way.
-        ///
-        /// A standard voxel traversal: track the distance along the ray to the next boundary on each
-        /// axis and step across whichever is nearest. It visits every cell the ray passes through
-        /// and no others, so a ray cannot slip diagonally between two touching blocks.
-        /// </summary>
         /// <summary>Grids other than this one that the running pass is testing against.</summary>
         public int OccluderCount { get { return occluders.Count; } }
 

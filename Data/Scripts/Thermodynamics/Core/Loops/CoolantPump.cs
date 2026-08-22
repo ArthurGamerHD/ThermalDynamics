@@ -1,16 +1,9 @@
 namespace Thermodynamics.Core
 {
     /// <summary>
-    /// One coolant pump in a ring, resolved against the grid.
-    ///
-    /// The pump is the reason a ring cools anything. A ring with no pump running still holds coolant
-    /// and still exchanges with the blocks it touches, but nothing carries that heat to the far side —
-    /// so the coolant beside a reactor saturates while the coolant at the radiator stays cold. See
-    /// <see cref="CoolantLoop"/>.
-    ///
-    /// The host owns all three inputs, as it does for <see cref="HeatPumpDevice"/>: the terminal's
-    /// speed setting, whether the block is switched on and functional, and how much of the power it
-    /// asked for the grid actually supplied.
+    /// One coolant pump in a ring: the reason a ring carries heat to its far side rather than
+    /// saturating where it is made. The host owns all three inputs — the terminal's speed, whether the
+    /// block is on and functional, and how much power the grid supplied.
     /// </summary>
     public class CoolantPump
     {
@@ -18,15 +11,9 @@ namespace Thermodynamics.Core
         public BlockInstance Block;
 
         /// <summary>
-        /// Which way round the ring this pump pushes: +1 with the ring's own order, -1 against it.
-        ///
-        /// Set from the block's orientation when the loop is traced — a pump drives fluid out of its
-        /// outlet port, and whether that port faces the next pipe in the ring or the previous one is
-        /// the whole of it. A pump fitted the other way round is not broken, it drives the loop
-        /// backwards, and a loop driven backwards works exactly as well.
-        ///
-        /// Two pumps facing each other therefore cancel, which is worth knowing before building it:
-        /// the ring holds coolant, the pumps draw their power, and nothing circulates.
+        /// Which way round the ring this pump pushes: +1 with the ring's own order, -1 against it, set
+        /// from the block's orientation when the loop is traced. A backwards pump drives a backwards
+        /// ring, which works as well; two facing each other cancel. See blocks.md, Coolant loop rules.
         /// </summary>
         public int Direction = 1;
 
@@ -51,12 +38,9 @@ namespace Thermodynamics.Core
         public float LastPowerWatts;
 
         /// <summary>
-        /// This pump's share of the ring's flow, in units of one pump at full speed, signed by
-        /// <see cref="Direction"/>.
-        ///
-        /// Speed times what the grid supplied: a pump set to half speed on a browned-out grid moves
-        /// half of half. <see cref="CoolantLoop.RefreshFlow"/> sums these and takes the square root of
-        /// the magnitude, so this is a demand rather than a flow, and opposed pumps subtract.
+        /// This pump's share of the ring's flow, signed by <see cref="Direction"/>: speed times what
+        /// the grid supplied. A demand rather than a flow — <see cref="CoolantLoop.RefreshFlow"/> sums
+        /// these and takes the square root — so opposed pumps subtract.
         /// </summary>
         public float Contribution
         {
@@ -68,18 +52,10 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Electricity this pump wants at its current setting, W. Linear in speed.
-        ///
-        /// A real centrifugal pump follows the affinity law — shaft power with the cube of speed — and
-        /// this was written that way first. Combined with flow going as the square root of combined
-        /// pumping it produced an exploit rather than a trade: getting a given flow from N pumps costs
-        /// <c>maxPower x K^3 / N^2</c>, so ten pumps idling at a tenth each cost a hundredth of one
-        /// pump working, and the optimal build was always "more pumps, all barely on".
-        ///
-        /// Linear closes it exactly. Flow F needs <c>sum of speeds = (F/base)^2</c>, so the bill is
-        /// <c>maxPower x (F/base)^2</c> — a function of the flow alone, with the pump count cancelled
-        /// out. Doubling flow costs four times the power however it is arranged, and a second pump
-        /// buys redundancy and headroom rather than a discount.
+        /// Electricity this pump wants at its current setting, W. **Linear in speed, deliberately**:
+        /// a real centrifugal pump's cubed affinity law, against flow going as a square root, makes
+        /// ten idling pumps a hundredth the price of one working, which is an exploit rather than a
+        /// trade. See thermal-model.md, Coolant loops.
         /// </summary>
         public float DemandWatts
         {

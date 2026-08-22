@@ -15,19 +15,10 @@ namespace Thermodynamics
 {
     /// <summary>
     /// The block debug overlay: every block of the targeted grid drawn as a coloured box, visible
-    /// through the hull. Two views draw something other than blocks: the solar view draws the skin,
-    /// one quad per exposed face, and the room view draws the mapped air, one box per cell.
-    ///
-    /// Everything is drawn client side, per frame, as transparent geometry; nothing is written to
-    /// the grid. The replaced block-colouring modes called <c>ColorBlocks</c>, which is a real,
-    /// replicated and permanent change to a grid's paint.
-    ///
-    /// Every block is drawn whether or not something stands between it and the camera, since the
-    /// blocks under inspection are usually buried. This is done by scaling each box about the eye
-    /// onto a shallow band just in front of the near plane: a perspective projection is invariant
-    /// under scaling about the eye, so each box appears exactly where the block is while nothing in
-    /// the scene can occlude it. Relative depth order between boxes is preserved because they all
-    /// take the same scale factor.
+    /// through the hull. Client side, per frame, transparent geometry; nothing is written to the grid.
+    /// The x-ray is a scale about the eye onto a band just in front of the near plane — a perspective
+    /// projection is invariant under it, so each box lands where the block is and nothing occludes it.
+    /// See configuration.md, The block overlay.
     /// </summary>
     public static class ThermalDebugView
     {
@@ -320,15 +311,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Sunlight, drawn on the surfaces that receive it.
-        ///
-        /// Solar heating is a property of a face rather than a block, so this view draws the skin —
-        /// one quad per exposed face — shaded by that face's own irradiance: the sun's energy times
-        /// the face's incidence against it. A face dark from turning away is then distinguishable
-        /// from a face dark from being shadowed.
-        ///
-        /// Faces turned away from the camera are dropped, since they are on the far side of the
-        /// grid and would only stack colour behind the near skin.
+        /// Sunlight, drawn on the skin rather than on blocks, because it lands on a face. Shaded by
+        /// that face's own irradiance, so a face dark from turning away is distinguishable from one
+        /// dark from being shadowed. Faces pointing away from the camera are dropped.
         /// </summary>
         private static void DrawSolarSurfaces(ThermalGrid thermals, ref MatrixD camera, ref Vector3D eye)
         {
@@ -435,13 +420,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// The rooms, drawn as the air itself and coloured by its temperature.
-        ///
-        /// Uses the same ramp as every other view, so a cold compartment reads the same as a cold
-        /// block. Room identity goes on the wireframe instead, which marks the boundary without
-        /// altering the colour of the air inside it.
-        ///
-        /// A room holding no air has no temperature and is drawn as an empty outline.
+        /// The rooms, drawn as the air itself and coloured by its temperature. Identity goes on the
+        /// wireframe, so it never costs the temperature its clarity; a room holding no air has no
+        /// temperature and is drawn as an empty outline.
         /// </summary>
         private static void DrawRooms(ThermalGrid thermals, ref MatrixD camera, ref Vector3D eye)
         {
@@ -519,15 +500,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// The compartments the game seals and this model does not.
-        ///
-        /// A room the flood fill walked into from outside is absent from the map, so without this
-        /// there is nothing drawn and no way to distinguish it from a room correctly found to be
-        /// open. Drawn in a colour no other part of the view uses, so a gap in the model reads as a
-        /// fault rather than an absence.
-        ///
-        /// Each keeps its own hue, derived from its index in the list the report prints, so one can
-        /// be identified on screen and matched to a dump.
+        /// The compartments the game seals and this model does not, drawn in a colour off the
+        /// temperature ramp so a gap in the model reads as a fault rather than as a cold room. Each
+        /// hue comes from its index in the list the report prints, so a shape matches a dump.
         /// </summary>
         private static void DrawLostRooms(
             ThermalGrid thermals, ref MatrixD camera, ref Vector3D eye, MatrixD gridMatrix, Vector3D half)

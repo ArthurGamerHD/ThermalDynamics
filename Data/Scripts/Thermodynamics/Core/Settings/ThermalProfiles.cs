@@ -5,22 +5,7 @@ namespace Thermodynamics.Core
     /// <summary>
     /// Ready-made settings bundles, spanning accuracy-first to arcade. Each sets only the four
     /// integration values, plus two mechanism switches at the cheapest end.
-    ///
-    /// <para>
-    /// The governing relationship: diffusion is a square-root process, so a heat front crosses
-    /// blocks at a rate proportional to the square root of substeps per second while cost is
-    /// linear in substeps per second. Doubling responsiveness at fixed accuracy therefore costs
-    /// four times as much, and the profiles are points along that curve.
-    /// </para>
-    ///
-    /// <para>
-    /// The exception is where the substeps are spent.
-    /// <see cref="ThermalSettings.HeatTimeScale"/> buys transfer per substep and
-    /// <see cref="ThermalSettings.MaxSubsteps"/> caps how many are taken; together they allow a
-    /// deliberately over-long step bounded by the overshoot clamps. That route is approximate by
-    /// construction and roughly three times more responsive per unit of cost, which is what the
-    /// arcade end of this list uses.
-    /// </para>
+    /// See profiles.md, which is the ladder in full and the two relationships that bound it.
     /// </summary>
     public static class ThermalProfiles
     {
@@ -31,12 +16,8 @@ namespace Thermodynamics.Core
         public const string Arcade = "arcade";
 
         /// <summary>
-        /// The presets, most faithful first.
-        ///
-        /// A ladder rather than five unrelated tunings, on two axes: how faithfully the simulation
-        /// is integrated, and how fast heat is made to move. Simulation, optimized and simlite
-        /// share the <em>real</em> pace (HeatTimeScale 1) and descend in accuracy; responsive and
-        /// arcade are simulation and optimized with that pace raised to the tuned 225.
+        /// The presets, most faithful first: a ladder on two axes, where the simulation is integrated
+        /// and how fast heat is made to move.
         /// </summary>
         public static readonly string[] Names =
         {
@@ -79,11 +60,9 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Applies a profile to a settings object and calls <see cref="ThermalSettings.Derive"/>.
-        ///
-        /// Only the integration values are written, plus two mechanism switches for the cheapest
-        /// profile. Vacuum temperature, friction, heat pump behaviour and the debug switches are
-        /// left as found: a profile is a starting point, not a reset.
+        /// Applies a profile to a settings object and calls <see cref="ThermalSettings.Derive"/>. Only
+        /// the integration values and two mechanism switches; the caller returns everything else to
+        /// the shipped value first, which is what makes a profile the whole world.
         /// </summary>
         /// <returns>False when the name is not one of <see cref="Names"/>.</returns>
         public static bool Apply(ThermalSettings settings, string name)
@@ -93,16 +72,9 @@ namespace Thermodynamics.Core
             switch (Normalise(name))
             {
                 case Simulation:
-                    // Real time, and therefore real physics: HeatTimeScale divides every heat
-                    // capacity, so anything above 1 is thermal time running fast. At 1 a ship
-                    // takes the hours a ship really takes, which is the whole claim this profile
-                    // makes and the reason it is not the default.
-                    //
-                    // It is also the *cheapest* profile to integrate, which is the opposite of
-                    // what a "maximum quality" preset usually means. Stiffness is conductance over
-                    // capacity, so dividing capacity by 225 multiplies substep demand by 225:
-                    // measured on a 150-block hull, demand is 0.00 substeps at scale 1, 0.90 at
-                    // 225 and 14.40 at 3600. Accuracy here costs patience, not frames.
+                    // Real time, and therefore real physics — and the cheapest thing here to
+                    // integrate, which is the opposite of what a maximum-quality preset usually
+                    // means. profiles.md, The two axes.
                     settings.Frequency = 8;
                     settings.SimulationSpeed = 1f;
                     settings.HeatTimeScale = 1f;
