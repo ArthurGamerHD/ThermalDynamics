@@ -41,6 +41,14 @@ is a finding rather than an excuse to move a threshold.
 | **G5** | **No death spiral.** A ship past critical that throttles to idle returns below critical in bounded time. | recovery time unbounded, or damage continues after the load stops | A player must be able to react to a warning. |
 | **G6** | **Affordable across the population.** Substep demand and step cost at p95/p99 of the corpus, not at the mean. | p99 substep demand exceeds what the shipped caps grant | The census hull is one point; the tail is what stutters. |
 
+**G3 is half answered, and the half that is answered fails.** *Bolting* cooling to a heat source
+moves nothing: the `coolers` ladder puts every block in the game with a claim to being good cooling
+against the largest reactor it ships, and the best takes 3.1 % off while the mod's own radiator
+takes 0.24 % — see [balance.md](balance.md#the-same-question-asked-of-the-whole-game). That is one
+of the two fits a player can make, on a synthetic rig. The other is a *plumbed* fit — a ring, a
+pump and sink faces — on a corpus hull, and it is still unmeasured, which is why G3 is still open.
+The distinction matters: the two differ by six times on the joint alone.
+
 **G6 is not a balance criterion and is here on purpose.** The corpus answers the open questions in
 [stiffness.md](stiffness.md) and the D-series of the [backlog](backlog.md) — lumping, multirate,
 the substep cap — better than any synthetic ladder can, because those decisions turn entirely on
