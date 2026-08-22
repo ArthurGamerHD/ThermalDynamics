@@ -4,7 +4,7 @@ Runs the thermal simulation outside Space Engineers, so it can be built, tested,
 debugged in seconds instead of by loading a world.
 
 > The rules argued here are stated canonically in [rules.md](../docs/rules.md): `E7` `D2` `D4`
-> `D5` `C1` `C2` `C5` `M11` `R10`.
+> `D5` `D8` `C1` `C2` `C5` `M11` `R10`.
 
 | Looking for | Go to |
 | --- | --- |

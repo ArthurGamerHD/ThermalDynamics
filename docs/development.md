@@ -1,7 +1,7 @@
 # Development
 
 > The rules argued here are stated canonically in [rules.md](rules.md): `C1` `C2` `C3` `C4`
-> `M9` `R2` `R3` `R4` `R5` `R6`, and the principles P7, P11 and P12 they follow from.
+> `M9` `R2` `R3` `R4` `R5` `R6` `R12` `R13`, and the principles P7, P11 and P12 they follow from.
 
 | Looking for | Go to |
 | --- | --- |

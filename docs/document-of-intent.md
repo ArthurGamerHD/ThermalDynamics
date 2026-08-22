@@ -12,8 +12,8 @@ rules. Where two statements of intent conflict, this page says which the code cu
 Where there is no intent at all, this page says that too, because an undeclared intent is decided by
 whoever touches the file next.
 
-> The rules argued here are stated canonically in [rules.md](rules.md): `E3` `E5` `E10` `E11` `D6`,
-> and the principles P3 and P14 they follow from.
+> The rules argued here are stated canonically in [rules.md](rules.md): `E3` `E5` `E10` `E11` `D6`
+> `D7` `C9` `C10`, and the principles P3, P7, P10 and P14 they follow from.
 
 | Looking for | Go to |
 | --- | --- |
