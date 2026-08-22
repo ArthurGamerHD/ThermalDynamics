@@ -19,7 +19,7 @@
 # Directory.Build.props and Blueprints.CorpusPath. This repository is the mod folder, linked into
 # the game, so anything sitting in it is part of what gets published to the workshop. These entries
 # remain so an older checkout that still has them does not commit them.
-corpus/
+/corpus/
 *.build/
 
 # vstest blame dumps: multi-gigabyte, and this folder is published to the workshop

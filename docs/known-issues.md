@@ -450,6 +450,25 @@ the ticks either side of it got three to five times cheaper and the first touch 
 
 ## Deliberate limits
 
+**The lab never destroys a block, so a peak temperature above critical is not a prediction.** The
+solver raises an `OverheatEvent` when a node passes its critical temperature, but applying that
+damage is `bound.Block.DoDamage` in `ThermalGridSimulation` — the game layer, which no harness runs.
+In the lab an overheating block is therefore never removed: it keeps generating, keeps conducting to
+neighbours, and keeps climbing for whatever remains of the clock. In game it would be gone in
+seconds and would stop producing.
+
+That censors every number drawn from the right tail. The 2026-08-21 corpus survey reports one ship
+at 541,648 K and a parked mobile base at 31,151 K; neither is a temperature the mod can reach,
+because the block that got there does not survive to be measured. Read any peak above critical as
+"this block dies" and nothing further, and treat the population's peak statistics — p95, p99, max —
+as describing the harness rather than the mod. `over_critical`, `over_share` and
+`seconds_to_critical` are unaffected: they are decided at the crossing, before the divergence
+matters.
+
+Closing it properly means the harness modelling destruction — removing the node, re-deriving the
+graph, and stopping the source — which is a solver-wide change to answer a question the censored
+reading already answers. Recorded as a limit instead.
+
 **Planet and asteroid shadow is per grid; only other grids shade individual faces.** A grid's own
 shadow is per face (`SolarSelfShadowing`) and so is another grid's (`SolarGridShadows = full`), but a
 planet's or an asteroid's dims the whole grid by the share of sampled rays that were blocked
@@ -504,6 +523,29 @@ cell, so it cannot know whether two partial mounts line up.
 sample per interval for grids near a surface, which should be well under the voxel raycast it sits
 beside, but no dump has confirmed it. The `solar occlusion` timing in a telemetry report is where it
 would show.
+
+## Balance findings from the corpus survey
+
+The 2026-08-21 sweep of 8,142 ships is the first complete population measurement, and the four
+measurable criteria pass on shipped defaults. Two things it measured are not visible in that pass.
+
+**Damage arrives too fast to be played around.** Of ships that overheat at all, the median loses its
+first block 9 s into full electrical load and 6 s into a forward burn; the tenth percentile is three
+to four seconds. The same measure at idle is 112 s, with nothing in between — ships are either
+thermally inert or they fail almost immediately. Heat is meant to be a resource a player reasons
+about, and a consequence landing inside ten seconds is closer to the block simply exploding when
+switched on. This is a balance decision rather than a defect, and it is the one the survey most
+clearly asks for.
+
+**The heat strands in one or two blocks, usually the same ones.** Runaway rows carry a median of two
+blocks above critical against a hull sitting near its median temperature — *humpback 38* peaks at
+164,570 K with a median of 360 K. `LargeHydrogenEngine` is the hottest block on 34 % of runaway rows
+while being hottest on 4 % of rows overall; with `LargeJumpDrive` and the large thrusters, a short
+list of types accounts for most of the tail. That makes it tunable on perhaps a dozen definitions —
+waste-heat fraction, thermal mass, or conductance to neighbours — without touching the solver.
+
+Both readings are subject to the censoring limit above. `tools/corpus/verdict.py` computes the
+criteria and reports the censored share alongside them.
 
 ## Testing gaps
 
