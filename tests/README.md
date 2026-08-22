@@ -414,7 +414,31 @@ PipeFitter.BuildRing(builder, ring);      // pump goes on the first straight run
 
 ## Test coverage
 
-1,471 tests across:
+1,486 tests. **What each class is for is stated in its own summary, not here** —
+the index below says where to look, and `EveryTestClassSaysWhatItIsFor` fails when a class arrives
+without saying. This table is checked by `EveryTestClassIsInTheIndex`, so a suite cannot be added
+and left off it.
+
+| Subject | Suites |
+| --- | --- |
+| **Block geometry and the grid model** | `FaceTests` `BoxGeometryTests` `GridMathTests` `CellBitsetTests` `BlockOrientationTests` `BlockInstanceTests` `GridModelTests` `BlockSurfaceBuilderTests` `Se2LatticeTests` `ShapeTests` |
+| **Surfaces, rooms and air** | `SurfaceMapTests` `RoomMapperTests` `DoorSealingTests` `RoomPortalTests` `IncrementalRoomTests` `RoomMapCompletionTests` `RoomCellStorageTests` `RoomAuditTests` `UnmappedRoomTests` `RoomAirTests` `RoomAirCouplingTests` `RoomPressureTests` `RoomAirPressureTests` `ExposureAuditTests` |
+| **Conduction and the integrator** | `ConductionTests` `StabilityTests` `ConductionClampGateTests` `CoupledConductanceCacheTests` `SubstepDemandTests` `SubstepFloorTests` `SubstepScaleTests` `HeatTimeScaleTests` |
+| **Environment: air, climate, weather** | `EnvironmentSolverTests` `RadiationTests` `ConvectionSolarFrictionTests` `FrictionIsolationTests` `ClimateModelTests` `WeatherAndDepthTests` `PlanetThermalTests` `PlanetPropertyMergeTests` `DescentTests` |
+| **Sun, shadow and occlusion** | `SunShadowMapTests` `SolarSelfShadowingTests` `SunLitSliceTests` `SolarOcclusionTests` `SolarOcclusionSamplerTests` `OcclusionMathTests` `SolarSymmetryTests` `GridShadowTests` `TerrainHorizonTests` `SelfShadowScenarioTests` `FaceWeightPairingTests` |
+| **Wind** | `WindFieldTests` `WindProfileTests` `WindSlopeTests` `WindTerrainTests` `WindCompassTests` `WindScenarioTests` `WindSolverContractTests` `WindLabTests` |
+| **Heat sources, damage and thresholds** | `HeatGenerationTests` `DamageTests` `CriticalTemperatureTests` `CriticalTemperatureMirrorTests` `OverheatEventTests` `ThresholdTests` `HeatSourceTests` `HeatSourceMathTests` `HeatSourceCommandTests` `CustomHeatSourceTests` `MultiCellAndDamageTests` `ReactorWasteHeatTests` `GridHeatBalanceTests` `HottestNodeTests` |
+| **Coolant loops and heat pumps** | `CoolantLoopTests` `CoolantFlowTests` `CoolantFaultTests` `PipeFitterTests` `HeatPumpTests` `CoolingScenarioClaimTests` |
+| **What a step costs, and what it must not change** | `LoadTests` `StepBudgetTests` `StepFixedCostTests` `StepPacingTests` `StepTermsTests` `SpreadStepTests` `PaceEquivalenceTests` `SweepSliceTests` `BufferGrowthTests` `IncrementalTopologyTests` `BlockRefreshTests` `CostRollupTests` `SolverReportingTests` `StressFindingsTests` |
+| **Bit-identity: an optimisation against what it replaced** | `PrecomputedEnvironmentTests` `FixedSourceRowTests` `WattsClearFusionTests` `ConductionClampGateTests` `DiagnosticBatchingTests` |
+| **Settings, storage and definitions** | `SettingsTests` `SettingsDefaultsTests` `SettingsWiringTests` `StorageCodecTests` `SchedulerTests` `DefinitionTests` `DefinitionFileTests` `ShippedDefinitionTests` `BlockDerivationTests` `MaterialOverrideTests` `FeatureToggleTests` `ProfileTests` `ProfileSuiteTests` `WorldSettingsTests` |
+| **Readouts a player sees** | `TemperatureScaleTests` |
+| **Telemetry, reports and overlays** | `RunningStatTests` `HistogramTests` `TimingStatTests` `TelemetryFormatTests` `TelemetryAnomalyTests` `SampleGateTests` `GridHealthTests` `AnomalyRegistryTests` `FrameCostTests` `ProfilerTests` `RescanGateTests` `OverlayBudgetTests` `PerformanceReportTests` `BenchmarkBaselineTests` |
+| **Field dumps: the mod checked against a world** | `DumpAuditTests` `FieldDumpTests` `CensusFidelityTests` |
+| **End to end, and the host boundary** | `SimulationIntegrationTests` `ScenarioTests` `ScenarioClaimTests` `HostAdapterTests` `CoreIsolationTests` |
+| **Balance, and the ships it is decided on** | `BalanceTests` `BlockHeatIndexTests` `DecorativeStiffnessTests` `ElementCostFitTests` `ScreeningTests` `BlueprintTests` `WorstCaseTests` `LabRunTests` `LabInvariantTests` |
+| **Corpus walks** (opt-in, `THERMAL_CORPUS_TESTS`) | `CorpusSurvey` `CorpusCensus` `KnobSweep` `SunlightPanelWalk` `BlockAccountingWalk` `DeterminismWalk` |
+| **The documentation itself** | `DocumentationTests` `ConfigurationDocTests` |
 
 > **The bit-identity suites share one fixture.** Five of them pin an optimisation against the
 > thing it replaced — the precomputed environment rows, the fixed source row, the gated
@@ -423,66 +447,13 @@ PipeFitter.BuildRing(builder, ring);      // pump goes on the first straight run
 > That fixture checks its own postconditions, because two runs of a hull that built nothing agree
 > perfectly and agreement is the whole assertion. `SolverAb` holds the capture and the comparison.
 
-* position keys and block geometry maths
-* face indexing, the colour ramp, occlusion
-* orientations, block instances, grid model bookkeeping
-* surface bit flags and their symmetry
-* room flood fill, including incremental vs one-shot equivalence
-* conduction: conductance, symmetry, energy conservation, order independence
-* radiation, convection, solar, aerodynamic heating
-* waste heat, critical damage and its rate independence
-* integrator stability under absurd step sizes
-* coolant loop topology and heat transport
-* the save format, both current and legacy
-* scheduling, settings and definition clamping
-* end-to-end simulation, save/load, and every scenario
-* the claims each scenario's summary line makes, so a headline conclusion cannot quietly invert
-* block balance: that every shipped block is priced, weighs something, gets its own thermal entry
-  and carries plumbing exactly when it should; and that the conclusions drawn from the balance pass
-  — the radiator beating the armour it displaces, a coolant sink beating every surface dial, the
-  heat pump passing through all three of its limits — cannot quietly invert
-* the lab runner: that results keep the order of their inputs in both modes, that one item
-  throwing does not lose the rest, and — the invariant parallel mode rests on — that parallel and
-  linear produce the same matrix
-* the load model: that only a thruster carries thrust, since gyros spell torque with the same
-  element and reading it drove a real hull to 342,000 K
-* blueprint reading: that a ship comes back with its name and every block, that an empty
-  SubtypeName is the base armour cube, that one modded block disqualifies a ship, that a block of
-  the wrong grid size is refused, and that a real subscribed ship builds a simulation that steps
-* the block derivation: that specific heat is the exact mass-weighted mean, that a window comes out
-  glass and an armour block steel, that a battery is more fragile than a reactor, that a plushie is
-  fabric, that an unknown component falls back to steel, and that no invented material sits outside
-  the range the real ones span
-* reactor waste heat: that every block type delivering power through the source component converts
-  some of it, that no reactor cooks itself with every face on open space, and that a large one
-  buried in hull at full rating does — so the fraction still means what it was chosen to mean
-* the profile machinery: that the settings and material hooks reach a scenario, that the material
-  override is applied exactly once, that a profile's conduction pace lands on the number the solver
-  uses, and that no two profiles derive to the same world
-* two divergence defects, pinned as present so that fixing either fails a test rather than moving a
-  number nobody is watching
-* the climate: latitude, ground, lag, altitude, thin air, weather and depth
-* room air coupling — that a pressurised room gains links and takes the temperature of its walls
-* the compartments the game seals and this model does not
-* real specific heat against the `HeatTimeScale` clock, including that scaling capacity is
-  exactly running time faster
-* every mechanism switched off one at a time, and switches changed mid-session taking effect
-  without a rebuild
-* temperature thresholds: direction, no double reporting on the boundary, survival across a
-  multi-step update
-* registered point heat sources: gain, additivity, buffer bounds, and no gain on a buried block
-* room air: pressurisation, links to the surfaces bounding a room, heat carried between walls that
-  do not touch, energy conservation, and air surviving a map rebuild
-* block identity by minimum cell, and overheat events surviving a multi-step update
-* the stage-timing hook, and that instrumenting a run does not change its results
-* the incremental conduction graph: that building a grid one block at a time, and grinding one
-  down, produce the same graph a full rebuild does — including a 400-step run that builds and
-  grinds in a generated order and compares against a rebuild after every single change
-* what an update costs, asserted on work counters rather than a stopwatch: a settled grid rebuilds
-  nothing, a placed block links the block and not the grid, a removed one unpicks the block and not
-  the grid, every budgeted pass respects its budget, and observing the simulation does not change it
-* the rolling sweep's slice arithmetic, including that it never rounds down to nothing
-* the per-frame cost tracker that finds hitches in a real session
+> **Where a claim is checked against something other than the model.** `LegacyFormulas` is a
+> verbatim copy of the original mod's equations, so a test can show exactly how the rewrite
+> differs rather than asserting that it differs. `Reference` works sun visibility out the slow,
+> obvious way — intersect the ray with every cell's cube — so the shadow map is compared against
+> geometry rather than against itself. `benchmarks/field-dump/` is three CSVs a real world
+> produced. A test that asks the model the same question twice agrees with whatever the model
+> happens to do.
 
-Several tests compare against `LegacyFormulas`, a verbatim copy of the original mod's equations,
-to pin down exactly how the rewritten model differs.
+> **Two divergence defects are pinned as present**, so that fixing either fails a test rather than
+> moving a number nobody is watching.

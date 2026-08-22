@@ -293,6 +293,69 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// A class declaration at file scope inside the test project.
+        /// </summary>
+        private const string TestClassPattern =
+            @"(?m)^[ \t]*public\s+(?:sealed\s+|static\s+|partial\s+)*class\s+(\w+)";
+
+        /// <summary>
+        /// Whether a class in the test project holds cases, as opposed to being a fixture, a
+        /// shared rig or a reference implementation. Those are documented where they are used
+        /// from and belong to no subject of their own.
+        /// </summary>
+        private static bool HoldsCases(string name)
+        {
+            return name.EndsWith("Tests", StringComparison.Ordinal)
+                || name.EndsWith("Walk", StringComparison.Ordinal)
+                || name.EndsWith("Survey", StringComparison.Ordinal)
+                || name.EndsWith("Sweep", StringComparison.Ordinal)
+                || name.EndsWith("Census", StringComparison.Ordinal);
+        }
+
+        /// <summary>
+        /// Every class of tests is filed under a subject in the suite's index.
+        ///
+        /// <para>
+        /// The index replaced a bullet list of everything the suite covered, written in prose and
+        /// maintained by whoever remembered to. It had drifted: suites written in the last hundred
+        /// commits were absent, and two of the bullets described a coverage the suite had moved
+        /// elsewhere. An index of names against subjects is the part worth keeping current, and it
+        /// is the part a check can keep current — what each suite is *for* lives in its own
+        /// summary, where it cannot drift away from the code it describes.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void EveryTestClassIsInTheIndex()
+        {
+            string index = File.ReadAllText(Path.Combine(RepoRoot(), "tests", "README.md"));
+            string folder = Path.Combine(RepoRoot(), "tests", "Thermodynamics.Tests");
+
+            List<string> missing = new List<string>();
+            List<string> names = new List<string>();
+
+            foreach (string file in Directory.GetFiles(folder, "*.cs"))
+            {
+                foreach (Match match in Regex.Matches(File.ReadAllText(file), TestClassPattern))
+                {
+                    string name = match.Groups[1].Value;
+                    if (!HoldsCases(name)) continue;
+
+                    names.Add(name);
+                    if (index.IndexOf("`" + name + "`", StringComparison.Ordinal) < 0) missing.Add(name);
+                }
+            }
+
+            Assert.True(names.Count > 100,
+                "only " + names.Count + " test classes were recognised, so the declaration pattern"
+                + " has changed and this test is no longer reading anything");
+
+            missing.Sort(StringComparer.Ordinal);
+            Assert.True(missing.Count == 0,
+                "test classes filed under no subject in tests/README.md:\n  "
+                + string.Join("\n  ", missing.ToArray()));
+        }
+
+        /// <summary>
         /// Every class that holds tests says what it is for.
         ///
         /// <para>
@@ -326,17 +389,10 @@ namespace Thermodynamics.Tests
             {
                 string source = File.ReadAllText(file);
 
-                foreach (Match match in Regex.Matches(source,
-                    @"(?m)^[ \t]*public\s+(?:sealed\s+|static\s+|partial\s+)*class\s+(\w+)"))
+                foreach (Match match in Regex.Matches(source, TestClassPattern))
                 {
                     string name = match.Groups[1].Value;
-
-                    // Only the classes that hold cases. Fixtures, shared rigs and reference
-                    // implementations are documented where they are used from.
-                    if (!name.EndsWith("Tests", StringComparison.Ordinal)
-                        && !name.EndsWith("Walk", StringComparison.Ordinal)
-                        && !name.EndsWith("Survey", StringComparison.Ordinal)
-                        && !name.EndsWith("Sweep", StringComparison.Ordinal)) continue;
+                    if (!HoldsCases(name)) continue;
 
                     classes++;
 
