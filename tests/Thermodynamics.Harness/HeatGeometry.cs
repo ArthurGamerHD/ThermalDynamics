@@ -6,28 +6,15 @@ using VRageMath;
 namespace Thermodynamics.Harness
 {
     /// <summary>
-    /// Where a hull puts its heat sources in space, and how far that heat has to travel to leave.
+    /// Where a hull puts its heat sources in space, and how far that heat has to travel to leave —
+    /// the arrangement no total can express, since two ships with identical power and exposure behave
+    /// differently depending on where the generators sit.
     ///
     /// <para>
-    /// The survey established that heat strands: a median of two blocks over critical with the hull
-    /// around them cold. It could not say *why* one hull does that and another does not, because
-    /// nothing measured arrangement. Totals cannot — two ships with identical installed power and
-    /// identical exposed area behave completely differently depending on whether the generators are
-    /// spread along the skin or stacked in one interior bay.
-    /// </para>
-    ///
-    /// <para>
-    /// **Depth is measured in conduction hops, not in metres.** The question a hot block faces is
-    /// not "how far is the hull surface" but "how many blocks does my heat have to cross to reach
-    /// something that radiates", and that is a walk over the solver's own link graph. Cell adjacency
-    /// would be the wrong graph: a multi-cell block occupies several cells, mounting is per face,
-    /// and two blocks touching in space are not necessarily conducting. Using the links means the
-    /// number measured is the path the heat actually takes.
-    /// </para>
-    ///
-    /// <para>
-    /// Distances are per grid, because a coordinate in one subgrid means nothing in another. The
-    /// per-ship figures below aggregate across grids by watts.
+    /// **Depth is measured in conduction hops, not metres**, over the solver's own link graph: cell
+    /// adjacency is the wrong graph, because two blocks touching in space are not necessarily
+    /// conducting. Distances are per grid, since a coordinate in one subgrid means nothing in another.
+    /// See balance.md, What actually causes a hot spot.
     /// </para>
     /// </summary>
     public static class HeatGeometry

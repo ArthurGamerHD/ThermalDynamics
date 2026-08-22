@@ -8,32 +8,15 @@ using VRageMath;
 namespace Thermodynamics.Harness
 {
     /// <summary>
-    /// The wind model put through every world the game ships and every corner of one.
+    /// The wind model put through every world the game ships and every corner of one — the whole model
+    /// against real planets at their real sizes, where the unit tests hold each piece against a case
+    /// built to exercise it. Space Engineers planets are a hundredth the size of real ones, so every
+    /// borrowed constant lands somewhere unexpected.
     ///
-    /// <para><b>Why this is not the same question as "does the arithmetic work".</b> The unit tests
-    /// hold each piece against a synthetic case built to exercise it. This holds the whole model
-    /// against real planets at their real sizes — and Space Engineers planets are strange. They are a
-    /// hundredth the size of real ones with terrain that is a tenth of their own radius, so a
-    /// mountain is a *proportionally enormous* object and every constant borrowed from terrestrial
-    /// meteorology lands somewhere unexpected.</para>
-    ///
-    /// <para>Some of what falls out of that, before any code runs:</para>
-    ///
-    /// <list type="bullet">
-    /// <item>A <b>circulation band</b> spans 30° of latitude. On Earth that is 3,300 km. On a 60 km
-    /// world it is <b>31 km</b> — a band of the general circulation is a short flight.</item>
-    /// <item>The <b>horizon</b> from head height on a 60 km world is about 490 m, against 5 km on
-    /// Earth. On a 9.5 km moon it is 195 m.</item>
-    /// <item>The <b>boundary layer</b> at 600 m is 1% of an earthlike radius, against 0.016% of
-    /// Earth's — and on a small moon it is <i>taller than the entire atmosphere</i>.</item>
-    /// <item><b>Triton's peaks are in vacuum:</b> 20% of its radius in mountain against an
-    /// atmosphere 9.4% of it deep.</item>
-    /// <item><b>The Moon has no atmosphere at all</b>, so every wind figure on it must be zero, and
-    /// nothing in the model may divide by that.</item>
-    /// </list>
-    ///
-    /// <para>Each scenario states what it is for and what would be wrong. They run in about a second
-    /// between them, so the whole matrix is a test rather than an exercise.</para>
+    /// <para>
+    /// Each scenario states what it is for and what would be wrong, and they run in about a second
+    /// between them. See environment.md, The scenario matrix, and World size.
+    /// </para>
     /// </summary>
     public static class WindScenarios
     {

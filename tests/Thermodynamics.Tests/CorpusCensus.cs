@@ -9,28 +9,14 @@ using Xunit;
 namespace Thermodynamics.Tests
 {
     /// <summary>
-    /// What every ship in the corpus *is*, before anything is stepped.
+    /// What every ship in the corpus *is*, before anything is stepped — the terms G4 needs and the
+    /// survey's outcome rows do not carry. **This costs a build, not a simulation**, so the full
+    /// corpus is minutes rather than the survey's eight hours and can be re-run whenever a definition
+    /// moves.
     ///
     /// <para>
-    /// The survey measures what ships do; nothing measured what they are made of. That gap is why
-    /// two questions stayed open after a complete 8,142-ship run. G4 — "design decides, not size" —
-    /// needs exposed area per watt, and the dataset carried neither term. And the survey's own
-    /// finding, that heat strands in one or two blocks, could be seen but not attributed: the
-    /// outcome rows name the hottest block and nothing about the hull around it.
-    /// </para>
-    ///
-    /// <para>
-    /// **This costs a build, not a simulation.** Exposure, thermal mass, installed power and the
-    /// waste watts at each load are all properties of the assembled grid — one <c>ShipLoad.Apply</c>
-    /// per load state settles them, with no stepping at all. The full corpus is therefore minutes
-    /// rather than the eight hours the survey takes, which is what makes it reasonable to re-run
-    /// whenever a definition moves.
-    /// </para>
-    ///
-    /// <para>
-    /// Two files come out. <c>census.csv</c> is one row per ship: the shape of the hull and what it
-    /// installs. <c>composition.csv</c> is one row per ship and heat-making block type, so a block
-    /// distribution can be read against the heating the survey measured for the same ship.
+    /// <c>census.csv</c> is one row per ship, <c>composition.csv</c> one per ship and heat-making block
+    /// type. See balance.md, The datasets.
     /// </para>
     /// </summary>
     public class CorpusCensus

@@ -10,28 +10,10 @@ namespace Thermodynamics.Harness
 {
     /// <summary>
     /// Sweeps <see cref="ThermalSettings.Frequency"/> to find where the substep cost bottoms out.
-    ///
-    /// The arithmetic that governs it. A step is <c>1 / Frequency</c> seconds long, and the number
-    /// of substeps it needs is proportional to its length times the grid's stiffness. So substeps
-    /// per step fall as Frequency rises — but there are proportionally more steps, and the product
-    /// is the same:
-    ///
-    /// <code>
-    ///   substeps per second = Frequency x (stiffness / Frequency) = stiffness
-    /// </code>
-    ///
-    /// **Total substep work is invariant in Frequency**, right up until substeps per step reaches
-    /// its floor of one. Past that point the grid is being stepped more often than it needs and
-    /// every extra step is pure overhead.
-    ///
-    /// That is the theory, and it predicts a knee rather than a slope. What it does not predict is
-    /// which side of the knee is actually cheaper in wall-clock, because a substep and a step are
-    /// not the same price: a field run showed a single substep pass getting 32 % cheaper when there
-    /// were more of them per step, which is locality rather than arithmetic. If that holds, fewer
-    /// longer steps beat more shorter ones and the sweet spot is *below* the knee, not at it.
-    ///
-    /// This measures both, on the same grid, so the question is settled by the clock rather than by
-    /// the model.
+    /// **Total substep work is invariant in Frequency** — <c>Frequency x (stiffness / Frequency)</c> —
+    /// until substeps per step reach their floor of one, so the theory predicts a knee rather than a
+    /// slope, and says nothing about which side of it is cheaper on a clock.
+    /// See configuration.md, Frequency is not the cost dial it looks like.
     /// </summary>
     public static class FrequencyLab
     {

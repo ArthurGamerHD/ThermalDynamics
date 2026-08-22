@@ -6,30 +6,15 @@ using Thermodynamics.Core;
 namespace Thermodynamics.Harness
 {
     /// <summary>
-    /// **Is the hull every benchmark is built on a ship anybody has built?**
+    /// **Is the hull every benchmark is built on a ship anybody has built?** The same quantity
+    /// <c>Census.Field</c> holds from two ships in two vanished sessions, measured over real workshop
+    /// blueprints where every input is visible and the run repeats (`E2`). It steps nothing, so a
+    /// thousand real ships cost seconds.
     ///
     /// <para>
-    /// A step takes as many substeps as its stiffest block needs, so a grid's cost is set by its
-    /// lightest fitting rather than by its size, and every performance figure this repository
-    /// publishes is taken on <see cref="Census"/>'s synthetic hull. That hull is held to
-    /// <c>Census.Field</c> — 21.35 and 31.25 substeps, from **two ships in two live sessions**.
-    /// Two is not a population, and a figure a running game reported is the one kind of evidence
-    /// that cannot be re-examined: the ships are gone, the world is gone, and what else was true of
-    /// them is unrecorded.
-    /// </para>
-    ///
-    /// <para>
-    /// This measures the same quantity over real workshop blueprints in the lab, where every input
-    /// is visible and the run can be repeated. It steps nothing — stiffness is a property of a
-    /// built grid and the world it is asked about — so a thousand real ships cost seconds.
-    /// </para>
-    ///
-    /// <para>
-    /// <b>Everything is reported against one stated step length.</b> Demand is proportional to it:
-    /// the same ship asks twice as much of a quarter-second step as of an eighth-second one, and
-    /// the field figures are quarter-second figures while the screening pass reports whatever the
-    /// settings it was handed imply. Two numbers on this page that are not on the same basis are
-    /// worse than one number, so the basis is a column and not a footnote.
+    /// **Everything is reported against one stated step length** (`E3`), because demand is
+    /// proportional to it and two figures on different bases are worse than one.
+    /// See stiffness.md, The same question asked of eight thousand real ships.
     /// </para>
     /// </summary>
     public static class StiffnessLab

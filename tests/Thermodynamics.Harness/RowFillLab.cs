@@ -8,31 +8,15 @@ using Thermodynamics.Core;
 namespace Thermodynamics.Harness
 {
     /// <summary>
-    /// What the first substep of a step costs over every later one — the per-node environment
-    /// terms that are fixed for a step and filled once.
+    /// What the first substep of a step costs over every later one, measured directly by turning
+    /// <c>PrecomputeEnvironment</c> off: a step then pays N fills instead of one, so **the signal is
+    /// multiplied by the substep count rather than divided by it** — where the report's four
+    /// measurements and three subtractions leave the residue carrying all four lots of noise.
     ///
     /// <para>
-    /// The performance report already reports this, but by subtraction: it measures a whole step
-    /// at one substep, takes away a separately measured prologue and write-back, and takes away a
-    /// separately measured later substep. Four measurements, three subtractions, and the residue
-    /// is the fill. Each of the four carries its own noise and the residue carries all of it, which
-    /// is fine for a term that is a fifth of a step and useless for judging a change worth a
-    /// tenth of that.
-    /// </para>
-    ///
-    /// <para>
-    /// This measures it directly instead, by turning the cache off. With
-    /// <c>PrecomputeEnvironment</c> on, a step of N substeps pays one fill and N-1 cheap substeps;
-    /// with it off, it pays N fills. The difference between the two steps is therefore N-1 fills,
-    /// so the fill's own cost comes out of a subtraction between two figures that differ by a
-    /// large amount rather than a small one — the signal is multiplied by the substep count
-    /// instead of divided by it.
-    /// </para>
-    ///
-    /// <para>
-    /// Both figures come from one simulation with the flag flipped between timed blocks.
-    /// <c>PrecomputedEnvironmentTests</c> is what makes that legitimate: the flag does not change
-    /// the answer, so it cannot change the state the second block starts from.
+    /// One simulation with the flag flipped between timed blocks, which
+    /// <c>PrecomputedEnvironmentTests</c> is what makes legitimate.
+    /// See benchmarks.md, Measuring the fill by turning the cache off.
     /// </para>
     /// </summary>
     public static class RowFillLab

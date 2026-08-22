@@ -5,31 +5,15 @@ using Thermodynamics.Core;
 namespace Thermodynamics.Harness
 {
     /// <summary>
-    /// One dial, moved one step at a time, with everything else held still.
+    /// One dial, moved one step at a time, with everything else held still, over a standing panel
+    /// chosen for spread — because re-simulating 8,142 ships per value per dial is weeks.
     ///
     /// <para>
-    /// The corpus survey answers "what do ships do at the shipped settings". It cannot answer "what
-    /// happens if I halve emissivity", and re-simulating 8,142 ships per value of per dial is weeks.
-    /// This is the other instrument: a small standing panel, chosen for spread rather than for size,
-    /// run across a grid of configurations so that each dial gets a measured response curve instead
-    /// of an argument.
-    /// </para>
-    ///
-    /// <para>
-    /// **One at a time, and that is a real limitation.** Each configuration moves a single dial off
-    /// the shipped value, so what comes out is a set of partial derivatives and not a model of the
-    /// whole space. Two dials moved together will not in general do what their curves added
-    /// together say — emissivity and exposed area multiply in the radiation term, and heat capacity
-    /// and waste fraction trade against each other in the time constant. The curves are for finding
-    /// the range a dial should live in, and for ranking dials against each other. They are a
-    /// ballpark for anything beyond that, and the report says so.
-    /// </para>
-    ///
-    /// <para>
-    /// **Each dial is measured only where it can act.** Sweeping the solar constant through the
-    /// shadow scenarios would spend hours proving that a dial nothing reads does nothing. A knob
-    /// declares its own scenarios, and the cost of the sweep is roughly the sum over knobs of levels
-    /// times scenarios times the panel, which is about three hours rather than a week.
+    /// **One at a time is a real limitation**: what comes out is a set of partial derivatives, and two
+    /// dials moved together will not do what their curves added together say. Good for the range a
+    /// dial should live in and for ranking dials; a ballpark beyond that, and the report says so.
+    /// Each dial is measured only in the scenarios it can act in.
+    /// See balance.md, and balance-lab.md, Sweep the settings space.
     /// </para>
     /// </summary>
     public static class KnobLab

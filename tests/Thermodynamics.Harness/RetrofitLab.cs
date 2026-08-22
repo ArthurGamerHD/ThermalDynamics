@@ -7,29 +7,15 @@ using VRageMath;
 namespace Thermodynamics.Harness
 {
     /// <summary>
-    /// **Does fitting cooling to a ship somebody actually built do anything?**
+    /// **Does fitting cooling to a ship somebody actually built do anything?** Criterion G3, which no
+    /// corpus ship can answer because the reader rejects a blueprint carrying a modded block and this
+    /// mod's blocks are modded blocks. So a real hull is parsed, run under load to find where its heat
+    /// is, and the mod's blocks go into the cells that hull left free — **the constraint is what makes
+    /// this a measurement of ships rather than of blocks**.
     ///
     /// <para>
-    /// This is criterion G3 of the balance lab, and it has been open since the lab was designed
-    /// because nothing could answer it: no corpus ship carries a radiator — the reader rejects a
-    /// blueprint with a modded block in it, and this mod's blocks are modded blocks — so the
-    /// population says only what an *uncooled* ship does. <see cref="CoolingLadder"/> answered half
-    /// of it on a synthetic rig, one reactor with blocks stacked against it. A rig is not a ship.
-    /// </para>
-    ///
-    /// <para>
-    /// So the cooling is fitted here instead: a real workshop hull is parsed, run under load to
-    /// find where its heat actually is, and then the mod's own blocks are placed against that spot
-    /// in cells the hull leaves free — which is the constraint that makes this a measurement of
-    /// ships rather than of blocks. A reactor buried behind six other blocks cannot be cooled
-    /// without demolishing something, and how often that is true is one of the answers.
-    /// </para>
-    ///
-    /// <para>
-    /// Two fits, because the model prices them six times apart and only one has ever been
-    /// measured: <b>bolted</b>, radiators against the hot block, and <b>plumbed</b>, a coolant ring
-    /// with a pump and a sink face against it. Both use the shipped definitions read from
-    /// <c>Cubes.xml</c>, not stand-ins.
+    /// Two fits, priced six times apart: <b>bolted</b> and <b>plumbed</b>, both from the shipped
+    /// definitions. See balance-lab.md, Define good balance.
     /// </para>
     /// </summary>
     public static class RetrofitLab

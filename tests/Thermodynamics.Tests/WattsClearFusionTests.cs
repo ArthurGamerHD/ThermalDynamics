@@ -5,30 +5,16 @@ using VRageMath;
 namespace Thermodynamics.Tests
 {
     /// <summary>
-    /// The watts row is written by the environment pass rather than zeroed first and added into,
-    /// and the only thing that makes that safe is an ordering claim: within a substep, the
-    /// environment pass reaches every node before anything else reads or writes the row.
+    /// The watts row is written by the environment pass rather than zeroed first, and the only thing
+    /// that makes that safe is an ordering claim in three parts: the pass runs first, reaches
+    /// **every** node including buried ones and a switched-off environment, and still does so when
+    /// sliced across frames.
     ///
     /// <para>
-    /// The claim has three parts, and each is a way the change could be wrong. The environment
-    /// pass must run first — conduction, the coupled stage and apply all follow it in the stage
-    /// machine. It must reach <em>every</em> node, including buried ones and including the case
-    /// where the whole environment is switched off and there is nothing to write. And it must
-    /// still reach every node when the pass is sliced across frames, since a node the budget did
-    /// not reach this frame would otherwise carry the previous substep's watts into this one.
-    /// </para>
-    ///
-    /// <para>
-    /// So the assertion is <b>bit-identical</b> rather than "close enough". A node whose watts
-    /// were not reset would integrate a doubled source term, which on a settled hull is a slow
-    /// drift rather than an obvious break — the failure this suite exists to catch is the one
-    /// that would otherwise be found in a save game months later.
-    /// </para>
-    ///
-    /// <para>
-    /// What it is worth is measured separately, by <c>bench wattsclear</c>: 0.2–0.6 % of a step,
-    /// growing with grid size. That is small, and it is not why the assertion matters — a
-    /// redundant memset that is <em>nearly</em> redundant is a correctness defect at any price.
+    /// The assertion is **bit-identical** rather than close enough (`D8`), because a node whose watts
+    /// were not reset integrates a doubled source term — a slow drift found in a save months later.
+    /// A memset that is *nearly* redundant is a correctness defect at any price, whatever it saves.
+    /// See benchmarks.md, The watts row is written.
     /// </para>
     /// </summary>
     public class WattsClearFusionTests

@@ -5,29 +5,14 @@ using VRageMath;
 namespace Thermodynamics.Tests
 {
     /// <summary>
-    /// The conduction pass skips the overshoot clamp on any step where the clamp cannot bind, and
-    /// the only thing that makes that safe is that running it would have produced the same bits.
+    /// The conduction pass skips the overshoot clamp on any step where it cannot bind, and the only
+    /// thing that makes that safe is that running it would have produced **the same bits** (`D8`) — a
+    /// gate that is nearly right drops clamping on a grid that needed it and diverges silently.
     ///
     /// <para>
-    /// Both halves of the clamp are the same stability test written twice. A node under-relaxes
-    /// only when <c>h * G &gt; C</c> for that node; a link's exchange is capped at equilibrium only
-    /// when <c>h * conductance &gt;</c> its reduced mass. Neither reads a temperature, so both are
-    /// settled for the whole grid before the substeps run. On a grid granted the substeps it
-    /// demands — which is what the substep count is chosen to guarantee — neither holds anywhere,
-    /// and every clamped branch computes a value it then discards.
-    /// </para>
-    ///
-    /// <para>
-    /// The assertion is <b>bit-identical</b>, not "close enough". A gate that is nearly right
-    /// would drop clamping on grids that needed it and diverge silently, which is worse than
-    /// paying for the clamp. The margin in <c>ClampBindingMargin</c> is what buys that: the fast
-    /// path is taken only with a hundred parts per million of headroom, three orders of magnitude
-    /// above the rounding in the comparison the clamp itself makes.
-    /// </para>
-    ///
-    /// <para>
-    /// The last two tests are the ones that keep the rest honest. Without them a gate that never
-    /// engaged, or one that engaged always, would pass every equivalence assertion above.
+    /// The last two tests are what keep the rest honest: without them a gate that never engaged, or
+    /// one that always did, would pass every equivalence assertion above (`E8`).
+    /// See benchmarks.md, The overshoot clamp A/B.
     /// </para>
     /// </summary>
     public class ConductionClampGateTests

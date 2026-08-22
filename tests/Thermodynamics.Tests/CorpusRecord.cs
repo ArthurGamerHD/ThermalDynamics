@@ -8,29 +8,14 @@ using Thermodynamics.Harness;
 namespace Thermodynamics.Tests
 {
     /// <summary>
-    /// What a corpus pass **learned**, written down.
+    /// What a corpus pass **learned**, written down: the invariants are pass or fail, and every figure
+    /// the run measured to answer them used to die with the assertion. Written down once, the same
+    /// pass names the specimens that answer the question in minutes afterwards.
     ///
     /// <para>
-    /// The invariants are pass or fail, and that is all they were ever asked for. But the run that
-    /// answers them measures every ship in the corpus in detail and then discards every number:
-    /// each <see cref="ScenarioOutcome"/> carries the temperature distribution, where the heat
-    /// concentrated, how long the hull took to settle, what it made and what it vented, the split
-    /// between radiation and convection and solar and friction, and what it cost the solver in
-    /// substeps — and none of it outlives the assertion.
-    /// </para>
-    ///
-    /// <para>
-    /// That is what makes a ten thousand ship pass something you have to keep repeating. Written
-    /// down once, the same pass tells you which hulls are exceptional — the hottest, the ones that
-    /// never settle, the ones that melt, the ones that demand substeps nothing else does — and
-    /// those ships become the standing panel that answers the question in minutes. The population
-    /// is measured to find the specimens; after that the specimens do the work.
-    /// </para>
-    ///
-    /// <para>
-    /// Off unless <c>THERMAL_CORPUS_DATA</c> names a directory, so an ordinary suite writes nothing.
-    /// One file per kind of row, appended a batch at a time rather than a row at a time, because
-    /// thirty workers each opening a file per ship is its own bottleneck.
+    /// Off unless <c>THERMAL_CORPUS_DATA</c> names a directory. One file per kind of row, appended a
+    /// batch at a time, because thirty workers opening a file per ship is its own bottleneck.
+    /// See balance.md, The datasets.
     /// </para>
     /// </summary>
     internal static class CorpusRecord

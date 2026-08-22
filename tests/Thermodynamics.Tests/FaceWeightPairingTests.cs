@@ -6,32 +6,15 @@ using VRageMath;
 namespace Thermodynamics.Tests
 {
     /// <summary>
-    /// A node's exposure on face <i>f</i> is weighted against the sun's and the wind's incidence
-    /// on <b>that same face</b>, and nothing outside this suite would notice if it were not.
+    /// A node's exposure on face <i>f</i> is weighted against the sun's and the wind's incidence on
+    /// **that same face**. A sum pairing face 2's exposure with face 3's incidence compiles, stays
+    /// symmetric, conserves energy and reads plausibly on every hull, and a cube — which is what
+    /// <see cref="SolarSymmetryTests"/> uses — cannot see a permutation at all.
     ///
     /// <para>
-    /// Both weightings are six-term sums, <c>Σ faceWeight[f] × incidence[f]</c>, written out term
-    /// by term so the six face weights can be read once and shared between them. Written out, they
-    /// are transcription: a sum that paired face 2's exposure with face 3's incidence would still
-    /// compile, still be symmetric, still conserve energy, and still produce plausible numbers on
-    /// every ship anyone benchmarks.
-    /// </para>
-    ///
-    /// <para>
-    /// <see cref="SolarSymmetryTests"/> cannot see it, and that is not a criticism of it — it
-    /// tests a lone cube, whose six faces are identical, so <em>any</em> permutation of them is
-    /// invisible by construction. Catching a permutation needs a node whose faces differ, which
-    /// is what the fixture below builds: a block buried on five sides, leaving exactly one face
-    /// open.
-    /// </para>
-    ///
-    /// <para>
-    /// The assertion does not assume which world direction lights which face. It asserts the
-    /// weaker and more useful thing: that <b>one</b> direction lights each node, and that the
-    /// direction is the same function of the open face for all six of them. A permutation breaks
-    /// that — a node open on face <i>f</i> would answer to the direction belonging to face
-    /// <i>π(f)</i> — while a sign or handedness convention this suite has no business pinning
-    /// does not.
+    /// The fixture is a block buried on five sides. The assertion is the weaker and more useful one:
+    /// that one direction lights each node, and that it is the same function of the open face for all
+    /// six — which a permutation breaks and a handedness convention does not.
     /// </para>
     /// </summary>
     public class FaceWeightPairingTests

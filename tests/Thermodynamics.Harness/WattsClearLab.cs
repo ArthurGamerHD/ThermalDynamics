@@ -8,30 +8,14 @@ using Thermodynamics.Core;
 namespace Thermodynamics.Harness
 {
     /// <summary>
-    /// What the watts row costs to clear, measured rather than argued.
+    /// What the watts row costs to clear. **A ladder rather than a figure**, because the clear is a
+    /// second walk of the same array and what it costs depends on where that array sits in the cache:
+    /// a saving that appears only at the top is bandwidth, one flat across it is instructions.
     ///
     /// <para>
-    /// A substep begins by zeroing <c>nodeWatts</c>, then the environment pass walks every node
-    /// and adds into it, then conduction scatters into it, then apply reads it. The first of
-    /// those four is redundant: the environment pass visits every node before anything reads the
-    /// row, so it can write the row outright and the memset has nothing to do. What that is worth
-    /// is a question about memory rather than about arithmetic — the clear is a second walk of the
-    /// same array, and whether it costs anything depends on where the array sits in the cache
-    /// hierarchy at the size being run.
-    /// </para>
-    ///
-    /// <para>
-    /// So the lab is a ladder rather than a single figure. At 2,000 nodes the row is 8 KB and
-    /// lives in L1 between the two walks; at 500,000 it is 2 MB and does not. A saving that only
-    /// appears at the top of the ladder is a saving in bandwidth, and one that is flat across it
-    /// is a saving in instructions.
-    /// </para>
-    ///
-    /// <para>
-    /// Every rung also compares the two paths bit for bit. A speed-up that changed an answer
-    /// would not be a speed-up, and this is the same hull driven the same way, so anything but
-    /// exact agreement is a defect. <c>WattsClearFusionTests</c> makes that assertion part of the
-    /// suite; here it guards the measurement itself.
+    /// Every rung compares the two paths bit for bit, since this is one hull driven the same way and
+    /// anything but exact agreement is a defect (`D8`).
+    /// See benchmarks.md, The watts row is written.
     /// </para>
     /// </summary>
     public static class WattsClearLab

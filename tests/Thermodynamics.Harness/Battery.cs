@@ -6,34 +6,11 @@ using VRageMath;
 namespace Thermodynamics.Harness
 {
     /// <summary>
-    /// The scenario battery: every state a ship can be in that tells you something different about
-    /// its thermal behaviour.
-    ///
-    /// <para>
-    /// The battery is built along four independent axes, and a scenario is a point on all four at
-    /// once. Nothing is included because it seems interesting; a scenario earns its place by
-    /// answering a question no other scenario answers, and where two would answer the same one, the
-    /// cheaper is kept.
-    /// </para>
-    ///
-    /// <list type="bullet">
-    /// <item><b>Environment</b> — what the outside is doing to the ship: vacuum, sun, air, weather,
-    /// ground. This is where external heating and external cooling live, and they are the same axis
-    /// because a planet's surface does both depending on the hour.</item>
-    /// <item><b>Motion</b> — friction heats the leading face and airflow cools every face, and both
-    /// depend on speed and on *which way the ship is pointing*. A ship travelling nose-first heats
-    /// a different set of blocks from the same ship travelling belly-first.</item>
-    /// <item><b>Load</b> — what is switched on inside: idle, full electrical, thrust in one named
-    /// direction, weapons, everything at once.</item>
-    /// <item><b>Configuration</b> — the ship as built, against the same ship with cooling fitted.
-    /// This is the only axis the player controls directly, and the one criterion G3 is about.</item>
-    /// </list>
-    ///
-    /// <para>
-    /// Directional cases are enumerated rather than sampled. Friction and thrust both land their
-    /// heat somewhere specific, and a ship is not symmetric: running only the forward case would
-    /// miss that most designs have their thrusters and their thin armour on different faces.
-    /// </para>
+    /// The scenario battery, built along four independent axes — environment, motion, load and
+    /// configuration — with a scenario a point on all four at once. **A scenario earns its place by
+    /// answering what nothing else answers** (`M8`), and directional cases are enumerated rather than
+    /// sampled, because a ship is not symmetric.
+    /// See balance-lab.md, Run the scenario battery.
     /// </summary>
     public static class Battery
     {

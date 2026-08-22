@@ -5,30 +5,14 @@ namespace Thermodynamics.Harness
 {
     /// <summary>
     /// Which ships are worth keeping, and which are saying what another ship already said.
+    /// **Selection is by coverage, not by frequency** (`M10`): the extremes of every axis first, then
+    /// greedy maximin, because the interior of a cluster is predictable from its edges and a balance
+    /// figure fails at the edges first.
     ///
     /// <para>
-    /// Ten thousand ships is the right number to *start* with and the wrong number to keep running.
-    /// A corpus of popular workshop designs is enormously redundant — five hundred small-grid
-    /// fighters differ in silhouette and not in anything this simulation can see — and every one of
-    /// them costs the same to run as the one ship that taught you something. The useful measure of
-    /// a ship is not how typical it is but how much it says that nothing else says.
-    /// </para>
-    ///
-    /// <para>
-    /// **Selection here is by coverage, not by frequency.** Picking the most popular ships would
-    /// produce a panel of near-duplicates from the densest part of the design space and no examples
-    /// of anything unusual, which is exactly backwards: the interior of a cluster is predictable
-    /// from its edges, and the edges are where a balance figure fails first. So the panel is built
-    /// greedily to spread as widely as possible through the feature space, seeded with the extremes
-    /// of each axis.
-    /// </para>
-    ///
-    /// <para>
-    /// **This is a hypothesis, and it has to be checked rather than assumed.** The claim is that
-    /// two ships close together in <see cref="ShipProfile.Features"/> behave the same way under the
-    /// scenario battery. Until the battery has been run over the full corpus once and the panel's
-    /// verdicts compared against it, a reduced panel is a guess about what matters. See
-    /// <see cref="Fidelity"/> for the check.
+    /// **That two close ships behave alike is a hypothesis, not a result**, and until the battery has
+    /// run over a whole corpus once a reduced panel is a guess about what matters. See
+    /// <see cref="Fidelity"/>, and balance-lab.md, Specimens.
     /// </para>
     /// </summary>
     public static class Specimens
