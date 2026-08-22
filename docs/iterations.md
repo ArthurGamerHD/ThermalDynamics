@@ -28,7 +28,7 @@ can be recovered for any row here by reading that file at the row's commit.
 | 6 | 2026-08-20 | `f411f7d` | 1,359 | **50 s** | one ungated corpus test was 4 m 57 s of every run since the fixture landed; rows 4 and 5 carry it. The `speed!=slow` lane is 14 s. |
 | — | | `f411f7d..c18e3e4` | | | **20 commits recorded no row.** The wind burial audit, the per-planet climates, the block heat index, the balance bench and the first full corpus survey landed between rows 6 and 7. |
 | 7 | 2026-08-22 | `c18e3e4` | 1,467 | 51 s | where this pass started; +108 across those 20 commits |
-| 8 | 2026-08-22 | *(this pass)* | 1,517 | 52 s | +50. A defragmentation pass: shipped code is **343 lines shorter** with nothing left in it that nothing calls, and nearly every test added checks something that had drifted rather than making a new claim about the physics. |
+| 8 | 2026-08-22 | *(this pass)* | 1,526 | 50 s | +59. A defragmentation pass, and then a validation one: shipped code is **343 lines shorter** with nothing left in it that nothing calls, and the ground truth every benchmark rests on moved from two ships in a vanished session to 8,102 workshop hulls measured in the lab. |
 
 ## The solver
 
@@ -81,6 +81,15 @@ nothing called, and the two structures it changed, a grid's key index and a room
 touched when a block is placed and when a mapping pass completes, not inside a substep.
 
 `tests/benchmarks/performance.csv` is deliberately left at row 3, for the reason row 4 gives.
+
+**Row 8's second half changed no code the columns can see and changed what the columns mean.** The
+census hull is the instrument every figure above is taken on, and it was held to `Census.Field` —
+21.35 and 31.25 substeps, from two ships in two live sessions. `StiffnessLab` asks the same
+question of 8,102 real workshop blueprints in four minutes. The field figures survive: they land at
+the 63rd and 85th percentile. What they could not show is that the population is **bimodal** — a
+light sets the substep count on 45 % of hulls at a median of 28.5 and armour on the rest at 4.8,
+with almost nothing between — and that the census hull sits in the trough and gets there by
+conducting where a real ship convects. See [stiffness.md](stiffness.md#the-same-question-asked-of-eight-thousand-real-ships).
 
 Where a pass moves something the columns above cannot see, it gets a row here.
 
