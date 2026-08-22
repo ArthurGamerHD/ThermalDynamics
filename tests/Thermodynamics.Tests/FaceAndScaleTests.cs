@@ -80,8 +80,8 @@ namespace Thermodynamics.Tests
         {
             Assert.Equal(0f, ThermalConstants.KelvinToCelsius(273.15f), 3);
             Assert.Equal(273.15f, ThermalConstants.CelsiusToKelvin(0f), 3);
-            Assert.Equal(32f, ThermalConstants.KelvinToFahrenheit(273.15f), 2);
-            Assert.Equal(212f, ThermalConstants.KelvinToFahrenheit(373.15f), 2);
+            Assert.Equal(100f, ThermalConstants.KelvinToCelsius(373.15f), 3);
+            Assert.Equal(373.15f, ThermalConstants.CelsiusToKelvin(100f), 3);
         }
 
         [Fact]

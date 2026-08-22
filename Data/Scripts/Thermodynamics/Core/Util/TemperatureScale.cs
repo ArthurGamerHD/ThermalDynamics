@@ -62,10 +62,5 @@ namespace Thermodynamics.Core
         {
             return ThermalConstants.KelvinToCelsius(kelvin).ToString("n2") + "°C";
         }
-
-        public static string ToFahrenheitString(float kelvin)
-        {
-            return ThermalConstants.KelvinToFahrenheit(kelvin).ToString("n2") + "°F";
-        }
     }
 }

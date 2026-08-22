@@ -13,7 +13,6 @@ namespace Thermodynamics.Core
 
         public const float MegawattsToWatts = 1000000f;
         public const float WattsToMegawatts = 1f / MegawattsToWatts;
-        public const float KilowattsToWatts = 1000f;
 
         /// <summary>Offset between Kelvin and Celsius.</summary>
         public const float KelvinOffset = 273.15f;
@@ -67,11 +66,6 @@ namespace Thermodynamics.Core
         public static float CelsiusToKelvin(float celsius)
         {
             return celsius + KelvinOffset;
-        }
-
-        public static float KelvinToFahrenheit(float kelvin)
-        {
-            return ((kelvin - KelvinOffset) * 9f / 5f) + 32f;
         }
     }
 }
