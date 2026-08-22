@@ -76,6 +76,29 @@ a repository is conventionally expected to publish.
 
 ---
 
+## What a code comment is for
+
+**A comment names a definition; it does not teach a topic.** Its job is to tell a reader what a
+thing is for in as little space as possible, and nothing beyond that: the explanation of *why* the
+thing works the way it does belongs on the documentation page that covers it, where it can be
+argued at length and found by someone who is not already looking at that line.
+
+So a comment is worth writing in two places — on a definition, and over a chunk of code that is
+genuinely complex or abstract. Code that is neither is read faster without one.
+
+Three tests, in the developer's words:
+
+* **It must stand on its own.** A comment that expects the reader to hold context living in another
+  file is a bad comment. Either it says enough to be understood where it sits, or it should be a
+  pointer to the page that does.
+* **Two lines is the limit.** A comment longer than that is a documentation entry that ended up in
+  the wrong file. Move the explanation to the page it belongs on and leave the definition with the
+  one line that names it.
+* **It describes, it does not lecture.** Detail is what the documentation files are for; this page
+  and the ones it sits among exist so that no comment has to carry an argument.
+
+---
+
 ## How a player perceives heat
 
 Legibility is the first of the three commitments above, and it has three layers. **Only the first is
@@ -579,6 +602,7 @@ very different warnings on very different blocks.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Recorded what a code comment is for: it names a definition or an especially complex chunk of code, stands on its own without context from another file, and stays inside two lines — anything longer is a documentation entry in the wrong file. |
 | 2026-08-22 | Recorded what the README is for: a workshop-pasteable front page for players, with one section for modders building on the framework, and deliberately not an explanation of how the mod works inside. Recorded the conflict this creates with the three developer-facing sections the page carries today. |
 | 2026-08-22 | Renamed from `document_of_intent.md` to match the kebab-case every other page uses. **Answered all eight areas that had no stated intent**, which are now stated in the body: cooling is designed in but a vanilla ship still has to survive; the scale target is 10⁶ blocks at `SimulationSpeed` 1.0 with ~250,000 as the realistic figure and uncapped stress bounds; a coolant loop costs power and makes waste heat, because a pump is a motor; an unattended grid gets the same simulation as an attended one, with the saving available as a switch; the mod is balanced for vanilla play in the knowledge that worlds get modded; the warning is a cockpit-only lead cue with a linear visual ramp keyed to each block's threshold; every thermal property is a dial; and a client is owed the minimum traffic that keeps the world coherent, with drift tolerated. Added the principle those answers share — **fidelity is the default and a saving is a switch** — which is what P14 leaves undecided once a difference *is* perceptible. The voids section is replaced by the six smaller questions the answers left open. |
 | 2026-08-22 | Recorded four intents stated by the developer after this page was first written. **A thermal camera is wanted** — it had been recorded here and in [known-issues.md](known-issues.md) as a deliberate limit on the grounds that mods get no shader, which is a statement about difficulty rather than about intent. Added [How a player perceives heat](#how-a-player-perceives-heat), covering the three layers of it: instruments that belong to the game's HUD rather than sit on top of it, natural feedback through subtle audio and in-world visuals, and thermal vision as an open problem with no known route. Added the threading target to [Performance intent](#performance-intent): use as much of the CPU as possible while taking as little of the game thread as possible. Void 6 is rewritten — the form of a warning is now stated, and its timing is what remains undefined. |
