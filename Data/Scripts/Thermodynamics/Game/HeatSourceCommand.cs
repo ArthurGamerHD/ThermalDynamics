@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using Thermodynamics.Core;
 
 namespace Thermodynamics
 {
@@ -150,13 +151,13 @@ namespace Thermodynamics
             return TryWatts(text, out range) && range > 0f ? range : fallback;
         }
 
-        /// <summary>Watts in the unit a person would say them in.</summary>
+        /// <summary>
+        /// Watts in the unit a person would say them in. Invariant, because this echoes a figure
+        /// <see cref="TryWatts"/> parsed as invariant and a player may paste it back.
+        /// </summary>
         public static string Describe(float watts)
         {
-            if (watts >= 1e9f) return (watts / 1e9f).ToString("n2", CultureInfo.InvariantCulture) + " GW";
-            if (watts >= 1e6f) return (watts / 1e6f).ToString("n2", CultureInfo.InvariantCulture) + " MW";
-            if (watts >= 1e3f) return (watts / 1e3f).ToString("n2", CultureInfo.InvariantCulture) + " kW";
-            return watts.ToString("n0", CultureInfo.InvariantCulture) + " W";
+            return Units.Watts(watts, 2, CultureInfo.InvariantCulture);
         }
 
         public static string Help()

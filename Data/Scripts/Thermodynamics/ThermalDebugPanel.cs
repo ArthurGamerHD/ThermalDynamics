@@ -360,14 +360,13 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>Formats watts at a readable magnitude; a grid's total reaches megawatts.</summary>
+        /// <summary>
+        /// Watts at a readable magnitude, to two places rather than the cockpit panel's one — this
+        /// is a diagnostic and the second digit is often the whole point of reading it.
+        /// </summary>
         private static string Watts(float watts)
         {
-            float magnitude = Math.Abs(watts);
-
-            if (magnitude >= 1000000f) return (watts / 1000000f).ToString("n2") + " MW";
-            if (magnitude >= 1000f) return (watts / 1000f).ToString("n2") + " kW";
-            return watts.ToString("n0") + " W";
+            return Units.Watts(watts, 2);
         }
     }
 }

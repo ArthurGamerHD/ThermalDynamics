@@ -856,11 +856,7 @@ namespace Thermodynamics
         /// <summary>Watts at a readable magnitude, as the cockpit panel shows them.</summary>
         private static string Watts(float watts)
         {
-            float magnitude = watts < 0f ? -watts : watts;
-
-            if (magnitude >= 1000000f) return (watts / 1000000f).ToString("n1") + " MW";
-            if (magnitude >= 1000f) return (watts / 1000f).ToString("n1") + " kW";
-            return watts.ToString("n0") + " W";
+            return Units.Watts(watts);
         }
 
         /// <summary>Whether a setting has been moved away from what a fresh install ships with.</summary>

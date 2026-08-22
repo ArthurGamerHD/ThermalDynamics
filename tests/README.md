@@ -432,7 +432,7 @@ and left off it.
 | **What a step costs, and what it must not change** | `LoadTests` `StepBudgetTests` `StepFixedCostTests` `StepPacingTests` `StepTermsTests` `SpreadStepTests` `PaceEquivalenceTests` `SweepSliceTests` `BufferGrowthTests` `IncrementalTopologyTests` `BlockRefreshTests` `CostRollupTests` `SolverReportingTests` `StressFindingsTests` |
 | **Bit-identity: an optimisation against what it replaced** | `PrecomputedEnvironmentTests` `FixedSourceRowTests` `WattsClearFusionTests` `ConductionClampGateTests` `DiagnosticBatchingTests` |
 | **Settings, storage and definitions** | `SettingsTests` `SettingsDefaultsTests` `SettingsWiringTests` `StorageCodecTests` `SchedulerTests` `DefinitionTests` `DefinitionFileTests` `ShippedDefinitionTests` `BlockDerivationTests` `MaterialOverrideTests` `FeatureToggleTests` `ProfileTests` `ProfileSuiteTests` `WorldSettingsTests` |
-| **Readouts a player sees** | `TemperatureScaleTests` |
+| **Readouts a player sees** | `TemperatureScaleTests` `UnitsTests` |
 | **Telemetry, reports and overlays** | `RunningStatTests` `HistogramTests` `TimingStatTests` `TelemetryFormatTests` `TelemetryAnomalyTests` `SampleGateTests` `GridHealthTests` `AnomalyRegistryTests` `FrameCostTests` `ProfilerTests` `RescanGateTests` `OverlayBudgetTests` `PerformanceReportTests` `BenchmarkBaselineTests` |
 | **Field dumps: the mod checked against a world** | `DumpAuditTests` `FieldDumpTests` `CensusFidelityTests` |
 | **End to end, and the host boundary** | `SimulationIntegrationTests` `ScenarioTests` `ScenarioClaimTests` `HostAdapterTests` `CoreIsolationTests` |
