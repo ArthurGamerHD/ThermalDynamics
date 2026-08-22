@@ -17,7 +17,7 @@ into atmosphere and into the air of sealed rooms, arrives from the sun, and — 
 * **Isolated.** Every mechanism has its own switch, and switching one off removes exactly its own
   cost. Switches take effect on the next step, with no reload.
 * **Tested.** The simulation is a pure library with no dependency on the game session, built and
-  tested outside it — 1,532 tests, 33 deterministic scenarios and a load benchmark that goes to a
+  tested outside it — 1,533 tests, 33 deterministic scenarios and a load benchmark that goes to a
   million blocks in one grid.
 * **Open.** Everything the simulation knows is readable and everything it does is drivable from
   another mod, through a delegate table passed by mod message. See [docs/api.md](docs/api.md).
@@ -136,7 +136,7 @@ game compiles it. The projects under [tests/](tests) link the same files so it c
 profiled outside the game:
 
 ```bash
-cd tests && dotnet test                                  # 1,532 tests
+cd tests && dotnet test                                  # 1,533 tests
 dotnet run --project Thermodynamics.Sim -- run all     # scenario suite
 dotnet run --project Thermodynamics.Sim -- bench scale # cost from 8k to 1M blocks
 ```
@@ -174,6 +174,7 @@ ThermalDynamics/
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Brought the quoted suite size to 1,533, after a pass that added four documentation checks. |
 | 2026-08-22 | Rebuilt the documentation index around what a reader is trying to do rather than the order pages were written, after a defragmentation pass took the documentation from 31 pages to 21. Every page now opens with its scope and closes with a change log; the conventions are in [docs/development.md](docs/development.md#documentation-conventions) and checked by `EveryPageHasAChangeLog`. |
 | 2026-08-21 | Made the quoted suite size a claim the suite checks, and fixed the sixteen dead documentation links a first check found. |
 | 2026-08-20 | Pointed the READMEs at the corpus and the lab. |

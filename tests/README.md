@@ -426,7 +426,7 @@ PipeFitter.BuildRing(builder, ring);      // pump goes on the first straight run
 
 ## Test coverage
 
-1,532 tests. **What each class is for is stated in its own summary, not here** —
+1,533 tests. **What each class is for is stated in its own summary, not here** —
 the index below says where to look, and `EveryTestClassSaysWhatItIsFor` fails when a class arrives
 without saying. This table is checked by `EveryTestClassIsInTheIndex`, so a suite cannot be added
 and left off it.

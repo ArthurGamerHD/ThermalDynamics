@@ -817,6 +817,7 @@ report can be recovered for any row here by reading that file at the row's commi
 | 7 | 2026-08-22 | `c18e3e4` | 1,467 | 51 s | +108 across those 20 commits |
 | 8 | 2026-08-22 | *(the 2026-08-22 pass)* | 1,528 | 50 s | +61. A defragmentation pass and then a validation one: shipped code is **343 lines shorter** with nothing left in it that nothing calls, and the ground truth every benchmark rests on moved from two ships in a vanished session to 8,102 workshop hulls measured in the lab. |
 | 9 | 2026-08-22 | *(the documentation pass)* | 1,529 | — | +1, `EveryPageHasAChangeLog`. Documentation only: 31 pages merged to 21, every page given a change log, and six published figures corrected. **No duration**, because the run was taken on a different machine from rows 6–8 and a figure that cannot be compared to its neighbours is worse on this table than a dash. No shipped solver code changed, so there is no solver row below. |
+| 10 | 2026-08-22 | *(the standardisation pass)* | 1,533 | 2 m 36 s | +4: `EveryCheckCitedByTheRulesPageResolves`, `EveryRuleCitedByAPageExists`, `TheRulesPageIndexesEveryRuleItStates` and `NoDocCommentDescribesSomethingThatIsNotThere`. Documentation and comments only. **The duration is not comparable to rows 6–8** — this run was serialised under `maxParallelThreads: 1` and taken on a different machine — so it is recorded for the count beside it and nothing else. No shipped solver code changed, so there is no solver row below. |
 
 ### The solver
 
@@ -912,6 +913,7 @@ several times its neighbours' should be re-taken rather than explained.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Recorded row 10 of [the iteration log](#the-iteration-log), and marked its duration as not comparable rather than leaving a reader to compare it (`M7`). |
 | 2026-08-22 | Absorbed `element-cost.md` as [What a substep costs](#what-a-substep-costs) — the measurement behind the step budget's weighting belongs beside the report that uses it — and `iterations.md` as [The iteration log](#the-iteration-log), which is this report's own trend over time. Converted the three optimisation findings to present tense, with the state they replaced kept in their before/after tables. |
 | 2026-08-21 | Filed one overheat event per block per step rather than per substep, which had been multiplying every reported critical-block count by the grid's substep demand and OOM-killing a 4,000-tick driven run at 14 GB. Read a node's six face weights once in the row fill instead of twice (−12.4% on the fill in air). Let the environment pass write the watts row instead of clearing it first (+0.6% at half a million blocks — a bandwidth effect, not an instruction one). Gave every substep count the step length it was counted against. |
 | 2026-08-20 | Re-recorded the baseline against the fixed-source row, and stopped the first substep filling rows nothing reads. Corrected what being measured was thought to cost. |

@@ -243,7 +243,7 @@ The core speaks no game type, so it builds and runs outside the session in secon
 makes it testable, profilable, drivable by another mod, and portable to another engine — the four
 are one property, not four.
 
-**Checked by** `C5` (`CoreIsolationTests`). The suite is 1,532 tests, 33 deterministic scenarios and
+**Checked by** `C5` (`CoreIsolationTests`). The suite is 1,533 tests, 33 deterministic scenarios and
 a load benchmark that reaches a million blocks in one grid.
 
 ### Open — the API is part of the contract
@@ -606,6 +606,7 @@ very different warnings on very different blocks.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Stated that the comment standard here is `R14`, and that the check on it catches the failure the length limit prevents. Twenty-four comments in the tree described a member that was no longer there. |
 | 2026-08-22 | Recorded what a code comment is for: it names a definition or an especially complex chunk of code, stands on its own without context from another file, and stays inside two lines — anything longer is a documentation entry in the wrong file. |
 | 2026-08-22 | Recorded what the README is for: a workshop-pasteable front page for players, with one section for modders building on the framework, and deliberately not an explanation of how the mod works inside. Recorded the conflict this creates with the three developer-facing sections the page carries today. |
 | 2026-08-22 | Renamed from `document_of_intent.md` to match the kebab-case every other page uses. **Answered all eight areas that had no stated intent**, which are now stated in the body: cooling is designed in but a vanilla ship still has to survive; the scale target is 10⁶ blocks at `SimulationSpeed` 1.0 with ~250,000 as the realistic figure and uncapped stress bounds; a coolant loop costs power and makes waste heat, because a pump is a motor; an unattended grid gets the same simulation as an attended one, with the saving available as a switch; the mod is balanced for vanilla play in the knowledge that worlds get modded; the warning is a cockpit-only lead cue with a linear visual ramp keyed to each block's threshold; every thermal property is a dial; and a client is owed the minimum traffic that keeps the world coherent, with drift tolerated. Added the principle those answers share — **fidelity is the default and a saving is a switch** — which is what P14 leaves undecided once a difference *is* perceptible. The voids section is replaced by the six smaller questions the answers left open. |

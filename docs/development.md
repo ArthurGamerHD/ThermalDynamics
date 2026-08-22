@@ -111,8 +111,24 @@ while still reading as a description of the code.
    was published is not corrected (`E10`).
 
 Checks that hold this in place: `EveryDocumentIsInTheIndex`, `EveryPageHasAChangeLog`,
-`EveryRelativeLinkResolves`, `EveryAnchorNamesAHeading`, `NoPageNamesATestThatHasBeenRenamed` and
-`EveryQuotedSuiteSizeIsCurrent`.
+`EveryRelativeLinkResolves`, `EveryAnchorNamesAHeading`, `NoPageNamesATestThatHasBeenRenamed`,
+`EveryQuotedSuiteSizeIsCurrent`, `EveryRuleCitedByAPageExists` and
+`TheRulesPageIndexesEveryRuleItStates`.
+
+### And in the code
+
+A comment follows the same split, stated in
+[document-of-intent.md](document-of-intent.md#what-a-code-comment-is-for) and held by `R14`: it
+**names** the definition it sits on, and where it would argue, it names the page that argues.
+
+Write that pointer as plain text — `See stiffness.md, A per-block substep cap.` — and never as a
+relative markdown link. A link inside a `.cs` file renders nowhere, so nobody clicks it and nothing
+notices when it breaks; `EveryAnchorNamesAHeading` reads markdown only. Both of the two that existed
+in the tree had rotted, one of them into a directory that does not exist.
+
+The exception is a **test class summary**, which `R10` makes the canonical statement of what that
+class is for — "in its own summary, not in an index". There is no page to move it to, so it stays
+where it is.
 
 ## Do not restructure `Models/`
 
@@ -235,6 +251,7 @@ already parameterises the game location.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Added the comment convention to [Documentation conventions](#documentation-conventions): a comment names a definition and points at the page that argues it, and the pointer is plain text rather than a relative markdown link, because a link inside a `.cs` renders nowhere and nothing checks it. Both of the two that existed had rotted. |
 | 2026-08-22 | Corrected the multiplayer row, which said no commands were registered on the network channel; three replicated properties and a second secure channel exist. |
 | 2026-08-22 | Added the standard header and this change log. The documentation conventions this repository follows are stated in [Documentation conventions](#documentation-conventions) below. |
 | 2026-08-21 | Checked the documentation's own links and fixed the sixteen that were dead. |
