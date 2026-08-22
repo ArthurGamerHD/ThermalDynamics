@@ -8,13 +8,9 @@ using VRageMath;
 namespace Thermodynamics
 {
     /// <summary>
-    /// Heat conduction across a rotor or a piston, where the two blocks belong to different
-    /// grids and therefore to different simulations.
-    ///
-    /// A grid's solver works over one array of nodes, so a link between two grids cannot live in
-    /// either. It is held here as a list of pairs, exchanged once per tick with the same clamped,
-    /// energy-conserving step the solver uses internally. A grid carries a handful of these, so a
-    /// flat list is sufficient.
+    /// Heat conduction across a rotor or a piston, where the two blocks belong to different grids and
+    /// so to different solvers — a link that can live in neither. Exchanged once per tick under the
+    /// same clamped, energy-conserving rule. See thermal-model.md, Conduction.
     /// </summary>
     public static class ThermalBridges
     {

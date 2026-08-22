@@ -2258,18 +2258,10 @@ namespace Thermodynamics.Core
                 CoolantLoop loop = loops[l];
                 float[] watts = loop.SegmentWatts;
 
-                // How hard every link on a parcel pulls, together.
-                //
-                // ClampExchange bounds one exchange to the energy that would equalise that pair,
-                // which is right for a pair and wrong for a parcel with more than one link on it:
-                // two links each allowed to equalise deliver twice the energy that equalising
-                // takes, the parcel overshoots past its neighbours, and the overshoot grows. A
-                // pipe carrying a sink face has exactly that shape — its own link plus the sink's
-                // — and a well-mixed ring has one parcel carrying every link in the ring.
-                //
-                // Below the clamp threshold this changes nothing, which is why it went unnoticed:
-                // it only bites once the exchanges are large enough to saturate, and conductance
-                // is what decides that. Brass stayed under it and copper did not.
+                // How hard every link on a parcel pulls, together. ClampExchange bounds one exchange
+                // at the energy that equalises *that pair*, which lets two links on one parcel deliver
+                // twice what equalising takes; a pipe with a sink face has exactly that shape.
+                // profiles.md, The loop path has a stiffness ceiling.
                 float relaxation = 1f;
                 if (clamp && h > 0f)
                 {

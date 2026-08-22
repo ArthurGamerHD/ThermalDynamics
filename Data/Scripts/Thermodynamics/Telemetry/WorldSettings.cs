@@ -4,15 +4,10 @@ using System.Collections.Generic;
 namespace Thermodynamics
 {
     /// <summary>
-    /// The world's own settings, as the report sees them.
-    ///
-    /// The mod's settings say what the model was asked to do; the world's say whether the game
-    /// allowed it. A dump taken with <c>EnableDamage</c> on in a world with <c>DestructibleBlocks</c>
-    /// off records damage the engine discarded, and nothing in the report explained the difference.
-    ///
-    /// The list is taken from the serialised session settings rather than a hand-written field list,
-    /// so a setting the game adds appears in the next dump without a change here. Free of any Space
-    /// Engineers type: the caller supplies the XML.
+    /// The world's own settings, as the report sees them: the mod's say what the model was asked to do
+    /// and these say whether the game allowed it. Read out of the serialised session settings rather
+    /// than a hand-written list, so a setting the game adds appears in the next dump.
+    /// See telemetry.md, Output.
     /// </summary>
     public static class WorldSettings
     {

@@ -169,15 +169,10 @@ namespace Thermodynamics.Core
         /// <summary>Number of live entries in <see cref="HeatSources"/>.</summary>
         public int HeatSourceCount;
 
-        /// <summary>A sample for deep space with the sun overhead.</summary>
         /// <summary>
-        /// Composes the airflow a hull actually feels: the ambient wind minus the grid's own
-        /// velocity, resolved into the grid's local frame.
-        ///
-        /// This is the one place the two motions meet, extracted so the offline harness feels
-        /// exactly the airflow a session would. Friction and forced convection read nothing but
-        /// the result, which is why a ship flying with the wind at the wind's own speed is in calm
-        /// air at 100 m/s ground speed, and a ship flying into it feels the sum.
+        /// Composes the airflow a hull actually feels: the ambient wind minus the grid's own velocity,
+        /// in the grid's local frame. **The one place the two motions meet** — friction and forced
+        /// convection read nothing but the result. See environment.md, What the solver computes.
         /// </summary>
         public void ComposeRelativeWind(Vector3 windDirection, float windSpeed, Matrix worldToLocal)
         {

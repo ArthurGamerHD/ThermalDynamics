@@ -186,13 +186,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Ctrl+Shift+= cycles the block overlay through its views; Ctrl+Shift+W cycles the wind map
-        /// through its two scales; Ctrl+Shift+S opens the settings
-        /// menu.
-        ///
-        /// Hard-coded rather than rebindable because a mod cannot add an entry to the game's binding
-        /// list. The chat and terminal typing checks keep the keystrokes out of text the player is
-        /// entering.
+        /// Ctrl+Shift+= cycles the block overlay, Ctrl+Shift+W the wind map, Ctrl+Shift+S the settings
+        /// menu. Hard-coded rather than rebindable, because a mod cannot add an entry to the game's
+        /// binding list; the typing checks keep the chords out of text a player is entering.
         /// </summary>
         private void PollKeys()
         {

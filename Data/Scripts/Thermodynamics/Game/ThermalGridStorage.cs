@@ -16,12 +16,9 @@ namespace Thermodynamics
     public partial class ThermalGrid
     {
         /// <summary>
-        /// Everything this mod saves on a grid goes under this one key.
-        ///
-        /// The key ending 344 is retired and must not be reused: version 1 wrote loop temperatures
-        /// under it, separately and indexed by list position. The codec carries them inside the
-        /// main payload keyed by the loop's own signature instead, so a rebuilt loop keeps its
-        /// temperature. A world saved by version 1 still has the old blob; nothing reads it.
+        /// Everything this mod saves on a grid goes under this one key. **The key ending 344 is retired
+        /// and must not be reused**: version 1 wrote loop temperatures under it, and a world saved by
+        /// that build still carries the blob, which nothing reads.
         /// </summary>
         private static readonly Guid StorageGuid = new Guid("f7cd64ae-9cd8-41f3-8e5d-3db992619343");
 

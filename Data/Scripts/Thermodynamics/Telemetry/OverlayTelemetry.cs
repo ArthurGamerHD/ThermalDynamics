@@ -3,14 +3,9 @@ using System.Text;
 namespace Thermodynamics
 {
     /// <summary>
-    /// What the block overlay costs the client, per frame it drew.
-    ///
-    /// The overlay is a diagnostic, and a diagnostic that halves the frame rate on the ships worth
-    /// diagnosing is one nobody leaves on. It draws no simulation, so nothing else in the report
-    /// records it: without this, an overlay-induced stutter appears in the frame histogram as a
-    /// simulation cost it is not.
-    ///
-    /// Free of any Space Engineers type, so what it records is testable outside the game.
+    /// What the block overlay costs the client, per frame it drew. It simulates nothing, so without
+    /// this an overlay-induced stutter reads in the frame histogram as a simulation cost. Free of any
+    /// Space Engineers type, so what it records is testable outside the game.
     /// </summary>
     public class OverlayTelemetry
     {

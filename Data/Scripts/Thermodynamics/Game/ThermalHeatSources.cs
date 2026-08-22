@@ -7,14 +7,9 @@ using VRageMath;
 namespace Thermodynamics
 {
     /// <summary>
-    /// Point heat sources registered by other mods: a burning wreck, a plasma bolt, a second sun.
-    ///
-    /// A source is a position, a power and a reach. The registry converts that into the irradiance
-    /// reaching one grid — watts spread over the sphere at that distance — which the simulation
-    /// treats exactly as it treats sunlight.
-    ///
-    /// A source bound to an entity follows it and is removed with it, so a mod registering one on a
-    /// projectile need not clean it up.
+    /// Point heat sources registered by other mods: a position, a power and a reach, converted to the
+    /// irradiance reaching one grid and treated exactly as sunlight is. A source bound to an entity
+    /// follows it and is removed with it. See api.md, Heat sources.
     /// </summary>
     public static class ThermalHeatSources
     {

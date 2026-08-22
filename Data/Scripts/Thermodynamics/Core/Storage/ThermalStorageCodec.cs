@@ -44,16 +44,10 @@ namespace Thermodynamics.Core
     }
 
     /// <summary>
-    /// Serialises grid temperatures to and from a base64 blob.
-    ///
-    /// Two formats are supported. Version 1 is the legacy layout, retained so existing saves load.
-    /// Version 2 corrects three of its limitations: positions are 64-bit so distant blocks cannot
-    /// alias, temperatures keep their fractional part, and loops are keyed by a stable signature
-    /// rather than by their index in a list rebuilt on load.
-    ///
-    /// Version 2 is extended by adding a section rather than by changing the marker: every record is
-    /// twelve bytes and a reader skips a section it does not recognise, so a save written by a newer
-    /// build still loads on an older one.
+    /// Serialises grid temperatures to and from a base64 blob. Version 1 is read so old saves load;
+    /// version 2 is **extended by adding a section rather than by changing the marker**, so a reader
+    /// skips what it does not recognise and a newer save still loads on an older build.
+    /// See architecture.md, Persistence.
     /// </summary>
     public static class ThermalStorageCodec
     {

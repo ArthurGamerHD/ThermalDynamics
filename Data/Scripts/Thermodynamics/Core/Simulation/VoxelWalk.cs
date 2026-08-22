@@ -4,16 +4,10 @@ using VRageMath;
 namespace Thermodynamics.Core
 {
     /// <summary>
-    /// Walks a ray through a grid's cells and reports whether it hits anything solid.
-    ///
-    /// The traversal is Amanatides and Woo's: track the distance to the next cell boundary on each
-    /// axis and cross whichever is nearest. It visits every cell the ray passes through and no
-    /// others, so a ray cannot slip diagonally between two blocks touching along an edge.
-    ///
-    /// The origin is a point rather than a cell, so one implementation serves both callers. A grid
-    /// testing its own shadow starts at cell centres, on the integers; a grid testing another grid
-    /// starts wherever that grid's lattice falls relative to its own, which is rotated and rarely
-    /// on an integer.
+    /// Walks a ray through a grid's cells and reports whether it hits anything solid: Amanatides and
+    /// Woo, so it visits every cell the ray passes through and no others and cannot slip diagonally
+    /// between two blocks touching along an edge. The origin is a point rather than a cell, so one
+    /// implementation serves a grid shadowing itself and a grid shadowing another.
     /// </summary>
     public static class VoxelWalk
     {

@@ -109,15 +109,9 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// How many items a rolling sweep should visit this tick.
-        ///
-        /// A sweep is needed where the game raises no event and the only way to detect a change is
-        /// to poll; block mass is the case in this mod. The slice is the share that completes a full
-        /// pass in <paramref name="interval"/> steps, capped so no tick exceeds its share however
-        /// large the grid.
-        ///
-        /// Below the cap a full pass still takes exactly <paramref name="interval"/> steps, so a
-        /// grid small enough to sweep whole is unaffected.
+        /// How many items a rolling sweep should visit this tick: the share completing a full pass in
+        /// <paramref name="interval"/> steps, capped so no tick exceeds its share however large the
+        /// grid. Below the cap a grid still sweeps whole in exactly that many steps.
         /// </summary>
         /// <param name="count">Items in the rota.</param>
         /// <param name="steps">Solver steps this tick advanced.</param>

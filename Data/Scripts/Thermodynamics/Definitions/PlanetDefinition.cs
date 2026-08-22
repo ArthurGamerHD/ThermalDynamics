@@ -27,12 +27,8 @@ namespace Thermodynamics
         private static readonly MyStringId ConvectionCoefficientId = MyStringId.GetOrCompute("ConvectionCoefficient");
 
         /// <summary>
-        /// Which values the definition actually carried.
-        ///
-        /// A planet whose generator has no <c>ThermalPlanetProperties</c> group — or one authored
-        /// with three of the eleven — used to hand back zeros for everything it did not say, and
-        /// those zeros were copied straight over the model's own defaults. Nothing carries what a
-        /// definition did not say any more.
+        /// Which values the definition actually carried, so a merge writes only those and never a zero
+        /// the definition did not say. See environment.md, When the file does not reach the mod.
         /// </summary>
         public PlanetField Supplied;
 

@@ -38,15 +38,9 @@ namespace Thermodynamics
         private static readonly Dictionary<string, CoolantShape> Cache = new Dictionary<string, CoolantShape>();
 
         /// <summary>
-        /// Guards <see cref="Cache"/>.
-        ///
-        /// <see cref="ThermalBlockCatalog"/> locks its own model dictionary but calls <c>Build</c>
-        /// outside that lock, so as not to serialise the worker threads the game pastes with, and
-        /// <c>Build</c> calls in here. Unguarded, this dictionary tore: a field run logged three
-        /// <c>NullReferenceException</c>s from <c>Dictionary.Insert</c> within the first tenth of a
-        /// second of a world load, and every block of those types failed to become a node.
-        ///
-        /// The lock costs a dictionary probe once per block type per session.
+        /// Guards <see cref="Cache"/>. <see cref="ThermalBlockCatalog"/> deliberately builds outside its
+        /// own lock, so this is reached from the worker threads the game pastes grids on.
+        /// See known-issues.md, Block placement is not a main-thread-only path.
         /// </summary>
         private static readonly object CacheLock = new object();
 

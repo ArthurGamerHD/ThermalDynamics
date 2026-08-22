@@ -5,13 +5,9 @@ using VRageMath;
 namespace Thermodynamics
 {
     /// <summary>
-    /// The heat-pump hardware of the blocks this mod ships, keyed by subtype. Same shape of table as
-    /// <see cref="ThermalCoolantShapes"/>, and for the same reason: a block's material properties
-    /// belong in its definition, but its port geometry must be supplied to the simulation.
-    ///
-    /// The two ratings here describe the hardware. Conversion efficiency follows the Carnot relation
-    /// and is tuned once for the whole mod in
-    /// <see cref="ThermalSettings.HeatPumpCarnotFraction"/>.
+    /// The heat-pump hardware of the blocks this mod ships, keyed by subtype: the two ratings and the
+    /// face geometry, which a definition cannot express. Efficiency is Carnot's and is tuned once for
+    /// the whole mod in <see cref="ThermalSettings.HeatPumpCarnotFraction"/>.
     /// </summary>
     public static class ThermalHeatPumpShapes
     {

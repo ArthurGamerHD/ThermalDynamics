@@ -18,15 +18,10 @@ namespace Thermodynamics.Core
     }
 
     /// <summary>
-    /// The air inside one sealed room as a single well-mixed mass: the same lumped model a coolant
-    /// loop uses, with the room's volume in place of the fluid's.
-    ///
-    /// Air has low conductivity and little mass, so it stores little heat; its effect is to couple
-    /// every surface bounding the room to every other, with no conduction path between them.
-    ///
-    /// A room holds air only when the host says so: <see cref="Pressure"/> starts at zero and the
-    /// host sets it from its own pressurisation model. A room at zero pressure has no air mass, no
-    /// links, and no cost.
+    /// The air inside one sealed room as a single well-mixed mass. It stores little heat; what it does
+    /// is couple every surface bounding the room to every other, which nothing else can. A room holds
+    /// air only when the host says so, and one at zero pressure has no mass, no links and no cost.
+    /// See thermal-model.md, Room air.
     /// </summary>
     public class RoomAirNode
     {

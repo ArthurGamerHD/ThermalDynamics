@@ -64,16 +64,10 @@ namespace Thermodynamics.Core
     }
 
     /// <summary>
-    /// The set of temperatures being watched on one grid.
-    ///
-    /// Held apart from the solver so its cost is explicit: with nothing registered a step tests one
-    /// integer, and with thresholds registered the check is one comparison per node per threshold
-    /// against temperatures the step already holds — no extra pass over the grid and no per-block
-    /// subscription list.
-    ///
-    /// Crossings are detected against the temperature at the start of the step rather than of a
-    /// substep, so a block that crosses and recrosses within one step reports once, in the
-    /// direction it finished in.
+    /// The set of temperatures being watched on one grid. With nothing registered a step tests one
+    /// integer. Crossings are measured against the temperature at the start of the *step*, so a block
+    /// that crosses and recrosses within one reports once, in the direction it finished in.
+    /// See api.md, Thresholds.
     /// </summary>
     public class ThermalThresholds
     {
