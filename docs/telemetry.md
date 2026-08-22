@@ -725,7 +725,7 @@ than by the periodic sample, because it needs a walk rather than a reading. See
 
 ## Tests
 
-Most of the module reads `Sandbox.*` and `VRage.Game` types, which cannot load in [`tests/`](../sim).
+Most of the module reads `Sandbox.*` and `VRage.Game` types, which cannot load in [`tests/`](../tests).
 Its decision logic does not, and lives in files that reference nothing but `System`:
 
 | File | What it holds |

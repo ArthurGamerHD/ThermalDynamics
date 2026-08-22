@@ -6,7 +6,7 @@
 > order of work has since been measured, and most of it fixed. The correctness findings here still
 > stand.
 
-Findings from extracting the simulation into [`tests/`](../sim) and putting it under test. Each
+Findings from extracting the simulation into [`tests/`](../tests) and putting it under test. Each
 correctness item says whether it is confirmed by a test, and where the fixed behaviour lives.
 
 Severity is about impact on a running game, not on how hard it is to fix.
@@ -17,9 +17,11 @@ Severity is about impact on a running game, not on how hard it is to fix.
 > are answered by switching telemetry on (`/thermal telemetry on`) and reading the cost and
 > substep sections of the report. See [telemetry.md](telemetry.md).
 >
-> This document is a record of an investigation, not a description of the current code. Source
-> links below point at the legacy files the findings were made against; those files no longer
-> exist. For what the simulation does now, read [thermal-model.md](thermal-model.md).
+> This document is a record of an investigation, not a description of the current code. Legacy
+> file names below — `ThermalCell.cs`, `ThermalGridMapper.cs`, `ThermalGridSolar.cs`,
+> `ThermalGridStorage.cs` — name the pre-rewrite sources the findings were made against and are
+> deliberately not links: those files no longer exist. For what the simulation does now, read
+> [thermal-model.md](thermal-model.md).
 
 ---
 
@@ -178,7 +180,7 @@ symmetric conductance per joint, computed as two conductors in series
 
 ### M3. Aerodynamic friction never heats anything — **high** — *fixed in the live mod*
 
-[ThermalCell.cs:452](../Data/Scripts/Thermodynamics/ThermalCell.cs#L452):
+`ThermalCell.cs:452`:
 
 ```csharp
 DeltaTemperature += DeltaRadiation + DeltaFriction;   // friction included here
@@ -247,7 +249,7 @@ shades an entire station including faces nowhere near it. There is no self-shado
 dark side of a ship absorbs exactly as much as the lit side, weighted only by face direction.
 
 A per-block implementation exists, fully commented out, in
-[ThermalGridSolar.cs](../Data/Scripts/Thermodynamics/ThermalGridSolar.cs).
+`ThermalGridSolar.cs`.
 
 ### M7. Convection ignores still air on unfavourable faces — **low**
 
@@ -293,7 +295,7 @@ affected wherever their largest dimension precedes their second largest.
 
 ### C2. `RemoveNeighbor` can throw — **high** — *fixed in the live mod*
 
-[ThermalCell.cs:409](../Data/Scripts/Thermodynamics/ThermalCell.cs#L409) tests the wrong variable:
+`ThermalCell.cs:409` tests the wrong variable:
 
 ```csharp
 int j = n2.Neighbors.IndexOf(this);
@@ -308,7 +310,7 @@ a skip into an `ArgumentOutOfRangeException` inside a block-removal event handle
 
 ### C3. Door handlers double on every door cycle — **critical** — *fixed in the live mod*
 
-[ThermalGridMapper.cs:111](../Data/Scripts/Thermodynamics/ThermalGridMapper.cs#L111):
+`ThermalGridMapper.cs:111`:
 
 ```csharp
 public void OnBlockAddOrUpdate(IMySlimBlock block)
@@ -338,7 +340,7 @@ of a newly allocated lambda.
 
 ### C4. Save data quantises and perturbs the live simulation — **medium**
 
-[ThermalGridStorage.cs:46](../Data/Scripts/Thermodynamics/ThermalGridStorage.cs#L46) stores
+`ThermalGridStorage.cs:46` stores
 temperature as a `short` and writes the truncated value back onto the running cell. Every
 autosave snaps the whole grid to whole kelvin. Both `Pack` and `PackLoops` carry a `TODO`
 acknowledging it.
@@ -445,7 +447,7 @@ before the next `Step` collapse into one pass. *Confirmed by*
 
 ### P2. Per-cell logging in the block placement path — **critical** — *fixed in the live mod*
 
-[ThermalGridMapper.cs:321](../Data/Scripts/Thermodynamics/ThermalGridMapper.cs#L321) writes a log
+`ThermalGridMapper.cs:321` writes a log
 line for every *cell* of every block placed, unguarded by any debug setting:
 
 ```csharp

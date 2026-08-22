@@ -32,9 +32,10 @@ Adjust them for another machine. Two things about that reference set are easy to
 
 XML documentation ships next to the DLLs for `Sandbox.Game`, `VRage.Game`, `VRage` and others,
 so IntelliSense will show the engine's own docs once the references resolve. See
-[engine-api-notes.md](engine-api-notes.md) for a survey of what is available. Both `*.csproj` and `*.sln` are in
-[.gitignore](../../.gitignore) at the repo root, along with `bin/`, `obj/` and `.vs/` — the
-checked-in copies here predate that rule, so avoid committing further changes to them.
+[engine-api-notes.md](engine-api-notes.md) for a survey of what is available.
+[.gitignore](../.gitignore) drops `bin/`, `obj/`, `.vs/` and `out/`; it lists `*.csproj`, `*.sln`
+and `*.props` and then un-ignores them again, because the mod project and the test projects are
+both built from checked-in files.
 
 Constraints that matter when writing code for this project:
 
@@ -55,9 +56,8 @@ Constraints that matter when writing code for this project:
 
 ## Deploying to the game
 
-Space Engineers loads local mods from its `Mods` directory. On Windows the repo ships
-[symlink-to-semods.bat](../../symlink-to-semods.bat) at the repo root, which creates junctions
-from each mod folder into `%AppData%/SpaceEngineers/Mods`. On Linux, symlink manually:
+Space Engineers loads local mods from its `Mods` directory. On Windows, junction this folder into
+`%AppData%/SpaceEngineers/Mods`. On Linux, symlink it:
 
 ```bash
 ln -s /home/gauge/Content/git/SpaceEngineers/One/ThermalDynamics \
@@ -70,12 +70,13 @@ Script changes take effect on world reload. Definition XML changes also require 
 
 ## Repo conventions
 
-* One mod per top-level folder in the `One` repository; this folder is self-contained.
+* This repository *is* the mod folder: the game loads it directly, so anything committed here is
+  published to the workshop. Build output and the blueprint corpus are kept outside it — see
+  [Directory.Build.props](../Directory.Build.props), which sends `bin/` and `obj/` to a sibling
+  `ThermalDynamics.build/`.
 * [metadata.mod](../metadata.mod) and [modinfo.sbmi](../modinfo.sbmi) carry the workshop
   identity — `modinfo.sbmi` holds the Steam workshop id `2985582372`. Do not regenerate them,
   or the mod will publish as a new item.
-* [ModIdFinder.sh](../../ModIdFinder.sh) at the repo root resolves workshop ids across the
-  mods in this repository.
 
 ## Do not restructure `Models/`
 
@@ -107,7 +108,7 @@ Do not hand-edit these; replace them wholesale when the upstream author publishe
 
 ## Scenarios
 
-The harness in [tests/](../sim) runs the model without the game. `dotnet run --project
+The harness in [tests/](../tests) runs the model without the game. `dotnet run --project
 tests/Thermodynamics.Sim -- list` names them; `run <name|all>` runs them, `--csv <dir>` writes the
 full series.
 
@@ -126,7 +127,7 @@ Two are about the sun rather than about heat flow:
 
 ## Debugging
 
-* **In game:** the debug toggles in [configuration.md](configuration.md#debug-toggles) cover
+* **In game:** the debug toggles in [configuration.md](configuration.md#presentation) cover
   temperature, solar intensity, exposed surfaces, friction, and the solar/wind rays. The
   crosshair readout in [Debug.cs](../Data/Scripts/Thermodynamics/Debug.cs) dumps a block's full
   thermal state including raw surface bits.
@@ -143,7 +144,7 @@ Two are about the sun rather than about heat flow:
   folder or one CSV, `THERMAL_DUMPS` names a folder for good. Non-zero exit means a defect check
   failed; the counts against open questions are printed as observations and never fail. Columns a
   dump predates are skipped by name rather than passed silently.
-* **Outside the game:** most questions are faster to answer in [`tests/`](../sim) —
+* **Outside the game:** most questions are faster to answer in [`tests/`](../tests) —
   `dotnet test`, or `dotnet run --project Thermodynamics.Sim -- run perf` for throughput.
 
 ## Where to start when adding a feature

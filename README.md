@@ -92,6 +92,9 @@ into atmosphere and into the air of sealed rooms, arrives from the sun, and — 
 | [docs/development.md](docs/development.md) | Building, deploying, repo layout, conventions. |
 | [docs/known-issues.md](docs/known-issues.md) | Confirmed defects, unfinished systems and deliberate limits. |
 | [docs/balance-lab.md](docs/balance-lab.md) | Deciding good balance from a population of real ships: criteria, staging, and the corpus. |
+| [docs/balance.md](docs/balance.md) | Every block this mod ships, costed against the vanilla blocks it competes with. |
+| [docs/corpus-shape.md](docs/corpus-shape.md) | What the corpus datasets say when read for balance, and what they cannot answer. |
+| [docs/field-tuning.md](docs/field-tuning.md) | Live runs against the harness: what a real world's telemetry changed. |
 | [docs/backlog.md](docs/backlog.md) | Every open item across these documents, categorised, one line each. |
 | [docs/bugs-and-performance.md](docs/bugs-and-performance.md) | Findings from putting the simulation under test. |
 | [docs/engine-api-notes.md](docs/engine-api-notes.md) | Engine APIs this mod reimplements by hand, and what it could use instead. |
@@ -111,7 +114,7 @@ into atmosphere and into the air of sealed rooms, arrives from the sun, and — 
 
 The simulation core lives under
 [Data/Scripts/Thermodynamics/Core/](Data/Scripts/Thermodynamics/Core) and ships with the mod — the
-game compiles it. The projects under [tests/](sim) link the same files so it can be built, tested and
+game compiles it. The projects under [tests/](tests) link the same files so it can be built, tested and
 profiled outside the game:
 
 ```bash
