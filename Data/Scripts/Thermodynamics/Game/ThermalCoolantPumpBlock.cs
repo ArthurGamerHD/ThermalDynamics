@@ -8,22 +8,10 @@ using VRage.ObjectBuilders;
 namespace Thermodynamics
 {
     /// <summary>
-    /// The game-side half of a coolant pump: its switch and its speed setting.
-    ///
-    /// <para>
-    /// <see cref="Core.CoolantPump"/> has read <c>Enabled</c>, <c>Speed</c> and
-    /// <c>PowerAvailable</c> from the host since it was written — the field comments name the
-    /// switch and the terminal explicitly — and nothing ever wrote them. A pump therefore ran at
-    /// full speed whatever its terminal said, which is what made the on/off toggle look like a
-    /// bug: the toggle was real, the wiring behind it was missing.
-    /// </para>
-    ///
-    /// <para>
-    /// <c>Enabled</c> comes from the block's own functional state, which the game replicates
-    /// itself. The speed setting does not exist in the game's model at all, so it is carried by a
-    /// <see cref="NetSync{T}"/> of this mod's own — one property, declared here so its address is
-    /// the same on every side.
-    /// </para>
+    /// The game-side half of a coolant pump: its switch and its speed setting, carried into
+    /// <see cref="Core.CoolantPump"/>. <c>Enabled</c> is the block's own functional state, which the
+    /// game replicates; the speed does not exist in the game's model at all, so it is one
+    /// <see cref="NetSync{T}"/> declared here, where its address is the same on every side.
     /// </summary>
     [MyEntityComponentDescriptor(typeof(MyObjectBuilder_UpgradeModule), false,
         "Gauge_LG_CoolantPump", "Gauge_SG_CoolantPump")]

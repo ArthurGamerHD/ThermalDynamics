@@ -508,12 +508,9 @@ namespace Thermodynamics.Core
         // ---- what the loop moved, per step -------------------------------------------------
 
         /// <summary>
-        /// Heat the fluid drew out of the blocks it touches over the last step, W.
-        ///
-        /// Gross rather than net, and that is the whole point of reporting two figures. A working
-        /// loop settles where what it draws off a reactor equals what it sheds into a radiator, so
-        /// its *net* is around zero exactly when it is doing the most work. A single figure would
-        /// make a loop moving 40 kW indistinguishable from a loop moving nothing.
+        /// Heat the fluid drew out of the blocks it touches over the last step, W. **Gross rather than
+        /// net**: a working loop's net is around zero exactly when it is doing the most work, so one
+        /// figure would make a loop moving 40 kW look like a loop moving nothing.
         /// </summary>
         public float LastWattsAbsorbed;
 

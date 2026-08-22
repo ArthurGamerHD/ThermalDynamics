@@ -27,23 +27,11 @@ namespace Thermodynamics
     }
 
     /// <summary>
-    /// Lets an admin change the world's settings from a multiplayer client.
-    ///
-    /// <para>
-    /// **This deliberately does not use the mod's <see cref="SENetworkAPI"/> channel.** That API
-    /// registers the game's *non-secure* message handler, so every "who sent this" it reports —
-    /// including the steam id given to a network command — is a field the sender wrote, and a
-    /// modified client can put anything there. Its own documentation says not to gate admin
-    /// actions on it. The engine's secure handler supplies a sender the transport verified and a
-    /// flag saying whether a message came from the server, which is exactly what a permission
-    /// check needs, so this uses that directly on a channel of its own.
-    /// </para>
-    ///
-    /// <para>
-    /// The reply path exists because a refusal is otherwise silent: the settings themselves
-    /// replicate on change, so an accepted request is visible as the value moving, and a rejected
-    /// one would look identical to a lost packet.
-    /// </para>
+    /// Lets an admin change the world's settings from a multiplayer client. **Deliberately not on the
+    /// mod's <see cref="SENetworkAPI"/> channel**, whose sender id is a field the sender wrote; the
+    /// engine's secure handler supplies one the transport verified. The reply path exists because a
+    /// refusal is otherwise indistinguishable from a lost packet.
+    /// See configuration.md, Changing settings from a client.
     /// </summary>
     public static class SettingsRequests
     {

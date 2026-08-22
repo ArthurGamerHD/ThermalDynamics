@@ -4,22 +4,10 @@ using VRageMath;
 namespace Thermodynamics
 {
     /// <summary>
-    /// How much of a point source reaches a place, and from which way.
-    ///
-    /// <para>
-    /// This is the arithmetic of the whole mechanism — a source radiates <c>P / 4πr²</c> and the
-    /// solver weights that by which faces look at it — and until now it lived inside
-    /// <see cref="ThermalHeatSources.Sample"/>, in a file that cannot be compiled without the game
-    /// assemblies and therefore has never been tested. The registry around it is covered; the
-    /// inverse square, the near-field clamp and the range cutoff were not.
-    /// </para>
-    ///
-    /// <para>
-    /// That matters most for the thing the mechanism is for. A modder's thermal missile, a bonfire,
-    /// an explosion — all of them are judged by whether the heat falls off correctly with distance,
-    /// and a source that delivered its full output at any range, or nothing past one metre, would
-    /// look plausible in every existing test.
-    /// </para>
+    /// How much of a point source reaches a place, and from which way: <c>P / 4πr²</c>, the near-field
+    /// clamp and the range cutoff. Held apart from <see cref="ThermalHeatSources"/>, which cannot be
+    /// compiled without the game assemblies, so the arithmetic the whole mechanism is judged on can be
+    /// tested. See api.md, Heat sources.
     /// </summary>
     public static class HeatSourceMath
     {

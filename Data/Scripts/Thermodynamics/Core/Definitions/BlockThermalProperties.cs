@@ -35,23 +35,10 @@ namespace Thermodynamics.Core
         public float ConsumerWasteEnergy = 0.05f;
 
         /// <summary>
-        /// Watts this block emits as heat regardless of power, thrust or anything else it is
-        /// doing — a **custom heat source**.
-        ///
-        /// <para>
-        /// Every other way a block makes heat here is a fraction of power crossing it: produced,
-        /// consumed, or spent on thrust. That covers a reactor and a thruster and covers nothing
-        /// else. A block that is hot because of what it *is* rather than what it draws — decay
-        /// heat in spent fuel, a forge, a campfire, an alien artifact, a wreck still burning — had
-        /// no way to say so, and a mod author's only recourse was to fake a power draw the block
-        /// does not have and accept whatever consumer fraction came with it.
-        /// </para>
-        ///
-        /// <para>
-        /// This is watts, not a fraction, because there is nothing to take a fraction of. It is
-        /// added to the waste-heat terms rather than replacing them, so a block may both draw
-        /// power and smoulder.
-        /// </para>
+        /// Watts this block emits regardless of power, thrust or anything else it is doing — decay
+        /// heat, a forge, a wreck still burning. Watts rather than a fraction, because there is nothing
+        /// to take a fraction of, and added to the waste-heat terms rather than replacing them, so a
+        /// block may both draw power and smoulder. See definitions.md.
         /// </summary>
         public float HeatSourceWatts;
 

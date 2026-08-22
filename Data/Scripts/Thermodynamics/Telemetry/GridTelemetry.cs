@@ -411,12 +411,9 @@ namespace Thermodynamics
         public ThermalSolver.SubstepProfile Profile;
 
         /// <summary>
-        /// Subtype and position of the block that set the substep count when the profile was last
-        /// taken.
-        ///
-        /// Resolved at capture rather than at report time: the profile carries an index into the
-        /// solver's node list, which is compacted on every block removal, so a later lookup would
-        /// name a different block.
+        /// Subtype and position of the block that set the substep count when the profile was last taken,
+        /// resolved at capture: the profile carries a node index, and the node list is compacted on
+        /// every removal, so a later lookup would name a different block.
         /// </summary>
         public string WorstSubstepBlock = "-";
 
@@ -438,14 +435,10 @@ namespace Thermodynamics
         public readonly TimingStat LoadTime = new TimingStat("load");
 
         /// <summary>
-        /// The one-off build of a grid's graph, rooms and exposure, before its first tick.
-        ///
-        /// A root of its own, like save and load. It runs from the entity's own
-        /// <c>UpdateOnceBeforeFrame</c>, so it is inside neither the session frame nor a grid's
-        /// update, and until it had a row it was inside nothing: its cost appeared in the stage
-        /// rows, which the table indents under `grid simulation`, and in no total at all. It is the
-        /// single most expensive call a grid ever makes — 179 ms on a 44,000-block ship in the
-        /// 2026-08-20 fleet dump — so the omission was not a rounding matter.
+        /// The one-off build of a grid's graph, rooms and exposure, before its first tick — a root of
+        /// its own, like save and load, because it runs from the entity's own
+        /// <c>UpdateOnceBeforeFrame</c> and is inside neither the session frame nor a grid's update.
+        /// The single most expensive call a grid ever makes.
         /// </summary>
         public readonly TimingStat BuildTime = new TimingStat("build");
 

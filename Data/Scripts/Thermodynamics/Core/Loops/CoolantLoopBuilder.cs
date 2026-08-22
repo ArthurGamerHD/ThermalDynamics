@@ -123,14 +123,9 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Which way round the ring the pump at <paramref name="index"/> pushes: +1 with the ring's
-        /// own order, -1 against it.
-        ///
-        /// A pump drives fluid out of its second link port — <see cref="CoolantShape.Pump"/> takes the
-        /// inlet first and the outlet second — so the question is only whether that port faces the
-        /// next pipe along the ring or the previous one. A pump fitted the other way round drives the
-        /// loop backwards rather than not working, which is the point: the ring does not care which
-        /// way it turns.
+        /// Which way round the ring the pump at <paramref name="index"/> pushes: +1 with the ring's own
+        /// order, -1 against it. Decided by whether its outlet port — <see cref="CoolantShape.Pump"/>
+        /// takes the inlet first — faces the next pipe or the previous one.
         /// </summary>
         private static int PumpDirection(GridModel grid, List<BlockInstance> ring, int index)
         {

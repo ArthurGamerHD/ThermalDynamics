@@ -3,22 +3,10 @@ using System.Collections.Generic;
 namespace Thermodynamics.Core
 {
     /// <summary>
-    /// Answers "which blocks touch this one".
-    ///
-    /// The seam between the simulation and however the host stores its grid. The simulation needs
-    /// the adjacency relation only — not a cell index, a spatial tree, or the host's block type.
-    ///
-    /// <para>
-    /// Both games maintain a spatial index of their own. Space Engineers 1 stores a block per grid
-    /// cell; Space Engineers 2 keeps a block octree with a face-connectivity graph exposed as
-    /// <c>GetConnectedCubeBlocks</c> and <c>HasBlockConnection</c>. An adapter should forward to
-    /// whichever exists rather than duplicating it.
-    /// </para>
-    ///
-    /// <para>
-    /// <see cref="GridModel"/> implements this over its own cell map, which the tests and the SE1
-    /// adapter use.
-    /// </para>
+    /// Answers "which blocks touch this one": the seam between the simulation and however the host
+    /// stores its grid. Both games keep a spatial index of their own, so an adapter should forward to
+    /// it rather than duplicate it; <see cref="GridModel"/> implements this over its cell map.
+    /// See api.md, In-process extension.
     /// </summary>
     public interface IBlockAdjacency
     {

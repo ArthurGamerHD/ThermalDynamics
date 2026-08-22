@@ -5,22 +5,9 @@ using Thermodynamics.Core;
 namespace Thermodynamics
 {
     /// <summary>
-    /// Reading a <c>/thermal heat</c> command, with nothing of the game in it.
-    ///
-    /// <para>
-    /// The half of the debug tool that can be wrong is this half. Placing a source is one call into
-    /// a registry that is already tested; working out that <c>pulse 5M 30</c> means five megawatts
-    /// for thirty seconds — and that <c>5</c> means five watts rather than five megawatts, and that
-    /// a missing argument is a usage message rather than a zero-watt source nobody can see — is
-    /// where a typo becomes a modder wondering why their bonfire does nothing.
-    /// </para>
-    ///
-    /// <para>
-    /// So the parse is separated from the doing, and lives here with no <c>Sandbox.*</c> reference,
-    /// which is what lets the test harness link it directly. It is the same arrangement the shape
-    /// tables use, and for the same reason: a table that goes wrong silently is worth testing
-    /// against the real thing rather than a copy.
-    /// </para>
+    /// Reading a <c>/thermal heat</c> command, with no <c>Sandbox.*</c> reference in it so the harness
+    /// can link it directly. The parse is the half of the debug tool that can be wrong silently —
+    /// a mis-read magnitude is a modder wondering why their bonfire does nothing.
     /// </summary>
     public static class HeatSourceCommand
     {

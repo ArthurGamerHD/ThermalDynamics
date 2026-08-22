@@ -4,10 +4,6 @@ using VRageMath;
 namespace Thermodynamics.Core
 {
     /// <summary>
-    /// The environment reduced to exactly the numbers the solver consumes. Produced once per
-    /// step by <see cref="EnvironmentSolver"/> and shared by every node on the grid.
-    /// </summary>
-    /// <summary>
     /// One directional heat source other than the sun, reduced to a direction and the watts per
     /// square metre it delivers to a face pointing at it.
     /// </summary>
@@ -51,15 +47,10 @@ namespace Thermodynamics.Core
         public float ConvectionCoefficient;
 
         /// <summary>
-        /// The coefficient a surface actually exchanges at, W/(m^2 K): the one above, blended by
-        /// how fluid-like the air is.
-        ///
-        /// The solver applies <see cref="AtmosphereFactor"/> to the transfer rather than to the
-        /// coefficient, because the same factor also weights radiation down as it weights
-        /// convection up, and the blend belongs where the two meet. That left the raw coefficient
-        /// as the only figure anything reported: a field dump showed 50 W/(m^2 K) at 44 km with
-        /// the air density column reading 0.0000, which reads as a defect and is not one. Anything
-        /// reporting what convection is doing wants this.
+        /// The coefficient a surface actually exchanges at, W/(m^2 K): the raw one blended by
+        /// <see cref="AtmosphereFactor"/>. **Anything reporting what convection is doing wants this
+        /// one**, since the solver applies the blend at the transfer and the raw figure reads as
+        /// 50 W/(m^2 K) in a vacuum. See known-issues.md, A guard has to test what it claims to test.
         /// </summary>
         public float EffectiveConvectionCoefficient
         {
