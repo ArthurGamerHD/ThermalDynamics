@@ -175,7 +175,13 @@ namespace Thermodynamics.Harness
             // face. Which one wins is a question of speed, and *where* it lands is a question of
             // heading — so both are enumerated.
 
-            float[] speeds = { 50f, 100f };
+            // **The ladder runs past the game's own limit on purpose.** Vanilla Space Engineers
+            // caps a grid at 100 m/s, and the servers most of this mod's players are on raise that
+            // — 300 m/s is the common setting. A balance that is only ever measured at the vanilla
+            // cap says nothing about the world it will be played in, and friction goes as the cube
+            // of airspeed, so the gap between 100 and 300 is a factor of twenty-seven in the one
+            // term that is not bounded by ambient.
+            float[] speeds = { 50f, 100f, 300f };
             foreach (float speed in speeds)
             {
                 float knots = speed;
@@ -194,6 +200,15 @@ namespace Thermodynamics.Harness
             // moving ship cannot attribute a heat to either, so the battery holds each still while
             // the other moves, then runs the two compositions where the sum does something neither
             // part does. flight-100 above is the velocity-only case.
+
+            scenarios.Add(new Scenario
+            {
+                Name = "storm-300",
+                Question = "wind alone at a raised speed limit: a parked hull in a 300 m/s gale",
+                Environment = t => Worlds.Storm(ThickAir, 300f),
+                Load = ShipLoad.State.Idle,
+                Seconds = 3600f,
+            });
 
             scenarios.Add(new Scenario
             {

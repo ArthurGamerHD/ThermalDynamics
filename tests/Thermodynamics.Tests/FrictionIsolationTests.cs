@@ -168,6 +168,65 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// The cube law and the airspeed-equivalence both still hold at 300 m/s, the speed limit
+        /// the servers this mod is played on actually run.
+        ///
+        /// <para>
+        /// **Vanilla's 100 m/s cap is not the world to balance against.** Friction goes as the cube
+        /// of airspeed, so a raised limit is a twenty-sevenfold change in the one heating term that
+        /// no ambient bounds, and a balance measured only at 100 has no evidence about it. The
+        /// battery carries <c>flight-300</c> and <c>storm-300</c> for the same reason.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheFrictionLawStillHoldsAtARaisedSpeedLimit()
+        {
+            float at100 = FrictionWatts(Worlds.Flight(ThickAir, 100f));
+            float at300 = FrictionWatts(Worlds.Flight(ThickAir, 300f));
+
+            Assert.True(at100 > 0f, "100 m/s is above the friction threshold");
+            Assert.Equal(27f, at300 / at100, 1);
+
+            // Still the relative wind and nothing else: a parked hull in a 300 m/s gale is a hull
+            // doing 300 through still air.
+            Assert.Equal(at300, FrictionWatts(Worlds.Storm(ThickAir, 300f)), 0);
+
+            // And the cancellation survives the speed: 300 downwind in a 300 m/s tailwind is calm.
+            Assert.Equal(0f, FrictionWatts(
+                Worlds.WindAndMotion(ThickAir, 300f, Vector3.Forward, Vector3.Forward * 300f)));
+        }
+
+        /// <summary>
+        /// Forced convection at 300 m/s, which is where the cost of a raised speed limit lands.
+        ///
+        /// The coefficient carries a square-root wind bonus, <c>h = h0 * (1 + 0.1 * sqrt(v))</c>,
+        /// so tripling the airspeed does not triple the cooling — it moves the bonus from 2.00 to
+        /// 2.73. That flatness is the finding: the airflow term saturates while the friction term
+        /// cubes, so past some speed the hull is being heated faster than the same air can cool it.
+        /// </summary>
+        [Fact]
+        public void ForcedConvectionSaturatesWhileFrictionCubes()
+        {
+            ThermalSettings settings = new ThermalSettings();
+            settings.Derive();
+            PlanetThermalProperties planet = PlanetThermalProperties.Default();
+
+            float calm = EnvironmentSolver.Solve(
+                settings, planet, Worlds.Flight(ThickAir, 0f)).ConvectionCoefficient;
+            float at100 = EnvironmentSolver.Solve(
+                settings, planet, Worlds.Flight(ThickAir, 100f)).ConvectionCoefficient;
+            float at300 = EnvironmentSolver.Solve(
+                settings, planet, Worlds.Flight(ThickAir, 300f)).ConvectionCoefficient;
+
+            Assert.Equal(2.000f, at100 / calm, 2);
+            Assert.Equal(2.732f, at300 / calm, 2);
+
+            // Tripling the speed buys 37 % more cooling against 27x the friction heat.
+            Assert.True(at300 / at100 < 1.4f,
+                "the airflow term saturates: three times the speed is under 1.4x the cooling");
+        }
+
+        /// <summary>
         /// The activation and the heat agree through the full solve, not just the sample: the
         /// environment state a composed sample produces carries FrictionActive exactly where the
         /// relative wind exceeds the threshold.

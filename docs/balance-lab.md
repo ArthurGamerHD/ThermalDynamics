@@ -126,7 +126,9 @@ something neither part does. `FrictionIsolationTests` pins the same matrix at un
 | Scenario | The question |
 | --- | --- |
 | `flight-50`, `flight-100` | Velocity alone, in still air: friction against airflow, at which speed |
+| `flight-300` | The same, at the speed limit the servers this mod is played on actually run |
 | `storm-parked` | Wind alone: a parked hull in a 100 m/s gale heats exactly as `flight-100` does |
+| `storm-300` | Wind alone at the raised limit, so the airspeed can be attributed at 300 too |
 | `flight-headwind` | Composition: 40 of wind against 60 of speed trips a threshold neither reaches alone |
 | `flight-downwind` | Composition: 80 of speed in a 60 m/s tailwind is 20 of airflow — no friction at full throttle |
 | `reentry` | The leading face at terminal speed in thick air |
