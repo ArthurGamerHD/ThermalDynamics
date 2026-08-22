@@ -62,6 +62,7 @@ the shipped defaults with no error and no log line.
 | `PipeSurfaceAreaScaler` | `PipeContactMultiplier` | Pairs with the above; the two are siblings and now look it |
 | `MassPerPipe` | `CoolantMassPerPipe` | Mass of what, in a file full of blocks |
 | `SegmentsPerSecondAtFullFlow` | `LargeGridFlowRate` / `SmallGridFlowRate` | Parcels per second is the solver's unit, not a player's; and one parcel is one pipe block, so a single figure meant 10 m/s on a large grid and 2 m/s on a small one. Converted on read, per grid. |
+| `FlowRate` | `LargeGridFlowRate` / `SmallGridFlowRate` | One rate for both grid sizes. Already metres per second, so it is read into both rather than converted — split for the reason the row above gives. |
 
 New definitions should use the current names. The old ones are not planned for removal.
 

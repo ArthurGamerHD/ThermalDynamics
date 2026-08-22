@@ -537,11 +537,14 @@ namespace Thermodynamics.Tests
         /// table has no other form.
         /// </para>
         /// </summary>
-        [Fact]
-        public void EveryBlockPropertyTheGameReadsIsInTheReference()
+        [Theory]
+        [InlineData("ThermalCellDefinition.cs", "ThermalBlockProperties", 8)]
+        [InlineData("PlanetDefinition.cs", "ThermalPlanetProperties", 8)]
+        [InlineData("ThermalLoopDefinition.cs", "ThermalLoopProperties", 8)]
+        public void EveryPropertyTheGameReadsIsInTheReference(string file, string group, int least)
         {
             string reader = File.ReadAllText(Path.Combine(RepoRoot(),
-                "Data", "Scripts", "Thermodynamics", "Definitions", "ThermalCellDefinition.cs"));
+                "Data", "Scripts", "Thermodynamics", "Definitions", file));
 
             HashSet<string> read = new HashSet<string>(StringComparer.Ordinal);
             foreach (Match match in Regex.Matches(reader, @"GetOrCompute\(""(\w+)""\)"))
@@ -550,10 +553,10 @@ namespace Thermodynamics.Tests
             }
 
             // The group the properties live in, not a property.
-            read.Remove("ThermalBlockProperties");
+            read.Remove(group);
 
-            Assert.True(read.Count > 8,
-                "only " + read.Count + " property names were found in the reader, so this test is"
+            Assert.True(read.Count >= least,
+                "only " + read.Count + " property names were found in " + file + ", so this test is"
                 + " no longer looking at it");
 
             string doc = File.ReadAllText(Path.Combine(RepoRoot(), "docs", "definitions.md"));
@@ -572,7 +575,7 @@ namespace Thermodynamics.Tests
 
             missing.Sort(StringComparer.Ordinal);
             Assert.True(missing.Count == 0,
-                "block properties the game reads and docs/definitions.md does not list:\n  "
+                "properties " + file + " reads and docs/definitions.md does not list:\n  "
                 + string.Join("\n  ", missing.ToArray()));
         }
 
