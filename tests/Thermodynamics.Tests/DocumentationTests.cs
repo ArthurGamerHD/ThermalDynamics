@@ -580,6 +580,47 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// Every entry in the mod API's delegate table is documented.
+        ///
+        /// <para>
+        /// The table is the mod's contract with every other mod, and it is a dictionary of strings
+        /// to delegates — so a caller finds out that a name is wrong at run time, in someone
+        /// else's session, with a cast that fails. `api.md` is the only place the names and their
+        /// signatures are written for a reader, which makes it part of the contract rather than a
+        /// description of it.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void EveryModApiEntryIsDocumented()
+        {
+            string api = File.ReadAllText(Path.Combine(RepoRoot(),
+                "Data", "Scripts", "Thermodynamics", "ThermalApi.cs"));
+
+            List<string> keys = new List<string>();
+            foreach (Match match in Regex.Matches(api, @"methods\[""(\w+)""\]"))
+            {
+                keys.Add(match.Groups[1].Value);
+            }
+
+            Assert.True(keys.Count > 10,
+                "only " + keys.Count + " API entries were found, so the table has changed shape and"
+                + " this test is no longer reading it");
+
+            string doc = File.ReadAllText(Path.Combine(RepoRoot(), "docs", "api.md"));
+
+            List<string> missing = new List<string>();
+            foreach (string key in keys)
+            {
+                if (doc.IndexOf("`" + key + "`", StringComparison.Ordinal) < 0) missing.Add(key);
+            }
+
+            missing.Sort(StringComparer.Ordinal);
+            Assert.True(missing.Count == 0,
+                "entries in the mod API's delegate table that docs/api.md does not name:\n  "
+                + string.Join("\n  ", missing.ToArray()));
+        }
+
+        /// <summary>
         /// Every page under `docs/` is reachable from the README's index.
         ///
         /// <para>
