@@ -10,23 +10,9 @@ using VRage.Utils;
 namespace Thermodynamics
 {
     /// <summary>
-    /// Session-wide data collection for the live mod.
-    ///
-    /// The simulation reports through the hooks on this class, which aggregate into streaming
-    /// statistics and are written to a report when the world closes. Nothing here changes
-    /// simulation behaviour, and every entry point swallows its own exceptions so a telemetry fault
-    /// cannot fail the mod.
-    ///
-    /// **Observations are gated on <see cref="Enabled"/>; faults are not.** Every measurement hook
-    /// is a no-op when collection is off, which is the default and is what keeps a shipped world
-    /// paying a bool read and nothing more. <see cref="Exception"/> is the exception to that, in
-    /// both senses: a caught exception costs nothing until the mod has already failed, and a
-    /// failure nobody records is a bug that cannot be fixed. It records always, and puts the first
-    /// of each kind in the game log.
-    ///
-    /// Sized for a session running for hours: no sample buffers, no per-cell history, no unbounded
-    /// dictionaries. Memory is bounded by the number of block definitions and the number of grids
-    /// that have existed.
+    /// Session-wide data collection for the live mod: streaming statistics, no sample buffers, and
+    /// memory bounded by the block definitions and grids that have existed.
+    /// **Observations are gated on <see cref="Enabled"/>; faults are not.** See telemetry.md.
     /// </summary>
     public static class Telemetry
     {
@@ -131,17 +117,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Guards the three registries above.
-        ///
-        /// Grids and blocks are not created on one thread: the game builds pasted and projected
-        /// grids on workers, so <see cref="RegisterGrid"/>, <see cref="GetBlockType"/> and
-        /// <see cref="Anomaly"/> — the last called from wherever an adapter exception was thrown —
-        /// can each run concurrently with themselves. Unsynchronised, this produced
-        /// <c>ArgumentException</c> from <c>GetBlockType</c> for keys a <c>TryGetValue</c> had just
-        /// reported missing, and null-reference throws from inside <c>Dictionary.Insert</c>.
-        ///
-        /// Registration happens once per grid and once per block type, so the lock is off every hot
-        /// path; the per-record counters beneath it remain lock-free.
+        /// Guards the three registries above: grids and blocks are not created on one thread. Taken
+        /// once per grid and once per block type, so it is off every hot path.
+        /// See known-issues.md, Block placement is not a main-thread-only path.
         /// </summary>
         private static readonly object RegistryLock = new object();
 
@@ -155,12 +133,8 @@ namespace Thermodynamics
         public static readonly TimingStat SessionFrameTime = new TimingStat("session frame");
 
         /// <summary>
-        /// Cost per frame across every grid, and the worst frames of the session.
-        ///
-        /// Every other cost figure is per grid, while a stutter is per frame: twenty grids each
-        /// costing an acceptable two milliseconds on the same frame produce a forty-millisecond
-        /// frame. Grids tick on the ten-frame cadence and the engine calls them together, so this is
-        /// the usual shape of the cost rather than a corner case.
+        /// Cost per frame across every grid, and the worst frames of the session. Every other figure
+        /// here is per grid and a stutter is per frame. See telemetry.md, Frame cost and hitching.
         /// </summary>
         public static readonly FrameCostTracker FrameCost = new FrameCostTracker();
 
@@ -574,19 +548,10 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Records a caught exception, <b>whether or not collection is running</b>.
-        ///
-        /// Every <c>catch</c> in the simulation adapter routes here, and for a long time this went
-        /// through <see cref="Anomaly"/> and so through the <see cref="Enabled"/> gate. Telemetry
-        /// is off by default, so in an ordinary world all twenty-two of those handlers swallowed
-        /// their exception, wrote nothing anywhere, and left a grid running in whatever state the
-        /// throw abandoned it in. The guard around <c>ThermalGrid.Tick</c> says an exception named
-        /// here is worth more than a crash dump; it named it nowhere.
-        ///
-        /// A fault is not data collection. Collection is a running cost paid on healthy frames and
-        /// is rightly opt-in; a fault costs nothing until something has already gone wrong, and by
-        /// then it is the only evidence there will be. So faults are always recorded, and the first
-        /// of each kind goes to the game log, which is the one file a player can be asked for.
+        /// Records a caught exception, <b>whether or not collection is running</b>, and puts the first
+        /// of each kind in the game log. A fault is not data collection: it costs nothing until
+        /// something has already gone wrong, and by then it is the only evidence there will be.
+        /// See telemetry.md, Faults are recorded whether or not collection is running.
         /// </summary>
         public static void Exception(string where, Exception e)
         {

@@ -9,23 +9,10 @@ using VRage.Utils;
 namespace Thermodynamics
 {
     /// <summary>
-    /// Replicates the world's settings from the server to every client.
-    ///
-    /// <para>
-    /// Without this a client ran the simulation on <see cref="Settings.GetDefaults"/>, because
-    /// only the server can read the config file — <c>CanReadWorldStorage</c> says so, and its
-    /// comment already promised clients "take the server's settings rather than their own file".
-    /// Nothing delivered them. A server running the arcade profile and a client running the
-    /// shipped defaults integrate different physics from the same inputs, and every temperature
-    /// on the client is wrong in a way nothing reports.
-    /// </para>
-    ///
-    /// <para>
-    /// One session-scoped property carries the whole settings object rather than a property per
-    /// field. Settings change rarely — a profile, a chat command, a slider — and the object is a
-    /// few hundred bytes, so the alternative buys nothing and costs one address per field, each of
-    /// which has to stay in declaration order across builds.
-    /// </para>
+    /// Replicates the world's settings from the server to every client, since only the server reads
+    /// the config file. One session-scoped property carries the whole object rather than one per
+    /// field, which would cost an address per field in declaration order across builds.
+    /// See configuration.md, Checking a client has the server's settings.
     /// </summary>
     public static class SettingsSync
     {
@@ -60,16 +47,11 @@ namespace Thermodynamics
 
             try
             {
-                // Seeded with the settings already in hand, and never with null: a null value is
-                // never transmitted, because there is nothing to encode. A property left at null
-                // answers a joining client's fetch with silence, and since the server only
-                // publishes when a setting *changes*, a world where nobody touches the config
-                // would leave every client on the shipped defaults for the whole session — which
-                // is the failure this class exists to fix, reintroduced one layer up.
-                //
-                // Server to client only: the config is the server's, and a client editing it would
-                // be editing its own copy of someone else's world. Fetch is exempt from that rule
-                // inside the API, which is what lets a joining client ask at all.
+                // Seeded, never left at null: a null value is never transmitted, so a joining
+                // client's fetch is answered with silence and — since the server publishes only on a
+                // change — an untouched world leaves every client on the shipped defaults.
+                // Server to client only; fetch is exempt inside the API, which is what lets a joining
+                // client ask at all.
                 synced = new NetSync<Settings>(
                     session, TransferType.ServerToClient, Settings.EnsureLoaded(), true);
 
@@ -138,17 +120,10 @@ namespace Thermodynamics
             {
                 applying = true;
 
-                // Copied into the live object rather than swapped for it, and this is not a
-                // preference. A grid takes its core settings once, at construction —
-                // `new ThermalSimulation(Settings.Instance.ToCore(), Model)` — and notices later
-                // changes only through that object's Revision. Replacing Settings.Instance leaves
-                // every grid already on the client holding the settings it was born with, which
-                // is a subtler version of the divergence this class exists to close.
-                //
-                // Names() is the same list the settings menu copies through: every setting a
-                // player or mod may change at runtime. It includes the four presentation switches,
-                // which a client owns for itself, so those are skipped — a server has no business
-                // deciding which overlay is on someone else's screen.
+                // Copied into the live object rather than swapped for it: a grid takes its core
+                // settings once at construction and notices later changes only through that object's
+                // Revision, so replacing the instance leaves every existing grid on what it was born
+                // with. The four client-owned presentation switches are skipped.
                 Settings target = Settings.Instance;
                 if (target == null)
                 {
@@ -188,16 +163,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// A short digest of every replicated setting, for comparing two machines by eye.
-        ///
-        /// The whole point of this class is that a client and a server hold the same numbers, and
-        /// nothing about it can be tested outside a live session: it is all host code. One string
-        /// that must match, read on each side, is the cheapest way to check it — and the cheapest
-        /// way to tell whether a report of "the client feels different" is this or something else.
-        ///
-        /// Order comes from <see cref="Settings.Names"/> and the client-owned switches are left
-        /// out, so the digest covers exactly what is replicated and nothing that is allowed to
-        /// differ.
+        /// A short digest of every replicated setting, for comparing two machines by eye — the only
+        /// check available, since none of this can be tested outside a live session. Covers exactly
+        /// what replicates and nothing that is allowed to differ.
         /// </summary>
         public static string Fingerprint()
         {

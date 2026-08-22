@@ -5,27 +5,17 @@ using VRageMath;
 namespace Thermodynamics.Core
 {
     /// <summary>
-    /// The result of a room mapping pass: which cells see open space, which are sealed
-    /// structure, and which belong to an enclosed pocket.
-    ///
-    /// Pocket boundaries are structural: doors count as shut whatever their state, so a room is a
-    /// property of how the grid is built and survives its doors being used. A door's open state is
-    /// recorded as a <see cref="RoomPortal"/>, and <see cref="RefreshVenting"/> resolves the
-    /// portals into which rooms currently reach open air — a walk over the doors, not the grid.
-    ///
-    /// The geometry is immutable to the simulation: <see cref="RoomMapper"/> builds a fresh map and
-    /// swaps it in only when a pass completes, so readers never see a partial one. Venting is the
-    /// one field that changes in place, since it must respond within the frame a door is operated.
+    /// The result of a room mapping pass: which cells see open space, which are sealed structure, and
+    /// which belong to an enclosed pocket. Boundaries are structural — a door counts as shut whatever
+    /// its state — and venting is the one field that changes in place, because it must answer within
+    /// the frame a door is operated. See thermal-model.md, Portals and venting.
     /// </summary>
     public class RoomMap
     {
         /// <summary>
-        /// Count of cells the pass classified as open air, and the box it classified them in.
-        ///
-        /// The cells themselves are not stored. Most of a grid's bounding box is open air — 1.3 of
-        /// 1.5 million cells on a 127,000-block grid — and a cell inside the box that is neither
-        /// solid nor in a room is external by definition, so storing them duplicates the other two
-        /// sets at about forty bytes each.
+        /// Count of cells the pass classified as open air, and the box it classified them in. The
+        /// cells are derivable — inside the box, neither solid nor in a room — so they are counted
+        /// rather than stored. See memory.md, 1b.
         /// </summary>
         private int externalCount;
 
@@ -33,14 +23,9 @@ namespace Thermodynamics.Core
         private Vector3I searchMaxExclusive;
         private readonly HashSet<Vector3I> solid = new HashSet<Vector3I>(Vector3I.Comparer);
         /// <summary>
-        /// The cells of each room, in the order the flood reached them.
-        ///
-        /// Lists rather than sets. Nothing asks a room whether it contains a cell — that question
-        /// goes to <see cref="roomIndexByCell"/>, which answers it for every room at once — so the
-        /// only things asked of these are their length and their contents in turn, and a set pays
-        /// about seventeen bytes a cell over a list for a lookup nobody performs. The flood cannot
-        /// offer the same cell twice: every <c>AddToRoom</c> is behind a visited bitset that was
-        /// tested and set in the same breath, so there is nothing for a set to deduplicate either.
+        /// The cells of each room, in the order the flood reached them. Lists rather than sets:
+        /// containment goes to <see cref="roomIndexByCell"/>, and the flood cannot offer a cell twice
+        /// because every add is behind a visited bitset. See memory.md, 4.
         /// </summary>
         private readonly List<List<Vector3I>> rooms = new List<List<Vector3I>>();
         private readonly Dictionary<Vector3I, int> roomIndexByCell = new Dictionary<Vector3I, int>(Vector3I.Comparer);
@@ -251,12 +236,8 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Recomputes which rooms reach open air from the doors' current states.
-        ///
-        /// Union-find over the rooms plus one node for open air: every open portal merges the two
-        /// regions it joins, and any room in open air's set is vented. Cost is the number of doors
-        /// rather than the number of cells, which is why the map is built on structure rather than
-        /// on current door state.
+        /// Recomputes which rooms reach open air from the doors' current states: union-find over the
+        /// rooms plus one node for open air, costing the number of doors rather than of cells.
         /// </summary>
         /// <returns>True when any room changed state.</returns>
         public bool RefreshVenting()
@@ -329,17 +310,10 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Called once when a pass completes. Drops the rooms the flood opened and never filled,
-        /// then hands back the spare capacity in the rest.
-        ///
-        /// A list doubles as it grows, so a finished room carries up to as much empty capacity as
-        /// it does cells — on a large hull that is tens of megabytes of nothing, held for as long
-        /// as the grid exists. The map is immutable from here, so the trim can never be undone by
-        /// a later add.
-        ///
-        /// Assigning <c>Capacity</c> rather than calling <c>TrimExcess</c>, which declines to do
-        /// anything unless the list is under ninety per cent full and therefore leaves the common
-        /// case — a room that stopped just past a doubling — carrying its slack.
+        /// Called once when a pass completes: drops the rooms the flood opened and never filled, then
+        /// hands back the doubling slack in the rest, which on a large hull is tens of megabytes.
+        /// <c>Capacity</c> rather than <c>TrimExcess</c>, which declines below ninety per cent full
+        /// and so leaves the common case — a room that stopped just past a doubling — carrying it.
         /// </summary>
         internal void DropEmptyRooms()
         {
