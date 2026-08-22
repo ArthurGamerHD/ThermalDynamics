@@ -557,6 +557,12 @@ would show.
 The 2026-08-21 sweep of 8,142 ships is the first complete population measurement, and the four
 measurable criteria pass on shipped defaults. Two things it measured are not visible in that pass.
 
+> **Quote the figures from `verdict.py`, not from here or from memory.** The corpus is 8,142 hulls
+> and 8,132 distinct name-and-id pairs and 8,054 distinct names, and every statistic is computed
+> over one of the three. `verdict.py` itself carried "7,899 of 8,142 recover" written in by hand
+> against an actual 7,889 of 8,132 — both halves wrong, in a script whose entire purpose is that a
+> run's numbers come from the run. It computes that line now.
+
 **Damage arrives too fast to be played around.** Of ships that overheat at all, the median loses its
 first block 9 s into full electrical load and 6 s into a forward burn; the tenth percentile is three
 to four seconds. The same measure at idle is 112 s, with nothing in between — ships are either

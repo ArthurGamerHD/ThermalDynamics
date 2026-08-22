@@ -245,6 +245,19 @@ function table(){
 /* ---------------- wiring ---------------- */
 function render(){
   $("#pv-filtered").textContent = rows().length.toLocaleString();
+  // Everything the header states about the dataset comes from the dataset. These were written into
+  // the HTML by hand, and the ship count named the hulls the sweep was handed rather than the
+  // groups every statistic below is computed over.
+  $("#pv-headline").textContent = D.ships.length.toLocaleString();
+  $("#pv-ships").textContent = D.ships.length.toLocaleString();
+  $("#pv-rows").textContent = D.rows.length.toLocaleString();
+  $("#pv-scenarios").textContent = D.scenarios.length.toLocaleString();
+  if (D.identities && D.identities > D.ships.length) {
+    $("#pv-ships").parentElement.title =
+      D.identities.toLocaleString() + " distinct name-and-id pairs were simulated; rows are keyed"
+      + " on name, so " + (D.identities - D.ships.length).toLocaleString()
+      + " re-uploads merge into a neighbour.";
+  }
   verdicts(); smalls(); ttc(); lead(); table();
 }
 function chips(){

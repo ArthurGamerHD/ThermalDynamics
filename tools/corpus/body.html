@@ -2,15 +2,15 @@
 
 <header class="top">
   <p class="eyebrow">Balance survey &middot; run of 21 August 2026 &middot; shipped profile</p>
-  <h1>What 8,142 ships do<br>when you switch them on</h1>
+  <h1>What <span id="pv-headline">&mdash;</span> ships do<br>when you switch them on</h1>
   <p class="dek">Every published blueprint in the corpus, built and simulated under five scenarios on
   an equal clock. This page recomputes the balance criteria live: move the thresholds and watch
   which claims survive. The four measurable criteria pass on shipped defaults &mdash; and two
   findings below argue that passing is not the same as being right.</p>
   <div class="provenance">
-    <div class="prov"><b class="num">8,142</b><span>ships</span></div>
-    <div class="prov"><b class="num">40,710</b><span>outcome rows</span></div>
-    <div class="prov"><b class="num">5</b><span>scenarios</span></div>
+    <div class="prov"><b class="num" id="pv-ships">&mdash;</b><span>ships, by name</span></div>
+    <div class="prov"><b class="num" id="pv-rows">&mdash;</b><span>outcome rows</span></div>
+    <div class="prov"><b class="num" id="pv-scenarios">&mdash;</b><span>scenarios</span></div>
     <div class="prov"><b class="num">1,800&thinsp;s</b><span>equal clock &middot; 225&times; heat scale</span></div>
     <div class="prov"><b class="num" id="pv-filtered">&mdash;</b><span>in current filter</span></div>
   </div>
@@ -100,7 +100,7 @@
     Every peak above critical should be read as &ldquo;this block dies&rdquo; and nothing more, and
     the population statistics that quote peak &mdash; p95, p99, max &mdash; describe the lab, not the mod.</p>
     <p class="ev">21.6&nbsp;% of rows exceed 900&nbsp;K &middot; 3.9&nbsp;% exceed 2,000&nbsp;K &middot;
-    1,076 of 8,054 ships have at least one runaway scenario &middot; 83.5&nbsp;% of runaway rows never
+    1,076 of 8,054 ships have at least one runaway scenario<!-- of the run's date --> &middot; 83.5&nbsp;% of runaway rows never
     settle within the clock</p>
   </div>
 

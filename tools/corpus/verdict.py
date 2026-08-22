@@ -237,7 +237,13 @@ for name in sorted(by_scenario):
           f"{q['p50']:>8.0f}s{hit[min(len(hit)-1, (9*len(hit))//10)]:>7.0f}s")
 print("\n  A consequence that lands inside ten seconds is not a resource a player can manage.")
 print("  recovery inherits its crossings from the burn it starts in — that column is not new damage;")
-print("  whether those ships come back is G5 above, and 7,899 of 8,142 do.")
+# Computed rather than quoted. This line carried "7,899 of 8,142", which were the figures of the
+# 2026-08-21 run written in by hand — in a script whose whole purpose is that a run's numbers come
+# from the run and not from what anybody remembers them to be.
+if recovery:
+    print(f"  whether those ships come back is G5 above, and {returned:,} of {len(recovery):,} do.")
+else:
+    print("  whether those ships come back is G5 above, which this dataset cannot answer.")
 
 # ---- which blocks drive the tail ----------------------------------------------------------
 print("\n" + "=" * 78)
