@@ -158,6 +158,16 @@ namespace Thermodynamics.Tests
         }
     }
 
+    /// <summary>
+    /// The bucketing behind every distribution in the telemetry report.
+    ///
+    /// <para>
+    /// A histogram is read as evidence, so what it does with the values that are not ordinary matters
+    /// more than what it does with the ones that are: NaN is dropped rather than bucketed, infinity
+    /// goes to the overflow bucket, and merging refuses two histograms whose edges differ rather than
+    /// silently adding unlike things.
+    /// </para>
+    /// </summary>
     public class HistogramTests
     {
         private static Histogram TenTwentyThirty()
@@ -345,6 +355,15 @@ namespace Thermodynamics.Tests
         }
     }
 
+    /// <summary>
+    /// The accumulator every stage timing in the report is built from.
+    ///
+    /// <para>
+    /// EachIntervalIsMeasuredFromScratchRatherThanAccumulatingTheStopwatch is the case with a fault
+    /// behind it: a stopwatch restarted rather than reset reports every interval as the time since the
+    /// session began.
+    /// </para>
+    /// </summary>
     public class TimingStatTests
     {
         [Fact]

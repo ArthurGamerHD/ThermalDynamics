@@ -39,6 +39,16 @@ namespace Thermodynamics.Tests
     public class LoadCollection { }
 
     [Collection("load")]
+    /// <summary>
+    /// What an update costs, asserted on work counters rather than on a stopwatch.
+    ///
+    /// <para>
+    /// A timing test on a shared machine measures the machine. These count visits instead: a settled
+    /// grid rebuilds nothing, a placed block links the block and not the grid, a burst of welding
+    /// costs the burst, every budgeted pass respects its budget, and observing any of it changes none
+    /// of it.
+    /// </para>
+    /// </summary>
     public class LoadTests
     {
         /// <summary>Grid sizes the suite can afford. The benchmarks go to a million.</summary>

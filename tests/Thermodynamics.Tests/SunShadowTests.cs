@@ -459,6 +459,16 @@ namespace Thermodynamics.Tests
         }
     }
 
+    /// <summary>
+    /// A grid standing in its own light, at the level of what it does to a temperature.
+    ///
+    /// <para>
+    /// SunShadowMapTests checks the map's geometry; this checks that the map reaches the solver. A
+    /// block behind another stops being heated, a lone block is unaffected, the shadow follows a
+    /// moving sun, and a block built into an existing shadow is picked up without the sun having to
+    /// move.
+    /// </para>
+    /// </summary>
     public class SolarSelfShadowingTests
     {
         /// <summary>Noon-strength sun coming straight down the +X axis, in vacuum.</summary>

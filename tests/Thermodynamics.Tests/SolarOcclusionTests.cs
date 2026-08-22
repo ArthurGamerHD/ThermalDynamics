@@ -123,6 +123,16 @@ namespace Thermodynamics.Tests
         }
     }
 
+    /// <summary>
+    /// Where to cast from when asking whether the sun reaches a grid.
+    ///
+    /// <para>
+    /// One ray from the centre makes a large ship flip from fully lit to fully dark the instant its
+    /// centre crosses a terminator. These pin the properties that turn that step into a ramp: the
+    /// centre comes first so one sample behaves as it always did, opposite corners are paired so any
+    /// even count straddles the hull, and every point is inside the hull rather than beside it.
+    /// </para>
+    /// </summary>
     public class SolarOcclusionSamplerTests
     {
         private static readonly BoundingBoxD Ship =

@@ -293,6 +293,83 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// Every class that holds tests says what it is for.
+        ///
+        /// <para>
+        /// A test method's name states what it asserts; nothing states why the group of them
+        /// exists, what fixture they share, or which of them is the one with a defect behind it.
+        /// Twenty-nine classes — the oldest and most foundational, conduction and orientation and
+        /// the save format among them — carried no summary at all, so the only way to learn what a
+        /// suite was protecting was to read every case in it and guess.
+        /// </para>
+        ///
+        /// <para>
+        /// Checked from the source rather than by reflection, because an XML doc comment is not
+        /// compiled into the assembly unless documentation generation is switched on, and a check
+        /// that silently stops looking is worse than no check.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void EveryTestClassSaysWhatItIsFor()
+        {
+            string folder = Path.Combine(RepoRoot(), "tests", "Thermodynamics.Tests");
+            string[] files = Directory.GetFiles(folder, "*.cs");
+
+            Assert.True(files.Length > 100,
+                "only " + files.Length + " test sources were found, so this test is looking in the"
+                + " wrong place and would pass whatever the suite did");
+
+            List<string> undocumented = new List<string>();
+            int classes = 0;
+
+            foreach (string file in files)
+            {
+                string source = File.ReadAllText(file);
+
+                foreach (Match match in Regex.Matches(source,
+                    @"(?m)^[ \t]*public\s+(?:sealed\s+|static\s+|partial\s+)*class\s+(\w+)"))
+                {
+                    string name = match.Groups[1].Value;
+
+                    // Only the classes that hold cases. Fixtures, shared rigs and reference
+                    // implementations are documented where they are used from.
+                    if (!name.EndsWith("Tests", StringComparison.Ordinal)
+                        && !name.EndsWith("Walk", StringComparison.Ordinal)
+                        && !name.EndsWith("Survey", StringComparison.Ordinal)
+                        && !name.EndsWith("Sweep", StringComparison.Ordinal)) continue;
+
+                    classes++;
+
+                    // Attributes sit between the summary and the declaration — [Trait("speed",
+                    // "slow")] on the batteries — so they are stepped back over before looking.
+                    string before = source.Substring(0, match.Index).TrimEnd();
+                    while (before.EndsWith("]", StringComparison.Ordinal))
+                    {
+                        int open = before.LastIndexOf('[');
+                        if (open < 0) break;
+                        before = before.Substring(0, open).TrimEnd();
+                    }
+
+                    // A one-line summary closes on the same line it opens, so the tag is what is
+                    // looked for rather than a line consisting only of it.
+                    if (!before.EndsWith("</summary>", StringComparison.Ordinal))
+                    {
+                        undocumented.Add(Path.GetFileName(file) + ": " + name);
+                    }
+                }
+            }
+
+            Assert.True(classes > 100,
+                "only " + classes + " test classes were recognised, so the declaration pattern has"
+                + " changed and this test is no longer reading anything");
+
+            undocumented.Sort(StringComparer.Ordinal);
+            Assert.True(undocumented.Count == 0,
+                "test classes with no summary saying what they are for:\n  "
+                + string.Join("\n  ", undocumented.ToArray()));
+        }
+
+        /// <summary>
         /// Every page under `docs/` is reachable from the README's index.
         ///
         /// <para>
