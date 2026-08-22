@@ -59,7 +59,7 @@ namespace Thermodynamics.Tests
             ThermalSimulation always = Build(gate: false, maxSubsteps: 4096);
             ThermalSimulation gated = Build(gate: true, maxSubsteps: 4096);
 
-            EnvironmentSample sample = Worlds.PlanetSurface(0.8f, timeOfDay: 0.35f, windSpeed: 22f);
+            EnvironmentSample sample = Worlds.Ab.MildAtmosphere();
 
             always.StepExact(40, sample);
             gated.StepExact(40, sample);
@@ -78,7 +78,7 @@ namespace Thermodynamics.Tests
             ThermalSimulation always = Build(gate: false, maxSubsteps: 1);
             ThermalSimulation gated = Build(gate: true, maxSubsteps: 1);
 
-            EnvironmentSample sample = Worlds.PlanetSurface(0.8f, timeOfDay: 0.35f, windSpeed: 22f);
+            EnvironmentSample sample = Worlds.Ab.MildAtmosphere();
 
             always.StepExact(40, sample);
             gated.StepExact(40, sample);
@@ -97,7 +97,7 @@ namespace Thermodynamics.Tests
             ThermalSimulation always = Build(gate: false, maxSubsteps: 4096);
             ThermalSimulation gated = Build(gate: true, maxSubsteps: 4096);
 
-            EnvironmentSample sample = Worlds.Space(new Vector3(0.3f, 0.9f, 0.2f));
+            EnvironmentSample sample = Worlds.Ab.SunlitVacuum();
 
             always.StepExact(40, sample);
             gated.StepExact(40, sample);
@@ -123,7 +123,7 @@ namespace Thermodynamics.Tests
             ThermalSimulation always = Build(gate: false, maxSubsteps: cap);
             ThermalSimulation gated = Build(gate: true, maxSubsteps: cap);
 
-            EnvironmentSample sample = Worlds.PlanetSurface(0.8f, timeOfDay: 0.35f, windSpeed: 22f);
+            EnvironmentSample sample = Worlds.Ab.MildAtmosphere();
 
             always.StepExact(20, sample);
             gated.StepExact(20, sample);
@@ -147,7 +147,7 @@ namespace Thermodynamics.Tests
 
             EnvironmentState state = EnvironmentSolver.Solve(
                 whole.Settings, whole.Planet,
-                Worlds.PlanetSurface(0.8f, timeOfDay: 0.35f, windSpeed: 22f));
+                Worlds.Ab.MildAtmosphere());
 
             for (int step = 0; step < 8; step++)
             {
@@ -171,7 +171,7 @@ namespace Thermodynamics.Tests
             ThermalSimulation resolved = Build(gate: true, maxSubsteps: 4096);
             ThermalSimulation stiff = Build(gate: true, maxSubsteps: 1);
 
-            EnvironmentSample sample = Worlds.PlanetSurface(0.8f, timeOfDay: 0.35f, windSpeed: 22f);
+            EnvironmentSample sample = Worlds.Ab.MildAtmosphere();
 
             resolved.StepExact(4, sample);
             stiff.StepExact(4, sample);
@@ -201,7 +201,7 @@ namespace Thermodynamics.Tests
             Census.DriveCensus(simulation);
             LoadBenchmarks.SeedSpread(simulation);
 
-            simulation.StepExact(4, Worlds.PlanetSurface(0.8f, timeOfDay: 0.35f, windSpeed: 22f));
+            simulation.StepExact(4, Worlds.Ab.MildAtmosphere());
 
             Assert.False(simulation.Solver.ConductionClampLive);
         }

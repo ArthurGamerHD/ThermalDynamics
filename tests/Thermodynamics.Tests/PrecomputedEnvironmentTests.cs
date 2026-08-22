@@ -51,7 +51,7 @@ namespace Thermodynamics.Tests
             ThermalSimulation recomputed = Build(false);
             ThermalSimulation reused = Build(true);
 
-            EnvironmentSample sample = Worlds.PlanetSurface(0.8f, timeOfDay: 0.35f, windSpeed: 22f);
+            EnvironmentSample sample = Worlds.Ab.MildAtmosphere();
 
             recomputed.StepExact(40, sample);
             reused.StepExact(40, sample);
@@ -71,7 +71,7 @@ namespace Thermodynamics.Tests
             ThermalSimulation recomputed = Build(false);
             ThermalSimulation reused = Build(true);
 
-            EnvironmentSample sample = Worlds.PlanetSurface(1f, timeOfDay: 0.35f, windSpeed: 300f);
+            EnvironmentSample sample = Worlds.Ab.EveryTermLive();
 
             recomputed.StepExact(40, sample);
             reused.StepExact(40, sample);
@@ -86,7 +86,7 @@ namespace Thermodynamics.Tests
             ThermalSimulation recomputed = Build(false);
             ThermalSimulation reused = Build(true);
 
-            EnvironmentSample sample = Worlds.Space(new Vector3(0.3f, 0.9f, 0.2f));
+            EnvironmentSample sample = Worlds.Ab.SunlitVacuum();
 
             recomputed.StepExact(40, sample);
             reused.StepExact(40, sample);
@@ -141,7 +141,7 @@ namespace Thermodynamics.Tests
 
             EnvironmentState state = EnvironmentSolver.Solve(
                 whole.Settings, whole.Planet,
-                Worlds.PlanetSurface(0.8f, timeOfDay: 0.35f, windSpeed: 22f));
+                Worlds.Ab.MildAtmosphere());
 
             for (int step = 0; step < 8; step++)
             {

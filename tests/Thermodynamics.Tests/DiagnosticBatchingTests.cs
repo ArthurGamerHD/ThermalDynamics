@@ -51,7 +51,7 @@ namespace Thermodynamics.Tests
             ThermalSimulation every = Build(everySubstep: true, maxSubsteps: maxSubsteps);
             ThermalSimulation last = Build(everySubstep: false, maxSubsteps: maxSubsteps);
 
-            EnvironmentSample sample = Worlds.PlanetSurface(0.8f, timeOfDay: 0.35f, windSpeed: 22f);
+            EnvironmentSample sample = Worlds.Ab.MildAtmosphere();
 
             every.StepExact(20, sample);
             last.StepExact(20, sample);
@@ -69,7 +69,7 @@ namespace Thermodynamics.Tests
             ThermalSimulation every = Build(everySubstep: true, maxSubsteps: 4096);
             ThermalSimulation last = Build(everySubstep: false, maxSubsteps: 4096);
 
-            EnvironmentSample sample = Worlds.Space(new Vector3(0.3f, 0.9f, 0.2f));
+            EnvironmentSample sample = Worlds.Ab.SunlitVacuum();
 
             every.StepExact(20, sample);
             last.StepExact(20, sample);
@@ -92,7 +92,7 @@ namespace Thermodynamics.Tests
 
             EnvironmentState state = EnvironmentSolver.Solve(
                 whole.Settings, whole.Planet,
-                Worlds.PlanetSurface(0.8f, timeOfDay: 0.35f, windSpeed: 22f));
+                Worlds.Ab.MildAtmosphere());
 
             for (int step = 0; step < 8; step++)
             {
@@ -115,7 +115,7 @@ namespace Thermodynamics.Tests
             ThermalSimulation simulation = Build(everySubstep: false, maxSubsteps: 4096);
             simulation.Solver.CollectDiagnostics = false;
 
-            simulation.StepExact(20, Worlds.PlanetSurface(0.8f, timeOfDay: 0.35f, windSpeed: 22f));
+            simulation.StepExact(20, Worlds.Ab.MildAtmosphere());
 
             float[] published = SolverAb.Diagnostics(simulation);
             for (int i = 0; i < published.Length; i++)

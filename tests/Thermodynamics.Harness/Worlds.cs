@@ -94,6 +94,49 @@ namespace Thermodynamics.Harness
             return WindAndMotion(airDensity, 0f, Vector3.Zero, Vector3.Backward * speed, timeOfDay);
         }
 
+        /// <summary>
+        /// The three worlds the A/B suites compare in, named once because they were written out as
+        /// literals in twenty-five places across six files and the suites are only comparable to
+        /// each other while they agree.
+        ///
+        /// <para>
+        /// They are chosen for which terms each one makes live, not for being realistic. Between
+        /// them every branch of the environment pass is taken: with all of them on, with friction
+        /// below its threshold, and with air absent entirely.
+        /// </para>
+        /// </summary>
+        public static class Ab
+        {
+            /// <summary>
+            /// Full air at 300 m/s of relative airflow: the only world where forced convection and
+            /// aerodynamic friction are both live. The suite ran at 22 m/s for months, below the
+            /// 50 m/s friction threshold, so no bit-identity test had ever had both on at once.
+            /// </summary>
+            public static EnvironmentSample EveryTermLive()
+            {
+                return PlanetSurface(1f, timeOfDay: 0.35f, windSpeed: 300f);
+            }
+
+            /// <summary>
+            /// Thinner air at a breeze: convection carries the wind bonus, friction is below its
+            /// threshold and contributes nothing. The ordinary case.
+            /// </summary>
+            public static EnvironmentSample MildAtmosphere()
+            {
+                return PlanetSurface(0.8f, timeOfDay: 0.35f, windSpeed: 22f);
+            }
+
+            /// <summary>
+            /// Vacuum with the sun off-axis, so solar weights every face differently and radiation
+            /// is the only other environment term. The case where the environment row's contents
+            /// are smallest, and a stale figure in it proportionally largest.
+            /// </summary>
+            public static EnvironmentSample SunlitVacuum()
+            {
+                return Space(new Vector3(0.3f, 0.9f, 0.2f));
+            }
+        }
+
         /// <summary>A parked hull in an ambient wind — a storm, with the ship standing still.</summary>
         public static EnvironmentSample Storm(float airDensity, float windSpeed, float timeOfDay = 0.5f)
         {

@@ -29,7 +29,7 @@ namespace Thermodynamics.Tests
 
         private static EnvironmentSample Flight()
         {
-            return Worlds.PlanetSurface(1f, timeOfDay: 0.35f, windSpeed: 300f);
+            return Worlds.Ab.EveryTermLive();
         }
 
         [Theory]

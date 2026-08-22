@@ -57,7 +57,7 @@ namespace Thermodynamics.Tests
             ThermalSimulation cleared = Build(false);
             ThermalSimulation fused = Build(true);
 
-            EnvironmentSample sample = Worlds.PlanetSurface(1f, timeOfDay: 0.35f, windSpeed: 300f);
+            EnvironmentSample sample = Worlds.Ab.EveryTermLive();
 
             cleared.StepExact(40, sample);
             fused.StepExact(40, sample);
@@ -71,7 +71,7 @@ namespace Thermodynamics.Tests
             ThermalSimulation cleared = Build(false);
             ThermalSimulation fused = Build(true);
 
-            EnvironmentSample sample = Worlds.PlanetSurface(0.8f, timeOfDay: 0.35f, windSpeed: 22f);
+            EnvironmentSample sample = Worlds.Ab.MildAtmosphere();
 
             cleared.StepExact(40, sample);
             fused.StepExact(40, sample);
@@ -90,7 +90,7 @@ namespace Thermodynamics.Tests
             ThermalSimulation cleared = Build(false);
             ThermalSimulation fused = Build(true);
 
-            EnvironmentSample sample = Worlds.Space(new Vector3(0.3f, 0.9f, 0.2f));
+            EnvironmentSample sample = Worlds.Ab.SunlitVacuum();
 
             cleared.StepExact(40, sample);
             fused.StepExact(40, sample);
@@ -120,7 +120,7 @@ namespace Thermodynamics.Tests
             cleared.Solver.FuseWattsClear = false;
             fused.Solver.FuseWattsClear = true;
 
-            EnvironmentSample sample = Worlds.Space(new Vector3(0.3f, 0.9f, 0.2f));
+            EnvironmentSample sample = Worlds.Ab.SunlitVacuum();
 
             cleared.StepExact(40, sample);
             fused.StepExact(40, sample);
@@ -147,7 +147,7 @@ namespace Thermodynamics.Tests
             cleared.Solver.FuseWattsClear = false;
             fused.Solver.FuseWattsClear = true;
 
-            EnvironmentSample sample = Worlds.Space(new Vector3(0.3f, 0.9f, 0.2f));
+            EnvironmentSample sample = Worlds.Ab.SunlitVacuum();
 
             cleared.StepExact(40, sample);
             fused.StepExact(40, sample);
@@ -174,7 +174,7 @@ namespace Thermodynamics.Tests
 
             EnvironmentState state = EnvironmentSolver.Solve(
                 whole.Settings, whole.Planet,
-                Worlds.PlanetSurface(0.8f, timeOfDay: 0.35f, windSpeed: 22f));
+                Worlds.Ab.MildAtmosphere());
 
             for (int step = 0; step < 8; step++)
             {
@@ -201,7 +201,7 @@ namespace Thermodynamics.Tests
             cleared.Solver.CollectDiagnostics = true;
             fused.Solver.CollectDiagnostics = true;
 
-            EnvironmentSample sample = Worlds.PlanetSurface(1f, timeOfDay: 0.35f, windSpeed: 300f);
+            EnvironmentSample sample = Worlds.Ab.EveryTermLive();
 
             cleared.StepExact(40, sample);
             fused.StepExact(40, sample);
@@ -222,7 +222,7 @@ namespace Thermodynamics.Tests
             ThermalSimulation cleared = Build(false);
             ThermalSimulation fused = Build(true);
 
-            EnvironmentSample sample = Worlds.PlanetSurface(1f, timeOfDay: 0.35f, windSpeed: 300f);
+            EnvironmentSample sample = Worlds.Ab.EveryTermLive();
 
             cleared.StepExact(40, sample);
             fused.StepExact(40, sample);
