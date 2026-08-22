@@ -733,22 +733,6 @@ namespace Thermodynamics.Core
             return GetNode(grid.GetAtCell(cell));
         }
 
-        /// <summary>Registers every block on the grid at one starting temperature.</summary>
-        public void AddAllBlocks(float initialTemperature)
-        {
-            IList<BlockInstance> blocks = grid.Blocks;
-            for (int i = 0; i < blocks.Count; i++)
-            {
-                AddBlock(blocks[i], initialTemperature);
-            }
-        }
-
-        /// <summary>Forces the conduction graph to be rebuilt before the next step.</summary>
-        public void InvalidateLinks()
-        {
-            linksDirty = true;
-        }
-
         /// <summary>
         /// Brings the conduction graph up to date, incrementally when only blocks have been placed
         /// and by full rebuild otherwise. No-op when the graph already matches the layout.
