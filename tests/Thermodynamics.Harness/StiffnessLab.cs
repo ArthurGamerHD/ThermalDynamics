@@ -63,6 +63,28 @@ namespace Thermodynamics.Harness
             /// <summary>Nodes on the ship, and how many of them each cap would hold back.</summary>
             public int Nodes;
             public int[] FlooredAtCap;
+
+            /// <summary>
+            /// Exposed faces on the block that set <see cref="Air"/>.
+            ///
+            /// The column that says *why* a hull is stiff. A stiffest block with faces open to the
+            /// sky is convectively stiff; one with none is stiff through conduction alone.
+            /// </summary>
+            public int StiffestFaces;
+
+            /// <summary>
+            /// The <b>same block's</b> demand in vacuum, so the two can be divided.
+            ///
+            /// <para>
+            /// <see cref="Vacuum"/> is the hull's vacuum peak, which is frequently a different
+            /// block — a buried heavy one that conducts hard and does not care about air. Dividing
+            /// the two peaks therefore compares two different blocks and answers nothing; it read
+            /// the census hull at 1.02 and called it insensitive to air when the block itself is
+            /// three times stiffer in air than out of it. This is the ratio that means what it
+            /// looks like.
+            /// </para>
+            /// </summary>
+            public float StiffestInVacuum;
         }
 
         /// <summary>
@@ -84,7 +106,8 @@ namespace Thermodynamics.Harness
         /// sides are measured by different code is not a comparison.
         /// </summary>
         public static void MeasureSolver(ThermalSolver solver, ref EnvironmentState air,
-            ref float vacuum, ref float inAir, ref string stiffest, int[] flooredAtCap, ref int nodes)
+            ref float vacuum, ref float inAir, ref string stiffest, int[] flooredAtCap, ref int nodes,
+            ref int stiffestFaces, ref float stiffestDry)
         {
             for (int i = 0; i < solver.Nodes.Count; i++)
             {
@@ -98,6 +121,8 @@ namespace Thermodynamics.Harness
                 {
                     inAir = wet;
                     stiffest = solver.Nodes[i].Block.Name;
+                    stiffestFaces = solver.Nodes[i].TotalExposedFaces;
+                    stiffestDry = dry;
                 }
 
                 // A per-block cap holds a node back when the node asks for more substeps than the
@@ -134,8 +159,10 @@ namespace Thermodynamics.Harness
             float vacuum = 0f, inAir = 0f;
             string stiffest = "";
             int[] floored = new int[Caps.Length];
-            int nodes = 0;
-            MeasureSolver(simulation.Solver, ref air, ref vacuum, ref inAir, ref stiffest, floored, ref nodes);
+            int nodes = 0, faces = 0;
+            float stiffestDry = 0f;
+            MeasureSolver(simulation.Solver, ref air, ref vacuum, ref inAir, ref stiffest,
+                floored, ref nodes, ref faces, ref stiffestDry);
 
             return new Row
             {
@@ -147,6 +174,8 @@ namespace Thermodynamics.Harness
                 StiffestInAir = stiffest,
                 Nodes = nodes,
                 FlooredAtCap = floored,
+                StiffestFaces = faces,
+                StiffestInVacuum = stiffestDry,
             };
         }
 
@@ -160,12 +189,13 @@ namespace Thermodynamics.Harness
             float vacuum = 0f, inAir = 0f;
             string stiffest = "";
             int[] floored = new int[Caps.Length];
-            int nodes = 0;
+            int nodes = 0, faces = 0;
+            float stiffestDry = 0f;
 
             for (int g = 0; g < assembly.Simulations.Count; g++)
             {
                 MeasureSolver(assembly.Simulations[g].Solver, ref air, ref vacuum, ref inAir,
-                    ref stiffest, floored, ref nodes);
+                    ref stiffest, floored, ref nodes, ref faces, ref stiffestDry);
             }
 
             return new Row
@@ -178,6 +208,8 @@ namespace Thermodynamics.Harness
                 StiffestInAir = stiffest,
                 Nodes = nodes,
                 FlooredAtCap = floored,
+                StiffestFaces = faces,
+                StiffestInVacuum = stiffestDry,
             };
         }
 
@@ -258,6 +290,14 @@ namespace Thermodynamics.Harness
             vacuum.Sort();
             air.Sort();
 
+            List<float> ratios = new List<float>();
+            for (int i = 0; i < rows.Count; i++)
+            {
+                float ratio = Ratio(rows[i]);
+                if (ratio > 0f) ratios.Add(ratio);
+            }
+            ratios.Sort();
+
             sb.Append("  ").Append(rows.Count.ToString("n0")).Append(" ships measured of ")
                 .Append(walk.Files.ToString("n0")).Append(" blueprints under ").AppendLine(root);
             sb.Append("  in ").Append(clock.Elapsed.TotalSeconds.ToString("n1"))
@@ -277,11 +317,15 @@ namespace Thermodynamics.Harness
             sb.AppendLine("  world       min     p10     p50     p90     p95     p99     max");
             Band(sb, "vacuum", vacuum);
             Band(sb, "air", air);
+            Band(sb, "x air", ratios);
+            sb.AppendLine();
+            sb.AppendLine("  `x air` is the air peak over the SAME block's vacuum demand. Dividing the two");
+            sb.AppendLine("  rows above it would divide two different blocks and mean nothing.");
             sb.AppendLine();
 
             // The instrument, put in the population it claims to describe.
             sb.AppendLine("  the hull every benchmark is built on, measured the same way");
-            sb.AppendLine("  hull                          vacuum     air   percentile of the corpus, in air");
+            sb.AppendLine("  hull                        hull vac  hull air   pct   its own vac   x air   faces");
 
             int[] sizes = { 2000, 4000, 32000 };
             for (int i = 0; i < sizes.Length; i++)
@@ -290,8 +334,11 @@ namespace Thermodynamics.Harness
                 sb.Append("  ").Append(Trim(hull.Ship, 28).PadRight(30));
                 sb.Append(hull.Vacuum.ToString("n2").PadLeft(7));
                 sb.Append(hull.Air.ToString("n2").PadLeft(8));
-                sb.Append((100d * ShareBelow(air, hull.Air)).ToString("n1").PadLeft(9)).Append(" %");
-                sb.Append("   stiffest: ").AppendLine(Trim(hull.StiffestInAir, 30));
+                sb.Append((100d * ShareBelow(air, hull.Air)).ToString("n0").PadLeft(6)).Append("%");
+                sb.Append(hull.StiffestInVacuum.ToString("n2").PadLeft(12));
+                sb.Append(Ratio(hull).ToString("n2").PadLeft(8));
+                sb.Append(hull.StiffestFaces.ToString().PadLeft(7));
+                sb.AppendLine();
             }
 
             sb.AppendLine();
@@ -456,7 +503,7 @@ namespace Thermodynamics.Harness
         public static string Csv(IList<Row> rows)
         {
             StringBuilder sb = new StringBuilder();
-            sb.AppendLine("ship,large,blocks,vacuum,air,stiffest_in_air");
+            sb.AppendLine("ship,large,blocks,vacuum,air,stiffest_in_air,stiffest_faces,stiffest_vacuum");
 
             for (int i = 0; i < rows.Count; i++)
             {
@@ -468,7 +515,10 @@ namespace Thermodynamics.Harness
                 sb.Append(row.Blocks).Append(',');
                 sb.Append(row.Vacuum.ToString("r", System.Globalization.CultureInfo.InvariantCulture)).Append(',');
                 sb.Append(row.Air.ToString("r", System.Globalization.CultureInfo.InvariantCulture)).Append(',');
-                sb.Append('"').Append((row.StiffestInAir ?? "").Replace("\"", "\"\"")).AppendLine("\"");
+                sb.Append('"').Append((row.StiffestInAir ?? "").Replace("\"", "\"\"")).Append('"').Append(',');
+                sb.Append(row.StiffestFaces).Append(',');
+                sb.Append(row.StiffestInVacuum.ToString("r", System.Globalization.CultureInfo.InvariantCulture));
+                sb.AppendLine();
             }
 
             return sb.ToString();
@@ -476,6 +526,13 @@ namespace Thermodynamics.Harness
 
         /// <summary>The rows of the last <see cref="Report"/>, for a caller that wants the CSV.</summary>
         public static List<Row> LastRows { get; private set; }
+
+        /// <summary>How much stiffer air makes the block that sets the hull's air peak.</summary>
+        public static float Ratio(Row row)
+        {
+            if (row == null || row.StiffestInVacuum <= 0f) return 0f;
+            return row.Air / row.StiffestInVacuum;
+        }
 
         private static void Band(StringBuilder sb, string label, List<float> sorted)
         {

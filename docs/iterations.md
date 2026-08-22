@@ -88,8 +88,8 @@ census hull is the instrument every figure above is taken on, and it was held to
 question of 8,102 real workshop blueprints in four minutes. The field figures survive: they land at
 the 63rd and 85th percentile. What they could not show is that the population is **bimodal** — a
 light sets the substep count on 45 % of hulls at a median of 28.5 and armour on the rest at 4.8,
-with almost nothing between — and that the census hull sits in the trough and gets there by
-conducting where a real ship convects. See [stiffness.md](stiffness.md#the-same-question-asked-of-eight-thousand-real-ships).
+with almost nothing between — and that the census hull sits in the trough between them, feeling a
+little less of the air than a typical hull because its stiffest block is less exposed. See [stiffness.md](stiffness.md#the-same-question-asked-of-eight-thousand-real-ships).
 
 Where a pass moves something the columns above cannot see, it gets a row here.
 

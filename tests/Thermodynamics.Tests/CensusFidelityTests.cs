@@ -157,38 +157,38 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// **The census hull is stiff for the wrong reason, and that is the finding this class
-        /// exists to keep visible.**
+        /// The census hull feels air the way a real hull does — less than most, and inside the
+        /// range.
         ///
         /// <para>
-        /// A real ship's stiffness is mostly what its lightest exposed block exchanges with the
-        /// air over its own area: the median hull demands 1.73 times in air what it does in
-        /// vacuum, and the ninetieth percentile 5.78 times. The census hull's ratio is 1.02. It
-        /// reaches a realistic air figure through conduction alone, so it will not respond to any
-        /// change that touches convection, exposure or air density — and those are most of this
-        /// mod.
-        /// </para>
-        ///
-        /// <para>
-        /// Pinned as *present* rather than fixed, because correcting it moves every performance
-        /// figure this repository has published and that is a decision rather than a repair. It
-        /// fails when someone fixes it, which is the point: the fix should be noticed.
+        /// <b>This test replaces one that asserted the opposite, on a broken measurement.</b> The
+        /// first version divided the hull's air peak by its vacuum peak and got 1.02, which looked
+        /// like a hull that does not notice air at all. Those are two different blocks: the air
+        /// peak is an exposed fitting and the vacuum peak is a buried heavy block that conducts
+        /// hard. Asked of the same block, the census hull is 1.20 to 1.50 against a real median of
+        /// 2.34 — low, because its stiffest block has one or two exposed faces where a real ship's
+        /// has 5.26, and well inside the population.
         /// </para>
         /// </summary>
         [Fact]
-        public void TheCensusHullBarelyNoticesAirAndARealShipDoes()
+        public void TheCensusHullFeelsAirLikeARealHullDoes()
         {
             StiffnessLab.Row hull = CensusHull();
-            Assert.True(hull.Vacuum > 0f);
+            Assert.True(hull.StiffestInVacuum > 0f, "the stiffest block has no vacuum demand");
 
-            float ratio = hull.Air / hull.Vacuum;
+            float ratio = StiffnessLab.Ratio(hull);
 
-            Assert.True(ratio < 1.2f,
-                "the census hull's air-to-vacuum stiffness ratio is now " + ratio.ToString("n2")
-                + ", against 1.02 when this was recorded. If it has risen toward the corpus median"
-                + " of " + Census.Corpus.AirRatioP50 + " the hull has been made convectively stiff"
-                + " like a real ship, which is a fix — retake the benchmark baseline and rewrite"
-                + " this test as the assertion that it stays that way");
+            Assert.True(ratio > Census.Corpus.AirRatioP10,
+                "the census hull's stiffest block is " + ratio.ToString("n2")
+                + " times stiffer in air than out of it, below the tenth percentile of "
+                + Census.Corpus.AirRatioP10 + " over " + Census.Corpus.Ships.ToString("n0")
+                + " real ships; the hull has stopped responding to the air");
+
+            Assert.True(ratio < Census.Corpus.AirRatioP90,
+                "the census hull is now " + ratio.ToString("n2")
+                + " times stiffer in air, past the ninetieth percentile of "
+                + Census.Corpus.AirRatioP90 + "; it has become one of the extreme hulls rather"
+                + " than an ordinary one");
         }
 
         /// <summary>

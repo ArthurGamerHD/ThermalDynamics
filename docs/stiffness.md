@@ -658,26 +658,37 @@ That is the same finding [C9 in the backlog](backlog.md) reached from one save, 
 a population, and it is why the per-block cap is the lever this page argues for: the two modes are
 separated by a handful of block types, not by ship design.
 
-### The census hull is stiff for the wrong reason
+### The census hull sits in the trough, and feels less of the air than most
 
 The hull every benchmark here is built on lands at 23.39 in air — the 65th percentile, and *in the
-trough between the two modes*, a value about six per cent of real ships have. That alone would be
-a fair choice for a benchmark. What is not fair is how it gets there:
+trough between the two modes*, a value about six per cent of real ships have. For a benchmark that
+is a fair choice: it is neither of the two things a ship usually is, but it is between them rather
+than outside them.
 
-| | air ÷ vacuum |
+How much of that stiffness comes from the air is the second question, and it has to be asked of
+**one block**:
+
+| | its own air ÷ its own vacuum |
 | --- | ---: |
-| a real ship, median | **1.73** |
-| a real ship, p90 | **5.78** |
-| the census hull | **1.02** |
+| a real ship, p10 | 1.04 |
+| a real ship, median | **2.34** |
+| a real ship, p90 | 6.89 |
+| the census hull | **1.20 – 1.50** |
 
-A real light-limited ship is stiff because of what its exposed fitting exchanges with the air. The
-census hull is stiff because of what its blocks conduct into each other, and air barely moves it.
-It arrives at a realistic number by a mechanism no real ship uses — so it will not respond to a
-change in convection, exposure, air density or wind, and those are most of this mod.
+Low, and inside the range. The reason is exposure: the block that sets a real ship's air peak has
+**5.26 exposed faces** on average — a light hangs off a hull — and the census hull's has one or
+two, because the tiers are dealt out by a hash of a cell's position and land wherever that puts
+them. So the hull is a little less air-sensitive than a typical ship. It is a fidelity gap worth
+recording, not a defect, and `TheCensusHullFeelsAirLikeARealHullDoes` holds it inside the
+population at both ends.
 
-`TheCensusHullBarelyNoticesAirAndARealShipDoes` pins it as **present rather than fixed**, because
-correcting it moves every performance figure this repository has published and that is a decision
-rather than a repair. The test fails when someone fixes it, which is the point.
+> **This was published as a defect first, and the defect was in the measurement.** The first
+> version divided the hull's *air peak* by its *vacuum peak* and got 1.02, which reads as a hull
+> that does not notice air at all. Those are two different blocks: the air peak is an exposed
+> fitting and the vacuum peak is a buried heavy block that conducts hard and does not care about
+> air. Two peaks are not a ratio. Asked of the same block, the census hull is ordinary. A fixture
+> change had already been made on the strength of the wrong figure and has been reverted — a
+> benchmark fixture is not something to move on a number nobody has checked twice.
 
 ### The cap curve holds where the cap is actually set
 

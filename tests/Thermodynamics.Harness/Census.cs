@@ -221,15 +221,37 @@ namespace Thermodynamics.Harness
             public const float LitShare = 0.450f;
 
             /// <summary>
-            /// How much stiffer air makes a real ship: the median hull demands 1.73 times what it
-            /// does in vacuum, and the ninetieth percentile 5.78 times.
+            /// How much stiffer air makes the block that sets a hull's air peak: **the same
+            /// block's** air demand over its own vacuum demand.
             ///
-            /// This is the figure the census hull does not reproduce. Its own ratio is 1.02 — it is
-            /// conductively stiff where a real light-limited ship is convectively stiff, so it
-            /// arrives at a realistic air figure by a mechanism no real ship uses.
+            /// <para>
+            /// <b>Measured wrongly the first time, and the wrong figure was published.</b> The
+            /// first version divided the hull's air peak by the hull's vacuum peak, which is
+            /// frequently a different block — a buried heavy one that conducts hard and does not
+            /// care about air. That read the census hull at 1.02 and called it insensitive to air
+            /// when the block itself is half again stiffer in air than out of it. Two peaks are
+            /// not a ratio.
+            /// </para>
+            ///
+            /// <para>
+            /// Correctly measured, the census hull is <em>inside</em> the population it describes:
+            /// 1.20 to 1.50 against a real median of 2.34, between the tenth and fiftieth
+            /// percentile. Low, and not an outlier.
+            /// </para>
             /// </summary>
-            public const float AirRatioP50 = 1.73f;
-            public const float AirRatioP90 = 5.78f;
+            public const float AirRatioP10 = 1.04f;
+            public const float AirRatioP50 = 2.34f;
+            public const float AirRatioP90 = 6.89f;
+
+            /// <summary>
+            /// The census hull's own, on the same basis. Its stiffest block has one or two exposed
+            /// faces where a real ship's has 5.26 on average, so it feels less of the air than a
+            /// typical hull does — a fidelity gap worth recording rather than a defect.
+            /// </summary>
+            public const float CensusAirRatio = 1.50f;
+
+            /// <summary>Exposed faces on the block that sets a real ship's air peak, mean.</summary>
+            public const float StiffestFacesMean = 5.26f;
 
             /// <summary>
             /// The cap curve, over every block of every ship — 2.4 million blocks — against

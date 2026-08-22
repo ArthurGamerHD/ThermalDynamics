@@ -299,9 +299,11 @@ is everything else that does not reach the table.
 It found three things two field observations could not have. The field figures are ordinary ships —
 63rd and 85th percentile. The population is **bimodal**: a light or camera sets the count on 45 %
 of hulls at a median of 28.5 substeps, armour on the rest at 4.8, and almost nothing sits between.
-And the census hull, which every benchmark is built on, lands in the trough between the two modes
-and gets there by conducting rather than by convecting — its air-to-vacuum ratio is 1.02 against a
-real ship's 1.73. See [stiffness.md](../docs/stiffness.md#the-same-question-asked-of-eight-thousand-real-ships).
+And the census hull, which every benchmark is built on, lands in the trough between the two modes —
+a fair choice for a benchmark — while feeling a little less of the air than a typical ship: the
+same block is 1.20–1.50 times stiffer in air against a real median of 2.34, because its stiffest
+block has one or two exposed faces where a real ship's has 5.26. See
+[stiffness.md](../docs/stiffness.md#the-same-question-asked-of-eight-thousand-real-ships).
 
 ## Screening and the battery
 
