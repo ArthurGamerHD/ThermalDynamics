@@ -235,6 +235,12 @@ payload = {
     "heatIndexCols": ["subtype", "typeId", "large", "source", "wasteW", "areaM2", "criticalK",
                       "radiatedW", "conductedW", "index", "selfIndex", "hullAreaNeeded"],
     "heatIndex": heat_index,
+
+    # Counts the page states about itself. They were written into the HTML by hand and one of them
+    # — the panel, which grew from 36 ships to 50 — had gone stale, which is the one kind of error
+    # a page of measurements cannot afford: a reader who catches a wrong count stops believing the
+    # right ones.
+    "compositionRows": len(composition),
 }
 
 os.makedirs(os.path.dirname(TARGET) or ".", exist_ok=True)

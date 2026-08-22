@@ -110,6 +110,61 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// Every tool under `tools/` is named by the README beside it.
+        ///
+        /// <para>
+        /// The corpus tooling had four entry points and its README described two. The two it left
+        /// out were the standing panel the whole dial sweep runs on, and the balance bench — 1,300
+        /// lines of page assembling every corpus dataset into one document, mentioned nowhere in
+        /// the repository except as five words in the iteration log.
+        /// </para>
+        ///
+        /// <para>
+        /// A script is not a command with a help text, so the README is the only place its
+        /// existence is recorded. Fragments a script includes rather than a reader runs — the HTML
+        /// parts the shell scripts concatenate — are named by the prose that describes what
+        /// assembles them, so they are covered by the same check.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void EveryToolIsNamedByItsReadme()
+        {
+            string tools = Path.Combine(Thermodynamics.Harness.ShippedBlocks.RepoRoot(), "tools");
+            List<string> orphans = new List<string>();
+            int seen = 0;
+
+            foreach (string folder in Directory.GetDirectories(tools))
+            {
+                string readmePath = Path.Combine(folder, "README.md");
+                Assert.True(File.Exists(readmePath),
+                    "tools/" + Path.GetFileName(folder) + " has no README, so nothing says what is"
+                    + " in it or how to run any of it");
+
+                string readme = File.ReadAllText(readmePath);
+
+                foreach (string file in Directory.GetFiles(folder))
+                {
+                    string name = Path.GetFileName(file);
+                    if (name == "README.md") continue;
+
+                    // Data the tools read and write rather than something a reader runs.
+                    if (name.EndsWith(".csv", StringComparison.Ordinal)) continue;
+
+                    seen++;
+                    if (readme.IndexOf(name, StringComparison.Ordinal) < 0) orphans.Add(name);
+                }
+            }
+
+            Assert.True(seen > 5,
+                "only " + seen + " tools were found, so this test is looking in the wrong place");
+
+            orphans.Sort(StringComparer.Ordinal);
+            Assert.True(orphans.Count == 0,
+                "tools no README mentions, so nothing says they exist:\n  "
+                + string.Join("\n  ", orphans.ToArray()));
+        }
+
+        /// <summary>
         /// Every lab that produces a report is reachable. A lab nobody can run is a measurement
         /// nobody takes, and the repository had one — 297 lines answering an open balance
         /// criterion, wired to nothing.

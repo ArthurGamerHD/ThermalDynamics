@@ -697,6 +697,12 @@ function drawCurve(){
 /* ---------------- wiring ---------------- */
 function render(){
   corrCache = null;
+  // Every figure the header states about the dataset comes from the dataset. Four of the five were
+  // written into the HTML by hand and the panel count had gone stale at 36 against 50.
+  $("#pv-ships").textContent = D.census.length.toLocaleString();
+  $("#pv-survey").textContent = D.outcomes.length.toLocaleString();
+  $("#pv-composition").textContent = (D.compositionRows || 0).toLocaleString();
+  $("#pv-panel").textContent = D.panel.length.toLocaleString();
   $("#pv-knobs").textContent = D.knobs.length ? D.knobs.length.toLocaleString() : "pending";
   verdicts(); drawCorrelations(); drawHeat(); drawJumpDrives(); drawHotspots();
   drawHeatIndex(); drawFleet(); drawKnobs();
