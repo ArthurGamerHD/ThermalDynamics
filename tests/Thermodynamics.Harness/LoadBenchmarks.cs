@@ -1433,6 +1433,19 @@ namespace Thermodynamics.Harness
             /// </summary>
             public float PeakTemperature;
             public float PeakError;
+
+            /// <summary>
+            /// Simulated seconds in one solver step, which every other figure in the row is
+            /// relative to.
+            ///
+            /// A step of `dt` needs `dt * r_max / safety` substeps, so the demand — and with it
+            /// which blocks a given cap reaches, and what that cap is worth — is proportional to
+            /// this. A table without it cannot be read, and one read against the wrong value is
+            /// wrong by exactly the ratio: the figures in stiffness.md were taken at a quarter
+            /// second and quoted against a shipped default of an eighth, which doubled every
+            /// speed-up on the page.
+            /// </summary>
+            public float StepSeconds;
         }
 
         /// <summary>
@@ -1454,20 +1467,20 @@ namespace Thermodynamics.Harness
         /// </para>
         /// </summary>
         public static List<FloorRow> SubstepFloor(string shape, int size, int steps,
-            IList<int> caps, Action<string> log = null, bool driven = false)
+            IList<int> caps, Action<string> log = null, bool driven = false, int frequency = 0)
         {
             List<FloorRow> rows = new List<FloorRow>();
             float[] reference = null;
             float referencePeak = 0f;
 
             // The first row measured would otherwise be measuring the JIT.
-            RunFloor(shape, Math.Min(size, 2000), 2, 0, null, driven);
+            RunFloor(shape, Math.Min(size, 2000), 2, 0, null, driven, frequency);
 
             for (int i = 0; i < caps.Count; i++)
             {
                 if (log != null) log("cap " + caps[i]);
 
-                FloorRow row = RunFloor(shape, size, steps, caps[i], reference, driven);
+                FloorRow row = RunFloor(shape, size, steps, caps[i], reference, driven, frequency);
                 if (reference == null)
                 {
                     reference = lastTemperatures;
@@ -1485,7 +1498,7 @@ namespace Thermodynamics.Harness
         private static float[] lastTemperatures;
 
         private static FloorRow RunFloor(string shape, int size, int steps, int cap,
-            float[] reference, bool driven)
+            float[] reference, bool driven, int frequency)
         {
             HashSet<Vector3I> cells = LoadShapes.Build(shape, size);
 
@@ -1494,6 +1507,11 @@ namespace Thermodynamics.Harness
 
             ThermalSettings settings = new ThermalSettings();
             settings.MaxSubstepsPerBlock = cap;
+
+            // Zero means the shipped default, which is what a table meant to inform a default
+            // should be read at. Anything else is here so a table taken at another step length
+            // can be reproduced rather than argued about.
+            if (frequency > 0) settings.Frequency = frequency;
 
             // Both of the bounds that would otherwise hide what the floor does: one refuses the
             // substeps the estimate asks for, the other shortens the step rather than pay.
@@ -1548,6 +1566,7 @@ namespace Thermodynamics.Harness
 
             FloorRow row = new FloorRow();
             row.Cap = cap;
+            row.StepSeconds = settings.StepSeconds;
             row.Nodes = count;
             row.Floored = floored;
             row.RequiredSubsteps = simulation.Solver.RequiredSubsteps(settings.StepSeconds);
@@ -1598,6 +1617,16 @@ namespace Thermodynamics.Harness
               .Append("rmsErr K".PadLeft(11))
               .Append("maxErr floored".PadLeft(16))
               .Append('\n');
+
+            // Stated rather than assumed: every figure below is proportional to it.
+            if (rows.Count > 0)
+            {
+                sb.Append("  step ")
+                  .Append(rows[0].StepSeconds.ToString("n4"))
+                  .Append(" s (Frequency ")
+                  .Append((1f / rows[0].StepSeconds).ToString("n0"))
+                  .Append("), and every substep count below is proportional to it\n");
+            }
 
             double baseline = rows.Count > 0 ? rows[0].Milliseconds : 0;
 

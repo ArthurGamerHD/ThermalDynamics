@@ -757,17 +757,19 @@ namespace Thermodynamics.Sim
                     Console.WriteLine("== substep floor, " + shape + " " + size.ToString("n0") + " ==");
                     Console.WriteLine("  MaxSubstepsPerBlock swept, on a hull built from the measured"
                         + " block census.");
-                    Console.WriteLine("  " + (ticks > 0 ? ticks : 200) + " steps of a quarter second, "
+                    Console.WriteLine("  " + (ticks > 0 ? ticks : 200) + " steps, "
                         + (Has(args, "--driven")
                             ? "the census share of heat producers run to equilibrium"
                             : "temperatures spread 250-750 K")
                         + ", vacuum. Error is against the uncapped run.");
+                    Console.WriteLine("  --frequency N sets the step length; every substep count"
+                        + " below is proportional to it.");
                     Console.WriteLine();
 
                     Console.WriteLine(LoadBenchmarks.FloorTable(LoadBenchmarks.SubstepFloor(
                         shape, size, ticks > 0 ? ticks : 200, caps,
                         message => Console.Error.WriteLine("  " + message),
-                        Has(args, "--driven"))));
+                        Has(args, "--driven"), OptionInt(args, "--frequency", 0))));
                     return 0;
                 }
 

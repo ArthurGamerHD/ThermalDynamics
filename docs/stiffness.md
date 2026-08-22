@@ -220,21 +220,56 @@ substeps against the lights' twenty-eight, so it does not bind — but a ship wi
 pressurised cupboard could be different, and the telemetry now reports both so it stops being a
 guess.
 
-**What it buys and what it costs**, from `bench floor --size 42000 --ticks 200` — a 43,232-node
-ship with the field's proportion of light fittings, temperatures spread 250–750 K, fifty seconds
-of simulated time, error measured against the uncapped run:
+**What it buys and what it costs**, from `bench floor --size 42000` — a 43,232-node ship with the
+field's proportion of light fittings, temperatures spread 250–750 K, error measured against the
+uncapped run.
+
+**Read the step length first.** A step of `dt` needs `dt · r_max / safety` substeps, so the demand
+— and with it which blocks a given cap reaches and what that cap is worth — is *proportional to
+the step length*. There is no single table here; there is one per step length, and the two that
+matter are the two the shipped profiles run at.
+
+`simulation` and `responsive` run **Frequency 8**, an eighth-second step:
 
 | cap | substeps | ms | speed | blocks raised of 43,232 | worst error | rms error |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| off | 22.97 | 3,472 | 1.0x | 0 | — | — |
-| 32 | 22.97 | 3,533 | 1.0x | 0 | 0 | 0 |
-| 16 | 16.00 | 2,440 | 1.4x | 172 (0.4 %) | 0.034 K | 0.011 K |
-| 8 | 8.00 | 1,316 | **2.6x** | 461 (1.1 %) | 0.144 K | 0.048 K |
-| 6 | 6.00 | 1,027 | 3.4x | 1,450 (3.4 %) | 0.217 K | 0.065 K |
-| **4** | 4.00 | 743 | **4.7x** | 3,648 (8.4 %) | 0.358 K | 0.096 K |
-| 3 | 3.00 | 569 | 6.1x | 5,219 (12.1 %) | 0.594 K | 0.159 K |
-| 2 | 2.00 | 492 | 7.1x | 9,283 (21.5 %) | 1.50 K | 0.442 K |
-| 1 | 1.00 | 317 | **11.0x** | 14,138 (32.7 %) | 5.00 K | 1.68 K |
+| off | 11.48 | 696 | 1.0x | 0 | — | — |
+| 32 | 11.48 | 689 | 1.0x | 0 | 0 | 0 |
+| 16 | 11.48 | 680 | 1.0x | 0 | 0 | 0 |
+| 8 | 8.00 | 508 | 1.4x | 172 (0.4 %) | 0.056 K | 0.016 K |
+| **6** | 6.00 | 436 | **1.6x** | 459 (1.1 %) | 0.113 K | 0.033 K |
+| 4 | 4.00 | 327 | **2.1x** | 461 (1.1 %) | 0.225 K | 0.067 K |
+| 3 | 3.00 | 285 | 2.4x | 1,450 (3.4 %) | 0.345 K | 0.095 K |
+| 2 | 2.00 | 235 | 3.0x | 3,648 (8.4 %) | 0.606 K | 0.152 K |
+| 1 | 1.00 | 191 | 3.6x | 9,283 (21.5 %) | 1.887 K | 0.449 K |
+
+`optimized`, `arcade` and `simlite` run **Frequency 4**, a quarter-second step, and ask twice as
+much of the integrator:
+
+| cap | substeps | ms | speed | blocks raised of 43,232 | worst error | rms error |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| off | 22.97 | 627 | 1.0x | 0 | — | — |
+| 32 | 22.97 | 613 | 1.0x | 0 | 0 | 0 |
+| 16 | 16.00 | 452 | 1.4x | 172 (0.4 %) | 0.052 K | 0.015 K |
+| 8 | 8.00 | 269 | **2.3x** | 461 (1.1 %) | 0.221 K | 0.066 K |
+| **6** | 6.00 | 223 | **2.8x** | 1,450 (3.4 %) | 0.341 K | 0.094 K |
+| 4 | 4.00 | 180 | 3.5x | 3,648 (8.4 %) | 0.601 K | 0.150 K |
+| 3 | 3.00 | 162 | 3.9x | 5,219 (12.1 %) | 0.887 K | 0.218 K |
+| 2 | 2.00 | 139 | 4.5x | 9,283 (21.5 %) | 1.898 K | 0.450 K |
+| 1 | 1.00 | 108 | 5.8x | 14,138 (32.7 %) | 5.915 K | 1.518 K |
+
+> **This page used to carry the second table alone, under no step length, and read it as if it
+> described the default.** It does not: `Frequency` had moved to 8 and the table had not, so every
+> speed-up quoted here was about twice what a `simulation` or `responsive` world would see, and
+> the cap of 6 that `optimized` ships was being credited with 3.4x rather than its own 2.8x. The
+> floored-block counts are what identified it — they reproduce *exactly*, row for row, one cap
+> apart — and `bench floor` now takes `--frequency` and prints the step length above the table so
+> the mistake cannot be made silently again.
+
+The two tables are the same measurement at two step lengths, and they line up: a cap of N at
+Frequency 8 raises the same blocks as a cap of 2N at Frequency 4, because both leave the same
+`C_min = ΣG · StepSeconds / (safety · N)`. **A cap is a statement about a node's time constant
+against the step, not a number of substeps**, which is why it cannot be quoted without one.
 
 The substep column lands on the cap exactly, which is the point of the floor being computed from
 the same rate the estimate reads. A cap of one means one substep, not "about one".
@@ -266,8 +301,8 @@ heat moved per millisecond, depending on which of the two you were unhappy about
 The sweep above diffuses a seeded spread. A ship held at temperature by its own power — which is
 what a field ship is — is the case that decides whether a player ever sees it, and it is what
 `bench floor --driven` measures: the census share of heat producers, at the census wattage, run
-until the hull settles. On a 43,232-block hull over 500 simulated seconds:
-
+until the hull settles. On a 43,232-block hull over 500 simulated seconds, **at `Frequency 4`** —
+the same quarter-second step as the second table above, and not the shipped default:
 
 | cap | speed | blocks raised of 43,232 | peak K | peak error | worst error |
 | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -283,6 +318,34 @@ until the hull settles. On a 43,232-block hull over 500 simulated seconds:
 > Re-run after the census landed and reproduced every temperature to three decimal places, which
 > is the benchmark saying it is deterministic: the hull, the sources and the seeded state are all
 > derived rather than sampled, so two runs differ only by the clock.
+
+At the shipped `Frequency 8`, over **125** simulated seconds rather than 500 — see the note below
+for why not 500:
+
+| cap | speed | blocks raised of 43,232 | peak K | peak error | worst error |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| off | 1.0x | 0 | 1,146.7 | — | — |
+| 16 | 1.0x | 0 | 1,146.7 | 0.000 K | 0 |
+| 8 | 1.3x | 172 | 1,146.7 | +0.010 K | 0.046 K |
+| **6** | **1.6x** | 459 | 1,146.7 | −0.019 K | 0.141 K |
+| 4 | 2.2x | 461 | 1,146.6 | −0.092 K | 0.480 K |
+| 3 | 2.5x | 1,450 | 1,146.6 | −0.172 K | 0.824 K |
+| 2 | 3.2x | 3,648 | 1,145.5 | −1.280 K | 2.084 K |
+| 1 | 4.0x | 9,283 | 1,137.1 | −9.675 K | 10.870 K |
+
+The shape is the same and the peak is unmoved down to a cap of 6, which is the conclusion that
+matters. **The two driven tables are not comparable row for row**: this one is a quarter of the
+simulated time, so its hull is a quarter of the way up a climb that ends far higher, and the late
+transient the 500-second run exists to show is precisely what a 125-second run cannot see.
+
+> **Why not 500 seconds.** `bench floor --driven --ticks 4000` was **OOM-killed at 14 GB**, twice,
+> on the second cap of nine. It is not a large-hull problem: `ThermalSimulation.RunSteps` clears
+> the overheat list once for the whole batch and then appends every step's events to it, so a
+> driven run accumulates `steps × substeps × overheating blocks` records — about 440 million on
+> this hull at 4,000 steps. The shipped mod does not do this; its frame-paced path clears the list
+> at the top of each step, and only the harness's `StepExact` batches. Filed as D19. Until it is
+> fixed the long driven table cannot be reproduced at all, which is worth knowing before anyone
+> quotes the 500-second one.
 
 **Down to a cap of 6 the peak is unmoved.** Below that it is not, and the sign says why: the
 capped hull is *cooler*, which is what a hull that has not finished climbing looks like. The cap

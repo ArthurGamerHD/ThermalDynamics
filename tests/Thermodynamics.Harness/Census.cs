@@ -132,9 +132,20 @@ namespace Thermodynamics.Harness
         /// </summary>
         public static class Field
         {
-            /// <summary>Substeps a full step was measured to need, across the ships seen so far.</summary>
-            public const float LeastDemand = 21.35f;   // STR Hound, 1,293 blocks, 19 Aug
-            public const float MostDemand = 31.25f;    // UNSC Infinity, 42,051 blocks, 18 Aug
+            /// <summary>
+            /// Substeps a full step was measured to need, across the ships seen so far.
+            ///
+            /// <para>
+            /// <b>Both dumps ran <c>Frequency 4</c>, a quarter-second step, and these figures are
+            /// meaningless without that.</b> A step of <c>dt</c> needs <c>dt * r_max / safety</c>
+            /// substeps, so a demand is proportional to the step length: the same two ships at the
+            /// shipped <c>Frequency 8</c> would ask for half of this. <c>CensusFidelityTests</c>
+            /// pins the rate for exactly this reason, and the cap tables in stiffness.md were once
+            /// quoted against the wrong one.
+            /// </para>
+            /// </summary>
+            public const float LeastDemand = 21.35f;   // STR Hound, 1,293 blocks, 19 Aug, Frequency 4
+            public const float MostDemand = 31.25f;    // UNSC Infinity, 42,051 blocks, 18 Aug, Frequency 4
 
             /// <summary>
             /// Share of blocks a cap would raise, from the projection in the 19 Aug single-ship
