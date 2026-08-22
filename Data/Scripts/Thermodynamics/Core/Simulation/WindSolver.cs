@@ -4,20 +4,10 @@ using VRageMath;
 namespace Thermodynamics.Core
 {
     /// <summary>
-    /// The whole wind model in one call: circulation, weather, height, hour and terrain, in, and a
-    /// speed and a direction out.
-    ///
-    /// <para>It exists to be the <b>only</b> place the parts are composed. The game fills the inputs
-    /// from a planet and the offline simulator fills them from an invented one, and both then run
-    /// exactly this code — so a wind measured in game and a wind modelled at a desk are the same
-    /// arithmetic on different numbers, and a difference between them is a difference in the world
-    /// rather than in a second implementation that drifted.</para>
-    ///
-    /// <para>Every factor is reported alongside the answer, because a wind speed on its own cannot
-    /// be argued with. A reading that looks wrong is attributable to the band, the height, the hour
-    /// or the ground by reading the fields, and each is 1 when it has nothing to say.</para>
-    ///
-    /// <para>Pure. No planet, no session, no allocation.</para>
+    /// The whole wind model in one call, and the <b>only</b> place the parts are composed: the game
+    /// and the offline simulator both run exactly this, so a difference between them is a difference
+    /// in the world rather than in a second implementation. Every factor is reported beside the
+    /// answer, each 1 when it has nothing to say. Pure. See environment.md, What the solver computes.
     /// </summary>
     public static class WindSolver
     {
@@ -52,15 +42,9 @@ namespace Thermodynamics.Core
             public float HeightAboveGround;
 
             /// <summary>
-            /// Metres of descent below the surface over which the wind dies, m.
-            ///
-            /// A grid is a body rather than a point, and the height above ground is measured at its
-            /// centre: a ship in the trench it has just dug has its centre under the surface and its
-            /// deck still open to the sky. Fading over the grid's own size answers both — a shallow
-            /// scrape still blows, a shaft does not — where a test on the centre alone would switch
-            /// the wind off the moment the hull's midpoint passed the rim.
-            ///
-            /// Zero or less cuts the wind at the surface exactly.
+            /// Metres of descent below the surface over which the wind dies. Faded over the grid's own
+            /// size rather than switched at its centre, because a ship in the trench it has dug is
+            /// under the surface at its centre and open to the sky at its deck. Zero cuts exactly.
             /// </summary>
             public float BurialDepth;
 

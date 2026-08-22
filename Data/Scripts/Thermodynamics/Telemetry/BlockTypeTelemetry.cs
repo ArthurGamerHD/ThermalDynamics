@@ -61,13 +61,9 @@ namespace Thermodynamics
         public long PeakTemperatureGrid;
 
         /// <summary>
-        /// Substeps one block of this type would need for a full step on its own, from its real heat
-        /// capacity and everything it is coupled to.
-        ///
-        /// A grid takes as many substeps as its stiffest block demands, so this identifies which
-        /// definitions are expensive to place. Demand is not a property of the definition alone — it
-        /// depends on what the block is mounted to and whether it is exposed — so it is recorded as a
-        /// distribution, of which the maximum sets the grid.
+        /// Substeps one block of this type would need for a full step on its own. Recorded as a
+        /// distribution rather than a figure, since demand depends on what the block is mounted to and
+        /// whether it is exposed; the maximum is what sets the grid. See stiffness.md.
         /// </summary>
         public readonly RunningStat SubstepDemand = new RunningStat();
 
@@ -137,12 +133,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// The game builds pasted and projected grids on worker threads, so two placements of the
-        /// same block type can run concurrently. Plain increments lost one against fourteen
-        /// thousand in a field dump — placed 14,273, removed 113, live 14,159 — which is exactly
-        /// what a torn ++ looks like, so the four counters that must reconcile are interlocked.
-        /// The peak is a monotonic race-tolerant max: a stale read can only under-record a peak
-        /// that another thread has already recorded.
+        /// Records a placement. The four counters that must reconcile are interlocked, because the game
+        /// places blocks on worker threads and a plain increment lost one in fourteen thousand. The
+        /// peak is a race-tolerant max, where a stale read can only under-record.
         /// </summary>
         public void OnPlaced(ThermalBlock block)
         {
@@ -192,13 +185,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// The hottest this type has been, without counting an update.
-        ///
-        /// The peak and the temperature range are fed by different passes: the peak by the strided
-        /// sampler, the range by that sampler *and* by the end-of-session sweep that guarantees one
-        /// observation of every block on every grid. A type the sampler never reached therefore
-        /// reported a maximum above its own peak — 327 of 815 types in the 2026-08-20 fleet dump,
-        /// most of them at the 293.15 K blocks are created at.
+        /// The hottest this type has been, without counting an update. Fed by the strided sampler *and*
+        /// by the end-of-session sweep, since a type only the sweep reaches would otherwise report a
+        /// temperature range above its own peak.
         /// </summary>
         public void NotePeak(float temperature, long gridId)
         {

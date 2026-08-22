@@ -854,10 +854,6 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Replaces the coolant loops, preserving the temperature of any loop whose signature
-        /// survives the rebuild.
-        /// </summary>
-        /// <summary>
         /// Pours the coolant of every loop with no successor into the pipes that were carrying it, in
         /// proportion to their capacity. A pipe destroyed with the ring takes no share, which is
         /// right: that coolant left with the block.

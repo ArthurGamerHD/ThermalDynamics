@@ -88,12 +88,9 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// The same bits with the block's state taken as sealing, so a door reads as shut.
-        ///
-        /// This is the block's structure: what it seals when untouched. The room mapper walks these
-        /// rather than the live bits, so a door opening does not change the shape of the grid or
-        /// cost a new flood fill; it is recorded instead as a portal between the regions either
-        /// side of it.
+        /// The same bits with the block's state taken as sealing, so a door reads as shut — the block's
+        /// structure. The room mapper walks these, so a door opening costs a portal rather than a new
+        /// flood fill. See thermal-model.md, Two layers.
         /// </summary>
         public int[] StructuralSurfaces
         {
@@ -139,13 +136,10 @@ namespace Thermodynamics.Core
             return (gridFace >= 0 && gridFace < Face.Count) ? fractions.Mount[gridFace] : 0f;
         }
 
-        /// <summary>Fraction of a grid-space face that seals, 0..1. Zero for an open door.</summary>
         /// <summary>
-        /// How much of a face seals in the block's current state.
-        ///
-        /// Resolved on demand rather than cached: the only difference between two blocks sharing a
-        /// model and an orientation is whether a door is shut, which this already holds as a bool,
-        /// so a door cycling rewrites nothing.
+        /// How much of a grid-space face seals in the block's current state, 0..1. Resolved on demand
+        /// rather than cached: the only difference between two blocks sharing a model and an
+        /// orientation is a bool, so a door cycling rewrites nothing.
         /// </summary>
         public float SealFraction(int gridFace)
         {
@@ -248,12 +242,9 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Recomputes the cached grid-space surfaces. Call after the host changes door state or
-        /// anything else that alters sealing.
-        ///
-        /// The open state comes from the model rather than from clearing every seal bit here: an
-        /// open door still seals along the sides it is mounted in, and stops sealing only across the
-        /// way through.
+        /// Recomputes the cached grid-space surfaces, after the host changes door state or anything
+        /// else that alters sealing. The open state comes from the model rather than from clearing
+        /// seal bits, since an open door still seals along the sides it is mounted in.
         /// </summary>
         public void RefreshSurfaces()
         {

@@ -11,20 +11,10 @@ using VRageMath;
 namespace Thermodynamics
 {
     /// <summary>
-    /// The surface other mods bind to.
-    ///
-    /// Space Engineers mods cannot reference one another's assemblies, so the contract is a
-    /// dictionary of delegates passed by mod message. A consumer registers a handler for
-    /// <see cref="ChannelId"/>, receives <c>Dictionary&lt;string, Delegate&gt;</c>, and casts the
-    /// entries it needs. Every entry is built from whitelisted types only.
-    ///
-    /// Two invariants hold throughout. Nothing throws into a caller: an invalid argument returns
-    /// false or zero. And nothing a consumer does reaches the simulation: callbacks are invoked
-    /// inside a try, and one that throws is dropped with a log entry rather than failing a grid's
-    /// update.
-    ///
-    /// The dictionary is broadcast at session start and re-sent on request, since neither end
-    /// controls mod load order.
+    /// The surface other mods bind to: a dictionary of delegates passed by mod message, since Space
+    /// Engineers mods cannot reference one another's assemblies. Nothing throws into a caller, and
+    /// nothing a consumer does reaches the simulation. **This table is a contract, and api.md is where
+    /// it is written down** — `EveryModApiEntryIsDocumented` holds the two together.
     /// </summary>
     public static class ThermalApi
     {
@@ -181,12 +171,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Watts the grid is venting to its surroundings, and watts it is making.
-        ///
-        /// The pair rather than either alone: venting says nothing about whether a ship is coping
-        /// until it is read against what the ship produces, and a ship in balance vents exactly
-        /// what it makes. Venting is zero while a grid is net absorbing, which a hull in sunlight
-        /// or in warm atmosphere can be.
+        /// Watts the grid is venting to its surroundings, and watts it is making. The pair rather than
+        /// either alone, since a ship in balance vents exactly what it makes. Venting reads zero while
+        /// a grid is net absorbing. See telemetry.md, Grid heat balance.
         /// </summary>
         private static MyTuple<float, float> GetGridHeatBalance(IMyCubeGrid grid)
         {

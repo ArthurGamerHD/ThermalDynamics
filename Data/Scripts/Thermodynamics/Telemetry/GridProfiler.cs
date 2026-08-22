@@ -17,13 +17,9 @@ namespace Thermodynamics
         public readonly TimingStat Solver = new TimingStat("  of which solver");
 
         /// <summary>
-        /// The room pressure sweep, which the host drives rather than the simulation, so it is
-        /// timed by an explicit Begin/End rather than through <see cref="SimulationPhase"/>.
-        ///
-        /// It was unattributed until it was measured: it sits inside a grid's update with two game
-        /// API calls per compartment and a walk over every air vent, and neither is bounded by
-        /// anything the step budget can see. Bounded by compartment count rather than block count,
-        /// so it is small on a ship and unmeasured on a station.
+        /// The room pressure sweep, which the host drives rather than the simulation, so it is timed
+        /// by an explicit Begin/End. Bounded by compartment count rather than block count, which
+        /// nothing the step budget sees can bound. See backlog A4.
         /// </summary>
         public readonly TimingStat RoomPressure = new TimingStat("  of which room pressure");
 
@@ -39,10 +35,7 @@ namespace Thermodynamics
         /// <summary>
         /// Everything that reads a step's output: overheat damage, threshold crossings, heat pump
         /// demand, the mass sweep, the pressure sweep, the hottest-node scan and the health check.
-        ///
-        /// Deliberately off the stepping path, which is why none of it was timed. The consequence
-        /// was that a worst frame in a field dump could attribute five per cent of itself and leave
-        /// the rest unexplained.
+        /// Off the stepping path, and timed anyway, or a worst frame attributes five per cent of itself.
         /// </summary>
         public readonly TimingStat AfterStep = new TimingStat("  of which after step");
 
@@ -72,13 +65,9 @@ namespace Thermodynamics
         public readonly TimingStat Sampling = new TimingStat("    of which telemetry sampling");
 
         /// <summary>
-        /// Whether a tick is what is driving the stages right now.
-        ///
-        /// The one-off build runs the same three stages from the entity's own callback, outside any
-        /// tick and outside the session frame. Recorded into the same rows it made them larger than
-        /// the `grid simulation` row the table indents them under, and added stage milliseconds to
-        /// frames that had not spent them. The build is timed as its own root instead — see
-        /// <see cref="GridTelemetry.BuildTime"/>.
+        /// Whether a tick is what is driving the stages right now. The one-off build runs the same
+        /// three from the entity's own callback, outside any tick, and is timed as its own root in
+        /// <see cref="GridTelemetry.BuildTime"/>. See telemetry.md, What the stages leave over.
         /// </summary>
         public bool InTick;
 

@@ -3,29 +3,10 @@ using System.Collections.Generic;
 namespace Thermodynamics
 {
     /// <summary>
-    /// Runs every grid on every frame, each doing its share of the step it is part way through.
-    ///
-    /// <para>
-    /// A grid advances by one solver step every <c>1 / StepsPerSecond</c> of a second, fifteen frames
-    /// at the default <c>Frequency 4</c>. Each grid does a fifteenth of its step per frame, which
-    /// costs the same in total as the whole step on one frame and is felt as a steady frame rate.
-    /// <c>Frequency</c> and <c>SimulationSpeed</c> set the size of that share through
-    /// <c>StepsPerSecond</c>, so raising either makes every frame do proportionally more work.
-    /// </para>
-    ///
-    /// <para>
-    /// The engine's ten-frame callback cannot do this: it fires every grid together, so a 203-grid
-    /// world did all of its thermal work on one frame in ten — 1,392 of 13,915 frames doing
-    /// anything, averaging 117 ms, two in three exceeding a 60 fps frame. Assigning each grid one of
-    /// ten phases spreads the grids across the cycle but not the work inside each of them, and one
-    /// large grid on its own frame remains a stutter.
-    /// </para>
-    ///
-    /// <para>
-    /// Driven from the session component rather than the grid entity: <c>MyCubeGrid</c> clears
-    /// <c>EACH_FRAME</c> from its update flags whenever its scheduled-work queue empties, so a mod
-    /// depending on that flag silently stops running.
-    /// </para>
+    /// Runs every grid on every frame, each doing its share of the step it is part way through, so the
+    /// cost of a step is spread rather than landed whole. Driven from the session component rather
+    /// than the grid entity, because <c>MyCubeGrid</c> clears <c>EACH_FRAME</c> from its own update
+    /// flags whenever its scheduled-work queue empties. See load-and-hitching.md, 9 and 10.
     /// </summary>
     public static class ThermalGridScheduler
     {
