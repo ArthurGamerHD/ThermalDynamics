@@ -806,6 +806,8 @@ report can be recovered for any row here by reading that file at the row's commi
 | 9 | 2026-08-22 | *(the documentation pass)* | 1,529 | — | +1, `EveryPageHasAChangeLog`. Documentation only: 31 pages merged to 21, every page given a change log, and six published figures corrected. **No duration**, because the run was taken on a different machine from rows 6–8 and a figure that cannot be compared to its neighbours is worse on this table than a dash. No shipped solver code changed, so there is no solver row below. |
 | 10 | 2026-08-22 | *(the standardisation pass)* | 1,533 | 2 m 36 s | +4: `EveryCheckCitedByTheRulesPageResolves`, `EveryRuleCitedByAPageExists`, `TheRulesPageIndexesEveryRuleItStates` and `NoDocCommentDescribesSomethingThatIsNotThere`. Documentation and comments only. **The duration is not comparable to rows 6–8** — this run was serialised under `maxParallelThreads: 1` and taken on a different machine — so it is recorded for the count beside it and nothing else. No shipped solver code changed, so there is no solver row below. |
 
+| 11 | 2026-08-22 | *(the profiles pass)* | 1,520 | 53 s | −13: the five settings profiles are gone and with them `ProfileTests`, replaced by `DefaultSettingsTests`. The mod ships one configuration. Shipped solver defaults moved, so there is a solver row below. |
+
 ### The solver
 
 Headline figures from `bench report --size 32000 --max 125000`, on a 32,800-block census hull in
@@ -821,8 +823,22 @@ flight unless the row says otherwise.
 | 5 | `b7ccf75` | 105.6 ms | 0.206 ms | 1.210 ms | 4.198 ms | 4.282 ms | 1.951 ms | 2.41 |
 | 7 | `c18e3e4` | 85.8 ms | 0.057 ms | 1.095 ms | 3.490 ms | 3.496 ms | 1.616 ms | 2.02 |
 | 8 | *(the 2026-08-22 pass)* | 84.0 ms | 0.075 ms | 1.085 ms | 3.461 ms | 3.510 ms | 1.636 ms | 2.02 |
+| 11 | *(the profiles pass)* | 105.9 ms | 0.123 ms | 2.134 ms | 6.719 ms | 6.583 ms | 3.093 ms | 2.09 |
 
 Row 2 changed no shipped code, so its solver figures are row 1's.
+
+**Row 11's step columns doubled on purpose and its cost did not move.** `Frequency` went from eight
+steps a second to four, so a step covers twice as long and demands twice the substeps — 21.96 to
+43.91 on the 8,000 rung — and `MaxElementVisitsPerStep` was doubled with it, from 1,000,000 to
+2,000,000, to keep the per-frame charge identical. What a player pays is per simulated second, and
+that column is **8.948 ms before against 8.537 ms after** on a machine whose calibration is 23%
+slower. The ship is also still granted everything it asks for: 44 substeps against 43.91 demanded,
+where before it was 22 against 21.96. The doubling is arithmetic, not cost.
+
+**Row 11's machine is not rows 0-8's.** Calibration is up 26% on row 8 and noise is 1.6x, in two
+runs twenty minutes apart, so it is the machine's state rather than one loud sample. Nothing in the
+row is readable against its neighbours except through the per-simulated-second comparison above,
+which is taken from the committed baselines at both commits.
 
 **Row 3's noise column is three times row 1's**, and row 1's is the quietest run this machine has
 recorded. Differences of a few per cent between those two rows are not readable.
@@ -846,8 +862,9 @@ the same report at `c18e3e4` and at the tip, twenty minutes apart on an idle mac
 moved nothing.** Six rows are named as regressions and every one is inside or barely above a noise
 floor that is itself up 30% between the two runs; the ladder rows did not move enough to be named.
 
-`tests/benchmarks/performance.csv` is deliberately left at row 3: re-recording a baseline for a pass
-that moved no solver code would bake that run's machine state into every future comparison.
+**A baseline is re-recorded only when its keys change**, never to refresh its timings: re-recording
+for a pass that moved no solver code bakes that run's machine state into every future comparison.
+`BenchmarkBaselineTests` reads the keys and not the numbers (`M6`), which is what makes that safe.
 
 ### Where a pass moves something the columns cannot see
 
@@ -864,6 +881,10 @@ that moved no solver code would bake that run's machine state into every future 
 | 8 | `RoomMap` retained, B/block at 505,566 | 309 | **229** |
 | 8 | retained total, B/block at 126,731 | 1,095 | **1,023** |
 
+Row 3's first three figures are the `optimized`, `simlite` and `simulation` settings profiles, which
+no longer exist — the mod ships one configuration. They stay because they are what was measured, and
+they cannot be re-taken.
+
 **Row 8's second half changed no code the columns can see and changed what the columns mean.** The
 census hull is the instrument every figure above is taken on, and it was held to `Census.Field` —
 21.35 and 31.25 substeps, from two ships in two live sessions. `StiffnessLab` asks the same question
@@ -878,9 +899,9 @@ temperature figure and no stiffness one. See
 
 ### Recording a row
 
-**Measure the pass against its own start, not against the committed baseline.** That file is pinned
-at row 3, so a diff against it spans every commit since and attributes all of them to the pass that
-ran it. Build the pass's starting commit in a worktree, take a report from it into a scratch
+**Measure the pass against its own start, not against the committed baseline.** The committed file
+is whatever pass last had to re-record it, so a diff against it spans every commit since and
+attributes all of them to the pass that ran it. Build the pass's starting commit in a worktree, take a report from it into a scratch
 directory, then run the tip's report with `--baseline` pointing at that. Twenty minutes apart on one
 idle machine is what makes the two comparable, and it is the only way to say a pass moved nothing.
 
@@ -900,7 +921,8 @@ several times its neighbours' should be re-taken rather than explained.
 
 | Date | Change |
 | --- | --- |
-| 2026-08-22 | Dropped the profile rows from [The configurations](#the-configurations) and from the report, with the five settings profiles they measured. The section is the substep cap alone now, and the committed baseline was re-recorded because its keys changed (`M6`). **The re-recording is this machine on a loud day** — calibration 109.4 ms against row 3's 86.2, noise 0.129 ms against 0.025 — so the file's *timings* are not comparable to the figures quoted on this page, and its keys, which is all `BenchmarkBaselineTests` reads, are. |
+| 2026-08-22 | Recorded row 11 in both tables and re-took the baseline on this machine. The step columns doubled because `Frequency` halved and the element allowance doubled with it; per simulated second is 8.948 ms before against 8.537 ms after, so the pass is cost-neutral and the 8,000-block ship went from 22 substeps granted to 44 with demand doubling to match. The machine is 26% slower than rows 0-8 in two runs twenty minutes apart, which is its state and not a loud sample, so only that one comparison is readable. Corrected two statements that the committed baseline is pinned at row 3; it is re-recorded whenever its keys change, which happened this pass. |
+| 2026-08-22 | Dropped the profile rows from [The configurations](#the-configurations) and from the report, with the five settings profiles they measured. The section is the substep cap alone now, and the committed baseline was re-recorded because its keys changed (`M6`). **The re-recording is 23% slower than row 3** — calibration 109.4 ms against 86.2, noise 0.129 ms against 0.043 — which the row 11 re-take reproduced, so it is the machine and not one loud run. The file's *timings* are not comparable to the figures quoted on this page; its keys, which is all `BenchmarkBaselineTests` reads, are. |
 | 2026-08-22 | Recorded row 10 of [the iteration log](#the-iteration-log), and marked its duration as not comparable rather than leaving a reader to compare it (`M7`). |
 | 2026-08-22 | Absorbed `element-cost.md` as [What a substep costs](#what-a-substep-costs) — the measurement behind the step budget's weighting belongs beside the report that uses it — and `iterations.md` as [The iteration log](#the-iteration-log), which is this report's own trend over time. Converted the three optimisation findings to present tense, with the state they replaced kept in their before/after tables. |
 | 2026-08-21 | Filed one overheat event per block per step rather than per substep, which had been multiplying every reported critical-block count by the grid's substep demand and OOM-killing a 4,000-tick driven run at 14 GB. Read a node's six face weights once in the row fill instead of twice (−12.4% on the fill in air). Let the environment pass write the watts row instead of clearing it first (+0.6% at half a million blocks — a bandwidth effect, not an instruction one). Gave every substep count the step length it was counted against. |
