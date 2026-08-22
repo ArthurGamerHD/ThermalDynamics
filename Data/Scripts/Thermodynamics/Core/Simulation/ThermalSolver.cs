@@ -1979,10 +1979,31 @@ namespace Thermodynamics.Core
                 {
                     float area = nodeExposedArea[i];
 
+                    // The node's six face weights, read once and shared by both sums below.
+                    //
+                    // They used to be read twice, because the two sums are two calls with a row
+                    // store between them and nothing can share loads across that: nodeFaceWeights,
+                    // nodeConvectionRow and nodeSolarRow are all float[] fields, so a compiler
+                    // cannot prove a store to one is not a store to another and has to assume the
+                    // weights moved. Hoisting them here says they did not.
+                    int b = i * Face.Count;
+                    float f0 = nodeFaceWeights[b];
+                    float f1 = nodeFaceWeights[b + 1];
+                    float f2 = nodeFaceWeights[b + 2];
+                    float f3 = nodeFaceWeights[b + 3];
+                    float f4 = nodeFaceWeights[b + 4];
+                    float f5 = nodeFaceWeights[b + 5];
+
                     // One weighting against the wind, read by both the terms that want it. The
                     // convection factor and the friction row asked for the same six-face sum
                     // separately, and in air at speed both of them are live.
-                    float wind = windy || frictionEnabled ? Weighted(i, windWeights) : 0f;
+                    float wind = 0f;
+                    if (windy || frictionEnabled)
+                    {
+                        wind = (f0 * windWeights[0]) + (f1 * windWeights[1])
+                            + (f2 * windWeights[2]) + (f3 * windWeights[3])
+                            + (f4 * windWeights[4]) + (f5 * windWeights[5]);
+                    }
 
                     // A face in the airflow sheds more heat, but still air convects as well, so
                     // the factor spans 0.5..1. It depends on geometry and wind, not temperature.
@@ -1994,9 +2015,18 @@ namespace Thermodynamics.Core
 
                     // Per face, weighted by both incidence against the sun and the fraction of
                     // the face the grid's own shadow leaves lit.
-                    float solar = solarEnabled
-                        ? env.SolarEnergy * nodeEmissivity[i] * WeightedLit(i, sunWeights) * area
-                        : 0f;
+                    float solar = 0f;
+                    if (solarEnabled)
+                    {
+                        float lit = (f0 * nodeSunLit[b] * sunWeights[0])
+                            + (f1 * nodeSunLit[b + 1] * sunWeights[1])
+                            + (f2 * nodeSunLit[b + 2] * sunWeights[2])
+                            + (f3 * nodeSunLit[b + 3] * sunWeights[3])
+                            + (f4 * nodeSunLit[b + 4] * sunWeights[4])
+                            + (f5 * nodeSunLit[b + 5] * sunWeights[5]);
+
+                        solar = env.SolarEnergy * nodeEmissivity[i] * lit * area;
+                    }
                     nodeSolarRow[i] = solar;
 
                     float friction = frictionEnabled ? frictionScale * area * wind : 0f;

@@ -129,7 +129,7 @@ section,case,metric,value,unit,lower_is_better
 "step shape","terms","write-back",0.051785000000000005,"ms",1
 "step shape","terms","first substep",0.38569500000000007,"ms",1
 "step shape","terms","later substep",0.16783708333333336,"ms",1
-"step shape","terms","row fill, first substep only",0.2178579166666667,"ms",1
+"step shape","terms","row fill, first substep only, clamp live",0.2178579166666667,"ms",1
 "overshoot clamp","resolved","step, gated",3.5519350000000003,"ms",1
 "overshoot clamp","resolved","step, always clamped",7.988764999999999,"ms",1
 "overshoot clamp","resolved","substeps granted",19,"",0

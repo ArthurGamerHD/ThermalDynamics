@@ -235,7 +235,7 @@ stage driven on its own clock, and what is left is one substep with the fill in 
 | --- | ---: | --- |
 | prologue and estimate | 0.18 | mirroring the node objects, the conductance totals, the mass floor, the stability walk |
 | write-back | 0.05 | the step's results onto the node objects |
-| **row fill** | **0.22** | **the first substep's share, and none of any later one's** |
+| **row fill** | **0.22** | **the first substep's share, and none of any later one's — measured here at `cap 1`, which is a refused grid, so it is [the clamped fill](#the-fill-is-two-different-fills-and-the-report-measured-the-expensive-one) and about twice what a grid granted its substeps pays** |
 | later substep | 0.17 | one substep once the rows are filled |
 
 The three add to 0.45 against a fitted intercept of 0.49, which is the model reconstructing the fit
@@ -343,6 +343,68 @@ against 0.9682 ms, inside the noise floor.
 > `bench report --diagnostics` set a flag nothing in `PerformanceReport` read, so the whole report
 > ran in the cheap configuration and printed it under a name that said otherwise. The flag now
 > reaches the solver, and this section measures both configurations whether or not it is passed.
+
+### The row fill read every face weight twice
+
+The first substep of a step fills the per-node environment rows every later substep reads. Two of
+those rows are six-term sums over a node's faces — the wind weighting the convection factor and
+the friction row share, and the lit weighting the solar row wants — and both read the same six
+face weights.
+
+They read them **twice**. The two sums were two calls with a row store between them, and nothing
+can share loads across that store: `nodeFaceWeights`, `nodeConvectionRow` and `nodeSolarRow` are
+all `float[]` fields, so a compiler has to assume a store to one may be a store to another and
+reload the weights. Hoisting the six into locals says they did not move.
+
+`bench rowfill` measures the fill directly, and the vacuum row is the control:
+
+| world | before | after | change |
+| --- | ---: | ---: | ---: |
+| flight | 3.602 ns/node | 3.150 ns/node | **−12.5 %** |
+| atmosphere | 3.578 ns/node | 3.178 ns/node | **−12.2 %** |
+| vacuum | 2.586 ns/node | 2.53 ns/node | — |
+
+**Vacuum does not move, and it is the reason to believe the other two.** With no air there is no
+wind sum, so the lit weighting is the only reader of the face weights and there is no second read
+to remove. The saving appears exactly where the mechanism says it should and vanishes exactly
+where it says it should.
+
+#### Measuring the fill by turning the cache off
+
+The report already reports this term, by subtraction: a whole step at one substep, less a
+separately measured prologue, less a separately measured write-back, less a separately measured
+later substep. Four measurements, three subtractions, and the residue carries all four lots of
+noise — fine for a term that is a fifth of a step, useless for judging a change worth a tenth of
+that.
+
+`bench rowfill` measures it directly by turning `PrecomputeEnvironment` off. A step of N substeps
+then pays N fills instead of one, so the difference between the two configurations is N−1 fills:
+the signal is **multiplied** by the substep count rather than divided by it. Both figures come
+from one simulation with the flag flipped between timed blocks, which
+`PrecomputedEnvironmentTests` is what makes legitimate — the flag does not change the answer, so
+it cannot change the state the second block starts from.
+
+#### The fill is two different fills, and the report measured the expensive one
+
+| world | cap | substeps | clamp | one fill | of a step |
+| --- | ---: | ---: | --- | ---: | ---: |
+| flight | — | 19 | off | 3.150 ns/node | 2.9 % |
+| flight | 4 | 4 | live | 4.502 ns/node | 9.9 % |
+| atmosphere | — | 15 | off | 3.138 ns/node | 3.5 % |
+| atmosphere | 4 | 4 | live | 4.058 ns/node | 8.7 % |
+| vacuum | — | 12 | off | 2.622 ns/node | 3.7 % |
+| vacuum | 4 | 4 | live | 3.591 ns/node | 7.0 % |
+
+**A refused grid fills a row an unrefused one does not.** The relaxation row is read only by the
+clamped conduction loop, so it is written only while that clamp is live — which happens when the
+grid is denied the substeps it asked for. It costs a float divide per node, and the capped rows
+measure it at **0.9 to 1.4 ns a node**, a third of the fill.
+
+That is what the report's `row fill` figure of 0.22 ms is measuring. It is taken at `cap 1`, where
+a grid demanding nineteen substeps is granted one, so the clamp is live and the relaxation row is
+in the fill. The uncapped fill — what a grid granted its substeps actually pays — is 0.10 ms on the
+same hull. **Both are right; they are answers to different questions**, and the report's label does
+not say which one it is asking.
 
 ### The watts row was cleared and then written
 

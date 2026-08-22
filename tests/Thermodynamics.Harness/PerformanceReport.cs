@@ -413,6 +413,15 @@ namespace Thermodynamics.Harness
         /// needs, the write-back is the last stage of the step machine driven on its own clock, and
         /// what is left is one substep with the row fill in it.
         /// </para>
+        ///
+        /// <para>
+        /// <b>`cap 1` refuses the grid the substeps it asks for, so the row fill measured here is
+        /// the clamped one.</b> The relaxation row is read only by the clamped conduction loop and
+        /// so is written only while that clamp is live, which costs a float divide per node —
+        /// measured at 0.9 to 1.4 ns a node by <c>bench rowfill</c>, a third of the fill. A grid
+        /// granted its substeps fills three rows here rather than four and pays about half. Both
+        /// are real; they are answers to different questions, and the row below says which.
+        /// </para>
         /// </summary>
         private static void StepTerms(List<ReportRow> rows, string shape, int size, int ticks,
             double[] stepMs, double perSubstep)
@@ -472,7 +481,9 @@ namespace Thermodynamics.Harness
             Add(rows, "step shape", "terms", "write-back", publish, "ms");
             Add(rows, "step shape", "terms", "first substep", firstSubstep, "ms");
             Add(rows, "step shape", "terms", "later substep", perSubstep, "ms");
-            Add(rows, "step shape", "terms", "row fill, first substep only",
+            // Named for the regime rather than for the term: `cap 1` is a refused grid, so this
+            // is the fill with the relaxation row in it. `bench rowfill` reports both regimes.
+            Add(rows, "step shape", "terms", "row fill, first substep only, clamp live",
                 firstSubstep - perSubstep, "ms");
         }
 

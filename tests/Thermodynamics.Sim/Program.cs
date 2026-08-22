@@ -653,6 +653,35 @@ namespace Thermodynamics.Sim
                     return 0;
                 }
 
+                case "rowfill":
+                {
+                    int fillBlocks = size > 0 ? size : 32000;
+                    int fillSteps = ticks > 0 ? ticks : 30;
+                    string fillOut = csvDirectory ?? "out";
+
+                    Console.WriteLine();
+                    Console.WriteLine("== row fill, " + fillBlocks.ToString("n0") + " blocks ==");
+                    Console.WriteLine("  The per-node environment terms a step fills once and every"
+                        + " later substep reads.");
+                    Console.WriteLine("  Measured by turning the cache off, so a step of N substeps"
+                        + " pays N fills instead of one:");
+                    Console.WriteLine("  the difference is N-1 fills, which multiplies the signal"
+                        + " by the substep count rather than dividing it.");
+                    Console.WriteLine();
+
+                    List<RowFillLab.Row> fillRows = RowFillLab.Run(RowFillLab.DefaultWorlds,
+                        RowFillLab.DefaultCaps, fillBlocks, fillSteps,
+                        message => Console.Error.WriteLine("  " + message));
+
+                    Console.WriteLine(RowFillLab.Table(fillRows));
+
+                    Directory.CreateDirectory(fillOut);
+                    string fillPath = Path.Combine(fillOut, "rowfill.csv");
+                    File.WriteAllText(fillPath, RowFillLab.Csv(fillRows));
+                    Console.WriteLine("csv -> " + fillPath);
+                    return 0;
+                }
+
                 case "wattsclear":
                 {
                     List<int> clearLadder = new List<int>();
@@ -878,6 +907,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  bench steppath          a step at the solver, against a step through the host");
             Console.WriteLine("  bench smallgrids        what one grid costs before any of its blocks do");
             Console.WriteLine("  bench wattsclear        what zeroing the watts row costs, up a size ladder");
+            Console.WriteLine("  bench rowfill           what the first substep of a step pays over a later one");
             Console.WriteLine("  bench pace  --size N    does slowing sim and raising transfer save anything");
             Console.WriteLine("  bench reach --length N  how fast heat crosses a grid, against what it costs");
             Console.WriteLine("  bench profiles          the named profiles, measured side by side");

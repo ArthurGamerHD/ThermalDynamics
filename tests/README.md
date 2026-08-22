@@ -300,6 +300,7 @@ dotnet run --project Thermodynamics.Sim -- bench floor --size 42000    # what a 
 dotnet run --project Thermodynamics.Sim -- bench steppath              # a step at the solver, against a step through the host
 dotnet run --project Thermodynamics.Sim -- bench smallgrids            # what one grid costs before any of its blocks do
 dotnet run --project Thermodynamics.Sim -- bench wattsclear            # what zeroing the watts row costs, up a size ladder
+dotnet run --project Thermodynamics.Sim -- bench rowfill               # what the first substep of a step pays over a later one
 dotnet run --project Thermodynamics.Sim -- bench report --csv benchmarks              # the full report
 dotnet run --project Thermodynamics.Sim -- bench report --baseline benchmarks/performance.csv   # and the diff
 ```
