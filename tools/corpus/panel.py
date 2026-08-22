@@ -13,11 +13,19 @@ audited and rebuilt rather than trusted.
 Usage: panel.py <census.csv> <outcomes.csv> [out.csv]
 """
 import csv
+import os
 import sys
 
 CENSUS = sys.argv[1] if len(sys.argv) > 1 else "out/census-2026-08-21/census.csv"
 OUTCOMES = sys.argv[2] if len(sys.argv) > 2 else "out/corpus-2026-08-21/outcomes.csv"
 TARGET = sys.argv[3] if len(sys.argv) > 3 else "tools/corpus/panel.csv"
+
+# ships.csv is the only file carrying each blueprint's path, and the sweep needs it: without a
+# path it has to walk and fully parse all 9,981 corpus blueprints to find 36 ships, with 31
+# workers opening quarter-gigabyte files at once. That is the exact shape CorpusFixture documents
+# as how earlier runs died, and it wedged the first smoke test. With paths the sweep opens 36
+# files. Falls back to the survey's own directory when not given one.
+SHIPS = os.path.join(os.path.dirname(OUTCOMES), "ships.csv")
 
 # Scenarios that must exist for a ship to be eligible: a panel member has to be measurable in
 # every state the sweep will put it in, or its rows are holes in the response surface.
@@ -36,6 +44,13 @@ def key_of(row):
 
 
 census = {key_of(r): r for r in csv.DictReader(open(CENSUS))}
+
+paths = {}
+if os.path.exists(SHIPS):
+    for r in csv.DictReader(open(SHIPS)):
+        paths[key_of(r)] = r.get("path", "")
+else:
+    print(f"warning: {SHIPS} not found — the panel will carry no blueprint paths")
 outcomes = {}
 for row in csv.DictReader(open(OUTCOMES)):
     outcomes.setdefault(key_of(row), {})[row["scenario"]] = row
@@ -163,7 +178,7 @@ take("broad-face", "most exposed area outright — the sun dial acts hardest her
         where=lambda k: powered(k) and affordable(k)), 2)
 
 # ---- write it out ---------------------------------------------------------------------------
-columns = ["ship", "workshop_id", "rule", "why", "large", "blocks", "buried_share",
+columns = ["ship", "workshop_id", "path", "rule", "why", "large", "blocks", "buried_share",
            "exposed_area_m2", "exposure_m2_per_kw", "capacity_j_per_k_per_w",
            "installed_power_w", "waste_full_w", "thrust_n",
            "idle_peak_k", "load_peak_k", "burn_peak_k", "scenarios_critical",
@@ -173,7 +188,8 @@ rows = []
 for k, (rule, note) in picked.items():
     c = census[k]
     rows.append({
-        "ship": k[0], "workshop_id": k[1], "rule": rule, "why": note,
+        "ship": k[0], "workshop_id": k[1], "path": paths.get(k, ""),
+        "rule": rule, "why": note,
         "large": int(number(c, "large")), "blocks": int(number(c, "blocks")),
         "buried_share": round(number(c, "buried_share"), 3),
         "exposed_area_m2": round(number(c, "exposed_area_m2"), 1),
@@ -197,6 +213,9 @@ with open(TARGET, "w", newline="") as handle:
     writer.writeheader()
     writer.writerows(rows)
 
+missing = sum(1 for r in rows if not r["path"])
+if missing:
+    print(f"warning: {missing} panel ships have no blueprint path — the sweep will scan for those")
 print(f"panel of {len(rows)} ships -> {TARGET}")
 print(f"  large grid {sum(1 for r in rows if r['large'])}, "
       f"small grid {sum(1 for r in rows if not r['large'])}")

@@ -458,13 +458,55 @@ namespace Thermodynamics.Harness
         /// across a few thousand distinct types, so this is the difference between a pass that runs
         /// and one that does not.
         /// </summary>
+        private static Func<BlockThermalProperties, BlockThermalProperties> materialOverride;
+
+        /// <summary>
+        /// Rewrites every block's thermal properties as its model is built, for a sweep that has to
+        /// ask what one material dial does to a real hull.
+        ///
+        /// <para>
+        /// **Setting it empties the model cache**, which is the whole difficulty. Models are built
+        /// once and shared because a corpus places millions of blocks across a few thousand types,
+        /// and the derived properties are baked into them — so an override installed after the
+        /// first ship was built would silently apply to nothing, and a sweep would report that
+        /// every dial does nothing. Clearing here means the next ship rebuilds against the new
+        /// override.
+        /// </para>
+        ///
+        /// <para>
+        /// **Set it between passes, never during one.** The cache is concurrent and the sweep is
+        /// parallel; emptying it while workers are building would have them race to rebuild the
+        /// same types, which is wasteful rather than wrong, but a change of override mid-pass would
+        /// mix two worlds into one measurement, which is wrong. Every caller sets it, runs a pass,
+        /// and clears it.
+        /// </para>
+        /// </summary>
+        public static Func<BlockThermalProperties, BlockThermalProperties> MaterialOverride
+        {
+            get { return materialOverride; }
+            set
+            {
+                materialOverride = value;
+                Models.Clear();
+            }
+        }
+
         public static BlockModel Model(GameBlocks.Definition definition)
         {
             BlockModel model;
             if (Models.TryGetValue(definition.SubtypeId, out model)) return model;
 
-            model = BlockModel.Solid(definition.SubtypeId, definition.Size, definition.Mass,
-                BlockThermalDerivation.Derive(definition.Components, definition.TypeId));
+            BlockThermalProperties thermal =
+                BlockThermalDerivation.Derive(definition.Components, definition.TypeId);
+
+            // The one place a sweep can reach a corpus ship's materials. Synthetic rigs go through
+            // Catalog, which has had an override for as long as the profiles have existed; corpus
+            // ships are built here and had none, so every block-level dial — heat capacity,
+            // emissivity, conductivity, the waste fractions — was unmeasurable on a real hull.
+            Func<BlockThermalProperties, BlockThermalProperties> material = materialOverride;
+            if (material != null) thermal = material(thermal);
+
+            model = BlockModel.Solid(definition.SubtypeId, definition.Size, definition.Mass, thermal);
 
             // A definition that declares no mount points has them generated from its model, which
             // is geometry this harness cannot read. Treating that silence as "mounts nowhere" is
