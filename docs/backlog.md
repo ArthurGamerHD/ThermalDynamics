@@ -149,8 +149,11 @@ Ordered by how much a published figure depends on the gap.
 
 ## H. Repository hygiene
 
-| # | Item |
-| --- | --- |
+**Empty.** Every row this section held is done: five dead invariants and a dead batching walk
+deleted, an opt-in whose off position could not be spelled, a resume that counted the wrong thing,
+three sections of the README moved to the audience they were written for, and five merged branches
+gone. The section stays because the class of work recurs — it is where the next dead helper, stale
+count or misfiled page goes.
 
 ---
 
