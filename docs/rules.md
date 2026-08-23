@@ -765,9 +765,13 @@ errors are not the same size. The models disagree by construction, because this 
 pieces of the game's and its cells are coarser than a sloped block, so what matters is the
 direction of a disagreement rather than its existence.
 
-*Applies to:* room pressure, and anything else the game already answers.
+*Applies to:* room pressure, air density, and anything else the game already answers.
 *Checked by:* `RoomPressureTests` — one case per veto — and `RoomAirPressureTests`, which reports
 the one direction that is a fault: air in the game and none here.
+*Also settles:* whether this mod should author its own air densities, since seven of the eight
+shipped worlds have density exactly 1 and nothing derived from it distinguishes them. It should not:
+a density this model invented would disagree with the oxygen system, the wind ceiling and the
+jetpack at once. See [environment.md](environment.md#its-inputs).
 *From:* [document-of-intent.md](document-of-intent.md#what-this-mod-deliberately-is-not),
 [thermal-model.md](thermal-model.md), and `RoomPressure`'s own summary.
 
@@ -1224,6 +1228,7 @@ right and this page is stale**; say so and fix it here.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | `C9` now names air density among the things the game answers, which is what settles whether this mod should author its own against the engine's ([backlog.md](backlog.md) `B22`). |
 | 2026-08-22 | `R3` and `E5` are checked rather than judged ([backlog.md](backlog.md) `F9`). The tree is scanned for four credential shapes, and the scan is itself checked against a value of each shape and against the text this repository legitimately writes. Counts a page states about the panel, about `Cubes.xml` and about the suite's own classes are compared with those datasets; a change log is exempt, because `R12` makes it a record of what was true rather than a claim about now. It found two stale figures on its first run — 432 authored values against 654, and 135 test classes against 160. |
 | 2026-08-22 | Added `R14`, from the standard [document-of-intent.md](document-of-intent.md#what-a-code-comment-is-for) states and a pass that applied it: twenty-four comments were found describing a member that no longer exists, having come to rest on the one below. `NoDocCommentDescribesSomethingThatIsNotThere` catches the shape, and was run against a deliberate orphan in both spellings before being believed — the first version caught only one of the two and missed a real orphan in `CoolantLoopTests`. |
 | 2026-08-22 | Moved *What the extraction changed* into this log, where a record of a revision belongs (`R12`). It held four things, each still true and each now recorded once. **Three *Checked by* citations named something that does not run:** `C6` cited `PhysicsTests`, which is a file whose classes are `ConductionTests` and `StabilityTests`; `D1` attributed three invariants to `LabInvariantTests` that live in `ScreeningTests`; and `D5` cited `SealedBlocksAreRare`, which commit `991d4d9` demoted to an uncalled helper when `CorpusSurvey` absorbed the standalone walks. `R11` is the rule those three produced. **`E1` and `E8` overstated `verdict.py`**, which prints `HOLDS`, `FAILS` or `?` and exits zero either way — both fields now say reported rather than checked. **Two rules came out of the reduction rather than an incident:** `E11` closes `E1`'s hole, and `C8` generalises the gate whose off position cannot be spelled. **Three rules stopped being rules and one changed category** — `R1`, `J1` and `J2` are premises rather than things a change can violate, and `O4` was reclassified low value against a measurement taken the same day. All four dispositions are in [Low value](#low-value). |
