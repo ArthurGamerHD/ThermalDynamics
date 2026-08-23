@@ -10,6 +10,12 @@ here is a shipped-minus-counterfactual difference on the same forty hulls.
 and two stiffened families in series do not add, so the composite is not the sum of the arms and
 this prints all five rather than inviting the subtraction.
 
+**The criteria are the ones that already existed.** A retest that invents a threshold after
+seeing its numbers has fitted the threshold to the data (`E1`), so what this reports per world is
+G1, G2 and G5 exactly as `verdict.py` computes them — idle is safe, load bites, no death spiral —
+on forty ships instead of eight thousand. A world that flips one of them is the finding; a world
+that moves temperatures and flips none is a different and smaller finding, and this prints both.
+
 **Reach is printed first and it is not decoration.** An arm that reaches no block on this set
 reports "no change" in exactly the shape of an arm that reached every block and changed nothing,
 and one of the four reaches nothing here by construction — the corpus filters admit vanilla ships,
@@ -60,12 +66,18 @@ def main():
         print('      dotnet test --filter "FullyQualifiedName~ConductanceRetestWalk"')
         return 1
 
+    # Worlds come from the reach file where there is one: it is written before any scenario runs,
+    # so an interrupted walk still knows how many arms it was going to have. Reading them off the
+    # results instead makes a run that died after one world look like a run with one world (`E4`).
     worlds = []
-    for row in rows:
+    for row in reach + rows:
         if row["world"] not in worlds:
             worlds.append(row["world"])
 
-    ships = {(r["ship"], r["workshop_id"]) for r in rows}
+    # The population is the set the walk was given, which the reach file records before any
+    # scenario runs. Taking it from the results instead shrinks the denominator to whatever
+    # finished, and a partial run then reports itself as complete.
+    ships = {(r["ship"], r["workshop_id"]) for r in (reach or rows)}
     scenarios = []
     for row in rows:
         if row["scenario"] not in scenarios:
@@ -73,6 +85,18 @@ def main():
 
     print(f"{DATA}: {len(rows)} rows, {len(ships)} ships, {len(scenarios)} scenarios, "
           f"{len(worlds)} worlds")
+
+    # **A partial walk says so.** Every figure below is a median over whatever landed, and a walk
+    # killed halfway through a world has measured the ships it happened to reach — which on this set
+    # is not a random half of it (`E4`).
+    per_world = {w: len({(r["ship"], r["workshop_id"]) for r in rows if r["world"] == w})
+                 for w in worlds}
+    short = [w for w in worlds if per_world.get(w, 0) < len(ships)]
+    if short:
+        print()
+        print("PARTIAL — these arms have not finished, and nothing below is a whole result:")
+        for world in short:
+            print(f"    {world}: {per_world.get(world, 0)} of {len(ships)} ships")
     print()
 
     # ---- reach -----------------------------------------------------------------------------
@@ -151,6 +175,37 @@ def main():
             print(line)
 
         print()
+
+    # ---- the criteria, as they already stand ------------------------------------------------
+    # Copied in shape from verdict.py rather than reimagined: same scenarios, same thresholds, same
+    # direction. Forty ships is not the population the thresholds were written for, so what matters
+    # here is the difference between worlds rather than the absolute verdict.
+    print("G1, G2 and G5 per world — the criteria as verdict.py computes them, on this set")
+    print()
+    print(f"{'world':<22}{'G1 critical at idle':>22}{'G2 warm under load':>22}{'G5 recovered':>18}")
+
+    for world in worlds:
+        mine = [r for r in rows if r["world"] == world]
+        idle = [r for r in mine if r["scenario"] == "idle"]
+        loaded = [r for r in mine if r["scenario"] == "full-electrical"]
+        recovery = [r for r in mine if r["scenario"] == "recovery"]
+
+        def share(subset, test):
+            if not subset:
+                return "-"
+            hit = sum(1 for r in subset if test(r))
+            return f"{hit}/{len(subset)} {hit / len(subset):.0%}"
+
+        g1 = share(idle, lambda r: (number(r, "over_critical") or 0) > 0)
+        g2 = share(loaded, lambda r: (number(r, "peak_k") or 0) >= 400.0)
+        g5 = share(recovery, lambda r: number(r, "over_critical") == 0)
+        print(f"{world:<22}{g1:>22}{g2:>22}{g5:>18}")
+
+    print()
+    print("G1 fails above ~1 % critical at idle, G2 below ~20 % reaching 400 K under load, and G5")
+    print("below ~95 % recovering. A world that moves a temperature without moving one of these has")
+    print("moved something a player does not meet.")
+    print()
 
     print("Each cell is the median over the ships the scenario could be read from, and the count")
     print("beside it is how many of them moved at all. Positive means the shipped world is the")
