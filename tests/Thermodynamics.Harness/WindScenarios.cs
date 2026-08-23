@@ -235,10 +235,40 @@ namespace Thermodynamics.Harness
 
             /// <summary>Samples where the wind was over the friction threshold with nothing moving.</summary>
             public int OverFriction;
+
+            /// <summary>
+            /// The same, and the fastest wind, taken only where a grid could be **parked**.
+            ///
+            /// The distinction `B17` turns on. A grid four kilometres up is flying, and the wind it
+            /// meets there is stronger because the boundary-layer profile says so — that is the
+            /// model working. A grid standing on the ground in a wind over the friction threshold
+            /// is the defect the wind field was written to prevent, and nothing had ever separated
+            /// the two.
+            /// </summary>
+            public int OverFrictionNearGround;
+
+            public float MaxSpeedNearGround;
         }
 
-        /// <summary>Speed at which the shipped configuration starts heating a hull by friction.</summary>
-        public const float FrictionThreshold = 100f;
+        /// <summary>
+        /// Height above ground at or below which a grid is taken to be parked rather than flying, m.
+        ///
+        /// A ship is landed within a hull's height of the ground; a hundred metres is generous and
+        /// still an order of magnitude below where the profile does its work.
+        /// </summary>
+        public const float ParkedHeightMetres = 100f;
+
+        /// <summary>
+        /// Speed at which the shipped configuration starts heating a hull by friction.
+        ///
+        /// Read from the settings rather than transcribed. It was a `100f` here against a shipped
+        /// `50f` for as long as both existed, so every scenario judged a parked grid against twice
+        /// the threshold the game uses (`D3`).
+        /// </summary>
+        public static float FrictionThreshold
+        {
+            get { return new ThermalSettings().FrictionAtSpeedsAbove; }
+        }
 
         public static Outcome Run(Scenario scenario)
         {
@@ -265,6 +295,7 @@ namespace Thermodynamics.Harness
             outcome.MinShelter = float.MaxValue;
 
             double total = 0d;
+            float threshold = FrictionThreshold;
 
             for (int i = 0; i < rows.Count; i++)
             {
@@ -285,7 +316,13 @@ namespace Thermodynamics.Harness
                 if (r.Profile > outcome.MaxProfile) outcome.MaxProfile = r.Profile;
 
                 if (r.Speed > r.Ceiling + 1e-4f) outcome.OverCeiling++;
-                if (r.Speed > FrictionThreshold) outcome.OverFriction++;
+                if (r.Speed > threshold) outcome.OverFriction++;
+
+                if (r.HeightAboveGround <= ParkedHeightMetres)
+                {
+                    if (r.Speed > outcome.MaxSpeedNearGround) outcome.MaxSpeedNearGround = r.Speed;
+                    if (r.Speed > threshold) outcome.OverFrictionNearGround++;
+                }
             }
 
             if (rows.Count == 0)
@@ -380,21 +417,25 @@ namespace Thermodynamics.Harness
             sb.Append("\n  Earth, for scale:  6,371.0        -11,000..8,849        ~100,000   3,336.0       5,048\n");
 
             sb.Append("\nScenarios\n");
-            sb.Append("  name                         samples   speed m/s          speed-up      shelter  chan   >ceil  >fric  bad\n");
+            sb.Append("  name                         samples   speed m/s          speed-up      shelter  chan   >ceil  >fric  parked >fric  bad\n");
 
             for (int i = 0; i < scenarios.Count; i++)
             {
                 Outcome o = Run(scenarios[i]);
 
                 sb.Append(string.Format(CultureInfo.InvariantCulture,
-                    "  {0,-26} {1,8:n0}   {2,5:n1}..{3,-6:n1} ({4,4:n1})  {5,4:n2}..{6,-4:n2}  {7,7:n3}  {8,4:n0}  {9,6:n0} {10,6:n0} {11,4:n0}\n",
+                    "  {0,-26} {1,8:n0}   {2,5:n1}..{3,-6:n1} ({4,4:n1})  {5,4:n2}..{6,-4:n2}  {7,7:n3}  {8,4:n0}  {9,6:n0} {10,6:n0} {11,6:n1} {12,5:n0} {13,4:n0}\n",
                     o.Name, o.Samples, o.MinSpeed, o.MaxSpeed, o.MeanSpeed,
                     o.MinSpeedUp, o.MaxSpeedUp, o.MinShelter, o.MaxChannelDegrees,
-                    o.OverCeiling, o.OverFriction, o.Bad));
+                    o.OverCeiling, o.OverFriction, o.MaxSpeedNearGround,
+                    o.OverFrictionNearGround, o.Bad));
             }
 
             sb.Append("\n  >ceil  samples where the modelled wind exceeded the engine's own figure\n");
-            sb.Append("  >fric  samples where a *parked* grid would be friction-heated by wind alone\n");
+            sb.Append("  >fric  samples over the friction threshold at any height\n");
+            sb.Append("  parked the fastest wind, and the samples over the threshold, within "
+                + ParkedHeightMetres.ToString("n0", CultureInfo.InvariantCulture)
+                + " m of the ground — where a grid can be standing still\n");
             sb.Append("  bad    NaN, infinite or negative results — must be zero everywhere\n");
 
             return sb.ToString();

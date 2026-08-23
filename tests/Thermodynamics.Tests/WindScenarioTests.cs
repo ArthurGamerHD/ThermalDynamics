@@ -261,37 +261,49 @@ namespace Thermodynamics.Tests
 
         // ---- the known fault, pinned ------------------------------------------------------------
 
+        /// <summary>
+        /// The engine's figure bounds the wind everywhere, and a storm is the only thing that
+        /// reaches the friction threshold with nothing moving.
+        ///
+        /// <para>
+        /// This replaces a test that pinned the size of a defect. The composed model used to reach
+        /// **187 m/s against a planet rating of 80**, with 143 of that within a hundred metres of
+        /// the ground — the exact failure `WindField` was written to prevent, reopened because no
+        /// unit test could see a compound where every factor was reasonable alone. Two of the three
+        /// causes were faults: the weather's own wind modifier multiplied a share that already
+        /// meant "the worst weather", counting one storm twice, and nothing bounded the composed
+        /// speed at all. Both are fixed, and `&gt;ceil` is zero on every scenario in the matrix.
+        /// </para>
+        ///
+        /// <para>
+        /// The third is not a fault. A storm at the planet's own ceiling is over
+        /// `FrictionAtSpeedsAbove`, and `v_rel` is relative wind by design — a hull parked in a
+        /// hurricane heats like a hull flying at hurricane speed. `StormHeatingTests` measures what
+        /// that costs and it is degrees rather than hundreds of degrees, because the wind that
+        /// heats it is also the wind that cools it. Backlog `B17`, `B18`.
+        /// </para>
+        /// </summary>
         [Fact]
-        public void AStormBlowsRightThroughTheCeilingAndThroughTheFrictionThreshold()
+        public void OnlyAStormReachesTheFrictionThresholdAndNothingPassesTheCeiling()
         {
-            // **This is a known defect, pinned rather than accepted** — backlog B17 and B18.
-            //
-            // Weather at full intensity with a storm's own wind modifier, times the vertical profile,
-            // times terrain speed-up, produces winds over 200 m/s and puts a *parked* grid over the
-            // friction threshold. That threshold is the exact defect WindField was written to
-            // prevent: before it existed, the engine's raw 80 m/s put every stationary ship into
-            // aerodynamic heating.
-            //
-            // The composed model reopened it, and no unit test could see it, because each part is
-            // reasonable alone. Whether the fix is a cap on the composed speed, a lower storm
-            // fraction, or accepting that a storm at altitude is genuinely violent, is a balance
-            // decision. This holds the size of the problem so that whatever is chosen is visible.
             WindScenarios.Outcome storm = One("settings:storm");
 
-            Assert.True(storm.MaxSpeed > 150f,
-                "the storm case is expected to blow out; if it no longer does, this test has "
-                + "outlived the defect and should be replaced: " + storm.MaxSpeed);
+            Assert.Equal(0, storm.OverCeiling);
+            Assert.True(storm.MaxSpeed > WindScenarios.FrictionThreshold,
+                "a storm should still be a storm: " + storm.MaxSpeed);
 
-            Assert.True(storm.OverCeiling > 0,
-                "the engine's figure is no longer a bound once weather and profile compound");
+            Assert.True(storm.OverFrictionNearGround > 0,
+                "a parked grid in the worst weather the game reports is expected to be friction"
+                + " heated; if it no longer is, this test has outlived its subject");
 
-            Assert.True(storm.OverFriction > 0,
-                "a parked grid is being friction-heated by wind alone");
-
-            // And the control: without the storm it does not happen.
+            // And the control: ordinary weather comes nowhere near either bound, at any height or
+            // on any ground. That is what makes the storm case the extreme rather than the norm.
             WindScenarios.Outcome calm = One("vanilla:EarthLike");
             Assert.Equal(0, calm.OverCeiling);
             Assert.Equal(0, calm.OverFriction);
+            Assert.True(calm.MaxSpeedNearGround < WindScenarios.FrictionThreshold * 0.6f,
+                "a fair day near the ground should be well under the threshold: "
+                + calm.MaxSpeedNearGround);
         }
 
         [Fact]

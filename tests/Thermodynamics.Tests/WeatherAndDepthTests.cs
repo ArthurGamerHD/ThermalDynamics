@@ -414,15 +414,38 @@ namespace Thermodynamics.Tests
 
         // ---- wind --------------------------------------------------------------------------
 
+        /// <summary>
+        /// Same ceiling, same intensity, same place: a gale and a fog have to differ, and before the
+        /// modifier existed they could not.
+        ///
+        /// <para>
+        /// **How far they may differ is bounded, and the bound is the model.** The modifier scales
+        /// how fast the share climbs from calm to storm rather than multiplying the finished share,
+        /// so the windiest weather lands exactly on `StormFraction` and the stillest cannot fall
+        /// below `CalmFraction` — the whole spread is the ratio of those two. Multiplying the share
+        /// instead let a sandstorm's 2.25 carry the wind past the planet's own ceiling, which is
+        /// [backlog](../../docs/backlog.md) `B17`.
+        /// </para>
+        /// </summary>
         [Fact]
         public void TheWindFieldTakesTheWeathersOwnWindModifier()
         {
-            // Same ceiling, same intensity, same place: a gale and a fog have to differ, and
-            // before the modifier existed they could not.
             float gale = WindField.Speed(80f, 1f, 0.5f, WeatherResponse.For("SandStormHeavy").WindMultiplier);
             float fog = WindField.Speed(80f, 1f, 0.5f, WeatherResponse.For("FogHeavy").WindMultiplier);
 
-            Assert.True(gale > fog * 4f);
+            Assert.True(gale > fog * 3f,
+                "a sandstorm and a fog should be plainly different weather: "
+                + gale.ToString("n1") + " against " + fog.ToString("n1"));
+
+            float widest = WindField.StormFraction / WindField.CalmFraction;
+            Assert.True(gale / fog <= widest,
+                "no two weathers may differ by more than the storm share over the calm one: "
+                + (gale / fog).ToString("n2") + " against " + widest.ToString("n2"));
+
+            // The windiest weather lands on the storm share and does not pass it, whatever its
+            // modifier says — that is what makes the share mean "the worst weather".
+            Assert.Equal(WindField.Speed(80f, 1f, 0.5f, 1f),
+                WindField.Speed(80f, 1f, 0.5f, 9f), 4);
 
             // And the old three-argument form still means exactly what it did.
             Assert.Equal(WindField.Speed(80f, 1f, 0.5f), WindField.Speed(80f, 1f, 0.5f, 1f), 4);
