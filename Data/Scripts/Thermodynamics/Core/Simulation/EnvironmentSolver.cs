@@ -119,8 +119,18 @@ namespace Thermodynamics.Core
             // Humid air removes heat faster than dry air at the same speed, which the wind term
             // alone cannot express: fog barely moves and still carries heat away.
             float windBonus = 1f + (WindConvectionScale * (float)Math.Sqrt(state.WindSpeed));
-            state.ConvectionCoefficient =
-                planet.ConvectionCoefficient * windBonus * Math.Max(0f, weather.ConvectionMultiplier);
+            float air = planet.ConvectionCoefficient * windBonus
+                * Math.Max(0f, weather.ConvectionMultiplier);
+
+            // **Rock, once there is rock.** A buried grid used to exchange at the planet's own air
+            // coefficient, so digging in was the best cooling in the game — it is a far worse heat
+            // sink than moving air, not an equal one. Neither wind nor weather reaches it, so
+            // neither multiplies it. See PlanetThermalProperties.UndergroundConvectionCoefficient
+            // and backlog A16.
+            float rock = InRock(sample.Depth);
+            state.ConvectionCoefficient = rock <= 0f
+                ? air
+                : air + ((planet.UndergroundConvectionCoefficient - air) * rock);
 
             // ---- solar through atmosphere --------------------------------------------------
             state.SolarEnergy = settings.SolarEnergy
@@ -135,6 +145,21 @@ namespace Thermodynamics.Core
                 && state.WindSpeed > settings.FrictionAtSpeedsAbove;
 
             return state;
+        }
+
+        /// <summary>
+        /// How much of a grid at this depth is against rock rather than against air, 0..1.
+        ///
+        /// A crossover rather than a step, over <see cref="ThermalConstants.UndergroundContactDepth"/>:
+        /// a ship breaking the surface should not have its cooling change by a factor of
+        /// twenty-five between one metre and the next.
+        /// </summary>
+        public static float InRock(float depth)
+        {
+            if (depth <= 0f) return 0f;
+
+            float share = depth / ThermalConstants.UndergroundContactDepth;
+            return share > 1f ? 1f : share;
         }
 
         /// <summary>

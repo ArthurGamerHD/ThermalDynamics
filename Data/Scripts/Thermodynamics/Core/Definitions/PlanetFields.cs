@@ -16,10 +16,12 @@ namespace Thermodynamics.Core
         UndergroundDampingDepth = 256,
         SolarDecay = 512,
         ConvectionCoefficient = 1024,
+        UndergroundConvectionCoefficient = 2048,
 
         All = NightTemperature | DayTemperature | UndergroundTemperature | CoreTemperature
             | SealevelDeadzone | PoleTemperatureDrop | AmbientLagSeconds | AmbientLapseRate
-            | UndergroundDampingDepth | SolarDecay | ConvectionCoefficient,
+            | UndergroundDampingDepth | SolarDecay | ConvectionCoefficient
+            | UndergroundConvectionCoefficient,
     }
 
     /// <summary>
@@ -74,6 +76,9 @@ namespace Thermodynamics.Core
 
             if ((supplied & PlanetField.ConvectionCoefficient) != 0)
                 merged.ConvectionCoefficient = read.ConvectionCoefficient;
+
+            if ((supplied & PlanetField.UndergroundConvectionCoefficient) != 0)
+                merged.UndergroundConvectionCoefficient = read.UndergroundConvectionCoefficient;
 
             return merged.Clamp();
         }

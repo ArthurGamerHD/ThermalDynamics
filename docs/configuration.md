@@ -512,6 +512,7 @@ model they parameterise.
 | `PlanetAmbientLapseRate` | 4 K/km | How fast the air cools with altitude. |
 | `PlanetAmbientLagSeconds` | 45 s | First-order lag on the ambient target, which is what makes the day peak after noon. Absolute seconds against a day that is not — see [environment.md](environment.md#limits-and-open-questions). |
 | `PlanetConvectionCoefficient` | 50 W/(m²·K) | Convective coupling in full atmosphere, scaled down with air density and up with wind. |
+| `PlanetUndergroundConvectionCoefficient` | 2 W/(m²·K) | The same for a grid buried in rock, which is a far worse heat sink than moving air: `2k/D` for rock at 2.5 W/(m·K) over a 2.5 m block. Crossed over the first five metres of burial, and neither wind nor weather multiplies it. |
 | `PlanetSolarDecay` | 0.5 | How fast sunlight is attenuated through the atmosphere. |
 | `PlanetUndergroundTemperature` | 280 K | The rock's own temperature below the damping depth and above the deadzone. |
 | `PlanetUndergroundDampingDepth` | 20 m | Depth over which the day's swing, the weather and the ground table all damp out. Below it, ambient is simply `PlanetUndergroundTemperature`. |
@@ -880,6 +881,7 @@ one with a migration risk — is late rather than first.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Added `PlanetUndergroundConvectionCoefficient`. A buried grid exchanged at the coefficient for moving air, which made digging in the best cooling in the game ([backlog.md](backlog.md) `A16`). |
 | 2026-08-22 | Added [The suit](#the-suit) and its five settings, plus `EnableSuitDamage`. A player in a burning compartment was the one place heat stopped being consequential ([backlog.md](backlog.md) `B10`). The survivable temperature is derived from the rating and the conductance rather than authored, and the three things the model deliberately does not do are `C16`, `C17` and `C18`. |
 | 2026-08-22 | Added `/thermal problems`, and the count of them to `/thermal status`. The two validators the mod carried had never been called from anywhere the game runs, so an emissivity above one or a substep long enough to clamp away a whole step was diagnosed correctly and told to nobody ([backlog.md](backlog.md) `A19`). |
 | 2026-08-22 | Said in [External shadow](#external-shadow) that the shipped occlusion default is the cheapest rung of the ladder those three settings compose, and pointed at [backlog.md](backlog.md) `A9` for the ladder and the default it asks for. The settings table is unchanged — it describes what ships, and what ships has not moved. |

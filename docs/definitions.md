@@ -245,6 +245,7 @@ keyed on a `PlanetGeneratorDefinition` id, falling back to
 | `SealevelDeadzone` | 2000 m | Depth **below sea level** at which core heating starts. Measured from sea level, so a tunnel into a mountain stays cold however deep it goes. Lower it to make reachable mining depths hot. |
 | `SolarDecay` | 0.5 | Fraction of solar energy lost in a full-density atmosphere. |
 | `ConvectionCoefficient` | 50 | W/(m²·K) base heat transfer into the air. |
+| `UndergroundConvectionCoefficient` | 2 | W/(m²·K) for a grid buried in rock. Rock is a far worse heat sink than moving air: `2k/D` for rock at 2.5 W/(m·K) over a 2.5 m block. Crossed over the first five metres of burial, and neither wind nor weather multiplies it. |
 
 The last five rows carry the model's own defaults rather than zero when the definition omits them,
 unlike the rows above. They were added after the planet definitions were written, and zero is a
@@ -332,6 +333,7 @@ Tuning guidance:
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Added `UndergroundConvectionCoefficient`. A buried grid exchanged with rock at the coefficient for moving air, which made digging in the best cooling in the game ([backlog.md](backlog.md) `A16`). |
 | 2026-08-22 | Split `SolarAbsorptivity` off `Emissivity`. One number did both jobs, so a good radiator was forced to be a good absorber — the one combination real spacecraft radiators exist to avoid ([backlog.md](backlog.md) `B27`). Omitting it follows the emissivity, so nothing already authored changes, and zero stays a real answer rather than reading as unset. |
 | 2026-08-22 | Corrected the claim that `Data/Planets.xml` defines only the fallback, so every planet runs Earthlike numbers. The file carries nine entries — `DefaultThermodynamics` plus one per shipped world — generated from each world's own generator definition. Added the standard header and this change log. |
 | 2026-08-22 | Checked all three definition readers against this reference rather than only the block one, and put the newly working heat-source property in it. |

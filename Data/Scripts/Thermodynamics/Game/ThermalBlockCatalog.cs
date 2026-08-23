@@ -409,6 +409,7 @@ namespace Thermodynamics
             read.UndergroundDampingDepth = definition.UndergroundDampingDepth;
             read.SolarDecay = definition.SolarDecay;
             read.ConvectionCoefficient = definition.ConvectionCoefficient;
+            read.UndergroundConvectionCoefficient = definition.UndergroundConvectionCoefficient;
 
             properties = PlanetProperties.Merge(properties, read, definition.Supplied);
 
@@ -477,6 +478,13 @@ namespace Thermodynamics
 
             if (Moved(world.PlanetConvectionCoefficient, shipped.PlanetConvectionCoefficient))
                 properties.ConvectionCoefficient = world.PlanetConvectionCoefficient;
+
+            if (Moved(world.PlanetUndergroundConvectionCoefficient,
+                    shipped.PlanetUndergroundConvectionCoefficient))
+            {
+                properties.UndergroundConvectionCoefficient =
+                    world.PlanetUndergroundConvectionCoefficient;
+            }
 
             if (Moved(world.PlanetSolarDecay, shipped.PlanetSolarDecay))
                 properties.SolarDecay = world.PlanetSolarDecay;

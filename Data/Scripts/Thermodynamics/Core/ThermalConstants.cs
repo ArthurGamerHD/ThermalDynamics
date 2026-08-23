@@ -47,6 +47,16 @@ namespace Thermodynamics.Core
         /// </summary>
         public const float MinimumThermalMass = 0.001f;
 
+        /// <summary>
+        /// Metres of burial over which a grid stops being in air and starts being in rock.
+        ///
+        /// A hull's own depth, near enough: a grid one metre under is mostly still in the open and
+        /// one five metres under is not. It exists so the environment coefficient crosses over
+        /// rather than stepping — a step would put a ship's cooling on a knife edge at the moment
+        /// it broke the surface. See environment.md, Underground.
+        /// </summary>
+        public const float UndergroundContactDepth = 5f;
+
         public static float KelvinToCelsius(float kelvin)
         {
             return kelvin - KelvinOffset;
