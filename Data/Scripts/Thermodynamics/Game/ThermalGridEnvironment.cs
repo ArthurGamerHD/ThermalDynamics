@@ -504,7 +504,17 @@ namespace Thermodynamics
             // than a body and reads false for a ship whose deck is still open to the sky.
             inputs.BurialDepth = BurialDepth();
             inputs.Heating = windHeating;
-            inputs.Roughness = settings.WindRoughnessLength;
+
+            // **The ground the grid is standing on, where the model knows it.** Roughness length
+            // is the one figure in the ground table that is a standard wind-engineering quantity
+            // rather than an opinion, and it is exactly what the material should set: snow drags on
+            // the wind a thousand times less than forest does. It costs nothing — the material was
+            // already read for the temperature offset and cached with it — and the world's own
+            // setting answers for ground the table does not cover. See backlog B16.
+            inputs.Roughness = ground.Roughness > 0f
+                ? ground.Roughness
+                : settings.WindRoughnessLength;
+
             // Capped by the air there is. Several shipped worlds have less atmosphere over their
             // ground than the configured boundary layer is tall, and a profile evaluated in vacuum
             // is a profile of nothing. See WindProfile.GradientHeightIn and backlog B20.
