@@ -29,6 +29,11 @@ whoever touches the file next.
 **Heat is a resource a player reasons about.** Every block has a temperature, that temperature is
 consequential, and a player who is overheating can find out why and do something about it.
 
+**Consequential includes the player.** Heat that only ever damages blocks stops at the airlock, and
+a burning compartment that a person can stand in is the mod saying the temperature does not really
+matter. The suit is what closes that — a machine that holds its occupant and can be beaten, rather
+than a threshold — and it is described in [configuration.md](configuration.md#the-suit).
+
 Three commitments follow, and they are the test for whether a feature belongs:
 
 1. **It has to be legible.** A player must be able to ask "is this ship able to cool itself at all"
@@ -613,6 +618,7 @@ very different warnings on very different blocks.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Said that *consequential* includes the player. Heat that only damages blocks stops at the airlock, and a burning compartment somebody can stand in is the mod contradicting its own purpose ([backlog.md](backlog.md) `B10`, closed). |
 | 2026-08-22 | Stated that the comment standard here is `R14`, and that the check on it catches the failure the length limit prevents. Twenty-four comments in the tree described a member that was no longer there. |
 | 2026-08-22 | Recorded what a code comment is for: it names a definition or an especially complex chunk of code, stands on its own without context from another file, and stays inside two lines — anything longer is a documentation entry in the wrong file. |
 | 2026-08-22 | Recorded what the README is for: a workshop-pasteable front page for players, with one section for modders building on the framework, and deliberately not an explanation of how the mod works inside. Recorded the conflict this creates with the three developer-facing sections the page carries today. |

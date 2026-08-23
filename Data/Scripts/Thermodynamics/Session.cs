@@ -127,6 +127,13 @@ namespace Thermodynamics
         /// <summary>Frames between deferred config writes; one second at 60 fps.</summary>
         private const int SaveFlushFrames = 60;
 
+        /// <summary>
+        /// Frames between suit passes — one real second. The suit is eighty kilograms of mostly
+        /// water and nothing it does resolves faster than that, so a finer cadence would cost more
+        /// and say the same.
+        /// </summary>
+        private const int SuitFrames = 60;
+
         private int framesSinceSaveCheck;
 
         public override void Simulate()
@@ -176,6 +183,13 @@ namespace Thermodynamics
             {
                 ThermalBridges.Update(ThermalGrid.TickSeconds);
                 ThermalTerminal.Update();
+            }
+
+            // The suit, on its own cadence: a player's thermal mass is large enough that a second
+            // is fine resolution, and the pass costs a bounding-box test per live grid per player.
+            if (_frame % SuitFrames == 0)
+            {
+                ThermalCharacters.Step(SuitFrames / 60f * Settings.Instance.SimulationSpeed);
             }
 
             Debug.ShowDebugInfo();
