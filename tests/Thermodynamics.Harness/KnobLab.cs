@@ -87,35 +87,13 @@ namespace Thermodynamics.Harness
             }
         }
 
-        /// <summary>
-        /// Copies a block's properties, so an override never mutates the shared derived instance.
-        /// The models cache is keyed by subtype and handed out to every ship; writing through it
-        /// would leak one configuration's world into the next.
-        /// </summary>
-        private static BlockThermalProperties Copy(BlockThermalProperties source)
-        {
-            return new BlockThermalProperties
-            {
-                Conductivity = source.Conductivity,
-                SpecificHeat = source.SpecificHeat,
-                Emissivity = source.Emissivity,
-                ExposedSurfaceMultiplier = source.ExposedSurfaceMultiplier,
-                ProducerWasteEnergy = source.ProducerWasteEnergy,
-                ConsumerWasteEnergy = source.ConsumerWasteEnergy,
-                CriticalTemperature = source.CriticalTemperature,
-                OverheatDamagePerKelvin = source.OverheatDamagePerKelvin,
-                HeatSourceWatts = source.HeatSourceWatts,
-                ExcludeFromSimulation = source.ExcludeFromSimulation,
-            };
-        }
-
         /// <summary>Builds a dial that acts on every block, so each knob below is one line of intent.</summary>
         private static Func<float, Func<string, string, BlockThermalProperties, BlockThermalProperties>> Block(
             Action<BlockThermalProperties, float> set)
         {
             return level => (typeId, subtype, source) =>
             {
-                BlockThermalProperties copy = Copy(source);
+                BlockThermalProperties copy = source.Clone();
                 set(copy, level);
                 return copy;
             };
@@ -136,7 +114,7 @@ namespace Thermodynamics.Harness
             {
                 if (!string.Equals(blockType, typeId, StringComparison.Ordinal)) return source;
 
-                BlockThermalProperties copy = Copy(source);
+                BlockThermalProperties copy = source.Clone();
                 set(copy, level);
                 return copy;
             };

@@ -74,6 +74,10 @@ namespace Thermodynamics.Sim
                     Console.Write(CoolingLadder.Report());
                     return 0;
 
+                case "conductance":
+                    Console.Write(ModHardwareRetest.Report());
+                    return 0;
+
                 case "blocks":
                     Console.Write(BlockCatalogLab.Report());
                     return 0;
@@ -1003,6 +1007,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  frequency               where substep cost bottoms out against Frequency");
             Console.WriteLine("  reactors                where a vanilla reactor settles, against its waste fraction");
             Console.WriteLine("  coolers                 every block that could cool a reactor, stacked against one");
+            Console.WriteLine("  conductance             what real units did to the mod's own pipes and radiators");
             Console.WriteLine("  blocks                  every block in the game, derived from its build components");
             Console.WriteLine("  corpus [--path <dir>]   real ships read from blueprints, and what they are made of");
             Console.WriteLine("  corpus-fetch            build a corpus from the workshop; --key, --user, --top, --out");
