@@ -146,6 +146,7 @@ Each switch removes exactly its own mechanism and its own cost.
 | `EnableCoolantLoops` | `true` | Coolant loop heat transport. |
 | `EnableRoomAir` | `true` | Sealed rooms hold an air mass that couples their surfaces. |
 | `EnableHeatPumps` | `true` | Heat pumps move heat against a gradient for an electrical cost. Off makes them ordinary blocks. |
+| `EnableSuitDamage` | `true` | Heat can hurt a player, not only a block. Off leaves the suit unsimulated and the pass does nothing. |
 
 ## Solver
 
@@ -533,6 +534,39 @@ Raising the fraction does not change what a pump can do — the shape of the cos
 and is not negotiable — only how far up it the block sits. Lowering the ceiling makes pumps
 predictable near equilibrium at the cost of making cheap, small-gap cooling less rewarding.
 
+## The suit
+
+A player in a burning compartment used to be the one place heat stopped being consequential. These
+settings are the suit that decides otherwise, and they describe a machine rather than a threshold:
+the occupant is held at body temperature by a cooler, so a hot room is survivable while the cooler
+keeps up and lethal past the point where it does not.
+
+| Setting | Default | Effect |
+| --- | --- | --- |
+| `SuitConductance` | 2.5 W/K | How well the room reaches the occupant through a sealed suit. With the rating below, this is what sets the hottest room a player can stand in indefinitely. |
+| `SuitHeatCapacity` | 240,000 J/K | The occupant and the suit together — about eighty kilograms of mostly water. Divided by `HeatTimeScale` like every block's, so a player heats on the same clock as the ship. It is the whole of how long a dash through a hot room can be. |
+| `SuitCoolingWatts` | 500 W | Heat the suit can move, either way. A real EMU's sublimator handles about this. |
+| `SuitCriticalTemperature` | 315.15 K | Interior temperature above which the occupant is being hurt. 42 °C, where heat stroke becomes life-threatening, and five degrees above where the suit holds them. |
+| `SuitDamagePerKelvin` | 1 | Hit points a second per kelvin of overshoot. The same shape a block is damaged with. |
+
+**The survivable room temperature is derived, not authored.** It is where the rating exactly cancels
+what leaks in — `310 + 500/2.5` = **510 K**, about 237 °C — so moving either of the first two moves
+it, and `SuitThermal.SurvivableKelvin` is the one place it is computed.
+
+**An open helmet is a second heat path, not a second rule.** Breathing puts the room against the
+lung surface, which no suit wall stands in the way of, so the conductance goes up tenfold and the
+same cooler is asked to shift ten times as much. There is no separate setting and no separate
+threshold: the survivable temperature falls out at `310 + 500/25` = **330 K**, about 57 °C, which is
+where breathing hot air stops being merely unpleasant.
+
+**Only room air is read.** A player outside a pressurised compartment the mod has mapped is not
+simulated — no planet surface, no vacuum, no open-frame ship. That is the scope of what room air
+already carries, and the rest is [backlog](backlog.md) `C17`.
+
+**The cooler is free**, which is a limit rather than a decision: `IMyCharacter` exposes
+`SuitEnergyLevel` to read and nothing to write, so no mod can charge a player for running it. What
+the mod can see is a flat suit, and a flat suit does not regulate.
+
 ## Wind
 
 The game's own wind figure is `MaxWindSpeed × airDensity` — one number per planet, scaled linearly
@@ -846,6 +880,7 @@ one with a migration risk — is late rather than first.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Added [The suit](#the-suit) and its five settings, plus `EnableSuitDamage`. A player in a burning compartment was the one place heat stopped being consequential ([backlog.md](backlog.md) `B10`). The survivable temperature is derived from the rating and the conductance rather than authored, and the three things the model deliberately does not do are `C16`, `C17` and `C18`. |
 | 2026-08-22 | Added `/thermal problems`, and the count of them to `/thermal status`. The two validators the mod carried had never been called from anywhere the game runs, so an emissivity above one or a substep long enough to clamp away a whole step was diagnosed correctly and told to nobody ([backlog.md](backlog.md) `A19`). |
 | 2026-08-22 | Said in [External shadow](#external-shadow) that the shipped occlusion default is the cheapest rung of the ladder those three settings compose, and pointed at [backlog.md](backlog.md) `A9` for the ladder and the default it asks for. The settings table is unchanged — it describes what ships, and what ships has not moved. |
 | 2026-08-22 | **An existing world keeps the values in its config file.** The file's `Version` is unchanged, because the shape did not change and regenerating it would throw away real customisation — so a world created before this pass still runs at `Frequency` 8 and the old visit budget until someone moves them, and the menu's **Defaults** button is the one action that takes it to the new values. |

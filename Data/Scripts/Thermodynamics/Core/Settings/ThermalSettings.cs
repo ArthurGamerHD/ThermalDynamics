@@ -52,6 +52,12 @@ namespace Thermodynamics.Core
         /// <summary>Damage above a block's critical temperature.</summary>
         public bool EnableDamage = true;
 
+        /// <summary>
+        /// Heat as something that can hurt a player, not only a block. Off leaves the suit
+        /// unsimulated and costs nothing (`C7`).
+        /// </summary>
+        public bool EnableSuitDamage = true;
+
         /// <summary>Coolant loop heat transport.</summary>
         public bool EnableCoolantLoops = true;
 
@@ -135,6 +141,35 @@ namespace Thermodynamics.Core
         /// See configuration.md, Heat pumps.
         /// </summary>
         public float HeatPumpMaxCoefficient = 8f;
+
+        // ---- the suit ---------------------------------------------------------------------
+
+        /// <summary>
+        /// How well the environment reaches the occupant through a sealed suit, W/K. With the
+        /// cooling rating this sets the hottest room a player can stand in indefinitely; see
+        /// <see cref="SuitThermal.SurvivableKelvin"/>.
+        /// </summary>
+        public float SuitConductance = 2.5f;
+
+        /// <summary>
+        /// Heat capacity of the occupant and the suit together, J/K — about eighty kilograms of
+        /// mostly water. Divided by <see cref="HeatTimeScale"/> like every block's, so a player
+        /// heats on the same clock as the ship around them.
+        /// </summary>
+        public float SuitHeatCapacity = 240000f;
+
+        /// <summary>Heat the suit can move, either way, W.</summary>
+        public float SuitCoolingWatts = 500f;
+
+        /// <summary>
+        /// Interior temperature above which the occupant is being hurt, K. 42 C: the core body
+        /// temperature at which heat stroke becomes life-threatening, and only a few degrees above
+        /// where the suit holds them.
+        /// </summary>
+        public float SuitCriticalTemperature = 315.15f;
+
+        /// <summary>Hit points a second per kelvin above <see cref="SuitCriticalTemperature"/>.</summary>
+        public float SuitDamagePerKelvin = 1f;
 
         // ---- solver -----------------------------------------------------------------------
 
@@ -230,6 +265,12 @@ namespace Thermodynamics.Core
             if (HeatPumpCarnotFraction < 0f) HeatPumpCarnotFraction = 0f;
             if (HeatPumpCarnotFraction > 1f) HeatPumpCarnotFraction = 1f;
             if (HeatPumpMaxCoefficient < 0f) HeatPumpMaxCoefficient = 0f;
+
+            if (SuitConductance < 0f) SuitConductance = 0f;
+            if (SuitHeatCapacity <= 0f) SuitHeatCapacity = ThermalConstants.MinimumThermalMass;
+            if (SuitCoolingWatts < 0f) SuitCoolingWatts = 0f;
+            if (SuitCriticalTemperature < 0f) SuitCriticalTemperature = 0f;
+            if (SuitDamagePerKelvin < 0f) SuitDamagePerKelvin = 0f;
             if (MaxElementVisitsPerStep < 0) MaxElementVisitsPerStep = 0;
             if (MaxSubsteps < 1) MaxSubsteps = 1;
             if (MaxSubstepsPerBlock < 0) MaxSubstepsPerBlock = 0;
@@ -261,6 +302,11 @@ namespace Thermodynamics.Core
                     + "can be driven to the ambient floor. Raise Frequency or lower HeatTimeScale.");
             }
             if (VacuumTemperature < 0f) problems.Add("VacuumTemperature cannot be negative.");
+            if (SuitCriticalTemperature > 0f && SuitCriticalTemperature <= SuitThermal.ComfortKelvin)
+            {
+                problems.Add("SuitCriticalTemperature is at or below the temperature the suit holds "
+                    + "its occupant at, so a player is being damaged even when the suit is working.");
+            }
             return problems;
         }
 

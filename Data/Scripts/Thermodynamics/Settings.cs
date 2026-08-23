@@ -109,6 +109,9 @@ namespace Thermodynamics
         [ProtoMember(21)] public bool EnableRoomAir = true;
         [ProtoMember(22)] public bool EnableHeatPumps = true;
 
+        /// <summary>Heat as something that can hurt a player, not only a block.</summary>
+        [ProtoMember(23)] public bool EnableSuitDamage = true;
+
         // ---- solver ------------------------------------------------------------------------
 
         [ProtoMember(30)] public bool ClampConductionOvershoot = true;
@@ -278,6 +281,23 @@ namespace Thermodynamics
         /// <summary>Ceiling on a heat pump's coefficient of performance.</summary>
         [ProtoMember(48)] public float HeatPumpMaxCoefficient = 8f;
 
+        // ---- the suit ----------------------------------------------------------------------
+
+        /// <summary>How well a room reaches the occupant through a sealed suit, W/K.</summary>
+        [ProtoMember(115)] public float SuitConductance = 2.5f;
+
+        /// <summary>Heat capacity of occupant and suit together, J/K, before the clock divides it.</summary>
+        [ProtoMember(116)] public float SuitHeatCapacity = 240000f;
+
+        /// <summary>Heat the suit can move, either way, W.</summary>
+        [ProtoMember(117)] public float SuitCoolingWatts = 500f;
+
+        /// <summary>Interior temperature above which the occupant is hurt, K.</summary>
+        [ProtoMember(118)] public float SuitCriticalTemperature = 315.15f;
+
+        /// <summary>Hit points a second per kelvin above the suit's critical temperature.</summary>
+        [ProtoMember(119)] public float SuitDamagePerKelvin = 1f;
+
         // ---- presentation ------------------------------------------------------------------
 
         /// <summary>Crosshair readout for the block being looked at. Client side.</summary>
@@ -390,6 +410,11 @@ namespace Thermodynamics
             if (HeatPumpCarnotFraction < 0f) HeatPumpCarnotFraction = 0f;
             if (HeatPumpCarnotFraction > 1f) HeatPumpCarnotFraction = 1f;
             if (HeatPumpMaxCoefficient < 0f) HeatPumpMaxCoefficient = 0f;
+            if (SuitConductance < 0f) SuitConductance = 0f;
+            if (SuitHeatCapacity <= 0f) SuitHeatCapacity = 1f;
+            if (SuitCoolingWatts < 0f) SuitCoolingWatts = 0f;
+            if (SuitCriticalTemperature < 0f) SuitCriticalTemperature = 0f;
+            if (SuitDamagePerKelvin < 0f) SuitDamagePerKelvin = 0f;
             if (WindRoughnessLength <= 0f) WindRoughnessLength = 0.0002f;
             if (WindGradientHeight < Core.WindProfile.ReferenceHeight)
                 WindGradientHeight = Core.WindProfile.ReferenceHeight;
@@ -549,6 +574,12 @@ namespace Thermodynamics
             core.RoomAirDensity = RoomAirDensity;
             core.HeatPumpCarnotFraction = HeatPumpCarnotFraction;
             core.HeatPumpMaxCoefficient = HeatPumpMaxCoefficient;
+            core.EnableSuitDamage = EnableSuitDamage;
+            core.SuitConductance = SuitConductance;
+            core.SuitHeatCapacity = SuitHeatCapacity;
+            core.SuitCoolingWatts = SuitCoolingWatts;
+            core.SuitCriticalTemperature = SuitCriticalTemperature;
+            core.SuitDamagePerKelvin = SuitDamagePerKelvin;
 
             core.Derive();
 
@@ -610,6 +641,8 @@ namespace Thermodynamics
                 "RoomConvectionCoefficient", "RoomAirDensity", "SolarOcclusionInterval",
                 "ClimateGroundInfluence", "ClimateWeatherInfluence",
                 "HeatPumpCarnotFraction", "HeatPumpMaxCoefficient",
+                "EnableSuitDamage", "SuitConductance", "SuitHeatCapacity", "SuitCoolingWatts",
+                "SuitCriticalTemperature", "SuitDamagePerKelvin",
                 "WindRoughnessLength", "WindGradientHeight",
                 "WindDiurnalAmplitude", "WindDiurnalCrossover",
                 "WindTerrainInfluence", "WindTerrainRadius", "WindSlopeStrength",
@@ -673,6 +706,12 @@ namespace Thermodynamics
                 case "RoomAirDensity": return RoomAirDensity;
                 case "HeatPumpCarnotFraction": return HeatPumpCarnotFraction;
                 case "HeatPumpMaxCoefficient": return HeatPumpMaxCoefficient;
+                case "EnableSuitDamage": return EnableSuitDamage ? 1f : 0f;
+                case "SuitConductance": return SuitConductance;
+                case "SuitHeatCapacity": return SuitHeatCapacity;
+                case "SuitCoolingWatts": return SuitCoolingWatts;
+                case "SuitCriticalTemperature": return SuitCriticalTemperature;
+                case "SuitDamagePerKelvin": return SuitDamagePerKelvin;
                 case "WindRoughnessLength": return WindRoughnessLength;
                 case "WindGradientHeight": return WindGradientHeight;
                 case "WindDiurnalAmplitude": return WindDiurnalAmplitude;
@@ -765,6 +804,12 @@ namespace Thermodynamics
                 case "RoomAirDensity": RoomAirDensity = value; return true;
                 case "HeatPumpCarnotFraction": HeatPumpCarnotFraction = value; return true;
                 case "HeatPumpMaxCoefficient": HeatPumpMaxCoefficient = value; return true;
+                case "EnableSuitDamage": EnableSuitDamage = value != 0f; return true;
+                case "SuitConductance": SuitConductance = value; return true;
+                case "SuitHeatCapacity": SuitHeatCapacity = value; return true;
+                case "SuitCoolingWatts": SuitCoolingWatts = value; return true;
+                case "SuitCriticalTemperature": SuitCriticalTemperature = value; return true;
+                case "SuitDamagePerKelvin": SuitDamagePerKelvin = value; return true;
                 case "WindRoughnessLength": WindRoughnessLength = value; return true;
                 case "WindGradientHeight": WindGradientHeight = value; return true;
                 case "WindDiurnalAmplitude": WindDiurnalAmplitude = value; return true;
