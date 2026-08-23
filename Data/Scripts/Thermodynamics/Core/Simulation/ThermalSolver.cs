@@ -1540,6 +1540,11 @@ namespace Thermodynamics.Core
             bool all = resyncAll;
             resyncAll = false;
 
+            // A full resync is the only place the lowest critical temperature can rise, because
+            // every other pass here visits only the rows that changed. See
+            // LowestCriticalTemperature, which is documented as a bound for that reason.
+            if (all) lowestCritical = float.PositiveInfinity;
+
             for (int i = 0; i < nodes.Count; i++)
             {
                 ThermalNode node = nodes[i];
@@ -1563,6 +1568,10 @@ namespace Thermodynamics.Core
                 nodeExposedArea[i] = node.ExposedArea;
                 nodeAbsorptivity[i] = node.Thermal.EffectiveSolarAbsorptivity;
                 nodeCritical[i] = node.Thermal.CriticalTemperature;
+                if (nodeCritical[i] > 0f && nodeCritical[i] < lowestCritical)
+                {
+                    lowestCritical = nodeCritical[i];
+                }
 
                 int total = node.TotalExposedFaces;
                 nodeExposedFaces[i] = total;

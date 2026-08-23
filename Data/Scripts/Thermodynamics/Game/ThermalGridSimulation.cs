@@ -242,6 +242,12 @@ namespace Thermodynamics
                 End(profiler == null ? null : profiler.Health);
             }
 
+            // Presentation, and client only: a dedicated server has nobody to show or play it to.
+            if (!MyAPIGateway.Utilities.IsDedicated)
+            {
+                UpdateCues(steps, steps * Simulation.Settings.StepSeconds);
+            }
+
             if (Telemetry.Enabled)
             {
                 Begin(profiler == null ? null : profiler.Sampling);

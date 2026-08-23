@@ -110,8 +110,8 @@ Three tests, in the developer's words:
 
 ## How a player perceives heat
 
-Legibility is the first of the three commitments above, and it has three layers. **Only the first is
-built.**
+Legibility is the first of the three commitments above, and it has three layers. **The first two are
+built; the third is not.**
 
 ### Instruments — built
 
@@ -124,38 +124,61 @@ styling, and the goal is that a player reads a temperature the same way they rea
 without a mod-shaped panel announcing itself. Anything that looks bolted on has failed this even if
 every number in it is right.
 
-### Natural feedback — not built
+### Natural feedback — built
 
 **A player should learn their ship is overheating without looking at an instrument.** This is the
-layer that makes heat a felt resource rather than a readout, and none of it exists: there is no
-sound emitter and no particle or emissive code anywhere in the mod.
+layer that makes heat a felt resource rather than a readout. It is two channels, and the most
+important thing about them is that they are different *kinds* of thing.
 
-**Audio is for the player in the cockpit, and it is a warning rather than an ambience.** Only a
-player at the controls hears it — they are the one who can act. The shape is a short cue with a lead
-on it and a distinct one at the event: *a chirp about three seconds before a block crosses its
-threshold, a double chirp as it crosses.* That is an illustration of the timing rather than the
-final sound.
+**The glow is a property of the block, and it is physics rather than a design choice.** Hot matter
+glows because it is hot, at a temperature that is the same for a jump drive and for a piece of
+armour, and the whole value of the channel is that a player learns to read a colour the way they
+read one on a real forge. It starts at the **Draper point, 798 K** — the temperature at which a
+solid first glows visibly, dull red, in the dark — runs up the Planckian locus through orange, and
+is full at 1,500 K, which is forge-welding heat. Brightness is the black body's own visible-band
+luminance, taken through the eye's transfer curve because the output is a display-referred 0..1
+intensity and the raw luminance spans six decades over that ramp. `Incandescence` holds it and
+`IncandescenceTests` re-derives every constant in it from Planck's law.
 
-**Visuals are a ramp, not a state.** A block at its critical temperature glows fully and distorts the
-air around it in atmosphere; both fall away **linearly** as it cools and are gone entirely at
-ordinary temperatures. The block's own threshold temperature sets the top of that ramp, which is what
-keeps it honest across block types — a block that runs hot by design does not spend its life looking
-like it is failing.
+**The cue is information for the pilot, and it is keyed to the block's own rating.** A short sound
+about three seconds before a block crosses its critical temperature and a distinct one as it
+crosses, heard only by the player at the controls, because they are the only one who can act.
+
+> **This withdraws an earlier statement on this page, in the open (`E11`).** The visual ramp was
+> written here as *keyed to each block's threshold temperature, which is what keeps it honest across
+> block types*. That was wrong, and measuring the shipped definitions is what showed it: block
+> ratings run from 500 K to 1,522 K, so a ramp defined as a fraction of critical puts the same
+> colour on a block at 400 K and a block at 1,200 K, and teaches a player nothing they can carry
+> from one block to the next. The concern behind the old wording was real — a block that runs hot by
+> design should not spend its life looking like it is failing — and the answer is that it *does*
+> glow, because it is hot, and what stays quiet is the cue.
+>
+> The consequence is a real limit rather than a hidden one: **26 % of block types are rated below
+> the Draper point**, so a quarter of the game fails before it ever glows. That is precisely why the
+> cue is keyed to the rating and the glow is not — between them the two channels cover the range no
+> single rule covers.
 
 Both channels are properties of the object rather than marks on the screen, which is what makes them
-read as physics instead of as UI.
+read as physics instead of as UI. The glow is also a real limit on models rather than on physics:
+only a model with an emissive material can carry it, and armour has none.
 
-**Two implementation consequences follow from the three-second lead, and neither is free:**
+**The three-second lead is a prediction, and a straight line is the wrong one.** A block warming
+toward an equilibrium slows down as it approaches, so projecting its current rate forward crosses
+thresholds the block never reaches — every hot-running reactor in the game would be warned about,
+once, for as long as it was warming up, and a cue that cries wolf is worse than no cue. `HeatWarning`
+reads the equilibrium off the rate instead: heat flow out of a block grows with the gap between it
+and everything around it, so the rate decays by a fixed factor each interval and two rates one
+interval apart give both the time constant and the temperature the block is heading for. **A block
+heading somewhere below its rating is not warned about at all**, which is the whole difference. A
+block whose rate is *rising* has no equilibrium to read, so the straight line answers there — it
+under-estimates a runaway, which warns early, and early is the safe direction to be wrong in.
 
-* **It is a prediction, so it needs a rate.** `ThermalNode.LastDeltaTemperature` is a per-step
-  delta, so a rate exists. Extrapolating it linearly will over-warn: a block approaching equilibrium
-  slows down as it gets there, so a linear projection crosses a threshold that the block never
-  reaches. A cue that cries wolf is worse than no cue, so the projection has to account for the
-  approach, or the lead has to be defined some other way.
-* **It runs when nothing is wrong.** Every other presentation feature is off unless something reads
-  it. This one has to be watching in order to warn, which is the tension resolved in the
-  [conflicts table](#where-the-goals-and-the-code-disagree): the reader is the block's own state, and
-  the cost on a ship where nothing is hot must be a threshold test and nothing more.
+**It runs when nothing is wrong.** Every other presentation feature is off unless something reads
+it. This one has to be watching in order to warn, which is the tension resolved in the
+[conflicts table](#where-the-goals-and-the-code-disagree): the reader is the block's own state, and
+the cost on a ship where nothing is hot is **one comparison for the whole grid** — the hottest
+block, which the observation pass already caches, against the lower of the glow's floor and the
+coolest block's watch point.
 
 ### Thermal vision — wanted, method unknown
 
@@ -574,7 +597,7 @@ about intent rather than a decision on the developer's behalf.
 | **"The radiator is a block you plumb"** against the retrofit measurement, where a plumbed ring fits on **15%** of warm hulls and bolting — which fits nearly everywhere — makes more ships worse than better. | **Resolved: cooling is designed in.** A hull laid out with heat in mind is the ship the mod is for, so a 15% retrofit rate is not the failure it looks like — it is the measurement of how many finished hulls happen to have room. What the answer does *not* license is a balance that breaks unmodified ships, which is the floor stated in [Cooling is designed in](#cooling-is-designed-in--and-a-vanilla-ship-still-has-to-survive). `G3` should be scored against designed-in cooling, not against retrofits. |
 | **"Light: a grid's cost is one pass over its links per substep"** against the measured per-node cost of the environment pass. | **The measurement wins and the goal is unchanged.** The step budget already counts `links + 4 × nodes`. The README's wording predates the measurement and understates what a substep does. |
 | **`MaxSubstepsPerBlock 6` recommended in the field** against the shipped default of `0` (off). | **The shipped default stands, and the recommendation is weaker than it was.** Re-measured at the shipped `Frequency 8`, a cap of 6 buys 1.6× rather than 3.4× — the original table was taken at `Frequency 4` and read as if it were the default. Still a clear win, no longer a dramatic one, and open as [backlog](backlog.md) C3. |
-| **Natural feedback against the Light goal.** The README says *"every readout, diagnostic and overlay is off unless something is reading it"*. [Natural feedback](#natural-feedback--not-built) is the first presentation feature meant to be **on** by default — a player who has not opened anything is exactly who it is for. | **Both stand, and the resolution is a definition rather than a compromise.** Feedback that only runs when a block is near its limit *is* "something reading it" — the reader is the block's own state, not a player with a panel open. What it must not do is cost anything on a ship where nothing is hot, which makes the trigger a threshold test on a ratio the solver already computes, and `C7` still applies: it needs its own switch like every other mechanism. |
+| **Natural feedback against the Light goal.** The README says *"every readout, diagnostic and overlay is off unless something is reading it"*. [Natural feedback](#natural-feedback--built) is the first presentation feature meant to be **on** by default — a player who has not opened anything is exactly who it is for. | **Both stand, and the resolution is a definition rather than a compromise.** Feedback that only runs when a block is near its limit *is* "something reading it" — the reader is the block's own state, not a player with a panel open. What it must not do is cost anything on a ship where nothing is hot, which makes the trigger a threshold test on a ratio the solver already computes, and `C7` still applies: it needs its own switch like every other mechanism. **Built, and the cost is one comparison per grid** — the hottest block against the lower of the glow's floor and the coolest block's watch point — with `HeatGlow` and `HeatWarningSound` as the two switches. |
 | **The README's stated audience against what it currently carries.** The README is meant to be pasteable into the workshop and readable by a non-technical player, with one section for modders. It currently also carries a repository layout tree, a building-and-testing section and the documentation index — three sections written for somebody who has cloned the repository. | **The intent is newer than the page, and the page has not been changed to match it.** Nothing is wrong with the content; it is in the wrong place for the audience the page is for. Moving the layout and the build instructions under [development.md](development.md) and reducing the documentation index to one link is the change this asks for, and it is not made here. |
 | **The census hull as "a worst case" against "what a ship does".** It makes 12.1 kW a block against a real median of 335 W — the 96th percentile. | **Undecided, and recorded as such in the code.** `TheCensusHullMakesFarMoreHeatThanARealShip` pins the figure and fails if it changes quietly. It reaches every temperature figure and no stiffness figure. |
 
@@ -596,11 +619,13 @@ is reachable at all. **This is a research task before it is a design task.**
 
 ### 2. The warning cue itself
 
-The *shape* is decided — a lead cue and an event cue, cockpit only, with a linear visual ramp keyed
-to each block's threshold. The cue itself is an open question, and so is the lead: three seconds is
-an illustration, and it collides with the fact that a linear projection over-warns on a block that
-is levelling off. **This wants prototyping in game rather than deciding on paper.**
-[backlog](backlog.md) B25.
+The shape is decided and built, and the projection is no longer the problem it was: a block heading
+somewhere below its rating is not warned about, because the forecast reads the equilibrium off the
+rate rather than extrapolating a straight line. **What is still open is the sound**, which is
+currently two of the game's own destruction cues standing in for a lead chirp and an event chirp,
+and which wants hearing in a cockpit rather than deciding on paper — as does whether three seconds
+is the right lead when the median crossing is nine seconds after the load
+([backlog](backlog.md) `C11`). [backlog](backlog.md) `F15`.
 
 ### 3. How far a client may drift
 
@@ -623,12 +648,14 @@ The two measurements point opposite ways — 0.128 ms for 8,000 blocks may be un
 hand-off, while a 242-grid fleet spent 25.9% of real time in the solver — which argues for across
 grids before within one. [backlog](backlog.md) D19.
 
-### 6. Where the visual ramp starts
+### 6. Where the visual ramp starts — settled
 
-"The threshold temperature should probably dictate much of what that means" is the stated
-expectation, with the *probably* intact. Because radiated power rises as the fourth power, a band
-defined as a fraction of critical is not a band defined as a number of seconds, and the two give
-very different warnings on very different blocks.
+**At the Draper point, 798 K, because the glow is incandescence and not a warning light.** The
+*probably* in "the threshold temperature should probably dictate much of what that means" did not
+survive contact with the shipped definitions: block ratings run from 500 K to 1,522 K, so a ramp
+defined as a fraction of critical shows the same colour at 400 K and at 1,200 K. See
+[Natural feedback](#natural-feedback--built), where the change is argued and the old wording is
+withdrawn.
 
 ---
 
@@ -636,6 +663,7 @@ very different warnings on very different blocks.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | Natural feedback is built ([backlog.md](backlog.md) `B25`), and building it withdrew a statement on this page. The visual ramp is **not** keyed to each block's critical temperature: it is incandescence, absolute, from the Draper point at 798 K up the Planckian locus, because block ratings run from 500 K to 1,522 K and a relative ramp shows the same colour at 400 K and at 1,200 K. The consequence is stated rather than hidden — 26 % of block types fail before they glow — and it is the reason the audio cue is keyed to the rating instead. The three-second lead now reads a block's equilibrium off its own rate, so a block levelling off short of its rating is never warned about; undecided items 2 and 6 move with it. |
 | 2026-08-22 | A coolant loop costs power and makes heat doing it ([backlog.md](backlog.md) `C13`). The rating is derived from the loop the model already describes — 200 kg/s against two bar of head — and the asymmetry with the heat pump is now a stated design: a circulator costs well under a per cent of what it moves against a heat pump's third. |
 | 2026-08-22 | The compatibility floor is measured. All 705 prefabs the game ships, idle, in the environment each category spawns into: 461,428 blocks and not one crossing critical. The same 705 flown hard lose 616, which is what makes the first number a measurement rather than a formality ([backlog.md](backlog.md) `C10`, criterion `G7`). |
 | 2026-08-22 | Said that *consequential* includes the player. Heat that only damages blocks stops at the airlock, and a burning compartment somebody can stand in is the mod contradicting its own purpose ([backlog.md](backlog.md) `B10`, closed). |

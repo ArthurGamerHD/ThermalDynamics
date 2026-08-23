@@ -342,6 +342,20 @@ namespace Thermodynamics
         [ProtoMember(113)] public bool DebugWindIndicator = true;
 
         /// <summary>
+        /// Blocks glow as they heat, from the Draper point up. Client side, and on by default: it
+        /// is what a hot block looks like rather than a diagnostic, and it is the mod's answer to
+        /// *a player should learn their ship is overheating without looking at an instrument*.
+        /// See document-of-intent.md, Natural feedback.
+        /// </summary>
+        [ProtoMember(121)] public bool HeatGlow = true;
+
+        /// <summary>
+        /// A cue in the cockpit as a block comes up on its rating and as it passes it. Client side,
+        /// heard only by the player at the controls, and on by default for the same reason.
+        /// </summary>
+        [ProtoMember(122)] public bool HeatWarningSound = true;
+
+        /// <summary>
         /// Bottom of the room overlay's colour span, K. Separate from the block ramp because room
         /// air spans a few tens of degrees, over which the block ramp gives one shade.
         /// </summary>
@@ -619,6 +633,7 @@ namespace Thermodynamics
         {
             "DebugTextOnScreen", "DebugSolarRaycast", "DebugWindRaycast", "DebugBlockOverlay",
             "DebugWindOverlay", "DebugWindIndicator", "DebugOverlayMaxBoxes",
+            "HeatGlow", "HeatWarningSound",
         };
 
         /// <summary>
@@ -652,6 +667,7 @@ namespace Thermodynamics
                 "DebugTextOnScreen", "DebugSolarRaycast", "DebugWindRaycast",
                 "DebugBlockOverlay", "DebugWindOverlay", "DebugWindIndicator",
                 "DebugOverlayMaxBoxes",
+                "HeatGlow", "HeatWarningSound",
                 "RoomOverlayMinKelvin", "RoomOverlayMaxKelvin",
                 "EnableTelemetry", "TelemetrySampleStride", "TelemetryPlanetProbes",
 
@@ -733,6 +749,8 @@ namespace Thermodynamics
                 case "DebugOverlayMaxBoxes": return DebugOverlayMaxBoxes;
                 case "DebugWindOverlay": return DebugWindOverlay;
                 case "DebugWindIndicator": return Flag(DebugWindIndicator);
+                case "HeatGlow": return Flag(HeatGlow);
+                case "HeatWarningSound": return Flag(HeatWarningSound);
                 case "RoomOverlayMinKelvin": return RoomOverlayMinKelvin;
                 case "RoomOverlayMaxKelvin": return RoomOverlayMaxKelvin;
                 case "EnableTelemetry": return Flag(EnableTelemetry);
@@ -840,6 +858,8 @@ namespace Thermodynamics
                     return true;
                 case "DebugOverlayMaxBoxes": DebugOverlayMaxBoxes = (int)value; return true;
                 case "DebugWindIndicator": DebugWindIndicator = Flag(value); return true;
+                case "HeatGlow": HeatGlow = Flag(value); return true;
+                case "HeatWarningSound": HeatWarningSound = Flag(value); return true;
                 case "EnableTelemetry": EnableTelemetry = Flag(value); Telemetry.SetEnabled(EnableTelemetry); return true;
                 case "TelemetrySampleStride": TelemetrySampleStride = (int)value; return true;
                 case "TelemetryPlanetProbes": TelemetryPlanetProbes = (int)value; return true;
