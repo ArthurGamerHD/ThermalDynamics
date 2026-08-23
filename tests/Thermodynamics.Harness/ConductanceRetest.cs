@@ -106,8 +106,15 @@ namespace Thermodynamics.Harness
             /// <summary>What this arm restores, printed with the results.</summary>
             public string Restores;
 
-            /// <summary>True for the shipped world, which is the control every arm is read against.</summary>
-            public bool IsShipped;
+            /// <summary>
+            /// True for the control, which is the world as published and the one every arm is read
+            /// against. It is not a flag anyone sets — the control is exactly the world that
+            /// rewrites nothing.
+            /// </summary>
+            public bool IsShipped
+            {
+                get { return Reaches == null; }
+            }
 
             /// <summary>
             /// Which blocks this arm rewrites, or null for the control. Separate from the rewrite
@@ -149,7 +156,6 @@ namespace Thermodynamics.Harness
             {
                 Name = "shipped",
                 Restores = "nothing: real materials everywhere, the world as published",
-                IsShipped = true,
             });
 
             worlds.Add(new World
@@ -171,7 +177,8 @@ namespace Thermodynamics.Harness
             worlds.Add(new World
             {
                 Name = "thrust-and-reactors",
-                Restores = "quality 1 for thrusters and reactors, which the conversion took to 0.6×",
+                Restores = "quality 1 for thrusters and reactors, which the conversion took to "
+                    + "0.23× on an ion thruster, 0.60× on a hydrogen one and 0.52× on a reactor",
                 Reaches = (typeId, subtype) =>
                     !IsModBlock(subtype) && WasBest(typeId, subtype),
             });

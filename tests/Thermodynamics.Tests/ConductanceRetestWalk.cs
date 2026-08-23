@@ -96,6 +96,17 @@ namespace Thermodynamics.Tests
             }
 
             List<ConductanceRetest.World> worlds = ConductanceRetest.All();
+
+            // Exactly one control, or the comparison has no baseline — or two, in which case one of
+            // the arms is silently being read against itself.
+            int controls = 0;
+            foreach (ConductanceRetest.World world in worlds)
+            {
+                if (world.IsShipped) controls++;
+            }
+
+            Assert.Equal(1, controls);
+
             Dictionary<string, int> reach = Reach(worlds, ships);
 
             foreach (ConductanceRetest.World world in worlds)
@@ -355,7 +366,8 @@ namespace Thermodynamics.Tests
                 Blueprints.MaterialOverride = null;
             }
 
-            Progress(world.Name + " wrote " + written + " rows, resumed past " + skipped + " ships");
+            Progress(world.Name + " (" + world.Restores + ") wrote " + written + " rows, "
+                + "resumed past " + skipped + " ships");
         }
 
         private static string Row(ConductanceRetest.World world, int retuned,
