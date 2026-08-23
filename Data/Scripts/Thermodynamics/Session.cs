@@ -51,6 +51,10 @@ namespace Thermodynamics
         {
             Instance = this;
 
+            // Before the settings load below, because that load derives and validates them: a
+            // problem found before the writer is installed is still recorded, but nobody sees it.
+            Core.ThermalValidation.Writer = WriteValidationProblem;
+
             NetworkAPI.Init(ModID, Settings.Name);
             NetworkAPI.LogNetworkTraffic = true;
 
@@ -371,13 +375,39 @@ namespace Thermodynamics
                     + ", stride " + Telemetry.SampleStride
                     + ", grids " + ThermalGrid.LiveGrids.Count
                     + ", block models " + ThermalBlockCatalog.ModelCount
-                    + ", bridges " + ThermalBridges.Count);
+                    + ", bridges " + ThermalBridges.Count
+                    + ", validation problems " + Core.ThermalValidation.Count);
                 return;
             }
 
-            Reply("commands: status | settings | set <name> <value> | save"
+            // A count in the status line is what makes anyone ask; this is the answer. The problems
+            // are already in the log, and a mod author reading a chat window is not reading a log.
+            if (lowered == "problems")
+            {
+                List<string> found = Core.ThermalValidation.Problems;
+                if (found.Count == 0)
+                {
+                    Reply("no definition or settings problems reported this session");
+                    return;
+                }
+
+                for (int i = 0; i < found.Count; i++) Reply(found[i]);
+                return;
+            }
+
+            Reply("commands: status | problems | settings | set <name> <value> | save"
                 + " | sync [fetch] | overlay | menu | telemetry on | telemetry off"
                 + " | stride <n> | dump");
+        }
+
+        /// <summary>
+        /// The log line a validator's finding becomes. Warning rather than Info: every one of them
+        /// is an authored value the mod is about to work around, and an author grepping a log for
+        /// their own mod's name is who it is for.
+        /// </summary>
+        private static void WriteValidationProblem(string line)
+        {
+            MyLog.Default.Warning("[" + Settings.Name + "] " + line);
         }
 
         /// <summary>

@@ -552,6 +552,11 @@ namespace Thermodynamics
 
             core.Derive();
 
+            // After the derive, because two of the problems are about derived quantities, and after
+            // Clamp above for the same reason the block check runs before its clamp: what is worth
+            // telling an administrator is what the clamp could not fix. See ThermalValidation.
+            Core.ThermalValidation.Check(core);
+
             Telemetry.SampleStride = TelemetrySampleStride;
 
             // The loop and planet values are laid over the definitions at cache time, so moving one
