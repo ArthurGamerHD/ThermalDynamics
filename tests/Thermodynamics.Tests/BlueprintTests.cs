@@ -15,6 +15,10 @@ namespace Thermodynamics.Tests
     /// blueprint that half-parses does not throw: it yields a ship with some of its blocks, which
     /// simulates perfectly well and answers a different question from the one being asked. Every
     /// test here is about the *yield* rather than about the physics.
+    ///
+    /// Every test here is synthetic, and deliberately: the end of the chain — a real subscribed
+    /// blueprint building a simulation that steps — is `CorpusSurvey`, which builds every ship in
+    /// the corpus, probes that it steps and counts joints, rooms and small grids in one pass.
     /// </summary>
     public class BlueprintTests
     {
@@ -188,106 +192,6 @@ namespace Thermodynamics.Tests
             Assert.Empty(Blueprints.Read(file));
             Assert.True(Blueprints.Unreadable().ContainsKey(file),
                 "the file should have been recorded as unreadable");
-        }
-
-        /// <summary>
-        /// The end of the chain: a ship read from a real subscribed blueprint builds a simulation
-        /// that steps. Everything the lab does rests on this, and it is the one thing a synthetic
-        /// blueprint cannot check — real ships have subgrids, rotors, oddly shaped blocks and
-        /// twenty years of accumulated definition quirks in them.
-        /// </summary>
-        // Retired as a standalone corpus walk: CorpusSurvey builds every ship, checks the
-        // node-count accounting, probes that it steps, and counts joints, rooms and small grids
-        // as part of its single pass. The synthetic tests in this class are untouched.
-        internal static void ARealSubscribedShipBuildsASimulationThatSteps()
-        {
-            if (CorpusFixture.Files().Count == 0) return;
-
-            List<string> wrong = new List<string>();
-            int stepped = 0;
-            int withJoints = 0;
-            int smallGrid = 0;
-            int withRooms = 0;
-
-            // Building a hull and stepping it a minute is the whole cost of this test, and ships
-            // share nothing with each other, so it fans out and only the tallying happens here.
-            foreach (Built built in CorpusFixture.Sweep("real-ships", Inspect))
-            {
-                if (built.Complaint != null) wrong.Add(built.Complaint);
-                if (built.SmallGrid) smallGrid++;
-                if (built.Stepped) stepped++;
-                if (built.Joints) withJoints++;
-                if (built.Rooms) withRooms++;
-            }
-
-            Assert.Empty(wrong);
-
-            Assert.True(stepped > 0,
-                "no ship in the corpus changed temperature over sixty seconds, so the step path "
-                + "may not be running at all.");
-
-            Assert.True(withJoints > 0,
-                "not one ship in the corpus resolved a mechanical joint. Subgrids are common "
-                + "enough that this means the joint linker has stopped finding them.");
-
-            // Small grids multiply every mass by roughly a hundredth, so a grid-size misread is
-            // one of the loudest possible faults and one nothing else on real ships would see.
-            Assert.True(smallGrid > 0,
-                "not one small-grid ship in the corpus. Either the corpus is unrepresentative or "
-                + "small grids have stopped being read.");
-
-            // Same argument for sealed interiors: rooms are where the air model attaches, and a
-            // corpus of built ships with no room in any of them means the room mapper is silent.
-            Assert.True(withRooms > 0,
-                "not one ship in the corpus mapped a sealed room.");
-        }
-
-        /// <summary>What one real ship turned out to be once it was built and stepped.</summary>
-        private class Built
-        {
-            public string Complaint;
-            public bool SmallGrid;
-            public bool Stepped;
-            public bool Joints;
-            public bool Rooms;
-        }
-
-        /// <summary>Builds one corpus ship, steps it a minute in shadow, and reports what it is.</summary>
-        private static Built Inspect(Blueprints.Ship ship)
-        {
-            Built built = new Built { SmallGrid = !ship.Large };
-            ShipAssembly assembly = ship.Build();
-
-            // **Every block the reader counted has to have become a node.** The parser proves its
-            // own count against the raw XML elsewhere, and the runner proves the nodes it has can
-            // be stepped — but nobody stood between the two, and that gap is exactly where a hull
-            // quietly loses a third of its armour. GridBuilder.Place returns no success signal, so
-            // a rejected block is counted by the reader and absent from the solver with nothing to
-            // say so.
-            if (assembly.NodeCount != ship.Blocks)
-            {
-                built.Complaint = ship.Name + " read " + ship.Blocks + " blocks and built "
-                    + assembly.NodeCount + " nodes";
-                return built;
-            }
-
-            AssemblyRunner runner = new AssemblyRunner(assembly);
-            runner.Environment = t => Worlds.Shadow();
-
-            // The old version of this test asserted the hottest block was above zero Kelvin after
-            // one sample, which every block satisfies at its build temperature of 293.15 K whether
-            // the solver stepped or not. A temperature that moved is the thing worth asserting.
-            float before = assembly.Hottest() == null ? 0f : assembly.Hottest().Temperature;
-            runner.Run(60f);
-            built.Stepped = runner.Hottest[runner.Hottest.Count - 1] != before;
-
-            // Subgrids are the reason a real ship is worth testing at all — a rotor head or a
-            // piston tip is a separate grid, and the bridge between them is the only path heat has
-            // across the joint. The corpus is full of them; if it suddenly is not, the joint linker
-            // has stopped resolving.
-            built.Joints = assembly.Bridges.Count > 0;
-            built.Rooms = assembly.RoomCount > 0;
-            return built;
         }
     }
 }
