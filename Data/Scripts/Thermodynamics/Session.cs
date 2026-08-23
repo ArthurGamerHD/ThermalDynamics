@@ -1,13 +1,18 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 using Draygo.BlockExtensionsAPI;
+using Sandbox.Game.Entities;
 using Sandbox.ModAPI;
 using SENetworkAPI;
 using VRage.Game;
 using VRage.Game.Components;
+using VRage.Game.Entity;
+using VRage.Game.ModAPI;
 using VRage.Input;
 using VRage.Utils;
+using VRageMath;
 
 namespace Thermodynamics
 {
@@ -199,6 +204,7 @@ namespace Thermodynamics
         {
             ThermalHud.Draw();
             ThermalDebugView.Draw();
+            ThermalGlow.Draw();
             WindOverlay.Draw();
             ThermalDebugPanel.Update();
         }
@@ -409,9 +415,111 @@ namespace Thermodynamics
                 return;
             }
 
+            if (lowered.StartsWith("heat"))
+            {
+                RunHeat(lowered.Length > 4 ? lowered.Substring(4).Trim() : "");
+                return;
+            }
+
             Reply("commands: status | problems | settings | set <name> <value> | save"
                 + " | sync [fetch] | overlay | menu | telemetry on | telemetry off"
-                + " | stride <n> | dump");
+                + " | stride <n> | heat <k> | dump");
+        }
+
+
+        /// <summary>
+        /// Heats the block under the crosshair to a temperature, so the presentation channels can
+        /// be seen without building a ship that overheats.
+        ///
+        /// <para>
+        /// **This exists because two channels went a long time unverified.** The glow and the
+        /// warning cue only appear in the last hundred kelvin before a block fails, which is a state
+        /// no ordinary session reaches on demand — so the only way anyone found out whether they
+        /// worked at all was to build something that cooks itself. It sets a temperature and
+        /// nothing else: the solver takes it from there and cools it back down, which is also what
+        /// makes it safe to leave in.
+        /// </para>
+        ///
+        /// <para>
+        /// Server side, because a temperature a client invents is one the next step overwrites.
+        /// </para>
+        /// </summary>
+        private static void RunHeat(string argument)
+        {
+            if (MyAPIGateway.Session == null || !MyAPIGateway.Session.IsServer)
+            {
+                Reply("heat is server side");
+                return;
+            }
+
+            ThermalGrid thermals;
+            ThermalBlock block;
+            if (!Aimed(out thermals, out block))
+            {
+                Reply("aim at a block on a simulated grid");
+                return;
+            }
+
+            float kelvin;
+            float critical = block.Node.Thermal.CriticalTemperature;
+
+            if (argument.Length == 0)
+            {
+                // No number given, so the useful one: hot enough to glow at full and be in the last
+                // moments before it fails, which is the state both channels are about.
+                kelvin = critical > 0f ? critical : 1200f;
+            }
+            else if (!float.TryParse(argument, NumberStyles.Float, CultureInfo.InvariantCulture,
+                out kelvin) || kelvin <= 0f)
+            {
+                Reply("usage: /thermal heat [kelvin]");
+                return;
+            }
+
+            block.Node.Temperature = kelvin;
+
+            Reply(block.Block.BlockDefinition.Id.SubtypeName + " set to "
+                + kelvin.ToString("n0") + " K, rated " + critical.ToString("n0") + " K");
+        }
+
+        /// <summary>The block under the crosshair, and the grid simulating it.</summary>
+        private static bool Aimed(out ThermalGrid thermals, out ThermalBlock block)
+        {
+            thermals = null;
+            block = null;
+
+            IMyPlayer player = MyAPIGateway.Session == null ? null : MyAPIGateway.Session.Player;
+            if (player == null || player.Character == null) return false;
+
+            MatrixD head = player.Character.GetHeadMatrix(true);
+            LineD ray = new LineD(head.Translation, head.Translation + (head.Forward * 150));
+
+            List<MyLineSegmentOverlapResult<MyEntity>> hits =
+                new List<MyLineSegmentOverlapResult<MyEntity>>();
+            MyGamePruningStructure.GetTopmostEntitiesOverlappingRay(ref ray, hits);
+
+            for (int i = 0; i < hits.Count; i++)
+            {
+                IMyCubeGrid grid = hits[i].Element as IMyCubeGrid;
+                if (grid == null) continue;
+
+                Vector3I? cell = grid.RayCastBlocks(ray.From, ray.To);
+                if (!cell.HasValue) continue;
+
+                ThermalGrid found = grid.GameLogic == null
+                    ? null
+                    : grid.GameLogic.GetAs<ThermalGrid>();
+                if (found == null) continue;
+
+                ThermalBlock bound = found.GetAtCell(cell.Value);
+                if (bound == null || bound.Node == null) continue;
+
+                thermals = found;
+                block = bound;
+                return true;
+            }
+
+            return false;
         }
 
         /// <summary>

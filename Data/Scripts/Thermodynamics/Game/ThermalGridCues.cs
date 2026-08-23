@@ -59,6 +59,21 @@ namespace Thermodynamics
         /// <summary>Blocks this grid has written an emissive on, so it can put them back.</summary>
         private readonly Dictionary<Vector3I, float> glowing = new Dictionary<Vector3I, float>();
 
+        /// <summary>
+        /// The blocks currently glowing, for <see cref="ThermalGlow"/> to draw.
+        ///
+        /// Separate from <see cref="glowing"/>, which is a record of what has to be put back on the
+        /// model: this is rebuilt whole each scan and is empty whenever nothing is hot, so the draw
+        /// pass reads a count and returns.
+        /// </summary>
+        private readonly List<LitBlock> litBlocks = new List<LitBlock>();
+
+        /// <summary>The blocks this grid is glowing, empty when none is.</summary>
+        public IList<LitBlock> LitBlocks
+        {
+            get { return litBlocks; }
+        }
+
         private readonly List<Vector3I> faded = new List<Vector3I>();
 
         private int stepsSinceCues;
@@ -90,6 +105,8 @@ namespace Thermodynamics
                 cueState.Clear();
                 return;
             }
+
+            litBlocks.Clear();
 
             // The one test a hull with nothing hot on it pays for. HottestNode is refreshed by the
             // observation pass and is an array read there, so this costs a comparison.
@@ -133,6 +150,14 @@ namespace Thermodynamics
                 if (glowing.TryGetValue(cue.Block.Position, out written)) Fade(cue.Block.Position);
                 return;
             }
+
+            // Recorded before the emissive is attempted, because four fifths of block models have
+            // nowhere to write one and those are exactly the blocks the drawn glow exists for.
+            LitBlock lit = new LitBlock();
+            lit.Position = cue.Block.Position;
+            lit.Kelvin = cue.Kelvin;
+            lit.Glow = glow;
+            litBlocks.Add(lit);
 
             MyCubeBlock cube = FatBlockAt(cue.Block.Position);
             if (cube == null) return;
@@ -209,6 +234,8 @@ namespace Thermodynamics
         /// <summary>Puts every glowing block back and forgets them.</summary>
         private void ClearGlow()
         {
+            litBlocks.Clear();
+
             if (glowing.Count == 0) return;
 
             faded.Clear();

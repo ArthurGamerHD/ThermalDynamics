@@ -339,8 +339,7 @@ namespace Thermodynamics
 
                 Vector3D delta = centre - eye;
 
-                Vector3 half = ((Vector3)(bound.Block.Max - bound.Block.Min + Vector3I.One))
-                    * (gridSize * 0.5f);
+                Vector3 half = FaceQuad.HalfExtents(bound.Block.Min, bound.Block.Max, gridSize);
 
                 if (!Wanted(ref delta, half.Length(), ref camera)) continue;
 
@@ -351,7 +350,7 @@ namespace Thermodynamics
                     Vector3 localNormal = Face.Normals[face];
                     Vector3D normal = Vector3D.TransformNormal(localNormal, gridMatrix);
 
-                    Vector3D position = centre + (normal * Extent(ref half, ref localNormal));
+                    Vector3D position = centre + (normal * FaceQuad.Extent(ref half, ref localNormal));
                     if (Vector3D.Dot(normal, position - eye) >= 0) continue;
 
                     float dot = Vector3.Dot(localNormal, sun);
@@ -370,7 +369,7 @@ namespace Thermodynamics
                     colour.A = (byte)(SurfaceAlpha * 255f);
 
                     Vector3 localLeft, localUp;
-                    Tangents(face, out localLeft, out localUp);
+                    FaceQuad.Tangents(face, out localLeft, out localUp);
 
                     Vector3 left = (Vector3)Vector3D.TransformNormal(localLeft, gridMatrix);
                     Vector3 up = (Vector3)Vector3D.TransformNormal(localUp, gridMatrix);
@@ -383,39 +382,13 @@ namespace Thermodynamics
                         eye + ((position - eye) * BandScale),
                         left,
                         up,
-                        (float)(Extent(ref half, ref localLeft) * BandScale),
-                        (float)(Extent(ref half, ref localUp) * BandScale),
+                        (float)(FaceQuad.Extent(ref half, ref localLeft) * BandScale),
+                        (float)(FaceQuad.Extent(ref half, ref localUp) * BandScale),
                         Vector2.Zero,
                         BlendTypeEnum.PostPP);
 
                     billboards++;
                 }
-            }
-        }
-
-        /// <summary>The block's half-extent along a single-axis unit vector.</summary>
-        private static float Extent(ref Vector3 half, ref Vector3 axis)
-        {
-            return (half.X * Math.Abs(axis.X)) + (half.Y * Math.Abs(axis.Y)) + (half.Z * Math.Abs(axis.Z));
-        }
-
-        /// <summary>The two axes spanning a face, in block-local space.</summary>
-        private static void Tangents(int face, out Vector3 left, out Vector3 up)
-        {
-            switch (Face.Axis(face))
-            {
-                case 0:
-                    left = Vector3.Up;
-                    up = Vector3.Backward;
-                    return;
-                case 1:
-                    left = Vector3.Right;
-                    up = Vector3.Backward;
-                    return;
-                default:
-                    left = Vector3.Right;
-                    up = Vector3.Up;
-                    return;
             }
         }
 
