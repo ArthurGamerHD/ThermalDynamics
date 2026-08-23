@@ -187,5 +187,99 @@ namespace Thermodynamics.Harness
             return worlds;
         }
 
+
+        // ---- what the conversion did to one block ------------------------------------------------
+
+        /// <summary>What the conversion did to one block type.</summary>
+        public class Move
+        {
+            public string Subtype;
+            public string TypeId;
+
+            /// <summary>Effective conductance before the conversion, W/(m·K).</summary>
+            public float Before;
+
+            /// <summary>Effective conductance now, W/(m·K).</summary>
+            public float After;
+
+            public float Ratio
+            {
+                get { return Before <= 0f ? 0f : After / Before; }
+            }
+        }
+
+        /// <summary>
+        /// The blocks worth naming in the conversion's own table, chosen to span it: the
+        /// calibration point, both ends of the thruster family, the two power sources, the block
+        /// that carries most of the population's waste heat, and a few ordinary hull blocks.
+        ///
+        /// <para>
+        /// **The list is by hand and the figures are not.** A subtype the installed game does not
+        /// carry comes back absent rather than faked, because these subtype ids are written here and
+        /// the game renames blocks between versions — a candidate that vanished quietly would turn
+        /// the table into a shorter table that still reads as complete.
+        /// </para>
+        /// </summary>
+        private static readonly string[] Notable =
+        {
+            "LargeBlockArmorBlock",
+            "LargeHeavyBlockArmorBlock",
+            "LargeBlockLargeThrust",
+            "LargeBlockLargeHydrogenThrust",
+            "LargeBlockLargeAtmosphericThrust",
+            "LargeBlockLargeGenerator",
+            "LargeBlockBatteryBlock",
+            "LargeJumpDrive",
+            "LargeBlockSolarPanel",
+            "LargeBlockGyro",
+            "LargeBlockCockpit",
+            "LargeBlockConveyor",
+            "LargeBlockLargeContainer",
+        };
+
+        /// <summary>
+        /// What the conversion did to each notable block, measured off the shipped definitions
+        /// rather than stated. Empty when the game is not installed.
+        /// </summary>
+        public static List<Move> Moves()
+        {
+            List<Move> moves = new List<Move>();
+            if (!GameBlocks.IsInstalled) return moves;
+
+            Dictionary<string, GameBlocks.Definition> definitions = GameBlocks.BySubtype();
+
+            for (int i = 0; i < Notable.Length; i++)
+            {
+                GameBlocks.Definition definition;
+                if (!definitions.TryGetValue(Notable[i], out definition)) continue;
+
+                BlockThermalProperties thermal = Blueprints.Model(definition).Thermal;
+
+                moves.Add(new Move
+                {
+                    Subtype = Notable[i],
+                    TypeId = definition.TypeId,
+                    Before = PreConversion(definition.TypeId, Notable[i]),
+                    After = thermal.Conductivity * ThermalConstants.ConductionScale,
+                });
+            }
+
+            return moves;
+        }
+
+        /// <summary>Subtypes named above that the installed game does not carry.</summary>
+        public static List<string> Missing()
+        {
+            List<string> missing = new List<string>();
+            if (!GameBlocks.IsInstalled) return missing;
+
+            Dictionary<string, GameBlocks.Definition> definitions = GameBlocks.BySubtype();
+            for (int i = 0; i < Notable.Length; i++)
+            {
+                if (!definitions.ContainsKey(Notable[i])) missing.Add(Notable[i]);
+            }
+
+            return missing;
+        }
     }
 }

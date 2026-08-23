@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Thermodynamics.Core;
 using Thermodynamics.Harness;
 using Xunit;
@@ -132,6 +133,51 @@ namespace Thermodynamics.Tests
             Assert.True(ring.SourceKelvin > 310f,
                 "the ring rig's source only reached " + ring.SourceKelvin + " K, so it is not under "
                 + "load and the comparison means nothing");
+        }
+
+        /// <summary>
+        /// **The conversion's four headline moves, pinned.** The published table in
+        /// <c>definitions.md</c> had four rows and they described only the families
+        /// <c>Cubes.xml</c> authors; the change reached every vanilla block through derivation, and
+        /// its two largest moves are on blocks that table never named.
+        ///
+        /// <para>
+        /// Measured 2026-08-23. Armour is unmoved, which is the calibration and the only exact
+        /// figure here. The ion thruster fell to **0.23×** — the largest loss the conversion caused,
+        /// and the reason a burning hull is hotter than it was. The jump drive rose to **3.51×** —
+        /// the largest gain, on the block type carrying 71.3 % of the population's full-load waste.
+        /// Bands rather than points, because these follow from build costs the game may re-balance.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheConversionsHeadlineMovesAreWhereTheyWereMeasured()
+        {
+            if (!GameBlocks.IsInstalled) return;
+
+            Dictionary<string, ConductanceRetest.Move> moves =
+                new Dictionary<string, ConductanceRetest.Move>(StringComparer.Ordinal);
+            foreach (ConductanceRetest.Move move in ConductanceRetest.Moves())
+            {
+                moves[move.Subtype] = move;
+            }
+
+            Assert.Empty(ConductanceRetest.Missing());
+            Assert.True(moves.Count >= 13, "the conversion table lost rows: " + moves.Count);
+
+            // The calibration: ordinary armour is exactly where it was, which is what made the
+            // conversion possible without re-balancing every hull.
+            Assert.Equal(1.00f, moves["LargeBlockArmorBlock"].Ratio, 2);
+            Assert.Equal(1.00f, moves["LargeHeavyBlockArmorBlock"].Ratio, 2);
+
+            Assert.InRange(moves["LargeBlockLargeThrust"].Ratio, 0.18f, 0.30f);
+            Assert.InRange(moves["LargeJumpDrive"].Ratio, 3.0f, 4.0f);
+            Assert.InRange(moves["LargeBlockLargeGenerator"].Ratio, 0.45f, 0.60f);
+            Assert.InRange(moves["LargeBlockBatteryBlock"].Ratio, 0.45f, 0.60f);
+
+            // And the thruster family does not move together, which is why "thrusters went 0.6x"
+            // was only ever true of the hydrogen ones.
+            Assert.InRange(moves["LargeBlockLargeHydrogenThrust"].Ratio, 0.55f, 0.65f);
+            Assert.InRange(moves["LargeBlockLargeAtmosphericThrust"].Ratio, 1.15f, 1.40f);
         }
     }
 }

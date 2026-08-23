@@ -170,12 +170,60 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
+
+        /// <summary>
+        /// What the conversion did to a spread of vanilla blocks, measured rather than argued.
+        ///
+        /// <para>
+        /// It belongs beside the rigs because it is the same question one step out: the rigs price
+        /// the two families <c>Cubes.xml</c> authors, and this is what the same change did to the
+        /// blocks whose conductance is *derived* from what they are built out of — which is most of
+        /// the game, and which no table anywhere stated until the retest went looking.
+        /// </para>
+        /// </summary>
+        public static string Table()
+        {
+            System.Text.StringBuilder text = new System.Text.StringBuilder();
+            List<ConductanceRetest.Move> moves = ConductanceRetest.Moves();
+
+            text.AppendLine("What the conversion to real W/(m K) did, block by block");
+            text.AppendLine();
+            text.AppendLine("Before it, every block took one of two conductances: 120 from the 0.6");
+            text.AppendLine("fall-through, or 200 for Thrust, Reactor and the mod's own blocks at quality 1.");
+            text.AppendLine();
+            text.AppendLine(string.Format("{0,-36} {1,8} {2,8} {3,8}",
+                "block", "before", "now", "ratio"));
+
+            for (int i = 0; i < moves.Count; i++)
+            {
+                ConductanceRetest.Move move = moves[i];
+                text.AppendLine(string.Format("{0,-36} {1,8:0} {2,8:0.0} {3,8:0.00}x",
+                    move.Subtype, move.Before, move.After, move.Ratio));
+            }
+
+            List<string> missing = ConductanceRetest.Missing();
+            if (missing.Count > 0)
+            {
+                text.AppendLine();
+                text.AppendLine("named here and not in the installed game: "
+                    + string.Join(", ", missing.ToArray()));
+            }
+            else if (moves.Count == 0)
+            {
+                text.AppendLine("  (no game installed, so nothing could be derived)");
+            }
+
+            text.AppendLine();
+            return text.ToString();
+        }
+
         /// <summary>The table, with the shipped and pre-conversion rows paired so the delta reads.</summary>
         public static string Report()
         {
             List<Row> rows = Measure();
             System.Text.StringBuilder text = new System.Text.StringBuilder();
 
+            text.Append(Table());
             text.AppendLine("What the real-unit conversion did to the mod's own cooling hardware");
             text.AppendLine();
             text.AppendLine("One family moves per rig and everything else stays shipped, because the");
