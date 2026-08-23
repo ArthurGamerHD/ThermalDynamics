@@ -38,7 +38,7 @@ paid where they buy something.
 
 ### 0. Define good balance, before collecting anything
 
-Six criteria, each a number the matrix can produce and each able to fail. These are proposals to
+Eight criteria, each a number the matrix can produce and each able to fail. These are proposals to
 argue with — the point is that they are written down before the data is, so a run that fails them
 is a finding rather than an excuse to move a threshold.
 
@@ -51,10 +51,37 @@ is a finding rather than an excuse to move a threshold.
 | **G5** | **No death spiral.** A ship past critical that throttles to idle returns below critical in bounded time. | recovery time unbounded, or damage continues after the load stops | A player must be able to react to a warning. |
 | **G6** | **Affordable across the population.** Substep demand and step cost at p95/p99 of the corpus, not at the mean. | p99 substep demand exceeds what the shipped caps grant | The census hull is one point; the tail is what stutters. |
 | **G7** | **A ship the game spawns survives arrival.** Every vanilla prefab, idle, in the environment its category spawns into, for five simulated minutes, loses no block. | any prefab loses a block | The stated compatibility floor. A mod that destroys the game's own cargo ships as they arrive is broken however good its physics is, and this is the one criterion measured on ships nobody chose to put in a corpus. |
+| **G8** | **The significant event lands in the window, and the hull still settles inside a session.** Under sustained full electrical load, the median time from load to the first block crossing critical falls in 120–300 simulated seconds — and at idle, the median time for a hull to reach equilibrium stays under an hour. | the crossing median falls outside 120–300 s, or the idle settling median exceeds 3,600 s | The mod's own stated balance target, which had never been a scored criterion. Both halves are one criterion because one clock governs both: the dial that puts the block in the window pushes the hull out of the session, and a route that satisfies either half alone is not a route. |
 
 **G7 holds.** All 705 prefabs, 461,428 blocks, idle: not one crosses critical, let alone loses a
 block. The same 705 flown hard lose 616, which is the control rather than the criterion — see
 [balance.md](balance.md#the-compatibility-floor-holds).
+
+**G8 was written here before the sweep that tests it**, on the same terms as `G7`, and its five
+decisions could each have gone the other way:
+
+* **Ships, not block types.** The reading that opened [backlog.md](backlog.md) `C12` timed each of
+  the 72 block types that cannot cool themselves from 293 K, alone, and found none in the window. A
+  player never meets a block alone — they meet it bolted to a hull that conducts heat out of it —
+  and the whole projected route to the window works *through* that conduction. A criterion over
+  isolated blocks would be insensitive to the dial the answer is expected to be.
+* **The crossing, not the loss.** The crossing is when a readout changes and a player can act; the
+  loss is a median 37 s later ([balance.md](balance.md#how-long-a-block-has-after-it-crosses)). The
+  window is about the event a player is meant to notice and respond to, so it is the crossing.
+* **Full electrical load.** The state `G2` is already scored in, and the one a player reaches by
+  turning everything on rather than by flying in a particular direction. Thrust would make the
+  answer a property of a heading.
+* **The median, not a share.** A window is two-sided, so it needs a point statistic rather than a
+  count, and the median is what the population tables already carry.
+* **An hour for the hull, stated as a number rather than as "too long".** The shipped clock settles
+  a hull at idle in about 1,560 s, and `HeatTimeScale` ≈ 11 alone pushes that to eight hours. A hull
+  that has not reached equilibrium within a session never has a steady state a player can read; an
+  hour is the round figure inside a session and outside the shipped value by more than a factor of
+  two, so it can fail without being a restatement of the status quo.
+
+**G8 is not yet measured.** Every configuration in `knobs.csv` moves one dial, and the projected
+route — conduction up and the clock down together — is an extrapolation across an interaction
+nothing has run. What tests it is the paired sweep.
 
 **G7 was written here before it was measured**, which is the whole of `E11` — a criterion added after
 the numbers arrive is not a criterion. Four choices in it were decisions rather than conveniences,
@@ -428,6 +455,7 @@ hold the suite hostage.
 | Date | Change |
 | --- | --- |
 | 2026-08-22 | Removed *subgrids are read as separate ships* from the open questions. It was not true and had not been for as long as `ShipAssembly` existed: a blueprint's grids are built as one machine and bridged at their mechanical joints. 747 of the first 1,002 ships of the 2026-08-22 sweep hold more than one grid and 695 resolved joints, 29,604 of them. What was genuinely missing is that nothing checked a bridge *moves heat* — `CorpusSurvey` counted them — and `SubgridBridgeTests` does. |
+| 2026-08-23 | Added `G8`, the significance window, **before the sweep that tests it** (`E11`): under sustained full electrical load the median crossing falls in 120–300 s, and at idle the median hull settles inside an hour. The mod's own balance target had never been a scored criterion, which is [backlog.md](backlog.md) `C12`. Both halves are one criterion because one clock governs both time constants, and the five decisions inside the wording are written out beside it. |
 | 2026-08-22 | Added `G7`, the compatibility floor, **before measuring it** (`E11`): every vanilla prefab, idle, in the environment its category spawns into, for five simulated minutes, loses no block. The stated intent that a ship the game spawns must survive arrival had never been a scored criterion and had never been measured, which is [backlog.md](backlog.md) `C10`. The four decisions inside the wording are written out beside it, because a criterion whose terms are settled after the data is not one. |
 | 2026-08-22 | Said that `BlueprintTests` is synthetic throughout. The real-ship case it used to end on was demoted to an uncalled helper when `CorpusSurvey` absorbed it, and has now been deleted ([backlog.md](backlog.md) `H4`); the claim is `CorpusSurvey`'s step probe, over every ship rather than one. |
 | 2026-08-22 | Finished the split this page began: the three sections still narrating what an early run found are gone. *The first full cycle* reported 32 subscribed ships as a provisional read of G1, G2 and G5, which the 8,142-hull survey in [balance.md](balance.md#the-population) has since answered over a population — quoting the small run beside the large one is `E4` in slow motion. *Where the numbers stand* was the same 32-ship run on one hull. *Sealed blocks: three harness faults* narrated three defects that are fixed and pinned; what survives is the standing hazard, restated as what a definition does **not** mean, which is the form `D1` and `ScreeningTests` hold it in. Three struck-through entries left *Open questions*, and *What exists now* stopped quoting a 32-ship yield as the corpus. |
