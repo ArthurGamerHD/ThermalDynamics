@@ -127,6 +127,25 @@ namespace Thermodynamics.Harness
         public static readonly string[] Scenarios = { "idle", "full-electrical", "recovery" };
 
         /// <summary>
+        /// The load grid's scenarios, which are the three above plus the other bound on a loaded
+        /// ship.
+        ///
+        /// <para>
+        /// **`full-electrical` charges every jump drive for as long as the run lasts, and no ship
+        /// does that** — a drive charges once and then holds. Drives are 71.3 % of the corpus's
+        /// full-load waste heat, so that one choice is most of the shape of every load result, and
+        /// a grid that asks whether the mod makes too much heat cannot rest on it. Running both
+        /// states over the same cells makes the load a bracket rather than a number, and it is what
+        /// tells apart *the mod makes twice the heat it should* from *the scenario over-states the
+        /// load*. See [backlog.md](../../docs/backlog.md) `F13`.
+        /// </para>
+        /// </summary>
+        public static readonly string[] LoadScenarios =
+        {
+            "idle", "full-electrical", "full-electrical-charged", "recovery",
+        };
+
+        /// <summary>
         /// **The four environments the cost question is actually decided in.** `G6` is a cost
         /// criterion and the three scenarios above are all vacuum, where substeps are cheap: corpus
         /// p99 is 6.02 against 64 granted. In air they are not — the panel measures 36.71 at p95
@@ -343,6 +362,14 @@ namespace Thermodynamics.Harness
             // recommendation resting on an interpolation, and the last one of those was wrong by a
             // factor of five (`E1`), so the band is measured rather than read off the fit.
             new[] { 1f, 110f, 0.5f }, new[] { 1f, 100f, 0.5f }, new[] { 1f, 80f, 0.5f },
+
+            // **The conduction route, brought into this grid so it meets the same two load cases.**
+            // The pair grid chose these four against `full-electrical` alone, which charges every
+            // jump drive for the whole run — so their `G8` pass is conditional on that bound in
+            // exactly the way this grid's own is, and a comparison of the two routes that scored
+            // one against both bounds and the other against one would be no comparison at all.
+            new[] { 4f, 120f, 1f }, new[] { 4f, 100f, 1f },
+            new[] { 4f, 90f, 1f }, new[] { 4f, 80f, 1f },
         };
 
         /// <summary>The load grid, control first.</summary>

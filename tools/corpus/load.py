@@ -12,6 +12,12 @@ median recovery inside 3,600 s. Both go as one over the clock, so the clock alon
 that reaches the window has to move that ratio, and this prints it beside the two medians it comes
 from rather than leaving it to be divided out.
 
+**Two load cases, printed as a pair.** `full-electrical` charges every jump drive for the whole run
+and no ship does that; `full-electrical-charged` is the same load with the drives full. Drives are
+71.3 % of the corpus's full-load waste heat, so the two are bounds on what a loaded ship makes
+rather than one being right — and which side of the window each lands on is what says whether the
+mod makes too much heat or the scenario asks for too much.
+
 **Read the crossing beside the share.** A hull only crosses if its equilibrium is past critical, and
 equilibrium moves with the load — so cutting the load lengthens the crossing *and* empties the set
 that has one, which is the censoring that excluded conductivity ×8. Raising it does the opposite and
@@ -100,45 +106,60 @@ def main():
 
     print(f"The load against the clock — {DATA}, {ships} hulls, {len(cells)} cells")
     print()
-    print(f"{'cell':>18} {'waste':>6} {'clock':>6} | {'crossing p50':>12} {'crossed':>9}"
-          f" | {'recovery p50':>12} {'settled':>9} | {'ratio':>7} | {'G8':>4}"
-          f" {'G1':>6} {'G2':>6} {'G5':>6}")
+    load_cases = [c for c in ("full-electrical", "full-electrical-charged")
+                  if any(r["scenario"] == c for r in rows)]
 
-    for name in order:
-        mine = cells[name]
-        waste = number(mine[0], "waste") or 1.0
-        clock = number(mine[0], "clock") or 0.0
+    for case in load_cases:
+        print(f"load case: {case}"
+              + ("   (every jump drive charging, for the whole run)"
+                 if case == "full-electrical" else "   (the same load, drives full)"))
+        print()
+        print(f"{'cell':>18} {'waste':>6} {'clock':>6} | {'crossing p50':>12} {'crossed':>9}"
+              f" | {'recovery p50':>12} {'settled':>9} | {'ratio':>7} | {'G8':>4}"
+              f" {'G1':>6} {'G2':>6} {'G5':>6}")
 
-        loaded = [r for r in mine if r["scenario"] == "full-electrical"]
-        idle = [r for r in mine if r["scenario"] == "idle"]
-        recovery = [r for r in mine if r["scenario"] == "recovery"]
+        for name in order:
+            mine = cells[name]
+            waste = number(mine[0], "waste") or 1.0
+            clock = number(mine[0], "clock") or 0.0
 
-        crossing, crossed, of = crossing_median(loaded)
-        settle, settled, settle_of = recovery_median(recovery)
+            loaded = [r for r in mine if r["scenario"] == case]
+            idle = [r for r in mine if r["scenario"] == "idle"]
+            recovery = [r for r in mine if r["scenario"] == "recovery"]
+            if not loaded:
+                continue
 
-        g1 = share(idle, lambda r: (number(r, "over_critical") or 0) > 0)
-        g2 = share(loaded, lambda r: (number(r, "peak_k") or 0) >= WARM_KELVIN)
-        g5 = share(recovery, lambda r: (number(r, "over_critical") or 0) == 0)
+            crossing, crossed, of = crossing_median(loaded)
+            settle, settled, settle_of = recovery_median(recovery)
 
-        window = crossing is not None and WINDOW[0] <= crossing <= WINDOW[1]
-        recovered = settle is not None and settle <= RECOVERY_BOUND
-        g8 = window and recovered
+            g1 = share(idle, lambda r: (number(r, "over_critical") or 0) > 0)
+            g2 = share(loaded, lambda r: (number(r, "peak_k") or 0) >= WARM_KELVIN)
+            g5 = share(recovery, lambda r: (number(r, "over_critical") or 0) == 0)
 
-        keeps = (g1 is not None and g1 <= G1_MAX_SHARE
-                 and g2 is not None and g2 >= G2_MIN_SHARE
-                 and g5 is not None and g5 >= G5_MIN_SHARE)
+            window = crossing is not None and WINDOW[0] <= crossing <= WINDOW[1]
+            recovered = settle is not None and settle <= RECOVERY_BOUND
+            g8 = window and recovered
 
-        ratio = (settle / crossing) if (crossing and settle) else None
+            keeps = (g1 is not None and g1 <= G1_MAX_SHARE
+                     and g2 is not None and g2 >= G2_MIN_SHARE
+                     and g5 is not None and g5 >= G5_MIN_SHARE)
 
-        print(f"{name:>18} {waste:>6g} {clock:>6g} | "
-              + (f"{crossing:10.1f} s" if crossing is not None else f"{'censored':>12}")
-              + f" {crossed:4d}/{of:<4d} | "
-              + (f"{settle:10.1f} s" if settle is not None else f"{'censored':>12}")
-              + f" {settled:4d}/{settle_of:<4d} | "
-              + (f"{ratio:7.1f}" if ratio is not None else f"{'—':>7}")
-              + f" | {('PASS' if g8 else '—'):>4}"
-              + f" {g1:5.1f}% {g2:5.1f}% {g5:5.1f}%"
-              + ("" if keeps else "   <- breaks a criterion it must keep"))
+            ratio = (settle / crossing) if (crossing and settle) else None
+
+            print(f"{name:>18} {waste:>6g} {clock:>6g} | "
+                  + (f"{crossing:10.1f} s" if crossing is not None else f"{'censored':>12}")
+                  + f" {crossed:4d}/{of:<4d} | "
+                  + (f"{settle:10.1f} s" if settle is not None else f"{'censored':>12}")
+                  + f" {settled:4d}/{settle_of:<4d} | "
+                  + (f"{ratio:7.1f}" if ratio is not None else f"{'—':>7}")
+                  + f" | {('PASS' if g8 else '—'):>4}"
+                  + f" {g1:5.1f}% {g2:5.1f}% {g5:5.1f}%"
+                  + ("" if keeps else "   <- breaks a criterion it must keep"))
+        print()
+
+    if len(load_cases) > 1:
+        print("The recovery column is the same in both tables: recovery runs from a full burn")
+        print("rather than from an electrical load, so the drives never charge in it either way.")
 
     print()
     print(f"G8 wants the crossing p50 inside {WINDOW[0]:.0f}-{WINDOW[1]:.0f} s and the recovery p50")

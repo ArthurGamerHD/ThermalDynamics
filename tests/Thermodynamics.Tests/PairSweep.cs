@@ -156,7 +156,7 @@ namespace Thermodynamics.Tests
                 new Dictionary<string, Battery.Scenario>(StringComparer.Ordinal);
             foreach (Battery.Scenario scenario in Battery.All()) scenarios[scenario.Name] = scenario;
 
-            Sweep(LoadDial, PairLab.Load(), PairLab.Scenarios, ships, scenarios);
+            Sweep(LoadDial, PairLab.Load(), PairLab.LoadScenarios, ships, scenarios);
         }
 
         /// <summary>

@@ -81,6 +81,51 @@ namespace Thermodynamics.Tests
             Assert.NotNull(new PairLab.Cell { Conductivity = 4f, Clock = 225f, Waste = 1f }.Material());
         }
 
+        /// <summary>
+        /// **The jump drive is not a tool, and moving it off that list moved no published figure.**
+        ///
+        /// <para>
+        /// It was filed with the drills and the turrets, so <see cref="ShipLoad.State.Tools"/>
+        /// governed it and <see cref="ShipLoad.State.Consumers"/> — the dial that reads as *the
+        /// ship's electrical load* — never reached the block carrying 71.3 % of the corpus's
+        /// full-load waste heat. That is a dial nobody could use rather than a wrong number: in all
+        /// four states that existed the two shares agree, which is what makes the reclassification
+        /// safe and is what this pins.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void EveryStateThatExistedPutsTheDriveWhereItAlwaysWas()
+        {
+            // Idle and Burn had their tools off, Full and Everything had them on. The drive must
+            // land on the same side of each, or a figure taken before this pass moves under it.
+            Assert.Equal(0f, ShipLoad.State.Idle.Drives, 4);
+            Assert.Equal(0f, ShipLoad.State.Burn(0).Drives, 4);
+            Assert.Equal(1f, ShipLoad.State.Full.Drives, 4);
+            Assert.Equal(1f, ShipLoad.State.Everything.Drives, 4);
+
+            // And each still matches the tool share it used to be read off, which is the property
+            // that makes "no figure moved" true rather than merely intended.
+            Assert.Equal(ShipLoad.State.Idle.Tools, ShipLoad.State.Idle.Drives, 4);
+            Assert.Equal(ShipLoad.State.Burn(0).Tools, ShipLoad.State.Burn(0).Drives, 4);
+            Assert.Equal(ShipLoad.State.Full.Tools, ShipLoad.State.Full.Drives, 4);
+            Assert.Equal(ShipLoad.State.Everything.Tools, ShipLoad.State.Everything.Drives, 4);
+
+            // The new state is the only one where they differ, and that difference is its point.
+            Assert.Equal(1f, ShipLoad.State.Charged.Tools, 4);
+            Assert.Equal(0f, ShipLoad.State.Charged.Drives, 4);
+        }
+
+        [Fact]
+        public void ADriveIsNotATool()
+        {
+            Assert.True(ShipLoad.IsDrive("JumpDrive"));
+            Assert.False(ShipLoad.IsDrive("Refinery"));
+            Assert.False(ShipLoad.IsDrive("BatteryBlock"));
+
+            // A drive is not a store either: it draws to fill and never supplies.
+            Assert.False(ShipLoad.IsStore("JumpDrive"));
+        }
+
         [Fact]
         public void TheLoadGridHasExactlyOneControlAndItRunsFirst()
         {

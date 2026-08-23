@@ -126,6 +126,14 @@ namespace Thermodynamics.Harness
 
             scenarios.Add(new Scenario
             {
+                Name = "full-electrical-charged",
+                Question = "the same load with the jump drives charged rather than charging",
+                Environment = t => Worlds.Shadow(),
+                Load = ShipLoad.State.Charged,
+            });
+
+            scenarios.Add(new Scenario
+            {
                 Name = "all-peak",
                 Question = "where heat concentrates when everything runs at once",
                 Environment = t => Worlds.Shadow(),

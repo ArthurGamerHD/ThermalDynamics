@@ -833,9 +833,11 @@ and `recovery × clock` is about 286,000 to 3 %. Those put the window at clock 4
 recovery bound at clock 80 or above; the four cells above are the overlap, and the interior was
 measured rather than read off the fit.
 
-**The cell is ×0.5 / 100**, by the widest margin on its worst criterion — the same rule the
+**The cell would be ×0.5 / 100**, by the widest margin on its worst criterion — the same rule the
 conduction grid was read with. Clock 110 sits 3 % from the window edge and clock 80 sits 1 % from
-the recovery bound; 100 is 16 % clear of both.
+the recovery bound; 100 is 16 % clear of both. **Would be, because every row of this table is
+conditional on the load case it was taken in**, and measured against the other one it does not hold
+— see [neither route survives the other bound](#measured-neither-route-survives-the-other-bound-and-g8-cannot-be-scored-against-either).
 
 #### What it costs, and it is not free either
 
@@ -859,6 +861,47 @@ substep cap to about 50 %.
 **So the window costs something whichever dial reaches it.** Conduction buys the timing with three
 of the mod's levers; the load buys it with a quarter of the damage. That is the trade, and it is now
 measured on both sides rather than argued.
+
+#### Measured: neither route survives the other bound, and `G8` cannot be scored against either
+
+The confound below was measured rather than left as a caveat. `full-electrical-charged` is the same
+load with the jump drives full instead of charging, and every cell of both routes was run through
+both cases on the same forty hulls:
+
+| | crossing p50, drives **charging** | crossed | crossing p50, drives **full** | crossed |
+| --- | ---: | ---: | ---: | ---: |
+| *(shipped)* ×1 / 225 | 10.4 s | 29/40 | **censored** | 12/40 |
+| the load route, ×0.5 / 100 | **134.5 s** | 22/40 | **censored** | 3/40 |
+| the conduction route, ×4 / 100 | **148.9 s** | 25/40 | **censored** | 6/40 |
+
+**Both routes satisfy `G8` only while every jump drive is charging.** With the drives full, fewer
+than half the hulls cross critical at all in any of the three, so the 50th percentile sits in the
+censored tail and there is no median to score — the same exclusion that removed conductivity ×8
+(`E9`). The shipped configuration is in the same position: 12 of 40.
+
+**So the mod is both too fast and too slow, and which one depends on one block.** With drives
+charging the median hull crosses in 10 s, far under the window; with them full it never crosses.
+Drives are 71.3 % of population waste, and a ship carries either state at different minutes of the
+same session.
+
+**That is a fact about the criterion, not about the dials.** `G8` asks for *the most significant
+thermal event* to land in 2–5 minutes, and on a real ship that event **is** the drive charging — a
+transient with a beginning and an end. Both scenarios model it as permanent or absent, and neither
+is a steady state a hull ever sits in. What `G8` needs is a **duty-cycled load**: a drive that
+charges, finishes and stops, measured across the whole cycle. `Battery` already runs one scenario
+that changes state mid-run — `recovery` burns and then throttles to idle — so the shape exists.
+
+**This is a correction to the two sections above**, and it is why neither names a cell to ship. It
+also reproduced both of them: the conduction route's four cells came out at 124.0, 148.9, 165.4 and
+186.0 s in this dataset against 124.0, 148.9, 165.4 and 186.0 s in the pair grid, which is two
+independent runs agreeing to the last figure.
+
+**One defect found underneath it.** The jump drive was filed as a *tool* in `ShipLoad`, so
+`State.Tools` governed it and `State.Consumers` — the dial that reads as the ship's electrical load
+— never reached the block carrying 71.3 % of the load's heat. No published figure moves: the two
+shares agree in all four states that existed, checked against 1,794 rows of the previous dataset,
+of which none moved. What it cost was a dial nobody could use, and it is why the first run of this
+comparison produced two identical tables.
 
 #### The confound this rests on, and it is a known gap
 
@@ -1077,6 +1120,7 @@ five ways a full sweep dies, and [backlog.md](backlog.md) for what is still open
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | **Measured `F13`, and it withdraws both of `C12`'s routes.** `full-electrical` charges every jump drive for the whole run; run against the other bound — the same load with the drives full — the conduction route crosses on 6 of 40 hulls, the load route on 3, and the shipped configuration on 12. All three are censored, so none has a median and none satisfies `G8`. **The mod is both too fast and too slow depending on one block**: 10 s to cross with drives charging, never with them full. That is a fact about the criterion rather than the dials — `G8`'s *most significant thermal event* is the drive charging, which is a transient, and both scenarios model it as permanent or absent. What it needs is a duty-cycled load. The comparison also reproduced the pair grid's four cells to the last figure across two independent runs, and found that the jump drive was filed as a *tool*, so `State.Consumers` never reached 71.3 % of the load's heat — neutral on every published figure, checked against 1,794 rows of which none moved. |
 | 2026-08-23 | **The significance window is reachable without touching transport.** Eighteen cells of the load against the clock: `G8` is satisfied by waste ×0.5 at `HeatTimeScale` 110, 100, 90 and 80, at conductivity ×1 — so plumbing, radiation geometry and air are all untouched — while keeping `G1`, `G2` and `G5` and costing 0.43× the substep demand, which also takes `C19`'s atmospheric breach from 115 % of the cap to about 50 %. **The ratio is the quantity**: `recovery / crossing` is 127 at the shipped load and needs 30 or less, the clock cannot change it because both halves go as one over the clock, and the load can — 315 at ×2, 127 at ×1, 21 at ×0.5. It costs the bite rather than the levers: the median hull peaks 264 K cooler and loses one block instead of four. **And it rests on a confound**: `full-electrical` charges every jump drive continuously (`F13`), so a ×0.5 multiplier is within the distance between that bound and a realistic load, and the alternative reading is that nothing needs retuning at all. |
 | 2026-08-23 | **Built `C12`'s retune, measured it, and did not ship it.** `ConductionScale` 2.4 → 9.6 with `HeatTimeScale` 225 → 100 satisfies `G8` and fixes `C19`, and costs three of the mod's four levers: a coolant sink stops out-performing the best surface dial (195.3 K vs 41.5 K becomes 73.3 K vs 135.3 K), bolting starts working, a 300 MW reactor buried in armour settles inside its rating, and the stiffest block on the census hull stops responding to air at all. The sweep that chose ×4 scored `G1`, `G2`, `G5`, `G8` and cost, and never scored `G3`. Also found the trap underneath it: the game has two conduction paces and nothing made them agree, so raising the solid one alone weakens every coolant loop by four relative to the structure it competes with — `ConductionPaceTests` now fails if one moves without the other. |
 | 2026-08-23 | **Priced `C12`'s candidate cells in air, and the answer inverted the question.** The cost column that made the retune a decision was a *vacuum* column, where demand is 12 % of what the caps grant; in air it is 115 % of it. Two findings came out of the same run. **Every atmospheric figure this page carried was exactly half**, taken when `Frequency` was 8 and never re-derived when the shipped step became a quarter second — measured on the same 49-ship panel, all eight are 2.000× what was published. **And the shipped configuration fails `G6` in air**: p99 substep demand at 200 m/s is 73.4 against 64, fourteen of forty-nine hulls are over the cap, and at the 300 m/s servers run the *median* ship is. Read there, all four candidate cells pass and the shipped pair is the only one that does not, because lowering the clock divides every stiffness term while raising conductivity restores only conduction. The retune is the fix for a defect rather than a cost to be justified. |
