@@ -608,6 +608,37 @@ Alongside `latitude_deg`, `sun_elevation_deg`, `altitude_surface`, `altitude_sea
 `game_comfort`, that is enough to check every claim on this page against a real world. Audit a
 dump with `dotnet run --project Thermodynamics.Sim -- dump`.
 
+### Terrain saturates rather than clipping
+
+Each terrain factor is a linear law from the wind-engineering literature — speed-up is the `2H/L` of
+linearised flow over a hill, shelter is the angle of the upwind horizon against a full-shelter
+angle, channelling is a valley's confinement against a full-channelling slope. Each was then
+**clipped** to a cap, for the reason the codes cap them: the linear theory stops being true on
+exactly the steep ground that produces the largest numbers.
+
+On Earth's slopes a clip almost never binds. On SE's it binds everywhere, and a clipped model has no
+middle: every rise read speed-up 1.60, every sheltered site read 0.250, every valley channelled its
+limit. The caps had stopped bounding a model and become one.
+
+Each factor is now bent onto its bound instead:
+
+```
+saturated = bound × tanh(linear / bound)
+```
+
+which keeps the two things the clip got right and restores the one it did not. The gradient at zero
+is the literature's own, so gentle ground is unchanged to within a per cent and the borrowed
+constants still mean what they were measured to mean. The bound is the same figure, so nothing that
+relied on it moves. And in between, a ridge twice as steep as another is no longer the same ridge.
+
+It is also closer to the flow: a crest steep enough separates, and the speed-up stops growing rather
+than stopping suddenly.
+
+**One consequence is worth stating.** A bound approached is never reached, so the nominal floor is
+not a value the terrain can sit on — the worst shelter any ground can produce is `1 − 0.75 ×
+tanh(90/40)` = **0.267**, not 0.250, because an upwind horizon cannot stand at more than ninety
+degrees.
+
 ### The scenario matrix
 
 `dotnet run --project tests/Thermodynamics.Sim -- wind scenarios` runs the wind model over **28
@@ -618,7 +649,8 @@ middles and the band edges exactly, and twelve heights from the ground to 20 km.
 samples. `WindScenarioTests` runs the same matrix at a coarse day as part of the suite, and holds:
 
 * **not one NaN, infinity or negative wind anywhere** across the whole matrix;
-* every terrain factor inside its declared cap on every world;
+* every terrain factor inside its declared bound on every world, and none of them sitting
+  exactly on it;
 * airless worlds and zero-rated worlds produce exactly zero, and nothing divides by it;
 * a flat world leaves every terrain factor exactly 1, and so does `WindTerrainInfluence = 0`;
 * the engine's derivations reproduce exactly, including Triton's peaks-above-air;
@@ -789,9 +821,12 @@ Five consequences:
 
 1. **SE terrain is about eighty times steeper than real terrain** relative to its world — hills at
    12% of the radius against Earth's 0.14%. Every terrain constant borrowed from wind engineering is
-   operating far outside the range it was fitted in, and speed-up, shelter and channelling all
-   saturate their caps on ordinary SE ground. **The caps are not a safety net here, they are the
-   model** — [backlog](backlog.md) B19.
+   operating far outside the range it was fitted in, so speed-up, shelter and channelling all reach
+   for their bounds on ordinary SE ground where on Earth's slopes they would almost never bind.
+   **They saturate onto those bounds rather than clipping to them**, which is the difference between
+   a bound and a model: a clip made every site read exactly the cap, so terrain stopped telling one
+   place from another — the only thing it is there to do. See
+   [Terrain saturates rather than clipping](#terrain-saturates-rather-than-clipping).
 2. **A circulation band is 31 km wide**, not 3,300. The general circulation is a local feature you
    can fly across in a minute.
 3. **The horizon from head height is 490 m** on the largest world in the game. The local wind map
@@ -839,6 +874,7 @@ this page depends on any of them.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Closed `B19`. The terrain factors saturate onto their bounds rather than clipping to them, so SE's ground — eighty times steeper than the literature's — no longer makes every site read exactly the cap. The gradient at zero and the bound at infinity are both unchanged; what comes back is the middle, and terrain telling one place from another. Pertam and an earthlike world now differ, where under the clip both read the cap. |
 | 2026-08-22 | Said *why* the three unbuilt wind mechanisms are unbuilt, which is what made their absence a decision rather than a note, and took the closed `C5` off the known-faults table. Closes `B28`, which was a backlog row recording something this page already recorded. |
 | 2026-08-22 | Closed `B22` as a decision rather than a change: this mod will not author air densities against the engine's, because `C9` says the game's own answer is read and not overridden — and a density that disagreed with the engine's would put this model at odds with the oxygen system, the wind ceiling and the jetpack at once. The lack of differentiation between atmospheric worlds is the definitions', not the model's. |
 | 2026-08-22 | Closed `C5`. The sea-level deadzone is derived from each world's own deepest natural ground — `HillParams.Min × radius`, 285 m to 2 km across the eight — rather than a round 2 km that put the core gradient out of reach on seven of them. Opened the cross-check that should have existed with the transcription: `PlanetReferenceTests` compares the eight worlds against the installed definitions, and found on its first run that two of them are written under a different element name than the other six. |

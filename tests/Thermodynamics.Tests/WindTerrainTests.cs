@@ -211,6 +211,93 @@ namespace Thermodynamics.Tests
                 < WindTerrain.Shelter(far, Inner, Outer, fromTheNorth, North, East));
         }
 
+        /// <summary>
+        /// The saturation keeps both ends of the law it replaced: the literature's gradient at zero
+        /// and the same bound at infinity.
+        ///
+        /// **A clip has those too — what it does not have is the middle.** Every terrain factor here
+        /// was a linear law followed by a clip, and SE's ground is steep enough that every site ran
+        /// past the clip, so terrain read the same number everywhere and stopped telling one place
+        /// from another. [backlog](../../docs/backlog.md) `B19`.
+        /// </summary>
+        [Fact]
+        public void SaturationKeepsTheGradientAndTheBound()
+        {
+            const float Bound = 0.6f;
+
+            // Gentle ground is the linear law to within a per cent, which is the whole point: the
+            // figure it comes from is a real one and applies exactly where it was measured.
+            foreach (float value in new[] { 0.001f, 0.01f, 0.05f })
+            {
+                float saturated = WindTerrain.Saturate(value, Bound);
+                Assert.True(Math.Abs(saturated - value) < value * 0.02f,
+                    "gentle ground moved by more than a per cent: " + value + " to " + saturated);
+            }
+
+            // The bound is the same bound: approached, and never crossed. It is *reached* far out,
+            // where `tanh` saturates to one in float — which is the arithmetic rather than the
+            // model, and lands well past any ground.
+            foreach (float value in new[] { 1f, 10f, 1000f })
+            {
+                float saturated = WindTerrain.Saturate(value, Bound);
+
+                Assert.True(saturated <= Bound + 1e-6f, "the bound was crossed at " + value);
+                Assert.True(saturated > Bound * 0.9f, "the bound was not approached at " + value);
+            }
+
+            Assert.True(WindTerrain.Saturate(1f, Bound) < Bound,
+                "a relief of one should still be short of the bound");
+
+            Assert.Equal(0f, WindTerrain.Saturate(0f, Bound), 6);
+            Assert.Equal(0f, WindTerrain.Saturate(1f, 0f), 6);
+        }
+
+        /// <summary>
+        /// **The property the clip made impossible.** Two slopes that both ran past the old clip
+        /// gave the same answer; a steeper ridge is now a windier one all the way up.
+        /// </summary>
+        [Fact]
+        public void ASteeperRidgeIsStillWindierThanASteepOne()
+        {
+            // Over the range SE ground actually produces. Far beyond it `tanh` saturates to one in
+            // float and the curve does go flat — that is the arithmetic, and it is past any hill.
+            float previous = 0f;
+
+            for (float relief = 0.1f; relief <= 2f; relief += 0.1f)
+            {
+                float speedUp = WindTerrain.SpeedUp(relief);
+
+                Assert.True(speedUp > previous,
+                    "speed-up stopped rising at a relief of " + relief.ToString("n1"));
+                Assert.True(speedUp <= 1f + WindTerrain.MaximumSpeedUp,
+                    "speed-up passed its bound at " + relief.ToString("n1") + ": " + speedUp);
+
+                previous = speedUp;
+            }
+
+            // And the same downhill, where the bound is a different one.
+            previous = float.MaxValue;
+            for (float relief = -0.1f; relief >= -2f; relief -= 0.1f)
+            {
+                float speedUp = WindTerrain.SpeedUp(relief);
+
+                Assert.True(speedUp < previous,
+                    "a deeper hollow stopped being calmer at " + relief.ToString("n1"));
+                Assert.True(speedUp >= 1f - WindTerrain.MaximumSlowDown,
+                    "a hollow passed its bound at " + relief.ToString("n1") + ": " + speedUp);
+
+                previous = speedUp;
+            }
+        }
+
+        /// <summary>
+        /// Open ground shelters nothing, and the floor is approached rather than sat on.
+        ///
+        /// The shelter share saturates onto its bound instead of clipping to it, so a wall a
+        /// hundred kilometres high gets arbitrarily close to the floor without a wall of a hundred
+        /// metres reading the same number. See `WindTerrain.Saturate` and
+        /// [backlog](../../docs/backlog.md) `B19`.
+        /// </summary>
         [Fact]
         public void OpenGroundShelltersNothingAndTheFloorHolds()
         {
@@ -219,7 +306,16 @@ namespace Thermodynamics.Tests
             float[] cliff = Wall(0, 100000f);
             float least = WindTerrain.Shelter(cliff, Inner, Outer, -North, North, East);
 
-            Assert.Equal(1f - WindTerrain.MaximumShelter, least, 4);
+            // **The floor is approached and never reached, and the reason is geometry.** An upwind
+            // horizon cannot stand at more than ninety degrees, so the shelter share cannot exceed
+            // `tanh(90 / FullShelterDegrees)` however tall the wall is. Computed rather than
+            // written down, so moving either constant moves the expectation with it.
+            float steepest = (float)System.Math.Tanh(90d / WindTerrain.FullShelterDegrees);
+            float reachable = 1f - (WindTerrain.MaximumShelter * steepest);
+
+            Assert.Equal(reachable, least, 0.001f);
+            Assert.True(least > 1f - WindTerrain.MaximumShelter,
+                "the floor is a bound, not a value the terrain can sit on: " + least);
             Assert.True(least > 0f, "even a wind shadow leaves something behind");
         }
 

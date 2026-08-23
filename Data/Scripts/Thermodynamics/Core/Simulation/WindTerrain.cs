@@ -67,6 +67,34 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
+        /// A linear response bent smoothly onto its own bound.
+        ///
+        /// <para>
+        /// **The caps were doing the modelling rather than bounding it.** Every terrain factor here
+        /// is a linear law from the wind-engineering literature followed by a clip, and that
+        /// literature is written for Earth: its hills reach 0.14 % of the planet's radius where SE's
+        /// reach 12 %, about eighty times steeper. So on every shipped world at every size the
+        /// linear term ran past the clip and *every* site read exactly the cap — speed-up 1.60,
+        /// shelter 0.250, channelling at its limit — which means terrain stopped telling one place
+        /// from another, which is the only thing it was there to do.
+        /// </para>
+        ///
+        /// <para>
+        /// Saturating instead of clipping keeps both ends and restores the middle: the gradient at
+        /// zero is the literature's own <c>2H/L</c>, so gentle ground is unchanged to within a per
+        /// cent, and the bound is the same figure it always was, so nothing that relied on it moves.
+        /// What changes is that a ridge twice as steep as another is no longer the same ridge.
+        /// Saturation is also what the flow does — a steep enough crest separates, and the speed-up
+        /// stops growing rather than stopping suddenly.
+        /// </para>
+        /// </summary>
+        public static float Saturate(float value, float bound)
+        {
+            if (bound <= 0f) return 0f;
+            return bound * (float)Math.Tanh(value / bound);
+        }
+
+        /// <summary>
         /// How much this site stands above the land around it, as a slope. Positive on a rise,
         /// negative in a hollow, near zero on a plain — and on an even hillside, which is not
         /// sheltered by being one.
@@ -98,8 +126,11 @@ namespace Thermodynamics.Core
         {
             float change = SpeedUpPerSlope * relief;
 
-            if (change > MaximumSpeedUp) change = MaximumSpeedUp;
-            if (change < -MaximumSlowDown) change = -MaximumSlowDown;
+            // Saturated rather than clipped: SE ground is steep enough that the clip bound every
+            // site at the cap and terrain stopped differentiating places. See Saturate.
+            change = change >= 0f
+                ? Saturate(change, MaximumSpeedUp)
+                : -Saturate(-change, MaximumSlowDown);
 
             return 1f + change;
         }
@@ -141,8 +172,10 @@ namespace Thermodynamics.Core
 
             if (steepest <= 0f) return 1f;
 
-            float share = steepest / FullShelterDegrees;
-            if (share > 1f) share = 1f;
+            // Saturated rather than clipped, for the reason Saturate gives: on SE ground every
+            // upwind horizon cleared the full-shelter angle and every sheltered site read the same
+            // number.
+            float share = Saturate(steepest / FullShelterDegrees, 1f);
 
             return 1f - (MaximumShelter * share);
         }
@@ -189,8 +222,8 @@ namespace Thermodynamics.Core
             double amplitude = Math.Sqrt((cosine * cosine) + (sine * sine));
             if (amplitude < 1e-4d) return direction;
 
-            float confinement = (float)(amplitude / radius) / FullChannelSlope;
-            if (confinement > 1f) confinement = 1f;
+            // Saturated rather than clipped, as the other two are. See Saturate.
+            float confinement = Saturate((float)(amplitude / radius) / FullChannelSlope, 1f);
             confinement *= strength > 1f ? 1f : strength;
 
             if (confinement <= 0f) return direction;

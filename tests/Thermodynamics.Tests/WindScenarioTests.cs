@@ -226,21 +226,64 @@ namespace Thermodynamics.Tests
 
         // ---- what world size actually changes ---------------------------------------------------
 
+        /// <summary>
+        /// SE terrain still reaches for its bounds on every world size, and no longer sits on them.
+        ///
+        /// <para>
+        /// **This test used to pin the defect.** SE's hills reach 12 % of a planet's radius where
+        /// Earth's reach 0.14 %, so the linear laws the terrain factors come from ran past their
+        /// clips on ordinary ground and *every* site read exactly the cap — which meant terrain had
+        /// stopped telling one place from another, the only thing it was there to do.
+        /// [backlog](../../docs/backlog.md) `B19`.
+        /// </para>
+        ///
+        /// <para>
+        /// The factors saturate onto their bounds now instead of clipping to them, so what this
+        /// asserts is the corrected shape: the bounds still bound, the steepest ground still gets
+        /// near them, and two worlds of different steepness give different answers.
+        /// </para>
+        /// </summary>
         [Fact]
-        public void TerrainSaturatesItsCapsOnEverySizeOfShippedWorld()
+        public void TerrainReachesForItsBoundsWithoutSittingOnThem()
         {
-            // The finding this matrix exists to produce. SE terrain is so steep relative to its
-            // world that speed-up, shelter and channelling all run into their caps on ordinary
-            // ground — the caps are not a safety net here, they are the model. On Earth's slopes
-            // they would almost never bind.
             foreach (string name in new[] { "size:19km", "size:60km", "size:120km" })
             {
                 WindScenarios.Outcome o = One(name);
 
-                Assert.Equal(1f + Thermodynamics.Core.WindTerrain.MaximumSpeedUp, o.MaxSpeedUp, 2);
-                Assert.Equal(1f - Thermodynamics.Core.WindTerrain.MaximumShelter, o.MinShelter, 2);
-                Assert.True(o.MaxChannelDegrees > 45f, name + " channelled only " + o.MaxChannelDegrees);
+                float ceiling = 1f + Thermodynamics.Core.WindTerrain.MaximumSpeedUp;
+                float floor = 1f - Thermodynamics.Core.WindTerrain.MaximumShelter;
+
+                Assert.True(o.MaxSpeedUp <= ceiling + 1e-3f,
+                    name + " exceeded the speed-up bound: " + o.MaxSpeedUp);
+                Assert.True(o.MaxSpeedUp > ceiling * 0.9f,
+                    name + " never came near it: " + o.MaxSpeedUp);
+
+                Assert.True(o.MinShelter >= floor - 1e-3f,
+                    name + " went under the shelter floor: " + o.MinShelter);
+                Assert.True(o.MinShelter < 0.5f,
+                    name + " was never sheltered at all: " + o.MinShelter);
+
+                Assert.True(o.MaxChannelDegrees > 30f, name + " channelled only " + o.MaxChannelDegrees);
             }
+        }
+
+        /// <summary>
+        /// And the property the clip made impossible: two worlds whose ground is differently steep
+        /// answer differently. Pertam's hills are a fortieth of its radius against an earthlike
+        /// world's eighth, and under the clip both read the cap.
+        /// </summary>
+        [Fact]
+        public void TerrainTellsOneWorldFromAnother()
+        {
+            WindScenarios.Outcome earth = One("vanilla:EarthLike");
+            WindScenarios.Outcome pertam = One("vanilla:Pertam");
+
+            Assert.True(pertam.MaxSpeedUp < earth.MaxSpeedUp - 0.05f,
+                "the gentler world should be less exposed: " + pertam.MaxSpeedUp
+                + " against " + earth.MaxSpeedUp);
+
+            Assert.True(pertam.MinShelter > earth.MinShelter + 0.05f,
+                "and less sheltered: " + pertam.MinShelter + " against " + earth.MinShelter);
         }
 
         [Fact]
