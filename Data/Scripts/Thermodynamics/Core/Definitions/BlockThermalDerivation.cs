@@ -34,6 +34,34 @@ namespace Thermodynamics.Core
     public static class BlockThermalDerivation
     {
         /// <summary>
+        /// The waste fraction a block's own stated charging efficiency implies, or -1 where the
+        /// game states none.
+        ///
+        /// <para>
+        /// **The one functional property the game publishes.** A block's build cost cannot say what
+        /// it does with power, which is why the functional properties are authored per type in
+        /// `Cubes.xml` — but the jump drive's definition carries `PowerEfficiency`, and the power a
+        /// charging block draws and does not store is heat. So this is derivation rather than
+        /// authoring, and it covers a modded drive nobody has written an entry for.
+        /// </para>
+        ///
+        /// <para>
+        /// **It is here rather than in either adapter** because the mod reads the efficiency off a
+        /// live definition and the harness reads it out of the `.sbc`, and one rule with two
+        /// readers is what stops the two answering differently (`P5`).
+        /// </para>
+        /// </summary>
+        public static float WasteFromEfficiency(float efficiency)
+        {
+            // Zero is *not stated* rather than *wastes everything*: the field is absent on almost
+            // every definition in the game, and reading its absence as total loss would make every
+            // block a heater. Above one is a definition claiming to store more than it draws.
+            if (efficiency <= 0f || efficiency > 1f) return -1f;
+
+            return 1f - efficiency;
+        }
+
+        /// <summary>
         /// The material properties of a block with this build cost. A block with no priced
         /// components comes back as mild steel.
         /// </summary>

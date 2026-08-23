@@ -594,8 +594,8 @@ namespace Thermodynamics.Harness
             BlockModel model;
             if (Models.TryGetValue(definition.SubtypeId, out model)) return model;
 
-            BlockThermalProperties thermal =
-                ShippedBlocks.DeriveWithFunction(definition.Components, definition.TypeId);
+            BlockThermalProperties thermal = ShippedBlocks.DeriveWithFunction(
+                definition.Components, definition.TypeId, definition.PowerEfficiency);
 
             // The one place a sweep can reach a corpus ship's materials. Synthetic rigs go through
             // Catalog, which has had an override for as long as the profiles have existed; corpus

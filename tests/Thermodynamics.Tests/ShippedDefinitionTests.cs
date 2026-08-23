@@ -270,7 +270,10 @@ namespace Thermodynamics.Tests
                 { "Reactor", new[] { 0.01f, 0.01f, 1f, 0.25f } },
                 { "HydrogenEngine", new[] { 0.60f, 0.05f, 1f, 0.5f } },
                 { "BatteryBlock", new[] { 0.03f, 0.03f, 1f, 1f } },
-                { "JumpDrive", new[] { 0f, 0.15f, 1f, 2f } },
+                // 0.2 is 1 - the PowerEfficiency 0.8 the game states for the vanilla drive; the
+                // prototech pair state 0.9 and get 0.1 from the per-block derivation, which a type
+                // entry cannot express. Was 0.15 by assertion and wrong for all four.
+                { "JumpDrive", new[] { 0f, 0.2f, 1f, 2f } },
                 { "Thrust", new[] { 0f, 0.25f, 1.5f, 1f } },
                 { "InteriorLight", new[] { 0f, 0.9f, 1f, 1f } },
                 { "Gyro", new[] { 0f, 0.15f, 1f, 1f } },

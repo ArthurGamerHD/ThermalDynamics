@@ -185,8 +185,8 @@ namespace Thermodynamics.Harness
         {
             if (rating == null || rating.Components.Count == 0) return null;
 
-            BlockThermalProperties thermal =
-                ShippedBlocks.DeriveWithFunction(rating.Components, rating.TypeId);
+            BlockThermalProperties thermal = ShippedBlocks.DeriveWithFunction(
+                rating.Components, rating.TypeId, rating.PowerEfficiency);
             if (thermal == null) return null;
 
             // ---- what it makes at full rating --------------------------------------------------

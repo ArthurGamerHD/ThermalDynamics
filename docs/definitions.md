@@ -201,6 +201,9 @@ of every other mod, which previously all fell through to one entry describing mi
 | --- | --- |
 | `Conductivity`, `SpecificHeat`, `Emissivity`, `CriticalTemperature` | `ProducerWasteEnergy`, `ConsumerWasteEnergy`, `ExposedSurfaceMultiplier`, `OverheatDamagePerKelvin` |
 
+…with one exception, below: where a block's own definition states a `PowerEfficiency`, its
+`ConsumerWasteEnergy` is derived from that rather than taken from its type.
+
 `SolarAbsorptivity` is in neither column: it follows the emissivity — derived or declared — until
 somebody writes one, because a build cost says what a surface is made of and nothing about how it
 was finished.
@@ -210,6 +213,25 @@ The split is not arbitrary. What a block is made of cannot say what it does with
 of identical construction, one a thruster and one a girder, differ entirely in what they put into
 the ship. The functional half is a table keyed by block type in `BlockThermalDerivation`, and it is
 the only place opinions are left.
+
+**One functional property is not an opinion, because the game publishes it.** A jump drive's
+definition carries `PowerEfficiency` — 0.8 on the vanilla drive and its reskin, 0.9 on the two
+prototech ones — and the power a charging block draws and does not store is heat. So
+`ConsumerWasteEnergy` for a drive is `1 − PowerEfficiency`, derived per block rather than authored
+per type, and `BlockThermalDerivation.WasteFromEfficiency` is the rule. It is the only family in the
+whole game that states an efficiency; twelve thruster definitions state `1.0`, which is about thrust
+rather than about heat and is not read.
+
+It sits **above the type entry and below a subtype entry**: a type entry describes a family and
+cannot say both 0.8 and 0.9, while a subtype entry describes one block and is a deliberate override.
+A zero is silence, not total loss — every other block in the game omits the field, and reading its
+absence as *stores none of what it draws* would make all of them heaters.
+
+**What it corrected.** The drive was authored at `0.15` with the note *"storage is efficient; the
+dump is not"* — an assertion, and wrong for all four drives in both directions. It is now 0.2 and
+0.1, which matters more than it sounds: `LargeJumpDrive` carries **71.3 %** of the corpus's
+full-load waste heat, so the one number in the file with the largest reach was the one with no
+source. A modded drive nobody has written an entry for is now right too.
 
 Of the three derived blends, only specific heat is exact — heat capacity is additive, so the
 mass-weighted mean is the right answer rather than an approximation of one. Conductivity and
@@ -385,6 +407,7 @@ Tuning guidance:
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | **Derived the jump drive's waste fraction from the efficiency the game states, instead of asserting it.** `PowerEfficiency` is 0.8 on the vanilla drive and its reskin and 0.9 on the two prototech ones, so their `ConsumerWasteEnergy` is 0.2 and 0.1; it was `0.15` for all four, by a comment rather than a source. It is the only family in the game that publishes an efficiency, and it is the block carrying **71.3 %** of the corpus's full-load waste heat — the number in the file with the largest reach was the one with no provenance. The rule is one function in `Core` with three readers, because a harness that disagreed with the mod about it would be measuring a mod nobody runs. |
 | 2026-08-23 | **Corrected [what the conversion moved](#conductivity-is-in-real-wmk).** The table stated *thruster … 0.60×*, which is true of the hydrogen thrusters and of nothing else — the large ion thruster is **0.23×** and the atmospheric **1.27×**, because a thruster's conductance is now derived from what it is built out of and the three families are built out of different things. The table also described only the four families this file authors and omitted every vanilla block, which is the larger half of the change and holds both of its extremes: the ion thruster's 0.23× and the jump drive's **3.51×**. Measured off the shipped definitions and pinned by `ModHardwareRetestTests` rather than stated. |
 | 2026-08-23 | Made every authored material figure say where it came from, and checked the ones that name a material. `AuthoredMaterialTests` holds all 46 `Conductivity` and `SpecificHeat` values in `Cubes.xml` against `ReferenceMaterials` or against an explicit `invented`; four had no provenance at all and now have it, one of which — the emissive block's 1 and 840 — turned out to be soda-lime glass exactly and never said so. Wrote down [what the conversion to real units actually moved](#conductivity-is-in-real-wmk), because [backlog.md](backlog.md) `C2` had the radiator backwards: it is 2.84× stiffer, not half, and the blocks that lost are the thruster and the two pumps at 0.60×. |
 | 2026-08-22 | Added `AmbientLagShareOfDay`. The climate's lag was 45 absolute seconds against a rotation a server sets to anything, so one authored figure meant a different climate on every world ([backlog.md](backlog.md) `C6`). |

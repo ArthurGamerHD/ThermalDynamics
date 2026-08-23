@@ -992,10 +992,22 @@
 			</Id>
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
-					<!--Storage is efficient; the dump is not.-->
+					<!--
+						ConsumerWasteEnergy is not authored here. The jump drive is the one family in
+						the game whose definition states what it does with the power it draws:
+						PowerEfficiency is 0.8 on the vanilla drive and its reskin and 0.9 on the two
+						prototech ones, so a fifth and a tenth of what a charging drive draws never
+						reaches the store and is heat. Deriving it per block gets both right, and
+						gets a modded drive right too; the 0.15 that stood here was an assertion and
+						was wrong for all four. See definitions.md, Where a block's properties come from.
+					-->
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<Decimal Name="ConsumerWasteEnergy" Value="0.15" />
+					<!--from PowerEfficiency 0.8, the vanilla drive and its reskin. Authored as well
+					    as derived so a reader that only has the type entry is on a sourced number
+					    rather than the environment fallback; the per-block derivation above
+					    overrides it for the prototech pair, which state 0.9.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="0.2" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="2" />
 				</Group>

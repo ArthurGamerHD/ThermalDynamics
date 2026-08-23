@@ -130,8 +130,11 @@ namespace Thermodynamics.Tests
             BlockHeatIndex.Reading reading = BlockHeatIndex.Measure(rating);
             Assert.NotNull(reading);
 
-            // 32 MW of draw at the shipped 0.15.
-            Assert.InRange(reading.Watts, 4.79e6f, 4.81e6f);
+            // 32 MW of draw at 0.2, which is 1 - the PowerEfficiency 0.8 the game's own definition
+            // states for this block. It was 4.8 MW while the fraction was authored at 0.15 by
+            // assertion; the jump drive is the one family in the game whose efficiency is published,
+            // and it carries 71.3 % of the corpus's full-load waste heat.
+            Assert.InRange(reading.Watts, 6.39e6f, 6.41e6f);
 
             // Bare 3x3x2 on a large grid: 2*(9+6+6) cells of face at 6.25 m2 each.
             Assert.Equal(262.5f, reading.AreaSquareMetres, 1);

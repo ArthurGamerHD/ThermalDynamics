@@ -169,8 +169,15 @@ namespace Thermodynamics.Tests
 
             Assert.Equal(0f, armour.JumpEnergyJoules, 4);
 
-            // One rather than zero, so a block with no stated efficiency divides by something.
-            Assert.Equal(1f, armour.PowerEfficiency, 4);
+            // **Zero means the definition is silent, not that the block stores none of what it
+            // draws.** Reading an absent field as total loss would make every block in the game a
+            // heater, which is why `WasteFromEfficiency` takes zero as silence and returns -1.
+            Assert.Equal(0f, armour.PowerEfficiency, 4);
+            Assert.Equal(-1f, BlockThermalDerivation.WasteFromEfficiency(armour.PowerEfficiency), 4);
+
+            // And the drive, which does state one, comes back with the fraction it implies.
+            Assert.Equal(0.2f, BlockThermalDerivation.WasteFromEfficiency(0.8f), 4);
+            Assert.Equal(0.1f, BlockThermalDerivation.WasteFromEfficiency(0.9f), 4);
         }
 
         [Fact]

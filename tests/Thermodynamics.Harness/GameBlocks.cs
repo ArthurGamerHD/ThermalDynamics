@@ -43,10 +43,14 @@ namespace Thermodynamics.Harness
             public float JumpEnergyJoules;
 
             /// <summary>
-            /// Fraction of drawn power that reaches the store, from `PowerEfficiency`. One where a
-            /// definition does not say, which is every block that does not charge.
+            /// Fraction of drawn power that reaches the store, from `PowerEfficiency`.
+            ///
+            /// **Zero means the definition does not say**, which is every block in the game but the
+            /// four jump drives. It is not *stores none of it*: reading an absent field as total
+            /// loss would turn every block into a heater, which is why
+            /// <see cref="BlockThermalDerivation.WasteFromEfficiency"/> takes zero as silence.
             /// </summary>
-            public float PowerEfficiency = 1f;
+            public float PowerEfficiency;
 
             /// <summary>
             /// Whether the definition listed any mount points at all.
