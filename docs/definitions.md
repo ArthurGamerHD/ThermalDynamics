@@ -233,6 +233,60 @@ dump is not"* — an assertion, and wrong for all four drives in both directions
 full-load waste heat, so the one number in the file with the largest reach was the one with no
 source. A modded drive nobody has written an entry for is now right too.
 
+### Every waste fraction says where it came from, and most of them say "invented"
+
+The derivation above covers what a block is *made of*. What it *does with power* is the other half of
+a definition, and it is authored — which is why every fraction in `Cubes.xml` states where it came
+from and a check holds it to what it says. Nothing did before this, and that is how the jump drive
+came to sit at `0.15` under a note that read as an argument.
+
+Each fraction now claims one of four provenances, and `AuthoredWasteTests` holds it to the claim:
+
+| Claim | What it means | What checks it |
+| --- | --- | --- |
+| `waste: <conversion>` | A named class of machine in `ReferenceEfficiencies` | The value is inside that conversion's band |
+| `derived: <field>` | A field the game's own definitions state | Recomputed from every definition of the type |
+| `no producer: …` | Nothing multiplies this fraction | No definition of the type declares power output |
+| `invented: …` | An admitted opinion | Nothing, and saying so is the point |
+
+**Bands rather than point values, because that is what the literature gives.** A motor's efficiency
+is a range over frame sizes and duty points, so `ReferenceEfficiencies` carries the range and the
+check asks whether the authored value sits inside it. Six conversions have a source worth quoting:
+an electric motor at 0.05–0.15 waste, a lithium-ion store at 0.02–0.06 one way, a spark-ignition
+engine at 0.55–0.70, a radio transmitter at 0.60–0.85, a solid-state laser at 0.50–0.90, and *all of
+it* — the first law's bound on a device that does no work outside itself and radiates nothing away.
+
+**The counts are the finding.** Of the 228 waste fractions, **15** name a conversion, **1** is derived
+from the game, **108** are producer fractions on types that produce nothing, and **104** are
+inventions. Of the 120 that anything ever multiplies, **104 are opinions** — but counting fractions
+and weighting them by the heat they carry disagree about how much that matters:
+
+| | Share of the fractions | Share of the corpus's full-load waste heat |
+| --- | ---: | ---: |
+| derived from the game | 0.4 % | **76.3 %** |
+| sourced to a conversion | 6.6 % | 8.4 % |
+| invented | 45.6 % | 15.3 % |
+
+*Population: the 8,142-ship census of 2026-08-21, 109,312 block rows. Basis: full electrical load
+with every jump drive charging, no thrust — a bound rather than a duty cycle (`E3`). The drives are
+restated at the fractions derived on 2026-08-23 rather than the 0.15 the census measured.
+`tools/corpus/provenance.py` computes it.*
+
+**So the file is mostly opinion and the heat mostly is not**, because one derived block carries three
+quarters of it. And the invented sixth is not spread over a hundred blocks either — four types carry
+almost all of it: artificial mass at 4.0 %, the reactor at 3.6 %, the refinery at 3.0 % and the
+assembler at 2.9 %. Everything else in the file, added together, is under two per cent of a loaded
+fleet's heat.
+
+**Three inventions have a real figure sitting beside them and do not use it**, and each is recorded
+in its own comment rather than here. The oxygen generator wastes 0.6 where water electrolysis runs
+0.60–0.80 efficient and the sourced figure is 0.20–0.40, which is the largest gap in the file. Every
+computer, screen and sensor wastes 0.9 where the first law says 1.0, since a device that does no
+work outside itself has nowhere else to put what it draws. And the reactor's 0.01 is a hundredth
+where a real thermal cycle rejects about two thirds — that one is deliberate and measured, because at
+0.02 the two smaller reactors cook themselves bare in vacuum. Moving any of them is a balance change
+and belongs in its own commit (`E11`), not in the pass that gave them provenance.
+
 Of the three derived blends, only specific heat is exact — heat capacity is additive, so the
 mass-weighted mean is the right answer rather than an approximation of one. Conductivity and
 critical temperature are mass-weighted because a build cost does not say how the phases are
@@ -407,6 +461,7 @@ Tuning guidance:
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | **Gave every waste fraction a provenance, and measured how much of a fleet's heat rests on the ones that have none** ([backlog.md](backlog.md) `C21`). All 228 `ProducerWasteEnergy` and `ConsumerWasteEnergy` values in `Cubes.xml` now claim a source, a derivation, a statement that nothing reads them, or an admitted invention, and `AuthoredWasteTests` holds each claim to its evidence — a band in `ReferenceEfficiencies`, the game's own `PowerEfficiency`, or the game declaring no output for the type. The counts are [the finding](#every-waste-fraction-says-where-it-came-from-and-most-of-them-say-invented): 15 sourced, 1 derived, 104 invented — and weighted by the heat they actually carry that is 8.4 %, 76.3 % and 15.3 %, so the file is mostly opinion and the heat mostly is not. No value moved; three inventions that have a real figure beside them are recorded rather than retuned (`E11`). |
 | 2026-08-23 | **Derived the jump drive's waste fraction from the efficiency the game states, instead of asserting it.** `PowerEfficiency` is 0.8 on the vanilla drive and its reskin and 0.9 on the two prototech ones, so their `ConsumerWasteEnergy` is 0.2 and 0.1; it was `0.15` for all four, by a comment rather than a source. It is the only family in the game that publishes an efficiency, and it is the block carrying **71.3 %** of the corpus's full-load waste heat — the number in the file with the largest reach was the one with no provenance. The rule is one function in `Core` with three readers, because a harness that disagreed with the mod about it would be measuring a mod nobody runs. |
 | 2026-08-23 | **Corrected [what the conversion moved](#conductivity-is-in-real-wmk).** The table stated *thruster … 0.60×*, which is true of the hydrogen thrusters and of nothing else — the large ion thruster is **0.23×** and the atmospheric **1.27×**, because a thruster's conductance is now derived from what it is built out of and the three families are built out of different things. The table also described only the four families this file authors and omitted every vanilla block, which is the larger half of the change and holds both of its extremes: the ion thruster's 0.23× and the jump drive's **3.51×**. Measured off the shipped definitions and pinned by `ModHardwareRetestTests` rather than stated. |
 | 2026-08-23 | Made every authored material figure say where it came from, and checked the ones that name a material. `AuthoredMaterialTests` holds all 46 `Conductivity` and `SpecificHeat` values in `Cubes.xml` against `ReferenceMaterials` or against an explicit `invented`; four had no provenance at all and now have it, one of which — the emissive block's 1 and 840 — turned out to be soda-lime glass exactly and never said so. Wrote down [what the conversion to real units actually moved](#conductivity-is-in-real-wmk), because [backlog.md](backlog.md) `C2` had the radiator backwards: it is 2.84× stiffer, not half, and the blocks that lost are the thruster and the two pumps at 0.60×. |

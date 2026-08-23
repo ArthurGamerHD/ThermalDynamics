@@ -862,6 +862,30 @@ substep cap to about 50 %.
 of the mod's levers; the load buys it with a quarter of the damage. That is the trade, and it is now
 measured on both sides rather than argued.
 
+#### And the load route halves a number that is sourced
+
+A waste multiplier looked like the cheaper dial partly because the fractions it scales read as
+guesses. Weighted by the heat they actually carry, they are not. Every fraction in `Cubes.xml` now
+states its provenance ([definitions.md](definitions.md#every-waste-fraction-says-where-it-came-from-and-most-of-them-say-invented)),
+and over the 8,142-ship census at full electrical load:
+
+| Where a loaded fleet's waste heat comes from | Share |
+| --- | ---: |
+| a fraction derived from the efficiency the game itself states | **76.3 %** |
+| a fraction sourced to a real conversion | 8.4 % |
+| a fraction somebody invented | 15.3 % |
+
+*Population: the census of 2026-08-21, 109,312 block rows, drives restated at their derived
+fractions. Basis: full electrical load with every drive charging, no thrust (`E3`).
+`tools/corpus/provenance.py`.*
+
+**So ×0.5 is an admitted balance knob and not a correction.** Three quarters of what it would halve
+is `1 − PowerEfficiency` on the jump drive, which the game publishes; the mod would be declaring that
+a charging drive is twice as efficient as its own definition says. That is a legitimate thing for a
+`ConductionScale`-shaped dial to do, and it has to be argued as one rather than as fixing a guess.
+The 15.3 % that *is* invented sits on four block types — artificial mass, the reactor, the refinery
+and the assembler — and retuning those four reaches a sixth of the load, not the window.
+
 #### The event has a length, and measured across it `G8` selects the same cells
 
 A jump drive holds `PowerNeededForJump` 3 MWh, draws `RequiredPowerInput` 32 MW while filling and
@@ -1153,6 +1177,7 @@ five ways a full sweep dies, and [backlog.md](backlog.md) for what is still open
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | **Priced the load route's dial against the provenance of what it scales, and it argues against the route.** Every waste fraction in `Cubes.xml` now states where it came from, and weighted by the heat each carries over the census, **76.3 %** of a loaded fleet's waste comes through a fraction derived from the game's own `PowerEfficiency`, 8.4 % through a sourced conversion and 15.3 % through an invention. So waste ×0.5 halves a sourced number — an admitted balance knob rather than the correction of a guess — and the invented sixth sits on four block types that between them cannot reach the window. |
 | 2026-08-23 | **Gave `G8` a load case that is an event, and it selects the cells the grids already found.** A jump drive holds 3 MWh, draws 32 MW and keeps 80 % of it, so it fills in **421.9 s** — every figure off the game's own definition — and `jump-charge` runs exactly that: charge, finish, hold. Measured across it, both routes satisfy `G8` and the shipped pair does not, at 10.4 s. **This corrects the entry below**: `full-electrical-charged` is a ship not having an event, not a bound on one, and reading its censored medians as evidence against the routes was reading an absence as a short crossing. The transient reproduces the charging bound to the last figure, because every hull that crosses does so in the first minute of a seven-minute charge — which is the defect in one sentence. |
 | 2026-08-23 | **Measured `F13`, and it withdraws both of `C12`'s routes.** `full-electrical` charges every jump drive for the whole run; run against the other bound — the same load with the drives full — the conduction route crosses on 6 of 40 hulls, the load route on 3, and the shipped configuration on 12. All three are censored, so none has a median and none satisfies `G8`. **The mod is both too fast and too slow depending on one block**: 10 s to cross with drives charging, never with them full. That is a fact about the criterion rather than the dials — `G8`'s *most significant thermal event* is the drive charging, which is a transient, and both scenarios model it as permanent or absent. What it needs is a duty-cycled load. The comparison also reproduced the pair grid's four cells to the last figure across two independent runs, and found that the jump drive was filed as a *tool*, so `State.Consumers` never reached 71.3 % of the load's heat — neutral on every published figure, checked against 1,794 rows of which none moved. |
 | 2026-08-23 | **The significance window is reachable without touching transport.** Eighteen cells of the load against the clock: `G8` is satisfied by waste ×0.5 at `HeatTimeScale` 110, 100, 90 and 80, at conductivity ×1 — so plumbing, radiation geometry and air are all untouched — while keeping `G1`, `G2` and `G5` and costing 0.43× the substep demand, which also takes `C19`'s atmospheric breach from 115 % of the cap to about 50 %. **The ratio is the quantity**: `recovery / crossing` is 127 at the shipped load and needs 30 or less, the clock cannot change it because both halves go as one over the clock, and the load can — 315 at ×2, 127 at ×1, 21 at ×0.5. It costs the bite rather than the levers: the median hull peaks 264 K cooler and loses one block instead of four. **And it rests on a confound**: `full-electrical` charges every jump drive continuously (`F13`), so a ×0.5 multiplier is within the distance between that bound and a realistic load, and the alternative reading is that nothing needs retuning at all. |

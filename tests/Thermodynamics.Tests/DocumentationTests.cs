@@ -309,6 +309,12 @@ namespace Thermodynamics.Tests
                 },
                 new QuotedCount
                 {
+                    Noun = "waste fractions",
+                    Actual = WasteFractionCount,
+                    Tolerance = 0f,
+                },
+                new QuotedCount
+                {
                     Noun = "test classes",
                     Actual = TestClassCount,
                     Tolerance = 0.1f,
@@ -338,6 +344,19 @@ namespace Thermodynamics.Tests
             if (!File.Exists(path)) return -1;
 
             return Regex.Matches(File.ReadAllText(path), @"<(?:Decimal|Bool)\s+Name=").Count;
+        }
+
+        /// <summary>
+        /// Waste fractions authored in `Cubes.xml`. Each one states its provenance, so a page
+        /// quoting how many there are is quoting the size of the ledger `AuthoredWasteTests` keeps.
+        /// </summary>
+        private static int WasteFractionCount()
+        {
+            string path = Path.Combine(RepoRoot(), "Data", "Cubes.xml");
+            if (!File.Exists(path)) return -1;
+
+            return Regex.Matches(File.ReadAllText(path),
+                "<Decimal\\s+Name=\"(?:Producer|Consumer)WasteEnergy\"").Count;
         }
 
         /// <summary>Classes in the test project that hold cases.</summary>

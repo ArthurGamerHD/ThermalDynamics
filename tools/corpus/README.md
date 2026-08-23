@@ -241,13 +241,29 @@ as satisfying `G8` — where 27 of 40 hulls never reach critical at all. `pairs.
 non-crosser past every crosser, exactly as it already ordered a non-settler past the recovery bound,
 so a cell where fewer than half ever cross prints `censored` and has no median (`E9`).
 
+**`provenance.py` weights a census by where its heat's numbers came from.** Every waste fraction in
+`Cubes.xml` states a provenance ([definitions.md](../../docs/definitions.md#every-waste-fraction-says-where-it-came-from-and-most-of-them-say-invented)),
+and counting those says how much of the *file* is sourced rather than how much of the *heat* is. It
+reads a census `composition.csv` — per ship, per subtype, watts wasted at full electrical load — and
+prints both, plus which block types carry the invented share.
+
+```
+python3 tools/corpus/provenance.py out/census-2026-08-21/composition.csv
+```
+
+Seconds, on a census that already exists. A block that generates power is weighted by its producer
+fraction and everything else by its consumer one, which is the difference between a hydrogen engine
+reading as sourced and as invented — six per cent of the corpus's waste heat.
+
 ```
 python3 -m unittest discover -s tools/corpus -p 'test_*.py'
 ```
 
-`test_scoring.py` pins that rule and the two thresholds `G8` is scored at, so changing either fails
-a check rather than moving a number nobody is watching. It is the only check over the scorers and
-it is not part of the `dotnet test` suite; run it when a scorer changes.
+`test_scoring.py` pins that rule and the two thresholds `G8` is scored at, and `test_provenance.py`
+pins the four provenance counts against the ones `AuthoredWasteTests` pins, so the two readers of
+one grammar cannot drift apart quietly (`D3`). Changing either fails a check rather than moving a
+number nobody is watching. They are the only checks over the scorers and are not part of the
+`dotnet test` suite; run them when a scorer changes.
 
 ---
 
@@ -269,6 +285,7 @@ limit in [known-issues.md](../../docs/known-issues.md).
 | 2026-08-23 | Pruned the corpus directory from 68 GB to 32 GB and wrote down [what is in it](#what-is-in-the-corpus-directory-and-what-is-beside-it). 20.6 GB of leavings deleted, 1,840 barren blueprints and 8 oversized ones moved aside rather than deleted because `F14` still has the 25-block floor untested. The inference that a blueprint is barren was checked by parsing all 1,852 — 12 were usable ships and are back — which is also what added `corpus --list`. Fixed `Unpack`, which had silently skipped three legacy archives whose entry names are truncated. |
 | 2026-08-23 | Added `PairSweep` and `pairs.py`: conduction against the clock, sixteen cells, scoring `G8` ([backlog.md](../../docs/backlog.md) `C12`). The three sweeps' CSV reading, blueprint resolution and resume record are one `ShipSet` now rather than three copies. |
 | 2026-08-23 | Wired the retest set to something: `ConductanceRetestWalk` runs it against the world before conductance became real units, and `retest.py` reads the result against G1, G2 and G5 as `verdict.py` already computes them ([backlog.md](../../docs/backlog.md) `C2`). |
+| 2026-08-23 | Added `provenance.py` and `test_provenance.py`: how much of a fleet's waste heat rests on a fraction nobody sourced. [backlog.md](../../docs/backlog.md) `C21`. |
 | 2026-08-23 | Added `typical.py` and [the retest set](#the-retest-set): the panel picks extremes for a dial sweep, this picks the middle for a regression. |
 | 2026-08-22 | Split the crossing from the loss everywhere the pages had run them together. The survey report's headline said a ship *loses its first block* after nine seconds where it meant *crosses critical*, its table's `First loss` column was the crossing and its `Blocks lost` column was blocks over critical, and the bench page repeated all three. `seconds_to_first_loss` is packed and shown beside the crossing, and reads as absent on every dataset collected before it existed. |
 | 2026-08-22 | The resume is a record rather than a count. A walk writes `done-<walk>.txt` as it finishes each blueprint and reads it on the next start, so relaunching is the whole procedure and `THERMAL_CORPUS_SKIP` is gone ([backlog.md](../../docs/backlog.md) `H2`). Said that off is now spellable in `THERMAL_CORPUS_TESTS` every way anyone reaches for (`H3`). |
