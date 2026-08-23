@@ -765,12 +765,45 @@ hull, and solar gain is scaled by the share that reached the sun. At the default
 share is 0 or 1 and behaves exactly as before. Raise it and a kilometre-long ship crossing a
 terminator dims over the crossing instead of switching off when its centre passes.
 
-**The default is the cheapest of these and is under review.** `SolarOcclusionSamples`,
-`SolarGridShadows` and `SolarSelfShadowing` compose into a ladder that nothing names, and the rung
-that ships is the bottom one — against *fidelity is the default; a saving is a switch*, which holds
-that the cheap form becomes an option rather than the shipped behaviour wherever the difference is
-one a player can see. [backlog.md](backlog.md) `A9` states the ladder, the rung that is still
-unbuilt, and the default it asks for.
+**The sample count is the cheapest rung, and it is measurably not the dial worth spending on.**
+`SolarOcclusionSamples`, `SolarGridShadows` and `SolarSelfShadowing` compose into a ladder that
+nothing names, and two of the three already ship at the top. The third ships at one ray from the
+grid's centre, which [backlog.md](backlog.md) `A9` ranked second of everything open on the ground
+that a ship flipping between fully lit and fully dark is a difference a player can see. **Measured,
+it is the wrong dial**, and `dotnet run --project tests/Thermodynamics.Sim -- occlusion` is the
+measurement.
+
+Flying hulls of every size through an Earthlike's terminator at the shipped cadence, averaged over
+where the test schedule falls:
+
+| Hull | Surplus sunlight, 1 sample | at 9 samples | Worst error, 1 → 9 | Partial readings a crossing, at 9 |
+| --- | ---: | ---: | ---: | ---: |
+| 25 m | 1.51 s | 1.54 s | 0.977 → 0.968 | 0.08 |
+| 300 m | 1.53 s | 1.50 s | 0.889 → 0.769 | 0.62 |
+| 600 m | 1.56 s | 1.53 s | 0.778 → 0.551 | 1.21 |
+| 2,500 m | 1.41 s | 1.46 s | 0.551 → 0.333 | 4.92 |
+
+**Nine times the raycasts changes the sunlight a hull absorbs by nothing.** A single ray from the
+centre is *unbiased*: it goes on reporting light after the leading end is dark and reports dark
+before the trailing end is, and over a crossing the two cancel. What the extra samples fix is the
+**worst error** column — how wrong the reading is at a moment, which is what a player sees — and
+only on a hull long enough that a test lands while it is still straddling. Below about 600 m it
+almost never does.
+
+**The surplus is the interval, and it is exactly half of it.** A test that ran before the crossing
+keeps saying *lit* until the next one, and a grid meets every phase of that schedule equally often:
+
+| `SolarOcclusionInterval` | Every | Surplus sunlight a crossing |
+| ---: | ---: | ---: |
+| 1 step | 0.25 s | 0.10 s |
+| 4 steps | 1.00 s | 0.48 s |
+| 12 steps *(shipped)* | 3.00 s | 1.53 s |
+| 48 steps | 12.00 s | 5.96 s |
+
+So the two dials cost the same thing — raycasts — and per raycast spent **the interval buys strictly
+more fidelity than the sample count**. Neither default moves here, because both raise a cost that has
+never been measured in a session: `A9` needs `F5` first. What has changed is which dial the answer
+is expected to be.
 
 The three solar settings stack as a choice of cost. `EnableSolarHeat` off is free and models no
 sunlight at all. On with `SolarSelfShadowing` off is the cheap model: a face is lit whenever it

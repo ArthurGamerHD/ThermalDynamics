@@ -54,6 +54,10 @@ namespace Thermodynamics.Sim
                 case "prefabs":
                     return PrefabCommand(args);
 
+                case "occlusion":
+                    Console.Write(OcclusionLadderLab.Report());
+                    return 0;
+
                 case "profiles":
                     Console.Write(ProfileLab.Report());
                     return 0;
@@ -1020,6 +1024,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("    --csv <dir>               one row per prefab");
             Console.WriteLine("    --load                    full load instead of idle: the control, not G7");
             Console.WriteLine("  drift                   how long a client that joined stale stays wrong");
+            Console.WriteLine("  occlusion               what a terminator crossing costs at each rung of the shadow ladder");
             Console.WriteLine("    --scenario shadow|sunlit|planet  --watch <s> --size N --csv <dir>");
             Console.WriteLine("  planets                 every shipped world's climate, and where each figure came from");
             Console.WriteLine("    --xml | --write <path>    the generated Planets.xml");
