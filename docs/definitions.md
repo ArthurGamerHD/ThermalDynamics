@@ -108,6 +108,24 @@ conduct like every other metal. **A coolant loop's `Conductivity` still works th
 deliberately: fluid-to-wall transfer is convective, and the honest dial for it is a heat transfer
 coefficient in W/(m²·K), which is a change to the loop equations rather than to a number.
 
+**What that conversion moved, in one table**, because it is the substance of [backlog.md](backlog.md)
+`C2` and the row had it backwards. `ConductionScale` is 2.4 because mild steel's 50 lands on the 120
+the old default's 0.6 gave it, so ordinary armour is exactly unmoved and everything else is not:
+
+| Block | Old quality | Old effective | Now | New effective | Change |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| armour and anything undeclared | 0.6 | 120 | 50, mild steel | 120 | **1.00×** |
+| coolant pipe | 1 | 200 | 400, copper | 960 | **4.80×** |
+| radiator | 1 | 200 | 237, aluminium | 568.8 | **2.84×** |
+| thruster, the two pumps | 1 | 200 | 50, derived as steel | 120 | **0.60×** |
+
+**Every authored figure now says where it came from**, and `AuthoredMaterialTests` holds it to that:
+either it names a material [`ReferenceMaterials`](../Data/Scripts/Thermodynamics/Core/Definitions/ReferenceMaterials.cs)
+prices and matches it within five per cent — the rounding the environment default's 450 against mild
+steel's 466 needs — or it says `invented`, which four figures do: the two lamps and the camera, none
+of which is one substance. A figure with no provenance at all fails, which is what stops the check
+decaying as values are added.
+
 ### Specific heat is real, and the clock is not
 
 `SpecificHeat` is in the units you would find in a materials table, so a definition reads as a
@@ -334,6 +352,7 @@ Tuning guidance:
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | Made every authored material figure say where it came from, and checked the ones that name a material. `AuthoredMaterialTests` holds all 46 `Conductivity` and `SpecificHeat` values in `Cubes.xml` against `ReferenceMaterials` or against an explicit `invented`; four had no provenance at all and now have it, one of which — the emissive block's 1 and 840 — turned out to be soda-lime glass exactly and never said so. Wrote down [what the conversion to real units actually moved](#conductivity-is-in-real-wmk), because [backlog.md](backlog.md) `C2` had the radiator backwards: it is 2.84× stiffer, not half, and the blocks that lost are the thruster and the two pumps at 0.60×. |
 | 2026-08-22 | Added `AmbientLagShareOfDay`. The climate's lag was 45 absolute seconds against a rotation a server sets to anything, so one authored figure meant a different climate on every world ([backlog.md](backlog.md) `C6`). |
 | 2026-08-22 | Added `UndergroundConvectionCoefficient`. A buried grid exchanged with rock at the coefficient for moving air, which made digging in the best cooling in the game ([backlog.md](backlog.md) `A16`). |
 | 2026-08-22 | Split `SolarAbsorptivity` off `Emissivity`. One number did both jobs, so a good radiator was forced to be a good absorber — the one combination real spacecraft radiators exist to avoid ([backlog.md](backlog.md) `B27`). Omitting it follows the emissivity, so nothing already authored changes, and zero stays a real answer rather than reading as unset. |

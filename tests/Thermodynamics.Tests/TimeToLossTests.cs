@@ -23,6 +23,13 @@ namespace Thermodynamics.Tests
     /// </summary>
     public class TimeToLossTests
     {
+        private readonly Xunit.Abstractions.ITestOutputHelper output;
+
+        public TimeToLossTests(Xunit.Abstractions.ITestOutputHelper output)
+        {
+            this.output = output;
+        }
+
         /// <summary>
         /// With nothing radiating, temperature climbs linearly, damage accrues as the square of the
         /// time, and destruction lands at <c>sqrt(2 C I / (d W))</c> exactly.
@@ -295,6 +302,108 @@ namespace Thermodynamics.Tests
 
             Assert.True(crossing > 0, "no shipped block crosses, so nothing was judged");
             Assert.True(violations.Count == 0, string.Join("\n  ", violations));
+        }
+
+
+        /// <summary>
+        /// Halving a block's damage per kelvin does *not* double how long it lasts, and the shape is
+        /// what makes the dial a weak one: the damage rate rises from zero as the block climbs, so
+        /// the span goes as the inverse square root of the dial rather than its inverse.
+        /// </summary>
+        [Fact]
+        public void TheSpanGoesAsTheInverseSquareRootOfTheDamageDial()
+        {
+            const float Capacity = 5000f;
+            const float Watts = 250f;
+            const float Critical = 600f;
+            const float Integrity = 30000f;
+
+            float baseline = BlockHeatIndex.SecondsFromCriticalToLoss(
+                Capacity, Watts, 0f, Critical, 2f, Integrity);
+
+            Assert.Equal(baseline * (float)Math.Sqrt(2d), BlockHeatIndex.SecondsFromCriticalToLoss(
+                Capacity, Watts, 0f, Critical, 1f, Integrity), 1);
+            Assert.Equal(baseline / (float)Math.Sqrt(2d), BlockHeatIndex.SecondsFromCriticalToLoss(
+                Capacity, Watts, 0f, Critical, 4f, Integrity), 1);
+        }
+
+        /// <summary>
+        /// At the damage rule `OverheatDamagePerKelvin` was authored under, a block lasts a fraction
+        /// as long — and this is the measurement that says the authored values should stay.
+        ///
+        /// <para>
+        /// The solver used to apply the whole overshoot as damage on **every update**, so at the
+        /// shipped `Frequency` of 8 the dial bit eight times harder than it does now. That is one
+        /// of the three changes [backlog.md](../../docs/backlog.md) `C2` says the authored values
+        /// predate — and re-running the shipped definitions at eight times the dial shows restoring
+        /// their authored intent would put the median block's whole life past its rating inside ten
+        /// seconds, which is the failure `C11` was opened for and `G5` forbids.
+        /// </para>
+        ///
+        /// <para>
+        /// **The scaling is not a square root here**, which is why this recomputes rather than
+        /// dividing: a block that settles just over its limit grinds down at a constant rate, and
+        /// that tail is linear in the dial. Blocks near the fast end lose about 2.8×, the slow end
+        /// up to 8×. See balance.md, How long a block has after it crosses.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheAuthoredDamageRuleWouldPutTheWholeEventInsideTenSeconds()
+        {
+            if (!GameBlocks.IsInstalled) return;
+
+            // The factor the per-step rule applied at the shipped frequency.
+            const float Authored = 8f;
+
+            List<float> shipped = new List<float>();
+            List<float> authored = new List<float>();
+
+            foreach (BlockHeatIndex.Reading reading in BlockHeatIndex.All())
+            {
+                if (float.IsInfinity(reading.SecondsToCritical)) continue;
+                if (float.IsInfinity(reading.SecondsCriticalToLoss)) continue;
+
+                float harsher = BlockHeatIndex.SecondsFromCriticalToLoss(
+                    reading.HeatCapacity, reading.Watts, reading.RadiativeCoefficient,
+                    reading.CriticalKelvin, reading.DamagePerKelvin * Authored, reading.Integrity);
+
+                if (float.IsInfinity(harsher)) continue;
+
+                shipped.Add(reading.SecondsCriticalToLoss);
+                authored.Add(harsher);
+            }
+
+            Assert.True(shipped.Count > 20, "too few shipped blocks crossed to say anything");
+
+            float shippedMedian = Median(shipped);
+            float authoredMedian = Median(authored);
+
+            output.WriteLine(string.Format("{0,-22}{1,9}{2,9}{3,9}", "damage per kelvin", "p10", "p50", "p90"));
+            output.WriteLine(string.Format("{0,-22}{1,9:n1}{2,9:n1}{3,9:n1}", "as shipped (x1)",
+                Percentile(shipped, 10), shippedMedian, Percentile(shipped, 90)));
+            output.WriteLine(string.Format("{0,-22}{1,9:n1}{2,9:n1}{3,9:n1}", "as authored (x8)",
+                Percentile(authored, 10), authoredMedian, Percentile(authored, 90)));
+            output.WriteLine(shipped.Count + " shipped block types cross and are destroyed");
+
+            Assert.True(shippedMedian > 20f,
+                "the shipped rule gives the median block " + shippedMedian.ToString("n1") + " s");
+            Assert.True(authoredMedian < 10f,
+                "the authored rule gives the median block " + authoredMedian.ToString("n1") + " s");
+        }
+
+        private static float Percentile(List<float> values, int percent)
+        {
+            List<float> ordered = new List<float>(values);
+            ordered.Sort();
+            int index = (ordered.Count - 1) * percent / 100;
+            return ordered[index];
+        }
+
+        private static float Median(List<float> values)
+        {
+            List<float> ordered = new List<float>(values);
+            ordered.Sort();
+            return ordered[ordered.Count / 2];
         }
 
         private static float Pow4(float value)

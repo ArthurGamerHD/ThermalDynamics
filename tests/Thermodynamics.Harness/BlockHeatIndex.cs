@@ -52,6 +52,9 @@ namespace Thermodynamics.Harness
             public float CriticalKelvin;
             public float Emissivity;
 
+            /// <summary>Emissivity x sigma x area, W/K^4: the block's whole radiating skin.</summary>
+            public float RadiativeCoefficient;
+
             /// <summary>Watts it can radiate at its critical temperature.</summary>
             public float RadiatedWatts;
 
@@ -110,6 +113,14 @@ namespace Thermodynamics.Harness
             /// Zero where the install is absent, which is the only case this figure is unavailable.
             /// </summary>
             public float Integrity;
+
+            /// <summary>
+            /// Hit points the block loses per kelvin over its rating per simulated second, from its
+            /// own definition. Carried so the span above can be recomputed at another value — which
+            /// is the only way to ask what the dial is worth. See balance.md, How long a block has
+            /// after it crosses.
+            /// </summary>
+            public float DamagePerKelvin;
 
             /// <summary>
             /// Simulated seconds from the crossing to the block being destroyed, alone in the dark
@@ -255,6 +266,7 @@ namespace Thermodynamics.Harness
                 AreaSquareMetres = area,
                 CriticalKelvin = critical,
                 Emissivity = thermal.Emissivity,
+                RadiativeCoefficient = thermal.Emissivity * ThermalConstants.StefanBoltzmann * area,
                 RadiatedWatts = radiated,
                 ConductedWatts = conducted,
                 Index = shed > 0f ? watts / shed : float.PositiveInfinity,
@@ -268,6 +280,7 @@ namespace Thermodynamics.Harness
                 SecondsToCritical = SecondsToReach(capacity, watts,
                     thermal.Emissivity * ThermalConstants.StefanBoltzmann * area, critical),
                 Integrity = rating.Integrity,
+                DamagePerKelvin = thermal.OverheatDamagePerKelvin,
                 SecondsCriticalToLoss = SecondsFromCriticalToLoss(capacity, watts,
                     thermal.Emissivity * ThermalConstants.StefanBoltzmann * area, critical,
                     thermal.OverheatDamagePerKelvin, rating.Integrity),

@@ -367,6 +367,23 @@ both measure: `burn-forward` crossings at p10/p50/p90 of 2.8/5.5/30.3 s against 
 `full-electrical` at a median of 9.0 s against 8.9 s. The one place it does not is `idle`, where two
 ships cross rather than eighteen and nothing can be read from either.
 
+**The damage dial is the reason the window exists, and it was not chosen for the rule it now runs
+under.** The solver used to apply the whole overshoot as damage on *every update*, so at the shipped
+`Frequency` of 8 it bit eight times harder than it does now — and `OverheatDamagePerKelvin` was
+authored under that rule. Re-running the 72 shipped types that cross at eight times the dial says
+what restoring their authored intent would cost:
+
+| Damage per kelvin | p10 | Median | p90 |
+| --- | ---: | ---: | ---: |
+| as shipped, per simulated second | 8.7 s | **25.1 s** | 238.4 s |
+| as authored, per step at `Frequency` 8 | 2.8 s | **6.5 s** | 35.3 s |
+
+**So the authored values stay.** Under the rule they were written for the median block's entire life
+past its rating is six and a half seconds, which is the failure `C11` was opened for and `G5`
+forbids. This is recomputed rather than scaled, because the dial is not a square root: a block that
+settles just over its limit grinds down at a constant rate, so the slow end loses 6.8× where the
+fast end loses 3.1×. Pinned by `TheAuthoredDamageRuleWouldPutTheWholeEventInsideTenSeconds`.
+
 The per-block-type counterpart is [`BlockHeatIndex.SecondsFromCriticalToLoss`](../tests/Thermodynamics.Harness/BlockHeatIndex.cs),
 which integrates the same damage rule against a block's own hit points with the block alone in the
 dark: of the 72 shipped types that cross at all, the median survives **24.7 s** past its rating and
@@ -701,6 +718,7 @@ five ways a full sweep dies, and [backlog.md](backlog.md) for what is still open
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | Settled one of `C2`'s three claims with a measurement rather than a retune: `OverheatDamagePerKelvin` was authored for the per-step damage rule, which at `Frequency` 8 bit eight times harder, and restoring that intent would put the median block's whole life past its rating at **6.5 s**. The authored values stay. |
 | 2026-08-23 | Answered the damage-timing question with the event that costs a player something. The section had been called *"damage arrives too fast to be played around"* and quoted a **median 8.9 s** that is the *crossing* — the moment the damage rate leaves zero. The first block is lost at a median **37.0 s** under full electrical load, the median ship's own crossing-to-loss gap is **24.2 s**, and with the cue's three-second lead the window is 40 s. `G5`'s rationale holds. Split into [the crossing](#how-fast-a-ship-crosses-critical) and [the loss](#how-long-a-block-has-after-it-crosses), which is the section `BlockHeatIndex` has cited since it was written and which did not exist. |
 | 2026-08-22 | Measured the catalogue drift this page had recorded as *up to 4×*: it is **4.32×** at worst, on the large thruster, and four of six blocks are out rather than three. `CatalogDriftTests` pins all of it, armour included — matching exactly is what makes the rest a measurement ([backlog.md](backlog.md) `C4`). |
 | 2026-08-22 | Added [The compatibility floor holds](#the-compatibility-floor-holds). Every one of the 705 prefabs the game ships has now been simulated — the criterion `G7` was written down first ([balance-lab.md](balance-lab.md)) — and none loses a block arriving, against 616 of 705 that do when flown hard. |
