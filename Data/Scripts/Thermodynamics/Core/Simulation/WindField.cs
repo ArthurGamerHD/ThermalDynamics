@@ -35,11 +35,69 @@ namespace Thermodynamics.Core
             Vector3 direction = Direction(up, axis);
             if (direction.LengthSquared() < 1e-6f) return Vector3.Zero;
 
-            return direction * Speed(maxSpeed, weather, variation);
+            // The band's own strength, which is what keeps this continuous across a band edge where
+            // the direction reverses. See BandStrength.
+            return direction * Speed(maxSpeed, weather, variation) * BandStrength(up, axis);
+        }
+
+        /// <summary>
+        /// How far a band's own bearing sits off due east or west, as the tangent of the angle.
+        ///
+        /// Earth's trades reach the equator twenty to thirty degrees off due west and its
+        /// westerlies leave the mid latitudes about thirty degrees off due east. This is the
+        /// tangent of thirty, applied at the band's own strongest point and fading with it.
+        /// </summary>
+        public const float BandTilt = 0.5774f;
+
+        /// <summary>
+        /// The band signal at this latitude: +1 where the band blows westward, −1 where it blows
+        /// eastward, and zero at the three latitudes that separate them.
+        ///
+        /// Three bands per hemisphere, as on Earth, taken on distance from the equator: trades,
+        /// westerlies, polar easterlies. The zeros are the doldrums, the horse latitudes and the
+        /// polar front, and they are zeros rather than seams — the organised circulation of a band
+        /// really does die out where the next one begins.
+        /// </summary>
+        private static float Band(float distance)
+        {
+            return (float)Math.Sin(distance * 6d);
+        }
+
+        /// <summary>
+        /// How much of the ceiling this latitude's circulation is worth, 0..1. Full at a band's
+        /// centre and zero at its edges.
+        ///
+        /// **This is what makes the field continuous.** <see cref="Direction"/> is a unit vector
+        /// and it reverses end for end at every band edge, because the band on the other side blows
+        /// the other way — which is true and is not a wall, because the wind has died before it
+        /// turns. A consumer that multiplies the two gets a smooth field; one that reads the
+        /// direction alone does not, and there is no direction to read where the strength is zero.
+        /// </summary>
+        public static float BandStrength(Vector3 up, Vector3 axis)
+        {
+            if (up.LengthSquared() < 1e-6f || axis.LengthSquared() < 1e-6f) return 0f;
+
+            float sine = Clamp(Vector3.Dot(Vector3.Normalize(up), Vector3.Normalize(axis)), -1f, 1f);
+            return Math.Abs(Band(Math.Abs((float)Math.Asin(sine))));
         }
 
         /// <summary>
         /// Wind direction here: along the surface, in the circulation band this latitude falls in.
+        ///
+        /// <para>
+        /// **The sideways component follows the band, not the hemisphere.** It used to be poleward
+        /// everywhere, so air diverged from the equator where Earth's trades converge, and the
+        /// vector flipped end for end across latitude 0 at full strength — a wall a ship could fly
+        /// through. A band's meridional component is equatorward in the trades and the polar
+        /// easterlies and poleward in the westerlies, which is the same alternation the zonal
+        /// component already had, so both now come off one signal.
+        /// </para>
+        ///
+        /// <para>
+        /// It vanishes at the equator and at the poles rather than reversing there: the equator is
+        /// where the two hemispheres' flows meet, and a meridional component that stepped across it
+        /// would be the same wall in a different place.
+        /// </para>
         /// </summary>
         public static Vector3 Direction(Vector3 up, Vector3 axis)
         {
@@ -61,16 +119,18 @@ namespace Thermodynamics.Core
             float latitude = (float)Math.Asin(sine);
             float distance = Math.Abs(latitude);
 
-            // Three bands per hemisphere, as on Earth, taken on distance from the equator. Expressed
-            // as a bearing rather than a pair of components: mixing a fixed sideways term into a
-            // fading one makes the wind jump at every band edge, where the sideways term is all that
-            // remains. Rotating the bearing keeps the direction continuous.
-            double bearing = (Math.PI / 2d) + ((Math.PI / 2d) * Math.Sin(distance * 6d));
+            float band = Band(distance);
+            if (Math.Abs(band) < 1e-6f) return Vector3.Zero;
 
-            Vector3 alongMeridian = latitude < 0f ? -north : north;
+            // Toward the nearer pole, which is what "poleward" means on either side of the equator.
+            Vector3 poleward = latitude < 0f ? -north : north;
 
-            Vector3 direction =
-                (east * (float)Math.Cos(bearing)) + (alongMeridian * (float)Math.Sin(bearing));
+            // Zero at the equator and at the pole, largest between: the meridional component is a
+            // tilt on the zonal one rather than a term of its own, so it cannot survive the zonal
+            // component's death at a band edge and reverse on its own.
+            float tilt = BandTilt * (float)Math.Sin(distance * 2d);
+
+            Vector3 direction = (east * -band) + (poleward * (-band * tilt));
 
             return direction.LengthSquared() < 1e-6f ? Vector3.Zero : Vector3.Normalize(direction);
         }

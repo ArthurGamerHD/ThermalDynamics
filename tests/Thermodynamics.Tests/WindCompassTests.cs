@@ -176,14 +176,23 @@ namespace Thermodynamics.Tests
             Assert.Equal(0f, WindCompass.Normalise(float.NaN), 3);
         }
 
+        /// <summary>
+        /// The two halves joined up: wherever the circulation blows, a player standing there gets a
+        /// needle rather than a blank — and where it does not blow, a blank rather than a needle
+        /// pointing at a rounding error.
+        ///
+        /// The equator and the two band edges are calms. `WindField.BandStrength` is what says so,
+        /// and the readout is meant to hide below `MinimumReadableWind` rather than show a bearing
+        /// nobody should trust.
+        /// </summary>
         [Fact]
-        public void TheFieldsOwnWindReadsAsABearingAtEveryLatitude()
+        public void TheFieldsOwnWindReadsAsABearingWhereverItBlows()
         {
-            // The two halves joined up: whatever the circulation does at a latitude, a player
-            // standing there gets a needle rather than a blank.
             Vector3 axis = new Vector3(0f, 1f, 0f);
+            int read = 0;
+            int calm = 0;
 
-            for (int latitude = -80; latitude <= 80; latitude += 10)
+            for (int latitude = -85; latitude <= 85; latitude += 5)
             {
                 double radians = latitude * Math.PI / 180d;
                 Vector3 up = Vector3.Normalize(new Vector3(
@@ -195,10 +204,22 @@ namespace Thermodynamics.Tests
                 Vector3 facing = Vector3.Normalize(Vector3.Cross(axis, up));
 
                 float degrees;
-                Assert.True(WindCompass.Bearing(wind, facing, up, out degrees),
-                    "no bearing at latitude " + latitude);
+                bool bearing = WindCompass.Bearing(wind, facing, up, out degrees);
+
+                if (WindField.BandStrength(up, axis) < 1e-3f)
+                {
+                    Assert.False(bearing, "a calm at latitude " + latitude + " reported a bearing");
+                    calm++;
+                    continue;
+                }
+
+                Assert.True(bearing, "no bearing at latitude " + latitude);
                 Assert.InRange(degrees, 0f, 360f);
+                read++;
             }
+
+            Assert.True(read > 20, "only " + read + " latitudes had a wind to read");
+            Assert.True(calm > 0, "no band edge was swept, so the calm case is untested");
         }
     }
 }
