@@ -17,6 +17,7 @@ namespace Thermodynamics
         private static readonly MyStringId ConductivityId = MyStringId.GetOrCompute("Conductivity");
         private static readonly MyStringId SpecificHeatId = MyStringId.GetOrCompute("SpecificHeat");
         private static readonly MyStringId EmissivityId = MyStringId.GetOrCompute("Emissivity");
+        private static readonly MyStringId SolarAbsorptivityId = MyStringId.GetOrCompute("SolarAbsorptivity");
         private static readonly MyStringId SurfaceAreaScalerId = MyStringId.GetOrCompute("ExposedSurfaceMultiplier");
         private static readonly MyStringId ProducerWasteEnergyId = MyStringId.GetOrCompute("ProducerWasteEnergy");
         private static readonly MyStringId ConsumerWasteEnergyId = MyStringId.GetOrCompute("ConsumerWasteEnergy");
@@ -57,11 +58,19 @@ namespace Thermodynamics
         public float SpecificHeat;
 
         /// <summary>
-        /// Grey-body emissivity, 0..1, also used as solar absorptivity. Reference values:
+        /// Grey-body emissivity, 0..1: what leaves the block as thermal radiation. Reference values:
         /// https://www.engineeringtoolbox.com/emissivity-coefficients-d_447.html
         /// </summary>
         [ProtoMember(15)]
         public float Emissivity;
+
+        /// <summary>
+        /// Solar absorptivity, 0..1: what the surface takes in from the sun and from point sources.
+        /// Undeclared, it follows the emissivity, which is what every block did before this property
+        /// existed. See definitions.md, Emissivity and absorptivity are two numbers.
+        /// </summary>
+        [ProtoMember(16)]
+        public float SolarAbsorptivity;
 
         [ProtoMember(17)]
         public float ExposedSurfaceMultiplier;
@@ -102,6 +111,10 @@ namespace Thermodynamics
             Conductivity = 1,
             SpecificHeat = 2,
             Emissivity = 4,
+
+            // Beside the emissivity it follows, and at the next free bit rather than the next
+            // number: the values are a wire format and moving one would re-read every other flag.
+            SolarAbsorptivity = 1024,
             ExposedSurfaceMultiplier = 8,
             ProducerWasteEnergy = 16,
             ConsumerWasteEnergy = 32,
@@ -183,6 +196,12 @@ namespace Thermodynamics
                 def.Declared |= DeclaredProperties.Emissivity;
             }
 
+            if (lookup.TryGetDouble(defId, GroupId, SolarAbsorptivityId, out dvalue))
+            {
+                def.SolarAbsorptivity = (float)dvalue;
+                def.Declared |= DeclaredProperties.SolarAbsorptivity;
+            }
+
             if (lookup.TryGetDouble(defId, GroupId, SurfaceAreaScalerId, out dvalue)
                 || lookup.TryGetDouble(defId, GroupId, LegacyExposedSurfaceId, out dvalue))
             {
@@ -226,6 +245,8 @@ namespace Thermodynamics
             def.SpecificHeat = Math.Max(0, def.SpecificHeat);
 
             def.Emissivity = Math.Max(0, def.Emissivity);
+
+            def.SolarAbsorptivity = Math.Max(0, def.SolarAbsorptivity);
 
             def.ExposedSurfaceMultiplier = Math.Max(0, def.ExposedSurfaceMultiplier);
 

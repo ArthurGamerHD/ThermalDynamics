@@ -74,7 +74,12 @@ namespace Thermodynamics.Core
         private float[] nodeRadiation = new float[0];
         private float[] nodeGeneration = new float[0];
         private float[] nodeExposedArea = new float[0];
-        private float[] nodeEmissivity = new float[0];
+        /// <summary>
+        /// Each node's solar absorptivity — what it takes *in* from the sun and from point
+        /// sources. Emission is <see cref="nodeRadiation"/>, which carries the emissivity, and the
+        /// two are different numbers on a selective surface. See BlockThermalProperties.
+        /// </summary>
+        private float[] nodeAbsorptivity = new float[0];
         private int[] nodeExposedFaces = new int[0];
 
         /// <summary>
@@ -1556,7 +1561,7 @@ namespace Thermodynamics.Core
                 nodeRadiation[i] = node.RadiationCoefficient;
                 nodeGeneration[i] = node.HeatGenerationWatts;
                 nodeExposedArea[i] = node.ExposedArea;
-                nodeEmissivity[i] = node.Thermal.Emissivity;
+                nodeAbsorptivity[i] = node.Thermal.EffectiveSolarAbsorptivity;
                 nodeCritical[i] = node.Thermal.CriticalTemperature;
 
                 int total = node.TotalExposedFaces;
@@ -1889,7 +1894,7 @@ namespace Thermodynamics.Core
                             + (f4 * nodeSunLit[b + 4] * sunWeights[4])
                             + (f5 * nodeSunLit[b + 5] * sunWeights[5]);
 
-                        solar = env.SolarEnergy * nodeEmissivity[i] * lit * area;
+                        solar = env.SolarEnergy * nodeAbsorptivity[i] * lit * area;
                     }
                     nodeSolarRow[i] = solar;
 
@@ -1986,7 +1991,7 @@ namespace Thermodynamics.Core
                 {
                     if (nodeExposedFaces[i] <= 0) continue;
 
-                    float watts = source.Irradiance * nodeEmissivity[i]
+                    float watts = source.Irradiance * nodeAbsorptivity[i]
                         * Weighted(i, sourceWeights) * nodeExposedArea[i];
                     if (watts == 0f) continue;
 
@@ -3132,7 +3137,7 @@ namespace Thermodynamics.Core
                 nodeRadiation = new float[size];
                 nodeGeneration = new float[size];
                 nodeExposedArea = new float[size];
-                nodeEmissivity = new float[size];
+                nodeAbsorptivity = new float[size];
                 nodeCritical = new float[size];
                 nodeExposedFaces = new int[size];
                 nodeRelaxation = new float[size];

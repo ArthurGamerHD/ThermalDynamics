@@ -449,6 +449,7 @@ namespace Thermodynamics.Harness
                     case "Conductivity": properties.Conductivity = number; break;
                     case "SpecificHeat": properties.SpecificHeat = number; break;
                     case "Emissivity": properties.Emissivity = number; break;
+                    case "SolarAbsorptivity": properties.SolarAbsorptivity = number; break;
                     case "ExposedSurfaceMultiplier":
                     case "SurfaceAreaScaler": properties.ExposedSurfaceMultiplier = number; break;
                     case "ProducerWasteEnergy": properties.ProducerWasteEnergy = number; break;

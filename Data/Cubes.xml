@@ -13,6 +13,10 @@
 
 	Units are real: SpecificHeat J/(kg K), Conductivity W/(m K), Emissivity 0..1. The HeatTimeScale
 	setting divides every capacity to reach a playable pace without moving any equilibrium.
+
+	Emissivity is what leaves; SolarAbsorptivity is what arrives. Declare only the first and the
+	second follows it, which is what every block did before the two were separated - so nothing
+	here needs an absorptivity, and a selective surface is the reason to write one.
 -->
 <Definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
 	<CubeBlocks>

@@ -523,8 +523,10 @@ Recorded so nobody rediscovers a decision as a bug. Each carries its price in
 frame buffer. That is a statement about difficulty, not about intent — it is wanted. See
 [Thermal vision](#thermal-vision--wanted-method-unknown).
 
-* **Not a per-block radiative transfer model.** Emissivity doubles as absorptivity; a block cannot
-  be shiny to the sun and black to space.
+* **Not a per-block radiative transfer model.** A face radiates to the sky or to nothing: two hot
+  blocks facing each other across a gap do not see each other, and no view factors exist. A surface
+  *can* now be shiny to the sun and black to space — `SolarAbsorptivity` is separate from
+  `Emissivity` — but each is one constant rather than a curve against wavelength.
 * **Not a build-state simulator.** A block at 10% construction carries its full thermal properties.
   The machinery to change that exists and the difference would be invisible next to the heat a
   block's neighbours carry.
