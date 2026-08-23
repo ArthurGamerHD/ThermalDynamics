@@ -148,20 +148,34 @@ Two hypotheses were tested and both were wrong, which is recorded here so they a
 * *The well-mixed ring puts every pipe link onto one parcel.* It does, but switching it off makes
   arcade's divergences slightly **worse** (14 → 16), so it is not the mechanism.
 
-### The shipped default diverges too, on a ship a player can build
+### The shipped default was never diverging on the burning ship
 
 ```
-shipped     x-burning-ship   11,279 K   0% starved   4268 over critical   DIVERGED
-candidate   x-burning-ship   11,280 K  49% starved   4268 over critical   DIVERGED
+shipped     x-burning-ship   11,279 K   0% starved   4268 over critical   settled
+candidate   x-burning-ship   11,280 K  49% starved   4268 over critical   settled
 ```
 
-On a burning 4,000-block ship the current default passes 10,000 K and never settles — with every
-substep it asks for granted. The published account of this used to be starvation, and the pair
-above is what falsified it: `candidate` is refused half its substeps on the same rig and lands one
-kelvin away. The cause is still open. This is not an arcade problem that arcade made visible; it is
-a divergence problem that arcade made loud. Pinned by
-`ProfileSuiteTests.TheShippedProfileStillDivergesOnABurningShip`, which is written to **fail when
-the defect is fixed**.
+This was published as a divergence for as long as it was measured, on the strength of one number:
+the hottest block passes 10,000 K. **It is a converged answer**, and three things say so. Run ten
+times longer the rig is flat to the last digit from 600 s to 6,000 s. Its energy balances —
+**1,083.360 MW made against 1,083.251 MW vented**, a part in ten thousand. And the pair above,
+which was originally the evidence that *starvation* was not the cause, is stronger evidence than
+that: two integrators refused wildly different substep counts landing one kelvin apart is what
+convergence looks like and is not something a divergence does.
+
+**Where the number comes from is arithmetic.** `Burning` drives the census hull's producers at
+twenty times their rating, so 488 of them make 1,083 MW inside a four-thousand-block hull. The
+hottest block is one with **no exposed face at all**: its only way out is 1,317 W/K of conduction
+into neighbours that are themselves buried and hot, and the temperature that pushes 2.22 MW down
+that path is 11,279 K. The peak among blocks that *can* radiate is 2,822 K. The rig exists to raise
+a damage event on every step, and it is not a state a ship reaches.
+
+**The defect it leaves behind is the column, not the cell.** `Diverged` was a threshold on a
+temperature, and a threshold on a temperature cannot tell a converged extreme from a diverged
+integration — so it reported one as the other and a year of work went after a cause that was not
+there. It now requires the run to have *failed to settle* as well, measured over the last fifth of
+the clock rather than over one interval. `ProfileSuiteTests.TheBurningShipSettlesRatherThanDiverging`
+and `TheHottestBlockOnTheBurningShipHasNoFaceToRadiateFrom` hold both halves.
 
 ## The feature matrix
 
@@ -202,6 +216,7 @@ separately rather than reported as defects — otherwise four correct results bu
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Withdrew the burning-ship divergence and corrected it in place (`E10`). It settles: flat to the last digit over ten times the run, energy balanced to a part in ten thousand, and two integrators refused wildly different substep counts one kelvin apart. The 11,279 K is a conduction-limited interior temperature — the hottest block has no face to radiate from — and the peak among blocks that can is 2,822 K. The real defect was the divergence column: a threshold on a temperature, which cannot tell a converged extreme from a diverged integration. It now requires a failure to settle as well. |
 | 2026-08-22 | Re-measured every figure here against one sweep, after `shipped` began reading the real defaults. The correction that matters: the shipped default's divergence on `x-burning-ship` was published as starvation, and it is not — it diverges with 0% of its substeps refused, one kelvin from `candidate`, which is refused 49%. |
 | 2026-08-22 | Became this page. The five shipped presets are gone — see [configuration.md](configuration.md#change-log) — and what is left is the half of the old `profiles.md` that was never about them: the harness's realism comparison, what it found, and the two divergences it pins. `shipped` now reads `ThermalSettings` rather than restating it, which is how it came to carry `MaxSubsteps 16` against a shipped 64. |
 | 2026-08-22 | Corrected the account of the shipped bundles, which named a `minimal` profile that does not exist and said all five ran `HeatTimeScale` 225 when three ran 1. |

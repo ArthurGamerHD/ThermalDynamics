@@ -41,6 +41,7 @@ packed = [[
     round(number(r, "substeps_demanded", 0), 2), round(number(r, "substeps_granted", 0), 1),
     int(number(r, "generation_w", 0) or 0), bi[r["hottest_block"]],
     int(number(r, "seconds_to_settle", -1) or -1),
+    int(number(r, "seconds_to_first_loss", -1) or -1),
 ] for r in rows]
 
 workshop = {}

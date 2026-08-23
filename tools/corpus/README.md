@@ -101,6 +101,7 @@ limit in [known-issues.md](../../docs/known-issues.md).
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Split the crossing from the loss everywhere the pages had run them together. The survey report's headline said a ship *loses its first block* after nine seconds where it meant *crosses critical*, its table's `First loss` column was the crossing and its `Blocks lost` column was blocks over critical, and the bench page repeated all three. `seconds_to_first_loss` is packed and shown beside the crossing, and reads as absent on every dataset collected before it existed. |
 | 2026-08-22 | The resume is a record rather than a count. A walk writes `done-<walk>.txt` as it finishes each blueprint and reads it on the next start, so relaunching is the whole procedure and `THERMAL_CORPUS_SKIP` is gone ([backlog.md](../../docs/backlog.md) `H2`). Said that off is now spellable in `THERMAL_CORPUS_TESTS` every way anyone reaches for (`H3`). |
 | 2026-08-22 | Wrote down [the five ways a full sweep dies](#the-five-ways-a-full-sweep-dies), which [balance.md](../../docs/balance.md) had been pointing at [backlog.md](../../docs/backlog.md) for and which no page in the tree carried — it had survived only as a note kept outside the repository, which is the failure [rules.md](../../docs/rules.md) exists to prevent. |
 | 2026-08-22 | Added this change log. |

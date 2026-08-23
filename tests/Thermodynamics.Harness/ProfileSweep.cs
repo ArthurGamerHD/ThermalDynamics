@@ -32,11 +32,30 @@ namespace Thermodynamics.Harness
     public static class ProfileSweep
     {
         /// <summary>
-        /// Above this, a reading is not a hot ship — it is a diverged integration. Tungsten boils
-        /// at about 6,200 K, so nothing on a grid has any business here, and calling it a failure
-        /// rather than a big number is the whole point of the column.
+        /// Above this, a reading is not a hot ship. Tungsten boils at about 6,200 K, so nothing on
+        /// a grid has any business here.
+        ///
+        /// **On its own it does not mean the integration diverged**, and reading it that way was
+        /// wrong for a year: `x-burning-ship` sat past 10,000 K and was reported as a divergence
+        /// until somebody ran it ten times longer and found it flat to the last digit, conserving
+        /// energy to a part in ten thousand, and agreeing to one kelvin between two integrators
+        /// that were refused wildly different substep counts. It was a converged
+        /// conduction-limited interior temperature, which is what a thousand megawatts inside a
+        /// four-thousand-block hull produces. See <see cref="Cell.Diverged"/>.
         /// </summary>
         public const float DivergenceKelvin = 10000f;
+
+        /// <summary>
+        /// Samples at the end of a run whose agreement decides whether it settled.
+        ///
+        /// One interval is not enough: a run can happen to move little between two samples while
+        /// still climbing, and a run that has genuinely stopped stays stopped. Five of the thirty
+        /// a rig takes is a fifth of the clock.
+        /// </summary>
+        public const int ConvergenceSamples = 5;
+
+        /// <summary>Fractional movement across that window under which a run has settled.</summary>
+        public const float ConvergenceFraction = 0.002f;
 
         /// <summary>One rig under one profile, fully measured.</summary>
         public class Cell
@@ -233,6 +252,30 @@ namespace Thermodynamics.Harness
             }
         }
 
+        /// <summary>
+        /// Whether the hottest block stopped moving over the last <see cref="ConvergenceSamples"/>
+        /// of a run — not over the last interval, which a run that is still climbing can pass.
+        /// </summary>
+        public static bool Settled(IList<Sample> samples)
+        {
+            if (samples == null || samples.Count < 2) return false;
+
+            int from = samples.Count - ConvergenceSamples;
+            if (from < 1) from = 1;
+
+            float last = samples[samples.Count - 1].HottestTemperature;
+            float span = Math.Max(1f, Math.Abs(last));
+
+            for (int i = from; i < samples.Count; i++)
+            {
+                float moved = Math.Abs(samples[i].HottestTemperature
+                    - samples[i - 1].HottestTemperature);
+                if (moved / span >= ConvergenceFraction) return false;
+            }
+
+            return true;
+        }
+
         private static ScenarioRunner FromBuilt(WorstCases.Built built)
         {
             ScenarioRunner runner = new ScenarioRunner(built.Simulation);
@@ -320,20 +363,19 @@ namespace Thermodynamics.Harness
                 cell.ColdestKelvin = Coldest(solver);
                 cell.OverCritical = last.OverheatingBlocks;
 
-                if (runner.Samples.Count >= 2)
-                {
-                    float previous = runner.Samples[runner.Samples.Count - 2].HottestTemperature;
-                    float span = Math.Max(1f, Math.Abs(last.HottestTemperature));
-                    cell.Converged = Math.Abs(previous - last.HottestTemperature) / span < 0.002f;
-                }
+                cell.Converged = Settled(runner.Samples);
 
                 if (first.TotalEnergy > 0f)
                 {
                     cell.EnergyDriftFraction = (last.TotalEnergy - first.TotalEnergy) / first.TotalEnergy;
                 }
 
+                // **A run that settled did not diverge, however hot it settled.** The threshold
+                // says the answer is not a ship; only the failure to settle says the answer is not
+                // an answer. Reading the threshold alone reported a converged extreme as an
+                // integration failure and sent a year of work after a cause that was not there.
                 cell.Diverged = !IsFinite(last.HottestTemperature)
-                    || last.HottestTemperature > DivergenceKelvin;
+                    || (last.HottestTemperature > DivergenceKelvin && !cell.Converged);
             }
             catch (Exception error)
             {
