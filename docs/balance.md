@@ -260,11 +260,12 @@ are **in vacuum**. The knob sweep is the only dataset with air, wind or motion i
 
 Two caveats apply to every figure below:
 
-* **The corpus dataset carries 50 duplicate rows.** A resumed run re-emits the batch it was
-  interrupted in — `THERMAL_CORPUS_SKIP` counts in files while the writing is per ship — so ten
-  ships are written twice. `verdict.py` drops them and prints the count. It is a tenth of a per cent
-  and changes no finding, but a population statistic that silently double-weights part of its
-  population is the failure this lab exists to prevent.
+* **The 2026-08-21 dataset carries 50 duplicate rows.** A resumed run re-emitted the batch it was
+  interrupted in, because the skip was counted in files while the writing was per ship, so ten ships
+  are written twice. `verdict.py` drops them and prints the count. It is a tenth of a per cent and
+  changes no finding, but a population statistic that silently double-weights part of its population
+  is the failure this lab exists to prevent. The resume is now a record of finished blueprints
+  rather than a count, so nothing collected since can carry them.
 * **Peaks past critical are not physics.** The harness never destroys an overheating block, so a
   ship past critical keeps generating for the rest of the clock; the 541,648 K reading is 1,800 s of
   an undamped source. Crossing times and shares are unaffected. See
