@@ -823,11 +823,15 @@ does not exist — `game_comfort` correlates weakly with everything and is not a
 
 | | |
 | --- | --- |
-| C5 | The core gradient sits behind a 2 km deadzone deeper than SE's voxels reach. Whether the default should be a few hundred metres is a balance question. |
 | C7 | The 4 K/km lapse rate and the ground table both say mountains are cold. The honest fix is probably that ground offsets should shrink as the lapse rate grows, since a site is only snowy *because* it is high. **The snow reference site is where that will show.** |
 | F4 | No latitude spread and no weather variety in any field data: three sites spanning 7°–41°, one weather kind, no still air. A polar grid and `/weather SnowHeavy` would settle the first two. |
 
-**Not built:** sea breeze, gap-wind acceleration, lee turbulence.
+**Three mechanisms are not built, and that is a decision rather than an oversight.** A *sea breeze*
+needs a coastline, which means knowing where water is; *gap-wind acceleration* needs a valley
+recognised as a valley rather than a fall line sampled at a radius; and *lee turbulence* is unsteady
+by definition, which this field is not — it is a steady map, and a gusting term would be the one
+thing in it that changed from moment to moment for no reason a player could see. Nothing else on
+this page depends on any of them.
 
 ---
 
@@ -835,6 +839,7 @@ does not exist — `game_comfort` correlates weakly with everything and is not a
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Said *why* the three unbuilt wind mechanisms are unbuilt, which is what made their absence a decision rather than a note, and took the closed `C5` off the known-faults table. Closes `B28`, which was a backlog row recording something this page already recorded. |
 | 2026-08-22 | Closed `B22` as a decision rather than a change: this mod will not author air densities against the engine's, because `C9` says the game's own answer is read and not overridden — and a density that disagreed with the engine's would put this model at odds with the oxygen system, the wind ceiling and the jetpack at once. The lack of differentiation between atmospheric worlds is the definitions', not the model's. |
 | 2026-08-22 | Closed `C5`. The sea-level deadzone is derived from each world's own deepest natural ground — `HillParams.Min × radius`, 285 m to 2 km across the eight — rather than a round 2 km that put the core gradient out of reach on seven of them. Opened the cross-check that should have existed with the transcription: `PlanetReferenceTests` compares the eight worlds against the installed definitions, and found on its first run that two of them are written under a different element name than the other six. |
 | 2026-08-22 | Closed `C6`: the climate's lag is a share of the world's own day rather than 45 absolute seconds, and the day is measured from the sun the model already samples rather than read from a type whose whitelist status cannot be established outside a session. |
