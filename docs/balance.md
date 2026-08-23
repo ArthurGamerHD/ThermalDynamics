@@ -794,21 +794,65 @@ rows re-derived (`M1`); what is compared is the interior of this grid against it
 Retuning to it would move every temperature figure in this repository, and the cost column has been
 read at the median only. See [backlog.md](backlog.md) `C12`.
 
-### Air costs about six times what vacuum costs
+### Air is where the substep budget goes, and the shipped pair does not fit it
 
-In vacuum, substeps are cheap: corpus p99 is 6.02 against 64 granted. In air they are not, and the
-corpus never measured air. On the 49-ship panel at shipped settings:
+**Every atmospheric figure this section carried was exactly half what the shipped configuration
+demands.** The table below was taken when `Frequency` was 8; the shipped step became a quarter of a
+second when it went to 4, which doubles the demand — substep demand is a conductance times the step
+over a capacity — and the table was never re-derived. Re-measured on the same 49-ship panel, all
+eight of its figures come out at **2.000×** what it published, in four environments at once, and
+`AirCostTests` pins the proportionality the correction rests on.
 
-| Environment | substeps p50 | p95 |
-| --- | ---: | ---: |
-| `vacuum-shadow` | 2.41 | 3.56 |
-| `surface-cold-night` | 12.59 | 14.78 |
-| `surface-hot-noon` (still air) | 14.15 | 16.66 |
-| `surface-windy` (60 m/s) | 23.28 | 27.61 |
-| `storm-parked` (100 m/s) | 25.94 | 30.81 |
-| `reentry` (200 m/s) | 30.87 | 36.71 |
+| Environment | substeps p50 | p95 | as published | |
+| --- | ---: | ---: | ---: | --- |
+| `vacuum-shadow` | 4.83 | 7.12 | 2.41 / 3.56 | ×2.00 |
+| `surface-hot-noon` (still air) | 28.28 | 33.31 | 14.15 / 16.66 | ×2.00 |
+| `storm-parked` (100 m/s) | 51.86 | 61.61 | 25.94 / 30.81 | ×2.00 |
+| `reentry` (200 m/s) | 61.67 | 73.37 | 30.87 / 36.71 | ×2.00 |
 
-That is the responsiveness budget, and it is spent on convection rather than on heat.
+**Read against the cap, the shipped configuration fails `G6` in air.** `MaxSubsteps` grants 64. At
+200 m/s in thick air the panel's p99 demand is **73.4**, and **14 of 49 hulls are over the cap**;
+the median hull is at 61.7, which is 96 % of it. The same run on the forty-hull retest set gives
+73.6 and the same verdict, so this is a property of the configuration rather than of a population.
+Exceeding the cap is not a slow step — the solver refuses to divide finely enough and floors the
+block's heat capacity instead — so a hull over it is being simulated *wrong*, not slowly.
+
+The criterion had been scored in vacuum, where the same panel demands 7.1 at p95 and nothing is
+close to anything. **`G6` was read where the money is not being spent.**
+
+#### The retune `C12` is about costs less here, not more
+
+`G8`'s four candidate cells were priced at 1.36–2.04× the shipped demand, and that column is a
+vacuum column. In air the same cells are **cheaper**, and the mechanism is exact:
+
+> Substep demand is a conductance over a heat capacity. `HeatTimeScale` divides every capacity and
+> touches nothing else, so lowering it divides *every* stiffness term at once; multiplying
+> conductivity restores the conduction term and only that one.
+
+A hull in vacuum is conduction-limited, so it gets dearer by `conductivity × clock / 225`. A hull in
+air is convection-limited, that term is not restored, and it gets cheaper by nearly `clock / 225`.
+Both halves are pinned on rigs that isolate one term each.
+
+Measured over the 49-ship panel, worst environment per cell, against the 64 the caps grant:
+
+| cell | reentry p99 | of cap | `G6` | projected at 300 m/s, p50 / p95 | of cap | `G6` |
+| --- | ---: | ---: | :---: | ---: | ---: | :---: |
+| shipped, ×1 / 225 | 73.4 | 115 % | **fail** | 69.2 / 82.4 | 129 % | **fail** |
+| ×4 / 120 | 46.4 | 72 % | pass | 43.6 / 51.2 | 80 % | pass |
+| ×4 / 100 | 38.6 | 60 % | pass | 36.3 / 42.6 | 67 % | pass |
+| ×4 / 90 | 34.8 | 54 % | pass | 32.7 / 38.4 | 60 % | pass |
+| ×4 / 80 | 30.9 | 48 % | pass | 29.1 / 34.1 | 53 % | pass |
+
+**So the retune is not a cost to be justified — it is the fix for a defect that already exists**,
+and its vacuum price is paid in the environment where demand is 12 % of the cap rather than 115 %
+of it. `PairSweep.EveryCandidateCellIsPricedInAir` is the run and `tools/corpus/air.py` scores it.
+
+**What this does not measure.** The 300 m/s columns are a projection — demand is linear in the
+convection coefficient, fitted per cell on its own three atmospheric points, and validated against a
+held-out point below. `storm-parked` at clocks 80–100 hits the sweep's 7,200 s ceiling rather than
+its stretched length, so its column is read at a slightly earlier state than the rule asks for;
+`reentry` is not affected and is the binding case. And the demand recorded is the one the *last*
+step needed, which is the same statistic `verdict.py` scores `G6` on.
 
 ### The 300 m/s constraint
 
@@ -826,15 +870,17 @@ because convection dominates. At `reentry` it does bite: 300 K → 521 K over th
 
 Substep demand is linear in the convection coefficient. Fitting the two measured points at h=1
 (`surface-hot-noon`) and h=2 (`storm-parked`) and testing against the held-out 200 m/s `reentry`
-measurement:
+measurement — re-derived at the shipped quarter-second step, which is what the section above
+corrects:
 
 | | Fit | Predicted at 200 m/s | Measured at 200 m/s | Error | **Projected at 300 m/s** |
 | --- | --- | ---: | ---: | ---: | ---: |
-| p50 | 2.35 + 11.79h | 30.83 | 30.87 | −0.13% | **34.58** |
-| p95 | 2.50 + 14.15h | 36.67 | 36.71 | −0.11% | **41.17** |
+| p50 | 4.70 + 23.58h | 61.63 | 61.67 | −0.06% | **69.2** |
+| p95 | 5.01 + 28.30h | 73.33 | 73.37 | −0.05% | **82.4** |
 
-**300 m/s demands about 35 substeps at the median and 41 at p95, against `MaxSubsteps` 64.** It
-fits, with roughly a third of the budget in reserve, at about 15× the vacuum cost. This is a
+**300 m/s demands about 69 substeps at the median and 82 at p95, against `MaxSubsteps` 64.** It does
+not fit: at the speed these servers actually run, the *median* ship in atmosphere is over the cap.
+That is the same defect the section above measures at 200 m/s, one speed further on. This is a
 projection from a validated fit, not a measurement; `flight-300` and `storm-300` exist in
 [`Battery.All()`](../tests/Thermodynamics.Harness/Battery.cs) to measure it.
 
@@ -850,15 +896,20 @@ projection from a validated fit, not a measurement; `flight-300` and `storm-300`
 * **The failure is per-block, not per-hull**, and it strands in one or two block types.
 * **Timing is linear in `HeatTimeScale` and unaffected by anything that changes equilibrium**;
   equilibrium is unaffected by `HeatTimeScale`. The two axes are cleanly separable.
-* **G1, G2, G5 and G6 hold on shipped defaults.**
+* **G1, G2 and G5 hold on shipped defaults. `G6` does not, in air.** It holds comfortably in
+  vacuum — panel p95 7.1 against the 64 the caps grant — and fails at 200 m/s in thick air, where
+  p99 is 73.4 and fourteen of forty-nine hulls are over the cap. It had only ever been scored in
+  vacuum. See [Air is where the substep budget goes](#air-is-where-the-substep-budget-goes-and-the-shipped-pair-does-not-fit-it).
 
 **Not settled.**
 
 * **G3 has never been measured.** No corpus ship carries a cooling block — the filter rejects
   non-vanilla blocks — so the single highest-value missing run is the retrofit pass, and two of the
   five balance goals depend entirely on it.
-* **No dial has been measured against another.** Every knob row moves one thing, and the
-  conduction/clock pair the timing goal depends on is unmeasured.
+* **Whether to ship the retune `G6` and `G8` now agree on.** Conductivity ×4 with the clock at
+  100 satisfies `G8`, keeps `G1`, `G2` and `G5`, and takes the atmospheric demand from 115 % of the
+  cap to 60 %. What is unbuilt is the pass itself, which re-quotes every temperature figure on this
+  page ([backlog.md](backlog.md) `C12`).
 * **The corpus has never seen air.** Five vacuum scenarios on 8,132 ships; air only on the 49-ship
   panel, so every atmospheric statement here rests on 49 hulls.
 * **`full-electrical` charges every jump drive continuously**, so the scenario is a bound rather
@@ -901,6 +952,7 @@ five ways a full sweep dies, and [backlog.md](backlog.md) for what is still open
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | **Priced `C12`'s candidate cells in air, and the answer inverted the question.** The cost column that made the retune a decision was a *vacuum* column, where demand is 12 % of what the caps grant; in air it is 115 % of it. Two findings came out of the same run. **Every atmospheric figure this page carried was exactly half**, taken when `Frequency` was 8 and never re-derived when the shipped step became a quarter second — measured on the same 49-ship panel, all eight are 2.000× what was published. **And the shipped configuration fails `G6` in air**: p99 substep demand at 200 m/s is 73.4 against 64, fourteen of forty-nine hulls are over the cap, and at the 300 m/s servers run the *median* ship is. Read there, all four candidate cells pass and the shipped pair is the only one that does not, because lowering the clock divides every stiffness term while raising conductivity restores only conduction. The retune is the fix for a defect rather than a cost to be justified. |
 | 2026-08-23 | **Measured the two dials together and found the significance window**, which is `C12` and the one thing every sweep before it could not answer: `G8` is satisfied by conductivity ×4 at `HeatTimeScale` 80–120, crossing at 124–186 s and recovering in 2,220–3,270 s, at 1.36–2.04× the shipped substep demand and with `G1`, `G2` and `G5` all kept. **Corrected the projection this page carried**, which put the window at ×4 with the clock near 15 — measured, that cell crosses at 991 s, five times its prediction, because the two curves multiplied together came from different scenarios and from a median over the ships that crossed. The composition rule itself holds to 1 %. **Conductivity ×8 is excluded by the criterion rather than by cost**: only 13 of 40 hulls ever cross there, so the population has no median crossing at any clock. |
 | 2026-08-23 | **Measured what the real-unit conversion did to the ships people fly**, which is what was left of `C2`. Forty retest hulls through seven scenarios in the shipped world and four counterfactual ones recovered exactly from `Cubes.xml` at `4f6b44a^`: a burning hull is **+34.7 K** hotter than before the conversion and a loaded one **−16.3 K** cooler, the arms attribute each to one family, and **no criterion moves** — G1, G2 and G5 are identical in all five worlds. What changed for a player is the spread rather than the peak: under load the peak fell 16 K and **192 more** blocks went over critical, under thrust the peak rose 35 K and **257 fewer** did. Also corrected the published per-block table, which described only the four families `Cubes.xml` authors and said *thrusters went 0.6×* — true of the hydrogen ones alone, against **0.23×** for ion and **1.27×** for atmospheric. |
 | 2026-08-23 | Settled one of `C2`'s three claims with a measurement rather than a retune: `OverheatDamagePerKelvin` was authored for the per-step damage rule, which at `Frequency` 8 bit eight times harder, and restoring that intent would put the median block's whole life past its rating at **6.5 s**. The authored values stay. |

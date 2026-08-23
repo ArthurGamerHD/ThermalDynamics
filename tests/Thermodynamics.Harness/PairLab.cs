@@ -126,6 +126,43 @@ namespace Thermodynamics.Harness
         /// </summary>
         public static readonly string[] Scenarios = { "idle", "full-electrical", "recovery" };
 
+        /// <summary>
+        /// **The four environments the cost question is actually decided in.** `G6` is a cost
+        /// criterion and the three scenarios above are all vacuum, where substeps are cheap: corpus
+        /// p99 is 6.02 against 64 granted. In air they are not — the panel measures 36.71 at p95
+        /// under reentry, and about 41 is projected at the 300 m/s servers run — so whether a
+        /// retune is affordable is a question about air and the grid never asked it.
+        ///
+        /// <para>
+        /// Four rather than the panel's six, and each earns its place. `vacuum-shadow` ties this
+        /// pass to the vacuum data it has to be read beside. The other three are the two anchors of
+        /// the convection fit [balance.md](../../docs/balance.md) validated — `h = 1` at
+        /// `surface-hot-noon` and `h = 2` at `storm-parked` — and the held-out point it was tested
+        /// against, `reentry` at 200 m/s, which is also the worst measured case. Keeping the fit's
+        /// own three points means this pass can be read as *what the retune does to that fit*
+        /// rather than as four unrelated numbers, and the 300 m/s figure is a projection either way.
+        /// </para>
+        /// </summary>
+        public static readonly string[] AirScenarios =
+        {
+            "vacuum-shadow", "surface-hot-noon", "storm-parked", "reentry",
+        };
+
+        /// <summary>
+        /// The cells the air pass prices: the shipped control, and the four
+        /// [balance.md](../../docs/balance.md) found satisfy `G8`.
+        ///
+        /// **Only these five, because only these five are decidable.** Every other cell in the grid
+        /// either fails `G8` or is excluded by it, so what it costs in air changes nothing. The
+        /// control is here for the same reason it is in the main grid: a cost is a ratio, and a
+        /// ratio needs a denominator measured the same way.
+        /// </summary>
+        private static readonly float[][] AirGrid =
+        {
+            new[] { 1f, 225f },
+            new[] { 4f, 120f }, new[] { 4f, 100f }, new[] { 4f, 90f }, new[] { 4f, 80f },
+        };
+
         /// <summary>One cell of the grid.</summary>
         public class Cell
         {
@@ -201,11 +238,22 @@ namespace Thermodynamics.Harness
         /// <summary>Every cell, control first, then in the order above.</summary>
         public static List<Cell> All()
         {
+            return Cells(Grid);
+        }
+
+        /// <summary>The five cells the air pass prices, control first.</summary>
+        public static List<Cell> Decision()
+        {
+            return Cells(AirGrid);
+        }
+
+        private static List<Cell> Cells(float[][] grid)
+        {
             List<Cell> cells = new List<Cell>();
 
-            for (int i = 0; i < Grid.Length; i++)
+            for (int i = 0; i < grid.Length; i++)
             {
-                cells.Add(new Cell { Conductivity = Grid[i][0], Clock = Grid[i][1] });
+                cells.Add(new Cell { Conductivity = grid[i][0], Clock = grid[i][1] });
             }
 
             return cells;

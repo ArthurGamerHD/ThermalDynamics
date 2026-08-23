@@ -57,8 +57,6 @@ namespace Thermodynamics.Tests
             + "seconds_to_settle,seconds_to_critical,seconds_to_first_loss,"
             + "made_w,vented_w,substeps_demanded,hottest_block";
 
-        private static int rowsWritten;
-
         [Fact]
         public void EveryPairOfConductionAndClockGetsAMeasuredCell()
         {
@@ -82,8 +80,61 @@ namespace Thermodynamics.Tests
                     "the grid asks for scenario '" + name + "' and the battery has no such case");
             }
 
-            List<PairLab.Cell> cells = PairLab.All();
+            Sweep(Pairs, PairLab.All(), PairLab.Scenarios, ships, scenarios);
+        }
 
+        /// <summary>
+        /// **What the four candidate cells cost in air**, which is the column `G8`'s answer was
+        /// left without and the one `G6` is decided in.
+        ///
+        /// <para>
+        /// The main grid is three vacuum scenarios, where substeps are cheap — corpus p99 6.02
+        /// against 64 granted — so its cost column cannot say whether a retune is affordable. Air
+        /// is where the budget is spent: the panel measures p95 36.71 under reentry at shipped
+        /// settings, and about 41 is projected at 300 m/s. A cell that doubles that does not fit.
+        /// </para>
+        ///
+        /// <code>
+        ///     THERMAL_CORPUS_TESTS=1 THERMAL_CORPUS_DATA=out/air         ///         dotnet test --filter "FullyQualifiedName~EveryCandidateCellIsPricedInAir"
+        /// </code>
+        /// </summary>
+        [Fact]
+        public void EveryCandidateCellIsPricedInAir()
+        {
+            if (CorpusFixture.Files().Count == 0) return;
+
+            List<ShipSet.Entry> set = ShipSet.Read("THERMAL_PANEL", "tools/corpus/typical.csv");
+            Assert.True(set.Count > 0,
+                "the corpus is opted in but no ship set was read. Build one with "
+                + "tools/corpus/typical.py, or point THERMAL_PANEL at another.");
+
+            List<Blueprints.Ship> ships = ShipSet.Load(set, Progress);
+            Assert.True(ships.Count > 0, "the set named ships but none of them could be read");
+
+            Dictionary<string, Battery.Scenario> scenarios =
+                new Dictionary<string, Battery.Scenario>(StringComparer.Ordinal);
+            foreach (Battery.Scenario scenario in Battery.All()) scenarios[scenario.Name] = scenario;
+
+            foreach (string name in PairLab.AirScenarios)
+            {
+                Assert.True(scenarios.ContainsKey(name),
+                    "the air pass asks for scenario '" + name + "' and the battery has no such case");
+            }
+
+            Sweep(Air, PairLab.Decision(), PairLab.AirScenarios, ships, scenarios);
+        }
+
+        /// <summary>
+        /// One pass over a cell list: check its control, then run every cell through every scenario
+        /// the pass names.
+        ///
+        /// Shared by both passes rather than copied, because the two differ only in which cells and
+        /// which scenarios — and a second copy of this loop is a second place the resume record, the
+        /// stop rule and the override teardown can drift.
+        /// </summary>
+        private static void Sweep(Pass pass, List<PairLab.Cell> cells, string[] scenarioNames,
+            List<Blueprints.Ship> ships, Dictionary<string, Battery.Scenario> scenarios)
+        {
             // Exactly one control, and it runs first, so a grid killed early still carries the row
             // every other row is read against.
             int controls = 0;
@@ -95,9 +146,9 @@ namespace Thermodynamics.Tests
             Assert.Equal(1, controls);
             Assert.True(cells[0].IsShipped, "the control must run first");
 
-            foreach (PairLab.Cell cell in cells) Run(cell, ships, scenarios);
+            foreach (PairLab.Cell cell in cells) Run(pass, cell, scenarioNames, ships, scenarios);
 
-            Assert.True(rowsWritten > 0 || Record.Done().Count >= cells.Count * ships.Count,
+            Assert.True(pass.RowsWritten > 0 || pass.Record.Done().Count >= cells.Count * ships.Count,
                 "the grid produced no rows and had nothing recorded as already finished");
         }
 
@@ -108,14 +159,14 @@ namespace Thermodynamics.Tests
         /// The override is cleared in a finally, because leaving one installed contaminates every
         /// cell after it and the contamination reads as a smooth surface rather than as an error.
         /// </summary>
-        private static void Run(PairLab.Cell cell, List<Blueprints.Ship> ships,
-            Dictionary<string, Battery.Scenario> scenarios)
+        private static void Run(Pass pass, PairLab.Cell cell, string[] scenarioNames,
+            List<Blueprints.Ship> ships, Dictionary<string, Battery.Scenario> scenarios)
         {
             object gate = new object();
             int written = 0;
             int skipped = 0;
 
-            HashSet<string> done = Record.Done();
+            HashSet<string> done = pass.Record.Done();
 
             try
             {
@@ -150,10 +201,10 @@ namespace Thermodynamics.Tests
                             // scenarios sharing one instance would write over each other.
                             Blueprints.Ship ship = source.Reload();
 
-                            for (int s = 0; s < PairLab.Scenarios.Length; s++)
+                            for (int s = 0; s < scenarioNames.Length; s++)
                             {
                                 Battery.Scenario scenario;
-                                if (!scenarios.TryGetValue(PairLab.Scenarios[s], out scenario)) continue;
+                                if (!scenarios.TryGetValue(scenarioNames[s], out scenario)) continue;
 
                                 Battery.Scenario stretched = PairLab.Stretch(scenario, cell);
 
@@ -173,12 +224,12 @@ namespace Thermodynamics.Tests
                             {
                                 if (CorpusRecord.On && mine.Count > 0)
                                 {
-                                    CorpusRecord.Write("pairs", Header, mine);
+                                    CorpusRecord.Write(pass.Dataset, Header, mine);
                                 }
 
-                                Record.Mark(mark);
+                                pass.Record.Mark(mark);
                                 written += mine.Count;
-                                rowsWritten += mine.Count;
+                                pass.RowsWritten += mine.Count;
                             }
                         }
                     });
@@ -188,7 +239,8 @@ namespace Thermodynamics.Tests
                 Blueprints.MaterialOverride = null;
             }
 
-            Progress(cell.Name + " (conductivity ×" + cell.Conductivity + ", clock " + cell.Clock
+            ShipSet.Progress(pass.Dataset,
+                cell.Name + " (conductivity ×" + cell.Conductivity + ", clock " + cell.Clock
                 + ") wrote " + written + " rows, resumed past " + skipped + " ships");
         }
 
@@ -225,10 +277,25 @@ namespace Thermodynamics.Tests
         // ---- the set and the resume record -----------------------------------------------
 
         /// <summary>
-        /// The resume record for this sweep. One per sweep, beside its data — see
-        /// <see cref="ShipSet.Resume"/> for why a shared one would be a silent skip.
+        /// One pass: which file it writes, and the resume record beside it.
+        ///
+        /// **A record per pass, not one shared.** The two passes run the same ships through the
+        /// same cells under different scenarios, so a shared record would mark a ship done for the
+        /// air pass because the vacuum pass had finished it — a silent skip that reads as a
+        /// completed run. See <see cref="ShipSet.Resume"/>.
         /// </summary>
-        private static readonly ShipSet.Resume Record = new ShipSet.Resume("pairs");
+        private class Pass
+        {
+            public string Dataset;
+            public ShipSet.Resume Record;
+            public int RowsWritten;
+        }
+
+        private static readonly Pass Pairs =
+            new Pass { Dataset = "pairs", Record = new ShipSet.Resume("pairs") };
+
+        private static readonly Pass Air =
+            new Pass { Dataset = "air", Record = new ShipSet.Resume("air") };
 
         private static void Progress(string line)
         {
