@@ -501,6 +501,17 @@ Two things follow. **Every world with air has density exactly 1**, so anything d
 density gives the same answer for seven of eight and only the Moon differs. And **SE's Triton is a
 breathable, full-density, 1 g world** with nothing in common with the real Triton but its name.
 
+**This mod does not author its own densities against the engine's, and will not.** The temptation is
+obvious — a Titan at full density is a world with no thin air anywhere to test convection against —
+but air density is a thing the game already decides and `C9` says this model reads the game's answer
+rather than forming its own. Overriding it would mean a grid whose air density disagreed with the
+oxygen system, the wind ceiling and the jetpack, all of which read the engine's figure, and the
+disagreement would surface as three mechanics contradicting each other rather than as a better
+climate. **What is left is not a gap in the model.** The differentiation between atmospheric worlds
+really is gravity and solar protection alone, because those are the only two things the definitions
+vary — and a planet pack that authors a thin atmosphere gets everything derived from density for
+free, since none of it is hard-coded to 1.
+
 ### Where the shipped entries depart from the derivation
 
 **The rule: an authored level is followed; an unauthored one is not treated as intent.**
@@ -812,7 +823,6 @@ does not exist — `game_comfort` correlates weakly with everything and is not a
 
 | | |
 | --- | --- |
-| B22 | Seven of eight shipped worlds have air density exactly 1, so swing, pole drop, lag and convection derive to the same figure for all of them. |
 | C5 | The core gradient sits behind a 2 km deadzone deeper than SE's voxels reach. Whether the default should be a few hundred metres is a balance question. |
 | C7 | The 4 K/km lapse rate and the ground table both say mountains are cold. The honest fix is probably that ground offsets should shrink as the lapse rate grows, since a site is only snowy *because* it is high. **The snow reference site is where that will show.** |
 | F4 | No latitude spread and no weather variety in any field data: three sites spanning 7°–41°, one weather kind, no still air. A polar grid and `/weather SnowHeavy` would settle the first two. |
@@ -825,6 +835,7 @@ does not exist — `game_comfort` correlates weakly with everything and is not a
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Closed `B22` as a decision rather than a change: this mod will not author air densities against the engine's, because `C9` says the game's own answer is read and not overridden — and a density that disagreed with the engine's would put this model at odds with the oxygen system, the wind ceiling and the jetpack at once. The lack of differentiation between atmospheric worlds is the definitions', not the model's. |
 | 2026-08-22 | Closed `C5`. The sea-level deadzone is derived from each world's own deepest natural ground — `HillParams.Min × radius`, 285 m to 2 km across the eight — rather than a round 2 km that put the core gradient out of reach on seven of them. Opened the cross-check that should have existed with the transcription: `PlanetReferenceTests` compares the eight worlds against the installed definitions, and found on its first run that two of them are written under a different element name than the other six. |
 | 2026-08-22 | Closed `C6`: the climate's lag is a share of the world's own day rather than 45 absolute seconds, and the day is measured from the sun the model already samples rather than read from a type whose whitelist status cannot be established outside a session. |
 | 2026-08-22 | Closed `B16`: roughness length comes from the ground material under the grid rather than being one number for a whole world. It is the one figure in the ground table with a published table behind it, and it was already being looked up for the temperature offset. |
