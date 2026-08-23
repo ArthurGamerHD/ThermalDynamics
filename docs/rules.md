@@ -150,7 +150,7 @@ under [low value](#low-value) so a citation to them does not dangle.
 | **E2** | Measure the population, not the specimen | conditional | P1 | `CensusFidelityTests` |
 | **E3** | Name the population and the basis of every figure | load-bearing | P1 | — |
 | **E4** | A partial sweep is not a result | load-bearing | P2 | — |
-| **E5** | Every figure on a page comes from the dataset the page is about | load-bearing | P5 | partly |
+| **E5** | Every figure on a page comes from the dataset the page is about | load-bearing | P5 | `EveryQuotedDatasetCountIsCurrent` |
 | **E6** | Pair the terms before dividing | conditional | P1 | — |
 | **E7** | Check a claim against something that is not the model | load-bearing | P4 | `LegacyFormulas` `Reference` `DumpAuditTests` |
 | **E8** | A check that judged nothing has not passed | load-bearing | P2 | `CorpusSurvey` |
@@ -188,7 +188,7 @@ under [low value](#low-value) so a citation to them does not dangle.
 | **C10** | The server is authoritative over damage | load-bearing | P7 | — |
 | **R1** | *The repository is the mod folder* | low value | P11 | absorbed into P11 |
 | **R2** | Build output and the corpus live outside it | load-bearing | P11 | `Directory.Build.props` |
-| **R3** | No credential is written into the tree | load-bearing | P11 | — |
+| **R3** | No credential is written into the tree | load-bearing | P11 | `CredentialScanTests` |
 | **R4** | `Models/` is not restructured | load-bearing | P12 | — |
 | **R5** | The workshop identity files are not regenerated | load-bearing | P12 | — |
 | **R6** | Vendored code is replaced, never edited | load-bearing | P12 | — |
@@ -209,7 +209,7 @@ under [low value](#low-value) so a citation to them does not dangle.
 | **J2** | *Light, isolated, tested, open* | low value | — | absorbed into `C4` `C5` `C7` `R9` |
 | **J3** | The corpus filters are strict, and their cost is recorded | conditional | P1 | `BlueprintTests` |
 
-Fifty-one load-bearing, seven conditional, four low value. Seventeen of the load-bearing rules have
+Fifty-one load-bearing, seven conditional, four low value. Sixteen of the load-bearing rules have
 no automated check, and say so.
 
 ---
@@ -508,9 +508,11 @@ ones.
 
 *Applies to:* every page that reports on a dataset, including this one's own claims about the
 suite.
-*Checked by:* partly — `EveryQuotedSuiteSizeIsCurrent` catches a stale suite size, and the pack
-scripts generate the figures the report pages carry. A hand-written count elsewhere is caught by
-nobody.
+*Checked by:* `EveryQuotedSuiteSizeIsCurrent` for a stale suite size and
+`EveryQuotedDatasetCountIsCurrent` for a count of the panel, of the values authored in `Cubes.xml`
+or of the suite's classes; the pack scripts generate the figures the report pages carry. A count of
+a dataset that is not in this repository — the corpus, the game's own definitions — is still caught
+by nobody.
 *From:* [tools/corpus/README.md](../tools/corpus/README.md).
 
 #### D2 — Hunt for what is built, documented and reached by nothing
@@ -885,9 +887,10 @@ printed, and never written to a file. SteamCMD is invoked with a user name and n
 Anything else would mean this program handling a password, and it has no business doing that.
 
 *Applies to:* the corpus fetcher and anything else that talks to an external service.
-*Checked by:* — nothing scans the tree.
-*Retires when:* nothing retires it, but a scan for a key-shaped literal would move it from
-judgement to enforcement. It is cheap and does not exist; [backlog.md](backlog.md) F9.
+*Checked by:* `CredentialScanTests`, which scans every file a person writes for a private key
+block, a provider-prefixed token, a credential assigned a literal, and a Steam key beside a word
+saying it is one — and whose second case checks the scan fires on each of those and on none of the
+things this repository legitimately writes, `--key <key>` among them.
 *From:* [development.md](development.md), [balance-lab.md](balance-lab.md).
 
 ### P12 — Do not edit what this repository cannot regenerate
@@ -1220,6 +1223,7 @@ right and this page is stale**; say so and fix it here.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | `R3` and `E5` are checked rather than judged ([backlog.md](backlog.md) `F9`). The tree is scanned for four credential shapes, and the scan is itself checked against a value of each shape and against the text this repository legitimately writes. Counts a page states about the panel, about `Cubes.xml` and about the suite's own classes are compared with those datasets; a change log is exempt, because `R12` makes it a record of what was true rather than a claim about now. It found two stale figures on its first run — 432 authored values against 654, and 135 test classes against 160. |
 | 2026-08-22 | Added `R14`, from the standard [document-of-intent.md](document-of-intent.md#what-a-code-comment-is-for) states and a pass that applied it: twenty-four comments were found describing a member that no longer exists, having come to rest on the one below. `NoDocCommentDescribesSomethingThatIsNotThere` catches the shape, and was run against a deliberate orphan in both spellings before being believed — the first version caught only one of the two and missed a real orphan in `CoolantLoopTests`. |
 | 2026-08-22 | Moved *What the extraction changed* into this log, where a record of a revision belongs (`R12`). It held four things, each still true and each now recorded once. **Three *Checked by* citations named something that does not run:** `C6` cited `PhysicsTests`, which is a file whose classes are `ConductionTests` and `StabilityTests`; `D1` attributed three invariants to `LabInvariantTests` that live in `ScreeningTests`; and `D5` cited `SealedBlocksAreRare`, which commit `991d4d9` demoted to an uncalled helper when `CorpusSurvey` absorbed the standalone walks. `R11` is the rule those three produced. **`E1` and `E8` overstated `verdict.py`**, which prints `HOLDS`, `FAILS` or `?` and exits zero either way — both fields now say reported rather than checked. **Two rules came out of the reduction rather than an incident:** `E11` closes `E1`'s hole, and `C8` generalises the gate whose off position cannot be spelled. **Three rules stopped being rules and one changed category** — `R1`, `J1` and `J2` are premises rather than things a change can violate, and `O4` was reclassified low value against a measurement taken the same day. All four dispositions are in [Low value](#low-value). |
 | 2026-08-22 | Put this page under the checks it asks of every other page. `EveryCheckCitedByTheRulesPageResolves` resolves every name in a *Checked by* field to something that runs, which retires `R11`'s unchecked state and closes [backlog](backlog.md) F10; `EveryRuleCitedByAPageExists` fails on a page citing a rule this one does not state; `TheRulesPageIndexesEveryRuleItStates` holds the index, the body and the principle table together. Each was run against a deliberate violation before being believed. |
