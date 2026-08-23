@@ -137,11 +137,17 @@ Into the surrounding atmosphere:
 ```
 watts = −h_eff × A_exposed × windFactor × (T − T_ambient)
 h_eff = ConvectionCoefficient × (1 + 0.1 √v_rel)
-windFactor = 0.5 + 0.5 × faceWeight(wind)        (1.0 in still air)
+windFactor = 1 + faceWeight(wind)                (1.0 in still air)
 ```
 
 `faceWeight(d)` is the exposure-weighted average of `max(0, faceNormal · d)` over the block's six
-faces, so a face turned into the airflow sheds more than one in the lee.
+faces, so a face turned into the airflow sheds twice what one in the lee does.
+
+**A wind never sheds less than still air.** Forced convection adds to natural convection rather
+than replacing it, so the factor runs from 1 upward and a lee face keeps exactly what it had. The
+factor used to run 0.5 to 1, which had the same two-to-one contrast and the wrong floor: most of a
+closed hull's exposed faces do not point into the wind, so the geometric term lost more than the
+speed term gained and a wind under about 50 m/s came out a net *warmer*.
 
 Radiation and convection are blended by how fluid the atmosphere is:
 
@@ -651,6 +657,7 @@ several tests compare against it so the differences stay pinned rather than reme
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | The convection wind factor runs from 1 upward rather than from 0.5 to 1. Forced convection adds to natural convection; the old floor made a wind under about 50 m/s a net warmer, because most of a closed hull's faces do not point into it ([backlog.md](backlog.md) `B29`). The two-to-one contrast between a windward face and a lee one is unchanged. |
 | 2026-08-22 | Radiation in and radiation out are two coefficients. Emission keeps the emissivity; the sun and point sources read `SolarAbsorptivity`, which follows the emissivity unless authored, so the grey-body behaviour is the default rather than the only option ([backlog.md](backlog.md) `B27`). |
 | 2026-08-22 | Corrected the reactor's shipped waste fraction, which this page and [tests/README.md](../tests/README.md) both quoted as 0.02 against the 0.01 in `Cubes.xml` and on [balance.md](balance.md#reactor-waste-heat). 0.02 is the value the sweep rejected: it puts a 300 MW reactor past critical *bare* in vacuum, which is a state no build can improve on. |
 | 2026-08-22 | Corrected the substep cap quoted beside `LastStepWasClamped`: it read 16 and ships 64. |
