@@ -124,6 +124,34 @@ def main():
     print("against itself. That is the expected result for the mod's own blocks on a vanilla corpus.")
     print()
 
+    # ---- censoring -------------------------------------------------------------------------
+    # **The lab never destroys an overheating block** (`E9`), so anything past critical kept
+    # generating for the rest of the clock and a peak above about 1,500 K says *ran away* and
+    # nothing finer. Differences taken between two censored runs are differences between two
+    # harness artefacts, so the share is printed before any of them.
+    CENSORED = 1500.0
+    censored = {}
+    for row in rows:
+        peak = number(row, "peak_k")
+        if peak is None:
+            continue
+        got = censored.setdefault(row["world"], [0, 0])
+        got[1] += 1
+        if peak >= CENSORED:
+            got[0] += 1
+
+    print(f"Runs whose peak is past {CENSORED:.0f} K, which is 'ran away' and not a temperature")
+    print()
+    for world in worlds:
+        hit, total = censored.get(world, (0, 0))
+        if not total:
+            continue
+        print(f"    {world:<22} {hit:>4} of {total:>4}  {hit / total:.1%}")
+    print()
+    print("Read every peak below against that. The medians and the counts are what the findings")
+    print("rest on; a single hull's extreme is the harness, not the mod.")
+    print()
+
     # ---- the effect ------------------------------------------------------------------------
     indexed = {}
     for row in rows:
