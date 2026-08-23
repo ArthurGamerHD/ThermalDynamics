@@ -109,8 +109,9 @@ balance question, not a code one.
 
 The block glow is written through the model's emissive material, which is the only per-block
 rendering channel the engine exposes to a mod. A model that has none — armour, most structural
-blocks — takes the write and shows nothing. **That is a limit on models rather than on the model**, and
-it is why the pilot's warning is carried by sound as well: what the glow cannot reach, the cue can. See
+blocks — takes the write and shows nothing. **That is a limit on models rather than on the physics**,
+and it is why the cue that warns a pilot is keyed to each block's own rating and carried by sound:
+between the two channels, what the glow cannot reach the cue can. See
 [document-of-intent.md](document-of-intent.md#natural-feedback--built).
 
 ## Open defects
@@ -560,6 +561,7 @@ counters rather than milliseconds so it holds on any machine.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | The glow is back to incandescence, which leaves the limit above where it was: a model with no emissive material still cannot show it. |
 | 2026-08-23 | The glow is now a block's distance from its own rating rather than an absolute temperature, which does not change the limit above: a model with no emissive material still cannot show it. |
 | 2026-08-23 | Recorded two limits that came with natural feedback ([backlog.md](backlog.md) `B25`, `F15`): a block with no emissive material in its model cannot glow, which is most structural blocks, and the two engine calls the feature makes have never run in a session — they compile, which says the members exist and nothing more. |
 | 2026-08-22 | Withdrew the burning-ship divergence. It was never a divergence: run ten times longer the rig is flat to the last digit from 600 s to 6,000 s, its energy balances to a part in ten thousand, and two integrators refused wildly different substep counts land one kelvin apart. The 11,279 K is a converged conduction-limited interior temperature — the hottest block has no exposed face and pushes 2.22 MW out through 1,317 W/K of conduction — and the peak among blocks that can radiate is 2,822 K. The defect it left behind is on [realism.md](realism.md): a divergence column that was a threshold on a temperature, which cannot tell a converged extreme from a diverged one. |

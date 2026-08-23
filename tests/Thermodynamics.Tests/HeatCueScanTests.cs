@@ -27,32 +27,21 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// The floor a cold hull is compared against is the lower of where the coolest block starts
-        /// glowing and where it starts being watched for a warning.
-        ///
-        /// <para>
-        /// **For every block the game ships the glow is the one that binds**, and the arithmetic
-        /// says where that stops: the two cross at a rating of about 472 K, and the lowest-rated
-        /// type in the installed game is 583 K. The watch point is the floor only for a definition
-        /// rated under that, which is why both branches are exercised here with one rating the game
-        /// has and one it does not.
-        /// </para>
+        /// The floor a cold hull is compared against is the lower of the glow's own and the coolest
+        /// block's watch point — so a hull of blocks rated well under the Draper point is still
+        /// warned about, and one of blocks rated well over it does not scan for a glow that cannot
+        /// happen yet.
         /// </summary>
         [Fact]
-        public void TheFloorIsTheLowerOfTheGlowStartAndTheWatchPoint()
+        public void TheFloorIsTheLowerOfTheGlowAndTheCoolestRating()
         {
-            Rig shipped = Rig.Build(300f, 900f);
-            Assert.Equal(Incandescence.GlowStartKelvin(900f),
-                shipped.Simulation.Solver.CueFloorTemperature(), 1);
-            Assert.True(Incandescence.GlowStartKelvin(900f) < 900f * HeatCueState.WatchFraction);
+            Rig cool = Rig.Build(300f, 600f);
+            Assert.Equal(600f * HeatCueState.WatchFraction,
+                cool.Simulation.Solver.CueFloorTemperature(), 1);
 
-            Rig fragile = Rig.Build(250f, 400f);
-            Assert.Equal(400f * HeatCueState.WatchFraction,
-                fragile.Simulation.Solver.CueFloorTemperature(), 1);
-
-            Assert.True(fragile.Simulation.Solver.CueFloorTemperature()
-                < shipped.Simulation.Solver.CueFloorTemperature(),
-                "a grid of low-rated blocks should start looking sooner");
+            Rig hot = Rig.Build(300f, 1400f);
+            Assert.Equal(Incandescence.DraperKelvin,
+                hot.Simulation.Solver.CueFloorTemperature(), 1);
         }
 
         /// <summary>
@@ -77,7 +66,7 @@ namespace Thermodynamics.Tests
 
             Assert.Single(cues);
             Assert.Equal(1000f, cues[0].Kelvin, 0);
-            Assert.Equal(Incandescence.Glow(1000f, 900f), cues[0].Glow, 4);
+            Assert.Equal(Incandescence.Glow(1000f), cues[0].Glow, 4);
             Assert.Equal(HeatCueStage.Critical, cues[0].Stage);
             Assert.True(cues[0].Announce, "the first scan of a block already over should announce");
         }
@@ -153,12 +142,12 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// **A block rated below the Draper point still glows and is still cued.** This is the
-        /// quarter of the game a physical glow would never reach: it is 86 % of the way to failing
-        /// at 560 K, where nothing real emits any light, and it is bright.
+        /// **A block below the Draper point but near its own rating is still cued.** This is the
+        /// quarter of the game that fails before it glows, and if the scan watched a single
+        /// temperature instead of each block's own it would be silent about all of them.
         /// </summary>
         [Fact]
-        public void ABlockRatedBelowTheDraperPointStillGlows()
+        public void ABlockRatedBelowTheDraperPointIsStillWatched()
         {
             Rig rig = Rig.Build(560f, 600f);
             List<HeatCue> cues = new List<HeatCue>();
@@ -166,14 +155,13 @@ namespace Thermodynamics.Tests
             rig.Simulation.Solver.CollectHeatCues(rig.State, 0.25f, cues);
 
             Assert.Single(cues);
+            Assert.Equal(0f, cues[0].Glow);
             Assert.True(cues[0].Kelvin < Incandescence.DraperKelvin);
-            Assert.True(cues[0].Glow > 0.5f,
-                "a block 86 % of the way to its rating read " + cues[0].Glow);
         }
 
         /// <summary>
-        /// And an ordinary hull at an ordinary temperature glows nothing, however many blocks it
-        /// has — the other half of the same requirement.
+        /// An ordinary hull at an ordinary temperature glows nothing, however many blocks it has —
+        /// and the grid-level floor is what says so, in one comparison.
         /// </summary>
         [Fact]
         public void AHullAtRoomTemperatureGlowsNothing()
