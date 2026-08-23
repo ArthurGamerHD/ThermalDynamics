@@ -181,6 +181,66 @@ Each pipe adds 1,000 W/K of its own and the fluid mass does not grow, so **a lon
 better**. Pinned by `LongerRingsDeliverColderBlocks` and
 `LongerRingsCoupleHarderAndCarryTheSameFluid`.
 
+### What the real-unit conversion moved
+
+`Conductivity` used to be a 0…1 quality against a 200 W/(m·K) reference and is now the figure a
+materials table gives, times `ThermalConstants.ConductionScale` = 2.4 — calibrated so mild steel
+lands exactly where it was ([definitions.md](definitions.md#conductivity-is-in-real-wmk)). The
+question [backlog.md](backlog.md) `C2` held open is what that did to the balance a player meets.
+
+**The old world is recoverable exactly, which is what makes this a measurement.** `Data/Cubes.xml`
+at `4f6b44a^` held twenty-two definitions and derivation from build components arrived after the
+conversion, so before it every block in the game took one of two conductances: **120 W/(m·K)** from
+the 0.6 fall-through, and **200** for `Thrust`, `Reactor` and the mod's own nineteen blocks at
+quality 1.
+
+**Where it landed, block by block.** Measured off the shipped definitions; the full table is in
+[definitions.md](definitions.md#conductivity-is-in-real-wmk) and these are its ends:
+
+| Block | Before | Now | Change |
+| --- | ---: | ---: | ---: |
+| light and heavy armour | 120 | 120.0 | **1.00×** — the calibration |
+| large ion thruster | 200 | 45.3 | **0.23×** |
+| large reactor | 200 | 103.2 | **0.52×** |
+| battery | 120 | 61.2 | **0.51×** |
+| jump drive | 120 | 421.1 | **3.51×** |
+
+The published table had four rows and described only the families `Cubes.xml` authors, so both of
+those extremes were unrecorded — and one of the four rows was wrong, because *thrusters went 0.6×*
+is true of the hydrogen ones and of nothing else.
+
+#### The two moves the corpus cannot see
+
+Coolant pipes went 4.8× and radiators 2.84×, and **not one of the forty ships in the retest set
+carries either**: the corpus filters admit vanilla hulls, so the walk's own reach column reports that
+arm as reaching **0 of 177,822 blocks**. Both are priced on a rig instead —
+`dotnet run --project Thermodynamics.Sim -- conductance`, one family moved per rig with everything
+else left shipped, a large reactor at 300 kW in shadow:
+
+| Rig | Before | Now | Source settles | Saved |
+| --- | ---: | ---: | ---: | ---: |
+| 1 radiator | 200 | 568.8 | 333.8 → 328.4 K | **5.34 K** |
+| 8 radiators | 200 | 568.8 | 328.7 → 316.6 K | **12.07 K** |
+| 32 radiators | 200 | 568.8 | 328.6 → 316.2 K | **12.44 K** |
+| 12-pipe ring | 200 | 960 | 333.2 → 333.1 K | **0.13 K** |
+| 20-pipe ring | 200 | 960 | 319.9 → 319.8 K | **0.06 K** |
+| 28-pipe ring | 200 | 960 | 310.7 → 310.7 K | **0.02 K** |
+
+**The 4.8× on coolant pipes is the largest number the conversion produced and the smallest effect it
+had.** The fluid couples to its pipe through `LoopThermalProperties.Conductivity`, a 0…1 quality
+against `ThermalConstants.ReferenceConductivity` that the conversion never touched; the pipe's own
+material decides only what crosses between the pipe block and whatever is bolted to it. Copper made
+the pipes better conductors and left the loop carrying exactly what it carried.
+
+**The radiator's 2.84× is real and it saturates.** It is worth 5.3 K on one radiator and 12.4 K by
+sixteen, and it stops there because a stack's limit is the area it radiates from rather than the
+rate heat reaches it — the visible sign is that the far end of the stack is now *hotter* (43.0 K
+against 59.0 K at thirty-two), which is the heat getting further up before it leaves.
+
+Pinned by `ModHardwareRetestTests`, which first holds `Catalog`'s pipe and radiator conductances
+against the shipped ones, so a rig cannot quietly become a measurement of a block the mod does not
+ship (`C4`).
+
 ### Reactor waste heat
 
 A reactor's fraction has to hold across three orders of magnitude of rated output — 0.5 MW on a

@@ -108,16 +108,49 @@ conduct like every other metal. **A coolant loop's `Conductivity` still works th
 deliberately: fluid-to-wall transfer is convective, and the honest dial for it is a heat transfer
 coefficient in W/(m²·K), which is a change to the loop equations rather than to a number.
 
-**What that conversion moved, in one table**, because it is the substance of [backlog.md](backlog.md)
-`C2` and the row had it backwards. `ConductionScale` is 2.4 because mild steel's 50 lands on the 120
-the old default's 0.6 gave it, so ordinary armour is exactly unmoved and everything else is not:
+**What that conversion moved**, because it is the substance of [backlog.md](backlog.md) `C2`.
+`ConductionScale` is 2.4 because mild steel's 50 lands on the 120 the old default's 0.6 gave it, so
+ordinary armour is exactly unmoved and everything else is not. **Before the conversion every block
+in the game took one of exactly two conductances** — the file then held twenty-two definitions and
+derivation from build components arrived after it — which is what makes the old world recoverable
+and the change measurable.
+
+The four families this file authors:
 
 | Block | Old quality | Old effective | Now | New effective | Change |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | armour and anything undeclared | 0.6 | 120 | 50, mild steel | 120 | **1.00×** |
 | coolant pipe | 1 | 200 | 400, copper | 960 | **4.80×** |
 | radiator | 1 | 200 | 237, aluminium | 568.8 | **2.84×** |
-| thruster, the two pumps | 1 | 200 | 50, derived as steel | 120 | **0.60×** |
+| the two pumps and the two heat pumps | 1 | 200 | 50, steel casing | 120 | **0.60×** |
+
+**And every vanilla block, through derivation, which is the larger half and which this table used to
+omit.** It also said *thruster … 0.60×*; that is true of the hydrogen thrusters and of nothing else,
+because a thruster's conductance now comes from what it is built out of and the three families are
+built out of different things. Measured 2026-08-23 off the shipped definitions by
+`ConductanceRetest.Moves`, printed by `dotnet run --project Thermodynamics.Sim -- conductance`, and
+pinned by `ModHardwareRetestTests`:
+
+| Block | Before | Now | Change |
+| --- | ---: | ---: | ---: |
+| light and heavy armour | 120 | 120.0 | **1.00×** — the calibration |
+| large ion thruster | 200 | 45.3 | **0.23×** |
+| large hydrogen thruster | 200 | 120.0 | **0.60×** |
+| large atmospheric thruster | 200 | 254.5 | **1.27×** |
+| large reactor | 200 | 103.2 | **0.52×** |
+| battery | 120 | 61.2 | **0.51×** |
+| jump drive | 120 | 421.1 | **3.51×** |
+| solar panel | 120 | 88.4 | **0.74×** |
+| gyro | 120 | 121.3 | **1.01×** |
+| cockpit | 120 | 108.1 | **0.90×** |
+| conveyor | 120 | 163.4 | **1.36×** |
+| large cargo container | 120 | 140.7 | **1.17×** |
+
+The two ends of that table are the two ends of what a player feels. **The ion thruster's 0.23× is the
+largest loss the conversion caused** — a burning hull now holds heat where its thrusters are — and
+**the jump drive's 3.51× is the largest gain**, on the block type carrying 71.3 % of the population's
+full-load waste. What both did to a real ship is measured in
+[balance.md](balance.md#what-the-real-unit-conversion-moved).
 
 **Every authored figure now says where it came from**, and `AuthoredMaterialTests` holds it to that:
 either it names a material [`ReferenceMaterials`](../Data/Scripts/Thermodynamics/Core/Definitions/ReferenceMaterials.cs)
@@ -352,6 +385,7 @@ Tuning guidance:
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | **Corrected [what the conversion moved](#conductivity-is-in-real-wmk).** The table stated *thruster … 0.60×*, which is true of the hydrogen thrusters and of nothing else — the large ion thruster is **0.23×** and the atmospheric **1.27×**, because a thruster's conductance is now derived from what it is built out of and the three families are built out of different things. The table also described only the four families this file authors and omitted every vanilla block, which is the larger half of the change and holds both of its extremes: the ion thruster's 0.23× and the jump drive's **3.51×**. Measured off the shipped definitions and pinned by `ModHardwareRetestTests` rather than stated. |
 | 2026-08-23 | Made every authored material figure say where it came from, and checked the ones that name a material. `AuthoredMaterialTests` holds all 46 `Conductivity` and `SpecificHeat` values in `Cubes.xml` against `ReferenceMaterials` or against an explicit `invented`; four had no provenance at all and now have it, one of which — the emissive block's 1 and 840 — turned out to be soda-lime glass exactly and never said so. Wrote down [what the conversion to real units actually moved](#conductivity-is-in-real-wmk), because [backlog.md](backlog.md) `C2` had the radiator backwards: it is 2.84× stiffer, not half, and the blocks that lost are the thruster and the two pumps at 0.60×. |
 | 2026-08-22 | Added `AmbientLagShareOfDay`. The climate's lag was 45 absolute seconds against a rotation a server sets to anything, so one authored figure meant a different climate on every world ([backlog.md](backlog.md) `C6`). |
 | 2026-08-22 | Added `UndergroundConvectionCoefficient`. A buried grid exchanged with rock at the coefficient for moving air, which made digging in the best cooling in the game ([backlog.md](backlog.md) `A16`). |
