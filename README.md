@@ -17,7 +17,7 @@ into atmosphere and into the air of sealed rooms, arrives from the sun, and — 
 * **Isolated.** Every mechanism has its own switch, and switching one off removes exactly its own
   cost. Switches take effect on the next step, with no reload.
 * **Tested.** The simulation is a pure library with no dependency on the game session, built and
-  tested outside it — 1,520 tests, 33 deterministic scenarios and a load benchmark that goes to a
+  tested outside it — 1,560 tests, 33 deterministic scenarios and a load benchmark that goes to a
   million blocks in one grid.
 * **Open.** Everything the simulation knows is readable and everything it does is drivable from
   another mod, through a delegate table passed by mod message. See [docs/api.md](docs/api.md).
@@ -75,97 +75,10 @@ into atmosphere and into the air of sealed rooms, arrives from the sun, and — 
 
 ## Documentation
 
-Every page opens with what it covers and closes with a change log; history lives there rather than
-in the prose.
-
-**Start here**
-
-| Document | Contents |
-| --- | --- |
-| [docs/document-of-intent.md](docs/document-of-intent.md) | What the mod is for and the goals it is measured against, where those goals conflict with the code, and where no intent has been stated at all. |
-| [docs/rules.md](docs/rules.md) | The standing rules, in one place: fourteen principles, the rules that follow from them, and whether each is load-bearing, conditional or not worth keeping. |
-| [docs/architecture.md](docs/architecture.md) | Component layout, update order, grid lifecycle, persistence. |
-| [docs/backlog.md](docs/backlog.md) | Every open item across these documents, categorised, one line each. |
-
-**The simulation**
-
-| Document | Contents |
-| --- | --- |
-| [docs/thermal-model.md](docs/thermal-model.md) | Every equation the simulation evaluates, and the surface geometry every area term reads. |
-| [docs/environment.md](docs/environment.md) | The air, ground, sun and wind outside a grid: how each is computed and what evidence stands behind it. |
-| [docs/scale-design.md](docs/scale-design.md) | Where the model is going: variable block sizes, and grids to a million blocks. |
-
-**Using it**
-
-| Document | Contents |
-| --- | --- |
-| [docs/blocks.md](docs/blocks.md) | The blocks and items this mod ships, and the coolant loop build rules. |
-| [docs/configuration.md](docs/configuration.md) | Every setting, its default, the runtime commands, and where the settings surface is going. |
-| [docs/realism.md](docs/realism.md) | How far the model is from physics, measured, and what each departure costs. |
-| [docs/definitions.md](docs/definitions.md) | Block, planet and loop properties, and how to add support for another mod's blocks. |
-| [docs/api.md](docs/api.md) | The mod API: reading, writing, heat sources, thresholds, settings. |
-
-**Measurement and evidence**
-
-| Document | Contents |
-| --- | --- |
-| [docs/telemetry.md](docs/telemetry.md) | Session data collection and what the report contains. |
-| [docs/benchmarks.md](docs/benchmarks.md) | The performance report: cost by size, feature and configuration; what a substep costs; and the trend across passes. |
-| [docs/load-and-hitching.md](docs/load-and-hitching.md) | What a grid costs as it grows, what makes it stutter, and what live worlds measure. |
-| [docs/stiffness.md](docs/stiffness.md) | Why a handful of light fittings sets the cost of a capital ship, and what to do about it. |
-| [docs/memory.md](docs/memory.md) | Where a grid's memory goes, and what can be given back. |
-| [docs/balance-lab.md](docs/balance-lab.md) | Deciding good balance from a population of real ships: criteria, staging, and the corpus. |
-| [docs/balance.md](docs/balance.md) | Every block costed against the vanilla blocks it competes with, and what 8,132 real ships say about the targets. |
-
-**Working on it**
-
-| Document | Contents |
-| --- | --- |
-| [docs/development.md](docs/development.md) | Building, deploying, repo layout, conventions. |
-| [docs/known-issues.md](docs/known-issues.md) | Deliberate limits, open defects, and the failure patterns worth carrying forward. |
-| [docs/engine-notes.md](docs/engine-notes.md) | What both engines actually provide, and what an SE2 adapter would bind to. |
-| [tests/README.md](tests/README.md) | The isolated simulation environment: running the tests and scenarios. |
-| [tools/corpus/README.md](tools/corpus/README.md) | The corpus tooling: the verdict script and the report builder. |
-
-## Building and testing
-
-The simulation core lives under
-[Data/Scripts/Thermodynamics/Core/](Data/Scripts/Thermodynamics/Core) and ships with the mod — the
-game compiles it. The projects under [tests/](tests) link the same files so it can be built, tested and
-profiled outside the game:
-
-```bash
-cd tests && dotnet test                                  # 1,520 tests
-dotnet run --project Thermodynamics.Sim -- run all     # scenario suite
-dotnet run --project Thermodynamics.Sim -- bench scale # cost from 8k to 1M blocks
-```
-
-The mod as a whole builds against the installed game assemblies:
-
-```bash
-dotnet build Generic.csproj
-```
-
-## Repository layout
-
-```
-ThermalDynamics/
-├── Data/
-│   ├── Cubes.xml                 ModExtensions thermal properties per block subtype
-│   ├── Planets.xml               ModExtensions planet climate properties
-│   ├── Loops.xml                 ModExtensions coolant loop properties
-│   ├── EntityComponents.sbc      Registers the mod-storage GUID used for saving
-│   ├── TransparentMaterials.sbc  The billboard material used by the extinguisher overlay
-│   ├── CubeBlocks/               Block definitions (coolant pipes, pumps, radiator, heat pump)
-│   ├── Extinguisher/             Hand tool: weapon, ammo, hand item, audio, decorative block
-│   ├── Localization/             DisplayName/Description strings
-│   └── Scripts/Thermodynamics/   All C# source
-├── Models/                       .mwm models — do not restructure, LOD paths are baked in
-├── Textures/                     Block, decal and particle textures
-├── Audio/                        FireExtinguisher.wav
-├── tests/                          Isolated build, tests and scenarios
-└── docs/                         This documentation
-```
+**[docs/](docs/) is the documentation**, indexed by what you are trying to do in
+[docs/README.md](docs/README.md). If you are here to build on this mod rather than to play with it,
+[docs/api.md](docs/api.md) is the contract and [docs/development.md](docs/development.md) is how the
+repository is built and laid out.
 
 ---
 
@@ -173,6 +86,7 @@ ThermalDynamics/
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Moved the repository layout tree, the build-and-test section and the documentation index off this page. The stated audience is a workshop reader, with one section for modders, and all three were written for somebody who has cloned the repository ([docs/backlog.md](docs/backlog.md) `H5`). The layout and the build are now in [docs/development.md](docs/development.md); the index is [docs/README.md](docs/README.md). |
 | 2026-08-22 | Brought the quoted suite size to 1,533, after a pass that added four documentation checks. |
 | 2026-08-22 | Rebuilt the documentation index around what a reader is trying to do rather than the order pages were written, after a defragmentation pass took the documentation from 31 pages to 21. Every page now opens with its scope and closes with a change log; the conventions are in [docs/development.md](docs/development.md#documentation-conventions) and checked by `EveryPageHasAChangeLog`. |
 | 2026-08-21 | Made the quoted suite size a claim the suite checks, and fixed the sixteen dead documentation links a first check found. |
