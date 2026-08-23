@@ -320,25 +320,50 @@ namespace Thermodynamics.Harness
         /// is deliberate — resolving them finely would mean sampling every step, and they are used
         /// to sort ships rather than to decide anything on their own.
         /// </summary>
+
+        /// <summary>Kelvin of the final value a sample must be inside to count as settled.</summary>
+        public const float SettledWithinOfFinal = 5f;
+
+        /// <summary>
+        /// Seconds until the hottest-block trace first came within
+        /// <see cref="SettledWithinOfFinal"/> of where it ended, or -1 if it never did.
+        ///
+        /// <para>
+        /// **This is a settling time only when the block moved.** A hull that barely changed over
+        /// the whole run is inside 5 K of its final value at the first sample and reports
+        /// <see cref="Chunk"/>, so *has not begun* and *has finished* come out as the same number.
+        /// It is not the limitation <see cref="ScenarioOutcome.BulkDriftKelvinPerSecond"/> guards —
+        /// that one is one block settling ahead of the hull, and a hull that never started has a
+        /// small drift too. Pinned by <c>SettleReadingTests</c>, and it is why `G8`'s settling half
+        /// is scored on a scenario where the hull is driven somewhere rather than at idle.
+        /// </para>
+        /// </summary>
+        public static float SettleSeconds(IList<float> samples, float final)
+        {
+            if (samples == null || samples.Count < 2) return -1f;
+
+            for (int i = 1; i < samples.Count; i++)
+            {
+                if (Math.Abs(samples[i] - final) <= SettledWithinOfFinal) return (i + 1) * Chunk;
+            }
+
+            return -1f;
+        }
+
         private static void Settle(ScenarioOutcome outcome, AssemblyRunner runner)
         {
             List<float> samples = runner.Hottest;
             if (samples.Count < 2) return;
 
-            float final = outcome.PeakKelvin;
             float fastest = 0f;
 
             for (int i = 1; i < samples.Count; i++)
             {
                 float rate = Math.Abs(samples[i] - samples[i - 1]) / Chunk;
                 if (rate > fastest) fastest = rate;
-
-                if (outcome.SecondsToSettle < 0f && Math.Abs(samples[i] - final) <= 5f)
-                {
-                    outcome.SecondsToSettle = (i + 1) * Chunk;
-                }
             }
 
+            outcome.SecondsToSettle = SettleSeconds(samples, outcome.PeakKelvin);
             outcome.PeakRateKelvinPerSecond = fastest;
 
             BulkDrift(outcome, runner);
