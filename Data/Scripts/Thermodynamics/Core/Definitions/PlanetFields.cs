@@ -17,11 +17,12 @@ namespace Thermodynamics.Core
         SolarDecay = 512,
         ConvectionCoefficient = 1024,
         UndergroundConvectionCoefficient = 2048,
+        AmbientLagShareOfDay = 4096,
 
         All = NightTemperature | DayTemperature | UndergroundTemperature | CoreTemperature
             | SealevelDeadzone | PoleTemperatureDrop | AmbientLagSeconds | AmbientLapseRate
             | UndergroundDampingDepth | SolarDecay | ConvectionCoefficient
-            | UndergroundConvectionCoefficient,
+            | UndergroundConvectionCoefficient | AmbientLagShareOfDay,
     }
 
     /// <summary>
@@ -64,6 +65,9 @@ namespace Thermodynamics.Core
 
             if ((supplied & PlanetField.AmbientLagSeconds) != 0)
                 merged.AmbientLagSeconds = read.AmbientLagSeconds;
+
+            if ((supplied & PlanetField.AmbientLagShareOfDay) != 0)
+                merged.AmbientLagShareOfDay = read.AmbientLagShareOfDay;
 
             if ((supplied & PlanetField.AmbientLapseRate) != 0)
                 merged.AmbientLapseRate = read.AmbientLapseRate;

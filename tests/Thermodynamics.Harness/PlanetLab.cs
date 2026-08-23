@@ -342,7 +342,11 @@ namespace Thermodynamics.Harness
                 "How much colder a pole is than the equator, K. Air carries heat polewards, so a\n"
                 + "\t\t\t\t\tthin-aired world keeps more of what each latitude is given.");
             Value(sb, "AmbientLagSeconds", p.AmbientLagSeconds,
-                "Seconds the air takes to answer the sun. What puts the day's peak after noon.");
+                "Seconds the air takes to answer the sun. What puts the day's peak after noon,\n"
+                + "\t\t\t\t\tand the fallback for a session that has not yet measured a day.");
+            Value(sb, "AmbientLagShareOfDay", p.AmbientLagShareOfDay,
+                "The same lag as a share of this world's own day, which is what it should be.\n"
+                + "\t\t\t\t\tEarth peaks about two hours after noon out of twenty-four.");
             Value(sb, "AmbientLapseRate", p.AmbientLapseRate,
                 "How much colder a kilometre up is, K/km. Derived: g/cp, two thirds for moisture.");
             Value(sb, "UndergroundTemperature", p.UndergroundTemperature,

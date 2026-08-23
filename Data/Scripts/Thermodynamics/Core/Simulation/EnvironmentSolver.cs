@@ -110,7 +110,8 @@ namespace Thermodynamics.Core
             // no previous ambient starts at the target.
             float ambient = sample.HasPreviousAmbient
                 ? ClimateModel.Follow(
-                    sample.PreviousAmbient, target, sample.SecondsSincePrevious, planet.AmbientLagSeconds)
+                    sample.PreviousAmbient, target, sample.SecondsSincePrevious,
+                    planet.LagSecondsFor(sample.DayLengthSeconds))
                 : target;
 
             state.SetAmbient(Math.Max(settings.VacuumTemperature, ambient));

@@ -35,8 +35,13 @@
 					thin-aired world keeps more of what each latitude is given.-->
 					<Decimal Name="PoleTemperatureDrop" Value="40" />
 
-					<!--Seconds the air takes to answer the sun. What puts the day's peak after noon.-->
+					<!--Seconds the air takes to answer the sun. What puts the day's peak after noon,
+					and the fallback for a session that has not yet measured a day.-->
 					<Decimal Name="AmbientLagSeconds" Value="45" />
+
+					<!--The same lag as a share of this world's own day, which is what it should be.
+					Earth peaks about two hours after noon out of twenty-four.-->
+					<Decimal Name="AmbientLagShareOfDay" Value="0.083" />
 
 					<!--How much colder a kilometre up is, K/km. Derived: g/cp, two thirds for moisture.-->
 					<Decimal Name="AmbientLapseRate" Value="4" />
@@ -91,8 +96,13 @@
 					thin-aired world keeps more of what each latitude is given.-->
 					<Decimal Name="PoleTemperatureDrop" Value="40" />
 
-					<!--Seconds the air takes to answer the sun. What puts the day's peak after noon.-->
+					<!--Seconds the air takes to answer the sun. What puts the day's peak after noon,
+					and the fallback for a session that has not yet measured a day.-->
 					<Decimal Name="AmbientLagSeconds" Value="45" />
+
+					<!--The same lag as a share of this world's own day, which is what it should be.
+					Earth peaks about two hours after noon out of twenty-four.-->
+					<Decimal Name="AmbientLagShareOfDay" Value="0.083" />
 
 					<!--How much colder a kilometre up is, K/km. Derived: g/cp, two thirds for moisture.-->
 					<Decimal Name="AmbientLapseRate" Value="6.4424" />
@@ -147,8 +157,13 @@
 					thin-aired world keeps more of what each latitude is given.-->
 					<Decimal Name="PoleTemperatureDrop" Value="40" />
 
-					<!--Seconds the air takes to answer the sun. What puts the day's peak after noon.-->
+					<!--Seconds the air takes to answer the sun. What puts the day's peak after noon,
+					and the fallback for a session that has not yet measured a day.-->
 					<Decimal Name="AmbientLagSeconds" Value="45" />
+
+					<!--The same lag as a share of this world's own day, which is what it should be.
+					Earth peaks about two hours after noon out of twenty-four.-->
+					<Decimal Name="AmbientLagShareOfDay" Value="0.083" />
 
 					<!--How much colder a kilometre up is, K/km. Derived: g/cp, two thirds for moisture.-->
 					<Decimal Name="AmbientLapseRate" Value="7.0866" />
@@ -205,8 +220,13 @@
 					thin-aired world keeps more of what each latitude is given.-->
 					<Decimal Name="PoleTemperatureDrop" Value="40" />
 
-					<!--Seconds the air takes to answer the sun. What puts the day's peak after noon.-->
+					<!--Seconds the air takes to answer the sun. What puts the day's peak after noon,
+					and the fallback for a session that has not yet measured a day.-->
 					<Decimal Name="AmbientLagSeconds" Value="45" />
+
+					<!--The same lag as a share of this world's own day, which is what it should be.
+					Earth peaks about two hours after noon out of twenty-four.-->
+					<Decimal Name="AmbientLagShareOfDay" Value="0.083" />
 
 					<!--How much colder a kilometre up is, K/km. Derived: g/cp, two thirds for moisture.-->
 					<Decimal Name="AmbientLapseRate" Value="6.8555" />
@@ -261,8 +281,13 @@
 					thin-aired world keeps more of what each latitude is given.-->
 					<Decimal Name="PoleTemperatureDrop" Value="40" />
 
-					<!--Seconds the air takes to answer the sun. What puts the day's peak after noon.-->
+					<!--Seconds the air takes to answer the sun. What puts the day's peak after noon,
+					and the fallback for a session that has not yet measured a day.-->
 					<Decimal Name="AmbientLagSeconds" Value="45" />
+
+					<!--The same lag as a share of this world's own day, which is what it should be.
+					Earth peaks about two hours after noon out of twenty-four.-->
+					<Decimal Name="AmbientLagShareOfDay" Value="0.083" />
 
 					<!--How much colder a kilometre up is, K/km. Derived: g/cp, two thirds for moisture.-->
 					<Decimal Name="AmbientLapseRate" Value="7.7309" />
@@ -317,8 +342,13 @@
 					thin-aired world keeps more of what each latitude is given.-->
 					<Decimal Name="PoleTemperatureDrop" Value="40" />
 
-					<!--Seconds the air takes to answer the sun. What puts the day's peak after noon.-->
+					<!--Seconds the air takes to answer the sun. What puts the day's peak after noon,
+					and the fallback for a session that has not yet measured a day.-->
 					<Decimal Name="AmbientLagSeconds" Value="45" />
+
+					<!--The same lag as a share of this world's own day, which is what it should be.
+					Earth peaks about two hours after noon out of twenty-four.-->
+					<Decimal Name="AmbientLagShareOfDay" Value="0.083" />
 
 					<!--How much colder a kilometre up is, K/km. Derived: g/cp, two thirds for moisture.-->
 					<Decimal Name="AmbientLapseRate" Value="6.4424" />
@@ -373,8 +403,13 @@
 					thin-aired world keeps more of what each latitude is given.-->
 					<Decimal Name="PoleTemperatureDrop" Value="40" />
 
-					<!--Seconds the air takes to answer the sun. What puts the day's peak after noon.-->
+					<!--Seconds the air takes to answer the sun. What puts the day's peak after noon,
+					and the fallback for a session that has not yet measured a day.-->
 					<Decimal Name="AmbientLagSeconds" Value="45" />
+
+					<!--The same lag as a share of this world's own day, which is what it should be.
+					Earth peaks about two hours after noon out of twenty-four.-->
+					<Decimal Name="AmbientLagShareOfDay" Value="0.083" />
 
 					<!--How much colder a kilometre up is, K/km. Derived: g/cp, two thirds for moisture.-->
 					<Decimal Name="AmbientLapseRate" Value="1.9043" />
@@ -431,8 +466,13 @@
 					thin-aired world keeps more of what each latitude is given.-->
 					<Decimal Name="PoleTemperatureDrop" Value="40" />
 
-					<!--Seconds the air takes to answer the sun. What puts the day's peak after noon.-->
+					<!--Seconds the air takes to answer the sun. What puts the day's peak after noon,
+					and the fallback for a session that has not yet measured a day.-->
 					<Decimal Name="AmbientLagSeconds" Value="45" />
+
+					<!--The same lag as a share of this world's own day, which is what it should be.
+					Earth peaks about two hours after noon out of twenty-four.-->
+					<Decimal Name="AmbientLagShareOfDay" Value="0.083" />
 
 					<!--How much colder a kilometre up is, K/km. Derived: g/cp, two thirds for moisture.-->
 					<Decimal Name="AmbientLapseRate" Value="1.6106" />
@@ -489,8 +529,13 @@
 					thin-aired world keeps more of what each latitude is given.-->
 					<Decimal Name="PoleTemperatureDrop" Value="120" />
 
-					<!--Seconds the air takes to answer the sun. What puts the day's peak after noon.-->
+					<!--Seconds the air takes to answer the sun. What puts the day's peak after noon,
+					and the fallback for a session that has not yet measured a day.-->
 					<Decimal Name="AmbientLagSeconds" Value="5" />
+
+					<!--The same lag as a share of this world's own day, which is what it should be.
+					Earth peaks about two hours after noon out of twenty-four.-->
+					<Decimal Name="AmbientLagShareOfDay" Value="0.083" />
 
 					<!--How much colder a kilometre up is, K/km. Derived: g/cp, two thirds for moisture.-->
 					<Decimal Name="AmbientLapseRate" Value="0" />

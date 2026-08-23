@@ -77,6 +77,16 @@ namespace Thermodynamics.Core
         public float SecondsSincePrevious;
 
         /// <summary>
+        /// Seconds in this world's full day, or 0 where nothing has measured one yet.
+        ///
+        /// The climate's lag is a share of the day rather than an absolute count of seconds, and
+        /// this is the day. Measured from the sun by <see cref="DayLength"/> rather than asked for.
+        /// Zero leaves the authored absolute lag in charge, which is what a session that has just
+        /// started gets. See PlanetThermalProperties.AmbientLagShareOfDay.
+        /// </summary>
+        public float DayLengthSeconds;
+
+        /// <summary>
         /// Whether <see cref="PreviousAmbient"/> is a climate this grid actually held.
         ///
         /// False on the step a grid arrives at a planet, where the state still holds the vacuum it

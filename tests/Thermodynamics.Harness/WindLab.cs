@@ -356,6 +356,19 @@ namespace Thermodynamics.Harness
             /// <summary>The climate's lag, which the daily heating curve shares.</summary>
             public float AmbientLagSeconds = 45f;
 
+            /// <summary>
+            /// The same lag as a share of this world's day, which is what the model uses wherever
+            /// the day's length is known. Zero leaves the absolute figure in charge.
+            /// </summary>
+            public float AmbientLagShareOfDay = 0.083f;
+
+            /// <summary>The lag to use on a world with this day, in seconds.</summary>
+            public float LagSecondsFor(double dayLengthSeconds)
+            {
+                if (AmbientLagShareOfDay <= 0f || dayLengthSeconds <= 0d) return AmbientLagSeconds;
+                return (float)(AmbientLagShareOfDay * dayLengthSeconds);
+            }
+
             /// <summary>Latitudes sampled, degrees, from −this to +this.</summary>
             public double LatitudeLimit = 80d;
             public double LatitudeStep = 20d;
@@ -460,8 +473,11 @@ namespace Thermodynamics.Harness
             {
                 double sunSine = planet.SunElevationSine(Latitude, Longitude, dayFraction);
 
+                // The lag is a share of the day, and this lab knows exactly how long its day is —
+                // so it does not need the estimator the game side runs. See backlog C6.
                 heating = WindProfile.Heating(
-                    heating, (float)sunSine, step, options.AmbientLagSeconds);
+                    heating, (float)sunSine, step,
+                    options.LagSecondsFor(planet.DayLength));
 
                 Vector3 up = (Vector3)Up;
                 Vector3 east = Vector3.Cross(planet.Axis, up);

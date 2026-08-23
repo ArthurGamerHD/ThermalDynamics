@@ -32,6 +32,26 @@ namespace Thermodynamics.Core
         public float AmbientLagSeconds = 45f;
 
         /// <summary>
+        /// The same lag as a share of the world's own day, which is what it should have been.
+        ///
+        /// <para>
+        /// **An absolute lag against a rotation a server sets to anything is two different
+        /// climates.** Forty-five seconds attenuates a four-minute day to less than half and does
+        /// nothing at all to a two-hour one, so the authored figure above means something different
+        /// on every world it is applied to. Earth's air peaks about two hours after noon out of
+        /// twenty-four, which is where 0.083 comes from.
+        /// </para>
+        ///
+        /// <para>
+        /// Used wherever the day's length is known — <see cref="DayLength"/> measures it from the
+        /// sun rather than asking for it — and <see cref="AmbientLagSeconds"/> is the fallback for
+        /// a session that has not seen enough of a rotation yet, and for a world whose sun does not
+        /// move at all. Zero disables the share and leaves the absolute figure in charge.
+        /// </para>
+        /// </summary>
+        public float AmbientLagShareOfDay = 0.083f;
+
+        /// <summary>
         /// Lapse rate: how much colder a kilometre above sea level is, K.
         ///
         /// Earth's is about 6.5. The default here is lower because the ground table already accounts
@@ -110,6 +130,16 @@ namespace Thermodynamics.Core
             return p;
         }
 
+        /// <summary>
+        /// The lag to use, given how long a day this world has: the share of it where that is
+        /// known, and the authored absolute where it is not.
+        /// </summary>
+        public float LagSecondsFor(float dayLengthSeconds)
+        {
+            if (AmbientLagShareOfDay <= 0f || dayLengthSeconds <= 0f) return AmbientLagSeconds;
+            return AmbientLagShareOfDay * dayLengthSeconds;
+        }
+
         public PlanetThermalProperties Clamp()
         {
             NightTemperature = Math.Max(0f, NightTemperature);
@@ -119,6 +149,7 @@ namespace Thermodynamics.Core
             UndergroundDampingDepth = Math.Max(0f, UndergroundDampingDepth);
             AmbientLapseRate = Math.Max(0f, AmbientLapseRate);
             AmbientLagSeconds = Math.Max(0f, AmbientLagSeconds);
+            AmbientLagShareOfDay = Math.Max(0f, AmbientLagShareOfDay);
             CoreTemperature = Math.Max(0f, CoreTemperature);
             SealevelDeadzone = Math.Max(0f, SealevelDeadzone);
             SolarDecay = Math.Max(0f, Math.Min(1f, SolarDecay));

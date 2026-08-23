@@ -510,7 +510,7 @@ model they parameterise.
 | `PlanetNightTemperature` | 283.15 K | Equatorial night air. |
 | `PlanetPoleTemperatureDrop` | 40 K | Span from equator to pole, interpolated on cos(latitude). |
 | `PlanetAmbientLapseRate` | 4 K/km | How fast the air cools with altitude. |
-| `PlanetAmbientLagSeconds` | 45 s | First-order lag on the ambient target, which is what makes the day peak after noon. Absolute seconds against a day that is not — see [environment.md](environment.md#limits-and-open-questions). |
+| `PlanetAmbientLagSeconds` | 45 s | First-order lag on the ambient target, which is what makes the day peak after noon. **The fallback**: the lag is a share of this world's own day wherever the day has been measured, and this is what runs until it has been. See [The lag is a share of the day](environment.md#the-lag-is-a-share-of-the-day). |
 | `PlanetConvectionCoefficient` | 50 W/(m²·K) | Convective coupling in full atmosphere, scaled down with air density and up with wind. |
 | `PlanetUndergroundConvectionCoefficient` | 2 W/(m²·K) | The same for a grid buried in rock, which is a far worse heat sink than moving air: `2k/D` for rock at 2.5 W/(m·K) over a 2.5 m block. Crossed over the first five metres of burial, and neither wind nor weather multiplies it. |
 | `PlanetSolarDecay` | 0.5 | How fast sunlight is attenuated through the atmosphere. |
@@ -881,6 +881,7 @@ one with a migration risk — is late rather than first.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | `PlanetAmbientLagSeconds` is the fallback rather than the whole answer: the lag is a share of the world's own day wherever the day has been measured ([backlog.md](backlog.md) `C6`). |
 | 2026-08-22 | `WindRoughnessLength` is the fallback rather than the whole answer: the ground material under a grid now sets its own roughness, which is the one figure in that table with a published table behind it ([backlog.md](backlog.md) `B16`). |
 | 2026-08-22 | Said that `WindGradientHeight` is capped by the atmosphere over the grid's own ground ([backlog.md](backlog.md) `B20`). |
 | 2026-08-22 | Added `PlanetUndergroundConvectionCoefficient`. A buried grid exchanged at the coefficient for moving air, which made digging in the best cooling in the game ([backlog.md](backlog.md) `A16`). |

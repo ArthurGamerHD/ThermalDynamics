@@ -24,7 +24,7 @@ arguing about them.
 
 ```
 ambient   = target(latitude, ground, altitude, air, weather, depth)
-            lagged once, last, by AmbientLagSeconds
+            lagged once, last, by AmbientLagShareOfDay x dayLength
 
 speed     = ceiling(planet, altitude)          // the engine's rating, used as a scale only
           × band(latitude, weather, place)     // WindField    — circulation and weather
@@ -73,11 +73,35 @@ target    = target − AmbientLapseRate × altitude/1000
 target    = VacuumTemperature + (target − VacuumTemperature) × (1 − (1 − density)⁸)
 target    = depth > 0 ? underground(target, depth, radius) : target
 
+lag       = AmbientLagShareOfDay × dayLength            // measured from the sun; see below
 ambient   = hasHistory
-              ? ambient + (target − ambient) × (1 − e^(−dt / AmbientLagSeconds))
+              ? ambient + (target − ambient) × (1 − e^(−dt / lag))
               : target
 ambient   = max(VacuumTemperature, ambient)
 ```
+
+### The lag is a share of the day
+
+A first-order lag needs a time constant, and it was 45 absolute seconds against a rotation a server
+sets to anything. That attenuates a four-minute day to less than half of its intended swing and does
+essentially nothing to a default two-hour one, so **the same authored figure meant a different
+climate on every world it was applied to**. Physically it is a fraction: Earth's air peaks about two
+hours after noon out of twenty-four, which is where `AmbientLagShareOfDay` = 0.083 comes from.
+
+**The day is measured, not asked for.** `MySectorWeatherComponent.RotationInterval` exists and would
+answer directly, but whether the script whitelist admits it cannot be established outside a session
+and a type the in-game compiler rejects takes the mod down at world load. The sun's direction is
+already sampled once a frame for the solar term, and the angle it sweeps between two samples is the
+same fact — so [DayLength](../Data/Scripts/Thermodynamics/Core/Simulation/DayLength.cs) needs no new
+type, survives a server changing the interval mid-session, and works on a world whose rotation
+nothing publishes. It offers nothing until the sun has swept a tenth of a turn, and until then the
+authored `AmbientLagSeconds` runs, which is also what a world with a static sun gets.
+
+Two details are numerical rather than physical, and both were found by the test rather than
+reasoned: the swept angle is `atan2(|a × b|, a · b)` and not `acos(a · b)`, because a frame moves
+the sun about a thousandth of a radian and the cosine of that is one to within a few float epsilons;
+and a sample claiming to have taken more than a second is dropped, because a world load or a paste
+moves the sun as far as many ordinary frames and would read as a much faster rotation.
 
 **Everything is a target, and the lag is applied to it exactly once, last.** That ordering is
 load-bearing rather than stylistic: scaling the *running* ambient compounds the scale against the
@@ -101,7 +125,7 @@ there is no convection.
 | --- | --- | --- |
 | **Latitude** | A planet's `DayTemperature` and `NightTemperature` are its *equatorial* figures. `PoleTemperatureDrop` is the span to its poles, interpolated on cos(latitude) because that is how squarely the sun strikes a band. Zero gives one climate for a whole world. | `PlanetPoleTemperatureDrop` |
 | **Ground** | The voxel material under the grid shifts the air and widens or narrows its day ([GroundTemperature.cs](../Data/Scripts/Thermodynamics/Core/Definitions/GroundTemperature.cs)). Snow −14 K at 0.7× swing; sand +8 K at 1.7×, because dry ground holds nothing overnight. Matched on the *word* in the material name rather than the exact subtype, so other worlds' spellings land; anything unrecognised leaves the planet untouched. | `ClimateGroundInfluence` |
-| **Lag** | First-order, applied once to a finished target. The day's peak then lands after noon and the low before dawn without either being written down. | `PlanetAmbientLagSeconds` |
+| **Lag** | First-order, applied once to a finished target. The day's peak then lands after noon and the low before dawn without either being written down. **A share of the day rather than a count of seconds** — see [The lag is a share of the day](#the-lag-is-a-share-of-the-day). | `PlanetAmbientLagSeconds` |
 | **Altitude** | A lapse rate cools the air as it rises, which is what makes a mountain colder than its valley. | `PlanetAmbientLapseRate` |
 | **Thin air** | Ambient fades toward vacuum on `1 − (1 − d)⁸`, blunter than the `1 − (1 − d)⁴` curve convection and solar decay run on: density decides when there stops being air to have a temperature at all, and that happens at the edge of space rather than gradually all the way up. | — |
 | **Weather** | Colder in rain and snow, warmer in a sandstorm; the sun dimmer, the wind the weather's own, and wet air stripping heat faster. See [Weather](#weather). | `ClimateWeatherInfluence` |
@@ -785,7 +809,6 @@ does not exist — `game_comfort` correlates weakly with everything and is not a
 | --- | --- |
 | B22 | Seven of eight shipped worlds have air density exactly 1, so swing, pole drop, lag and convection derive to the same figure for all of them. |
 | C5 | The core gradient sits behind a 2 km deadzone deeper than SE's voxels reach. Whether the default should be a few hundred metres is a balance question. |
-| C6 | `AmbientLagSeconds` is 45 absolute seconds against a day that is not: it attenuates a four-minute day to 46% of its intended swing and does essentially nothing to a default two-hour one. It is physically a fraction of a day. `MySectorWeatherComponent.RotationInterval` would express it as a share of one, if that type is reachable under the whitelist. |
 | C7 | The 4 K/km lapse rate and the ground table both say mountains are cold. The honest fix is probably that ground offsets should shrink as the lapse rate grows, since a site is only snowy *because* it is high. **The snow reference site is where that will show.** |
 | F4 | No latitude spread and no weather variety in any field data: three sites spanning 7°–41°, one weather kind, no still air. A polar grid and `/weather SnowHeavy` would settle the first two. |
 
@@ -797,6 +820,7 @@ does not exist — `game_comfort` correlates weakly with everything and is not a
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Closed `C6`: the climate's lag is a share of the world's own day rather than 45 absolute seconds, and the day is measured from the sun the model already samples rather than read from a type whose whitelist status cannot be established outside a session. |
 | 2026-08-22 | Closed `B16`: roughness length comes from the ground material under the grid rather than being one number for a whole world. It is the one figure in the ground table with a published table behind it, and it was already being looked up for the temperature offset. |
 | 2026-08-22 | Closed `B23`: the telemetry column is `game_comfort`, named for what it is. Re-measured its correlations against the fixture this repository actually holds — +0.11 with the sun's elevation and +0.20 with this model's ambient, against the +0.86 and +0.12 quoted from a dataset that is not in the tree (`E5`). The conclusion is unchanged and the numbers are now checkable. |
 | 2026-08-22 | Closed `B20`. The boundary layer is capped by the air over the ground under the grid, so the vertical profile is no longer evaluated at heights with no atmosphere at them — Titan's air is 285 m deep against a 600 m configured gradient. Derived from `MyPlanet.AtmosphereAltitude` rather than authored, so it follows every world including modded ones, and the offline lab computes it the same way. |

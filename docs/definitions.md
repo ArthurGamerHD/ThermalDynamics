@@ -237,7 +237,8 @@ keyed on a `PlanetGeneratorDefinition` id, falling back to
 | `NightTemperature` | 283.15 K | Ambient with the sun on the far side. **Equatorial, at sea level.** |
 | `DayTemperature` | 294.261 K | Ambient with the sun directly overhead. **Equatorial, at sea level.** |
 | `PoleTemperatureDrop` | 40 K | How much colder a pole is than the equator. Earth's is about 40. 0 gives one climate for a whole world. |
-| `AmbientLagSeconds` | 45 s | How long the air takes to answer the sun. Without it the day's peak is exactly noon. Worth raising on a world with a long day and lowering on a short one. |
+| `AmbientLagSeconds` | 45 s | How long the air takes to answer the sun. Without it the day's peak is exactly noon. **The fallback**: it runs until the mod has measured this world's day, and on a world whose sun does not move. |
+| `AmbientLagShareOfDay` | 0.083 | The same lag as a share of this world's own day, which is what it should be — Earth's air peaks about two hours after noon out of twenty-four. Used wherever the day's length is known, which is within a tenth of a turn of a session starting. Zero leaves the absolute figure above in charge. |
 | `AmbientLapseRate` | 4 K/km | How much colder a kilometre above sea level is. Earth's is 6.5; lower here because the ground table already makes mountains snowy. 0 switches altitude off. |
 | `UndergroundTemperature` | 280 K | Ambient deep enough underground that the surface's day no longer reaches; also forces solar occlusion. |
 | `UndergroundDampingDepth` | 20 m | Metres of rock that blunt the surface's day-night swing to nothing. Above it a buried block still feels part of the day; below it, none. |
@@ -333,6 +334,7 @@ Tuning guidance:
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Added `AmbientLagShareOfDay`. The climate's lag was 45 absolute seconds against a rotation a server sets to anything, so one authored figure meant a different climate on every world ([backlog.md](backlog.md) `C6`). |
 | 2026-08-22 | Added `UndergroundConvectionCoefficient`. A buried grid exchanged with rock at the coefficient for moving air, which made digging in the best cooling in the game ([backlog.md](backlog.md) `A16`). |
 | 2026-08-22 | Split `SolarAbsorptivity` off `Emissivity`. One number did both jobs, so a good radiator was forced to be a good absorber — the one combination real spacecraft radiators exist to avoid ([backlog.md](backlog.md) `B27`). Omitting it follows the emissivity, so nothing already authored changes, and zero stays a real answer rather than reading as unset. |
 | 2026-08-22 | Corrected the claim that `Data/Planets.xml` defines only the fallback, so every planet runs Earthlike numbers. The file carries nine entries — `DefaultThermodynamics` plus one per shipped world — generated from each world's own generator definition. Added the standard header and this change log. |
