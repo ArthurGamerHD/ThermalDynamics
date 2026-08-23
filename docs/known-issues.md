@@ -105,6 +105,15 @@ balance question, not a code one.
 
 ---
 
+### Armour cannot glow, and no block without an emissive material can
+
+The block glow is written through the model's emissive material, which is the only per-block
+rendering channel the engine exposes to a mod. A model that has none — armour, most structural
+blocks — takes the write and shows nothing. **That is a limit on models rather than on the physics**,
+and it is why the cue that warns a pilot is keyed to each block's own rating and carried by sound:
+between the two channels, what the glow cannot reach the cue can. See
+[document-of-intent.md](document-of-intent.md#natural-feedback--built).
+
 ## Open defects
 
 **Temperatures are not reconciled between server and clients.** Clients run their own simulation
@@ -541,6 +550,7 @@ be reached without a session; the rest of `Game/` is exercised only in the game.
 | The vent sweep, the terminal readout and the mod API's delegate table | need a live session | the API's *shape* is checkable without one and is worth pinning |
 | The wind map and the wind indicator | whether an arrow lands where it should on screen is answerable only by looking | the arithmetic under them is in `WindCompass` and pinned by `WindCompassTests`, including the handedness — the half a drawing cannot argue with |
 | The mass sweep's rota | the sweep asks the game for a block's mass, and a harness has no game block to ask | covered today only by arithmetic tests on its slice function |
+| The block glow and the cockpit cue | `MyCubeBlock.UpdateEmissiveParts` needs a model with an emissive material and a live render object, and `MyEntity3DSoundEmitter` needs an audio device | both compile against the installed assemblies, which says the members exist and nothing about what they do; the state they decide is `HeatCue`, and that is pinned end to end by `HeatCueScanTests` and `HeatWarningTests`. [backlog](backlog.md) `F15` |
 
 `LoadTests` closes part of the adapter gap for cost rather than for correctness, and asserts work
 counters rather than milliseconds so it holds on any machine.
@@ -551,6 +561,7 @@ counters rather than milliseconds so it holds on any machine.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | Recorded two limits that came with natural feedback ([backlog.md](backlog.md) `B25`, `F15`): a block with no emissive material in its model cannot glow, which is most structural blocks, and the two engine calls the feature makes have never run in a session — they compile, which says the members exist and nothing more. |
 | 2026-08-22 | Withdrew the burning-ship divergence. It was never a divergence: run ten times longer the rig is flat to the last digit from 600 s to 6,000 s, its energy balances to a part in ten thousand, and two integrators refused wildly different substep counts land one kelvin apart. The 11,279 K is a converged conduction-limited interior temperature — the hottest block has no exposed face and pushes 2.22 MW out through 1,317 W/K of conduction — and the peak among blocks that can radiate is 2,822 K. The defect it left behind is on [realism.md](realism.md): a divergence column that was a threshold on a temperature, which cannot tell a converged extreme from a diverged one. |
 | 2026-08-22 | Measured the client divergence that had been recorded as cosmetic, with `-- drift`. It converges on its own — the model is dissipative — but it is on the wrong side of a block's critical temperature for two and a half to five minutes, against a whole damage event that is a median 8.9 s long, and the error is not a uniform offset so a per-grid correction would not reach it ([backlog.md](backlog.md) `B4`). Corrected the count of replicated settings, which said 44 of 49 against 77 of 85. |
 | 2026-08-22 | Said what the destruction limit does and does not reach in the new `seconds_to_first_loss` column: the first loss is exact, and there is deliberately no count of losses after it. |
