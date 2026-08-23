@@ -169,8 +169,14 @@ def main():
                 if not deltas:
                     line += f"{'-':>22}"
                 else:
-                    moved = sum(1 for d in deltas if abs(d) > 1e-3)
-                    line += f"{median(deltas):>+14.2f}{unit} {moved:>3}/{len(deltas)}"
+                    # **The median is not enough for a count.** Blocks over critical is zero for
+                    # most ships in most scenarios, so its median is zero however many hulls the
+                    # change pushed over the line; the split says which way the ones that moved
+                    # went, and it is the half that carries the finding.
+                    up = sum(1 for d in deltas if d > 1e-3)
+                    down = sum(1 for d in deltas if d < -1e-3)
+                    cell = f"{median(deltas):+.2f}{unit} {up}up {down}dn"
+                    line += f"{cell:>22}"
 
             print(line)
 
@@ -207,9 +213,9 @@ def main():
     print("moved something a player does not meet.")
     print()
 
-    print("Each cell is the median over the ships the scenario could be read from, and the count")
-    print("beside it is how many of them moved at all. Positive means the shipped world is the")
-    print("hotter, later or more damaged one.")
+    print("Each cell is the median over the ships the scenario could be read from, then how many")
+    print("of them the shipped world is higher on (+) and lower on (-). Positive means the shipped")
+    print("world is the hotter, later or more damaged one.")
     return 0
 
 
