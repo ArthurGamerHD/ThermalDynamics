@@ -264,6 +264,46 @@ input. Every magnitude in that table is a knob the lab turns, not a figure measu
 What it answers is the shape — which inputs bias, which perturb, and whether the correction reaches
 each — and the shape is what decides the protocol.
 
+### The nine cases are not the whole input surface, and here is what is missing
+
+The simulation reads its state from three places: an `EnvironmentSample` the client builds itself
+from the world around it, block state the adapter reads off the game's own blocks, and the room map
+it floods locally. Enumerated against the code rather than remembered, **the sweep covers eight
+inputs and leaves fourteen**:
+
+| input | read from | covered | |
+| --- | --- | --- | --- |
+| initial temperatures | the save | yes | `stale join` |
+| step schedule | `SimulationScheduler` | yes | `hitching` |
+| settings | replicated | yes | `wrong settings` |
+| sun direction | grid orientation | yes | `sun angle` |
+| ambient and air density | `PlanetManager` | yes | `thinner air` |
+| block electrical power | `MyResourceSourceComponent` | yes | `power lag`, `power error` |
+| whole-sample staleness | the client's own tick | yes | `environment lag` |
+| **thrust** | `block.CurrentThrust` | **no** | physics state, *predicted* on a client rather than replicated, and a separate heat term from electrical power |
+| **grid velocity and relative wind** | `EnvironmentSample.GridVelocity` | **no** | the classic multiplayer prediction error, and it drives convective cooling in atmosphere |
+| **solar occlusion** | raycast against voxels and grids | **no** | a *binary* flag over the whole solar input, resolved against world state a client holds differently |
+| **altitude, depth, latitude** | grid position | **no** | position lag on a *moving* ship, which is not the same as a lag on a stationary one |
+| **weather and its intensity** | the game's weather | **no** | server-driven world state |
+| **the ten wind fields** | terrain and the wind solver | **no** | shelter, burial and channelling are all voxel-derived |
+| **block mass and integrity** | `SweepMass`, a rota | **no** | swept every 8 steps and capped at 4,096 blocks, so a large grid's masses lag by design, and integrity replicates on its own schedule |
+| **block enabled and functional state** | the game's block | **no** | a block turned off on one machine and not the other |
+| **room air pressure** | the game's gas system | **no** | `C9` says the mod reads the game's answer, so this is the input the mod least owns |
+| **the room map itself** | a local flood fill | **no** | converges on its own schedule, which `D2` measures at 7,207 ticks on a million blocks |
+| **topology and subgrid attach** | block add and remove | **no** | placement order and attach timing change the conduction graph, not just a value in it |
+| **coolant loop identity** | loop signatures over topology | **no** | a loop is keyed by its shape, so a topology difference is a different loop |
+| **registered heat sources** | the mod API | **no** | another mod's registrations need not reach a client |
+| **simulation speed** | the host's own clock | **no** | a server below 1.0 while a client is not, which is a *rate* difference rather than the dropped backlog `hitching` models |
+
+Two of those are the ones to expect the most from. **Thrust** is a heat term of its own and is
+physics state, which the engine predicts on a client rather than replicating — so on a flying ship
+it is likely the largest input error there is. **Solar occlusion** is the only binary in the list:
+every other input is wrong by an amount, and this one is wrong by the entire solar term at once.
+
+They are tracked as [backlog.md](backlog.md) `F17` to `F23`. None of them changes the protocol —
+the correction overwrites state and so does not care which input produced the disagreement — and
+each of them changes how much correcting there is to do.
+
 Settings and pump controls *are* replicated. `SENetworkAPI` 2.0 runs on channel `30323` with three
 properties on it: the world's settings and the two pump throttles.
 
