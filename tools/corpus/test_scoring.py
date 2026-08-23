@@ -17,6 +17,7 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import pairs
+import scoring
 
 
 def loaded(*seconds):
@@ -71,6 +72,30 @@ class TheWindowIsTheOneWrittenDownBeforeTheData(unittest.TestCase):
     def test_the_window_and_the_recovery_bound_are_g8_as_written(self):
         self.assertEqual((120.0, 300.0), pairs.WINDOW)
         self.assertEqual(3600.0, pairs.RECOVERY_BOUND)
+
+
+class ABreachIsPricedBesideTheVerdictAndTheMarkerDoesNotMove(unittest.TestCase):
+    """`G6` fails on the demand; what the demand is worth is reported beside it, not instead of it.
+
+    The criterion's marker was written before the data (`E1`) and stays there (`E11`). What is new
+    is that the error it proxies for has been measured, so a reader can see whether a failure is
+    three hundredths of a kelvin or a hull being integrated wrong.
+    """
+
+    def test_a_demand_inside_the_ceiling_says_nothing(self):
+        self.assertEqual("", scoring.oversubscription_note(60.0, 64))
+        self.assertEqual("", scoring.oversubscription_note(64.0, 64))
+        self.assertEqual("", scoring.oversubscription_note(73.4, 0))
+
+    def test_the_shipped_breach_is_reported_with_its_price(self):
+        note = scoring.oversubscription_note(73.4, 64)
+        self.assertIn("1.15x", note)
+        self.assertIn("0.03 K", note)
+
+    def test_past_the_measured_range_it_says_so_rather_than_extrapolating(self):
+        note = scoring.oversubscription_note(200.0, 64)
+        self.assertIn("3.12x", note)
+        self.assertIn("unpriced", note)
 
 
 if __name__ == "__main__":

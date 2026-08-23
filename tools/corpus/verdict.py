@@ -17,6 +17,10 @@ import os
 import statistics
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from scoring import oversubscription_note
+
 DATA = sys.argv[1] if len(sys.argv) > 1 else "out/corpus-2026-08-21"
 
 # Steel gives up around here; a block over its critical temperature is taking damage.
@@ -166,7 +170,7 @@ if demand:
     cap = max(granted) if granted else 0
     verdict("G6", "Affordable across the population.", p["p99"] <= cap,
             f"substep demand p50 {p['p50']:.1f}, p95 {p['p95']:.1f}, p99 {p['p99']:.1f}, "
-            f"max {p['max']:.1f}; highest granted {cap:.0f}",
+            f"max {p['max']:.1f}; highest granted {cap:.0f}" + oversubscription_note(p["p99"], cap),
             "p99 substep demand exceeds what the shipped caps grant")
 
 # ---- G3 / G4: not answerable from this dataset -------------------------------------------

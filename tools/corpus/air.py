@@ -30,8 +30,9 @@ DATA = sys.argv[1] if len(sys.argv) > 1 else "out/air-2026-08-23"
 
 SHIPPED_CLOCK = 225.0
 
-# What MaxSubsteps grants at the shipped defaults. A demand above this is a step the solver refuses
-# to divide finely enough, which is a floored block rather than a slow one.
+# What MaxSubsteps grants at the shipped defaults. A demand above this is a step integrated at the
+# ceiling with both overshoot clamps live: an approximation rather than a slow step, and one whose
+# price stiffness.md, What refusing the demand costs, has measured.
 GRANTED = 64.0
 
 # The scenarios, in the order they are read. vacuum-shadow ties this pass to the vacuum dataset;
@@ -157,9 +158,10 @@ def main():
     print("convection coefficient, fitted here on this cell's own three atmospheric scenarios and")
     print("evaluated at h = 2.73. balance.md validates the same fit against a held-out point.")
     print()
-    print("'over cap' counts hulls demanding more substeps than the caps grant, which is not a")
-    print("slow step but a floored block: the solver refuses to divide finely enough and drops the")
-    print("capacity instead. A count there is an accuracy loss, not a frame-rate one.")
+    print("'over cap' counts hulls demanding more substeps than the caps grant. That is an")
+    print("approximation rather than a slow step - the step is integrated at the ceiling with both")
+    print("overshoot clamps live - and it is worth about 0.03 K on the hottest block at the 1.15x")
+    print("these hulls sit at. See stiffness.md, What refusing the demand costs.")
     return 0
 
 
