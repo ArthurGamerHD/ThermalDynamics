@@ -356,8 +356,10 @@ part of a coolant loop does not exempt it. This mirrors the physics, which is th
 either moves, but `MaxPowerWatts` is never assigned, so a pump draws nothing and heats nothing — a
 loop is free to run once built, where a heat pump pays for every watt it lifts. The symmetric
 implementation exists to copy: `ThermalHeatPumpBlock` attaches a `MyResourceSinkComponent` in code
-during `Init`, because an upgrade module has no definition field for one. Tracked as
-[backlog](backlog.md) B2.
+during `Init`, because an upgrade module has no definition field for one. The switch itself is
+wired — `ThermalGridSimulation.PushCoolantPumpState` walks the loops and pushes each pump's state
+into the ring — so what is left is the cost, which is a balance decision rather than a fix:
+[backlog](backlog.md) C13.
 
 ### Every thermal property is a dial
 

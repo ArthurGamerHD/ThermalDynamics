@@ -160,13 +160,22 @@ The obvious move: derive `PlanetThermalProperties` from the planet's own definit
 `ThermalPlanetProperties` ModExtensions group override it. Pertam runs hot and Europa freezes
 without anyone authoring a line of XML, and modded planets get sensible defaults for free.
 
-`SolarRadiationProtectionFactor` is the engine's version of the mod's `SolarDecay`, and
-`GetHeightFromSurface` is what the `//TODO: implement underground core temparatures` needs.
+`SolarRadiationProtectionFactor` is the engine's version of the mod's `SolarDecay`.
+`GetHeightFromSurface` is what the underground model needed and now uses; the `//TODO: implement
+underground core temparatures` this section was written against is gone, and what the model does
+below the surface is in [environment.md](environment.md#underground). What is still open there is
+`A16` — a buried grid convects with the planet's air coefficient, because rock contact is not
+modelled.
 
 ## Block mass and build state can be tracked
 
-`ThermalCell.PrecalculateVariables` reads `Block.Mass` once at construction and never again, so a
-half-built or heavily damaged block keeps the thermal mass of a complete one.
+**Mass is tracked now.** This section was written against a `ThermalCell.PrecalculateVariables` that
+read `Block.Mass` once at construction, so a half-built or heavily damaged block kept the thermal
+mass of a complete one. A mass rota has since closed it: `ThermalBlock.RefreshMass` re-reads
+`Block.Mass` and calls `ThermalNode.RefreshThermalMass` when it moves, on a sweep every eight steps,
+and because the engine's own `Mass` counts installed components a welding block warms up as it is
+built. What is *not* read is the rest of the group below — build ratio, integrity and damage never
+reach the model, so a shot-up block conducts and radiates as an intact one of the same mass.
 
 ```csharp
 float mass       = block.Mass;
@@ -665,6 +674,7 @@ object-builder type.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Corrected two survey entries that read as open work and are not. The underground core temperature is built and the `//TODO` this page quoted no longer exists; block mass is re-read by a rota through `ThermalBlock.RefreshMass`, against the claim here that it was read once at construction. Both now state what is built and what is left — a survey of what the engine offers is worth nothing if a reader cannot tell which offers have been taken. |
 | 2026-08-22 | Merged `engine-api-notes.md` and `se2-research.md` into this page as Parts 1 and 2: both answer "what does the engine give us", and the design that consumes them treats them as one survey. Dropped the section numbering in favour of named anchors. Added the standard header and this log. |
 | 2026-08-20 | Wrote down what the engine gives and what was invented, which is what the wind and climate models are justified against. |
 | 2026-08-19 | Measured that entity updates are **not** staggered across frames, and that `MyCubeGrid` clears `EACH_FRAME` from its own update flags — the two engine behaviours the scheduler had been assuming its way around. |

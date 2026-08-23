@@ -45,6 +45,49 @@ census, the composition and the dial sweep with `pack-bench.py` and assembles `b
 counts were written into the HTML by hand until the panel grew from 36 ships to 50 and the page
 went on saying 36. A reader who catches one wrong count stops believing the right ones.
 
+## The five ways a full sweep dies
+
+A full sweep is about eight hours of compute. Five things went wrong on the run of 2026-08-21, all
+of them avoidable, and all five cost time rather than data. Recorded here because a run that dies at
+hour seven is the most expensive mistake this repository can make.
+
+**Never set `--blame-hang-timeout` on a corpus test.** It killed a healthy run at exactly eight
+hours. The survey is one test that legitimately runs longer than any timeout worth setting, and
+VSTest cannot tell slow from deadlocked.
+
+**Filter to the survey alone** — `--filter "FullyQualifiedName~CorpusSurvey"`. A broader filter pulls
+in `SunlightPanelWalk`, which is 200 ships × 7 runs on a fixed 1,800 s clock, and under
+`maxParallelThreads: 1` that blocks the deliverable for hours.
+
+**Do not let the walks run concurrently.** Four walks × 31 workers is 124 threads on 32 cores, and it
+measured **17× slower** than sequential — hidden behind a 93 % CPU reading, because the cores were
+busy thrashing cache rather than working. `xunit.runner.json` is set to `maxParallelThreads: 1`;
+leave it, and see [backlog.md](../../docs/backlog.md) F8 for the narrower form that would let the
+rest of the suite run in parallel again.
+
+**Watch what a `pkill` pattern matches.** `pkill -f "filter CorpusSurvey"` matched the relaunch that
+had just started, killing the recovery along with the corpse. Use a pattern that cannot match the new
+invocation.
+
+**Cap the memory.** An uncapped run has taken the machine down with it; wrap it in
+`systemd-run --scope -p MemoryMax=…` so the run dies instead of the session.
+
+**Resume with `THERMAL_CORPUS_SKIP=<n>` rather than starting again.** Corpus order is deterministic —
+sorted largest-first — and rows are written per ship, so a killed run resumes by skipping what is
+already done. This turned a lost eight hours into a seventeen-minute finish. Note `H2` in
+[backlog.md](../../docs/backlog.md): the skip counts *files* while the writing is per *ship*, which
+is why an interrupted batch re-emits and the shipped dataset carries 50 duplicate rows.
+
+**Read progress in bytes, not files.** The corpus is sorted largest-first, so file 500 of 9,981 is
+5 % of the files and 50 % of the work. `THERMAL_CORPUS_PROGRESS` reports both.
+
+The environment variables a run takes: `THERMAL_CORPUS_TESTS`, `THERMAL_CORPUS_DATA`,
+`THERMAL_CORPUS_PROGRESS`, `THERMAL_CORPUS_SKIP`, `THERMAL_CORPUS_SHIPS` and
+`THERMAL_CORPUS_MAX_MB`. **`THERMAL_CORPUS_TESTS=` with an empty value opts *in*** rather than out,
+which is `H3` on the backlog and the standing rule [rules.md](../../docs/rules.md) `C8`.
+
+---
+
 **Read the peak columns with the censoring in mind.** The harness never destroys an overheating
 block, so anything above critical kept generating for the rest of the clock. See the deliberate
 limit in [known-issues.md](../../docs/known-issues.md).
@@ -55,6 +98,7 @@ limit in [known-issues.md](../../docs/known-issues.md).
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Wrote down [the five ways a full sweep dies](#the-five-ways-a-full-sweep-dies), which [balance.md](../../docs/balance.md) had been pointing at [backlog.md](../../docs/backlog.md) for and which no page in the tree carried — it had survived only as a note kept outside the repository, which is the failure [rules.md](../../docs/rules.md) exists to prevent. |
 | 2026-08-22 | Added this change log. |
 | 2026-08-22 | Made every recorded corpus figure read by something, and closed the pass. |
 | 2026-08-21 | Opened the page against the 2026-08-21 datasets: what each script reads, what it prints, and why the panel's every pick names its own rule. |

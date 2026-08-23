@@ -627,7 +627,8 @@ THERMAL_CORPUS_DATA=$PWD/out/blockheat dotnet test \
   --filter BlockHeatIndexTests                            # block index, with pace
 ```
 
-See [backlog.md](backlog.md) for the five ways a full sweep dies.
+See [tools/corpus/README.md](../tools/corpus/README.md#the-five-ways-a-full-sweep-dies) for the
+five ways a full sweep dies, and [backlog.md](backlog.md) for what is still open.
 
 ---
 
