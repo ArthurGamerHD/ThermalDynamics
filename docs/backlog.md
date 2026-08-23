@@ -22,14 +22,15 @@ one of them, and this one had drifted.
 ## What to do next
 
 Ranked by what a player would feel, not by what is cheapest or most interesting. Every row is one of
-the mod's own stated goals failing to reach the player. `C12` and `C19` are one piece of work and its
-reason: the retune that satisfies the significance window is also the fix for a configuration that is
-over the substep cap in air, so the first two rows are a single pass. What none of them is waiting on
-any more is evidence.
+the mod's own stated goals failing to reach the player. **`C12` and `C19` were one piece of work and
+are not any more**: the retune was carrying both the significance window and the substep breach, and
+the breach has since been measured at 0.028 K on the hottest block, so it can no longer pay for a
+retune. Each row now stands on its own reason. What none of them is waiting on any more is
+evidence.
 
 | | Item | Why it is here |
 | --- | --- | --- |
-| 1 | **C12** — the window is reachable, the better route is known, and its provenance is not settled | Measured across the 421.9 s drive charge, the shipped pair puts the median hull past critical at **10.4 s**. Waste ×0.5 with the clock at 100 puts it at 134.5 s, keeps every lever, costs 0.43× the substeps and fixes `C19`; conduction ×4 also reaches it and costs three levers. What is unresolved is the knob itself: the fractions all have a provenance now (`C21`), and **76.3 %** of a loaded fleet's waste heat comes through one derived from the game's own stated efficiency, so halving it is a balance decision rather than a correction. |
+| 1 | **C12** — the window is reachable, the better route is known, and its provenance is not settled | Measured across the 421.9 s drive charge, the shipped pair puts the median hull past critical at **10.4 s**. Waste ×0.5 with the clock at 100 puts it at 134.5 s, keeps every lever and costs 0.43× the substeps; conduction ×4 also reaches it and costs three levers. Neither can charge its price to `C19` any more, which is worth 0.028 K. What is unresolved is the knob itself: the fractions all have a provenance now (`C21`), and **76.3 %** of a loaded fleet's waste heat comes through one derived from the game's own stated efficiency, so halving it is a balance decision rather than a correction. |
 | 2 | **C19** — the shipped configuration is over the substep cap in air, and the breach is worth 0.028 K | p99 demand at 200 m/s is 73.4 against 64 granted, and 14 of 50 panel hulls are over it, every one of them at 1.14–1.15×. **Measured**: at that over-subscription the hottest block of a driven hull is 0.028 K from where an uncapped run leaves it, and the approximation stays free to about 2×. `G6` fails as written and the failure is not the defect the row claimed. What is open is whether the criterion's marker should be the demand or the error. |
 | 3 | **B30** — the temperature replication has never run in a session | `B4`'s transport is built, and the half of it a test can reach is the half that was never in doubt. Registration, addressing, the sync-distance gate and the send are host code; what stands in for a test is a pair of counters, and nobody has read them yet. |
 | 4 | **D19** — nothing is threaded | A 242-grid fleet spends 25.9 % of real time in the solver on the game's own thread, which is the number that decides whether a server can run this. |
