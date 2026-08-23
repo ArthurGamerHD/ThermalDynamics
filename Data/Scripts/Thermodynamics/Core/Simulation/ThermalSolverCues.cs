@@ -150,16 +150,20 @@ namespace Thermodynamics.Core
 
         /// <summary>
         /// The temperature below which no block on this grid is interesting to a cue: the lower of
-        /// the glow's own floor and the coolest block's watch point.
+        /// where the coolest block starts glowing and where it starts being watched for a warning.
         ///
         /// **The whole cost of the feature on a hull where nothing is hot is comparing the hottest
         /// block against this**, which is what the intent asks for — see document-of-intent.md,
-        /// Natural feedback.
+        /// Natural feedback. Both halves are shares of a block's own rating, so a grid of
+        /// low-rated blocks lowers its own floor and a grid of refractory ones raises it.
         /// </summary>
         public float CueFloorTemperature()
         {
+            if (float.IsInfinity(lowestCritical)) return float.PositiveInfinity;
+
             float watch = lowestCritical * HeatCueState.WatchFraction;
-            return watch < Incandescence.DraperKelvin ? watch : Incandescence.DraperKelvin;
+            float glow = Incandescence.GlowStartKelvin(lowestCritical);
+            return watch < glow ? watch : glow;
         }
 
         /// <summary>
@@ -184,16 +188,16 @@ namespace Thermodynamics.Core
             }
 
             cueSeen.Clear();
-            float glowFloor = Incandescence.DraperKelvin;
 
             for (int i = 0; i < count; i++)
             {
                 float kelvin = nodeTemperatures[i];
                 float critical = nodeCritical[i];
 
-                // The one test a cold hull pays for.
-                if (kelvin < glowFloor && (critical <= 0f
-                    || kelvin < critical * HeatCueState.WatchFraction))
+                // The one test a cold hull pays for. Both halves are the block's own rating: one
+                // share of it starts the glow, a higher one starts watching for a warning.
+                if (critical <= 0f || (kelvin < critical * HeatCueState.WatchFraction
+                    && kelvin < Incandescence.GlowStartKelvin(critical)))
                 {
                     continue;
                 }
@@ -232,7 +236,7 @@ namespace Thermodynamics.Core
                 cue.Block = block;
                 cue.Kelvin = kelvin;
                 cue.Critical = critical;
-                cue.Glow = Incandescence.Glow(kelvin);
+                cue.Glow = Incandescence.Glow(kelvin, critical);
                 cue.Stage = stage;
                 cue.Announce = stage > (had ? previous.Stage : HeatCueStage.None);
                 cue.SecondsToCritical = forecast.WillCross

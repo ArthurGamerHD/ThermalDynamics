@@ -597,7 +597,7 @@ indicator, which are what a player meets while playing rather than diagnostics f
 | `DebugWindRaycast` | `false` | Draws the relative wind each grid is flying through, as a line from the grid scaled by its speed: green in still air, red once the grid is over `FrictionAtSpeedsAbove` and the leading face is heating. |
 | `DebugWindOverlay` | 0 | Which view the wind map opens a session on: 0 off, 1 the lattice around you, 2 the whole planet. |
 | `DebugWindIndicator` | `true` | The wind needle and speed under the crosshair. |
-| `HeatGlow` | `true` | Blocks glow as they heat: nothing below 798 K, dull red above it, orange by 1,500 K. |
+| `HeatGlow` | `true` | Blocks glow as they approach their own critical temperature: nothing at comfortable temperatures, full at critical and above. |
 | `HeatWarningSound` | `true` | A cue in the cockpit as a block comes up on its own rating and as it crosses it. Heard only by the player at the controls. |
 | `RoomOverlayMinKelvin` | 253.15 K | Bottom of the room view's colour span, −20 °C. |
 | `RoomOverlayMaxKelvin` | 323.15 K | Top of the room view's colour span, 50 °C. |
@@ -606,25 +606,35 @@ indicator, which are what a player meets while playing rather than diagnostics f
 
 ### Natural feedback
 
-Two channels, and they answer different questions. **`HeatGlow` is incandescence** — what hot matter
-looks like — so it is keyed to temperature alone and is the same on every block in the game: nothing
-below the Draper point at 798 K, dull red just above it, orange at 1,500 K and above. It is
-deliberately *not* a fraction of each block's rating, because block ratings run from 500 K to
-1,522 K and a relative ramp would put the same colour on a block at 400 K and one at 1,200 K. See
-[document-of-intent.md](document-of-intent.md#natural-feedback--built).
+Two channels, and both answer the same question: how close is this block to failing.
 
-**`HeatWarningSound` is the warning**, and it *is* keyed to the block's own rating: a cue about three
-seconds before a block crosses it and a distinct one as it crosses, heard only by the player at the
-controls. It covers the blocks the glow cannot — a quarter of block types are rated below the point
-at which anything glows at all, and a block with no emissive material in its model cannot glow
-whatever its temperature.
+**`HeatGlow` is brightness, and it is keyed to the block's own rating.** A hull at temperatures a
+person would be comfortable in glows nothing; above that it brightens as the block heats, and it is
+full at that block's critical temperature and beyond. The ramp is the share of the way from
+comfortable to critical, cubed, so the low end stays genuinely dark — a block a quarter of the way
+up reads 1.6 % and half way reads 12 %. Nothing the game ships glows in air a player can breathe;
+on the 390 K world a handful of the lowest-rated block types glow faintly, which is the ramp working
+rather than failing.
+
+**The colour is separate and stays physical**: the Planckian locus by absolute temperature, so a
+block glowing at 500 K is deep red and one at 2,000 K is orange. Brightness reads as danger, colour
+reads as temperature. See
+[document-of-intent.md](document-of-intent.md#natural-feedback--built) for why the brightness is not
+incandescence.
+
+**`HeatWarningSound` is the same question in sound**: a cue about three seconds before a block
+crosses its rating and a distinct one as it crosses, heard only by the player at the controls. It
+reaches what the glow cannot — a block with no emissive material in its model cannot glow whatever
+its temperature.
 
 The lead is a forecast rather than a straight line: a block levelling off below its rating is never
 cued, however fast it is warming at the moment. A block heating *faster* than it was has no
 equilibrium to read, so a straight line answers there, which warns early rather than late.
 
 **With both off, the cost is nothing**, and with both on and nothing hot it is one comparison per
-grid per second — the hottest block against the lower of 798 K and the coolest block's watch point.
+grid per second — the hottest block against the lower of where the coolest block would start glowing
+and where it would start being watched. Both are shares of that block's rating, so an ordinary hull
+does not look at anything under about 470 K.
 
 ### The wind map
 
@@ -905,6 +915,7 @@ one with a migration risk — is late rather than first.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | `HeatGlow` is a block's distance from its own rating rather than an absolute temperature: nothing at comfortable temperatures, full at critical and above. The colour is unchanged and still absolute. |
 | 2026-08-23 | Added `HeatGlow` and `HeatWarningSound`, the two natural-feedback switches ([backlog.md](backlog.md) `B25`). Both client side and both on by default, which makes them the first presentation entries here that are on because a player is meant to meet them rather than because they were asked for. |
 | 2026-08-22 | `PlanetAmbientLagSeconds` is the fallback rather than the whole answer: the lag is a share of the world's own day wherever the day has been measured ([backlog.md](backlog.md) `C6`). |
 | 2026-08-22 | `WindRoughnessLength` is the fallback rather than the whole answer: the ground material under a grid now sets its own roughness, which is the one figure in that table with a published table behind it ([backlog.md](backlog.md) `B16`). |

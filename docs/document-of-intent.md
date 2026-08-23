@@ -127,40 +127,38 @@ every number in it is right.
 ### Natural feedback — built
 
 **A player should learn their ship is overheating without looking at an instrument.** This is the
-layer that makes heat a felt resource rather than a readout. It is two channels, and the most
-important thing about them is that they are different *kinds* of thing.
+layer that makes heat a felt resource rather than a readout. It is two channels, and both are keyed
+to the same thing: how close a block is to failing.
 
-**The glow is a property of the block, and it is physics rather than a design choice.** Hot matter
-glows because it is hot, at a temperature that is the same for a jump drive and for a piece of
-armour, and the whole value of the channel is that a player learns to read a colour the way they
-read one on a real forge. It starts at the **Draper point, 798 K** — the temperature at which a
-solid first glows visibly, dull red, in the dark — runs up the Planckian locus through orange, and
-is full at 1,500 K, which is forge-welding heat. Brightness is the black body's own visible-band
-luminance, taken through the eye's transfer curve because the output is a display-referred 0..1
-intensity and the raw luminance spans six decades over that ramp. `Incandescence` holds it and
-`IncandescenceTests` re-derives every constant in it from Planck's law.
+**The glow is how close the block is to its own rating.** A hull at temperatures a person would be
+comfortable in glows nothing at all. Above that it brightens as the block heats, and it is at full
+intensity at the block's critical temperature and beyond. The ramp is the share of the way from
+comfortable to critical, cubed — a straight line spends most of its length faintly lit, which is
+both wrong (a real hot thing brightens far faster than its temperature rises) and expensive (a
+barely-lit block still costs a render write every pass). A block a quarter of the way up reads 1.6 %,
+half way reads 12 %, and at its rating it is full.
 
-**The cue is information for the pilot, and it is keyed to the block's own rating.** A short sound
-about three seconds before a block crosses its critical temperature and a distinct one as it
-crosses, heard only by the player at the controls, because they are the only one who can act.
+**The colour is how hot the block actually is**, and that half stays physical: the Planckian locus,
+absolute, computed from Planck's law against the CIE 1931 observer. A block glowing at 500 K is deep
+red and one at 2,000 K is orange, whatever either is rated for. So brightness reads as danger and
+colour reads as temperature, and neither has to be calibrated against the other.
 
-> **This withdraws an earlier statement on this page, in the open (`E11`).** The visual ramp was
-> written here as *keyed to each block's threshold temperature, which is what keeps it honest across
-> block types*. That was wrong, and measuring the shipped definitions is what showed it: block
-> ratings run from 500 K to 1,522 K, so a ramp defined as a fraction of critical puts the same
-> colour on a block at 400 K and a block at 1,200 K, and teaches a player nothing they can carry
-> from one block to the next. The concern behind the old wording was real — a block that runs hot by
-> design should not spend its life looking like it is failing — and the answer is that it *does*
-> glow, because it is hot, and what stays quiet is the cue.
->
-> The consequence is a real limit rather than a hidden one: **26 % of block types are rated below
-> the Draper point**, so a quarter of the game fails before it ever glows. That is precisely why the
-> cue is keyed to the rating and the glow is not — between them the two channels cover the range no
-> single rule covers.
+> **The brightness is deliberately not incandescence, and the governing prior is what settles it.**
+> A real solid emits no visible light below the Draper point at 798 K, and the shipped definitions
+> put **26 % of block types below that** — keyed to the physics, a quarter of the game would fail
+> with no visual warning at all, and a decorative block rated 583 K would go from dark to destroyed
+> with nothing in between. [Game mod first](#the-governing-prior-game-mod-first) says take the
+> physical form where the difference cannot be perceived; here the difference is the whole point of
+> the channel and the cost of the strict form is paid by the player, so legibility wins. The colour
+> keeps the physics, because nothing is lost by being right about it.
+
+**The cue is the same question in sound.** A short sound about three seconds before a block crosses
+its critical temperature and a distinct one as it crosses, heard only by the player at the controls,
+because they are the only one who can act. It reaches what the glow cannot: a block with no emissive
+material in its model — which is most structural blocks — cannot glow whatever its temperature.
 
 Both channels are properties of the object rather than marks on the screen, which is what makes them
-read as physics instead of as UI. The glow is also a real limit on models rather than on physics:
-only a model with an emissive material can carry it, and armour has none.
+read as physics instead of as UI.
 
 **The three-second lead is a prediction, and a straight line is the wrong one.** A block warming
 toward an equilibrium slows down as it approaches, so projecting its current rate forward crosses
@@ -177,8 +175,10 @@ under-estimates a runaway, which warns early, and early is the safe direction to
 it. This one has to be watching in order to warn, which is the tension resolved in the
 [conflicts table](#where-the-goals-and-the-code-disagree): the reader is the block's own state, and
 the cost on a ship where nothing is hot is **one comparison for the whole grid** — the hottest
-block, which the observation pass already caches, against the lower of the glow's floor and the
-coolest block's watch point.
+block, which the observation pass already caches, against the lower of where the coolest block would
+start glowing and where it would start being watched. Both are shares of that block's own rating, so
+the floor follows what the ship is made of: a hull of ordinary blocks does not look at anything under
+about 470 K.
 
 ### Thermal vision — wanted, method unknown
 
@@ -650,12 +650,11 @@ grids before within one. [backlog](backlog.md) D19.
 
 ### 6. Where the visual ramp starts — settled
 
-**At the Draper point, 798 K, because the glow is incandescence and not a warning light.** The
-*probably* in "the threshold temperature should probably dictate much of what that means" did not
-survive contact with the shipped definitions: block ratings run from 500 K to 1,522 K, so a ramp
-defined as a fraction of critical shows the same colour at 400 K and at 1,200 K. See
-[Natural feedback](#natural-feedback--built), where the change is argued and the old wording is
-withdrawn.
+**At the top of the comfortable band, and full at the block's own critical temperature.** Nothing
+glows at temperatures a person would be comfortable in; above that the brightness is the share of
+the way to that block's rating, cubed, so the low end stays dark and the top end is unambiguous. The
+*probably* in "the threshold temperature should probably dictate much of what that means" is gone:
+the threshold dictates it entirely. See [Natural feedback](#natural-feedback--built).
 
 ---
 
@@ -663,6 +662,7 @@ withdrawn.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | The glow is keyed to each block's own rating after all, and the entry below it is superseded. Nothing glows at comfortable temperatures; brightness is the share of the way to critical, cubed, and is full at critical and above. The measurement that argued for the absolute form is unchanged and is now the argument *for* this one: 26 % of block types are rated below the Draper point, so a physical glow would leave a quarter of the game going from dark to destroyed with nothing in between. The colour stays absolute and stays physical, so brightness reads as danger and colour reads as temperature. |
 | 2026-08-23 | Natural feedback is built ([backlog.md](backlog.md) `B25`), and building it withdrew a statement on this page. The visual ramp is **not** keyed to each block's critical temperature: it is incandescence, absolute, from the Draper point at 798 K up the Planckian locus, because block ratings run from 500 K to 1,522 K and a relative ramp shows the same colour at 400 K and at 1,200 K. The consequence is stated rather than hidden — 26 % of block types fail before they glow — and it is the reason the audio cue is keyed to the rating instead. The three-second lead now reads a block's equilibrium off its own rate, so a block levelling off short of its rating is never warned about; undecided items 2 and 6 move with it. |
 | 2026-08-22 | A coolant loop costs power and makes heat doing it ([backlog.md](backlog.md) `C13`). The rating is derived from the loop the model already describes — 200 kg/s against two bar of head — and the asymmetry with the heat pump is now a stated design: a circulator costs well under a per cent of what it moves against a heat pump's third. |
 | 2026-08-22 | The compatibility floor is measured. All 705 prefabs the game ships, idle, in the environment each category spawns into: 461,428 blocks and not one crossing critical. The same 705 flown hard lose 616, which is what makes the first number a measurement rather than a formality ([backlog.md](backlog.md) `C10`, criterion `G7`). |
