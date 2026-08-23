@@ -117,7 +117,6 @@ namespace Thermodynamics.Harness
             GridBuilder builder = GridBuilder.Large();
 
             float conductance;
-            Func<Vector3I[], BlockModel> straight = Catalog.CoolantPipeStraight;
 
             using (Pre(preConversion))
             {
@@ -241,20 +240,24 @@ namespace Thermodynamics.Harness
             return new Restore(previous);
         }
 
+        /// <summary>
+        /// Puts the override back the way it was found. Also used for the shipped world, where it
+        /// restores the null it was handed — a rig that skipped the restore in one branch and not
+        /// the other would leave the two worlds built differently for a reason that has nothing to
+        /// do with conductance.
+        /// </summary>
         private class Restore : IDisposable
         {
             private readonly Func<BlockThermalProperties, BlockThermalProperties> previous;
-            private readonly bool installed;
 
             public Restore(Func<BlockThermalProperties, BlockThermalProperties> previous)
             {
                 this.previous = previous;
-                installed = true;
             }
 
             public void Dispose()
             {
-                if (installed) Catalog.MaterialOverride = previous;
+                Catalog.MaterialOverride = previous;
             }
         }
 
