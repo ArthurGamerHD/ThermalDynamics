@@ -748,10 +748,12 @@ Five consequences:
 4. **Triton's peaks stand in vacuum.** 20% of its radius in mountain against `LimitAltitude` 0.47,
    so the air runs out less than half way up its highest ground. Its mean modelled wind is 1.5 m/s
    against an earthlike world's 7.1, because most of its surface is not in air.
-5. **On a small moon the boundary layer is taller than the whole atmosphere.** `WindGradientHeight`
-   is 600 m; Titan's air is 285 m deep. The vertical profile is asked about heights in vacuum, and
-   the only thing keeping the answer sane is the ceiling reaching zero first — [backlog](backlog.md)
-   B20.
+5. **On a small moon the boundary layer would be taller than the whole atmosphere.**
+   `WindGradientHeight` is 600 m; Titan's air is 285 m deep. The gradient height is capped by the
+   air standing over the ground under the grid — `MyPlanet.AtmosphereAltitude` measured from the
+   mean radius, minus wherever the ground actually is — so the profile stops climbing where the air
+   stops rather than going on into vacuum. A mountain therefore has a shallower boundary layer than
+   the valley beside it, which is the engine's own geometry rather than a choice.
 
 ---
 
@@ -786,6 +788,7 @@ does not exist — `game_temperature` tracks the sun rather than the ground.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Closed `B20`. The boundary layer is capped by the air over the ground under the grid, so the vertical profile is no longer evaluated at heights with no atmosphere at them — Titan's air is 285 m deep against a 600 m configured gradient. Derived from `MyPlanet.AtmosphereAltitude` rather than authored, so it follows every world including modded ones, and the offline lab computes it the same way. |
 | 2026-08-22 | Closed `A16`. A buried grid exchanged with rock at the coefficient for moving air, which made digging in the best cooling in the game; it is `2k/D` — 2 W/(m²·K) against 50 — authored per planet as `UndergroundConvectionCoefficient` and crossed over the first five metres so the surface is not a wall. Neither wind nor weather reaches it. |
 | 2026-08-22 | Closed `B29` the same day it was opened: the convection wind factor runs from 1 upward rather than from 0.5 to 1, so a wind cools a hull at every speed instead of warming it below about 50 m/s. Same two-to-one contrast between a windward face and a lee one; corrected floor. |
 | 2026-08-22 | Closed `B17` and `B18`. Two of the three causes were faults and are fixed: the weather's own wind modifier multiplied a share that already meant *the worst weather*, so one storm was counted twice, and nothing bounded the composed speed. A storm went from 187 m/s to 74, and from 143 m/s to 66 within a hundred metres of the ground; `>ceil` is now zero on every scenario in the matrix. The third is not a fault — a storm at the planet's own ceiling is over the friction threshold, `v_rel` is relative wind by design, and `StormHeatingTests` measures the cost as degrees rather than hundreds. Opened `B29`, which came out of trying to write that test: below about 50 m/s the model's directional convection factor makes wind a net *warmer*. |

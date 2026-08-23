@@ -578,7 +578,7 @@ and where it comes from.
 | Setting | Default | Effect |
 | --- | --- | --- |
 | `WindRoughnessLength` | 0.03 m | Roughness length z0 — about a tenth of the height of whatever covers the ground. 0.0002 open water, 0.03 grassland, 0.1 scattered obstacles, 0.5 forest. Sets how steeply wind strengthens with height near the surface. |
-| `WindGradientHeight` | 600 m | Height at which wind stops strengthening: the top of the boundary layer. Above it the profile is flat and the air density takes it down from there. |
+| `WindGradientHeight` | 600 m | Height at which wind stops strengthening: the top of the boundary layer. Above it the profile is flat and the air density takes it down from there. **Capped by the air there is** — a boundary layer cannot be taller than the atmosphere over the ground under the grid, and several shipped worlds have less than 600 m of it. |
 | `WindDiurnalAmplitude` | 0.35 | How far the daily cycle swings wind either side of its mean. Surface wind peaks in the afternoon; wind above the crossover peaks before dawn. 0 disables the cycle. |
 | `WindDiurnalCrossover` | 80 m | Height at which the daily cycle vanishes. Below it the surface cycle, above it the nocturnal jet, fully reversed by twice this height. |
 | `WindTerrainInfluence` | 1 | How much the shape of the ground affects wind: speed-up over rises, shelter behind ridges, steering along valleys. 0 leaves the wind ignorant of terrain. |
@@ -881,6 +881,7 @@ one with a migration risk — is late rather than first.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Said that `WindGradientHeight` is capped by the atmosphere over the grid's own ground ([backlog.md](backlog.md) `B20`). |
 | 2026-08-22 | Added `PlanetUndergroundConvectionCoefficient`. A buried grid exchanged at the coefficient for moving air, which made digging in the best cooling in the game ([backlog.md](backlog.md) `A16`). |
 | 2026-08-22 | Added [The suit](#the-suit) and its five settings, plus `EnableSuitDamage`. A player in a burning compartment was the one place heat stopped being consequential ([backlog.md](backlog.md) `B10`). The survivable temperature is derived from the rating and the conductance rather than authored, and the three things the model deliberately does not do are `C16`, `C17` and `C18`. |
 | 2026-08-22 | Added `/thermal problems`, and the count of them to `/thermal status`. The two validators the mod carried had never been called from anywhere the game runs, so an emissivity above one or a substep long enough to clamp away a whole step was diagnosed correctly and told to nobody ([backlog.md](backlog.md) `A19`). |

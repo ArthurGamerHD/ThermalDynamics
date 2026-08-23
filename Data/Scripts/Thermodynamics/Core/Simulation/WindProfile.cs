@@ -40,6 +40,33 @@ namespace Thermodynamics.Core
         /// Height at which the profile stops climbing, m — the top of the boundary layer. Several
         /// hundred metres over open country, higher over rough ground.
         /// </param>
+        /// <summary>
+        /// The boundary layer's top, where the air runs out first.
+        ///
+        /// <para>
+        /// **A boundary layer cannot be taller than the atmosphere it is in.** The shipped
+        /// `WindGradientHeight` is 600 m and several of the game's own worlds have less air than
+        /// that above their ground — Titan's is 285 m — so the profile was being asked about
+        /// heights in vacuum, and the only thing keeping the answer sane was the engine's own wind
+        /// ceiling reaching zero first. See backlog `B20`.
+        /// </para>
+        ///
+        /// <para>
+        /// <paramref name="airAboveGround"/> is the atmosphere's top measured from the ground under
+        /// the grid, not from the mean radius: a ship on a mountain has less air over it than one
+        /// in a valley, and on a world whose peaks stand above their own air it has none.
+        /// Non-positive leaves the configured height alone, which is the airless case — there is no
+        /// wind there for a profile to shape.
+        /// </para>
+        /// </summary>
+        public static float GradientHeightIn(float configured, float airAboveGround)
+        {
+            if (airAboveGround <= 0f) return configured;
+            if (airAboveGround >= configured) return configured;
+
+            return airAboveGround < ReferenceHeight ? ReferenceHeight : airAboveGround;
+        }
+
         public static float Multiplier(float height, float roughness, float gradientHeight)
         {
             if (roughness <= 0f) roughness = 0.0002f;

@@ -306,7 +306,13 @@ namespace Thermodynamics
                     inputs.HeightAboveGround = height;
                     inputs.Heating = probe.Heating;
                     inputs.Roughness = settings.WindRoughnessLength;
-                    inputs.GradientHeight = settings.WindGradientHeight;
+                    // Capped by the air over this probe's own ground. See backlog B20.
+                    inputs.GradientHeight = WindProfile.GradientHeightIn(
+                        settings.WindGradientHeight,
+                        entity.HasAtmosphere
+                            ? (float)((entity.AverageRadius + entity.AtmosphereAltitude)
+                                - probe.GroundRadius)
+                            : 0f);
                     inputs.DiurnalAmplitude = settings.WindDiurnalAmplitude;
                     inputs.DiurnalCrossover = settings.WindDiurnalCrossover;
                     inputs.TerrainInfluence = settings.WindTerrainInfluence;
