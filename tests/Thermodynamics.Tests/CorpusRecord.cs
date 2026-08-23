@@ -85,7 +85,7 @@ namespace Thermodynamics.Tests
             + "gradient_k,hotspot_k,hotspot_blocks,over_critical,over_share,margin_k,"
             + "seconds_to_settle,seconds_to_critical,peak_rate_k_per_s,thermal_mass_j_per_k,"
             + "bulk_drift_w,made_w,vented_w,radiation_w,convection_w,solar_w,friction_w,"
-            + "generation_w,substeps_demanded,substeps_granted,hottest_block";
+            + "generation_w,substeps_demanded,substeps_granted,hottest_block,seconds_to_first_loss";
 
         /// <summary>Everything one run of one ship measured, as a row.</summary>
         public static string Row(string walk, ScenarioOutcome o)
@@ -123,7 +123,8 @@ namespace Thermodynamics.Tests
             row.Append(Num(o.GenerationWatts)).Append(',');
             row.Append(Num(o.SubstepsDemanded)).Append(',');
             row.Append(o.SubstepsGranted).Append(',');
-            row.Append(Text(o.HottestBlock));
+            row.Append(Text(o.HottestBlock)).Append(',');
+            row.Append(Num(o.SecondsToFirstLoss));
             return row.ToString();
         }
 

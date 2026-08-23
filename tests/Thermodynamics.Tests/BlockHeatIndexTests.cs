@@ -268,7 +268,7 @@ namespace Thermodynamics.Tests
             StringBuilder csv = new StringBuilder();
             csv.AppendLine("subtype,type_id,large,source,waste_w,area_m2,emissivity,critical_k,"
                 + "radiated_w,conducted_w,index,self_index,hull_area_needed_m2,equilibrium_k,"
-                + "capacity_j_per_k,seconds_to_critical");
+                + "capacity_j_per_k,seconds_to_critical,integrity,seconds_critical_to_loss");
 
             foreach (BlockHeatIndex.Reading r in readings)
             {
@@ -280,7 +280,9 @@ namespace Thermodynamics.Tests
                    .Append(Num(r.Index)).Append(',').Append(Num(r.SelfIndex)).Append(',')
                    .Append(Num(r.HullAreaNeeded)).Append(',').Append(Num(r.EquilibriumKelvin))
                    .Append(',').Append(Num(r.HeatCapacity)).Append(',')
-                   .Append(Num(r.SecondsToCritical))
+                   .Append(Num(r.SecondsToCritical)).Append(',')
+                   .Append(Num(r.Integrity)).Append(',')
+                   .Append(Num(r.SecondsCriticalToLoss))
                    .AppendLine();
             }
 

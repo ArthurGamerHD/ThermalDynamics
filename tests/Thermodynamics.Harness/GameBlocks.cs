@@ -80,6 +80,20 @@ namespace Thermodynamics.Harness
             /// <summary>Build cost, priced with the game's own component masses.</summary>
             public List<BlockComponent> Components = new List<BlockComponent>();
 
+            /// <summary>
+            /// The block's full hit points, summed from its components' <c>MaxIntegrity</c> exactly
+            /// as the game sums them.
+            ///
+            /// <para>
+            /// This is the denominator of every damage figure. The solver hands
+            /// <c>DoDamage</c> a number in these units — <c>(T - critical) x
+            /// OverheatDamagePerKelvin</c> per simulated second — so without the integrity a damage
+            /// rate says nothing about how long the block has. See balance.md, How long a block has
+            /// after it crosses.
+            /// </para>
+            /// </summary>
+            public float Integrity;
+
             /// <summary>Kilograms, summed from the components.</summary>
             public float Mass
             {
@@ -132,6 +146,7 @@ namespace Thermodynamics.Harness
 
         private static List<Definition> _all;
         private static Dictionary<string, float> _componentMasses;
+        private static Dictionary<string, float> _componentIntegrities;
 
         /// <summary>
         /// Guards the three lazy caches below.
@@ -188,6 +203,57 @@ namespace Thermodynamics.Harness
             }
         }
 
+        /// <summary>
+        /// Component name to hit points, from the installed `Components.sbc`.
+        ///
+        /// The counterpart of <see cref="ComponentMasses"/>, and read from the same file in the same
+        /// pass shape: a block's integrity is the sum of its components' <c>MaxIntegrity</c>, which
+        /// is how the game itself builds <c>MyCubeBlockDefinition.MaxIntegrity</c>.
+        /// </summary>
+        public static Dictionary<string, float> ComponentIntegrities()
+        {
+            lock (CacheLock)
+            {
+            if (_componentIntegrities != null) return _componentIntegrities;
+
+            Dictionary<string, float> integrities = new Dictionary<string, float>();
+            string content = ContentPath();
+
+            if (content != null)
+            {
+                foreach (XElement component in XDocument.Load(Path.Combine(content, "Components.sbc"))
+                             .Descendants("Component"))
+                {
+                    XElement id = component.Element("Id");
+                    if (id == null) continue;
+
+                    string subtype = (string)id.Element("SubtypeId");
+                    float integrity;
+                    if (subtype != null && float.TryParse((string)component.Element("MaxIntegrity"),
+                            NumberStyles.Float, CultureInfo.InvariantCulture, out integrity))
+                    {
+                        integrities[subtype] = integrity;
+                    }
+                }
+            }
+
+            _componentIntegrities = integrities;
+            return integrities;
+            }
+        }
+
+        /// <summary>
+        /// Hit points a block of this subtype has, or zero where the install is absent or the
+        /// subtype unknown. The lookup a lab uses to turn a stream of damage into a block lost.
+        /// </summary>
+        public static float IntegrityOf(string subtype)
+        {
+            if (string.IsNullOrEmpty(subtype)) return 0f;
+
+            Definition definition;
+            return BySubtype().TryGetValue(subtype, out definition) ? definition.Integrity : 0f;
+        }
+
         /// <summary>Every block definition in the installed game, or an empty list.</summary>
         public static List<Definition> All()
         {
@@ -204,6 +270,7 @@ namespace Thermodynamics.Harness
             }
 
             Dictionary<string, float> masses = ComponentMasses();
+            Dictionary<string, float> integrities = ComponentIntegrities();
             string directory = Path.Combine(content, "CubeBlocks");
             if (!Directory.Exists(directory))
             {
@@ -227,7 +294,7 @@ namespace Thermodynamics.Harness
 
                 foreach (XElement definition in document.Descendants("Definition"))
                 {
-                    Definition block = Read(definition, masses);
+                    Definition block = Read(definition, masses, integrities);
                     if (block != null) blocks.Add(block);
                 }
             }
@@ -237,7 +304,8 @@ namespace Thermodynamics.Harness
             }
         }
 
-        private static Definition Read(XElement definition, Dictionary<string, float> masses)
+        private static Definition Read(XElement definition, Dictionary<string, float> masses,
+            Dictionary<string, float> integrities)
         {
             XElement id = definition.Element("Id");
             if (id == null) return null;
@@ -294,6 +362,15 @@ namespace Thermodynamics.Harness
                     int count;
                     if (!int.TryParse((string)component.Attribute("Count"),
                             NumberStyles.Integer, CultureInfo.InvariantCulture, out count)) continue;
+
+                    // Integrity is summed before the mass lookup can reject the component: the
+                    // game prices hit points off every component in the list, whether or not this
+                    // harness knows what it weighs.
+                    float integrityEach;
+                    if (integrities.TryGetValue(name, out integrityEach))
+                    {
+                        block.Integrity += count * integrityEach;
+                    }
 
                     float mass;
                     if (!masses.TryGetValue(name, out mass)) continue;

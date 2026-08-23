@@ -35,6 +35,11 @@ block dies" and nothing further**, and treat the population's peak statistics �
 describing the harness rather than the mod. `over_critical`, `over_share` and `seconds_to_critical`
 are unaffected: they are decided at the crossing, before the divergence matters.
 
+`seconds_to_first_loss` is unaffected for the same reason and only for the **first** loss. Up to the
+moment a block's hit points run out the harness and the game agree exactly, because nothing has been
+removed from either. After it they part company, which is why the column records the first loss and
+no count of losses: a second one would be measured on a ship the game would no longer have.
+
 Closing it properly means the harness modelling destruction — removing the node, re-deriving the
 graph, and stopping the source — which is a solver-wide change to answer a question the censored
 reading already answers.
@@ -523,6 +528,7 @@ counters rather than milliseconds so it holds on any machine.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Said what the destruction limit does and does not reach in the new `seconds_to_first_loss` column: the first loss is exact, and there is deliberately no count of losses after it. |
 | 2026-08-22 | Reopened the per-grid shadow limit as designed work. It was recorded as a simplification taken on purpose, which `D6` is satisfied by, but the cost argument behind it treated three occluders as one: the planet's test is analytic and costs no ray, so the per-block objection was never true of the one occluder a player notices. Now [backlog](backlog.md) `A9`. |
 | 2026-08-22 | Filed the burning-ship divergence as an open defect. It had been carried on [realism.md](realism.md) as a starved-integrator finding; re-measuring it showed 0% starved, so the explanation is withdrawn and the defect stands with its cause unknown. |
 | 2026-08-22 | Repointed the step-budget paragraph at the renamed test and at the shipped rate, which moved from eight steps a second to four when the settings profiles were removed. |
