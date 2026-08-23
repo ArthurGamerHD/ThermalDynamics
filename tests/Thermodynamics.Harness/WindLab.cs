@@ -486,7 +486,15 @@ namespace Thermodynamics.Harness
                     inputs.HeightAboveGround = (float)height;
                     inputs.Heating = heating;
                     inputs.Roughness = options.Roughness;
-                    inputs.GradientHeight = options.GradientHeight;
+                    // Capped by the air over this site's own ground, exactly as the game side does
+                    // it — several shipped worlds have less atmosphere than the configured boundary
+                    // layer is tall. See WindProfile.GradientHeightIn and backlog B20.
+                    inputs.GradientHeight = WindProfile.GradientHeightIn(
+                        options.GradientHeight,
+                        planet.HasAtmosphere
+                            ? (float)((planet.AverageRadius + planet.AtmosphereAltitude)
+                                - GroundRadius)
+                            : 0f);
                     inputs.DiurnalAmplitude = options.DiurnalAmplitude;
                     inputs.DiurnalCrossover = options.DiurnalCrossover;
                     inputs.TerrainInfluence = options.TerrainInfluence;

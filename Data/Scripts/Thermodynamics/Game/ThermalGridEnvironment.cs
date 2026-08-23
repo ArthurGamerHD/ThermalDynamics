@@ -505,7 +505,11 @@ namespace Thermodynamics
             inputs.BurialDepth = BurialDepth();
             inputs.Heating = windHeating;
             inputs.Roughness = settings.WindRoughnessLength;
-            inputs.GradientHeight = settings.WindGradientHeight;
+            // Capped by the air there is. Several shipped worlds have less atmosphere over their
+            // ground than the configured boundary layer is tall, and a profile evaluated in vacuum
+            // is a profile of nothing. See WindProfile.GradientHeightIn and backlog B20.
+            inputs.GradientHeight = WindProfile.GradientHeightIn(
+                settings.WindGradientHeight, AirAboveGround(planet, groundSurfaceRadius));
             inputs.DiurnalAmplitude = settings.WindDiurnalAmplitude;
             inputs.DiurnalCrossover = settings.WindDiurnalCrossover;
             inputs.TerrainInfluence = settings.WindTerrainInfluence;
@@ -912,6 +916,24 @@ namespace Thermodynamics
                 settings.SolarTerrainRange,
                 TerrainSamples,
                 surfaceRadius ?? (surfaceRadius = SurfaceRadiusAt));
+        }
+
+        /// <summary>
+        /// Metres of atmosphere standing over the ground under this grid, or zero on an airless
+        /// world.
+        ///
+        /// The engine measures its atmosphere from the *mean* radius while the ground is wherever
+        /// it is, so a mountain has less air above it than a valley does and on a world whose peaks
+        /// stand above their own air it has none at all.
+        /// </summary>
+        private static float AirAboveGround(PlanetManager.Planet planet, float groundSurfaceRadius)
+        {
+            if (planet == null || planet.Entity == null || !planet.Entity.HasAtmosphere) return 0f;
+            if (groundSurfaceRadius <= 0f) return 0f;
+
+            double top = planet.Entity.AverageRadius + planet.Entity.AtmosphereAltitude;
+            double above = top - groundSurfaceRadius;
+            return above <= 0d ? 0f : (float)above;
         }
 
         /// <summary>Metres above mean radius past which terrain cannot be in the way.</summary>
