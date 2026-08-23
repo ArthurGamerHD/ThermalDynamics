@@ -312,6 +312,13 @@ covering the ground. Open water is 0.0002 m, grassland 0.03 m, forest or a built
 f(z) = ln((z + z₀)/z₀) / ln((z_ref + z₀)/z₀)
 ```
 
+**z₀ comes from the ground the grid is standing on.** The voxel material under a grid is already
+classified for the temperature model, and roughness is the one figure in that table with a published
+table behind it rather than a judgement — ice 0.0002 m, snow 0.0005, sand 0.003, grass 0.03, broken
+rock 0.05, forest 0.5. It costs nothing: the material was already read for the temperature offset
+and is cached with it. `WindRoughnessLength` is what ground the table does not classify gets, which
+is an airless world, a modded voxel, or a grid over no surface at all.
+
 Ten metres is the reference, because that is the height the world's weather stations measure at. The
 power law `u ∝ z^α` with `α = 1/7` is the common shortcut and the wrong one here: the 1/7 exponent
 is only reasonable over open ground, and gives poor answers exactly where terrain and cover matter.
@@ -776,7 +783,6 @@ does not exist — `game_comfort` correlates weakly with everything and is not a
 
 | | |
 | --- | --- |
-| B16 | Roughness length is one number for a whole world, when the ground material under a grid is already classified and is exactly what it should vary with. |
 | B22 | Seven of eight shipped worlds have air density exactly 1, so swing, pole drop, lag and convection derive to the same figure for all of them. |
 | C5 | The core gradient sits behind a 2 km deadzone deeper than SE's voxels reach. Whether the default should be a few hundred metres is a balance question. |
 | C6 | `AmbientLagSeconds` is 45 absolute seconds against a day that is not: it attenuates a four-minute day to 46% of its intended swing and does essentially nothing to a default two-hour one. It is physically a fraction of a day. `MySectorWeatherComponent.RotationInterval` would express it as a share of one, if that type is reachable under the whitelist. |
@@ -791,6 +797,7 @@ does not exist — `game_comfort` correlates weakly with everything and is not a
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Closed `B16`: roughness length comes from the ground material under the grid rather than being one number for a whole world. It is the one figure in the ground table with a published table behind it, and it was already being looked up for the temperature offset. |
 | 2026-08-22 | Closed `B23`: the telemetry column is `game_comfort`, named for what it is. Re-measured its correlations against the fixture this repository actually holds — +0.11 with the sun's elevation and +0.20 with this model's ambient, against the +0.86 and +0.12 quoted from a dataset that is not in the tree (`E5`). The conclusion is unchanged and the numbers are now checkable. |
 | 2026-08-22 | Closed `B20`. The boundary layer is capped by the air over the ground under the grid, so the vertical profile is no longer evaluated at heights with no atmosphere at them — Titan's air is 285 m deep against a 600 m configured gradient. Derived from `MyPlanet.AtmosphereAltitude` rather than authored, so it follows every world including modded ones, and the offline lab computes it the same way. |
 | 2026-08-22 | Closed `A16`. A buried grid exchanged with rock at the coefficient for moving air, which made digging in the best cooling in the game; it is `2k/D` — 2 W/(m²·K) against 50 — authored per planet as `UndergroundConvectionCoefficient` and crossed over the first five metres so the surface is not a wall. Neither wind nor weather reaches it. |
