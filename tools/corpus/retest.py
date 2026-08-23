@@ -133,6 +133,10 @@ def main():
         ("peak_k", "peak temperature", "K"),
         ("over_critical", "blocks over critical", ""),
         ("seconds_to_critical", "seconds to first block over critical", "s"),
+        # The crossing is not the loss, and the loss is what costs a player something
+        # (balance.md, How long a block has after it crosses). Both are here because a change
+        # that moves one without the other says which half it touched.
+        ("seconds_to_first_loss", "seconds to the first block lost", "s"),
     ):
         print(f"Shipped minus pre-conversion, {label}")
         print()
@@ -161,7 +165,7 @@ def main():
 
                     # A run that never crossed reports -1, which is not a duration and must not be
                     # averaged with ones that are.
-                    if column == "seconds_to_critical" and (a < 0 or b < 0):
+                    if column.startswith("seconds_to") and (a < 0 or b < 0):
                         continue
 
                     deltas.append(a - b)
