@@ -638,10 +638,14 @@ projection from a validated fit, not a measurement; `flight-300` and `storm-300`
   `ProducerWasteEnergy` 0.25 against the shipped 0.01, so any scenario quoting a reactor temperature
   quotes one no player will see. `Vanilla.Reference` derives from real build costs and is the right
   model for `Catalog` to follow.
-* **`Catalog` masses are not the shipped masses.** The harness's hand-written stand-ins are up to 4×
-  out — `Battery` 1,040 kg against 3,845; `Thruster` 10,000 kg against 43,200; `Radiator` 900 kg
-  against 600. They affect scenarios rather than this report, which reads the definitions directly,
-  but every scenario temperature is quoted off them.
+* **`Catalog` masses are not the shipped masses.** Measured and pinned by `CatalogDriftTests`: four
+  of the six blocks the catalogue stands in for are out by more than five per cent, and the worst is
+  **4.32×** — `Thruster` at 10,000 kg against a real 43,200 — with `Battery` at 3.70× because it
+  carries the *small-grid* battery's 1,040 kg under a large-grid name, and the two reactors at 1.60×
+  and 1.42×. Armour matches exactly, which is what makes the rest a measurement rather than an
+  artefact of the comparison. They affect scenarios rather than this report, which reads the
+  definitions directly, but every scenario temperature is quoted off them — and **the fix moves all
+  of those at once**, so it is a pass of its own rather than a line in another one.
 
 ---
 
@@ -664,6 +668,7 @@ five ways a full sweep dies, and [backlog.md](backlog.md) for what is still open
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Measured the catalogue drift this page had recorded as *up to 4×*: it is **4.32×** at worst, on the large thruster, and four of six blocks are out rather than three. `CatalogDriftTests` pins all of it, armour included — matching exactly is what makes the rest a measurement ([backlog.md](backlog.md) `C4`). |
 | 2026-08-22 | Added [The compatibility floor holds](#the-compatibility-floor-holds). Every one of the 705 prefabs the game ships has now been simulated — the criterion `G7` was written down first ([balance-lab.md](balance-lab.md)) — and none loses a block arriving, against 616 of 705 that do when flown hard. |
 | 2026-08-22 | Restored the damage-timing finding, which the merge of `corpus-shape.md` and the register had dropped, and corrected its idle figure: the median time to critical at idle is **104.5 s**, matching this page's own shape table, where the prose had carried 112 s — one of the eighteen values rather than their median. |
 | 2026-08-22 | Merged `corpus-shape.md` and the corpus findings from `known-issues.md` into this page, so the block-level argument and the population that tests it sit together. **Corrected the jump-drive figures**, which stood at three different values across three pages: recomputed from `composition.csv` and `outcomes.csv`, `LargeJumpDrive` alone is 10,567 blocks on 2,183 ships and 67.1% of full-load waste, while all `JumpDrive` subtypes together are 10,954 on 2,253 and 71.3% — both previous figures were right over populations neither page named. The outcome split is 2,249 ships carrying one against 5,883 without, at 100.0% and 65.5% reaching 400 K; the register had 2,255/5,887 and quoted G2 as both 67.1% and 65.6% in adjacent paragraphs. **Corrected the local-W/m² banding table**, which dropped 894 of 8,132 ships and omitted the 50,000–200,000 band entirely. The block-index tables, the cooling ladder and the reactor sweep were re-verified against the datasets and are unchanged. |
