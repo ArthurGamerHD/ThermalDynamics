@@ -248,12 +248,12 @@ namespace Thermodynamics.Core
                         float total = combined.Length();
 
                         // Slope wind may turn the wind freely but must not be a new way through the
-                        // planet's own figure. The bound is the ceiling *or* whatever the wind was
-                        // already doing, whichever is higher — so where the band and the profile have
-                        // already carried it past the ceiling (the storm case, backlog B17/B18) this
-                        // neither adds to that nor quietly hides it.
-                        float limit = inputs.Ceiling > speed ? inputs.Ceiling : speed;
-                        if (total > limit) total = limit;
+                        // planet's own figure. The ceiling bounds the whole composed speed now, so
+                        // this is the same bound the last line of this method applies rather than a
+                        // second one — kept here because the slope term replaces the speed as well
+                        // as the direction, and a total that is clamped afterwards would have been
+                        // normalised out of a vector that was not.
+                        if (total > inputs.Ceiling) total = inputs.Ceiling;
 
                         if (total > 1e-6f && combined.LengthSquared() > 1e-12f)
                         {
@@ -263,6 +263,15 @@ namespace Thermodynamics.Core
                     }
                 }
             }
+
+            // **The engine's figure is a ceiling, and this is what makes that true.** It was
+            // adopted for exactly one property — that it bounds the wind — and the composed model
+            // had grown past it: a storm reached 187 m/s against a planet rating of 80, and 143 of
+            // that within a hundred metres of the ground, where a grid can be standing still. Each
+            // factor is reasonable alone, which is why no unit test could see it. Every one of them
+            // still does its work below the bound; ordinary weather never comes near it.
+            // See backlog B17, B18.
+            if (speed > inputs.Ceiling) speed = inputs.Ceiling;
 
             result.Direction = direction;
             result.Speed = speed;

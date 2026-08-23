@@ -151,16 +151,30 @@ namespace Thermodynamics.Core
         public static float Speed(float maxSpeed, float weather, float variation, float weatherWind)
         {
             if (maxSpeed <= 0f) return 0f;
-            if (weatherWind < 0f) weatherWind = 0f;
 
             weather = Clamp(weather, 0f, 1f);
             variation = Clamp(variation, 0f, 1f);
 
             // Interpolates calm to storm on the weather, with a steady per-position spread so two
             // places under the same weather differ.
-            float share = CalmFraction + ((StormFraction - CalmFraction) * weather);
+            //
+            // **The weather's own wind modifier scales how fast that interpolation gets there, and
+            // it cannot get past the far end.** Both terms describe the same weather — the
+            // intensity is how much of it there is and the modifier is what kind it is — so
+            // multiplying the finished share by the modifier counted one storm twice:
+            // `StormFraction` already means the share in the worst weather the game reports, and a
+            // sandstorm's 2.25 on top of it put the wind past the planet's own ceiling before the
+            // profile or the terrain had touched it. See backlog B17.
+            //
+            // A modifier of 1 is exactly neutral, so a caller with no weather-kind information gets
+            // what it always did. A windier kind reaches the storm share at a lower intensity
+            // rather than passing it, and a still kind — fog at 0.1 — barely leaves the calm share.
+            float range = StormFraction - CalmFraction;
+            float above = range * weather * (weatherWind < 0f ? 0f : weatherWind);
+            if (above > range) above = range;
+
+            float share = CalmFraction + above;
             share *= 0.6f + (0.8f * variation);
-            share *= weatherWind;
 
             return maxSpeed * Clamp(share, 0f, 1f);
         }

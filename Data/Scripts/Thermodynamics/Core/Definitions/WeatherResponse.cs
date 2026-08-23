@@ -72,6 +72,7 @@ namespace Thermodynamics.Core
         /// <summary>Share of a heavy weather's departure from calm that a light one carries.</summary>
         public const float LightFraction = 0.5f;
 
+
         /// <summary>
         /// The entry for a weather name at full intensity. <see cref="Calm"/> for any weather the
         /// table does not cover, and for the empty string the game returns when there is no weather.

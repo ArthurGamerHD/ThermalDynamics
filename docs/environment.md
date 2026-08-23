@@ -253,6 +253,14 @@ the planet — trades blowing west to 30°, westerlies to 60°, polar easterlies
 fraction of the ceiling: about an eighth in fair weather, half in the worst weather the game
 reports, times a steady per-place variation so one valley is windier than the next.
 
+**The weather's own wind modifier scales how fast the share climbs, not the finished share.** The
+intensity says how much weather there is and the modifier says what kind it is, so multiplying one
+by the other counted the same storm twice — a sandstorm's 2.25 on a share that already meant *the
+worst weather* put the wind past the planet's own ceiling before the profile or the terrain had
+touched it. A windier kind now reaches the storm share at a lower intensity rather than passing it,
+a modifier of 1 is exactly neutral, and the whole spread between the windiest and the stillest
+weather is `StormFraction / CalmFraction`, because the calm share is a floor.
+
 **One signal decides both components.** `sin(6 × distance from the equator)` is +1 in the middle of
 a westward band, −1 in the middle of an eastward one, and zero at the equator, at 30°, at 60° and at
 the pole. The zonal component is that signal; the meridional component is the same signal times a
@@ -553,7 +561,10 @@ samples. `WindScenarioTests` runs the same matrix at a coarse day as part of the
 * airless worlds and zero-rated worlds produce exactly zero, and nothing divides by it;
 * a flat world leaves every terrain factor exactly 1, and so does `WindTerrainInfluence = 0`;
 * the engine's derivations reproduce exactly, including Triton's peaks-above-air;
-* the storm case blowing out, pinned as a defect — [backlog](backlog.md) B17.
+* **nothing over the engine's own figure on any scenario**, which is the one property that figure
+  was adopted for;
+* a storm reaching the friction threshold near the ground, and ordinary weather nowhere near it on
+  any world at any height.
 
 ### What the field data reaches, and what it does not
 
@@ -745,8 +756,7 @@ does not exist — `game_temperature` tracks the sun rather than the ground.
 
 | | |
 | --- | --- |
-| B17 | A parked grid can be pushed over the friction threshold by wind alone — the offline storm scenario reaches 209 m/s. This is the defect the wind field was built to prevent, reopened by the vertical profile multiplying the band share above the reference height. |
-| B18 | The engine's figure is no longer a ceiling: three field samples exceeded it once profile and band share compound. |
+| B29 | A wind slower than about 50 m/s **reduces** a hull's convection instead of raising it. The per-block factor is `0.5 + 0.5 × faceWeight(wind)` against 1.0 in still air, and a closed hull's mean face weight is well under one, so the geometric term loses more than `1 + 0.1√v` gains until the wind is fast. Measured: a hull making 2 MW settles 0.9 K **hotter** in a 40 m/s wind than in still air. The shape is right — a lee face transfers less than a windward one — and the normalisation is not, because a bluff body in a crossflow has a higher mean transfer coefficient on every face than the same body in still air. |
 | B16 | Roughness length is one number for a whole world, when the ground material under a grid is already classified and is exactly what it should vary with. |
 | B22 | Seven of eight shipped worlds have air density exactly 1, so swing, pole drop, lag and convection derive to the same figure for all of them. |
 | B23 | `game_temperature` is zero wherever there is no oxygen, and a daylight figure where there is. The telemetry should say so where it is reported. |
@@ -763,6 +773,7 @@ does not exist — `game_temperature` tracks the sun rather than the ground.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Closed `B17` and `B18`. Two of the three causes were faults and are fixed: the weather's own wind modifier multiplied a share that already meant *the worst weather*, so one storm was counted twice, and nothing bounded the composed speed. A storm went from 187 m/s to 74, and from 143 m/s to 66 within a hundred metres of the ground; `>ceil` is now zero on every scenario in the matrix. The third is not a fault — a storm at the planet's own ceiling is over the friction threshold, `v_rel` is relative wind by design, and `StormHeatingTests` measures the cost as degrees rather than hundreds. Opened `B29`, which came out of trying to write that test: below about 50 m/s the model's directional convection factor makes wind a net *warmer*. |
 | 2026-08-22 | Fixed `B14`, the largest known fault in the wind pattern. The meridional component follows the band rather than the hemisphere — equatorward in the trades and the polar easterlies, poleward in the westerlies — and comes off the same signal as the zonal one, so a band edge is a calm rather than a place where the wind reverses at full strength. The test that should have caught it measured the east component of a unit bearing; it now measures the velocity. Two things fell out of the same pass: a terrain influence outside 0..1 could make a shelter factor negative and a speed with it, and the wind lab's day-against-night ratio was dividing two averages taken over different sets of latitudes (`E6`). |
 | 2026-08-22 | Merged `planet-climate.md`, `planet-thermals.md` and `wind-model.md` into this page, named for the subsystem it describes. Converted to present tense, with the measurement narrative moved into this log. Corrected the claim that slope winds were not built — `WindSlope` is built, wired, settable and tested. Promoted the composed model above the engine survey it is justified by. |
 | 2026-08-21 | Recorded the two defects that stopped any world receiving a per-planet climate: the generated file carried `--` inside an XML comment and was rejected wholesale by the strict importer, and the lookup was keyed on the planet entity's `DefinitionId` (`MyObjectBuilder_Planet/(null)`) rather than `Entity.Generator.Id`. Added the strict-parse check over every file `definitionextensions.txt` names. |
