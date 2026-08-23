@@ -109,6 +109,7 @@ namespace Thermodynamics.Harness
                 RealMeanKelvin = 288f,
                 Engine = new PlanetThermalDerivation.Engine
                 {
+                    DeepestGroundMetres = 600f,
                     SurfaceTemperatureLevel = 0.5f,     // Cozy, by default
                     SurfaceGravity = 1.0f,
                     HasAtmosphere = true,
@@ -126,6 +127,7 @@ namespace Thermodynamics.Harness
                 RealMeanKelvin = 288f,
                 Engine = new PlanetThermalDerivation.Engine
                 {
+                    DeepestGroundMetres = 600f,
                     SurfaceTemperatureLevel = 0.5f,
                     SurfaceGravity = 1.1f,
                     HasAtmosphere = true,
@@ -148,6 +150,7 @@ namespace Thermodynamics.Harness
                     + "its ~60 K daily range instead, which its thin real air cannot damp.",
                 Engine = new PlanetThermalDerivation.Engine
                 {
+                    DeepestGroundMetres = 600f,
                     SurfaceTemperatureLevel = 0.5f,     // Cozy, by default — see the report
                     SurfaceGravity = 0.9f,
                     HasAtmosphere = true,
@@ -165,6 +168,7 @@ namespace Thermodynamics.Harness
                 RealMeanKelvin = 325f,
                 Engine = new PlanetThermalDerivation.Engine
                 {
+                    DeepestGroundMetres = 750f,
                     SurfaceTemperatureLevel = 0.75f,
                     SurfaceGravity = 1.2f,
                     HasAtmosphere = true,
@@ -182,6 +186,7 @@ namespace Thermodynamics.Harness
                 RealMeanKelvin = 38f,
                 Engine = new PlanetThermalDerivation.Engine
                 {
+                    DeepestGroundMetres = 2000f,
                     SurfaceTemperatureLevel = 0f,
                     SurfaceGravity = 1.0f,
                     HasAtmosphere = true,
@@ -199,6 +204,7 @@ namespace Thermodynamics.Harness
                 RealMeanKelvin = 102f,
                 Engine = new PlanetThermalDerivation.Engine
                 {
+                    DeepestGroundMetres = 285f,
                     SurfaceTemperatureLevel = 0f,
                     SurfaceGravity = 0.25f,
                     HasAtmosphere = true,
@@ -221,6 +227,7 @@ namespace Thermodynamics.Harness
                     + "nitrogen atmosphere gives it.",
                 Engine = new PlanetThermalDerivation.Engine
                 {
+                    DeepestGroundMetres = 285f,
                     SurfaceTemperatureLevel = 0.5f,     // Cozy, by default — see the report
                     SurfaceGravity = 0.25f,
                     HasAtmosphere = true,
@@ -243,6 +250,7 @@ namespace Thermodynamics.Harness
                     + "dawn and 390 K at noon rather than leaving the mean at the Cozy default.",
                 Engine = new PlanetThermalDerivation.Engine
                 {
+                    DeepestGroundMetres = 285f,
                     SurfaceTemperatureLevel = 0.5f,
                     SurfaceGravity = 0.25f,
                     HasAtmosphere = false,

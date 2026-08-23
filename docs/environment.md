@@ -235,9 +235,20 @@ the air is simply `UndergroundTemperature`. Sun, weather and the ground table al
 one term, for free — a cold night and a hot noon converge on the same rock, which is the point of
 it.
 
-**The planet is hot inside.** Below `SealevelDeadzone` (2 km) the rock warms linearly toward
+**The planet is hot inside.** Below `SealevelDeadzone` the rock warms linearly toward
 `CoreTemperature`, reaching it at the centre. On an earthlike world's 60 km radius with the shipped
-3000 K core that is about 47 K/km, roughly twice Earth's crustal gradient.
+3000 K core that is about 46 K/km, roughly twice Earth's crustal gradient.
+
+**The deadzone is the world's own deepest ground**, not a round number. `HillParams.Min` times the
+radius is the depth of a world's lowest natural valley floor, and below that there is nothing but
+rock — so the flat band is exactly the band where ground can be, and a shaft driven under the lowest
+natural surface starts to warm. It ranges from **285 m** on the small moons through 600 m on the
+earthlike worlds and 750 m on Pertam to **2 km on Triton**, which really is that deep.
+
+It used to be 2 km everywhere, and that put the core term out of reach in ordinary play on seven of
+the eight worlds — the field dump's buried rows, 1 to 99 m down, all read a flat
+`UndergroundTemperature`. At the derived depths a shaft 500 m below the deadzone reads about
+**+23 K**, which is a base a player would notice being warm.
 
 The deadzone is measured from **sea level** and not from the surface, which is the detail that makes
 it behave: a tunnel bored a kilometre into a mountainside stays cold however far in it goes, because
@@ -265,12 +276,6 @@ h       = air + (rock − air) × inRock
 A crossover rather than a step, because a ship breaking the surface should not have its cooling
 change twenty-five-fold between one metre and the next. Neither the wind bonus nor the weather
 multiplies the rock end: there is no wind under fifty metres of stone.
-
-One limit is deliberate and recorded as such:
-
-* **With the shipped 2 km deadzone the core term is out of reach in ordinary play**, since SE's
-  voxels do not go down that far. The model is correct and the tuning lever is documented: lowering
-  `SealevelDeadzone` to a few hundred metres is how a planet author makes deep mining hot.
 
 ---
 
@@ -473,7 +478,7 @@ are in [definitions.md](definitions.md#group-thermalplanetproperties).
 | **Ambient lag** | Scales with air — a bare rock answers the sun almost at once. 45 s at full density, floored at 5. |
 | **Solar decay** | The engine's `SolarRadiationProtectionFactor`, scaled so 1.8 → 0.30, about what Earth's atmosphere really absorbs and scatters. Mars's 0.2 → 0.03. |
 | **Convection** | 50 W/(m²·K) in proportion to air density; zero on an airless world. |
-| **Interior** | Not derived. Nothing in a planet generator definition says anything about a planet's inside, so damping depth, core temperature and the sea-level deadzone carry the defaults through. |
+| **Interior** | Mostly not derived. Nothing in a planet generator definition says anything about a planet's *inside*, so damping depth and core temperature carry the defaults through. The **sea-level deadzone is derived**: it is `HillParams.Min × radius`, the world's own deepest natural ground, because below the lowest place ground can be there is nothing but rock. |
 
 ### Its inputs
 
@@ -820,6 +825,7 @@ does not exist — `game_comfort` correlates weakly with everything and is not a
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Closed `C5`. The sea-level deadzone is derived from each world's own deepest natural ground — `HillParams.Min × radius`, 285 m to 2 km across the eight — rather than a round 2 km that put the core gradient out of reach on seven of them. Opened the cross-check that should have existed with the transcription: `PlanetReferenceTests` compares the eight worlds against the installed definitions, and found on its first run that two of them are written under a different element name than the other six. |
 | 2026-08-22 | Closed `C6`: the climate's lag is a share of the world's own day rather than 45 absolute seconds, and the day is measured from the sun the model already samples rather than read from a type whose whitelist status cannot be established outside a session. |
 | 2026-08-22 | Closed `B16`: roughness length comes from the ground material under the grid rather than being one number for a whole world. It is the one figure in the ground table with a published table behind it, and it was already being looked up for the temperature offset. |
 | 2026-08-22 | Closed `B23`: the telemetry column is `game_comfort`, named for what it is. Re-measured its correlations against the fixture this repository actually holds — +0.11 with the sun's elevation and +0.20 with this model's ambient, against the +0.86 and +0.12 quoted from a dataset that is not in the tree (`E5`). The conclusion is unchanged and the numbers are now checkable. |
