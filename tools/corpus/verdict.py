@@ -221,8 +221,13 @@ print(f"  ships with at least one runaway scenario: {len(runaway_ships):,} of "
       f"{len(set(r['ship'] for r in outcomes)):,}")
 
 # ---- how fast damage arrives -------------------------------------------------------------
+# **The crossing and the loss are two events, and this section used to print one under the other's
+# name.** The solver damages an overheating block by (T - critical) x OverheatDamagePerKelvin per
+# simulated second, so at the crossing the damage rate is exactly zero. The crossing is when a
+# warning could fire; the loss is when the player is out a block. Both are decided before the run
+# ends, so censoring reaches neither.
 print("\n" + "=" * 78)
-print("TIME TO FIRST LOSS — decided at the crossing, so censoring does not reach it")
+print("TIME TO CRITICAL — when a warning could fire, not when anything is lost")
 print("=" * 78)
 print(f"\n  {'scenario':18}{'reach critical':>16}{'p10':>8}{'median':>9}{'p90':>8}")
 for name in sorted(by_scenario):
@@ -235,8 +240,8 @@ for name in sorted(by_scenario):
     q = percentiles(hit)
     print(f"  {name:18}{pct(len(hit), len(rows_)):>15.1f}%{hit[len(hit)//10]:>8.0f}s"
           f"{q['p50']:>8.0f}s{hit[min(len(hit)-1, (9*len(hit))//10)]:>7.0f}s")
-print("\n  A consequence that lands inside ten seconds is not a resource a player can manage.")
-print("  recovery inherits its crossings from the burn it starts in — that column is not new damage;")
+
+print("\n  recovery inherits its crossings from the burn it starts in — that column is not new damage;")
 # Computed rather than quoted. This line carried "7,899 of 8,142", which were the figures of the
 # 2026-08-21 run written in by hand — in a script whose whole purpose is that a run's numbers come
 # from the run and not from what anybody remembers them to be.
@@ -245,6 +250,33 @@ if recovery:
 else:
     print("  whether those ships come back is G5 above, which this dataset cannot answer.")
 
+print("\n" + "=" * 78)
+print("TIME TO FIRST LOSS — when a block's hit points run out")
+print("=" * 78)
+if not any("seconds_to_first_loss" in r for r in outcomes):
+    print("\n  not in this dataset: seconds_to_first_loss was added after it was collected.")
+else:
+    print(f"\n  {'scenario':18}{'lose a block':>16}{'p10':>8}{'median':>9}{'p90':>8}"
+          f"{'after crossing':>17}")
+    for name in sorted(by_scenario):
+        rows_ = by_scenario[name]
+        lost = sorted(v for v in (number(r, "seconds_to_first_loss") for r in rows_)
+                      if v is not None and v >= 0)
+        if not lost:
+            print(f"  {name:18}{'none':>16}")
+            continue
+        # Paired per ship before the difference is taken (`E6`): the gap between two percentiles of
+        # two populations is not a percentile of the gap.
+        gaps = sorted(number(r, "seconds_to_first_loss") - number(r, "seconds_to_critical")
+                      for r in rows_
+                      if (number(r, "seconds_to_first_loss") or -1) >= 0
+                      and (number(r, "seconds_to_critical") or -1) >= 0)
+        q = percentiles(lost)
+        gap = f"{percentiles(gaps)['p50']:>16.0f}s" if gaps else f"{'—':>17}"
+        print(f"  {name:18}{pct(len(lost), len(rows_)):>15.1f}%{lost[len(lost)//10]:>8.0f}s"
+              f"{q['p50']:>8.0f}s{lost[min(len(lost)-1, (9*len(lost))//10)]:>7.0f}s{gap}")
+    print("\n  The last column is the median ship's own crossing-to-loss gap, paired before it is")
+    print("  differenced — it is the span a warning has to be useful in.")
 # ---- which blocks drive the tail ----------------------------------------------------------
 print("\n" + "=" * 78)
 print("WHICH BLOCKS RUN AWAY — the tunable surface")
