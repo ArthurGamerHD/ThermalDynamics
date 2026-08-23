@@ -61,6 +61,10 @@ namespace Thermodynamics
             PlanetProperties.Clear();
             OverlapResults.Clear();
             sunDirectionFrame = -1;
+
+            // A new world has its own day, and inheriting the last one's would lag its climate on a
+            // rotation it does not have.
+            Day.Reset();
         }
 
         /// <summary>Reads the world for this grid, once per step.</summary>
@@ -72,6 +76,7 @@ namespace Thermodynamics
             MatrixD worldToLocal = MatrixD.Transpose(Grid.WorldMatrix.GetOrientation());
 
             sample.SunDirection = SunDirection();
+            sample.DayLengthSeconds = Day.Known ? Day.Seconds : 0f;
             sample.SunDirectionLocal = Vector3.Normalize(
                 Vector3D.TransformNormal(sample.SunDirection, worldToLocal));
 
@@ -111,10 +116,23 @@ namespace Thermodynamics
             int frame = MyAPIGateway.Session != null ? MyAPIGateway.Session.GameplayFrameCounter : 0;
             if (frame == sunDirectionFrame) return sunDirection;
 
+            // How far the sun moved since the last frame that asked is the same fact as how long a
+            // day is, and it is already being paid for. See DayLength and backlog C6.
+            int frames = sunDirectionFrame < 0 ? 1 : frame - sunDirectionFrame;
+            if (frames < 1) frames = 1;
+
             sunDirection = MyVisualScriptLogicProvider.GetSunDirection();
             sunDirectionFrame = frame;
+
+            Day.Observe(sunDirection, frames * ThermalGridScheduler.FrameSeconds);
             return sunDirection;
         }
+
+        /// <summary>
+        /// This world's day, measured from the sun. World-wide, like the sun itself, so one
+        /// estimator serves every grid.
+        /// </summary>
+        public static readonly DayLength Day = new DayLength();
 
         private void SamplePlanet(ref EnvironmentSample sample, ref Vector3D position, PlanetManager.Planet planet)
         {
@@ -486,7 +504,8 @@ namespace Thermodynamics
             // the mixing that brings wind down to the surface — and takes it away again at night.
             float sunSine = Vector3.Dot(up, Vector3.Normalize(sample.SunDirection));
             windHeating = WindProfile.Heating(
-                windHeating, sunSine, TickSeconds, Simulation.Planet.AmbientLagSeconds);
+                windHeating, sunSine, TickSeconds,
+                Simulation.Planet.LagSecondsFor(Day.Known ? Day.Seconds : 0f));
 
             Settings settings = Settings.Instance;
 

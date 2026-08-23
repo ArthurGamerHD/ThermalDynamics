@@ -21,6 +21,7 @@ namespace Thermodynamics
         private static readonly MyStringId SealevelDeadzoneId = MyStringId.GetOrCompute("SealevelDeadzone");
         private static readonly MyStringId PoleTemperatureDropId = MyStringId.GetOrCompute("PoleTemperatureDrop");
         private static readonly MyStringId AmbientLagSecondsId = MyStringId.GetOrCompute("AmbientLagSeconds");
+        private static readonly MyStringId AmbientLagShareOfDayId = MyStringId.GetOrCompute("AmbientLagShareOfDay");
         private static readonly MyStringId AmbientLapseRateId = MyStringId.GetOrCompute("AmbientLapseRate");
         private static readonly MyStringId UndergroundDampingDepthId = MyStringId.GetOrCompute("UndergroundDampingDepth");
         private static readonly MyStringId SolarDecayId = MyStringId.GetOrCompute("SolarDecay");
@@ -74,6 +75,9 @@ namespace Thermodynamics
         /// <summary>How long the air takes to answer the sun, in seconds of play.</summary>
         [ProtoMember(28)]
         public float AmbientLagSeconds = 45f;
+
+        /// <summary>The same lag as a share of this world's own day.</summary>
+        public float AmbientLagShareOfDay;
 
         /// <summary>How much colder a kilometre above sea level is, K.</summary>
         [ProtoMember(29)]
@@ -154,6 +158,12 @@ namespace Thermodynamics
             {
                 def.AmbientLagSeconds = (float)dvalue;
                 def.Supplied |= PlanetField.AmbientLagSeconds;
+            }
+
+            if (lookup.TryGetDouble(defId, GroupId, AmbientLagShareOfDayId, out dvalue))
+            {
+                def.AmbientLagShareOfDay = (float)dvalue;
+                def.Supplied |= PlanetField.AmbientLagShareOfDay;
             }
 
             if (lookup.TryGetDouble(defId, GroupId, AmbientLapseRateId, out dvalue))

@@ -410,6 +410,7 @@ namespace Thermodynamics
             read.SolarDecay = definition.SolarDecay;
             read.ConvectionCoefficient = definition.ConvectionCoefficient;
             read.UndergroundConvectionCoefficient = definition.UndergroundConvectionCoefficient;
+            read.AmbientLagShareOfDay = definition.AmbientLagShareOfDay;
 
             properties = PlanetProperties.Merge(properties, read, definition.Supplied);
 
