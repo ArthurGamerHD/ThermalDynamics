@@ -157,8 +157,9 @@
 				<Group Name="ThermalBlockProperties">
 					<!--Nearly all of a lamp's draw leaves as heat, not as light.-->
 					<Bool Name="ExcludeFromSimulation" Value="false" />
-					<!--A lamp is a plastic housing around a lens; its build cost is mostly the plate it mounts on.-->
+					<!--invented: a lamp is a plastic housing around a lens, and its build cost is mostly the plate it mounts on, so it is neither.-->
 					<Decimal Name="Conductivity" Value="2" />
+					<!--invented: as above.-->
 					<Decimal Name="SpecificHeat" Value="900" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
 					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
@@ -175,7 +176,9 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--invented: the same lamp as InteriorLight, in a housing with a reflector.-->
 					<Decimal Name="Conductivity" Value="2" />
+					<!--invented: as above.-->
 					<Decimal Name="SpecificHeat" Value="900" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
 					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
@@ -192,7 +195,9 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: glass-->
 					<Decimal Name="Conductivity" Value="1" />
+					<!--J/(kg K), real units: glass-->
 					<Decimal Name="SpecificHeat" Value="840" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
 					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
@@ -271,7 +276,9 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--invented: a lens and a board, between the glass and the epoxy BlockMaterials prices.-->
 					<Decimal Name="Conductivity" Value="5" />
+					<!--invented: as above.-->
 					<Decimal Name="SpecificHeat" Value="800" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
 					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />

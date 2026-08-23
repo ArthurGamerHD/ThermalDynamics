@@ -53,8 +53,8 @@ namespace Thermodynamics.Core
         /// </summary>
         public static readonly BlockMaterial Steel = new BlockMaterial
         {
-            Conductivity = 50f,
-            SpecificHeat = 466f,
+            Conductivity = ReferenceMaterials.MildSteel.Conductivity,
+            SpecificHeat = ReferenceMaterials.MildSteel.SpecificHeat,
             Emissivity = 0.15f,
             ServiceLimit = 900f,
         };
@@ -92,6 +92,18 @@ namespace Thermodynamics.Core
             };
         }
 
+        /// <summary>
+        /// A component made of a material the reference table holds, so its two bulk figures come
+        /// off that table rather than being typed again. Emissivity and the service limit stay
+        /// arguments: both are properties of the component rather than of the substance.
+        /// </summary>
+        private static void AddOf(Dictionary<string, BlockMaterial> table, string component,
+            ReferenceMaterials.Reference material, float emissivity, float serviceLimit)
+        {
+            Add(table, component, material.Conductivity, material.SpecificHeat,
+                emissivity, serviceLimit);
+        }
+
         private static Dictionary<string, BlockMaterial> Build()
         {
             Dictionary<string, BlockMaterial> t = new Dictionary<string, BlockMaterial>();
@@ -99,12 +111,12 @@ namespace Thermodynamics.Core
             // ---- structural steel ------------------------------------------------------------
             // Mild steel throughout. They differ only in surface: a flat plate is smoother than a
             // mesh or a girder, and emissivity is a surface property.
-            Add(t, "SteelPlate", 50f, 466f, 0.15f, 900f);
-            Add(t, "Construction", 50f, 466f, 0.15f, 900f);
-            Add(t, "SmallTube", 50f, 466f, 0.20f, 900f);
-            Add(t, "LargeTube", 50f, 466f, 0.20f, 900f);
-            Add(t, "MetalGrid", 50f, 466f, 0.30f, 900f);
-            Add(t, "Girder", 50f, 466f, 0.25f, 900f);
+            AddOf(t, "SteelPlate", ReferenceMaterials.MildSteel, 0.15f, 900f);
+            AddOf(t, "Construction", ReferenceMaterials.MildSteel, 0.15f, 900f);
+            AddOf(t, "SmallTube", ReferenceMaterials.MildSteel, 0.20f, 900f);
+            AddOf(t, "LargeTube", ReferenceMaterials.MildSteel, 0.20f, 900f);
+            AddOf(t, "MetalGrid", ReferenceMaterials.MildSteel, 0.30f, 900f);
+            AddOf(t, "Girder", ReferenceMaterials.MildSteel, 0.25f, 900f);
 
             // A thin painted interior panel. Lighter gauge and a painted face, which is why it
             // radiates far better than bare plate — paint of any colour runs about 0.9.
@@ -114,7 +126,7 @@ namespace Thermodynamics.Core
             // Soda-lime glass: 1.0 W/(m K), 840 J/(kg K), emissivity 0.92. Two orders of magnitude
             // below steel in conductivity, which is the single largest material distinction in the
             // game and the reason windows deserve an entry of their own.
-            Add(t, "BulletproofGlass", 1.0f, 840f, 0.92f, 800f);
+            AddOf(t, "BulletproofGlass", ReferenceMaterials.SodaLimeGlass, 0.92f, 800f);
 
             // ---- electrical ------------------------------------------------------------------
             // Copper windings on steel laminations, roughly half and half by mass. Limited by the
