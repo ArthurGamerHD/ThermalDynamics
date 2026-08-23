@@ -101,6 +101,54 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// Below the threshold a wind is a *cooler*, and it never makes a hull hotter than still
+        /// air does.
+        ///
+        /// <para>
+        /// **The claim this test could not make when it was written.** The directional convection
+        /// factor spanned 0.5 to 1 against 1 in still air, so most of a closed hull's exposed faces
+        /// — the ones not pointing into the wind — shed *less* than they would have with no wind at
+        /// all, and the geometric loss beat the speed gain until about 50 m/s. A hull making 2 MW
+        /// settled 0.9 K hotter in a 40 m/s wind than in still air, which is the wrong sign for the
+        /// dominant effect. Forced convection adds to natural convection rather than replacing it,
+        /// so the factor spans 1 to 2 now. Backlog `B29`.
+        /// </para>
+        ///
+        /// <para>
+        /// Measured on the hull's mean rather than on its peak: the hottest block on a ship with a
+        /// reactor in it is the reactor, which is buried and has no face for the wind to touch.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void AWindyDayCoolsAHullThatIsMakingHeat()
+        {
+            ThermalSettings settings = new ThermalSettings();
+            ThermalSettings world = new ThermalSettings();
+            world.EnableDamage = false;
+            world.EnableSolarHeat = false;
+            world.Derive();
+
+            GridBuilder builder = GridBuilder.Large();
+            builder.Fill(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(4, 3, 8));
+            builder.Remove(new Vector3I(1, 1, 1));
+            builder.Place(Catalog.Reactor(), new Vector3I(1, 1, 1)).Producing(2e6f);
+
+            float still = Mean(builder, world, Worlds.PlanetSurface(1f, 0.5f), 600f);
+
+            // Every speed under the threshold, so this is about the convection factor and not
+            // about friction: none of these has a friction term at all.
+            for (float speed = 5f; speed < settings.FrictionAtSpeedsAbove; speed += 5f)
+            {
+                float windy = Mean(builder, world, Worlds.Storm(1f, speed), 600f);
+
+                Assert.True(windy < still,
+                    "a " + speed.ToString("n0") + " m/s wind left the hull at "
+                    + windy.ToString("n1") + " K against " + still.ToString("n1")
+                    + " K in still air");
+            }
+        }
+
+        /// <summary>
         /// Watts the friction term put into a hull over one step in a wind of a given speed.
         /// </summary>
         private static float FrictionWatts(float windSpeed)
