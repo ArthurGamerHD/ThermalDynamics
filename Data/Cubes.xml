@@ -1895,7 +1895,10 @@
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<Decimal Name="ConsumerWasteEnergy" Value="0" />
+					<!--All of it. A circulator does no work that leaves the system: its shaft
+					power dissipates as friction in the coolant it is pushing, and its motor
+					losses stay in the block. Nothing to subtract.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
 				</Group>
@@ -1916,7 +1919,10 @@
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<Decimal Name="ConsumerWasteEnergy" Value="0" />
+					<!--All of it. A circulator does no work that leaves the system: its shaft
+					power dissipates as friction in the coolant it is pushing, and its motor
+					losses stay in the block. Nothing to subtract.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
 				</Group>

@@ -363,14 +363,26 @@ and the cooling term by 1.37.
 part of a coolant loop does not exempt it. This mirrors the physics, which is the default under
 [fidelity](#fidelity-is-the-default-a-saving-is-a-switch).
 
-**Not built.** The pump's switch and speed slider reach the loop and the ring's flow refreshes when
-either moves, but `MaxPowerWatts` is never assigned, so a pump draws nothing and heats nothing — a
-loop is free to run once built, where a heat pump pays for every watt it lifts. The symmetric
-implementation exists to copy: `ThermalHeatPumpBlock` attaches a `MyResourceSinkComponent` in code
-during `Init`, because an upgrade module has no definition field for one. The switch itself is
-wired — `ThermalGridSimulation.PushCoolantPumpState` walks the loops and pushes each pump's state
-into the ring — so what is left is the cost, which is a balance decision rather than a fix:
-[backlog](backlog.md) C13.
+**Built.** A coolant pump draws through a `MyResourceSinkComponent` attached in code during `Init`,
+because an upgrade module has no definition field for one — the same shape `ThermalHeatPumpBlock`
+already used. The heat comes free with the cost: `ThermalBlock` subscribes to whatever sink an
+entity carries and turns its draw into `PowerConsumedWatts`, which the waste-heat model converts
+through the block's own fraction. That fraction is **1** for a pump, and the reason is physics
+rather than balance: a circulator does no work that leaves the system, so its shaft power dissipates
+as friction in the coolant it is pushing and its motor losses stay in the block.
+
+**The rating is derived, not chosen.** A large-grid ring moves 200 kg/s of coolant — four
+two-and-a-half-metre parcels a second at fifty kilograms each — and pushing that against two bar of
+head at seventy per cent efficiency is `ṁ ΔP / (ρ η)` = 57 kW. Fifty is the rating; the small-grid
+block is a fifth, on the same reasoning the heat pump's rating uses.
+
+**The asymmetry with the heat pump is now a stated design rather than an accident.** The ring
+carries 680 kW for every kelvin of difference around it, so a circulator costs well under a per cent
+of what it moves, where a heat pump pays a third. Both blocks exist because those two prices are
+different, and that could not be said while one of them was free.
+
+An under-supplied pump circulates proportionally slower rather than stopping, so a ship whose
+reactors are failing loses its cooling gradually rather than all at once.
 
 ### Every thermal property is a dial
 
@@ -624,6 +636,7 @@ very different warnings on very different blocks.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | A coolant loop costs power and makes heat doing it ([backlog.md](backlog.md) `C13`). The rating is derived from the loop the model already describes — 200 kg/s against two bar of head — and the asymmetry with the heat pump is now a stated design: a circulator costs well under a per cent of what it moves against a heat pump's third. |
 | 2026-08-22 | The compatibility floor is measured. All 705 prefabs the game ships, idle, in the environment each category spawns into: 461,428 blocks and not one crossing critical. The same 705 flown hard lose 616, which is what makes the first number a measurement rather than a formality ([backlog.md](backlog.md) `C10`, criterion `G7`). |
 | 2026-08-22 | Said that *consequential* includes the player. Heat that only damages blocks stops at the airlock, and a burning compartment somebody can stand in is the mod contradicting its own purpose ([backlog.md](backlog.md) `B10`, closed). |
 | 2026-08-22 | Stated that the comment standard here is `R14`, and that the check on it catches the failure the length limit prevents. Twenty-four comments in the tree described a member that was no longer there. |

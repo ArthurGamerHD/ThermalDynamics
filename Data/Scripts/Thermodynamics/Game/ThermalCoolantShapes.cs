@@ -79,6 +79,32 @@ namespace Thermodynamics
             }
         }
 
+        /// <summary>
+        /// Most electricity a large-grid coolant pump draws at full speed, W.
+        ///
+        /// <para>
+        /// Derived from the loop the model already describes rather than chosen: a large-grid ring
+        /// moves 200 kg/s of coolant — four two-and-a-half-metre parcels a second at 50 kg each —
+        /// and pushing that against two bar of head at seventy per cent efficiency is
+        /// <c>ṁ ΔP / (ρ η)</c> = 57 kW. Fifty, rounded.
+        /// </para>
+        ///
+        /// <para>
+        /// It is small against what a ring carries — 680 kW per kelvin of difference around it —
+        /// which is the point: a circulator is not a refrigerator, and the mod's heat pump pays a
+        /// third of what it moves. Both blocks exist because those two prices are different, and
+        /// that was not expressible while one of them was free. See backlog `C13`.
+        /// </para>
+        /// </summary>
+        public const float LargeGridPumpWatts = 50000f;
+
+        /// <summary>
+        /// The same for a small grid: a fifth, on the same reasoning the heat pump's rating uses.
+        /// The block is an eighth of the volume and is sized for the loop a small ship builds, so
+        /// it is not scaled by volume.
+        /// </summary>
+        public const float SmallGridPumpWatts = 10000f;
+
         private static CoolantShape Build(string subtype, Vector3I size)
         {
             Plumbing plumbing;
@@ -89,7 +115,13 @@ namespace Thermodynamics
                 // The pump's second port sits at the far end of the block, whatever its length.
                 Vector3I axis = Vector3I.Abs(plumbing.Link[1]);
                 int length = (axis.X * size.X) + (axis.Y * size.Y) + (axis.Z * size.Z);
-                return CoolantShape.Pump(plumbing.Link[0], plumbing.Link[1], Math.Max(1, length));
+
+                float power = subtype != null && subtype.StartsWith("Gauge_SG_")
+                    ? SmallGridPumpWatts
+                    : LargeGridPumpWatts;
+
+                return CoolantShape.Pump(
+                    plumbing.Link[0], plumbing.Link[1], Math.Max(1, length), power);
             }
 
             return CoolantShape.Pipe(plumbing.Link[0], plumbing.Link[1], plumbing.Sink);
