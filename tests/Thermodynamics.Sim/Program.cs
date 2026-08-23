@@ -51,6 +51,9 @@ namespace Thermodynamics.Sim
                 case "drift":
                     return DriftCommand(args);
 
+                case "inputs":
+                    return InputsCommand(args);
+
                 case "prefabs":
                     return PrefabCommand(args);
 
@@ -258,6 +261,95 @@ namespace Thermodynamics.Sim
 
             Console.Write(ClientDriftLab.Report(runs));
 
+            // The correction sweep, on the worst of the three staleness rungs: what a protocol
+            // that states the near-critical band on an interval buys, and what it costs.
+            List<ClientDriftLab.Run> corrected = new List<ClientDriftLab.Run>();
+            if (HasFlag(args, "--correct"))
+            {
+                float worst = stale[stale.Length - 1];
+                float[] intervals = { 1f, 5f, 15f, 60f };
+                int[] budgets = { 0, 1000 };
+
+                corrected.Add(ClientDriftLab.Measure(scenario, worst, watch, blocks, null,
+                    ClientDriftLab.Correction.None));
+
+                for (int i = 0; i < intervals.Length; i++)
+                {
+                    for (int b = 0; b < budgets.Length; b++)
+                    {
+                        corrected.Add(ClientDriftLab.Measure(scenario, worst, watch, blocks, null,
+                            new ClientDriftLab.Correction
+                            {
+                                IntervalSeconds = intervals[i],
+                                MaxBlocks = budgets[b],
+                            }));
+                    }
+                }
+
+                // The composition the two above point at: state the whole hull once when the
+                // client joins, then track the band. The expensive packet happens once instead of
+                // every interval.
+                for (int i = 0; i < intervals.Length; i++)
+                {
+                    corrected.Add(ClientDriftLab.Measure(scenario, worst, watch, blocks, null,
+                        new ClientDriftLab.Correction
+                        {
+                            IntervalSeconds = intervals[i],
+                            WholeHullOnJoin = true,
+                        }));
+                }
+
+                // **The diagnostic, not a proposal.** Replicating every block that can fail is far
+                // more than a session would send; what it answers is whether the residual left by
+                // the band is the update interval or the un-replicated hull around it dragging the
+                // corrected blocks back. Without this row that question is an opinion.
+                for (int i = 0; i < intervals.Length; i++)
+                {
+                    corrected.Add(ClientDriftLab.Measure(scenario, worst, watch, blocks, null,
+                        new ClientDriftLab.Correction
+                        {
+                            IntervalSeconds = intervals[i],
+                            BandKelvin = 100000f,
+                        }));
+                }
+
+                Console.WriteLine();
+                Console.Write(ClientDriftLab.CorrectionReport(corrected));
+            }
+
+            // The hardware sweep: a client that keeps losing simulated time, which is the one
+            // property of somebody else's machine this lab can reach.
+            List<ClientDriftLab.Run> hitching = new List<ClientDriftLab.Run>();
+            if (HasFlag(args, "--hitch"))
+            {
+                float[] every = { 0f, 60f, 30f, 10f };
+                float[] costs = { 1f, 5f };
+
+                for (int i = 0; i < every.Length; i++)
+                {
+                    for (int c = 0; c < costs.Length; c++)
+                    {
+                        if (every[i] <= 0f && c > 0) continue;
+
+                        ClientDriftLab.Machine host = new ClientDriftLab.Machine
+                        {
+                            HitchEverySeconds = every[i],
+                            HitchLosesSeconds = costs[c],
+                        };
+
+                        hitching.Add(ClientDriftLab.Measure(scenario, 0f, watch, blocks, null,
+                            ClientDriftLab.Correction.None, host));
+
+                        hitching.Add(ClientDriftLab.Measure(scenario, 0f, watch, blocks, null,
+                            new ClientDriftLab.Correction { IntervalSeconds = 5f, MaxBlocks = 250 },
+                            host));
+                    }
+                }
+
+                Console.WriteLine();
+                Console.Write(ClientDriftLab.HitchReport(hitching));
+            }
+
             string directory = ValueAfter(args, "--csv");
             if (directory != null)
             {
@@ -280,6 +372,119 @@ namespace Thermodynamics.Sim
 
                 Directory.CreateDirectory(directory);
                 string path = Path.Combine(directory, "drift.csv");
+                File.WriteAllText(path, csv.ToString());
+                Console.WriteLine();
+                Console.WriteLine("wrote " + path);
+
+                if (corrected.Count > 0)
+                {
+                    StringBuilder sweep = new StringBuilder();
+                    sweep.AppendLine("scenario,blocks,stale_s,interval_s,band_k,max_blocks,"
+                        + "misreading_s,showing_safe_s,crying_wolf_s,updates,bytes,bytes_per_s,peak_blocks,dropped");
+
+                    foreach (ClientDriftLab.Run run in corrected)
+                    {
+                        sweep.Append(run.Scenario).Append(',').Append(run.Blocks).Append(',')
+                             .Append(run.StaleSeconds.ToString("0.###")).Append(',')
+                             .Append(run.Protocol.IntervalSeconds.ToString("0.###")).Append(',')
+                             .Append(run.Protocol.BandKelvin.ToString("0.###")).Append(',')
+                             .Append(run.Protocol.MaxBlocks).Append(',')
+                             .Append(run.SecondsMisreadingCritical.ToString("0.###")).Append(',')
+                             .Append(run.SecondsShowingSafe.ToString("0.###")).Append(',')
+                             .Append(run.SecondsCryingWolf.ToString("0.###")).Append(',')
+                             .Append(run.Updates).Append(',').Append(run.Bytes).Append(',')
+                             .Append(run.BytesPerSecond.ToString("0.##")).Append(',')
+                             .Append(run.PeakBlocksSent).Append(',')
+                             .Append(run.BlocksDropped).AppendLine();
+                    }
+
+                    string sweepPath = Path.Combine(directory, "drift-correction.csv");
+                    File.WriteAllText(sweepPath, sweep.ToString());
+                    Console.WriteLine("wrote " + sweepPath);
+                }
+            }
+
+            return 0;
+        }
+
+        /// <summary>
+        /// Every input a client drives its own simulation from, degraded one at a time and then all
+        /// at once, with the correction off and on.
+        ///
+        /// The question this answers that `drift` does not: which of those inputs is a
+        /// **perturbation**, which decays on its own, and which is a **bias**, which does not — and
+        /// therefore which of them the readout needs a protocol for rather than patience.
+        /// </summary>
+        private static int InputsCommand(string[] args)
+        {
+            string scenario = ValueAfter(args, "--scenario") ?? "planet";
+
+            float watch = 600f;
+            string configured = ValueAfter(args, "--watch");
+            if (configured != null) float.TryParse(configured, out watch);
+
+            int blocks = 2000;
+            string sized = ValueAfter(args, "--size");
+            if (sized != null) int.TryParse(sized, out blocks);
+
+            ClientDriftLab.Correction fix = new ClientDriftLab.Correction
+            {
+                IntervalSeconds = 5f,
+                WholeHullOnJoin = true,
+            };
+
+            Console.WriteLine("A client whose view of the world is worse than the server's.");
+            Console.WriteLine("Hull: " + blocks.ToString("n0") + " census blocks, " + scenario
+                + ", " + watch.ToString("n0") + " simulated seconds, load alternating every "
+                + ClientInputLab.LoadPeriodSeconds.ToString("n0") + " s.");
+            Console.WriteLine();
+
+            List<ClientInputLab.Degradation> cases = ClientInputLab.All();
+            List<ClientInputLab.Result> results = new List<ClientInputLab.Result>();
+
+            foreach (ClientInputLab.Degradation one in cases)
+            {
+                results.Add(ClientInputLab.Measure(one, ClientDriftLab.Correction.None,
+                    scenario, watch, blocks));
+                results.Add(ClientInputLab.Measure(one, fix, scenario, watch, blocks));
+            }
+
+            Console.Write(ClientInputLab.Report(results));
+            Console.WriteLine();
+            Console.WriteLine("What each case degrades, and why that is what the engine does:");
+            Console.WriteLine();
+
+            foreach (ClientInputLab.Degradation one in cases)
+            {
+                Console.WriteLine("  " + one.Name.PadRight(20) + one.Because);
+            }
+
+            string directory = ValueAfter(args, "--csv");
+            if (directory != null)
+            {
+                StringBuilder csv = new StringBuilder();
+                csv.AppendLine("degradation,scenario,blocks,correction_s,whole_hull_on_join,"
+                    + "peak_k,standing_k,misreading_s,peak_disagreeing,peak_server_critical,"
+                    + "peak_blocks_sent,bytes_per_s");
+
+                foreach (ClientInputLab.Result result in results)
+                {
+                    bool off = result.Protocol == null || result.Protocol.IntervalSeconds <= 0f;
+                    csv.Append('"').Append(result.Name).Append('"').Append(',')
+                       .Append(result.Scenario).Append(',').Append(result.Blocks).Append(',')
+                       .Append(off ? "0" : result.Protocol.IntervalSeconds.ToString("0.###")).Append(',')
+                       .Append(!off && result.Protocol.WholeHullOnJoin ? "1" : "0").Append(',')
+                       .Append(result.PeakKelvin.ToString("0.####")).Append(',')
+                       .Append(result.StandingKelvin.ToString("0.####")).Append(',')
+                       .Append(result.SecondsMisreading.ToString("0.###")).Append(',')
+                       .Append(result.PeakDisagreeing).Append(',')
+                       .Append(result.PeakServerCritical).Append(',')
+                       .Append(result.PeakBlocksSent).Append(',')
+                       .Append(result.BytesPerSecond.ToString("0.##")).AppendLine();
+                }
+
+                Directory.CreateDirectory(directory);
+                string path = Path.Combine(directory, "client-inputs.csv");
                 File.WriteAllText(path, csv.ToString());
                 Console.WriteLine();
                 Console.WriteLine("wrote " + path);
@@ -441,6 +646,16 @@ namespace Thermodynamics.Sim
 
             Console.Write(PlanetLab.Report());
             return 0;
+        }
+
+        /// <summary>Whether a bare flag is present, for options that take no value.</summary>
+        private static bool HasFlag(string[] args, string flag)
+        {
+            for (int i = 0; i < args.Length; i++)
+            {
+                if (args[i] == flag) return true;
+            }
+            return false;
         }
 
         private static string ValueAfter(string[] args, string flag)
@@ -1029,6 +1244,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("    --csv <dir>               one row per prefab");
             Console.WriteLine("    --load                    full load instead of idle: the control, not G7");
             Console.WriteLine("  drift                   how long a client that joined stale stays wrong");
+            Console.WriteLine("  inputs                  each input a client drives its sim from, degraded");
             Console.WriteLine("  occlusion               what a terminator crossing costs at each rung of the shadow ladder");
             Console.WriteLine("    --scenario shadow|sunlit|planet  --watch <s> --size N --csv <dir>");
             Console.WriteLine("  planets                 every shipped world's climate, and where each figure came from");

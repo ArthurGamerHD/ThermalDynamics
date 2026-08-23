@@ -941,5 +941,47 @@ namespace Thermodynamics.Core
 
             return restored;
         }
+
+        /// <summary>
+        /// Selects the blocks inside the warning band, for a server to send to its clients.
+        /// </summary>
+        /// <returns>
+        /// How many blocks were inside the band, which is more than <paramref name="results"/>
+        /// holds whenever the budget bit.
+        /// </returns>
+        public int ExportHotTail(float bandKelvin, int budget, List<StoredTemperature> results)
+        {
+            return HotTailCodec.Select(solver.Nodes, bandKelvin, budget, results);
+        }
+
+        /// <summary>
+        /// Writes received temperatures onto this simulation. Unknown positions are ignored, so a
+        /// client whose grid has lost a block since the packet was built still applies the rest.
+        ///
+        /// <para>
+        /// **This is the same write that loading a save makes**, and it is legal for the same
+        /// reason: a node's temperature is the one value a host may set from outside a step, and
+        /// the solver re-reads it. It is not a step, so it conserves nothing and is not asked to —
+        /// what it does is replace this machine's guess with the answer from the machine that
+        /// decides.
+        /// </para>
+        /// </summary>
+        /// <returns>How many blocks were found and written.</returns>
+        public int ImportHotTail(IList<StoredTemperature> tail)
+        {
+            if (tail == null) return 0;
+
+            int applied = 0;
+            for (int i = 0; i < tail.Count; i++)
+            {
+                ThermalNode node = solver.GetNodeAt(tail[i].Position);
+                if (node == null) continue;
+
+                node.Temperature = Math.Max(ThermalConstants.MinimumTemperature, tail[i].Temperature);
+                applied++;
+            }
+
+            return applied;
+        }
     }
 }

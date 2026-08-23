@@ -107,5 +107,119 @@ namespace Thermodynamics.Tests
                 "air should have converged further than vacuum in the same time: "
                 + airEnd + " K against " + vacuumEnd + " K");
         }
+
+        // ---- a client that keeps losing time ---------------------------------------------------
+
+        /// <summary>
+        /// **A client that keeps hitching does not converge, and that is a second defect rather than
+        /// a worse version of the first.** The convergence above is what happens after *one*
+        /// perturbation; a machine that drops its solver backlog every few seconds is perturbed
+        /// again before it has finished recovering, and holds a standing error indefinitely.
+        ///
+        /// <para>
+        /// Started perfectly in step with the server, so every kelvin here was made by the hitches
+        /// and none of it is the join.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void AClientThatKeepsLosingTimeHoldsAStandingError()
+        {
+            ClientDriftLab.Run steady = ClientDriftLab.Measure("shadow", 0f, 240f, 400, null,
+                ClientDriftLab.Correction.None, ClientDriftLab.Machine.KeepsUp);
+
+            ClientDriftLab.Run hitching = ClientDriftLab.Measure("shadow", 0f, 240f, 400, null,
+                ClientDriftLab.Correction.None,
+                new ClientDriftLab.Machine { HitchEverySeconds = 10f, HitchLosesSeconds = 5f });
+
+            // The control: in step and left alone, the two runs are the same arithmetic and must
+            // agree exactly, or the figure below is measuring the harness (`E8`).
+            Assert.Equal(0f, steady.Samples[steady.Samples.Count - 1].MaxKelvin, 4);
+
+            Assert.True(hitching.Hitches > 0, "the rig took no hitches");
+            Assert.True(hitching.SecondsLostToHitches > 0f, "the client lost no time");
+
+            float last = hitching.Samples[hitching.Samples.Count - 1].MaxKelvin;
+            Assert.True(last > 0.5f,
+                "a client still losing time should still be wrong at the end of the run, got "
+                + last + " K");
+        }
+
+        // ---- what the correction buys ----------------------------------------------------------
+
+        /// <summary>
+        /// The server stating its near-critical band leaves the readout wrong for less time than
+        /// leaving the client alone does. The claim is the direction, not a figure — the figures
+        /// come from `-- drift --correct` at sizes a suite has no business running.
+        /// </summary>
+        [Fact]
+        public void CorrectingTheBandLeavesTheReadoutWrongForLessTime()
+        {
+            ClientDriftLab.Run alone = ClientDriftLab.Measure("shadow", 60f, 300f, 2000, null,
+                ClientDriftLab.Correction.None);
+
+            ClientDriftLab.Run corrected = ClientDriftLab.Measure("shadow", 60f, 300f, 2000, null,
+                new ClientDriftLab.Correction { IntervalSeconds = 5f });
+
+            Assert.True(alone.SecondsShowingSafe > 0f,
+                "the rig needs an uncorrected client that misreads critical; it did not");
+
+            Assert.True(corrected.SecondsShowingSafe < alone.SecondsShowingSafe,
+                "the correction should shorten the time the client shows safe: "
+                + corrected.SecondsShowingSafe + " s against " + alone.SecondsShowingSafe + " s");
+        }
+
+        /// <summary>
+        /// **The correction is charged for the drift it allows.** A sample taken immediately after
+        /// an update reads the client at the one moment it is right, so a longer interval must
+        /// leave the readout wrong for longer — and if it did not, the lab would be measuring its
+        /// own sampling rather than the protocol (`M7`).
+        /// </summary>
+        [Fact]
+        public void ALongerIntervalLeavesTheReadoutWrongForLonger()
+        {
+            ClientDriftLab.Run tight = ClientDriftLab.Measure("shadow", 60f, 300f, 2000, null,
+                new ClientDriftLab.Correction { IntervalSeconds = 5f });
+
+            ClientDriftLab.Run loose = ClientDriftLab.Measure("shadow", 60f, 300f, 2000, null,
+                new ClientDriftLab.Correction { IntervalSeconds = 60f });
+
+            Assert.True(loose.SecondsShowingSafe > tight.SecondsShowingSafe,
+                "a minute between updates should be worse than five seconds: "
+                + loose.SecondsShowingSafe + " s against " + tight.SecondsShowingSafe + " s");
+
+            Assert.True(loose.Updates < tight.Updates);
+            Assert.True(loose.Bytes < tight.Bytes);
+        }
+
+        /// <summary>
+        /// The bytes the lab charges are the bytes the codec makes, so the bandwidth column is a
+        /// measurement of the wire format rather than an estimate beside it (`P5`).
+        /// </summary>
+        [Fact]
+        public void TheBytesChargedAreTheBytesTheCodecPacks()
+        {
+            ClientDriftLab.Run run = ClientDriftLab.Measure("shadow", 60f, 60f, 2000, null,
+                new ClientDriftLab.Correction { IntervalSeconds = 5f });
+
+            Assert.True(run.Updates > 0);
+            Assert.True(run.Bytes >= run.Updates * (long)HotTailCodec.HeaderSize);
+            Assert.True(run.Bytes
+                <= run.Updates * (long)HotTailCodec.SizeOf(run.PeakBlocksSent));
+        }
+
+        /// <summary>
+        /// A correction with no interval sends nothing at all — the off switch is off, and costs
+        /// what off costs (`C7`, `P8`).
+        /// </summary>
+        [Fact]
+        public void TheCorrectionSwitchedOffSendsNothing()
+        {
+            ClientDriftLab.Run run = ClientDriftLab.Measure("shadow", 60f, 60f, 400, null,
+                ClientDriftLab.Correction.None);
+
+            Assert.Equal(0, run.Updates);
+            Assert.Equal(0L, run.Bytes);
+            Assert.Equal(0f, run.BytesPerSecond, 5);
+        }
     }
 }
