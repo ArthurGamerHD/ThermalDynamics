@@ -1586,6 +1586,288 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
+        // ---- the substep ceiling -----------------------------------------------------------
+
+        /// <summary>
+        /// One row of the substep ceiling sweep: what refusing a demand does to the answer.
+        ///
+        /// The floor sweep above is the other half of the same question. `MaxSubstepsPerBlock`
+        /// declines to resolve a *block* and says so by raising its capacity; `MaxSubsteps`
+        /// declines to resolve the *step* and says nothing at all — it hands back the ceiling and
+        /// integrates a demand it refused. See stiffness.md, What refusing the demand costs.
+        /// </summary>
+        public class CeilingRow
+        {
+            /// <summary>The <c>MaxSubsteps</c> this row ran at.</summary>
+            public int Ceiling;
+
+            /// <summary>What the stiffest element asked for at the start of the run.</summary>
+            public float RequiredSubsteps;
+
+            /// <summary>Substeps actually granted, averaged over the run.</summary>
+            public double MeanGranted;
+
+            /// <summary>
+            /// How far the ceiling is over-subscribed: what was demanded over what it granted.
+            ///
+            /// **The ratio is the quantity, not the count.** A demand of 73 refused to 64 and a
+            /// demand of 36 refused to 32 are the same approximation asked of the integrator, which
+            /// is what lets a rig answer for a population it is not a member of.
+            /// </summary>
+            public float Oversubscription;
+
+            /// <summary>Whether the ceiling refused what the estimate asked for.</summary>
+            public bool Bound;
+
+            public double Milliseconds;
+            public int Nodes;
+
+            /// <summary>Worst and root-mean-square departure from the run that was granted its demand.</summary>
+            public float MaxError;
+            public double RmsError;
+
+            /// <summary>
+            /// Hottest block at the end of the run, and how far that is from the granted run's.
+            ///
+            /// The figure overheat damage is taken off, so it is the one that says whether a
+            /// refused demand changes what happens to a player's ship rather than only what the
+            /// numbers look like.
+            /// </summary>
+            public float PeakTemperature;
+            public float PeakError;
+
+            /// <summary>Simulated seconds in one solver step; every substep figure is proportional to it.</summary>
+            public float StepSeconds;
+
+            /// <summary>Airspeed the run was made at, m/s, and the air density it met.</summary>
+            public float Speed;
+            public float AirDensity;
+        }
+
+        /// <summary>
+        /// What <c>MaxSubsteps</c> refusing a demand costs, swept across ceilings, in the
+        /// environment where the demand is actually large.
+        ///
+        /// <para>
+        /// **Air is the case, not vacuum.** The same hull demands a few substeps in vacuum and
+        /// tens of them at flying speed in thick atmosphere, so a ceiling sweep taken in vacuum
+        /// measures a bound that never binds. The default here is thick air at 200 m/s, which is
+        /// the `reentry` scenario's airflow and the environment
+        /// [balance.md](../../docs/balance.md) scores `G6` in.
+        /// </para>
+        ///
+        /// <para>
+        /// Error is against the run granted everything it asked for, in the same way the floor
+        /// sweep is, because the question is how far the approximation moves the answer rather
+        /// than whether either run is right in some absolute sense (`E7`).
+        /// </para>
+        /// </summary>
+        public static List<CeilingRow> SubstepCeiling(string shape, int size, int steps,
+            IList<int> ceilings, Action<string> log = null, bool driven = false, int frequency = 0,
+            float speed = 200f, float airDensity = 1f)
+        {
+            List<CeilingRow> rows = new List<CeilingRow>();
+            float[] reference = null;
+            float referencePeak = 0f;
+
+            // The first row measured would otherwise be measuring the JIT.
+            CeilingRow probe = RunCeiling(shape, Math.Min(size, 2000), 2, Hulls.Unbounded, null,
+                driven, frequency, speed, airDensity);
+
+            // No ceilings given means the ladder of over-subscriptions rather than a ladder of
+            // counts, resolved against what this hull in this air actually demands. A ceiling of 64
+            // means nothing on a hull that asks for six.
+            if (ceilings == null || ceilings.Count == 0)
+            {
+                ceilings = CeilingLadder(probe.RequiredSubsteps);
+            }
+
+            for (int i = 0; i < ceilings.Count; i++)
+            {
+                if (log != null) log("ceiling " + ceilings[i]);
+
+                CeilingRow row = RunCeiling(shape, size, steps, ceilings[i], reference, driven,
+                    frequency, speed, airDensity);
+                if (reference == null)
+                {
+                    reference = lastTemperatures;
+                    referencePeak = row.PeakTemperature;
+                }
+
+                row.PeakError = row.PeakTemperature - referencePeak;
+                rows.Add(row);
+            }
+
+            return rows;
+        }
+
+        /// <summary>
+        /// The over-subscriptions the sweep asks about: what fraction of its demand a step is
+        /// granted. **1.15 is the shipped configuration's own breach** — the 49-ship panel's p99
+        /// demand of 73.4 against the 64 `MaxSubsteps` grants — and the rest of the ladder is there
+        /// so a reader can see where the approximation stops being free.
+        /// See [balance.md](../../docs/balance.md), Air is where the substep budget goes.
+        /// </summary>
+        public static readonly float[] Oversubscriptions = { 1.15f, 1.5f, 2f, 3f, 4.5f, 9f };
+
+        /// <summary>Ceilings that put a demand at each rung of <see cref="Oversubscriptions"/>.</summary>
+        public static List<int> CeilingLadder(float demand)
+        {
+            List<int> ceilings = new List<int>();
+            ceilings.Add(Hulls.Unbounded);
+
+            for (int i = 0; i < Oversubscriptions.Length; i++)
+            {
+                int ceiling = (int)Math.Round(demand / Oversubscriptions[i]);
+                if (ceiling < 1) ceiling = 1;
+                if (!ceilings.Contains(ceiling)) ceilings.Add(ceiling);
+            }
+
+            return ceilings;
+        }
+
+        private static CeilingRow RunCeiling(string shape, int size, int steps, int ceiling,
+            float[] reference, bool driven, int frequency, float speed, float airDensity)
+        {
+            HashSet<Vector3I> cells = LoadShapes.Build(shape, size);
+
+            GridBuilder builder = GridBuilder.Large();
+            builder.PlaceCensus(cells);
+
+            ThermalSettings settings = new ThermalSettings();
+            if (frequency > 0) settings.Frequency = frequency;
+
+            // The ceiling is the subject. The visit budget is not: it shortens a step rather than
+            // coarsening it, which is a different approximation and would be mixed into the error.
+            settings.MaxSubsteps = ceiling;
+            settings.MaxElementVisitsPerStep = 0;
+            settings.Derive();
+
+            ThermalSimulation simulation = new ThermalSimulation(settings, builder.Grid);
+            for (int i = 0; i < builder.Placed.Count; i++)
+            {
+                simulation.Solver.AddBlock(builder.Placed[i], 293.15f);
+            }
+            simulation.RebuildAll();
+
+            IList<ThermalNode> nodes = simulation.Solver.Nodes;
+            int count = nodes.Count;
+
+            if (driven)
+            {
+                Census.DriveCensus(simulation);
+            }
+            else
+            {
+                SeedSpread(simulation);
+            }
+
+            EnvironmentSample sample = Worlds.Flight(airDensity, speed);
+
+            CeilingRow row = new CeilingRow();
+            row.Ceiling = ceiling;
+            row.StepSeconds = settings.StepSeconds;
+            row.Nodes = count;
+            row.Speed = speed;
+            row.AirDensity = airDensity;
+
+            // Taken against the environment the run is made in: the estimate reads the convection
+            // coefficient, so a demand sampled in vacuum is the wrong number by the whole reason
+            // this sweep exists.
+            simulation.StepExact(1, sample);
+            row.RequiredSubsteps = simulation.Solver.LastRequiredSubsteps;
+
+            simulation.Work.Reset();
+            Stopwatch watch = Stopwatch.StartNew();
+            simulation.StepExact(steps, sample);
+            watch.Stop();
+            row.Milliseconds = watch.Elapsed.TotalMilliseconds;
+
+            row.MeanGranted = simulation.Work.SolverSteps > 0
+                ? (double)simulation.Work.SolverSubsteps / simulation.Work.SolverSteps
+                : 0d;
+            row.Bound = ceiling < row.RequiredSubsteps;
+            row.Oversubscription = ceiling > 0 && row.Bound
+                ? row.RequiredSubsteps / ceiling
+                : 1f;
+
+            float[] result = new float[count];
+            for (int i = 0; i < count; i++)
+            {
+                result[i] = nodes[i].Temperature;
+                if (result[i] > row.PeakTemperature) row.PeakTemperature = result[i];
+            }
+            lastTemperatures = result;
+
+            if (reference != null && reference.Length == count)
+            {
+                double sumSquares = 0;
+                for (int i = 0; i < count; i++)
+                {
+                    float error = Math.Abs(result[i] - reference[i]);
+                    sumSquares += (double)error * error;
+                    if (error > row.MaxError) row.MaxError = error;
+                }
+
+                row.RmsError = Math.Sqrt(sumSquares / count);
+            }
+
+            return row;
+        }
+
+        public static string CeilingTable(IList<CeilingRow> rows)
+        {
+            StringBuilder sb = new StringBuilder();
+
+            sb.Append("ceiling".PadLeft(9))
+              .Append("demanded".PadLeft(10))
+              .Append("granted".PadLeft(10))
+              .Append("over".PadLeft(7))
+              .Append("ms".PadLeft(10))
+              .Append("x granted".PadLeft(11))
+              .Append("peak K".PadLeft(10))
+              .Append("peakErr".PadLeft(10))
+              .Append("maxErr K".PadLeft(11))
+              .Append("rmsErr K".PadLeft(11))
+              .Append('\n');
+
+            if (rows.Count > 0)
+            {
+                sb.Append("  step ")
+                  .Append(rows[0].StepSeconds.ToString("n4"))
+                  .Append(" s (Frequency ")
+                  .Append((1f / rows[0].StepSeconds).ToString("n0"))
+                  .Append("), air ")
+                  .Append(rows[0].AirDensity.ToString("n2"))
+                  .Append(" at ")
+                  .Append(rows[0].Speed.ToString("n0"))
+                  .Append(" m/s, ")
+                  .Append(rows[0].Nodes.ToString("n0"))
+                  .Append(" nodes\n");
+            }
+
+            double baseline = rows.Count > 0 ? rows[0].Milliseconds : 0;
+
+            for (int i = 0; i < rows.Count; i++)
+            {
+                CeilingRow row = rows[i];
+
+                sb.Append((row.Ceiling >= Hulls.Unbounded ? "granted" : row.Ceiling.ToString()).PadLeft(9))
+                  .Append(row.RequiredSubsteps.ToString("n2").PadLeft(10))
+                  .Append(row.MeanGranted.ToString("n2").PadLeft(10))
+                  .Append((row.Bound ? row.Oversubscription.ToString("n2") + "x" : "-").PadLeft(7))
+                  .Append(row.Milliseconds.ToString("n0").PadLeft(10))
+                  .Append((row.Milliseconds <= 0 ? "-" : (baseline / row.Milliseconds).ToString("n2") + "x").PadLeft(11))
+                  .Append(row.PeakTemperature.ToString("n1").PadLeft(10))
+                  .Append((i == 0 ? "-" : row.PeakError.ToString("n3")).PadLeft(10))
+                  .Append((i == 0 ? "-" : row.MaxError.ToString("n4")).PadLeft(11))
+                  .Append((i == 0 ? "-" : row.RmsError.ToString("n4")).PadLeft(11))
+                  .Append('\n');
+            }
+
+            return sb.ToString();
+        }
+
         // ---- reporting ----------------------------------------------------------------------
 
         public static string Table(IList<ScaleRow> rows)

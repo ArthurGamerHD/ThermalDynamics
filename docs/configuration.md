@@ -428,8 +428,12 @@ ways to move more heat per second. The accurate one raises `HeatTimeScale` and g
 substeps its stiffness demands. The approximate one raises `HeatTimeScale` *and refuses* the substeps
 with `MaxSubsteps`, letting the overshoot clamps decide how much crosses — which is the most a
 substep can carry, by definition. Measured: the clamped route delivered 0.125 blocks/s per substep/s
-against 0.045 for the accurate one. **The shipped configuration takes the accurate route**, which is
-what `MaxSubsteps 64` is for.
+against 0.045 for the accurate one. **The shipped configuration takes the accurate route almost
+everywhere**, which is what `MaxSubsteps 64` is for — but not quite everywhere: in thick air at
+200 m/s about a fifth of a real population demands 73.4 and is refused. What that refusal costs has
+been measured and it is **0.028 K** on the hottest block over 600 simulated seconds, because 1.15×
+over-subscribed is the free end of that trade. See
+[stiffness.md](stiffness.md#what-refusing-the-demand-costs).
 
 **The far end is a wall, not a slope.** Past roughly `HeatTimeScale / Frequency = 4000` the clamps
 are carrying the entire step and blocks start being driven to the ambient floor. The shipped ratio is

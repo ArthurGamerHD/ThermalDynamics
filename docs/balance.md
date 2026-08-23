@@ -1039,8 +1039,21 @@ eight of its figures come out at **2.000×** what it published, in four environm
 200 m/s in thick air the panel's p99 demand is **73.4**, and **14 of 49 hulls are over the cap**;
 the median hull is at 61.7, which is 96 % of it. The same run on the forty-hull retest set gives
 73.6 and the same verdict, so this is a property of the configuration rather than of a population.
-Exceeding the cap is not a slow step — the solver refuses to divide finely enough and floors the
-block's heat capacity instead — so a hull over it is being simulated *wrong*, not slowly.
+Exceeding the cap is not a slow step: the solver integrates the step at the ceiling instead of
+dividing it as finely as the estimate asked. **What that costs is now measured and it is 0.028 K**
+— on the hottest block of a driven census hull over 600 simulated seconds, in the same thick air at
+200 m/s, against a run granted everything it asked for. Every hull over the cap in either
+population is at 1.14–1.15× over-subscribed, which is the first rung of a ladder that stays free to
+about 2× and breaks between 2× and 3×; the worst block on that rung is 0.041 K out. See
+[stiffness.md](stiffness.md#what-refusing-the-demand-costs).
+
+**Two claims this section carried are corrected.** The mechanism named — the solver flooring a
+block's heat capacity — is `MaxSubstepsPerBlock`, which ships at zero and does not run; what bounds
+the refused step is the two overshoot clamps. And *simulated wrong rather than slowly* is not what
+the measurement says: refusing 1.15× the demand buys 1.15× of the step for three hundredths
+of a kelvin. **`G6` still fails as written** — the criterion's marker is demand exceeding what the
+caps grant, and it does — but the failure now has a price on it, and it is smaller than the
+instrument that reads it.
 
 The criterion had been scored in vacuum, where the same panel demands 7.1 at p95 and nothing is
 close to anything. **`G6` was read where the money is not being spent.**
@@ -1068,9 +1081,11 @@ Measured over the 49-ship panel, worst environment per cell, against the 64 the 
 | ×4 / 90 | 34.8 | 54 % | pass | 32.7 / 38.4 | 60 % | pass |
 | ×4 / 80 | 30.9 | 48 % | pass | 29.1 / 34.1 | 53 % | pass |
 
-**So the retune is not a cost to be justified — it is the fix for a defect that already exists**,
-and its vacuum price is paid in the environment where demand is 12 % of the cap rather than 115 %
-of it. `PairSweep.EveryCandidateCellIsPricedInAir` is the run and `tools/corpus/air.py` scores it.
+**So the retune is cheaper here than the cost column made it look**, and its vacuum price is paid
+in the environment where demand is 12 % of the cap rather than 115 % of it. It was read as *the fix
+for a defect that already exists*; that reading is withdrawn — the defect is worth 0.028 K on the
+hottest block ([stiffness.md](stiffness.md#what-refusing-the-demand-costs)), so the retune has to be
+justified by `G8`'s timing after all, not by this. `PairSweep.EveryCandidateCellIsPricedInAir` is the run and `tools/corpus/air.py` scores it.
 
 **What this does not measure.** The 300 m/s columns are a projection — demand is linear in the
 convection coefficient, fitted per cell on its own three atmospheric points, and validated against a

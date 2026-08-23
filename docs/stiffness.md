@@ -187,6 +187,62 @@ Sixteen blocks of 1,381 are raised at cap 8. Two, at cap 16.
 
 ---
 
+## What refusing the demand costs
+
+`MaxSubsteps` is the other cap, and it is the one that ships bound. The per-block floor below is
+off by default; the global ceiling is 64 and the 49-ship panel's p99 demand in thick air at 200 m/s
+is **73.4**, so the shipped configuration asks for more than it is granted on about a fifth of a
+real population. [balance.md](balance.md#air-is-where-the-substep-budget-goes-and-the-shipped-pair-does-not-fit-it)
+records that as a `G6` failure; what nobody had measured is what the refusal actually does.
+
+**What happens is not the floor below.** `ApplyThermalMassFloor` returns immediately when
+`MaxSubstepsPerBlock` is zero, which is what ships, so no capacity is raised and no block is
+approximated on purpose. The step is simply integrated at the ceiling, with the two overshoot
+clamps — `ClampConductionOvershoot` and `ClampEnvironmentOvershoot`, both on by default — bounding
+every exchange it makes at the energy that brings the pair to equilibrium. The result is damped and
+bounded rather than unstable.
+
+**The quantity is the over-subscription, not the substep count.** A step demanding 72 and granted 62
+and a step demanding 36 and granted 31 are the same question asked of the integrator, and they cost
+the same to four significant figures — measured at two step lengths on the same hull, which is what
+lets a rig answer for a population it is not a member of.
+
+`bench ceiling --size 4000 --ticks 2400 --driven`, a 4,386-node census hull in thick air at 200 m/s
+with its producers running, 600 simulated seconds, error against the run granted everything it asked
+for:
+
+| granted | over-subscribed | speed | peak error | worst block | rms |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 35 (its demand) | — | 1.00× | — | — | — |
+| 30 | **1.15×** | 1.15× | **0.028 K** | 0.041 K | 0.004 K |
+| 23 | 1.50× | 1.47× | 0.068 K | 0.099 K | 0.010 K |
+| 17 | 2.03× | 1.99× | 0.101 K | 0.148 K | 0.016 K |
+| 11 | 3.13× | 1.80× | 0.137 K | **5.116 K** | 0.084 K |
+| 8 | 4.31× | 2.48× | 0.185 K | 12.012 K | 0.269 K |
+| 4 | 8.61× | 4.49× | 2.062 K | 325.232 K | 25.719 K |
+
+**Three things to read out of it.**
+
+**The approximation is free to about twice over-subscribed**, and the knee is between 2× and 3×:
+the worst block goes from a seventh of a kelvin to five kelvin across that one rung, while the
+hottest block — the number overheat damage is taken off — barely moves until 9×.
+
+**The shipped breach is the first rung.** Every hull over the cap in either population sits between
+1.14× and 1.15×: 14 of 50 on the panel and 8 of 40 on the retest set, and the maximum in both is
+73.4 against 64. That is not a tail, it is a ceiling — the stiffest block class is the same fitting
+on every ship and its demand in thick air at 200 m/s is set by the convection coefficient rather
+than by the hull. So the population is not spread across this table; it is all on one row of it.
+
+**The saving is proportional and the error is not.** Refusing 1.15× of the demand buys 1.15× of the
+step for 0.03 K on the hottest block. Granting it instead — a ceiling of 128 — costs that 15 % back,
+in thick air at flying speed only, since the same hull demands 7 substeps in vacuum and the ceiling
+never binds there.
+
+Measured over 100 simulated seconds the same rung reads 0.003 K rather than 0.028 K, so the error
+grows with the run and grows slowly; it is a lag rather than a divergence, which is what the clamps
+being live predicts. `SubstepCeilingTests` pins the first rung, the ninth, and the claim that the
+ratio rather than the count is what sets the error.
+
 ## What to do about it
 
 Four routes, cheapest first. The first is built and measured; the other three are re-ranked
@@ -752,6 +808,7 @@ conductivity 50 is conduction-stiff, and a material definition would fix them ou
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | **Measured what the *global* ceiling costs when it refuses a demand**, which nothing had — the page had a floor sweep and no ceiling sweep, and [backlog.md](backlog.md) `C19` was answering the question by naming the floor, which ships off. Added [What refusing the demand costs](#what-refusing-the-demand-costs) and `bench ceiling`: free to about 2× over-subscribed, breaking between 2× and 3×, and the shipped breach of 1.15× worth 0.028 K on the hottest block over 600 simulated seconds. The error follows the ratio rather than the substep count, measured at two step lengths, which is what lets a rig answer for a population. |
 | 2026-08-22 | Labelled the two cap tables by their step length alone, and named the shipped one. They were labelled by which settings profiles ran at each rate, and the profiles are gone; the shipped `Frequency` is 4, so the quarter-second table is now the one a default world reads. |
 | 2026-08-22 | Gave up *A number in the report that does not add up* to [telemetry.md](telemetry.md#whether-the-report-agrees-with-itself), which carries the same defect, the invariants the Consistency section now states and the fix — this page was a second, older account of a report it does not own. Moved four historical asides into this log, keeping what each of them was *for*: that a cap table has to name its step length, that a recommendation quoted without its rate is out by two, that the equilibrium claim is safe only in the limit, and that a ratio is formed from two measurements of the same block (`E6`). |
 | 2026-08-22 | Took the decorative-block findings from `field-tuning.md` — the definitions fixing the conduction half only, and exposed area as the knob that reaches the other half — since this page is where that subject lives. Added the standard header and this log. |

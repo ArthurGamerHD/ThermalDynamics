@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Text;
 using Thermodynamics.Core;
@@ -729,6 +730,7 @@ namespace Thermodynamics.Sim
         ///   bench weld  --size 250000         a block welded on every tick
         ///   bench load  --size 1000000        what building the grid costs before tick one
         ///   bench floor --size 42000           what a per-block substep cap buys, and costs
+        ///   bench ceiling --size 42000         what refusing a substep demand costs, in air
         ///   bench report --csv out/            the full performance report, as a CSV to diff
         ///   bench report --baseline out/performance.csv   the same, against an earlier one
         /// </summary>
@@ -1085,6 +1087,30 @@ namespace Thermodynamics.Sim
                     return 0;
                 }
 
+                case "ceiling":
+                {
+                    float speed = OptionFloat(args, "--speed", 200f);
+
+                    Console.WriteLine();
+                    Console.WriteLine("== substep ceiling, " + shape + " " + size.ToString("n0") + " ==");
+                    Console.WriteLine("  MaxSubsteps swept, on a hull built from the measured block"
+                        + " census, in thick air at " + speed.ToString("n0") + " m/s.");
+                    Console.WriteLine("  " + (ticks > 0 ? ticks : 200) + " steps, "
+                        + (Has(args, "--driven")
+                            ? "the census share of heat producers run to equilibrium"
+                            : "temperatures spread 250-750 K")
+                        + ". Error is against the run granted its demand.");
+                    Console.WriteLine("  --speed N sets the airflow; air is where the demand is,"
+                        + " and in vacuum no ceiling binds.");
+                    Console.WriteLine();
+
+                    Console.WriteLine(LoadBenchmarks.CeilingTable(LoadBenchmarks.SubstepCeiling(
+                        shape, size, ticks > 0 ? ticks : 200, null,
+                        message => Console.Error.WriteLine("  " + message),
+                        Has(args, "--driven"), OptionInt(args, "--frequency", 0), speed)));
+                    return 0;
+                }
+
                 case "floor":
                 {
                     int[] caps = { 0, 32, 16, 8, 6, 4, 3, 2, 1 };
@@ -1163,6 +1189,15 @@ namespace Thermodynamics.Sim
             string raw = Option(args, flag, null);
             int value;
             return raw != null && int.TryParse(raw, out value) ? value : fallback;
+        }
+
+        private static float OptionFloat(string[] args, string flag, float fallback)
+        {
+            string raw = Option(args, flag, null);
+            float value;
+            return raw != null
+                && float.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out value)
+                ? value : fallback;
         }
 
         private static void PrintTable(ScenarioResult result)
@@ -1257,6 +1292,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  bench weld  --size N    a block welded on every tick");
             Console.WriteLine("  bench load  --size N    what building the grid costs before tick one");
             Console.WriteLine("  bench floor --size N    what a per-block substep cap buys, and costs");
+            Console.WriteLine("  bench ceiling --size N  what refusing a substep demand costs, in air");
             Console.WriteLine("  bench report            full performance report; --baseline <csv> to compare");
             Console.WriteLine("  bench spike --size N    one block placed, split by stage");
             Console.WriteLine("  bench steppath          a step at the solver, against a step through the host");
