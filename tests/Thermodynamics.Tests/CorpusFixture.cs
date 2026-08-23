@@ -302,17 +302,6 @@ namespace Thermodynamics.Tests
 
             return ships;
         }
-
-        /// <summary>
-        /// Ships per batch when a test walks the whole corpus.
-        ///
-        /// Every batch is a barrier — the next one cannot start until the slowest ship in this one
-        /// has settled — so a small batch pays that cost often and leaves workers idle waiting for
-        /// one capital hull. Large enough to keep thirty-odd workers fed, small enough that what is
-        /// alive at once is a few gigabytes rather than the sixty-eight the corpus weighs.
-        /// </summary>
-        public const int BatchSize = 120;
-
         /// <summary>
         /// Where a walk of the corpus reports how far it has got, when
         /// <c>THERMAL_CORPUS_PROGRESS</c> names a file.
@@ -392,7 +381,16 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>A file above this competes for a parse slot instead of being read immediately.</summary>
+        /// <summary>
+        /// A file above this competes for a parse slot instead of being read immediately.
+        ///
+        /// **This is the whole of what bounds a sweep's memory**, and it is a bound on bytes rather
+        /// than on a count because a count is not a bound on anything that matters: the corpus
+        /// holds one blueprint of 1.85 GB against a median of 1 MB, and an XML document costs
+        /// several times its file on the heap. What is alive at once is four heavy files and the
+        /// light ones the workers hold, which is a few gigabytes rather than the sixty-eight the
+        /// corpus weighs.
+        /// </summary>
         private const long HeavyFileBytes = 48L * 1024L * 1024L;
 
         /// <summary>
@@ -513,119 +511,12 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// Source XML a batch may hold before it is closed early, whatever the ship count.
-        ///
-        /// <para>
-        /// A count alone is not a bound on anything that matters. The corpus holds one blueprint of
-        /// 1.85 GB and a median of 1 MB, and an XML document costs several times its file on the
-        /// heap — so a hundred and twenty of the largest ships is not a large batch, it is an
-        /// impossible one, and reading them across thirty-one workers at once is how a run finds
-        /// the memory ceiling and dies there. Sorted largest-first, that batch is the *first* one.
-        /// A byte budget is the bound the count was pretending to be.
-        /// </para>
-        /// </summary>
-        public const long BatchBytes = 768L * 1024L * 1024L;
-
-        /// <summary>A batch above this competes for a parse slot instead of reading immediately.</summary>
-        private const long HeavyBatchBytes = 256L * 1024L * 1024L;
-
-        /// <summary>
-        /// How many heavy batches may be parsed at once **across every walk in the run**, which is the
-        /// quantity that has to fit: the walks start together and read the same corpus largest-first,
-        /// so all of them reach for the same 1.85 GB blueprint at once. Only heavy batches queue
-        /// (`O1`, `O5`).
+        /// How many heavy blueprints may be parsed at once **across every walk in the run**, which
+        /// is the quantity that has to fit: the walks start together and read the same corpus
+        /// largest-first, so all of them reach for the same 1.85 GB blueprint at once. Only a heavy
+        /// file queues, and a light one is read the moment a worker reaches it (`O1`, `O5`).
         /// </summary>
         private static readonly System.Threading.SemaphoreSlim ParseSlots =
             new System.Threading.SemaphoreSlim(4, 4);
-
-        /// <summary>
-        /// The sample cut into batches, read lazily.
-        ///
-        /// <para>
-        /// Handing five thousand ships to the lab in one call would build five thousand assemblies
-        /// across every worker at once, and the corpus runs to tens of gigabytes of blueprints. An
-        /// uncapped sweep of it has already taken a machine down. Batching bounds what is alive at
-        /// any moment to the batch rather than to the corpus, at no cost to coverage — every ship
-        /// is still run, and the lab still fans each batch out across its workers.
-        /// </para>
-        ///
-        /// <param name="label">Names this walk in the progress file, so concurrent tests can be
-        /// told apart.</param>
-        /// </summary>
-        public static IEnumerable<List<Blueprints.Ship>> Batches(string label)
-        {
-            List<string> sample = Sample(label);
-            // An upper bound rather than a count: a batch also closes when it reaches its byte
-            // budget, so the real number is this or more. Progress reads as conservative.
-            int batches = (sample.Count + BatchSize - 1) / BatchSize;
-            int batchNumber = 0;
-            int seen = 0;
-
-            // The definition table is built under a lock on first use. Warming it here means the
-            // workers below find it built rather than all queueing on the same lock.
-            GameBlocks.BySubtype();
-
-            int i = 0;
-            while (i < sample.Count)
-            {
-                // Whichever bound is reached first: the ship count, or the bytes. A batch always
-                // takes at least one file, so a single blueprint larger than the whole budget is
-                // read on its own rather than not at all.
-                List<string> paths = new List<string>();
-                long bytes = 0L;
-
-                while (i < sample.Count && paths.Count < BatchSize)
-                {
-                    long length = Length(sample[i]);
-                    if (paths.Count > 0 && bytes + length > BatchBytes) break;
-
-                    paths.Add(sample[i]);
-                    bytes += length;
-                    i++;
-                }
-
-                // **Read the batch across every worker.** Parsing was the serial half of this
-                // loop: one thread reading twenty-five blueprints while thirty-one cores waited,
-                // then thirty-one cores stepping them while the reader waited. Measured mid-run,
-                // the whole sweep was drawing nine cores of thirty-two. Reading is per-file and
-                // shares nothing, so it fans out exactly as the stepping does.
-                bool heavy = bytes > HeavyBatchBytes;
-                if (heavy) ParseSlots.Wait();
-
-                List<List<Blueprints.Ship>> read;
-                try
-                {
-                    read = LabRun.Map(paths, Blueprints.Read, LabMode.Parallel);
-                }
-                finally
-                {
-                    if (heavy) ParseSlots.Release();
-                }
-
-                List<Blueprints.Ship> batch = new List<Blueprints.Ship>();
-                foreach (List<Blueprints.Ship> ships in read)
-                {
-                    foreach (Blueprints.Ship ship in ships)
-                    {
-                        // The same two filters the corpus scan applies: a ship with one unresolved
-                        // subtype is not a measurement of vanilla balance, and anything under the
-                        // floor is a cockpit or a door rather than a design.
-                        if (!ship.IsVanilla) continue;
-                        if (ship.Blocks < CorpusLab.MinimumBlocks) continue;
-
-                        batch.Add(ship);
-                    }
-                }
-
-                seen += batch.Count;
-                Report(label, ++batchNumber, batches, seen, i);
-
-                if (batch.Count > 0) yield return batch;
-
-                // Lazily, so the caller's batch is collectable before the next one is read. A
-                // method that built every batch up front would hold the whole corpus again by a
-                // longer route.
-            }
-        }
     }
 }
