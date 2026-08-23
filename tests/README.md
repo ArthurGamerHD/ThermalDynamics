@@ -427,7 +427,7 @@ PipeFitter.BuildRing(builder, ring);      // pump goes on the first straight run
 
 ## Test coverage
 
-1,767 tests. **What each class is for is stated in its own summary, not here** —
+1,769 tests. **What each class is for is stated in its own summary, not here** —
 the index below says where to look, and `EveryTestClassSaysWhatItIsFor` fails when a class arrives
 without saying. This table is checked by `EveryTestClassIsInTheIndex`, so a suite cannot be added
 and left off it.
@@ -477,6 +477,7 @@ and left off it.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | Extended `LoadDialTests` to the charge duration, which is the number `G8` is now scored against: a drive holds 3 MWh, draws 32 MW and keeps 80 % of it, so it fills in 421.9 s. Every figure is read off the game's own definition, because a duration invented here would be the criterion being scored against an assumption. |
 | 2026-08-23 | Indexed `LoadDialTests`, which checks that the pair grid's third axis reaches the blocks and reaches nothing else — a sweep dial that reached nothing would report *no change* in exactly the shape of one that reached everything and changed nothing, which is the failure the retest set's `reach.csv` exists for. Conductivity above all: the whole point of that axis is that it is not transport. |
 | 2026-08-23 | Indexed `ConductionPaceTests`, which guards a ratio rather than a number: the game has two conduction paces — one for solids, one for the coolant loop's fluid coupling — and nothing made them agree. Moving one alone weakens every loop relative to the structure it competes with, and the only thing that said so when it happened was four balance tests failing for what read like unrelated reasons. |
 | 2026-08-23 | Indexed `AirCostTests`, which pins the arithmetic under `C19`: demand is a conductance times the step over a capacity, so it is exactly proportional to the step — which is why every atmospheric figure taken at `Frequency` 8 was half — and lowering the clock divides every stiffness term while raising conductivity restores only conduction. Two rigs, one conduction-limited and one convection-limited, because a hull mixes the two in proportions nobody chose. The population figures it stands beside cannot be pinned here and are not; they are scored by `tools/corpus/air.py`. |

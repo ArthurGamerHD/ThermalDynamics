@@ -837,7 +837,7 @@ measured rather than read off the fit.
 conduction grid was read with. Clock 110 sits 3 % from the window edge and clock 80 sits 1 % from
 the recovery bound; 100 is 16 % clear of both. **Would be, because every row of this table is
 conditional on the load case it was taken in**, and measured against the other one it does not hold
-— see [neither route survives the other bound](#measured-neither-route-survives-the-other-bound-and-g8-cannot-be-scored-against-either).
+— see [neither route survives the other bound](#the-event-has-a-length-and-measured-across-it-g8-selects-the-same-cells).
 
 #### What it costs, and it is not free either
 
@@ -862,7 +862,42 @@ substep cap to about 50 %.
 of the mod's levers; the load buys it with a quarter of the damage. That is the trade, and it is now
 measured on both sides rather than argued.
 
-#### Measured: neither route survives the other bound, and `G8` cannot be scored against either
+#### The event has a length, and measured across it `G8` selects the same cells
+
+A jump drive holds `PowerNeededForJump` 3 MWh, draws `RequiredPowerInput` 32 MW while filling and
+keeps `PowerEfficiency` 0.8 of it, so it fills in **421.9 s**. Every one of those figures is read off
+the definition the game ships; none is chosen here. That is the length of the largest thermal event
+most ships have, and `jump-charge` is the scenario that runs it: the drives charge for 421.9 s,
+finish, and the ship holds.
+
+| | crossing p50 across the charge | crossed | recovery p50 | `G8` |
+| --- | ---: | ---: | ---: | :---: |
+| *(shipped)* ×1 / 225 | **10.4 s** | 29/40 | 1,320 s | — |
+| the load route, ×0.5 / 110 | 122.4 s | 22/40 | 2,670 s | **pass** |
+| the load route, ×0.5 / 100 | **134.5 s** | 22/40 | 2,880 s | **pass** |
+| the load route, ×0.5 / 90 | 149.5 s | 22/40 | 3,180 s | **pass** |
+| the load route, ×0.5 / 80 | 168.1 s | 22/40 | 3,570 s | **pass** |
+| the conduction route, ×4 / 120 | 124.0 s | 25/40 | 2,220 s | **pass** |
+| the conduction route, ×4 / 100 | 148.9 s | 25/40 | 2,640 s | **pass** |
+| the conduction route, ×4 / 90 | 165.4 s | 25/40 | 2,940 s | **pass** |
+
+**So `G8` can be scored, and it selects the cells the two grids already found.** The transient
+reproduces the charging bound to the last figure, because every hull that crosses does so in the
+first minute of a seven-minute charge — which is itself the clearest statement of the defect:
+**a player who starts charging a jump drive has a block past its rating about ten seconds in, and
+the charge runs for seven minutes.**
+
+**This corrects the section below.** `full-electrical-charged` is not a bound on the event; it is a
+ship not having one, and reading *fewer than half the hulls cross* there as evidence against the two
+routes was reading the absence of an event as a short one. The two real bounds on the event are its
+length and its absence, and the length is what `G8` is about.
+
+**Two things this does not settle.** The ×0.5 cells cross on 22 of 40 hulls, which is barely over
+the half the median needs, so the pass is not robust to a different population. And ×4 / 80 lost
+seven hulls to run failures in this dataset and is reported on 33; its `full-electrical` figure of
+186.0 s over 40 stands and its `jump-charge` figure does not.
+
+#### Measured: with the drives full there is no event to time
 
 The confound below was measured rather than left as a caveat. `full-electrical-charged` is the same
 load with the jump drives full instead of charging, and every cell of both routes was run through
@@ -874,25 +909,23 @@ both cases on the same forty hulls:
 | the load route, ×0.5 / 100 | **134.5 s** | 22/40 | **censored** | 3/40 |
 | the conduction route, ×4 / 100 | **148.9 s** | 25/40 | **censored** | 6/40 |
 
-**Both routes satisfy `G8` only while every jump drive is charging.** With the drives full, fewer
-than half the hulls cross critical at all in any of the three, so the 50th percentile sits in the
-censored tail and there is no median to score — the same exclusion that removed conductivity ×8
-(`E9`). The shipped configuration is in the same position: 12 of 40.
+**With the drives full, fewer than half the hulls cross critical at all in any of the three**, so
+the 50th percentile sits in the censored tail and there is no median. The shipped configuration is
+in the same position: 12 of 40. **Read correctly that is not a failure of the routes** — it is a
+ship that is not doing the thing, and a criterion about an event cannot be scored where there is no
+event. It is kept because it is the other half of the bracket and because it says how much of a
+loaded ship's heat one block type is.
 
 **So the mod is both too fast and too slow, and which one depends on one block.** With drives
 charging the median hull crosses in 10 s, far under the window; with them full it never crosses.
 Drives are 71.3 % of population waste, and a ship carries either state at different minutes of the
 same session.
 
-**That is a fact about the criterion, not about the dials.** `G8` asks for *the most significant
-thermal event* to land in 2–5 minutes, and on a real ship that event **is** the drive charging — a
-transient with a beginning and an end. Both scenarios model it as permanent or absent, and neither
-is a steady state a hull ever sits in. What `G8` needs is a **duty-cycled load**: a drive that
-charges, finishes and stops, measured across the whole cycle. `Battery` already runs one scenario
-that changes state mid-run — `recovery` burns and then throttles to idle — so the shape exists.
+**`G8` asks for *the most significant thermal event* to land in 2–5 minutes, and on a real ship that
+event is the drive charging** — a transient with a beginning and an end, which neither of these two
+cases is. That is what `jump-charge` above measures, and it is where the criterion is scored.
 
-**This is a correction to the two sections above**, and it is why neither names a cell to ship. It
-also reproduced both of them: the conduction route's four cells came out at 124.0, 148.9, 165.4 and
+**This dataset reproduced both grids** : the conduction route's four cells came out at 124.0, 148.9, 165.4 and
 186.0 s in this dataset against 124.0, 148.9, 165.4 and 186.0 s in the pair grid, which is two
 independent runs agreeing to the last figure.
 
@@ -1120,6 +1153,7 @@ five ways a full sweep dies, and [backlog.md](backlog.md) for what is still open
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | **Gave `G8` a load case that is an event, and it selects the cells the grids already found.** A jump drive holds 3 MWh, draws 32 MW and keeps 80 % of it, so it fills in **421.9 s** — every figure off the game's own definition — and `jump-charge` runs exactly that: charge, finish, hold. Measured across it, both routes satisfy `G8` and the shipped pair does not, at 10.4 s. **This corrects the entry below**: `full-electrical-charged` is a ship not having an event, not a bound on one, and reading its censored medians as evidence against the routes was reading an absence as a short crossing. The transient reproduces the charging bound to the last figure, because every hull that crosses does so in the first minute of a seven-minute charge — which is the defect in one sentence. |
 | 2026-08-23 | **Measured `F13`, and it withdraws both of `C12`'s routes.** `full-electrical` charges every jump drive for the whole run; run against the other bound — the same load with the drives full — the conduction route crosses on 6 of 40 hulls, the load route on 3, and the shipped configuration on 12. All three are censored, so none has a median and none satisfies `G8`. **The mod is both too fast and too slow depending on one block**: 10 s to cross with drives charging, never with them full. That is a fact about the criterion rather than the dials — `G8`'s *most significant thermal event* is the drive charging, which is a transient, and both scenarios model it as permanent or absent. What it needs is a duty-cycled load. The comparison also reproduced the pair grid's four cells to the last figure across two independent runs, and found that the jump drive was filed as a *tool*, so `State.Consumers` never reached 71.3 % of the load's heat — neutral on every published figure, checked against 1,794 rows of which none moved. |
 | 2026-08-23 | **The significance window is reachable without touching transport.** Eighteen cells of the load against the clock: `G8` is satisfied by waste ×0.5 at `HeatTimeScale` 110, 100, 90 and 80, at conductivity ×1 — so plumbing, radiation geometry and air are all untouched — while keeping `G1`, `G2` and `G5` and costing 0.43× the substep demand, which also takes `C19`'s atmospheric breach from 115 % of the cap to about 50 %. **The ratio is the quantity**: `recovery / crossing` is 127 at the shipped load and needs 30 or less, the clock cannot change it because both halves go as one over the clock, and the load can — 315 at ×2, 127 at ×1, 21 at ×0.5. It costs the bite rather than the levers: the median hull peaks 264 K cooler and loses one block instead of four. **And it rests on a confound**: `full-electrical` charges every jump drive continuously (`F13`), so a ×0.5 multiplier is within the distance between that bound and a realistic load, and the alternative reading is that nothing needs retuning at all. |
 | 2026-08-23 | **Built `C12`'s retune, measured it, and did not ship it.** `ConductionScale` 2.4 → 9.6 with `HeatTimeScale` 225 → 100 satisfies `G8` and fixes `C19`, and costs three of the mod's four levers: a coolant sink stops out-performing the best surface dial (195.3 K vs 41.5 K becomes 73.3 K vs 135.3 K), bolting starts working, a 300 MW reactor buried in armour settles inside its rating, and the stiffest block on the census hull stops responding to air at all. The sweep that chose ×4 scored `G1`, `G2`, `G5`, `G8` and cost, and never scored `G3`. Also found the trap underneath it: the game has two conduction paces and nothing made them agree, so raising the solid one alone weakens every coolant loop by four relative to the structure it competes with — `ConductionPaceTests` now fails if one moves without the other. |

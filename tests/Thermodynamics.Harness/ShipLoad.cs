@@ -237,6 +237,46 @@ namespace Thermodynamics.Harness
             return watts;
         }
 
+        /// <summary>
+        /// How long this ship's jump drives take to fill from empty, in simulated seconds, or zero
+        /// where it carries none.
+        ///
+        /// <para>
+        /// **The length of the largest thermal event most ships have, and the game states it.** A
+        /// drive holds `PowerNeededForJump` megawatt-hours, draws `RequiredPowerInput` megawatts
+        /// while filling, and stores `PowerEfficiency` of what it draws — so the shipped large
+        /// drive holds 3 MWh, draws 32 MW, keeps 80 % of it, and fills in **421.9 s**. Nothing here
+        /// is chosen: every figure is read off the definition the game ships.
+        /// </para>
+        ///
+        /// <para>
+        /// **The longest drive on the ship sets it**, because the ship is charging until the last
+        /// one is done and that is when the load falls away.
+        /// </para>
+        /// </summary>
+        public static float ChargeSeconds(ShipAssembly assembly)
+        {
+            if (assembly == null) return 0f;
+
+            Dictionary<string, GameBlocks.Definition> definitions = GameBlocks.BySubtype();
+            float longest = 0f;
+
+            foreach (ThermalNode node in assembly.Nodes)
+            {
+                GameBlocks.Definition definition;
+                if (!definitions.TryGetValue(node.Block.Name, out definition)) continue;
+                if (!IsDrive(definition.TypeId)) continue;
+
+                float stored = definition.PowerDrawWatts * definition.PowerEfficiency;
+                if (stored <= 0f || definition.JumpEnergyJoules <= 0f) continue;
+
+                float seconds = definition.JumpEnergyJoules / stored;
+                if (seconds > longest) longest = seconds;
+            }
+
+            return longest;
+        }
+
         /// <summary>Spreads a supplied total over a set of producers in proportion to their rating.</summary>
         private static void Share(Dictionary<string, GameBlocks.Definition> definitions,
             List<BlockInstance> producers, float installed, float supplied)

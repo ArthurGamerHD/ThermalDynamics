@@ -191,10 +191,12 @@ THERMAL_CORPUS_TESTS=1 THERMAL_CORPUS_DATA=$PWD/out/pairs-2026-08-23 \
 python3 tools/corpus/pairs.py out/pairs-2026-08-23
 ```
 
-**And the load pass, which is the third question the class answers.** It runs two load cases —
-`full-electrical`, which charges every jump drive for the whole run, and `full-electrical-charged`,
-the same load with them full — because drives are 71.3 % of the corpus's full-load waste heat and
-those two bracket what a loaded ship makes rather than either being right. Conduction and the clock are
+**And the load pass, which is the third question the class answers.** It runs three load cases. `full-electrical`
+charges every jump drive for the whole run and `full-electrical-charged` never charges one; drives
+are 71.3 % of the corpus's full-load waste heat, so those two bracket what a loaded ship makes.
+**`jump-charge` is the one `G8` is scored on**: a drive fills in 421.9 s — 3 MWh at 32 MW with 0.8
+efficiency, every figure off the game's own definition — so the scenario charges for exactly that
+and then holds, which is the event rather than a bound on it. Conduction and the clock are
 both transport; `EveryLoadAndClockPairGetsAMeasuredCell` moves how much heat a ship makes against
 the clock instead, and `load.py` scores the same criteria. Ten minutes on the retest set. It imports
 `pairs.py`'s thresholds and censoring rather than restating them, because two scorers that drift
@@ -259,6 +261,7 @@ limit in [known-issues.md](../../docs/known-issues.md).
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | Gave the load pass `jump-charge`, the case `G8` is scored on: the drives charge for the 421.9 s their own definition implies, finish, and the ship holds. `Battery.Scenario` gained `Then` and `ThenAfterSeconds` for it, which also generalises the name-matched special case `recovery` had been carried by since it was written. |
 | 2026-08-23 | Gave the load pass its second load case, `full-electrical-charged`, which is what answers `F13`: with the drives full nothing in either of `C12`'s routes has a median crossing at all. The dial that makes it possible found a defect on the way — the jump drive was filed as a *tool*, so `State.Consumers` never reached it — and the change is neutral on 1,794 rows of the previous dataset. |
 | 2026-08-23 | Added the load pass and `load.py`: the load against the clock, which is the dial that is not transport. Three grids share one run loop, one row format and one resume-record-per-pass now; the row format gained a `waste` column, and a cell that does not move the load keeps the name the two earlier grids wrote so their records still match the cells they were taken on. |
 | 2026-08-23 | Added the air pass and `air.py`: the same cells `pairs.py` scores for `G8`, priced in the environment `G6` is decided in. It found the shipped configuration over the substep cap at 200 m/s and every atmospheric figure in [balance.md](../../docs/balance.md) exactly half, taken before `Frequency` went 8 to 4 ([backlog.md](../../docs/backlog.md) `C19`). The two sweeps share one run loop and one row format; what differs is which cells and which scenarios, and each keeps its own resume record so one cannot mark a ship done for the other. |

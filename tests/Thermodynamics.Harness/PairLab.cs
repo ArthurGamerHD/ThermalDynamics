@@ -142,7 +142,7 @@ namespace Thermodynamics.Harness
         /// </summary>
         public static readonly string[] LoadScenarios =
         {
-            "idle", "full-electrical", "full-electrical-charged", "recovery",
+            "idle", "full-electrical", "full-electrical-charged", "jump-charge", "recovery",
         };
 
         /// <summary>

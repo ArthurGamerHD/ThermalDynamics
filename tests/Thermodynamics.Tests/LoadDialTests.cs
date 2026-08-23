@@ -126,6 +126,53 @@ namespace Thermodynamics.Tests
             Assert.False(ShipLoad.IsStore("JumpDrive"));
         }
 
+        /// <summary>
+        /// **The charge has a length, and the game states it rather than this harness choosing it.**
+        ///
+        /// A large jump drive holds `PowerNeededForJump` 3 MWh, draws `RequiredPowerInput` 32 MW
+        /// while filling and keeps `PowerEfficiency` 0.8 of that, so it fills in
+        /// <c>3 × 3.6e9 / (32e6 × 0.8)</c> = **421.9 s**. That figure is the length of the largest
+        /// thermal event most ships have, and `G8` is a claim about how it compares to 2–5 minutes
+        /// — so a number invented here would be the criterion being scored against an assumption.
+        /// </summary>
+        [Fact]
+        public void ADriveChargesForAsLongAsItsOwnDefinitionSays()
+        {
+            Dictionary<string, GameBlocks.Definition> byType = GameBlocks.BySubtype();
+            if (byType.Count == 0) return;
+
+            GameBlocks.Definition drive;
+            Assert.True(byType.TryGetValue("LargeJumpDrive", out drive),
+                "the game's own LargeJumpDrive definition was not read, so this cannot check it");
+
+            Assert.Equal(32000000f, drive.PowerDrawWatts, 0);
+            Assert.Equal(0.8f, drive.PowerEfficiency, 3);
+            Assert.Equal(3f * 3.6e9f, drive.JumpEnergyJoules, 0);
+
+            float seconds = drive.JumpEnergyJoules / (drive.PowerDrawWatts * drive.PowerEfficiency);
+            Assert.Equal(421.9f, seconds, 1);
+
+            // And it is longer than G8's window, which is the fact the criterion has to be read
+            // against: the event a player meets lasts seven minutes, and the question is whether a
+            // hull crosses inside it rather than whether the event itself is 2 to 5 minutes long.
+            Assert.True(seconds > 300f);
+        }
+
+        [Fact]
+        public void ABlockThatDoesNotChargeCarriesNoChargeAtAll()
+        {
+            Dictionary<string, GameBlocks.Definition> byType = GameBlocks.BySubtype();
+            if (byType.Count == 0) return;
+
+            GameBlocks.Definition armour;
+            if (!byType.TryGetValue("LargeBlockArmorBlock", out armour)) return;
+
+            Assert.Equal(0f, armour.JumpEnergyJoules, 4);
+
+            // One rather than zero, so a block with no stated efficiency divides by something.
+            Assert.Equal(1f, armour.PowerEfficiency, 4);
+        }
+
         [Fact]
         public void TheLoadGridHasExactlyOneControlAndItRunsFirst()
         {

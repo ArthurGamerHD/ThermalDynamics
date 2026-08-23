@@ -51,6 +51,13 @@ DATA = sys.argv[1] if len(sys.argv) > 1 else "out/load-2026-08-23"
 
 SHIPPED_CLOCK = 225.0
 
+# What each load case is, in one line, because a table of three is unreadable without them.
+CASES = {
+    "full-electrical": "(every jump drive charging, for the whole run — a bound)",
+    "full-electrical-charged": "(the same load, drives full — the other bound)",
+    "jump-charge": "(drives charge for 421.9 s, finish, and hold — the event itself)",
+}
+
 
 def load(name):
     import csv
@@ -106,13 +113,11 @@ def main():
 
     print(f"The load against the clock — {DATA}, {ships} hulls, {len(cells)} cells")
     print()
-    load_cases = [c for c in ("full-electrical", "full-electrical-charged")
+    load_cases = [c for c in ("full-electrical", "full-electrical-charged", "jump-charge")
                   if any(r["scenario"] == c for r in rows)]
 
     for case in load_cases:
-        print(f"load case: {case}"
-              + ("   (every jump drive charging, for the whole run)"
-                 if case == "full-electrical" else "   (the same load, drives full)"))
+        print("load case: " + case + "   " + CASES.get(case, ""))
         print()
         print(f"{'cell':>18} {'waste':>6} {'clock':>6} | {'crossing p50':>12} {'crossed':>9}"
               f" | {'recovery p50':>12} {'settled':>9} | {'ratio':>7} | {'G8':>4}"

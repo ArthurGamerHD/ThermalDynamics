@@ -30,6 +30,24 @@ namespace Thermodynamics.Harness
 
             /// <summary>What this scenario is here to find out. Printed with the results.</summary>
             public string Question;
+
+            /// <summary>
+            /// A second state to switch to partway through, or null for a scenario that holds one
+            /// state throughout.
+            ///
+            /// **The shape a transient needs, and the reason it is here rather than named in the
+            /// runner.** `recovery` has switched state mid-run since it was written, by a test on
+            /// its own name — which works for one case and cannot be reused, so the next transient
+            /// would be a second special case in the same method. This is that generalised.
+            /// </summary>
+            public ShipLoad.State Then;
+
+            /// <summary>
+            /// Simulated seconds the first state runs for before <see cref="Then"/> replaces it,
+            /// as a function of the ship — because the length of a transient is a property of the
+            /// hardware and not a number a scenario gets to choose.
+            /// </summary>
+            public Func<ShipAssembly, float> ThenAfterSeconds;
         }
 
         /// <summary>Air density of an earthlike surface, and of a thin one.</summary>
@@ -122,6 +140,16 @@ namespace Thermodynamics.Harness
                 Question = "G2: every consumer at rating, reactors supplying what they ask",
                 Environment = t => Worlds.Shadow(),
                 Load = ShipLoad.State.Full,
+            });
+
+            scenarios.Add(new Scenario
+            {
+                Name = "jump-charge",
+                Question = "G8: the ship charges its drives, finishes, and holds — the real event",
+                Environment = t => Worlds.Shadow(),
+                Load = ShipLoad.State.Full,
+                Then = ShipLoad.State.Charged,
+                ThenAfterSeconds = ShipLoad.ChargeSeconds,
             });
 
             scenarios.Add(new Scenario
@@ -272,6 +300,22 @@ namespace Thermodynamics.Harness
                 RunUntilSettled(runner, scenario.Seconds);
                 ShipLoad.Apply(assembly, ShipLoad.State.Idle);
                 RunUntilSettled(runner, scenario.Seconds);
+            }
+            else if (scenario.Then != null)
+            {
+                // **Run to the clock, not to a settle.** The first half of a transient is an event
+                // with a length the hardware sets, and stopping it early because the hull stopped
+                // moving would measure a shorter event than the ship actually has — which is the
+                // whole quantity the case exists to report.
+                float first = scenario.ThenAfterSeconds == null
+                    ? scenario.Seconds
+                    : scenario.ThenAfterSeconds(assembly);
+
+                if (first > scenario.Seconds) first = scenario.Seconds;
+                if (first > 0f) runner.Run(first);
+
+                ShipLoad.Apply(assembly, scenario.Then);
+                RunUntilSettled(runner, scenario.Seconds - first);
             }
             else
             {

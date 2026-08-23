@@ -33,6 +33,22 @@ namespace Thermodynamics.Harness
             public readonly bool[] MountFaces = new bool[Face.Count];
 
             /// <summary>
+            /// Energy a jump drive holds when full, in joules, or zero for anything else.
+            ///
+            /// The definitions give it as `PowerNeededForJump` in megawatt-hours; this is that
+            /// times 3.6 GJ. With <see cref="PowerEfficiency"/> and
+            /// <see cref="PowerDrawWatts"/> it is what says how long the charge lasts, which is the
+            /// length of the largest thermal event most ships have.
+            /// </summary>
+            public float JumpEnergyJoules;
+
+            /// <summary>
+            /// Fraction of drawn power that reaches the store, from `PowerEfficiency`. One where a
+            /// definition does not say, which is every block that does not charge.
+            /// </summary>
+            public float PowerEfficiency = 1f;
+
+            /// <summary>
             /// Whether the definition listed any mount points at all.
             ///
             /// **A definition that lists none is not a block that mounts nowhere** — it is a block
@@ -333,6 +349,13 @@ namespace Thermodynamics.Harness
                     Math.Max(Megawatts(definition, "MaxPowerConsumption"),
                         Megawatts(definition, "OperationalPowerConsumption"))));
             if (block.TypeId == "Thrust") block.ThrustNewtons = Number(definition, "ForceMagnitude");
+
+            // Megawatt-hours in the definitions, joules everywhere in this model.
+            block.JumpEnergyJoules = Number(definition, "PowerNeededForJump") * 3600f
+                * ThermalConstants.MegawattsToWatts;
+
+            float efficiency = Number(definition, "PowerEfficiency");
+            if (efficiency > 0f) block.PowerEfficiency = efficiency;
 
             bool airtight;
             string airtightText = (string)definition.Element("IsAirTight");
