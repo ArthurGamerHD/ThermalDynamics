@@ -321,18 +321,24 @@ time, and two cases are load-bearing:
 * **A player adds this mod to an existing world and loads it.** Their fleet must not begin falling
   apart. This is the case `G1` protects, and it holds: 0.22% of the corpus goes critical at idle.
 * **The game spawns a vanilla prefab.** Cargo ships, drones, encounters and respawn ships must not
-  disintegrate on arrival. **This has never been measured**, and it is measurable — see below.
+  disintegrate on arrival. This is `G7`, and **it holds**.
 
 So the balance target is a floor as well as a ceiling. `G2` asks that load bites; this asks that it
 does not bite an unmodified ship that is simply *there*. The two are not in tension at idle, and
 they are the two ends of the same dial under load.
 
-> **The prefabs are sitting in the game install and nothing has ever run them.** There are **705**
-> prefab files under `Content/Data/Prefabs`, including 46 planetary encounters, 41 unknown signals,
-> 38 global encounters, 32 random encounters, 23 cargo ships, 47 drones and the 2 respawn ships.
-> They hold `<CubeGrids><CubeGrid>` exactly as a workshop blueprint does; the corpus parser keys on
-> `Descendants("ShipBlueprint")`, so reading them is a one-element change to a parser that already
-> exists rather than new machinery. Tracked as [backlog](backlog.md) C10.
+> **All 705 prefabs the game ships have now been simulated.** Idle, in the environment each
+> category spawns into, for five simulated minutes: **461,428 blocks across 705 ships, and not one
+> of them crosses its critical temperature, let alone loses a block.** Run `-- prefabs`.
+>
+> **And the same 705 flown hard lose 616.** That is the control rather than the criterion — a floor
+> that can only ever pass has not been tested — and the distance between the two numbers is the
+> whole of what this mod is: a ship that arrives is safe, and a ship that is worked is not.
+>
+> Two things the walk cannot see, which are part of the result. **1,503 blocks are subtypes the
+> installed game no longer defines** — coloured legacy armour, every one of them in
+> `LegacyContent` — so they are not simulated. And one prefab is stored gzipped, which the parser
+> now un-gzips; before that it was one ship the floor was never measured on.
 
 ### Who it is balanced for
 
@@ -618,6 +624,7 @@ very different warnings on very different blocks.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | The compatibility floor is measured. All 705 prefabs the game ships, idle, in the environment each category spawns into: 461,428 blocks and not one crossing critical. The same 705 flown hard lose 616, which is what makes the first number a measurement rather than a formality ([backlog.md](backlog.md) `C10`, criterion `G7`). |
 | 2026-08-22 | Said that *consequential* includes the player. Heat that only damages blocks stops at the airlock, and a burning compartment somebody can stand in is the mod contradicting its own purpose ([backlog.md](backlog.md) `B10`, closed). |
 | 2026-08-22 | Stated that the comment standard here is `R14`, and that the check on it catches the failure the length limit prevents. Twenty-four comments in the tree described a member that was no longer there. |
 | 2026-08-22 | Recorded what a code comment is for: it names a definition or an especially complex chunk of code, stands on its own without context from another file, and stays inside two lines — anything longer is a documentation entry in the wrong file. |

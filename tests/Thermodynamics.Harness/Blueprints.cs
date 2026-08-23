@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.IO.Compression;
 using System.Xml.Linq;
 using Thermodynamics.Core;
 using VRageMath;
@@ -256,6 +257,56 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
+        /// The installed game's own prefab directory, or null — the ships the game spawns rather
+        /// than the ships players upload.
+        /// </summary>
+        public static string PrefabPath()
+        {
+            string content = GameBlocks.ContentPath();
+            if (content == null) return null;
+
+            string prefabs = Path.Combine(content, "Prefabs");
+            return Directory.Exists(prefabs) ? prefabs : null;
+        }
+
+        /// <summary>
+        /// Every prefab file the game ships, sorted so a walk is deterministic.
+        ///
+        /// One file is one prefab — checked, not assumed: all 705 hold exactly one — and a prefab's
+        /// several grids are its subgrids, exactly as a blueprint's are.
+        /// </summary>
+        public static List<string> PrefabFiles(string root = null)
+        {
+            List<string> files = new List<string>();
+
+            string path = root ?? PrefabPath();
+            if (path == null || !Directory.Exists(path)) return files;
+
+            files.AddRange(Directory.GetFiles(path, "*.sbc", SearchOption.AllDirectories));
+            files.Sort(StringComparer.Ordinal);
+            return files;
+        }
+
+        /// <summary>
+        /// Which family of spawn a prefab belongs to, from the directory the game keeps it in.
+        ///
+        /// It is what decides the environment `G7` runs it in, and the game's own layout is the
+        /// only statement of it there is.
+        /// </summary>
+        public static string PrefabCategory(string path)
+        {
+            string root = PrefabPath();
+            if (path == null || root == null) return "";
+
+            string relative = path.StartsWith(root, StringComparison.Ordinal)
+                ? path.Substring(root.Length).TrimStart('/', '\\')
+                : path;
+
+            int slash = relative.IndexOfAny(new[] { '/', '\\' });
+            return slash < 0 ? "" : relative.Substring(0, slash);
+        }
+
+        /// <summary>
         /// Reads one blueprint file into **one ship**, whatever number of grids it holds.
         ///
         /// Returns a list because a file can hold more than one blueprint, which is rare. It does
@@ -312,25 +363,16 @@ namespace Thermodynamics.Harness
         {
             List<Ship> ships = new List<Ship>();
 
-            XDocument document;
-            try
-            {
-                document = XDocument.Load(path);
-            }
-            catch
-            {
-                return ships;
-            }
+            XDocument document = Load(path);
+            if (document == null) return ships;
 
             Dictionary<string, GameBlocks.Definition> definitions = GameBlocks.BySubtype();
 
-            string name = null;
-            foreach (XElement definition in document.Descendants("ShipBlueprint"))
-            {
-                XElement id = definition.Element("Id");
-                if (id != null) name = (string)id.Attribute("Subtype") ?? (string)id.Element("SubtypeId");
-                break;
-            }
+            // A workshop blueprint names itself in a `ShipBlueprint`; the game's own prefabs name
+            // themselves in a `Prefab`. Everything below the name is identical — both hold
+            // `<CubeGrids><CubeGrid>` with the same block elements in it — which is why reading the
+            // game's 705 prefabs needed one element rather than a second parser.
+            string name = NameOf(document, "ShipBlueprint") ?? NameOf(document, "Prefab");
 
             Ship ship = new Ship
             {
@@ -419,6 +461,53 @@ namespace Thermodynamics.Harness
             }
 
             return part;
+        }
+
+        /// <summary>
+        /// Reads an `.sbc`, compressed or not, or null where nothing could be read.
+        ///
+        /// **The game writes some of its own content gzipped** and reads it back transparently, so
+        /// a loader that only handles text is not reading what the game reads. One of the 705
+        /// prefabs in the install is compressed — `LegacyContent/LargeShipRed` — and it was the one
+        /// file `G7` could not measure until this existed. It is sniffed by the two magic bytes
+        /// rather than by the extension, because the extension is the same either way.
+        /// </summary>
+        private static XDocument Load(string path)
+        {
+            try
+            {
+                bool compressed;
+                using (FileStream probe = File.OpenRead(path))
+                {
+                    compressed = probe.ReadByte() == 0x1f && probe.ReadByte() == 0x8b;
+                }
+
+                if (!compressed) return XDocument.Load(path);
+
+                using (FileStream file = File.OpenRead(path))
+                using (GZipStream stream = new GZipStream(file, CompressionMode.Decompress))
+                {
+                    return XDocument.Load(stream);
+                }
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>The subtype of the first <paramref name="element"/> in a document, or null.</summary>
+        private static string NameOf(XDocument document, string element)
+        {
+            foreach (XElement definition in document.Descendants(element))
+            {
+                XElement id = definition.Element("Id");
+                if (id == null) return null;
+
+                return (string)id.Attribute("Subtype") ?? (string)id.Element("SubtypeId");
+            }
+
+            return null;
         }
 
         private static long ParseLong(XElement element)

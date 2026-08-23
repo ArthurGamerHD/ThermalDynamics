@@ -287,6 +287,33 @@ Deduplicated, shipped settings, `HeatTimeScale` 225. Seconds are simulated secon
 **The distribution is bimodal, not spread.** A ship either sits near ambient indefinitely or runs
 away in under ten seconds, and the 2–5 minute window the balance target asks for lands in the gap.
 
+### The compatibility floor holds
+
+`G7` asks that a ship the game spawns survives arriving. Every prefab in the install — 705 files,
+461,428 blocks — run idle in the environment its category spawns into, for five simulated minutes:
+
+| | Prefabs | Cross critical | Lose a block |
+| --- | ---: | ---: | ---: |
+| **arriving** (idle) — this is `G7` | 705 | **0** | **0** |
+| flown hard (everything on) — the control | 705 | 630 | **616** |
+
+**The second row is what makes the first one a measurement.** A floor that can only ever pass has
+not been tested, and running the same ships under load is how this one is shown to be able to fail.
+The distance between the two rows is the whole of what the mod is for: a ship that arrives is safe,
+and a ship that is worked is not.
+
+**Where the failures land under load** is by category, and it is not uniform: 22 of 23 cargo ships,
+45 of 47 drones and 2 of 2 respawn ships lose a block, against 28 of 41 unknown signals and 32 of 46
+planetary encounters. The planetary ones are the mildest, which is convection doing its work.
+
+**Two things the walk cannot see, and they are part of the result.** 1,503 blocks are subtypes the
+installed game no longer defines — coloured legacy armour, every one in `LegacyContent` — so they
+are not simulated at all. And one prefab is stored gzipped; the parser un-gzips it now, and before
+that it was one ship the floor had never been measured on.
+
+Run it with `dotnet run --project tests/Thermodynamics.Sim -- prefabs`, and `--load` for the
+control. `PrefabWalk` holds both in the suite over a stride of 140.
+
 ### Damage arrives too fast to be played around
 
 Of the ships that cross critical at all, seconds from the start of the run to the crossing —
@@ -637,6 +664,7 @@ five ways a full sweep dies, and [backlog.md](backlog.md) for what is still open
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Added [The compatibility floor holds](#the-compatibility-floor-holds). Every one of the 705 prefabs the game ships has now been simulated — the criterion `G7` was written down first ([balance-lab.md](balance-lab.md)) — and none loses a block arriving, against 616 of 705 that do when flown hard. |
 | 2026-08-22 | Restored the damage-timing finding, which the merge of `corpus-shape.md` and the register had dropped, and corrected its idle figure: the median time to critical at idle is **104.5 s**, matching this page's own shape table, where the prose had carried 112 s — one of the eighteen values rather than their median. |
 | 2026-08-22 | Merged `corpus-shape.md` and the corpus findings from `known-issues.md` into this page, so the block-level argument and the population that tests it sit together. **Corrected the jump-drive figures**, which stood at three different values across three pages: recomputed from `composition.csv` and `outcomes.csv`, `LargeJumpDrive` alone is 10,567 blocks on 2,183 ships and 67.1% of full-load waste, while all `JumpDrive` subtypes together are 10,954 on 2,253 and 71.3% — both previous figures were right over populations neither page named. The outcome split is 2,249 ships carrying one against 5,883 without, at 100.0% and 65.5% reaching 400 K; the register had 2,255/5,887 and quoted G2 as both 67.1% and 65.6% in adjacent paragraphs. **Corrected the local-W/m² banding table**, which dropped 894 of 8,132 ships and omitted the 50,000–200,000 band entirely. The block-index tables, the cooling ladder and the reactor sweep were re-verified against the datasets and are unchanged. |
 | 2026-08-22 | Fitted cooling to ships people actually built, and said which half of the cooling criterion the ladder answers and which it does not. |

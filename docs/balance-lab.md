@@ -52,9 +52,13 @@ is a finding rather than an excuse to move a threshold.
 | **G6** | **Affordable across the population.** Substep demand and step cost at p95/p99 of the corpus, not at the mean. | p99 substep demand exceeds what the shipped caps grant | The census hull is one point; the tail is what stutters. |
 | **G7** | **A ship the game spawns survives arrival.** Every vanilla prefab, idle, in the environment its category spawns into, for five simulated minutes, loses no block. | any prefab loses a block | The stated compatibility floor. A mod that destroys the game's own cargo ships as they arrive is broken however good its physics is, and this is the one criterion measured on ships nobody chose to put in a corpus. |
 
-**G7 is written here before it is measured**, which is the whole of `E11` — a criterion added after
-the numbers arrive is not a criterion. Four choices in it are decisions rather than conveniences,
-and each is a decision that could have gone the other way:
+**G7 holds.** All 705 prefabs, 461,428 blocks, idle: not one crosses critical, let alone loses a
+block. The same 705 flown hard lose 616, which is the control rather than the criterion — see
+[balance.md](balance.md#the-compatibility-floor-holds).
+
+**G7 was written here before it was measured**, which is the whole of `E11` — a criterion added after
+the numbers arrive is not a criterion. Four choices in it were decisions rather than conveniences,
+and each could have gone the other way:
 
 * **Losing a block, not crossing critical.** The floor is that a spawned ship does not *fall apart*.
   The two are different events and a block that has just crossed is losing nothing; measuring the
