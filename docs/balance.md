@@ -794,6 +794,49 @@ rows re-derived (`M1`); what is compared is the interior of this grid against it
 Retuning to it would move every temperature figure in this repository, and the cost column has been
 read at the median only. See [backlog.md](backlog.md) `C12`.
 
+#### What the retune was measured to cost, and why it is not shipped
+
+The pair was built and the suite was run against it: `ConductionScale` 2.4 → 9.6 and
+`HeatTimeScale` 225 → 100, which is exactly the ×4 / 100 cell. **Forty tests failed, and they are
+not stale figures — most of them are the mod's own levers going away.**
+
+| What was measured | Shipped | At ×4 / 100 |
+| --- | ---: | ---: |
+| a coolant sink, against the best surface dial | **195.3 K vs 41.5 K** | **73.3 K vs 135.3 K** |
+| …with the loop's own pace moved ×4 as well | — | **108.2 K vs 135.3 K** |
+| thirty-two radiators *bolted* to a reactor | under 1 % of it | **25.6 K off 890 K** |
+| plain armour bolted to a reactor | loses — it buries a radiating face | **saves 2.42 K** |
+| a 300 MW reactor under one cell of armour | overheats, asks to be cooled | **settles at 940.6 K, inside its 1,090.1 K** |
+| the census hull's stiffest block, in air against vacuum | 1.04× or more, as real ships are | **1.00× — it stops responding to air** |
+
+**The first row is the finding.** *The radiator is a block you plumb* is this page's own headline,
+and it inverts: at four times the solid conduction pace a bolt joint is no longer the bottleneck, so
+shortening a panel buys more than plumbing it does. Moving the loop's fluid coupling with the solid
+pace recovers a third of that and does not restore the ordering, because the surface dial gained too.
+
+**The last row is the one that decides it.** Conduction at ×4 dominates every other transport the
+model has. A hull shares heat well enough that burying a reactor solves it, bolting works, and the
+atmosphere stops mattering to the stiffest block on the ship — which is the conductivity ×8 failure
+mode, *the hull absorbs the whole event*, arriving three rungs early. The mod's purpose is that heat
+is a resource with a lever; ×4 removes three of the levers to buy the timing of one.
+
+**So `G8` and `G3` cannot both be satisfied by moving conduction**, and the sweep that found ×4
+never scored `G3` — it scored `G1`, `G2`, `G5`, `G8` and cost. That is the gap, not the cell.
+
+**What the search has not tried.** Both dials moved so far act on *transport*. The crossing is when
+a block passes critical, and it depends on what the block is *made to absorb* as much as on how fast
+the heat leaves: `crossing × clock` is a constant per conductivity, and waste heat and the critical
+temperatures move that constant without touching the conduction pace at all — so without touching
+plumbing, radiation geometry or air. Recovery is set by the clock alone, so that half is unaffected.
+That is where `C12` goes next, and it is a sweep the same machinery runs.
+
+**One trap this pass found on the way.** The game has two conduction paces —
+`ThermalConstants.ConductionScale` for solids and `ThermalConstants.ReferenceConductivity` for the
+loop's fluid coupling — and nothing made them agree. Raising the first alone makes a coolant loop
+four times weaker *relative to the structure it competes with*, silently; it is the whole difference
+between the first and second rows above. `ConductionPaceTests` now fails if one moves without the
+other.
+
 ### Air is where the substep budget goes, and the shipped pair does not fit it
 
 **Every atmospheric figure this section carried was exactly half what the shipped configuration
@@ -952,6 +995,7 @@ five ways a full sweep dies, and [backlog.md](backlog.md) for what is still open
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | **Built `C12`'s retune, measured it, and did not ship it.** `ConductionScale` 2.4 → 9.6 with `HeatTimeScale` 225 → 100 satisfies `G8` and fixes `C19`, and costs three of the mod's four levers: a coolant sink stops out-performing the best surface dial (195.3 K vs 41.5 K becomes 73.3 K vs 135.3 K), bolting starts working, a 300 MW reactor buried in armour settles inside its rating, and the stiffest block on the census hull stops responding to air at all. The sweep that chose ×4 scored `G1`, `G2`, `G5`, `G8` and cost, and never scored `G3`. Also found the trap underneath it: the game has two conduction paces and nothing made them agree, so raising the solid one alone weakens every coolant loop by four relative to the structure it competes with — `ConductionPaceTests` now fails if one moves without the other. |
 | 2026-08-23 | **Priced `C12`'s candidate cells in air, and the answer inverted the question.** The cost column that made the retune a decision was a *vacuum* column, where demand is 12 % of what the caps grant; in air it is 115 % of it. Two findings came out of the same run. **Every atmospheric figure this page carried was exactly half**, taken when `Frequency` was 8 and never re-derived when the shipped step became a quarter second — measured on the same 49-ship panel, all eight are 2.000× what was published. **And the shipped configuration fails `G6` in air**: p99 substep demand at 200 m/s is 73.4 against 64, fourteen of forty-nine hulls are over the cap, and at the 300 m/s servers run the *median* ship is. Read there, all four candidate cells pass and the shipped pair is the only one that does not, because lowering the clock divides every stiffness term while raising conductivity restores only conduction. The retune is the fix for a defect rather than a cost to be justified. |
 | 2026-08-23 | **Measured the two dials together and found the significance window**, which is `C12` and the one thing every sweep before it could not answer: `G8` is satisfied by conductivity ×4 at `HeatTimeScale` 80–120, crossing at 124–186 s and recovering in 2,220–3,270 s, at 1.36–2.04× the shipped substep demand and with `G1`, `G2` and `G5` all kept. **Corrected the projection this page carried**, which put the window at ×4 with the clock near 15 — measured, that cell crosses at 991 s, five times its prediction, because the two curves multiplied together came from different scenarios and from a median over the ships that crossed. The composition rule itself holds to 1 %. **Conductivity ×8 is excluded by the criterion rather than by cost**: only 13 of 40 hulls ever cross there, so the population has no median crossing at any clock. |
 | 2026-08-23 | **Measured what the real-unit conversion did to the ships people fly**, which is what was left of `C2`. Forty retest hulls through seven scenarios in the shipped world and four counterfactual ones recovered exactly from `Cubes.xml` at `4f6b44a^`: a burning hull is **+34.7 K** hotter than before the conversion and a loaded one **−16.3 K** cooler, the arms attribute each to one family, and **no criterion moves** — G1, G2 and G5 are identical in all five worlds. What changed for a player is the spread rather than the peak: under load the peak fell 16 K and **192 more** blocks went over critical, under thrust the peak rose 35 K and **257 fewer** did. Also corrected the published per-block table, which described only the four families `Cubes.xml` authors and said *thrusters went 0.6×* — true of the hydrogen ones alone, against **0.23×** for ion and **1.27×** for atmospheric. |
