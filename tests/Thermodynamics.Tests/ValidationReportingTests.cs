@@ -92,7 +92,7 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// A healthy definition and a healthy world say nothing at all. The mod ships 432 authored
+        /// A healthy definition and a healthy world say nothing at all. The mod ships 654 authored
         /// values and every one of them goes through this on the definition pass; a validator that
         /// chatted about correct values would be turned off within a session.
         /// </summary>

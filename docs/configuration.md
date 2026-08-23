@@ -825,9 +825,9 @@ The menu, the config file and the definition files are one surface to a player a
 code. Two of the three definition files are settings now — [the loop and planet values](#the-definition-files-from-the-menu)
 — and what is left is the third, the config file's own shape, and a Status page worth opening.
 
-**Per-subtype block overrides.** `Cubes.xml` is 54 entries of 8 values, and it is different in kind
-from the other two: 432 values, whose interesting ones belong to the block a player is looking at
-rather than to a list they scroll. Properties are cached per definition in `ThermalBlockCatalog`, so
+**Per-subtype block overrides.** `Cubes.xml` is 114 entries — 96 per-type defaults and 18 per-subtype
+— and it is different in kind from the other two: 654 authored values, whose interesting ones belong
+to the block a player is looking at rather than to a list they scroll. Properties are cached per definition in `ThermalBlockCatalog`, so
 changing one at runtime needs the cache invalidated and every node of that type refreshed. A mod
 folder is read-only in a workshop install, so this writes a per-world override layer into world
 storage like the other two, covering any subtype rather than a fixed list.

@@ -268,6 +268,177 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// A count a page states about something this repository holds, and where the true figure
+        /// comes from.
+        ///
+        /// The generalisation of <see cref="EveryQuotedSuiteSizeIsCurrent"/>, and the rule is `E5`:
+        /// no count is written into prose by hand when the data behind it can be read. The balance
+        /// bench said 36 panel ships for as long as the panel had 50, because the header had been
+        /// typed rather than generated — and a reader who catches one wrong count stops believing
+        /// the right ones. This pass found two more: 432 authored values against 654, and 135 test
+        /// classes against a suite that had grown past 160.
+        /// </summary>
+        private class QuotedCount
+        {
+            public string Noun;
+            public Func<int> Actual;
+
+            /// <summary>
+            /// How far a quoted figure may sit from the true one. Zero for a dataset somebody
+            /// authored, where the count is exactly knowable and exactly checkable; a band for the
+            /// suite's own size, which every commit moves and no page is expected to track.
+            /// </summary>
+            public float Tolerance;
+        }
+
+        private static List<QuotedCount> QuotedCounts()
+        {
+            return new List<QuotedCount>
+            {
+                new QuotedCount
+                {
+                    Noun = "panel ships",
+                    Actual = PanelShipCount,
+                    Tolerance = 0f,
+                },
+                new QuotedCount
+                {
+                    Noun = "authored values",
+                    Actual = AuthoredValueCount,
+                    Tolerance = 0f,
+                },
+                new QuotedCount
+                {
+                    Noun = "test classes",
+                    Actual = TestClassCount,
+                    Tolerance = 0.1f,
+                },
+            };
+        }
+
+        /// <summary>Data rows in the standing panel.</summary>
+        private static int PanelShipCount()
+        {
+            string path = Path.Combine(RepoRoot(), "tools", "corpus", "panel.csv");
+            if (!File.Exists(path)) return -1;
+
+            int rows = 0;
+            foreach (string line in File.ReadAllLines(path))
+            {
+                if (line.Trim().Length > 0) rows++;
+            }
+
+            return rows - 1;                                   // the header is not a ship
+        }
+
+        /// <summary>Values authored in `Cubes.xml`, which is every Decimal and Bool in it.</summary>
+        private static int AuthoredValueCount()
+        {
+            string path = Path.Combine(RepoRoot(), "Data", "Cubes.xml");
+            if (!File.Exists(path)) return -1;
+
+            return Regex.Matches(File.ReadAllText(path), @"<(?:Decimal|Bool)\s+Name=").Count;
+        }
+
+        /// <summary>Classes in the test project that hold cases.</summary>
+        private static int TestClassCount()
+        {
+            int count = 0;
+            foreach (string file in Directory.GetFiles(
+                Path.Combine(RepoRoot(), "tests", "Thermodynamics.Tests"), "*.cs"))
+            {
+                foreach (Match match in Regex.Matches(File.ReadAllText(file), TestClassPattern))
+                {
+                    if (HoldsCases(match.Groups[1].Value)) count++;
+                }
+            }
+
+            return count;
+        }
+
+        /// <summary>
+        /// Every count a page states about a dataset this repository holds is the count that
+        /// dataset actually has.
+        ///
+        /// <para>
+        /// **A sentence that also states the true figure is left alone.** Two pages describe the
+        /// original defect — "the balance bench stated 36 panel ships for as long as the panel had
+        /// 50" — and a page that names the right number beside the wrong one is not making the
+        /// claim, it is recording it.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void EveryQuotedDatasetCountIsCurrent()
+        {
+            List<string> wrong = new List<string>();
+            int judged = 0;
+
+            foreach (QuotedCount quoted in QuotedCounts())
+            {
+                int actual = quoted.Actual();
+                Assert.True(actual > 0,
+                    "could not count the " + quoted.Noun + ", so this test would pass whatever a"
+                    + " page claimed about them");
+
+                int slack = (int)(actual * quoted.Tolerance);
+                Regex pattern = new Regex(@"([\d][\d,]*)\s+" + Regex.Escape(quoted.Noun));
+
+                foreach (string file in MarkdownFiles())
+                {
+                    foreach (string sentence in Sentences(PresentTense(File.ReadAllText(file))))
+                    {
+                        foreach (Match match in pattern.Matches(sentence))
+                        {
+                            int stated = int.Parse(match.Groups[1].Value.Replace(",", ""));
+                            judged++;
+
+                            if (Math.Abs(stated - actual) <= slack) continue;
+
+                            // A sentence naming the true figure as well is recording the drift
+                            // rather than repeating it.
+                            if (Regex.IsMatch(sentence, @"\b" + actual + @"\b")) continue;
+
+                            wrong.Add(Relative(file) + ": " + stated + " " + quoted.Noun
+                                + " against " + actual + " actual");
+                        }
+                    }
+                }
+            }
+
+            Assert.True(judged > 0,
+                "no page quoted any of the counts this test knows how to check, so it judged"
+                + " nothing (`E8`)");
+
+            wrong.Sort(StringComparer.Ordinal);
+            Assert.True(wrong.Count == 0,
+                "counts that no longer match what they describe:\n  "
+                + string.Join("\n  ", wrong.ToArray()));
+        }
+
+        /// <summary>
+        /// A page with its change log cut off.
+        ///
+        /// `R12` says a page describes the present and logs its changes, which makes the two halves
+        /// different in kind: the body is a claim about now and is checkable, and the log is a
+        /// record of what was true then and must not be edited to stay true. A figure a change log
+        /// entry corrects is quoted, not asserted.
+        /// </summary>
+        private static string PresentTense(string page)
+        {
+            Match log = Regex.Match(page, @"(?m)^##+\s+Change log\s*$");
+            return log.Success ? page.Substring(0, log.Index) : page;
+        }
+
+        /// <summary>
+        /// A page split into sentences, roughly. Rough is enough: the only thing riding on the
+        /// boundary is whether a figure and its correction are near each other.
+        /// </summary>
+        private static IEnumerable<string> Sentences(string text)
+        {
+            return Regex.Split(text, @"(?<=[.!?])\s+|\n\s*\n");
+        }
+
+        /// <summary>
         /// A class declaration at file scope inside the test project.
         /// </summary>
         private const string TestClassPattern =
