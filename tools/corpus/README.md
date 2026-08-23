@@ -180,6 +180,25 @@ reaches nothing here by construction: the corpus filters admit vanilla ships, so
 forty carries a coolant pipe or a radiator. Those two are measured on a rig instead —
 `dotnet run --project Thermodynamics.Sim -- conductance`.
 
+`PairSweep` reads the same set for a different question. `G8` — the significance window — is a claim
+about two dials interacting, and every sweep before it moves one; this runs a grid of conduction
+against the clock and `pairs.py` scores `G8` on every cell beside the criteria a cell must not break
+to be usable.
+
+```
+THERMAL_CORPUS_TESTS=1 THERMAL_CORPUS_DATA=$PWD/out/pairs-2026-08-23 \
+    dotnet test --filter "FullyQualifiedName~PairSweep"
+python3 tools/corpus/pairs.py out/pairs-2026-08-23
+```
+
+Under two hours, resumable the same way. **Sixteen cells rather than a full grid**: the two edges
+are the single-dial curves, so the interaction is testable as *is the interior what the edges
+predict* rather than assumed, and the interior is the equal-cost diagonal — substep demand goes as
+conductivity × clock — plus the pair [balance.md](../../docs/balance.md) projected and the four
+cells bracketing it. **Run length scales with the clock**, capped at twice `G8`'s own bound, because
+a fixed ceiling reports a still-climbing hull as settled at the ceiling and a censored settling time
+cannot fail a criterion about settling.
+
 ---
 
 **Read the peak columns with the censoring in mind.** The harness never destroys an overheating
@@ -193,6 +212,7 @@ limit in [known-issues.md](../../docs/known-issues.md).
 | Date | Change |
 | --- | --- |
 | 2026-08-23 | Pruned the corpus directory from 68 GB to 32 GB and wrote down [what is in it](#what-is-in-the-corpus-directory-and-what-is-beside-it). 20.6 GB of leavings deleted, 1,840 barren blueprints and 8 oversized ones moved aside rather than deleted because `F14` still has the 25-block floor untested. The inference that a blueprint is barren was checked by parsing all 1,852 — 12 were usable ships and are back — which is also what added `corpus --list`. Fixed `Unpack`, which had silently skipped three legacy archives whose entry names are truncated. |
+| 2026-08-23 | Added `PairSweep` and `pairs.py`: conduction against the clock, sixteen cells, scoring `G8` ([backlog.md](../../docs/backlog.md) `C12`). The three sweeps' CSV reading, blueprint resolution and resume record are one `ShipSet` now rather than three copies. |
 | 2026-08-23 | Wired the retest set to something: `ConductanceRetestWalk` runs it against the world before conductance became real units, and `retest.py` reads the result against G1, G2 and G5 as `verdict.py` already computes them ([backlog.md](../../docs/backlog.md) `C2`). |
 | 2026-08-23 | Added `typical.py` and [the retest set](#the-retest-set): the panel picks extremes for a dial sweep, this picks the middle for a regression. |
 | 2026-08-22 | Split the crossing from the loss everywhere the pages had run them together. The survey report's headline said a ship *loses its first block* after nine seconds where it meant *crosses critical*, its table's `First loss` column was the crossing and its `Blocks lost` column was blocks over critical, and the bench page repeated all three. `seconds_to_first_loss` is packed and shown beside the crossing, and reads as absent on every dataset collected before it existed. |
