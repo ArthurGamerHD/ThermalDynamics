@@ -54,6 +54,10 @@ namespace Thermodynamics.Sim
                 case "prefabs":
                     return PrefabCommand(args);
 
+                case "occlusion":
+                    Console.Write(OcclusionLadderLab.Report());
+                    return 0;
+
                 case "profiles":
                     Console.Write(ProfileLab.Report());
                     return 0;
@@ -68,6 +72,10 @@ namespace Thermodynamics.Sim
 
                 case "coolers":
                     Console.Write(CoolingLadder.Report());
+                    return 0;
+
+                case "conductance":
+                    Console.Write(ModHardwareRetest.Report());
                     return 0;
 
                 case "blocks":
@@ -999,6 +1007,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  frequency               where substep cost bottoms out against Frequency");
             Console.WriteLine("  reactors                where a vanilla reactor settles, against its waste fraction");
             Console.WriteLine("  coolers                 every block that could cool a reactor, stacked against one");
+            Console.WriteLine("  conductance             what real units did to the mod's own pipes and radiators");
             Console.WriteLine("  blocks                  every block in the game, derived from its build components");
             Console.WriteLine("  corpus [--path <dir>]   real ships read from blueprints, and what they are made of");
             Console.WriteLine("  corpus-fetch            build a corpus from the workshop; --key, --user, --top, --out");
@@ -1020,6 +1029,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("    --csv <dir>               one row per prefab");
             Console.WriteLine("    --load                    full load instead of idle: the control, not G7");
             Console.WriteLine("  drift                   how long a client that joined stale stays wrong");
+            Console.WriteLine("  occlusion               what a terminator crossing costs at each rung of the shadow ladder");
             Console.WriteLine("    --scenario shadow|sunlit|planet  --watch <s> --size N --csv <dir>");
             Console.WriteLine("  planets                 every shipped world's climate, and where each figure came from");
             Console.WriteLine("    --xml | --write <path>    the generated Planets.xml");

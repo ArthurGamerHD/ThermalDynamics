@@ -181,6 +181,128 @@ Each pipe adds 1,000 W/K of its own and the fluid mass does not grow, so **a lon
 better**. Pinned by `LongerRingsDeliverColderBlocks` and
 `LongerRingsCoupleHarderAndCarryTheSameFluid`.
 
+### What the real-unit conversion moved
+
+`Conductivity` used to be a 0…1 quality against a 200 W/(m·K) reference and is now the figure a
+materials table gives, times `ThermalConstants.ConductionScale` = 2.4 — calibrated so mild steel
+lands exactly where it was ([definitions.md](definitions.md#conductivity-is-in-real-wmk)). The
+question [backlog.md](backlog.md) `C2` held open is what that did to the balance a player meets.
+
+**The old world is recoverable exactly, which is what makes this a measurement.** `Data/Cubes.xml`
+at `4f6b44a^` held twenty-two definitions and derivation from build components arrived after the
+conversion, so before it every block in the game took one of two conductances: **120 W/(m·K)** from
+the 0.6 fall-through, and **200** for `Thrust`, `Reactor` and the mod's own nineteen blocks at
+quality 1.
+
+**Where it landed, block by block.** Measured off the shipped definitions; the full table is in
+[definitions.md](definitions.md#conductivity-is-in-real-wmk) and these are its ends:
+
+| Block | Before | Now | Change |
+| --- | ---: | ---: | ---: |
+| light and heavy armour | 120 | 120.0 | **1.00×** — the calibration |
+| large ion thruster | 200 | 45.3 | **0.23×** |
+| large reactor | 200 | 103.2 | **0.52×** |
+| battery | 120 | 61.2 | **0.51×** |
+| jump drive | 120 | 421.1 | **3.51×** |
+
+The published table had four rows and described only the families `Cubes.xml` authors, so both of
+those extremes were unrecorded — and one of the four rows was wrong, because *thrusters went 0.6×*
+is true of the hydrogen ones and of nothing else.
+
+#### The two moves the corpus cannot see
+
+Coolant pipes went 4.8× and radiators 2.84×, and **not one of the forty ships in the retest set
+carries either**: the corpus filters admit vanilla hulls, so the walk's own reach column reports that
+arm as reaching **0 of 177,822 blocks**. Both are priced on a rig instead —
+`dotnet run --project Thermodynamics.Sim -- conductance`, one family moved per rig with everything
+else left shipped, a large reactor at 300 kW in shadow:
+
+| Rig | Before | Now | Source settles | Saved |
+| --- | ---: | ---: | ---: | ---: |
+| 1 radiator | 200 | 568.8 | 333.8 → 328.4 K | **5.34 K** |
+| 8 radiators | 200 | 568.8 | 328.7 → 316.6 K | **12.07 K** |
+| 32 radiators | 200 | 568.8 | 328.6 → 316.2 K | **12.44 K** |
+| 12-pipe ring | 200 | 960 | 333.2 → 333.1 K | **0.13 K** |
+| 20-pipe ring | 200 | 960 | 319.9 → 319.8 K | **0.06 K** |
+| 28-pipe ring | 200 | 960 | 310.7 → 310.7 K | **0.02 K** |
+
+**The 4.8× on coolant pipes is the largest number the conversion produced and the smallest effect it
+had.** The fluid couples to its pipe through `LoopThermalProperties.Conductivity`, a 0…1 quality
+against `ThermalConstants.ReferenceConductivity` that the conversion never touched; the pipe's own
+material decides only what crosses between the pipe block and whatever is bolted to it. Copper made
+the pipes better conductors and left the loop carrying exactly what it carried.
+
+**The radiator's 2.84× is real and it saturates.** It is worth 5.3 K on one radiator and 12.4 K by
+sixteen, and it stops there because a stack's limit is the area it radiates from rather than the
+rate heat reaches it — the visible sign is that the far end of the stack is now *hotter* (43.0 K
+against 59.0 K at thirty-two), which is the heat getting further up before it leaves.
+
+Pinned by `ModHardwareRetestTests`, which first holds `Catalog`'s pipe and radiator conductances
+against the shipped ones, so a rig cannot quietly become a measurement of a block the mod does not
+ship (`C4`).
+
+#### What it did to the ships people fly
+
+Forty hulls from [the retest set](../tools/corpus/README.md#the-retest-set) — each carrying thrust,
+power, an airtight room and 100 kW of load, nearest the population median on the four quantities the
+census found decide an outcome — run through seven scenarios in the shipped world and in four
+counterfactual ones. 1,400 runs, about thirty-five minutes, `ConductanceRetestWalk` and
+`tools/corpus/retest.py`. **17.8 % of the 177,822 blocks on the set changed conductance at all**;
+the rest derive as steel and sit where the calibration put them.
+
+Shipped minus pre-conversion, median over the forty. Positive means the shipped world is the hotter
+one:
+
+| Scenario | composite | vanilla blocks only | thrust and reactors only | mod blocks |
+| --- | ---: | ---: | ---: | ---: |
+| idle | +0.00 K | −0.11 K | +0.08 K | 0.00 K |
+| vacuum-sunlit | +0.03 K | −0.02 K | +0.01 K | 0.00 K |
+| recovery | +0.11 K | −0.06 K | +0.14 K | 0.00 K |
+| **full-electrical** | **−16.28 K** | **−16.27 K** | +5.12 K | 0.00 K |
+| **burn-forward** | **+34.73 K** | −3.04 K | **+44.90 K** | 0.00 K |
+| flight-100 | +26.40 K | −2.40 K | +28.35 K | 0.00 K |
+| flight-300 | +17.94 K | −2.08 K | +19.46 K | 0.00 K |
+
+**The two effects live in different scenarios and do not cancel.** A burning hull is 34.7 K hotter
+than it was and the arms say why: thrusters and reactors alone account for 44.9 K of it, and the
+vanilla blocks gaining conductance claw about ten of that back. A hull under electrical load is
+16.3 K *cooler*, and every kelvin of that is the vanilla blocks — the jump drive at 3.51× is the
+block type carrying 71.3 % of the population's full-load waste, and it now spreads what it makes.
+Nothing moves at idle, in sun, or in recovery, because none of those is a hull with a hot block in
+it.
+
+**What actually changed for a player is not the peak, it is the spread.** Blocks over critical,
+summed across the set:
+
+| Scenario | shipped | pre-conversion | change |
+| --- | ---: | ---: | ---: |
+| full-electrical | 1,461 | 1,269 | **+192**, on 21 of 40 hulls |
+| burn-forward | 1,354 | 1,611 | **−257**, on 25 of 40 hulls |
+
+Both rows run against their own peak column. Under load the peak fell 16 K and 192 *more* blocks
+went over critical, because a jump drive that conducts 3.5× better pushes its heat into blocks that
+used to stay cold. Under thrust the peak rose 35 K and 257 *fewer* did, because an ion thruster at
+0.23× keeps its heat to itself. **The conversion traded peak temperature for spread, in both
+directions at once**, and a headline temperature alone would have reported each of those backwards.
+
+Time to the first block lost is unmoved: every median is within 1.5 s, against a damage event that
+runs a median 37 s ([how long a block has](#how-long-a-block-has-after-it-crosses)).
+
+**And no criterion moved.** G1, G2 and G5 read identically in all five worlds — 0 of 40 critical at
+idle, 40 of 40 warm under load, 39 of 40 recovering. The set is not the population and its G2 is
+100 % against the corpus's 65.5 % because membership requires 100 kW of waste; what the identical
+columns say is that a change worth tens of kelvin did not reach a threshold the balance is judged
+on.
+
+**The null arm is a control and it earned its fifth of the run.** The arm for the mod's own blocks
+retunes nothing on a vanilla corpus, and all 280 of its rows came back bit-identical to the shipped
+world — so the walk's zero is a measured zero rather than an arm that failed to install (`E8`), and
+the harness is deterministic across independently built worlds.
+
+**Read the peaks against the censoring.** One run in eleven on this set — 8.9 % of the shipped
+world's 280 — ends past 1,500 K, which says *ran away* and nothing finer, so the findings above rest
+on medians and counts and not on any hull's extreme.
+
 ### Reactor waste heat
 
 A reactor's fraction has to hold across three orders of magnitude of rated output — 0.5 MW on a
@@ -718,6 +840,7 @@ five ways a full sweep dies, and [backlog.md](backlog.md) for what is still open
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | **Measured what the real-unit conversion did to the ships people fly**, which is what was left of `C2`. Forty retest hulls through seven scenarios in the shipped world and four counterfactual ones recovered exactly from `Cubes.xml` at `4f6b44a^`: a burning hull is **+34.7 K** hotter than before the conversion and a loaded one **−16.3 K** cooler, the arms attribute each to one family, and **no criterion moves** — G1, G2 and G5 are identical in all five worlds. What changed for a player is the spread rather than the peak: under load the peak fell 16 K and **192 more** blocks went over critical, under thrust the peak rose 35 K and **257 fewer** did. Also corrected the published per-block table, which described only the four families `Cubes.xml` authors and said *thrusters went 0.6×* — true of the hydrogen ones alone, against **0.23×** for ion and **1.27×** for atmospheric. |
 | 2026-08-23 | Settled one of `C2`'s three claims with a measurement rather than a retune: `OverheatDamagePerKelvin` was authored for the per-step damage rule, which at `Frequency` 8 bit eight times harder, and restoring that intent would put the median block's whole life past its rating at **6.5 s**. The authored values stay. |
 | 2026-08-23 | Answered the damage-timing question with the event that costs a player something. The section had been called *"damage arrives too fast to be played around"* and quoted a **median 8.9 s** that is the *crossing* — the moment the damage rate leaves zero. The first block is lost at a median **37.0 s** under full electrical load, the median ship's own crossing-to-loss gap is **24.2 s**, and with the cue's three-second lead the window is 40 s. `G5`'s rationale holds. Split into [the crossing](#how-fast-a-ship-crosses-critical) and [the loss](#how-long-a-block-has-after-it-crosses), which is the section `BlockHeatIndex` has cited since it was written and which did not exist. |
 | 2026-08-22 | Measured the catalogue drift this page had recorded as *up to 4×*: it is **4.32×** at worst, on the large thruster, and four of six blocks are out rather than three. `CatalogDriftTests` pins all of it, armour included — matching exactly is what makes the rest a measurement ([backlog.md](backlog.md) `C4`). |
