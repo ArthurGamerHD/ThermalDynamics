@@ -8,14 +8,17 @@ using Xunit;
 namespace Thermodynamics.Tests
 {
     /// <summary>
-    /// The glow, checked against Planck's law rather than against itself.
+    /// The glow: the brightness ramp, and the colour checked against Planck's law rather than
+    /// against itself.
     ///
     /// <para>
-    /// <see cref="Incandescence"/> ships two fitted constants and a twelve-entry colour table, and
-    /// every one of those numbers came out of an integration that is not in the mod. This file
-    /// carries that integration — Planck's law against the CIE observer, in SI units, from first
-    /// principles — and re-runs it. Nothing here compares the shipped code to a number a previous
-    /// run of the shipped code produced, which is the only way a fit can be checked at all (`E7`).
+    /// The two halves are tested differently because they are different claims. **Brightness is a
+    /// design decision** — nothing at comfortable temperatures, full at a block's own rating — so
+    /// what can be checked is that it does what it says at both ends and in between. **Colour is a
+    /// measurement**, and <see cref="Incandescence"/>'s twelve-entry table came out of an
+    /// integration that is not in the mod. This file carries that integration — Planck's law
+    /// against the CIE observer, in SI units, from first principles — and re-runs it, so nothing
+    /// about the colour compares the shipped code to a number the shipped code produced (`E7`).
     /// </para>
     /// </summary>
     public class IncandescenceTests
@@ -66,92 +69,142 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// The two fitted constants still describe the integral they were fitted to.
-        ///
-        /// A luminance ratio is what the glow reads, so the ratio is what this checks, over the
-        /// whole range the ramp lives in.
+        /// The ramp is nothing at comfortable temperatures, full at the block's own rating, and
+        /// rises the whole way between.
         /// </summary>
         [Fact]
-        public void TheLuminanceFitStillFollowsPlancksLaw()
+        public void TheRampRunsFromComfortableToTheBlocksOwnRating()
         {
-            double worst = 0d;
-            float worstAt = 0f;
+            const float critical = 900f;
 
-            for (float kelvin = 700f; kelvin <= 1900f; kelvin += 10f)
-            {
-                double truth = Luminance(kelvin) / Luminance(Incandescence.FullGlowKelvin);
-                double fit = Incandescence.Luminance(kelvin)
-                    / Incandescence.Luminance(Incandescence.FullGlowKelvin);
-
-                double error = Math.Abs((fit / truth) - 1d);
-                if (error > worst)
-                {
-                    worst = error;
-                    worstAt = kelvin;
-                }
-            }
-
-            Assert.True(worst < 0.05d,
-                "the luminance fit is out by " + (worst * 100d).ToString("n1") + " % at "
-                + worstAt.ToString("n0") + " K");
-        }
-
-        /// <summary>
-        /// The Wien constant in the fit is a wavelength, and it is a red one.
-        ///
-        /// **This is the check that the fit is physics.** <c>c2/b</c> has to land in the visible
-        /// band, at the red end, because that is where a dull-hot body is seen — and if it did not,
-        /// the fit would be two numbers that happen to draw the right curve.
-        /// </summary>
-        [Fact]
-        public void TheFittedWienConstantIsARedWavelength()
-        {
-            double metres = SecondRadiation / Incandescence.LuminanceWienKelvin;
-            double nanometres = metres * 1e9d;
-
-            Assert.InRange(nanometres, 600d, 700d);
-        }
-
-        /// <summary>
-        /// The ramp runs from nothing at the Draper point to full at forge heat, and rises the
-        /// whole way.
-        /// </summary>
-        [Fact]
-        public void TheGlowRampRunsFromTheDraperPointToFull()
-        {
-            Assert.Equal(0f, Incandescence.Glow(Incandescence.DraperKelvin));
-            Assert.Equal(0f, Incandescence.Glow(500f));
-            Assert.Equal(1f, Incandescence.Glow(Incandescence.FullGlowKelvin));
-            Assert.Equal(1f, Incandescence.Glow(5000f));
+            Assert.Equal(0f, Incandescence.Glow(Incandescence.ComfortableKelvin, critical));
+            Assert.Equal(0f, Incandescence.Glow(200f, critical));
+            Assert.Equal(1f, Incandescence.Glow(critical, critical));
+            Assert.Equal(1f, Incandescence.Glow(5000f, critical));
 
             float previous = 0f;
-            for (float kelvin = Incandescence.DraperKelvin + 1f;
-                kelvin <= Incandescence.FullGlowKelvin; kelvin += 5f)
+            for (float kelvin = Incandescence.ComfortableKelvin; kelvin <= critical; kelvin += 5f)
             {
-                float glow = Incandescence.Glow(kelvin);
+                float glow = Incandescence.Glow(kelvin, critical);
                 Assert.InRange(glow, previous, 1f);
                 previous = glow;
             }
-
-            Assert.True(previous > 0.9f, "the ramp never reached the top: " + previous);
         }
 
         /// <summary>
-        /// **The eye's transfer function is doing real work**, and this is how much.
+        /// **The same fraction of the way to failure looks the same on every block**, which is the
+        /// property the ramp exists for and the one an absolute ramp does not have.
         ///
-        /// Without it the glow is raw luminance, which spans six decades over the ramp: a block at
-        /// 1,100 K — hot enough to be visibly orange in a dark room — would come out at three
-        /// thousandths and render as black. The cube root is what makes the middle of the ramp
-        /// visible, and this fails if it is ever taken out.
+        /// A decorative block rated 500 K and a refractory one rated 1,500 K are both half way to
+        /// their own limit at very different temperatures, and both read the same brightness there.
         /// </summary>
         [Fact]
-        public void TheLightnessExponentIsWhatMakesTheMiddleOfTheRampVisible()
+        public void TheSameShareOfTheWayToFailureReadsTheSameOnEveryBlock()
         {
-            double raw = Luminance(1100d) / Luminance(Incandescence.FullGlowKelvin);
-            Assert.True(raw < 0.01d, "raw luminance at 1,100 K was already visible: " + raw);
+            float[] ratings = new float[] { 500f, 700f, 900f, 1200f, 1522f };
+            float first = 0f;
 
-            float glow = Incandescence.Glow(1100f);
-            Assert.InRange(glow, 0.1f, 0.25f);
+            for (int i = 0; i < ratings.Length; i++)
+            {
+                float halfway = Incandescence.ComfortableKelvin
+                    + (0.5f * (ratings[i] - Incandescence.ComfortableKelvin));
+
+                float glow = Incandescence.Glow(halfway, ratings[i]);
+                if (i == 0) first = glow;
+
+                Assert.Equal(first, glow, 4);
+            }
+
+            Assert.InRange(first, 0.1f, 0.15f);
+        }
+
+        /// <summary>
+        /// **Ordinary play is dark.** A hull sitting in any climate a player can breathe in, made
+        /// of any block the game ships, glows nothing at all.
+        ///
+        /// <para>
+        /// <c>Planets.xml</c> runs from a 95 K day to a 390 K one, and the hottest a player can
+        /// stand outside is the 330 K world. Nothing glows there. At 390 K — 117 °C, which is a
+        /// planet a suit is keeping someone alive on — a handful of the lowest-rated block types
+        /// do, faintly, and that is the ramp working rather than failing: a block rated 600 K in
+        /// 390 K air really is a good part of the way to its limit.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void NoBlockGlowsInAClimateAPlayerCanStandIn()
+        {
+            if (!GameBlocks.IsInstalled) return;
+
+            const float habitableDay = 330.5f;   // the hottest breathable world in Planets.xml
+            const float hottestDay = 390f;       // the hottest world of any kind
+
+            List<BlockCatalogLab.TypeRow> catalog = BlockCatalogLab.Catalog();
+            Assert.NotEmpty(catalog);
+
+            int rated = 0;
+            int glowingOnTheHottest = 0;
+            float brightest = 0f;
+
+            foreach (BlockCatalogLab.TypeRow row in catalog)
+            {
+                float critical = row.Properties.CriticalTemperature;
+                if (critical <= 0f) continue;
+
+                rated++;
+
+                Assert.Equal(0f, Incandescence.Glow(habitableDay, critical));
+
+                float glow = Incandescence.Glow(hottestDay, critical);
+                if (glow > 0f) glowingOnTheHottest++;
+                if (glow > brightest) brightest = glow;
+            }
+
+            Assert.True(rated > 50, "the catalog produced too few ratings to mean anything");
+
+            Assert.True(glowingOnTheHottest < rated / 5,
+                glowingOnTheHottest + " of " + rated + " block types glow in 390 K air, which is "
+                + "enough of a hull to be a cost rather than a signal");
+
+            Assert.True(brightest < 0.1f,
+                "a block glowed at " + brightest.ToString("n3") + " in air alone");
+        }
+
+        /// <summary>
+        /// The floor the grid scan compares against is the temperature at which the ramp becomes
+        /// worth drawing, and the two agree — a block below its own start glows nothing, and one
+        /// just above it glows the minimum.
+        /// </summary>
+        [Fact]
+        public void TheDrawFloorIsWhereTheRampBecomesVisible()
+        {
+            float[] ratings = new float[] { 500f, 900f, 1522f };
+
+            foreach (float critical in ratings)
+            {
+                float start = Incandescence.GlowStartKelvin(critical);
+
+                Assert.Equal(0f, Incandescence.Glow(start - 1f, critical));
+                Assert.InRange(Incandescence.Glow(start + 1f, critical),
+                    Incandescence.MinimumVisibleGlow, 0.05f);
+            }
+
+            // And it is far enough above any climate to keep an ordinary hull dark.
+            Assert.True(Incandescence.GlowStartKelvin(900f) > 400f,
+                "a 900 K block starts glowing at "
+                + Incandescence.GlowStartKelvin(900f).ToString("n0") + " K");
+        }
+
+        /// <summary>
+        /// A block rated at or below comfort is a nonsense definition rather than a glow question,
+        /// and it does not produce a nonsense ramp.
+        /// </summary>
+        [Fact]
+        public void NonsenseRatingsDoNotProduceANonsenseRamp()
+        {
+            Assert.Equal(0f, Incandescence.Glow(300f, 0f));
+            Assert.Equal(1f, Incandescence.Glow(300f, 200f));
+            Assert.Equal(0f, Incandescence.Glow(float.NaN, 900f));
+            Assert.Equal(0f, Incandescence.Glow(500f, float.NaN));
         }
 
         /// <summary>
@@ -206,12 +259,13 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// A quarter of the game is rated below the Draper point, so the glow cannot be the only
-        /// channel — which is the reason the audio cue is keyed to a block's own rating instead.
+        /// **A quarter of block types are rated below the Draper point**, and that is why the
+        /// brightness ramp is not incandescence.
         ///
         /// <para>
-        /// This is a claim about the shipped definitions rather than about the glow, and it is
-        /// quoted in <see cref="Incandescence"/>'s own summary and in
+        /// A real solid emits no visible light under 798 K. Keyed to that, a quarter of the game
+        /// would fail with no visual warning at all — the measurement that decided the ramp, quoted
+        /// in <see cref="Incandescence"/>'s own summary and in
         /// [document-of-intent.md](../../docs/document-of-intent.md), so it is measured here rather
         /// than asserted there. Measured over the installed game's block types, which is the
         /// population both of those sentences are about, so it stands down where the game is not
@@ -219,7 +273,7 @@ namespace Thermodynamics.Tests
         /// </para>
         /// </summary>
         [Fact]
-        public void AQuarterOfBlockTypesFailBeforeTheyGlow()
+        public void AQuarterOfBlockTypesWouldNeverGlowIfTheGlowWerePhysical()
         {
             if (!GameBlocks.IsInstalled) return;
 
@@ -246,13 +300,13 @@ namespace Thermodynamics.Tests
 
             // Wide, because this is a fact about the game rather than about this repository and it
             // moves when Keen ships blocks. What it is guarding is the shape of the argument: that
-            // a real and substantial share of the game dies before it glows, and that no single
-            // temperature is near every block's rating.
+            // a real and substantial share of the game would fail before a physical glow ever
+            // reached it, and that no single temperature is near every block's rating.
             Assert.InRange(share, 0.1f, 0.45f);
             Assert.True(highest - lowest > 300f,
                 "critical temperatures span " + lowest.ToString("n0") + " to "
-                + highest.ToString("n0") + " K, which would make a single watch temperature "
-                + "workable and HeatCueState.WatchFraction unnecessary");
+                + highest.ToString("n0") + " K, which would make a single glow temperature "
+                + "workable and the ramp's per-block form unnecessary");
         }
 
         private static void AssertColour(float kelvin, Vector3 actual, float tolerance)
