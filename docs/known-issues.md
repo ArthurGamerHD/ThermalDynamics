@@ -118,7 +118,34 @@ the figures and the falsification are in [realism.md](realism.md#failure-and-wha
 **Temperatures are not reconciled between server and clients.** Clients run their own simulation
 from the same inputs and reach the same answers, but nothing reconciles them: a client that joins
 mid-session starts from saved temperatures, and divergence is never corrected. Damage and settings
-are server authoritative, so the divergence is cosmetic — but it is real.
+are server authoritative, so nothing a client believes changes what happens to the ship.
+
+**Measured, and it is not as cosmetic as it reads.** `-- drift` runs the same hull twice from states
+a stated distance apart and watches the disagreement decay — the model is dissipative, so a client
+converges on the server without anybody correcting it, and the question is how fast. On the census
+hull in shadow, a client joining sixty simulated seconds behind:
+
+| Hull | Wrong by, at the join | Under 10 K | Under 1 K | Wrong about *critical* |
+| --- | ---: | ---: | ---: | ---: |
+| 1,500 blocks | 37 K | 75 s | 190 s | **150 s** |
+| 8,904 blocks | 112 K | 200 s | 375 s | **305 s** |
+
+Air is much faster than vacuum — 75 s to agree within a kelvin on a planet surface against 190 s in
+shadow — because convection is a far stronger path to a shared ambient than radiation is. Staleness
+saturates: a state from thirty minutes ago is no worse than one from five, because the hull had
+settled by then.
+
+**The last column is the finding.** For two and a half to five minutes a client's readout is on the
+wrong side of a block's critical temperature — and [balance.md](balance.md#damage-arrives-too-fast-to-be-played-around)
+measures the whole event at a median 8.9 s to the crossing. A client can therefore show *safe* for
+the entire lifetime of the event that destroyed the block, which is the readout being wrong about
+the one thing it is for.
+
+**And a per-grid correction would not fix it.** The error is not a uniform offset: at the join the
+worst block is 105 K out against a mean of 20 K, so a single scalar per grid would correct the
+armour and leave the blocks that matter wrong. What has to be replicated is the near-critical tail —
+1,700 to 2,000 blocks of 8,904 on this hull, which makes 12.1 kW a block against a real median of
+335 W and is therefore an upper bound on how long that tail is. Tracked as [backlog](backlog.md) B4.
 
 Settings and pump controls *are* replicated. `SENetworkAPI` 2.0 runs on channel `30323` with three
 properties on it: the world's settings and the two pump throttles.
@@ -135,9 +162,9 @@ Model)` — and notices later changes only through that object's `Revision`, so 
 `Settings.Instance` would leave every grid already on the client running the settings it was born
 with. The copy goes through `Settings.Names()`, the same list the settings menu uses, minus
 `Settings.ClientOwned` — the four presentation switches a client owns for itself, since a server has
-no business choosing which overlay is on someone else's screen. That leaves 44 of the 49 serialized
-fields replicated; the fifth is the config file's `Version`, which describes the file rather than
-the world.
+no business choosing which overlay is on someone else's screen. That leaves 77 of the 85 serialized
+fields replicated; of the other eight, seven are the client-owned presentation switches and the
+last is the config file's `Version`, which describes the file rather than the world.
 
 **Admin changes from a client travel on their own secure channel, deliberately.** SENetworkAPI
 registers the game's non-secure message handler, so every sender id it reports is a field the sender
@@ -532,6 +559,7 @@ counters rather than milliseconds so it holds on any machine.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Measured the client divergence that had been recorded as cosmetic, with `-- drift`. It converges on its own — the model is dissipative — but it is on the wrong side of a block's critical temperature for two and a half to five minutes, against a whole damage event that is a median 8.9 s long, and the error is not a uniform offset so a per-grid correction would not reach it ([backlog.md](backlog.md) `B4`). Corrected the count of replicated settings, which said 44 of 49 against 77 of 85. |
 | 2026-08-22 | Said what the destruction limit does and does not reach in the new `seconds_to_first_loss` column: the first loss is exact, and there is deliberately no count of losses after it. |
 | 2026-08-22 | Reopened the per-grid shadow limit as designed work. It was recorded as a simplification taken on purpose, which `D6` is satisfied by, but the cost argument behind it treated three occluders as one: the planet's test is analytic and costs no ray, so the per-block objection was never true of the one occluder a player notices. Now [backlog](backlog.md) `A9`. |
 | 2026-08-22 | Filed the burning-ship divergence as an open defect. It had been carried on [realism.md](realism.md) as a starved-integrator finding; re-measuring it showed 0% starved, so the explanation is withdrawn and the defect stands with its cause unknown. |
