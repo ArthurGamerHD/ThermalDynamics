@@ -194,7 +194,7 @@ under [low value](#low-value) so a citation to them does not dangle.
 | **R6** | Vendored code is replaced, never edited | load-bearing | P12 | — |
 | **R7** | Every document is indexed, and every link resolves | load-bearing | P5 | `DocumentationTests` |
 | **R8** | Every setting is documented, wired, and read by something | load-bearing | P5 | `ConfigurationDocTests` `SettingsWiringTests` |
-| **R9** | The API page is part of the contract | load-bearing | P5 P9 | `EveryModApiEntryIsDocumented` |
+| **R9** | The API page is part of the contract | load-bearing | P5 P9 | `EveryModApiEntryIsDocumented` `ModApiShapeTests` |
 | **R10** | Every test class says what it is for | load-bearing | P5 | `EveryTestClassSaysWhatItIsFor` |
 | **R11** | A check is cited only if it runs | load-bearing | P5 | `EveryCheckCitedByTheRulesPageResolves` |
 | **R12** | A page states its scope, describes the present, and logs its changes | load-bearing | P3 | partly |
@@ -599,10 +599,14 @@ also happened: a toggle with a menu entry, a config field, a label and no reader
 run time, in someone else's session, by a cast that fails.**
 
 `api.md` is the only place those names and signatures are written down for a reader, which makes
-it part of the contract rather than a description of one.
+it part of the contract rather than a description of one. **A failed cast returns null rather than
+throwing**, so the symptom is not an error but a feature of somebody else's mod that quietly does
+nothing — which is why the signature is as much of the contract as the name.
 
-*Applies to:* every entry in the delegate table, and the version number beside it.
-*Checked by:* `EveryModApiEntryIsDocumented`.
+*Applies to:* every entry in the delegate table, its signature, the worked examples that cast with
+it, and the version number beside it.
+*Checked by:* `EveryModApiEntryIsDocumented` for the names, `ModApiShapeTests` for the signatures in
+both directions and for the page's own examples casting the way its tables say.
 *From:* [api.md](api.md).
 
 #### R10 — Every test class says what it is for
@@ -1228,6 +1232,7 @@ right and this page is stale**; say so and fix it here.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | `R9` covers the signature as well as the name, and `ModApiShapeTests` checks it. A failed cast returns null rather than throwing, so a signature that moves on one side alone gives another mod a feature that silently does nothing ([backlog.md](backlog.md) `F1`). |
 | 2026-08-22 | `C9` now names air density among the things the game answers, which is what settles whether this mod should author its own against the engine's ([backlog.md](backlog.md) `B22`). |
 | 2026-08-22 | `R3` and `E5` are checked rather than judged ([backlog.md](backlog.md) `F9`). The tree is scanned for four credential shapes, and the scan is itself checked against a value of each shape and against the text this repository legitimately writes. Counts a page states about the panel, about `Cubes.xml` and about the suite's own classes are compared with those datasets; a change log is exempt, because `R12` makes it a record of what was true rather than a claim about now. It found two stale figures on its first run — 432 authored values against 654, and 135 test classes against 160. |
 | 2026-08-22 | Added `R14`, from the standard [document-of-intent.md](document-of-intent.md#what-a-code-comment-is-for) states and a pass that applied it: twenty-four comments were found describing a member that no longer exists, having come to rest on the one below. `NoDocCommentDescribesSomethingThatIsNotThere` catches the shape, and was run against a deliberate orphan in both spellings before being believed — the first version caught only one of the two and missed a real orphan in `CoolantLoopTests`. |
