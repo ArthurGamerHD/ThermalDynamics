@@ -4,117 +4,83 @@ using VRageMath;
 namespace Thermodynamics.Core
 {
     /// <summary>
-    /// What a hot block looks like, from Planck's law rather than from a design choice.
+    /// What a hot block looks like: how brightly it glows, and what colour.
     ///
     /// <para>
-    /// **This is not a warning and it is not keyed to anything the block is rated for.** Hot matter
-    /// glows because it is hot, at a temperature that is the same for a jump drive and for a piece
-    /// of armour, and the whole value of the channel is that a player learns to read a colour the
-    /// way they read one on a real forge. Both halves — brightness and colour — are functions of
-    /// temperature alone.
+    /// **Brightness is the last hundred kelvin before a block fails.** Nothing until a block is
+    /// within <see cref="GlowBandKelvin"/> of its own critical temperature, then a straight ramp up
+    /// to full at that temperature and above. It is a narrow window on purpose: a glow means this
+    /// block is about to go, not that it is warm, so it stays off through every temperature a ship
+    /// runs at in ordinary play and comes on only at the end.
     /// </para>
     ///
     /// <para>
-    /// **A ramp keyed to each block's rating was tried and withdrawn.** It reads as a fuel gauge
-    /// for failure rather than as a hot object, and the game already tells a player that a block is
-    /// in trouble: damaged blocks carry the engine's own damage effects, and how close a given
-    /// block is to its limit is something a player works out from playing. Making the glow say it
-    /// twice buys nothing and costs the one thing the channel is for, which is that the same
-    /// temperature looks the same everywhere. See
-    /// [document-of-intent.md](../../../../../docs/document-of-intent.md), Natural feedback.
+    /// **Colour is physics and stays absolute.** The Planckian locus, computed from Planck's law
+    /// against the CIE 1931 observer, so a block glowing at 500 K is deep red and one at 2,000 K is
+    /// orange whatever either is rated for. A decorative block failing at 583 K and a thruster
+    /// failing at 1,522 K are both at full brightness when they go, and the colour is what says how
+    /// hot each of them actually got.
     /// </para>
     ///
     /// <para>
-    /// The consequence is a real limit and it is why the glow cannot be the only channel: the
-    /// shipped definitions run from 500 K to 1,522 K of critical temperature, and **26 % of block
-    /// types are rated below the Draper point**, so a quarter of the game fails before it ever
-    /// glows. The audio cue, which *is* keyed to a block's own rating, is what covers those.
+    /// The consequence of the band being fixed rather than a share is that it is a *longer* warning
+    /// on a block that heats slowly and a shorter one on a block that heats fast, which is the
+    /// right way round: the hundred kelvin is a hundred kelvin of heating either way, and a block
+    /// tearing through it is a block there was never much to be done about.
     /// </para>
     ///
     /// <para>
-    /// Free of any game type but <c>Vector3</c>, and a pure function of temperature, so all of it
-    /// is checked outside a session against a numerical integration of Planck's law (`C5`, `E7`).
+    /// Free of any game type but <c>Vector3</c>, and a pure function of its arguments, so all of it
+    /// is checked outside a session — the colour against a numerical integration of Planck's law
+    /// (`C5`, `E7`).
     /// </para>
     /// </summary>
     public static class Incandescence
     {
         /// <summary>
-        /// The Draper point, K: the temperature at which a solid first glows visibly, dull red, in
-        /// the dark. Below this the glow is nothing, which is a measurement rather than a cutoff —
-        /// the luminance here is already four decades under the one at
-        /// <see cref="FullGlowKelvin"/>.
+        /// How far below its critical temperature a block starts to glow, K.
+        ///
+        /// A block rated for less than this glows from absolute zero instead, which is a
+        /// degenerate definition rather than a case the game has — the coolest block type the
+        /// installed game ships is rated 583 K.
+        /// </summary>
+        public const float GlowBandKelvin = 100f;
+
+        /// <summary>
+        /// The Draper point, K: where a real solid first glows visibly, dull red, in the dark.
+        ///
+        /// Not what the brightness ramp uses — a quarter of block types are rated below it and
+        /// would fail with no glow at all — and kept because it is where the colour table starts,
+        /// below which the locus has no visible colour to report.
         /// </summary>
         public const float DraperKelvin = 798f;
 
         /// <summary>
-        /// Where the ramp reaches full, K. Forge-welding heat, bright orange, and above the
-        /// critical temperature of 92 % of shipped block types — so a block that reaches it is one
-        /// the game is about to take away.
-        /// </summary>
-        public const float FullGlowKelvin = 1500f;
-
-        /// <summary>
-        /// The two constants of the visible-band luminance of a black body,
-        /// <c>L(T) ∝ T^p · exp(−b/T)</c>.
+        /// The coolest a block rated for <paramref name="critical"/> can be and still glow, K.
         ///
-        /// <para>
-        /// **Measured, not chosen.** Both were fitted to a numerical integration of Planck's law
-        /// against the CIE photopic response over 700–1,900 K, and the fit holds to 2.9 % over that
-        /// whole range — far inside anything an eye resolves. `IncandescenceTests` re-runs that
-        /// integration and fails if either constant drifts from it.
-        /// </para>
-        ///
-        /// <para>
-        /// <see cref="LuminanceWienKelvin"/> is Wien's <c>c₂/λ</c> and says which wavelength is
-        /// doing the work: 0.0143878 / 21,735 = **662 nm**, the deep red end of the band. That is
-        /// the cross-check that the fit is physics and not curve drawing — a dull-hot body is seen
-        /// almost entirely in the red, which is why it looks red.
-        /// </para>
+        /// **This is also the floor a grid decides on**: below it the block is not worth looking
+        /// at, so the whole feature costs one comparison on a hull where nothing is failing.
         /// </summary>
-        public const float LuminanceExponent = 1.7929f;
-
-        public const float LuminanceWienKelvin = 21735f;
-
-        /// <summary>
-        /// The exponent that turns luminance into brightness: CIE lightness, <c>L*</c> ∝
-        /// <c>Y^(1/3)</c>.
-        ///
-        /// <para>
-        /// **The eye's own transfer function, and it is required rather than decorative.** The
-        /// luminance of a black body rises by six decades between the Draper point and
-        /// <see cref="FullGlowKelvin"/>; handed to a renderer as a 0..1 intensity that would leave
-        /// everything under about 1,300 K at zero, which is not what a hot bar looks like. The
-        /// output here is display-referred, so the display-referred transfer belongs in it.
-        /// </para>
-        /// </summary>
-        public const float LightnessExponent = 1f / 3f;
-
-        /// <summary>
-        /// How brightly a block at <paramref name="kelvin"/> glows, 0 at the Draper point and 1 at
-        /// <see cref="FullGlowKelvin"/> and above.
-        /// </summary>
-        public static float Glow(float kelvin)
+        public static float GlowStartKelvin(float critical)
         {
-            if (kelvin <= DraperKelvin || float.IsNaN(kelvin)) return 0f;
-            if (kelvin >= FullGlowKelvin) return 1f;
-
-            double ratio = Luminance(kelvin) / Luminance(FullGlowKelvin);
-            if (ratio <= 0d) return 0f;
-
-            float glow = (float)Math.Pow(ratio, LightnessExponent);
-            if (glow < 0f) return 0f;
-            if (glow > 1f) return 1f;
-            return glow;
+            if (critical <= 0f) return 0f;
+            return critical > GlowBandKelvin ? critical - GlowBandKelvin : 0f;
         }
 
         /// <summary>
-        /// Visible-band luminance in arbitrary units. Only ratios of it mean anything, which is why
-        /// the fit carries no scale.
+        /// How brightly a block at <paramref name="kelvin"/> rated for
+        /// <paramref name="critical"/> glows: 0 at <see cref="GlowStartKelvin"/> and below, 1 at
+        /// its rating and above, and a straight line between.
         /// </summary>
-        public static double Luminance(double kelvin)
+        public static float Glow(float kelvin, float critical)
         {
-            if (kelvin <= 0d) return 0d;
-            return Math.Pow(kelvin, LuminanceExponent) * Math.Exp(-LuminanceWienKelvin / kelvin);
+            if (float.IsNaN(kelvin) || float.IsNaN(critical) || critical <= 0f) return 0f;
+            if (kelvin >= critical) return 1f;
+
+            float start = GlowStartKelvin(critical);
+            if (kelvin <= start) return 0f;
+
+            return (kelvin - start) / (critical - start);
         }
 
         /// <summary>

@@ -140,7 +140,7 @@ namespace Thermodynamics
             { "HeatPumpCarnotFraction", new Entry(Systems, "Carnot fraction", "How much of the Carnot limit a pump achieves, 0..1.", 0f, 1f) },
             { "HeatPumpMaxCoefficient", new Entry(Systems, "Max coefficient", "Ceiling on the coefficient of performance.", 0f, 20f) },
 
-            { "HeatGlow", new Entry(Display, "Blocks glow when hot", "A hot block glows the colour a hot thing is: nothing below about 525 C, dull red above it, orange by 1,200 C. It is incandescence rather than a warning light, so it is the same temperature on every block.", 0, 1) },
+            { "HeatGlow", new Entry(Display, "Blocks glow when hot", "A block glows over the last 100 K before its own critical temperature, full at it and above, so a glow means it is about to go rather than that it is warm. The colour is what a body that hot really looks like: deep red low down, orange high up.", 0, 1) },
             { "HeatWarningSound", new Entry(Display, "Overheat cue", "A cue in the cockpit as a block comes up on its own rating and as it passes it. Heard only by the player at the controls.", 0, 1) },
 
             { "DebugTextOnScreen", new Entry(Display, "Crosshair readout", "Everything the simulation knows about the block being looked at. Also makes the solver record per-mechanism watts, which is not free.", 0, 1) },
