@@ -136,8 +136,12 @@ is where the whitelist is built, and the shape of it is what matters:
 * So `CultureInfo` is fine and the interface it implements is not, which is not a distinction
   anything on this machine would have drawn.
 
-**A doc comment is not the guard this needs** — see [backlog](backlog.md) `F16` for the check that
-would run the game's own rule over the mod's source.
+**`ScriptWhitelistTests` is the guard**, and it would have caught this one. It reads every file the
+game would compile, finds the names written in a *type* position — which is the only way to tell a
+type from a field called `Uri` — and reports any framework type the whitelist refuses. It judges the
+framework surface alone and drops any name the game or the mod also declares, because a `Color` is
+`VRageMath.Color` in nearly every line here and `System.Drawing.Color` in none of them; that blind
+spot is the price of not burying every real finding under three hundred false ones.
 
 ## Open defects
 
@@ -586,6 +590,7 @@ counters rather than milliseconds so it holds on any machine.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | Built the guard the entry above asked for ([backlog.md](backlog.md) `F16`), so this is now a limit with a check under it rather than a warning to remember. |
 | 2026-08-23 | Recorded that the mod project's build is not the game's check, after `Units.Watts` took an `IFormatProvider` and the mod failed to compile in a session while building clean here. The whitelist was read out of `SpaceEngineers.Game.MySpaceGameDefaultIlChecker` rather than guessed at: `System` is not an allowed namespace, only a named list of its types, and `IFormatProvider` is not on it. Opened `F16` for the check that would have caught it. |
 | 2026-08-23 | The glow is back to incandescence, which leaves the limit above where it was: a model with no emissive material still cannot show it. |
 | 2026-08-23 | The glow is now a block's distance from its own rating rather than an absolute temperature, which does not change the limit above: a model with no emissive material still cannot show it. |

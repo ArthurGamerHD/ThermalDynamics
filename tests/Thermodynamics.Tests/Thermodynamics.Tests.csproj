@@ -11,6 +11,13 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="xunit" Version="2.9.3" />
+
+    <!--
+      Roslyn, for the script-whitelist check only: it parses Data/Scripts to find the names the mod
+      writes in a type position, which is the one way to tell a type from a field called Size.
+      Syntax only - no compilation, no references, no semantic model.
+    -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
   </ItemGroup>
 

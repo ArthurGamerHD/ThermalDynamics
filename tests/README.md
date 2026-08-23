@@ -451,7 +451,7 @@ and left off it.
 | **End to end, and the host boundary** | `SimulationIntegrationTests` `ScenarioTests` `ScenarioClaimTests` `HostAdapterTests` `CoreIsolationTests` |
 | **Balance, and the ships it is decided on** | `BalanceTests` `CoolingLadderTests` `RetrofitTests` `BlockHeatIndexTests` `TimeToLossTests` `CatalogDriftTests` `DecorativeStiffnessTests` `ElementCostFitTests` `ScreeningTests` `BlueprintTests` `SubgridBridgeTests` `PrefabWalk` `CorpusGuardTests` `ClientDriftTests` `WorstCaseTests` `LabRunTests` `LabInvariantTests` |
 | **Corpus walks** (opt-in, `THERMAL_CORPUS_TESTS`) | `CorpusSurvey` `CorpusCensus` `KnobSweep` `SunlightPanelWalk` `BlockAccountingWalk` `DeterminismWalk` |
-| **The documentation itself** | `DocumentationTests` `ModApiShapeTests` `ConfigurationDocTests` `SimCommandTests` `CredentialScanTests` |
+| **The documentation itself** | `DocumentationTests` `ModApiShapeTests` `ConfigurationDocTests` `SimCommandTests` `CredentialScanTests` `ScriptWhitelistTests` |
 
 > **The bit-identity suites share one fixture.** Five of them pin an optimisation against the
 > thing it replaced — the precomputed environment rows, the fixed source row, the gated
@@ -477,6 +477,7 @@ and left off it.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | Indexed `ScriptWhitelistTests`, which is the one class here that judges the mod against the *game* rather than against the model: it reads `Data/Scripts` for framework types the game's script whitelist refuses, which a green mod build cannot tell you. It is also why Roslyn is a package reference — syntax only, to tell a type from a field of the same name. |
 | 2026-08-23 | Indexed the three natural-feedback classes. `IncandescenceTests` is the unusual one: it carries a numerical integration of Planck's law against the CIE observer and re-derives every constant the shipped glow uses, so nothing in it compares the mod to a figure the mod produced (`E7`). |
 | 2026-08-22 | Condensed the five balance commands from a section each to one table. Each of them restated a conclusion argued in full on [balance.md](../docs/balance.md), [balance-lab.md](../docs/balance-lab.md) or [stiffness.md](../docs/stiffness.md), which is how the reactor fraction below came to be wrong here and right there. This page is now what to run and where the answer is argued, and keeps only what is the harness's own business rather than the finding's. |
 | 2026-08-22 | Corrected the reactor's shipped waste fraction, quoted here and on [thermal-model.md](../docs/thermal-model.md) as 0.02 against the 0.01 in `Cubes.xml` and on [balance.md](../docs/balance.md#reactor-waste-heat). |
