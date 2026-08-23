@@ -188,16 +188,16 @@ namespace Thermodynamics.Harness
                 }
                 row.ColdestKelvin = coldest == float.MaxValue ? 0f : coldest;
 
-                if (runner.Samples.Count >= 2)
-                {
-                    float previous = runner.Samples[runner.Samples.Count - 2].HottestTemperature;
-                    float span = Math.Max(1f, Math.Abs(last.HottestTemperature));
-                    row.Converged = Math.Abs(previous - last.HottestTemperature) / span < 0.002f;
-                }
+                row.Converged = ProfileSweep.Settled(runner.Samples);
 
+                // The same rule the profile sweep uses, and for the same reason: a temperature past
+                // the threshold says the answer is not a ship, and only a failure to settle says it
+                // is not an answer. A *negative* temperature needs no such qualification — a block
+                // below absolute zero is wrong however still it is holding, and it is half of the
+                // signature this matrix exists to catch.
                 row.Diverged = float.IsNaN(row.PeakKelvin) || float.IsInfinity(row.PeakKelvin)
-                    || row.PeakKelvin > ProfileSweep.DivergenceKelvin
-                    || row.ColdestKelvin < 0f;
+                    || row.ColdestKelvin < 0f
+                    || (row.PeakKelvin > ProfileSweep.DivergenceKelvin && !row.Converged);
             }
             catch (Exception error)
             {

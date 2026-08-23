@@ -191,14 +191,86 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// **A known defect, pinned.** The shipped default diverges on a burning ship.
+        /// **The burning ship was never diverging.** It settles, and where it settles is arithmetic.
         ///
-        /// Refused about half the substeps its own stability estimate asks for, it reaches past
-        /// 10,000 K and never settles. This is the current default on a case a player can build,
-        /// and it is the strongest argument that the divergence problem was never arcade's alone.
+        /// <para>
+        /// It was recorded as a divergence for as long as it existed, on the strength of one
+        /// number: the hottest block passes 10,000 K. Three things say otherwise, and any one of
+        /// them would have. Run ten times longer it is flat to the last digit from 600 s to
+        /// 6,000 s. Its energy balances — 1,083.360 MW made against 1,083.251 MW vented, a part in
+        /// ten thousand. And two integrators refused wildly different substep counts land one
+        /// kelvin apart, which no divergence does.
+        /// </para>
+        ///
+        /// <para>
+        /// What it is instead: `Burning` drives the census hull's producers at twenty times their
+        /// rating, so 488 of them make 1,083 MW inside a four-thousand-block hull, and the hottest
+        /// block is one with **no exposed face at all**. Its only way out is 1,317 W/K of
+        /// conduction into neighbours that are themselves buried and hot, and the temperature that
+        /// pushes 2.22 MW down that path is 11,279 K. The peak among blocks that *can* radiate is
+        /// 2,822 K. See [known-issues.md](../../docs/known-issues.md) and
+        /// [realism.md](../../docs/realism.md).
+        /// </para>
+        ///
+        /// <para>
+        /// This test used to assert the divergence. It asserts the convergence, because the claim
+        /// that was published was wrong and a correction belongs where the claim was made (`E10`).
+        /// </para>
         /// </summary>
         [Fact]
-        public void TheShippedProfileStillDivergesOnABurningShip()
+        public void TheBurningShipSettlesRatherThanDiverging()
+        {
+            ThermalSettings settings = BalanceProfile.Shipped().ToSettings();
+            WorstCases.Built built = WorstCases.Burning("ship", 4000, settings);
+
+            // The per-node watt ledger is opt-in, and it is what the energy balance below reads.
+            built.Simulation.Solver.CollectDiagnostics = true;
+
+            ScenarioRunner runner = new ScenarioRunner(built.Simulation);
+            runner.Environment = t => Worlds.Shadow();
+            runner.Run(1800f, 60f);
+
+            float peak = runner.Final.HottestTemperature;
+
+            Assert.True(ProfileSweep.Settled(runner.Samples),
+                "the burning ship stopped settling; it reached " + peak.ToString("n0")
+                + " K and was still moving, which would make it the divergence it was once"
+                + " reported as");
+
+            // Still far too hot to be a ship, and that is the rig rather than the solver: it exists
+            // to raise a damage event on every step. The threshold column says so; the divergence
+            // column no longer does.
+            Assert.True(peak > ProfileSweep.DivergenceKelvin,
+                "the burning rig is expected to be absurd: " + peak.ToString("n0") + " K");
+
+            // Energy in equals energy out. A converged state conserves and a divergent one does
+            // not, so this is the claim that does not depend on watching it for long enough.
+            float made = 0f;
+            float vented = 0f;
+
+            for (int i = 0; i < built.Simulation.Solver.Nodes.Count; i++)
+            {
+                ThermalNode node = built.Simulation.Solver.Nodes[i];
+                made += node.HeatGenerationWatts;
+                vented += -(node.LastRadiationWatts + node.LastConvectionWatts);
+            }
+
+            Assert.True(made > 0f, "the burning rig has to be making heat");
+            Assert.True(Math.Abs(made - vented) / made < 0.01f,
+                "a settled hull sheds what it makes: made " + (made / 1e6f).ToString("n1")
+                + " MW against vented " + (vented / 1e6f).ToString("n1") + " MW");
+        }
+
+        /// <summary>
+        /// And the reason it settles where it does: the hottest block cannot radiate at all.
+        ///
+        /// The number that makes 11,279 K arithmetic rather than a mystery. A block with no exposed
+        /// face has one way out and it is conduction, so its temperature is whatever gradient
+        /// carries its own watts down that path — and on this rig that is a producer at twenty
+        /// times rating buried inside the hull.
+        /// </summary>
+        [Fact]
+        public void TheHottestBlockOnTheBurningShipHasNoFaceToRadiateFrom()
         {
             ThermalSettings settings = BalanceProfile.Shipped().ToSettings();
             WorstCases.Built built = WorstCases.Burning("ship", 4000, settings);
@@ -207,10 +279,27 @@ namespace Thermodynamics.Tests
             runner.Environment = t => Worlds.Shadow();
             runner.Run(1800f, 60f);
 
-            float peak = runner.Final.HottestTemperature;
-            Assert.True(peak > ProfileSweep.DivergenceKelvin,
-                "the shipped profile no longer diverges on a burning ship — it reached " + peak
-                + " K. If that was deliberate, invert this test.");
+            ThermalNode hottest = null;
+            float exposedPeak = 0f;
+
+            for (int i = 0; i < built.Simulation.Solver.Nodes.Count; i++)
+            {
+                ThermalNode node = built.Simulation.Solver.Nodes[i];
+                if (hottest == null || node.Temperature > hottest.Temperature) hottest = node;
+                if (node.TotalExposedFaces > 0 && node.Temperature > exposedPeak)
+                {
+                    exposedPeak = node.Temperature;
+                }
+            }
+
+            Assert.NotNull(hottest);
+            Assert.Equal(0, hottest.TotalExposedFaces);
+            Assert.True(hottest.HeatGenerationWatts > 0f,
+                "and it is making the heat itself rather than receiving it");
+
+            Assert.True(exposedPeak < hottest.Temperature / 3f,
+                "a block that can radiate should be nowhere near it: " + exposedPeak.ToString("n0")
+                + " K against " + hottest.Temperature.ToString("n0") + " K");
         }
     }
 }

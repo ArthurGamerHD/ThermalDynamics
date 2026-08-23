@@ -80,6 +80,19 @@ in files by hand: files were counted as they were handed to a batch while rows w
 ship finished, so a resume both re-emitted the interrupted batch and lost the ships it had not
 reached. The 2026-08-21 dataset carries 50 duplicate rows from that; nothing collected since can.
 
+**A run that has no record can be given one.** The resume reads `done-<walk>.txt`, and a dataset
+collected before that file existed does not have one — but `ships.csv` carries each ship's blueprint
+path, so the record can be rebuilt from it:
+
+```bash
+python3 -c "import csv,sys;[print(r['path']) for r in csv.DictReader(open(sys.argv[1]))]" \
+    out/corpus-2026-08-22/ships.csv | sort -u > out/corpus-2026-08-22/done-survey.txt
+```
+
+One caveat, and it is the reason this is a recovery rather than the normal path: a blueprint holding
+several ships that was interrupted part way through appears in `ships.csv` and would be skipped with
+ships still to do. That is one file of nine thousand, against a whole run.
+
 **Read progress in bytes, not files.** The corpus is sorted largest-first, so file 500 of 9,981 is
 5 % of the files and 50 % of the work. `THERMAL_CORPUS_PROGRESS` reports both.
 
@@ -101,6 +114,7 @@ limit in [known-issues.md](../../docs/known-issues.md).
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Split the crossing from the loss everywhere the pages had run them together. The survey report's headline said a ship *loses its first block* after nine seconds where it meant *crosses critical*, its table's `First loss` column was the crossing and its `Blocks lost` column was blocks over critical, and the bench page repeated all three. `seconds_to_first_loss` is packed and shown beside the crossing, and reads as absent on every dataset collected before it existed. |
 | 2026-08-22 | The resume is a record rather than a count. A walk writes `done-<walk>.txt` as it finishes each blueprint and reads it on the next start, so relaunching is the whole procedure and `THERMAL_CORPUS_SKIP` is gone ([backlog.md](../../docs/backlog.md) `H2`). Said that off is now spellable in `THERMAL_CORPUS_TESTS` every way anyone reaches for (`H3`). |
 | 2026-08-22 | Wrote down [the five ways a full sweep dies](#the-five-ways-a-full-sweep-dies), which [balance.md](../../docs/balance.md) had been pointing at [backlog.md](../../docs/backlog.md) for and which no page in the tree carried — it had survived only as a note kept outside the repository, which is the failure [rules.md](../../docs/rules.md) exists to prevent. |
 | 2026-08-22 | Added this change log. |

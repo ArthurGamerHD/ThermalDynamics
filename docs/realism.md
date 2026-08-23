@@ -85,19 +85,34 @@ wrong it is; the question is what it does about it.
 | profile | substeps | wanted | diverged cells |
 | --- | --- | --- | --- |
 | physical | 1.00 | 0 | 1 |
-| candidate | 4.15 | 31 | 2 |
-| shipped | 7.22 | 47 | 1 |
-| arcade | 1.00 | **21,101,200** | **6** |
+| candidate | 4.15 | 31 | **0** |
+| shipped | 7.22 | 47 | **0** |
+| arcade | 1.00 | **21,101,200** | **1** |
 
-**Starvation is what breaks `arcade`.** Granting it 64 substeps instead of 1, at the same clock,
-dropped its divergences from 14 to 5. It is not that the profile is approximate — it is that the
-integrator is refused what it asks for by seven orders of magnitude. Every `arcade` divergence in
-the sweep is 100% starved.
+**Eight of the ten cells this column used to report were converged answers**, not failed
+integrations. `Diverged` was a threshold on a temperature until 2026-08-22, and the table above is
+the same sweep re-measured under a rule that also asks whether the run settled — see
+[The shipped default was never diverging](#the-shipped-default-was-never-diverging-on-the-burning-ship).
+Two cells are left in the whole matrix.
 
-**Starvation explains nothing anywhere else.** `candidate` is starved 49% on `x-burning-ship` and
-peaks at 11,280 K; `shipped` is starved 0% on the same rig and peaks at 11,279 K. One kelvin apart,
-with the substeps granted in one case and refused in the other. Whatever is wrong there does not
-care how finely the second is cut.
+**Starvation is what breaks `arcade`**, and with one divergence left instead of six the claim is
+cleaner rather than weaker: `arcade / air-conditioning` reaches 21,900 K at **100% starved**, which
+is the signature the argument always rested on. The integrator is refused what it asks for by seven
+orders of magnitude, which is not the profile being approximate.
+
+**The other survivor is not starved at all.** `physical / x-overloaded` reaches 11,662 K with every
+substep granted — but `physical` runs `HeatTimeScale 1`, so a scenario clock cut for a world 225×
+faster ends while it is still climbing, and *everything* `physical` runs is marked not settled. It
+is the one cell where the divergence test cannot separate a failure from a run that was stopped too
+early, which is the limit recorded below and `M1` in practice.
+
+**Starvation explains nothing anywhere else** — and the pair that established that turned out to be
+saying something larger. `candidate` was starved 49% on `x-burning-ship` and peaked at 11,280 K;
+`shipped` is starved 0% on the same rig and peaks at 11,279 K. One kelvin apart, with the substeps
+granted in one case and refused in the other. That is not two integrations failing in the same way;
+it is two integrations agreeing, which is what convergence is. The starvation share is quoted from
+the 2026-08-21 run, which is where it was measured: neither of these cells appears in the failure
+list of the sweep above, because neither of them fails any more.
 
 **And starvation was never the only cause.** The five arcade divergences that survived the extra
 substeps were loop-bearing, and `loop-faults` got *worse* with more of them — 2.4×10¹⁵ K against
@@ -135,8 +150,10 @@ stayed under it and copper did not.
 The fix is one aggregate limit per parcel, the same shape as `RelaxationFactor` for conduction —
 `mass / (h × total conductance on that parcel)`, with the worst parcel setting the ring's factor.
 The same case now settles at **0.8 K instead of 291,360**, the pipes are copper again, and the
-sweep's arcade divergences fell to the **6 in the table above — every loop-bearing one went**,
-including `loop-stiffness` at 2.4×10¹⁰ K. The six survivors carry no coolant loop at all.
+sweep's arcade divergences fell to **six — every loop-bearing one went**, including `loop-stiffness`
+at 2.4×10¹⁰ K, and the six survivors carried no coolant loop at all. Five of those six have since
+turned out to have been converged answers misread by the divergence column; the one that remains,
+`air-conditioning`, still carries no loop.
 
 Guarded by `TheLoopPathSurvivesAVeryConductivePipe` at copper and at four times copper, and by
 `ArcadeNoLongerDivergesOnTheEverythingRig`.
@@ -148,20 +165,34 @@ Two hypotheses were tested and both were wrong, which is recorded here so they a
 * *The well-mixed ring puts every pipe link onto one parcel.* It does, but switching it off makes
   arcade's divergences slightly **worse** (14 → 16), so it is not the mechanism.
 
-### The shipped default diverges too, on a ship a player can build
+### The shipped default was never diverging on the burning ship
 
 ```
-shipped     x-burning-ship   11,279 K   0% starved   4268 over critical   DIVERGED
-candidate   x-burning-ship   11,280 K  49% starved   4268 over critical   DIVERGED
+shipped     x-burning-ship   11,279 K   settled     0% starved
+candidate   x-burning-ship   11,280 K   settled    49% starved   (2026-08-21)
 ```
 
-On a burning 4,000-block ship the current default passes 10,000 K and never settles — with every
-substep it asks for granted. The published account of this used to be starvation, and the pair
-above is what falsified it: `candidate` is refused half its substeps on the same rig and lands one
-kelvin away. The cause is still open. This is not an arcade problem that arcade made visible; it is
-a divergence problem that arcade made loud. Pinned by
-`ProfileSuiteTests.TheShippedProfileStillDivergesOnABurningShip`, which is written to **fail when
-the defect is fixed**.
+This was published as a divergence for as long as it was measured, on the strength of one number:
+the hottest block passes 10,000 K. **It is a converged answer**, and three things say so. Run ten
+times longer the rig is flat to the last digit from 600 s to 6,000 s. Its energy balances —
+**1,083.360 MW made against 1,083.251 MW vented**, a part in ten thousand. And the pair above,
+which was originally the evidence that *starvation* was not the cause, is stronger evidence than
+that: two integrators refused wildly different substep counts landing one kelvin apart is what
+convergence looks like and is not something a divergence does.
+
+**Where the number comes from is arithmetic.** `Burning` drives the census hull's producers at
+twenty times their rating, so 488 of them make 1,083 MW inside a four-thousand-block hull. The
+hottest block is one with **no exposed face at all**: its only way out is 1,317 W/K of conduction
+into neighbours that are themselves buried and hot, and the temperature that pushes 2.22 MW down
+that path is 11,279 K. The peak among blocks that *can* radiate is 2,822 K. The rig exists to raise
+a damage event on every step, and it is not a state a ship reaches.
+
+**The defect it leaves behind is the column, not the cell.** `Diverged` was a threshold on a
+temperature, and a threshold on a temperature cannot tell a converged extreme from a diverged
+integration — so it reported one as the other and a year of work went after a cause that was not
+there. It now requires the run to have *failed to settle* as well, measured over the last fifth of
+the clock rather than over one interval. `ProfileSuiteTests.TheBurningShipSettlesRatherThanDiverging`
+and `TheHottestBlockOnTheBurningShipHasNoFaceToRadiateFrom` hold both halves.
 
 ## The feature matrix
 
@@ -183,7 +214,7 @@ separately rather than reported as defects — otherwise four correct results bu
 ## Known limits of this suite
 
 * **Scenario run lengths are fixed to the shipped clock.** A world 225× slower is still climbing
-  when a run ends: 59 of 136 cells are untrustworthy, mostly `physical`'s. Run lengths would have to
+  when a run ends: 72 of 136 cells are untrustworthy, mostly `physical`'s. Run lengths would have to
   scale with `HeatTimeScale` for that column to mean anything. The report marks them rather than
   letting a transient read as an equilibrium.
 * **The divergence flag is a 10,000 K threshold**, so it catches both genuine runaway and
@@ -202,6 +233,8 @@ separately rather than reported as defects — otherwise four correct results bu
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Re-measured the divergence counts under the corrected rule. Eight of the ten cells the column reported were converged answers: `candidate` and `shipped` have none at all, and `arcade` has one — `air-conditioning` at 21,900 K and 100% starved, which is the case the starvation argument always rested on. The other survivor, `physical / x-overloaded`, is the one cell where the test cannot separate a divergence from a run stopped too early, because a scenario clock cut for the shipped world ends while a 225×-slower one is still climbing. |
+| 2026-08-22 | Withdrew the burning-ship divergence and corrected it in place (`E10`). It settles: flat to the last digit over ten times the run, energy balanced to a part in ten thousand, and two integrators refused wildly different substep counts one kelvin apart. The 11,279 K is a conduction-limited interior temperature — the hottest block has no face to radiate from — and the peak among blocks that can is 2,822 K. The real defect was the divergence column: a threshold on a temperature, which cannot tell a converged extreme from a diverged integration. It now requires a failure to settle as well. |
 | 2026-08-22 | Re-measured every figure here against one sweep, after `shipped` began reading the real defaults. The correction that matters: the shipped default's divergence on `x-burning-ship` was published as starvation, and it is not — it diverges with 0% of its substeps refused, one kelvin from `candidate`, which is refused 49%. |
 | 2026-08-22 | Became this page. The five shipped presets are gone — see [configuration.md](configuration.md#change-log) — and what is left is the half of the old `profiles.md` that was never about them: the harness's realism comparison, what it found, and the two divergences it pins. `shipped` now reads `ThermalSettings` rather than restating it, which is how it came to carry `MaxSubsteps 16` against a shipped 64. |
 | 2026-08-22 | Corrected the account of the shipped bundles, which named a `minimal` profile that does not exist and said all five ran `HeatTimeScale` 225 when three ran 1. |

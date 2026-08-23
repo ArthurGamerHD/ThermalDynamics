@@ -107,14 +107,6 @@ balance question, not a code one.
 
 ## Open defects
 
-**The shipped defaults diverge on a burning 4,000-block ship, and starvation is not why.** In the
-realism sweep, `x-burning-ship` passes 10,000 K and never settles under the shipped configuration
-with **0% of its substeps refused** — every substep the solver asks for is granted. The published
-explanation used to be starvation; the `candidate` profile falsified it by reaching 11,280 K on the
-same rig while being refused 49%, one kelvin from shipped's 11,279. The cause is open. Pinned by
-`ProfileSuiteTests.TheShippedProfileStillDivergesOnABurningShip`, written to fail when it is fixed;
-the figures and the falsification are in [realism.md](realism.md#failure-and-what-actually-causes-it).
-
 **Temperatures are not reconciled between server and clients.** Clients run their own simulation
 from the same inputs and reach the same answers, but nothing reconciles them: a client that joins
 mid-session starts from saved temperatures, and divergence is never corrected. Damage and settings
@@ -559,6 +551,7 @@ counters rather than milliseconds so it holds on any machine.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Withdrew the burning-ship divergence. It was never a divergence: run ten times longer the rig is flat to the last digit from 600 s to 6,000 s, its energy balances to a part in ten thousand, and two integrators refused wildly different substep counts land one kelvin apart. The 11,279 K is a converged conduction-limited interior temperature — the hottest block has no exposed face and pushes 2.22 MW out through 1,317 W/K of conduction — and the peak among blocks that can radiate is 2,822 K. The defect it left behind is on [realism.md](realism.md): a divergence column that was a threshold on a temperature, which cannot tell a converged extreme from a diverged one. |
 | 2026-08-22 | Measured the client divergence that had been recorded as cosmetic, with `-- drift`. It converges on its own — the model is dissipative — but it is on the wrong side of a block's critical temperature for two and a half to five minutes, against a whole damage event that is a median 8.9 s long, and the error is not a uniform offset so a per-grid correction would not reach it ([backlog.md](backlog.md) `B4`). Corrected the count of replicated settings, which said 44 of 49 against 77 of 85. |
 | 2026-08-22 | Said what the destruction limit does and does not reach in the new `seconds_to_first_loss` column: the first loss is exact, and there is deliberately no count of losses after it. |
 | 2026-08-22 | Reopened the per-grid shadow limit as designed work. It was recorded as a simplification taken on purpose, which `D6` is satisfied by, but the cost argument behind it treated three occluders as one: the planet's test is analytic and costs no ray, so the per-block objection was never true of the one occluder a player notices. Now [backlog](backlog.md) `A9`. |

@@ -525,7 +525,7 @@ function drawFleet(){
         <div class="pc-stat"><b>${fmt(p[P.wasteW])}W</b><span>waste, full</span></div>
         <div class="pc-stat"><b>${fmt(p[P.idleK])} K</b><span>idle peak</span></div>
         <div class="pc-stat"><b>${fmt(p[P.loadK])} K</b><span>load peak</span></div>
-        <div class="pc-stat"><b>${tc >= 0 ? tc + " s" : "—"}</b><span>first loss</span></div>
+        <div class="pc-stat"><b>${tc >= 0 ? tc + " s" : "—"}</b><span>to critical</span></div>
       </div>
       ${comp.length ? `<div class="pc-comp"><span class="pc-comp-h">heat by block type</span>${bars}</div>` : ""}
     </div>`;
@@ -593,7 +593,7 @@ function drawKnobs(){
         <div id="curve"></div>
         <div class="legend">
           <span><i style="background:var(--s2)"></i>median peak, K</span>
-          <span><i style="background:var(--s1)"></i>median seconds to first loss</span>
+          <span><i style="background:var(--s1)"></i>median seconds to critical</span>
           <span><i style="background:var(--s4)"></i>share of runs losing a block</span>
         </div>
       </div></div>
@@ -633,7 +633,7 @@ function drawCurve(){
       <div class="pred"><span>${name} at</span><b>${shown.level}</b>
         <i class="flat">${shown.shipped ? "shipped value" : "shipped is " + base.level}</i></div>
       <div class="pred"><span>median peak</span><b>${fmt(shown.peak)} K</b>${delta(shown.peak, base.peak, false)}</div>
-      <div class="pred"><span>first loss after</span><b>${shown.tcrit != null ? shown.tcrit + " s" : "—"}</b>
+      <div class="pred"><span>crosses critical after</span><b>${shown.tcrit != null ? shown.tcrit + " s" : "—"}</b>
         ${shown.tcrit != null && base.tcrit != null ? delta(shown.tcrit, base.tcrit, true) : `<i class="flat">—</i>`}</div>
       <div class="pred"><span>runs losing a block</span><b>${shown.lost.toFixed(0)}%</b>${delta(shown.lost, base.lost, false)}</div>
       <div class="pred"><span>substeps demanded</span><b>${shown.demand.toFixed(1)}</b>${delta(shown.demand, base.demand, false)}</div>
@@ -680,7 +680,7 @@ function drawCurve(){
   }).join("");
 
   $("#curve").innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img"
-    aria-label="Response of the panel to ${name}: median peak, seconds to first loss, and share losing a block">
+    aria-label="Response of the panel to ${name}: median peak, seconds to critical, and share losing a block">
     <line class="axisline" x1="${L}" y1="${T+ph}" x2="${W-R}" y2="${T+ph}"></line>
     ${paths}${dots}${ticks}${hits}
     <text class="ax" x="${L}" y="${H-6}" style="font-size:9px">${name} · hollow point is the shipped value</text>

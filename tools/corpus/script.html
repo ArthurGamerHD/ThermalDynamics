@@ -214,7 +214,8 @@ function lead(){
 
 /* ---------------- table ---------------- */
 const KEY = { name:r=>SHIPS[r[0]].toLowerCase(), blocks:r=>r[2], scen:r=>r[1], peak:r=>r[3],
-  median:r=>r[4], over:r=>r[5], overPct:r=>r[6], tcrit:r=>r[7]<0?1e9:r[7], hot:r=>BLK[r[11]] };
+  median:r=>r[4], over:r=>r[5], overPct:r=>r[6], tcrit:r=>r[7]<0?1e9:r[7], tloss:r=>r[13]===undefined||r[13]<0?1e9:r[13],
+  hot:r=>BLK[r[11]] };
 function table(){
   const rs = rows();
   const f = KEY[state.sort];
@@ -231,9 +232,10 @@ function table(){
       <td class="n">${r[5].toLocaleString()}</td>
       <td class="n">${r[6].toFixed(2)}</td>
       <td class="n">${r[7]<0 ? "&mdash;" : r[7]+" s"}</td>
+      <td class="n">${r[13]===undefined||r[13]<0 ? "&mdash;" : r[13]+" s"}</td>
       <td class="n" style="text-align:left">${BLK[r[11]]}</td>
     </tr>`; }).join("");
-  $("#tbl tbody").innerHTML = body || `<tr><td colspan="9" style="color:var(--ink-3);padding:22px">Nothing matches this filter.</td></tr>`;
+  $("#tbl tbody").innerHTML = body || `<tr><td colspan="10" style="color:var(--ink-3);padding:22px">Nothing matches this filter.</td></tr>`;
   $("#tbl-count").textContent = rs.length.toLocaleString() + " rows";
   $("#tbl-more").textContent = rs.length > 300 ? `Showing the first 300 of ${rs.length.toLocaleString()} rows in this filter. Narrow the filter or search for a ship to see the rest.` : "";
   document.querySelectorAll("#tbl th").forEach(th => {
