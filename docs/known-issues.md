@@ -177,6 +177,93 @@ armour and leave the blocks that matter wrong. What has to be replicated is the 
 1,700 to 2,000 blocks of 8,904 on this hull, which makes 12.1 kW a block against a real median of
 335 W and is therefore an upper bound on how long that tail is. Tracked as [backlog](backlog.md) B4.
 
+### The protocol is measured, and the near-critical tail alone is not it
+
+`HotTailCodec` is the packet: the blocks inside the band the glow already draws — the last 100 K
+before each block's own critical temperature — at ten bytes each, keyed by grid position rather than
+by node index, because node indices come from block insertion order and two machines do not build a
+grid in the same order. `-- drift --correct` runs it against a server and charges it for the drift
+it allows: every reading is taken at the end of an interval rather than after an update, and the run
+advances by the finer of the two cadences, both of which were flattering the protocol before they
+were fixed.
+
+**On the census hull, correcting the tail on an interval does not close the gap**, and the reason is
+not the interval:
+
+| what is sent | interval | misreading | wrong blocks, mean / worst | bytes a second |
+| --- | ---: | ---: | ---: | ---: |
+| nothing | — | 560 s | 75.0 / 648 | 0 |
+| the band | 5 s | 145 s | 7.3 / 648 | 6,151 |
+| the band | 60 s | 185 s | 10.6 / 648 | 513 |
+| **every block** | 5 s | **5 s** | 5.4 / 648 | 18,861 |
+| **the whole hull once, then the band** | 60 s | **0 s** | **0.0 / 0** | **670** |
+
+Replicating every block continuously fixes it and costs thirty times the bandwidth, which is what
+says the residual is **the un-replicated hull rather than the update rate**: the corrected blocks
+conduct to neighbours that are still stale, and a block crossing into the band arrives with its
+client-side twin far behind. Stating the whole hull **once**, when the client joins, removes the
+same residual for one packet — 94 KB on a 9,430-node hull — after which the band is tracking rather
+than repairing, and even a sixty-second interval leaves the readout right for the whole run. The
+steady cost is the band alone; the join packet amortises to 157 B/s over ten minutes and to nothing
+over a session.
+
+**A budget makes it worse, not cheaper.** Capping an update at 1,000 blocks on a hull whose band is
+3,075 takes the misreading from 145 s to 240 s, because the 2,075 blocks cut are exactly the ones
+the correction existed to carry. The budget's own blind spot is counted and printed rather than
+inferred (`P2`); what it is for is a hull whose band does not fit a packet at all, and on this hull
+it does.
+
+### A client's inputs are a different defect from a client's state, and only one of them decays
+
+Everything above is a **perturbation** — one wrong initial state — and it decays because the model
+is dissipative. A client's *inputs* are not perturbations. `-- inputs` degrades each one a client
+drives its own simulation from, alone and together, and separates the two by whether the
+disagreement is still there at the end of the run:
+
+A 2,000-block hull in sunlit vacuum, ten minutes, the load alternating every two minutes so a lag
+has something to lag. **Still wrong at the end** is the mean disagreement over the final third:
+
+| what is degraded | peak | still wrong at the end | misread, uncorrected → corrected | why that is what the engine does |
+| --- | ---: | ---: | ---: | --- |
+| nothing | 0.0 K | 0.00 K | 0 → 0 blocks | the control: two clients on one world must agree exactly |
+| joined 60 s stale | 30.9 K | **0.00 K** | 145 s → **5 s** | restoring a save; it happens once and decays |
+| environment sampled 2 s late | 1.4 K | 0.41 K | 45 s → 40 s | position and orientation replicate on their own schedule |
+| sun 5° off | 1.9 K | 1.20 K | 195 s → 115 s | replicated orientation trails the server's |
+| thinner air | 0.0 K | 0.00 K | 0 → 0 | nothing to disagree about in vacuum; a planet run is what tests this |
+| block power 5 % out | 46.9 K | **29.11 K** | 149 → 59 blocks | whatever the game's own block replication rounds |
+| block power 2 s late | 246.1 K | **33.64 K** | 396 → 398 blocks | a throttle change reaching the client late |
+| drops its backlog every 30 s | 235.2 K | **57.18 K** | 388 → 396 blocks | `SimulationScheduler.StepsDue` drops rather than catches up |
+| never got the settings | 201.3 K | **142.84 K** | 598 → 272 blocks | a fetch that never landed; other physics entirely |
+| all of it at once | 230.3 K | **116.03 K** | 518 → 279 blocks | the union of the rows above, computed not written |
+
+**The third column is the finding.** A stale join settles at nothing whatever it peaked at; a wrong
+input settles where the input puts it and stays there. So the convergence argument that made this
+defect look cosmetic covers exactly one of the nine rows, and it is the one that was measured first.
+
+**The correction narrows a bias without removing it.** Against the combined case it more than halves
+the standing error, 116.0 K to 52.5 K, and halves how much of the hull is misread, 518 blocks to 279
+— but the client's inputs are still wrong, so it re-diverges between updates. Against a bias the
+interval is the lever and five seconds is not enough; against a perturbation the join packet is the
+whole answer, 145 s to 5 s.
+
+**Read the seconds column with the block counts beside it.** *At least one block wrong* is a harsh
+binary on a hull of two thousand: `never got the settings` reads 550 s uncorrected and 560 s
+corrected while the blocks misread at once fall from 598 to 272. The count is the figure that moved.
+
+**The control row found a defect in the correction itself.** With the packet applied unconditionally,
+a client that was *exactly* right went to misreading one block for ten seconds of the run — because
+the wire carries tenths of a kelvin, and writing a received value onto a node that already matches
+it moves the node by up to half a quantum, which is enough to flip a block sitting on its own
+critical temperature. A block already agreeing to within the packet's own resolution is now left
+alone: the correction has to be able to do nothing. It is pinned by `HotTailTests`, and it is why
+the control row is run at all.
+
+**What none of this models**, stated rather than assumed: two instances of one solver in one
+process, so there is no latency, no loss, no send queue, and no engine behaviour behind any degraded
+input. Every magnitude in that table is a knob the lab turns, not a figure measured from a session.
+What it answers is the shape — which inputs bias, which perturb, and whether the correction reaches
+each — and the shape is what decides the protocol.
+
 Settings and pump controls *are* replicated. `SENetworkAPI` 2.0 runs on channel `30323` with three
 properties on it: the world's settings and the two pump throttles.
 
@@ -590,6 +677,7 @@ counters rather than milliseconds so it holds on any machine.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | **Measured the fix for `B4` rather than only the defect, and both halves changed what the row said.** The near-critical tail alone does not close the gap on the census hull — 560 s of misreading to 145 s, and the residual is the un-replicated hull rather than the update rate, because a corrected block conducts to stale neighbours. Stating the whole hull **once at the join** and then tracking the band takes it to **0 s at every interval down to sixty seconds**, for one 94 KB packet and 513 B/s after it. And `-- inputs` found that the convergence argument this row rested on covers one of eight causes: a stale join settles at 0.25 K, while a wrong input — power 2 s late, a dropped backlog, settings that never arrived — settles at 44, 58 and 116 K and stays there. A bias does not decay, and the correction narrows one without removing it. |
 | 2026-08-23 | Built the guard the entry above asked for ([backlog.md](backlog.md) `F16`), so this is now a limit with a check under it rather than a warning to remember. |
 | 2026-08-23 | Recorded that the mod project's build is not the game's check, after `Units.Watts` took an `IFormatProvider` and the mod failed to compile in a session while building clean here. The whitelist was read out of `SpaceEngineers.Game.MySpaceGameDefaultIlChecker` rather than guessed at: `System` is not an allowed namespace, only a named list of its types, and `IFormatProvider` is not on it. Opened `F16` for the check that would have caught it. |
 | 2026-08-23 | The glow is back to incandescence, which leaves the limit above where it was: a model with no emissive material still cannot show it. |

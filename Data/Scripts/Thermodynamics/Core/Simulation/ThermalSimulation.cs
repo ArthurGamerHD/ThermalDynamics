@@ -977,7 +977,19 @@ namespace Thermodynamics.Core
                 ThermalNode node = solver.GetNodeAt(tail[i].Position);
                 if (node == null) continue;
 
-                node.Temperature = Math.Max(ThermalConstants.MinimumTemperature, tail[i].Temperature);
+                float value = Math.Max(ThermalConstants.MinimumTemperature, tail[i].Temperature);
+
+                // **A block already agreeing to within the packet's own resolution is left alone,
+                // and this is a correction rather than an optimisation.** The wire carries tenths
+                // of a kelvin, so writing a received value onto a node that already matches it
+                // asserts a precision the packet does not have — and it moves the node by up to
+                // half a quantum, which is enough to flip a block sitting on its own critical
+                // temperature. Measured: a client that was *exactly* right, corrected every five
+                // seconds, went from agreeing about every block to misreading one for ten seconds
+                // of a ten-minute run. The correction has to be able to do nothing.
+                if (Math.Abs(node.Temperature - value) <= HotTailCodec.TemperatureStep) continue;
+
+                node.Temperature = value;
                 applied++;
             }
 

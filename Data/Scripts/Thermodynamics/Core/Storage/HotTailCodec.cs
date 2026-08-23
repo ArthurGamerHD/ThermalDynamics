@@ -106,7 +106,24 @@ namespace Thermodynamics.Core
             {
                 // Sorted only when the budget bites, because sorting a tail that fits is work for
                 // an order nothing reads.
-                results.Sort(HottestFirst(nodes));
+                //
+                // **Written as an inline delegate rather than through a named comparison, and that
+                // is not a style choice.** The game's script whitelist admits `System` types one by
+                // one and does not admit `System.Comparison<T>`; naming it compiles here and stops
+                // the mod loading in a session, which is what `ScriptWhitelistTests` exists to
+                // catch and did (`C2`, `P7`).
+                Dictionary<long, float> criticals = new Dictionary<long, float>(nodes.Count);
+                for (int i = 0; i < nodes.Count; i++)
+                {
+                    ThermalNode node = nodes[i];
+                    criticals[GridMath.Key(node.Block.Position)] = node.Thermal.CriticalTemperature;
+                }
+
+                results.Sort(delegate (StoredTemperature a, StoredTemperature b)
+                {
+                    return Margin(criticals, b).CompareTo(Margin(criticals, a));
+                });
+
                 results.RemoveRange(budget, results.Count - budget);
             }
 
@@ -114,27 +131,13 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Orders two selected blocks by how far past their own critical temperature they are.
+        /// How far a selected block is past its own critical temperature.
         ///
-        /// The comparison needs each block's critical temperature and the selection carries only a
-        /// position and a temperature, so it is resolved through the node list it came from. Built
-        /// per call, and only on the path where the budget bit.
+        /// The selection carries only a position and a temperature, so the rating is resolved
+        /// through a table built from the nodes it came from. A block whose rating cannot be found
+        /// sorts last rather than throwing: it was in the band a moment ago, so the packet is still
+        /// legal and the block is simply not what the budget should be spent on.
         /// </summary>
-        private static Comparison<StoredTemperature> HottestFirst(IList<ThermalNode> nodes)
-        {
-            Dictionary<long, float> criticals = new Dictionary<long, float>(nodes.Count);
-            for (int i = 0; i < nodes.Count; i++)
-            {
-                ThermalNode node = nodes[i];
-                criticals[GridMath.Key(node.Block.Position)] = node.Thermal.CriticalTemperature;
-            }
-
-            return delegate (StoredTemperature a, StoredTemperature b)
-            {
-                return Margin(criticals, b).CompareTo(Margin(criticals, a));
-            };
-        }
-
         private static float Margin(Dictionary<long, float> criticals, StoredTemperature entry)
         {
             float critical;

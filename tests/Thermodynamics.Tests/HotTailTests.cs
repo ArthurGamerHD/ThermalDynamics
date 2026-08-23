@@ -463,6 +463,54 @@ namespace Thermodynamics.Tests
             Assert.Equal(ThermalConstants.MinimumTemperature, simulation.Solver.Nodes[0].Temperature, 3);
         }
 
+        /// <summary>
+        /// **A client that is already right is left alone**, because the packet carries tenths of a
+        /// kelvin and writing one onto a node that already matches it moves the node by up to half a
+        /// quantum — enough to flip a block sitting on its own critical temperature.
+        ///
+        /// This was found by the degraded-input sweep's control row: an undegraded client, corrected
+        /// every five seconds, went from agreeing about every block to misreading one. The
+        /// correction has to be able to do nothing.
+        /// </summary>
+        [Fact]
+        public void ABlockAlreadyRightToWithinTheQuantumIsNotMoved()
+        {
+            ThermalSimulation simulation = Warm();
+            ThermalNode node = simulation.Solver.Nodes[0];
+
+            node.Temperature = 400f;
+            float nudged = 400f + HotTailCodec.TemperatureStep * 0.5f;
+
+            List<StoredTemperature> packet = new List<StoredTemperature>
+            {
+                new StoredTemperature(node.Block.Position, nudged),
+            };
+
+            Assert.Equal(0, simulation.ImportHotTail(packet));
+            Assert.Equal(400f, node.Temperature, 4);
+        }
+
+        /// <summary>
+        /// And a block that is wrong by more than the quantum still moves, so the guard above is a
+        /// resolution limit rather than the correction quietly doing nothing.
+        /// </summary>
+        [Fact]
+        public void ABlockWrongByMoreThanTheQuantumStillMoves()
+        {
+            ThermalSimulation simulation = Warm();
+            ThermalNode node = simulation.Solver.Nodes[0];
+
+            node.Temperature = 400f;
+
+            List<StoredTemperature> packet = new List<StoredTemperature>
+            {
+                new StoredTemperature(node.Block.Position, 400f + HotTailCodec.TemperatureStep * 3f),
+            };
+
+            Assert.Equal(1, simulation.ImportHotTail(packet));
+            Assert.Equal(400.3f, node.Temperature, 3);
+        }
+
         /// <summary>Nothing at all applies nothing, rather than throwing on a client.</summary>
         [Fact]
         public void ApplyingNothingAppliesNothing()
