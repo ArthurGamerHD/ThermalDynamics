@@ -44,6 +44,27 @@ namespace Thermodynamics.Core
         /// <summary>A loop needs at least one pump to circulate.</summary>
         public bool IsPump;
 
+        /// <summary>
+        /// Most electricity this block draws at full speed, W. Zero on anything that is not a pump.
+        ///
+        /// <para>
+        /// **A loop is not free, and it is very much cheaper than a heat pump.** Circulating is
+        /// pumping work against a head, not lifting heat against a gradient: the model's own flow
+        /// carries 200 kg/s around a large-grid ring, and 2 bar of head at 70% efficiency is
+        /// <c>ṁ ΔP / (ρ η)</c> = 57 kW. Fifty is the rating. Against that the ring carries 680 kW
+        /// for every kelvin of difference around it, so the pump costs well under a per cent of
+        /// what it moves, where a heat pump costs a third. That contrast is the reason both blocks
+        /// exist and it was not expressible while one of them was free.
+        /// </para>
+        ///
+        /// <para>
+        /// The power is drawn through an ordinary resource sink, so the block's own waste-heat
+        /// fraction turns it into heat with no new path: a cooling system costs power and makes
+        /// heat doing it. See document-of-intent.md.
+        /// </para>
+        /// </summary>
+        public float MaxPowerWatts;
+
         public static CoolantShape Pipe(Vector3I inDirection, Vector3I outDirection, params Vector3I[] sinkDirections)
         {
             CoolantShape s = new CoolantShape();
@@ -56,10 +77,12 @@ namespace Thermodynamics.Core
         /// A pump whose two ports sit on opposite ends of a block that is
         /// <paramref name="length"/> cells long along the link axis.
         /// </summary>
-        public static CoolantShape Pump(Vector3I inDirection, Vector3I outDirection, int length)
+        public static CoolantShape Pump(Vector3I inDirection, Vector3I outDirection, int length,
+            float maxPowerWatts = 0f)
         {
             CoolantShape s = new CoolantShape();
             s.IsPump = true;
+            s.MaxPowerWatts = maxPowerWatts > 0f ? maxPowerWatts : 0f;
 
             Vector3I farCell = Vector3I.Abs(outDirection) * Math.Max(0, length - 1);
             s.LinkPorts = new CoolantPort[]

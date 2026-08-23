@@ -80,6 +80,7 @@ namespace Thermodynamics.Core
                     CoolantPump pump = new CoolantPump();
                     pump.Block = ring[r];
                     pump.Direction = PumpDirection(grid, ring, r);
+                    pump.MaxPowerWatts = ring[r].Model.Coolant.MaxPowerWatts;
                     loop.Pumps.Add(pump);
                 }
 

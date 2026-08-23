@@ -329,6 +329,18 @@ Linear closes it exactly, because flow `F` needs `Σ speed = (F/base)²` and the
 flow costs four times the power however it is arranged, and a second pump buys redundancy and
 headroom rather than a discount.
 
+**A large-grid pump is rated at 50 kW, and the figure is derived rather than chosen.** The ring
+moves 200 kg/s of coolant — four two-and-a-half-metre parcels a second at fifty kilograms each —
+and pushing that against two bar of head at seventy per cent efficiency is `ṁ ΔP / (ρ η)` = 57 kW.
+The small-grid block is a fifth. **All of it becomes heat**: a circulator does no work that leaves
+the system, so its shaft power dissipates as friction in the coolant it is pushing and its motor
+losses stay in the block, which is why its `ConsumerWasteEnergy` is 1 where a reactor's is 0.01.
+
+Against that, the ring carries **680 kW for every kelvin** of difference around it, so a circulator
+costs well under a per cent of what it moves where a heat pump pays a third. That contrast is why
+both blocks exist. A pump the grid cannot feed circulates proportionally slower rather than
+stopping.
+
 With no pump running, `parcels/s` is zero and nothing is carried. The ring still holds its coolant
 and still exchanges with what it touches, so the coolant beside a reactor saturates while the
 coolant at the radiator stays cold — which is what a stopped pump does. `WellMixedCoolant` reverts
@@ -657,6 +669,7 @@ several tests compare against it so the differences stay pinned rather than reme
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Wrote down what a coolant pump costs, now that it costs anything: 50 kW on a large grid, derived from the loop's own mass flow against two bar of head, all of it becoming heat because a circulator does no work that leaves the system ([backlog.md](backlog.md) `C13`). |
 | 2026-08-22 | The convection wind factor runs from 1 upward rather than from 0.5 to 1. Forced convection adds to natural convection; the old floor made a wind under about 50 m/s a net warmer, because most of a closed hull's faces do not point into it ([backlog.md](backlog.md) `B29`). The two-to-one contrast between a windward face and a lee one is unchanged. |
 | 2026-08-22 | Radiation in and radiation out are two coefficients. Emission keeps the emissivity; the sun and point sources read `SolarAbsorptivity`, which follows the emissivity unless authored, so the grey-body behaviour is the default rather than the only option ([backlog.md](backlog.md) `B27`). |
 | 2026-08-22 | Corrected the reactor's shipped waste fraction, which this page and [tests/README.md](../tests/README.md) both quoted as 0.02 against the 0.01 in `Cubes.xml` and on [balance.md](balance.md#reactor-waste-heat). 0.02 is the value the sweep rejected: it puts a 300 MW reactor past critical *bare* in vacuum, which is a state no build can improve on. |

@@ -401,11 +401,19 @@ namespace Thermodynamics
 
                     bool running = control.IsRunning;
                     float speed = control.Speed;
+                    float available = control.PowerAvailable;
+                    float rating = control.MaxPowerWatts;
 
-                    if (pump.Enabled == running && pump.Speed == speed) continue;
+                    if (pump.Enabled == running && pump.Speed == speed
+                        && pump.PowerAvailable == available && pump.MaxPowerWatts == rating) continue;
 
                     pump.Enabled = running;
                     pump.Speed = speed;
+
+                    // A pump the grid cannot feed circulates proportionally slower rather than
+                    // stopping, so a ship losing its reactors loses its cooling gradually.
+                    pump.PowerAvailable = available;
+                    pump.MaxPowerWatts = rating;
                     changed = true;
                 }
 

@@ -28,6 +28,12 @@ Both grid sizes are provided for every functional block, prefixed `Gauge_LG_` (l
 | `Gauge_LG_CoolantPump` | `UpgradeModule` | 1×1×1 | none |
 | `Gauge_SG_CoolantPump` | `UpgradeModule` | 1×1×**3** | none |
 
+**A pump draws power, and all of it becomes heat.** 50 kW on a large grid and 10 kW on a small one,
+linear in the speed slider, through an ordinary resource sink — so a loop is not free to run and a
+pump the grid cannot feed circulates proportionally slower rather than stopping. The figures are
+derived in [thermal-model.md](thermal-model.md#coolant-loops); the short version is that it is well
+under a per cent of what the ring carries, where a heat pump pays a third.
+
 *Sink faces* are the sides that transfer heat between the coolant and the block pressed against
 them. A pipe with no sinks is plumbing only. Plumbing is declared per subtype in
 [ThermalCoolantShapes.cs](../Data/Scripts/Thermodynamics/Game/ThermalCoolantShapes.cs) as a
@@ -335,6 +341,7 @@ all, so it is the readout that works in any world.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Said that a coolant pump draws power — 50 kW large, 10 kW small, all of it becoming heat ([backlog.md](backlog.md) `C13`). It drew nothing until now. |
 | 2026-08-22 | Removed a trailing *Radiators and the heat pump* section that restated the [Radiator](#radiator) and [Heat pump](#heat-pump) sections above it in weaker form — the emissivity, the multiplier, the absent coolant ports and the Carnot cost were each already stated once. The one thing it said that they did not, that a pump pairs with a radiator on its hot side, moved into the heat pump's own section. |
 | 2026-08-22 | Added the standard header and this change log. |
 | 2026-08-19 | Corrected two claims on this page that measurement contradicted, and answered two build questions with measurements rather than intuition: several small loops do **not** beat one big one, and a heat pump does work as air conditioning through a wall. Let pumps drive a ring either way, so a backwards pump still works. Reported a coolant block's loop — and why it has none — in its own terminal, and reported flow in metres per second. |
