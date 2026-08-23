@@ -63,7 +63,7 @@ and each could have gone the other way:
 * **Losing a block, not crossing critical.** The floor is that a spawned ship does not *fall apart*.
   The two are different events and a block that has just crossed is losing nothing; measuring the
   crossing would fail ships that never lose anything. See
-  [balance.md](balance.md#damage-arrives-too-fast-to-be-played-around).
+  [balance.md](balance.md#how-long-a-block-has-after-it-crosses).
 * **Idle, not loaded.** Arrival is what is being tested. A ship the player has not touched is not
   charging a jump drive, and what happens once they fly it is `G2`'s question.
 * **Five simulated minutes.** Long past where a corpus ship that is going to lose a block has lost

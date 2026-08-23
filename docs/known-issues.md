@@ -166,10 +166,10 @@ saturates: a state from thirty minutes ago is no worse than one from five, becau
 settled by then.
 
 **The last column is the finding.** For two and a half to five minutes a client's readout is on the
-wrong side of a block's critical temperature — and [balance.md](balance.md#damage-arrives-too-fast-to-be-played-around)
-measures the whole event at a median 8.9 s to the crossing. A client can therefore show *safe* for
-the entire lifetime of the event that destroyed the block, which is the readout being wrong about
-the one thing it is for.
+wrong side of a block's critical temperature — and [balance.md](balance.md#how-long-a-block-has-after-it-crosses)
+measures the whole event, from the load to the first block gone, at a median 37 s. A client can
+therefore show *safe* for the entire lifetime of the event that destroyed the block, several times
+over, which is the readout being wrong about the one thing it is for.
 
 **And a per-grid correction would not fix it.** The error is not a uniform offset: at the join the
 worst block is 105 K out against a mean of 20 K, so a single scalar per grid would correct the

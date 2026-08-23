@@ -104,6 +104,66 @@ existed to say so.
 
 ---
 
+## What is in the corpus directory, and what is beside it
+
+Pruned 2026-08-23, from 68 GB in 33,773 files to 32 GB in 8,144 blueprints. **Every blueprint that
+has ever produced a ship is still there**, and the three directories say what each holds:
+
+| Directory | Holds | Why |
+| --- | --- | ---: |
+| `corpus` | 8,144 `bp.sbc` | Every blueprint known to yield a usable ship. 32 GB |
+| `corpus-barren` | 1,840 `bp.sbc` | Parsed and yields nothing: 1,742 rejected as modded, 53 under the 25-block floor, 3 the parser cannot read. 12 GB |
+| `corpus-oversized` | 8 `bp.sbc` | Over `THERMAL_CORPUS_MAX_MB`, so a walk has never read them and a machine with room can. 4.5 GB |
+
+**20.6 GB of it was the download's leavings and is deleted rather than moved**: 7,205
+`.sbcB1`–`.sbcB5` autosave backups, 3,904 `_legacy.bin` archives, 6,209 thumbnails, 185 `.sbcPB`
+script backups and a handful of image-editor files. Nothing has ever read any of them, and the
+`.bin` were checked to be redundant rather than assumed to be — see below.
+
+**The barren set is moved rather than deleted, and the reason is a rule this repository already
+has.** Pruning them from disk would bake today's two filters — `IsVanilla` and the 25-block floor —
+into the population, and [backlog.md](../../docs/backlog.md) `F14` records that the floor has never
+been varied to see whether it moves a population figure. Moving costs a rename to undo; deleting
+costs a re-download.
+
+**And the inference was checked rather than trusted, which is the whole reason to keep this
+paragraph.** The barren set was first identified by subtracting the paths in `ships.csv` from the
+blueprints on disk — an inference from two runs, one of which predates the per-blueprint resume
+record and could therefore have *lost* ships it never reached. Parsing the 1,852 said so: **12 were
+usable ships**, and they are back in the corpus. `dotnet run --project tests/Thermodynamics.Sim --
+corpus --list --path <dir>` is what names them, because a scan that answers *twelve* and cannot say
+which twelve is an answer that has to be taken on trust.
+
+**Three of the 3,904 legacy archives had never been unpacked, and nothing said so.** A blueprint
+published before Steam's current UGC system arrives as a zip holding `bp.sbc` and a thumbnail;
+three of them have lost the leading characters of their entry names — `p.sbc`, `.sbc`,
+`humb.png` — and `Unpack`'s exact test for `bp.sbc` skipped all three silently. It matches the
+extension now (`Blueprints.IsLegacyBlueprintEntry`, checked by `CorpusArchiveTests`), and two of
+the three recovered blueprints are usable ships that had never been in any run.
+
+---
+
+## The retest set
+
+`panel.py` picks extremes and `typical.py` picks the middle, and they answer different questions.
+
+```
+python3 tools/corpus/typical.py out/census-2026-08-21/census.csv \
+                               out/corpus-2026-08-21/outcomes.csv
+```
+
+A dial sweep needs the largest lever it can find, so the panel carries the most buried hull, the
+least surface per kilowatt and the hulls where one block type is most of the heat. **A retest asks
+whether a change broke the ships people actually fly**, and a regression judged only on outliers is
+a regression judged on hulls nobody built on purpose. `typical.py` writes `typical.csv`: 40 ships
+that each carry thrust, power, an airtight room and 100 kW of waste at full load, that fit the same
+30,000-block budget, and that sit nearest the population median on the four quantities the census
+found decide an outcome — scored on their *worst* axis rather than their mean, because a hull median
+on three and extreme on the fourth is not typical. Drawn across four size bands per grid size, so a
+retest is not accidentally all frigates. 3,816 of 8,141 ships pass the six tests.
+
+---
+
 **Read the peak columns with the censoring in mind.** The harness never destroys an overheating
 block, so anything above critical kept generating for the rest of the clock. See the deliberate
 limit in [known-issues.md](../../docs/known-issues.md).
@@ -114,6 +174,8 @@ limit in [known-issues.md](../../docs/known-issues.md).
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | Pruned the corpus directory from 68 GB to 32 GB and wrote down [what is in it](#what-is-in-the-corpus-directory-and-what-is-beside-it). 20.6 GB of leavings deleted, 1,840 barren blueprints and 8 oversized ones moved aside rather than deleted because `F14` still has the 25-block floor untested. The inference that a blueprint is barren was checked by parsing all 1,852 — 12 were usable ships and are back — which is also what added `corpus --list`. Fixed `Unpack`, which had silently skipped three legacy archives whose entry names are truncated. |
+| 2026-08-23 | Added `typical.py` and [the retest set](#the-retest-set): the panel picks extremes for a dial sweep, this picks the middle for a regression. |
 | 2026-08-22 | Split the crossing from the loss everywhere the pages had run them together. The survey report's headline said a ship *loses its first block* after nine seconds where it meant *crosses critical*, its table's `First loss` column was the crossing and its `Blocks lost` column was blocks over critical, and the bench page repeated all three. `seconds_to_first_loss` is packed and shown beside the crossing, and reads as absent on every dataset collected before it existed. |
 | 2026-08-22 | The resume is a record rather than a count. A walk writes `done-<walk>.txt` as it finishes each blueprint and reads it on the next start, so relaunching is the whole procedure and `THERMAL_CORPUS_SKIP` is gone ([backlog.md](../../docs/backlog.md) `H2`). Said that off is now spellable in `THERMAL_CORPUS_TESTS` every way anyone reaches for (`H3`). |
 | 2026-08-22 | Wrote down [the five ways a full sweep dies](#the-five-ways-a-full-sweep-dies), which [balance.md](../../docs/balance.md) had been pointing at [backlog.md](../../docs/backlog.md) for and which no page in the tree carried — it had survived only as a note kept outside the repository, which is the failure [rules.md](../../docs/rules.md) exists to prevent. |

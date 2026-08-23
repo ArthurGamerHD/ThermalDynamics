@@ -78,7 +78,9 @@ namespace Thermodynamics.Sim
                     return DumpCommand(args);
 
                 case "corpus":
-                    Console.Write(CorpusLab.Report(ValueAfter(args, "--path")));
+                    Console.Write(Has(args, "--list")
+                        ? CorpusLab.List(ValueAfter(args, "--path"))
+                        : CorpusLab.Report(ValueAfter(args, "--path")));
                     return 0;
 
                 case "corpus-fetch":

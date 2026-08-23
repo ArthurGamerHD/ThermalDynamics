@@ -314,7 +314,7 @@ that it was one ship the floor had never been measured on.
 Run it with `dotnet run --project tests/Thermodynamics.Sim -- prefabs`, and `--load` for the
 control. `PrefabWalk` holds both in the suite over a stride of 140.
 
-### Damage arrives too fast to be played around
+### How fast a ship crosses critical
 
 Of the ships that cross critical at all, seconds from the start of the run to the crossing —
 computed over the deduplicated outcomes, counting only ships that cross:
@@ -335,11 +335,44 @@ the two groups is only about twelvefold. What separates them is per-block: a pro
 watts are large against its own heat capacity crosses critical almost immediately whatever the clock
 says.
 
-This is a balance decision rather than a defect, and it is the one the survey most clearly asks for.
-It is also the sharpest tension with the stated goals: `G5` holds as written — recovery is bounded —
-while the reason given for it, *"a player must be able to react to a warning"*, does not survive a
-median of 8.9 seconds. See
-[document-of-intent.md](document-of-intent.md#where-the-goals-and-the-code-disagree).
+**The crossing is not the damage, and for a long time this page said it was.** It is the moment the
+damage rate leaves zero — the solver's rule is `(T − critical) × OverheatDamagePerKelvin`, which at
+the crossing is nothing at all. What a player loses is a block, and that is the section below.
+
+### How long a block has after it crosses
+
+Measured on `out/corpus-2026-08-23-loss`, 798 ships, the first dataset to carry
+`seconds_to_first_loss` — the figure the harness has computed since 2026-08-22 and no run had
+recorded. Paired per ship before the difference is taken (`E6`), because the gap between two
+percentiles of two populations is not a percentile of the gap:
+
+| Scenario | Crossing p50 | First loss p50 | Own gap p10 | Own gap p50 | Own gap p90 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `full-electrical` | 9.0 s | **37.0 s** | 7.7 s | **24.2 s** | 54.8 s |
+| `burn-forward` | 5.5 s | **23.0 s** | 4.2 s | **13.0 s** | 66.6 s |
+
+**Add the warning's own lead and the window is what the goal asked for.** `HeatWarning` sounds three
+seconds before the crossing, so the median ship under full electrical load gives its pilot **40
+seconds** between the first cue and the first block gone, and 26 seconds in a hard burn. At p10 it
+is 18 and 12 seconds. `G5`'s rationale — *a player must be able to react to a warning* — holds when
+it is measured against the event that costs the player something.
+
+**The crossing still predicts the loss**, which is what makes it a fair thing to warn on: of the
+ships that cross, 98.7 % under full electrical load and 97.0 % in a burn go on to lose a block
+before the clock runs out. It arrives about four times too early, not wrongly.
+
+**Why the sample is a population figure.** 798 ships against the 8,054 of the full survey, taken as
+a stride through the size-sorted corpus, and it reproduces the run it is a sample of on the quantity
+both measure: `burn-forward` crossings at p10/p50/p90 of 2.8/5.5/30.3 s against 2.9/5.6/31.0 s, and
+`full-electrical` at a median of 9.0 s against 8.9 s. The one place it does not is `idle`, where two
+ships cross rather than eighteen and nothing can be read from either.
+
+The per-block-type counterpart is [`BlockHeatIndex.SecondsFromCriticalToLoss`](../tests/Thermodynamics.Harness/BlockHeatIndex.cs),
+which integrates the same damage rule against a block's own hit points with the block alone in the
+dark: of the 72 shipped types that cross at all, the median survives **24.7 s** past its rating and
+the tenth percentile 8.7 s. A ship lasts longer than its worst block because its neighbours are
+taking heat off it, and shorter than its median block because the first loss is the fastest of
+thousands.
 
 ### One block type decides the load criterion
 
@@ -668,6 +701,7 @@ five ways a full sweep dies, and [backlog.md](backlog.md) for what is still open
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | Answered the damage-timing question with the event that costs a player something. The section had been called *"damage arrives too fast to be played around"* and quoted a **median 8.9 s** that is the *crossing* — the moment the damage rate leaves zero. The first block is lost at a median **37.0 s** under full electrical load, the median ship's own crossing-to-loss gap is **24.2 s**, and with the cue's three-second lead the window is 40 s. `G5`'s rationale holds. Split into [the crossing](#how-fast-a-ship-crosses-critical) and [the loss](#how-long-a-block-has-after-it-crosses), which is the section `BlockHeatIndex` has cited since it was written and which did not exist. |
 | 2026-08-22 | Measured the catalogue drift this page had recorded as *up to 4×*: it is **4.32×** at worst, on the large thruster, and four of six blocks are out rather than three. `CatalogDriftTests` pins all of it, armour included — matching exactly is what makes the rest a measurement ([backlog.md](backlog.md) `C4`). |
 | 2026-08-22 | Added [The compatibility floor holds](#the-compatibility-floor-holds). Every one of the 705 prefabs the game ships has now been simulated — the criterion `G7` was written down first ([balance-lab.md](balance-lab.md)) — and none loses a block arriving, against 616 of 705 that do when flown hard. |
 | 2026-08-22 | Restored the damage-timing finding, which the merge of `corpus-shape.md` and the register had dropped, and corrected its idle figure: the median time to critical at idle is **104.5 s**, matching this page's own shape table, where the prose had carried 112 s — one of the eighteen values rather than their median. |
