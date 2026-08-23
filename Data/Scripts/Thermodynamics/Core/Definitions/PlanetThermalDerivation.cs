@@ -43,6 +43,23 @@ namespace Thermodynamics.Core
             /// </summary>
             public float SolarRadiationProtection;
 
+            /// <summary>
+            /// Metres from sea level down to the world's deepest natural ground — the depth of its
+            /// lowest valley floor, as a positive number.
+            ///
+            /// <para>
+            /// The game's own `HillParams.Min` times the planet's radius, and it is what
+            /// <see cref="PlanetThermalProperties.SealevelDeadzone"/> should be: the flat band is
+            /// then exactly the band where ground can be, and any shaft driven *below the lowest
+            /// natural surface on that world* starts to warm. The shipped 2 km was a round number
+            /// against worlds whose deepest ground ranges from 285 m to 2 km, so on most of them
+            /// the core term was unreachable in ordinary play.
+            /// </para>
+            ///
+            /// <para>Zero leaves the property's own default in charge.</para>
+            /// </summary>
+            public float DeepestGroundMetres;
+
             /// <summary>Effective density: zero when the world has no air at all.</summary>
             public float Air
             {
@@ -232,6 +249,13 @@ namespace Thermodynamics.Core
             // The rock below settles at the mean of what the surface does over a day, which is what
             // the mean temperature already is.
             properties.UndergroundTemperature = mean;
+
+            // The flat band above the core gradient is the band where ground can be. Below the
+            // world's deepest natural valley floor there is nothing but rock, and rock warms.
+            if (engine.DeepestGroundMetres > 0f)
+            {
+                properties.SealevelDeadzone = engine.DeepestGroundMetres;
+            }
 
             properties.SolarDecay = SolarDecay(engine.SolarRadiationProtection, air);
             properties.ConvectionCoefficient = ConvectionCoefficient(air);
