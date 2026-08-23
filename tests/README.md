@@ -451,7 +451,7 @@ and left off it.
 | **End to end, and the host boundary** | `SimulationIntegrationTests` `ScenarioTests` `ScenarioClaimTests` `HostAdapterTests` `CoreIsolationTests` |
 | **Balance, and the ships it is decided on** | `BalanceTests` `CoolingLadderTests` `RetrofitTests` `BlockHeatIndexTests` `TimeToLossTests` `DecorativeStiffnessTests` `ElementCostFitTests` `ScreeningTests` `BlueprintTests` `SubgridBridgeTests` `PrefabWalk` `CorpusGuardTests` `ClientDriftTests` `WorstCaseTests` `LabRunTests` `LabInvariantTests` |
 | **Corpus walks** (opt-in, `THERMAL_CORPUS_TESTS`) | `CorpusSurvey` `CorpusCensus` `KnobSweep` `SunlightPanelWalk` `BlockAccountingWalk` `DeterminismWalk` |
-| **The documentation itself** | `DocumentationTests` `ConfigurationDocTests` `SimCommandTests` `CredentialScanTests` |
+| **The documentation itself** | `DocumentationTests` `ModApiShapeTests` `ConfigurationDocTests` `SimCommandTests` `CredentialScanTests` |
 
 > **The bit-identity suites share one fixture.** Five of them pin an optimisation against the
 > thing it replaced — the precomputed environment rows, the fixed source row, the gated
