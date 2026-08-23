@@ -557,7 +557,7 @@ balancing a planet's climate.
 | `weather` | the game's name for the weather standing over the grid — `RainHeavy`, `SnowLight` — empty in clear air |
 | `weather_intensity` | the game's weather intensity at that point |
 | `weather_ambient_k` | what that weather did to the air, K. The column that says the model reacted to it at all |
-| `game_temperature` | the game's own comfort figure at that point, 0..1 — its model, for comparison |
+| `game_comfort` | the game's own comfort figure at that point, 0..1 — `GetTemperatureInPoint`. **Not a temperature and not a cross-check**: it is a fraction, never kelvin, and it is zero wherever there is no oxygen. Written as `game_temperature` in any dump taken before 2026-08-22. |
 | `surface_material` | the voxel material under the grid: snow, sand, grass, ice |
 | `grid_mean_k`, `grid_peak_k` | what the grid itself did about all of it |
 
@@ -784,6 +784,7 @@ rest.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Renamed `game_temperature` to `game_comfort`. `GetTemperatureInPoint` returns a 0..1 fraction and zero wherever there is no oxygen, so the old name claimed two things it is not ([backlog.md](backlog.md) `B23`). A dump written under the old name is still read, and `TheComfortColumnIsReadableUnderEitherName` keeps it that way. |
 | 2026-08-22 | Added the standard header and this change log. |
 | 2026-08-21 | Gave every substep count the step length it was counted against, and filed one overheat event per block per step rather than per substep — which had been multiplying the reported critical-block count by the grid's substep demand. |
 | 2026-08-20 | Recorded faults whether or not collection is running, and caught a grid that has gone numerically bad without collection on. Measured the per-grid visit instead of inferring it, and attributed the eighth of a grid's update that had belonged to nothing. |

@@ -334,7 +334,7 @@ namespace Thermodynamics
                     row.WindBearingDegrees = (float)(Math.Atan2(
                         Vector3.Dot(wind, east), Vector3.Dot(wind, north)) * 180d / Math.PI);
                 }
-                row.GameTemperature = MyVisualScriptLogicProvider.GetTemperatureInPoint(position);
+                row.GameComfort = MyVisualScriptLogicProvider.GetTemperatureInPoint(position);
                 row.SurfaceMaterial = MaterialUnder(entity, ref surface);
             }
 
