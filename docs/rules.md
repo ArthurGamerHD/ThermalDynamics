@@ -982,9 +982,9 @@ that had to be cut down to fit in memory.
 **A shortcut taken on purpose is written into the limits list, with what it costs, so nobody
 rediscovers it as a bug.**
 
-Build state not changing a block's thermal properties, emissivity used as absorptivity, point
-sources not occluded, a room with no vent holding no air: each is a decision, and each is
-recorded with the machinery that would undo it. This is the operative half of P14 — the shortcut
+Build state not changing a block's thermal properties, a surface described by two constants
+rather than a spectrum, point sources not occluded, a room with no vent holding no air: each is a
+decision, and each is recorded with the machinery that would undo it. This is the operative half of P14 — the shortcut
 is free to take and not free to leave unwritten.
 
 *Applies to:* every decision to approximate.

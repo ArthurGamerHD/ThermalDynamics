@@ -76,8 +76,12 @@ per-block event on the construction path plus a rule for what a half-built block
 machinery to support it exists — `RefreshBlock` handles a geometry change correctly and cheaply —
 so this can be revisited by hooking build state to it, and nothing else would need to change.
 
-**Emissivity is used as absorptivity.** The grey-body assumption. A block cannot be made shiny to
-the sun and black to space.
+**A surface is two constants, not a spectrum.** Emission and absorption are separate numbers now —
+`Emissivity` and `SolarAbsorptivity`, the second following the first unless a definition declares it
+— so a block *can* be made shiny to the sun and black to space ([backlog](backlog.md) `B27`, closed).
+What is still a simplification is that each is one constant: a real selective surface is a curve
+against wavelength, and this is that curve reduced to a value in the visible and a value in the
+thermal infrared. No shipped block declares the two apart yet.
 
 **A coolant loop's `Conductivity` is a 0…1 quality against a 200 W/(m·K) reference**, where a
 block's is the real W/(m·K) figure a materials table gives. The fluid-to-wall path is convective,

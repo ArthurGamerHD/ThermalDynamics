@@ -122,8 +122,13 @@ watts = −ε σ A_exposed × (T⁴ − T_ambient⁴)
 σ = 5.670374419e-8. `A_exposed` is the count the surface mapper produced — see
 [Exposure](#exposure). **A block with no exposed face neither radiates nor absorbs.**
 
-Emissivity doubles as absorptivity for incoming radiation. That is the grey-body assumption, and it
-is deliberate.
+**What arrives is a different coefficient from what leaves.** Emission uses `ε`; the sun and every
+point source use `α`, the block's `SolarAbsorptivity`. Undeclared, `α = ε` — the grey-body
+assumption, which is where this model started and what every block still does unless somebody
+authors otherwise. Declaring the two apart is what a selective surface is: a real radiator sheds in
+the thermal infrared at `ε ≈ 0.8` and takes in the visible at `α ≈ 0.1`, and while one number did
+both jobs that surface could not be described at all. See
+[definitions.md](definitions.md#emissivity-and-absorptivity-are-two-numbers).
 
 ### Convection
 
@@ -646,6 +651,7 @@ several tests compare against it so the differences stay pinned rather than reme
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Radiation in and radiation out are two coefficients. Emission keeps the emissivity; the sun and point sources read `SolarAbsorptivity`, which follows the emissivity unless authored, so the grey-body behaviour is the default rather than the only option ([backlog.md](backlog.md) `B27`). |
 | 2026-08-22 | Corrected the reactor's shipped waste fraction, which this page and [tests/README.md](../tests/README.md) both quoted as 0.02 against the 0.01 in `Cubes.xml` and on [balance.md](balance.md#reactor-waste-heat). 0.02 is the value the sweep rejected: it puts a 300 MW reactor past critical *bare* in vacuum, which is a state no build can improve on. |
 | 2026-08-22 | Corrected the substep cap quoted beside `LastStepWasClamped`: it read 16 and ships 64. |
 | 2026-08-22 | Absorbed `surface-mapping.md`, whose subject is the geometry every area term on this page reads. Moved the environment equations to [environment.md](environment.md), leaving one home for them instead of two. Converted to present tense, with the defect narratives moved to [known-issues.md](known-issues.md) and this log. Promoted the three solver invariants into a table of their own. |

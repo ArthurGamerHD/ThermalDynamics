@@ -312,6 +312,12 @@ namespace Thermodynamics
                 properties.SpecificHeat = definition.SpecificHeat;
             if (definition.WasDeclared(ThermalCellDefinition.DeclaredProperties.Emissivity))
                 properties.Emissivity = definition.Emissivity;
+
+            // Absorptivity follows the emissivity unless it is declared in its own right, and that
+            // includes a *declared* emissivity: an entry written before this property existed said
+            // one number and meant both, so reading only one of them would silently change it.
+            if (definition.WasDeclared(ThermalCellDefinition.DeclaredProperties.SolarAbsorptivity))
+                properties.SolarAbsorptivity = definition.SolarAbsorptivity;
             if (definition.WasDeclared(ThermalCellDefinition.DeclaredProperties.ExposedSurfaceMultiplier))
                 properties.ExposedSurfaceMultiplier = definition.ExposedSurfaceMultiplier;
             if (definition.WasDeclared(ThermalCellDefinition.DeclaredProperties.ProducerWasteEnergy))

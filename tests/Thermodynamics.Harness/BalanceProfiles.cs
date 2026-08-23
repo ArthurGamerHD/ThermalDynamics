@@ -252,9 +252,10 @@ namespace Thermodynamics.Harness
         /// </summary>
         public static readonly string[] RealismGaps =
         {
-            "Grey body: Emissivity doubles as solar absorptivity, so a good radiator is forced to "
-            + "be a good absorber. Real spacecraft radiators use selective surfaces with a high "
-            + "emissivity and a low absorptivity, which is exactly the combination this cannot express.",
+            "Grey body by default: a block absorbs at its emissivity unless a definition declares "
+            + "a SolarAbsorptivity of its own. Selective surfaces are expressible now — that was "
+            + "the gap — but no shipped block uses one, and the wavelength dependence a real "
+            + "selective surface has is still two constants rather than a spectrum.",
 
             "No inter-block radiation: a face radiates to the sky or to nothing. Two hot blocks "
             + "facing each other across a gap do not see each other, and no view factors exist.",

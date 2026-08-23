@@ -34,13 +34,33 @@ Read by `ThermalCellDefinition.GetDefinition`
 | `ExcludeFromSimulation` | Bool | — | `true` excludes the block from the simulation entirely: no cell is created, it conducts nothing and blocks nothing. |
 | `Conductivity` | Decimal | `≥ 0` | Thermal conductivity in **real W/(m·K)** — the number a materials table gives. Mild steel 50, stainless 15, glass 1, aluminium 237, copper 400. The game's pace is set once, globally, in `ThermalConstants.ConductionScale`, so this stays a description of the material. |
 | `SpecificHeat` | Decimal | `≥ 0` | Heat capacity in **real J/(kg·K)** — look the material up. Steel 450, copper 385, aluminium 900, graphite 710, water 4184. Higher = slower to heat and to cool. See [the note below](#specific-heat-is-real-and-the-clock-is-not). |
-| `Emissivity` | Decimal | `≥ 0` | Fraction of blackbody radiation emitted, and equally the fraction of incident solar energy absorbed. Physically `0 … 1`. |
+| `Emissivity` | Decimal | `≥ 0` | Fraction of blackbody radiation **emitted**. Physically `0 … 1`. |
+| `SolarAbsorptivity` | Decimal | `≥ 0` | Fraction of arriving radiation **absorbed** — the sun, and every point heat source. Physically `0 … 1`. **Omit it and it follows `Emissivity`**, which is what every block did before this property existed, so nothing already authored changes. See [Emissivity and absorptivity are two numbers](#emissivity-and-absorptivity-are-two-numbers). |
 | `ExposedSurfaceMultiplier` | Decimal | `≥ 0` | Multiplies the geometric face area. Use `> 1` for finned or folded surfaces (the radiator uses `1.25`). It scales **every** external path, so a large value also multiplies solar gain and reentry friction — and it buys much less than it looks: see [balance.md](balance.md). |
 | `ProducerWasteEnergy` | Decimal | `≥ 0` | Fraction of *generated* power converted to heat. |
 | `ConsumerWasteEnergy` | Decimal | `≥ 0` | Fraction of *consumed* power converted to heat. |
 | `CriticalTemperature` | Decimal | `≥ 0` | Kelvin above which the block takes damage. |
 | `OverheatDamagePerKelvin` | Decimal | `≥ 0` | Damage per Kelvin of overshoot, per second. |
 | `HeatSourceWatts` | Decimal | `≥ 0` | Watts the block makes because of **what it is**, not because of power crossing it — decay heat in spent fuel, a forge, a wreck still burning. Every other heat term is a fraction of watts passing through, which describes a reactor and a thruster and nothing else. [Omitted, and correctly so, by every block that is not one](#every-property-but-one-must-be-declared). |
+
+### Emissivity and absorptivity are two numbers
+
+A surface is not obliged to absorb what it emits. Real spacecraft radiators are *selective*: high
+emissivity in the thermal infrared where their own heat leaves, low absorptivity in the visible
+where the sun arrives. Second-surface mirrors reach `α ≈ 0.08` against `ε ≈ 0.8`; white paint is
+around `0.2` against `0.9`. That is a factor of ten between the two, and one number cannot express
+it — which is why, while emissivity did both jobs, **a good radiator was forced to be a good
+absorber** and improving one improved the other exactly as much.
+
+They are separate now, and the separation is what makes surface finish a design decision rather
+than a constant. The default is unchanged in both directions: an entry that does not mention
+`SolarAbsorptivity` absorbs at its emissivity, and a block with no entry at all derives one number
+from its build components and uses it for both.
+
+**Omission means "follow", not "zero".** It is the second property where that is true, and for a
+different reason from [`HeatSourceWatts`](#every-property-but-one-must-be-declared): here zero is a
+real answer — a perfect reflector — so the sentinel is a negative value rather than an absent one,
+resolved in a single place on `BlockThermalProperties`.
 
 ### Every property but one must be declared
 
@@ -129,6 +149,11 @@ of every other mod, which previously all fell through to one entry describing mi
 | Derived from components | Taken from the block's type | 
 | --- | --- |
 | `Conductivity`, `SpecificHeat`, `Emissivity`, `CriticalTemperature` | `ProducerWasteEnergy`, `ConsumerWasteEnergy`, `ExposedSurfaceMultiplier`, `OverheatDamagePerKelvin` |
+
+`SolarAbsorptivity` is in neither column: it follows the emissivity — derived or declared — until
+somebody writes one, because a build cost says what a surface is made of and nothing about how it
+was finished.
+
 
 The split is not arbitrary. What a block is made of cannot say what it does with power: two blocks
 of identical construction, one a thruster and one a girder, differ entirely in what they put into
@@ -307,6 +332,7 @@ Tuning guidance:
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Split `SolarAbsorptivity` off `Emissivity`. One number did both jobs, so a good radiator was forced to be a good absorber — the one combination real spacecraft radiators exist to avoid ([backlog.md](backlog.md) `B27`). Omitting it follows the emissivity, so nothing already authored changes, and zero stays a real answer rather than reading as unset. |
 | 2026-08-22 | Corrected the claim that `Data/Planets.xml` defines only the fallback, so every planet runs Earthlike numbers. The file carries nine entries — `DefaultThermodynamics` plus one per shipped world — generated from each world's own generator definition. Added the standard header and this change log. |
 | 2026-08-22 | Checked all three definition readers against this reference rather than only the block one, and put the newly working heat-source property in it. |
 | 2026-08-20 | Let the derivation reach every vanilla block. |
