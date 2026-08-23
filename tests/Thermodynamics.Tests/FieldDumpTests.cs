@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using Thermodynamics.Harness;
 using Xunit;
@@ -47,6 +48,63 @@ namespace Thermodynamics.Tests
             }
 
             throw new Xunit.Sdk.XunitException("no check named " + name);
+        }
+
+        /// <summary>
+        /// The comfort column is still readable in a dump written before it was renamed.
+        ///
+        /// <para>
+        /// `GetTemperatureInPoint` returns a 0..1 comfort fraction and zero wherever there is no
+        /// oxygen, so the column it was written into claimed two things it is not: it is now
+        /// `game_comfort`. The fixture beside the benchmarks was written under the old name and is
+        /// **a record of what the mod wrote then**, so it is read rather than edited — the same
+        /// treatment a retired definition property gets.
+        /// </para>
+        ///
+        /// <para>
+        /// And what the fixture says about it, which is why it was renamed: over the 286 rows with
+        /// air it spans 0.000 to 0.494 and never resembles a temperature, and it is exactly zero on
+        /// 374 of the 597 rows — every airless one and sixty-three that have air.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheComfortColumnIsReadableUnderEitherName()
+        {
+            string path = Fixture();
+            string[] lines = File.ReadAllLines(path);
+            Assert.True(lines.Length > 1, "the fixture has no rows");
+
+            List<string> header = new List<string>(lines[0].Split(','));
+            int column = header.IndexOf("game_comfort");
+            if (column < 0) column = header.IndexOf("game_temperature");
+
+            Assert.True(column >= 0,
+                "neither the current comfort column nor the name it retired is in the fixture");
+
+            int rows = 0;
+            int zero = 0;
+            float highest = 0f;
+
+            for (int i = 1; i < lines.Length; i++)
+            {
+                string[] cells = lines[i].Split(',');
+                if (cells.Length <= column) continue;
+
+                float value;
+                if (!float.TryParse(cells[column], System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture, out value)) continue;
+
+                rows++;
+                if (value == 0f) zero++;
+                if (value > highest) highest = value;
+            }
+
+            Assert.True(rows > 500, "only " + rows + " rows were read");
+            Assert.True(highest > 0f && highest <= 1f,
+                "a comfort fraction should sit inside 0..1 and not be flat: " + highest);
+            Assert.True(zero > rows / 2,
+                "most of the fixture should be zero, because most of it is airless: "
+                + zero + " of " + rows);
         }
 
         /// <summary>Every check reaches the fixture: a lost column must fail, not skip.</summary>

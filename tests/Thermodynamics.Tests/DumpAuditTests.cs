@@ -44,7 +44,8 @@ namespace Thermodynamics.Tests
             "depth_m,solar_w,solar_occlusion,convection_coeff,wind_speed,wind_bearing_deg," +
             "wind_ceiling,wind_agl_m,wind_burial,wind_band_share,wind_profile,wind_heating,wind_speedup," +
             "wind_shelter,wind_channel_deg,grid_speed,weather,weather_intensity,weather_ambient_k," +
-            "game_temperature,surface_material,grid_mean_k,grid_peak_k";
+            "game_comfort,surface_material,grid_mean_k,grid_peak_k";
+
 
         /// <summary>
         /// One plausible row, by column name. A test names only what it is about and inherits a

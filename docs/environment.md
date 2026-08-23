@@ -558,7 +558,7 @@ do, so none of them can drift from the model without the model itself changing.
 
 Alongside `latitude_deg`, `sun_elevation_deg`, `altitude_surface`, `altitude_sealevel`,
 `air_density`, `depth_m`, `weather`, `weather_intensity`, `convection_coeff`, `surface_material` and
-`game_temperature`, that is enough to check every claim on this page against a real world. Audit a
+`game_comfort`, that is enough to check every claim on this page against a real world. Audit a
 dump with `dotnet run --project Thermodynamics.Sim -- dump`.
 
 ### The scenario matrix
@@ -590,12 +590,15 @@ materials, across a sunrise. What it settles:
 | `depth_m` | 42 buried rows, 46–169 m. Every one reads 280.00 K — a flat `UndergroundTemperature`, since all of them are inside the 2 km deadzone. The model is in force and the core gradient is unreachable, exactly as [Underground](#underground) argues. |
 | `weather` | `RainLight` on 672 rows and nothing else. The offset is −1.8 K per unit of intensity on every one of them, so the table figure is being faded in by intensity and applied once. |
 | `convection_coeff` | 0–166 W/(m²·K), mean 59. Zero on all 906 airless rows and non-zero on all 3,465 rows with air. |
-| `game_temperature` | 0.269–0.395 where there is oxygen, zero on every airless row. |
+| `game_comfort` | 0.000–0.494 where there is oxygen, zero on every airless row **and on sixty-three that have air** — 374 zeros of 597 rows. |
 
-**The game's own temperature figure cannot check anything here.** Over the 3,465 rows that carry
-one it correlates +0.86 with the sun's elevation and +0.12 with this model's ambient. It is a
-daylight figure on a 0..1 scale, so it says when it is day — which the model already knows — and
-nothing about how warm the ground under a grid is.
+**The game's own comfort figure cannot check anything here.** Over the 286 rows of this dump that
+carry air it correlates **+0.11** with the sun's elevation and **+0.20** with this model's ambient —
+weak against both, so it confirms nothing thermal in either direction. An earlier reading of a
+larger dump put those at +0.86 and +0.12 and read it as a daylight figure; that dataset is not in
+this repository and the figures above are the ones its own fixture gives, which is `E5`. What both
+readings agree on is the conclusion: it is a comfort fraction and it is not a check on anything this
+model computes.
 
 **What no field dump has reached:** one planet, one weather kind, one latitude band, and no still
 air anywhere — every row with air also had wind, so the convection coefficient has never been
@@ -661,7 +664,8 @@ return MathHelper.Lerp(0f, value2, oxygenInPoint);
 
 `GetTemperatureInPoint` returns **0..1, not kelvin**, and **returns zero wherever there is no
 oxygen**. Mars, Europa and the Moon are all unbreathable, so it is flatly zero on three of the eight
-worlds and near it on a fourth. The `game_temperature` telemetry column is this figure.
+worlds and near it on a fourth. The `game_comfort` telemetry column is this figure, and it is named
+for what it is rather than for what it looked like.
 
 **Orbital distance does not exist.** One sun, one intensity, and no field anywhere saying how far a
 planet sits from it. A world cannot be cold *because* it is far away — the level is the whole
@@ -766,7 +770,7 @@ bands, every constant in `WindTerrain` (0.6 speed-up, 0.45 slow-down, 0.75 shelt
 full-shelter angle, the one-in-three full-channelling slope), and the diurnal amplitude and
 crossover (0.35 and 80 m, plausible middles of wide real ranges) are all chosen to be plausible and
 cheap. The game supplies nothing to fit them to, and the cross-check they were to be fitted against
-does not exist — `game_temperature` tracks the sun rather than the ground.
+does not exist — `game_comfort` correlates weakly with everything and is not a check on any of it.
 
 **Known faults, tracked in the [backlog](backlog.md):**
 
@@ -774,7 +778,6 @@ does not exist — `game_temperature` tracks the sun rather than the ground.
 | --- | --- |
 | B16 | Roughness length is one number for a whole world, when the ground material under a grid is already classified and is exactly what it should vary with. |
 | B22 | Seven of eight shipped worlds have air density exactly 1, so swing, pole drop, lag and convection derive to the same figure for all of them. |
-| B23 | `game_temperature` is zero wherever there is no oxygen, and a daylight figure where there is. The telemetry should say so where it is reported. |
 | C5 | The core gradient sits behind a 2 km deadzone deeper than SE's voxels reach. Whether the default should be a few hundred metres is a balance question. |
 | C6 | `AmbientLagSeconds` is 45 absolute seconds against a day that is not: it attenuates a four-minute day to 46% of its intended swing and does essentially nothing to a default two-hour one. It is physically a fraction of a day. `MySectorWeatherComponent.RotationInterval` would express it as a share of one, if that type is reachable under the whitelist. |
 | C7 | The 4 K/km lapse rate and the ground table both say mountains are cold. The honest fix is probably that ground offsets should shrink as the lapse rate grows, since a site is only snowy *because* it is high. **The snow reference site is where that will show.** |
@@ -788,6 +791,7 @@ does not exist — `game_temperature` tracks the sun rather than the ground.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Closed `B23`: the telemetry column is `game_comfort`, named for what it is. Re-measured its correlations against the fixture this repository actually holds — +0.11 with the sun's elevation and +0.20 with this model's ambient, against the +0.86 and +0.12 quoted from a dataset that is not in the tree (`E5`). The conclusion is unchanged and the numbers are now checkable. |
 | 2026-08-22 | Closed `B20`. The boundary layer is capped by the air over the ground under the grid, so the vertical profile is no longer evaluated at heights with no atmosphere at them — Titan's air is 285 m deep against a 600 m configured gradient. Derived from `MyPlanet.AtmosphereAltitude` rather than authored, so it follows every world including modded ones, and the offline lab computes it the same way. |
 | 2026-08-22 | Closed `A16`. A buried grid exchanged with rock at the coefficient for moving air, which made digging in the best cooling in the game; it is `2k/D` — 2 W/(m²·K) against 50 — authored per planet as `UndergroundConvectionCoefficient` and crossed over the first five metres so the surface is not a wall. Neither wind nor weather reaches it. |
 | 2026-08-22 | Closed `B29` the same day it was opened: the convection wind factor runs from 1 upward rather than from 0.5 to 1, so a wind cools a hull at every speed instead of warming it below about 50 m/s. Same two-to-one contrast between a windward face and a lee one; corrected floor. |

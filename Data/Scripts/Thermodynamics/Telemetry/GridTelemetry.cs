@@ -176,8 +176,20 @@ namespace Thermodynamics
         /// <summary>Temperature offset that weather applied to the air, K.</summary>
         public float WeatherAmbientOffset;
 
-        /// <summary>The game's own environment comfort scale at this point, 0..1.</summary>
-        public float GameTemperature;
+        /// <summary>
+        /// The game's own environment comfort scale at this point, 0..1 — `GetTemperatureInPoint`.
+        ///
+        /// <para>
+        /// **It is not a temperature and it is not a cross-check.** It is a fraction, never kelvin,
+        /// and it returns zero wherever there is no oxygen — so it is flatly zero on Mars, Europa
+        /// and the Moon. Over the 286 breathable rows of the field dump kept beside the benchmarks
+        /// it spans 0.000 to 0.494 and correlates +0.11 with the sun's elevation and +0.20 with
+        /// this model's own ambient: weak against both, so it confirms nothing thermal. It is
+        /// recorded because it is what the game thinks about the same point, not because it
+        /// verifies anything. See telemetry.md.
+        /// </para>
+        /// </summary>
+        public float GameComfort;
 
         public string SurfaceMaterial;
 

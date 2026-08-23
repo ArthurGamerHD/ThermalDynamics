@@ -1768,7 +1768,7 @@ namespace Thermodynamics
                 altitude.Add((float)row.AltitudeSurface);
                 solar.Add(row.SolarEnergy);
                 wind.Add(row.WindSpeed);
-                game.Add(row.GameTemperature);
+                game.Add(row.GameComfort);
                 convection.Add(row.ConvectionCoefficient);
 
                 if (row.SunElevationDegrees > 0f) day.Add(row.AmbientKelvin);
@@ -1804,7 +1804,7 @@ namespace Thermodynamics
                 Field(sb, "    solar W", solar.Format("n0"));
                 Field(sb, "    wind m/s", wind.Format("n1"));
                 Field(sb, "    convection W/m2K", convection.Format("n1"));
-                Field(sb, "    game temperature", game.Format("n3"));
+                Field(sb, "    game comfort 0..1", game.Format("n3"));
 
                 if (depth.Count > 0)
                 {
@@ -1861,7 +1861,7 @@ namespace Thermodynamics
             sb.Append("sun_elevation_deg,air_density,atmosphere_factor,ambient_k,ambient_c,underground,depth_m,");
             sb.Append("solar_w,solar_occlusion,convection_coeff,wind_speed,wind_bearing_deg,wind_ceiling,");
             sb.Append("wind_agl_m,wind_burial,wind_band_share,wind_profile,wind_heating,wind_speedup,wind_shelter,wind_channel_deg,grid_speed,");
-            sb.Append("weather,weather_intensity,weather_ambient_k,game_temperature,");
+            sb.Append("weather,weather_intensity,weather_ambient_k,game_comfort,");
             sb.Append("surface_material,grid_mean_k,grid_peak_k\n");
 
             IList<GridTelemetry> grids = Telemetry.Grids;
@@ -1912,7 +1912,7 @@ namespace Thermodynamics
                     Csv(sb, Truncate(row.Weather ?? "", 32));
                     Csv(sb, row.WeatherIntensity);
                     Csv(sb, row.WeatherAmbientOffset);
-                    Csv(sb, row.GameTemperature);
+                    Csv(sb, row.GameComfort);
 
                     Csv(sb, Truncate(row.SurfaceMaterial ?? "", 32));
                     Csv(sb, row.GridMeanKelvin);
