@@ -249,11 +249,29 @@ different in different places, and recognisable from a cockpit.
 ### Circulation
 
 [WindField.cs](../Data/Scripts/Thermodynamics/Core/Simulation/WindField.cs) lays Earth's bands over
-the planet — trades blowing west to 30°, westerlies to 60°, polar easterlies beyond — as a **bearing
-that turns** rather than components that are mixed and normalised, because the latter snaps round at
-every band edge where the fading zonal term leaves only the sideways one. Speed is a fraction of the
-ceiling: about an eighth in fair weather, half in the worst weather the game reports, times a steady
-per-place variation so one valley is windier than the next.
+the planet — trades blowing west to 30°, westerlies to 60°, polar easterlies beyond. Speed is a
+fraction of the ceiling: about an eighth in fair weather, half in the worst weather the game
+reports, times a steady per-place variation so one valley is windier than the next.
+
+**One signal decides both components.** `sin(6 × distance from the equator)` is +1 in the middle of
+a westward band, −1 in the middle of an eastward one, and zero at the equator, at 30°, at 60° and at
+the pole. The zonal component is that signal; the meridional component is the same signal times a
+tilt, so the sideways term cannot outlive the along-track one and reverse on its own. The tilt is
+the tangent of thirty degrees at its largest, which is about how far off due east or west Earth's
+trades and westerlies actually run, and it fades to nothing at the equator and at the pole.
+
+**A band edge is a calm, not a seam.** The signal is zero there, so `BandStrength` is zero, so there
+is no wind — the doldrums, the horse latitudes and the polar front. The direction does reverse
+across those latitudes, because the band on the other side blows the other way; what makes that a
+turn rather than a wall is that the wind has died before it happens. `WindField.Direction` is a unit
+vector and reverses; the *velocity*, which is what a ship stands in, passes smoothly through zero.
+A consumer must multiply the two — `WindSolver` does, and `TheWindSwingsThroughTheCalmsRatherThanReversingAcrossALine`
+measures the product rather than the bearing, which is what it was doing when it missed `B14`.
+
+**This replaced a rotating bearing**, which kept the direction continuous by construction but could
+only express a meridional component pointing one way: poleward. Air therefore diverged from the
+equator where Earth's trades converge, and the wind flipped end for end across latitude 0 at full
+strength.
 
 ### The vertical profile
 
@@ -727,7 +745,6 @@ does not exist — `game_temperature` tracks the sun rather than the ground.
 
 | | |
 | --- | --- |
-| B14 | The wind's meridional component is poleward everywhere and reverses across the equator, so air diverges from the equator where Earth's trades converge. The test that exists measures only the east component. **The largest known fault in the pattern.** |
 | B17 | A parked grid can be pushed over the friction threshold by wind alone — the offline storm scenario reaches 209 m/s. This is the defect the wind field was built to prevent, reopened by the vertical profile multiplying the band share above the reference height. |
 | B18 | The engine's figure is no longer a ceiling: three field samples exceeded it once profile and band share compound. |
 | B16 | Roughness length is one number for a whole world, when the ground material under a grid is already classified and is exactly what it should vary with. |
@@ -746,6 +763,7 @@ does not exist — `game_temperature` tracks the sun rather than the ground.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Fixed `B14`, the largest known fault in the wind pattern. The meridional component follows the band rather than the hemisphere — equatorward in the trades and the polar easterlies, poleward in the westerlies — and comes off the same signal as the zonal one, so a band edge is a calm rather than a place where the wind reverses at full strength. The test that should have caught it measured the east component of a unit bearing; it now measures the velocity. Two things fell out of the same pass: a terrain influence outside 0..1 could make a shelter factor negative and a speed with it, and the wind lab's day-against-night ratio was dividing two averages taken over different sets of latitudes (`E6`). |
 | 2026-08-22 | Merged `planet-climate.md`, `planet-thermals.md` and `wind-model.md` into this page, named for the subsystem it describes. Converted to present tense, with the measurement narrative moved into this log. Corrected the claim that slope winds were not built — `WindSlope` is built, wired, settable and tested. Promoted the composed model above the engine survey it is justified by. |
 | 2026-08-21 | Recorded the two defects that stopped any world receiving a per-planet climate: the generated file carried `--` inside an XML comment and was rejected wholesale by the strict importer, and the lookup was keyed on the planet entity's `DefinitionId` (`MyObjectBuilder_Planet/(null)`) rather than `Entity.Generator.Id`. Added the strict-parse check over every file `definitionextensions.txt` names. |
 | 2026-08-20 | Derived a climate per shipped world from its own generator definition, and made the same derivation the fallback for modded planets. Added the wind model: circulation, vertical profile, daily cycle, terrain and slope winds, with the 28-scenario matrix behind it. Took the wind away from a buried grid — it had been clamped to ground level. Stopped a planet whose definition did not load being simulated as a vacuum. Recorded what the 4,371-row field dump settles and what it cannot reach. |

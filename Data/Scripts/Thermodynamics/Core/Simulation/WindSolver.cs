@@ -147,8 +147,11 @@ namespace Thermodynamics.Core
             Vector3 direction = WindField.Direction(inputs.Up, inputs.Axis);
             if (direction.LengthSquared() < 1e-8f) return result;
 
+            // The band's own strength is what makes the field continuous where the direction
+            // reverses: a band edge is a calm, not a seam. See WindField.BandStrength.
             float share = WindField.Speed(
-                inputs.Ceiling, inputs.WeatherIntensity, inputs.Variation, inputs.WeatherWind);
+                inputs.Ceiling, inputs.WeatherIntensity, inputs.Variation, inputs.WeatherWind)
+                * WindField.BandStrength(inputs.Up, inputs.Axis);
 
             result.BandShare = share / inputs.Ceiling;
 
@@ -198,8 +201,16 @@ namespace Thermodynamics.Core
 
                     // Faded toward no effect rather than switched off, so a climbing ship leaves a
                     // valley's influence smoothly instead of stepping out of it.
+                    //
+                    // Floored at nothing: an influence outside 0..1 — which no caller should send
+                    // and the contract sweep does — fades *past* no effect and turns a shelter
+                    // factor negative, and a negative factor is a wind blowing backwards at a
+                    // negative speed. The slope term used to hide it by overwriting the speed with
+                    // a length; where there is no slope wind it escaped.
                     result.SpeedUp = 1f + ((speedUp - 1f) * influence);
                     result.Shelter = 1f + ((shelter - 1f) * influence);
+                    if (result.SpeedUp < 0f) result.SpeedUp = 0f;
+                    if (result.Shelter < 0f) result.Shelter = 0f;
 
                     speed *= result.SpeedUp * result.Shelter;
 

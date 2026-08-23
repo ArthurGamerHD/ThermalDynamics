@@ -36,27 +36,75 @@ namespace Thermodynamics.Tests
             return total / rows.Count;
         }
 
-        /// <summary>Mean speed at a height, split by whether the ground was hot or cold.</summary>
+        /// <summary>
+        /// The afternoon and the night at one height, **paired by latitude before they are
+        /// compared** (`E6`).
+        ///
+        /// The unpaired form averaged every latitude into one figure and divided the two. That was
+        /// wrong in a way nothing noticed while every latitude had wind: the day and the night
+        /// samples are not the same set — the sun does not rise at every latitude — so the ratio
+        /// carried a latitude difference as well as a diurnal one. It became visible when the band
+        /// edges became the calms they should always have been and three of the nine sampled
+        /// latitudes went to zero.
+        ///
+        /// A latitude with no wind at either end of the day has nothing to say about the diurnal
+        /// cycle and is skipped rather than averaged in as a zero.
+        /// </summary>
         private static void DayNight(
             List<WindLab.Row> rows, double height, out double day, out double night)
         {
-            double dayTotal = 0d, nightTotal = 0d;
-            int dayCount = 0, nightCount = 0;
+            Dictionary<double, double> dayTotal = new Dictionary<double, double>();
+            Dictionary<double, double> nightTotal = new Dictionary<double, double>();
+            Dictionary<double, int> dayCount = new Dictionary<double, int>();
+            Dictionary<double, int> nightCount = new Dictionary<double, int>();
 
             for (int i = 0; i < rows.Count; i++)
             {
                 WindLab.Row r = rows[i];
                 if (Math.Abs(r.HeightAboveGround - height) > 1e-6d) continue;
 
-                if (r.Heating > 0.6f) { dayTotal += r.Speed; dayCount++; }
-                else if (r.Heating < 0.05f) { nightTotal += r.Speed; nightCount++; }
+                if (r.Heating > 0.6f) Add(dayTotal, dayCount, r.Latitude, r.Speed);
+                else if (r.Heating < 0.05f) Add(nightTotal, nightCount, r.Latitude, r.Speed);
             }
 
-            Assert.True(dayCount > 0 && nightCount > 0,
-                "the modelled day must contain both a hot afternoon and a cold night at " + height + " m");
+            double dayMeans = 0d, nightMeans = 0d;
+            int latitudes = 0;
 
-            day = dayTotal / dayCount;
-            night = nightTotal / nightCount;
+            foreach (KeyValuePair<double, int> entry in dayCount)
+            {
+                int nights;
+                if (!nightCount.TryGetValue(entry.Key, out nights) || nights == 0) continue;
+
+                double dayMean = dayTotal[entry.Key] / entry.Value;
+                double nightMean = nightTotal[entry.Key] / nights;
+
+                // A band edge is calm all day and all night. It agrees with itself and says nothing
+                // about the cycle, so it is not evidence either way.
+                if (dayMean <= 1e-6d && nightMean <= 1e-6d) continue;
+
+                dayMeans += dayMean;
+                nightMeans += nightMean;
+                latitudes++;
+            }
+
+            Assert.True(latitudes > 0,
+                "no latitude at " + height + " m had both a hot afternoon and a cold night with"
+                + " wind in it, so this comparison judges nothing");
+
+            day = dayMeans / latitudes;
+            night = nightMeans / latitudes;
+        }
+
+        private static void Add(Dictionary<double, double> totals, Dictionary<double, int> counts,
+            double latitude, double speed)
+        {
+            double total;
+            totals.TryGetValue(latitude, out total);
+            totals[latitude] = total + speed;
+
+            int count;
+            counts.TryGetValue(latitude, out count);
+            counts[latitude] = count + 1;
         }
 
         // ---- the engine, reproduced ----------------------------------------------------------
