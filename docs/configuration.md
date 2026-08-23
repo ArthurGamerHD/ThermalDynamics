@@ -697,6 +697,13 @@ hull, and solar gain is scaled by the share that reached the sun. At the default
 share is 0 or 1 and behaves exactly as before. Raise it and a kilometre-long ship crossing a
 terminator dims over the crossing instead of switching off when its centre passes.
 
+**The default is the cheapest of these and is under review.** `SolarOcclusionSamples`,
+`SolarGridShadows` and `SolarSelfShadowing` compose into a ladder that nothing names, and the rung
+that ships is the bottom one — against *fidelity is the default; a saving is a switch*, which holds
+that the cheap form becomes an option rather than the shipped behaviour wherever the difference is
+one a player can see. [backlog.md](backlog.md) `A9` states the ladder, the rung that is still
+unbuilt, and the default it asks for.
+
 The three solar settings stack as a choice of cost. `EnableSolarHeat` off is free and models no
 sunlight at all. On with `SolarSelfShadowing` off is the cheap model: a face is lit whenever it
 points at the sun. On with both is the accurate one: the grid shadows itself, for one pass over its
@@ -838,6 +845,7 @@ one with a migration risk — is late rather than first.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Said in [External shadow](#external-shadow) that the shipped occlusion default is the cheapest rung of the ladder those three settings compose, and pointed at [backlog.md](backlog.md) `A9` for the ladder and the default it asks for. The settings table is unchanged — it describes what ships, and what ships has not moved. |
 | 2026-08-22 | **An existing world keeps the values in its config file.** The file's `Version` is unchanged, because the shape did not change and regenerating it would throw away real customisation — so a world created before this pass still runs at `Frequency` 8 and the old visit budget until someone moves them, and the menu's **Defaults** button is the one action that takes it to the new values. |
 | 2026-08-22 | **Removed the five settings profiles.** There is one configuration now, and it is the most faithful one the model has: every mechanism on, no approximation switched on for anybody, `SimulationSpeed` 1 and `Frequency` **4** against the 8 it shipped at. `MaxSubstepsPerBlock` stays 0 and `MaxSubsteps` 64, so nothing is refused the substeps it asks for. `/thermal profile` is gone and the menu's profile buttons are one **Defaults** button, which is what applying a profile was actually being used for. `TheDefaultsAreTheMostFaithfulConfiguration` holds the claim so it cannot quietly stop being true. |
 | 2026-08-22 | Moved `MaxElementVisitsPerStep` from 1,000,000 to **2,000,000** with `Frequency`, keeping the per-frame cost identical rather than the per-step one. A step is spread across the frames of its own window, and a frame does `budget × frameSeconds × Frequency` of work, so halving the rate halves what a given budget costs per frame — and leaving the budget alone would have throttled an 8,904-block ship to 73 % of real time where it previously ran at 100 %, which is an approximation nobody asked for. Old value kept visible here (`E11`). |

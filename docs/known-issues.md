@@ -43,8 +43,16 @@ reading already answers.
 shadow is per face (`SolarSelfShadowing`) and so is another grid's (`SolarGridShadows = full`), but a
 planet's or an asteroid's dims the whole grid by the share of sampled rays that were blocked
 (`SolarOcclusionSamples`). A capital ship crossing a terminator therefore ramps rather than
-switching, but never carries a shadow edge across its own hull. Per-block would need the ray count
-to scale with block count, which is a different order of cost from what is there.
+switching, but never carries a shadow edge across its own hull.
+
+**This is no longer filed as a limit taken and left.** It is now the top rung of
+[backlog](backlog.md) `A9`, which asks for occlusion as an ordered ladder of configurations from a
+single centre ray to per-face shadow for every occluder, with the most realistic rung shipped by
+default. The cost objection that justified the limit — *per-block would need the ray count to scale
+with block count* — survives for terrain and voxels and does **not** hold for the planet, which is
+the occluder that matters: `OcclusionMath.IsOccludedBySphere` is a normalise, a dot and an `atan`
+with no ray in it, so evaluating it per exposed face is arithmetic on a pass the self-shadow already
+walks.
 
 **Point sources are not occluded.** A registered heat source heats through walls and through other
 ships. Occlusion is left to the host, which can simply not register a source it knows is hidden.
@@ -515,6 +523,7 @@ counters rather than milliseconds so it holds on any machine.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Reopened the per-grid shadow limit as designed work. It was recorded as a simplification taken on purpose, which `D6` is satisfied by, but the cost argument behind it treated three occluders as one: the planet's test is analytic and costs no ray, so the per-block objection was never true of the one occluder a player notices. Now [backlog](backlog.md) `A9`. |
 | 2026-08-22 | Filed the burning-ship divergence as an open defect. It had been carried on [realism.md](realism.md) as a starved-integrator finding; re-measuring it showed 0% starved, so the explanation is withdrawn and the defect stands with its cause unknown. |
 | 2026-08-22 | Repointed the step-budget paragraph at the renamed test and at the shipped rate, which moved from eight steps a second to four when the settings profiles were removed. |
 | 2026-08-22 | Moved the thermal view out of the deliberate limits. It was filed there on the grounds that mods get no shader — which is a statement about difficulty, not a simplification taken on purpose, and a limit is only a limit when it is chosen (`D6`). It is an open problem, and the intent to have one is stated in [document-of-intent.md](document-of-intent.md#thermal-vision--wanted-method-unknown). Recorded the absence of any non-instrument feedback beside it. |
