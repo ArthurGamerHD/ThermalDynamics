@@ -51,6 +51,9 @@ namespace Thermodynamics.Sim
                 case "drift":
                     return DriftCommand(args);
 
+                case "prefabs":
+                    return PrefabCommand(args);
+
                 case "profiles":
                     Console.Write(ProfileLab.Report());
                     return 0;
@@ -167,6 +170,48 @@ namespace Thermodynamics.Sim
                     PrintUsage();
                     return 1;
             }
+        }
+
+        /// <summary>
+        /// `G7`: every ship the game itself spawns, simulated as it arrives.
+        ///
+        /// The compatibility floor, measured on the 705 prefabs in the install rather than on ships
+        /// players uploaded. The criterion is in balance-lab.md and was written before this ran.
+        /// </summary>
+        private static int PrefabCommand(string[] args)
+        {
+            int limit = 0;
+            string configured = ValueAfter(args, "--limit");
+            if (configured != null) int.TryParse(configured, out limit);
+
+            if (Blueprints.PrefabPath() == null)
+            {
+                Console.Error.WriteLine("No installed game found, so there are no prefabs to read.");
+                return 1;
+            }
+
+            bool loaded = Array.IndexOf(args, "--load") >= 0;
+            ShipLoad.State load = loaded ? ShipLoad.State.Everything : ShipLoad.State.Idle;
+
+            Console.WriteLine(loaded
+                ? "Under full load, which is the control rather than the criterion."
+                : "Idle, which is what G7 asks.");
+            Console.WriteLine();
+
+            List<PrefabLab.Outcome> outcomes = PrefabLab.Run(null, limit, load);
+            Console.Write(PrefabLab.Report(outcomes));
+
+            string directory = ValueAfter(args, "--csv");
+            if (directory != null)
+            {
+                Directory.CreateDirectory(directory);
+                string path = Path.Combine(directory, "prefabs.csv");
+                File.WriteAllText(path, PrefabLab.Csv(outcomes));
+                Console.WriteLine();
+                Console.WriteLine("wrote " + path);
+            }
+
+            return outcomes.Count == 0 ? 1 : 0;
         }
 
         /// <summary>
@@ -969,6 +1014,9 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  sealed [--path <dir>]   blocks with nowhere at all to send their heat");
             Console.WriteLine("  dump [--path <dir>]     audit a field telemetry dump against the model's own claims");
             Console.WriteLine("  descent [--csv <dir>]   surface to core: sun, wind, rock damping and planet heat");
+            Console.WriteLine("  prefabs [--limit N]     G7: every ship the game spawns, simulated as it arrives");
+            Console.WriteLine("    --csv <dir>               one row per prefab");
+            Console.WriteLine("    --load                    full load instead of idle: the control, not G7");
             Console.WriteLine("  drift                   how long a client that joined stale stays wrong");
             Console.WriteLine("    --scenario shadow|sunlit|planet  --watch <s> --size N --csv <dir>");
             Console.WriteLine("  planets                 every shipped world's climate, and where each figure came from");
