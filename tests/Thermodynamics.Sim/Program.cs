@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using Thermodynamics.Core;
 using Thermodynamics.Harness;
 
@@ -46,6 +47,9 @@ namespace Thermodynamics.Sim
 
                 case "descent":
                     return DescentCommand(args);
+
+                case "drift":
+                    return DriftCommand(args);
 
                 case "profiles":
                     Console.Write(ProfileLab.Report());
@@ -163,6 +167,70 @@ namespace Thermodynamics.Sim
                     PrintUsage();
                     return 1;
             }
+        }
+
+        /// <summary>
+        /// How long a client that joined with the wrong temperatures stays wrong.
+        ///
+        /// Block temperatures are not replicated, so a client joining mid-session starts from the
+        /// last save. This runs the same hull twice from states a stated distance apart and
+        /// measures how the disagreement decays. See the lab for what it does and does not model.
+        /// </summary>
+        private static int DriftCommand(string[] args)
+        {
+            string scenario = ValueAfter(args, "--scenario") ?? "shadow";
+
+            float watch = 600f;
+            string configured = ValueAfter(args, "--watch");
+            if (configured != null) float.TryParse(configured, out watch);
+
+            int blocks = 2000;
+            string sized = ValueAfter(args, "--size");
+            if (sized != null) int.TryParse(sized, out blocks);
+
+            float[] stale = { 60f, 300f, 1800f };
+
+            Console.WriteLine("A client joining from a save, against the server that kept running.");
+            Console.WriteLine("Hull: " + blocks.ToString("n0") + " census blocks, " + scenario
+                + ", watched for " + watch.ToString("n0") + " simulated seconds.");
+            Console.WriteLine();
+
+            List<ClientDriftLab.Run> runs = new List<ClientDriftLab.Run>();
+            for (int i = 0; i < stale.Length; i++)
+            {
+                runs.Add(ClientDriftLab.Measure(scenario, stale[i], watch, blocks));
+            }
+
+            Console.Write(ClientDriftLab.Report(runs));
+
+            string directory = ValueAfter(args, "--csv");
+            if (directory != null)
+            {
+                StringBuilder csv = new StringBuilder();
+                csv.AppendLine("scenario,blocks,stale_s,seconds,max_k,mean_k,disagree_on_critical,hot_blocks");
+
+                foreach (ClientDriftLab.Run run in runs)
+                {
+                    foreach (ClientDriftLab.Sample sample in run.Samples)
+                    {
+                        csv.Append(run.Scenario).Append(',').Append(run.Blocks).Append(',')
+                           .Append(run.StaleSeconds.ToString("0.###")).Append(',')
+                           .Append(sample.Seconds.ToString("0.###")).Append(',')
+                           .Append(sample.MaxKelvin.ToString("0.####")).Append(',')
+                           .Append(sample.MeanKelvin.ToString("0.####")).Append(',')
+                           .Append(sample.DisagreeOnCritical).Append(',')
+                           .Append(sample.HotBlocks).AppendLine();
+                    }
+                }
+
+                Directory.CreateDirectory(directory);
+                string path = Path.Combine(directory, "drift.csv");
+                File.WriteAllText(path, csv.ToString());
+                Console.WriteLine();
+                Console.WriteLine("wrote " + path);
+            }
+
+            return 0;
         }
 
         /// <summary>
@@ -901,6 +969,8 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  sealed [--path <dir>]   blocks with nowhere at all to send their heat");
             Console.WriteLine("  dump [--path <dir>]     audit a field telemetry dump against the model's own claims");
             Console.WriteLine("  descent [--csv <dir>]   surface to core: sun, wind, rock damping and planet heat");
+            Console.WriteLine("  drift                   how long a client that joined stale stays wrong");
+            Console.WriteLine("    --scenario shadow|sunlit|planet  --watch <s> --size N --csv <dir>");
             Console.WriteLine("  planets                 every shipped world's climate, and where each figure came from");
             Console.WriteLine("    --xml | --write <path>    the generated Planets.xml");
             Console.WriteLine("  wind                    a day of wind over one world; --planet, --weather, --csv");
