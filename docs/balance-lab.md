@@ -51,7 +51,7 @@ is a finding rather than an excuse to move a threshold.
 | **G5** | **No death spiral.** A ship past critical that throttles to idle returns below critical in bounded time. | recovery time unbounded, or damage continues after the load stops | A player must be able to react to a warning. |
 | **G6** | **Affordable across the population.** Substep demand and step cost at p95/p99 of the corpus, not at the mean. | p99 substep demand exceeds what the shipped caps grant | The census hull is one point; the tail is what stutters. |
 | **G7** | **A ship the game spawns survives arrival.** Every vanilla prefab, idle, in the environment its category spawns into, for five simulated minutes, loses no block. | any prefab loses a block | The stated compatibility floor. A mod that destroys the game's own cargo ships as they arrive is broken however good its physics is, and this is the one criterion measured on ships nobody chose to put in a corpus. |
-| **G8** | **The significant event lands in the window, and the hull still settles inside a session.** Under sustained full electrical load, the median time from load to the first block crossing critical falls in 120–300 simulated seconds — and at idle, the median time for a hull to reach equilibrium stays under an hour. | the crossing median falls outside 120–300 s, or the idle settling median exceeds 3,600 s | The mod's own stated balance target, which had never been a scored criterion. Both halves are one criterion because one clock governs both: the dial that puts the block in the window pushes the hull out of the session, and a route that satisfies either half alone is not a route. |
+| **G8** | **The significant event lands in the window, and the ship is usable again inside a session.** Under sustained full electrical load, the median time from load to the first block crossing critical falls in 120–300 simulated seconds — and from a full burn throttled to idle, the median hull finishes cooling within an hour. | the crossing median falls outside 120–300 s, or the recovery median exceeds 3,600 s | The mod's own stated balance target, which had never been a scored criterion. Both halves are one criterion because one clock governs both: the dial that puts the block in the window pushes the hull out of the session, and a route that satisfies either half alone is not a route. |
 
 **G7 holds.** All 705 prefabs, 461,428 blocks, idle: not one crosses critical, let alone loses a
 block. The same 705 flown hard lose 616, which is the control rather than the criterion — see
@@ -73,11 +73,24 @@ decisions could each have gone the other way:
   answer a property of a heading.
 * **The median, not a share.** A window is two-sided, so it needs a point statistic rather than a
   count, and the median is what the population tables already carry.
-* **An hour for the hull, stated as a number rather than as "too long".** The shipped clock settles
-  a hull at idle in about 1,560 s, and `HeatTimeScale` ≈ 11 alone pushes that to eight hours. A hull
-  that has not reached equilibrium within a session never has a steady state a player can read; an
-  hour is the round figure inside a session and outside the shipped value by more than a factor of
-  two, so it can fail without being a restatement of the status quo.
+* **An hour for the hull, stated as a number rather than as "too long".** A ship that is still
+  cooling long after the load came off is a ship a player cannot use, and the shipped clock brings
+  one back in about 1,320 s. An hour is the round figure inside a session and outside the shipped
+  value by more than a factor of two, so it can fail without being a restatement of the status quo.
+  *(The scenario this is scored in was corrected before the grid was read — see below.)*
+
+**G8's second half was corrected once, before the grid was scored against it**, and the direction
+matters: the change made the criterion *stricter*, not looser. It was written as *at idle, the median
+time for a hull to reach equilibrium stays under an hour*, and idle turned out to be a scenario that
+cannot answer it. A hull at idle in vacuum shadow has no equilibrium — it cools toward the vacuum
+floor — and the settling figure is *seconds until the hottest block came within 5 K of where it
+ended*, which at low `HeatTimeScale` a hull satisfies at the first sample because it has barely
+moved. Measured: the median runs 1,230 s, 2,370 s, 3,450 s as the clock falls 225 → 112 → 56, then
+reads **120 s** at 25, 15 and 11 with 26 to 36 of 40 hulls sitting on the floor. Under the old
+wording four cells passed on a column that was a blind spot; under this one **none of them does**.
+The reading is pinned by `SettleReadingTests`, and recovery — from a full burn, throttled to idle —
+is the scenario where the hull is driven somewhere and back, so the same figure is a real duration
+there and is the one a player actually waits through.
 
 **G8 is not yet measured.** Every configuration in `knobs.csv` moves one dial, and the projected
 route — conduction up and the clock down together — is an extrapolation across an interaction
@@ -455,6 +468,7 @@ hold the suite hostage.
 | Date | Change |
 | --- | --- |
 | 2026-08-22 | Removed *subgrids are read as separate ships* from the open questions. It was not true and had not been for as long as `ShipAssembly` existed: a blueprint's grids are built as one machine and bridged at their mechanical joints. 747 of the first 1,002 ships of the 2026-08-22 sweep hold more than one grid and 695 resolved joints, 29,604 of them. What was genuinely missing is that nothing checked a bridge *moves heat* — `CorpusSurvey` counted them — and `SubgridBridgeTests` does. |
+| 2026-08-23 | **Corrected `G8`'s second half in the open, before scoring anything against it** (`E11`). It asked for a settling time *at idle*, and idle has no equilibrium in vacuum shadow — the hull cools toward the floor — so at low `HeatTimeScale` the figure reads 120 s, its own floor, for 26 to 36 of 40 hulls. The old wording is above; it is replaced by the recovery time, which is a real duration and the one a player waits through. **The correction is stricter**: four cells passed the old half and none passes this one. |
 | 2026-08-23 | Added `G8`, the significance window, **before the sweep that tests it** (`E11`): under sustained full electrical load the median crossing falls in 120–300 s, and at idle the median hull settles inside an hour. The mod's own balance target had never been a scored criterion, which is [backlog.md](backlog.md) `C12`. Both halves are one criterion because one clock governs both time constants, and the five decisions inside the wording are written out beside it. |
 | 2026-08-22 | Added `G7`, the compatibility floor, **before measuring it** (`E11`): every vanilla prefab, idle, in the environment its category spawns into, for five simulated minutes, loses no block. The stated intent that a ship the game spawns must survive arrival had never been a scored criterion and had never been measured, which is [backlog.md](backlog.md) `C10`. The four decisions inside the wording are written out beside it, because a criterion whose terms are settled after the data is not one. |
 | 2026-08-22 | Said that `BlueprintTests` is synthetic throughout. The real-ship case it used to end on was demoted to an uncalled helper when `CorpusSurvey` absorbed it, and has now been deleted ([backlog.md](backlog.md) `H4`); the claim is `CorpusSurvey`'s step probe, over every ship rather than one. |
