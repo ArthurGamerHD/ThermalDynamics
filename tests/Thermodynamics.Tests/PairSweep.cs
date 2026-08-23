@@ -52,7 +52,7 @@ namespace Thermodynamics.Tests
     public class PairSweep
     {
         public const string Header =
-            "cell,conductivity,clock,shipped,ceiling_s,scenario,ship,workshop_id,large,blocks,"
+            "cell,conductivity,clock,waste,shipped,ceiling_s,scenario,ship,workshop_id,large,blocks,"
             + "peak_k,mean_k,p95_k,hotspot_k,over_critical,over_share,"
             + "seconds_to_settle,seconds_to_critical,seconds_to_first_loss,"
             + "made_w,vented_w,substeps_demanded,hottest_block";
@@ -122,6 +122,41 @@ namespace Thermodynamics.Tests
             }
 
             Sweep(Air, PairLab.Decision(), PairLab.AirScenarios, ships, scenarios);
+        }
+
+        /// <summary>
+        /// **The load against the clock**: whether a dial that is not transport reaches the
+        /// significance window.
+        ///
+        /// <para>
+        /// Conduction reaches it and costs three of the mod's levers doing so, measured in
+        /// [balance.md](../../docs/balance.md). This grid moves how much heat a ship makes instead
+        /// of how it travels, against the clock, and scores the same criteria.
+        /// </para>
+        ///
+        /// <code>
+        ///     THERMAL_CORPUS_TESTS=1 THERMAL_CORPUS_DATA=out/load \
+        ///         dotnet test --filter "FullyQualifiedName~EveryLoadAndClockPairGetsAMeasuredCell"
+        /// </code>
+        /// </summary>
+        [Fact]
+        public void EveryLoadAndClockPairGetsAMeasuredCell()
+        {
+            if (CorpusFixture.Files().Count == 0) return;
+
+            List<ShipSet.Entry> set = ShipSet.Read("THERMAL_PANEL", "tools/corpus/typical.csv");
+            Assert.True(set.Count > 0,
+                "the corpus is opted in but no ship set was read. Build one with "
+                + "tools/corpus/typical.py, or point THERMAL_PANEL at another.");
+
+            List<Blueprints.Ship> ships = ShipSet.Load(set, Progress);
+            Assert.True(ships.Count > 0, "the set named ships but none of them could be read");
+
+            Dictionary<string, Battery.Scenario> scenarios =
+                new Dictionary<string, Battery.Scenario>(StringComparer.Ordinal);
+            foreach (Battery.Scenario scenario in Battery.All()) scenarios[scenario.Name] = scenario;
+
+            Sweep(LoadDial, PairLab.Load(), PairLab.Scenarios, ships, scenarios);
         }
 
         /// <summary>
@@ -251,6 +286,7 @@ namespace Thermodynamics.Tests
             row.Append(CorpusRecord.Text(cell.Name)).Append(',');
             row.Append(CorpusRecord.Num(cell.Conductivity)).Append(',');
             row.Append(CorpusRecord.Num(cell.Clock)).Append(',');
+            row.Append(CorpusRecord.Num(cell.Waste)).Append(',');
             row.Append(cell.IsShipped ? 1 : 0).Append(',');
             row.Append(CorpusRecord.Num(scenario.Seconds)).Append(',');
             row.Append(CorpusRecord.Text(o.Scenario)).Append(',');
@@ -296,6 +332,9 @@ namespace Thermodynamics.Tests
 
         private static readonly Pass Air =
             new Pass { Dataset = "air", Record = new ShipSet.Resume("air") };
+
+        private static readonly Pass LoadDial =
+            new Pass { Dataset = "load", Record = new ShipSet.Resume("load") };
 
         private static void Progress(string line)
         {

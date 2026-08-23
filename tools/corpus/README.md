@@ -191,6 +191,18 @@ THERMAL_CORPUS_TESTS=1 THERMAL_CORPUS_DATA=$PWD/out/pairs-2026-08-23 \
 python3 tools/corpus/pairs.py out/pairs-2026-08-23
 ```
 
+**And the load pass, which is the third question the class answers.** Conduction and the clock are
+both transport; `EveryLoadAndClockPairGetsAMeasuredCell` moves how much heat a ship makes against
+the clock instead, and `load.py` scores the same criteria. Ten minutes on the retest set. It imports
+`pairs.py`'s thresholds and censoring rather than restating them, because two scorers that drift
+apart disagree about the same criterion silently.
+
+```
+THERMAL_CORPUS_TESTS=1 THERMAL_CORPUS_DATA=$PWD/out/load-2026-08-23 \
+    dotnet test --filter "FullyQualifiedName~EveryLoadAndClockPairGetsAMeasuredCell"
+python3 tools/corpus/load.py out/load-2026-08-23
+```
+
 **The same class carries the air pass, and it is a different question with a different filter.**
 `G6` is a cost criterion and the grid above is three vacuum scenarios, where substeps are cheap;
 the budget is spent on convection. `EveryCandidateCellIsPricedInAir` runs the shipped pair and the
@@ -244,6 +256,7 @@ limit in [known-issues.md](../../docs/known-issues.md).
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | Added the load pass and `load.py`: the load against the clock, which is the dial that is not transport. Three grids share one run loop, one row format and one resume-record-per-pass now; the row format gained a `waste` column, and a cell that does not move the load keeps the name the two earlier grids wrote so their records still match the cells they were taken on. |
 | 2026-08-23 | Added the air pass and `air.py`: the same cells `pairs.py` scores for `G8`, priced in the environment `G6` is decided in. It found the shipped configuration over the substep cap at 200 m/s and every atmospheric figure in [balance.md](../../docs/balance.md) exactly half, taken before `Frequency` went 8 to 4 ([backlog.md](../../docs/backlog.md) `C19`). The two sweeps share one run loop and one row format; what differs is which cells and which scenarios, and each keeps its own resume record so one cannot mark a ship done for the other. |
 | 2026-08-23 | Scored `G8` and found it satisfied at conductivity ×4 with `HeatTimeScale` 80–120. Fixed the defect that had to be fixed first: `pairs.py` took the crossing median over the hulls that crossed, so conductivity ×8 — where 27 of 40 hulls never reach critical — read as the grid's best cell. Non-crossers are censored above now, `test_scoring.py` pins it, and `verdict.py`'s time-to-critical table says in words that its quantiles are over the ships that reached. |
 | 2026-08-23 | Pruned the corpus directory from 68 GB to 32 GB and wrote down [what is in it](#what-is-in-the-corpus-directory-and-what-is-beside-it). 20.6 GB of leavings deleted, 1,840 barren blueprints and 8 oversized ones moved aside rather than deleted because `F14` still has the 25-block floor untested. The inference that a blueprint is barren was checked by parsing all 1,852 — 12 were usable ships and are back — which is also what added `corpus --list`. Fixed `Unpack`, which had silently skipped three legacy archives whose entry names are truncated. |

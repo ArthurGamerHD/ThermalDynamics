@@ -1,0 +1,117 @@
+using System;
+using System.Collections.Generic;
+using Thermodynamics.Core;
+using Thermodynamics.Harness;
+using Xunit;
+
+namespace Thermodynamics.Tests
+{
+    /// <summary>
+    /// **The load axis of the pair grid reaches the blocks, and reaches nothing else.**
+    ///
+    /// <para>
+    /// `C12`'s search moved conduction and the clock, which are both transport, and reaching the
+    /// significance window that way costs three of the mod's levers. The load is the dial that is
+    /// not transport: it changes how much heat a ship makes without changing how the heat moves,
+    /// and measured over the retest set it reaches the same window at conductivity ×1. See
+    /// [balance.md](../../docs/balance.md#the-load-reaches-the-window-too-and-costs-the-bite-instead-of-the-levers).
+    /// </para>
+    ///
+    /// <para>
+    /// **A sweep dial that reaches nothing reports *no change* in exactly the shape of a dial that
+    /// reached everything and changed nothing**, which is the failure this repository keeps
+    /// finding — the retest set's own `reach.csv` exists for it. So the override is checked here
+    /// rather than trusted: both waste fractions move, and nothing else does.
+    /// </para>
+    /// </summary>
+    public class LoadDialTests
+    {
+        private static BlockThermalProperties Apply(PairLab.Cell cell, BlockThermalProperties source)
+        {
+            Func<string, string, BlockThermalProperties, BlockThermalProperties> material =
+                cell.Material();
+
+            return material == null ? source : material("TypeId", "Subtype", source);
+        }
+
+        private static BlockThermalProperties Sample()
+        {
+            BlockThermalProperties properties = BlockThermalProperties.Default();
+            properties.Conductivity = 50f;
+            properties.ProducerWasteEnergy = 0.4f;
+            properties.ConsumerWasteEnergy = 0.2f;
+            properties.SpecificHeat = 500f;
+            properties.Emissivity = 0.6f;
+            properties.CriticalTemperature = 900f;
+            return properties;
+        }
+
+        [Fact]
+        public void TheLoadDialMovesBothWasteFractionsAndNothingElse()
+        {
+            PairLab.Cell cell = new PairLab.Cell { Conductivity = 1f, Clock = 100f, Waste = 0.5f };
+            BlockThermalProperties source = Sample();
+            BlockThermalProperties moved = Apply(cell, source);
+
+            Assert.Equal(0.2f, moved.ProducerWasteEnergy, 4);
+            Assert.Equal(0.1f, moved.ConsumerWasteEnergy, 4);
+
+            // Everything a load dial must not touch. Conductivity above all: the whole point of
+            // this axis is that it is not transport, and a dial that quietly moved it would
+            // reproduce the conduction result and be read as a different finding.
+            Assert.Equal(source.Conductivity, moved.Conductivity, 4);
+            Assert.Equal(source.SpecificHeat, moved.SpecificHeat, 4);
+            Assert.Equal(source.Emissivity, moved.Emissivity, 4);
+            Assert.Equal(source.CriticalTemperature, moved.CriticalTemperature, 4);
+
+            // And the source itself is untouched, because the catalogue hands out one instance per
+            // definition and a mutating override would compound across cells.
+            Assert.Equal(0.4f, source.ProducerWasteEnergy, 4);
+        }
+
+        [Fact]
+        public void ACellThatMovesNothingInstallsNoOverrideAtAll()
+        {
+            // Null rather than an identity function, so the control shares the model cache with
+            // nothing installed and cannot differ from the shipped world by a rounding.
+            PairLab.Cell control = new PairLab.Cell { Conductivity = 1f, Clock = 225f, Waste = 1f };
+            Assert.Null(control.Material());
+
+            Assert.NotNull(new PairLab.Cell { Conductivity = 1f, Clock = 225f, Waste = 2f }.Material());
+            Assert.NotNull(new PairLab.Cell { Conductivity = 4f, Clock = 225f, Waste = 1f }.Material());
+        }
+
+        [Fact]
+        public void TheLoadGridHasExactlyOneControlAndItRunsFirst()
+        {
+            // A grid is read against its control, so a grid killed early has to have written it.
+            // The two earlier grids assert this in the walk; this asserts it without a corpus.
+            List<PairLab.Cell> cells = PairLab.Load();
+
+            Assert.True(cells.Count > 1);
+            Assert.True(cells[0].IsShipped, "the control must run first");
+
+            int controls = 0;
+            foreach (PairLab.Cell cell in cells) if (cell.IsShipped) controls++;
+
+            Assert.Equal(1, controls);
+        }
+
+        [Fact]
+        public void TheShippedPairIsNotAWasteMultiplierAwayFromItself()
+        {
+            // A cell at the shipped conduction and clock but a different load is not the control,
+            // and reading it as one would make the grid compare a cell against itself.
+            PairLab.Cell halved = new PairLab.Cell
+            { Conductivity = 1f, Clock = PairLab.ShippedClock, Waste = 0.5f };
+
+            Assert.False(halved.IsShipped);
+            Assert.Contains("w0.5", halved.Name);
+
+            // And a cell that does not move the load keeps the name the two earlier grids wrote,
+            // so their resume records still match the cells they were taken on.
+            PairLab.Cell plain = new PairLab.Cell { Conductivity = 4f, Clock = 80f };
+            Assert.Equal("k4-h80", plain.Name);
+        }
+    }
+}

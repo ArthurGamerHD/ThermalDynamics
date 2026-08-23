@@ -794,6 +794,88 @@ rows re-derived (`M1`); what is compared is the interior of this grid against it
 Retuning to it would move every temperature figure in this repository, and the cost column has been
 read at the median only. See [backlog.md](backlog.md) `C12`.
 
+### The load reaches the window too, and costs the bite instead of the levers
+
+Conduction and the clock are both *transport*. The load is not: it changes how much heat a ship
+makes without changing how the heat moves. Eighteen cells of a waste-heat multiplier against the
+clock, same forty hulls, same three scenarios, same stop rule — `PairSweep` runs it and
+`tools/corpus/load.py` scores it.
+
+**`G8` is satisfied by four cells, at conductivity ×1.** Waste ×0.5 with `HeatTimeScale` 110, 100,
+90 or 80:
+
+| `waste` | `HeatTimeScale` | crossing p50 | crossed | recovery p50 | ratio | G1 | G2 | G5 |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 0.5 | 110 | 122.4 s | 22/40 | 2,670 s | 21.8 | 0 % | 100 % | 97.5 % |
+| **0.5** | **100** | **134.5 s** | **22/40** | **2,880 s** | **21.4** | **0 %** | **100 %** | **97.5 %** |
+| 0.5 | 90 | 149.5 s | 22/40 | 3,180 s | 21.3 | 0 % | 100 % | 97.5 % |
+| 0.5 | 80 | 168.1 s | 22/40 | 3,570 s | 21.2 | 0 % | 100 % | 97.5 % |
+| *(shipped)* | *225* | *10.4 s* | *29/40* | *1,320 s* | *127.2* | *0 %* | *100 %* | *97.5 %* |
+
+**The ratio column is the finding.** `G8` wants a crossing over 120 s and a recovery under 3,600 s,
+and both go as one over the clock — so the clock slides the pair along and cannot change
+`recovery / crossing`. At the shipped load that ratio is 127, and the window needs about 30 or less.
+**The load is the dial that moves it**: 315 at waste ×2, 127 at ×1, 21 at ×0.5, and within each load
+it barely moves across the clock at all. Conduction moves it the same way — that is why ×4 worked —
+and the load moves it without touching a transport term.
+
+**The mechanism is a change of population, not of rate.** Cutting the load makes every hull heat
+more slowly *and* pushes the marginal hulls below their own critical temperature entirely, so the
+set that crosses shrinks from 29 of 40 to 22 and the survivors are the slow ones near their
+equilibrium. The median moves from 10.4 s to 59.9 s at the same clock because it is a median of a
+different set. That is also why the deeper cuts fail: at ×0.25 only 8 of 40 hulls cross and at
+×0.125 only 1, so the 50th percentile sits in the censored tail and there is no median at any clock
+— the same exclusion conductivity ×8 met (`E9`).
+
+**Both composition rules hold exactly**, which is what makes the band a band rather than four
+lucky cells: `crossing × clock` is 13,455 across clocks 225, 110, 100, 90, 80 and 45 to **0.2 %**,
+and `recovery × clock` is about 286,000 to 3 %. Those put the window at clock 45–112 and the
+recovery bound at clock 80 or above; the four cells above are the overlap, and the interior was
+measured rather than read off the fit.
+
+**The cell is ×0.5 / 100**, by the widest margin on its worst criterion — the same rule the
+conduction grid was read with. Clock 110 sits 3 % from the window edge and clock 80 sits 1 % from
+the recovery bound; 100 is 16 % clear of both.
+
+#### What it costs, and it is not free either
+
+| | Shipped | ×0.5 / 100 |
+| --- | ---: | ---: |
+| median peak under full load | 999.0 K | **734.5 K** |
+| median blocks over critical under full load | 4 | **1** |
+| hulls that ever cross critical | 29/40 | **22/40** |
+| median substep demand | 5.99 | **2.53**, 0.43× |
+
+**It costs the bite.** A median hull under sustained full load peaks 264 K cooler and loses one
+block instead of four, and a quarter of the hulls that used to overheat no longer do. `G2` still
+passes at 100 % — every hull still reaches 400 K — so the mod still bites; it bites less hard.
+
+**What it does not cost is a lever.** Conductivity does not move, so a coolant sink still
+out-performs every surface dial, bolting still loses, a buried reactor still cooks, and the
+atmosphere still sets the stiffest block's pace. And it is **cheaper**: substep demand goes as
+`conductivity × clock`, so 0.43× — which also takes the atmospheric p99 of `C19` from 115 % of the
+substep cap to about 50 %.
+
+**So the window costs something whichever dial reaches it.** Conduction buys the timing with three
+of the mod's levers; the load buys it with a quarter of the damage. That is the trade, and it is now
+measured on both sides rather than argued.
+
+#### The confound this rests on, and it is a known gap
+
+`full-electrical` charges every jump drive continuously, and drives are 71.3 % of population waste
+([backlog.md](backlog.md) `F13`). So the load scenario is a **bound rather than a steady state**, and
+a waste multiplier of 0.5 is within the distance between that bound and a realistic load. There are
+therefore two readings of the table above, and they are not distinguishable from this dataset:
+
+* the shipped mod makes twice as much heat as it should, and ×0.5 is a retune; or
+* the shipped mod is right and the *scenario* over-states the load, in which case `G8` may already
+  be satisfied against a realistic one and nothing needs retuning at all.
+
+The second would be much the better outcome — no balance change, a corrected measurement — and it
+is one run away: the same grid at waste ×1 under a load case that does not charge every drive. That
+makes `F13` the next thing to measure rather than a footnote, and it is why this page recommends a
+cell without recommending that it ship.
+
 #### What the retune was measured to cost, and why it is not shipped
 
 The pair was built and the suite was run against it: `ConductionScale` 2.4 → 9.6 and
@@ -995,6 +1077,7 @@ five ways a full sweep dies, and [backlog.md](backlog.md) for what is still open
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | **The significance window is reachable without touching transport.** Eighteen cells of the load against the clock: `G8` is satisfied by waste ×0.5 at `HeatTimeScale` 110, 100, 90 and 80, at conductivity ×1 — so plumbing, radiation geometry and air are all untouched — while keeping `G1`, `G2` and `G5` and costing 0.43× the substep demand, which also takes `C19`'s atmospheric breach from 115 % of the cap to about 50 %. **The ratio is the quantity**: `recovery / crossing` is 127 at the shipped load and needs 30 or less, the clock cannot change it because both halves go as one over the clock, and the load can — 315 at ×2, 127 at ×1, 21 at ×0.5. It costs the bite rather than the levers: the median hull peaks 264 K cooler and loses one block instead of four. **And it rests on a confound**: `full-electrical` charges every jump drive continuously (`F13`), so a ×0.5 multiplier is within the distance between that bound and a realistic load, and the alternative reading is that nothing needs retuning at all. |
 | 2026-08-23 | **Built `C12`'s retune, measured it, and did not ship it.** `ConductionScale` 2.4 → 9.6 with `HeatTimeScale` 225 → 100 satisfies `G8` and fixes `C19`, and costs three of the mod's four levers: a coolant sink stops out-performing the best surface dial (195.3 K vs 41.5 K becomes 73.3 K vs 135.3 K), bolting starts working, a 300 MW reactor buried in armour settles inside its rating, and the stiffest block on the census hull stops responding to air at all. The sweep that chose ×4 scored `G1`, `G2`, `G5`, `G8` and cost, and never scored `G3`. Also found the trap underneath it: the game has two conduction paces and nothing made them agree, so raising the solid one alone weakens every coolant loop by four relative to the structure it competes with — `ConductionPaceTests` now fails if one moves without the other. |
 | 2026-08-23 | **Priced `C12`'s candidate cells in air, and the answer inverted the question.** The cost column that made the retune a decision was a *vacuum* column, where demand is 12 % of what the caps grant; in air it is 115 % of it. Two findings came out of the same run. **Every atmospheric figure this page carried was exactly half**, taken when `Frequency` was 8 and never re-derived when the shipped step became a quarter second — measured on the same 49-ship panel, all eight are 2.000× what was published. **And the shipped configuration fails `G6` in air**: p99 substep demand at 200 m/s is 73.4 against 64, fourteen of forty-nine hulls are over the cap, and at the 300 m/s servers run the *median* ship is. Read there, all four candidate cells pass and the shipped pair is the only one that does not, because lowering the clock divides every stiffness term while raising conductivity restores only conduction. The retune is the fix for a defect rather than a cost to be justified. |
 | 2026-08-23 | **Measured the two dials together and found the significance window**, which is `C12` and the one thing every sweep before it could not answer: `G8` is satisfied by conductivity ×4 at `HeatTimeScale` 80–120, crossing at 124–186 s and recovering in 2,220–3,270 s, at 1.36–2.04× the shipped substep demand and with `G1`, `G2` and `G5` all kept. **Corrected the projection this page carried**, which put the window at ×4 with the clock near 15 — measured, that cell crosses at 991 s, five times its prediction, because the two curves multiplied together came from different scenarios and from a median over the ships that crossed. The composition rule itself holds to 1 %. **Conductivity ×8 is excluded by the criterion rather than by cost**: only 13 of 40 hulls ever cross there, so the population has no median crossing at any clock. |

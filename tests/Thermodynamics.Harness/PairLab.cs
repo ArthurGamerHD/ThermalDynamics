@@ -172,10 +172,21 @@ namespace Thermodynamics.Harness
             /// <summary>`HeatTimeScale`, absolute.</summary>
             public float Clock;
 
+            /// <summary>
+            /// Multiplier on every block's waste-heat fractions, both producer and consumer.
+            ///
+            /// **The dial that is not transport.** Conduction and the clock both act on how heat
+            /// *moves*; this acts on how much there is. It is here because `G8`'s two halves pull
+            /// against each other along the clock — crossing and recovery both go as one over it,
+            /// so the clock cannot change their ratio — and the load is the first dial that can.
+            /// See balance.md, What the retune was measured to cost.
+            /// </summary>
+            public float Waste = 1f;
+
             /// <summary>True for the shipped pair, which is the control the grid is read against.</summary>
             public bool IsShipped
             {
-                get { return Conductivity == 1f && Clock == ShippedClock; }
+                get { return Conductivity == 1f && Clock == ShippedClock && Waste == 1f; }
             }
 
             /// <summary>
@@ -188,14 +199,40 @@ namespace Thermodynamics.Harness
                 get { return Conductivity * Clock / ShippedClock; }
             }
 
+            /// <summary>
+            /// The crossing this cell is expected to have, from the two composition rules the grid
+            /// above measured and this one is testing an extension of.
+            ///
+            /// **A projection, printed beside the measurement rather than instead of it.**
+            /// `crossing × clock` is a constant per conductivity, held to 1.5 % across every cell
+            /// that has a median; whether the load composes the same way — `crossing ∝ 1 / waste`,
+            /// because a block heats at the rate it is driven — is exactly what this grid is for.
+            /// The last projection of this shape was out by a factor of five.
+            /// </summary>
+            public float ProjectedCrossingSeconds(float constantAtThisConductivity)
+            {
+                if (Clock <= 0f || Waste <= 0f) return -1f;
+                return constantAtThisConductivity / (Clock * Waste);
+            }
+
             public string Name
             {
                 get
                 {
-                    return "k" + Conductivity.ToString("0.##",
-                               System.Globalization.CultureInfo.InvariantCulture)
+                    string name = "k" + Conductivity.ToString("0.##",
+                                      System.Globalization.CultureInfo.InvariantCulture)
                         + "-h" + Clock.ToString("0.##",
                                System.Globalization.CultureInfo.InvariantCulture);
+
+                    // Only when it is not one, so every name the two earlier grids wrote is
+                    // unchanged and their resume records still match the cells they were taken on.
+                    if (Waste != 1f)
+                    {
+                        name += "-w" + Waste.ToString("0.####",
+                            System.Globalization.CultureInfo.InvariantCulture);
+                    }
+
+                    return name;
                 }
             }
 
@@ -213,13 +250,21 @@ namespace Thermodynamics.Harness
             /// </summary>
             public Func<string, string, BlockThermalProperties, BlockThermalProperties> Material()
             {
-                if (Conductivity == 1f) return null;
+                if (Conductivity == 1f && Waste == 1f) return null;
 
-                float multiplier = Conductivity;
+                float conduction = Conductivity;
+                float waste = Waste;
                 return (typeId, subtype, source) =>
                 {
                     BlockThermalProperties copy = source.Clone();
-                    copy.Conductivity *= multiplier;
+                    copy.Conductivity *= conduction;
+
+                    // Both fractions, because a ship's waste is producers and consumers together
+                    // and moving one is a change to which *kind* of block is hot rather than to how
+                    // much heat there is. Clamped in the definition, so a multiplier that would
+                    // push a fraction past one creates no energy from nothing.
+                    copy.ProducerWasteEnergy *= waste;
+                    copy.ConsumerWasteEnergy *= waste;
                     return copy;
                 };
             }
@@ -241,6 +286,71 @@ namespace Thermodynamics.Harness
             return Cells(Grid);
         }
 
+        /// <summary>
+        /// **The load against the clock**, which is the search `C12` was left pointing at.
+        ///
+        /// <para>
+        /// Conduction reaches the significance window and costs three of the mod's levers doing it
+        /// — a coolant sink stops out-performing the best surface dial, bolting starts working, a
+        /// buried reactor survives, and the stiffest block stops responding to air. So the question
+        /// is whether a dial that is not *transport* can reach the same window, and the load is the
+        /// first one: it changes how much heat there is without changing how it moves.
+        /// </para>
+        ///
+        /// <para>
+        /// **What the arithmetic says, so the grid tests a prediction rather than fishing.**
+        /// Crossing and recovery both go as one over the clock, so the clock cannot change their
+        /// ratio — 129 at the shipped pair, against the 30 or less `G8` needs. Cutting the load
+        /// should lengthen the crossing and shorten the recovery, moving the ratio the right way.
+        /// **And it should also lower the share of hulls that cross at all**, because a block only
+        /// crosses if its equilibrium is past critical, and equilibrium falls with the load — which
+        /// is the same censoring that excluded conductivity ×8. Whether the ratio improves faster
+        /// than the share collapses is the whole question, and it cannot be reasoned out: the last
+        /// projection of this shape was wrong by a factor of five.
+        /// </para>
+        ///
+        /// <para>
+        /// **Both directions, because the coupling is the finding.** ×2 is the opposite corner —
+        /// a shorter crossing and a higher share — and a grid that only cuts the load would measure
+        /// one side of a trade and call it a curve.
+        /// </para>
+        /// </summary>
+        private static readonly float[][] LoadGrid =
+        {
+            // control, the same one both earlier grids are read against
+            new[] { 1f, 225f, 1f },
+
+            // edge: the load alone, at the shipped clock
+            new[] { 1f, 225f, 2f },
+            new[] { 1f, 225f, 0.5f }, new[] { 1f, 225f, 0.25f }, new[] { 1f, 225f, 0.125f },
+
+            // edge: the clock alone, at the two clocks the recovery bound admits, so this grid
+            // carries its own clock edge rather than borrowing one from another dataset (`M1`)
+            new[] { 1f, 120f, 1f }, new[] { 1f, 90f, 1f },
+
+            // interior: where the arithmetic puts a satisfying cell if the load composes the way
+            // the clock does, plus the neighbours that bracket it in both dials
+            new[] { 1f, 120f, 0.125f }, new[] { 1f, 90f, 0.125f }, new[] { 1f, 80f, 0.125f },
+            new[] { 1f, 90f, 0.25f }, new[] { 1f, 60f, 0.25f },
+            new[] { 1f, 90f, 0.5f }, new[] { 1f, 45f, 0.5f },
+            new[] { 1f, 90f, 2f },
+
+            // **The band's interior, added after the fifteen above were read.** They found the one
+            // cut that keeps a median — waste 0.5 — and two constants that place the band it
+            // admits: `crossing × clock` is 13,455 across clocks 225, 90 and 45 to 0.2 %, and
+            // `recovery × clock` is about 286,000 to 6 %, which put the window at clock 45–112 and
+            // the recovery bound at clock 80 or above. One measured cell inside a band is a
+            // recommendation resting on an interpolation, and the last one of those was wrong by a
+            // factor of five (`E1`), so the band is measured rather than read off the fit.
+            new[] { 1f, 110f, 0.5f }, new[] { 1f, 100f, 0.5f }, new[] { 1f, 80f, 0.5f },
+        };
+
+        /// <summary>The load grid, control first.</summary>
+        public static List<Cell> Load()
+        {
+            return Cells(LoadGrid);
+        }
+
         /// <summary>The five cells the air pass prices, control first.</summary>
         public static List<Cell> Decision()
         {
@@ -253,7 +363,9 @@ namespace Thermodynamics.Harness
 
             for (int i = 0; i < grid.Length; i++)
             {
-                cells.Add(new Cell { Conductivity = grid[i][0], Clock = grid[i][1] });
+                Cell cell = new Cell { Conductivity = grid[i][0], Clock = grid[i][1] };
+                if (grid[i].Length > 2) cell.Waste = grid[i][2];
+                cells.Add(cell);
             }
 
             return cells;

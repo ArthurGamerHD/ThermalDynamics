@@ -427,7 +427,7 @@ PipeFitter.BuildRing(builder, ring);      // pump goes on the first straight run
 
 ## Test coverage
 
-1,760 tests. **What each class is for is stated in its own summary, not here** —
+1,765 tests. **What each class is for is stated in its own summary, not here** —
 the index below says where to look, and `EveryTestClassSaysWhatItIsFor` fails when a class arrives
 without saying. This table is checked by `EveryTestClassIsInTheIndex`, so a suite cannot be added
 and left off it.
@@ -449,7 +449,7 @@ and left off it.
 | **Telemetry, reports and overlays** | `RunningStatTests` `HistogramTests` `TimingStatTests` `TelemetryFormatTests` `TelemetryAnomalyTests` `SampleGateTests` `GridHealthTests` `AnomalyRegistryTests` `FrameCostTests` `ProfilerTests` `RescanGateTests` `OverlayBudgetTests` `PerformanceReportTests` `BenchmarkBaselineTests` |
 | **Field dumps: the mod checked against a world** | `DumpAuditTests` `FieldDumpTests` `CensusFidelityTests` |
 | **End to end, and the host boundary** | `SimulationIntegrationTests` `ScenarioTests` `ScenarioClaimTests` `HostAdapterTests` `CoreIsolationTests` |
-| **Balance, and the ships it is decided on** | `BalanceTests` `CoolingLadderTests` `RetrofitTests` `BlockHeatIndexTests` `TimeToLossTests` `CatalogDriftTests` `ModHardwareRetestTests` `RetestSetTests` `SettleReadingTests` `DecorativeStiffnessTests` `ElementCostFitTests` `ScreeningTests` `BlueprintTests` `SubgridBridgeTests` `PrefabWalk` `CorpusGuardTests` `CorpusArchiveTests` `ClientDriftTests` `ClientInputTests` `HotTailTests` `HotTailSyncTests` `AirCostTests` `ConductionPaceTests` `WorstCaseTests` `LabRunTests` `LabInvariantTests` |
+| **Balance, and the ships it is decided on** | `BalanceTests` `CoolingLadderTests` `RetrofitTests` `BlockHeatIndexTests` `TimeToLossTests` `CatalogDriftTests` `ModHardwareRetestTests` `RetestSetTests` `SettleReadingTests` `DecorativeStiffnessTests` `ElementCostFitTests` `ScreeningTests` `BlueprintTests` `SubgridBridgeTests` `PrefabWalk` `CorpusGuardTests` `CorpusArchiveTests` `ClientDriftTests` `ClientInputTests` `HotTailTests` `HotTailSyncTests` `AirCostTests` `ConductionPaceTests` `LoadDialTests` `WorstCaseTests` `LabRunTests` `LabInvariantTests` |
 | **Corpus walks** (opt-in, `THERMAL_CORPUS_TESTS`) | `CorpusSurvey` `CorpusCensus` `KnobSweep` `ConductanceRetestWalk` `PairSweep` `SunlightPanelWalk` `BlockAccountingWalk` `DeterminismWalk` |
 | **The documentation itself** | `DocumentationTests` `ModApiShapeTests` `ConfigurationDocTests` `SimCommandTests` `CredentialScanTests` `ScriptWhitelistTests` |
 
@@ -477,6 +477,7 @@ and left off it.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | Indexed `LoadDialTests`, which checks that the pair grid's third axis reaches the blocks and reaches nothing else — a sweep dial that reached nothing would report *no change* in exactly the shape of one that reached everything and changed nothing, which is the failure the retest set's `reach.csv` exists for. Conductivity above all: the whole point of that axis is that it is not transport. |
 | 2026-08-23 | Indexed `ConductionPaceTests`, which guards a ratio rather than a number: the game has two conduction paces — one for solids, one for the coolant loop's fluid coupling — and nothing made them agree. Moving one alone weakens every loop relative to the structure it competes with, and the only thing that said so when it happened was four balance tests failing for what read like unrelated reasons. |
 | 2026-08-23 | Indexed `AirCostTests`, which pins the arithmetic under `C19`: demand is a conductance times the step over a capacity, so it is exactly proportional to the step — which is why every atmospheric figure taken at `Frequency` 8 was half — and lowering the clock divides every stiffness term while raising conductivity restores only conduction. Two rigs, one conduction-limited and one convection-limited, because a hull mixes the two in proportions nobody chose. The population figures it stands beside cannot be pinned here and are not; they are scored by `tools/corpus/air.py`. |
 | 2026-08-23 | Indexed `HotTailSyncTests`, which covers the protocol around the packet rather than the packet: which grid a message is about, when a server sends one, when a client asks again, and what a ledger drops when a player leaves. It is here because a session is the one place none of it can be checked — registration and addressing are host code, the policy is not, and two of its cases are failures that are silent by construction (`P2`). |
