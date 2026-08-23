@@ -33,7 +33,7 @@ namespace Thermodynamics.Harness
         public const float ShippedClock = 225f;
 
         /// <summary>
-        /// **Sixteen cells, not a full grid, and the choice is the design.** A full 4 × 6 sweep
+        /// **Twenty cells in two stages, not a full grid, and the choice is the design.** A full 4 × 6 sweep
         /// maps a surface; `G8` asks whether a point on it exists, and a panel run costs about
         /// thirteen minutes a cell at shipped cost, so twenty-four cells is most of a day for
         /// resolution the question does not use.
@@ -82,6 +82,20 @@ namespace Thermodynamics.Harness
             // the projection, and the four cells that bracket it
             new[] { 4f, 15f },
             new[] { 2f, 15f }, new[] { 8f, 15f }, new[] { 4f, 25f }, new[] { 4f, 11f },
+
+            // **The corner, added after the sixteen above were read.** Those sixteen found no cell
+            // that satisfies `G8`: five reach the window and every one of them takes 1.3 to 2.5
+            // hours to come back. They also found why — the crossing responds to conduction by
+            // 5.6× while the recovery time does not move at all — and therefore where a satisfying
+            // cell would have to be, since the two dials were measured to compose multiplicatively
+            // to within 2 %. Solving the two bounds against those curves puts it near conductivity
+            // ×8 and a clock in the seventies to low hundreds.
+            //
+            // **These are a search guided by the data and then measured, which is a different thing
+            // from a threshold moved to fit it** (`E1`, `E11`): the criterion is unchanged and was
+            // written before any of this ran. What is being searched for is a configuration that
+            // satisfies it, and the four cells below are the ones the measured curves say could.
+            new[] { 8f, 112f }, new[] { 8f, 90f }, new[] { 8f, 80f }, new[] { 8f, 70f },
         };
 
         /// <summary>

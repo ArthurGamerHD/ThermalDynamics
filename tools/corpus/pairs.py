@@ -26,9 +26,15 @@ DATA = sys.argv[1] if len(sys.argv) > 1 else "out/pairs-2026-08-23"
 
 SHIPPED_CLOCK = 225.0
 
-# G8, as balance-lab.md wrote it down before this run.
+# G8, as balance-lab.md wrote it down before this run — and its settling half as corrected before
+# this dataset was scored, which is the recovery time rather than an idle settling time. Idle in
+# vacuum shadow has no equilibrium, so the figure there reads its own 120 s floor at low clock.
 WINDOW = (120.0, 300.0)
-SETTLE_BOUND = 3600.0
+RECOVERY_BOUND = 3600.0
+
+# The floor Battery.SettleSeconds can return: the scan starts at the second sample. A column of
+# these is a blind spot, and the idle column is printed only to show it.
+SETTLE_FLOOR = 120.0
 
 # The thresholds G1, G2 and G5 are already scored at, copied in shape from verdict.py rather than
 # reinvented: same scenarios, same numbers, same direction.
@@ -129,8 +135,9 @@ def main():
     print()
     print("G8 and what a cell costs to get there")
     print()
-    print(f"{'conductivity':>12} {'clock':>6} {'cross p50':>10} {'n':>4} {'settle p50':>11}"
-          f" {'G8':>4} {'G1':>7} {'G2':>7} {'G5':>7} {'substeps':>9} {'cost':>6}")
+    print(f"{'conductivity':>12} {'clock':>6} {'cross p50':>10} {'n':>4} {'recover p50':>12}"
+          f" {'G8':>4} {'G1':>6} {'G2':>6} {'G5':>6} {'substeps':>9} {'cost':>6}"
+          f" {'idle-floor':>11}")
 
     control_demand = median([number(r, "substeps_demanded") or 0.0
                              for r in per_cell[control]])
@@ -146,21 +153,22 @@ def main():
         cross = median(crossings(loaded))
         n = len(crossings(loaded))
 
-        # A hull that did not settle inside the clock it was given reports -1. That is not a
-        # missing value: it is a settling time past the ceiling, which is past G8's bound, so it
-        # counts as a failure rather than being dropped.
-        settles = []
-        unsettled = 0
-        for row in idle:
+        # **Recovery is where the settling half is scored**, because the hull is driven somewhere
+        # and back, so the figure is a real duration. A run that never settled reports -1 and
+        # counts as past the bound rather than as missing — its ceiling is already past it.
+        returns = []
+        for row in recovery:
             value = number(row, "seconds_to_settle")
             ceiling = number(row, "ceiling_s") or 0.0
-            if value is None or value < 0:
-                unsettled += 1
-                settles.append(ceiling if ceiling > 0 else SETTLE_BOUND * 10)
-            else:
-                settles.append(value)
+            returns.append(value if value is not None and value >= 0
+                           else max(ceiling * 2, RECOVERY_BOUND * 10))
 
-        settle = median(settles)
+        back = median(returns)
+
+        # The idle column, printed only so the blind spot stays visible: at low clock a hull has
+        # barely moved and reports the floor, which is why this is not what G8 is scored on.
+        idle_settles = [number(r, "seconds_to_settle") or -1.0 for r in idle]
+        on_floor = sum(1 for v in idle_settles if 0 <= v <= SETTLE_FLOOR)
 
         g1_hits = sum(1 for r in idle if (number(r, "over_critical") or 0) > 0)
         g1 = 100.0 * g1_hits / len(idle) if idle else None
@@ -174,31 +182,35 @@ def main():
         demand = median([number(r, "substeps_demanded") or 0.0 for r in mine])
 
         in_window = cross is not None and WINDOW[0] <= cross <= WINDOW[1]
-        settles_ok = settle is not None and settle <= SETTLE_BOUND
-        g8 = in_window and settles_ok
+        comes_back = back is not None and back <= RECOVERY_BOUND
+        g8 = in_window and comes_back
 
         cost = demand / control_demand if control_demand else float("nan")
 
         print(f"{key[0]:>12g} {key[1]:>6g}"
               f" {('-' if cross is None else f'{cross:.1f}'):>10} {n:>4}"
-              f" {('-' if settle is None else f'{settle:.0f}'):>11}"
+              f" {('-' if back is None else f'{back:.0f}'):>12}"
               f" {('YES' if g8 else ('win' if in_window else '-')):>4}"
-              f" {('-' if g1 is None else f'{g1:.0f}%'):>7}"
-              f" {('-' if g2 is None else f'{g2:.0f}%'):>7}"
-              f" {('-' if g5 is None else f'{g5:.0f}%'):>7}"
-              f" {demand:>9.2f} {cost:>5.2f}x")
+              f" {('-' if g1 is None else f'{g1:.0f}%'):>6}"
+              f" {('-' if g2 is None else f'{g2:.0f}%'):>6}"
+              f" {('-' if g5 is None else f'{g5:.0f}%'):>6}"
+              f" {demand:>9.2f} {cost:>5.2f}x"
+              f" {on_floor:>7}/{len(idle):<3}")
 
         if g8:
             keeps = ((g1 is None or g1 <= G1_MAX_SHARE)
                      and (g2 is None or g2 >= G2_MIN_SHARE)
                      and (g5 is None or g5 >= G5_MIN_SHARE))
-            winners.append((key, cross, settle, demand, cost, keeps))
+            winners.append((key, cross, back, demand, cost, keeps))
 
     print()
-    print(f"G8 holds when the crossing p50 is in {WINDOW[0]:.0f}-{WINDOW[1]:.0f} s AND the idle")
-    print(f"settling p50 is under {SETTLE_BOUND:.0f} s. 'win' means the window alone; a hull that")
-    print("never settled inside its ceiling counts as failing rather than as missing.")
-    print("cost is substep demand against the shipped pair, which is what G6 is about.")
+    print(f"G8 holds when the crossing p50 is in {WINDOW[0]:.0f}-{WINDOW[1]:.0f} s AND the recovery")
+    print(f"p50 is under {RECOVERY_BOUND:.0f} s. 'win' means the window alone. cost is substep demand")
+    print("against the shipped pair, which is what G6 is about.")
+    print()
+    print("idle-floor is how many hulls reported the 120 s floor of the settling rule at idle — a")
+    print("hull that has not begun reading as one that has finished. It is printed rather than")
+    print("scored, and it is why the settling half is taken from recovery (SettleReadingTests).")
 
     # ---- does the interaction compose? ------------------------------------------------------
     print()
