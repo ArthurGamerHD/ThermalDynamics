@@ -50,6 +50,24 @@ is a finding rather than an excuse to move a threshold.
 | **G4** | **Design decides, not size.** Outcome correlates with things a builder controls — exposed area per watt, radiator count, how buried the reactor is — more than with block count or grid size. | rank correlation with block count exceeds that with exposure | Otherwise the mod taxes big ships rather than rewarding good ones. |
 | **G5** | **No death spiral.** A ship past critical that throttles to idle returns below critical in bounded time. | recovery time unbounded, or damage continues after the load stops | A player must be able to react to a warning. |
 | **G6** | **Affordable across the population.** Substep demand and step cost at p95/p99 of the corpus, not at the mean. | p99 substep demand exceeds what the shipped caps grant | The census hull is one point; the tail is what stutters. |
+| **G7** | **A ship the game spawns survives arrival.** Every vanilla prefab, idle, in the environment its category spawns into, for five simulated minutes, loses no block. | any prefab loses a block | The stated compatibility floor. A mod that destroys the game's own cargo ships as they arrive is broken however good its physics is, and this is the one criterion measured on ships nobody chose to put in a corpus. |
+
+**G7 is written here before it is measured**, which is the whole of `E11` — a criterion added after
+the numbers arrive is not a criterion. Four choices in it are decisions rather than conveniences,
+and each is a decision that could have gone the other way:
+
+* **Losing a block, not crossing critical.** The floor is that a spawned ship does not *fall apart*.
+  The two are different events and a block that has just crossed is losing nothing; measuring the
+  crossing would fail ships that never lose anything. See
+  [balance.md](balance.md#damage-arrives-too-fast-to-be-played-around).
+* **Idle, not loaded.** Arrival is what is being tested. A ship the player has not touched is not
+  charging a jump drive, and what happens once they fly it is `G2`'s question.
+* **Five simulated minutes.** Long past where a corpus ship that is going to lose a block has lost
+  it — the crossing-to-loss gap is under a minute at p90 — and inside the clocks the lab already
+  runs.
+* **The environment its category spawns into.** Planetary encounters on a planet surface at noon,
+  everything else in sunlit vacuum. Running every prefab in both would be a harder test than the
+  truth and would fail ships for a place they are never put.
 
 **G3 is answered, and the answer is that the two fits fail in opposite ways.** `retrofit` parses a
 real workshop hull, runs it under full electrical load to find where its heat actually is, and puts
@@ -408,6 +426,7 @@ hold the suite hostage.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Added `G7`, the compatibility floor, **before measuring it** (`E11`): every vanilla prefab, idle, in the environment its category spawns into, for five simulated minutes, loses no block. The stated intent that a ship the game spawns must survive arrival had never been a scored criterion and had never been measured, which is [backlog.md](backlog.md) `C10`. The four decisions inside the wording are written out beside it, because a criterion whose terms are settled after the data is not one. |
 | 2026-08-22 | Said that `BlueprintTests` is synthetic throughout. The real-ship case it used to end on was demoted to an uncalled helper when `CorpusSurvey` absorbed it, and has now been deleted ([backlog.md](backlog.md) `H4`); the claim is `CorpusSurvey`'s step probe, over every ship rather than one. |
 | 2026-08-22 | Finished the split this page began: the three sections still narrating what an early run found are gone. *The first full cycle* reported 32 subscribed ships as a provisional read of G1, G2 and G5, which the 8,142-hull survey in [balance.md](balance.md#the-population) has since answered over a population — quoting the small run beside the large one is `E4` in slow motion. *Where the numbers stand* was the same 32-ship run on one hull. *Sealed blocks: three harness faults* narrated three defects that are fixed and pinned; what survives is the standing hazard, restated as what a definition does **not** mean, which is the form `D1` and `ScreeningTests` hold it in. Three struck-through entries left *Open questions*, and *What exists now* stopped quoting a 32-ship yield as the corpus. |
 | 2026-08-22 | Moved the readings of the corpus datasets to [balance.md](balance.md), so this page is the lab's design and that one is what the lab found. Added the standard header and this change log. |
