@@ -230,6 +230,10 @@ print(f"  ships with at least one runaway scenario: {len(runaway_ships):,} of "
 print("\n" + "=" * 78)
 print("TIME TO CRITICAL — when a warning could fire, not when anything is lost")
 print("=" * 78)
+print("\n  The quantiles are over the ships that reached critical, which is the share in the")
+print("  first column and not the population. A median here is 'how fast do the ships that")
+print("  overheat overheat', not 'when does a ship overheat' — pairs.py scores G8 on the second")
+print("  and they are different numbers wherever the share is not one (E9).")
 print(f"\n  {'scenario':18}{'reach critical':>16}{'p10':>8}{'median':>9}{'p90':>8}")
 for name in sorted(by_scenario):
     rows_ = by_scenario[name]

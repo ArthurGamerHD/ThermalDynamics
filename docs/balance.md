@@ -730,8 +730,69 @@ HeatTimeScale`. **Raising conduction and lowering the clock together moves the c
 window at constant or lower cost:** conductivity ×4 with `HeatTimeScale` ~15 projects to a ~200 s
 crossing at ~0.7 substeps in vacuum, against 4.8 s at 2.75 today.
 
-**That projection is an extrapolation across an interaction the sweep never measured.** Every
-configuration in `knobs.csv` moves one dial. The pair has to be run before it is trusted.
+**That projection was an extrapolation across an interaction the sweep never measured**, it has now
+been measured, and **it was wrong by a factor of five**: conductivity ×4 with `HeatTimeScale` 15
+gives a 991 s crossing, not ~200 s. What was wrong was not the composition rule — the two dials do
+multiply, to within 1 % — but the two curves fed into it, which came from different scenarios and
+from a statistic taken over the ships that crossed rather than over the ships that were loaded. The
+grid that replaces it is below.
+
+### Two dials at once: the window is reachable at conductivity ×4 with the clock near 100
+
+Twenty-five cells of conduction against the clock, on the forty-hull retest set, each scenario's run
+length stretched by the clock ratio so every cell is stopped the same way (`M1`). `PairSweep` runs
+it and `tools/corpus/pairs.py` scores it.
+
+**`G8` is satisfied, and by four cells.** Under sustained full electrical load the median hull
+crosses critical inside the 120–300 s window while a hull driven to full burn and throttled back
+recovers inside the hour:
+
+| `conductivity` | `HeatTimeScale` | crossing p50 | recovery p50 | substep demand | G1 | G2 | G5 |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 4 | 120 | 124.0 s | 2,220 s | 2.04× shipped | 0 % | 100 % | 100 % |
+| 4 | 100 | 148.9 s | 2,640 s | 1.70× | 0 % | 100 % | 100 % |
+| 4 | 90 | 165.4 s | 2,940 s | 1.53× | 0 % | 100 % | 100 % |
+| 4 | 80 | 186.0 s | 3,270 s | 1.36× | 0 % | 100 % | 100 % |
+
+None of the four breaks a criterion it has to keep: no hull goes critical at idle, every hull gets
+warm under load, and every hull comes back. **The price is 1.36–2.04× the shipped substep demand**,
+which is what `G6` is about and is a price rather than a bound — whether it is affordable is a
+question about the shipped caps and the tail, not about the median in that column.
+
+**Both dials behave exactly, which is why four cells were enough to find.** Two curves came out of
+the twenty-one cells that ran first, and each holds across every cell that has a median:
+
+* **The crossing goes as one over the clock.** `crossing × clock` is a constant per conductivity —
+  2,302 at ×1 over six cells, 5,418 at ×2 over three, 14,880 at ×4 over nine — held to within
+  1.5 %, 0.4 % and 0.3 %. So a conductivity *is* that constant, and the clocks that put it in the
+  window are the constant divided by 300 and by 120.
+* **Recovery is set by the clock and barely moves with conduction.** At the shipped clock it is
+  1,320 s at ×1 and 1,230 s at ×8; the bound of an hour falls between clock 70 (3,660 s) and clock
+  80 (3,210 s) whatever the conduction.
+
+The two bands overlap at exactly one conductivity. ×1 wants a clock of 8–19 and ×2 wants 18–45,
+both far under the clock recovery needs; ×4 wants 50–124, which reaches it. The four cells above are
+that overlap, and their crossings were predicted from the constant to within 0.2 % before they were
+run.
+
+**Conductivity ×8 is out, and not because it is slow.** At ×8 only 13 of 40 hulls ever reach
+critical, so there is no median crossing time at any clock — the 50th percentile of the population
+sits in the censored tail. Conduction spreads a block's heat into the hull it is bolted to, and past
+some point the hull absorbs the whole event. That is a defensible mod and it is not the one `G8`
+describes, so the rung is excluded by the criterion rather than by cost. The share is a property of
+conduction alone: 72 % at ×1, 68 % at ×2, 62 % at ×4, 32 % at ×8, flat across every clock.
+
+**This corrected a scoring defect before it corrected the answer.** The first reading of the grid
+took the crossing median over the hulls that crossed, which reported two ×8 cells as satisfying
+`G8` — a cell where two thirds of the population never overheats read as the grid's best. Read as
+`E9` requires, with a hull that never crossed censored above rather than dropped, none of them does.
+The rule is pinned by `tools/corpus/test_scoring.py`.
+
+**What this is not.** It is a measured configuration, not a shipped one. It is taken on the forty
+hulls of the retest set rather than on the standing panel, so it is not the published single-dial
+rows re-derived (`M1`); what is compared is the interior of this grid against its own edges.
+Retuning to it would move every temperature figure in this repository, and the cost column has been
+read at the median only. See [backlog.md](backlog.md) `C12`.
 
 ### Air costs about six times what vacuum costs
 
@@ -840,6 +901,7 @@ five ways a full sweep dies, and [backlog.md](backlog.md) for what is still open
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | **Measured the two dials together and found the significance window**, which is `C12` and the one thing every sweep before it could not answer: `G8` is satisfied by conductivity ×4 at `HeatTimeScale` 80–120, crossing at 124–186 s and recovering in 2,220–3,270 s, at 1.36–2.04× the shipped substep demand and with `G1`, `G2` and `G5` all kept. **Corrected the projection this page carried**, which put the window at ×4 with the clock near 15 — measured, that cell crosses at 991 s, five times its prediction, because the two curves multiplied together came from different scenarios and from a median over the ships that crossed. The composition rule itself holds to 1 %. **Conductivity ×8 is excluded by the criterion rather than by cost**: only 13 of 40 hulls ever cross there, so the population has no median crossing at any clock. |
 | 2026-08-23 | **Measured what the real-unit conversion did to the ships people fly**, which is what was left of `C2`. Forty retest hulls through seven scenarios in the shipped world and four counterfactual ones recovered exactly from `Cubes.xml` at `4f6b44a^`: a burning hull is **+34.7 K** hotter than before the conversion and a loaded one **−16.3 K** cooler, the arms attribute each to one family, and **no criterion moves** — G1, G2 and G5 are identical in all five worlds. What changed for a player is the spread rather than the peak: under load the peak fell 16 K and **192 more** blocks went over critical, under thrust the peak rose 35 K and **257 fewer** did. Also corrected the published per-block table, which described only the four families `Cubes.xml` authors and said *thrusters went 0.6×* — true of the hydrogen ones alone, against **0.23×** for ion and **1.27×** for atmospheric. |
 | 2026-08-23 | Settled one of `C2`'s three claims with a measurement rather than a retune: `OverheatDamagePerKelvin` was authored for the per-step damage rule, which at `Frequency` 8 bit eight times harder, and restoring that intent would put the median block's whole life past its rating at **6.5 s**. The authored values stay. |
 | 2026-08-23 | Answered the damage-timing question with the event that costs a player something. The section had been called *"damage arrives too fast to be played around"* and quoted a **median 8.9 s** that is the *crossing* — the moment the damage rate leaves zero. The first block is lost at a median **37.0 s** under full electrical load, the median ship's own crossing-to-loss gap is **24.2 s**, and with the cue's three-second lead the window is 40 s. `G5`'s rationale holds. Split into [the crossing](#how-fast-a-ship-crosses-critical) and [the loss](#how-long-a-block-has-after-it-crosses), which is the section `BlockHeatIndex` has cited since it was written and which did not exist. |

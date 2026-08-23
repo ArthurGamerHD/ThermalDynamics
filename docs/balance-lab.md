@@ -92,9 +92,23 @@ The reading is pinned by `SettleReadingTests`, and recovery — from a full burn
 is the scenario where the hull is driven somewhere and back, so the same figure is a real duration
 there and is the one a player actually waits through.
 
-**G8 is not yet measured.** Every configuration in `knobs.csv` moves one dial, and the projected
-route — conduction up and the clock down together — is an extrapolation across an interaction
-nothing has run. What tests it is the paired sweep.
+**G8 is measured, and it holds — at a configuration the mod does not ship.** The paired sweep ran
+twenty-five cells of conduction against the clock on the forty-hull retest set, and four of them
+satisfy both halves: conductivity ×4 at `HeatTimeScale` 120, 100, 90 and 80, crossing at 124–186 s
+and recovering in 2,220–3,270 s, at 1.36–2.04× the shipped substep demand and keeping `G1`, `G2`
+and `G5`. The projection that opened the question — ×4 with the clock near 15 — was out by a factor
+of five; the composition rule behind it was not, and holds to 1 %. The grid, the two curves that
+locate the answer and what excludes conductivity ×8 are in
+[balance.md](balance.md#two-dials-at-once-the-window-is-reachable-at-conductivity-4-with-the-clock-near-100).
+**Whether to ship it is a separate decision** and is [backlog.md](backlog.md) `C12`: retuning moves
+every temperature figure in the repository.
+
+**The first reading of that grid was wrong, and the criterion is what caught it.** The crossing
+median had been taken over the hulls that crossed rather than over the hulls that were loaded, and
+two cells at conductivity ×8 scored as satisfying `G8` on a population where 27 of 40 hulls never
+reach critical at all. A hull that never crossed is censored above, not absent (`E9`) — the same
+treatment the settling half already gave a hull that never settled — and read that way ×8 has no
+median at any clock. The rule is pinned by `tools/corpus/test_scoring.py`.
 
 **G7 was written here before it was measured**, which is the whole of `E11` — a criterion added after
 the numbers arrive is not a criterion. Four choices in it were decisions rather than conveniences,
@@ -468,6 +482,7 @@ hold the suite hostage.
 | Date | Change |
 | --- | --- |
 | 2026-08-22 | Removed *subgrids are read as separate ships* from the open questions. It was not true and had not been for as long as `ShipAssembly` existed: a blueprint's grids are built as one machine and bridged at their mechanical joints. 747 of the first 1,002 ships of the 2026-08-22 sweep hold more than one grid and 695 resolved joints, 29,604 of them. What was genuinely missing is that nothing checked a bridge *moves heat* — `CorpusSurvey` counted them — and `SubgridBridgeTests` does. |
+| 2026-08-23 | **`G8` is measured and it holds**, at conductivity ×4 with `HeatTimeScale` 80–120 — four of twenty-five cells, `G1`, `G2` and `G5` all kept, 1.36–2.04× the shipped substep demand. **The criterion caught a defect in its own scorer first**: the crossing median was taken over the hulls that crossed rather than over the hulls that were loaded, which reported two conductivity ×8 cells as satisfying `G8` on a population where 27 of 40 hulls never reach critical. Censored above as `E9` requires, ×8 has no median at any clock. Nothing in `G8` moved. |
 | 2026-08-23 | **Corrected `G8`'s second half in the open, before scoring anything against it** (`E11`). It asked for a settling time *at idle*, and idle has no equilibrium in vacuum shadow — the hull cools toward the floor — so at low `HeatTimeScale` the figure reads 120 s, its own floor, for 26 to 36 of 40 hulls. The old wording is above; it is replaced by the recovery time, which is a real duration and the one a player waits through. **The correction is stricter**: four cells passed the old half and none passes this one. |
 | 2026-08-23 | Added `G8`, the significance window, **before the sweep that tests it** (`E11`): under sustained full electrical load the median crossing falls in 120–300 s, and at idle the median hull settles inside an hour. The mod's own balance target had never been a scored criterion, which is [backlog.md](backlog.md) `C12`. Both halves are one criterion because one clock governs both time constants, and the five decisions inside the wording are written out beside it. |
 | 2026-08-22 | Added `G7`, the compatibility floor, **before measuring it** (`E11`): every vanilla prefab, idle, in the environment its category spawns into, for five simulated minutes, loses no block. The stated intent that a ship the game spawns must survive arrival had never been a scored criterion and had never been measured, which is [backlog.md](backlog.md) `C10`. The four decisions inside the wording are written out beside it, because a criterion whose terms are settled after the data is not one. |

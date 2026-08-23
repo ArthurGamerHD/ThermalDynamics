@@ -24,3 +24,7 @@
 
 # vstest blame dumps: multi-gigabyte, and this folder is published to the workshop
 TestResults/
+
+# Python bytecode, from the corpus scorers and their checks.
+__pycache__/
+*.pyc

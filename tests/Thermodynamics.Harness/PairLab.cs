@@ -33,13 +33,15 @@ namespace Thermodynamics.Harness
         public const float ShippedClock = 225f;
 
         /// <summary>
-        /// **Twenty cells in two stages, not a full grid, and the choice is the design.** A full 4 × 6 sweep
+        /// **Twenty-five cells, not a full grid, and the choice is the design.** A full 4 × 6 sweep
         /// maps a surface; `G8` asks whether a point on it exists, and a panel run costs about
-        /// thirteen minutes a cell at shipped cost, so twenty-four cells is most of a day for
+        /// thirteen minutes a cell at shipped cost, so a full grid is most of a day for
         /// resolution the question does not use.
         ///
         /// <para>
-        /// So the grid is cut into three parts that each answer something:
+        /// So the grid is cut into parts that each answer something. The first three were laid out
+        /// before anything ran; the two corners after them are searches guided by what the earlier
+        /// cells measured, and each is described where it appears in the table below.
         /// </para>
         ///
         /// <list type="bullet">
@@ -62,6 +64,11 @@ namespace Thermodynamics.Harness
         /// (2, 15), (8, 15), (4, 25) and (4, 11) bracket it in both directions, so a projection
         /// that is wrong is wrong by a measurable amount rather than just wrong.
         /// </description></item>
+        /// <item><description>
+        /// <b>Two corners, each added after the cells above it were read.</b> The first went to
+        /// conductivity ×8 and measured that ×8 has no crossing median at all; the second goes to
+        /// ×4 at clocks 80–120, which is the only band the corrected curves leave.
+        /// </description></item>
         /// </list>
         /// </summary>
         private static readonly float[][] Grid =
@@ -83,25 +90,39 @@ namespace Thermodynamics.Harness
             new[] { 4f, 15f },
             new[] { 2f, 15f }, new[] { 8f, 15f }, new[] { 4f, 25f }, new[] { 4f, 11f },
 
-            // **The corner, added after the sixteen above were read.** Those sixteen found no cell
-            // that satisfies `G8`: five reach the window and every one of them takes 1.3 to 2.5
-            // hours to come back. They also found why — the crossing responds to conduction by
-            // 5.6× while the recovery time does not move at all — and therefore where a satisfying
-            // cell would have to be, since the two dials were measured to compose multiplicatively
-            // to within 2 %. Solving the two bounds against those curves puts it near conductivity
-            // ×8 and a clock in the seventies to low hundreds.
-            //
-            // **These are a search guided by the data and then measured, which is a different thing
-            // from a threshold moved to fit it** (`E1`, `E11`): the criterion is unchanged and was
-            // written before any of this ran. What is being searched for is a configuration that
-            // satisfies it, and the four cells below are the ones the measured curves say could.
+            // **The first corner, added after the sixteen above were read, and it measured its own
+            // refutation.** The sixteen found no cell satisfying `G8`, and the crossing appeared to
+            // respond to conduction far more strongly than recovery did, which put a satisfying
+            // cell near conductivity ×8 with a clock in the seventies to low hundreds. Two of these
+            // four then scored as satisfying it — and did not: the crossing median had been taken
+            // over the hulls that crossed rather than over the hulls that were loaded, and at ×8
+            // that is thirteen of forty, so a cell where two thirds of the population never
+            // overheats read as the grid's best. Read as `E9` requires, all four are censored and
+            // conductivity ×8 has no crossing median at any clock. They are kept because that is
+            // the measurement: it is what says ×8 is out, and it is the only rung where the
+            // crossing share falls below a half. The reading is pinned by `tools/corpus/test_scoring.py`.
             new[] { 8f, 112f }, new[] { 8f, 90f }, new[] { 8f, 80f }, new[] { 8f, 70f },
+
+            // **The second corner, from the corrected curves**, and the same search done on a
+            // statistic that survives its own censoring rule. Two measured curves fix it: the
+            // crossing goes as one over the clock, so `crossing × clock` is a constant per
+            // conductivity — 2,302 at ×1, 5,418 at ×2, 14,869 at ×4, each held to within 1.5 %
+            // across every cell that has a median — and recovery is set by the clock alone, under
+            // the hour at clock 80 and over it at 70. Only ×4 has a window band (clock 50–124)
+            // that reaches the clock the recovery bound needs, so the four cells below are where
+            // `G8` can be satisfied if it can be satisfied at all.
+            //
+            // **A search guided by the data inside a criterion that has not moved** (`E1`, `E11`):
+            // `G8` is unchanged and was written before any of this ran.
+            new[] { 4f, 120f }, new[] { 4f, 100f }, new[] { 4f, 90f }, new[] { 4f, 80f },
         };
 
         /// <summary>
         /// The scenarios this grid runs, and every criterion the panel can answer from them: `G1`
-        /// from idle, `G2` and `G8`'s first half from full electrical load, `G5` from recovery,
-        /// `G6` from the substep demand of all three, and `G8`'s second half from idle's settling.
+        /// from idle, `G2` and `G8`'s first half from full electrical load, `G5` and `G8`'s second
+        /// half from recovery, and `G6` from the substep demand of all three. Idle is run and its
+        /// settling column is printed rather than scored, because a hull in vacuum shadow has no
+        /// equilibrium and the column is a floor at low clock (`SettleReadingTests`).
         /// </summary>
         public static readonly string[] Scenarios = { "idle", "full-electrical", "recovery" };
 

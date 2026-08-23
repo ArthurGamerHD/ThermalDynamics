@@ -191,13 +191,29 @@ THERMAL_CORPUS_TESTS=1 THERMAL_CORPUS_DATA=$PWD/out/pairs-2026-08-23 \
 python3 tools/corpus/pairs.py out/pairs-2026-08-23
 ```
 
-Under two hours, resumable the same way. **Sixteen cells rather than a full grid**: the two edges
-are the single-dial curves, so the interaction is testable as *is the interior what the edges
-predict* rather than assumed, and the interior is the equal-cost diagonal — substep demand goes as
+Under two hours for the first sixteen cells, resumable the same way, and the grid grew to
+twenty-five in two searches guided by what the earlier cells measured. **Not a full grid**: the two
+edges are the single-dial curves, so the interaction is testable as *is the interior what the edges
+predict* rather than assumed; the interior is the equal-cost diagonal — substep demand goes as
 conductivity × clock — plus the pair [balance.md](../../docs/balance.md) projected and the four
-cells bracketing it. **Run length scales with the clock**, capped at twice `G8`'s own bound, because
+cells bracketing it; and the two corners are where the measured curves said a cell satisfying `G8`
+would have to be. **Run length scales with the clock**, capped at twice `G8`'s own bound, because
 a fixed ceiling reports a still-climbing hull as settled at the ceiling and a censored settling time
 cannot fail a criterion about settling.
+
+**A hull that never crossed critical is censored above, not dropped.** The first reading of this
+grid took the crossing median over the hulls that crossed and reported two cells at conductivity ×8
+as satisfying `G8` — where 27 of 40 hulls never reach critical at all. `pairs.py` now orders a
+non-crosser past every crosser, exactly as it already ordered a non-settler past the recovery bound,
+so a cell where fewer than half ever cross prints `censored` and has no median (`E9`).
+
+```
+python3 -m unittest discover -s tools/corpus -p 'test_*.py'
+```
+
+`test_scoring.py` pins that rule and the two thresholds `G8` is scored at, so changing either fails
+a check rather than moving a number nobody is watching. It is the only check over the scorers and
+it is not part of the `dotnet test` suite; run it when a scorer changes.
 
 ---
 
@@ -211,6 +227,7 @@ limit in [known-issues.md](../../docs/known-issues.md).
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | Scored `G8` and found it satisfied at conductivity ×4 with `HeatTimeScale` 80–120. Fixed the defect that had to be fixed first: `pairs.py` took the crossing median over the hulls that crossed, so conductivity ×8 — where 27 of 40 hulls never reach critical — read as the grid's best cell. Non-crossers are censored above now, `test_scoring.py` pins it, and `verdict.py`'s time-to-critical table says in words that its quantiles are over the ships that reached. |
 | 2026-08-23 | Pruned the corpus directory from 68 GB to 32 GB and wrote down [what is in it](#what-is-in-the-corpus-directory-and-what-is-beside-it). 20.6 GB of leavings deleted, 1,840 barren blueprints and 8 oversized ones moved aside rather than deleted because `F14` still has the 25-block floor untested. The inference that a blueprint is barren was checked by parsing all 1,852 — 12 were usable ships and are back — which is also what added `corpus --list`. Fixed `Unpack`, which had silently skipped three legacy archives whose entry names are truncated. |
 | 2026-08-23 | Added `PairSweep` and `pairs.py`: conduction against the clock, sixteen cells, scoring `G8` ([backlog.md](../../docs/backlog.md) `C12`). The three sweeps' CSV reading, blueprint resolution and resume record are one `ShipSet` now rather than three copies. |
 | 2026-08-23 | Wired the retest set to something: `ConductanceRetestWalk` runs it against the world before conductance became real units, and `retest.py` reads the result against G1, G2 and G5 as `verdict.py` already computes them ([backlog.md](../../docs/backlog.md) `C2`). |
