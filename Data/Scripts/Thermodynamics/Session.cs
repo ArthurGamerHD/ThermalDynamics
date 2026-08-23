@@ -114,6 +114,10 @@ namespace Thermodynamics
             ThermalBridges.Clear();
             ThermalGrid.ResetEnvironmentCaches();
             ThermalHeatSources.Clear();
+
+            // A dynamic light this mod created outlives the grid it was lighting unless it is
+            // handed back, and the renderer has no session to end it with.
+            ThermalGlow.Clear();
             ThermalApi.Unregister();
             ThermalTerminal.Unregister();
             SettingsRequests.Unregister();
