@@ -70,6 +70,26 @@ namespace Thermodynamics.Core
         /// <summary>Convective heat transfer coefficient at rest, W/(m^2 K).</summary>
         public float ConvectionCoefficient = 50f;
 
+        /// <summary>
+        /// Heat transfer coefficient for a grid buried in rock, W/(m^2 K).
+        ///
+        /// <para>
+        /// **Rock is a far worse heat sink than moving air**, which is the opposite of what the
+        /// model used to say: a buried grid exchanged at the planet's own *air* coefficient, so
+        /// digging in was the best cooling in the game. For a body of size D buried far from a
+        /// surface the conduction shape factor gives <c>h = 2k/D</c>; rock conducts at about
+        /// 2.5 W/(m K) and a large-grid block is 2.5 m, so 2 W/(m² K) — twenty-five times worse
+        /// than the 50 above, not equal to it.
+        /// </para>
+        ///
+        /// <para>
+        /// It is a coefficient rather than a conduction path because that is the shape the
+        /// environment exchange already has, and the area it multiplies is the same exposed area
+        /// every other environment term uses. See environment.md, Underground.
+        /// </para>
+        /// </summary>
+        public float UndergroundConvectionCoefficient = 2f;
+
         public static PlanetThermalProperties Default()
         {
             return new PlanetThermalProperties();
@@ -103,6 +123,7 @@ namespace Thermodynamics.Core
             SealevelDeadzone = Math.Max(0f, SealevelDeadzone);
             SolarDecay = Math.Max(0f, Math.Min(1f, SolarDecay));
             ConvectionCoefficient = Math.Max(0f, ConvectionCoefficient);
+            UndergroundConvectionCoefficient = Math.Max(0f, UndergroundConvectionCoefficient);
             return this;
         }
 

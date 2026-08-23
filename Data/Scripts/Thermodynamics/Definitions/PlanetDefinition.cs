@@ -25,6 +25,7 @@ namespace Thermodynamics
         private static readonly MyStringId UndergroundDampingDepthId = MyStringId.GetOrCompute("UndergroundDampingDepth");
         private static readonly MyStringId SolarDecayId = MyStringId.GetOrCompute("SolarDecay");
         private static readonly MyStringId ConvectionCoefficientId = MyStringId.GetOrCompute("ConvectionCoefficient");
+        private static readonly MyStringId UndergroundConvectionCoefficientId = MyStringId.GetOrCompute("UndergroundConvectionCoefficient");
 
         /// <summary>
         /// Which values the definition actually carried, so a merge writes only those and never a zero
@@ -89,6 +90,9 @@ namespace Thermodynamics
         /// <summary>Convective heat transfer coefficient at rest, W/(m^2 K).</summary>
         [ProtoMember(40)]
         public float ConvectionCoefficient;
+
+        /// <summary>Heat transfer coefficient for a grid buried in this planet's rock, W/(m^2 K).</summary>
+        public float UndergroundConvectionCoefficient;
 
         public static PlanetDefinition GetDefinition(MyDefinitionId defId) 
         {
@@ -176,6 +180,12 @@ namespace Thermodynamics
                 def.Supplied |= PlanetField.ConvectionCoefficient;
             }
 
+
+            if (lookup.TryGetDouble(defId, GroupId, UndergroundConvectionCoefficientId, out dvalue))
+            {
+                def.UndergroundConvectionCoefficient = (float)dvalue;
+                def.Supplied |= PlanetField.UndergroundConvectionCoefficient;
+            }
             return def;
 
         }

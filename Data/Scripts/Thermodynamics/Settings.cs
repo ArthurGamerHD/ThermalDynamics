@@ -221,6 +221,9 @@ namespace Thermodynamics
         [ProtoMember(96)] public float PlanetAmbientLapseRate = 4f;
         [ProtoMember(97)] public float PlanetAmbientLagSeconds = 45f;
         [ProtoMember(98)] public float PlanetConvectionCoefficient = 50f;
+
+        /// <summary>Heat transfer coefficient for a grid buried in rock, W/(m^2 K).</summary>
+        [ProtoMember(120)] public float PlanetUndergroundConvectionCoefficient = 2f;
         [ProtoMember(99)] public float PlanetSolarDecay = 0.5f;
         [ProtoMember(100)] public float PlanetUndergroundTemperature = 280f;
         [ProtoMember(101)] public float PlanetUndergroundDampingDepth = 20f;
@@ -658,6 +661,7 @@ namespace Thermodynamics
 
                 "PlanetDayTemperature", "PlanetNightTemperature", "PlanetPoleTemperatureDrop",
                 "PlanetAmbientLapseRate", "PlanetAmbientLagSeconds", "PlanetConvectionCoefficient",
+                "PlanetUndergroundConvectionCoefficient",
                 "PlanetSolarDecay", "PlanetUndergroundTemperature",
                 "PlanetUndergroundDampingDepth", "PlanetCoreTemperature",
                 "PlanetSealevelDeadzone",
@@ -750,6 +754,7 @@ namespace Thermodynamics
                 case "PlanetAmbientLapseRate": return PlanetAmbientLapseRate;
                 case "PlanetAmbientLagSeconds": return PlanetAmbientLagSeconds;
                 case "PlanetConvectionCoefficient": return PlanetConvectionCoefficient;
+                case "PlanetUndergroundConvectionCoefficient": return PlanetUndergroundConvectionCoefficient;
                 case "PlanetSolarDecay": return PlanetSolarDecay;
                 case "PlanetUndergroundTemperature": return PlanetUndergroundTemperature;
                 case "PlanetUndergroundDampingDepth": return PlanetUndergroundDampingDepth;
@@ -854,6 +859,7 @@ namespace Thermodynamics
                 case "PlanetAmbientLapseRate": PlanetAmbientLapseRate = value; return true;
                 case "PlanetAmbientLagSeconds": PlanetAmbientLagSeconds = value; return true;
                 case "PlanetConvectionCoefficient": PlanetConvectionCoefficient = value; return true;
+                case "PlanetUndergroundConvectionCoefficient": PlanetUndergroundConvectionCoefficient = value; return true;
                 case "PlanetSolarDecay": PlanetSolarDecay = value; return true;
                 case "PlanetUndergroundTemperature": PlanetUndergroundTemperature = value; return true;
                 case "PlanetUndergroundDampingDepth": PlanetUndergroundDampingDepth = value; return true;

@@ -358,6 +358,9 @@ namespace Thermodynamics.Harness
                 + "\t\t\t\t\tSolarRadiationProtectionFactor.");
             Value(sb, "ConvectionCoefficient", p.ConvectionCoefficient,
                 "Convective coefficient at the surface, W/(m^2 K), in proportion to the air.");
+            Value(sb, "UndergroundConvectionCoefficient", p.UndergroundConvectionCoefficient,
+                "The same for a grid buried in rock, W/(m^2 K). Rock is a far worse heat sink\n"
+                + "\t\t\t\t\tthan moving air: 2k/D for k 2.5 W/(m K) over a 2.5 m block.");
 
             sb.Append("\t\t\t\t</Group>\n");
             sb.Append("\t\t\t</ModExtensions>\n");

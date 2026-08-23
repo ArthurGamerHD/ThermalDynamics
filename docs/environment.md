@@ -225,11 +225,25 @@ and cached on the same 40 m movement rule, so between refreshes depth is the dif
 — a subtraction, exact for a shaft sunk straight down, and anything moving far enough sideways for
 it not to be has already tripped the resample.
 
-Two limits are deliberate and recorded as such:
+**Rock is a far worse heat sink than air.** A buried grid used to exchange at the planet's own
+*convection* coefficient — the figure for moving air, 50 W/(m²·K) — because rock contact was not
+modelled and that was the nearest number available. It was wrong by a factor of twenty-five and in
+the flattering direction: digging in was the best cooling in the game. For a body of size D buried
+far from a surface the conduction shape factor gives `h = 2k/D`, and rock at 2.5 W/(m·K) over a
+2.5 m block is **2 W/(m²·K)**. That is `UndergroundConvectionCoefficient`, authored per planet like
+its surface counterpart.
 
-* **Convection underground is still the planet's own coefficient.** A buried grid exchanges with
-  rock at the rate it would exchange with still air. Rock contact is not modelled, so this is the
-  nearest available answer rather than a correct one — [backlog](backlog.md) A16.
+```
+inRock  = min(1, depth / UndergroundContactDepth)          // 5 m, a hull's own depth
+h       = air + (rock − air) × inRock
+```
+
+A crossover rather than a step, because a ship breaking the surface should not have its cooling
+change twenty-five-fold between one metre and the next. Neither the wind bonus nor the weather
+multiplies the rock end: there is no wind under fifty metres of stone.
+
+One limit is deliberate and recorded as such:
+
 * **With the shipped 2 km deadzone the core term is out of reach in ordinary play**, since SE's
   voxels do not go down that far. The model is correct and the tuning lever is documented: lowering
   `SealevelDeadzone` to a few hundred metres is how a planet author makes deep mining hot.
@@ -772,6 +786,7 @@ does not exist — `game_temperature` tracks the sun rather than the ground.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Closed `A16`. A buried grid exchanged with rock at the coefficient for moving air, which made digging in the best cooling in the game; it is `2k/D` — 2 W/(m²·K) against 50 — authored per planet as `UndergroundConvectionCoefficient` and crossed over the first five metres so the surface is not a wall. Neither wind nor weather reaches it. |
 | 2026-08-22 | Closed `B29` the same day it was opened: the convection wind factor runs from 1 upward rather than from 0.5 to 1, so a wind cools a hull at every speed instead of warming it below about 50 m/s. Same two-to-one contrast between a windward face and a lee one; corrected floor. |
 | 2026-08-22 | Closed `B17` and `B18`. Two of the three causes were faults and are fixed: the weather's own wind modifier multiplied a share that already meant *the worst weather*, so one storm was counted twice, and nothing bounded the composed speed. A storm went from 187 m/s to 74, and from 143 m/s to 66 within a hundred metres of the ground; `>ceil` is now zero on every scenario in the matrix. The third is not a fault — a storm at the planet's own ceiling is over the friction threshold, `v_rel` is relative wind by design, and `StormHeatingTests` measures the cost as degrees rather than hundreds. Opened `B29`, which came out of trying to write that test: below about 50 m/s the model's directional convection factor makes wind a net *warmer*. |
 | 2026-08-22 | Fixed `B14`, the largest known fault in the wind pattern. The meridional component follows the band rather than the hemisphere — equatorward in the trades and the polar easterlies, poleward in the westerlies — and comes off the same signal as the zonal one, so a band edge is a calm rather than a place where the wind reverses at full strength. The test that should have caught it measured the east component of a unit bearing; it now measures the velocity. Two things fell out of the same pass: a terrain influence outside 0..1 could make a shelter factor negative and a speed with it, and the wind lab's day-against-night ratio was dividing two averages taken over different sets of latitudes (`E6`). |
