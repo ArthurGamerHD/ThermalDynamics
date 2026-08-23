@@ -17,7 +17,7 @@ into atmosphere and into the air of sealed rooms, arrives from the sun, and — 
 * **Isolated.** Every mechanism has its own switch, and switching one off removes exactly its own
   cost. Switches take effect on the next step, with no reload.
 * **Tested.** The simulation is a pure library with no dependency on the game session, built and
-  tested outside it — 1,560 tests, 33 deterministic scenarios and a load benchmark that goes to a
+  tested outside it — 1,750 tests, 33 deterministic scenarios and a load benchmark that goes to a
   million blocks in one grid.
 * **Open.** Everything the simulation knows is readable and everything it does is drivable from
   another mod, through a delegate table passed by mod message. See [docs/api.md](docs/api.md).
@@ -41,6 +41,7 @@ into atmosphere and into the air of sealed rooms, arrives from the sun, and — 
 | Heat pumps | The one block that moves heat *up* a gradient, for an electrical cost set by Carnot: cheap across a small difference, ruinous across a large one. |
 | Damage and thresholds | Blocks above their critical temperature take continuous damage. Any other temperature can be watched by another mod. |
 | Airtightness mapping | A per-grid flood fill classifies every cell as external, structure or room, which decides what counts as an exposed surface. Doors are portals, so cycling one costs a walk over the doors rather than a remap. |
+| Multiplayer | Every machine simulates the same ship, and the server tells each client what its blocks are actually at: the whole ship once when the ship arrives, then whatever is near failing, a few seconds apart. Without that a client can show a block **safe** for the whole time it is burning. |
 | Readouts | Terminal panel per block, cockpit summary, crosshair readout, and an x-ray block overlay — every block of the ship in front of you drawn as a box coloured by temperature, exposed faces or friction watts, a solar view that shades the ship's skin face by face — plus a room view that draws the mapped air itself, cycled with Ctrl+Shift+=, with a readout panel of the figures behind whichever view is up. |
 
 ## Required dependencies
@@ -86,6 +87,7 @@ repository is built and laid out.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | Added multiplayer to **What it does**: temperatures now replicate, and a client that used to guess is told. |
 | 2026-08-22 | Moved the repository layout tree, the build-and-test section and the documentation index off this page. The stated audience is a workshop reader, with one section for modders, and all three were written for somebody who has cloned the repository ([docs/backlog.md](docs/backlog.md) `H5`). The layout and the build are now in [docs/development.md](docs/development.md); the index is [docs/README.md](docs/README.md). |
 | 2026-08-22 | Brought the quoted suite size to 1,533, after a pass that added four documentation checks. |
 | 2026-08-22 | Rebuilt the documentation index around what a reader is trying to do rather than the order pages were written, after a defragmentation pass took the documentation from 31 pages to 21. Every page now opens with its scope and closes with a change log; the conventions are in [docs/development.md](docs/development.md#documentation-conventions) and checked by `EveryPageHasAChangeLog`. |

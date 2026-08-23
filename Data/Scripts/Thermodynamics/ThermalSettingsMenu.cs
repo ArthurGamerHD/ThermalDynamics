@@ -47,12 +47,13 @@ namespace Thermodynamics
         private const string Solver = "Solver";
         private const string Environment = "Environment";
         private const string Display = "Display";
+        private const string Multiplayer = "Multiplayer";
         private const string Other = "Other";
 
         /// <summary>Sections in the order the page reads, top to bottom.</summary>
         private static readonly string[] Order =
         {
-            Transfer, Solar, Occlusion, Systems, Solver, Environment, Display, Other,
+            Transfer, Solar, Occlusion, Systems, Solver, Environment, Multiplayer, Display, Other,
         };
 
         /// <summary>
@@ -81,6 +82,9 @@ namespace Thermodynamics
             { "EnableCoolantLoops", new Entry(Systems, "Coolant loops", "Closed pipe rings acting as one fluid mass.", 0, 1) },
             { "EnableRoomAir", new Entry(Systems, "Room air", "Sealed rooms hold an air mass that carries heat.", 0, 1) },
             { "EnableHeatPumps", new Entry(Systems, "Heat pumps", "The block that moves heat up a gradient for an electrical cost.", 0, 1) },
+
+            { "EnableTemperatureSync", new Entry(Multiplayer, "Replicate temperatures", "The server tells each client what its blocks are actually at: the whole ship once when the ship arrives, then whatever is near failing. Off leaves every client guessing, and a client that guesses can show a block safe for the whole time it is burning.", 0, 1) },
+            { "TemperatureSyncInterval", new Entry(Multiplayer, "Update interval", "Seconds between updates about the blocks near failing. Longer is cheaper; the whole ship is still stated once whatever this says.", 0.5f, 60f) },
 
             // These four had no entry at all, so they fell through to "Other — not yet described"
             // at the bottom of the page, unlabelled and untooltipped. They are the four the field
@@ -338,6 +342,10 @@ namespace Thermodynamics
                     "EnableDamage", "DamageIsPerSecond"),
                 new Leaf("Point sources",
                     "EnableHeatSources")),
+
+            new Folder("Multiplayer",
+                new Leaf("Temperatures",
+                    "EnableTemperatureSync", "TemperatureSyncInterval")),
 
             new Folder("World",
                 new Leaf("Climate",

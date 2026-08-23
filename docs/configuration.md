@@ -362,6 +362,56 @@ The four presentation switches — the debug text, the two raycast overlays and 
 are deliberately outside the digest. A client owns what is drawn on its own screen, so those are
 allowed to differ and a server does not overwrite them.
 
+## Replicating temperatures
+
+Settings replicate. **Temperatures now do too**, and until this existed they did not: a client
+re-simulated from its own inputs, and a client joining mid-session started from whatever the world
+was last *saved* at. The model is dissipative, so a client converges on its own — but it spends 150
+to 305 s on the wrong side of a block's critical temperature while it does, against a damage event
+that runs a median 37 s from the load to the first block lost. A client could show **safe** for the
+entire lifetime of the event that destroyed the block, several times over.
+
+**The protocol is the whole hull once, then the blocks near failing.** When a client has finished
+building a grid it asks the server to state it; the server answers with every block's temperature,
+in as many messages as the hull needs. After that the server states only the blocks inside the
+warning band — the same last 100 K the glow already draws — every `TemperatureSyncInterval`
+seconds, and says nothing at all about a hull with nothing near failing.
+
+Both halves are load-bearing, and that is measured rather than assumed. Correcting the band alone
+leaves a client misreading for 145 s of a 560 s run *whatever the interval*, because a corrected
+block conducts to neighbours that are still stale; the hull once and then the band takes it to
+nothing, for one packet — 94 KB on a 9,430-block hull — and 513 bytes a second after it. Replicating
+every block continuously does the same job for thirty times the bandwidth. The evidence is in
+[known-issues.md](known-issues.md#the-protocol-is-measured-and-the-near-critical-tail-alone-is-not-it).
+
+| Setting | Default | Effect |
+| --- | --- | --- |
+| `EnableTemperatureSync` | `true` | Whether the server states block temperatures to its clients at all. Off is what the mod did before this existed: every client guessing, and able to show a block safe for the whole time it is burning. |
+| `TemperatureSyncInterval` | 5 s | Seconds between band updates once a client has the hull. The whole hull is stated once whatever this says. Sixty is enough to keep a client right about a *stale join*, which decays; five is chosen for a client whose **inputs** are wrong, which does not decay and re-diverges between updates. |
+
+**The cost is the size of the emergency.** A quiet ship sends nothing — an empty band is not
+transmitted. A burning one sends ten bytes per block near failing per interval per client in range,
+which on the hottest hull in the corpus is about 6 KB/s while it burns. Blocks outside a client's
+sync distance are never sent, because there is no grid on that machine to correct.
+
+**It travels on its own secure channel**, two above the shared one, for the reason
+[Changing settings from a client](#changing-settings-from-a-client) gives: the engine's secure
+handler supplies a sender the transport verified and a from-the-server flag a client cannot forge.
+A client must not be able to write temperatures onto another client's simulation, and the server
+must not serve a hull to a player id somebody else named. A snapshot asked for twice inside five
+seconds is refused, so a client asking in a loop cannot make the server transmit a hull per frame.
+
+`/thermal sync` prints what this has sent, asked for and applied on the machine it is run on. Run it
+on both: registration and addressing cannot be tested outside a session, and the pair of counters is
+what says which half is not moving.
+
+**What is still wrong after it.** The correction overwrites this machine's guess with the server's
+answer, so it fixes a client that started from the wrong state. It does not fix a client whose
+*inputs* are wrong — block power arriving late, a dropped solver backlog, settings that never landed
+— because those re-diverge as soon as the packet is applied. Against the measured combined case the
+correction more than halves the standing error and does not remove it. Those are tracked separately;
+see [backlog.md](backlog.md) `F17` to `F23`.
+
 ## What the dials trade against each other
 
 There is one configuration and no presets, so tuning a world is moving individual settings — and two

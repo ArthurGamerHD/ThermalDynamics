@@ -12,7 +12,7 @@ namespace Thermodynamics.Core
     /// anything, because the model is dissipative — but it is on the wrong side of a block's
     /// critical temperature for 150 to 305 s while it does, against a damage event that runs a
     /// median 37 s. The readout is wrong about the one thing it is for, for longer than the thing
-    /// lasts. See known-issues.md and [backlog.md](../../../../docs/backlog.md) `B4`.
+    /// lasts. See known-issues.md and [backlog.md](../../../../../docs/backlog.md) `B30`.
     /// </para>
     ///
     /// <para>
@@ -158,20 +158,68 @@ namespace Thermodynamics.Core
         /// <summary>Packs a selection. Never null; an empty tail is a header and no records.</summary>
         public static byte[] Encode(IList<StoredTemperature> tail)
         {
-            int count = tail == null ? 0 : tail.Count;
-            byte[] bytes = new byte[SizeOf(count)];
+            return Encode(tail, 0, tail == null ? 0 : tail.Count);
+        }
 
-            int at = 0;
+        /// <summary>
+        /// Packs one slice of a selection, which is how a hull too large for a single packet
+        /// travels: every slice is a whole legal packet of its own, so a reader needs no notion of
+        /// a sequence and a lost slice costs its own records rather than the message.
+        ///
+        /// A slice that runs off either end of <paramref name="tail"/> is clipped rather than
+        /// throwing, because the alternative is an out-of-range exception type the game's script
+        /// whitelist does not admit.
+        /// </summary>
+        public static byte[] Encode(IList<StoredTemperature> tail, int offset, int count)
+        {
+            Clip(tail, ref offset, ref count);
+
+            byte[] bytes = new byte[SizeOf(count)];
+            Write(bytes, 0, tail, offset, count);
+            return bytes;
+        }
+
+        /// <summary>
+        /// Writes a packet into an existing buffer at <paramref name="at"/> and returns the
+        /// position after it, so an envelope can carry a packet without copying it twice.
+        /// </summary>
+        public static int Write(byte[] bytes, int at, IList<StoredTemperature> tail, int offset, int count)
+        {
+            Clip(tail, ref offset, ref count);
+
             bytes[at++] = Version1Marker;
             WriteInt32(bytes, ref at, count);
 
             for (int i = 0; i < count; i++)
             {
-                WriteInt64(bytes, ref at, GridMath.Key(tail[i].Position));
-                WriteUInt16(bytes, ref at, Quantise(tail[i].Temperature));
+                WriteInt64(bytes, ref at, GridMath.Key(tail[offset + i].Position));
+                WriteUInt16(bytes, ref at, Quantise(tail[offset + i].Temperature));
             }
 
-            return bytes;
+            return at;
+        }
+
+        /// <summary>Holds a slice inside the list it is a slice of. Bounds rather than throws.</summary>
+        private static void Clip(IList<StoredTemperature> tail, ref int offset, ref int count)
+        {
+            int length = tail == null ? 0 : tail.Count;
+
+            if (offset < 0) offset = 0;
+            if (offset > length) offset = length;
+            if (count < 0) count = 0;
+            if (count > length - offset) count = length - offset;
+        }
+
+        /// <summary>
+        /// How many packets a selection of this size occupies, given how many records one packet
+        /// may carry. Zero records is one packet, because an empty band is still a statement.
+        /// </summary>
+        public static int Packets(int records, int recordsPerPacket)
+        {
+            if (recordsPerPacket < 1) return 1;
+            if (records <= recordsPerPacket) return 1;
+
+            return records / recordsPerPacket + (records % recordsPerPacket == 0 ? 0 : 1);
         }
 
         /// <summary>
@@ -183,15 +231,24 @@ namespace Thermodynamics.Core
         /// </summary>
         public static bool TryDecode(byte[] data, List<StoredTemperature> results)
         {
+            return TryDecode(data, 0, results);
+        }
+
+        /// <summary>
+        /// Unpacks a packet that starts at <paramref name="start"/>, for a reader that has already
+        /// consumed an envelope in front of it.
+        /// </summary>
+        public static bool TryDecode(byte[] data, int start, List<StoredTemperature> results)
+        {
             if (results == null) return false;
             results.Clear();
 
-            if (data == null || data.Length < HeaderSize) return false;
-            if (data[0] != Version1Marker) return false;
+            if (data == null || start < 0 || data.Length - start < HeaderSize) return false;
+            if (data[start] != Version1Marker) return false;
 
-            int at = 1;
+            int at = start + 1;
             int count = ReadInt32(data, ref at);
-            if (count < 0 || data.Length < SizeOf(count)) return false;
+            if (count < 0 || data.Length - start < SizeOf(count)) return false;
 
             for (int i = 0; i < count; i++)
             {

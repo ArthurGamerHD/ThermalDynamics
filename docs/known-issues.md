@@ -145,10 +145,25 @@ spot is the price of not burying every real finding under three hundred false on
 
 ## Open defects
 
-**Temperatures are not reconciled between server and clients.** Clients run their own simulation
-from the same inputs and reach the same answers, but nothing reconciles them: a client that joins
-mid-session starts from saved temperatures, and divergence is never corrected. Damage and settings
-are server authoritative, so nothing a client believes changes what happens to the ship.
+**Temperatures were not reconciled between server and clients. They are now, and the transport is
+the one part of it no test can reach.** Clients run their own simulation from the same inputs, and a
+client that joins mid-session starts from saved temperatures; nothing corrected the difference.
+`ThermalGridSync` does: a client that has finished building a grid asks the server to state it, the
+server answers with every block, and after that it states the near-critical band every
+`TemperatureSyncInterval` seconds. Both halves and their interval come from the measurements below,
+and the protocol classes are `HotTailMessage`, `HotTailSchedule` and `HotTailState` under
+`Core/Sync`, all of which are game-free and tested.
+
+**What is still open is the session.** Registration, addressing, the sync-distance gate and the send
+itself are host code that cannot run outside a live server, so none of it is covered by a test and
+none of it can be. What stands in for one is a pair of counters: `/thermal sync` prints what this
+machine has sent, asked for, refused and applied, and running it on both sides is what says which
+half is not moving. The mechanism has a switch for the same reason — `EnableTemperatureSync` — and
+the failure it guards against is the one this repository keeps finding: a mechanism correct
+everywhere it is exercised and inert everywhere it runs.
+
+Damage and settings remain server authoritative, so nothing a client believes changes what happens
+to the ship. What a client believes is what it is *shown*, which is the whole point.
 
 **Measured, and it is not as cosmetic as it reads.** `-- drift` runs the same hull twice from states
 a stated distance apart and watches the disagreement decay — the model is dissipative, so a client
@@ -175,7 +190,8 @@ over, which is the readout being wrong about the one thing it is for.
 worst block is 105 K out against a mean of 20 K, so a single scalar per grid would correct the
 armour and leave the blocks that matter wrong. What has to be replicated is the near-critical tail —
 1,700 to 2,000 blocks of 8,904 on this hull, which makes 12.1 kW a block against a real median of
-335 W and is therefore an upper bound on how long that tail is. Tracked as [backlog](backlog.md) B4.
+335 W and is therefore an upper bound on how long that tail is. What was built from it, and what
+is still untested about it, is [backlog](backlog.md) `B30`.
 
 ### The protocol is measured, and the near-critical tail alone is not it
 
@@ -212,6 +228,46 @@ over a session.
 the correction existed to carry. The budget's own blind spot is counted and printed rather than
 inferred (`P2`); what it is for is a hull whose band does not fit a packet at all, and on this hull
 it does.
+
+### What was built from that measurement, and what it costs
+
+The shipped protocol is the last row of the table above and nothing else. `ThermalGridSync` runs a
+pass every thirty frames — half a second, deliberately coarser than a frame and finer than the
+interval it serves — and for each live grid states it to each client that is owed something and is
+inside the world's sync distance. Outside that distance there is no grid on the client to correct.
+
+**The client asks; the server does not offer.** Only the client knows when it has finished building
+a grid, and a snapshot that arrives before it has is a snapshot every record of which is dropped for
+naming a block that does not exist yet. A request that goes unanswered is repeated with a doubling
+backoff capped at a minute, because a client that gave up would hold a stale hull for the rest of
+the session — the exact defect this closes. A request repeated inside five seconds is refused, so a
+client asking in a loop cannot make the server transmit a 94 KB hull per frame.
+
+**A hull larger than one message is sent as several, and each is complete.** There is no sequence
+number and nothing to reassemble: a slice is a whole legal packet, applied on arrival, so a lost one
+costs its own records rather than the hull. The bound is 2,048 records — under 21 KB — and it is a
+packet-size limit rather than a rate limit, because a message the transport refuses is a correction
+that never arrives.
+
+**No budget.** Capping an update is measured above to make the misreading *worse*, from 145 s to
+240 s, because the blocks a cap drops are exactly the ones the correction is for. What a hull too
+large for one message gets instead is more messages.
+
+**An empty band is not transmitted.** A ship with nothing near failing has nothing to correct, and
+the alternative is a header per grid per client per interval for the whole population of a server,
+forever. So the steady cost is the size of the emergency rather than the size of the world: nothing
+on a quiet ship, and about 6 KB/s per client in range on the hottest hull in the corpus while it
+burns.
+
+**On its own secure channel**, `30325`, for the reason `SettingsRequests` is on `30324`: the shared
+channel's sender id is a field the sender wrote, and the engine's secure handler supplies one the
+transport verified plus a from-the-server flag a client cannot forge. Temperatures that did not come
+from the server are dropped, and a request that reaches a client rather than the server is dropped —
+either would be one client writing onto another's simulation.
+
+**What the envelope costs.** Every figure in the table above is the codec's bytes. The wire adds ten
+bytes per message for a marker, a kind and the grid's entity id — the grid has to be named, because
+block positions are only an identity inside one grid — which at the shipped interval is 2 B/s.
 
 ### A client's inputs are a different defect from a client's state, and only one of them decays
 
@@ -717,6 +773,7 @@ counters rather than milliseconds so it holds on any machine.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | **Built `B4`'s transport**, which was the half of that row no lab could reach. `ThermalGridSync` is the session it happens in; `HotTailMessage`, `HotTailSchedule` and `HotTailState` are the wire, the timing and the bookkeeping, all game-free and covered by `HotTailSyncTests`. The protocol is the one the measurement chose and nothing more: the whole hull once when a client asks, then the band every five seconds, no budget, empty bands unsent, on a secure channel of its own. Two settings ship with it, `EnableTemperatureSync` and `TemperatureSyncInterval`. What no test reaches is registration, addressing and the send, so `/thermal sync` prints counters on both sides instead. |
 | 2026-08-23 | **Measured the fix for `B4` rather than only the defect, and both halves changed what the row said.** The near-critical tail alone does not close the gap on the census hull — 560 s of misreading to 145 s, and the residual is the un-replicated hull rather than the update rate, because a corrected block conducts to stale neighbours. Stating the whole hull **once at the join** and then tracking the band takes it to **0 s at every interval down to sixty seconds**, for one 94 KB packet and 513 B/s after it. And `-- inputs` found that the convergence argument this row rested on covers one of eight causes: a stale join settles at 0.25 K, while a wrong input — power 2 s late, a dropped backlog, settings that never arrived — settles at 44, 58 and 116 K and stays there. A bias does not decay, and the correction narrows one without removing it. |
 | 2026-08-23 | Built the guard the entry above asked for ([backlog.md](backlog.md) `F16`), so this is now a limit with a check under it rather than a warning to remember. |
 | 2026-08-23 | Recorded that the mod project's build is not the game's check, after `Units.Watts` took an `IFormatProvider` and the mod failed to compile in a session while building clean here. The whitelist was read out of `SpaceEngineers.Game.MySpaceGameDefaultIlChecker` rather than guessed at: `System` is not an allowed namespace, only a named list of its types, and `IFormatProvider` is not on it. Opened `F16` for the check that would have caught it. |

@@ -123,6 +123,17 @@ namespace Thermodynamics
         public int CriticalBlocks;
 
         private bool started;
+
+        /// <summary>
+        /// Whether the grid has finished its first build and may be read or written from outside.
+        ///
+        /// Read by the temperature replication, which must not state a hull the other machine has
+        /// not built yet and must not apply one onto a grid this machine has not built either.
+        /// </summary>
+        public bool Started
+        {
+            get { return started && !disabled && Simulation != null; }
+        }
         private bool disabled;
 
         /// <summary>

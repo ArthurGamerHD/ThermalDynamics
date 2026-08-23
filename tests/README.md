@@ -427,7 +427,7 @@ PipeFitter.BuildRing(builder, ring);      // pump goes on the first straight run
 
 ## Test coverage
 
-1,560 tests. **What each class is for is stated in its own summary, not here** —
+1,750 tests. **What each class is for is stated in its own summary, not here** —
 the index below says where to look, and `EveryTestClassSaysWhatItIsFor` fails when a class arrives
 without saying. This table is checked by `EveryTestClassIsInTheIndex`, so a suite cannot be added
 and left off it.
@@ -449,7 +449,7 @@ and left off it.
 | **Telemetry, reports and overlays** | `RunningStatTests` `HistogramTests` `TimingStatTests` `TelemetryFormatTests` `TelemetryAnomalyTests` `SampleGateTests` `GridHealthTests` `AnomalyRegistryTests` `FrameCostTests` `ProfilerTests` `RescanGateTests` `OverlayBudgetTests` `PerformanceReportTests` `BenchmarkBaselineTests` |
 | **Field dumps: the mod checked against a world** | `DumpAuditTests` `FieldDumpTests` `CensusFidelityTests` |
 | **End to end, and the host boundary** | `SimulationIntegrationTests` `ScenarioTests` `ScenarioClaimTests` `HostAdapterTests` `CoreIsolationTests` |
-| **Balance, and the ships it is decided on** | `BalanceTests` `CoolingLadderTests` `RetrofitTests` `BlockHeatIndexTests` `TimeToLossTests` `CatalogDriftTests` `ModHardwareRetestTests` `RetestSetTests` `SettleReadingTests` `DecorativeStiffnessTests` `ElementCostFitTests` `ScreeningTests` `BlueprintTests` `SubgridBridgeTests` `PrefabWalk` `CorpusGuardTests` `CorpusArchiveTests` `ClientDriftTests` `ClientInputTests` `HotTailTests` `WorstCaseTests` `LabRunTests` `LabInvariantTests` |
+| **Balance, and the ships it is decided on** | `BalanceTests` `CoolingLadderTests` `RetrofitTests` `BlockHeatIndexTests` `TimeToLossTests` `CatalogDriftTests` `ModHardwareRetestTests` `RetestSetTests` `SettleReadingTests` `DecorativeStiffnessTests` `ElementCostFitTests` `ScreeningTests` `BlueprintTests` `SubgridBridgeTests` `PrefabWalk` `CorpusGuardTests` `CorpusArchiveTests` `ClientDriftTests` `ClientInputTests` `HotTailTests` `HotTailSyncTests` `WorstCaseTests` `LabRunTests` `LabInvariantTests` |
 | **Corpus walks** (opt-in, `THERMAL_CORPUS_TESTS`) | `CorpusSurvey` `CorpusCensus` `KnobSweep` `ConductanceRetestWalk` `PairSweep` `SunlightPanelWalk` `BlockAccountingWalk` `DeterminismWalk` |
 | **The documentation itself** | `DocumentationTests` `ModApiShapeTests` `ConfigurationDocTests` `SimCommandTests` `CredentialScanTests` `ScriptWhitelistTests` |
 
@@ -477,6 +477,7 @@ and left off it.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | Indexed `HotTailSyncTests`, which covers the protocol around the packet rather than the packet: which grid a message is about, when a server sends one, when a client asks again, and what a ledger drops when a player leaves. It is here because a session is the one place none of it can be checked — registration and addressing are host code, the policy is not, and two of its cases are failures that are silent by construction (`P2`). |
 | 2026-08-23 | Indexed `HotTailTests` and `ClientInputTests`, which cover the two halves of `B4`'s fix: the packet a server sends a client about the blocks that are about to fail, and the claim that a degraded client *input* is a standing bias rather than a perturbation. Both carry their own rig guards as tests — an undegraded client must agree exactly, and a run where nothing on the server ever failed must say so rather than report that the readout agreed (`E8`). |
 | 2026-08-23 | Indexed `ScriptWhitelistTests`, which is the one class here that judges the mod against the *game* rather than against the model: it reads `Data/Scripts` for framework types the game's script whitelist refuses, which a green mod build cannot tell you. It is also why Roslyn is a package reference — syntax only, to tell a type from a field of the same name. |
 | 2026-08-23 | Indexed the three natural-feedback classes. `IncandescenceTests` is the unusual one: it carries a numerical integration of Planck's law against the CIE observer and re-derives every constant the shipped glow uses, so nothing in it compares the mod to a figure the mod produced (`E7`). |

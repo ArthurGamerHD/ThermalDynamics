@@ -71,6 +71,7 @@ temperatures, overheat events and threshold crossings.
 | [Settings.cs](../Data/Scripts/Thermodynamics/Settings.cs) | class | Config file, defaults, access by name, and the write-through to the model's settings. |
 | [SettingsSync.cs](../Data/Scripts/Thermodynamics/SettingsSync.cs) | static | Replicates the world's settings to every client, over `SENetworkAPI`. |
 | [SettingsRequests.cs](../Data/Scripts/Thermodynamics/SettingsRequests.cs) | static | An administrator changing a setting from a client, over the engine's secure handler. |
+| [Game/ThermalGridSync.cs](../Data/Scripts/Thermodynamics/Game/ThermalGridSync.cs) | static | Replicates block temperatures to clients: the whole hull once, then the near-critical band. Plumbing only — the protocol is `Core/Sync`. |
 | [WindOverlay.cs](../Data/Scripts/Thermodynamics/WindOverlay.cs) | static | The wind map and the crosshair wind needle, cycled with Ctrl+Shift+W. |
 | [OverlayBudget.cs](../Data/Scripts/Thermodynamics/OverlayBudget.cs) | static | Fits the block overlay's draw radius to `DebugOverlayMaxBoxes` each frame. |
 | [Definitions/](../Data/Scripts/Thermodynamics/Definitions) | classes | Typed readers over Definition Extensions. |
@@ -175,15 +176,23 @@ The simulation itself is not replicated. Clients run their own `ThermalGrid` com
 inputs and reach their own temperatures; only the server applies overheat damage, so the one
 conclusion with a world-visible consequence is never reached twice.
 
+**Their answers are corrected rather than their work replaced.** A client re-simulating from its own
+inputs is measurably on the wrong side of a block's critical temperature for longer than the damage
+event lasts, so the server states the truth over the top of it — the whole hull once when the client
+has built the grid, then the blocks near failing on an interval. The decision of what to send and
+when is in `Core/Sync` and is game-free; `ThermalGridSync` is the part that needs a session.
+
 What *is* replicated travels two ways, and the split is deliberate:
 
 | Channel | Carries | Why this channel |
 | --- | --- | --- |
 | `SENetworkAPI`, `30323` | The world's settings ([SettingsSync.cs](../Data/Scripts/Thermodynamics/SettingsSync.cs)) and the two block throttles — a coolant pump's speed and a heat pump's power limit | Ordinary state, server → client, seeded at construction so a joining client's fetch is answered |
 | The engine's secure handler, `30324` | An administrator's request to change a setting from a client ([SettingsRequests.cs](../Data/Scripts/Thermodynamics/SettingsRequests.cs)) | SENetworkAPI's sender id is a field the sender wrote; a promote-level check cannot be gated on it |
+| The engine's secure handler, `30325` | Block temperatures, server → client, and a client's request for a grid's hull ([Game/ThermalGridSync.cs](../Data/Scripts/Thermodynamics/Game/ThermalGridSync.cs)) | The same reason one channel along: a client must not be able to write temperatures onto another client's simulation, and the from-the-server flag is the only thing that says so. A second id rather than a second handler on `30324`, because one id registered twice delivers every message twice |
 
-See [configuration.md](configuration.md#changing-settings-from-a-client) for the request path and
-[known-issues.md](known-issues.md#open-defects) for what the unreconciled temperatures cost.
+See [configuration.md](configuration.md#changing-settings-from-a-client) for the request path,
+[configuration.md](configuration.md#replicating-temperatures) for the temperature protocol, and
+[known-issues.md](known-issues.md#open-defects) for what it does and does not reach.
 
 ## Extending it
 
@@ -197,6 +206,7 @@ pumps `ThermalSimulation` — which is exactly what the test harness does.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | Added the temperature replication: a third channel, a component in the adapter table, and a correction to the **Networking** claim that clients simply reach their own answers. They still do; the server now states the truth over the top of it. |
 | 2026-08-22 | Corrected two statements this page had gone on making after the code stopped supporting them. **Networking** said no `NetSync` property and no command was registered and that nothing replicates; three properties and a second, secure channel exist, and the section now says what each carries and why the split. **Update order** filed the per-grid block under "every 10th frame" while naming the scheduler that runs every grid every frame two lines below. Completed the adapter table, which named 22 of the 33 files under `Data/Scripts/Thermodynamics` — the scheduler, the settings sync and request paths, the room diagnostics, the coolant pump block, the wind overlay, the overlay budget, the planet probes and the three heat-source debug files were all absent. |
 | 2026-08-22 | Added the standard header and this change log. |
 | 2026-08-20 | Brought the page onto the blueprint-running path and the publishable mod folder. |

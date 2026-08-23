@@ -368,6 +368,25 @@ namespace Thermodynamics
         // land on a different field: 72 and 76 were the switches SolarGridShadows replaced, 53-56
         // the block-colouring debug modes, and 60-70 the thermal vision overlay.
 
+        // ---- multiplayer -------------------------------------------------------------------
+
+        /// <summary>
+        /// Whether the server states block temperatures to its clients.
+        ///
+        /// Off leaves every client re-simulating from its own inputs, which is what the mod did
+        /// before this existed and is measurably wrong about which side of critical a block is on
+        /// for longer than the damage event lasts. It is a switch because the correction costs
+        /// bandwidth and a server operator is the one who pays it.
+        /// See configuration.md, Replicating temperatures.
+        /// </summary>
+        [ProtoMember(123)] public bool EnableTemperatureSync = true;
+
+        /// <summary>
+        /// Seconds between band updates, once a client has been told the whole hull.
+        /// See <see cref="Core.HotTailSchedule.DefaultIntervalSeconds"/> for why five.
+        /// </summary>
+        [ProtoMember(124)] public float TemperatureSyncInterval = 5f;
+
         // ---- telemetry ---------------------------------------------------------------------
 
         [ProtoMember(80)] public bool EnableTelemetry = false;
@@ -396,6 +415,11 @@ namespace Thermodynamics
         private void Clamp()
         {
             if (Frequency < 1) Frequency = 1;
+
+            // A zero or negative interval would stop the band without stopping the join packet,
+            // which is a half-working protocol that reports as working. EnableTemperatureSync is
+            // the way to turn it off.
+            if (TemperatureSyncInterval < 0.5f) TemperatureSyncInterval = 0.5f;
             if (SimulationSpeed <= 0f) SimulationSpeed = 1f;
             if (HeatTimeScale <= 0f) HeatTimeScale = 1f;
             if (MaxElementVisitsPerStep < 0) MaxElementVisitsPerStep = 0;
@@ -669,6 +693,7 @@ namespace Thermodynamics
                 "DebugOverlayMaxBoxes",
                 "HeatGlow", "HeatWarningSound",
                 "RoomOverlayMinKelvin", "RoomOverlayMaxKelvin",
+                "EnableTemperatureSync", "TemperatureSyncInterval",
                 "EnableTelemetry", "TelemetrySampleStride", "TelemetryPlanetProbes",
 
                 "LoopLargeGridFlowRate", "LoopSmallGridFlowRate", "LoopCoolantMassPerPipe",
@@ -753,6 +778,8 @@ namespace Thermodynamics
                 case "HeatWarningSound": return Flag(HeatWarningSound);
                 case "RoomOverlayMinKelvin": return RoomOverlayMinKelvin;
                 case "RoomOverlayMaxKelvin": return RoomOverlayMaxKelvin;
+                case "EnableTemperatureSync": return Flag(EnableTemperatureSync);
+                case "TemperatureSyncInterval": return TemperatureSyncInterval;
                 case "EnableTelemetry": return Flag(EnableTelemetry);
                 case "TelemetrySampleStride": return TelemetrySampleStride;
                 case "TelemetryPlanetProbes": return TelemetryPlanetProbes;
@@ -860,6 +887,8 @@ namespace Thermodynamics
                 case "DebugWindIndicator": DebugWindIndicator = Flag(value); return true;
                 case "HeatGlow": HeatGlow = Flag(value); return true;
                 case "HeatWarningSound": HeatWarningSound = Flag(value); return true;
+                case "EnableTemperatureSync": EnableTemperatureSync = Flag(value); return true;
+                case "TemperatureSyncInterval": TemperatureSyncInterval = value; return true;
                 case "EnableTelemetry": EnableTelemetry = Flag(value); Telemetry.SetEnabled(EnableTelemetry); return true;
                 case "TelemetrySampleStride": TelemetrySampleStride = (int)value; return true;
                 case "TelemetryPlanetProbes": TelemetryPlanetProbes = (int)value; return true;
