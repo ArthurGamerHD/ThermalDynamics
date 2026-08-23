@@ -114,6 +114,31 @@ and it is why the cue that warns a pilot is keyed to each block's own rating and
 between the two channels, what the glow cannot reach the cue can. See
 [document-of-intent.md](document-of-intent.md#natural-feedback--built).
 
+### The whitelist is not the assemblies, and building the mod project does not check it
+
+`Generic.csproj` builds `Data/Scripts` against the installed game's own assemblies, which is what
+makes it a real compile rather than a guess — and it is **not** the check the game applies. Space
+Engineers compiles a mod with a Roslyn analyzer over a positive whitelist, so a type can exist in
+`Bin64`, resolve, build clean here, and be refused in a session.
+
+**Measured, from the game's own registration.** `SpaceEngineers.Game.MySpaceGameDefaultIlChecker`
+is where the whitelist is built, and the shape of it is what matters:
+
+* **`System` itself is not an allowed namespace.** Only the types named one by one in its
+  `AllowTypes` call are permitted — `object`, `string`, `Math`, `Enum`, the primitives, `DateTime`,
+  `TimeSpan`, `Array`, `Nullable<>`, `IComparable`, `IEquatable<>`, `Action`/`Func` and so on.
+  **`IFormatProvider` is not among them**, which is the one this was found by: `Units.Watts` took
+  one as a parameter and the mod would not compile in game.
+* Whole namespaces *are* allowed: `System.Collections`, `System.Collections.Generic`, `System.Text`,
+  `System.Text.RegularExpressions`, `System.Globalization` and `System.Linq`, plus
+  `Sandbox.Game.Entities`, `Sandbox.Game.EntityComponents`, `Sandbox.ModAPI`, `VRage.Game.Entity`,
+  `VRageMath` and the rest of the mod-facing surface.
+* So `CultureInfo` is fine and the interface it implements is not, which is not a distinction
+  anything on this machine would have drawn.
+
+**A doc comment is not the guard this needs** — see [backlog](backlog.md) `F16` for the check that
+would run the game's own rule over the mod's source.
+
 ## Open defects
 
 **Temperatures are not reconciled between server and clients.** Clients run their own simulation
@@ -561,6 +586,7 @@ counters rather than milliseconds so it holds on any machine.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | Recorded that the mod project's build is not the game's check, after `Units.Watts` took an `IFormatProvider` and the mod failed to compile in a session while building clean here. The whitelist was read out of `SpaceEngineers.Game.MySpaceGameDefaultIlChecker` rather than guessed at: `System` is not an allowed namespace, only a named list of its types, and `IFormatProvider` is not on it. Opened `F16` for the check that would have caught it. |
 | 2026-08-23 | The glow is back to incandescence, which leaves the limit above where it was: a model with no emissive material still cannot show it. |
 | 2026-08-23 | The glow is now a block's distance from its own rating rather than an absolute temperature, which does not change the limit above: a model with no emissive material still cannot show it. |
 | 2026-08-23 | Recorded two limits that came with natural feedback ([backlog.md](backlog.md) `B25`, `F15`): a block with no emissive material in its model cannot glow, which is most structural blocks, and the two engine calls the feature makes have never run in a session — they compile, which says the members exist and nothing more. |

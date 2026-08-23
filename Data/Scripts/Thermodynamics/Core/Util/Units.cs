@@ -20,8 +20,18 @@ namespace Thermodynamics.Core
         /// Pass the invariant culture where the text is parsed again or compared — a chat command
         /// echoing a value it parsed — and leave it null for a readout, where a player expects
         /// their own decimal separator.
+        ///
+        /// <para>
+        /// **Typed as <c>CultureInfo</c> rather than as <c>IFormatProvider</c>, which is what the
+        /// interface would ordinarily be for.** `IFormatProvider` is not on the game's script
+        /// whitelist, so a mod naming it does not compile in a session — and the mod project
+        /// building against the installed assemblies does not catch that, because the whitelist is
+        /// a Roslyn analyzer the game applies and not a property of the assemblies. See
+        /// [known-issues.md](../../../../../docs/known-issues.md), The whitelist is not the
+        /// assemblies.
+        /// </para>
         /// </param>
-        public static string Watts(float watts, int decimals = 1, IFormatProvider culture = null)
+        public static string Watts(float watts, int decimals = 1, CultureInfo culture = null)
         {
             if (culture == null) culture = CultureInfo.CurrentCulture;
 
