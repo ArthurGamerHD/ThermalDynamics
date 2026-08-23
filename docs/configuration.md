@@ -21,7 +21,8 @@ to disk unless asked.
 
 | Command | Effect |
 | --- | --- |
-| `/thermal status` | Collection state, sample stride, live grids, block models, bridges. |
+| `/thermal status` | Collection state, sample stride, live grids, block models, bridges, and how many validation problems have been reported. |
+| `/thermal problems` | Every distinct problem the definition and settings validators found this session, once each. The same lines are in the game log. |
 | `/thermal settings` | Every setting and its current value. |
 | `/thermal set <name> <value>` | Changes one setting for this session. Switches take `on`/`off` or `1`/`0`. On a multiplayer client this asks the server, which answers whether it was allowed. |
 | `/thermal save` | Writes the current values to the config file. |
@@ -845,6 +846,7 @@ one with a migration risk — is late rather than first.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | Added `/thermal problems`, and the count of them to `/thermal status`. The two validators the mod carried had never been called from anywhere the game runs, so an emissivity above one or a substep long enough to clamp away a whole step was diagnosed correctly and told to nobody ([backlog.md](backlog.md) `A19`). |
 | 2026-08-22 | Said in [External shadow](#external-shadow) that the shipped occlusion default is the cheapest rung of the ladder those three settings compose, and pointed at [backlog.md](backlog.md) `A9` for the ladder and the default it asks for. The settings table is unchanged — it describes what ships, and what ships has not moved. |
 | 2026-08-22 | **An existing world keeps the values in its config file.** The file's `Version` is unchanged, because the shape did not change and regenerating it would throw away real customisation — so a world created before this pass still runs at `Frequency` 8 and the old visit budget until someone moves them, and the menu's **Defaults** button is the one action that takes it to the new values. |
 | 2026-08-22 | **Removed the five settings profiles.** There is one configuration now, and it is the most faithful one the model has: every mechanism on, no approximation switched on for anybody, `SimulationSpeed` 1 and `Frequency` **4** against the 8 it shipped at. `MaxSubstepsPerBlock` stays 0 and `MaxSubsteps` 64, so nothing is refused the substeps it asks for. `/thermal profile` is gone and the menu's profile buttons are one **Defaults** button, which is what applying a profile was actually being used for. `TheDefaultsAreTheMostFaithfulConfiguration` holds the claim so it cannot quietly stop being true. |

@@ -325,6 +325,11 @@ namespace Thermodynamics
             if (definition.WasDeclared(ThermalCellDefinition.DeclaredProperties.HeatSourceWatts))
                 properties.HeatSourceWatts = definition.HeatSourceWatts;
 
+            // Before the clamp, and only here: this is the one path an authored value reaches, and
+            // once Clamp has run there is no problem left to describe. See ThermalValidation.
+            Core.ThermalValidation.Check(
+                block == null ? "a block definition" : block.Id.SubtypeName, properties);
+
             return properties.Clamp();
         }
 
