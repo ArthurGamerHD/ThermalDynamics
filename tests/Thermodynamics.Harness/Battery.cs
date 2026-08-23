@@ -254,6 +254,7 @@ namespace Thermodynamics.Harness
 
             AssemblyRunner runner = new AssemblyRunner(assembly);
             runner.Environment = scenario.Environment;
+            runner.Integrity = GameBlocks.IntegrityOf;
 
             // The recovery case is the only one that changes state mid-run: it burns until the
             // ship is as hot as it is going to get, then everything is switched off and the
@@ -272,6 +273,7 @@ namespace Thermodynamics.Harness
             ScenarioOutcome outcome = ScenarioOutcome.Read(assembly, ship.Name, scenario.Name);
             outcome.WorkshopId = ship.WorkshopId;
             outcome.SecondsToCritical = runner.SecondsToCritical;
+            outcome.SecondsToFirstLoss = runner.SecondsToFirstLoss;
 
             Settle(outcome, runner);
             return outcome;

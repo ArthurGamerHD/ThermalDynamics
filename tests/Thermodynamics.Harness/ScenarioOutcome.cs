@@ -80,6 +80,15 @@ namespace Thermodynamics.Harness
         /// <summary>Simulated seconds before the first block went critical, or -1.</summary>
         public float SecondsToCritical = -1f;
 
+        /// <summary>
+        /// Simulated seconds before the first block ran out of hit points, or -1.
+        ///
+        /// The crossing above is when damage *starts*, at a rate of zero; this is when a player
+        /// loses something. See <see cref="AssemblyRunner.SecondsToFirstLoss"/> for why only the
+        /// first loss is measured.
+        /// </summary>
+        public float SecondsToFirstLoss = -1f;
+
         // ---- how it got there ------------------------------------------------------------------
 
         /// <summary>Simulated seconds to come within 5 K of the final peak. Thermal inertia.</summary>

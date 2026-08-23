@@ -280,6 +280,35 @@ namespace Thermodynamics.Harness
         /// <summary>Simulated seconds at which a block first went critical, or -1.</summary>
         public float SecondsToCritical = -1f;
 
+        /// <summary>
+        /// Hit points a block of a given subtype has, or zero where the caller does not know —
+        /// <see cref="GameBlocks.IntegrityOf"/> is what a corpus run passes. Left null, the runner
+        /// does no damage bookkeeping at all and <see cref="SecondsToFirstLoss"/> stays at -1.
+        /// </summary>
+        public Func<string, float> Integrity;
+
+        /// <summary>
+        /// Simulated seconds at which the first block would have been destroyed, or -1.
+        ///
+        /// <para>
+        /// **The crossing and the loss are different events.** A block crosses its critical
+        /// temperature while taking zero damage — the solver's rate is <c>(T - critical) x
+        /// OverheatDamagePerKelvin</c> — and only survives as long as its own hit points last. This
+        /// is the second event, accumulated from the same <see cref="OverheatEvent"/> stream the
+        /// mod hands to <c>DoDamage</c>.
+        /// </para>
+        ///
+        /// <para>
+        /// **Only the first loss is measured, because only the first is exact.** Nothing is removed
+        /// from the assembly when its integrity runs out, so after that moment the run is
+        /// simulating a ship the game would no longer have — one block still making heat and still
+        /// conducting. Up to it, the two agree exactly.
+        /// </para>
+        /// </summary>
+        public float SecondsToFirstLoss = -1f;
+
+        private readonly Dictionary<long, float> damageTaken = new Dictionary<long, float>();
+
         public void Run(float seconds)
         {
             if (assembly.Simulations.Count == 0) return;
@@ -294,11 +323,48 @@ namespace Thermodynamics.Harness
                 ElapsedSeconds += step;
 
                 if (SecondsToCritical < 0f && AnyOverheating) SecondsToCritical = ElapsedSeconds;
+                if (SecondsToFirstLoss < 0f && Integrity != null) AccumulateDamage();
             }
 
             ThermalNode hottest = assembly.Hottest();
             Hottest.Add(hottest == null ? 0f : hottest.Temperature);
             Bulk.Add(assembly.BulkKelvin);
+        }
+
+        /// <summary>
+        /// Adds the step's overheat damage to the running total for each block, and files the first
+        /// one whose hit points are gone.
+        ///
+        /// A block with no integrity the caller can price is skipped rather than treated as
+        /// weightless: an install this harness could not read must not make every ship lose its
+        /// first block on the step it crosses.
+        /// </summary>
+        private void AccumulateDamage()
+        {
+            for (int i = 0; i < assembly.Simulations.Count; i++)
+            {
+                IList<OverheatEvent> events = assembly.Simulations[i].Overheats;
+
+                for (int e = 0; e < events.Count; e++)
+                {
+                    BlockInstance block = events[e].Block;
+                    if (block == null || block.Model == null) continue;
+
+                    float integrity = Integrity(block.Model.Name);
+                    if (integrity <= 0f) continue;
+
+                    float taken;
+                    damageTaken.TryGetValue(block.Key, out taken);
+                    taken += events[e].Damage;
+                    damageTaken[block.Key] = taken;
+
+                    if (taken >= integrity)
+                    {
+                        SecondsToFirstLoss = ElapsedSeconds;
+                        return;
+                    }
+                }
+            }
         }
     }
 }

@@ -105,6 +105,42 @@ namespace Thermodynamics.Harness
             /// </summary>
             public float SecondsToCritical;
 
+            /// <summary>
+            /// The block's full hit points, from <see cref="GameBlocks.Definition.Integrity"/>.
+            /// Zero where the install is absent, which is the only case this figure is unavailable.
+            /// </summary>
+            public float Integrity;
+
+            /// <summary>
+            /// Simulated seconds from the crossing to the block being destroyed, alone in the dark
+            /// and on the same terms as <see cref="SecondsToCritical"/>.
+            ///
+            /// <para>
+            /// **The crossing is not the loss, and this is the difference.** The solver damages an
+            /// overheating block by <c>(T - critical) x OverheatDamagePerKelvin</c> per simulated
+            /// second, so the moment it crosses it is losing hit points at a rate of zero. How long
+            /// it survives is that rate integrated against the block's own integrity, and it is the
+            /// span a warning has to be useful in. See balance.md, How long a block has after it
+            /// crosses.
+            /// </para>
+            ///
+            /// <para>
+            /// Infinite where the block never crosses at all, and infinite where it settles so near
+            /// its own limit that an hour of play does not finish it — past that the figure has
+            /// stopped being a statement about gameplay.
+            /// </para>
+            /// </summary>
+            public float SecondsCriticalToLoss;
+
+            /// <summary>
+            /// <see cref="SecondsToCritical"/> plus <see cref="SecondsCriticalToLoss"/>: seconds
+            /// from a cold start at full rating to the block being gone.
+            /// </summary>
+            public float SecondsToLoss
+            {
+                get { return SecondsToCritical + SecondsCriticalToLoss; }
+            }
+
             public bool Impossible
             {
                 get { return Index > 1f; }
@@ -231,6 +267,10 @@ namespace Thermodynamics.Harness
                 HeatCapacity = capacity,
                 SecondsToCritical = SecondsToReach(capacity, watts,
                     thermal.Emissivity * ThermalConstants.StefanBoltzmann * area, critical),
+                Integrity = rating.Integrity,
+                SecondsCriticalToLoss = SecondsFromCriticalToLoss(capacity, watts,
+                    thermal.Emissivity * ThermalConstants.StefanBoltzmann * area, critical,
+                    thermal.OverheatDamagePerKelvin, rating.Integrity),
             };
         }
 
@@ -277,6 +317,117 @@ namespace Thermodynamics.Harness
             }
 
             return (float)(total * width / 3d);
+        }
+
+        /// <summary>
+        /// The horizon this figure is quoted over. A block that has not been destroyed after an
+        /// hour of play is reported as never destroyed, because past that the number is no longer
+        /// answering a question about a session.
+        /// </summary>
+        public const float LossHorizonSeconds = 3600f;
+
+        /// <summary>
+        /// Simulated seconds from the crossing to destruction, for a block making
+        /// <paramref name="watts"/>, alone in the dark behind a skin of
+        /// <paramref name="radiativeCoefficient"/> = emissivity x sigma x area.
+        ///
+        /// <para>
+        /// Two coupled quantities: the temperature, which climbs from <paramref name="critical"/>
+        /// towards its own equilibrium, and the damage, which is the solver's own
+        /// <c>(T - critical) x <paramref name="damagePerKelvin"/></c> per simulated second
+        /// integrated from the crossing. The answer is the time at which the second reaches
+        /// <paramref name="integrity"/>.
+        /// </para>
+        ///
+        /// <para>
+        /// Integrated in temperature rather than in time, as <see cref="SecondsToReach"/> is, so
+        /// there is no timestep to argue about — but on a grid graded geometrically towards the
+        /// equilibrium rather than a uniform one, because the integrand goes as
+        /// <c>1/(equilibrium - T)</c> and a uniform grid spends all its samples where nothing is
+        /// happening. The last thousandth of the approach is closed rather than integrated: a block
+        /// that far in is at a constant damage rate, so what is left is a division.
+        /// </para>
+        ///
+        /// <para>
+        /// Returns infinity where the block never reaches <paramref name="critical"/> at all, and
+        /// where destruction is past <see cref="LossHorizonSeconds"/>. Returns zero for a block with
+        /// no integrity to lose, which is a block the install could not price.
+        /// </para>
+        /// </summary>
+        public static float SecondsFromCriticalToLoss(float capacity, float watts,
+            float radiativeCoefficient, float critical, float damagePerKelvin, float integrity)
+        {
+            if (capacity <= 0f || watts <= 0f || damagePerKelvin <= 0f) return float.PositiveInfinity;
+            if (integrity <= 0f) return 0f;
+            if (critical <= AmbientKelvin) return float.PositiveInfinity;
+
+            // A skin that radiates nothing has no equilibrium: the climb is linear, the damage rate
+            // rises linearly with it, and the time follows in closed form.
+            if (radiativeCoefficient <= 0d)
+            {
+                double linear = Math.Sqrt(2d * capacity * integrity / (damagePerKelvin * (double)watts));
+                return linear > LossHorizonSeconds ? float.PositiveInfinity : (float)linear;
+            }
+
+            double ambient4 = Pow4d(AmbientKelvin);
+            double equilibrium = Math.Pow((watts / radiativeCoefficient) + ambient4, 0.25d);
+
+            // Its own skin holds it under the limit, so it never crosses and never takes damage.
+            // The same case SecondsToReach reports as infinite, and reported the same way here.
+            if (equilibrium <= critical) return float.PositiveInfinity;
+
+            const int Intervals = 2048;
+            const double Closest = 0.001d;          // how near the equilibrium the grid reaches
+
+            double span = equilibrium - critical;
+            double decay = Math.Pow(Closest, 1d / Intervals);
+
+            double seconds = 0d;
+            double damage = 0d;
+            double previousTemperature = critical;
+            double criticalNet = watts - (radiativeCoefficient * (Pow4d(critical) - ambient4));
+            double previousTime = capacity / criticalNet;           // dt/dT where the damage starts
+            double previousDamage = 0d;                             // (T - critical) is zero there
+            double gap = 1d;
+
+            for (int i = 1; i <= Intervals; i++)
+            {
+                gap *= decay;
+                double temperature = equilibrium - (span * gap);
+                double net = watts - (radiativeCoefficient * (Pow4d(temperature) - ambient4));
+                if (net <= 0d) break;
+
+                double time = capacity / net;
+                double rate = damagePerKelvin * (temperature - critical) * time;
+                double width = temperature - previousTemperature;
+
+                double stepSeconds = 0.5d * (previousTime + time) * width;
+                double stepDamage = 0.5d * (previousDamage + rate) * width;
+
+                if (damage + stepDamage >= integrity)
+                {
+                    // Linear in the interval, which is all the trapezoid claimed anyway.
+                    double share = stepDamage > 0d ? (integrity - damage) / stepDamage : 0d;
+                    double landed = seconds + (stepSeconds * share);
+                    return landed > LossHorizonSeconds ? float.PositiveInfinity : (float)landed;
+                }
+
+                seconds += stepSeconds;
+                damage += stepDamage;
+                if (seconds > LossHorizonSeconds) return float.PositiveInfinity;
+
+                previousTemperature = temperature;
+                previousTime = time;
+                previousDamage = rate;
+            }
+
+            // Settled within a thousandth of its equilibrium with integrity to spare: from here the
+            // damage rate is constant, so the rest is arithmetic rather than integration.
+            double tail = damagePerKelvin * (previousTemperature - critical);
+            if (tail <= 0d) return float.PositiveInfinity;
+
+            double total = seconds + ((integrity - damage) / tail);
+            return total > LossHorizonSeconds ? float.PositiveInfinity : (float)total;
         }
 
         private static double Pow4d(double value)
