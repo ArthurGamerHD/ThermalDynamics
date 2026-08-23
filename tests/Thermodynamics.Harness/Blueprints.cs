@@ -212,6 +212,25 @@ namespace Thermodynamics.Harness
             return Path.Combine(data, "thermal-dynamics", "corpus");
         }
 
+
+        /// <summary>
+        /// Whether an entry of a legacy workshop archive is the blueprint.
+        ///
+        /// <para>
+        /// **Matched on the extension rather than on the whole name, because some of these archives
+        /// have lost the front of it.** Three of the 3,904 in the corpus hold entries called
+        /// <c>p.sbc</c>, <c>.sbc</c> and <c>humb.png</c> — the leading characters gone — and an
+        /// exact test for <c>bp.sbc</c> skipped all three silently, which is three blueprints the
+        /// corpus has held and never read. Nothing else in one of these archives ends in
+        /// <c>.sbc</c>, so the extension is enough to tell it from the thumbnail.
+        /// </para>
+        /// </summary>
+        public static bool IsLegacyBlueprintEntry(string name)
+        {
+            return !string.IsNullOrEmpty(name)
+                && name.EndsWith(".sbc", StringComparison.OrdinalIgnoreCase);
+        }
+
         /// <summary>
         /// The directory a command should read when it was not told one: the corpus if it has
         /// anything in it, else the subscribed workshop items, else nothing.

@@ -84,6 +84,29 @@ namespace Thermodynamics.Harness
             return summary;
         }
 
+        /// <summary>
+        /// Every usable ship's blueprint path, one a line, largest first.
+        ///
+        /// **The report says how many there are and this says which.** A scan that answers *twelve
+        /// usable ships* and cannot name them is a scan whose answer has to be taken on trust, and
+        /// naming them is what lets a set of blueprints be moved, pruned or re-run on the strength
+        /// of it.
+        /// </summary>
+        public static string List(string path)
+        {
+            string root = path ?? Blueprints.DefaultPath();
+            if (root == null) return "";
+
+            Summary summary = Scan(root);
+
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < summary.Usable.Count; i++)
+            {
+                sb.AppendLine(summary.Usable[i].Path);
+            }
+            return sb.ToString();
+        }
+
         public static string Report(string path)
         {
             StringBuilder sb = new StringBuilder();

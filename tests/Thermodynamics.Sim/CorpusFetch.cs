@@ -9,6 +9,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Thermodynamics.Harness;
 
 namespace Thermodynamics.Sim
 {
@@ -312,6 +313,8 @@ namespace Thermodynamics.Sim
                 id.ToString(CultureInfo.InvariantCulture));
         }
 
+
+
         /// <summary>
         /// Unpacks the legacy workshop format.
         ///
@@ -338,7 +341,7 @@ namespace Thermodynamics.Sim
                     {
                         foreach (ZipArchiveEntry entry in zip.Entries)
                         {
-                            if (entry.Name != "bp.sbc") continue;
+                            if (!Blueprints.IsLegacyBlueprintEntry(entry.Name)) continue;
 
                             entry.ExtractToFile(Path.Combine(folder, "bp.sbc"), true);
                             unpacked++;

@@ -230,6 +230,73 @@ namespace Thermodynamics.Tests
             Assert.Equal(closedLoss, measuredLoss - measuredCritical, closedLoss * 0.01f);
         }
 
+
+        /// <summary>
+        /// Past an hour of play the figure has stopped answering a question about a session, so it
+        /// reads as never rather than as a number nobody will see reached.
+        /// </summary>
+        [Fact]
+        public void DestructionBeyondTheHorizonReadsAsNever()
+        {
+            const float Capacity = 5000f;
+            const float Watts = 250f;
+            float critical = BlockHeatIndex.AmbientKelvin + 100f;
+
+            // Barely over its limit, with hit points far past what that trickle can spend.
+            float equilibrium = critical + 1f;
+            float ambient4 = Pow4(BlockHeatIndex.AmbientKelvin);
+            float coefficient = Watts / (Pow4(equilibrium) - ambient4);
+
+            Assert.True(float.IsPositiveInfinity(BlockHeatIndex.SecondsFromCriticalToLoss(
+                Capacity, Watts, coefficient, critical, 1f, 1e6f)),
+                "a block an hour of overheating cannot finish is not a loss");
+        }
+
+        /// <summary>
+        /// A block the install could not price reports zero rather than infinity, because a caller
+        /// has to be able to tell *this block is not destroyed* from *this figure is unavailable*.
+        /// </summary>
+        [Fact]
+        public void AnUnpricedBlockIsUnavailableRatherThanIndestructible()
+        {
+            Assert.Equal(0f, BlockHeatIndex.SecondsFromCriticalToLoss(
+                5000f, 250f, 0f, BlockHeatIndex.AmbientKelvin + 100f, 1f, 0f));
+        }
+
+        /// <summary>
+        /// Every shipped block that crosses is destroyed, and never at the moment it crosses.
+        ///
+        /// The ordering is the claim. A table reporting a loss at the crossing would be describing
+        /// a different damage rule from the one the solver runs, where the rate there is zero by
+        /// construction — and it is the whole table rather than a case, because the four above are
+        /// arithmetic and this is the definitions the balance argument is actually about.
+        /// </summary>
+        [Fact]
+        public void NoShippedBlockIsLostBeforeItCrosses()
+        {
+            if (!GameBlocks.IsInstalled) return;
+
+            List<BlockHeatIndex.Reading> readings = BlockHeatIndex.All();
+            Assert.True(readings.Count > 0, "the install yielded no readings");
+
+            int crossing = 0;
+            List<string> violations = new List<string>();
+
+            foreach (BlockHeatIndex.Reading reading in readings)
+            {
+                if (float.IsInfinity(reading.SecondsToCritical)) continue;
+                crossing++;
+
+                if (reading.SecondsCriticalToLoss <= 0f)
+                {
+                    violations.Add(reading.Subtype + " is destroyed at the moment it crosses");
+                }
+            }
+
+            Assert.True(crossing > 0, "no shipped block crosses, so nothing was judged");
+            Assert.True(violations.Count == 0, string.Join("\n  ", violations));
+        }
+
         private static float Pow4(float value)
         {
             float square = value * value;
