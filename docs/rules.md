@@ -824,8 +824,9 @@ rule, because a gate whose off position is unreachable by the obvious spelling w
 switched on by somebody trying to switch it off.
 
 *Applies to:* every environment variable and configuration value used as a gate.
-*Checked by:* — nothing. `IsNullOrEmpty` at the two sites in `CorpusFixture` and
-`LabInvariantTests` is the fix.
+*Checked by:* `CorpusGuardTests.OffMeansOffHoweverItIsSpelled`, over every spelling of off anyone
+reaches for. `CorpusFixture.OptedIn` is the one decision and `LabInvariantTests` calls it rather
+than repeating it.
 *From:* [backlog.md](backlog.md) H3, generalised.
 
 ### P9 — The core is a library the game happens to call

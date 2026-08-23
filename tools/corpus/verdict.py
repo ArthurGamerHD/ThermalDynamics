@@ -38,12 +38,13 @@ KEY = ("ship", "workshop_id")
 def load(name, *extra_key):
     """One row per ship, or per ship and scenario — duplicates dropped, and counted.
 
-    **A resumed run re-emits the batch it was interrupted in.** ``THERMAL_CORPUS_SKIP`` resumes by
-    skipping files already done, and the skip is counted in files while the writing is done per
-    ship, so the ships between the last flush and the kill are written twice. The 2026-08-21 dataset
-    carries ten of them, fifty rows. That is a tenth of a per cent and it changes no finding here,
-    but a population statistic that silently double-weights part of its population is the exact
-    failure this whole lab exists to prevent, so the duplicates come out and the count is printed.
+    **Kept for the datasets that need it.** A resume used to be a skip counted in files while the
+    writing was done per ship, so the ships between the last flush and the kill were written twice;
+    the 2026-08-21 dataset carries ten of them, fifty rows. The resume is now a record of finished
+    blueprints rather than a count and nothing collected since can carry them, but a population
+    statistic that silently double-weights part of its population is the exact failure this whole
+    lab exists to prevent — so the duplicates still come out, and the count is still printed, which
+    is also how a reader learns which kind of dataset they are holding.
     """
     path = os.path.join(DATA, name + ".csv")
     if not os.path.exists(path):
@@ -67,7 +68,7 @@ def load(name, *extra_key):
     dropped = len(rows) - len(unique)
     if dropped:
         print(f"note: {name}.csv held {dropped:,} duplicate rows "
-              f"(a resumed run re-emits its interrupted batch); they are excluded")
+              f"(a run resumed by a skip counted in files); they are excluded")
 
     return unique
 

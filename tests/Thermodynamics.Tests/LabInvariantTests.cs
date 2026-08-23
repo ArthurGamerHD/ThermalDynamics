@@ -119,7 +119,7 @@ namespace Thermodynamics.Tests
             // Behind the corpus opt-in like every other test here that reads it. This one missed
             // the gate and re-read the whole corpus twice per file on every run of the suite:
             // 4 m 57 s of a 5 m 4 s suite, on any machine where the corpus exists.
-            if (Environment.GetEnvironmentVariable("THERMAL_CORPUS_TESTS") == null) return;
+            if (!CorpusFixture.OptedIn()) return;
             if (!GameBlocks.IsInstalled) return;
 
             string root = Blueprints.DefaultPath();

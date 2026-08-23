@@ -72,19 +72,22 @@ invocation.
 **Cap the memory.** An uncapped run has taken the machine down with it; wrap it in
 `systemd-run --scope -p MemoryMax=…` so the run dies instead of the session.
 
-**Resume with `THERMAL_CORPUS_SKIP=<n>` rather than starting again.** Corpus order is deterministic —
-sorted largest-first — and rows are written per ship, so a killed run resumes by skipping what is
-already done. This turned a lost eight hours into a seventeen-minute finish. Note `H2` in
-[backlog.md](../../docs/backlog.md): the skip counts *files* while the writing is per *ship*, which
-is why an interrupted batch re-emits and the shipped dataset carries 50 duplicate rows.
+**Relaunch to resume; there is nothing to pass.** A walk records each blueprint in
+`done-<walk>.txt` in the data directory once it has finished with it, and reads that record on the
+next start, so a killed run picks up exactly where it stopped. Deleting the file starts the walk
+over. This turned a lost eight hours into a seventeen-minute finish, and it replaced a skip counted
+in files by hand: files were counted as they were handed to a batch while rows were written as each
+ship finished, so a resume both re-emitted the interrupted batch and lost the ships it had not
+reached. The 2026-08-21 dataset carries 50 duplicate rows from that; nothing collected since can.
 
 **Read progress in bytes, not files.** The corpus is sorted largest-first, so file 500 of 9,981 is
 5 % of the files and 50 % of the work. `THERMAL_CORPUS_PROGRESS` reports both.
 
 The environment variables a run takes: `THERMAL_CORPUS_TESTS`, `THERMAL_CORPUS_DATA`,
-`THERMAL_CORPUS_PROGRESS`, `THERMAL_CORPUS_SKIP`, `THERMAL_CORPUS_SHIPS` and
-`THERMAL_CORPUS_MAX_MB`. **`THERMAL_CORPUS_TESTS=` with an empty value opts *in*** rather than out,
-which is `H3` on the backlog and the standing rule [rules.md](../../docs/rules.md) `C8`.
+`THERMAL_CORPUS_PROGRESS`, `THERMAL_CORPUS_SHIPS` and `THERMAL_CORPUS_MAX_MB`. Off is spellable in
+`THERMAL_CORPUS_TESTS` every way anyone reaches for — empty, `0`, `no`, `off`, `false` — which is
+the standing rule [rules.md](../../docs/rules.md) `C8`, and was not true until `CorpusGuardTests`
+existed to say so.
 
 ---
 
@@ -98,6 +101,7 @@ limit in [known-issues.md](../../docs/known-issues.md).
 
 | Date | Change |
 | --- | --- |
+| 2026-08-22 | The resume is a record rather than a count. A walk writes `done-<walk>.txt` as it finishes each blueprint and reads it on the next start, so relaunching is the whole procedure and `THERMAL_CORPUS_SKIP` is gone ([backlog.md](../../docs/backlog.md) `H2`). Said that off is now spellable in `THERMAL_CORPUS_TESTS` every way anyone reaches for (`H3`). |
 | 2026-08-22 | Wrote down [the five ways a full sweep dies](#the-five-ways-a-full-sweep-dies), which [balance.md](../../docs/balance.md) had been pointing at [backlog.md](../../docs/backlog.md) for and which no page in the tree carried — it had survived only as a note kept outside the repository, which is the failure [rules.md](../../docs/rules.md) exists to prevent. |
 | 2026-08-22 | Added this change log. |
 | 2026-08-22 | Made every recorded corpus figure read by something, and closed the pass. |

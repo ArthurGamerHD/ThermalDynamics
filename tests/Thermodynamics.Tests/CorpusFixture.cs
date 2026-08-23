@@ -42,12 +42,34 @@ namespace Thermodynamics.Tests
             }
         }
 
+        /// <summary>
+        /// Whether the corpus walks are opted in to.
+        ///
+        /// <para>
+        /// **Off has to be spellable** (`C8`, `P8`). Testing the variable against null read an
+        /// empty value as opted *in*, because on Linux `THERMAL_CORPUS_TESTS=` is a variable that
+        /// exists and holds nothing — so the obvious way to write "off" turned every corpus walk
+        /// on. The values a person reaches for when they mean off are all off here, and anything
+        /// else is on.
+        /// </para>
+        /// </summary>
+        public static bool OptedIn(string configured)
+        {
+            if (string.IsNullOrEmpty(configured)) return false;
+
+            string value = configured.Trim().ToLowerInvariant();
+            return value != "0" && value != "no" && value != "off" && value != "false";
+        }
+
+        /// <summary>Whether this process is opted in to the corpus walks.</summary>
+        public static bool OptedIn()
+        {
+            return OptedIn(Environment.GetEnvironmentVariable("THERMAL_CORPUS_TESTS"));
+        }
+
         private static List<string> Find()
         {
-            if (Environment.GetEnvironmentVariable("THERMAL_CORPUS_TESTS") == null)
-            {
-                return new List<string>();
-            }
+            if (!OptedIn()) return new List<string>();
 
             if (!GameBlocks.IsInstalled) return new List<string>();
 
@@ -120,27 +142,106 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// Files to skip from the front, so an interrupted sweep resumes rather than re-simulating what
-        /// it already measured (`O3`). The corpus order is deterministic and largest first, so a skip
-        /// of N is exactly the N files already done.
+        /// The file a sweep records its finished blueprints in, or null when it is not recording.
+        ///
+        /// A sweep is hours long and dies for reasons that have nothing to do with it, so resuming
+        /// is not a convenience (`O3`). This is what makes the resume *exact*: a file is written
+        /// here when <see cref="Visit"/> has returned for it, which is after every ship in it has
+        /// been handed to the caller and recorded, so a path present here is a path with nothing
+        /// left to do.
         /// </summary>
-        private static int Skip()
+        private static string DonePath(string label)
         {
-            int skip;
-            string configured = Environment.GetEnvironmentVariable("THERMAL_CORPUS_SKIP");
-            return !string.IsNullOrEmpty(configured)
-                && int.TryParse(configured, out skip) && skip > 0 ? skip : 0;
+            string directory = CorpusRecord.Directory();
+            if (directory == null || string.IsNullOrEmpty(label)) return null;
+
+            // One record per walk. Two walks share a corpus and not a state: a determinism pass
+            // that inherited the survey's record would skip the whole corpus and report success.
+            return System.IO.Path.Combine(directory, "done-" + label + ".txt");
         }
 
-        public static List<string> Sample()
+        /// <summary>
+        /// Blueprints an earlier run of this sweep finished, read once.
+        ///
+        /// **This replaces a skip counted in files.** The count was supplied by hand off a progress
+        /// line, and the two did not mean the same thing: files were counted as they were handed to
+        /// a batch while rows were written as each ship finished, so a resume both re-emitted the
+        /// ships of the interrupted batch and lost the ones it had not reached. The shipped
+        /// 2026-08-21 dataset carries fifty duplicate rows from exactly that. Nothing is counted
+        /// here — a path is either finished or it is not.
+        /// </summary>
+        private static HashSet<string> Done(string label)
+        {
+            HashSet<string> done = new HashSet<string>(StringComparer.Ordinal);
+
+            string path = DonePath(label);
+            if (path == null || !System.IO.File.Exists(path)) return done;
+
+            try
+            {
+                foreach (string line in System.IO.File.ReadAllLines(path))
+                {
+                    string trimmed = line.Trim();
+                    if (trimmed.Length > 0) done.Add(trimmed);
+                }
+            }
+            catch (System.IO.IOException)
+            {
+                // A resume that cannot read its own record starts over, which is slow and correct.
+            }
+
+            return done;
+        }
+
+        /// <summary>
+        /// What is left of a corpus once the finished blueprints are taken out. Order is kept, so a
+        /// resumed run still reads largest first and its batches are still alike.
+        /// </summary>
+        public static List<string> Remaining(IList<string> corpus, ICollection<string> done)
+        {
+            List<string> remaining = new List<string>(corpus.Count);
+
+            for (int i = 0; i < corpus.Count; i++)
+            {
+                if (done == null || !done.Contains(corpus[i])) remaining.Add(corpus[i]);
+            }
+
+            return remaining;
+        }
+
+        /// <summary>Records that a blueprint is finished. Called with the collect lock held.</summary>
+        private static void MarkDone(string label, string blueprint)
+        {
+            string path = DonePath(label);
+            if (path == null) return;
+
+            try
+            {
+                System.IO.File.AppendAllText(path, blueprint + System.Environment.NewLine);
+            }
+            catch (System.IO.IOException)
+            {
+                // Losing a line costs one blueprint of rework on the next resume, which is not a
+                // reason to lose the run.
+            }
+        }
+
+        /// <summary>
+        /// The blueprints a walk should read, with anything an earlier run of that same walk
+        /// already finished taken out. A walk with no name resumes nothing, because there is
+        /// nothing to tell its record apart from another walk's.
+        /// </summary>
+        public static List<string> Sample(string label = null)
         {
             List<string> corpus = Files();
 
-            int skip = Skip();
-            if (skip > 0)
+            HashSet<string> done = Done(label);
+            if (done.Count > 0)
             {
-                if (skip >= corpus.Count) return new List<string>();
-                corpus = corpus.GetRange(skip, corpus.Count - skip);
+                List<string> remaining = Remaining(corpus, done);
+                Note(label + ": resuming, " + done.Count + " blueprints already finished and "
+                    + remaining.Count + " to go");
+                corpus = remaining;
             }
 
             int cap;
@@ -312,7 +413,7 @@ namespace Thermodynamics.Tests
         /// </summary>
         public static List<T> Sweep<T>(string label, Func<Blueprints.Ship, T> work) where T : class
         {
-            List<string> paths = Sample();
+            List<string> paths = Sample(label);
             List<T> results = new List<T>();
             if (paths.Count == 0) return results;
 
@@ -337,6 +438,7 @@ namespace Thermodynamics.Tests
                         lock (collect)
                         {
                             results.AddRange(mine);
+                            MarkDone(label, paths[i]);
                             files++;
                             ships += mine.Count;
 
@@ -452,7 +554,7 @@ namespace Thermodynamics.Tests
         /// </summary>
         public static IEnumerable<List<Blueprints.Ship>> Batches(string label)
         {
-            List<string> sample = Sample();
+            List<string> sample = Sample(label);
             // An upper bound rather than a count: a batch also closes when it reaches its byte
             // budget, so the real number is this or more. Progress reads as conservative.
             int batches = (sample.Count + BatchSize - 1) / BatchSize;
