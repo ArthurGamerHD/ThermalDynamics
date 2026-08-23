@@ -64,6 +64,13 @@ Constraints that matter when writing code for this project:
 * Anything that allocates per frame will show up. The existing code pools the raycast result
   lists (`_overlapResultPool`, `_gridPool`) and caches `kA` arrays for this reason.
 
+### Testing
+
+The simulation core under [Data/Scripts/Thermodynamics/Core/](../Data/Scripts/Thermodynamics/Core)
+ships with the mod — the game compiles it — and the projects under [tests/](../tests) link the same
+files so it can be built, tested and profiled outside the game. What each of them is, how to run the
+suite and how to run the scenarios and benchmarks is [tests/README.md](../tests/README.md).
+
 ## Deploying to the game
 
 Space Engineers loads local mods from its `Mods` directory. On Windows, junction this folder into
@@ -77,6 +84,30 @@ ln -s /home/gauge/Content/git/SpaceEngineers/One/ThermalDynamics \
 Then enable "ThermalDynamics" in the world's mod list alongside the two dependencies.
 
 Script changes take effect on world reload. Definition XML changes also require a reload.
+
+## Repository layout
+
+```
+ThermalDynamics/
+├── Data/
+│   ├── Cubes.xml                 ModExtensions thermal properties per block subtype
+│   ├── Planets.xml               ModExtensions planet climate properties
+│   ├── Loops.xml                 ModExtensions coolant loop properties
+│   ├── EntityComponents.sbc      Registers the mod-storage GUID used for saving
+│   ├── TransparentMaterials.sbc  The billboard material used by the extinguisher overlay
+│   ├── CubeBlocks/               Block definitions (coolant pipes, pumps, radiator, heat pump)
+│   ├── Extinguisher/             Hand tool: weapon, ammo, hand item, audio, decorative block
+│   ├── Localization/             DisplayName/Description strings
+│   └── Scripts/Thermodynamics/   All C# source
+├── Models/                       .mwm models — do not restructure, LOD paths are baked in
+├── Textures/                     Block, decal and particle textures
+├── Audio/                        FireExtinguisher.wav
+├── tests/                          Isolated build, tests and scenarios
+└── docs/                         This documentation
+```
+
+Two things in that tree are not to be touched: `Models/` is not restructured, and the workshop
+identity files are not regenerated. Both have their own sections below.
 
 ## Repo conventions
 
@@ -144,6 +175,7 @@ Naming pattern under `Models/Gauge/{LG,SG}/`:
 
 | Suffix | Meaning |
 | --- | --- |
+| 2026-08-22 | Took the repository layout tree and the build-and-test instructions off the [README](../README.md), which is written to be pasted into the workshop and read by a player ([backlog.md](backlog.md) `H5`). Nothing in them was wrong; they were in the wrong place, and the documentation index moved to [docs/README.md](README.md) for the same reason. |
 | *(none)* | Full-detail model |
 | `_LOD1` … `_LOD3` | Progressively lower detail |
 | `_BS1` … `_BS3` | Build-stage models, referenced from `<BuildProgressModels>` |

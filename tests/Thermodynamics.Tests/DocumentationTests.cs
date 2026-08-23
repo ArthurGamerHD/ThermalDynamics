@@ -851,7 +851,7 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// Every page under `docs/` is reachable from the README's index.
+        /// Every page under `docs/` is reachable from the documentation index.
         ///
         /// <para>
         /// The index is the only place a reader who does not already know a page exists can find
@@ -859,22 +859,30 @@ namespace Thermodynamics.Tests
         /// log — had been written, cited from their siblings and never listed, so the only route to
         /// them was a link inside a page you had to already be reading.
         /// </para>
+        ///
+        /// <para>
+        /// The index is `docs/README.md`. It was the README's until the README's audience was
+        /// written down: that page is meant to be pasted whole into the workshop and read by a
+        /// player, and twenty-one developer pages are not something that reader needs.
+        /// </para>
         /// </summary>
         [Fact]
         public void EveryDocumentIsInTheIndex()
         {
-            string index = File.ReadAllText(Path.Combine(RepoRoot(), "README.md"));
+            string index = File.ReadAllText(Path.Combine(RepoRoot(), "docs", "README.md"));
 
             List<string> missing = new List<string>();
             foreach (string file in Directory.GetFiles(Path.Combine(RepoRoot(), "docs"), "*.md"))
             {
-                string name = "docs/" + Path.GetFileName(file);
+                string name = Path.GetFileName(file);
+                if (name == "README.md") continue;              // the index does not index itself
+
                 if (index.IndexOf("(" + name + ")", StringComparison.Ordinal) < 0) missing.Add(name);
             }
 
             missing.Sort(StringComparer.Ordinal);
             Assert.True(missing.Count == 0,
-                "pages under docs/ that the README's documentation table does not list:\n  "
+                "pages under docs/ that the documentation index does not list:\n  "
                 + string.Join("\n  ", missing.ToArray()));
         }
         // --- The rules page ------------------------------------------------------------------
