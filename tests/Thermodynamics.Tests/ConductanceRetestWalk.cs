@@ -77,12 +77,12 @@ namespace Thermodynamics.Tests
         {
             if (CorpusFixture.Files().Count == 0) return;
 
-            List<RetestShip> set = Set();
+            List<ShipSet.Entry> set = ShipSet.Read("THERMAL_RETEST", "tools/corpus/typical.csv");
             Assert.True(set.Count > 0,
                 "the corpus is opted in but no retest set was read. Build one with "
                 + "tools/corpus/typical.py, or point THERMAL_RETEST at it.");
 
-            List<Blueprints.Ship> ships = Load(set);
+            List<Blueprints.Ship> ships = ShipSet.Load(set, Progress);
             Assert.True(ships.Count > 0, "the retest set named ships but none of them could be read");
 
             Dictionary<string, Battery.Scenario> scenarios =
@@ -114,7 +114,7 @@ namespace Thermodynamics.Tests
                 Run(world, reach, ships, scenarios);
             }
 
-            Assert.True(rowsWritten > 0 || Done().Count >= worlds.Count * ships.Count,
+            Assert.True(rowsWritten > 0 || Record.Done().Count >= worlds.Count * ships.Count,
                 "the retest produced no rows and had nothing recorded as already finished");
         }
 
@@ -301,7 +301,7 @@ namespace Thermodynamics.Tests
             int retuned;
             reach.TryGetValue(world.Name, out retuned);
 
-            HashSet<string> done = Done();
+            HashSet<string> done = Record.Done();
 
             try
             {
@@ -355,7 +355,7 @@ namespace Thermodynamics.Tests
                             CorpusRecord.Write("retest", Header, mine);
                         }
 
-                        MarkDone(mark);
+                        Record.Mark(mark);
                         written += mine.Count;
                         rowsWritten += mine.Count;
                     }
@@ -404,206 +404,10 @@ namespace Thermodynamics.Tests
             return row.ToString();
         }
 
-        // ---- the set ---------------------------------------------------------------------------
+        // ---- the set and the resume record -----------------------------------------------
 
-        private class RetestShip
-        {
-            public string Name;
-            public string WorkshopId;
-
-            /// <summary>The blueprint it was measured from, so the walk need not go looking.</summary>
-            public string Path;
-        }
-
-        /// <summary>Reads the retest set, authored by tools/corpus/typical.py and committed.</summary>
-        internal static List<string[]> Rows()
-        {
-            List<string[]> rows = new List<string[]>();
-
-            string path = Environment.GetEnvironmentVariable("THERMAL_RETEST");
-            if (string.IsNullOrEmpty(path)) path = Find("tools/corpus/typical.csv");
-            if (path == null || !File.Exists(path)) return rows;
-
-            string[] lines = File.ReadAllLines(path);
-            for (int i = 1; i < lines.Length; i++)
-            {
-                if (lines[i].Length == 0) continue;
-                rows.Add(Split(lines[i]).ToArray());
-            }
-
-            return rows;
-        }
-
-        private static List<RetestShip> Set()
-        {
-            List<RetestShip> set = new List<RetestShip>();
-
-            foreach (string[] fields in Rows())
-            {
-                if (fields.Length < 3) continue;
-                set.Add(new RetestShip
-                {
-                    Name = fields[0], WorkshopId = fields[1], Path = fields[2],
-                });
-            }
-
-            return set;
-        }
-
-        /// <summary>Splits one CSV line, honouring the quoting CorpusRecord.Text writes.</summary>
-        private static List<string> Split(string line)
-        {
-            List<string> fields = new List<string>();
-            StringBuilder current = new StringBuilder();
-            bool quoted = false;
-
-            for (int i = 0; i < line.Length; i++)
-            {
-                char c = line[i];
-                if (quoted)
-                {
-                    if (c != '"') { current.Append(c); continue; }
-
-                    if (i + 1 < line.Length && line[i + 1] == '"') { current.Append('"'); i++; }
-                    else quoted = false;
-                }
-                else if (c == '"') quoted = true;
-                else if (c == ',') { fields.Add(current.ToString()); current.Length = 0; }
-                else current.Append(c);
-            }
-
-            fields.Add(current.ToString());
-            return fields;
-        }
-
-        /// <summary>
-        /// A repository-relative path, found the way the rest of the harness finds its data. See the
-        /// note on <c>KnobSweep.Find</c>: build output lands in a sibling directory, so no ancestor
-        /// of the running assembly is the repository.
-        /// </summary>
-        internal static string Find(string relative)
-        {
-            try
-            {
-                string candidate = Path.Combine(ShippedBlocks.RepoRoot(), relative);
-                return File.Exists(candidate) ? candidate : null;
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-        /// <summary>Reads the set's ships, one blueprint each, matched on name and id together.</summary>
-        private static List<Blueprints.Ship> Load(List<RetestShip> set)
-        {
-            List<Blueprints.Ship> found = new List<Blueprints.Ship>();
-            object gate = new object();
-            int unresolved = 0;
-
-            GameBlocks.BySubtype();
-
-            System.Threading.Tasks.ParallelOptions options =
-                new System.Threading.Tasks.ParallelOptions
-                { MaxDegreeOfParallelism = LabRun.Workers };
-
-            System.Threading.Tasks.Parallel.ForEach(
-                System.Collections.Concurrent.Partitioner.Create(0, set.Count, 1),
-                options,
-                range =>
-                {
-                    for (int i = range.Item1; i < range.Item2; i++)
-                    {
-                        RetestShip wanted = set[i];
-
-                        if (string.IsNullOrEmpty(wanted.Path) || !File.Exists(wanted.Path))
-                        {
-                            lock (gate) unresolved++;
-                            continue;
-                        }
-
-                        List<Blueprints.Ship> read;
-                        try { read = Blueprints.Read(wanted.Path); }
-                        catch { lock (gate) unresolved++; continue; }
-
-                        bool matched = false;
-                        foreach (Blueprints.Ship ship in read)
-                        {
-                            if (ship.Name != wanted.Name) continue;
-                            if (ship.WorkshopId.ToString(CultureInfo.InvariantCulture)
-                                != wanted.WorkshopId) continue;
-
-                            lock (gate) found.Add(ship);
-                            matched = true;
-                            break;
-                        }
-
-                        if (!matched) lock (gate) unresolved++;
-                    }
-                });
-
-            Progress("retest set resolved " + found.Count + " of " + set.Count + " ships, "
-                + unresolved + " unresolved");
-            return found;
-        }
-
-        // ---- resume ----------------------------------------------------------------------------
-
-        /// <summary>
-        /// The file this walk records finished (world, ship) pairs in, or null when it is not
-        /// recording. One record per walk, beside the data it belongs to — a walk that inherited
-        /// another's record would skip everything and report success.
-        /// </summary>
-        private static string DonePath()
-        {
-            string directory = CorpusRecord.Directory();
-            return directory == null ? null : Path.Combine(directory, "done-retest.txt");
-        }
-
-        /// <summary>What an earlier run of this walk already finished.</summary>
-        private static HashSet<string> Done()
-        {
-            HashSet<string> done = new HashSet<string>(StringComparer.Ordinal);
-
-            string path = DonePath();
-            if (path == null || !File.Exists(path)) return done;
-
-            try
-            {
-                foreach (string line in File.ReadAllLines(path))
-                {
-                    string trimmed = line.Trim();
-                    if (trimmed.Length > 0) done.Add(trimmed);
-                }
-            }
-            catch (IOException)
-            {
-                // A resume that cannot read its own record starts over, which is slow and correct.
-            }
-
-            return done;
-        }
-
-        /// <summary>
-        /// Records one (world, ship) pair as finished. Called with the write lock held, and always
-        /// after its rows have been written — a mark that lands first would lose those rows on a
-        /// resume.
-        /// </summary>
-        private static void MarkDone(string mark)
-        {
-            string path = DonePath();
-            if (path == null) return;
-
-            try
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(path));
-                File.AppendAllText(path, mark + Environment.NewLine);
-            }
-            catch (IOException)
-            {
-                // Failing to record a finished ship costs a re-run, not a result.
-            }
-        }
+        /// <summary>The resume record for this walk. One per walk, beside its data.</summary>
+        private static readonly ShipSet.Resume Record = new ShipSet.Resume("retest");
 
         /// <summary>
         /// Runs <paramref name="work"/> over every ship, one ship per chunk. The default range
@@ -625,18 +429,7 @@ namespace Thermodynamics.Tests
 
         private static void Progress(string line)
         {
-            string path = Environment.GetEnvironmentVariable("THERMAL_CORPUS_PROGRESS");
-            if (string.IsNullOrEmpty(path)) return;
-
-            try
-            {
-                File.AppendAllText(path,
-                    DateTime.Now.ToString("HH:mm:ss") + " retest " + line + Environment.NewLine);
-            }
-            catch
-            {
-                // Progress reporting must never be the reason a run fails.
-            }
+            ShipSet.Progress("retest", line);
         }
     }
 }

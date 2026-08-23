@@ -28,18 +28,17 @@ namespace Thermodynamics.Tests
         [Fact]
         public void TheRetestSetIsReadableAndCarriesAPathPerShip()
         {
-            List<string[]> rows = ConductanceRetestWalk.Rows();
+            List<ShipSet.Entry> rows = ShipSet.Read("THERMAL_RETEST", "tools/corpus/typical.csv");
             Assert.True(rows.Count > 0,
                 "tools/corpus/typical.csv is missing or empty; rebuild it with typical.py");
 
             Assert.Equal(40, rows.Count);
 
-            foreach (string[] fields in rows)
+            foreach (ShipSet.Entry entry in rows)
             {
-                Assert.True(fields.Length >= 3, "a retest row has no path column: " + fields[0]);
-                Assert.False(string.IsNullOrEmpty(fields[0]), "a retest row has no ship name");
-                Assert.False(string.IsNullOrEmpty(fields[2]),
-                    "retest ship '" + fields[0] + "' carries no blueprint path");
+                Assert.False(string.IsNullOrEmpty(entry.Name), "a retest row has no ship name");
+                Assert.False(string.IsNullOrEmpty(entry.Path),
+                    "retest ship '" + entry.Name + "' carries no blueprint path");
             }
         }
 
@@ -54,11 +53,12 @@ namespace Thermodynamics.Tests
             HashSet<string> large = new HashSet<string>(StringComparer.Ordinal);
             HashSet<string> bands = new HashSet<string>(StringComparer.Ordinal);
 
-            foreach (string[] fields in ConductanceRetestWalk.Rows())
+            foreach (ShipSet.Entry entry in
+                ShipSet.Read("THERMAL_RETEST", "tools/corpus/typical.csv"))
             {
-                if (fields.Length < 6) continue;
-                large.Add(fields[3]);
-                bands.Add(fields[3] + "/" + fields[4]);
+                if (entry.Fields.Length < 6) continue;
+                large.Add(entry.Fields[3]);
+                bands.Add(entry.Fields[3] + "/" + entry.Fields[4]);
             }
 
             Assert.Equal(2, large.Count);
