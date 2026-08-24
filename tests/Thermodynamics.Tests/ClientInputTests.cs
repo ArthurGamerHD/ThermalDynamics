@@ -317,10 +317,17 @@ namespace Thermodynamics.Tests
             Assert.Equal(0f, resting.PeakKelvin, 3);
         }
 
-        /// <summary>The same run, on a hull that is flying rather than sitting.</summary>
-        private static ClientInputLab.Result Flying(ClientInputLab.Degradation how)
+        /// <summary>
+        /// The same run, on a hull that is flying rather than sitting.
+        ///
+        /// **The duration is a parameter because a bias needs time to become one.** A standing
+        /// error is the mean over a run's final third, and a run cut short reports a bias that is
+        /// still climbing as a perturbation — which is `C8` arriving in a different lab.
+        /// </summary>
+        private static ClientInputLab.Result Flying(ClientInputLab.Degradation how,
+            float seconds = 240f)
         {
-            return ClientInputLab.Measure(how, ClientDriftLab.Correction.None, "burn", 240f, 400);
+            return ClientInputLab.Measure(how, ClientDriftLab.Correction.None, "burn", seconds, 400);
         }
 
         /// <summary>
@@ -391,6 +398,52 @@ namespace Thermodynamics.Tests
             Assert.True(always.StandingKelvin > always.PeakKelvin * 0.5f,
                 "it peaked at " + always.PeakKelvin + " K and settled at " + always.StandingKelvin
                 + " K, which is a perturbation rather than the bias this pins");
+        }
+
+        /// <summary>
+        /// **A client's speed error is a bias, and it reaches the cubic term rather than the
+        /// saturating one.**
+        ///
+        /// <para>
+        /// Velocity is predicted on a client, and it sets the airflow over the hull — which feeds
+        /// two terms of very different shape. Forced convection saturates, so a fifth more speed is
+        /// a few per cent more cooling; aerodynamic friction goes as the *cube* of airspeed, so the
+        /// same fifth is 1.7× the heating. A client that is guessing fast therefore runs hot rather
+        /// than cold, and the error stands rather than decaying
+        /// ([backlog.md](../../docs/backlog.md) `F19`).
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void ASpeedErrorStandsAndOnlyOnAShipThatIsMoving()
+        {
+            ClientInputLab.Degradation how = new ClientInputLab.Degradation
+            {
+                Name = "speed error",
+                SpeedErrorShare = 0.2f,
+            };
+
+            // **Two run lengths, because that is what tells a bias from a perturbation here.**
+            // The peak cannot: this rig alternates its load every two minutes, so a peak carries a
+            // transient the standing error does not. What a bias does is fail to shrink when the
+            // run is longer, and what a perturbation does is shrink.
+            ClientInputLab.Result shorter = Flying(how, 240f);
+            ClientInputLab.Result longer = Flying(how, 480f);
+            ClientInputLab.Result resting = Run(how);
+
+            output.WriteLine("standing {0:n1} K at 240 s, {1:n1} K at 480 s; still and sunlit {2:n1} K",
+                shorter.StandingKelvin, longer.StandingKelvin, resting.PeakKelvin);
+
+            Assert.True(shorter.StandingKelvin > 1f,
+                "a 20 % speed error settled " + shorter.StandingKelvin + " K out, which is too small"
+                + " for the rest of this to be measuring anything");
+
+            Assert.True(longer.StandingKelvin >= shorter.StandingKelvin * 0.95f,
+                "the standing error fell from " + shorter.StandingKelvin + " K to "
+                + longer.StandingKelvin + " K over twice the run, which is a perturbation rather"
+                + " than the bias this pins");
+
+            // And it is the airflow it reaches, not something else the knob touches by accident.
+            Assert.Equal(0f, resting.PeakKelvin, 3);
         }
     }
 }

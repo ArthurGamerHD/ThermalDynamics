@@ -130,6 +130,28 @@ namespace Thermodynamics.Harness
             public float ThrustErrorShare;
 
             /// <summary>
+            /// The client's airspeed is wrong by this share, permanently. **A bias, and the classic
+            /// multiplayer prediction error**: a client's ship is where its own physics put it, and
+            /// how fast it is going is part of that.
+            ///
+            /// <para>
+            /// It reaches two terms and they are not the same size. Forced convection saturates —
+            /// `h = h0 (1 + 0.1 sqrt(v))` — so a fifth more speed is a few per cent more cooling;
+            /// aerodynamic friction goes as the **cube** of airspeed, so the same fifth is 1.7x the
+            /// heating. That asymmetry is what the 300 m/s constraint in
+            /// [balance.md](../../docs/balance.md#the-300-ms-constraint) is about, and this is the
+            /// same asymmetry arriving as a client's guess ([backlog.md](../../docs/backlog.md)
+            /// `F19`).
+            /// </para>
+            ///
+            /// <para>
+            /// It only reaches a run that is flying: the `burn` scenario has air moving past the
+            /// hull at 100 m/s, and a hull in vacuum or at rest makes this knob measure nothing.
+            /// </para>
+            /// </summary>
+            public float SpeedErrorShare;
+
+            /// <summary>
             /// How often the client's solar occlusion flag disagrees with the server's, and for how
             /// long. **The one input that is a binary**, so it is not wrong by an amount — it is
             /// wrong by the entire solar term at once.
@@ -432,7 +454,14 @@ namespace Thermodynamics.Harness
 
             // Flying: thick air at speed, which is the world a ship under thrust is actually in and
             // the one where a wrong thrust also drags a wrong airflow behind it.
-            if (scenario == "burn") return Worlds.Flight(1f, 100f);
+            if (scenario == "burn")
+            {
+                float speed = FlyingSpeed;
+                if (onClient) speed *= 1f + how.SpeedErrorShare;
+                if (speed < 0f) speed = 0f;
+
+                return Worlds.Flight(1f, speed);
+            }
 
             if (scenario == "sunlit")
             {
@@ -465,6 +494,12 @@ namespace Thermodynamics.Harness
 
             return Worlds.PlanetSurface(air, timeOfDay);
         }
+
+        /// <summary>
+        /// Airspeed the `burn` scenario flies at, m/s. Above the friction threshold, so both the
+        /// terms a speed error reaches are live.
+        /// </summary>
+        public const float FlyingSpeed = 100f;
 
         /// <summary>
         /// Whether the client's occlusion flag is on the wrong side at this moment.
@@ -603,6 +638,12 @@ namespace Thermodynamics.Harness
                 },
                 new Degradation
                 {
+                    Name = "speed error",
+                    Because = "its predicted velocity is 20 % out, which is 1.7x the friction heat",
+                    SpeedErrorShare = 0.2f,
+                },
+                new Degradation
+                {
                     Name = "wrong shadow",
                     Because = "its own raycast puts the hull in shade for 3 s of every 30, in full sun",
                     OcclusionWrongEverySeconds = 30f,
@@ -637,6 +678,7 @@ namespace Thermodynamics.Harness
                 if (one.EnvironmentLagSeconds > everything.EnvironmentLagSeconds) everything.EnvironmentLagSeconds = one.EnvironmentLagSeconds;
                 if (one.SunAngleDegrees > everything.SunAngleDegrees) everything.SunAngleDegrees = one.SunAngleDegrees;
                 if (one.ThrustErrorShare > everything.ThrustErrorShare) everything.ThrustErrorShare = one.ThrustErrorShare;
+                if (one.SpeedErrorShare > everything.SpeedErrorShare) everything.SpeedErrorShare = one.SpeedErrorShare;
                 if (one.OcclusionWrongEverySeconds > 0f)
                 {
                     everything.OcclusionWrongEverySeconds = one.OcclusionWrongEverySeconds;
