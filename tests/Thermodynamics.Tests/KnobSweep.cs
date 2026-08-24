@@ -32,6 +32,7 @@ namespace Thermodynamics.Tests
     /// across the panel, which is where it was anyway.
     /// </para>
     /// </summary>
+    [Collection("alone")]
     public class KnobSweep
     {
         public const string Header =

@@ -99,7 +99,7 @@ namespace Thermodynamics.Harness
             thermal.Conductivity = 56.667f;
             thermal.CriticalTemperature = ProducerCriticalTemperature;
 
-            producer = BlockModel.Solid("producer", Vector3I.One, ProducerMass, thermal);
+            producer = BlockModel.Solid(ProducerName, Vector3I.One, ProducerMass, thermal);
             return producer;
         }
 
@@ -317,9 +317,17 @@ namespace Thermodynamics.Harness
         /// </summary>
         public static bool IsProducer(ThermalNode node)
         {
-            return node != null && node.Block != null
-                && ReferenceEquals(node.Block.Model, Producer());
+            if (node == null || node.Block == null || node.Block.Model == null) return false;
+
+            // By name rather than by reference. The model cache is a plain lazy field, so two
+            // threads racing to build it can each hand out their own instance — and a reference
+            // test would then quietly answer *no* for a perfectly good producer, which is a hull
+            // driving nothing and reporting that it did (`E8`).
+            return node.Block.Model.Name == ProducerName;
         }
+
+        /// <summary>The model name a producer carries, which is its identity on any build order.</summary>
+        public const string ProducerName = "producer";
 
         /// <summary>
         /// Places one block per cell in the measured proportions, and returns the builder.

@@ -19,6 +19,7 @@ namespace Thermodynamics.Tests
     /// type. See balance.md, The datasets.
     /// </para>
     /// </summary>
+    [Collection("alone")]
     public class CorpusCensus
     {
         /// <summary>Everything the census learned about one ship.</summary>

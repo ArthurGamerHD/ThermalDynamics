@@ -14,6 +14,7 @@ namespace Thermodynamics.Tests
     /// overwriting each other's watts — which does not throw, and does not look wrong in a report.
     /// It just answers a different question.
     /// </summary>
+    [Collection("alone")]
     public class LabRunTests
     {
         /// <summary>

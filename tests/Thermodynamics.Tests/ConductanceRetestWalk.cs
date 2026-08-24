@@ -41,6 +41,7 @@ namespace Thermodynamics.Tests
     /// finding (`E8`).
     /// </para>
     /// </summary>
+    [Collection("alone")]
     public class ConductanceRetestWalk
     {
         public const string Header =

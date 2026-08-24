@@ -18,6 +18,7 @@ namespace Thermodynamics.Tests
     /// metres deep; katabatic 3–8 m/s and only 10–100 m deep; both forming under calm, clear
     /// conditions and both overrun by a real synoptic wind.</para>
     /// </summary>
+    [Collection("alone")]
     public class WindSlopeTests
     {
         private static readonly Vector3 North = new Vector3(0f, 0f, -1f);

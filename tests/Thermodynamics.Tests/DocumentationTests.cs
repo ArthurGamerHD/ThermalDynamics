@@ -1195,5 +1195,57 @@ namespace Thermodynamics.Tests
                 "checks docs/rules.md cites that do not resolve to anything that runs (R11):\n  "
                 + string.Join("\n  ", unresolved.ToArray()));
         }
+
+        /// <summary>
+        /// **Every class that walks the corpus declares that it runs alone** (`O4`).
+        ///
+        /// <para>
+        /// Four walks across thirty-one workers measured seventeen times slower than running them
+        /// one at a time, because each is already internally parallel over thousands of blueprints
+        /// and two of them at once are two thread pools thrashing one cache. The isolation used to
+        /// be `maxParallelThreads: 1` for the whole project, which charged every run three times
+        /// its duration for the sake of walks most runs never execute
+        /// ([backlog.md](../../docs/backlog.md) `F8`).
+        /// </para>
+        ///
+        /// <para>
+        /// **The narrow form needs a check and the broad one did not**, which is the whole reason
+        /// this exists: a project-wide setting cannot be forgotten, and an attribute on a class can.
+        /// A new walk written without it does not fail — it runs, slowly, alongside another walk,
+        /// and takes the suite's duration with it. Reached through the one thing every walk has in
+        /// common: it asks `CorpusFixture` for its files.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void EveryCorpusWalkDeclaresThatItRunsAlone()
+        {
+            string tests = Path.Combine(RepoRoot(), "tests");
+            List<string> offenders = new List<string>();
+            int walks = 0;
+
+            foreach (string file in Directory.GetFiles(tests, "*.cs", SearchOption.AllDirectories))
+            {
+                string relative = Relative(file);
+                if (relative.Contains("/bin/") || relative.Contains("/obj/")) continue;
+
+                string text = File.ReadAllText(file);
+
+                // The fixture's own file, and the test of the opt-in gate, walk nothing.
+                if (Path.GetFileName(file) == "CorpusFixture.cs") continue;
+                if (!Regex.IsMatch(text, @"\bCorpusFixture\.(Files|Sweep|Walk)\b")) continue;
+
+                walks++;
+                if (!text.Contains("[Collection(\"alone\")]")) offenders.Add(relative);
+            }
+
+            Assert.True(walks >= 4,
+                "only " + walks + " corpus walks were found, so this test is not reading the suite"
+                + " and would pass on a walk that runs beside another");
+
+            offenders.Sort(StringComparer.Ordinal);
+            Assert.True(offenders.Count == 0,
+                "corpus walks that do not declare the collection that runs alone (O4):\n  "
+                + string.Join("\n  ", offenders.ToArray()));
+        }
     }
 }

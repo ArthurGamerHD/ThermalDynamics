@@ -20,6 +20,7 @@ namespace Thermodynamics.Tests
     /// on a small stride when `THERMAL_CORPUS_TESTS` is set.
     /// </para>
     /// </summary>
+    [Collection("alone")]
     public class RetrofitTests
     {
         /// <summary>

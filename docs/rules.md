@@ -204,13 +204,13 @@ under [low value](#low-value) so a citation to them does not dangle.
 | **O1** | Every long run is capped | load-bearing | P13 | — |
 | **O2** | A run with no bounded duration gets no hang timeout | conditional | P13 | — |
 | **O3** | Long sweeps resume, and progress is measured in bytes | load-bearing | P13 | — |
-| **O4** | Corpus walks run alone | low value | P14 | `xunit.runner.json` |
+| **O4** | Corpus walks run alone | load-bearing | P14 | `EveryCorpusWalkDeclaresThatItRunsAlone` |
 | **O5** | A lab streams, and counts what it did not measure | load-bearing | P13 | — |
 | **J1** | *Game mod first* | low value | P14 | absorbed into P14 |
 | **J2** | *Light, isolated, tested, open* | low value | — | absorbed into `C4` `C5` `C7` `R9` |
 | **J3** | The corpus filters are strict, and their cost is recorded | conditional | P1 | `BlueprintTests` |
 
-Fifty-one load-bearing, seven conditional, four low value. Sixteen of the load-bearing rules have
+Fifty-two load-bearing, seven conditional, three low value. Sixteen of the load-bearing rules have
 no automated check, and say so.
 
 ---
@@ -1040,6 +1040,34 @@ run for. A ship is not symmetric, so both thrust and travel expand to six direct
 
 ---
 
+### O4 — Corpus walks run alone
+
+**A test that walks the corpus, or that asserts on wall-clock time, declares the collection that
+disables parallelism; nothing else in the suite does.**
+
+Four walks across thirty-one workers on thirty-two cores measured seventeen times slower than
+running them one at a time, and it hid behind a 93 % CPU reading because the cores were busy
+thrashing each other's cache. Each walk is already internally parallel over thousands of
+blueprints, so two at once are two thread pools competing for one memory bus.
+
+**The rule was right and its implementation was three times too broad.** `xunit.runner.json` set
+`maxParallelThreads: 1` for the whole project, so every run of every test paid for the isolation of
+four opt-in walks that most runs never execute. Measured on 2026-08-24 over 1,825 cases: **1 m 41 s
+at one worker, 38 s at eight, 1 m 47 s at thirty-two** — one worker per core is no faster than
+serial, which is the same cache effect one rung up. The walks and the wall-clock tests now declare
+`[Collection("alone")]` and the project runs at eight.
+
+*Applies to:* the opt-in corpus walks, and any test whose assertion is about elapsed time.
+*Checked by:* `EveryCorpusWalkDeclaresThatItRunsAlone`, which finds a walk by the one thing every
+walk does — ask `CorpusFixture` for its files. The wall-clock half is judgement: `StaggerTests`
+compares two cache regimes a few per cent apart, and its own noise guard is what caught it.
+*Retires when:* the walks stop being internally parallel, or a machine stops having a shared cache.
+*From:* the operations record, and [backlog.md](backlog.md) `F8`.
+
+**Why load-bearing.** A project-wide setting cannot be forgotten and an attribute on a class can:
+a new walk written without it does not fail, it runs beside another walk and takes the suite's
+duration with it. That is a silent failure, which is what this page is for.
+
 ## Conditional
 
 Seven rules hold only inside a stated scope. Every one of them was first written as an absolute,
@@ -1187,33 +1215,12 @@ there, the filter would reject its own input.
 
 ## Low value
 
-Four entries: one rule that costs measurably more than it prevents, and three that turned out not
-to be rules at all. They are kept here, rather than deleted, so that a citation to one resolves to
-its disposition rather than to nothing — and so that the reasoning survives the next person who
-thinks of writing them again.
+Three entries, all of them rules that turned out not to be rules at all. They are kept here, rather
+than deleted, so that a citation to one resolves to its disposition rather than to nothing — and so
+that the reasoning survives the next person who thinks of writing them again.
 
-### O4 — Corpus walks run alone
-
-**Four walks across thirty-one workers on thirty-two cores measured seventeen times slower than
-running them one at a time, and it hid behind a 93 % CPU reading because the cores were busy
-thrashing cache.**
-
-The observation is sound. The rule as implemented is not: `xunit.runner.json` sets
-`maxParallelThreads: 1` for the whole test project, so every run of every test pays for the
-isolation of four opt-in walks that most runs never execute. Measured on 2026-08-22: 53.1 s
-serial against 16.7 s at eight threads, with the same passing count in every configuration and ten
-for ten in a parallel burn-in.
-
-*Applies to:* the opt-in corpus walks — but the mechanism applies to every test class in the
-project.
-*Checked by:* `xunit.runner.json`, more broadly than the rule needs.
-*Retires when:* the walks move into a collection that disables parallelism for itself and the
-project-wide setting comes off. The narrower form already exists in the suite: `LoadTests`
-declares its own collection with `DisableParallelization`. [backlog.md](backlog.md) F8.
-*From:* the operations record.
-
-**Why low value.** It buys correct isolation for four tests and charges every run three times its
-duration, when a mechanism that charges only the four is already in use ten lines away.
+`O4` was the fourth and is no longer here: it costed measurably more than it prevented *as
+implemented*, and narrowing the implementation to the four tests it was about made it load-bearing.
 
 ### R1 — The repository is the mod folder
 

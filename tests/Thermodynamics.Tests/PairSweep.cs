@@ -49,6 +49,7 @@ namespace Thermodynamics.Tests
     /// parallelism is inside a cell, across the panel.
     /// </para>
     /// </summary>
+    [Collection("alone")]
     public class PairSweep
     {
         public const string Header =

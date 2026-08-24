@@ -17,6 +17,7 @@ namespace Thermodynamics.Tests
     /// check.
     /// </summary>
     [Trait("speed", "slow")]
+    [Collection("alone")]
     public class PerformanceReportTests
     {
         /// <summary>Small enough to run in the ordinary suite; the shape is the same at any size.</summary>

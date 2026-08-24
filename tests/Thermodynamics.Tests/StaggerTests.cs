@@ -18,6 +18,7 @@ namespace Thermodynamics.Tests
     /// </para>
     /// </summary>
     [Trait("speed", "slow")]
+    [Collection("alone")]
     public class StaggerTests
     {
         private readonly ITestOutputHelper output;

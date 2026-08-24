@@ -24,6 +24,7 @@ namespace Thermodynamics.Tests
     /// </para>
     /// </summary>
     [Trait("speed", "slow")]
+    [Collection("alone")]
     public class ProfileClockTests
     {
         private readonly ITestOutputHelper output;

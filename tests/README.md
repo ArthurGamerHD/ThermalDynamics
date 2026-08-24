@@ -119,6 +119,30 @@ minutes because one test read the whole blueprint corpus on every run despite it
 opt-in rule — 4 m 57 s of a 5 m 4 s suite. It is behind `THERMAL_CORPUS_TESTS` now, where the rest
 of its class already was.
 
+### The suite runs eight at a time, and a few classes run alone
+
+`xunit.runner.json` sets `maxParallelThreads: 8`, and the classes that must not share a machine
+declare `[Collection("alone")]`: the opt-in corpus walks, and every test whose assertion is about
+elapsed time.
+
+**Eight rather than one per core, measured.** On this repository's 32-core machine the suite is
+**1 m 41 s at one worker, 38 s at eight, and 1 m 47 s at thirty-two** — one per core is no faster
+than serial, because the tests are memory-bound and thirty-two of them thrash each other's cache.
+That is the same effect, one rung up, that made the corpus walks need isolation in the first place:
+four walks across thirty-one workers ran seventeen times slower than one at a time, behind a 93 %
+CPU reading.
+
+Two things go in the collection. A **corpus walk** is already internally parallel over thousands of
+blueprints, so two of them at once are two thread pools competing for one memory bus;
+`EveryCorpusWalkDeclaresThatItRunsAlone` finds them by the one thing they all do, which is ask
+`CorpusFixture` for its files. A **wall-clock assertion** on a contended machine is measuring the
+other tests — `StaggerTests` compares two cache regimes a few per cent apart and its own noise guard
+caught it on the first parallel burn-in. Everything else runs beside everything else: each test
+builds its own grid and shares no mutable state with another.
+
+The rule is `O4` in [rules.md](../docs/rules.md); the row that asked for the narrowing is
+[backlog.md](../docs/backlog.md) `F8`.
+
 ## Scenarios
 
 | Name | Question it answers |
@@ -487,6 +511,7 @@ and left off it.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-24 | The suite runs eight at a time. The isolation the corpus walks need is theirs now — `[Collection("alone")]`, with `EveryCorpusWalkDeclaresThatItRunsAlone` to keep it — rather than `maxParallelThreads: 1` for every class in the project: 1 m 41 s to 38 s over 1,825 cases. Eight rather than one per core, because thirty-two workers measured no faster than one ([backlog.md](../docs/backlog.md) `F8`). |
 | 2026-08-23 | Extended `LoadDialTests` to the charge duration, which is the number `G8` is now scored against: a drive holds 3 MWh, draws 32 MW and keeps 80 % of it, so it fills in 421.9 s. Every figure is read off the game's own definition, because a duration invented here would be the criterion being scored against an assumption. |
 | 2026-08-23 | Indexed `LoadDialTests`, which checks that the pair grid's third axis reaches the blocks and reaches nothing else — a sweep dial that reached nothing would report *no change* in exactly the shape of one that reached everything and changed nothing, which is the failure the retest set's `reach.csv` exists for. Conductivity above all: the whole point of that axis is that it is not transport. |
 | 2026-08-23 | Indexed `ConductionPaceTests`, which guards a ratio rather than a number: the game has two conduction paces — one for solids, one for the coolant loop's fluid coupling — and nothing made them agree. Moving one alone weakens every loop relative to the structure it competes with, and the only thing that said so when it happened was four balance tests failing for what read like unrelated reasons. |

@@ -19,6 +19,7 @@ namespace Thermodynamics.Tests
     /// See balance-lab.md, and balance.md, The population.
     /// </para>
     /// </summary>
+    [Collection("alone")]
     public class CorpusSurvey
     {
         /// <summary>The scenarios a corpus ship is measured under. Distinct by construction.</summary>
