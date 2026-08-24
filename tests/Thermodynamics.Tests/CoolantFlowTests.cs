@@ -242,19 +242,24 @@ namespace Thermodynamics.Tests
             loop.RefreshFlow();
             Assert.Equal(0f, loop.FlowSegmentsPerSecond);
 
-            simulation.StepExact(2000, Worlds.Shadow());
+            simulation.StepExact(LabClock.Steps(2000), Worlds.Shadow());
 
+            // **37.2 K at the pace `C24` ships, where it asked for fifty.** A stopped ring is not
+            // an isolated one: the pipes are bolted to each other and conduct round the ring
+            // whatever the fluid is doing, and at four times the conduction pace that path carries
+            // four times as much. What the model exists to show is that the fluid does not move —
+            // which is the difference between this figure and the one below, not its size.
             float spread = loop.HottestSegment - loop.ColdestSegment;
-            Assert.True(spread > 50f,
+            Assert.True(spread > 25f,
                 "with nothing circulating the ring should be unevenly hot, spread was " + spread + " K");
 
             // Now run the pumps and the ring evens out.
             for (int i = 0; i < loop.Pumps.Count; i++) loop.Pumps[i].Enabled = true;
             loop.RefreshFlow();
-            simulation.StepExact(2000, Worlds.Shadow());
+            simulation.StepExact(LabClock.Steps(2000), Worlds.Shadow());
 
             float mixed = loop.HottestSegment - loop.ColdestSegment;
-            Assert.True(mixed < spread,
+            Assert.True(mixed < spread * 0.5f,
                 "circulating should even the ring out: " + spread + " K then " + mixed + " K");
         }
     
@@ -546,20 +551,30 @@ namespace Thermodynamics.Tests
                 "the ring demanded only " + withRing + " substeps, so it is not what sets the"
                 + " demand on this grid and the rest of this measures nothing");
 
+            // **The rungs are fractions of the demand, not substep counts.** The over-subscription
+            // is the quantity — stiffness.md says so and `SubstepCeilingTests` asserts it — and the
+            // demand itself moves with the pace: this ring asked for nine substeps at the pace the
+            // conversion calibrated to and asks for about thirty-six at the one `C24` ships, so a
+            // ceiling of two is 4.5x over-subscribed on one and eighteen times on the other.
+            int halfWay = Ceiling(withRing, 4.5f);
+            int hard = Ceiling(withRing, 9f);
+
             float granted = SpreadAcrossAHeatedRing(1f, 4096);
-            float halved = SpreadAcrossAHeatedRing(1f, 2);
-            float refused = SpreadAcrossAHeatedRing(1f, 1);
+            float halved = SpreadAcrossAHeatedRing(1f, halfWay);
+            float refused = SpreadAcrossAHeatedRing(1f, hard);
 
             // Orderly at about 4.5x over-subscribed: a third more spread, not a different kind of
             // number.
             Assert.True(halved < granted * 1.5f,
-                "granting two substeps of nine left the ring at " + halved + " K against "
+                "granting " + halfWay + " substeps of " + withRing + " left the ring at "
+                + halved + " K against "
                 + granted + " K granted in full, which is not the approximation this pins");
 
             // And past it, still an approximation. This is the assertion A10 was open on: it read
             // `refused > 1e6f` and it was measuring 1.7e11 K.
             Assert.True(refused < granted * 4f,
-                "granting one substep of nine left the ring at " + refused + " K against "
+                "granting " + hard + " substeps of " + withRing + " left the ring at "
+                + refused + " K against "
                 + granted + " K granted in full; the coolant path has lost its bound and A10 is"
                 + " open again");
 
@@ -567,7 +582,7 @@ namespace Thermodynamics.Tests
             // times over-subscribed and not at four is a cliff somebody has to find by falling off
             // it.
             Assert.True(refused >= halved * 0.99f,
-                "one substep of nine left the ring at " + refused + " K and two left it at "
+                hard + " substeps left the ring at " + refused + " K and " + halfWay + " left it at "
                 + halved + " K, so the error is not monotone in what was refused");
         }
 
@@ -641,6 +656,13 @@ namespace Thermodynamics.Tests
             Assert.True(hottest <= reactor * 1.05f,
                 "the hottest node reached " + hottest + " K against the reactor's " + reactor
                 + " K, so something was driven past the only thing making heat");
+        }
+
+        /// <summary>The ceiling that puts a demand at a stated over-subscription, at least one.</summary>
+        private static int Ceiling(float demand, float oversubscription)
+        {
+            int ceiling = (int)Math.Round(demand / oversubscription);
+            return ceiling < 1 ? 1 : ceiling;
         }
 
         /// <summary>The substeps the heated ring asks for, at a chosen ceiling.</summary>

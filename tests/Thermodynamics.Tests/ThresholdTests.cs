@@ -78,8 +78,12 @@ namespace Thermodynamics.Tests
             simulation.Settings.EnableEnvironment = true;
             simulation.Settings.Derive();
 
+            // Long enough for the block to have radiated past the threshold, which is a length
+            // of thermal time rather than of steps: at the clock `C24` ships four hundred steps
+            // leave it above 400 K and the test reads "no crossing" from a run that had not got
+            // there yet. See LabClock.
             int seen = 0;
-            for (int i = 0; i < 400; i++)
+            for (int i = 0; i < LabClock.Steps(400); i++)
             {
                 simulation.StepExact(1, Worlds.Shadow());
                 seen += simulation.Crossings.Count;
@@ -99,7 +103,7 @@ namespace Thermodynamics.Tests
 
             int seen = 0;
             bool rising = true;
-            for (int i = 0; i < 400; i++)
+            for (int i = 0; i < LabClock.Steps(400); i++)
             {
                 simulation.StepExact(1, Worlds.Shadow());
                 for (int c = 0; c < simulation.Crossings.Count; c++)

@@ -29,6 +29,14 @@ namespace Thermodynamics.Tests
         private const int Small = 8000;
         private const int Large = 32000;
 
+        /// <summary>
+        /// The largest grid the shipped element-visit allowance still covers in vacuum, measured
+        /// 2026-08-24 at `C24`'s pair: 6,000 blocks run at 100 % of real time, 8,000 at 94.3 % and
+        /// 12,000 at 68.2 %. At the pace the conversion calibrated to, every one of those was
+        /// 100 %. See <see cref="TheShippedAllowanceFitsAGridAndAHalvedOneDoesNot"/>.
+        /// </summary>
+        private const int Covered = 6000;
+
         private readonly ITestOutputHelper output;
 
         public LoadTests(ITestOutputHelper output)
@@ -717,11 +725,20 @@ namespace Thermodynamics.Tests
         /// work. So the shipped allowance covers this rig at the shipped rate, and halving it, which is
         /// what the old figure came to at this rate, does not.
         /// </para>
+        ///
+        /// <para>
+        /// **The rig is 6,000 blocks because `C24` moved where the allowance stops covering.** It
+        /// was 8,000, and at the pace that now ships an 8,000-block grid in vacuum runs at 94.3 %
+        /// of real time — the demand went from 23.20 substeps to 37.13 while the cost of a substep
+        /// and the allowance stayed where they were.
+        /// <see cref="TheShippedAllowanceNoLongerCoversAnEightThousandBlockGridInVacuum"/> pins
+        /// that, and [backlog.md](../../docs/backlog.md) `C27` is what to do about it.
+        /// </para>
         /// </summary>
         [Fact]
-        public void TheShippedAllowanceFitsThisGridAndAHalvedOneDoesNot()
+        public void TheShippedAllowanceFitsAGridAndAHalvedOneDoesNot()
         {
-            ThermalSimulation shipped = Build(Small);
+            ThermalSimulation shipped = Build(Covered);
             while (shipped.HasPendingWork) shipped.Update(LoadBenchmarks.TickSeconds, Space());
             LoadBenchmarks.SeedSpread(shipped);
 
@@ -745,7 +762,7 @@ namespace Thermodynamics.Tests
 
             // Half the allowance no longer covers it — which is the figure the default carried when
             // the shipped rate was eight steps a second, and the reason it moved with the rate.
-            ThermalSimulation tighter = Build(Small);
+            ThermalSimulation tighter = Build(Covered);
             while (tighter.HasPendingWork) tighter.Update(LoadBenchmarks.TickSeconds, Space());
             LoadBenchmarks.SeedSpread(tighter);
 
@@ -768,6 +785,59 @@ namespace Thermodynamics.Tests
             Assert.False(tighter.Solver.LastStepWasClamped);
             Assert.True(tighter.SimulationRate < 1d);
             Assert.True(tighter.SimulationRate > 0.5d);
+        }
+
+        /// <summary>
+        /// **What `C24` costs the solver in vacuum, which is where it costs anything.**
+        ///
+        /// <para>
+        /// The retune multiplies conduction by four and divides every capacity by two and a half,
+        /// so a node whose demand is conduction asks 1.6 times what it did and one whose demand is
+        /// convection asks 0.4 times. Vacuum is all conduction, so the same grid demands 37.13
+        /// substeps where it demanded 23.20 — and air is where the demand used to be large, so the
+        /// panel's p99 there went the other way, from 115 % of the substep cap to 55 %
+        /// ([balance.md](../../docs/balance.md)). The retune moves solver cost from the
+        /// environment a ship flies in to the one it parks in.
+        /// </para>
+        ///
+        /// <para>
+        /// What that reaches is the element-visit allowance rather than the substep cap: 2,000,000
+        /// visits a step covered a 12,000-block grid before and covers about 6,000 now. Past that
+        /// the solver spreads a step over more frames, which is the design — it shortens simulated
+        /// time rather than coarsening a step — but simulated time is what `F23` measured a rate
+        /// difference in, so the trade has a price and it is now paid on smaller grids.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheShippedAllowanceNoLongerCoversAnEightThousandBlockGridInVacuum()
+        {
+            ThermalSimulation simulation = Build(Small);
+            while (simulation.HasPendingWork) simulation.Update(LoadBenchmarks.TickSeconds, Space());
+            LoadBenchmarks.SeedSpread(simulation);
+
+            simulation.Settings.MaxSubsteps = 4096;
+            simulation.Settings.Derive();
+
+            for (int tick = 0; tick < 60; tick++)
+            {
+                simulation.Update(LoadBenchmarks.TickSeconds, Space());
+            }
+
+            output.WriteLine("8,000 blocks: demand "
+                + simulation.Solver.LastRequiredSubsteps.ToString("n2")
+                + ", budget " + simulation.SubstepBudget.ToString("n0")
+                + ", rate " + (100d * simulation.SimulationRate).ToString("n1") + "%.");
+
+            // Measured 2026-08-24: 94.3 %. Bounded either side, so both a worse regression and a
+            // fix announce themselves — a fix being the allowance moving, the demand coming down,
+            // or `C27` closing.
+            Assert.InRange(simulation.SimulationRate, 0.85d, 0.99d);
+
+            // And it is the demand that moved rather than the cost of a substep, which is what
+            // says this is the retune and not a solver that got slower.
+            Assert.True(simulation.Solver.LastRequiredSubsteps > 30f,
+                "the grid demands only " + simulation.Solver.LastRequiredSubsteps
+                + " substeps, so the shortfall above is no longer C24's");
         }
 
         // ---- wall clock, loosely ------------------------------------------------------------

@@ -873,11 +873,16 @@ namespace Thermodynamics.Harness
         /// </summary>
         public static ScenarioResult Welding()
         {
-            // Short windows on purpose: at the shipped clock both masses reach the same
-            // equilibrium within a minute, and it is the approach that differs, not the
-            // destination.
-            float skeleton = WeldedRise(0.1f, 5f);
-            float finished = WeldedRise(1f, 5f);
+            // Short windows on purpose: both masses reach the same equilibrium inside the run, and
+            // it is the approach that differs rather than the destination.
+            //
+            // **A length of thermal time, so it moves with the clock.** At 225 a minute was enough
+            // for the welded block to arrive; at the 90 `C24` ships it is still climbing at the end
+            // of one, and the last window of the heavy block then rises as fast as the first window
+            // of the light one — which reads as the claim inverting. See LabClock.
+            float window = LabClock.Seconds(5f);
+            float skeleton = WeldedRise(0.1f, window);
+            float finished = WeldedRise(1f, window);
 
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.HeavyArmor(), Vector3I.Zero);
@@ -891,12 +896,12 @@ namespace Thermodynamics.Harness
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("skeleton", builder.Placed[0]);
-            runner.Run(5f, 1f);
+            runner.Run(window, LabClock.Seconds(1f));
 
             // Finish welding it mid-run: the same block, ten times the thermal mass.
             node.Block.Mass *= 10f;
             node.RefreshThermalMass();
-            runner.Run(55f, 5f);
+            runner.Run(LabClock.Seconds(55f), LabClock.Seconds(5f));
 
             return Result("welding", runner,
                 "Five seconds of a 250 kW source next to one heavy armour block. At a tenth of its "
