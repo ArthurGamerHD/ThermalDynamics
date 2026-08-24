@@ -57,11 +57,16 @@ namespace Thermodynamics.Core
         private int stepLinkCount;
 
         /// <summary>
-        /// Whether the conduction overshoot clamp can change any exchange during this step.
+        /// Whether the overshoot clamp can change any exchange during this step.
         ///
         /// Settled once in <see cref="BeginStep"/> from the substep length, which is what decides
         /// it, and read by every substep's conduction pass. See <c>ClampCanBind</c>. Readable so a
         /// test can tell a step that skipped the clamp from one that could not.
+        ///
+        /// **Not conduction alone, whatever the name says.** The per-node relaxation row it gates
+        /// is what bounds a node fed by a coolant loop or a room's air as well as by its
+        /// neighbours, and a grid can carry a ring with conduction switched off. Named for the
+        /// setting that turns it on. See stiffness.md, What refusing the demand costs.
         /// </summary>
         public bool ConductionClampLive { get; private set; }
 
@@ -239,7 +244,7 @@ namespace Thermodynamics.Core
             // After the substep length is known and before any substep runs: the clamp is a
             // function of that length and of masses and conductances that cannot move mid-step.
             ConductionClampLive = settings.ClampConductionOvershoot
-                && settings.EnableConduction
+                && (settings.EnableConduction || settings.EnableCoolantLoops || settings.EnableRoomAir)
                 && (!GateConductionClamp || ClampCanBind(substepSeconds));
 
             stepNodeCount = nodes.Count;

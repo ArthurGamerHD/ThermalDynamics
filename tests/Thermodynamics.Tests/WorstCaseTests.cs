@@ -86,6 +86,54 @@ namespace Thermodynamics.Tests
                 "no heat pump bound to two nodes, so the pump pass is measuring an empty list");
         }
 
+        /// <summary>
+        /// The rings fixture exists for one reason — the plumbing is what sets the substep demand
+        /// on it — so what it has to assert is that claim rather than the presence of a ring.
+        ///
+        /// `Plumbed` above is the other half: rings that cost passes and carry nothing. On a census
+        /// hull a light fitting demands more substeps than any ring can, so a ceiling sweep taken
+        /// there measures blocks whatever is plumbed into it.
+        /// </summary>
+        [Fact]
+        public void TheRingsFixtureIsWhereThePlumbingSetsTheDemand()
+        {
+            WorstCases.Built built = WorstCases.HeatedRings(2);
+
+            Assert.True(built.CoolantLoops > 0,
+                "no coolant loop closed, so the fixture is a reactor in a box of pipes");
+
+            ThermalSolver.SubstepProfile profile = built.Simulation.Solver.ProfileSubsteps();
+            IList<CoolantLoop> plumbing = built.Simulation.Solver.Loops;
+
+            // The demand a ring sets is read on the node it is bolted to rather than on the fluid.
+            // A parcel is heavy and a sink face is 1,000 W/K, so what the estimate reports as the
+            // stiffest element on a plumbed hull is the pipe, not the coolant in it — measured, a
+            // parcel here asks for 0.74 substeps and the pipe carrying its sink face asks for 8.3.
+            bool stiffestIsPlumbed = false;
+            for (int l = 0; l < plumbing.Count && !stiffestIsPlumbed; l++)
+            {
+                for (int i = 0; i < plumbing[l].Links.Count; i++)
+                {
+                    if (plumbing[l].Links[i].NodeIndex != profile.WorstNodeIndex) continue;
+                    stiffestIsPlumbed = true;
+                    break;
+                }
+            }
+
+            Assert.True(stiffestIsPlumbed,
+                "the stiffest node on the fixture asks for " + profile.WorstNodeDemand
+                + " substeps and is not one the plumbing touches, so this fixture is measuring the"
+                + " same thing census does");
+
+            // And the ring is what the reactor's heat leaves through, rather than a cold loop
+            // bolted beside it: a fixture whose sink face carries nothing would pass the line
+            // above on stiffness alone.
+            built.Simulation.StepExact(600, Worlds.Shadow());
+
+            Assert.True(plumbing[0].LastWattsAbsorbed > 0f,
+                "the ring absorbed nothing over ten simulated minutes beside a running reactor");
+        }
+
         [Fact]
         public void ABurningHullActuallyBurns()
         {

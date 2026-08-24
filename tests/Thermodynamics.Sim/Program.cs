@@ -731,6 +731,7 @@ namespace Thermodynamics.Sim
         ///   bench load  --size 1000000        what building the grid costs before tick one
         ///   bench floor --size 42000           what a per-block substep cap buys, and costs
         ///   bench ceiling --size 42000         what refusing a substep demand costs, in air
+        ///   bench ceiling --fixture rings       the same, where the plumbing sets the demand
         ///   bench parallel --size 600           one grid per thread: does a fleet pay for it
         ///   bench report --csv out/            the full performance report, as a CSV to diff
         ///   bench report --baseline out/performance.csv   the same, against an earlier one
@@ -1157,9 +1158,12 @@ namespace Thermodynamics.Sim
                 case "ceiling":
                 {
                     float speed = OptionFloat(args, "--speed", 200f);
+                    string fixture = Option(args, "--fixture",
+                        LoadBenchmarks.CeilingFixtures.Census);
 
                     Console.WriteLine();
-                    Console.WriteLine("== substep ceiling, " + shape + " " + size.ToString("n0") + " ==");
+                    Console.WriteLine("== substep ceiling, " + fixture + " " + shape + " "
+                        + size.ToString("n0") + " ==");
                     Console.WriteLine("  MaxSubsteps swept, on a hull built from the measured block"
                         + " census, in thick air at " + speed.ToString("n0") + " m/s.");
                     Console.WriteLine("  " + (ticks > 0 ? ticks : 200) + " steps, "
@@ -1169,12 +1173,17 @@ namespace Thermodynamics.Sim
                         + ". Error is against the run granted its demand.");
                     Console.WriteLine("  --speed N sets the airflow; air is where the demand is,"
                         + " and in vacuum no ceiling binds.");
+                    Console.WriteLine("  --fixture census|plumbed|pressurised|rings chooses which"
+                        + " element carries the heat: blocks alone, a census hull with rings beside"
+                        + " it, one with air in its compartments, or reactors cooled by rings —"
+                        + " which is the only one where the plumbing sets the demand.");
                     Console.WriteLine();
 
                     Console.WriteLine(LoadBenchmarks.CeilingTable(LoadBenchmarks.SubstepCeiling(
                         shape, size, ticks > 0 ? ticks : 200, null,
                         message => Console.Error.WriteLine("  " + message),
-                        Has(args, "--driven"), OptionInt(args, "--frequency", 0), speed)));
+                        Has(args, "--driven"), OptionInt(args, "--frequency", 0), speed, 1f,
+                        fixture, OptionFloat(args, "--flow", 0f))));
                     return 0;
                 }
 
@@ -1362,6 +1371,9 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  bench load  --size N    what building the grid costs before tick one");
             Console.WriteLine("  bench floor --size N    what a per-block substep cap buys, and costs");
             Console.WriteLine("  bench ceiling --size N  what refusing a substep demand costs, in air");
+            Console.WriteLine("      --fixture census|plumbed|pressurised|rings   which element carries it");
+            Console.WriteLine("      --flow N   parcels a second on the rings fixture; above one a"
+                + " substep the ring mixes rather than carries");
             Console.WriteLine("  bench parallel --size N one grid per thread: does a fleet pay for it");
             Console.WriteLine("  bench surface           what a selective surface on the radiator is worth");
             Console.WriteLine("  bench stagger --size N  whole steps against spread ones: what locality costs");

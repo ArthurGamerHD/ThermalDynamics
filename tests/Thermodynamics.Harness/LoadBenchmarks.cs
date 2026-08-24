@@ -1648,6 +1648,34 @@ namespace Thermodynamics.Harness
             /// <summary>Airspeed the run was made at, m/s, and the air density it met.</summary>
             public float Speed;
             public float AirDensity;
+
+            /// <summary>Which hull this row was measured on. See <see cref="CeilingFixtures"/>.</summary>
+            public string Fixture;
+
+            /// <summary>What the fixture built, so a row cannot report a plumbed hull with no ring.</summary>
+            public int CoolantLoops;
+            public int RoomsWithAir;
+
+            /// <summary>Hottest coolant parcel or room air at the end of the run, K.</summary>
+            public float PeakCoupledTemperature;
+        }
+
+        /// <summary>
+        /// The hulls the ceiling sweep can be asked for, one per element that carries heat.
+        ///
+        /// The ladder was measured on blocks alone for as long as it existed, and blocks are the
+        /// one element whose exchanges are all pairwise. A coolant parcel and a room's air are
+        /// each one mass carrying every link on it, which is the shape a pairwise bound cannot
+        /// hold on its own. See stiffness.md, What refusing the demand costs.
+        /// </summary>
+        public static class CeilingFixtures
+        {
+            public const string Census = "census";
+            public const string Plumbed = "plumbed";
+            public const string Pressurised = "pressurised";
+
+            /// <summary>Reactors cooled by rings: the hull where the plumbing sets the demand.</summary>
+            public const string Rings = "rings";
         }
 
         /// <summary>
@@ -1670,7 +1698,8 @@ namespace Thermodynamics.Harness
         /// </summary>
         public static List<CeilingRow> SubstepCeiling(string shape, int size, int steps,
             IList<int> ceilings, Action<string> log = null, bool driven = false, int frequency = 0,
-            float speed = 200f, float airDensity = 1f)
+            float speed = 200f, float airDensity = 1f, string fixture = CeilingFixtures.Census,
+            float flow = 0f)
         {
             List<CeilingRow> rows = new List<CeilingRow>();
             float[] reference = null;
@@ -1678,7 +1707,7 @@ namespace Thermodynamics.Harness
 
             // The first row measured would otherwise be measuring the JIT.
             CeilingRow probe = RunCeiling(shape, Math.Min(size, 2000), 2, Hulls.Unbounded, null,
-                driven, frequency, speed, airDensity);
+                driven, frequency, speed, airDensity, fixture, flow);
 
             // No ceilings given means the ladder of over-subscriptions rather than a ladder of
             // counts, resolved against what this hull in this air actually demands. A ceiling of 64
@@ -1693,7 +1722,7 @@ namespace Thermodynamics.Harness
                 if (log != null) log("ceiling " + ceilings[i]);
 
                 CeilingRow row = RunCeiling(shape, size, steps, ceilings[i], reference, driven,
-                    frequency, speed, airDensity);
+                    frequency, speed, airDensity, fixture, flow);
                 if (reference == null)
                 {
                     reference = lastTemperatures;
@@ -1733,13 +1762,9 @@ namespace Thermodynamics.Harness
         }
 
         private static CeilingRow RunCeiling(string shape, int size, int steps, int ceiling,
-            float[] reference, bool driven, int frequency, float speed, float airDensity)
+            float[] reference, bool driven, int frequency, float speed, float airDensity,
+            string fixture, float flow)
         {
-            HashSet<Vector3I> cells = LoadShapes.Build(shape, size);
-
-            GridBuilder builder = GridBuilder.Large();
-            builder.PlaceCensus(cells);
-
             ThermalSettings settings = new ThermalSettings();
             if (frequency > 0) settings.Frequency = frequency;
 
@@ -1749,12 +1774,42 @@ namespace Thermodynamics.Harness
             settings.MaxElementVisitsPerStep = 0;
             settings.Derive();
 
-            ThermalSimulation simulation = new ThermalSimulation(settings, builder.Grid);
-            for (int i = 0; i < builder.Placed.Count; i++)
+            // The fixture decides which element carries the heat. The two lumped masses are built
+            // by WorstCases, which counts what it managed to build — a plumbed hull with no ring
+            // is the failure this sweep would otherwise report as a result.
+            ThermalSimulation simulation;
+            WorstCases.Built built = null;
+
+            if (fixture == CeilingFixtures.Plumbed)
             {
-                simulation.Solver.AddBlock(builder.Placed[i], 293.15f);
+                built = WorstCases.Plumbed(shape, size, 8, settings);
+                simulation = built.Simulation;
             }
-            simulation.RebuildAll();
+            else if (fixture == CeilingFixtures.Rings)
+            {
+                // Sized in rings rather than in blocks: ten cells each, and the point of the
+                // fixture is what one ring does rather than how many there are.
+                built = WorstCases.HeatedRings(Math.Max(1, size / 10), Census.ProducerWatts, settings,
+                    flow);
+                simulation = built.Simulation;
+            }
+            else if (fixture == CeilingFixtures.Pressurised)
+            {
+                built = WorstCases.Pressurised(shape, size, settings);
+                simulation = built.Simulation;
+            }
+            else
+            {
+                GridBuilder builder = GridBuilder.Large();
+                builder.PlaceCensus(LoadShapes.Build(shape, size));
+
+                simulation = new ThermalSimulation(settings, builder.Grid);
+                for (int i = 0; i < builder.Placed.Count; i++)
+                {
+                    simulation.Solver.AddBlock(builder.Placed[i], 293.15f);
+                }
+                simulation.RebuildAll();
+            }
 
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
             int count = nodes.Count;
@@ -1776,6 +1831,9 @@ namespace Thermodynamics.Harness
             row.Nodes = count;
             row.Speed = speed;
             row.AirDensity = airDensity;
+            row.Fixture = fixture;
+            row.CoolantLoops = built != null ? built.CoolantLoops : 0;
+            row.RoomsWithAir = built != null ? built.RoomsWithAir : 0;
 
             // Taken against the environment the run is made in: the estimate reads the convection
             // coefficient, so a demand sampled in vacuum is the wrong number by the whole reason
@@ -1805,6 +1863,27 @@ namespace Thermodynamics.Harness
             }
             lastTemperatures = result;
 
+            // The lumped masses read apart from the blocks. A ring that has run away shows in a
+            // block peak only through the links it is already overshooting on, and whether a
+            // refused demand approximates or diverges on the path that carries the heat is the
+            // whole question this sweep exists to ask.
+            IList<CoolantLoop> loops = simulation.Solver.Loops;
+            for (int l = 0; l < loops.Count; l++)
+            {
+                float hottest = loops[l].HottestSegment;
+                if (hottest > row.PeakCoupledTemperature) row.PeakCoupledTemperature = hottest;
+            }
+
+            IList<RoomAirNode> air = simulation.Solver.RoomAir;
+            for (int r = 0; r < air.Count; r++)
+            {
+                if (!air[r].HasAir) continue;
+                if (air[r].Temperature > row.PeakCoupledTemperature)
+                {
+                    row.PeakCoupledTemperature = air[r].Temperature;
+                }
+            }
+
             if (reference != null && reference.Length == count)
             {
                 double sumSquares = 0;
@@ -1832,6 +1911,7 @@ namespace Thermodynamics.Harness
               .Append("ms".PadLeft(10))
               .Append("x granted".PadLeft(11))
               .Append("peak K".PadLeft(10))
+              .Append("coupled K".PadLeft(12))
               .Append("peakErr".PadLeft(10))
               .Append("maxErr K".PadLeft(11))
               .Append("rmsErr K".PadLeft(11))
@@ -1849,7 +1929,11 @@ namespace Thermodynamics.Harness
                   .Append(rows[0].Speed.ToString("n0"))
                   .Append(" m/s, ")
                   .Append(rows[0].Nodes.ToString("n0"))
-                  .Append(" nodes\n");
+                  .Append(" nodes, ")
+                  .Append(rows[0].Fixture ?? CeilingFixtures.Census)
+                  .Append(rows[0].CoolantLoops > 0 ? ", " + rows[0].CoolantLoops + " rings" : "")
+                  .Append(rows[0].RoomsWithAir > 0 ? ", " + rows[0].RoomsWithAir + " rooms of air" : "")
+                  .Append('\n');
             }
 
             double baseline = rows.Count > 0 ? rows[0].Milliseconds : 0;
@@ -1865,6 +1949,8 @@ namespace Thermodynamics.Harness
                   .Append(row.Milliseconds.ToString("n0").PadLeft(10))
                   .Append((row.Milliseconds <= 0 ? "-" : (baseline / row.Milliseconds).ToString("n2") + "x").PadLeft(11))
                   .Append(row.PeakTemperature.ToString("n1").PadLeft(10))
+                  .Append((row.PeakCoupledTemperature > 0f
+                      ? row.PeakCoupledTemperature.ToString("n1") : "-").PadLeft(12))
                   .Append((i == 0 ? "-" : row.PeakError.ToString("n3")).PadLeft(10))
                   .Append((i == 0 ? "-" : row.MaxError.ToString("n4")).PadLeft(11))
                   .Append((i == 0 ? "-" : row.RmsError.ToString("n4")).PadLeft(11))

@@ -148,6 +148,94 @@ namespace Thermodynamics.Tests
             Assert.Empty(AirOf(simulation).Links);
         }
 
+        /// <summary>
+        /// **A sliver of air is the stiffest thing on a grid, and refusing its substeps approximates
+        /// rather than diverges.**
+        ///
+        /// <para>
+        /// Room air is the coolant loop's twin: one lumped mass carrying a link to every surface
+        /// bounding it, which is the shape the pairwise overshoot clamp cannot hold on its own — it
+        /// bounds each wall against the air and lets six walls together take six times the energy
+        /// that equalises the air between them. At 2 % pressure the capacity is a fiftieth and the
+        /// coupling is the whole 30 kW/K, so this is the case that makes it visible.
+        /// </para>
+        ///
+        /// <para>
+        /// Written with [backlog.md](../../docs/backlog.md) `A10`, which was the same defect on the
+        /// coolant path and was found there first. The bound is the per-node relaxation applied to
+        /// the coupled passes: with it a substep is a convex combination of the temperatures
+        /// pulling on a node, and cannot leave the range they span.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void RefusingTheAirsDemandApproximatesRatherThanDiverging()
+        {
+            // The rig starts 300 K apart, and nothing in it makes heat: a bounded integrator can
+            // only ever narrow that, whatever it is granted. The unclamped run is the control —
+            // without it, a clamp that had quietly stopped working would read as a pass.
+            float refused = AirSpreadAtCeiling(1, true);
+            float unclamped = AirSpreadAtCeiling(1, false);
+
+            Assert.True(refused <= 300f,
+                "the hull started 300 K apart with nothing making heat and reached " + refused
+                + " K apart, so a substep left the range the temperatures pulling on it span");
+
+            Assert.True(unclamped > 300f,
+                "the unclamped run stayed inside " + unclamped + " K, so this rig no longer"
+                + " over-subscribes the air and the clamped figure above is proving nothing");
+        }
+
+        /// <summary>
+        /// A hot shell around a thin, cold room, run for five simulated minutes at a chosen substep
+        /// ceiling. The answer is how far the air ended from the walls.
+        /// </summary>
+        private static float AirSpreadAtCeiling(int ceiling, bool clamp)
+        {
+            ThermalSettings settings = new ThermalSettings();
+            settings.Frequency = 1;                  // a one second step, so one substep is one h
+            settings.EnableEnvironment = false;
+            settings.EnableDamage = false;
+            settings.MaxSubsteps = ceiling;
+            settings.MaxSubstepsPerBlock = 0;
+            settings.MaxElementVisitsPerStep = 0;
+            settings.ClampConductionOvershoot = clamp;
+            settings.Derive();
+
+            GridBuilder builder = GridBuilder.Large();
+            builder.Shell(Catalog.LightArmor(), new Vector3I(-1, -1, -1), new Vector3I(2, 2, 2));
+
+            ThermalSimulation simulation = builder.BuildSimulation(settings, 600f);
+            simulation.SetRoomPressure(Interior, 0.02f);
+
+            // The walls hot and the air cold. Left alike there is nothing to exchange and the run
+            // reports zero however it was integrated, which is a green test measuring nothing.
+            RoomAirNode air = AirOf(simulation);
+            air.Temperature = 300f;
+
+            // The widest the hull ever got, rather than where it ended: a bounded run relaxes back
+            // to one temperature, so the end of it is the same number for every ceiling.
+            float widest = 0f;
+            IList<ThermalNode> nodes = simulation.Solver.Nodes;
+
+            for (int step = 0; step < 300; step++)
+            {
+                simulation.StepExact(1, Worlds.Shadow());
+
+                float hottest = air.Temperature;
+                float coldest = air.Temperature;
+
+                for (int i = 0; i < nodes.Count; i++)
+                {
+                    if (nodes[i].Temperature > hottest) hottest = nodes[i].Temperature;
+                    if (nodes[i].Temperature < coldest) coldest = nodes[i].Temperature;
+                }
+
+                if (hottest - coldest > widest) widest = hottest - coldest;
+            }
+
+            return widest;
+        }
+
         [Fact]
         public void DroppingPressureTakesTheLinksAwayAgain()
         {

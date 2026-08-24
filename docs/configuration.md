@@ -324,8 +324,13 @@ servers commonly run, p95 reaches 1.29× and no further.
 
 **What being refused does** is not the per-block floor below — `ApplyThermalMassFloor` returns
 immediately at the shipped `MaxSubstepsPerBlock` of zero. The step is integrated at the ceiling and
-the two overshoot clamps bound every exchange at the energy that brings a pair to equilibrium, so
-the result is damped rather than unstable.
+the overshoot clamps bound every exchange at the energy that brings a pair to equilibrium, and every
+node's exchanges together at the energy that equalises *it*, so the result is damped rather than
+unstable. **The second half of that was added on 2026-08-24 and it is what makes this paragraph true
+of a plumbed or pressurised ship** rather than of blocks alone: a coolant parcel and a room's air
+each carry a link to every surface they touch, and a pairwise bound cannot hold a mass with many
+links. See [stiffness.md](stiffness.md#what-refusing-the-demand-costs) for the three ladders and
+[backlog.md](backlog.md) `A10` for what it used to do.
 
 **What it costs is 0.028 K**, on the hottest block of a driven census hull over 600 simulated
 seconds in that same air, against a run granted everything it asked for; the worst-placed block is
@@ -603,7 +608,7 @@ will not move it much.
 | `MaxElementVisitsPerStep` | 2000000 | Most element visits one step may make — substeps times its links plus four times its nodes — before the step is shortened to fit. 0 removes the bound. **Moves with `Frequency`**: a step is spread across the frames of its window, so this figure and the step rate together set the per-frame cost. See below. |
 | `MaxSubstepsPerBlock` | 0 (off) | Most substeps any single block may demand of the whole grid before it is treated as heavier than it is. The cheapest large win there is on a real ship. See below. |
 | `MaxSubsteps` | 64 | Most substeps one step may be cut into, whatever the grid asks for. A grid refused here integrates a step too long for its stiffest block, and the overshoot clamps carry the difference. **It binds in thick air at flying speed** — see [The one approximation that ships on](#the-one-approximation-that-ships-on). |
-| `ClampConductionOvershoot` | `true` | Caps each exchange at the energy that equalises the pair. Off reproduces the original unbounded solver. Skipped, at no change to the result, on any step short enough that no element can overshoot — see [benchmarks.md](benchmarks.md#the-overshoot-clamp-ab). |
+| `ClampConductionOvershoot` | `true` | Caps each exchange at the energy that equalises the pair, and every exchange arriving at one node, one parcel of coolant or one room's air at the energy that equalises that. Off reproduces the original unbounded solver. Skipped, at no change to the result, on any step short enough that no element can overshoot — see [benchmarks.md](benchmarks.md#the-overshoot-clamp-ab). |
 | `ClampEnvironmentOvershoot` | `true` | The same for radiation and convection: neither may carry a block past ambient in one substep. This is what bounds a step that is deliberately far too long. |
 | `DamageIsPerSecond` | `true` | Overheat damage per second of simulated time. Off applies it per step, which makes damage scale with `Frequency`. |
 
@@ -1113,6 +1118,7 @@ one with a migration risk — is late rather than first.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-24 | Corrected [The one approximation that ships on](#the-one-approximation-that-ships-on), which described what a refused step costs in terms that were true of blocks and not of a plumbed or pressurised ship, and `ClampConductionOvershoot`'s row, which described half of what the clamp now does. Both are the same fix: an exchange is bounded pairwise *and* every exchange arriving at one node, parcel or room is bounded together ([backlog.md](backlog.md) `A10`). |
 | 2026-08-24 | Added [Every mechanism, and the rungs it has](#every-mechanism-and-the-rungs-it-has), the inventory `C15` asks for: what each feature's ladder is today and whether a cheaper rung is known to be possible. Nine mechanisms have two rungs and only two of those are gaps. **Wired `WellMixedCoolant` into a world's configuration**, which it had never been: the solver read it, the suite exercised it and two pages called it a choice a world makes, with no field in `Settings.cs` and no line in `Apply`. |
 | 2026-08-24 | Added [The one approximation that ships on](#the-one-approximation-that-ships-on). The global substep ceiling binds on about a fifth of a real population in thick air at flying speed, which no page said out loud, and it stays at 64 because refusing 1.15× of the demand buys 1.15× of the step for 0.028 K — the trade `P14` exists to take. Recorded why the per-block cap is a switch and this one is not: 0.607 K against 0.028 K ([backlog.md](backlog.md) `C19`). |
 | 2026-08-24 | Recorded that `RoomConvectionCoefficient` carries no pressure term, so a room's pressure decides whether its walls are coupled and, above zero, nothing else ([backlog.md](backlog.md) `F21`). |

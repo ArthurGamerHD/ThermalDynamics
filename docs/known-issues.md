@@ -44,18 +44,26 @@ Closing it properly means the harness modelling destruction — removing the nod
 graph, and stopping the source — which is a solver-wide change to answer a question the censored
 reading already answers.
 
-**A refused substep demand is an approximation on a block and a divergence on a coolant loop.** The
-two overshoot clamps bound every conduction and environment exchange at the energy that brings a
-pair to equilibrium; the coolant path has no equivalent, and on a hull carrying nothing stiffer it
-is what sets the substep demand. Measured at the shipped `Frequency` and clock: a reactor with nine plain blocks
-demands **one** substep and is unmoved by any ceiling, and the same nine plumbed as a ring demand
-**nine** — refused to 4.5× the ring spreads 28.7 K against 21.9 K granted in full, and at 9× it
-reaches **1.7 × 10¹¹ K**. Nothing shipped reaches it: 64 granted against a demand of nine, and a
-loop would have to ask for nearly three hundred. `MaxSubsteps` is a documented setting, so this is
-recorded rather than assumed away, and the section below describes what a refused step costs in
-terms that are true of blocks and not of loops. `RefusingTheRingsDemandIsBoundedUntilItIsNotBounded`
-pins the boundary and is written so that a clamp arriving on this path fails it.
-[backlog.md](backlog.md) `A10`.
+**A refused substep demand is an approximation on every path now, and on two of them it was a
+divergence.** Fixed 2026-08-24, and it was [backlog.md](backlog.md) `A10`. The pairwise overshoot
+clamp bounds one exchange at the energy that brings *that pair* to equilibrium, which is the whole
+bound a block needs and half the bound a lumped mass needs: a coolant parcel carries a link to every
+pipe on it and a room's air a link to every surface bounding it, so their links together could take
+several times the energy that equalises them. The other end had the same shape — a pipe with a sink
+face is a node pulled on by the parcel and by everything it is bolted to. Each bound held and the
+node went past both. Measured on the fixture where the plumbing sets the demand, at 9.7× over-
+subscribed with the ring mixing: **1.3 × 10²⁵ K before, 1,799 K after**, against 335 K granted in
+full. The room path was the same defect and never had a test on it: a thin room refused one substep
+of thirty reached **3,839 K** of spread on a hull that started 300 K apart with nothing making heat.
+
+The fix is the per-node relaxation the conduction pass already used, applied to the coupled passes
+too — every exchange at a node scaled so their sum cannot exceed the energy that equalises it, which
+makes a substep a convex combination of the temperatures pulling on that node and so unable to leave
+the range they span. It is inert while the demand is granted, which is every step on every grid this
+mod ships to except the ones over `MaxSubsteps`, and the block ladder below is unmoved by it to
+three decimal places. `RefusingTheRingsDemandApproximatesRatherThanDiverging`,
+`NoNodeIsDrivenPastTheHottestThingPullingOnIt`, `RefusingTheAirsDemandApproximatesRatherThanDiverging`
+and `TheClampIsInertWhileTheDemandIsGranted` pin the four halves of that.
 
 **The global substep ceiling binds in thick air at flying speed, and that is the one approximation
 the defaults ship on.** `MaxSubsteps` grants 64. In vacuum a 49-ship panel of real hulls asks 7.1 at
@@ -994,6 +1002,7 @@ counters rather than milliseconds so it holds on any machine.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-24 | **Bounded the two coupled paths, which closes `A10`.** The pairwise overshoot clamp is the whole bound a block needs and half the bound a lumped mass needs: a parcel carries a link to every pipe on it and a room's air one to every surface bounding it, and the node on the other end of a sink face is pulled on by the fluid and by everything it is bolted to. Each bound held and the node went past both. The per-node relaxation the conduction pass already used now applies to the coupled passes too, which makes every substep a convex combination of the temperatures around a node. Measured where the plumbing sets the demand: **1.3e25 K before, 1,799 K after** at 9.7× over-subscribed, and a thin room refused one substep of thirty went from 3,839 K of spread to inside the 300 K it started at. Inert while the demand is granted — the block ladder is unchanged to three decimals — and `bench ceiling --fixture rings|pressurised` is what draws the other two ladders. |
 | 2026-08-24 | **The coolant path has no overshoot clamp** ([backlog.md](backlog.md) `A10`), so a refused substep demand approximates on a block and diverges on a loop — and on a hull carrying nothing stiffer the loop is what sets the demand, nine substeps where the same nine blocks unplumbed ask for one. Orderly to 4.5× over-subscribed, 1.7e11 K at 9×, and nothing shipped reaches it. Found by attempting `C24`, whose clock change put a test fixture's deliberately-refused ring past the cliff. |
 | 2026-08-24 | **The clock is in the sweep, and the mechanism the sweep had been naming turned out not to exist** ([backlog.md](backlog.md) `F23`). Simulated time is counted in simulation ticks, so a machine below 1.0 sim speed has a thermal clock that runs slow: a 10 % error settles 18.69 K out under a moving load and 0.00 K under a steady one, because two hulls heading to the same equilibrium at different speeds agree once they arrive. `hitching` is the same deficit in lumps — at an equal deficit it peaks 206.0 K against a slope's 39.7 K and settles within a fifth of it — and the backlog drop written beside it for months was `SimulationScheduler.StepsDue`, a second step-credit accumulator no shipped path called. Removed, with the step-rate tests moved onto `ThermalSimulation.Update`. Also added `missing source`, the one input that comes from outside this mod: 0.73 K standing for a registration worth a tenth of the sun. |
 | 2026-08-24 | **Topology is in the sweep, and it is the half that changes which numbers exist** ([backlog.md](backlog.md) `F22`). `build order` gives the client the same blocks in a different arrival order and reads 1.2e-4 K, which is float summation order rather than physics — and the same packet applied by index rather than by position leaves 492.0 K, which is what the codec's eight-byte key is buying, measured rather than asserted. `blocks missing` takes a tenth of the hull away: the loudest row in the sweep at 1,151.7 K, most of it the *arrival* rather than the absence, decaying to 0.08 K — and its bound is a bias at 380.5 K in vacuum and 740.7 K flying, the worst input measured anywhere here. The correction narrows what a partial hull misreads and cannot touch the 223 blocks that are absent. The comparison itself moved to block position from node index, which is a no-op on two hulls built alike and the only comparison that means anything on two that are not. |

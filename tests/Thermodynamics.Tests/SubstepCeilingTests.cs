@@ -114,6 +114,61 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// **The same ladder on the hull where the plumbing sets the demand**, which is the one
+        /// the block ladder above cannot answer for.
+        ///
+        /// <para>
+        /// Every figure in [stiffness.md](../../docs/stiffness.md#what-refusing-the-demand-costs)
+        /// was a block figure for as long as the page existed, and blocks are the one element whose
+        /// exchanges are all pairwise. A coolant parcel is one mass carrying a link to every pipe
+        /// on it and a pipe with a sink face is a node carrying a link to the parcel and to
+        /// everything it is bolted to, so a refused step there used to leave the range the
+        /// temperatures around a node span — 1.3e25 K on this fixture, against 1,799 K now.
+        /// That was [backlog.md](../../docs/backlog.md) `A10`.
+        /// </para>
+        ///
+        /// <para>
+        /// Run at a flow of 64 parcels a second because that is the regime it came apart in: above
+        /// one parcel a substep the ring stops carrying and starts mixing, which puts every link in
+        /// the ring on the parcel a sink face is already saturating.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheRingsLadderIsAnApproximationRatherThanACliff()
+        {
+            List<LoadBenchmarks.CeilingRow> rows = LoadBenchmarks.SubstepCeiling(
+                "ship", 20, 300, null, null, false, 1, 0f, 1f,
+                LoadBenchmarks.CeilingFixtures.Rings, 64f);
+
+            LoadBenchmarks.CeilingRow granted = rows[0];
+
+            Assert.False(granted.Bound, "the reference run was itself capped");
+            Assert.True(granted.CoolantLoops > 0,
+                "the fixture built no ring, so this is a ladder about blocks (`E8`)");
+            Assert.True(granted.RequiredSubsteps > 8f,
+                "the fixture demands " + granted.RequiredSubsteps + " substeps, too few for a"
+                + " ceiling sweep to reach the band this is about");
+
+            for (int i = 1; i < rows.Count; i++)
+            {
+                LoadBenchmarks.CeilingRow row = rows[i];
+
+                // Bounded by the run that got what it asked for, with room for the approximation
+                // to be a bad one. What this refuses is the other kind of number: the same rung
+                // read 1.3e25 K before the coupled passes took the per-node relaxation.
+                Assert.True(row.PeakTemperature < granted.PeakTemperature * 10f,
+                    "at " + row.Oversubscription + "x the hottest block reached "
+                    + row.PeakTemperature + " K against " + granted.PeakTemperature
+                    + " K granted in full, which is a divergence rather than an approximation");
+
+                Assert.True(row.PeakCoupledTemperature < granted.PeakTemperature * 10f,
+                    "at " + row.Oversubscription + "x the hottest parcel reached "
+                    + row.PeakCoupledTemperature + " K against a hull granted its demand at "
+                    + granted.PeakTemperature + " K");
+            }
+        }
+
+        /// <summary>
         /// **The error is a function of the ratio, not of the count** — the claim that lets a rig
         /// demanding 36 answer for a population demanding 73.
         ///

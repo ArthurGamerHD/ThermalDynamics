@@ -1638,6 +1638,20 @@ namespace Thermodynamics.Core
                 if (h * linkConductance[i] >= ClampBindingMargin * linkMassFactor[i]) return true;
             }
 
+            // The two lumped masses, on their own terms. A node's total covers the links a loop or
+            // a room hangs on it, and says nothing about whether the fluid or the air on the other
+            // end of them can be overshot: a parcel is one mass carrying every link on it.
+            for (int l = 0; l < loops.Count; l++)
+            {
+                if (h * SegmentConductance(l) >= ClampBindingMargin * EffectiveLoopMass(l)) return true;
+            }
+
+            for (int r = 0; r < roomAir.Count; r++)
+            {
+                if (!roomAir[r].HasAir) continue;
+                if (h * RoomConductance(r) >= ClampBindingMargin * EffectiveRoomMass(r)) return true;
+            }
+
             return false;
         }
 
@@ -2289,7 +2303,9 @@ namespace Thermodynamics.Core
         {
             if (!settings.EnableCoolantLoops) return;
 
-            bool clamp = settings.ClampConductionOvershoot;
+            // The live flag rather than the setting: it is what says the per-node relaxation row
+            // was filled this step, and a step that cannot overshoot has nothing to clamp.
+            bool clamp = ConductionClampLive;
 
             for (int l = 0; l < loops.Count; l++)
             {
@@ -2355,8 +2371,14 @@ namespace Thermodynamics.Core
                             loop.SegmentThermalMass,
                             nodeThermalMass[link.NodeIndex]);
 
-                        // Then the ring's own limit, which the pairwise bound cannot see.
-                        exchange *= relaxation;
+                        // Then the stricter of the two ends' own limits, which no pairwise bound can
+                        // see: the ring's, so one parcel's links cannot together overshoot it, and
+                        // the block's, so a sink face and the neighbours it is bolted to cannot.
+                        // Applied to one exchange, so what leaves the parcel still enters the block.
+                        // stiffness.md, What refusing the demand costs.
+                        float scale = relaxation;
+                        if (nodeRelaxation[link.NodeIndex] < scale) scale = nodeRelaxation[link.NodeIndex];
+                        if (scale < 1f) exchange *= scale;
                     }
 
                     nodeWatts[link.NodeIndex] += exchange;
@@ -2382,7 +2404,8 @@ namespace Thermodynamics.Core
         {
             if (!settings.EnableRoomAir) return;
 
-            bool clamp = settings.ClampConductionOvershoot;
+            // As in AccumulateLoops: the live flag is what says the relaxation row exists.
+            bool clamp = ConductionClampLive;
             bool diagnostics = CollectDiagnostics;
 
             if (diagnostics)
@@ -2400,6 +2423,21 @@ namespace Thermodynamics.Core
 
                 float airTemperature = air.Temperature;
 
+                // The air's own limit, in the shape a parcel of coolant takes it: what every
+                // surface bounding the room pulls, together, against the capacity of the air
+                // between them.
+                float roomRelaxation = 1f;
+                if (clamp && h > 0f)
+                {
+                    float mass = EffectiveRoomMass(r);
+                    float total = RoomConductance(r);
+                    if (mass > 0f && total > 0f)
+                    {
+                        float stable = mass / (h * total);
+                        if (stable < 1f) roomRelaxation = stable;
+                    }
+                }
+
                 for (int i = 0; i < air.Links.Count; i++)
                 {
                     RoomLink link = air.Links[i];
@@ -2414,6 +2452,13 @@ namespace Thermodynamics.Core
                             watts, h, difference,
                             air.ThermalMass,
                             nodeThermalMass[link.NodeIndex]);
+
+                        // The same two limits the ring takes: a room's air touches every surface
+                        // bounding it, so its links are the many-to-one shape the pairwise bound
+                        // cannot hold, and so are a bulkhead's.
+                        float scale = roomRelaxation;
+                        if (nodeRelaxation[link.NodeIndex] < scale) scale = nodeRelaxation[link.NodeIndex];
+                        if (scale < 1f) watts *= scale;
                     }
 
                     nodeWatts[link.NodeIndex] += watts;

@@ -341,6 +341,7 @@ dotnet run --project Thermodynamics.Sim -- bench hitch --size 125000   # per-tic
 dotnet run --project Thermodynamics.Sim -- bench load  --size 1000000  # world load, before the first tick
 dotnet run --project Thermodynamics.Sim -- bench floor --size 42000    # what a per-block substep cap buys, and costs
 dotnet run --project Thermodynamics.Sim -- bench ceiling --size 4000    # what refusing a substep demand costs, in air
+dotnet run --project Thermodynamics.Sim -- bench ceiling --fixture rings # the same, where the plumbing sets the demand
 dotnet run --project Thermodynamics.Sim -- bench parallel --size 600    # one grid per thread: does a fleet pay for it
 dotnet run --project Thermodynamics.Sim -- bench surface                # what a selective surface on the radiator is worth
 dotnet run --project Thermodynamics.Sim -- bench stagger --size 600     # whole steps against spread ones: what locality costs

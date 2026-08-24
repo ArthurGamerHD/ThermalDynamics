@@ -221,18 +221,49 @@ for:
 | 8 | 4.31× | 2.48× | 0.185 K | 12.012 K | 0.269 K |
 | 4 | 8.61× | 4.49× | 2.062 K | 325.232 K | 25.719 K |
 
-**And every figure in that table is a *block* figure.** The ladder is gentle because the two
-overshoot clamps bound each exchange at the energy that brings a pair to equilibrium. **The coolant
-path has no such clamp**, and on a hull carrying nothing stiffer it is what sets the demand:
-measured at the shipped `Frequency` and clock, a reactor with nine plain blocks demands **one**
-substep and is unmoved by any ceiling, and the same nine plumbed as a ring demand **nine**. On a
-census hull it is not the stiffest thing — light fittings set 23 substeps with the ring or without
-it, which is [tests/README.md](../tests/README.md)'s measurement — so this is a claim about a hull
-with a loop and little else. Refusing that is
-orderly to about 4.5× — 21.9 K of ring spread against 28.7 K — and at 9× the ring reaches
-**1.7 × 10¹¹ K**. So a refused block approximates and a refused loop diverges, and the ladder above
-should not be read as describing a plumbed grid. Nothing shipped reaches it — 64 granted against a
-demand of nine — and it is [backlog.md](backlog.md) `A10`.
+**Every figure in that table is a *block* figure, and blocks are the one element whose exchanges
+are all pairwise.** The ladder is gentle because the overshoot clamps bound each exchange at the
+energy that brings a pair to equilibrium — and a pairwise bound is the whole bound a block needs and
+half the bound a lumped mass needs. A coolant parcel carries a link to every pipe on it and a room's
+air a link to every surface bounding it, so their links together could take several times the energy
+that equalises them; the node on the other end of a sink face is pulled on by the fluid *and* by
+everything it is bolted to. Each bound held, and the node went past both. That was
+[backlog.md](backlog.md) `A10`, and until it was fixed a refused step approximated on a block and
+diverged on the two paths that carry heat in bulk.
+
+**The other two ladders, measured.** `bench ceiling --fixture rings` builds the hull where the
+plumbing sets the demand — a reactor under a ring's sink face, which asks nine substeps where the
+same blocks unplumbed ask one — and runs it at 64 parcels a second, the regime where a ring stops
+carrying and starts mixing. Two rings, 300 simulated seconds at `Frequency` 1, hottest block:
+
+| granted | over-subscribed | before the fix | after |
+| ---: | ---: | ---: | ---: |
+| 39 (its demand) | — | 335.2 K | 335.2 K |
+| 34 | 1.15× | 335.2 K | 335.2 K |
+| 26 | 1.50× | 335.2 K | 335.2 K |
+| 19 | 2.05× | 335.2 K | 335.2 K |
+| 13 | 3.00× | 721.2 K | 636.6 K |
+| 9 | 4.33× | 1,434.2 K | 888.0 K |
+| 4 | 9.74× | **1.3 × 10²⁵ K** | 1,799.0 K |
+
+Room air is the same defect and had never had a measurement on it: a thin compartment at 2 %
+pressure, walls hot and air cold, refused one substep of the thirty it asks for, reached **3,839 K**
+of spread on a hull that started 300 K apart with nothing in it making heat. After the fix it stays
+inside the 300 K it started at, which is the whole of what a bounded integrator promises.
+
+**What bounds them is the per-node relaxation the conduction pass already used.** Every exchange at
+a node is scaled so that the ones arriving together cannot exceed the energy that equalises it, which
+makes the substep a convex combination of the temperatures pulling on that node — and a convex
+combination cannot leave the range they span, whatever the substep length is. The same factor is
+taken on the parcel and on the room, and one exchange takes the stricter of the two ends, so what
+leaves the fluid still enters the block. **It is inert while the demand is granted**: the factor is
+`mass / (h × conductance)` held at one and the substep estimate is that same ratio with the safety
+factor in it, so a granted step is one where every factor is one by construction. The block table
+above is unchanged by it to three decimal places, which is the check that says so.
+
+**Nothing shipped ever reached the cliff** — 64 substeps granted against a plumbed hull's nine — so
+this is a bound the defaults did not need and a world that lowers `MaxSubsteps` or raises
+`Frequency` did.
 
 **Three things to read out of it.**
 
@@ -851,6 +882,7 @@ conductivity 50 is conduction-stiff, and a material definition would fix them ou
 
 | Date | Change |
 | --- | --- |
+| 2026-08-24 | **Bounded the coupled paths and measured their ladders**, which closes [backlog.md](backlog.md) `A10`. The pairwise clamp is half the bound a lumped mass needs — a parcel carries a link to every pipe on it, a room's air one to every surface, and the node on the other end of a sink face is pulled on by both the fluid and its neighbours. The per-node relaxation now applies to both coupled passes, which makes a substep a convex combination of the temperatures around a node. On the fixture where the plumbing sets the demand, 9.7× over-subscribed: **1.3e25 K before, 1,799 K after**; a thin room refused one substep of thirty went from 3,839 K of spread to inside the 300 K it started at. The block ladder is unmoved to three decimals. `bench ceiling` grew `--fixture census|plumbed|pressurised|rings`, because the ladder had been a block ladder for as long as it had existed and said so nowhere. |
 | 2026-08-24 | Recorded that the refusal ladder is a *block* ladder. The coolant path has no overshoot clamp and on a hull carrying nothing stiffer is what sets the demand, so refusing it is orderly to about 4.5× and reaches 1.7e11 K at 9× — a cliff where the block path has a slope ([backlog.md](backlog.md) `A10`). |
 | 2026-08-23 | **Measured the per-block cap in air, which is where it has most to reach** ([backlog.md](backlog.md) `C3`, `C19`). Demand is 34.44 there against 22.97 in vacuum, a cap of 6 reaches 6.6 % of blocks against 3.4 %, and it buys **4.2×** for 0.607 K on the worst-placed block and 0.007 K on the hottest. Also corrected two columns that were vacuum figures in an air run: the demand and the floored count are read after a step now, and the count comes from the solver rather than from a conduction-only sum that could not see convection. |
 | 2026-08-23 | **Measured what the *global* ceiling costs when it refuses a demand**, which nothing had — the page had a floor sweep and no ceiling sweep, and [backlog.md](backlog.md) `C19` was answering the question by naming the floor, which ships off. Added [What refusing the demand costs](#what-refusing-the-demand-costs) and `bench ceiling`: free to about 2× over-subscribed, breaking between 2× and 3×, and the shipped breach of 1.15× worth 0.028 K on the hottest block over 600 simulated seconds. The error follows the ratio rather than the substep count, measured at two step lengths, which is what lets a rig answer for a population. |

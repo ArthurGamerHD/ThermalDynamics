@@ -503,16 +503,26 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// **On a hull carrying nothing stiffer the ring sets the substep demand, and it is the one path a refused
-        /// step does not approximate but diverges.**
+        /// **On a hull carrying nothing stiffer the ring sets the substep demand, and refusing it
+        /// approximates rather than diverges.**
         ///
         /// <para>
-        /// Conduction and the environment each have an overshoot clamp — `ClampConductionOvershoot`
-        /// and `ClampEnvironmentOvershoot`, both on by default — which bound every exchange at the
-        /// energy that brings a pair to equilibrium, so a step integrated at the substep ceiling is
-        /// damped rather than unstable. That is what makes the shipped breach `C19` measured worth
-        /// 0.028 K instead of a number. **There is no clamp on the coolant path**, so what is an
-        /// approximation everywhere else is an explicit-Euler divergence here.
+        /// It did diverge, and that was [backlog.md](../../docs/backlog.md) `A10`. Conduction and
+        /// the environment each have an overshoot clamp — `ClampConductionOvershoot` and
+        /// `ClampEnvironmentOvershoot`, both on by default — which is what makes the shipped breach
+        /// `C19` measured worth 0.028 K instead of a number. The coolant path had the pairwise half
+        /// of that clamp and the ring's own limit, and neither can see the *block* on the other end
+        /// of a sink face: a pipe bolted to a reactor takes the energy that equalises it from the
+        /// parcel and the energy that equalises it from every neighbour it is bolted to, in the
+        /// same substep. Two bounds that each hold on their own, and a node past both of them.
+        /// </para>
+        ///
+        /// <para>
+        /// The fix is the per-node relaxation the conduction pass already used, applied to the
+        /// coupled paths as well, which makes every node's substep a convex combination of the
+        /// temperatures pulling on it — so a node cannot be driven past the hottest of them
+        /// whatever the substep length is. It costs nothing while the demand is granted, which is
+        /// what `TheClampIsInertWhileTheDemandIsGranted` pins.
         /// </para>
         ///
         /// <para>
@@ -520,21 +530,13 @@ namespace Thermodynamics.Tests
         /// demand **one** substep and are unmoved by any cap; with a nine-pipe ring they demand
         /// **nine**, so on a hull carrying nothing stiffer the loop is what sets the demand. On a
         /// census hull it is not — light fittings set 23 either way, which `tests/README.md`
-        /// measures — so this is a claim about a hull with a loop and little else. Refusing that demand is orderly to about 4.5× — 21.9 K of spread against
-        /// 28.7 K — and at 9× the ring reaches 1.7e11 K. So the bound is somewhere between them,
-        /// and it is a cliff rather than the gentle ladder the block path has.
-        /// </para>
-        ///
-        /// <para>
-        /// **Nothing shipped reaches it**: `MaxSubsteps` grants 64 against this ring's nine, and a
-        /// loop would have to demand nearly three hundred. `MaxSubsteps` is a documented setting
-        /// though, so a world that lowers it is choosing something with a different shape from what
-        /// [configuration.md](../../docs/configuration.md) says a refused step costs. Recorded as
-        /// [backlog.md](../../docs/backlog.md) `A10`.
+        /// measures — so this is a claim about a hull with a loop and little else. The ladder is in
+        /// [stiffness.md](../../docs/stiffness.md), What refusing the demand costs, and
+        /// `bench ceiling --fixture rings` is what draws it.
         /// </para>
         /// </summary>
         [Fact]
-        public void RefusingTheRingsDemandIsBoundedUntilItIsNotBounded()
+        public void RefusingTheRingsDemandApproximatesRatherThanDiverging()
         {
             float bare = DemandOfTheHullWithoutItsRing();
             float withRing = DemandOfTheHeatedRing(4096);
@@ -554,16 +556,91 @@ namespace Thermodynamics.Tests
                 "granting two substeps of nine left the ring at " + halved + " K against "
                 + granted + " K granted in full, which is not the approximation this pins");
 
-            // And past it, a divergence rather than an approximation. Pinned as the limit it is:
-            // if a clamp ever bounds this path, this assertion is what says so.
-            Assert.True(refused > 1e6f,
-                "granting one substep of nine left the ring at " + refused + " K; if that is now"
-                + " bounded, the coolant path has gained a clamp and A10 is closed");
+            // And past it, still an approximation. This is the assertion A10 was open on: it read
+            // `refused > 1e6f` and it was measuring 1.7e11 K.
+            Assert.True(refused < granted * 4f,
+                "granting one substep of nine left the ring at " + refused + " K against "
+                + granted + " K granted in full; the coolant path has lost its bound and A10 is"
+                + " open again");
 
-            // The shipped ceiling is far above what this ring asks for, which is why nothing
-            // shipped reaches the cliff.
-            Assert.True(new ThermalSettings().MaxSubsteps > withRing * 4.5f,
-                "the shipped substep ceiling is inside the band where a refused ring diverges");
+            // Refusing more of the demand must cost more, not less. A bound that holds at nine
+            // times over-subscribed and not at four is a cliff somebody has to find by falling off
+            // it.
+            Assert.True(refused >= halved * 0.99f,
+                "one substep of nine left the ring at " + refused + " K and two left it at "
+                + halved + " K, so the error is not monotone in what was refused");
+        }
+
+        /// <summary>
+        /// **The clamp changes nothing while the step is granted the substeps it asked for**, which
+        /// is every step on every grid this mod ships to except the ones over `MaxSubsteps`.
+        ///
+        /// The per-node relaxation is a factor of `mass / (h * conductance)` held at one, and the
+        /// substep estimate is that same ratio with the safety factor in it — so a granted step is
+        /// a step where every factor is one by construction. Asserted rather than reasoned, because
+        /// the reasoning is what a rounding difference in either formula would falsify: a ring
+        /// stepped at its demand reads the same temperature to seven figures whichever way the
+        /// clamp is set.
+        /// </summary>
+        [Fact]
+        public void TheClampIsInertWhileTheDemandIsGranted()
+        {
+            float clamped = SpreadAcrossAHeatedRing(1f, 4096);
+
+            ThermalSimulation unclamped = HeatedRing(1f, 4096);
+            unclamped.Settings.ClampConductionOvershoot = false;
+            unclamped.StepExact(300, Worlds.Shadow());
+
+            CoolantLoop loop = unclamped.Solver.Loops[0];
+            float bare = loop.HottestSegment - loop.ColdestSegment;
+
+            Assert.Equal(bare, clamped, 5);
+        }
+
+        /// <summary>
+        /// **A node cannot be driven past the hottest thing pulling on it**, however short of
+        /// substeps the step is.
+        ///
+        /// This is the property the per-node relaxation buys and the reason it is the right shape
+        /// of fix rather than a larger constant somewhere: with every exchange at a node scaled so
+        /// their sum cannot exceed the energy that equalises it, the substep is a convex
+        /// combination of the temperatures around that node, and a convex combination of numbers
+        /// bounded by the hottest of them. The ring is what makes the test hard — a parcel is one
+        /// mass carrying a link to every pipe on it, and a pipe with a sink face is a node carrying
+        /// a link to the parcel and to everything it is bolted to.
+        /// </summary>
+        [Fact]
+        public void NoNodeIsDrivenPastTheHottestThingPullingOnIt()
+        {
+            // One substep of the nine the ring asks for, and the reactor left running the whole
+            // time: the case that used to reach 1.7e11 K.
+            ThermalSimulation simulation = HeatedRing(64f, 1);
+
+            float hottest = 0f;
+            IList<ThermalNode> nodes = simulation.Solver.Nodes;
+
+            for (int step = 0; step < 600; step++)
+            {
+                simulation.StepExact(1, Worlds.Shadow());
+
+                for (int i = 0; i < nodes.Count; i++)
+                {
+                    if (nodes[i].Temperature > hottest) hottest = nodes[i].Temperature;
+                }
+            }
+
+            // The reactor is the only source, and what bounds the grid is where the reactor
+            // settles rather than any figure chosen here. Nothing may run away from it.
+            float reactor = 0f;
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                if (nodes[i].Block.PowerProducedWatts <= 0f) continue;
+                if (nodes[i].Temperature > reactor) reactor = nodes[i].Temperature;
+            }
+
+            Assert.True(hottest <= reactor * 1.05f,
+                "the hottest node reached " + hottest + " K against the reactor's " + reactor
+                + " K, so something was driven past the only thing making heat");
         }
 
         /// <summary>The substeps the heated ring asks for, at a chosen ceiling.</summary>
