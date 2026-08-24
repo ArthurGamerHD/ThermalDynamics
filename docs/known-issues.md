@@ -300,7 +300,9 @@ their figures are below, on the `burn` scenario that is theirs:
 | compartments a fifth emptier | 1.9 K | 0.90 K | 4 → 3 blocks | the game's gas system answering differently, which is worth almost nothing until it reaches zero |
 | block power 5 % out | 38.0 K | **24.40 K** | 166 → 62 blocks | whatever the game's own block replication rounds |
 | block power 2 s late | 245.5 K | **30.05 K** | 397 → 399 blocks | a throttle change reaching the client late |
-| drops its backlog every 30 s | 233.9 K | **49.68 K** | 395 → 397 blocks | `SimulationScheduler.StepsDue` drops rather than catches up |
+| loses 5 s of every 30 | 233.9 K | **49.68 K** | 395 → 397 blocks | a machine running fewer simulation ticks, and simulated time is counted in ticks |
+| its clock runs 10 % slow | 25.6 K | **18.69 K** | 120 → 54 blocks | sim speed below 1.0 on one machine and not the other — every input right, and elsewhere on the same curve |
+| a heat source it never heard about | 1.1 K | 0.73 K | 7 → 4 blocks | another mod's API registration, which nothing replicates |
 | shade for 3 s of every 30 | 16.4 K | 3.52 K | 12 → 11 blocks | its own raycast on its own budget; wrong by the whole solar term while it lasts |
 | block masses 20 % out | 43.2 K | **32.11 K** | 184 → 86 blocks | `SweepMass` is a rota on both machines, and mass is heat capacity |
 | never got the settings | 160.0 K | **120.30 K** | 625 → 273 blocks | a fetch that never landed; other physics entirely |
@@ -308,7 +310,7 @@ their figures are below, on the `burn` scenario that is theirs:
 | same blocks, different order | 0.0 K | 0.00 K | 0 → 0 blocks | two machines do not build a grid in the same order, and the packet is keyed on position rather than index |
 | a tenth of the hull missing for 60 s | **1,151.7 K** | 0.08 K | 1,078 → 656 blocks, 223 absent | a paste still streaming, or a subgrid that has not attached; it is a different ship, not a worse reading of this one |
 | a tenth of producers off | 385.0 K | **245.87 K** | 333 → 169 blocks | a switch on the wrong side, which is wrong by *all* of that block's heat |
-| all of it at once | 1,154.8 K | **215.86 K** | 1,246 → 693 blocks | the union of the rows above, computed not written |
+| all of it at once | 1,154.9 K | **214.76 K** | 1,248 → 670 blocks | the union of the rows above, computed not written |
 
 The sweep reports one more column than the table above: **absent**, the most blocks the server had
 that the client did not. Only the topology row has a number in it, and that is what the row is —
@@ -328,7 +330,7 @@ input settles where the input puts it and stays there. So the convergence argume
 defect look cosmetic covers exactly one of these rows, and it is the one that was measured first.
 
 **The correction narrows a bias without removing it.** Against the combined case it takes the
-standing error from 215.9 K to 148.6 K and cuts how much of the hull is misread, 1,246 blocks to 693 —
+standing error from 214.8 K to 142.6 K and cuts how much of the hull is misread, 1,248 blocks to 670 —
 but the client's inputs are still wrong, so it re-diverges between updates. Against a bias the
 interval is the lever and five seconds is not enough; against a perturbation the join packet is the
 whole answer, 85 s to 5 s.
@@ -355,8 +357,8 @@ each — and the shape is what decides the protocol.
 
 The simulation reads its state from three places: an `EnvironmentSample` the client builds itself
 from the world around it, block state the adapter reads off the game's own blocks, and the room map
-it floods locally. Enumerated against the code rather than remembered, **the sweep covers sixteen
-inputs and leaves five**:
+it floods locally. Enumerated against the code rather than remembered, **the sweep covers eighteen
+inputs and leaves three**:
 
 | input | read from | covered | |
 | --- | --- | --- | --- |
@@ -379,12 +381,13 @@ inputs and leaves five**:
 | **the room map itself** | a local flood fill | yes | `room map lag` — publishes atomically, so a client mid-pass holds no interior at all; `D2` measures the pass at 7,207 ticks on a million blocks |
 | **topology and subgrid attach** | block add and remove | yes | `build order`, `blocks missing` — placement order changes the index space and nothing else, and a missing block changes the conduction graph rather than a value in it |
 | **coolant loop identity** | loop signatures over topology | yes | `CoolantLoopTests` — the signature is an order-independent hash of the ring, so build order cannot move it and one pipe more is a different loop |
-| **registered heat sources** | the mod API | **no** | another mod's registrations need not reach a client |
-| **simulation speed** | the host's own clock | **no** | a server below 1.0 while a client is not, which is a *rate* difference rather than the dropped backlog `hitching` models |
+| **registered heat sources** | the mod API | yes | `missing source` — a registry another mod writes into, with no replication behind it, so a client can be beside a furnace it does not know exists |
+| **simulation speed** | the host's own tick rate | yes | `slow clock` — the mod counts simulated time in *simulation ticks*, so a machine running fewer of them has a thermal clock that runs slow; `hitching` is the same deficit in lumps |
 
-The row that is still open is tracked as [backlog.md](backlog.md) `F23`. It does not
-change the protocol — the correction overwrites state and so does not care which input produced the
-disagreement — and each of them changes how much correcting there is to do.
+The three rows still open are the environment ones, tracked as [backlog.md](backlog.md) `F19`: a
+ship's position, the weather, and the ten wind fields. None of them changes the protocol — the
+correction overwrites state and so does not care which input produced the disagreement — and each of
+them changes how much correcting there is to do.
 
 **A speed error reaches the cubic term, not the saturating one.** A client's velocity is predicted
 rather than replicated, and it feeds two terms of very different shape: forced convection saturates,
@@ -511,6 +514,40 @@ position in its ring, so build order cannot move it and two machines arrive at t
 and a ring one pipe longer is a *different* loop, whose temperature a save keyed on the old shape
 does not land on. That is intended: an index-keyed loop would let a reload put one loop's coolant
 into another. `CoolantLoopTests` pins both halves.
+
+**A rate difference is worth exactly what the load is doing and nothing else, and it is the one
+degradation where the client's inputs are all correct.** The mod advances a fixed sixtieth of a
+simulated second per *simulation tick* rather than per real second — `ThermalGridScheduler` passes a
+constant frame length and `Session` runs on `MyUpdateOrder.Simulation` — so simulated time is
+counted in ticks, and a machine executing fewer of them per real second has a thermal clock that
+runs slow. That is correct on one machine, where the whole world slows together, and a divergence
+between two. The client is not wrong about anything; it is *elsewhere on the same trajectory*, which
+is why no amount of dissipation closes it. Measured on the smaller rig, a 10 % clock error settles
+**19.25 K** out under a load that keeps moving and **0.00 K** under one that stops, from a 0.55 K
+peak — both runs in the dark with the same degradation, differing only in the load script. Two hulls
+heading to the same equilibrium at different speeds agree once they arrive.
+
+**And `hitching` is that same deficit arriving in lumps, which changes the peak and not the
+settling.** Five seconds lost of every thirty *is* five-sixths rate. At an equal deficit the lumpy
+case peaks **206.0 K** against the smooth one's **39.7 K** and the two settle at 39.6 K and 33.7 K —
+so the average deficit decides where a client ends up and the delivery decides how far wrong it gets
+on the way.
+
+**The mechanism written beside `hitching` for months was one the mod cannot perform**, and that is
+worth recording as a defect rather than as a correction. It said the client dropped a solver backlog
+at `SimulationScheduler.StepsDue`'s per-frame cap. `ThermalSimulation.Update` is what paces a step:
+it banks work credit against the frame it is handed and discards credit above one step's worth,
+which at a constant sixtieth cannot bind at any legal `Frequency`. The accumulator that *did* drop a
+backlog was a second, parallel one on `SimulationScheduler`, called by no shipped path, tested on its
+own terms, and pointed at by two labs and two pages as though it were the live one. It is removed,
+and the step-rate tests now run against the path the game drives — nothing in `Data/Scripts` broke
+when it went, which is the whole of the evidence that it was dead.
+
+**A heat source the client never heard about is a small standing bias, and it is the only input here
+that comes from outside this mod.** `ThermalHeatSources` is a registry another mod writes into
+through the API; a registration is a call made on whichever machine that mod runs its logic on, and
+nothing replicates it. A source worth a tenth of the sun settles a client **0.73 K** out and stays
+there.
 
 Settings and pump controls *are* replicated. `SENetworkAPI` 2.0 runs on channel `30323` with three
 properties on it: the world's settings and the two pump throttles.
@@ -925,6 +962,7 @@ counters rather than milliseconds so it holds on any machine.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-24 | **The clock is in the sweep, and the mechanism the sweep had been naming turned out not to exist** ([backlog.md](backlog.md) `F23`). Simulated time is counted in simulation ticks, so a machine below 1.0 sim speed has a thermal clock that runs slow: a 10 % error settles 18.69 K out under a moving load and 0.00 K under a steady one, because two hulls heading to the same equilibrium at different speeds agree once they arrive. `hitching` is the same deficit in lumps — at an equal deficit it peaks 206.0 K against a slope's 39.7 K and settles within a fifth of it — and the backlog drop written beside it for months was `SimulationScheduler.StepsDue`, a second step-credit accumulator no shipped path called. Removed, with the step-rate tests moved onto `ThermalSimulation.Update`. Also added `missing source`, the one input that comes from outside this mod: 0.73 K standing for a registration worth a tenth of the sun. |
 | 2026-08-24 | **Topology is in the sweep, and it is the half that changes which numbers exist** ([backlog.md](backlog.md) `F22`). `build order` gives the client the same blocks in a different arrival order and reads 1.2e-4 K, which is float summation order rather than physics — and the same packet applied by index rather than by position leaves 492.0 K, which is what the codec's eight-byte key is buying, measured rather than asserted. `blocks missing` takes a tenth of the hull away: the loudest row in the sweep at 1,151.7 K, most of it the *arrival* rather than the absence, decaying to 0.08 K — and its bound is a bias at 380.5 K in vacuum and 740.7 K flying, the worst input measured anywhere here. The correction narrows what a partial hull misreads and cannot touch the 223 blocks that are absent. The comparison itself moved to block position from node index, which is a no-op on two hulls built alike and the only comparison that means anything on two that are not. |
 | 2026-08-24 | **The room map and its air are in the sweep, and they are the two ends of its own axis** ([backlog.md](backlog.md) `F21`). Pressure is *binary*: the link conductance carries no pressure term, so a fifth of the air missing is 0.90 K and all of it is 110.3 K, and the last one per cent is worth more than the first ninety-nine. An unconverged room map is the loudest input measured here — 474.7 K in vacuum, 912.7 K in air, because an empty map makes the whole interior sky and the hull believes in 26.8 % more skin — and it settles at 0.01 K, so the loudest is also the one the correction has least reason to chase. The bound, a pass that never lands, is a bias at 290.95 K and out-settles the wrong switch. **Two rig changes came with it and every figure above was re-measured**: the sweep hull's four compartments now hold air, which is worth about a seventh off every standing error, and the suite's own rig moved from 400 blocks to 600 because the census hull grows its first sealed room between the two and both room knobs would otherwise have judged nothing (`E8`). |
 | 2026-08-24 | **Block state is in the sweep, and a wrong switch is the worst input in it outright** ([backlog.md](backlog.md) `F20`). A tenth of the producers on the wrong side of their own switch settles a client 281.0 K out against `wrong settings` at 142.8 K, because a block that is off is wrong by *all* of its heat rather than by a share of it — and at equal missing wattage the concentrated error is 61.0 K against 13.5 K spread. Mass is the opposite kind of input: it is capacity rather than watts, so it stands under a moving load and decays under a steady one, 38.45 K against 0.3 K. Integrity turned out to reach the model through mass and nothing else, so the row's three inputs are two knobs. |
