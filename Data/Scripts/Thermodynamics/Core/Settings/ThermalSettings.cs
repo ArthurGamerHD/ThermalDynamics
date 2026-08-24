@@ -98,7 +98,7 @@ namespace Thermodynamics.Core
         /// Factor by which thermal time runs faster than real physics; divides every heat capacity.
         /// 1 is fully physical. See configuration.md, Time and pace.
         /// </summary>
-        public float HeatTimeScale = 225f;
+        public float HeatTimeScale = 90f;
 
         // ---- environment ------------------------------------------------------------------
 

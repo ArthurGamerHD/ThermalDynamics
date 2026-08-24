@@ -144,7 +144,7 @@ namespace Thermodynamics
         /// </summary>
         [ProtoMember(32)] public int Frequency = 4;
         [ProtoMember(33)] public float SimulationSpeed = 1f;
-        [ProtoMember(34)] public float HeatTimeScale = 225f;
+        [ProtoMember(34)] public float HeatTimeScale = 90f;
 
         /// <summary>
         /// Most element visits one solver step may make — substeps times its links plus its weighted

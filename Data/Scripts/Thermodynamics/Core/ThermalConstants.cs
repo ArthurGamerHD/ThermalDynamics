@@ -23,7 +23,7 @@ namespace Thermodynamics.Core
         /// 2.4 puts mild steel exactly where the old 0..1 quality value put it.
         /// See definitions.md, Conductivity is in real W/(m·K).
         /// </summary>
-        public const float ConductionScale = 2.4f;
+        public const float ConductionScale = 9.6f;
 
         /// <summary>
         /// Specific heat of air at constant pressure, J/(kg K). Used for room air, which is the
