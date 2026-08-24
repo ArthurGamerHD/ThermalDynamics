@@ -127,7 +127,7 @@ list of the sweep above, because neither of them fails any more.
 substeps were loop-bearing, and `loop-faults` got *worse* with more of them — 2.4×10¹⁵ K against
 7×10⁴. Something in the coolant path was genuinely unstable rather than merely starved.
 
-### The loop path has a stiffness ceiling, and the clamp was what set it
+### The loop path had a stiffness ceiling, and the clamp was what set it
 
 The question that found it was whether the coolant pipes could go back to copper. They cannot, and
 the reason is the same defect. `CoolantFlowTests.SpreadAcrossAHeatedRing` deliberately runs **one substep across a
@@ -166,6 +166,21 @@ turned out to have been converged answers misread by the divergence column; the 
 
 Guarded by `TheLoopPathSurvivesAVeryConductivePipe` at copper and at four times copper, and by
 `ArcadeNoLongerDivergesOnTheEverythingRig`.
+
+**And the ceiling has since gone entirely**, because the parcel's limit was only half of the bound
+this path needed. The block on the other end of a sink face is pulled on by the fluid *and* by
+everything it is bolted to, and neither the pairwise clamp nor the ring's own factor can see that —
+which is [backlog.md](backlog.md) `A10`, fixed on 2026-08-24 by applying the per-node relaxation to
+the coupled passes as well. The same deliberately-refused ring, run again across the same ladder and
+past the end of it:
+
+| pipe conductivity, effective W/(m·K) | 264 (brass) | 480 | 960 (copper) | 3,840 | 15,360 |
+| --- | --- | --- | --- | --- | --- |
+| ring spread, one substep of a whole second | 15.1 K | 14.7 K | 14.5 K | 14.6 K | 14.7 K |
+
+Sixteen times copper is as bounded as brass, and the row above it is flat: **the material no longer
+sets a limit on this path at all.** What decides the spread is the refusal rather than the
+conductance, which is the same shape the block path has always had.
 
 Two hypotheses were tested and both were wrong, which is recorded here so they are not tried again:
 
@@ -248,6 +263,7 @@ separately rather than reported as defects — otherwise four correct results bu
 
 | Date | Change |
 | --- | --- |
+| 2026-08-24 | **The loop path's stiffness ceiling is gone rather than raised.** `A10` applied the per-node relaxation to the coupled passes, so the block on the other end of a sink face is bounded as well as the parcel. Re-run across the same ladder and past the end of it, the deliberately refused ring spreads 15.1 K at brass and 14.7 K at **sixteen times copper** — flat, so the material sets no limit on this path any more and what decides the spread is the refusal. |
 | 2026-08-23 | **The matrix's last unexplained divergence is not one.** `physical / x-overloaded` reads 11,662 K at a scenario clock cut for a world 225× faster; given the same physical duration the shipped column gets, it settles at about 1,300 K, converged and unstarved. So every divergence in the matrix is now starvation or the clock, and `physical` has no instability. `ScenarioRunner.DurationScale` is the mechanism ([backlog.md](backlog.md) `C8`) and is deliberately not the sweep's default: the 225× lands on every cell of that column and seven rigs alone ran past twenty minutes. |
 | 2026-08-22 | Re-measured the divergence counts under the corrected rule. Eight of the ten cells the column reported were converged answers: `candidate` and `shipped` have none at all, and `arcade` has one — `air-conditioning` at 21,900 K and 100% starved, which is the case the starvation argument always rested on. The other survivor, `physical / x-overloaded`, is the one cell where the test cannot separate a divergence from a run stopped too early, because a scenario clock cut for the shipped world ends while a 225×-slower one is still climbing. |
 | 2026-08-22 | Withdrew the burning-ship divergence and corrected it in place (`E10`). It settles: flat to the last digit over ten times the run, energy balanced to a part in ten thousand, and two integrators refused wildly different substep counts one kelvin apart. The 11,279 K is a conduction-limited interior temperature — the hottest block has no face to radiate from — and the peak among blocks that can is 2,822 K. The real defect was the divergence column: a threshold on a temperature, which cannot tell a converged extreme from a diverged integration. It now requires a failure to settle as well. |

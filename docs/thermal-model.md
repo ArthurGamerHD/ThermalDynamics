@@ -95,8 +95,11 @@ Two conductors in series: centre of A to the interface, interface to centre of B
 block's half-depth along the contact axis, so a long block conducts more slowly end to end than a
 cube does. `k = Conductivity × ThermalConstants.ConductionScale`, where `Conductivity` is the
 definition's figure in **real W/(m·K)** — mild steel 50, glass 1, copper 400 — and `ConductionScale`
-(2.4) is one global constant setting the game's pace, so the definition stays a description of the
-material rather than a balance dial. A coolant loop's `Conductivity` is still the older 0…1 quality
+(**9.6**) is one global constant setting the game's pace, so the definition stays a description of
+the material rather than a balance dial. It was 2.4 until `C24`, which is the value that puts mild
+steel exactly where the pre-conversion world put it; the shipped pace is four times that, and what
+bought it is `G8`'s significance window — see
+[balance.md](balance.md#the-route-is-chosen-and-it-is-the-one-the-cost-column-argued-against). A coolant loop's `Conductivity` is still the older 0…1 quality
 against a 200 W/(m·K) reference; see [definitions.md](definitions.md#conductivity-is-in-real-wmk).
 
 Blocks that touch without mount surfaces on both sides conduct **nothing**. This is what makes

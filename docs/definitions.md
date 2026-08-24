@@ -112,8 +112,11 @@ deliberately: fluid-to-wall transfer is convective, and the honest dial for it i
 coefficient in W/(m²·K), which is a change to the loop equations rather than to a number.
 
 **What that conversion moved**, because it is the substance of [backlog.md](backlog.md) `C2`.
-`ConductionScale` is 2.4 because mild steel's 50 lands on the 120 the old default's 0.6 gave it, so
-ordinary armour is exactly unmoved and everything else is not. **Before the conversion every block
+`ConductionScale` was 2.4 because mild steel's 50 lands on the 120 the old default's 0.6 gave it, so
+ordinary armour was exactly unmoved by the conversion and everything else was not. **It is 9.6
+now** — `C24` multiplied the pace by four for `G8`'s timing, which moves every block including
+armour and is a balance decision rather than a conversion; the calibration is what makes the
+conversion checkable, and the two are separate numbers on purpose. **Before the conversion every block
 in the game took one of exactly two conductances** — the file then held twenty-two definitions and
 derivation from build components arrived after it — which is what makes the old world recoverable
 and the change measurable.

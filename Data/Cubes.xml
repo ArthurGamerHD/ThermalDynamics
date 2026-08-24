@@ -1809,11 +1809,10 @@
 						W/(m K), real units: copper.
 
 						This was brass for a while, because copper made a 305 kg pipe stiff enough to
-						blow the loop integration up to 291,360 K. That turned out to be a defect in
-						the loop's clamp rather than a limit on the material: it bounded each link
-						against the parcel's whole heat capacity, so a parcel carrying two links got
-						twice the energy that equalising it takes. With the ring's own limit applied
-						the same case settles at 0.8 K and copper is back.
+						blow the loop integration up to 291,360 K. That was a defect in the loop's
+						clamp rather than a limit on the material, and both halves of it are fixed:
+						the ring's own limit, and then the node's (backlog A10). Sixteen times
+						copper is now as bounded as brass. See realism.md.
 					-->
 					<Decimal Name="Conductivity" Value="400" />
 					<!--J/(kg K), real units: copper-->
@@ -1842,11 +1841,10 @@
 						W/(m K), real units: copper.
 
 						This was brass for a while, because copper made a 305 kg pipe stiff enough to
-						blow the loop integration up to 291,360 K. That turned out to be a defect in
-						the loop's clamp rather than a limit on the material: it bounded each link
-						against the parcel's whole heat capacity, so a parcel carrying two links got
-						twice the energy that equalising it takes. With the ring's own limit applied
-						the same case settles at 0.8 K and copper is back.
+						blow the loop integration up to 291,360 K. That was a defect in the loop's
+						clamp rather than a limit on the material, and both halves of it are fixed:
+						the ring's own limit, and then the node's (backlog A10). Sixteen times
+						copper is now as bounded as brass. See realism.md.
 					-->
 					<Decimal Name="Conductivity" Value="400" />
 					<!--J/(kg K), real units: copper-->
@@ -1875,11 +1873,10 @@
 						W/(m K), real units: copper.
 
 						This was brass for a while, because copper made a 305 kg pipe stiff enough to
-						blow the loop integration up to 291,360 K. That turned out to be a defect in
-						the loop's clamp rather than a limit on the material: it bounded each link
-						against the parcel's whole heat capacity, so a parcel carrying two links got
-						twice the energy that equalising it takes. With the ring's own limit applied
-						the same case settles at 0.8 K and copper is back.
+						blow the loop integration up to 291,360 K. That was a defect in the loop's
+						clamp rather than a limit on the material, and both halves of it are fixed:
+						the ring's own limit, and then the node's (backlog A10). Sixteen times
+						copper is now as bounded as brass. See realism.md.
 					-->
 					<Decimal Name="Conductivity" Value="400" />
 					<!--J/(kg K), real units: copper-->
@@ -1908,11 +1905,10 @@
 						W/(m K), real units: copper.
 
 						This was brass for a while, because copper made a 305 kg pipe stiff enough to
-						blow the loop integration up to 291,360 K. That turned out to be a defect in
-						the loop's clamp rather than a limit on the material: it bounded each link
-						against the parcel's whole heat capacity, so a parcel carrying two links got
-						twice the energy that equalising it takes. With the ring's own limit applied
-						the same case settles at 0.8 K and copper is back.
+						blow the loop integration up to 291,360 K. That was a defect in the loop's
+						clamp rather than a limit on the material, and both halves of it are fixed:
+						the ring's own limit, and then the node's (backlog A10). Sixteen times
+						copper is now as bounded as brass. See realism.md.
 					-->
 					<Decimal Name="Conductivity" Value="400" />
 					<!--J/(kg K), real units: copper-->
@@ -1941,11 +1937,10 @@
 						W/(m K), real units: copper.
 
 						This was brass for a while, because copper made a 305 kg pipe stiff enough to
-						blow the loop integration up to 291,360 K. That turned out to be a defect in
-						the loop's clamp rather than a limit on the material: it bounded each link
-						against the parcel's whole heat capacity, so a parcel carrying two links got
-						twice the energy that equalising it takes. With the ring's own limit applied
-						the same case settles at 0.8 K and copper is back.
+						blow the loop integration up to 291,360 K. That was a defect in the loop's
+						clamp rather than a limit on the material, and both halves of it are fixed:
+						the ring's own limit, and then the node's (backlog A10). Sixteen times
+						copper is now as bounded as brass. See realism.md.
 					-->
 					<Decimal Name="Conductivity" Value="400" />
 					<!--J/(kg K), real units: copper-->
@@ -1974,11 +1969,10 @@
 						W/(m K), real units: copper.
 
 						This was brass for a while, because copper made a 305 kg pipe stiff enough to
-						blow the loop integration up to 291,360 K. That turned out to be a defect in
-						the loop's clamp rather than a limit on the material: it bounded each link
-						against the parcel's whole heat capacity, so a parcel carrying two links got
-						twice the energy that equalising it takes. With the ring's own limit applied
-						the same case settles at 0.8 K and copper is back.
+						blow the loop integration up to 291,360 K. That was a defect in the loop's
+						clamp rather than a limit on the material, and both halves of it are fixed:
+						the ring's own limit, and then the node's (backlog A10). Sixteen times
+						copper is now as bounded as brass. See realism.md.
 					-->
 					<Decimal Name="Conductivity" Value="400" />
 					<!--J/(kg K), real units: copper-->
@@ -2007,11 +2001,10 @@
 						W/(m K), real units: copper.
 
 						This was brass for a while, because copper made a 305 kg pipe stiff enough to
-						blow the loop integration up to 291,360 K. That turned out to be a defect in
-						the loop's clamp rather than a limit on the material: it bounded each link
-						against the parcel's whole heat capacity, so a parcel carrying two links got
-						twice the energy that equalising it takes. With the ring's own limit applied
-						the same case settles at 0.8 K and copper is back.
+						blow the loop integration up to 291,360 K. That was a defect in the loop's
+						clamp rather than a limit on the material, and both halves of it are fixed:
+						the ring's own limit, and then the node's (backlog A10). Sixteen times
+						copper is now as bounded as brass. See realism.md.
 					-->
 					<Decimal Name="Conductivity" Value="400" />
 					<!--J/(kg K), real units: copper-->
@@ -2040,11 +2033,10 @@
 						W/(m K), real units: copper.
 
 						This was brass for a while, because copper made a 305 kg pipe stiff enough to
-						blow the loop integration up to 291,360 K. That turned out to be a defect in
-						the loop's clamp rather than a limit on the material: it bounded each link
-						against the parcel's whole heat capacity, so a parcel carrying two links got
-						twice the energy that equalising it takes. With the ring's own limit applied
-						the same case settles at 0.8 K and copper is back.
+						blow the loop integration up to 291,360 K. That was a defect in the loop's
+						clamp rather than a limit on the material, and both halves of it are fixed:
+						the ring's own limit, and then the node's (backlog A10). Sixteen times
+						copper is now as bounded as brass. See realism.md.
 					-->
 					<Decimal Name="Conductivity" Value="400" />
 					<!--J/(kg K), real units: copper-->
@@ -2074,11 +2066,10 @@
 						W/(m K), real units: copper.
 
 						This was brass for a while, because copper made a 305 kg pipe stiff enough to
-						blow the loop integration up to 291,360 K. That turned out to be a defect in
-						the loop's clamp rather than a limit on the material: it bounded each link
-						against the parcel's whole heat capacity, so a parcel carrying two links got
-						twice the energy that equalising it takes. With the ring's own limit applied
-						the same case settles at 0.8 K and copper is back.
+						blow the loop integration up to 291,360 K. That was a defect in the loop's
+						clamp rather than a limit on the material, and both halves of it are fixed:
+						the ring's own limit, and then the node's (backlog A10). Sixteen times
+						copper is now as bounded as brass. See realism.md.
 					-->
 					<Decimal Name="Conductivity" Value="400" />
 					<!--J/(kg K), real units: copper-->
@@ -2107,11 +2098,10 @@
 						W/(m K), real units: copper.
 
 						This was brass for a while, because copper made a 305 kg pipe stiff enough to
-						blow the loop integration up to 291,360 K. That turned out to be a defect in
-						the loop's clamp rather than a limit on the material: it bounded each link
-						against the parcel's whole heat capacity, so a parcel carrying two links got
-						twice the energy that equalising it takes. With the ring's own limit applied
-						the same case settles at 0.8 K and copper is back.
+						blow the loop integration up to 291,360 K. That was a defect in the loop's
+						clamp rather than a limit on the material, and both halves of it are fixed:
+						the ring's own limit, and then the node's (backlog A10). Sixteen times
+						copper is now as bounded as brass. See realism.md.
 					-->
 					<Decimal Name="Conductivity" Value="400" />
 					<!--J/(kg K), real units: copper-->
@@ -2141,11 +2131,10 @@
 						W/(m K), real units: copper.
 
 						This was brass for a while, because copper made a 305 kg pipe stiff enough to
-						blow the loop integration up to 291,360 K. That turned out to be a defect in
-						the loop's clamp rather than a limit on the material: it bounded each link
-						against the parcel's whole heat capacity, so a parcel carrying two links got
-						twice the energy that equalising it takes. With the ring's own limit applied
-						the same case settles at 0.8 K and copper is back.
+						blow the loop integration up to 291,360 K. That was a defect in the loop's
+						clamp rather than a limit on the material, and both halves of it are fixed:
+						the ring's own limit, and then the node's (backlog A10). Sixteen times
+						copper is now as bounded as brass. See realism.md.
 					-->
 					<Decimal Name="Conductivity" Value="400" />
 					<!--J/(kg K), real units: copper-->
@@ -2174,11 +2163,10 @@
 						W/(m K), real units: copper.
 
 						This was brass for a while, because copper made a 305 kg pipe stiff enough to
-						blow the loop integration up to 291,360 K. That turned out to be a defect in
-						the loop's clamp rather than a limit on the material: it bounded each link
-						against the parcel's whole heat capacity, so a parcel carrying two links got
-						twice the energy that equalising it takes. With the ring's own limit applied
-						the same case settles at 0.8 K and copper is back.
+						blow the loop integration up to 291,360 K. That was a defect in the loop's
+						clamp rather than a limit on the material, and both halves of it are fixed:
+						the ring's own limit, and then the node's (backlog A10). Sixteen times
+						copper is now as bounded as brass. See realism.md.
 					-->
 					<Decimal Name="Conductivity" Value="400" />
 					<!--J/(kg K), real units: copper-->
