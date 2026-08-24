@@ -396,6 +396,17 @@ full rating with its faces on open space, and the 300 MW one goes past critical 
 hull. That makes where a reactor is installed a decision rather than a detail, and it is the first
 thing in the mod that makes a player want a coolant loop for a reason other than curiosity.
 
+> **The floor has gone, and `C24` is what removed it.** The table above was taken at
+> `ConductionScale` 2.4; at the 9.6 that now ships, the armour a reactor is buried in carries its
+> heat away and radiates it from its own faces, so the skinned 300 MW reactor settles at **940.6 K
+> against a critical of 1,090.1 K** where it settled at 1,245.0 K. Burying it costs **50.7 K rather
+> than 355 K**, and both installations survive. **Raising the fraction does not put the shape back**:
+> at 0.02 the skinned case does cook, at 1,214.9 K, and so do two of the four *bare* — 1,114.2 K and
+> 940.9 K against their own derived ratings — which is the bound this section calls unbuildable. So
+> the signal is smaller rather than moved. It is a block-level signal either way: `reactor-waste`
+> from 0.5 to 8.0 moves the corpus peak p50 by 3 %, and `G2` holds at 100 % of the retest set at the
+> pair that ships. [backlog.md](backlog.md) `C28`.
+
 An idling ship is deliberately not a cooling problem: at 10% of rating every reactor stays clear of
 critical in both rigs. **Heat arrives when power is drawn.**
 
@@ -742,6 +753,11 @@ else in the census moves it.
 
 ### No block lands in the 2–5 minute window, and none can be made to at `HeatTimeScale` 225
 
+> **This section and the three below it are the argument that ended in `C24`**, and every
+> *(shipped)* in them means the pair that shipped while they were written: `ConductionScale` 2.4
+> with the clock at 225. What ships now is 9.6 with the clock at 90, which is where the argument
+> arrives — see [The route is chosen](#the-route-is-chosen-and-it-is-the-one-the-cost-column-argued-against).
+
 Of the 72 block types that generate more heat than their own skin can shed, time from 293 K to their
 own critical temperature, alone:
 
@@ -766,7 +782,7 @@ linear:
 
 | `HeatTimeScale` | corpus `full-electrical` s-to-critical p50 | vacuum substeps p50 |
 | ---: | ---: | ---: |
-| 225 (shipped) | 8.9 | 2.41 |
+| 225 (shipped then; 90 now) | 8.9 | 2.41 |
 | 112 | ~17.8 | 1.21 |
 | 56 | ~35.8 | 0.60 |
 | 25 | ~80 | 0.27 |
@@ -782,7 +798,7 @@ Closing that gap needs conduction, which couples the block to the hull's mass:
 | `conductivity` | `burn-forward` s-to-critical p50 | peak p50 | substeps p50 |
 | ---: | ---: | ---: | ---: |
 | 0.25 | 4.2 | 1,296 K | 0.77 |
-| 1.00 (shipped) | 4.8 | 1,205 K | 2.75 |
+| 1.00 (shipped then; ×4 now) | 4.8 | 1,205 K | 2.75 |
 | 2.00 | 9.2 | 1,107 K | 5.23 |
 | 4.00 | 13.5 | 1,004 K | 9.93 |
 
@@ -871,7 +887,7 @@ clock, same forty hulls, same three scenarios, same stop rule — `PairSweep` ru
 | **0.5** | **100** | **134.5 s** | **22/40** | **2,880 s** | **21.4** | **0 %** | **100 %** | **97.5 %** |
 | 0.5 | 90 | 149.5 s | 22/40 | 3,180 s | 21.3 | 0 % | 100 % | 97.5 % |
 | 0.5 | 80 | 168.1 s | 22/40 | 3,570 s | 21.2 | 0 % | 100 % | 97.5 % |
-| *(shipped)* | *225* | *10.4 s* | *29/40* | *1,320 s* | *127.2* | *0 %* | *100 %* | *97.5 %* |
+| *(then shipped)* | *225* | *10.4 s* | *29/40* | *1,320 s* | *127.2* | *0 %* | *100 %* | *97.5 %* |
 
 **The ratio column is the finding.** `G8` wants a crossing over 120 s and a recovery under 3,600 s,
 and both go as one over the clock — so the clock slides the pair along and cannot change
@@ -957,7 +973,7 @@ finish, and the ship holds.
 
 | | crossing p50 across the charge | crossed | recovery p50 | `G8` |
 | --- | ---: | ---: | ---: | :---: |
-| *(shipped)* ×1 / 225 | **10.4 s** | 29/40 | 1,320 s | — |
+| *(then shipped)* ×1 / 225 | **10.4 s** | 29/40 | 1,320 s | — |
 | the load route, ×0.5 / 110 | 122.4 s | 22/40 | 2,670 s | **pass** |
 | the load route, ×0.5 / 100 | **134.5 s** | 22/40 | 2,880 s | **pass** |
 | the load route, ×0.5 / 90 | 149.5 s | 22/40 | 3,180 s | **pass** |
@@ -990,7 +1006,7 @@ both cases on the same forty hulls:
 
 | | crossing p50, drives **charging** | crossed | crossing p50, drives **full** | crossed |
 | --- | ---: | ---: | ---: | ---: |
-| *(shipped)* ×1 / 225 | 10.4 s | 29/40 | **censored** | 12/40 |
+| *(then shipped)* ×1 / 225 | 10.4 s | 29/40 | **censored** | 12/40 |
 | the load route, ×0.5 / 100 | **134.5 s** | 22/40 | **censored** | 3/40 |
 | the conduction route, ×4 / 100 | **148.9 s** | 25/40 | **censored** | 6/40 |
 
@@ -1157,6 +1173,13 @@ step needed, which is the same statistic `verdict.py` scores `G6` on.
 
 ### The route is chosen, and it is the one the cost column argued against
 
+> **Applied 2026-08-24.** `ConductionScale` 9.6 and `HeatTimeScale` 90 are what a default world now
+> runs, and what shipping them cost is at the end of this section. Two criteria moved with it: `G8`
+> goes from holding on 1 % of resampled fleets to 76 %, and `G6` — which was failing in air, the one
+> approximation the defaults shipped on — passes, because the demand it is scored on is
+> convection-limited and came down with the clock. `G1`, `G2`, `G5` and `G7` were re-scored and
+> hold. [backlog.md](backlog.md) `C24` is closed; `C25`, `C26`, `C27` and `C28` are what it opened.
+
 Both routes reach `G8`'s window on the forty-hull retest set, so the choice was never about which
 one works. **Resampled from the same population, they are not equally likely to keep working**:
 
@@ -1237,10 +1260,27 @@ is that it buys that by making conduction strong enough to blunt three of the de
 is built around. **That is a trade to take deliberately or not at all**, and it is why `C24` is a
 separate row rather than a follow-up commit.
 
-Two more things it needs. Every temperature figure in this repository is measured at the shipped
-pair and moves with it. And `G7` — the stated compatibility floor, the one criterion measured on
-ships nobody chose to put in a corpus — has to be re-scored on the 705 prefabs; both changes point
-the right way for it, and *points the right way* is not a measurement.
+**Both of the things it needed are measured.** `G7` — the stated compatibility floor, the one
+criterion measured on ships nobody chose to put in a corpus — was re-scored on the 705 prefabs
+before the defaults were committed: **idle, five simulated minutes, 0 of 705 crossing critical**,
+and its control still bites at **481 of 705 losing a block flown hard** against 616 at the pair
+before. And every temperature figure in this repository is measured at the shipped pair and moved
+with it, which is 47 tests read one at a time rather than counted.
+
+**What the reading found, beyond the four behaviours above**, each with a row of its own. A bolt
+joint now conducts as hard as a coolant sink face — 1,168 W/K against 1,000, where the design
+statement the guidance rests on had it six to one the other way (`C25`). The census hull has left
+the population it stands in for at the one cap that ships, flooring 6.91 % of its own blocks against
+a real population's 0.92 % (`C26`). Solver cost moved from air to vacuum: a settled grid there
+demands 1.6x what it did, so the shipped element-visit allowance covers about 6,000 blocks where it
+covered 12,000 (`C27`). And the reactor's waste fraction was chosen against a bound this retune
+removes, which no fraction restores (`C28`).
+
+**Two things got better.** Three blocks came off the known-impossible list — a hydrogen engine that
+could not shed its own heat at an index of 1.54 is at 0.43, because *shed* includes conduction into
+the hull and the hull now takes four times as much. And the population's stiffness landscape
+flattened: the two modes a single figure could not describe are 2.3x apart where they were 5.9x, and
+half the corpus sits between them where six per cent did.
 
 **The attempt also found a defect that has nothing to do with the retune.** The coolant path has no
 overshoot clamp, so where a refused substep demand *approximates* on a block it *diverges* on a
@@ -1348,6 +1388,7 @@ five ways a full sweep dies, and [backlog.md](backlog.md) for what is still open
 | Date | Change |
 | --- | --- |
 | 2026-08-24 | Corrected this page's own account of `C12`'s choice, from the attempt at shipping it. The conduction route's *three levers* are four named behaviours — a coolant sink stops out-performing surface dials, bolting starts working, the stiffest fitting stops responding to air, and the cooling ladder's control stops losing — so the route is a trade taken deliberately rather than the easy choice the previous entry implied. |
+| 2026-08-24 | **Shipped it, and read what it cost.** `ConductionScale` 9.6 and `HeatTimeScale` 90 are the defaults; `G7` was re-scored first — 0 of 705 prefabs crossing critical at idle, 481 of them still losing a block flown hard — and `G6` passes on the shipped configuration for the first time, at 55 % of the substep cap in the worst environment against 115 %. Reading the 47 tests the pair moved found four rows rather than four figures: a bolt joint conducts as hard as a coolant sink face (`C25`), the census hull has left the population at the shipped cap (`C26`), solver cost moved from air to vacuum (`C27`), and the reactor's fraction was chosen against a bound this removes (`C28`). Three blocks came off the known-impossible list and the population's two stiffness modes closed to 2.3× apart. |
 | 2026-08-24 | **Chose `C12`'s route, and the choice inverted on evidence the cost column could not carry.** Both routes reach `G8`'s window; resampled from the same population, conduction ×4 holds it on 76 % of fleets and waste ×0.5 on 33–37 %, because the censored median has a cliff at half the hulls crossing and the waste route sits two hulls from it. Priced the waste route in air for the first time — the two routes had been compared on a cost measured for one and projected for the other — and both take `G6` from 115 % of the cap to 41–73 %, so the cost decides nothing. The route is conduction ×4 with `HeatTimeScale` 90; shipping it is `C24`. |
 | 2026-08-23 | **The loop's fluid coupling is stated as a heat transfer coefficient** ([backlog.md](backlog.md) `C20`): 160 W/(m²·K), which is exactly what the old quality-against-a-reference came to on a large grid, so every cooling figure on this page still describes the loop it was measured on. What moves is small grids, where the old formula implied 800 W/(m²·K) for the same fluid because it divided by half a cell — a small-grid ring now couples a fifth as hard, worth 45.7 K on a four-by-four rig. |
 | 2026-08-23 | **Authored the mod's first selective surface and measured what it is worth** ([backlog.md](backlog.md) `C15`). The radiator absorbed sunlight at its emissivity because nothing declared otherwise; `SolarAbsorptivity 0.1` is what a second-surface mirror or white paint gives, and it is worth **10.9 K** to a sunlit stack and nothing in shadow. The finding beside it: raising emissivity alone would buy 1.9 K in sunlight, because a better emitter that is also a better absorber gives it back — the two changes are complementary, and the obvious one alone is nearly worthless in the sun. |

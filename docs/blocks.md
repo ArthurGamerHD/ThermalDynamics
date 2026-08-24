@@ -235,7 +235,7 @@ links     3,294      loops     4
 substeps  6 / 21.4   starved   72%
 visits/s  395,280    floored   122
 ambient   -270 C     peak      634 C
-critical  0          clock     225 / 4
+critical  0          clock     90 / 4
 ```
 
 It replaced a panel that appeared only while a player was seated in a block and showed five

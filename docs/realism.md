@@ -22,8 +22,8 @@ dotnet run --project Thermodynamics.Sim -- features          # mechanism switche
 
 ## The four worlds
 
-The mod has no dial for how physically true it is, because `HeatTimeScale` makes it deliberately 225
-times faster than the world and nothing shipped turns that off. So the axis is built in the harness
+The mod has no dial for how physically true it is, because `HeatTimeScale` makes it deliberately 90
+times faster than the world — 225 until `C24` — and nothing shipped turns that off. So the axis is built in the harness
 instead, as [`BalanceProfile`](../tests/Thermodynamics.Harness/BalanceProfiles.cs): **it changes
 nothing that ships**, and it carries every knob that moves the balance rather than only the
 integration ones — both pace scales, the environment constants, which mechanisms run, how the
@@ -46,13 +46,14 @@ anchored to.
 
 ## Real time is the cheapest thing to integrate
 
-Stiffness is conductance over capacity, so dividing capacity by 225 multiplies substep demand by 225.
-Measured on a 150-block hull with a 200 kW reactor in it:
+Stiffness is conductance over capacity, so dividing capacity by the clock multiplies substep demand
+by it. Measured on a 150-block hull with a 200 kW reactor in it, at the clock that shipped when the
+table was taken:
 
 | `HeatTimeScale` | substeps demanded | hull after 5 simulated seconds |
 | ---: | ---: | ---: |
 | 1 | 0.00 | 293.3 K |
-| 225 | 0.90 | 319.8 K |
+| 225 *(then shipped; 90 now)* | 0.90 | 319.8 K |
 | 3,600 | 14.40 | 440.5 K |
 
 **Accuracy costs patience, not frames.** What costs frames is the pace — which is the whole reason
@@ -63,13 +64,18 @@ this page.
 
 **Realism is the cheapest thing here, not the most expensive.** `physical` asks 1.00 substeps
 against `shipped`'s 7.22 and costs 8,152 link visits a second against 97,308 — real heat capacities
-are 225 times larger, so the grid is 225 times softer. Every substep this mod spends exists because
-of `HeatTimeScale`. What realism costs is *responsiveness*: 0.11 K/s against 22.9 K/s, which is the
+are 225 times larger at the clock this comparison was run at, so the grid is 225 times softer.
+Every substep this mod spends exists because of `HeatTimeScale` and `ConductionScale`; the clock is
+90 now and the conduction pace is four times what it was, so a re-run would show `shipped` asking
+about 1.6 times the substeps for a conduction-limited grid and 0.4 times for a convection-limited
+one. What realism costs is *responsiveness*: 0.11 K/s against 22.9 K/s, which is the
 one number that makes the clock have to be a lie.
 
 **`HeatTimeScale` is equilibrium-neutral and `ConductionScale` is not.** A 225× clock change moves
 a settling point 0.7 K. A 2.4× conduction change moves it 128 K at the same clock, and thousands of
-kelvin across the scenario library. One is a pace dial; the other silently redistributes where heat
+kelvin across the scenario library. That asymmetry is what `C24` spent: it bought `G8`'s timing with
+the dial that is *not* equilibrium-neutral, which is why applying it moved temperatures all over
+this repository and why four of the mod's own stated behaviours moved with them. One is a pace dial; the other silently redistributes where heat
 sits. They have been treated as the same kind of thing and they are not.
 
 **The candidate is not a free win.** On one rig it looked like it beat `shipped` on every axis. Across

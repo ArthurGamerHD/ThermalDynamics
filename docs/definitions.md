@@ -186,8 +186,11 @@ the clock moves.
 That separation is the point. Tune *what a block is* here, in real units, and tune *how fast the
 game feels* there, in one place.
 
-The shipped default is 225, which is what makes steel's 450 J/(kg·K) behave the way the flat
-game value of `2` used to.
+The shipped default is **90**. It was 225 until `C24`, and 225 is the value that makes steel's real
+450 J/(kg·K) behave the way the flat game value of `2` used to — the calibration the conversion in
+this page was checked against, and two and a half times faster than what a world now runs. What
+moved it is `G8`'s significance window; see
+[balance.md](balance.md#the-route-is-chosen-and-it-is-the-one-the-cost-column-argued-against).
 
 ### Where a block's properties come from
 

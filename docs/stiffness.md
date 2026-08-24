@@ -702,7 +702,7 @@ else was true of them is unrecorded — so the same measurement was taken in the
 workshop corpus, where every input is visible and the run repeats in four minutes:
 
 ```bash
-dotnet run --project Thermodynamics.Sim -- stiffness            # 8,102 ships, ~4 min
+dotnet run --project Thermodynamics.Sim -- stiffness            # 8,105 ships, ~3 min
 dotnet run --project Thermodynamics.Sim -- stiffness --csv out/ # one row per ship
 ```
 
@@ -713,56 +713,93 @@ figures were taken on; `Frequency 8` would ask half of each. The air is still, a
 the field sessions flew in wind, and wind raises the convection these numbers are mostly made of,
 so these are a lower bound.
 
+**Walked again on 2026-08-24 at the pair `C24` ships**, which is the table below; the one it
+replaces was taken at `ConductionScale` 2.4 with the clock at 225 and is kept under it, because a
+substep demand is a conductance over a capacity and both defaults moved.
+
+| | min | p10 | p50 | p90 | p95 | max |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| vacuum | 0.00 | 5.85 | 7.40 | 10.01 | 10.40 | 13.35 |
+| **air** | 0.13 | 6.20 | **7.90** | 18.42 | 18.75 | 22.41 |
+
+At the pair before, on 8,102 ships of the same corpus:
+
 | | min | p10 | p50 | p90 | p95 | max |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | vacuum | 0.01 | 3.71 | 4.79 | 6.34 | 6.54 | 8.64 |
 | **air** | 0.16 | 4.26 | **6.61** | 33.09 | 33.30 | 34.45 |
 
-**The two field ships hold up.** 21.35 lands at the 63rd percentile of the corpus in air and 31.25
-at the 85th. They were ordinary ships, which is what makes them usable evidence — had either
-landed in the last percent, everything built on them would have been built on an outlier.
+**The distribution did not simply scale, and that is the finding.** Four times the conduction pace
+raises a conduction-limited demand and a clock two and a half times slower lowers every demand, so
+the soft end came up and the stiff end came down: the bottom decile went from 4.26 to 6.20 and the
+top from 34.45 to 22.41. A population that was two modes with a gap is now most of a continuum.
 
-### The population has two modes and almost nothing between them
+**The two field ships can no longer be placed.** They were taken in live sessions at the pair that
+shipped then — 21.35 at the 63rd percentile of the old table and 31.25 at the 85th, ordinary ships,
+which is what made them usable evidence. Against the new one they read past the maximum, and the
+reason is the pace rather than the ships. Re-taking them needs a session on the new pair;
+`TheFieldObservationsAreFromAPaceThatNoLongerShips` says so and fails when a dump arrives.
 
-A median of 6.61 with a ninetieth percentile of 33.09 is not a long tail. It is two populations:
+### The population had two modes and almost nothing between them, and `C24` closed the gap
 
-| what sets the ship's substep count | ships | share | median in air |
-| --- | ---: | ---: | ---: |
-| a light or a camera | 3,645 | **45.0 %** | **28.51** |
-| armour or structure | 4,457 | 55.0 % | **4.81** |
+A median of 6.61 with a ninetieth percentile of 33.09 was not a long tail. It was two populations,
+and it is now two clusters with the space between them filled in:
 
-Between 8 and 28 substeps there are about six per cent of ships. **So there is no such thing as a
-typical ship's stiffness**, and any statement of the form "a real ship asks for about *n*"
-describes at most half the workshop. What decides which half is whether the builder put a light on
-the outside — `SmallLight` alone sets the count on 34.8 % of all hulls.
+| what sets the ship's substep count | ships | share | median in air, now | before `C24` |
+| --- | ---: | ---: | ---: | ---: |
+| a light or a camera | 3,644 | **45.0 %** | **16.83** | 28.51 |
+| armour or structure | 4,461 | 55.0 % | **7.23** | 4.81 |
+
+**The share did not move at all — 44.96 % against 45.0 % — and the distance between the two did**:
+5.9× apart, and 2.3× now. Between 8 and 28 substeps there were about six per cent of ships and
+there are **49 %**. So a statement of the form "a real ship asks for about *n*" describes rather
+more of the workshop than it used to, and the pages here that refuse to quote one are the ones to
+re-read. What decides which cluster a ship is in has not changed: whether the builder put a light
+on the outside — `SmallLight` alone sets the count on 34.5 % of all hulls.
 
 That is the same finding [C9 in the backlog](backlog.md) reached from one save, now measured over
 a population, and it is why the per-block cap is the lever this page argues for: the two modes are
 separated by a handful of block types, not by ship design.
 
-### The census hull sits in the trough, and feels less of the air than most
+### The census hull sat in the trough, and `C24` put it outside the population
 
-The hull every benchmark here is built on lands at 23.39 in air — the 65th percentile, and *in the
-trough between the two modes*, a value about six per cent of real ships have. For a benchmark that
-is a fair choice: it is neither of the two things a ship usually is, but it is between them rather
-than outside them.
+The hull every benchmark here is built on landed at 23.39 in air — the 65th percentile, and *in the
+trough between the two modes*, a value about six per cent of real ships had. For a benchmark that
+was a fair choice: neither of the two things a ship usually was, but between them rather than
+outside them.
+
+**At the pair that ships it asks for 36.75, against a population running 6.20 to 22.41** — 1.64
+times the stiffest of 8,105 real ships. The hull's stiffest blocks are buried, so their demand is
+conduction and rose fourfold with the pace; a real ship's stiffest block is an exposed light whose
+demand is convection and fell with the clock. At a per-block cap of 8 the hull floors **6.91 %** of
+its own blocks against a real population's 0.92 %, while at caps of 4, 2 and 1 it is inside the
+population as it always was.
+
+That is [backlog.md](backlog.md) `C26`, and the fix is `M11`'s — refresh the census tiers against
+the corpus at this pair, which moves every benchmark figure in this repository and is its own piece
+of work. Until then the hull is a **conservative bound for cost**, since it asks for more substeps
+than any real ship, and a poor stand-in for a fidelity question.
+`TheCensusHullIsStifferThanEveryShipInTheCorpus` and
+`TheCensusHullIsFarMoreReachableThanARealPopulationAtTheShippedCap` pin both halves.
 
 How much of that stiffness comes from the air is the second question, and it has to be asked of
 **one block**:
 
-| | its own air ÷ its own vacuum |
-| --- | ---: |
-| a real ship, p10 | 1.04 |
-| a real ship, median | **2.34** |
-| a real ship, p90 | 6.89 |
-| the census hull | **1.20 – 1.50** |
+| | its own air ÷ its own vacuum | before `C24` |
+| --- | ---: | ---: |
+| a real ship, p10 | **1.00** | 1.04 |
+| a real ship, median | **1.07** | 2.34 |
+| a real ship, p90 | **2.52** | 6.89 |
+| the census hull | **1.00** | 1.20 – 1.50 |
 
-Low, and inside the range. The reason is exposure: the block that sets a real ship's air peak has
-**5.26 exposed faces** on average — a light hangs off a hull — and the census hull's has one or
-two, because the tiers are dealt out by a hash of a cell's position and land wherever that puts
-them. So the hull is a little less air-sensitive than a typical ship. It is a fidelity gap worth
-recording, not a defect, and `TheCensusHullFeelsAirLikeARealHullDoes` holds it inside the
-population at both ends.
+**Air has stopped making much difference to *stiffness*, for every hull in the game.** The median
+ship's stiffest block is 1.07 times stiffer in air than out of it where it was 2.34, and a tenth of
+them are exactly 1.00 — so the census hull's own 1.00 is the population's floor rather than the
+fidelity gap it used to be. What this does *not* say is that air has stopped cooling a hull: the
+environment terms are untouched, and this is a statement about which term sets a substep count. The
+old reason for the gap is still visible in the exposure column: the block that sets a real ship's
+air peak has **3.46 exposed faces** on average, down from 5.26, and the census hull's has none at
+all. `TheCensusHullFeelsAirLikeARealHullDoes` holds it inside the population at both ends.
 
 > **It has to be the same block, and that is `E6`.** A hull's *air peak* over its *vacuum peak* is
 > 1.02, which reads as a hull that does not notice air at all — and describes no block, because the
@@ -795,17 +832,20 @@ ship does", and which of the two the census is meant to be is a decision rather 
 `MaxSubstepsPerBlock` is chosen from how much of a hull a cap holds back, and that curve came from
 the 189 stepping grids of one telemetry dump. Over **2.4 million blocks of 8,102 workshop ships**:
 
-| per-block cap | corpus | one field dump |
-| ---: | ---: | ---: |
-| 8 | **1.59 %** | 1.16 % |
-| 4 | **7.20 %** | 6.01 % |
-| 2 | **35.54 %** | 23.68 % |
-| 1 | **52.53 %** | 39.10 % |
+| per-block cap | corpus, at the pair that ships | corpus, before `C24` | one field dump |
+| ---: | ---: | ---: | ---: |
+| 8 | **0.92 %** | 1.59 % | 1.16 % |
+| 4 | **23.22 %** | 7.20 % | 6.01 % |
+| 2 | **40.33 %** | 35.54 % | 23.68 % |
+| 1 | **75.89 %** | 52.53 % | 39.10 % |
 
-**They agree where the choice is made and part company where it is not.** At the caps anyone would
-ship the dump was within half a percentage point, so the reach of a shipped cap is confirmed rather
-than corrected. At 1 and 2 it understates the reach by half again — one save is one builder's
-habits, and the aggressive end of the curve is where habits show.
+**They agree where the choice is made and part company where it is not.** At the cap anyone would
+ship, all three columns are inside half a percentage point of each other, so the reach of a shipped
+cap is confirmed rather than corrected — and it is the one row `C24` left alone. Below it the curve
+steepened sharply: a cap of 4 now reaches a quarter of all blocks where it reached a fourteenth,
+because the population's soft mode has come up to meet its stiff one. The dump understates the
+aggressive end on both pairs — one save is one builder's habits — and it cannot be re-taken at this
+one.
 
 `TheFieldCapCurveMatchesTheCorpusWhereTheCapIsActuallySet` holds the agreement at the top, because
 if that ever parts company the shipped cap was chosen against a population it does not describe.
@@ -840,20 +880,25 @@ plastic is about 0.2 W/(m·K) against steel's 50:
 | `EmissiveBlock` | 1 | 840 | 5.8 | **0.06** |
 | `CameraBlock` | 5 | 800 | 9.3 | **0.52** |
 
-**In vacuum the definitions do what they were written to do. In air they very nearly do not.**
-`DecorativeStiffnessTests` reproduces it on one 16 kg fitting bolted to an armour bar:
+**In vacuum the definitions do what they were written to do. In air they used to do very little,
+and `C24` changed that.** `DecorativeStiffnessTests` reproduces it on one 16 kg fitting bolted to an
+armour bar:
 
-| | Demand | Conduction share |
-| --- | ---: | ---: |
-| steel, vacuum | 6.56 | 71% |
-| light definition, vacuum | **1.00** | 18% |
-| steel, air | 31.68 | 15% |
-| light definition, air | **13.68** | 1% |
+| | Demand, at the pair that ships | Conduction share | Demand before `C24` | Share before |
+| --- | ---: | ---: | ---: | ---: |
+| steel, vacuum | 8.41 | 89 % | 6.56 | 71 % |
+| light definition, vacuum | **0.70** | 41 % | **1.00** | 18 % |
+| steel, air | 18.29 | 41 % | 31.68 | 15 % |
+| light definition, air | **5.69** | 5 % | **13.68** | 1 % |
 
 A block's stability demand is its conductance over its heat capacity, and the conductance has two
 halves: what it is bolted to, and what its exposed surface exchanges with the sky. **The definitions
-address the first.** In dense air, convection over the cell's exposed area is already 85% of a steel
-fitting's rate, so removing the conduction half removes almost nothing.
+address the first**, and how much that is worth depends entirely on which half dominates. At the
+pace the conversion calibrated to, convection over the cell's exposed area was 85 % of a steel
+fitting's rate in dense air and removing the conduction half removed almost nothing. At four times
+that pace conduction is 41 % of it, and writing a real conductivity onto the fitting takes **69 %**
+of its demand off in air as well as in vacuum. So the sentence this section is named for was true of
+one pair and is not true of the one that ships.
 
 The prediction that the definitions would take uncapped demand from 21.4 substeps to about 5.6 was
 arithmetic on `conductivity / (mass × specific heat)` — the conduction term alone. It was right
@@ -866,8 +911,9 @@ A `SmallLight` on a large grid presents 23.6 m² of exposed surface against 64 J
 because **exposed area comes from the cell a block occupies rather than from the block**. A light
 fitting is not a 2.5 m cube of radiating and convecting surface. `ExposedSurfaceMultiplier` is the
 per-type knob for exactly this, and every decorative entry leaves it at 1. At 0.1 the test fitting
-falls from 13.68 substeps to below the armour it is bolted to — a factor of nine on the term that is
-left.
+fell from 13.68 substeps to below the armour it is bolted to — a factor of nine on the term that was
+left. **It is no longer the only knob that reaches a fitting in air**, since the definitions now
+reach the larger half there too; what it is still the only knob for is the environment term itself.
 
 **Not applied.** It also changes how much heat the block exchanges with its surroundings, so it is a
 balance decision rather than a free one, and the figure is recorded so the decision can be made
@@ -882,6 +928,7 @@ conductivity 50 is conduction-stiff, and a material definition would fix them ou
 
 | Date | Change |
 | --- | --- |
+| 2026-08-24 | **Walked the corpus again at `C24`'s pair, and the population changed shape rather than scale.** 8,105 ships in 190 s: the two modes closed from 5.9× apart to 2.3×, half the population now sits between them where six per cent did, and air has stopped making much difference to *stiffness* anywhere — the median hull's stiffest block is 1.07 times stiffer in air where it was 2.34. The census hull went the other way and is now stiffer than every ship in the corpus, flooring 6.91 % of its own blocks at the shipped cap against a real 0.92 % ([backlog.md](backlog.md) `C26`). The two field observations cannot be placed against any of it: they were taken in sessions at the pair before. |
 | 2026-08-24 | **Bounded the coupled paths and measured their ladders**, which closes [backlog.md](backlog.md) `A10`. The pairwise clamp is half the bound a lumped mass needs — a parcel carries a link to every pipe on it, a room's air one to every surface, and the node on the other end of a sink face is pulled on by both the fluid and its neighbours. The per-node relaxation now applies to both coupled passes, which makes a substep a convex combination of the temperatures around a node. On the fixture where the plumbing sets the demand, 9.7× over-subscribed: **1.3e25 K before, 1,799 K after**; a thin room refused one substep of thirty went from 3,839 K of spread to inside the 300 K it started at. The block ladder is unmoved to three decimals. `bench ceiling` grew `--fixture census|plumbed|pressurised|rings`, because the ladder had been a block ladder for as long as it had existed and said so nowhere. |
 | 2026-08-24 | Recorded that the refusal ladder is a *block* ladder. The coolant path has no overshoot clamp and on a hull carrying nothing stiffer is what sets the demand, so refusing it is orderly to about 4.5× and reaches 1.7e11 K at 9× — a cliff where the block path has a slope ([backlog.md](backlog.md) `A10`). |
 | 2026-08-23 | **Measured the per-block cap in air, which is where it has most to reach** ([backlog.md](backlog.md) `C3`, `C19`). Demand is 34.44 there against 22.97 in vacuum, a cap of 6 reaches 6.6 % of blocks against 3.4 %, and it buys **4.2×** for 0.607 K on the worst-placed block and 0.007 K on the hottest. Also corrected two columns that were vacuum figures in an air run: the demand and the floored count are read after a step now, and the count comes from the solver rather than from a conduction-only sum that could not see convection. |
