@@ -84,7 +84,7 @@ the right fourteen — see [testing the reduction](#testing-the-reduction).
 | **P11** | **The repository is the publish.** Everything committed here reaches the workshop, so what must not ship must not be here. | `R2` `R3` |
 | **P12** | **Do not edit what this repository cannot regenerate.** Model binaries, workshop identity and vendored code have their source of truth outside this tree. | `R4` `R5` `R6` |
 | **P13** | **A long run is designed for its own death.** It will be killed — by the OOM killer, a timeout, a mistake or a power cut — so cap it, resume it, and never let a timer guess its duration. | `O1` `O2` `O3` `O5` |
-| **P14** | **Unobservable fidelity is cost.** Take the cheap form where the difference cannot be perceived, say what it gives up, and write the price down. | `D6` `M8` `O4` |
+| **P14** | **Unobservable fidelity is cost.** Take the cheap form where the difference cannot be perceived, say what it gives up, and write the price down. Where it *can* be perceived, the cheap form is a rung on the feature's own ladder rather than the default. | `D6` `M8` `O4` `C15` |
 
 ### Testing the reduction
 
@@ -184,6 +184,7 @@ under [low value](#low-value) so a citation to them does not dangle.
 | **C5** | The core speaks no game type | load-bearing | P9 | `CoreIsolationTests` |
 | **C6** | The solver's three invariants hold | load-bearing | P10 | `ConductionTests` `StabilityTests` `ConductionClampGateTests` |
 | **C7** | Every mechanism has a switch that removes its own cost | load-bearing | P8 | `FeatureToggleTests` |
+| **C15** | A feature's configuration runs from `off` to `realistic` | load-bearing | P14 | `EveryCoreSettingIsReachableFromAWorldsConfiguration` |
 | **C8** | Absent and empty mean the same thing | load-bearing | P8 | — |
 | **C9** | The game's own answer is read, never overridden | load-bearing | P7 | `RoomPressureTests` |
 | **C10** | The server is authoritative over damage | load-bearing | P7 | — |
@@ -210,7 +211,7 @@ under [low value](#low-value) so a citation to them does not dangle.
 | **J2** | *Light, isolated, tested, open* | low value | — | absorbed into `C4` `C5` `C7` `R9` |
 | **J3** | The corpus filters are strict, and their cost is recorded | conditional | P1 | `BlueprintTests` |
 
-Fifty-two load-bearing, seven conditional, three low value. Sixteen of the load-bearing rules have
+Fifty-three load-bearing, seven conditional, three low value. Sixteen of the load-bearing rules have
 no automated check, and say so.
 
 ---
@@ -840,6 +841,34 @@ in the benchmark report readable and what lets a server operator pay only for wh
 *Checked by:* `FeatureToggleTests`, and the benchmark feature table measures each cost.
 *From:* [README.md](../README.md), [configuration.md](configuration.md).
 
+#### C15 — A feature's configuration runs from `off` to `realistic`
+
+**A mechanism is configured as a list of options whose two ends are `off` and `realistic`;
+`realistic` is the most faithful thing the model can do and is the default, and every rung between
+them carries the price of what it gives up.**
+
+`C7` makes a feature's cost removable. This says removing it should not be the only alternative on
+offer: a player whose machine cannot afford the faithful model, given nothing but a boolean, turns
+the feature off — and a feature switched off is not in the game. A two-rung ladder is a complete
+ladder where no cheaper form is worth having; what the rule forbids is a cheaper form that exists in
+the model and is not on the list. `WellMixedCoolant` was one for as long as it existed: read by the
+solver, exercised by the suite, documented in two pages as a choice a world makes, and settable by
+nothing.
+
+It also fixes the *direction*, which is the half a boolean cannot get wrong and a dial can. Four
+integration dials currently run three ways — `MaxSubstepsPerBlock` 0 is the faithful end,
+`MaxSubsteps` up is the faithful end, `MaxElementVisitsPerStep` 0 means uncapped — so a reader has
+to be told, per setting, which way is which.
+
+*Applies to:* every mechanism a world can switch. Not to physical constants, balance dials or
+diagnostics: a diagnostic's ladder is `C7`'s off-unless-read.
+*Checked by:* `EveryCoreSettingIsReachableFromAWorldsConfiguration` holds the operative half — a
+rung the solver reads and no world can set fails it. `EveryMechanismSwitchIsClassifiedInTheLadderInventory`
+holds that every mechanism says what rungs it has. Whether a missing rung is worth building is
+judgement, and [configuration.md](configuration.md#every-mechanism-and-the-rungs-it-has) records the
+answer per feature.
+*From:* [document-of-intent.md](document-of-intent.md#a-switch-is-a-ladder-and-its-two-ends-are-off-and-realistic).
+
 #### C8 — Absent and empty mean the same thing
 
 **A gate read from the environment or from configuration treats an empty value as absent, so the
@@ -1260,6 +1289,7 @@ right and this page is stale**; say so and fix it here.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-24 | Added `C15`, which is `C7` grown a dimension: a mechanism's configuration runs from `off` to `realistic` rather than being a boolean, and a cheaper form that exists in the model belongs on that list. Stated after the intent it comes from, and it found one violation on the day it was written — `WellMixedCoolant`, read by the solver and settable by nothing. |
 | 2026-08-24 | Added `C11`, after the mod failed to compile for two commits while the whole suite passed. Two thirds of the adapter under `Game/` was compiled by nothing the workflow runs, so a rename in `Core` was invisible until a world load. `Generic.csproj` is in the test solution now, and its twenty-seven hard-coded Steam paths resolve through `$(SEBinPath)` — being unbuildable anywhere but this machine was the reason it could not be in the build in the first place ([backlog.md](backlog.md) `F25`). |
 | 2026-08-22 | `R9` covers the signature as well as the name, and `ModApiShapeTests` checks it. A failed cast returns null rather than throwing, so a signature that moves on one side alone gives another mod a feature that silently does nothing ([backlog.md](backlog.md) `F1`). |
 | 2026-08-22 | `C9` now names air density among the things the game answers, which is what settles whether this mod should author its own against the engine's ([backlog.md](backlog.md) `B22`). |

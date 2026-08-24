@@ -106,6 +106,20 @@ namespace Thermodynamics
         [ProtoMember(18)] public bool EnableFriction = true;
         [ProtoMember(19)] public bool EnableDamage = true;
         [ProtoMember(20)] public bool EnableCoolantLoops = true;
+
+        /// <summary>
+        /// The cheap rung of coolant transport: one well-mixed body of fluid instead of parcels
+        /// carried round the ring.
+        ///
+        /// <para>
+        /// Off — the default — is the realistic form: the fluid is a ring of parcels, so a stopped
+        /// pump leaves the coolant at the radiator cold and the coolant at the reactor hot, and
+        /// where a sink sits round the loop matters. On collapses the ring to a single temperature,
+        /// which is cheaper and makes a loop's layout stop mattering.
+        /// See configuration.md, Coolant loops, and thermal-model.md.
+        /// </para>
+        /// </summary>
+        [ProtoMember(126)] public bool WellMixedCoolant = false;
         [ProtoMember(21)] public bool EnableRoomAir = true;
         [ProtoMember(22)] public bool EnableHeatPumps = true;
 
@@ -639,6 +653,7 @@ namespace Thermodynamics
             core.EnableFriction = EnableFriction;
             core.EnableDamage = EnableDamage;
             core.EnableCoolantLoops = EnableCoolantLoops;
+            core.WellMixedCoolant = WellMixedCoolant;
             core.EnableRoomAir = EnableRoomAir;
             core.EnableHeatPumps = EnableHeatPumps;
 

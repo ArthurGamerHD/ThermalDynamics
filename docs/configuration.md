@@ -120,6 +120,46 @@ On a multiplayer client the simulation controls are visible but disabled, for th
 `set` is refused there: the config is world state and belongs to the server. The four presentation
 switches stay editable, because they only change what that client draws.
 
+## Every mechanism, and the rungs it has
+
+**The intent is that a feature is configured as a list of options from `off` to `realistic`**, with
+`realistic` the default and every rung between them a cheaper approximation carrying its measured
+price — see
+[document-of-intent.md](document-of-intent.md#a-switch-is-a-ladder-and-its-two-ends-are-off-and-realistic).
+This is the inventory of how far the settings surface is from that, kept here because the gap is
+per-feature and the answer to *should this one have a middle rung* is not the same twice.
+
+A two-rung ladder is a complete ladder: some mechanisms have no cheaper form that is worth having,
+and for those `off` and `realistic` are the whole list. **The column that matters is the last one** —
+whether a cheaper rung is known to be possible and nobody has built it.
+
+| Mechanism | Configured by | Rungs today | A cheaper rung |
+| --- | --- | ---: | --- |
+| Solar gain and shadow | `EnableSolarHeat`, `SolarSelfShadowing`, `SolarGridShadows`, `SolarOcclusionSamples`, `SolarOcclusionInterval`, `SolarOcclusionPlanets`, `SolarOcclusionTerrain`, `SolarOcclusionVoxels` | many | **The one full ladder, and it is spread over eight settings.** `SolarGridShadows` alone runs `none` → `basic` → `full`, which is the shape this page is arguing for. The unbuilt rung is *above* the top one — planet shadow per face, priced at 0.0045 K a metre in [backlog.md](backlog.md) `A9`. |
+| Coolant transport | `EnableCoolantLoops`, `WellMixedCoolant` | 3 | off → well-mixed → parcels round a ring. Complete, and the middle rung reached no world until 2026-08-24. |
+| Wind | `WindTerrainInfluence`, `WindSlopeStrength`, `WindDiurnalAmplitude` | continuous | Each influence runs 0 to 1, so the ends are there and the ladder is a dial rather than a list — **and there is no single `off`**: a world that wants no wind model has to zero three settings and know which three. |
+| Planet climate | `EnablePlanets`, `ClimateGroundInfluence`, `ClimateWeatherInfluence` | 2 + dials | Off means ambient is `VacuumTemperature` everywhere. The two influences are 0-to-1 dials on top of the switch rather than rungs under it. |
+| Integration fidelity | `Frequency`, `MaxSubsteps`, `MaxSubstepsPerBlock`, `MaxElementVisitsPerStep` | scalars | Not a feature and the exception that proves the point: **its four dials run in three different directions.** `MaxSubstepsPerBlock` 0 is the *faithful* end and a number is the cheap one; `MaxSubsteps` is the opposite; `MaxElementVisitsPerStep` 0 means uncapped; `Frequency` up is dearer and more faithful. Nothing tells a reader which way each points but this page. |
+| Conduction | `EnableConduction` | 2 | None known. Conduction between touching blocks is one multiply-add per link; there is no cheaper form of it that is still conduction. |
+| *(group switch)* | `EnableEnvironment` | — | Not a mechanism and not a rung: it turns radiation and convection off together. A switch that removes two mechanisms at once is a convenience over their own switches, and it is listed here so the inventory accounts for every `Enable*` there is. |
+| Radiation | `EnableRadiation` | 2 | None known, for the same reason. |
+| Convection | `EnableConvection` | 2 | None known. |
+| Waste heat | `EnableWasteHeat` | 2 | None known: it is a per-block fraction of a wattage the game already reports. |
+| Point heat sources | `EnableHeatSources` | 2 | The inverse square is already cut off by range. A rung that sampled the registry less often is possible and has never been wanted, because the registry is usually empty. |
+| Aerodynamic friction | `EnableFriction` | 2 + dials | `FrictionScale` and `FrictionAtSpeedsAbove` are balance dials rather than fidelity rungs — they change how much friction there is, not how well it is modelled. |
+| Room air | `EnableRoomAir` | 2 | **A cheaper rung is possible and unbuilt.** Room air is a well-mixed body already; what is expensive is the flood fill that finds the rooms, and a coarser or less frequent map is a rung. `D2` measures the fill at 7,207 ticks on a million blocks, so this is the mechanism where a middle rung would buy the most. |
+| Heat pumps | `EnableHeatPumps` | 2 | None known. Off makes them ordinary blocks. |
+| Overheat damage | `EnableDamage`, `DamageIsPerSecond` | 2 | `DamageIsPerSecond` is a correctness switch rather than a rung — off makes damage scale with `Frequency`, which is wrong rather than cheap. |
+| The suit | `EnableSuitDamage` | 2 | None known. One character, one pass. |
+| Temperature replication | `EnableTemperatureSync`, `TemperatureSyncInterval` | 2 + interval | The interval is a real rung and behaves like one: the cost is bandwidth and the price is measured in [Replicating temperatures](#replicating-temperatures). |
+| Unattended grids | — | 1 | **The rung that does not exist at all.** [document-of-intent.md](document-of-intent.md#what-an-unattended-grid-gets) says full simulation is the default and a per-grid rate tier is a switch; the switch is unbuilt, so today there is one rung and it is `realistic`. |
+
+**Read the count column with the last one.** Nine mechanisms have two rungs and only two of those are
+places a cheaper rung is known to be possible — room air's map, and the unattended-grid tier that was
+already intended. The rest have two rungs because two is all there is.
+
+The rows that are gaps are tracked as [backlog.md](backlog.md) `B31`.
+
 ## Mechanisms
 
 Each switch removes exactly its own mechanism and its own cost.
@@ -600,6 +640,7 @@ Move one and it wins from then on, across every loop definition in the world.
 | `LoopLargeGridFlowRate` | 10 m/s | How fast coolant moves on a large grid with one pump at full speed. Flow costs no substeps — carrying the fluid is a rotation of which parcel sits in which pipe, exact at any speed — so this is free to be set for feel. |
 | `LoopSmallGridFlowRate` | 10 m/s | The same for a small grid. Split from the large-grid figure because it is a balance dial rather than a constant. |
 | `LoopStagnantTransferFraction` | 1.0 | What a stopped ring still carries between neighbouring parcels, 0..1. 0 makes a pump failure total. |
+| `WellMixedCoolant` | `false` | The cheap rung of coolant transport. Off — the default — is the realistic form: the fluid is a ring of parcels, so a stopped pump leaves the coolant cold at the radiator and hot at the reactor, and where a sink sits round the loop matters. On collapses the ring to one temperature, which is cheaper and makes a loop's layout stop mattering. **It existed in the solver and reached no world until 2026-08-24**: the model read it, the tests exercised it, and nothing a player could touch set it. |
 
 ## Planet climate
 
@@ -1072,6 +1113,7 @@ one with a migration risk — is late rather than first.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-24 | Added [Every mechanism, and the rungs it has](#every-mechanism-and-the-rungs-it-has), the inventory `C15` asks for: what each feature's ladder is today and whether a cheaper rung is known to be possible. Nine mechanisms have two rungs and only two of those are gaps. **Wired `WellMixedCoolant` into a world's configuration**, which it had never been: the solver read it, the suite exercised it and two pages called it a choice a world makes, with no field in `Settings.cs` and no line in `Apply`. |
 | 2026-08-24 | Added [The one approximation that ships on](#the-one-approximation-that-ships-on). The global substep ceiling binds on about a fifth of a real population in thick air at flying speed, which no page said out loud, and it stays at 64 because refusing 1.15× of the demand buys 1.15× of the step for 0.028 K — the trade `P14` exists to take. Recorded why the per-block cap is a switch and this one is not: 0.607 K against 0.028 K ([backlog.md](backlog.md) `C19`). |
 | 2026-08-24 | Recorded that `RoomConvectionCoefficient` carries no pressure term, so a room's pressure decides whether its walls are coupled and, above zero, nothing else ([backlog.md](backlog.md) `F21`). |
 | 2026-08-23 | **Priced `A9`'s unbuilt top rung**, which had been described and never measured: resolving the planet's shadow per face removes an error linear in hull length, about a two-hundredth of a kelvin a metre — 0.73 K on a 150 m hull against the 1.97 K the cadence already costs it, and 11.33 K on a 2,500 m one. Below 300 m the cadence is the larger half. Added the table to [External shadow](#external-shadow). |

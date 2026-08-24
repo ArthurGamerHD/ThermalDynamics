@@ -7,7 +7,7 @@ population of 8,132 real ships says about whether the balance targets hold.
 
 | Looking for | Go to |
 | --- | --- |
-| The design of the lab and the six criteria | [balance-lab.md](balance-lab.md) |
+| The design of the lab and the eight criteria | [balance-lab.md](balance-lab.md) |
 | The equations behind every figure here | [thermal-model.md](thermal-model.md) |
 | What the blocks are and how to build with them | [blocks.md](blocks.md) |
 | The censoring limit every peak temperature is subject to | [known-issues.md](known-issues.md#deliberate-limits) |
@@ -1244,7 +1244,8 @@ the right way for it, and *points the right way* is not a measurement.
 
 **The attempt also found a defect that has nothing to do with the retune.** The coolant path has no
 overshoot clamp, so where a refused substep demand *approximates* on a block it *diverges* on a
-loop — and a loop is the stiffest thing on a plumbed grid. It is [backlog.md](backlog.md) `A10`,
+loop, which on a hull carrying nothing stiffer is what sets the demand. It is
+[backlog.md](backlog.md) `A10`,
 nothing shipped reaches it, and it is recorded because
 [stiffness.md](stiffness.md#what-refusing-the-demand-costs)'s refusal ladder reads as though it
 described a whole grid.

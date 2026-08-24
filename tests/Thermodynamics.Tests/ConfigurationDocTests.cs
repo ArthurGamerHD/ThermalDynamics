@@ -75,6 +75,119 @@ namespace Thermodynamics.Tests
             return names;
         }
 
+        /// <summary>
+        /// **Every mechanism switch is classified in the ladder inventory** (`C7`, and the intent
+        /// it grew a dimension into).
+        ///
+        /// <para>
+        /// The intent is that a feature is configured as a list of options from `off` to
+        /// `realistic`, and the settings surface is not that shape yet — so
+        /// [configuration.md](../../docs/configuration.md) carries an inventory of how far each
+        /// mechanism is from it. **An inventory that a new mechanism can be added behind is a
+        /// document that says the gap is smaller than it is**, which is the drift this catches:
+        /// every `Enable*` switch has to appear in the inventory section, by name.
+        /// </para>
+        ///
+        /// <para>
+        /// Scoped to `Enable*` because those are the mechanisms. A physical constant, a balance
+        /// dial and a debug overlay are not features with a fidelity ladder, and demanding a rung
+        /// for each of them would make the inventory a copy of the reference table.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void EveryMechanismSwitchIsClassifiedInTheLadderInventory()
+        {
+            string doc = File.ReadAllText(Path.Combine(RepoRoot(), "docs", "configuration.md"));
+
+            const string Heading = "## Every mechanism, and the rungs it has";
+            int start = doc.IndexOf(Heading, StringComparison.Ordinal);
+            Assert.True(start >= 0, "docs/configuration.md has no ladder inventory section");
+
+            int end = doc.IndexOf("\n## ", start + Heading.Length, StringComparison.Ordinal);
+            string inventory = end < 0 ? doc.Substring(start) : doc.Substring(start, end - start);
+
+            // A diagnostic is not a feature with a fidelity ladder. Telemetry's ladder is the
+            // *Light* goal — off unless something reads it — and giving it a rung would make this
+            // inventory a copy of the reference table.
+            HashSet<string> diagnostics = new HashSet<string> { "EnableTelemetry" };
+
+            List<string> mechanisms = new List<string>();
+            foreach (string name in Declared())
+            {
+                if (!name.StartsWith("Enable", StringComparison.Ordinal)) continue;
+                if (diagnostics.Contains(name)) continue;
+                mechanisms.Add(name);
+            }
+
+            Assert.True(mechanisms.Count > 10, "only " + mechanisms.Count + " mechanism switches"
+                + " were found, so this test is not reading Settings.cs");
+
+            List<string> unclassified = new List<string>();
+            foreach (string name in mechanisms)
+            {
+                if (!inventory.Contains("`" + name + "`")) unclassified.Add(name);
+            }
+
+            unclassified.Sort(StringComparer.Ordinal);
+            Assert.True(unclassified.Count == 0,
+                "mechanisms with no row in configuration.md's ladder inventory, so nothing says"
+                + " what rungs they have:\n  " + string.Join("\n  ", unclassified.ToArray()));
+        }
+
+        /// <summary>
+        /// **Nothing in the model is a rung a world cannot reach.**
+        ///
+        /// <para>
+        /// `WellMixedCoolant` was one for as long as it existed: declared on `ThermalSettings`, read
+        /// by the solver, exercised by the suite, documented in two pages as a choice a world
+        /// makes — and with no field in `Settings.cs` and no line in `Apply`, so no player could
+        /// ever set it. A cheap rung that reaches no world is the same as a rung that does not
+        /// exist, and it is worse, because the documentation says it is there.
+        /// </para>
+        ///
+        /// <para>
+        /// Textual, for the reason the rest of this class is: `Settings.cs` reads `Sandbox.*` and
+        /// cannot be linked into this project. Four core fields are excluded by name and each says
+        /// why.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void EveryCoreSettingIsReachableFromAWorldsConfiguration()
+        {
+            string core = File.ReadAllText(Path.Combine(RepoRoot(), "Data", "Scripts",
+                "Thermodynamics", "Core", "Settings", "ThermalSettings.cs"));
+            string world = File.ReadAllText(Path.Combine(RepoRoot(), "Data", "Scripts",
+                "Thermodynamics", "Settings.cs"));
+
+            // Not tunable: `Version` is the schema number, `Revision` counts changes so a grid can
+            // notice one, and the two step figures are derived from `Frequency` by `Derive`.
+            HashSet<string> derived = new HashSet<string>
+            {
+                "Version", "Revision", "StepSeconds", "StepsPerSecond",
+            };
+
+            List<string> unreachable = new List<string>();
+            int fields = 0;
+
+            foreach (Match match in Regex.Matches(core,
+                @"(?m)^\s*public\s+(?:bool|float|int)\s+([A-Za-z0-9_]+)\s*(?:=|\{)"))
+            {
+                string name = match.Groups[1].Value;
+                if (derived.Contains(name)) continue;
+
+                fields++;
+                if (!Regex.IsMatch(world, @"core\." + Regex.Escape(name) + @"\s*=")) unreachable.Add(name);
+            }
+
+            Assert.True(fields > 30, "only " + fields + " core settings were found, so this test is"
+                + " not reading ThermalSettings.cs and would pass on a rung wired to nothing");
+
+            unreachable.Sort(StringComparer.Ordinal);
+            Assert.True(unreachable.Count == 0,
+                "core settings the solver reads that no world configuration can set, so they are"
+                + " rungs reachable only by a test:\n  " + string.Join("\n  ", unreachable.ToArray()));
+        }
+
         [Fact]
         public void EverySettingIsInTheReference()
         {

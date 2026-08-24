@@ -503,7 +503,7 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// **The ring is the stiffest thing on a plumbed grid, and it is the one path a refused
+        /// **On a hull carrying nothing stiffer the ring sets the substep demand, and it is the one path a refused
         /// step does not approximate but diverges.**
         ///
         /// <para>
@@ -518,7 +518,9 @@ namespace Thermodynamics.Tests
         /// <para>
         /// Measured at the shipped `Frequency` and clock: the same reactor and blocks with no ring
         /// demand **one** substep and are unmoved by any cap; with a nine-pipe ring they demand
-        /// **nine**. Refusing that demand is orderly to about 4.5× — 21.9 K of spread against
+        /// **nine**, so on a hull carrying nothing stiffer the loop is what sets the demand. On a
+        /// census hull it is not — light fittings set 23 either way, which `tests/README.md`
+        /// measures — so this is a claim about a hull with a loop and little else. Refusing that demand is orderly to about 4.5× — 21.9 K of spread against
         /// 28.7 K — and at 9× the ring reaches 1.7e11 K. So the bound is somewhere between them,
         /// and it is a cliff rather than the gentle ladder the block path has.
         /// </para>
@@ -539,8 +541,8 @@ namespace Thermodynamics.Tests
 
             Assert.Equal(1f, bare, 0);
             Assert.True(withRing >= 8f,
-                "the ring demanded only " + withRing + " substeps, so it is not the stiffest thing"
-                + " on this grid and the rest of this measures nothing");
+                "the ring demanded only " + withRing + " substeps, so it is not what sets the"
+                + " demand on this grid and the rest of this measures nothing");
 
             float granted = SpreadAcrossAHeatedRing(1f, 4096);
             float halved = SpreadAcrossAHeatedRing(1f, 2);
