@@ -731,6 +731,7 @@ namespace Thermodynamics.Sim
         ///   bench load  --size 1000000        what building the grid costs before tick one
         ///   bench floor --size 42000           what a per-block substep cap buys, and costs
         ///   bench ceiling --size 42000         what refusing a substep demand costs, in air
+        ///   bench parallel --size 600           one grid per thread: does a fleet pay for it
         ///   bench report --csv out/            the full performance report, as a CSV to diff
         ///   bench report --baseline out/performance.csv   the same, against an earlier one
         /// </summary>
@@ -1087,6 +1088,42 @@ namespace Thermodynamics.Sim
                     return 0;
                 }
 
+                case "parallel":
+                {
+                    int[] sizes = { 1, 2, 4, 8, 16, 32, 64, 128, 242 };
+                    int threads = OptionInt(args, "--threads", Environment.ProcessorCount);
+                    int each = size > 0 ? size : 600;
+
+                    Console.WriteLine();
+                    Console.WriteLine("== fleet parallelism, " + each.ToString("n0")
+                        + " blocks a grid ==");
+                    Console.WriteLine("  One grid per work item, joined every fleet-step, against"
+                        + " the same fleet stepped in order.");
+                    Console.WriteLine("  " + threads + " threads of " + Environment.ProcessorCount
+                        + ". Fastest of " + FleetParallelLab.Repeats + " repeats; the noise column"
+                        + " is slowest over fastest for each side.");
+                    Console.WriteLine("  Hand-off is the same fan-out with nothing in the body -"
+                        + " a lower bound on the engine's own.");
+                    Console.WriteLine();
+
+                    Console.WriteLine(FleetParallelLab.Table(FleetParallelLab.Run(
+                        sizes, each, threads,
+                        message => Console.Error.WriteLine("  " + message))));
+
+                    // A server's fleet is a few capital ships among many small ones, and the
+                    // largest grid is the floor under a fleet-step however many threads there are.
+                    int[] uneven = { 8000, 4000, 2000, 1000, 600, 600, 400, 400, 300, 300,
+                                     200, 200, 200, 150, 150, 150, 100, 100, 100, 100 };
+                    Console.WriteLine("  uneven fleet: " + uneven.Length + " grids, "
+                        + uneven[0].ToString("n0") + " blocks down to " + uneven[uneven.Length - 1]);
+                    Console.WriteLine(FleetParallelLab.Table(new List<FleetParallelLab.Row>
+                    {
+                        FleetParallelLab.RunUneven(uneven, threads,
+                            message => Console.Error.WriteLine("  " + message)),
+                    }));
+                    return 0;
+                }
+
                 case "ceiling":
                 {
                     float speed = OptionFloat(args, "--speed", 200f);
@@ -1293,6 +1330,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  bench load  --size N    what building the grid costs before tick one");
             Console.WriteLine("  bench floor --size N    what a per-block substep cap buys, and costs");
             Console.WriteLine("  bench ceiling --size N  what refusing a substep demand costs, in air");
+            Console.WriteLine("  bench parallel --size N one grid per thread: does a fleet pay for it");
             Console.WriteLine("  bench report            full performance report; --baseline <csv> to compare");
             Console.WriteLine("  bench spike --size N    one block placed, split by stage");
             Console.WriteLine("  bench steppath          a step at the solver, against a step through the host");

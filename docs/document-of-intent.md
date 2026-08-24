@@ -495,11 +495,15 @@ the game thread — and the design has been kept ready for it rather than built:
 * **The shape is decided by what may race.** Reads must not race with the game mutating a grid, so
   the natural split is *solve in parallel, apply on the game thread* through `InvokeOnGameThread`.
 
-**Where the payoff is depends on size, and the measurements point in opposite directions.** Eight
-thousand blocks solve in 0.128 ms a step, which may already be under the cost of a thread hand-off;
-a 242-grid fleet spent 25.9% of real time in the solver, and a million-block step is 118 ms and
-atomic. Per-grid parallelism across many grids and per-grid splitting of one huge grid are different
-changes, and the fleet figure argues for the first before the second.
+**Where the payoff is depends on size, and the fleet half is now measured.** Per-grid parallelism
+across many grids and splitting one huge grid across threads are different changes, and the first is
+the one the fleet figure argued for. It pays: a 242-grid fleet steps **10.17× faster on 32 threads
+and 7.09× on eight**, the hand-off that was expected to eat it is 1.6–6.8 µs against a grid's own
+0.54 ms, and a fleet stepped one grid per thread is bit-identical to one stepped in order. What
+bounds it is the largest ship — an uneven fleet gives 3.35× because a step cannot finish before its
+biggest grid does — which is what makes splitting one grid the *second* change rather than a
+substitute for the first. A million-block step is still 118 ms and atomic. See
+[scale-design.md](scale-design.md#one-grid-per-thread-measured).
 
 Two things must survive it, and both are already rules: the three invariants (`C6`), and that
 nothing allocates on the stepping path (`C4`).

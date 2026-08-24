@@ -34,6 +34,7 @@ waste memory.
 | Block *storage* stops enumerating cells | **not done** — `GridModel.blocksByCell`, `SurfaceMap.states` and `BlockInstance.Cells` are still one entry per occupied cell. This is the one thing between the model and an SE2 grid; the maths above is already there. `Se2LatticeTests` marks the line between them. |
 | Room mapping off the block lattice | not done |
 | Struct-of-arrays solver state | **done for the step** — the substep loop reads flat arrays mirrored from the nodes, refreshed only for nodes that changed. The node objects remain the public face. |
+| One grid per thread | **measured, not built** — `bench parallel`: 10.17x on a 242-grid fleet at 32 threads, 7.09x at eight, 3.35x on an uneven fleet, hand-off 1.6-6.8 us. See [One grid per thread, measured](#one-grid-per-thread-measured) |
 | Stiffness / multirate | not done — but now **measured**: `LastStepWasClamped` is reported per grid as "steps clamped by substep cap" |
 | Land `Core/` in the live mod | **done** — the adapter is [`Game/`](../Data/Scripts/Thermodynamics/Game); the legacy per-cell path is deleted |
 | Instrument | **done** — [`ISimulationProfiler`](../Data/Scripts/Thermodynamics/Core/Simulation/SimulationProfiler.cs) times topology, room mapping, exposure and solver; see [telemetry.md](telemetry.md) |
@@ -357,6 +358,72 @@ The heap-object count matters more than the bytes: SE1 runs a non-server GC on t
 and 24 000 live objects per grid is collection pressure the mod does not need to create.
 
 ---
+
+## One grid per thread, measured
+
+[backlog.md](backlog.md) `D19` asks for the machine to be used and the game thread to be left
+alone, and says *measure before adopting* — because the two figures available pointed opposite
+ways. Eight thousand blocks solve in 0.128 ms, which might be under the cost of a hand-off; a
+242-grid fleet spent 25.9 % of real time in the solver. Those are answers to different questions,
+and `bench parallel` answers the second: **many grids, one per work item, joined every step**, which
+is the shape *solve in parallel, apply on the game thread* takes.
+
+**The hand-off is not the obstacle.** Fanning out over 242 items and joining costs **1.6–6.8 µs** a
+fleet-step — 0.5 % of one grid's own step at one grid, and under a twentieth of a per cent from four
+grids up. A single grid stepped through the fan-out comes back at **0.99×** what it costs stepped
+directly, so the doubt the row recorded is answered: at 1,004 nodes a grid's step is 0.54 ms and a
+hand-off is three parts in a thousand of it.
+
+**What a fleet buys**, identical 1,004-node driven hulls, 32 threads:
+
+| grids | serial | parallel | speed-up |
+| ---: | ---: | ---: | ---: |
+| 1 | 0.51 ms | 0.51 ms | 0.99× |
+| 8 | 4.32 ms | 1.07 ms | 4.06× |
+| 32 | 17.18 ms | 1.84 ms | 9.35× |
+| 128 | 70.30 ms | 7.13 ms | 9.86× |
+| **242** | **131.30 ms** | **12.92 ms** | **10.17×** |
+
+**And what the thread count buys**, at 242 grids:
+
+| threads | 2 | 4 | 8 | 16 | 32 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| speed-up | 1.96× | 3.87× | 7.09× | 8.09× | 10.17× |
+
+Near-linear to eight, then 8.09× at sixteen and 10.17× at thirty-two — the signature of a pass that is memory-bandwidth bound
+rather than arithmetic bound — the solver walks flat arrays and does little per element. **A
+server with eight cores gets most of what a server with thirty-two gets**, which is the useful half
+of that: the change does not need a big machine to pay.
+
+**The largest grid is the floor, and a real fleet has one.** Twenty grids from 8,904 nodes down to
+about 150 — a capital ship among frigates — give **3.35×** at 32 threads and 3.37× at sixteen, not ten, because the parallel step
+cannot finish before its biggest item does and that one grid is 4.3 ms of a 17.1 ms serial fleet.
+Per-grid parallelism therefore trades a fleet's cost for its largest ship's cost, and splitting one
+grid across threads is the separate change that would move *that* floor.
+
+**Applied to the figure that opened the question**: a 242-grid fleet at 25.9 % of real time becomes
+about **2.5 %** at 32 threads and **3.7 %** at eight, before any of the other work on this page.
+
+**Four things this does not measure**, each of which could take some of it back:
+
+* **The engine's scheduler, not the framework's.** The mod would fan out through
+  `MyAPIGateway.Parallel`, backed by `ParallelTasks`; this measures `System.Threading.Tasks`. The
+  hand-off column is a lower bound on the engine's rather than a prediction of it.
+* **The game-thread half.** Reading a grid's power and applying damage still has to happen on the
+  game thread, and none of that is in these numbers. What is measured is the solver, which is what
+  the 25.9 % was.
+* **A machine of its own.** The figures were taken on a 32-thread machine with about four cores
+  otherwise busy. Every row is the fastest of five repeats and background load costs the parallel
+  side more than the serial one, so the speed-ups are conservative.
+* **Grids that are not alike.** The ladder is identical hulls, which is the best case for any
+  scheduler; the uneven row is the one to read for a server.
+
+**What makes it safe is already true.** `FleetParallelTests` asserts that a fleet stepped one grid
+per thread lands bit-identically where the same fleet stepped in order lands, and that every piece
+of static state in `Core` is named with the reason two grids may share it — nineteen fields, all of
+them lookup tables, geometry constants or off the stepping path. A new static field fails that test
+until somebody writes its reason down, which is the shape of the defect that would otherwise arrive
+as a cache and land as a race.
 
 ## Order of work
 
@@ -773,6 +840,7 @@ sleeping and chunking are least effective.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | **Measured one grid per thread** ([backlog.md](backlog.md) `D19`), which the page listed as a route and nothing had priced. 10.17× on a 242-grid fleet at 32 threads, 7.09× at eight, 3.35× on an uneven fleet where the largest ship is the floor, and a hand-off of 1.6–6.8 µs against a grid's own 0.54 ms. `bench parallel` is the run and `FleetParallelTests` pins the bit-identity that makes it safe. |
 | 2026-08-22 | Corrected the substep cap in the integrator argument: it named 16, which was the default when the section was written and is now 64. The argument is unchanged — a 400× stiffness ratio exceeds any cap a grid can afford. |
 | 2026-08-22 | Merged `model-redesign.md` into this page as Part 1: both documents are design for the same model, and the data structures, room mapping and per-cell storage arguments were being made twice. Replaced the numbered section references with named links, so a cross-reference survives a section being added. Corrected three stale notes carried in from the older page — per-block self-shadowing is built and switchable rather than unimplemented, the sun raycast is on an interval, and specific heat is real J/(kg·K) rather than 250× below physical. Added the standard header and this log. |
 | 2026-08-18 | Recorded the measured effect of boundary-centric geometry: contact area for one joint is flat at ~13 ns whatever the block size, against 987 µs at 16³ cells for the cell-walking form. |
