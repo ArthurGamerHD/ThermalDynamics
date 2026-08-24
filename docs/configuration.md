@@ -267,6 +267,56 @@ rig asks 3.3 substeps at `Frequency 4` and about 6.7 at `Frequency 2` — enough
 so **halving `Frequency` halves the per-frame cost of a given step budget**; that is why
 `MaxElementVisitsPerStep` is 2,000,000 rather than the 1,000,000 it carried at `Frequency` 8.
 
+### The one approximation that ships on
+
+The defaults are the most faithful configuration the model has, and
+`TheDefaultsAreTheMostFaithfulConfiguration` holds them to it. **`MaxSubsteps` is the one exception,
+and it is written here rather than left to be discovered.**
+
+In vacuum nothing is close to it: a 49-ship panel of real workshop hulls asks 7.1 substeps at p95
+against the 64 granted. **In thick air at 200 m/s the same panel's p99 demand is 73.4 and 14 of 50
+hulls are refused** — and a forty-hull retest set gives 73.6 and the same verdict, so it is a
+property of the configuration rather than of a sample. Every refused hull in either population sits
+at **1.14–1.15× over-subscribed**, because the stiffest block class is the same fitting on every
+ship and its demand in air is set by the convection coefficient rather than by the hull. That makes
+it a *ceiling* rather than a tail: no ship can be far past it, and projected to the 300 m/s that
+servers commonly run, p95 reaches 1.29× and no further.
+
+**What being refused does** is not the per-block floor below — `ApplyThermalMassFloor` returns
+immediately at the shipped `MaxSubstepsPerBlock` of zero. The step is integrated at the ceiling and
+the two overshoot clamps bound every exchange at the energy that brings a pair to equilibrium, so
+the result is damped rather than unstable.
+
+**What it costs is 0.028 K**, on the hottest block of a driven census hull over 600 simulated
+seconds in that same air, against a run granted everything it asked for; the worst-placed block is
+0.041 K out. The approximation stays free to about 2× over-subscribed and breaks between 2× and 3×,
+which nothing in either population reaches.
+
+| granted against demand | speed | hottest block | worst block |
+| ---: | ---: | ---: | ---: |
+| 1.15× over-subscribed — **the shipped breach** | 1.15× | **0.028 K** | 0.041 K |
+| 1.50× | 1.47× | 0.068 K | 0.099 K |
+| 2.03× | 1.99× | 0.101 K | 0.148 K |
+| 3.13× | 1.80× | 0.137 K | **5.116 K** |
+
+**So it stays at 64 and stays a default rather than becoming a switch**, and the reasoning is the
+one [rules.md](rules.md) `P14` states: fidelity a player cannot perceive is cost, so where the
+difference is invisible the cheap form simply *is* the model and there is nothing to switch. Raising
+the ceiling to grant the demand would pay 1.15× of the solver step — 1.29× at 300 m/s — in the most
+expensive environment a ship ever flies in, to buy three hundredths of a kelvin.
+
+**`MaxSubstepsPerBlock` is the same kind of approximation and is *not* a default**, which is a
+consistent pair rather than a contradiction: it costs **0.607 K** on the worst-placed block, twenty
+times more and on the other side of what a player can see, so
+[the fidelity rule](document-of-intent.md#fidelity-is-the-default-a-saving-is-a-switch) makes it a
+switch. The boundary between the two is the number, not the mechanism.
+
+**This is why `G6` fails on the shipped configuration and will keep failing.** The criterion's
+marker is *p99 demand exceeds what the caps grant*, it was written before the data, and it is not
+moved because the data came back inconvenient (`P3`). The verdict carries the price beside it. See
+[backlog.md](backlog.md) `C19` and
+[stiffness.md](stiffness.md#what-refusing-the-demand-costs).
+
 ### `MaxSubstepsPerBlock`
 
 A step is divided into as many substeps as the **stiffest** block on the grid needs, and every
@@ -512,7 +562,7 @@ will not move it much.
 | `HeatTimeScale` | 225 | How much faster than real physics heat moves. Divides every heat capacity. |
 | `MaxElementVisitsPerStep` | 2000000 | Most element visits one step may make — substeps times its links plus four times its nodes — before the step is shortened to fit. 0 removes the bound. **Moves with `Frequency`**: a step is spread across the frames of its window, so this figure and the step rate together set the per-frame cost. See below. |
 | `MaxSubstepsPerBlock` | 0 (off) | Most substeps any single block may demand of the whole grid before it is treated as heavier than it is. The cheapest large win there is on a real ship. See below. |
-| `MaxSubsteps` | 64 | Most substeps one step may be cut into, whatever the grid asks for. A grid refused here integrates a step too long for its stiffest block, and the overshoot clamps carry the difference. |
+| `MaxSubsteps` | 64 | Most substeps one step may be cut into, whatever the grid asks for. A grid refused here integrates a step too long for its stiffest block, and the overshoot clamps carry the difference. **It binds in thick air at flying speed** — see [The one approximation that ships on](#the-one-approximation-that-ships-on). |
 | `ClampConductionOvershoot` | `true` | Caps each exchange at the energy that equalises the pair. Off reproduces the original unbounded solver. Skipped, at no change to the result, on any step short enough that no element can overshoot — see [benchmarks.md](benchmarks.md#the-overshoot-clamp-ab). |
 | `ClampEnvironmentOvershoot` | `true` | The same for radiation and convection: neither may carry a block past ambient in one substep. This is what bounds a step that is deliberately far too long. |
 | `DamageIsPerSecond` | `true` | Overheat damage per second of simulated time. Off applies it per step, which makes damage scale with `Frequency`. |
@@ -1022,6 +1072,7 @@ one with a migration risk — is late rather than first.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-24 | Added [The one approximation that ships on](#the-one-approximation-that-ships-on). The global substep ceiling binds on about a fifth of a real population in thick air at flying speed, which no page said out loud, and it stays at 64 because refusing 1.15× of the demand buys 1.15× of the step for 0.028 K — the trade `P14` exists to take. Recorded why the per-block cap is a switch and this one is not: 0.607 K against 0.028 K ([backlog.md](backlog.md) `C19`). |
 | 2026-08-24 | Recorded that `RoomConvectionCoefficient` carries no pressure term, so a room's pressure decides whether its walls are coupled and, above zero, nothing else ([backlog.md](backlog.md) `F21`). |
 | 2026-08-23 | **Priced `A9`'s unbuilt top rung**, which had been described and never measured: resolving the planet's shadow per face removes an error linear in hull length, about a two-hundredth of a kelvin a metre — 0.73 K on a 150 m hull against the 1.97 K the cadence already costs it, and 11.33 K on a 2,500 m one. Below 300 m the cadence is the larger half. Added the table to [External shadow](#external-shadow). |
 | 2026-08-23 | `HeatGlow` is the last 100 K before a block's own critical temperature, superseding the two entries below it. The colour is unchanged and still absolute. |

@@ -44,6 +44,25 @@ Closing it properly means the harness modelling destruction — removing the nod
 graph, and stopping the source — which is a solver-wide change to answer a question the censored
 reading already answers.
 
+**The global substep ceiling binds in thick air at flying speed, and that is the one approximation
+the defaults ship on.** `MaxSubsteps` grants 64. In vacuum a 49-ship panel of real hulls asks 7.1 at
+p95 and nothing is close to it; at 200 m/s in thick air the same panel's p99 demand is **73.4 and 14
+of 50 hulls are refused**, every one at 1.14–1.15× over-subscribed — a ceiling rather than a tail,
+because the stiffest block class is the same fitting on every ship and its demand in air is set by
+the convection coefficient. A refused step is integrated at the ceiling with the two overshoot
+clamps bounding each exchange, and it costs **0.028 K** on the hottest block over 600 simulated
+seconds, 0.041 K on the worst. It stays free to about 2× and breaks between 2× and 3×, which nothing
+in either population reaches even projected to 300 m/s.
+
+It stays a default rather than becoming a switch because 0.028 K is below every instrument here, and
+`P14` says that where the difference cannot be perceived the cheap form *is* the model. The
+per-block cap is the same kind of approximation at 0.607 K on the worst-placed block and is
+therefore a switch; the boundary is the number. It is also why `G6` fails on the shipped
+configuration and will keep failing — the criterion's marker was written before the data and is not
+moved because the data came back inconvenient. See
+[configuration.md](configuration.md#the-one-approximation-that-ships-on) and
+[backlog.md](backlog.md) `C19`.
+
 **Planet and asteroid shadow is per grid; only other grids shade individual faces.** A grid's own
 shadow is per face (`SolarSelfShadowing`) and so is another grid's (`SolarGridShadows = full`), but a
 planet's or an asteroid's dims the whole grid by the share of sampled rays that were blocked
