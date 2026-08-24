@@ -100,11 +100,14 @@ cleaner rather than weaker: `arcade / air-conditioning` reaches 21,900 K at **10
 is the signature the argument always rested on. The integrator is refused what it asks for by seven
 orders of magnitude, which is not the profile being approximate.
 
-**The other survivor is not starved at all.** `physical / x-overloaded` reaches 11,662 K with every
-substep granted — but `physical` runs `HeatTimeScale 1`, so a scenario clock cut for a world 225×
-faster ends while it is still climbing, and *everything* `physical` runs is marked not settled. It
-is the one cell where the divergence test cannot separate a failure from a run that was stopped too
-early, which is the limit recorded below and `M1` in practice.
+**The other survivor was not starved at all, and is not a divergence.** `physical / x-overloaded`
+reaches 11,662 K in the matrix with every substep granted — but `physical` runs `HeatTimeScale 1`,
+so a scenario clock cut for a world 225× faster ends while it is still climbing. **Asked at its own
+clock** — the same *physical* duration the shipped column gets, 225× the scenario's seconds and
+6.48 million steps — it settles at about **1,300 K**, converged, still unstarved. So the last
+divergence the matrix could not explain was a run stopped too early, and the profile has no
+instability in it. `ProfileClockTests` holds both halves: that the scaling reaches a run, and what
+the cell does once it does.
 
 **Starvation explains nothing anywhere else** — and the pair that established that turned out to be
 saying something larger. `candidate` was starved 49% on `x-burning-ship` and peaked at 11,280 K;
@@ -213,10 +216,16 @@ separately rather than reported as defects — otherwise four correct results bu
 
 ## Known limits of this suite
 
-* **Scenario run lengths are fixed to the shipped clock.** A world 225× slower is still climbing
-  when a run ends: 72 of 136 cells are untrustworthy, mostly `physical`'s. Run lengths would have to
-  scale with `HeatTimeScale` for that column to mean anything. The report marks them rather than
-  letting a transient read as an equilibrium.
+* **Scenario run lengths are fixed to the shipped clock, and now they can be asked not to be.** A
+  world 225× slower is still climbing when a run ends: 72 of 136 cells are transients, mostly
+  `physical`'s, and the report marks them rather than letting one read as an equilibrium.
+  `ScenarioRunner.DurationScale` scales a run to a profile's own clock and
+  `ProfileSweep.MeasureAtItsOwnClock` sets it from the ratio, which is what settled the matrix's
+  last unexplained divergence above. **It is not the sweep's default because the sweep would stop
+  being runnable**: seven of the physical column's cells alone ran past twenty minutes before being
+  cut, against a whole sweep of minutes today — the cost is the 225× itself, and it lands on every
+  cell of that column. So a cell is asked at its own clock when a reading turns on it, and the
+  column stays marked otherwise.
 * **The divergence flag is a 10,000 K threshold**, so it catches both genuine runaway and
   absurd-but-stable steady states. A buried 40 MW reactor really does reach tens of thousands of
   kelvin in this model, because conduction can only carry about 1.8 kW/K away from one cell.
@@ -233,6 +242,7 @@ separately rather than reported as defects — otherwise four correct results bu
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | **The matrix's last unexplained divergence is not one.** `physical / x-overloaded` reads 11,662 K at a scenario clock cut for a world 225× faster; given the same physical duration the shipped column gets, it settles at about 1,300 K, converged and unstarved. So every divergence in the matrix is now starvation or the clock, and `physical` has no instability. `ScenarioRunner.DurationScale` is the mechanism ([backlog.md](backlog.md) `C8`) and is deliberately not the sweep's default: the 225× lands on every cell of that column and seven rigs alone ran past twenty minutes. |
 | 2026-08-22 | Re-measured the divergence counts under the corrected rule. Eight of the ten cells the column reported were converged answers: `candidate` and `shipped` have none at all, and `arcade` has one — `air-conditioning` at 21,900 K and 100% starved, which is the case the starvation argument always rested on. The other survivor, `physical / x-overloaded`, is the one cell where the test cannot separate a divergence from a run stopped too early, because a scenario clock cut for the shipped world ends while a 225×-slower one is still climbing. |
 | 2026-08-22 | Withdrew the burning-ship divergence and corrected it in place (`E10`). It settles: flat to the last digit over ten times the run, energy balanced to a part in ten thousand, and two integrators refused wildly different substep counts one kelvin apart. The 11,279 K is a conduction-limited interior temperature — the hottest block has no face to radiate from — and the peak among blocks that can is 2,822 K. The real defect was the divergence column: a threshold on a temperature, which cannot tell a converged extreme from a diverged integration. It now requires a failure to settle as well. |
 | 2026-08-22 | Re-measured every figure here against one sweep, after `shipped` began reading the real defaults. The correction that matters: the shipped default's divergence on `x-burning-ship` was published as starvation, and it is not — it diverges with 0% of its substeps refused, one kelvin from `candidate`, which is refused 49%. |

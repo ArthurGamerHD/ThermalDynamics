@@ -76,8 +76,39 @@ namespace Thermodynamics.Harness
         /// <summary>Whether the solver's ambient is a climate it reached, rather than its seed.</summary>
         private bool hasAmbientHistory;
 
+        /// <summary>
+        /// Multiplies every run length and sample interval a scenario asks for. One by default.
+        ///
+        /// <para>
+        /// **Thermal time runs at `HeatTimeScale`, and a scenario clock does not.** A scenario cut
+        /// to 3,600 s reaches equilibrium in the shipped world and ends a 225×-slower one while it
+        /// is still climbing, so a column of such runs is a column of transients read as
+        /// equilibria — [backlog.md](../../docs/backlog.md) `C8`, and `M1` in practice: two runs
+        /// stopped on different physical states are not comparable however alike their clocks look.
+        /// A caller comparing across clocks sets this to the ratio between them.
+        /// </para>
+        ///
+        /// <para>
+        /// Thread-local, for the reason <see cref="Catalog.MaterialOverride"/> is: xUnit runs test
+        /// classes in parallel and a plain static leaks one comparison's clock into every scenario
+        /// running beside it.
+        /// </para>
+        /// </summary>
+        [ThreadStatic]
+        public static float DurationScale;
+
+        /// <summary>The scale in force, with zero — an unset thread-static — meaning one.</summary>
+        public static float EffectiveDurationScale
+        {
+            get { return DurationScale <= 0f ? 1f : DurationScale; }
+        }
+
         public ScenarioRunner Run(float seconds, float sampleIntervalSeconds = 1f)
         {
+            float scale = EffectiveDurationScale;
+            seconds *= scale;
+            sampleIntervalSeconds *= scale;
+
             float step = simulation.Settings.StepSeconds;
             int totalSteps = (int)Math.Round(seconds / step);
             int stepsPerSample = Math.Max(1, (int)Math.Round(sampleIntervalSeconds / step));
