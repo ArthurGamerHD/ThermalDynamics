@@ -138,14 +138,22 @@ Against a slab of ordinary light armour of the same shape, in the same position,
 | Fit | Count | Settles | Saved | Mass | K per tonne |
 | --- | --- | --- | --- | --- | --- |
 | bare source | 0 | 783.2 K | — | — | — |
-| radiators | 1 | 740.2 K | 42.9 K | 600 kg | 71.6 |
-| radiators | 8 | 736.5 K | 46.6 K | 4,800 kg | 9.7 |
-| armour slab | 1 | 775.7 K | 7.5 K | 5,000 kg | 1.5 |
-| armour slab | 8 | 772.7 K | 10.5 K | 40,000 kg | 0.26 |
+| radiators | 1 | 554.6 K | 228.6 K | 600 kg | 381.0 |
+| radiators | 8 | 491.0 K | 292.1 K | 4,800 kg | 60.9 |
+| armour slab | 1 | 710.9 K | 72.3 K | 5,000 kg | 14.5 |
+| armour slab | 8 | 690.9 K | 92.3 K | 40,000 kg | 2.3 |
 
-Six times the cooling for an eighth of the mass — about **48× better per tonne**, pinned by
-`TheRadiatorBeatsTheArmourItDisplaces`. The second radiator is worth 3 K and the eighth is worth
-nothing: one joint feeds them all.
+Three times the cooling for an eighth of the mass — about **26× better per tonne**, pinned by
+`TheRadiatorBeatsTheArmourItDisplaces`. The second radiator is worth 34 K and the eighth is worth
+8 K: one joint feeds them all, and how much that joint carries is what decides where the stack
+saturates.
+
+> **Re-measured 2026-08-24 at `C24`'s pair**, and the whole table moved because the joint did. At
+> the pace the conversion calibrated to, one radiator took 42.9 K off this source and eight took
+> 46.6 K — 48× better per tonne than armour, and saturated by the second panel. A bolt joint is
+> solid conduction, so four times the pace lets four times as much reach the panel: the first one is
+> worth five times what it was, the stack keeps paying to the eighth, and armour gained with it,
+> which is why the margin per tonne narrowed while every figure in the column grew.
 
 **Past a certain load the radiator turns negative.** At 2 MW into one cell, bolting panels on makes
 the source 33 K *hotter*, because they cover faces that were radiating and cannot carry away what

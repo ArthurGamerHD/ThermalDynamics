@@ -81,14 +81,15 @@ Practical build advice:
   in the ring gets its own full-strength link to the fluid, so a 32-pipe ring couples at 32,000 W/K
   against an 8-pipe ring's 8,000 W/K, while both carry the same 500 kg of coolant. A longer ring
   therefore cools strictly better: measured with a single sink face on the same hot block, an
-  8-pipe ring took it to 549.8 K and a 32-pipe ring to 532.5 K, because the fixed fluid mass is
-  buffered by more pipe metal and so stays colder at the sink. Nothing divides by segment count.
+  8-pipe ring took a 500 kW block to 752.6 K and a 28-pipe ring to 627.4 K, because the fixed fluid
+  mass is buffered by more pipe metal and so stays colder at the sink. Nothing divides by segment
+  count.
   Pinned by `LongerRingsCoupleHarderAndCarryTheSameFluid`.
 * A loop's temperature is saved and restored by member hash, so reloading cannot swap two loops'
   heat and rebuilding a ring does not reset it.
 * **Spread your sources around the ring; do not bother splitting it.** Four sources bunched into one
-  stretch of a 32-pipe ring settle at 140 C; the same four spread evenly around the same ring settle
-  at 91 C. Dividing that ring into four separate rings with a pump each lands at 93 C — no better than
+  stretch of a 32-pipe ring settle at 111.3 C; the same four spread evenly around the same ring
+  settle at 66.8 C. Dividing that ring into four separate rings with a pump each lands at 67.4 C — no better than
   spreading, for four times the pumps. What saturates a loop is several sources dumping into one short
   run of pipe, not the length of the ring. Measured by the `loop-layout` scenario.
 * **A pump fitted the wrong way round is not broken — it drives the loop backwards**, and a loop
@@ -129,14 +130,22 @@ Top and Bottom.
 It has **no script behaviour**. It is purely a definition-driven heat shedder: aluminium's specific
 heat (900 J/(kg K)), conductivity 1, high emissivity (0.35 against the 0.125 default) and a 1.25×
 surface area scaler, so it radiates faster than any armour block of comparable mass. Against a slab
-of light armour of the same shape on the same load it is about 48× better per tonne, which is what
+of light armour of the same shape on the same load it is about 26× better per tonne, which is what
 earns it its place.
 
-**Plumb it; do not bolt it.** A coolant sink face couples to the panel at about 1,000 W/K and a bolt
-joint at about 167 W/K, and on the same load that difference is worth 195 K — more than every
-surface property of the block put together. A panel bolted straight onto a hot block is limited by
-its joint, not its surface, which is why the second one you bolt on is worth 3 K and the eighth is
-worth nothing. Past a certain load it goes further than useless: bolted to a block already saturated,
+**Plumb it; do not bolt it.** A coolant sink face couples to the panel at about 1,000 W/K, and on
+the same load plumbing a panel rather than bolting it is worth **73.5 K** — more than doubling its
+area, and more than any surface property a definition would reach for first. What a loop buys is
+*reach*: a joint carries heat one block, and a ring carries it wherever the ring goes.
+
+> **The joint itself is no longer the weak end**, and that is a change. It carried about 167 W/K
+> against the sink's 1,000 when this was written; a joint is solid conduction and the pace of that
+> is four times what it was since `C24`, so it carries **1,168 W/K** — as hard as the fluid. The
+> guidance holds because of reach rather than because of rate, and whether the loop's coupling
+> should be paced along with conduction is [backlog.md](backlog.md) `C25`.
+
+A panel bolted straight onto a hot block is limited by what it can radiate rather than by what
+reaches it, which is why the second one you bolt on is worth 3 K and the eighth is worth nothing. Past a certain load it goes further than useless: bolted to a block already saturated,
 a panel makes it *hotter*, because it covers faces that were radiating and cannot carry off what it
 blocked. Keep the panel's own faces exposed to vacuum either way. Measured in
 [balance.md](balance.md).
@@ -184,7 +193,7 @@ how much wall the room has in contact with the cooled block, not by the pump's r
 large cabin is a small window to pull heat through.
 
 Measured by the `air-conditioning` scenario: a sealed cabin with a 15 kW source inside settles at
-−60 C with the pump off and −106 C with it on.
+−59.6 C with the pump off and −109.1 C with it on.
 
 The terminal shows what it is moving, what it is drawing, and the coefficient between them. A pump
 with nothing bolted to one of its faces says so rather than silently doing nothing.
@@ -341,6 +350,7 @@ all, so it is the readout that works in any world.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-24 | **Re-quoted every measured figure on this page at `C24`'s pair**, which moved the ones a bolt joint is in. A radiator bolted to a source is worth 228.6 K where it was 42.9 K and 26× armour per tonne where it was 48×, because solid conduction runs four times faster: the stack now keeps paying to the eighth panel instead of saturating at the second. *Plumb it, do not bolt it* holds on **reach** rather than on rate — plumbing a panel is worth 73.5 K over bolting it, while the joint itself now carries 1,168 W/K against a sink face's 1,000 ([backlog.md](backlog.md) `C25`). Ring, layout and air-conditioning figures re-read from their own scenarios. |
 | 2026-08-23 | Re-quoted the `loop-layout` and `air-conditioning` figures after `C4`: the scenario catalogue's blocks derive from the ones they stand in for now, and the rigs state their load in watts of heat rather than in a reactor's output. Bunched-against-spread is 140 C against 91 C, four rings 93 C; the cabin settles at −60 C with the pump off and −106 C with it on. |
 | 2026-08-22 | Said that a coolant pump draws power — 50 kW large, 10 kW small, all of it becoming heat ([backlog.md](backlog.md) `C13`). It drew nothing until now. |
 | 2026-08-22 | Removed a trailing *Radiators and the heat pump* section that restated the [Radiator](#radiator) and [Heat pump](#heat-pump) sections above it in weaker form — the emissivity, the multiplier, the absent coolant ports and the Carnot cost were each already stated once. The one thing it said that they did not, that a pump pairs with a radiator on its hot side, moved into the heat pump's own section. |
