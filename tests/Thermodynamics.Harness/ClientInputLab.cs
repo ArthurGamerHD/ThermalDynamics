@@ -111,6 +111,25 @@ namespace Thermodynamics.Harness
             public float AirDensityError;
 
             /// <summary>
+            /// The client's thrust is wrong by this share, permanently. **A bias, and the one input
+            /// the engine does not replicate at all.**
+            ///
+            /// <para>
+            /// A thruster's heat is charged against `CurrentThrust`, which is physics state: the
+            /// engine *predicts* it on a client rather than sending it, so a client's thrust is its
+            /// own guess about a ship whose physics it is not running. On a burning hull that is
+            /// the largest heat term there is
+            /// ([backlog.md](../../docs/backlog.md) `F17`).
+            /// </para>
+            ///
+            /// <para>
+            /// It only reaches a run that is flying: the `burn` scenario drives thrust on both
+            /// sides, and a hull at rest makes this knob measure nothing.
+            /// </para>
+            /// </summary>
+            public float ThrustErrorShare;
+
+            /// <summary>
             /// The client is running the shipped defaults while the server is not. **A bias, and
             /// the worst case of one that should not happen**: settings replicate, and a client
             /// fetches them on load, so this is what a fetch that never landed would look like.
@@ -201,6 +220,15 @@ namespace Thermodynamics.Harness
         public const float IdleWatts = Census.ProducerWatts * LoadMultiplier * 0.1f;
 
         /// <summary>
+        /// Thrust heat a flying hull makes, watts per producer.
+        ///
+        /// Equal to the electrical load, so the `burn` scenario is a ship making half its heat by
+        /// burning and half by drawing — which is what makes a thrust error and a power error
+        /// comparable rather than a comparison of two different ships.
+        /// </summary>
+        public const float ThrustWatts = LoadedWatts;
+
+        /// <summary>
         /// Runs one degraded client against a server, and scores the readout.
         /// </summary>
         public static Result Measure(Degradation degradation, ClientDriftLab.Correction protocol,
@@ -237,6 +265,14 @@ namespace Thermodynamics.Harness
             float warm = 120f;
             Drive(server, LoadedWatts);
             Drive(client, LoadedWatts);
+
+            // A ship under way, when the scenario is one. The client's own thrust is its guess.
+            bool flying = scenario == "burn";
+            if (flying)
+            {
+                Census.DriveThrust(server, ThrustWatts);
+                Census.DriveThrust(client, ThrustWatts * (1f + how.ThrustErrorShare));
+            }
             Advance(server, Sample(scenario, 0f, how, false), warm);
             Advance(client, Sample(scenario, 0f, how, true), warm);
 
@@ -376,6 +412,10 @@ namespace Thermodynamics.Harness
 
             if (scenario == "shadow") return Worlds.Shadow();
 
+            // Flying: thick air at speed, which is the world a ship under thrust is actually in and
+            // the one where a wrong thrust also drags a wrong airflow behind it.
+            if (scenario == "burn") return Worlds.Flight(1f, 100f);
+
             if (scenario == "sunlit")
             {
                 // A quarter turn every five minutes, so the sun moves across the hull and a lag or
@@ -512,6 +552,12 @@ namespace Thermodynamics.Harness
                 },
                 new Degradation
                 {
+                    Name = "thrust error",
+                    Because = "the engine predicts thrust rather than sending it, so its 20 % is a guess",
+                    ThrustErrorShare = 0.2f,
+                },
+                new Degradation
+                {
                     Name = "thinner air",
                     Because = "its gas system says the hull is in 20 % less air than the server's",
                     AirDensityError = 0.2f,
@@ -538,6 +584,7 @@ namespace Thermodynamics.Harness
                 if (one.HitchLosesSeconds > everything.HitchLosesSeconds) everything.HitchLosesSeconds = one.HitchLosesSeconds;
                 if (one.EnvironmentLagSeconds > everything.EnvironmentLagSeconds) everything.EnvironmentLagSeconds = one.EnvironmentLagSeconds;
                 if (one.SunAngleDegrees > everything.SunAngleDegrees) everything.SunAngleDegrees = one.SunAngleDegrees;
+                if (one.ThrustErrorShare > everything.ThrustErrorShare) everything.ThrustErrorShare = one.ThrustErrorShare;
                 if (one.PowerLagSeconds > everything.PowerLagSeconds) everything.PowerLagSeconds = one.PowerLagSeconds;
                 if (one.PowerErrorShare > everything.PowerErrorShare) everything.PowerErrorShare = one.PowerErrorShare;
                 if (one.AirDensityError > everything.AirDensityError) everything.AirDensityError = one.AirDensityError;

@@ -326,8 +326,8 @@ each — and the shape is what decides the protocol.
 
 The simulation reads its state from three places: an `EnvironmentSample` the client builds itself
 from the world around it, block state the adapter reads off the game's own blocks, and the room map
-it floods locally. Enumerated against the code rather than remembered, **the sweep covers eight
-inputs and leaves fourteen**:
+it floods locally. Enumerated against the code rather than remembered, **the sweep covers nine
+inputs and leaves thirteen**:
 
 | input | read from | covered | |
 | --- | --- | --- | --- |
@@ -338,8 +338,17 @@ inputs and leaves fourteen**:
 | ambient and air density | `PlanetManager` | yes | `thinner air` |
 | block electrical power | `MyResourceSourceComponent` | yes | `power lag`, `power error` |
 | whole-sample staleness | the client's own tick | yes | `environment lag` |
-| **thrust** | `block.CurrentThrust` | **no** | physics state, *predicted* on a client rather than replicated, and a separate heat term from electrical power |
+| thrust | `block.CurrentThrust` | yes | `thrust error`, on the `burn` scenario — physics state, *predicted* on a client rather than replicated, and a separate heat term from electrical power |
 | **grid velocity and relative wind** | `EnvironmentSample.GridVelocity` | **no** | the classic multiplayer prediction error, and it drives convective cooling in atmosphere |
+
+**Thrust is the worst input in the sweep, and it is not close.** Compared at the same 5 % error on a
+flying hull, a wrong thrust settles the client **17.8 K** from the server against block power's
+**1.8 K** — an order of magnitude, on the term that is *also* the largest on a burning ship. And it
+is a pure bias: at 20 % its peak and its standing error are the same 71.1 K, so it never decays at
+all, and the 5-second correction only halves it. A hull at rest shows none of it, which is what says
+the knob reaches the thrust term and nothing else. The reason is in the table above — the engine
+predicts physics state rather than sending it, so a client's thrust is its own guess about a ship
+whose physics it is not running. `ClientInputTests` pins both halves.
 | **solar occlusion** | raycast against voxels and grids | **no** | a *binary* flag over the whole solar input, resolved against world state a client holds differently |
 | **altitude, depth, latitude** | grid position | **no** | position lag on a *moving* ship, which is not the same as a lag on a stationary one |
 | **weather and its intensity** | the game's weather | **no** | server-driven world state |
@@ -775,6 +784,7 @@ counters rather than milliseconds so it holds on any machine.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | **Thrust is in the degraded-input sweep, and it is the worst input there is** ([backlog.md](backlog.md) `F17`). At the same 5 % error on a flying hull it settles a client 17.8 K out against block power's 1.8 K, and at 20 % its peak and standing error are the same 71.1 K — a bias that never decays, on the one input the engine predicts rather than replicates. The sweep needed a scenario that flies: a hull at rest makes the knob measure nothing. |
 | 2026-08-23 | Priced the per-grid planet shadow limit rather than leaving it argued: resolving the planet per face is worth about 0.0045 K a metre of hull on the worst-placed block, which is 0.73 K on a 150 m ship against a 1.47 K cadence floor it does not touch. The limit stays, with a figure. |
 | 2026-08-23 | **Built `B4`'s transport**, which was the half of that row no lab could reach. `ThermalGridSync` is the session it happens in; `HotTailMessage`, `HotTailSchedule` and `HotTailState` are the wire, the timing and the bookkeeping, all game-free and covered by `HotTailSyncTests`. The protocol is the one the measurement chose and nothing more: the whole hull once when a client asks, then the band every five seconds, no budget, empty bands unsent, on a secure channel of its own. Two settings ship with it, `EnableTemperatureSync` and `TemperatureSyncInterval`. What no test reaches is registration, addressing and the send, so `/thermal sync` prints counters on both sides instead. |
 | 2026-08-23 | **Measured the fix for `B4` rather than only the defect, and both halves changed what the row said.** The near-critical tail alone does not close the gap on the census hull — 560 s of misreading to 145 s, and the residual is the un-replicated hull rather than the update rate, because a corrected block conducts to stale neighbours. Stating the whole hull **once at the join** and then tracking the band takes it to **0 s at every interval down to sixty seconds**, for one 94 KB packet and 513 B/s after it. And `-- inputs` found that the convergence argument this row rested on covers one of eight causes: a stale join settles at 0.25 K, while a wrong input — power 2 s late, a dropped backlog, settings that never arrived — settles at 44, 58 and 116 K and stays there. A bias does not decay, and the correction narrows one without removing it. |

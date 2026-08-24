@@ -356,5 +356,42 @@ namespace Thermodynamics.Harness
 
             return producers;
         }
+
+        /// <summary>
+        /// Puts <paramref name="watts"/> of *thrust* heat on every heat producer of the hull, as a
+        /// watt-equivalent of force rather than as power drawn.
+        ///
+        /// <para>
+        /// **A thruster is charged against its thrust and not against its draw**, which is what
+        /// makes a hydrogen thruster heat at all — it draws no electricity. The solver reads
+        /// `ThrustWatts` through `ConsumerWasteEnergy`, so this is a separate term from
+        /// <see cref="DriveCensus"/> and stacks with it: a ship under way is making both.
+        /// </para>
+        ///
+        /// <para>
+        /// It exists for the degraded-input sweep ([backlog.md](../../docs/backlog.md) `F17`),
+        /// where thrust is the one input the engine *predicts* on a client rather than replicating,
+        /// so a client's is its own guess about a ship whose physics it is not running.
+        /// </para>
+        /// </summary>
+        public static int DriveThrust(ThermalSimulation simulation, float watts)
+        {
+            IList<ThermalNode> nodes = simulation.Solver.Nodes;
+            int thrusters = 0;
+
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                if (!ProducesHeatAt(i)) continue;
+
+                float waste = nodes[i].Thermal.ConsumerWasteEnergy;
+                if (waste <= 0f) continue;
+
+                nodes[i].Block.ThrustWatts = watts / waste;
+                nodes[i].RefreshHeatGeneration();
+                thrusters++;
+            }
+
+            return thrusters;
+        }
     }
 }

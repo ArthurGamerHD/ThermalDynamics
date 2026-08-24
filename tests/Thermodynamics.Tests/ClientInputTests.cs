@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Thermodynamics.Harness;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Thermodynamics.Tests
 {
@@ -25,6 +26,13 @@ namespace Thermodynamics.Tests
     /// </summary>
     public class ClientInputTests
     {
+        private readonly ITestOutputHelper output;
+
+        public ClientInputTests(ITestOutputHelper output)
+        {
+            this.output = output;
+        }
+
         private static ClientInputLab.Result Run(ClientInputLab.Degradation how,
             ClientDriftLab.Correction fix = null)
         {
@@ -227,6 +235,92 @@ namespace Thermodynamics.Tests
             Assert.True(corrected.StandingKelvin < alone.StandingKelvin,
                 "the correction should leave a biased client nearer the server: "
                 + corrected.StandingKelvin + " K against " + alone.StandingKelvin + " K");
+        }
+
+        /// <summary>
+        /// **Thrust is a bias that never decays, and per unit of error it is the worst input there
+        /// is** — which is what [backlog.md](../../docs/backlog.md) `F17` suspected and nothing had
+        /// measured.
+        ///
+        /// <para>
+        /// A thruster's heat is charged against `CurrentThrust`, and the engine *predicts* physics
+        /// state on a client rather than replicating it: a client's thrust is its own guess about a
+        /// ship whose physics it is not running. Compared at the same 5 % against block power,
+        /// which the engine does replicate, the thrust error is the larger of the two — and on a
+        /// burning hull thrust is also the larger term, so the two multiply.
+        /// </para>
+        ///
+        /// <para>
+        /// The comparison is per unit of error on purpose. The magnitudes in the sweep are knobs
+        /// this lab turns rather than figures measured from a session, so *thrust at 20 % beats
+        /// power at 5 %* would be a statement about the knobs (`E3`, and `P1`).
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void ThrustBiasesAClientMoreThanPowerDoesAtTheSameError()
+        {
+            const float Error = 0.05f;
+
+            ClientInputLab.Result thrust = Flying(new ClientInputLab.Degradation
+            {
+                Name = "thrust error",
+                ThrustErrorShare = Error,
+            });
+
+            ClientInputLab.Result power = Flying(new ClientInputLab.Degradation
+            {
+                Name = "power error",
+                PowerErrorShare = Error,
+            });
+
+            output.WriteLine("at {0:P0}: thrust {1:n1} K standing, power {2:n1} K",
+                Error, thrust.StandingKelvin, power.StandingKelvin);
+
+            // Both have to bite at all, or the ordering below is an ordering of two zeroes (`E8`).
+            Assert.True(power.StandingKelvin > 1f,
+                "power at " + Error + " settled at " + power.StandingKelvin + " K, so the rig is"
+                + " not one where an input error matters");
+
+            Assert.True(thrust.StandingKelvin > power.StandingKelvin,
+                "thrust settled at " + thrust.StandingKelvin + " K against power's "
+                + power.StandingKelvin + " K at the same error, so thrust is not the worse input");
+        }
+
+        /// <summary>
+        /// **And it is a bias rather than a perturbation**: its peak and its standing error are the
+        /// same number, which is what a wrong input that never decays looks like. A hull at rest
+        /// shows none of it, which is what says the knob reaches the thrust term and nothing else.
+        /// </summary>
+        [Fact]
+        public void AThrustErrorSettlesRatherThanDecayingAndOnlyOnAShipUnderWay()
+        {
+            ClientInputLab.Degradation how = new ClientInputLab.Degradation
+            {
+                Name = "thrust error",
+                ThrustErrorShare = 0.2f,
+            };
+
+            ClientInputLab.Result flying = Flying(how);
+            ClientInputLab.Result resting = Run(how);
+
+            output.WriteLine("flying: peak {0:n1} K, standing {1:n1} K. at rest: peak {2:n1} K",
+                flying.PeakKelvin, flying.StandingKelvin, resting.PeakKelvin);
+
+            Assert.True(flying.StandingKelvin > 1f,
+                "a flying hull showed " + flying.StandingKelvin + " K, so the knob reached nothing");
+
+            // A bias does not decay: what it peaked at is what it settles at.
+            Assert.True(flying.StandingKelvin > flying.PeakKelvin * 0.8f,
+                "the error peaked at " + flying.PeakKelvin + " K and settled at "
+                + flying.StandingKelvin + " K, which is a perturbation rather than a bias");
+
+            Assert.Equal(0f, resting.PeakKelvin, 3);
+        }
+
+        /// <summary>The same run, on a hull that is flying rather than sitting.</summary>
+        private static ClientInputLab.Result Flying(ClientInputLab.Degradation how)
+        {
+            return ClientInputLab.Measure(how, ClientDriftLab.Correction.None, "burn", 240f, 400);
         }
     }
 }
