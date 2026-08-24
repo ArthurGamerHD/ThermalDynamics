@@ -1367,6 +1367,13 @@ namespace Thermodynamics.Harness
             public int Floored;
             public float MaxError;
             public double RmsError;
+            /// <summary>
+            /// Retired. It used to be the worst error among the blocks the floor moved, which
+            /// needed a per-node "was this floored" list the lab computed from conduction alone —
+            /// and that list was wrong in air, where convection is what makes a block stiff. The
+            /// count now comes from the solver, which reads the same terms the floor does, and the
+            /// worst error is reported over every node instead.
+            /// </summary>
             public float MaxFlooredError;
 
             /// <summary>
@@ -1392,6 +1399,9 @@ namespace Thermodynamics.Harness
             /// speed-up on the page.
             /// </summary>
             public float StepSeconds;
+
+            /// <summary>Airspeed the row was measured at, m/s. Zero is vacuum.</summary>
+            public float AirSpeed;
         }
 
         /// <summary>
@@ -1402,20 +1412,22 @@ namespace Thermodynamics.Harness
         /// See stiffness.md, A per-block substep cap.
         /// </summary>
         public static List<FloorRow> SubstepFloor(string shape, int size, int steps,
-            IList<int> caps, Action<string> log = null, bool driven = false, int frequency = 0)
+            IList<int> caps, Action<string> log = null, bool driven = false, int frequency = 0,
+            float airSpeed = 0f)
         {
             List<FloorRow> rows = new List<FloorRow>();
             float[] reference = null;
             float referencePeak = 0f;
 
             // The first row measured would otherwise be measuring the JIT.
-            RunFloor(shape, Math.Min(size, 2000), 2, 0, null, driven, frequency);
+            RunFloor(shape, Math.Min(size, 2000), 2, 0, null, driven, frequency, airSpeed);
 
             for (int i = 0; i < caps.Count; i++)
             {
                 if (log != null) log("cap " + caps[i]);
 
-                FloorRow row = RunFloor(shape, size, steps, caps[i], reference, driven, frequency);
+                FloorRow row = RunFloor(shape, size, steps, caps[i], reference, driven, frequency,
+                    airSpeed);
                 if (reference == null)
                 {
                     reference = lastTemperatures;
@@ -1433,7 +1445,7 @@ namespace Thermodynamics.Harness
         private static float[] lastTemperatures;
 
         private static FloorRow RunFloor(string shape, int size, int steps, int cap,
-            float[] reference, bool driven, int frequency)
+            float[] reference, bool driven, int frequency, float airSpeed)
         {
             HashSet<Vector3I> cells = LoadShapes.Build(shape, size);
 
@@ -1476,35 +1488,27 @@ namespace Thermodynamics.Harness
                 SeedSpread(simulation);
             }
 
-            bool[] isFloored = new bool[count];
-            int floored = 0;
-            if (cap > 0)
-            {
-                float[] conductance = new float[count];
-                IList<ThermalLink> links = simulation.Solver.Links;
-                for (int i = 0; i < links.Count; i++)
-                {
-                    conductance[links[i].NodeA] += links[i].Conductance;
-                    conductance[links[i].NodeB] += links[i].Conductance;
-                }
 
-                float perConductance = settings.StepSeconds / (ThermalSolver.StabilitySafetyFactor * cap);
-                for (int i = 0; i < count; i++)
-                {
-                    if (nodes[i].ThermalMass >= conductance[i] * perConductance) continue;
-                    isFloored[i] = true;
-                    floored++;
-                }
-            }
-
-            EnvironmentSample sample = Worlds.Space(new Vector3(0f, 1f, 0f));
+            // **Air is where a per-block floor has most to reach**, because convection is what
+            // makes a light block stiff — the vacuum column is the one the floor was designed
+            // against and the one that understates it. See backlog.md, `C3` and `C19`.
+            EnvironmentSample sample = airSpeed > 0f
+                ? Worlds.Flight(1f, airSpeed)
+                : Worlds.Space(new Vector3(0f, 1f, 0f));
 
             FloorRow row = new FloorRow();
             row.Cap = cap;
+            row.AirSpeed = airSpeed;
             row.StepSeconds = settings.StepSeconds;
             row.Nodes = count;
-            row.Floored = floored;
-            row.RequiredSubsteps = simulation.Solver.RequiredSubsteps(settings.StepSeconds);
+            // Both read after a step rather than before one, and both for the same reason: the
+            // stability estimate and the floor read the environment, so a demand taken before the
+            // grid has met its air is a vacuum figure wearing an atmospheric label — which is what
+            // this table said the first time it was run in air.
+            simulation.StepExact(1, sample);
+
+            row.RequiredSubsteps = simulation.Solver.LastRequiredSubsteps;
+            row.Floored = cap > 0 ? simulation.Solver.FlooredNodes : 0;
 
             Stopwatch watch = Stopwatch.StartNew();
             simulation.StepExact(steps, sample);
@@ -1527,7 +1531,7 @@ namespace Thermodynamics.Harness
                     float error = Math.Abs(result[i] - reference[i]);
                     sumSquares += (double)error * error;
                     if (error > row.MaxError) row.MaxError = error;
-                    if (isFloored[i] && error > row.MaxFlooredError) row.MaxFlooredError = error;
+
                 }
 
                 row.RmsError = Math.Sqrt(sumSquares / count);
@@ -1550,7 +1554,6 @@ namespace Thermodynamics.Harness
               .Append("peakErr".PadLeft(10))
               .Append("maxErr K".PadLeft(11))
               .Append("rmsErr K".PadLeft(11))
-              .Append("maxErr floored".PadLeft(16))
               .Append('\n');
 
             // Stated rather than assumed: every figure below is proportional to it.
@@ -1560,7 +1563,11 @@ namespace Thermodynamics.Harness
                   .Append(rows[0].StepSeconds.ToString("n4"))
                   .Append(" s (Frequency ")
                   .Append((1f / rows[0].StepSeconds).ToString("n0"))
-                  .Append("), and every substep count below is proportional to it\n");
+                  .Append("), ")
+                  .Append(rows[0].AirSpeed > 0f
+                      ? "thick air at " + rows[0].AirSpeed.ToString("n0") + " m/s"
+                      : "vacuum")
+                  .Append(", and every substep count below is proportional to the step\n");
             }
 
             double baseline = rows.Count > 0 ? rows[0].Milliseconds : 0;
@@ -1579,7 +1586,6 @@ namespace Thermodynamics.Harness
                   .Append((i == 0 ? "-" : row.PeakError.ToString("n3")).PadLeft(10))
                   .Append((i == 0 ? "-" : row.MaxError.ToString("n4")).PadLeft(11))
                   .Append((i == 0 ? "-" : row.RmsError.ToString("n4")).PadLeft(11))
-                  .Append((i == 0 ? "-" : row.MaxFlooredError.ToString("n4")).PadLeft(16))
                   .Append('\n');
             }
 

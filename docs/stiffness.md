@@ -320,6 +320,36 @@ At the shipped **Frequency 4**, a quarter-second step, which asks twice as much 
 | 2 | 2.00 | 139 | 4.5x | 9,283 (21.5 %) | 1.898 K | 0.450 K |
 | 1 | 1.00 | 108 | 5.8x | 14,138 (32.7 %) | 5.915 K | 1.518 K |
 
+**And in air, which is where a floor has most to reach and where the tables above do not look.**
+Convection is what makes a light block stiff, so a vacuum sweep understates both what a cap reaches
+and what it buys. The same 20,916-node hull, driven, in thick air at 200 m/s —
+`bench floor --size 20000 --speed 200 --driven`:
+
+| cap | substeps | speed | blocks raised of 20,916 | peak error | worst error | rms |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| off | 34.44 | 1.0x | 0 | — | — | — |
+| 16 | 16.00 | 2.0x | 173 (0.8 %) | 0.012 K | 0.015 K | 0.004 K |
+| 8 | 8.00 | 3.4x | 1,032 (4.9 %) | 0.001 K | 0.351 K | 0.021 K |
+| **6** | **6.00** | **4.2x** | **1,378 (6.6 %)** | **−0.007 K** | **0.607 K** | 0.036 K |
+| 4 | 4.00 | 5.4x | 3,597 (17.2 %) | −0.467 K | 1.432 K | 0.143 K |
+| 1 | 1.00 | 9.0x | 11,113 (53.1 %) | −14.173 K | 21.381 K | 4.296 K |
+
+**The demand is 34.44 in air against 22.97 in vacuum, and a cap of 6 reaches twice as many blocks
+there** — 6.6 % against 3.4 % — because a block bolted to nothing much is still exchanging with the
+air around it. What that buys is larger too: 4.2× against 2.8×.
+
+**The peak barely moves, and the peak is the number damage is taken off.** At a cap of 6 the hottest
+block on the hull is seven thousandths of a kelvin from where an uncapped run leaves it, while the
+worst-placed block is 0.6 K out. That is the shape of the whole mechanism: it moves the blocks whose
+own time constant is far below the step, and those are not the blocks anything is watching.
+
+> **Two figures in the first air run were vacuum figures wearing an atmospheric label.** The demand
+> and the floored count were both read before the grid had met its air — the stability estimate and
+> the floor both read the environment — so the table said 22.97 and 765 in a run that stepped at
+> 34.44 and floored 1,378. Both are now read after a step, and the count comes from the solver's own
+> `FlooredNodes` rather than from a conduction-only sum the lab kept beside it, which could not see
+> convection at all.
+
 `bench floor` takes `--frequency` and prints the step length above the table, because a cap table
 under no step length reads as though it described the default and is out by a factor of two if it
 does not.
@@ -808,6 +838,7 @@ conductivity 50 is conduction-stiff, and a material definition would fix them ou
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | **Measured the per-block cap in air, which is where it has most to reach** ([backlog.md](backlog.md) `C3`, `C19`). Demand is 34.44 there against 22.97 in vacuum, a cap of 6 reaches 6.6 % of blocks against 3.4 %, and it buys **4.2×** for 0.607 K on the worst-placed block and 0.007 K on the hottest. Also corrected two columns that were vacuum figures in an air run: the demand and the floored count are read after a step now, and the count comes from the solver rather than from a conduction-only sum that could not see convection. |
 | 2026-08-23 | **Measured what the *global* ceiling costs when it refuses a demand**, which nothing had — the page had a floor sweep and no ceiling sweep, and [backlog.md](backlog.md) `C19` was answering the question by naming the floor, which ships off. Added [What refusing the demand costs](#what-refusing-the-demand-costs) and `bench ceiling`: free to about 2× over-subscribed, breaking between 2× and 3×, and the shipped breach of 1.15× worth 0.028 K on the hottest block over 600 simulated seconds. The error follows the ratio rather than the substep count, measured at two step lengths, which is what lets a rig answer for a population. |
 | 2026-08-22 | Labelled the two cap tables by their step length alone, and named the shipped one. They were labelled by which settings profiles ran at each rate, and the profiles are gone; the shipped `Frequency` is 4, so the quarter-second table is now the one a default world reads. |
 | 2026-08-22 | Gave up *A number in the report that does not add up* to [telemetry.md](telemetry.md#whether-the-report-agrees-with-itself), which carries the same defect, the invariants the Consistency section now states and the fix — this page was a second, older account of a report it does not own. Moved four historical asides into this log, keeping what each of them was *for*: that a cap table has to name its step length, that a recommendation quoted without its rate is out by two, that the equilibrium claim is safe only in the limit, and that a ratio is formed from two measurements of the same block (`E6`). |

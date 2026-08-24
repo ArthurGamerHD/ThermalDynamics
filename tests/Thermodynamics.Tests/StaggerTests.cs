@@ -30,14 +30,20 @@ namespace Thermodynamics.Tests
         private const int NodesEach = 600;
 
         /// <summary>
-        /// **Spreading costs nothing on a small fleet and something on a large one.** Two grids
-        /// interleaved still fit in cache; two hundred do not, and every resume is then a cold
-        /// start. The threshold is the machine's, so what is asserted is the *shape* — a large
-        /// fleet pays more than a small one — rather than a percentage this repository cannot pin
-        /// across machines (`M4`, `M5`).
+        /// **Spreading costs nothing until the fleet stops fitting in cache**, and where that falls
+        /// is the machine's business rather than this repository's.
+        ///
+        /// <para>
+        /// So the claim is conditional on the measurement, which is `M5` taken seriously: a
+        /// difference smaller than the run-to-run spread has not been observed, and asserting an
+        /// ordering between two such differences is asserting noise. The first version of this test
+        /// did exactly that — it compared 1.0056 against 0.9967 on a fleet that fits in cache and
+        /// passed by luck. What is held now is that *if* the large fleet's penalty is real, it is
+        /// larger than the small fleet's; and that if neither is, the two schedules agree.
+        /// </para>
         /// </summary>
         [Fact]
-        public void SpreadingCostsMoreAsMoreGridsCompeteForCache()
+        public void SpreadingCostsMoreOnlyOnceTheFleetStopsFittingInCache()
         {
             List<StaggerLab.Row> rows = StaggerLab.Run(new[] { 4, 64 }, NodesEach, 8);
             Assert.Equal(2, rows.Count);
@@ -54,6 +60,24 @@ namespace Thermodynamics.Tests
                 Assert.True(row.StaggeredSpread < 1.3d && row.SpreadSpread < 1.3d,
                     "the repeats spread " + row.StaggeredSpread + " / " + row.SpreadSpread
                     + "x, which is too noisy to read a few per cent through");
+            }
+
+            // The noise floor either side, from the repeats themselves rather than assumed.
+            double floor = System.Math.Max(
+                System.Math.Max(rows[0].StaggeredSpread, rows[0].SpreadSpread),
+                System.Math.Max(rows[1].StaggeredSpread, rows[1].SpreadSpread)) - 1d;
+
+            output.WriteLine("noise floor {0:P1}; penalties {1:P1} and {2:P1}",
+                floor, rows[0].Penalty - 1d, rows[1].Penalty - 1d);
+
+            if (rows[1].Penalty - 1d <= floor)
+            {
+                // Nothing to order. What that says is the finding for a fleet this size: the two
+                // schedules are the same speed while the working set fits.
+                Assert.True(System.Math.Abs(rows[0].Penalty - 1d) <= floor + 0.05d,
+                    "a small fleet paid " + rows[0].Penalty + "x for spreading, which is outside a"
+                    + " noise floor of " + floor + " and should have been free");
+                return;
             }
 
             Assert.True(rows[1].Penalty >= rows[0].Penalty,

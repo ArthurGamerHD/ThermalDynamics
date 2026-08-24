@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Thermodynamics.Core;
 using Thermodynamics.Harness;
 using VRageMath;
+using Xunit.Abstractions;
 
 namespace Thermodynamics.Tests
 {
@@ -28,6 +29,13 @@ namespace Thermodynamics.Tests
     /// </summary>
     public class SubstepFloorTests
     {
+        private readonly ITestOutputHelper output;
+
+        public SubstepFloorTests(ITestOutputHelper output)
+        {
+            this.output = output;
+        }
+
         /// <summary>A 16 kg fitting, the block the field dump found setting the substep count.</summary>
         private static BlockModel LightFitting()
         {
@@ -459,6 +467,55 @@ namespace Thermodynamics.Tests
             {
                 Assert.Equal(a.Solver.Nodes[i].Temperature, b.Solver.Nodes[i].Temperature);
             }
+        }
+
+        /// <summary>
+        /// **The floor bounds the whole grid's demand, which is what makes it `C19`'s third route.**
+        ///
+        /// <para>
+        /// The atmospheric breach is a demand of 73.4 against the 64 the ceiling grants. A per-block
+        /// floor does not refuse that demand, it removes it: every node it raises stops asking for
+        /// more than the cap, so the grid's own estimate lands on the cap and the ceiling never
+        /// binds. Asserted in air, because convection is what makes the demand large in the first
+        /// place and a vacuum rig would agree for the wrong reason.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheFloorTakesTheWholeGridsDemandDownToItsCap()
+        {
+            const int Cap = 6;
+
+            ThermalSettings uncapped = Settings(0);
+            ThermalSettings capped = Settings(Cap);
+
+            float demanded = DemandInAir(uncapped);
+            float bounded = DemandInAir(capped);
+
+            output.WriteLine("demand {0:n2} uncapped, {1:n2} at a cap of {2}", demanded, bounded, Cap);
+
+            // The rig has to be stiff enough in air for the cap to be doing anything (`E8`).
+            Assert.True(demanded > Cap * 2f,
+                "the hull demands only " + demanded + " substeps in air, so a cap of " + Cap
+                + " has nothing to bound and this judges nothing");
+
+            Assert.True(bounded <= Cap + 0.01f,
+                "the cap left the grid demanding " + bounded + " against a cap of " + Cap);
+        }
+
+        /// <summary>What the stiffest element asks of a step, with the grid in thick air.</summary>
+        private static float DemandInAir(ThermalSettings settings)
+        {
+            GridBuilder builder = GridBuilder.Large();
+            builder.Fill(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(4, 4, 4));
+            builder.Place(LightFitting(), new Vector3I(2, 4, 2));
+
+            ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);
+            simulation.RebuildAll();
+
+            // Stepped once first: the estimate reads the environment, so a demand taken before the
+            // grid has met its air is a vacuum figure.
+            simulation.StepExact(1, Worlds.Flight(1f, 200f));
+            return simulation.Solver.LastRequiredSubsteps;
         }
     }
 }

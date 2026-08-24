@@ -1192,13 +1192,15 @@ namespace Thermodynamics.Sim
                             : "temperatures spread 250-750 K")
                         + ", vacuum. Error is against the uncapped run.");
                     Console.WriteLine("  --frequency N sets the step length; every substep count"
-                        + " below is proportional to it.");
+                        + " below is proportional to it. --speed N flies it through thick air,"
+                        + " which is where a floor has most to reach.");
                     Console.WriteLine();
 
                     Console.WriteLine(LoadBenchmarks.FloorTable(LoadBenchmarks.SubstepFloor(
                         shape, size, ticks > 0 ? ticks : 200, caps,
                         message => Console.Error.WriteLine("  " + message),
-                        Has(args, "--driven"), OptionInt(args, "--frequency", 0))));
+                        Has(args, "--driven"), OptionInt(args, "--frequency", 0),
+                        OptionFloat(args, "--speed", 0f))));
                     return 0;
                 }
 
