@@ -422,10 +422,16 @@ namespace Thermodynamics.Tests
             Assert.Equal(1f, planet.SolarDecay, 5);
             Assert.Equal(0f, planet.ConvectionCoefficient, 5);
 
-            LoopThermalProperties loop = new LoopThermalProperties { CoolantMassPerPipe = 0f, Conductivity = 9f };
+            // The coefficient has no upper bound to clamp to — a faster flow really does transfer
+            // better — so what is held is that it cannot go negative.
+            LoopThermalProperties loop = new LoopThermalProperties
+            {
+                CoolantMassPerPipe = 0f,
+                HeatTransferCoefficient = -9f,
+            };
             loop.Clamp();
             Assert.Equal(1f, loop.CoolantMassPerPipe, 5);
-            Assert.Equal(1f, loop.Conductivity, 5);
+            Assert.Equal(0f, loop.HeatTransferCoefficient, 5);
         }
     }
 

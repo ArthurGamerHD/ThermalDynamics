@@ -188,8 +188,23 @@ namespace Thermodynamics
         /// <summary>Coolant carried by one pipe block, kg. More is more capacity for the same coupling.</summary>
         [ProtoMember(85)] public float LoopCoolantMassPerPipe = 50f;
 
-        /// <summary>Coolant's conduction quality into the pipe it sits in, 0..1.</summary>
-        [ProtoMember(86)] public float LoopConductivity = 1f;
+        /// <summary>
+        /// How well heat crosses between the coolant and the wall it touches, W/(m²·K).
+        ///
+        /// **Replaces `LoopConductivity`, which was a 0…1 quality against a reference conductivity**
+        /// and gave the game a second conduction pace ([backlog.md](../../docs/backlog.md) `C20`).
+        /// A new member number rather than a reused one, so a world saved before this reads its old
+        /// quality out of 86 and is migrated rather than silently reinterpreted as a coefficient of
+        /// one.
+        /// </summary>
+        [ProtoMember(125)] public float LoopHeatTransferCoefficient = 160f;
+
+        /// <summary>
+        /// **Retired.** The 0…1 quality this used to be, kept so a world saved with it moved can be
+        /// migrated into <see cref="LoopHeatTransferCoefficient"/>. Negative means "not present",
+        /// which is what a world saved after the change writes.
+        /// </summary>
+        [ProtoMember(86)] public float LegacyLoopConductivity = -1f;
 
         /// <summary>Coolant's specific heat, J/(kg K). Water-glycol is about 3400.</summary>
         [ProtoMember(87)] public float LoopSpecificHeat = 3400f;
@@ -412,8 +427,38 @@ namespace Thermodynamics
             return s;
         }
 
+        /// <summary>
+        /// Carries a world saved with the old fluid-coupling dial onto the new one.
+        ///
+        /// <para>
+        /// `LoopConductivity` was a 0…1 quality that the loop multiplied by 200 W/(m·K) and divided
+        /// by half a cell; on a large grid that came to 160 W/(m²·K), which is what
+        /// <see cref="LoopHeatTransferCoefficient"/> now holds directly
+        /// ([backlog.md](../../docs/backlog.md) `C20`). A world that moved the old dial gets the
+        /// same *relative* change on the new one, and the legacy field is spent so a later load
+        /// does not apply it twice.
+        /// </para>
+        ///
+        /// <para>
+        /// A world saved after the change carries −1 there and is left alone, which is also what a
+        /// new world has.
+        /// </para>
+        /// </summary>
+        private void MigrateLoopCoupling()
+        {
+            if (LegacyLoopConductivity < 0f) return;
+
+            LoopHeatTransferCoefficient = LegacyLoopConductivity * ShippedLoopCoefficient;
+            LegacyLoopConductivity = -1f;
+        }
+
+        /// <summary>What the old quality of one came to on a large grid, W/(m²·K).</summary>
+        private const float ShippedLoopCoefficient = 160f;
+
         private void Clamp()
         {
+            MigrateLoopCoupling();
+
             if (Frequency < 1) Frequency = 1;
 
             // A zero or negative interval would stop the band without stopping the join packet,
@@ -697,7 +742,7 @@ namespace Thermodynamics
                 "EnableTelemetry", "TelemetrySampleStride", "TelemetryPlanetProbes",
 
                 "LoopLargeGridFlowRate", "LoopSmallGridFlowRate", "LoopCoolantMassPerPipe",
-                "LoopSpecificHeat", "LoopConductivity", "LoopPipeContactMultiplier",
+                "LoopSpecificHeat", "LoopHeatTransferCoefficient", "LoopPipeContactMultiplier",
                 "LoopSinkContactMultiplier", "LoopStagnantTransferFraction",
 
                 "PlanetDayTemperature", "PlanetNightTemperature", "PlanetPoleTemperatureDrop",
@@ -785,7 +830,7 @@ namespace Thermodynamics
                 case "TelemetryPlanetProbes": return TelemetryPlanetProbes;
 
                 case "LoopCoolantMassPerPipe": return LoopCoolantMassPerPipe;
-                case "LoopConductivity": return LoopConductivity;
+                case "LoopHeatTransferCoefficient": return LoopHeatTransferCoefficient;
                 case "LoopSpecificHeat": return LoopSpecificHeat;
                 case "LoopPipeContactMultiplier": return LoopPipeContactMultiplier;
                 case "LoopSinkContactMultiplier": return LoopSinkContactMultiplier;
@@ -894,7 +939,7 @@ namespace Thermodynamics
                 case "TelemetryPlanetProbes": TelemetryPlanetProbes = (int)value; return true;
 
                 case "LoopCoolantMassPerPipe": LoopCoolantMassPerPipe = value; return true;
-                case "LoopConductivity": LoopConductivity = value; return true;
+                case "LoopHeatTransferCoefficient": LoopHeatTransferCoefficient = value; return true;
                 case "LoopSpecificHeat": LoopSpecificHeat = value; return true;
                 case "LoopPipeContactMultiplier": LoopPipeContactMultiplier = value; return true;
                 case "LoopSinkContactMultiplier": LoopSinkContactMultiplier = value; return true;

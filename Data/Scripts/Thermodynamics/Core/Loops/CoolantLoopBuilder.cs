@@ -279,26 +279,26 @@ namespace Thermodynamics.Core
 
         /// <summary>
         /// Conductance between the coolant and one pipe block it runs through, W/K.
+        ///
+        /// **`h · A`, with no length in it**, because fluid-to-wall transfer is convective: the
+        /// resistance is the boundary layer against the wall, not a thickness of anything. It used
+        /// to be a conductivity over half a cell, which made the coefficient it implied five times
+        /// larger on a small grid than on a large one for the same fluid (`C20`).
         /// </summary>
         public static float PipeConductance(GridModel grid, BlockInstance pipe, LoopThermalProperties properties)
         {
-            float k = properties.Conductivity * ThermalConstants.ReferenceConductivity;
             float area = grid.CellFaceArea * properties.PipeContactMultiplier;
-            float length = grid.GridSize * 0.5f;
-            if (length <= 0f) return 0f;
-            return k * area / length;
+            return properties.HeatTransferCoefficient * area;
         }
 
         /// <summary>
-        /// Conductance between the coolant and a block bolted to a sink face, W/K.
+        /// Conductance between the coolant and a block bolted to a sink face, W/K. As
+        /// <see cref="PipeConductance"/>: the fluid's side of the joint is convective.
         /// </summary>
         public static float PlateConductance(GridModel grid, LoopThermalProperties properties)
         {
-            float k = properties.Conductivity * ThermalConstants.ReferenceConductivity;
             float area = grid.CellFaceArea * properties.SinkContactMultiplier;
-            float length = grid.GridSize * 0.5f;
-            if (length <= 0f) return 0f;
-            return k * area / length;
+            return properties.HeatTransferCoefficient * area;
         }
     }
 }

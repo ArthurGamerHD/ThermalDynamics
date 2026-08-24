@@ -27,10 +27,16 @@ namespace Thermodynamics.Tests
     public class ConfigurationDocTests
     {
         /// <summary>
-        /// Bookkeeping rather than a tunable: the config file's schema number, which a player never
-        /// sets and a migration rewrites.
+        /// Settings by shape and not by nature: nobody tunes them, so the reference does not list
+        /// them and nothing outside `Settings.cs` reads them.
+        ///
+        /// `Version` is the config file's schema number, which a player never sets and a migration
+        /// rewrites. `LegacyLoopConductivity` is a retired dial kept only so a world saved before
+        /// `C20` can be migrated onto the coefficient that replaced it, and it is spent as it is
+        /// read.
         /// </summary>
-        private static readonly HashSet<string> NotTunable = new HashSet<string> { "Version" };
+        private static readonly HashSet<string> NotTunable =
+            new HashSet<string> { "Version", "LegacyLoopConductivity" };
 
         private static string RepoRoot()
         {

@@ -455,8 +455,8 @@ namespace Thermodynamics
             if (Moved(world.LoopCoolantMassPerPipe, shipped.LoopCoolantMassPerPipe))
                 properties.CoolantMassPerPipe = world.LoopCoolantMassPerPipe;
 
-            if (Moved(world.LoopConductivity, shipped.LoopConductivity))
-                properties.Conductivity = world.LoopConductivity;
+            if (Moved(world.LoopHeatTransferCoefficient, shipped.LoopHeatTransferCoefficient))
+                properties.HeatTransferCoefficient = world.LoopHeatTransferCoefficient;
 
             if (Moved(world.LoopSpecificHeat, shipped.LoopSpecificHeat))
                 properties.SpecificHeat = world.LoopSpecificHeat;

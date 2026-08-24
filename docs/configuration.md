@@ -544,7 +544,7 @@ Move one and it wins from then on, across every loop definition in the world.
 | --- | --- | --- |
 | `LoopCoolantMassPerPipe` | 50 kg | Coolant carried by one pipe block. More capacity for the same coupling: a heavier ring takes longer to saturate and longer to shed. |
 | `LoopSpecificHeat` | 3400 J/(kg·K) | The coolant's specific heat. Water-glycol is about 3,400. |
-| `LoopConductivity` | 1.0 | How well the fluid conducts into the pipe carrying it, 0..1. |
+| `LoopHeatTransferCoefficient` | 160 | How well heat crosses between the fluid and the wall it touches, W/(m²·K). Convective, so there is no thickness in it. A few hundred is a slow liquid flow and a few thousand a fast one. |
 | `LoopPipeContactMultiplier` | 1.0 | Scales the coupling between the fluid and its own pipe. |
 | `LoopSinkContactMultiplier` | 1.0 | Scales the coupling through a sink face into whatever is mounted against it. This is the dial that decides whether plumbing beats bolting. |
 | `LoopLargeGridFlowRate` | 10 m/s | How fast coolant moves on a large grid with one pump at full speed. Flow costs no substeps — carrying the fluid is a rotation of which parcel sits in which pipe, exact at any speed — so this is free to be set for feel. |

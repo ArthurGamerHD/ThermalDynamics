@@ -21,7 +21,7 @@ namespace Thermodynamics
         private static readonly MyStringId LargeGridFlowRateId = MyStringId.GetOrCompute("LargeGridFlowRate");
         private static readonly MyStringId SmallGridFlowRateId = MyStringId.GetOrCompute("SmallGridFlowRate");
         private static readonly MyStringId StagnantTransferId = MyStringId.GetOrCompute("StagnantTransferFraction");
-        private static readonly MyStringId ConductivityId = MyStringId.GetOrCompute("Conductivity");
+        private static readonly MyStringId HeatTransferId = MyStringId.GetOrCompute("HeatTransferCoefficient");
         private static readonly MyStringId SpecificHeatId = MyStringId.GetOrCompute("SpecificHeat");
         private static readonly MyStringId PipeContactMultiplierId = MyStringId.GetOrCompute("PipeContactMultiplier");
         private static readonly MyStringId SinkContactMultiplierId = MyStringId.GetOrCompute("SinkContactMultiplier");
@@ -58,7 +58,8 @@ namespace Thermodynamics
         /// https://www.engineeringtoolbox.com/thermal-conductivity-metals-d_858.html
         /// </summary>
         [ProtoMember(5)]
-        public float Conductivity = 1f;
+        /// <summary>Fluid-to-wall heat transfer coefficient, W/(m²·K). See `C20`.</summary>
+        public float HeatTransferCoefficient = 160f;
 
         /// <summary>
         /// Specific heat capacity of the coolant, J/(kg K). Reference values:
@@ -108,8 +109,8 @@ namespace Thermodynamics
                 || lookup.TryGetDouble(defId, GroupId, LegacyMassPerPipeId, out dvalue))
                 def.CoolantMassPerPipe = (float)dvalue;
 
-            if (lookup.TryGetDouble(defId, GroupId, ConductivityId, out dvalue))
-                def.Conductivity = (float)dvalue;
+            if (lookup.TryGetDouble(defId, GroupId, HeatTransferId, out dvalue))
+                def.HeatTransferCoefficient = (float)dvalue;
 
             if (lookup.TryGetDouble(defId, GroupId, SpecificHeatId, out dvalue))
                 def.SpecificHeat = (float)dvalue;
@@ -164,7 +165,7 @@ namespace Thermodynamics
 
             def.StagnantTransferFraction = Math.Min(1, Math.Max(0, def.StagnantTransferFraction));
 
-            def.Conductivity = Math.Min(1, Math.Max(0, def.Conductivity));
+            def.HeatTransferCoefficient = Math.Max(0, def.HeatTransferCoefficient);
 
             def.SpecificHeat = Math.Max(0, def.SpecificHeat);
 

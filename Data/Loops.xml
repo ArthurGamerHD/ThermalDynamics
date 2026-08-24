@@ -17,7 +17,18 @@
 						more coolant. 50 kg matches the old 500 kg figure at a ten-pipe ring.
 					-->
 					<Decimal Name="CoolantMassPerPipe" Value ="50" />
-					<Decimal Name="Conductivity" Value="1" />
+					<!--
+						W/(m2 K): how well heat crosses between the fluid and the wall it touches.
+						Convective, so there is no thickness in it - the resistance is the boundary
+						layer against the wall. It was a 0..1 quality against a reference
+						conductivity divided by half a cell, which gave the game a second conduction
+						pace and made the coefficient it implied five times larger on a small grid
+						than on a large one, for the same fluid against the same wall. 160 is what
+						the shipped large-grid loop was already running at; forced convection of a
+						water-glycol mix is a few hundred to a few thousand, and a ring driven by
+						one pump is a slow flow. See backlog.md, C20.
+					-->
+					<Decimal Name="HeatTransferCoefficient" Value="160" />
 					<!--J/(kg K), real units: water-glycol coolant-->
 					<Decimal Name="SpecificHeat" Value="3400" />
 					<Decimal Name="PipeContactMultiplier" Value ="1" />
