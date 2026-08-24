@@ -151,6 +151,40 @@ nothing: one joint feeds them all.
 the source 33 K *hotter*, because they cover faces that were radiating and cannot carry away what
 they blocked.
 
+### What a selective surface is worth
+
+A surface is not obliged to absorb what it emits, and a radiator is the one block where that matters
+most: its job is to emit in the infrared without collecting in the visible. Real ones are finished
+for exactly that — a second-surface mirror runs `α ≈ 0.08` against `ε ≈ 0.8`, white paint about 0.2
+against 0.9. The mod's radiator was authored at `ε 0.35` with no absorptivity, so it absorbed a
+third of the sunlight that landed on it.
+
+Measured on a source under eight radiators, 75 kW of heat, sun across the stack against the same rig
+in shadow — `dotnet run --project tests/Thermodynamics.Sim -- bench surface`:
+
+| Surface | ε | α | Sunlit | Shadow | The sun costs |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| shipped, before | 0.35 | *follows* | 355.6 K | 319.0 K | 36.5 K |
+| **shipped, now** | **0.35** | **0.10** | **344.7 K** | **319.0 K** | **25.7 K** |
+| second-surface mirror | 0.80 | 0.10 | 335.3 K | 310.8 K | 24.5 K |
+| emissive only | 0.80 | *follows* | 353.7 K | 310.8 K | 42.8 K |
+
+**The selective finish is worth 10.9 K in sunlight and exactly nothing in shadow**, which is what
+says the rig is measuring the surface rather than the geometry. It is authored on both radiators:
+emissivity is untouched, so the block emits precisely what it emitted and stops absorbing sunlight a
+real one would not.
+
+**The last row is the one worth reading twice.** Raising emissivity alone — making the radiator a
+better *emitter*, which is the obvious improvement — buys 8.2 K in shadow and **1.9 K in sunlight**,
+because a better emitter that is also a better absorber gives almost all of it back: the sun's
+penalty rises from 36.5 K to 42.8 K. The two changes are complementary rather than additive, and
+doing only the obvious one is nearly worthless where a radiator is most often used.
+
+**What is not authored is the emissivity.** 0.35 is low for a radiator and 0.8 is what a real one
+reaches; the table says that is worth 8.2 K in shadow and 9.4 K in sun on top of the finish. That is
+a balance change to the mod's own block rather than a fidelity correction, so it stays a decision
+with a number on it. `SelectiveSurfaceTests` pins both halves.
+
 ### The heat pump
 
 Large grid, cold side 300 K. Which of the three limits binds changes twice across an ordinary range,
@@ -1218,6 +1252,7 @@ five ways a full sweep dies, and [backlog.md](backlog.md) for what is still open
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | **Authored the mod's first selective surface and measured what it is worth** ([backlog.md](backlog.md) `C15`). The radiator absorbed sunlight at its emissivity because nothing declared otherwise; `SolarAbsorptivity 0.1` is what a second-surface mirror or white paint gives, and it is worth **10.9 K** to a sunlit stack and nothing in shadow. The finding beside it: raising emissivity alone would buy 1.9 K in sunlight, because a better emitter that is also a better absorber gives it back — the two changes are complementary, and the obvious one alone is nearly worthless in the sun. |
 | 2026-08-23 | **Closed `C4`: the scenario catalogue is the blocks it stands in for.** The six stand-ins derive from `Vanilla`'s transcribed build costs and the shipped derivation rather than being hand-typed, so a scenario reactor wastes the hundredth a player's does instead of the quarter the catalogue asserted, and the large thruster weighs 43,200 kg instead of 10,000. Rigs that only wanted a heat source now state it in watts of heat (`GridBuilder.Wasting`) and are unchanged; the scenarios that are about a reactor moved. |
 | 2026-08-23 | **Closed `C2`: its two headline figures are censored and every uncensored one is unmoved.** A hull with anything past its rating keeps generating undamped for the rest of the clock, so its peak is a harness artefact (`E9`) — and that is 34 of 40 hulls in `burn-forward` and 29 of 40 under load, which is both of the rows the finding rested on. Crossing moves −0.13 s, first loss +0.50 s and the share over critical 0.000. The block-count totals are a wash per hull as well: 14 better, 11 worse, 15 unchanged, one hull carrying a third of the −257. `retest.py` had been testing the peak against 1,500 K rather than against each block's own rating, which reported 9 % of the run censored where 31 % was, and 85 % in the scenario the finding came from. |
 | 2026-08-23 | **Priced the load route's dial against the provenance of what it scales, and it argues against the route.** Every waste fraction in `Cubes.xml` now states where it came from, and weighted by the heat each carries over the census, **76.3 %** of a loaded fleet's waste comes through a fraction derived from the game's own `PowerEfficiency`, 8.4 % through a sourced conversion and 15.3 % through an invention. So waste ×0.5 halves a sourced number — an admitted balance knob rather than the correction of a guess — and the invented sixth sits on four block types that between them cannot reach the window. |

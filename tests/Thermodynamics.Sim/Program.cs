@@ -1088,6 +1088,14 @@ namespace Thermodynamics.Sim
                     return 0;
                 }
 
+                case "surface":
+                {
+                    Console.WriteLine();
+                    Console.Write(SelectiveSurfaceLab.Report(
+                        OptionInt(args, "--radiators", 8)));
+                    return 0;
+                }
+
                 case "parallel":
                 {
                     int[] sizes = { 1, 2, 4, 8, 16, 32, 64, 128, 242 };
@@ -1331,6 +1339,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  bench floor --size N    what a per-block substep cap buys, and costs");
             Console.WriteLine("  bench ceiling --size N  what refusing a substep demand costs, in air");
             Console.WriteLine("  bench parallel --size N one grid per thread: does a fleet pay for it");
+            Console.WriteLine("  bench surface           what a selective surface on the radiator is worth");
             Console.WriteLine("  bench report            full performance report; --baseline <csv> to compare");
             Console.WriteLine("  bench spike --size N    one block placed, split by stage");
             Console.WriteLine("  bench steppath          a step at the solver, against a step through the host");

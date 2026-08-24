@@ -312,6 +312,7 @@ dotnet run --project Thermodynamics.Sim -- bench load  --size 1000000  # world l
 dotnet run --project Thermodynamics.Sim -- bench floor --size 42000    # what a per-block substep cap buys, and costs
 dotnet run --project Thermodynamics.Sim -- bench ceiling --size 4000    # what refusing a substep demand costs, in air
 dotnet run --project Thermodynamics.Sim -- bench parallel --size 600    # one grid per thread: does a fleet pay for it
+dotnet run --project Thermodynamics.Sim -- bench surface                # what a selective surface on the radiator is worth
 dotnet run --project Thermodynamics.Sim -- bench steppath              # a step at the solver, against a step through the host
 dotnet run --project Thermodynamics.Sim -- bench smallgrids            # what one grid costs before any of its blocks do
 dotnet run --project Thermodynamics.Sim -- bench wattsclear            # what zeroing the watts row costs, up a size ladder
@@ -446,7 +447,7 @@ and left off it.
 | **Coolant loops and heat pumps** | `CoolantLoopTests` `PumpPowerTests` `CoolantFlowTests` `CoolantFaultTests` `PipeFitterTests` `HeatPumpTests` `CoolingScenarioClaimTests` |
 | **What a step costs, and what it must not change** | `LoadTests` `StepBudgetTests` `StepFixedCostTests` `StepPacingTests` `StepTermsTests` `SpreadStepTests` `PaceEquivalenceTests` `SweepSliceTests` `BufferGrowthTests` `IncrementalTopologyTests` `BlockRefreshTests` `CostRollupTests` `SolverReportingTests` `StressFindingsTests` |
 | **Bit-identity: an optimisation against what it replaced** | `PrecomputedEnvironmentTests` `FixedSourceRowTests` `WattsClearFusionTests` `ConductionClampGateTests` `DiagnosticBatchingTests` |
-| **Settings, storage and definitions** | `SettingsTests` `SettingsDefaultsTests` `SettingsWiringTests` `ValidationReportingTests` `StorageCodecTests` `SchedulerTests` `DefinitionTests` `DefinitionFileTests` `ShippedDefinitionTests` `AuthoredMaterialTests` `AuthoredWasteTests` `BlockDerivationTests` `SolarAbsorptivityTests` `MaterialOverrideTests` `FeatureToggleTests` `DefaultSettingsTests` `ProfileSuiteTests` `WorldSettingsTests` |
+| **Settings, storage and definitions** | `SettingsTests` `SettingsDefaultsTests` `SettingsWiringTests` `ValidationReportingTests` `StorageCodecTests` `SchedulerTests` `DefinitionTests` `DefinitionFileTests` `ShippedDefinitionTests` `AuthoredMaterialTests` `AuthoredWasteTests` `BlockDerivationTests` `SolarAbsorptivityTests` `SelectiveSurfaceTests` `MaterialOverrideTests` `FeatureToggleTests` `DefaultSettingsTests` `ProfileSuiteTests` `WorldSettingsTests` |
 | **Readouts a player sees** | `TemperatureScaleTests` `UnitsTests` |
 | **Telemetry, reports and overlays** | `RunningStatTests` `HistogramTests` `TimingStatTests` `TelemetryFormatTests` `TelemetryAnomalyTests` `SampleGateTests` `GridHealthTests` `AnomalyRegistryTests` `FrameCostTests` `ProfilerTests` `RescanGateTests` `OverlayBudgetTests` `PerformanceReportTests` `BenchmarkBaselineTests` |
 | **Field dumps: the mod checked against a world** | `DumpAuditTests` `FieldDumpTests` `CensusFidelityTests` |

@@ -53,7 +53,10 @@ it — which is why, while emissivity did both jobs, **a good radiator was force
 absorber** and improving one improved the other exactly as much.
 
 They are separate now, and the separation is what makes surface finish a design decision rather
-than a constant. The default is unchanged in both directions: an entry that does not mention
+than a constant. **One block takes it up**: the radiator declares `SolarAbsorptivity 0.1` against
+its emissivity of 0.35, which is worth 10.9 K to a sunlit stack and nothing in shadow — and the
+measurement beside it says why raising the emissivity instead would have bought 1.9 K in sun. See
+[balance.md](balance.md#what-a-selective-surface-is-worth). The default is unchanged in both directions: an entry that does not mention
 `SolarAbsorptivity` absorbs at its emissivity, and a block with no entry at all derives one number
 from its build components and uses it for both.
 
@@ -461,6 +464,7 @@ Tuning guidance:
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | The radiator declares `SolarAbsorptivity 0.1`, which is the first shipped block to use the split at all ([backlog.md](backlog.md) `C15`). Worth 10.9 K to a sunlit stack, nothing in shadow, and emissivity untouched. |
 | 2026-08-23 | **Gave every waste fraction a provenance, and measured how much of a fleet's heat rests on the ones that have none** ([backlog.md](backlog.md) `C21`). All 228 `ProducerWasteEnergy` and `ConsumerWasteEnergy` values in `Cubes.xml` now claim a source, a derivation, a statement that nothing reads them, or an admitted invention, and `AuthoredWasteTests` holds each claim to its evidence — a band in `ReferenceEfficiencies`, the game's own `PowerEfficiency`, or the game declaring no output for the type. The counts are [the finding](#every-waste-fraction-says-where-it-came-from-and-most-of-them-say-invented): 15 sourced, 1 derived, 104 invented — and weighted by the heat they actually carry that is 8.4 %, 76.3 % and 15.3 %, so the file is mostly opinion and the heat mostly is not. No value moved; three inventions that have a real figure beside them are recorded rather than retuned (`E11`). |
 | 2026-08-23 | **Derived the jump drive's waste fraction from the efficiency the game states, instead of asserting it.** `PowerEfficiency` is 0.8 on the vanilla drive and its reskin and 0.9 on the two prototech ones, so their `ConsumerWasteEnergy` is 0.2 and 0.1; it was `0.15` for all four, by a comment rather than a source. It is the only family in the game that publishes an efficiency, and it is the block carrying **71.3 %** of the corpus's full-load waste heat — the number in the file with the largest reach was the one with no provenance. The rule is one function in `Core` with three readers, because a harness that disagreed with the mod about it would be measuring a mod nobody runs. |
 | 2026-08-23 | **Corrected [what the conversion moved](#conductivity-is-in-real-wmk).** The table stated *thruster … 0.60×*, which is true of the hydrogen thrusters and of nothing else — the large ion thruster is **0.23×** and the atmospheric **1.27×**, because a thruster's conductance is now derived from what it is built out of and the three families are built out of different things. The table also described only the four families this file authors and omitted every vanilla block, which is the larger half of the change and holds both of its extremes: the ion thruster's 0.23× and the jump drive's **3.51×**. Measured off the shipped definitions and pinned by `ModHardwareRetestTests` rather than stated. |

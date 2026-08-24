@@ -2306,6 +2306,16 @@
 					<!--J/(kg K), real units: aluminium-->
 					<Decimal Name="SpecificHeat" Value="900" />
 					<Decimal Name="Emissivity" Value="0.35" />
+					<!--
+						The one selective surface the mod ships, and the reason the two numbers were
+						separated. A radiator's job is to emit in the infrared without collecting in
+						the visible: a second-surface mirror runs about 0.08 and white paint about
+						0.2, so 0.1 is the middle of what a real radiator is finished with. Emissivity
+						is untouched, so the block emits exactly what it emitted and stops absorbing
+						sunlight it physically would not. Measured worth 10.9 K to a sunlit stack and
+						nothing at all in shadow - see balance.md, What a selective surface is worth.
+					-->
+					<Decimal Name="SolarAbsorptivity" Value="0.1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value ="1.25" />
 					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
@@ -2330,6 +2340,16 @@
 					<!--J/(kg K), real units: aluminium-->
 					<Decimal Name="SpecificHeat" Value="900" />
 					<Decimal Name="Emissivity" Value="0.35" />
+					<!--
+						The one selective surface the mod ships, and the reason the two numbers were
+						separated. A radiator's job is to emit in the infrared without collecting in
+						the visible: a second-surface mirror runs about 0.08 and white paint about
+						0.2, so 0.1 is the middle of what a real radiator is finished with. Emissivity
+						is untouched, so the block emits exactly what it emitted and stops absorbing
+						sunlight it physically would not. Measured worth 10.9 K to a sunlit stack and
+						nothing at all in shadow - see balance.md, What a selective surface is worth.
+					-->
+					<Decimal Name="SolarAbsorptivity" Value="0.1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value ="1.25" />
 					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
