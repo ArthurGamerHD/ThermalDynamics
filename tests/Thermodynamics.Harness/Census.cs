@@ -155,60 +155,99 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
-        /// The same quantities over **8,102 real workshop blueprints**, taken by <c>StiffnessLab</c>
+        /// The same quantities over **8,105 real workshop blueprints**, taken by <c>StiffnessLab</c>
         /// where <see cref="Field"/> is two ships from two vanished sessions. Quoted for a
         /// quarter-second step — <c>Frequency 4</c>, the basis <see cref="Field"/> used — in still
         /// sea-level air at noon, which is a *lower* bound.
         /// See stiffness.md, The same question asked of eight thousand real ships.
+        ///
+        /// <para>
+        /// **Re-measured 2026-08-24 at the pace `C24` ships**, and the figures beside each constant
+        /// are what the same walk read at `ConductionScale` 2.4 and `HeatTimeScale` 225. A substep
+        /// demand is a conductance over a capacity, so both defaults move every number here and
+        /// neither moves them by the same factor: a block whose demand is conduction rises with the
+        /// pace and one whose demand is convection falls with the clock. Comparing a hull measured
+        /// at one pair against a population measured at the other is the comparison `P6` forbids,
+        /// and it is why this walk was re-run rather than the constants adjusted.
+        /// </para>
+        ///
+        /// <para>
+        /// **The population changed shape, not only scale**, and two claims this repository rested
+        /// on went with it. The two modes have closed — a light-limited ship demands 16.83 against
+        /// a structure-limited ship's 7.23, where it was 28.51 against 4.81 — and 49 % of ships now
+        /// sit between 8 and 28 substeps where six per cent did. And air has stopped making much
+        /// difference to *stiffness*: the median hull's stiffest block is 1.07 times stiffer in air
+        /// than out of it, where it was 2.34. Neither says anything about how well air *cools* a
+        /// hull, which is the environment term and is untouched; both say that at four times the
+        /// conduction pace what sets a block's substep demand is its neighbours.
+        /// </para>
         /// </summary>
         public static class Corpus
         {
-            /// <summary>Ships measured. Of 9,989 blueprints; the rest are modded, tiny or unreadable.</summary>
-            public const int Ships = 8102;
+            /// <summary>Ships measured, of 8,144 blueprints; 39 are over the 64 MB reader cap.</summary>
+            public const int Ships = 8105;
 
-            // In air. The percentiles either side of the median are close together and the ones
-            // above it are far apart, which is the bimodality below rather than a long tail.
-            public const float AirP10 = 4.26f;
-            public const float AirP50 = 6.61f;
-            public const float AirP90 = 33.09f;
-            public const float AirMax = 34.45f;
-
-            /// <summary>In vacuum, where the same ships are three to five times softer.</summary>
-            public const float VacuumP50 = 4.79f;
-            public const float VacuumP90 = 6.34f;
-            public const float VacuumMax = 8.64f;
+            // In air. Was 4.26 / 6.61 / 33.09 / 34.45 before C24; the top of the distribution came
+            // down with the clock while the bottom of it went up with the conduction pace, which is
+            // the two modes closing.
+            public const float AirP10 = 6.20f;
+            public const float AirP50 = 7.90f;
+            public const float AirP90 = 18.42f;
+            public const float AirMax = 22.41f;
 
             /// <summary>
-            /// **The population has two modes and nothing much between them.**
-            ///
-            /// A ship's substep count is set by a light or a camera on 45 % of hulls and by armour
-            /// or structure on the rest, and the two groups do not overlap: 28.51 against 4.81 at
-            /// the median. Between 8 and 28 substeps there are about six per cent of ships. A
-            /// single figure describing "a typical ship" therefore describes almost nobody, which
-            /// is the thing two field observations could not have shown.
+            /// In vacuum, where the same ships used to be three to five times softer and are now
+            /// barely softer at all. Was 4.79 / 6.34 / 8.64.
             /// </summary>
-            public const float LitP50 = 28.51f;
-            public const float StructuralP50 = 4.81f;
-            public const float LitShare = 0.450f;
+            public const float VacuumP50 = 7.40f;
+            public const float VacuumP90 = 10.01f;
+            public const float VacuumMax = 13.35f;
+
+            /// <summary>
+            /// **The population had two modes and nothing much between them, and `C24` closed the
+            /// gap.**
+            ///
+            /// A ship's substep count is still set by a light or a camera on 45 % of hulls and by
+            /// armour or structure on the rest — that share did not move at all, 0.4496 against
+            /// 0.450 — but the two groups now differ by 2.3× where they differed by 5.9×: 16.83
+            /// against 7.23, where it was 28.51 against 4.81. Between 8 and 28 substeps there are
+            /// now **49 %** of ships against about six per cent. So a single figure describing "a
+            /// typical ship" describes rather more of them than it used to, and the statements in
+            /// this repository that refuse to quote one are the ones to re-read.
+            /// </summary>
+            public const float LitP50 = 16.83f;
+            public const float StructuralP50 = 7.23f;
+            public const float LitShare = 0.4496f;
+
+            /// <summary>Share of ships between the two modes, 8 to 28 substeps. Was about 0.06.</summary>
+            public const float BetweenTheModes = 0.492f;
 
             /// <summary>
             /// How much stiffer air makes the block that sets a hull's air peak: **the same block's**
-            /// air demand over its own vacuum demand, since two peaks are not a ratio (`E6`). The
-            /// census hull is inside the population at 1.20–1.50 against a real median of 2.34.
+            /// air demand over its own vacuum demand, since two peaks are not a ratio (`E6`).
+            ///
+            /// Was 1.04 / 2.34 / 6.89. At four times the conduction pace a block's neighbours set
+            /// its demand and the air barely adds to it, so the median hull is 1.07 and a tenth of
+            /// them are exactly 1.00 — which is what makes the census hull's own 1.00 ordinary
+            /// rather than the fidelity gap it used to be.
             /// </summary>
-            public const float AirRatioP10 = 1.04f;
-            public const float AirRatioP50 = 2.34f;
-            public const float AirRatioP90 = 6.89f;
+            public const float AirRatioP10 = 1.00f;
+            public const float AirRatioP50 = 1.07f;
+            public const float AirRatioP90 = 2.52f;
 
             /// <summary>
-            /// The census hull's own, on the same basis. Its stiffest block has one or two exposed
-            /// faces where a real ship's has 5.26 on average, so it feels less of the air than a
-            /// typical hull does — a fidelity gap worth recording rather than a defect.
+            /// The census hull's own, on the same basis. Was 1.50 against a population median of
+            /// 2.34; it is now 1.00 against 1.07, so the hull has stopped feeling the air and so
+            /// has a tenth of the population.
             /// </summary>
-            public const float CensusAirRatio = 1.50f;
+            public const float CensusAirRatio = 1.00f;
 
-            /// <summary>Exposed faces on the block that sets a real ship's air peak, mean.</summary>
-            public const float StiffestFacesMean = 5.26f;
+            /// <summary>
+            /// Exposed faces on the block that sets a real ship's air peak, mean. Was 5.26: the
+            /// block that sets the peak has moved inboard along with everything else the pace
+            /// changed.
+            /// </summary>
+            public const float StiffestFacesMean = 3.46f;
 
             // ---- what a real ship makes, against what the census hull makes -------------------
 
@@ -234,11 +273,20 @@ namespace Thermodynamics.Harness
             /// siblings from one dump. **They agree where the choice is made and diverge where it is
             /// not**, which is what confirms the shipped cap's reach.
             /// See stiffness.md, The cap curve holds where the cap is actually set.
+            ///
+            /// <para>
+            /// Re-measured 2026-08-24 at the pace `C24` ships; it read 0.0159 / 0.0720 / 0.3554 /
+            /// 0.5253 before. **The shipped cap of 8 still reaches under a per cent of real blocks**
+            /// — 0.92 %, where it was 1.59 % — and every cap below it reaches more than it did,
+            /// because the population's soft mode has come up to meet the stiff one. The dump it is
+            /// read against was taken before the retune and cannot be re-measured, which is why the
+            /// tests that compare the two now say so rather than pretending to a like-for-like.
+            /// </para>
             /// </summary>
-            public const float FlooredAtCap8 = 0.0159f;
-            public const float FlooredAtCap4 = 0.0720f;
-            public const float FlooredAtCap2 = 0.3554f;
-            public const float FlooredAtCap1 = 0.5253f;
+            public const float FlooredAtCap8 = 0.0092f;
+            public const float FlooredAtCap4 = 0.2322f;
+            public const float FlooredAtCap2 = 0.4033f;
+            public const float FlooredAtCap1 = 0.7589f;
         }
 
         private static BlockModel[] models;

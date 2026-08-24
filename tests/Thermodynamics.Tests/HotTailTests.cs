@@ -31,7 +31,7 @@ namespace Thermodynamics.Tests
         private static ThermalSimulation Warm(int blocks = 800, float seconds = 240f)
         {
             ThermalSettings settings = new ThermalSettings().Derive();
-            ThermalSimulation simulation = Hulls.Driven(settings, blocks);
+            ThermalSimulation simulation = Hulls.DrivenPastCritical(settings, blocks);
 
             int steps = (int)(seconds / settings.StepSeconds);
             for (int i = 0; i < steps; i++) simulation.StepExact(1, Worlds.Shadow());
@@ -533,8 +533,8 @@ namespace Thermodynamics.Tests
 
             // Two thousand blocks, which is the size the drift lab uses and the smallest this rig
             // was found to push past a critical temperature at all.
-            ThermalSimulation server = Hulls.Driven(settings, 2000);
-            ThermalSimulation client = Hulls.Driven(settings, 2000);
+            ThermalSimulation server = Hulls.DrivenPastCritical(settings, 2000);
+            ThermalSimulation client = Hulls.DrivenPastCritical(settings, 2000);
 
             // Run until blocks are actually past critical rather than for a fixed time: the claim
             // is about a disagreement, so a rig that never produced one would pass this test by

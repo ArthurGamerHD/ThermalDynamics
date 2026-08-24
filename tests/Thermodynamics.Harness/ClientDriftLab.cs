@@ -299,10 +299,16 @@ namespace Thermodynamics.Harness
             ThermalSettings world = settings ?? new ThermalSettings().Derive();
             Func<float, EnvironmentSample> environment = Environment(scenario);
 
-            ThermalSimulation server = Hulls.Driven(world, blocks);
+            ThermalSimulation server = Hulls.DrivenPastCritical(world, blocks);
 
             // Long enough that the hull is somewhere interesting rather than at its start, and
             // that the stale state is genuinely behind.
+            //
+            // **Not stretched by the clock, though every other length in this harness is.** The
+            // hull is driven past its ratings for this lab, and at that load it crosses at about
+            // 300 s and has settled by 450 s whatever the clock says; warming for longer would put
+            // the server at equilibrium, where a stale client is a client that agrees. What this
+            // rig needs is the middle of the transient, and 120 s is still in it.
             float warm = 120f;
             Step(server, environment, warm);
 
@@ -311,7 +317,7 @@ namespace Thermodynamics.Harness
 
             // The client is the same hull, built the same way, put into the state the server was in
             // staleSeconds ago. Built rather than copied so nothing is shared between them.
-            ThermalSimulation client = Hulls.Driven(world, blocks);
+            ThermalSimulation client = Hulls.DrivenPastCritical(world, blocks);
             Step(client, environment, warm);
             Restore(client, stale);
 

@@ -286,7 +286,12 @@ namespace Thermodynamics.Tests
         [Fact]
         public void ThrustBiasesAClientMoreThanPowerDoesAtTheSameError()
         {
-            const float Error = 0.05f;
+            // **A knob rather than a measurement**, and it was 0.05 until `C24`: at four times the
+            // conduction pace a hull carries a wrong wattage further before it shows, and a five
+            // per cent power error settles 0.73 K out — under the kelvin this rig needs before an
+            // ordering of two numbers means anything. The claim is per unit of error and is
+            // unaffected by which unit; what would break it is the two knobs differing.
+            const float Error = 0.10f;
 
             ClientInputLab.Result thrust = Flying(new ClientInputLab.Degradation
             {
@@ -647,7 +652,22 @@ namespace Thermodynamics.Tests
                 "a client that believes the compartments are empty settled only "
                 + gone.StandingKelvin + " K out, so the knob reached nothing");
 
-            Assert.True(gone.StandingKelvin > 4f * nearlyAll.StandingKelvin,
+            // **Per point of pressure, which is the form of the claim.** The last one per cent is
+            // worth 1.22 K and the first ninety-nine are worth 1.53 K between them, so a point of
+            // pressure at the bottom of the range is about eighty times a point anywhere else.
+            // Measured at 2.75 K against 1.53 K — 1.8x — where it was over four times before
+            // `C24`: at four times the conduction pace a wall's neighbours carry more of it and
+            // the room's coupling is a smaller share of what reaches that wall. The discontinuity
+            // is smaller and it is still a discontinuity.
+            float lastPoint = gone.StandingKelvin - nearlyAll.StandingKelvin;
+            float perPointBelow = nearlyAll.StandingKelvin / 99f;
+
+            Assert.True(lastPoint > 20f * perPointBelow,
+                "the last one per cent of the air was worth " + lastPoint + " K against "
+                + perPointBelow + " K a point for the first ninety-nine, which is not the"
+                + " discontinuity this pins");
+
+            Assert.True(gone.StandingKelvin > 1.5f * nearlyAll.StandingKelvin,
                 "removing the last one per cent of the air settled the client "
                 + gone.StandingKelvin + " K out against " + nearlyAll.StandingKelvin
                 + " K for the first ninety-nine, which is not the discontinuity this pins");

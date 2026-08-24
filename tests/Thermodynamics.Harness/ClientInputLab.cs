@@ -501,6 +501,15 @@ namespace Thermodynamics.Harness
             Degradation how = degradation ?? new Degradation();
             ClientDriftLab.Correction fix = protocol ?? ClientDriftLab.Correction.None;
 
+            // **The run and the load script are lengths of thermal time.** Every figure this lab
+            // reports is a *standing* error — what is left once a perturbation has decayed — so a
+            // run cut for a clock of 225 and read at 90 reports the decay half-finished and calls
+            // it a bias. The load's period stretches with it, because a square wave the hull can
+            // no longer follow is a different experiment rather than the same one run slower.
+            // See LabClock, and backlog C8.
+            seconds = LabClock.Seconds(seconds);
+            if (loadPeriodSeconds < 1e8f) loadPeriodSeconds = LabClock.Seconds(loadPeriodSeconds);
+
             ThermalSettings world = new ThermalSettings().Derive();
 
             // The server's world differs from the shipped defaults, so that a client which never
@@ -512,8 +521,8 @@ namespace Thermodynamics.Harness
             ThermalSettings serverWorld = how.OnDefaultSettings ? served : world;
             ThermalSettings clientWorld = how.OnDefaultSettings ? world : serverWorld;
 
-            ThermalSimulation server = Hulls.Driven(serverWorld, blocks);
-            ThermalSimulation client = Hulls.Driven(clientWorld, blocks, how.BuildOrderSeed);
+            ThermalSimulation server = Hulls.DrivenPastCritical(serverWorld, blocks);
+            ThermalSimulation client = Hulls.DrivenPastCritical(clientWorld, blocks, how.BuildOrderSeed);
 
             // **Aligned by position, not by index**, which is a no-op on two hulls built the same
             // way and the whole point on two that were not. A node's index is its arrival order, so
