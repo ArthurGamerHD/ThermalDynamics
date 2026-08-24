@@ -40,12 +40,17 @@ debugged in seconds instead of by loading a world.
 | `Thermodynamics.Harness` | Synthetic block catalogue, grid builder, canned environments, scenario library. |
 | `Thermodynamics.Sim` | Command line front end for the scenarios. |
 | `Thermodynamics.Tests` | xUnit suite. |
+| `../Generic.csproj` | The mod's own compile check, and **not** part of the isolated environment. It is in the solution so that building the solution compiles every file the game compiles; see [rules.md](../docs/rules.md) `C11`. It runs nothing and `dotnet test` skips it. |
 
 ## What makes it isolated
 
-The core references exactly one Space Engineers assembly: `VRage.Math.dll`, for `Vector3I`,
-`Vector3`, `Matrix` and `Base6Directions`. That is pure managed maths and loads fine on .NET on
-Linux. There is no `Sandbox.*`, no `VRage.Game`, no `MyAPIGateway`, no session, no entity.
+The four projects above reference exactly one Space Engineers assembly: `VRage.Math.dll`, for
+`Vector3I`, `Vector3`, `Matrix` and `Base6Directions`. That is pure managed maths and loads fine on
+.NET on Linux. There is no `Sandbox.*`, no `VRage.Game`, no `MyAPIGateway`, no session, no entity.
+
+The mod project is the exception and is deliberately outside this: it references the whole engine,
+targets `net48`, and exists to fail when the adapter no longer compiles. Nothing links against it
+and no test loads it.
 
 Everything the game would supply crosses one of three boundaries:
 
@@ -98,14 +103,15 @@ dotnet run --project Thermodynamics.Sim -- run reactor
 dotnet run --project Thermodynamics.Sim -- run all --csv out/
 ```
 
-If `VRage.Math.dll` is not found, point at your install:
+If the game's assemblies are not found, point at your install:
 
 ```bash
 SE_BIN=/path/to/SpaceEngineers/Bin64 dotnet test
 ```
 
-The probe order is `$SE_BIN`, the default Steam path, then the mod's own
-`bin/Release/net472` output.
+The probe order is `$SE_BIN`, the default Steam path on Linux, then the one on Windows, and it is
+in the repository's root [Directory.Build.props](../Directory.Build.props) because the mod project
+needs it too. If none of them resolves, the build says so by name.
 
 The nine scenario batteries — each stepping whole ships for tens of seconds — carry
 `[Trait("speed", "slow")]`; the fast lane is everything else. The suite spent months at five

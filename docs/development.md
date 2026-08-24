@@ -23,17 +23,27 @@
 Engineers compiles `Data/Scripts/**/*.cs` itself at world load; the produced `Generic.dll` is
 not shipped or loaded.
 
+**It is a member of `tests/Thermodynamics.slnx`, so the suite's own build compiles it** — building
+the test solution is what checks the mod, and `rules.md` `C11` is why. The test projects link
+`Core/` and a handful of adapter files; everything else that touches the game's assemblies is
+compiled here and nowhere else, so leaving this project out of the build made a rename in `Core`
+invisible until a world load.
+
 ```bash
-dotnet build Generic.csproj -c Release
+dotnet build tests/Thermodynamics.slnx      # everything, mod project included
+dotnet build Generic.csproj -c Release      # the mod project alone
 ```
 
-The `<HintPath>` entries are absolute and point at this machine's Steam library:
+Every `<HintPath>` resolves through `$(SEBinPath)`, which
+[Directory.Build.props](../Directory.Build.props) locates: `SE_BIN` if it is set, then the default
+Steam install on Linux, then the one on Windows. If none of them exists the build says so by name
+rather than producing an unresolved reference per assembly:
 
-```
-/home/gauge/Steam/SteamLibrary/steamapps/common/SpaceEngineers/Bin64/
+```bash
+SE_BIN=/path/to/SpaceEngineers/Bin64 dotnet build tests/Thermodynamics.slnx
 ```
 
-Adjust them for another machine. Two things about that reference set are easy to get wrong:
+Two things about that reference set are easy to get wrong:
 
 * **Target `net48`, not `net472`.** `VRage.Platform.Windows` and its RestSharp dependency are
   built against .NET Framework 4.8; at 4.7.2 they silently fail to resolve.

@@ -77,7 +77,7 @@ the right fourteen — see [testing the reduction](#testing-the-reduction).
 | **P4** | **Nothing is its own oracle.** A test that asks the model the same question twice agrees with whatever the model does; a harness fault looks exactly like physics. | `E7` `D1` `D4` `D7` `D8` |
 | **P5** | **One definition, and at least one consumer.** Two definitions drift, and the drift is silent in both directions; zero consumers means the thing does not exist however well it is written and tested. | `E5` `D2` `D3` `M6` `R7` `R8` `R9` `R10` `R11` `R13` `R14` |
 | **P6** | **A comparison holds everything but the subject equal.** Two numbers are comparable only when the stop criterion, the machine, the key and the baseline were the same. | `M1` `M2` `M3` `M7` |
-| **P7** | **The game is the authority.** The local build and the suite are an approximation of a compiler and a whitelist neither of them can see, and where the game already answers a question — what is sealed, what is destroyed — the mod reads that answer instead of forming its own. | `C1` `C2` `C3` `C9` `C10` |
+| **P7** | **The game is the authority.** The local build and the suite are an approximation of a compiler and a whitelist neither of them can see, and where the game already answers a question — what is sealed, what is destroyed — the mod reads that answer instead of forming its own. | `C1` `C2` `C3` `C11` `C9` `C10` |
 | **P8** | **Off means off, and costs nothing.** A mechanism nobody is using must cost nothing, and the way to turn it off must be unambiguous. | `C4` `C7` `C8` |
 | **P9** | **The core is a library the game happens to call.** That is what makes it testable in seconds, profilable, drivable by other mods and portable to another engine. | `C5` `R9` |
 | **P10** | **The solver's three invariants are the definition of correctness.** Order independence, energy conservation, boundedness — everything else is tuning. | `C6` |
@@ -179,6 +179,7 @@ under [low value](#low-value) so a citation to them does not dangle.
 | **C1** | C# 6 only | load-bearing | P7 | `LangVersion` on the core project |
 | **C2** | The whitelist covers types the local build accepts | load-bearing | P7 | — |
 | **C3** | Target `net48`, and never reference the native assembly | load-bearing | P7 | the build |
+| **C11** | Every file the game compiles is compiled by the suite's own build | load-bearing | P7 | the build |
 | **C4** | Nothing allocates on the stepping path | load-bearing | P8 | `bench report` |
 | **C5** | The core speaks no game type | load-bearing | P9 | `CoreIsolationTests` |
 | **C6** | The solver's three invariants hold | load-bearing | P10 | `ConductionTests` `StabilityTests` `ConductionClampGateTests` |
@@ -755,6 +756,26 @@ fail to resolve at 4.7.2. `VRage.Native.dll` is unmanaged and produces `MSB3246`
 *Checked by:* the build.
 *From:* [development.md](development.md).
 
+#### C11 — Every file the game compiles is compiled by the suite's own build
+
+**`Data/Scripts/**/*.cs` is what the game compiles at world load, and the one command the workflow
+already runs — `dotnet build tests/Thermodynamics.slnx` — has to compile all of it.**
+
+The test projects link `Core/` in full, four files of `Game/` and six of `Telemetry/`, and nothing
+else. The rest of the adapter is every file that touches the game's own assemblies, and it was
+compiled by `Generic.csproj` alone, which was built by hand. So a rename in `Core` could pass the
+whole suite and leave the mod unable to load — and did: `C20` renamed `Conductivity` to
+`HeatTransferCoefficient`, left one copy of the old name in `ThermalBlockCatalog`, and the mod did
+not compile for two commits while the whole suite passed.
+
+**It is the rung below `C2`.** There, a green build is not the game's check; here, a green *suite*
+was not even the local build. Nothing about this rule reaches the whitelist, which stays unchecked.
+
+*Applies to:* everything under `Data/Scripts`.
+*Checked by:* the build — `Generic.csproj` is a member of `tests/Thermodynamics.slnx`, so the
+solution build fails on a break the suite cannot see.
+*From:* [development.md](development.md#building), and the commit that fixed the break above.
+
 #### C9 — The game's own answer is read, never overridden
 
 **Where the game already decides something — whether a room is sealed, how much oxygen it holds —
@@ -1232,6 +1253,7 @@ right and this page is stale**; say so and fix it here.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-24 | Added `C11`, after the mod failed to compile for two commits while the whole suite passed. Two thirds of the adapter under `Game/` was compiled by nothing the workflow runs, so a rename in `Core` was invisible until a world load. `Generic.csproj` is in the test solution now, and its twenty-seven hard-coded Steam paths resolve through `$(SEBinPath)` — being unbuildable anywhere but this machine was the reason it could not be in the build in the first place ([backlog.md](backlog.md) `F25`). |
 | 2026-08-22 | `R9` covers the signature as well as the name, and `ModApiShapeTests` checks it. A failed cast returns null rather than throwing, so a signature that moves on one side alone gives another mod a feature that silently does nothing ([backlog.md](backlog.md) `F1`). |
 | 2026-08-22 | `C9` now names air density among the things the game answers, which is what settles whether this mod should author its own against the engine's ([backlog.md](backlog.md) `B22`). |
 | 2026-08-22 | `R3` and `E5` are checked rather than judged ([backlog.md](backlog.md) `F9`). The tree is scanned for four credential shapes, and the scan is itself checked against a value of each shape and against the text this repository legitimately writes. Counts a page states about the panel, about `Cubes.xml` and about the suite's own classes are compared with those datasets; a change log is exempt, because `R12` makes it a record of what was true rather than a claim about now. It found two stale figures on its first run — 432 authored values against 654, and 135 test classes against 160. |

@@ -24,88 +24,93 @@
     <EmbeddedResource Remove="tests/**" />
   </ItemGroup>
 
+  <!--
+    Every reference resolves through $(SEBinPath), which the root props locates; see the note
+    there. These were twenty-seven copies of one machine's Steam path, which made the mod project
+    unbuildable anywhere else - and it is in the test solution now, so anywhere else has to work.
+  -->
   <ItemGroup>
     <Reference Include="ProtoBuf.Net.Core">
-      <HintPath>/home/gauge/Steam/SteamLibrary/steamapps/common/SpaceEngineers/Bin64/ProtoBuf.Net.Core.dll</HintPath>
+      <HintPath>$(SEBinPath)/ProtoBuf.Net.Core.dll</HintPath>
     </Reference>
     <Reference Include="ProtoBuf.Net">
-      <HintPath>/home/gauge/Steam/SteamLibrary/steamapps/common/SpaceEngineers/Bin64/ProtoBuf.Net.dll</HintPath>
+      <HintPath>$(SEBinPath)/ProtoBuf.Net.dll</HintPath>
     </Reference>
     <Reference Include="Sandbox.Common">
-      <HintPath>/home/gauge/Steam/SteamLibrary/steamapps/common/SpaceEngineers/Bin64/Sandbox.Common.dll</HintPath>
+      <HintPath>$(SEBinPath)/Sandbox.Common.dll</HintPath>
     </Reference>
     <Reference Include="Sandbox.Game">
-      <HintPath>/home/gauge/Steam/SteamLibrary/steamapps/common/SpaceEngineers/Bin64/Sandbox.Game.dll</HintPath>
+      <HintPath>$(SEBinPath)/Sandbox.Game.dll</HintPath>
     </Reference>
     <Reference Include="Sandbox.Game.XmlSerializers">
-      <HintPath>/home/gauge/Steam/SteamLibrary/steamapps/common/SpaceEngineers/Bin64/Sandbox.Game.XmlSerializers.dll</HintPath>
+      <HintPath>$(SEBinPath)/Sandbox.Game.XmlSerializers.dll</HintPath>
     </Reference>
     <Reference Include="SpaceEngineers.Game">
-      <HintPath>/home/gauge/Steam/SteamLibrary/steamapps/common/SpaceEngineers/Bin64/SpaceEngineers.Game.dll</HintPath>
+      <HintPath>$(SEBinPath)/SpaceEngineers.Game.dll</HintPath>
     </Reference>
     <Reference Include="SpaceEngineers.ObjectBuilders">
-      <HintPath>/home/gauge/Steam/SteamLibrary/steamapps/common/SpaceEngineers/Bin64/SpaceEngineers.ObjectBuilders.dll</HintPath>
+      <HintPath>$(SEBinPath)/SpaceEngineers.ObjectBuilders.dll</HintPath>
     </Reference>
     <Reference Include="SpaceEngineers.ObjectBuilders.XmlSerializers">
-      <HintPath>/home/gauge/Steam/SteamLibrary/steamapps/common/SpaceEngineers/Bin64/SpaceEngineers.ObjectBuilders.XmlSerializers.dll</HintPath>
+      <HintPath>$(SEBinPath)/SpaceEngineers.ObjectBuilders.XmlSerializers.dll</HintPath>
     </Reference>
     <Reference Include="VRage">
-      <HintPath>/home/gauge/Steam/SteamLibrary/steamapps/common/SpaceEngineers/Bin64/VRage.dll</HintPath>
+      <HintPath>$(SEBinPath)/VRage.dll</HintPath>
     </Reference>
     <Reference Include="VRage.Ansel">
-      <HintPath>/home/gauge/Steam/SteamLibrary/steamapps/common/SpaceEngineers/Bin64/VRage.Ansel.dll</HintPath>
+      <HintPath>$(SEBinPath)/VRage.Ansel.dll</HintPath>
     </Reference>
     <Reference Include="VRage.Audio">
-      <HintPath>/home/gauge/Steam/SteamLibrary/steamapps/common/SpaceEngineers/Bin64/VRage.Audio.dll</HintPath>
+      <HintPath>$(SEBinPath)/VRage.Audio.dll</HintPath>
     </Reference>
     <Reference Include="VRage.EOS">
-      <HintPath>/home/gauge/Steam/SteamLibrary/steamapps/common/SpaceEngineers/Bin64/VRage.EOS.dll</HintPath>
+      <HintPath>$(SEBinPath)/VRage.EOS.dll</HintPath>
     </Reference>
     <Reference Include="VRage.Game">
-      <HintPath>/home/gauge/Steam/SteamLibrary/steamapps/common/SpaceEngineers/Bin64/VRage.Game.dll</HintPath>
+      <HintPath>$(SEBinPath)/VRage.Game.dll</HintPath>
     </Reference>
     <Reference Include="VRage.Input">
-      <HintPath>/home/gauge/Steam/SteamLibrary/steamapps/common/SpaceEngineers/Bin64/VRage.Input.dll</HintPath>
+      <HintPath>$(SEBinPath)/VRage.Input.dll</HintPath>
     </Reference>
     <Reference Include="VRage.Library">
-      <HintPath>/home/gauge/Steam/SteamLibrary/steamapps/common/SpaceEngineers/Bin64/VRage.Library.dll</HintPath>
+      <HintPath>$(SEBinPath)/VRage.Library.dll</HintPath>
     </Reference>
     <Reference Include="VRage.Math">
-      <HintPath>/home/gauge/Steam/SteamLibrary/steamapps/common/SpaceEngineers/Bin64/VRage.Math.dll</HintPath>
+      <HintPath>$(SEBinPath)/VRage.Math.dll</HintPath>
     </Reference>
     <Reference Include="VRage.Mod.Io">
-      <HintPath>/home/gauge/Steam/SteamLibrary/steamapps/common/SpaceEngineers/Bin64/VRage.Mod.Io.dll</HintPath>
+      <HintPath>$(SEBinPath)/VRage.Mod.Io.dll</HintPath>
     </Reference>
     <!-- VRage.Native.dll is unmanaged: referencing it produces MSB3246 "PE image has no metadata". -->
     <Reference Include="VRage.NativeAftermath">
-      <HintPath>/home/gauge/Steam/SteamLibrary/steamapps/common/SpaceEngineers/Bin64/VRage.NativeAftermath.dll</HintPath>
+      <HintPath>$(SEBinPath)/VRage.NativeAftermath.dll</HintPath>
     </Reference>
     <Reference Include="VRage.NativeWrapper">
-      <HintPath>/home/gauge/Steam/SteamLibrary/steamapps/common/SpaceEngineers/Bin64/VRage.NativeWrapper.dll</HintPath>
+      <HintPath>$(SEBinPath)/VRage.NativeWrapper.dll</HintPath>
     </Reference>
     <Reference Include="VRage.Network">
-      <HintPath>/home/gauge/Steam/SteamLibrary/steamapps/common/SpaceEngineers/Bin64/VRage.Network.dll</HintPath>
+      <HintPath>$(SEBinPath)/VRage.Network.dll</HintPath>
     </Reference>
     <Reference Include="VRage.Platform.Windows">
-      <HintPath>/home/gauge/Steam/SteamLibrary/steamapps/common/SpaceEngineers/Bin64/VRage.Platform.Windows.dll</HintPath>
+      <HintPath>$(SEBinPath)/VRage.Platform.Windows.dll</HintPath>
     </Reference>
     <Reference Include="VRage.Render">
-      <HintPath>/home/gauge/Steam/SteamLibrary/steamapps/common/SpaceEngineers/Bin64/VRage.Render.dll</HintPath>
+      <HintPath>$(SEBinPath)/VRage.Render.dll</HintPath>
     </Reference>
     <Reference Include="VRage.Render11">
-      <HintPath>/home/gauge/Steam/SteamLibrary/steamapps/common/SpaceEngineers/Bin64/VRage.Render11.dll</HintPath>
+      <HintPath>$(SEBinPath)/VRage.Render11.dll</HintPath>
     </Reference>
     <Reference Include="VRage.Scripting">
-      <HintPath>/home/gauge/Steam/SteamLibrary/steamapps/common/SpaceEngineers/Bin64/VRage.Scripting.dll</HintPath>
+      <HintPath>$(SEBinPath)/VRage.Scripting.dll</HintPath>
     </Reference>
     <Reference Include="VRage.Steam">
-      <HintPath>/home/gauge/Steam/SteamLibrary/steamapps/common/SpaceEngineers/Bin64/VRage.Steam.dll</HintPath>
+      <HintPath>$(SEBinPath)/VRage.Steam.dll</HintPath>
     </Reference>
     <Reference Include="VRage.UserInterface">
-      <HintPath>/home/gauge/Steam/SteamLibrary/steamapps/common/SpaceEngineers/Bin64/VRage.UserInterface.dll</HintPath>
+      <HintPath>$(SEBinPath)/VRage.UserInterface.dll</HintPath>
     </Reference>
     <Reference Include="VRage.XmlSerializers">
-      <HintPath>/home/gauge/Steam/SteamLibrary/steamapps/common/SpaceEngineers/Bin64/VRage.XmlSerializers.dll</HintPath>
+      <HintPath>$(SEBinPath)/VRage.XmlSerializers.dll</HintPath>
     </Reference>
   </ItemGroup>
 
