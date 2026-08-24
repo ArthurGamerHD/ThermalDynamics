@@ -82,10 +82,21 @@ namespace Thermodynamics.Harness
         /// </summary>
         public static Row RadiatorStack(int count, bool preConversion)
         {
+            return RadiatorStack(count, preConversion, SourceWatts);
+        }
+
+        /// <summary>
+        /// The same rig at a stated load, so a test can run the control: in shadow with nothing
+        /// making heat the whole stack falls to the sky, which is what makes "the source settled
+        /// at 272 K" a statement about the load rather than about where it started (`E8`).
+        /// </summary>
+        public static Row RadiatorStack(int count, bool preConversion, float watts)
+        {
             BlockModel radiator = Cooler(Catalog.Radiator, preConversion);
 
             GridBuilder builder = GridBuilder.Large();
-            builder.Place(Catalog.LargeReactor(), Vector3I.Zero).Wasting(SourceWatts);
+            builder.Place(Catalog.LargeReactor(), Vector3I.Zero);
+            if (watts > 0f) builder.Wasting(watts);
             BlockInstance source = builder.Last;
 
             int height = 3;

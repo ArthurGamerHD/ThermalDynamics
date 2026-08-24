@@ -91,14 +91,24 @@ namespace Thermodynamics.Tests
         /// The shipped pace itself, so a change to it is a deliberate edit here rather than a
         /// number that moved.
         ///
-        /// 2.4 is what puts mild steel exactly where the old 0…1 quality value put it, which is the
-        /// calibration the real-unit conversion was built around — see
-        /// [definitions.md](../../docs/definitions.md).
+        /// <para>
+        /// **2.4 was the calibration and 9.6 is a balance choice on top of it.** 2.4 is what puts
+        /// mild steel exactly where the old 0…1 quality value put it, which is what the real-unit
+        /// conversion was built around — see [definitions.md](../../docs/definitions.md) — and the
+        /// shipped pace is four times that, because nothing else reaches the 2–5 minute
+        /// significance window `G8` asks for without pushing the hull out of a session. Both
+        /// numbers are asserted, so the ratio between them is the thing that cannot move quietly.
+        /// [balance.md](../../docs/balance.md), The route is chosen; [backlog.md](../../docs/backlog.md)
+        /// `C12`, `C24`.
+        /// </para>
         /// </summary>
         [Fact]
-        public void TheShippedSolidPaceIsWhatTheConversionCalibratedTo()
+        public void TheShippedSolidPaceIsFourTimesWhatTheConversionCalibratedTo()
         {
-            Assert.Equal(2.4f, ThermalConstants.ConductionScale, 4);
+            const float Calibrated = 2.4f;
+
+            Assert.Equal(9.6f, ThermalConstants.ConductionScale, 4);
+            Assert.Equal(4f, ThermalConstants.ConductionScale / Calibrated, 4);
         }
 
         /// <summary>

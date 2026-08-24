@@ -65,8 +65,11 @@ namespace Thermodynamics.Tests
             Assert.Single(simulation.Solver.Links);
             ThermalLink link = simulation.Solver.Links[0];
 
-            // k = 0.6 * 200 = 120 W/(m K); L = 1.25 m each; A = 6.25 m^2
-            float expected = 6.25f / ((1.25f / 120f) * 2f);
+            // Light armour's own conductivity at the shipped pace; L = 1.25 m each; A = 6.25 m^2.
+            // Taken from the constant rather than written out, because the subject here is the
+            // series formula and not what the pace happens to be — it is 9.6 as of C24.
+            float k = Catalog.LightArmor().Thermal.Conductivity * ThermalConstants.ConductionScale;
+            float expected = 6.25f / ((1.25f / k) * 2f);
             Assert.Equal(expected, link.Conductance, 2);
             Assert.Equal(1, link.ContactFaces);
         }
