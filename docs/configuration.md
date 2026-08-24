@@ -859,6 +859,28 @@ more fidelity than the sample count**. Neither default moves here, because both 
 never been measured in a session: `A9` needs `F5` first. What has changed is which dial the answer
 is expected to be.
 
+**And the rung above both is worth about a two-hundredth of a kelvin a metre of hull.** Neither dial
+reaches the error that comes from applying one answer to a whole ship — the leading end told it is
+lit while it is dark and the trailing end the reverse — and resolving the planet's shadow *per face*
+is the only thing that would. Read per block instead of per hull, tested every step so the cadence
+contributes nothing, that error is:
+
+| Hull | Worst block, geometry alone | at the shipped 12-step cadence |
+| --- | ---: | ---: |
+| 25 m | 0.17 K | 1.47 K |
+| 150 m | 0.73 K | 1.97 K |
+| 600 m | 2.77 K | 4.07 K |
+| 2,500 m | 11.33 K | 12.54 K |
+
+*One lit face of a 500 kg steel-plate block gains 0.905 K a second of sunlight at the shipped clock,
+which is the conversion every figure above rests on.*
+
+**It is linear in length and it is under a kelvin for anything under 200 m**, so on the ships people
+build it is a fraction of what the cadence already costs — below 300 m the cadence is the larger half
+of the error, and above it the geometry is. That is what decides the top rung: it is a change about
+how long ships are rather than about how good the model is, and nothing in the shipped configuration
+moves for it. `OcclusionLadderTests` pins the rate and the crossover.
+
 The three solar settings stack as a choice of cost. `EnableSolarHeat` off is free and models no
 sunlight at all. On with `SolarSelfShadowing` off is the cheap model: a face is lit whenever it
 points at the sun. On with both is the accurate one: the grid shadows itself, for one pass over its
@@ -1000,6 +1022,7 @@ one with a migration risk — is late rather than first.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | **Priced `A9`'s unbuilt top rung**, which had been described and never measured: resolving the planet's shadow per face removes an error linear in hull length, about a two-hundredth of a kelvin a metre — 0.73 K on a 150 m hull against the 1.97 K the cadence already costs it, and 11.33 K on a 2,500 m one. Below 300 m the cadence is the larger half. Added the table to [External shadow](#external-shadow). |
 | 2026-08-23 | `HeatGlow` is the last 100 K before a block's own critical temperature, superseding the two entries below it. The colour is unchanged and still absolute. |
 | 2026-08-23 | `HeatGlow` is back to incandescence — brightness and colour both functions of temperature alone — and the rating-keyed form of the entry below is withdrawn. |
 | 2026-08-23 | `HeatGlow` is a block's distance from its own rating rather than an absolute temperature: nothing at comfortable temperatures, full at critical and above. The colour is unchanged and still absolute. |

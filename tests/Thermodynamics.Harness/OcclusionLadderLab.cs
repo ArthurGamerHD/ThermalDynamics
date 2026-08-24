@@ -336,6 +336,223 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
+        /// <summary>
+        /// What the whole-grid answer costs the blocks at the ends of a hull, which is the only
+        /// thing the unbuilt top rung of `A9` would fix.
+        ///
+        /// <para>
+        /// The grid-wide share is applied uniformly, so during a crossing every block is told the
+        /// same thing while the leading end is already dark and the trailing end still lit. **The
+        /// energy cancels over the hull and does not cancel over a block**: the two ends are wrong
+        /// in opposite directions, which is why the surplus column above reads near zero while the
+        /// blocks at the ends are each out by seconds of sunlight. Resolving the planet's shadow per
+        /// face is what would remove it, and this is what removing it is worth.
+        /// </para>
+        /// </summary>
+        public class Extremity
+        {
+            public double LengthMetres;
+
+            /// <summary>Seconds of sunlight the worst-placed block was told it had and did not.</summary>
+            public double SurplusSeconds;
+
+            /// <summary>And the seconds it was denied, which is the other end of the same hull.</summary>
+            public double DeficitSeconds;
+
+            /// <summary>The surplus as a temperature on one sunward face of a standard armour block.</summary>
+            public double SurplusKelvin;
+            public double DeficitKelvin;
+        }
+
+        /// <summary>
+        /// Kelvin one lit cell face gains per second of sunlight, on a standard light armour block
+        /// at the shipped clock.
+        ///
+        /// 1,000 W/m² over a 2.5 m face at the block's own absorptivity, over 500 kg of steel whose
+        /// capacity `HeatTimeScale` divides by 225. **Stated as a rate so the conversion is visible**:
+        /// every figure below it is seconds of sunlight times this.
+        /// </summary>
+        public static double KelvinPerLitSecond(ThermalSettings settings)
+        {
+            const double LargeGridCell = 2.5d;
+            const double ArmourKilograms = 500d;
+
+            // The block is stated as a material rather than taken from a catalog: 500 kg of steel
+            // plate at the figures `BlockMaterials` prices it with, so the conversion cannot drift
+            // with a harness stand-in and cannot be read as a claim about one subtype.
+            BlockMaterial steel = BlockMaterials.Steel;
+
+            double face = LargeGridCell * LargeGridCell;
+            double capacity = ArmourKilograms * steel.SpecificHeat / settings.HeatTimeScale;
+            return capacity <= 0d
+                ? 0d
+                : settings.SolarEnergy * face * steel.Emissivity / capacity;
+        }
+
+        /// <summary>
+        /// The worst-placed block on a hull of each length, averaged over test phases.
+        ///
+        /// Positions are walked along the hull rather than sampled from the box, because the
+        /// question is what one block meets rather than what the grid reports.
+        /// </summary>
+        public static List<Extremity> Extremities(double[] lengths, int samples,
+            int occlusionInterval, float frequency, double kelvinPerSecond)
+        {
+            List<Extremity> found = new List<Extremity>();
+            double testSeconds = occlusionInterval / (double)frequency;
+
+            foreach (double length in lengths)
+            {
+                double surplus = 0d;
+                double deficit = 0d;
+
+                for (int p = 0; p < Phases; p++)
+                {
+                    double phase = testSeconds * p / Phases;
+
+                    double high, low;
+                    BlockError(length, samples, testSeconds, phase, out high, out low);
+                    surplus += high;
+                    deficit += low;
+                }
+
+                Extremity row = new Extremity();
+                row.LengthMetres = length;
+                row.SurplusSeconds = surplus / Phases;
+                row.DeficitSeconds = deficit / Phases;
+                row.SurplusKelvin = row.SurplusSeconds * kelvinPerSecond;
+                row.DeficitKelvin = row.DeficitSeconds * kelvinPerSecond;
+                found.Add(row);
+            }
+
+            return found;
+        }
+
+        /// <summary>
+        /// Seconds of sunlight the most over-told and most under-told point on the hull differ by,
+        /// over one crossing at one phase.
+        /// </summary>
+        private static void BlockError(double length, int samples, double testSeconds, double phase,
+            out double worstSurplus, out double worstDeficit)
+        {
+            const int Positions = 9;
+
+            double radius = PlanetRadius + Altitude;
+            double omega = Speed / radius;
+            double terminator = Terminator(radius);
+            double halfSpan = ((length / radius) * 0.5d) + (omega * testSeconds * 6d);
+
+            double[] told = new double[Positions];
+            double[] met = new double[Positions];
+
+            double reported = double.NaN;
+            double sinceTest = double.PositiveInfinity;
+            bool first = true;
+
+            for (double angle = terminator - halfSpan; angle <= terminator + halfSpan; angle += omega * Tick)
+            {
+                if (first)
+                {
+                    first = false;
+                    reported = 1d - OccludedShare(angle, length, samples);
+                    sinceTest = phase;
+                }
+                else if (sinceTest >= testSeconds)
+                {
+                    reported = 1d - OccludedShare(angle, length, samples);
+                    sinceTest = 0d;
+                }
+
+                for (int i = 0; i < Positions; i++)
+                {
+                    // Along the hull from leading end to trailing end.
+                    double offset = ((i / (double)(Positions - 1)) - 0.5d) * (length / radius);
+                    double lit = IsOccluded(angle + offset, radius) ? 0d : 1d;
+
+                    told[i] += reported * Tick;
+                    met[i] += lit * Tick;
+                }
+
+                sinceTest += Tick;
+            }
+
+            worstSurplus = 0d;
+            worstDeficit = 0d;
+
+            for (int i = 0; i < Positions; i++)
+            {
+                double error = told[i] - met[i];
+                if (error > worstSurplus) worstSurplus = error;
+                if (error < worstDeficit) worstDeficit = error;
+            }
+
+            worstDeficit = -worstDeficit;
+        }
+
+        public static string ExtremityReport(int occlusionInterval, float frequency)
+        {
+            StringBuilder sb = new StringBuilder();
+
+            ThermalSettings settings = new ThermalSettings();
+            settings.Derive();
+
+            double perSecond = KelvinPerLitSecond(settings);
+
+            sb.AppendLine("  WHAT THE WHOLE-GRID ANSWER COSTS ONE BLOCK, WHICH IS THE TOP RUNG");
+            sb.AppendLine();
+            sb.Append("  nine samples at ").Append(occlusionInterval)
+              .AppendLine(" steps: the shipped ladder, read per block rather than per hull");
+            sb.Append("  one lit face of a 500 kg steel-plate block gains ")
+              .Append(perSecond.ToString("n3")).AppendLine(" K a second of sunlight");
+            sb.AppendLine();
+            sb.AppendLine("  grid        told and did not get   told and was denied      worst block");
+
+            List<Extremity> rows = Extremities(Lengths, SolarOcclusionSampler.MaxSamples,
+                occlusionInterval, frequency, perSecond);
+
+            foreach (Extremity row in rows)
+            {
+                double worst = Math.Max(row.SurplusKelvin, row.DeficitKelvin);
+
+                sb.Append("  ").Append((row.LengthMetres.ToString("n0") + " m").PadRight(12))
+                  .Append((row.SurplusSeconds.ToString("n2") + " s").PadLeft(14))
+                  .Append((row.DeficitSeconds.ToString("n2") + " s").PadLeft(22))
+                  .Append((worst.ToString("n2") + " K").PadLeft(17))
+                  .AppendLine();
+            }
+
+            sb.AppendLine();
+            sb.AppendLine("  and the same hulls tested every step, which leaves only the spatial half");
+            sb.AppendLine();
+            sb.AppendLine("  grid        told and did not get   told and was denied      worst block");
+
+            List<Extremity> tight = Extremities(Lengths, SolarOcclusionSampler.MaxSamples,
+                1, frequency, perSecond);
+
+            foreach (Extremity row in tight)
+            {
+                double worst = Math.Max(row.SurplusKelvin, row.DeficitKelvin);
+
+                sb.Append("  ").Append((row.LengthMetres.ToString("n0") + " m").PadRight(12))
+                  .Append((row.SurplusSeconds.ToString("n2") + " s").PadLeft(14))
+                  .Append((row.DeficitSeconds.ToString("n2") + " s").PadLeft(22))
+                  .Append((worst.ToString("n2") + " K").PadLeft(17))
+                  .AppendLine();
+            }
+
+            sb.AppendLine();
+            sb.AppendLine("  The second table is what resolving the planet per face would remove and");
+            sb.AppendLine("  the interval cannot: at one step it is all the error there is left, and it");
+            sb.AppendLine("  is a property of the hull's length rather than of the cadence.");
+            sb.AppendLine();
+            sb.AppendLine("  The hull's own surplus cancels and a block's does not: the leading end is");
+            sb.AppendLine("  told it is lit while it is dark and the trailing end the reverse, so the");
+            sb.AppendLine("  error the ladder above reports as near zero is two errors of opposite sign");
+            sb.AppendLine("  sitting at the two ends. Resolving the planet per face is what removes it.");
+
+            return sb.ToString();
+        }
+
         public static string Report(int occlusionInterval = 12, float frequency = 4f)
         {
             StringBuilder sb = new StringBuilder();
@@ -376,6 +593,7 @@ namespace Thermodynamics.Harness
             sb.AppendLine();
 
             sb.AppendLine(IntervalReport(frequency));
+            sb.AppendLine(ExtremityReport(occlusionInterval, frequency));
 
             return sb.ToString();
         }

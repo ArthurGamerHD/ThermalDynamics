@@ -50,14 +50,16 @@ planet's or an asteroid's dims the whole grid by the share of sampled rays that 
 (`SolarOcclusionSamples`). A capital ship crossing a terminator therefore ramps rather than
 switching, but never carries a shadow edge across its own hull.
 
-**This is no longer filed as a limit taken and left.** It is now the top rung of
-[backlog](backlog.md) `A9`, which asks for occlusion as an ordered ladder of configurations from a
-single centre ray to per-face shadow for every occluder, with the most realistic rung shipped by
-default. The cost objection that justified the limit — *per-block would need the ray count to scale
-with block count* — survives for terrain and voxels and does **not** hold for the planet, which is
-the occluder that matters: `OcclusionMath.IsOccludedBySphere` is a normalise, a dot and an `atan`
-with no ray in it, so evaluating it per exposed face is arithmetic on a pass the self-shadow already
-walks.
+**It is the top rung of [backlog](backlog.md) `A9`, and it is now priced.** The cost objection that
+justified the limit — *per-block would need the ray count to scale with block count* — survives for
+terrain and voxels and does **not** hold for the planet: `OcclusionMath.IsOccludedBySphere` is a
+normalise, a dot and an `atan` with no ray in it, so evaluating it per exposed face is arithmetic on
+a pass the self-shadow already walks. What was never measured is what it would be worth, and read
+per block that is **linear in hull length at about 0.0045 K a metre**: 0.17 K on a 25 m hull, 0.73 K
+at 150 m, 2.77 K at 600 m and 11.33 K at 2,500 m, on the worst-placed block of a crossing. The
+cadence the rung does not touch already costs every hull 1.47 K, so **below 300 m the interval is
+the larger half of the error and above it the geometry is**. The limit therefore stays taken, with a
+number on it rather than an argument: see [configuration.md](configuration.md#external-shadow).
 
 **Point sources are not occluded.** A registered heat source heats through walls and through other
 ships. Occlusion is left to the host, which can simply not register a source it knows is hidden.
@@ -773,6 +775,7 @@ counters rather than milliseconds so it holds on any machine.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | Priced the per-grid planet shadow limit rather than leaving it argued: resolving the planet per face is worth about 0.0045 K a metre of hull on the worst-placed block, which is 0.73 K on a 150 m ship against a 1.47 K cadence floor it does not touch. The limit stays, with a figure. |
 | 2026-08-23 | **Built `B4`'s transport**, which was the half of that row no lab could reach. `ThermalGridSync` is the session it happens in; `HotTailMessage`, `HotTailSchedule` and `HotTailState` are the wire, the timing and the bookkeeping, all game-free and covered by `HotTailSyncTests`. The protocol is the one the measurement chose and nothing more: the whole hull once when a client asks, then the band every five seconds, no budget, empty bands unsent, on a secure channel of its own. Two settings ship with it, `EnableTemperatureSync` and `TemperatureSyncInterval`. What no test reaches is registration, addressing and the send, so `/thermal sync` prints counters on both sides instead. |
 | 2026-08-23 | **Measured the fix for `B4` rather than only the defect, and both halves changed what the row said.** The near-critical tail alone does not close the gap on the census hull — 560 s of misreading to 145 s, and the residual is the un-replicated hull rather than the update rate, because a corrected block conducts to stale neighbours. Stating the whole hull **once at the join** and then tracking the band takes it to **0 s at every interval down to sixty seconds**, for one 94 KB packet and 513 B/s after it. And `-- inputs` found that the convergence argument this row rested on covers one of eight causes: a stale join settles at 0.25 K, while a wrong input — power 2 s late, a dropped backlog, settings that never arrived — settles at 44, 58 and 116 K and stays there. A bias does not decay, and the correction narrows one without removing it. |
 | 2026-08-23 | Built the guard the entry above asked for ([backlog.md](backlog.md) `F16`), so this is now a limit with a check under it rather than a warning to remember. |

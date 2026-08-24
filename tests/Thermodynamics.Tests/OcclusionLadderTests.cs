@@ -189,5 +189,83 @@ namespace Thermodynamics.Tests
 
             throw new InvalidOperationException("no rung at " + length + " m, " + samples + " samples");
         }
+
+        /// <summary>
+        /// **What the unbuilt top rung is worth, in kelvin on the block it is worst for.**
+        ///
+        /// <para>
+        /// Resolving the planet's shadow per face is the one rung of `A9`'s ladder nothing has
+        /// built, and it fixes the half neither the sample count nor the interval reaches: the two
+        /// ends of a hull being told the same thing while one is dark and the other is lit. Tested
+        /// every step, so the cadence contributes nothing and what is left is the spatial error
+        /// alone, it comes out **linear in hull length at about a two-hundredth of a kelvin a
+        /// metre** — which is what makes it a decision about how long ships are rather than about
+        /// how good the model is.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void ThePerFaceRungIsWorthAboutAKelvinEveryTwoHundredMetresOfHull()
+        {
+            ThermalSettings settings = new ThermalSettings();
+            settings.Derive();
+
+            double perSecond = OcclusionLadderLab.KelvinPerLitSecond(settings);
+            Assert.InRange(perSecond, 0.5d, 1.5d);
+
+            double[] lengths = { 150d, 600d, 2500d };
+            List<OcclusionLadderLab.Extremity> rows = OcclusionLadderLab.Extremities(
+                lengths, SolarOcclusionSampler.MaxSamples, 1, 4f, perSecond);
+
+            Assert.Equal(lengths.Length, rows.Count);
+
+            for (int i = 0; i < rows.Count; i++)
+            {
+                double worst = Math.Max(rows[i].SurplusKelvin, rows[i].DeficitKelvin);
+                double perMetre = worst / rows[i].LengthMetres;
+
+                output.WriteLine("{0:n0} m: {1:n2} K, {2:n5} K/m",
+                    rows[i].LengthMetres, worst, perMetre);
+
+                // The rate is the finding, and it holds across a factor of sixteen in length.
+                Assert.InRange(perMetre, 0.0035d, 0.0055d);
+            }
+
+            // An ordinary ship is a fraction of a kelvin, which is the reason the rung is not built.
+            double ordinary = Math.Max(rows[0].SurplusKelvin, rows[0].DeficitKelvin);
+            Assert.True(ordinary < 1.0d,
+                "a 150 m hull's worst block is out by " + ordinary.ToString("n2") + " K");
+        }
+
+        /// <summary>
+        /// **And below three hundred metres the cadence is the larger half**, which is why the
+        /// interval is the dial to spend on first and the sample count is neither.
+        /// </summary>
+        [Fact]
+        public void BelowThreeHundredMetresTheCadenceCostsMoreThanTheGeometry()
+        {
+            ThermalSettings settings = new ThermalSettings();
+            settings.Derive();
+
+            double perSecond = OcclusionLadderLab.KelvinPerLitSecond(settings);
+            double[] lengths = { 150d };
+
+            double shipped = Worst(OcclusionLadderLab.Extremities(
+                lengths, SolarOcclusionSampler.MaxSamples, 12, 4f, perSecond)[0]);
+
+            double spatial = Worst(OcclusionLadderLab.Extremities(
+                lengths, SolarOcclusionSampler.MaxSamples, 1, 4f, perSecond)[0]);
+
+            output.WriteLine("150 m: {0:n2} K at the shipped interval, {1:n2} K tested every step",
+                shipped, spatial);
+
+            Assert.True(spatial < shipped * 0.5d,
+                "the geometry is " + spatial.ToString("n2") + " K of a shipped "
+                + shipped.ToString("n2") + " K, so the cadence is not the larger half");
+        }
+
+        private static double Worst(OcclusionLadderLab.Extremity row)
+        {
+            return Math.Max(row.SurplusKelvin, row.DeficitKelvin);
+        }
     }
 }
