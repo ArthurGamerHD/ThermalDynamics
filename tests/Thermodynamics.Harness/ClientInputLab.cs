@@ -170,6 +170,46 @@ namespace Thermodynamics.Harness
             public float OcclusionWrongForSeconds = 3f;
 
             /// <summary>
+            /// The client's block masses are wrong by this share, permanently.
+            ///
+            /// <para>
+            /// **Mass is heat capacity, so this is the one input that is not an error in a heat
+            /// flow at all** — it is an error in what a given flow does to a temperature. Every
+            /// other knob here moves watts; this one moves the divisor those watts are divided by
+            /// (<see cref="ThermalNode.RefreshThermalMass"/>).
+            /// </para>
+            ///
+            /// <para>
+            /// It is what the engine does twice over. A block's mass is refreshed on a rota —
+            /// `SweepMass` every 8 steps, capped at 4,096 blocks — so a large grid's masses lag
+            /// *by design on both machines*, and the two rotas are not in step; and the build
+            /// progress and damage the mass is derived from replicate on their own schedule on
+            /// top of that. Integrity reaches the model through nothing else: no path in the mod
+            /// reads it, so a damaged block is a lighter block and that is all it is
+            /// ([backlog.md](../../docs/backlog.md) `F20`).
+            /// </para>
+            /// </summary>
+            public float MassErrorShare;
+
+            /// <summary>
+            /// This share of the client's heat producers are believed switched off.
+            ///
+            /// <para>
+            /// **The second binary input, and unlike the first it is per block rather than per
+            /// hull.** A block that is off draws no power and makes no waste heat, so a client
+            /// that has the switch on the wrong side is not wrong by a percentage of that block's
+            /// heat — it is wrong by all of it, on some blocks and not others
+            /// ([backlog.md](../../docs/backlog.md) `F20`).
+            /// </para>
+            ///
+            /// <para>
+            /// Applied to producers because they are the blocks a switch reaches: turning off an
+            /// armour cube changes nothing on either machine.
+            /// </para>
+            /// </summary>
+            public float BlocksOffShare;
+
+            /// <summary>
             /// The client is running the shipped defaults while the server is not. **A bias, and
             /// the worst case of one that should not happen**: settings replicate, and a client
             /// fetches them on load, so this is what a fetch that never landed would look like.
@@ -272,7 +312,8 @@ namespace Thermodynamics.Harness
         /// Runs one degraded client against a server, and scores the readout.
         /// </summary>
         public static Result Measure(Degradation degradation, ClientDriftLab.Correction protocol,
-            string scenario = "planet", float seconds = 600f, int blocks = 2000)
+            string scenario = "planet", float seconds = 600f, int blocks = 2000,
+            float loadPeriodSeconds = LoadPeriodSeconds)
         {
             Degradation how = degradation ?? new Degradation();
             ClientDriftLab.Correction fix = protocol ?? ClientDriftLab.Correction.None;
@@ -290,6 +331,10 @@ namespace Thermodynamics.Harness
 
             ThermalSimulation server = Hulls.Driven(serverWorld, blocks);
             ThermalSimulation client = Hulls.Driven(clientWorld, blocks);
+
+            // Capacity, not a flow, so it is set once on the hull rather than re-applied with the
+            // load: the rota that produces it in game changes a block's mass, not its wattage.
+            Reweigh(client, how.MassErrorShare);
 
             Result result = new Result
             {
@@ -313,6 +358,9 @@ namespace Thermodynamics.Harness
                 Census.DriveThrust(server, ThrustWatts);
                 Census.DriveThrust(client, ThrustWatts * (1f + how.ThrustErrorShare));
             }
+
+            Silence(client, how.BlocksOffShare);
+
             Advance(server, Sample(scenario, 0f, how, false), warm);
             Advance(client, Sample(scenario, 0f, how, true), warm);
 
@@ -344,9 +392,13 @@ namespace Thermodynamics.Harness
             {
                 float now = elapsed;
 
-                servedWatts = Retune(server, servedWatts, Watts(now));
+                servedWatts = Retune(server, servedWatts, Watts(now, loadPeriodSeconds));
+                float wasClientWatts = clientWatts;
                 clientWatts = Retune(client, clientWatts,
-                    Watts(now - how.PowerLagSeconds) * (1f + how.PowerErrorShare));
+                    Watts(now - how.PowerLagSeconds, loadPeriodSeconds) * (1f + how.PowerErrorShare));
+
+                // Re-driving the hull puts the switched-off blocks back on, so they go off again.
+                if (clientWatts != wasClientWatts) Silence(client, how.BlocksOffShare);
 
                 Advance(server, Sample(scenario, now, how, false), tick);
 
@@ -428,8 +480,23 @@ namespace Thermodynamics.Harness
         /// <summary>The scripted load at a moment: a square wave, so a lag has something to lag.</summary>
         public static float Watts(float seconds)
         {
+            return Watts(seconds, LoadPeriodSeconds);
+        }
+
+        /// <summary>
+        /// The same, at a chosen period.
+        ///
+        /// **A period longer than the run is how a caller asks for a steady load**, and one caller
+        /// needs to: a heat capacity error is an error in a *rate*, and the equilibrium a hull
+        /// settles at does not depend on capacity at all. Telling those two apart needs a run whose
+        /// load stops moving, which the shipped period deliberately never does.
+        /// </summary>
+        public static float Watts(float seconds, float periodSeconds)
+        {
             if (seconds < 0f) seconds = 0f;
-            int half = (int)(seconds / LoadPeriodSeconds);
+            if (periodSeconds <= 0f) return LoadedWatts;
+
+            int half = (int)(seconds / periodSeconds);
             return half % 2 == 0 ? LoadedWatts : IdleWatts;
         }
 
@@ -521,6 +588,61 @@ namespace Thermodynamics.Harness
         private static float Degrees(float degrees)
         {
             return (float)(degrees * Math.PI / 180d);
+        }
+
+        /// <summary>
+        /// Scales every block's mass by <paramref name="share"/>, and with it every block's heat
+        /// capacity.
+        ///
+        /// Every block rather than a sample of them, because the rota that produces this in game
+        /// visits every block: what differs between two machines is *when* each was last visited,
+        /// and a share applied to the whole hull is the bound on that.
+        /// </summary>
+        private static void Reweigh(ThermalSimulation simulation, float share)
+        {
+            if (share == 0f) return;
+
+            IList<ThermalNode> nodes = simulation.Solver.Nodes;
+            float scale = Math.Max(0.01f, 1f + share);
+
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                nodes[i].Block.Mass = nodes[i].Block.Mass * scale;
+                nodes[i].RefreshThermalMass();
+            }
+        }
+
+        /// <summary>
+        /// Zeroes the heat of <paramref name="share"/> of the hull's producers, as a block the
+        /// client believes is switched off makes none.
+        ///
+        /// <para>
+        /// The selection is every n-th producer rather than a random one, so a run is repeatable
+        /// and two runs at the same share silence the same blocks. Both terms go: a block that is
+        /// off is neither drawing nor thrusting.
+        /// </para>
+        /// </summary>
+        private static void Silence(ThermalSimulation simulation, float share)
+        {
+            if (share <= 0f) return;
+
+            IList<ThermalNode> nodes = simulation.Solver.Nodes;
+            int period = share >= 1f ? 1 : (int)Math.Round(1f / share);
+            if (period <= 0) period = 1;
+
+            int producer = 0;
+
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                if (!Census.ProducesHeatAt(i)) continue;
+
+                if (producer++ % period == 0)
+                {
+                    nodes[i].Block.PowerProducedWatts = 0f;
+                    nodes[i].Block.ThrustWatts = 0f;
+                    nodes[i].RefreshHeatGeneration();
+                }
+            }
         }
 
         private static void Drive(ThermalSimulation simulation, float watts)
@@ -651,6 +773,18 @@ namespace Thermodynamics.Harness
                 },
                 new Degradation
                 {
+                    Name = "mass error",
+                    Because = "its mass rota is 20 % behind the server's, so its capacities are wrong",
+                    MassErrorShare = 0.2f,
+                },
+                new Degradation
+                {
+                    Name = "blocks off",
+                    Because = "a tenth of its producers are on the wrong side of their own switch",
+                    BlocksOffShare = 0.1f,
+                },
+                new Degradation
+                {
                     Name = "thinner air",
                     Because = "its gas system says the hull is in 20 % less air than the server's",
                     AirDensityError = 0.2f,
@@ -684,6 +818,8 @@ namespace Thermodynamics.Harness
                     everything.OcclusionWrongEverySeconds = one.OcclusionWrongEverySeconds;
                     everything.OcclusionWrongForSeconds = one.OcclusionWrongForSeconds;
                 }
+                if (one.MassErrorShare > everything.MassErrorShare) everything.MassErrorShare = one.MassErrorShare;
+                if (one.BlocksOffShare > everything.BlocksOffShare) everything.BlocksOffShare = one.BlocksOffShare;
                 if (one.PowerLagSeconds > everything.PowerLagSeconds) everything.PowerLagSeconds = one.PowerLagSeconds;
                 if (one.PowerErrorShare > everything.PowerErrorShare) everything.PowerErrorShare = one.PowerErrorShare;
                 if (one.AirDensityError > everything.AirDensityError) everything.AirDensityError = one.AirDensityError;

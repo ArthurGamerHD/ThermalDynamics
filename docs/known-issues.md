@@ -78,6 +78,13 @@ per-block event on the construction path plus a rule for what a half-built block
 machinery to support it exists — `RefreshBlock` handles a geometry change correctly and cheaply —
 so this can be revisited by hooking build state to it, and nothing else would need to change.
 
+**The *same mass* half of that is an assumption rather than a measurement**, and it may already be
+false. `SweepMass` polls `IMySlimBlock.Mass` every eight steps, which is a poll rather than the
+event this paragraph says nothing raises — so if the game reports a partially-built block as
+lighter, its heat capacity is already following build state and this limit is describing a mod that
+no longer exists. Conductivity and mounting are unaffected either way. It is
+[backlog.md](backlog.md) `F24`, and only a session answers it.
+
 **A surface is two constants, not a spectrum.** Emission and absorption are separate numbers now —
 `Emissivity` and `SolarAbsorptivity`, the second following the first unless a definition declares it
 — so a block *can* be made shiny to the sun and black to space ([backlog](backlog.md) `B27`, closed).
@@ -279,7 +286,9 @@ drives its own simulation from, alone and together, and separates the two by whe
 disagreement is still there at the end of the run:
 
 A 2,000-block hull in sunlit vacuum, ten minutes, the load alternating every two minutes so a lag
-has something to lag. **Still wrong at the end** is the mean disagreement over the final third:
+has something to lag. **Still wrong at the end** is the mean disagreement over the final third.
+`thrust error` and `speed error` are absent because this hull is not flying and they read zero here;
+their figures are below, on the `burn` scenario that is theirs:
 
 | what is degraded | peak | still wrong at the end | misread, uncorrected → corrected | why that is what the engine does |
 | --- | ---: | ---: | ---: | --- |
@@ -291,15 +300,18 @@ has something to lag. **Still wrong at the end** is the mean disagreement over t
 | block power 5 % out | 46.9 K | **29.11 K** | 149 → 59 blocks | whatever the game's own block replication rounds |
 | block power 2 s late | 246.1 K | **33.64 K** | 396 → 398 blocks | a throttle change reaching the client late |
 | drops its backlog every 30 s | 235.2 K | **57.18 K** | 388 → 396 blocks | `SimulationScheduler.StepsDue` drops rather than catches up |
+| shade for 3 s of every 30 | 16.3 K | 3.52 K | 14 → 6 blocks | its own raycast on its own budget; wrong by the whole solar term while it lasts |
+| block masses 20 % out | 56.6 K | **38.45 K** | 186 → 74 blocks | `SweepMass` is a rota on both machines, and mass is heat capacity |
 | never got the settings | 201.3 K | **142.84 K** | 598 → 272 blocks | a fetch that never landed; other physics entirely |
-| all of it at once | 230.3 K | **116.03 K** | 518 → 279 blocks | the union of the rows above, computed not written |
+| a tenth of producers off | 449.6 K | **281.04 K** | 315 → 157 blocks | a switch on the wrong side, which is wrong by *all* of that block's heat |
+| all of it at once | 435.0 K | **272.72 K** | 379 → 182 blocks | the union of the rows above, computed not written |
 
 **The third column is the finding.** A stale join settles at nothing whatever it peaked at; a wrong
 input settles where the input puts it and stays there. So the convergence argument that made this
-defect look cosmetic covers exactly one of the nine rows, and it is the one that was measured first.
+defect look cosmetic covers exactly one of these rows, and it is the one that was measured first.
 
-**The correction narrows a bias without removing it.** Against the combined case it more than halves
-the standing error, 116.0 K to 52.5 K, and halves how much of the hull is misread, 518 blocks to 279
+**The correction narrows a bias without removing it.** Against the combined case it takes the
+standing error from 272.7 K to 181.7 K and halves how much of the hull is misread, 379 blocks to 182
 — but the client's inputs are still wrong, so it re-diverges between updates. Against a bias the
 interval is the lever and five seconds is not enough; against a perturbation the join packet is the
 whole answer, 145 s to 5 s.
@@ -322,12 +334,12 @@ input. Every magnitude in that table is a knob the lab turns, not a figure measu
 What it answers is the shape — which inputs bias, which perturb, and whether the correction reaches
 each — and the shape is what decides the protocol.
 
-### The nine cases are not the whole input surface, and here is what is missing
+### The sweep is not the whole input surface, and here is what is missing
 
 The simulation reads its state from three places: an `EnvironmentSample` the client builds itself
 from the world around it, block state the adapter reads off the game's own blocks, and the room map
-it floods locally. Enumerated against the code rather than remembered, **the sweep covers eleven
-inputs and leaves eleven**:
+it floods locally. Enumerated against the code rather than remembered, **the sweep covers twelve
+inputs and leaves nine**:
 
 | input | read from | covered | |
 | --- | --- | --- | --- |
@@ -340,6 +352,22 @@ inputs and leaves eleven**:
 | whole-sample staleness | the client's own tick | yes | `environment lag` |
 | thrust | `block.CurrentThrust` | yes | `thrust error`, on the `burn` scenario — physics state, *predicted* on a client rather than replicated, and a separate heat term from electrical power |
 | grid velocity and relative wind | `EnvironmentSample.GridVelocity` | yes | `speed error`, on the `burn` scenario — the classic multiplayer prediction error, and it drives both convective cooling and aerodynamic friction |
+| solar occlusion | raycast against voxels and grids | yes | `wrong shadow` — a *binary* flag over the whole solar input, resolved against world state a client holds differently |
+| block mass and integrity | `SweepMass`, a rota | yes | `mass error` — swept every 8 steps and capped at 4,096 blocks, so a large grid's masses lag by design on *both* machines and the two rotas are not in step |
+| block enabled and functional state | the game's block | yes | `blocks off` — a block turned off on one machine and not the other, which is a binary *per block* rather than per hull |
+| **altitude, depth, latitude** | grid position | **no** | position lag on a *moving* ship, which is not the same as a lag on a stationary one |
+| **weather and its intensity** | the game's weather | **no** | server-driven world state |
+| **the ten wind fields** | terrain and the wind solver | **no** | shelter, burial and channelling are all voxel-derived |
+| **room air pressure** | the game's gas system | **no** | `C9` says the mod reads the game's answer, so this is the input the mod least owns |
+| **the room map itself** | a local flood fill | **no** | converges on its own schedule, which `D2` measures at 7,207 ticks on a million blocks |
+| **topology and subgrid attach** | block add and remove | **no** | placement order and attach timing change the conduction graph, not just a value in it |
+| **coolant loop identity** | loop signatures over topology | **no** | a loop is keyed by its shape, so a topology difference is a different loop |
+| **registered heat sources** | the mod API | **no** | another mod's registrations need not reach a client |
+| **simulation speed** | the host's own clock | **no** | a server below 1.0 while a client is not, which is a *rate* difference rather than the dropped backlog `hitching` models |
+
+The rows that are still open are tracked as [backlog.md](backlog.md) `F20` to `F23`. None of them
+changes the protocol — the correction overwrites state and so does not care which input produced the
+disagreement — and each of them changes how much correcting there is to do.
 
 **A speed error reaches the cubic term, not the saturating one.** A client's velocity is predicted
 rather than replicated, and it feeds two terms of very different shape: forced convection saturates,
@@ -354,38 +382,46 @@ the server and settles at **2.8 K**: wrong by the entire solar term while it las
 afterwards, because the model is dissipative and the disagreement ends. The 5-second correction
 barely touches it — 2.84 K to 2.83 K — since it decays on its own anyway. A client that is
 *permanently* on the wrong side is the bound rather than the description, and it is a bias: peak
-11.4 K against a standing 10.8 K on the smaller rig the tests use. Either way it is far behind
-`wrong settings` at 121 K or `power lag` at 41 K.
+11.4 K against a standing 10.8 K on the smaller rig the tests use.
 
-**Thrust is the worst input in the sweep, and it is not close.** Compared at the same 5 % error on a
-flying hull, a wrong thrust settles the client **17.8 K** from the server against block power's
-**1.8 K** — an order of magnitude, on the term that is *also* the largest on a burning ship. And it
-is a pure bias: at 20 % its peak and its standing error are the same 71.1 K, so it never decays at
-all, and the 5-second correction only halves it. A hull at rest shows none of it, which is what says
-the knob reaches the thrust term and nothing else. The reason is in the table above — the engine
-predicts physics state rather than sending it, so a client's thrust is its own guess about a ship
-whose physics it is not running. `ClientInputTests` pins both halves.
-| solar occlusion | raycast against voxels and grids | yes | `wrong shadow` — a *binary* flag over the whole solar input, resolved against world state a client holds differently |
-| **altitude, depth, latitude** | grid position | **no** | position lag on a *moving* ship, which is not the same as a lag on a stationary one |
-| **weather and its intensity** | the game's weather | **no** | server-driven world state |
-| **the ten wind fields** | terrain and the wind solver | **no** | shelter, burial and channelling are all voxel-derived |
-| **block mass and integrity** | `SweepMass`, a rota | **no** | swept every 8 steps and capped at 4,096 blocks, so a large grid's masses lag by design, and integrity replicates on its own schedule |
-| **block enabled and functional state** | the game's block | **no** | a block turned off on one machine and not the other |
-| **room air pressure** | the game's gas system | **no** | `C9` says the mod reads the game's answer, so this is the input the mod least owns |
-| **the room map itself** | a local flood fill | **no** | converges on its own schedule, which `D2` measures at 7,207 ticks on a million blocks |
-| **topology and subgrid attach** | block add and remove | **no** | placement order and attach timing change the conduction graph, not just a value in it |
-| **coolant loop identity** | loop signatures over topology | **no** | a loop is keyed by its shape, so a topology difference is a different loop |
-| **registered heat sources** | the mod API | **no** | another mod's registrations need not reach a client |
-| **simulation speed** | the host's own clock | **no** | a server below 1.0 while a client is not, which is a *rate* difference rather than the dropped backlog `hitching` models |
+**Thrust is the worst input *per unit of error* in the sweep, and it is not close.** Compared at the
+same 5 % error on a flying hull, a wrong thrust settles the client **17.8 K** from the server against
+block power's **1.8 K** — an order of magnitude, on the term that is *also* the largest on a burning
+ship. And it is a pure bias: at 20 % its peak and its standing error are the same 71.1 K, so it never
+decays at all, and the 5-second correction only halves it. A hull at rest shows none of it, which is
+what says the knob reaches the thrust term and nothing else. The reason is in the table above — the
+engine predicts physics state rather than sending it, so a client's thrust is its own guess about a
+ship whose physics it is not running. `ClientInputTests` pins both halves.
 
-Two of those are the ones to expect the most from. **Thrust** is a heat term of its own and is
-physics state, which the engine predicts on a client rather than replicating — so on a flying ship
-it is likely the largest input error there is. **Solar occlusion** is the only binary in the list:
-every other input is wrong by an amount, and this one is wrong by the entire solar term at once.
+**A wrong switch is the worst input in the sweep outright, and it is the only one that is not an
+error in a number.** A block that is off draws no power and makes no waste heat, so a client holding
+the switch on the wrong side is not wrong by a percentage of that block's heat — it is wrong by
+*all* of it, on some blocks and not others. A tenth of the producers silenced peaks **449.6 K** and
+settles at **281.0 K**, ahead of `wrong settings` at 142.8 K, and it is what `all at once` is mostly
+made of. **Where the error lands is what decides that, not how much of it there is**: at equal
+missing wattage — a tenth of the producers making nothing against every producer making a tenth less
+— the concentrated case settles **61.0 K** out against the spread case's **13.5 K** on the smaller
+rig the tests use. The hull cannot conduct fast enough to average a dead thruster away, and the
+readout is per block.
 
-They are tracked as [backlog.md](backlog.md) `F17` to `F23`. None of them changes the protocol —
-the correction overwrites state and so does not care which input produced the disagreement — and
-each of them changes how much correcting there is to do.
+**A mass error is the one input that is not an error in a heat flow at all.** Mass is heat capacity,
+so it moves the divisor rather than the watts — and capacity does not appear in the balance a hull
+settles at, only in how long it takes to get there. So its shape is set by the *load* rather than by
+the input: 20 % out settles **38.45 K** under the sweep's alternating load, and on the smaller rig
+32.3 K under that same load against **0.3 K** when the load stops moving, from a 10.7 K peak. Both
+of those runs are in the dark with the same degradation and differ only in the load script, so the
+difference cannot be anything else. It is also the only degradation in the sweep that comes from a
+rota running on *both* machines rather than from something the client alone gets wrong.
+
+**Mass is the only channel block condition has into the model, and whether anything comes down it
+is unsettled.** No path in the mod reads a build ratio or an integrity figure — `ClientInputTests`
+pins that by scanning `Data/Scripts`, because a claim about what code does *not* do rots the moment
+somebody adds the line — so the sweep has a mass knob rather than a separate damage one. What that
+leaves open is the engine end: `SweepMass` polls `IMySlimBlock.Mass`, and whether the game moves it
+with build progress or with damage decides whether block condition is an input at all. **The
+deliberate limit above assumes it does not** — *a block at 10 % construction has the same mass* —
+and that assumption predates the rota, which is a poll rather than the event the limit says nothing
+raises. Nothing offline can settle it; it is [backlog.md](backlog.md) `F24`.
 
 Settings and pump controls *are* replicated. `SENetworkAPI` 2.0 runs on channel `30323` with three
 properties on it: the world's settings and the two pump throttles.
@@ -800,6 +836,7 @@ counters rather than milliseconds so it holds on any machine.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-24 | **Block state is in the sweep, and a wrong switch is the worst input in it outright** ([backlog.md](backlog.md) `F20`). A tenth of the producers on the wrong side of their own switch settles a client 281.0 K out against `wrong settings` at 142.8 K, because a block that is off is wrong by *all* of its heat rather than by a share of it — and at equal missing wattage the concentrated error is 61.0 K against 13.5 K spread. Mass is the opposite kind of input: it is capacity rather than watts, so it stands under a moving load and decays under a steady one, 38.45 K against 0.3 K. Integrity turned out to reach the model through mass and nothing else, so the row's three inputs are two knobs. |
 | 2026-08-23 | **Grid velocity is in the sweep** ([backlog.md](backlog.md) `F19`), which is the consequential third of that row. A 20 % speed error settles a flying client 14.0 K out — a bias, and it lands on friction rather than on convection, because one goes as the cube of airspeed and the other saturates. Position and weather are still unmodelled and the row says so. |
 | 2026-08-23 | **Solar occlusion is in the sweep** ([backlog.md](backlog.md) `F18`), which completes the environment half of the input surface. It is the one binary input and behaves like one: intermittent disagreement peaks 17.3 K and settles at 2.8 K — a perturbation, where thrust is a bias — and a client permanently on the wrong side settles at 10.8 K, which is the solar term itself and the bound. |
 | 2026-08-23 | **Thrust is in the degraded-input sweep, and it is the worst input there is** ([backlog.md](backlog.md) `F17`). At the same 5 % error on a flying hull it settles a client 17.8 K out against block power's 1.8 K, and at 20 % its peak and standing error are the same 71.1 K — a bias that never decays, on the one input the engine predicts rather than replicates. The sweep needed a scenario that flies: a hull at rest makes the knob measure nothing. |

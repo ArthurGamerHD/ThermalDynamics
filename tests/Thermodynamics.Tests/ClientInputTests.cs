@@ -1,5 +1,8 @@
 using System.Collections.Generic;
+using System.IO;
+using Thermodynamics.Core;
 using Thermodynamics.Harness;
+using VRageMath;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -152,6 +155,8 @@ namespace Thermodynamics.Tests
                 Assert.True(everything.StaleSeconds >= one.StaleSeconds, one.Name + ": stale");
                 Assert.True(everything.EnvironmentLagSeconds >= one.EnvironmentLagSeconds, one.Name + ": environment");
                 Assert.True(everything.SunAngleDegrees >= one.SunAngleDegrees, one.Name + ": sun");
+                Assert.True(everything.MassErrorShare >= one.MassErrorShare, one.Name + ": mass");
+                Assert.True(everything.BlocksOffShare >= one.BlocksOffShare, one.Name + ": blocks off");
                 Assert.True(everything.PowerLagSeconds >= one.PowerLagSeconds, one.Name + ": power lag");
                 Assert.True(everything.PowerErrorShare >= one.PowerErrorShare, one.Name + ": power error");
                 Assert.True(everything.AirDensityError >= one.AirDensityError, one.Name + ": air");
@@ -444,6 +449,184 @@ namespace Thermodynamics.Tests
 
             // And it is the airflow it reaches, not something else the knob touches by accident.
             Assert.Equal(0f, resting.PeakKelvin, 3);
+        }
+
+        /// <summary>
+        /// The same run in the dark, at a chosen load period. A period longer than the run is a
+        /// steady load, which is the only way to ask a capacity question of this rig.
+        ///
+        /// **Shadow rather than sunlit**, because `sunlit` turns the hull under the sun a quarter
+        /// turn every five minutes: a steady *load* there is still a moving *environment*, and the
+        /// comparison below would be measuring the sun.
+        /// </summary>
+        private static ClientInputLab.Result InTheDark(ClientInputLab.Degradation how, float period)
+        {
+            return ClientInputLab.Measure(how, ClientDriftLab.Correction.None,
+                "shadow", 240f, 400, period);
+        }
+
+        /// <summary>
+        /// **A mass error is an error in a rate and not in an equilibrium**, which is what makes it
+        /// unlike every other input in the sweep.
+        ///
+        /// <para>
+        /// Mass is heat capacity ([backlog.md](../../docs/backlog.md) `F20`), and capacity does not
+        /// appear in the balance a hull settles at: the temperature where losses equal generation
+        /// is set by area, emissivity, conductance and watts, and by nothing about how much metal
+        /// is being heated. What capacity sets is *how long* the hull takes to get there. So a
+        /// client whose masses are 20 % out is not heading somewhere else — it is heading to the
+        /// same place at a different speed.
+        /// </para>
+        ///
+        /// <para>
+        /// Which means the shape of this input depends on the load rather than on the input. Under
+        /// the moving load the sweep runs it stands, because the hull is always chasing; under a
+        /// load that stops moving it decays, because there is nothing left to chase. Both runs are
+        /// in the dark with the same degradation and differ only in the load script, so the
+        /// difference cannot be anything else.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void AMassErrorStandsUnderAMovingLoadAndDecaysUnderASteadyOne()
+        {
+            ClientInputLab.Degradation how = new ClientInputLab.Degradation
+            {
+                Name = "mass error",
+                MassErrorShare = 0.2f,
+            };
+
+            ClientInputLab.Result moving = InTheDark(how, ClientInputLab.LoadPeriodSeconds);
+            ClientInputLab.Result steady = InTheDark(how, 1e9f);
+
+            output.WriteLine("moving load: peak {0:n1} K, standing {1:n1} K. steady: peak {2:n1} K,"
+                + " standing {3:n1} K", moving.PeakKelvin, moving.StandingKelvin,
+                steady.PeakKelvin, steady.StandingKelvin);
+
+            // It has to bite at all under both, or the comparison is of two zeroes (`E8`).
+            Assert.True(steady.PeakKelvin > 1f,
+                "a 20 % capacity error peaked at only " + steady.PeakKelvin + " K under a steady"
+                + " load, so the knob reached nothing and this judges nothing");
+
+            Assert.True(moving.StandingKelvin > 1f,
+                "under the moving load it settled at " + moving.StandingKelvin + " K, which is too"
+                + " small for the comparison below to be measuring anything");
+
+            Assert.True(steady.StandingKelvin < steady.PeakKelvin * 0.5f,
+                "under a steady load a capacity error should have decayed: peaked at "
+                + steady.PeakKelvin + " K and settled at " + steady.StandingKelvin + " K");
+
+            Assert.True(moving.StandingKelvin > steady.StandingKelvin,
+                "a capacity error should stand while the load moves and not when it stops: "
+                + moving.StandingKelvin + " K against " + steady.StandingKelvin + " K");
+        }
+
+        /// <summary>
+        /// **A block believed switched off is wrong by all of its heat, and where that error lands
+        /// is what makes it worse than the same watts spread thin.**
+        ///
+        /// <para>
+        /// The comparison is at equal missing wattage: a tenth of the producers making nothing is
+        /// the same total heat as every producer making a tenth less. What differs is only where
+        /// the error sits — concentrated on a tenth of the blocks, or spread over all of them — and
+        /// that is the whole claim, because the readout is a per-block one and the hull cannot
+        /// conduct fast enough to average a missing thruster away
+        /// ([backlog.md](../../docs/backlog.md) `F20`).
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void ABlockBelievedOffIsWorseThanTheSameWattsSpreadOverTheHull()
+        {
+            const float Share = 0.1f;
+
+            ClientInputLab.Result concentrated = Run(new ClientInputLab.Degradation
+            {
+                Name = "blocks off",
+                BlocksOffShare = Share,
+            });
+
+            ClientInputLab.Result spread = Run(new ClientInputLab.Degradation
+            {
+                Name = "power short",
+                PowerErrorShare = -Share,
+            });
+
+            output.WriteLine("concentrated: peak {0:n1} K, standing {1:n1} K. spread: peak {2:n1} K,"
+                + " standing {3:n1} K", concentrated.PeakKelvin, concentrated.StandingKelvin,
+                spread.PeakKelvin, spread.StandingKelvin);
+
+            Assert.True(spread.StandingKelvin > 1f,
+                "the same watts spread over the hull settled at " + spread.StandingKelvin
+                + " K, which is too small for the ordering below to be measuring anything");
+
+            Assert.True(concentrated.StandingKelvin > spread.StandingKelvin,
+                "the same missing wattage concentrated on a tenth of the producers settled at "
+                + concentrated.StandingKelvin + " K against " + spread.StandingKelvin
+                + " K spread, so where the error lands is not what decides it");
+
+            // **And it is a bias, read the way `F19`'s velocity had to be read.** The peak cannot
+            // say so here: the load alternates every two minutes and a silenced producer is wrong
+            // by *all* of its heat at the top of that wave, so the peak is mostly the load script.
+            // What a bias does is fail to shrink when the run is longer.
+            ClientInputLab.Result longer = ClientInputLab.Measure(
+                new ClientInputLab.Degradation { Name = "blocks off", BlocksOffShare = Share },
+                ClientDriftLab.Correction.None, "sunlit", 480f, 400);
+
+            Assert.True(longer.StandingKelvin >= concentrated.StandingKelvin * 0.95f,
+                "the standing error fell from " + concentrated.StandingKelvin + " K to "
+                + longer.StandingKelvin + " K over twice the run, which is a perturbation rather"
+                + " than the bias this pins");
+        }
+
+        /// <summary>
+        /// **Mass is the only channel block condition has into the model**, which is why the sweep
+        /// has a mass knob and not a separate damage one.
+        ///
+        /// <para>
+        /// Two halves, and only the first is a claim about the mod. Nothing in `Data/Scripts`
+        /// reads a build ratio or an integrity figure — pinned below, because a claim about what
+        /// code does *not* do rots the moment somebody adds the line — and heat capacity is
+        /// strictly proportional to the mass the adapter last polled. Whether the *game* moves
+        /// that mass with build progress or damage is an engine question no harness can settle,
+        /// and the two pages of this repository that touch it disagree
+        /// ([backlog.md](../../docs/backlog.md) `F24`).
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void MassIsTheOnlyChannelBlockConditionHasIntoTheModel()
+        {
+            BlockThermalProperties thermal = Catalog.DefaultThermal();
+            BlockModel model = BlockModel.Solid("block", Vector3I.One, 1000f, thermal);
+            BlockInstance block = new BlockInstance(model, Vector3I.Zero, BlockOrientation.Identity);
+
+            ThermalNode node = new ThermalNode(block, 2.5f, 300f);
+            float whole = node.ThermalMass;
+
+            // A lighter block, however it got lighter: capacity follows mass and nothing else.
+            block.Mass = model.Mass * 0.5f;
+            node.RefreshThermalMass();
+
+            Assert.Equal(whole * 0.5f, node.ThermalMass, 3);
+
+            // And there is no second channel. `IMySlimBlock.Mass` is what the mass rota polls; a
+            // build ratio or an integrity figure appearing anywhere in the mod would be an input
+            // the sweep has no knob for and this file claims does not exist.
+            string root = ShippedBlocks.RepoRoot();
+            string scripts = Path.Combine(root, "Data", "Scripts", "Thermodynamics");
+            string[] routes = { "BuildLevelRatio", "BuildIntegrity", "CurrentDamage", "MaxIntegrity" };
+            List<string> offenders = new List<string>();
+
+            foreach (string file in Directory.GetFiles(scripts, "*.cs", SearchOption.AllDirectories))
+            {
+                string text = File.ReadAllText(file);
+                foreach (string route in routes)
+                {
+                    if (text.Contains(route)) offenders.Add(route + " in " + Path.GetFileName(file));
+                }
+            }
+
+            Assert.True(offenders.Count == 0,
+                "block condition now reaches the model by a route the sweep has no knob for: "
+                + string.Join(", ", offenders));
         }
     }
 }
