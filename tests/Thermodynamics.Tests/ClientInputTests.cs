@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using Thermodynamics.Core;
@@ -36,11 +37,24 @@ namespace Thermodynamics.Tests
             this.output = output;
         }
 
+        /// <summary>
+        /// Blocks every run in this file asks for.
+        ///
+        /// **The smallest census hull that has a sealed compartment**, and it is a measured
+        /// threshold rather than a round number: at 500 blocks the hull is 907 nodes and has no
+        /// room at all, at 600 it is 1,004 nodes and has one. Below it the two room knobs turn
+        /// against nothing and report a client that recovered from a degradation it was never
+        /// given (`E8`) — the lab raises rather than letting that happen, and this is the size that
+        /// answers it. One size for every row, because a fixture that differs between two claims
+        /// makes them incomparable.
+        /// </summary>
+        private const int Blocks = ClientInputLab.SmallestHullWithACompartment;
+
         private static ClientInputLab.Result Run(ClientInputLab.Degradation how,
             ClientDriftLab.Correction fix = null)
         {
             return ClientInputLab.Measure(how, fix ?? ClientDriftLab.Correction.None,
-                "sunlit", 240f, 400);
+                "sunlit", 240f, Blocks);
         }
 
         /// <summary>
@@ -56,6 +70,12 @@ namespace Thermodynamics.Tests
             Assert.Equal(0f, result.StandingKelvin, 4);
             Assert.Equal(0f, result.SecondsMisreading, 4);
             Assert.Equal(0, result.PeakDisagreeing);
+
+            // And the rig is one the room knobs can bite on. A hull with no compartment agrees
+            // exactly about rooms for the same reason a blank page has no spelling mistakes, and
+            // the control row is where that has to be caught (`E8`).
+            Assert.True(result.Rooms > 0,
+                "the rig has no sealed compartment, so its two room rows judge nothing");
         }
 
         /// <summary>
@@ -160,6 +180,8 @@ namespace Thermodynamics.Tests
                 Assert.True(everything.PowerLagSeconds >= one.PowerLagSeconds, one.Name + ": power lag");
                 Assert.True(everything.PowerErrorShare >= one.PowerErrorShare, one.Name + ": power error");
                 Assert.True(everything.AirDensityError >= one.AirDensityError, one.Name + ": air");
+                Assert.True(everything.RoomPressureError >= one.RoomPressureError, one.Name + ": room pressure");
+                Assert.True(everything.RoomMapLagSeconds >= one.RoomMapLagSeconds, one.Name + ": room map");
                 if (one.OnDefaultSettings) Assert.True(everything.OnDefaultSettings, one.Name + ": settings");
                 if (one.HitchEverySeconds > 0f) Assert.True(everything.HitchEverySeconds > 0f, one.Name + ": hitch");
             }
@@ -196,7 +218,7 @@ namespace Thermodynamics.Tests
             // other way round first and the guard caught it.
             ClientInputLab.Result cold = ClientInputLab.Measure(
                 new ClientInputLab.Degradation { Name = "none" },
-                ClientDriftLab.Correction.None, "planet", 120f, 400);
+                ClientDriftLab.Correction.None, "planet", 120f, Blocks);
 
             ClientInputLab.Result hot = Run(new ClientInputLab.Degradation
             {
@@ -332,7 +354,7 @@ namespace Thermodynamics.Tests
         private static ClientInputLab.Result Flying(ClientInputLab.Degradation how,
             float seconds = 240f)
         {
-            return ClientInputLab.Measure(how, ClientDriftLab.Correction.None, "burn", seconds, 400);
+            return ClientInputLab.Measure(how, ClientDriftLab.Correction.None, "burn", seconds, Blocks);
         }
 
         /// <summary>
@@ -462,7 +484,7 @@ namespace Thermodynamics.Tests
         private static ClientInputLab.Result InTheDark(ClientInputLab.Degradation how, float period)
         {
             return ClientInputLab.Measure(how, ClientDriftLab.Correction.None,
-                "shadow", 240f, 400, period);
+                "shadow", 240f, Blocks, period);
         }
 
         /// <summary>
@@ -569,12 +591,215 @@ namespace Thermodynamics.Tests
             // What a bias does is fail to shrink when the run is longer.
             ClientInputLab.Result longer = ClientInputLab.Measure(
                 new ClientInputLab.Degradation { Name = "blocks off", BlocksOffShare = Share },
-                ClientDriftLab.Correction.None, "sunlit", 480f, 400);
+                ClientDriftLab.Correction.None, "sunlit", 480f, Blocks);
 
             Assert.True(longer.StandingKelvin >= concentrated.StandingKelvin * 0.95f,
                 "the standing error fell from " + concentrated.StandingKelvin + " K to "
                 + longer.StandingKelvin + " K over twice the run, which is a perturbation rather"
                 + " than the bias this pins");
+        }
+
+        /// <summary>
+        /// **Room air is a binary input wearing the clothes of a continuous one, and the last one
+        /// per cent of it is worth more than the first ninety-nine.**
+        ///
+        /// <para>
+        /// Pressure is the game's answer rather than this model's (`C9`), and it reaches the
+        /// simulation twice: it scales the air's heat capacity, and it decides whether the room has
+        /// air *at all*. Only the second of those moves anything that lasts — the link conductance
+        /// is `RoomConvectionCoefficient × area` and carries no pressure term
+        /// (`RoomAirCouplingTests`), so a compartment at a fifth of an atmosphere couples its walls
+        /// exactly as hard as a full one and differs only in inertia, which is the `mass error`
+        /// finding arriving through a different input.
+        /// </para>
+        ///
+        /// <para>
+        /// So a client's disagreement about pressure is worth almost nothing until it crosses zero,
+        /// and then it is worth the whole coupling ([backlog.md](../../docs/backlog.md) `F21`).
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheLastOnePerCentOfARoomsAirIsWorthMoreThanTheFirstNinetyNine()
+        {
+            ClientInputLab.Result fifth = Run(new ClientInputLab.Degradation
+            {
+                Name = "room pressure",
+                RoomPressureError = 0.2f,
+            });
+
+            ClientInputLab.Result nearlyAll = Run(new ClientInputLab.Degradation
+            {
+                Name = "room pressure 99 %",
+                RoomPressureError = 0.99f,
+            });
+
+            ClientInputLab.Result gone = Run(new ClientInputLab.Degradation
+            {
+                Name = "air gone",
+                RoomPressureError = 1f,
+            });
+
+            output.WriteLine("standing: a fifth out {0:n2} K, 99 % out {1:n2} K, all of it {2:n2} K",
+                fifth.StandingKelvin, nearlyAll.StandingKelvin, gone.StandingKelvin);
+
+            // The knob has to reach anything at all, or the ordering below is of three zeroes.
+            Assert.True(gone.StandingKelvin > 1f,
+                "a client that believes the compartments are empty settled only "
+                + gone.StandingKelvin + " K out, so the knob reached nothing");
+
+            Assert.True(gone.StandingKelvin > 4f * nearlyAll.StandingKelvin,
+                "removing the last one per cent of the air settled the client "
+                + gone.StandingKelvin + " K out against " + nearlyAll.StandingKelvin
+                + " K for the first ninety-nine, which is not the discontinuity this pins");
+
+            // And the graded part is nearly flat, which is what says the jump is the coupling
+            // going rather than the capacity shrinking.
+            Assert.True(nearlyAll.StandingKelvin < 5f * fifth.StandingKelvin,
+                "a fifth of the air out settled at " + fifth.StandingKelvin + " K and 99 % out at "
+                + nearlyAll.StandingKelvin + " K, so pressure is behaving as a graded input");
+        }
+
+        /// <summary>
+        /// **A room map that has not landed is the loudest perturbation in the sweep, and it leaves
+        /// nothing behind.**
+        ///
+        /// <para>
+        /// The mapper publishes atomically, so a client mid-pass is not holding a rough map — it is
+        /// holding the previous one, which on a grid it has just built is empty. Every interior face
+        /// then has open air behind it (`RoomMap.IsExternal`), so the hull radiates from a skin 27 %
+        /// larger than the server's and the compartments have no air to couple through. Then the
+        /// pass lands and the client is simply right, which is what makes this a perturbation where
+        /// `room pressure` is a bias ([backlog.md](../../docs/backlog.md) `F21`).
+        /// </para>
+        ///
+        /// <para>
+        /// Two run lengths rather than a peak-to-standing ratio, for the reason `F19` and `F20`
+        /// both needed: the load alternates every two minutes, so a peak carries a transient that
+        /// says nothing about decay. What a perturbation does is shrink when the run is longer.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void AnUnconvergedRoomMapPeaksHardAndThenLeavesNothing()
+        {
+            ClientInputLab.Degradation how = new ClientInputLab.Degradation
+            {
+                Name = "room map lag",
+                RoomMapLagSeconds = 60f,
+            };
+
+            ClientInputLab.Result shorter = Run(how);
+            ClientInputLab.Result longer = ClientInputLab.Measure(how,
+                ClientDriftLab.Correction.None, "sunlit", 480f, Blocks);
+
+            ClientInputLab.Result airGone = Run(new ClientInputLab.Degradation
+            {
+                Name = "air gone",
+                RoomPressureError = 1f,
+            });
+
+            output.WriteLine("map lag: peak {0:n1} K, standing {1:n2} K at 240 s and {2:n2} K at"
+                + " 480 s. air gone: peak {3:n1} K", shorter.PeakKelvin, shorter.StandingKelvin,
+                longer.StandingKelvin, airGone.PeakKelvin);
+
+            Assert.True(shorter.PeakKelvin > 20f,
+                "a client with no room map peaked only " + shorter.PeakKelvin
+                + " K out, so the knob reached nothing");
+
+            // Louder than losing the air alone, because losing the map loses the air *and* opens
+            // the interior. The decomposition is the point of running both.
+            Assert.True(shorter.PeakKelvin > 2f * airGone.PeakKelvin,
+                "an unmapped hull peaked at " + shorter.PeakKelvin + " K against "
+                + airGone.PeakKelvin + " K for the air alone, so the skin is not the larger half");
+
+            Assert.True(longer.StandingKelvin < shorter.StandingKelvin,
+                "the standing error did not fall over twice the run — " + shorter.StandingKelvin
+                + " K to " + longer.StandingKelvin + " K — which is a bias rather than the"
+                + " perturbation this pins");
+
+            Assert.True(longer.StandingKelvin < shorter.PeakKelvin * 0.05f,
+                "it peaked at " + shorter.PeakKelvin + " K and was still " + longer.StandingKelvin
+                + " K out at the end of a run twice as long, which is not a perturbation");
+        }
+
+        /// <summary>
+        /// **And a map that never lands is the bound, which is a bias and the worst standing input
+        /// in the sweep** — ahead of the wrong switch `F20` crowned.
+        ///
+        /// <para>
+        /// It is the same reading `wrong shadow` needed: the shipped row is a client that is
+        /// briefly wrong and recovers, and the bound is a client that never does. Here the bound is
+        /// not hypothetical — `D2` measures the flood fill at 7,207 ticks on a million blocks, and
+        /// a client that restarts its pass faster than it finishes one never publishes a map at
+        /// all.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void ARoomMapThatNeverLandsOutSettlesEveryOtherInputInTheSweep()
+        {
+            ClientInputLab.Result never = Run(new ClientInputLab.Degradation
+            {
+                Name = "no room map",
+
+                // Longer than any run this file makes, so the pass never lands.
+                RoomMapLagSeconds = 1e9f,
+            });
+
+            ClientInputLab.Result switched = Run(new ClientInputLab.Degradation
+            {
+                Name = "blocks off",
+                BlocksOffShare = 0.1f,
+            });
+
+            output.WriteLine("no map: peak {0:n1} K, standing {1:n2} K. blocks off: peak {2:n1} K,"
+                + " standing {3:n2} K", never.PeakKelvin, never.StandingKelvin,
+                switched.PeakKelvin, switched.StandingKelvin);
+
+            // A bias: what it peaked at is roughly what it settles at.
+            Assert.True(never.StandingKelvin > never.PeakKelvin * 0.5f,
+                "a map that never lands peaked at " + never.PeakKelvin + " K and settled at "
+                + never.StandingKelvin + " K, which is a perturbation rather than the bias this pins");
+
+            Assert.True(never.StandingKelvin > switched.StandingKelvin,
+                "a client with no room map settled " + never.StandingKelvin + " K out against "
+                + switched.StandingKelvin + " K for a tenth of the producers switched off, so it"
+                + " is not the worst standing input here");
+        }
+
+        /// <summary>
+        /// **A hull with no sealed compartment is refused a room knob rather than reporting one as
+        /// harmless.**
+        ///
+        /// <para>
+        /// This is `E8` where it actually bit: the sweep's own test rig was 400 blocks, the census
+        /// hull grows its first room somewhere between 500 and 600, and both room knobs would have
+        /// come back at exactly zero — a client that recovered from a degradation it was never
+        /// given. The guard is scoped to the two knobs that need a room, because every other row in
+        /// the sweep is perfectly valid on a solid hull.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void ARoomKnobOnAHullWithNoCompartmentIsRefusedRatherThanReportedAsHarmless()
+        {
+            const int NoCompartment = 500;
+
+            InvalidOperationException raised = Assert.Throws<InvalidOperationException>(() =>
+                ClientInputLab.Measure(
+                    new ClientInputLab.Degradation { Name = "room pressure", RoomPressureError = 1f },
+                    ClientDriftLab.Correction.None, "sunlit", 30f, NoCompartment));
+
+            Assert.Contains("measure nothing", raised.Message);
+
+            // Scoped: the same hull is a fine rig for every knob that is not about a room.
+            ClientInputLab.Result solid = ClientInputLab.Measure(
+                new ClientInputLab.Degradation { Name = "power error", PowerErrorShare = 0.1f },
+                ClientDriftLab.Correction.None, "sunlit", 30f, NoCompartment);
+
+            Assert.Equal(0, solid.Rooms);
+
+            // And the size this file runs at is on the other side of the threshold, which is what
+            // makes every room row above a measurement rather than a zero.
+            Assert.True(Run(new ClientInputLab.Degradation { Name = "none" }).Rooms > 0,
+                "the suite's rig fell below the first compartment, so its room rows judge nothing");
         }
 
         /// <summary>

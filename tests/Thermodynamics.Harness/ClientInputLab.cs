@@ -210,6 +210,50 @@ namespace Thermodynamics.Harness
             public float BlocksOffShare;
 
             /// <summary>
+            /// The client's rooms hold this much less air than the server's, 0..1.
+            ///
+            /// <para>
+            /// **A bias, and the first knob in this sweep that moves a conduction path rather than
+            /// a watt or a divisor.** Room air is a well-mixed mass that links every surface
+            /// bounding a compartment to every other, so a client that believes a room is empty is
+            /// not running a slightly different number — it has lost the coupling entirely
+            /// (<see cref="RoomAirNode.HasAir"/>).
+            /// </para>
+            ///
+            /// <para>
+            /// It is an input the mod does not own. Pressure comes from the game's own gas system
+            /// by `C9` — world pressurisation, the game's airtightness answer and a vent's reported
+            /// level, each able to veto air and none able to require it — so a client's answer is
+            /// *that machine's* gas system's answer, arrived at on its own schedule
+            /// ([backlog.md](../../docs/backlog.md) `F21`).
+            /// </para>
+            /// </summary>
+            public float RoomPressureError;
+
+            /// <summary>
+            /// Simulated seconds the client runs before its room map converges.
+            ///
+            /// <para>
+            /// **The second room input, and it is structural rather than a value.** The map is a
+            /// local flood fill that publishes atomically — <see cref="RoomMapper.Map"/> is never
+            /// partially built — so a client that has not finished a pass is not holding a rough
+            /// map, it is holding the previous one, which on a grid it has just built is *empty*.
+            /// Every interior face then has open air on the other side
+            /// (<see cref="RoomMap.IsExternal"/>), so the hull radiates and convects from a skin
+            /// that is 27 % larger than the one the server sees, and the compartments have no air
+            /// to couple through because they do not exist yet.
+            /// </para>
+            ///
+            /// <para>
+            /// It converges on its own schedule and each machine runs its own: `D2` measures 7,207
+            /// ticks on a million blocks. Written as a duration rather than a share because that
+            /// is the shape of it — a client is wrong about the whole interior until the pass
+            /// lands, and then it is right ([backlog.md](../../docs/backlog.md) `F21`).
+            /// </para>
+            /// </summary>
+            public float RoomMapLagSeconds;
+
+            /// <summary>
             /// The client is running the shipped defaults while the server is not. **A bias, and
             /// the worst case of one that should not happen**: settings replicate, and a client
             /// fetches them on load, so this is what a fetch that never landed would look like.
@@ -255,6 +299,16 @@ namespace Thermodynamics.Harness
             public int PeakBlocksSent;
 
             /// <summary>
+            /// Sealed compartments the hull has, which the server's air was put into.
+            ///
+            /// **Zero voids the two room columns the way a cold server voids the readout ones**
+            /// (`E8`): a hull with no compartment cannot disagree about one. The lab raises rather
+            /// than reports when a room knob is turned on such a hull, and this is what the report
+            /// reads to say so for the rows that did not.
+            /// </summary>
+            public int Rooms;
+
+            /// <summary>
             /// The most blocks the **server** had past critical at any sample.
             ///
             /// **Without this the readout columns cannot be believed.** A run on a hull that never
@@ -267,6 +321,17 @@ namespace Thermodynamics.Harness
 
         /// <summary>Seconds between readings.</summary>
         public const float SampleSeconds = 5f;
+
+        /// <summary>
+        /// The smallest census hull that has a sealed compartment, in blocks asked for.
+        ///
+        /// **Measured rather than chosen**, and it is why the suite's own rig is this size: at
+        /// 500 blocks the census hull is 907 nodes and no room at all, and at 600 it is 1,004
+        /// nodes and one. A rig below this reports both room knobs as harmless, which is the
+        /// blank-page failure (`E8`), and `ClientInputTests` pins the threshold so it cannot move
+        /// quietly under the rows that depend on it.
+        /// </summary>
+        public const int SmallestHullWithACompartment = 600;
 
         /// <summary>
         /// How long the scripted load runs before it changes, s.
@@ -345,6 +410,31 @@ namespace Thermodynamics.Harness
                 Scenario = scenario,
             };
 
+            // **The compartments hold air, and without this two of the knobs below measure
+            // nothing.** The host owns whether a room is pressurised (`C9`), so a harness that
+            // never says leaves every compartment in vacuum — no air mass, no links, and a room
+            // knob turning against a room that exchanges nothing. A crewed ship's compartments
+            // are full, so the server's are.
+            result.Rooms = Pressurise(server, 1f);
+
+            // **And a hull with no compartment cannot judge a room knob at all** (`E8`). It is a
+            // property of the size asked for rather than of the degradation — the census hull
+            // grows its first sealed room somewhere under a thousand blocks — so a caller that
+            // turns a room knob on a hull that has none is asking a question of a blank page, and
+            // it is raised here rather than reported as a zero. Every other knob is unaffected,
+            // which is why the guard is scoped to the two that are not.
+            bool asksAboutRooms = how.RoomPressureError > 0f || how.RoomMapLagSeconds > 0f;
+            if (asksAboutRooms && result.Rooms <= 0)
+            {
+                throw new InvalidOperationException(
+                    "'" + how.Name + "' degrades a room on a " + blocks + "-block hull that has"
+                    + " none, so it would measure nothing; ask for at least "
+                    + SmallestHullWithACompartment);
+            }
+
+            float clientPressure = 1f - how.RoomPressureError;
+            Pressurise(client, clientPressure);
+
             // Warmed together so the run starts from a hull that is somewhere, and both sides see
             // the same warm-up: what is being measured is the degradation, not the start.
             float warm = 120f;
@@ -370,6 +460,14 @@ namespace Thermodynamics.Harness
                 Advance(server, Sample(scenario, 0f, how, false), how.StaleSeconds);
                 Restore(client, stale);
             }
+
+            // **The client's room map has not landed yet, when the case says so.** The mapper
+            // publishes atomically, so what a client holds mid-pass is the previous map — on a
+            // grid it has just built, an empty one. Applied after the warm-up rather than before
+            // it, so the run starts from two hulls that agree and the disagreement is the
+            // degradation rather than the warm-up.
+            bool mapPending = how.RoomMapLagSeconds > 0f;
+            if (mapPending) Unmap(client);
 
             List<StoredTemperature> selection = new List<StoredTemperature>();
             List<StoredTemperature> received = new List<StoredTemperature>();
@@ -412,6 +510,13 @@ namespace Thermodynamics.Harness
                 }
 
                 elapsed += tick;
+
+                if (mapPending && elapsed >= how.RoomMapLagSeconds)
+                {
+                    mapPending = false;
+                    Remap(client, clientPressure);
+                }
+
                 sinceUpdate += tick;
                 sinceSample += tick;
                 sinceHitch += tick;
@@ -645,6 +750,50 @@ namespace Thermodynamics.Harness
             }
         }
 
+        /// <summary>
+        /// Fills every sealed compartment on a hull to <paramref name="level"/>, 0..1, and reports
+        /// how many took it.
+        ///
+        /// The count is returned rather than discarded because a hull with no compartment is a rig
+        /// that reports a room degradation as harmless (`E8`), and the caller raises that.
+        /// </summary>
+        private static int Pressurise(ThermalSimulation simulation, float level)
+        {
+            if (level < 0f) level = 0f;
+            if (level > 1f) level = 1f;
+
+            IList<RoomAirNode> air = simulation.RoomAir;
+            int filled = 0;
+
+            for (int i = 0; i < air.Count; i++)
+            {
+                if (simulation.SetRoomPressure(air[i].Anchor, level)) filled++;
+            }
+
+            return filled;
+        }
+
+        /// <summary>
+        /// Puts a hull back to what it looks like before its first room pass completes: no rooms,
+        /// so no air and every interior face open to the environment.
+        ///
+        /// Both halves, because a room that does not exist cannot hold air either. Recomputing
+        /// exposure against an empty map is what the mod itself does on a grid whose mapper has
+        /// published nothing.
+        /// </summary>
+        private static void Unmap(ThermalSimulation simulation)
+        {
+            Pressurise(simulation, 0f);
+            simulation.Solver.RefreshExposure(new RoomMap());
+        }
+
+        /// <summary>The pass lands: the map is adopted and the compartments refill.</summary>
+        private static void Remap(ThermalSimulation simulation, float level)
+        {
+            simulation.Solver.RefreshExposure(simulation.Rooms.Map);
+            Pressurise(simulation, level);
+        }
+
         private static void Drive(ThermalSimulation simulation, float watts)
         {
             Census.DriveCensus(simulation, watts);
@@ -791,6 +940,18 @@ namespace Thermodynamics.Harness
                 },
                 new Degradation
                 {
+                    Name = "room pressure",
+                    Because = "its gas system reports the compartments a fifth emptier than the server's",
+                    RoomPressureError = 0.2f,
+                },
+                new Degradation
+                {
+                    Name = "room map lag",
+                    Because = "its flood fill has not landed for 60 s, so it has no rooms at all yet",
+                    RoomMapLagSeconds = 60f,
+                },
+                new Degradation
+                {
                     Name = "wrong settings",
                     Because = "never received the world's settings, so it is running other physics",
                     OnDefaultSettings = true,
@@ -823,6 +984,8 @@ namespace Thermodynamics.Harness
                 if (one.PowerLagSeconds > everything.PowerLagSeconds) everything.PowerLagSeconds = one.PowerLagSeconds;
                 if (one.PowerErrorShare > everything.PowerErrorShare) everything.PowerErrorShare = one.PowerErrorShare;
                 if (one.AirDensityError > everything.AirDensityError) everything.AirDensityError = one.AirDensityError;
+                if (one.RoomPressureError > everything.RoomPressureError) everything.RoomPressureError = one.RoomPressureError;
+                if (one.RoomMapLagSeconds > everything.RoomMapLagSeconds) everything.RoomMapLagSeconds = one.RoomMapLagSeconds;
                 if (one.OnDefaultSettings) everything.OnDefaultSettings = true;
             }
 
@@ -875,6 +1038,19 @@ namespace Thermodynamics.Harness
             text.AppendLine("nothing whatever it peaked at, and a wrong input settles somewhere and stays. worst");
             text.AppendLine("is the largest number of blocks the two put on opposite sides of critical at once.");
             text.AppendLine();
+            bool anyRooms = false;
+            for (int i = 0; i < results.Count; i++)
+            {
+                if (results[i].Rooms > 0) anyRooms = true;
+            }
+
+            if (!anyRooms)
+            {
+                text.AppendLine("**This hull has no sealed compartment**, so the two room rows judged nothing and");
+                text.AppendLine("the lab refuses to run them rather than printing a zero (E8).");
+                text.AppendLine();
+            }
+
             text.AppendLine("Every magnitude here is a knob this lab turns rather than a figure measured from a");
             text.AppendLine("session; what the table answers is which inputs bias, which perturb, and whether");
             text.AppendLine("the correction reaches each.");

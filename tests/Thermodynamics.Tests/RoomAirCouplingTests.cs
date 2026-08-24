@@ -98,6 +98,56 @@ namespace Thermodynamics.Tests
                 "cold air beside warm walls did not warm: " + air.Temperature + " K");
         }
 
+        /// <summary>
+        /// **The coupling carries no pressure term, so room air is a binary input above zero.**
+        ///
+        /// <para>
+        /// A link's conductance is `RoomConvectionCoefficient × faces × cellFaceArea` and nothing
+        /// else — a compartment at a fiftieth of an atmosphere couples its walls exactly as hard as
+        /// a full one. What pressure does move is the air's heat capacity, and by the same argument
+        /// that settles `mass error` in the client sweep, capacity does not appear in the balance a
+        /// hull settles at, only in how long it takes to get there.
+        /// </para>
+        ///
+        /// <para>
+        /// This is the mechanism behind `F21`'s finding: a client's disagreement about how full a
+        /// room is is worth almost nothing until it crosses zero, and then it is worth the whole
+        /// 30 kW/K of coupling. Pinned here rather than only in the lab, because it is a property of
+        /// the model and it is what makes the veto chain in
+        /// [thermal-model.md](../../docs/thermal-model.md) an asymmetric choice.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void ConductanceToARoomsAirDoesNotDependOnHowFullTheRoomIs()
+        {
+            ThermalSimulation simulation = Shell(300f);
+
+            simulation.SetRoomPressure(Interior, 1f);
+            RoomAirNode air = AirOf(simulation);
+
+            float full = 0f;
+            foreach (RoomLink link in air.Links) full += link.Conductance;
+            float fullMass = air.ThermalMass;
+
+            simulation.SetRoomPressure(Interior, 0.02f);
+
+            float sliver = 0f;
+            foreach (RoomLink link in air.Links) sliver += link.Conductance;
+
+            Assert.True(full > 0f, "a full room has no coupling at all, so this judges nothing");
+            Assert.Equal(full, sliver, 4);
+
+            // Capacity is the half that does move, or the claim above would be that pressure
+            // reaches nothing.
+            Assert.True(air.ThermalMass < fullMass * 0.1f,
+                "a room at 2 % pressure holds " + air.ThermalMass + " J/K against a full room's "
+                + fullMass + " J/K, so pressure is not reaching the capacity either");
+
+            // And zero is the discontinuity: the whole coupling, not a smaller one.
+            simulation.SetRoomPressure(Interior, 0f);
+            Assert.Empty(AirOf(simulation).Links);
+        }
+
         [Fact]
         public void DroppingPressureTakesTheLinksAwayAgain()
         {
