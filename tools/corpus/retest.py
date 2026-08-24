@@ -28,6 +28,10 @@ import os
 import statistics
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import scoring
+
 DATA = sys.argv[1] if len(sys.argv) > 1 else "out/retest-2026-08-23"
 
 CONTROL = "shipped"
@@ -129,27 +133,42 @@ def main():
     # generating for the rest of the clock and a peak above about 1,500 K says *ran away* and
     # nothing finer. Differences taken between two censored runs are differences between two
     # harness artefacts, so the share is printed before any of them.
-    CENSORED = 1500.0
+    # **Censoring begins at a block's own rating, not at 1,500 K.** From the moment anything is
+    # past critical it keeps generating undamped for the rest of the clock, so the peak is a
+    # harness artefact from that point on. Reading it off the magnitude instead said 9 % of these
+    # runs were censored when 31 % of them were, and 9 % against 85 % in `burn-forward` — which is
+    # how the +34.7 K that [backlog.md](../../docs/backlog.md) `C2` was deciding on came to be read
+    # as a temperature. The 1,500 K line is kept below it as the stronger flag: past there a peak
+    # says *ran away* and nothing finer.
     censored = {}
     for row in rows:
         peak = number(row, "peak_k")
         if peak is None:
             continue
-        got = censored.setdefault(row["world"], [0, 0])
-        got[1] += 1
-        if peak >= CENSORED:
+        got = censored.setdefault((row["world"], row["scenario"]), [0, 0, 0])
+        got[2] += 1
+        if scoring.peak_is_censored(number(row, "over_critical"), peak):
             got[0] += 1
+        if scoring.peak_ran_away(peak):
+            got[1] += 1
 
-    print(f"Runs whose peak is past {CENSORED:.0f} K, which is 'ran away' and not a temperature")
+    print("Runs with a block past its own rating, which is where the peak stops being a")
+    print(f"temperature, and runs past {scoring.RAN_AWAY_KELVIN:.0f} K, which is where it stops"
+          " being anything")
     print()
+    print(f"    {'world':<22}{'scenario':<18}{'over rating':>14}"
+          f"{'past ' + str(int(scoring.RAN_AWAY_KELVIN)) + ' K':>14}")
     for world in worlds:
-        hit, total = censored.get(world, (0, 0))
-        if not total:
-            continue
-        print(f"    {world:<22} {hit:>4} of {total:>4}  {hit / total:.1%}")
+        for scenario in scenarios:
+            over, ran, total = censored.get((world, scenario), (0, 0, 0))
+            if not total:
+                continue
+            print(f"    {world:<22}{scenario:<18}"
+                  f"{over:>6} of {total:<4} {ran:>6} of {total:<4}")
     print()
-    print("Read every peak below against that. The medians and the counts are what the findings")
-    print("rest on; a single hull's extreme is the harness, not the mod.")
+    print("**A peak difference taken on a censored row is a difference between two harness")
+    print("artefacts** (`E9`). Where the left column is most of the population, read the crossing")
+    print("and the counts below and not the peak: those are decided before anything diverges.")
     print()
 
     # ---- the effect ------------------------------------------------------------------------

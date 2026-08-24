@@ -186,7 +186,8 @@ better**. Pinned by `LongerRingsDeliverColderBlocks` and
 `Conductivity` used to be a 0…1 quality against a 200 W/(m·K) reference and is now the figure a
 materials table gives, times `ThermalConstants.ConductionScale` = 2.4 — calibrated so mild steel
 lands exactly where it was ([definitions.md](definitions.md#conductivity-is-in-real-wmk)). The
-question [backlog.md](backlog.md) `C2` held open is what that did to the balance a player meets.
+question [backlog.md](backlog.md) `C2` held open was what that did to the balance a player meets, and
+it is answered below: the two figures it turned on are censored and everything else is unmoved.
 
 **The old world is recoverable exactly, which is what makes this a measurement.** `Data/Cubes.xml`
 at `4f6b44a^` held twenty-two definitions and derivation from build components arrived after the
@@ -263,13 +264,21 @@ one:
 | flight-100 | +26.40 K | −2.40 K | +28.35 K | 0.00 K |
 | flight-300 | +17.94 K | −2.08 K | +19.46 K | 0.00 K |
 
-**The two effects live in different scenarios and do not cancel.** A burning hull is 34.7 K hotter
-than it was and the arms say why: thrusters and reactors alone account for 44.9 K of it, and the
-vanilla blocks gaining conductance claw about ten of that back. A hull under electrical load is
-16.3 K *cooler*, and every kelvin of that is the vanilla blocks — the jump drive at 3.51× is the
-block type carrying 71.3 % of the population's full-load waste, and it now spreads what it makes.
-Nothing moves at idle, in sun, or in recovery, because none of those is a hull with a hot block in
-it.
+**Read the two bold rows as censored, because they are.** The lab never destroys an overheating
+block, so from the moment anything on a hull is past its own rating the peak is 1,800 s of an
+undamped source rather than a temperature (`E9`). In `burn-forward` that is **34 of the 40 hulls**
+and in `full-electrical` **29 of 40** — the two rows the table sets in bold are the two where the
+peak has stopped being a prediction. The censoring report in `retest.py` said 9 % of the run was
+censored because it tested the peak against 1,500 K rather than against each block's own rating;
+that is corrected, and it is the reason the two figures below were read as balance rather than as
+artefacts.
+
+**Where they come from, for what it is worth.** Thrusters and reactors alone account for 44.9 K of
+the burn row, and the vanilla blocks gaining conductance claw about ten of that back; the load row is
+the vanilla blocks entirely — the jump drive at 3.51× is the block type carrying 71.3 % of the
+population's full-load waste, and it now spreads what it makes. Nothing moves at idle, in sun, or in
+recovery, because none of those is a hull with a hot block in it — and those three rows are the
+uncensored ones.
 
 **What actually changed for a player is not the peak, it is the spread.** Blocks over critical,
 summed across the set:
@@ -285,8 +294,26 @@ used to stay cold. Under thrust the peak rose 35 K and 257 *fewer* did, because 
 0.23× keeps its heat to itself. **The conversion traded peak temperature for spread, in both
 directions at once**, and a headline temperature alone would have reported each of those backwards.
 
-Time to the first block lost is unmoved: every median is within 1.5 s, against a damage event that
-runs a median 37 s ([how long a block has](#how-long-a-block-has-after-it-crosses)).
+**Both totals are dominated by single hulls and the per-hull split is a wash.** Under thrust the
+shipped world is better on 14 hulls, worse on 11 and unchanged on 15, with a median of exactly zero
+and one hull carrying −88 of the −257 (`P1`: a sum over a population is not a statistic about its
+members).
+
+**Every statistic that survives the censoring is unmoved**, which is the finding the peaks were
+standing in front of. Shipped minus pre-conversion, medians over the forty:
+
+| | burn-forward | full-electrical |
+| --- | ---: | ---: |
+| seconds to the first block over critical | **−0.13 s** | +0.75 s |
+| seconds to the first block lost | **+0.50 s** | +1.13 s |
+| share of blocks over critical | **0.000** | 0.000 |
+| peak temperature *(censored)* | +34.73 K | −16.28 K |
+
+The crossing and the loss are decided before anything diverges, and both are inside a second and a
+half against a damage event that runs a median 37 s
+([how long a block has](#how-long-a-block-has-after-it-crosses)). The share of blocks past their
+rating does not move at all. **So the conversion moved the one column that is not a prediction and
+left every column that is** — which is what `C2` was deciding about, and is why it is closed.
 
 **And no criterion moved.** G1, G2 and G5 read identically in all five worlds — 0 of 40 critical at
 idle, 40 of 40 warm under load, 39 of 40 recovering. The set is not the population and its G2 is
@@ -1192,6 +1219,7 @@ five ways a full sweep dies, and [backlog.md](backlog.md) for what is still open
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | **Closed `C2`: its two headline figures are censored and every uncensored one is unmoved.** A hull with anything past its rating keeps generating undamped for the rest of the clock, so its peak is a harness artefact (`E9`) — and that is 34 of 40 hulls in `burn-forward` and 29 of 40 under load, which is both of the rows the finding rested on. Crossing moves −0.13 s, first loss +0.50 s and the share over critical 0.000. The block-count totals are a wash per hull as well: 14 better, 11 worse, 15 unchanged, one hull carrying a third of the −257. `retest.py` had been testing the peak against 1,500 K rather than against each block's own rating, which reported 9 % of the run censored where 31 % was, and 85 % in the scenario the finding came from. |
 | 2026-08-23 | **Priced the load route's dial against the provenance of what it scales, and it argues against the route.** Every waste fraction in `Cubes.xml` now states where it came from, and weighted by the heat each carries over the census, **76.3 %** of a loaded fleet's waste comes through a fraction derived from the game's own `PowerEfficiency`, 8.4 % through a sourced conversion and 15.3 % through an invention. So waste ×0.5 halves a sourced number — an admitted balance knob rather than the correction of a guess — and the invented sixth sits on four block types that between them cannot reach the window. |
 | 2026-08-23 | **Gave `G8` a load case that is an event, and it selects the cells the grids already found.** A jump drive holds 3 MWh, draws 32 MW and keeps 80 % of it, so it fills in **421.9 s** — every figure off the game's own definition — and `jump-charge` runs exactly that: charge, finish, hold. Measured across it, both routes satisfy `G8` and the shipped pair does not, at 10.4 s. **This corrects the entry below**: `full-electrical-charged` is a ship not having an event, not a bound on one, and reading its censored medians as evidence against the routes was reading an absence as a short crossing. The transient reproduces the charging bound to the last figure, because every hull that crosses does so in the first minute of a seven-minute charge — which is the defect in one sentence. |
 | 2026-08-23 | **Measured `F13`, and it withdraws both of `C12`'s routes.** `full-electrical` charges every jump drive for the whole run; run against the other bound — the same load with the drives full — the conduction route crosses on 6 of 40 hulls, the load route on 3, and the shipped configuration on 12. All three are censored, so none has a median and none satisfies `G8`. **The mod is both too fast and too slow depending on one block**: 10 s to cross with drives charging, never with them full. That is a fact about the criterion rather than the dials — `G8`'s *most significant thermal event* is the drive charging, which is a transient, and both scenarios model it as permanent or absent. What it needs is a duty-cycled load. The comparison also reproduced the pair grid's four cells to the last figure across two independent runs, and found that the jump drive was filed as a *tool*, so `State.Consumers` never reached 71.3 % of the load's heat — neutral on every published figure, checked against 1,794 rows of which none moved. |

@@ -98,5 +98,31 @@ class ABreachIsPricedBesideTheVerdictAndTheMarkerDoesNotMove(unittest.TestCase):
         self.assertIn("unpriced", note)
 
 
+
+class CensoringBeginsAtABlocksOwnRatingRatherThanAtARoundNumber(unittest.TestCase):
+    """`E9`, and the defect that made `C2` a decision about a harness artefact.
+
+    A run with anything past critical keeps generating undamped for the rest of the clock, so its
+    peak has stopped being a temperature. Judging that by peak magnitude instead missed most of it:
+    9 % of a retest read as censored where 31 % of it was, and in `burn-forward` 9 % against 85 %.
+    """
+
+    def test_anything_past_its_rating_censors_the_peak_however_cool_the_hull_looks(self):
+        self.assertTrue(scoring.peak_is_censored(1, 1228.0))
+        self.assertTrue(scoring.peak_is_censored(1, 420.0))
+        self.assertFalse(scoring.peak_is_censored(0, 1228.0))
+        self.assertFalse(scoring.peak_is_censored(None, 300.0))
+
+    def test_the_ran_away_line_is_the_stronger_flag_and_not_the_censoring_test(self):
+        self.assertTrue(scoring.peak_ran_away(1500.0))
+        self.assertTrue(scoring.peak_ran_away(541648.0))
+        self.assertFalse(scoring.peak_ran_away(1228.0))
+        self.assertFalse(scoring.peak_ran_away(None))
+
+        # The pair a censored-but-not-runaway row makes: this is the 34-of-40 case in burn-forward.
+        self.assertTrue(scoring.peak_is_censored(3, 1228.0))
+        self.assertFalse(scoring.peak_ran_away(1228.0))
+
+
 if __name__ == "__main__":
     unittest.main()
