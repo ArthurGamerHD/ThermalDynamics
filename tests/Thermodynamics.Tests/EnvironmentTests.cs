@@ -578,7 +578,7 @@ namespace Thermodynamics.Tests
             EnvironmentSample sample;
             ThermalSimulation simulation = Rig(density, out sample);
 
-            for (int step = 0; step < 600; step++) simulation.StepExact(1, sample);
+            for (int step = 0; step < LabClock.Steps(600); step++) simulation.StepExact(1, sample);
             return simulation.Solver.Nodes[0].Temperature;
         }
 
@@ -588,7 +588,10 @@ namespace Thermodynamics.Tests
             ThermalSimulation simulation = Rig(density, out sample);
             simulation.Solver.CollectDiagnostics = true;
 
-            for (int step = 0; step < 600; step++) simulation.StepExact(1, sample);
+            // Long enough to have settled, which is a length of thermal time rather than of steps:
+            // at the clock `C24` ships, six hundred steps leave this block still climbing and the
+            // three densities are then compared mid-transient. See LabClock.
+            for (int step = 0; step < LabClock.Steps(600); step++) simulation.StepExact(1, sample);
             return simulation.Solver.Nodes[0].LastConvectionWatts;
         }
     }

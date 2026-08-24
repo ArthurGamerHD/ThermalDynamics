@@ -98,31 +98,59 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// In air it very nearly does not. Convection over the cell's exposed area is already
-        /// 85 % of the steel fitting's stability rate, so removing the conduction half removes
-        /// almost nothing: 31.7 substeps to 13.7, and the remainder is 99 % environment.
+        /// In air the environment is most of what is left, and `C24` took it from nearly all of it
+        /// to about three fifths.
+        ///
+        /// <para>
+        /// Convection over the cell's exposed area used to be 85 % of the steel fitting's
+        /// stability rate, so removing the conduction half removed almost nothing. At four times
+        /// the conduction pace the same fitting is **41 % conduction** in air, and removing that
+        /// half now removes rather more. The claim survives in its weaker form — a fitting with
+        /// real material properties is still environment-limited in air, and a light one is still
+        /// close to a steel one there — and the figure is asserted where it is rather than where
+        /// it was.
+        /// </para>
         ///
         /// This is the correction to the earlier prediction that the definitions would drop
         /// uncapped demand from 21.4 to about 5.6. That figure was the conduction term, and it is
         /// not the block's demand anywhere there is air.
         /// </summary>
         [Fact]
-        public void InAirTheEnvironmentIsWhatIsLeft()
+        public void InAirTheEnvironmentIsMostOfWhatIsLeft()
         {
             ThermalSolver.SubstepProfile steel = Profile(AsSteel(), Air());
             ThermalSolver.SubstepProfile light = Profile(AsLight(), Air());
 
-            Assert.True(steel.WorstNodeConductionShare < 0.25f,
+            Assert.True(steel.WorstNodeConductionShare < 0.5f,
                 "even as steel the fitting is environment-limited in air: "
                 + steel.WorstNodeConductionShare);
 
-            Assert.True(light.WorstNodeDemand > steel.WorstNodeDemand * 0.35f,
-                "steel " + steel.WorstNodeDemand + ", light " + light.WorstNodeDemand);
-            Assert.True(light.WorstNodeDemand > 8f,
-                "a fitting with real material properties still demands "
-                + light.WorstNodeDemand + " substeps in air");
-            Assert.True(light.WorstNodeConductionShare < 0.05f,
+            // **And the definition reaches the air case now, which it did not.** This asked for
+            // the light fitting to stay within a third of the steel one, because at the pace the
+            // conversion calibrated to the air term was 85 % of both and the material barely
+            // showed: 31.7 substeps to 13.7. At four times the conduction pace it is 18.29 to
+            // **5.69**, so writing a real conductivity on a decorative block takes 69 % of its
+            // demand off in air as well as in vacuum. That is the correction to this page's own
+            // correction, and `ExposedSurfaceMultiplier` is no longer the only knob that reaches
+            // a fitting in atmosphere.
+            Assert.True(light.WorstNodeDemand < steel.WorstNodeDemand * 0.5f,
+                "the light fitting demands " + light.WorstNodeDemand + " against the steel one's "
+                + steel.WorstNodeDemand + ", so the definitions have stopped reaching a fitting in"
+                + " air and the note above needs rewriting");
+
+            Assert.True(light.WorstNodeDemand > 4f,
+                "a fitting with real material properties demands only "
+                + light.WorstNodeDemand + " substeps in air, so the environment half has gone too"
+                + " and this rig is no longer about a decorative block in atmosphere");
+            // The light fitting is what is left when the material is right: 5 % conduction against
+            // the steel one's 41 %, where it was under 1 % against 15 %. Both ends moved by the
+            // pace and the ordering is the claim.
+            Assert.True(light.WorstNodeConductionShare < 0.1f,
                 "light conduction share " + light.WorstNodeConductionShare);
+            Assert.True(light.WorstNodeConductionShare < steel.WorstNodeConductionShare * 0.5f,
+                "the light fitting is " + light.WorstNodeConductionShare + " conduction against"
+                + " the steel one's " + steel.WorstNodeConductionShare
+                + ", so the material has stopped deciding which term carries the fitting");
         }
 
         /// <summary>

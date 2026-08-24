@@ -116,11 +116,18 @@ namespace Thermodynamics.Tests
         /// <summary>
         /// A cap only binds below what the grid would have asked for anyway, so the same cap is a
         /// different thing at different rates: at the shipped eighth-second step the census hull
-        /// asks for about eleven substeps, and a cap of sixteen is inert.
+        /// asks for 18.38 substeps, and a cap of thirty-two is inert.
         ///
+        /// <para>
         /// This is the one that would have caught the reading directly. The old page credited
-        /// `MaxSubstepsPerBlock 16` with removing 172 blocks' worth of stiffness; at the default
-        /// rate it removes none, because the hull never asks for sixteen.
+        /// `MaxSubstepsPerBlock 16` with removing 172 blocks' worth of stiffness; at the rate that
+        /// shipped then it removed none, because the hull asked for about eleven. **`C24` took the
+        /// hull past sixteen** — four times the conduction pace against two and a half times the
+        /// capacity — so a cap of sixteen now binds on it, and the inert case this test is about
+        /// is a cap of thirty-two. The demand is asserted rather than assumed, so the next time
+        /// the hull crosses a cap this fails rather than passing on a cap that quietly started
+        /// working.
+        /// </para>
         /// </summary>
         [Fact]
         public void ACapAboveWhatTheHullAsksForDoesNothingAtTheShippedRate()
@@ -128,11 +135,9 @@ namespace Thermodynamics.Tests
             ThermalSimulation uncapped = Hull(8);
             float demand = Demand(uncapped);
 
-            Assert.True(demand < 16f, "the census hull asks for " + demand.ToString("n2")
-                + " substeps at the shipped Frequency 8, so a cap of 16 is not the inert case this"
-                + " test was written around and the reasoning below needs redoing");
+            Assert.InRange(demand, 16f, 32f);
 
-            ThermalSimulation capped = Hull(8, 16);
+            ThermalSimulation capped = Hull(8, 32);
 
             Assert.Equal(demand, Demand(capped), 3);
             Assert.Equal(0, capped.Solver.FlooredNodes);
