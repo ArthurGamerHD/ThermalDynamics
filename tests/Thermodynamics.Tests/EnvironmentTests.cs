@@ -194,9 +194,13 @@ namespace Thermodynamics.Tests
 
             simulation.StepExact(1, Worlds.Shadow());
 
-            // 6 faces of 6.25 m^2, emissivity 0.125, ambient 2.7 K
+            // 6 faces of 6.25 m^2 at the block's own emissivity, ambient 2.7 K. Read off the
+            // block rather than written out: the catalogue's stand-ins derive from the blocks they
+            // stand in for now, so a literal here would be asserting the catalogue rather than
+            // Stefan-Boltzmann.
             float area = 6f * 6.25f;
-            float expected = -0.125f * ThermalConstants.StefanBoltzmann * area
+            float emissivity = node.Thermal.Emissivity;
+            float expected = -emissivity * ThermalConstants.StefanBoltzmann * area
                 * ((500f * 500f * 500f * 500f) - (2.7f * 2.7f * 2.7f * 2.7f));
 
             Assert.Equal(1f, node.LastRadiationWatts / expected, 3);
@@ -308,9 +312,12 @@ namespace Thermodynamics.Tests
 
             simulation.StepExact(1, Worlds.Space(new Vector3(1f, 0f, 0f)));
 
-            // one of six exposed faces points at the sun: 37.5 m^2 / 6 = 6.25 m^2 projected
-            float expected = 1000f * 0.125f * 6.25f;
-            Assert.Equal(expected, simulation.Solver.Nodes[0].LastSolarWatts, 1);
+            // one of six exposed faces points at the sun: 37.5 m^2 / 6 = 6.25 m^2 projected, at
+            // the block's own absorptivity rather than a literal — the catalogue's armour derives
+            // from the block it stands in for, so a number here would pin that instead.
+            ThermalNode node = simulation.Solver.Nodes[0];
+            float expected = 1000f * node.Thermal.EffectiveSolarAbsorptivity * 6.25f;
+            Assert.Equal(expected, node.LastSolarWatts, 1);
         }
 
         [Fact]
@@ -557,7 +564,7 @@ namespace Thermodynamics.Tests
             settings.Derive();
 
             GridBuilder builder = GridBuilder.Large();
-            builder.Place(Catalog.Reactor(), Vector3I.Zero).Producing(200000f);
+            builder.Place(Catalog.Reactor(), Vector3I.Zero).Wasting(50000f);
 
             ThermalSimulation simulation = builder.BuildSimulation(settings);
             simulation.Planet = PlanetThermalProperties.Default();

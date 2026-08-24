@@ -514,7 +514,7 @@ namespace Thermodynamics.Harness
             List<BlockInstance> pipes = PipeFitter.BuildRing(builder, ring, 5, sinks);
 
             builder.Place(Catalog.Reactor(), new Vector3I(1, -1, 0))
-                   .Producing(5f * ThermalConstants.MegawattsToWatts);
+                   .Wasting(1250000f);
             BlockInstance reactor = builder.Last;
 
             builder.Place(Catalog.LightArmor(), new Vector3I(2, 1, 0));
@@ -538,7 +538,7 @@ namespace Thermodynamics.Harness
                 : "NO CLOSED LOOP (" + pipes.Count + " pipes placed)";
 
             return Result("coolant", runner,
-                "Pumped coolant ring between a 5 MW reactor and a plain armour block: " + found
+                "Pumped coolant ring between a 1.25 MW source and a plain armour block: " + found
                 + ". Reactor " + C(runner.Final.Tracked["reactor"])
                 + ", coolant " + (runner.Final.Tracked.ContainsKey("coolant") ? C(runner.Final.Tracked["coolant"]) : "n/a")
                 + ", sink block " + C(runner.Final.Tracked["sink-block"]) + ".");
@@ -554,7 +554,7 @@ namespace Thermodynamics.Harness
 
             // 3x3x3 shell with a single hollow cell at the centre.
             builder.Shell(Catalog.LightArmor(), new Vector3I(-1, -1, -1), new Vector3I(2, 2, 2));
-            builder.Place(Catalog.Reactor(), Vector3I.Zero).Producing(2f * ThermalConstants.MegawattsToWatts);
+            builder.Place(Catalog.Reactor(), Vector3I.Zero).Wasting(500000f);
             BlockInstance reactor = builder.Last;
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
@@ -569,7 +569,7 @@ namespace Thermodynamics.Harness
             runner.Run(3600f, 600f);
 
             return Result("sealed-room", runner,
-                "2 MW reactor sealed inside a 3x3x3 hull. Reactor exposed faces: "
+                "A 500 kW source sealed inside a 3x3x3 hull. Its exposed faces: "
                 + interior.TotalExposedFaces + " (expected 0), conduction links: "
                 + interior.LinkCount + ", shell exposed faces: "
                 + shell.TotalExposedFaces + ". Reactor "
@@ -715,7 +715,7 @@ namespace Thermodynamics.Harness
             runner.Run(3600f, 300f);
 
             return Result("radiator", runner,
-                "2 MW into a 3x3x3 hull in shadow. Reactor settles at " + C(bare)
+                "500 kW into a 3x3x3 hull in shadow. The source settles at " + C(bare)
                 + " bare, " + C(flush) + " with panels bolted flat against the hull, and "
                 + C(clear) + " with panels standing clear on booms.");
         }
@@ -736,7 +736,7 @@ namespace Thermodynamics.Harness
             builder.Grid.Remove(centre);
             builder.Placed.Remove(centre);
             builder.Place(Catalog.Reactor(), new Vector3I(1, 1, 1))
-                   .Producing(2f * ThermalConstants.MegawattsToWatts);
+                   .Wasting(500000f);
 
             if (placement == RadiatorPlacement.Flush)
             {
@@ -792,7 +792,7 @@ namespace Thermodynamics.Harness
             // neither neighbours nor exposure has no way at all to shed heat, and no such block
             // can exist on a real grid.
             builder.Place(Catalog.Reactor(), new Vector3I(2, 1, 2))
-                   .Producing(1f * ThermalConstants.MegawattsToWatts);
+                   .Wasting(250000f);
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
             ThermalNode interior = simulation.Solver.GetNodeAt(new Vector3I(2, 1, 2));
@@ -813,7 +813,7 @@ namespace Thermodynamics.Harness
             runner.Run(900f, 300f);
 
             return Result("airlock", runner,
-                "A 1 MW reactor inside a sealed 5x5x5 shell reaches " + C(sealedTemperature)
+                "A 250 kW source inside a sealed 5x5x5 shell reaches " + C(sealedTemperature)
                 + " with " + sealedFaces + " exposed faces. Opening the door leaves it with "
                 + interior.TotalExposedFaces + " and it ends at " + C(interior.Temperature) + ".");
         }
@@ -833,7 +833,7 @@ namespace Thermodynamics.Harness
                 builder, PipeFitter.RectangleXZ(Vector3I.Zero, 4, 3), -1, sinks);
 
             builder.Place(Catalog.Reactor(), new Vector3I(1, -1, 0))
-                   .Producing(5f * ThermalConstants.MegawattsToWatts);
+                   .Wasting(1250000f);
             BlockInstance reactor = builder.Last;
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
@@ -858,7 +858,7 @@ namespace Thermodynamics.Harness
             runner.Run(1800f, 300f);
 
             return Result("coolant-failure", runner,
-                "5 MW reactor on a pumped ring holds at " + C(cooled) + " (" + loopsBefore
+                "A 1.25 MW source on a pumped ring holds at " + C(cooled) + " (" + loopsBefore
                 + " loop). With the pump destroyed the ring stops circulating — "
                 + simulation.Solver.Loops.Count + " loops — and the reactor ends at "
                 + C(simulation.Solver.GetNode(reactor).Temperature) + ".");
@@ -881,8 +881,7 @@ namespace Thermodynamics.Harness
 
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.HeavyArmor(), Vector3I.Zero);
-            builder.Place(Catalog.Reactor(), new Vector3I(0, 0, 1))
-                   .Producing(1f * ThermalConstants.MegawattsToWatts);
+            builder.Place(Catalog.Reactor(), new Vector3I(0, 0, 1)).Wasting(250000f);
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
             ThermalNode node = simulation.Solver.GetNode(builder.Placed[0]);
@@ -900,7 +899,7 @@ namespace Thermodynamics.Harness
             runner.Run(55f, 5f);
 
             return Result("welding", runner,
-                "Five seconds of a 1 MW reactor next to one heavy armour block. At a tenth of its "
+                "Five seconds of a 250 kW source next to one heavy armour block. At a tenth of its "
                 + "mass the block reaches " + C(skeleton) + "; fully welded it is still at "
                 + C(finished) + ". The tracked run welds it up after those five seconds and "
                 + "settles at " + C(runner.Final.Tracked["skeleton"]) + ".");
@@ -984,8 +983,7 @@ namespace Thermodynamics.Harness
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.HeavyArmor(), Vector3I.Zero);
-            builder.Place(Catalog.Reactor(), new Vector3I(0, 0, 1))
-                   .Producing(1f * ThermalConstants.MegawattsToWatts);
+            builder.Place(Catalog.Reactor(), new Vector3I(0, 0, 1)).Wasting(250000f);
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
 
@@ -1192,7 +1190,7 @@ namespace Thermodynamics.Harness
                     builder.Placed.Remove(occupant);
                 }
                 builder.Place(Catalog.Reactor(), engineRoom)
-                       .Producing(2f * ThermalConstants.MegawattsToWatts);
+                       .Wasting(500000f);
 
                 ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);
                 while (simulation.HasPendingWork) simulation.Update(1f / 60f, Worlds.Shadow());
@@ -1638,7 +1636,7 @@ namespace Thermodynamics.Harness
 
             Vector3I reactorCell = new Vector3I(1, 2, 1);
             builder.Place(Catalog.Reactor(), reactorCell)
-                   .Producing(3f * ThermalConstants.MegawattsToWatts);
+                   .Wasting(750000f);
             machinery.Add(reactorCell);
 
             // Eight consumers drawing hard. Batteries rather than the thrusters the dump found
@@ -1789,7 +1787,7 @@ namespace Thermodynamics.Harness
             List<Vector3I> cells = PipeFitter.RectangleXZ(Vector3I.Zero, 4, 3);
             PipeFitter.BuildRing(builder, cells);
             builder.Place(Catalog.Reactor(), new Vector3I(1, -1, 0))
-                   .Producing(2f * ThermalConstants.MegawattsToWatts);
+                   .Wasting(500000f);
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
             ScenarioRunner runner = new ScenarioRunner(simulation);
@@ -1816,7 +1814,7 @@ namespace Thermodynamics.Harness
 
             PipeFitter.BuildRing(builder, PipeFitter.RectangleXZ(Vector3I.Zero, 4, 3), -1, sinks);
             builder.Place(Catalog.Reactor(), new Vector3I(1, -1, 0))
-                   .Producing(2f * ThermalConstants.MegawattsToWatts);
+                   .Wasting(500000f);
             BlockInstance reactor = builder.Last;
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
@@ -1845,7 +1843,7 @@ namespace Thermodynamics.Harness
             ScenarioRunner runner = PumpRunner(false, builder);
 
             return Result("heatpump-backwards", runner,
-                "A pump between a 500 kW reactor and a radiator. Reactor " + C(correct)
+                "A pump between a 125 kW source and a radiator. The source " + C(correct)
                 + " with the cold face against it, " + C(backwards)
                 + " with the pump turned around — the wrong way costs "
                 + (backwards - correct).ToString("n1") + " K and the same electricity.");
@@ -1860,7 +1858,7 @@ namespace Thermodynamics.Harness
 
         private static ScenarioRunner PumpRunner(bool correctWayRound, GridBuilder builder)
         {
-            builder.Place(Catalog.Reactor(), Vector3I.Zero).Producing(500000f);
+            builder.Place(Catalog.Reactor(), Vector3I.Zero).Wasting(125000f);
             BlockInstance reactor = builder.Last;
 
             // The cold face is the block's local Forward, and orientation Forward is the world
@@ -1992,7 +1990,7 @@ namespace Thermodynamics.Harness
                 PipeFitter.BuildRing(builder, cells, -1, sinks);
 
                 builder.Place(Catalog.Reactor(), cells[1] + Vector3I.Down)
-                       .Producing(megawatts[i] * ThermalConstants.MegawattsToWatts);
+                       .Wasting(megawatts[i] * ThermalConstants.MegawattsToWatts * 0.25f);
                 BlockInstance reactor = builder.Last;
                 builder.Place(Catalog.Radiator(), cells[5] + Vector3I.Up);
 
@@ -2103,7 +2101,7 @@ namespace Thermodynamics.Harness
             float small = LoopLayoutPlant(4, 1, false, out runner);
 
             return Result("loop-layout", runner,
-                "Four 250 kW reactors and four radiators, 32 pipes and 4 pumps, arranged three ways. "
+                "Four 62.5 kW sources and four radiators, 32 pipes and 4 pumps, arranged three ways. "
                 + "One ring with the sources bunched: " + C(bunched) + ". One ring with them spread "
                 + "evenly: " + C(spread) + ". Four separate rings: " + C(small)
                 + ". Splitting the ring buys nothing; spreading the sources buys "
@@ -2153,7 +2151,7 @@ namespace Thermodynamics.Harness
                         : (cells.Count / 2) + i;
 
                     builder.Place(Catalog.Reactor(), cells[sourceAt] + Vector3I.Down)
-                           .Producing(250000f);
+                           .Wasting(62500f);
                     reactors.Add(builder.Last);
 
                     builder.Place(Catalog.Radiator(), cells[radiatorAt] + Vector3I.Up);
@@ -2211,7 +2209,7 @@ namespace Thermodynamics.Harness
             float with = ConditionedCabin(true, out runner);
 
             return Result("air-conditioning", runner,
-                "A sealed cabin with a 60 kW reactor in it, and a heat pump on one wall rejecting into "
+                "A sealed cabin with a 15 kW source in it, and a heat pump on one wall rejecting into "
                 + "a radiator outside. Room air settles at " + C(without) + " with the pump off and "
                 + C(with) + " with it on, a difference of " + (without - with).ToString("n0") + " K.");
         }
@@ -2221,7 +2219,7 @@ namespace Thermodynamics.Harness
             GridBuilder builder = GridBuilder.Large();
             builder.Shell(Catalog.LightArmor(), new Vector3I(-1, -1, -1), new Vector3I(4, 4, 4));
 
-            builder.Place(Catalog.Reactor(), new Vector3I(1, 1, 1)).Producing(60000f);
+            builder.Place(Catalog.Reactor(), new Vector3I(1, 1, 1)).Wasting(15000f);
 
             // Cold face on the cabin wall, hot face away from it, radiator beyond that.
             builder.Place(Catalog.HeatPump(), new Vector3I(1, 1, -2),

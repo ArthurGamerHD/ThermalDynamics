@@ -1185,18 +1185,17 @@ projection from a validated fit, not a measurement; `flight-300` and `storm-300`
 
 ### Open items in the block report
 
-* **The harness reactor and the shipped reactor disagree.** `Catalog.ReactorThermal` carries
-  `ProducerWasteEnergy` 0.25 against the shipped 0.01, so any scenario quoting a reactor temperature
-  quotes one no player will see. `Vanilla.Reference` derives from real build costs and is the right
-  model for `Catalog` to follow.
-* **`Catalog` masses are not the shipped masses.** Measured and pinned by `CatalogDriftTests`: four
-  of the six blocks the catalogue stands in for are out by more than five per cent, and the worst is
-  **4.32×** — `Thruster` at 10,000 kg against a real 43,200 — with `Battery` at 3.70× because it
-  carries the *small-grid* battery's 1,040 kg under a large-grid name, and the two reactors at 1.60×
-  and 1.42×. Armour matches exactly, which is what makes the rest a measurement rather than an
-  artefact of the comparison. They affect scenarios rather than this report, which reads the
-  definitions directly, but every scenario temperature is quoted off them — and **the fix moves all
-  of those at once**, so it is a pass of its own rather than a line in another one.
+* ~~**The harness catalogue is not the blocks it stands in for.**~~ **Fixed 2026-08-23.** The six
+  stand-ins derive from `Vanilla`'s build costs and the shipped derivation now, so a scenario
+  reactor weighs 4,793 kg and wastes a hundredth of what it makes exactly as a player's does. Four
+  of the six had been out by more than five per cent — the large thruster by **4.32×** at 10,000 kg
+  against a real 43,200, the battery by 3.70× because it carried the *small-grid* battery's mass
+  under a large-grid name — and `ReactorThermal` had said a quarter of a reactor's output becomes
+  heat against the shipped hundredth. `CatalogDriftTests` now fails if a hand-typed mass reappears.
+  **What it moved**: rigs whose source was incidental state their heat in watts through
+  `GridBuilder.Wasting` and carry the same load they always did, so their figures are unchanged;
+  the three scenarios that are *about* a reactor — `reactor`, `atmosphere`, `meltdown` — run a real
+  reactor at a real rating and their temperatures moved with it.
 
 ---
 
@@ -1219,6 +1218,7 @@ five ways a full sweep dies, and [backlog.md](backlog.md) for what is still open
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | **Closed `C4`: the scenario catalogue is the blocks it stands in for.** The six stand-ins derive from `Vanilla`'s transcribed build costs and the shipped derivation rather than being hand-typed, so a scenario reactor wastes the hundredth a player's does instead of the quarter the catalogue asserted, and the large thruster weighs 43,200 kg instead of 10,000. Rigs that only wanted a heat source now state it in watts of heat (`GridBuilder.Wasting`) and are unchanged; the scenarios that are about a reactor moved. |
 | 2026-08-23 | **Closed `C2`: its two headline figures are censored and every uncensored one is unmoved.** A hull with anything past its rating keeps generating undamped for the rest of the clock, so its peak is a harness artefact (`E9`) — and that is 34 of 40 hulls in `burn-forward` and 29 of 40 under load, which is both of the rows the finding rested on. Crossing moves −0.13 s, first loss +0.50 s and the share over critical 0.000. The block-count totals are a wash per hull as well: 14 better, 11 worse, 15 unchanged, one hull carrying a third of the −257. `retest.py` had been testing the peak against 1,500 K rather than against each block's own rating, which reported 9 % of the run censored where 31 % was, and 85 % in the scenario the finding came from. |
 | 2026-08-23 | **Priced the load route's dial against the provenance of what it scales, and it argues against the route.** Every waste fraction in `Cubes.xml` now states where it came from, and weighted by the heat each carries over the census, **76.3 %** of a loaded fleet's waste comes through a fraction derived from the game's own `PowerEfficiency`, 8.4 % through a sourced conversion and 15.3 % through an invention. So waste ×0.5 halves a sourced number — an admitted balance knob rather than the correction of a guess — and the invented sixth sits on four block types that between them cannot reach the window. |
 | 2026-08-23 | **Gave `G8` a load case that is an event, and it selects the cells the grids already found.** A jump drive holds 3 MWh, draws 32 MW and keeps 80 % of it, so it fills in **421.9 s** — every figure off the game's own definition — and `jump-charge` runs exactly that: charge, finish, hold. Measured across it, both routes satisfy `G8` and the shipped pair does not, at 10.4 s. **This corrects the entry below**: `full-electrical-charged` is a ship not having an event, not a bound on one, and reading its censored medians as evidence against the routes was reading an absence as a short crossing. The transient reproduces the charging bound to the last figure, because every hull that crosses does so in the first minute of a seven-minute charge — which is the defect in one sentence. |

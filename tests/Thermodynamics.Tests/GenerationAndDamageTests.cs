@@ -39,13 +39,17 @@ namespace Thermodynamics.Tests
             ThermalSimulation simulation = builder.BuildSimulation(Isolated(), 300f);
             ThermalNode node = simulation.Solver.Nodes[0];
 
-            // 10 MW at 25% waste
-            Assert.Equal(2.5e6f, node.HeatGenerationWatts, 0);
+            // 10 MW at the fraction the block itself declares, which is the claim in the name.
+            // Written as the product rather than as a literal: the catalogue's reactor derives
+            // from the shipped definition now, so a number here would pin the definition instead.
+            float waste = 10f * ThermalConstants.MegawattsToWatts * node.Thermal.ProducerWasteEnergy;
+            Assert.True(waste > 0f, "the reactor wastes nothing, so this judges nothing");
+            Assert.Equal(waste, node.HeatGenerationWatts, 0);
 
             float before = node.Temperature;
             simulation.StepExact(4, Worlds.Shadow());   // one simulated second
 
-            float expected = before + (2.5e6f / node.ThermalMass);
+            float expected = before + (waste / node.ThermalMass);
             Assert.Equal(expected, node.Temperature, 1);
         }
 
@@ -93,7 +97,7 @@ namespace Thermodynamics.Tests
             node.Block.PowerProducedWatts = 4e6f;
             node.RefreshHeatGeneration();
 
-            Assert.Equal(1e6f, node.HeatGenerationWatts, 0);
+            Assert.Equal(4e6f * node.Thermal.ProducerWasteEnergy, node.HeatGenerationWatts, 0);
         }
 
         [Fact]

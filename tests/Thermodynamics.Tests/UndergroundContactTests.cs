@@ -134,7 +134,7 @@ namespace Thermodynamics.Tests
             GridBuilder builder = GridBuilder.Large();
             builder.Fill(Catalog.LightArmor(), VRageMath.Vector3I.Zero, new VRageMath.Vector3I(4, 3, 6));
             builder.Remove(new VRageMath.Vector3I(1, 1, 1));
-            builder.Place(Catalog.Reactor(), new VRageMath.Vector3I(1, 1, 1)).Producing(500000f);
+            builder.Place(Catalog.Reactor(), new VRageMath.Vector3I(1, 1, 1)).Wasting(125000f);
 
             ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);
             simulation.RebuildAll();

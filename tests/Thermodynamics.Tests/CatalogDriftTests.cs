@@ -8,20 +8,22 @@ using Xunit.Abstractions;
 namespace Thermodynamics.Tests
 {
     /// <summary>
-    /// How far the scenario catalogue has drifted from the blocks it claims to stand in for.
+    /// That the scenario catalogue *is* the blocks it stands in for, and stays that way.
     ///
     /// <para>
-    /// `Catalog` opens by saying its masses are approximations of the real Space Engineers blocks
-    /// and that its thermal properties "mirror Data/Cubes.xml". Every scenario in this repository is
-    /// built out of it, so every scenario temperature is quoted off those numbers — and nothing has
-    /// ever compared them with the things they mirror. [backlog](../../docs/backlog.md) `C4`.
+    /// `Catalog` used to open by saying its masses were approximations and its thermal properties
+    /// "mirror Data/Cubes.xml". Nothing had compared them: four of the six stand-ins were out by
+    /// more than five per cent, the large thruster by **4.32x**, the battery by 3.70x because it
+    /// carried the *small-grid* battery's mass under a large-grid name, and `ReactorThermal` said a
+    /// quarter of a reactor's output becomes heat where the shipped definition says a hundredth.
+    /// Every scenario in this repository is built out of these, so every scenario temperature was
+    /// quoted off them. [backlog](../../docs/backlog.md) `C4`.
     /// </para>
     ///
     /// <para>
-    /// **This measures the disagreement rather than fixing it**, because fixing it moves every
-    /// scenario figure in the repository at once and that is a pass of its own. What it buys now is
-    /// that the size of the drift is visible and cannot grow quietly (`D5`), and that whoever does
-    /// the fix knows what they are taking on before they start.
+    /// **The stand-ins are now derived from `Vanilla` and the shipped derivation rather than typed**,
+    /// so the disagreement is structurally gone rather than corrected once. These hold it that way:
+    /// a hand-typed mass reappearing is what this fails on.
     /// </para>
     /// </summary>
     public class CatalogDriftTests
@@ -60,17 +62,12 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// **The masses are pinned, wrong ones included.** Four of the six the catalogue stands in
-        /// for are out by more than five per cent, and two of them by nearly a factor of four: the
-        /// battery carries the *small-grid* battery's 1,040 kg under a large-grid block's name, and
-        /// the large thruster is 10,000 kg against a real 43,200 — **4.32x**, which is worse than
-        /// the "up to 4x" the backlog row recorded.
-        ///
-        /// Pinned rather than corrected, because thermal mass is what sets how fast a scenario
-        /// block heats and moving six of them moves every scenario figure at once.
+        /// **Every stand-in weighs what the block it stands in for weighs.** Thermal mass is what
+        /// sets how fast a scenario block heats, so a mass that is out by a factor of four is a
+        /// scenario temperature that is out by a factor of four.
         /// </summary>
         [Fact]
-        public void TheCatalogueMassesAreWhereTheyAreAndNoWorse()
+        public void EveryStandInWeighsWhatItStandsInFor()
         {
             List<string> drifted = new List<string>();
             float worst = 1f;
@@ -93,24 +90,25 @@ namespace Thermodynamics.Tests
 
             foreach (string line in drifted) output.WriteLine(line);
 
-            Assert.True(drifted.Count == 4,
-                "four of the six stand-ins are known to be out; " + drifted.Count + " are now:\n  "
+            Assert.True(drifted.Count == 0,
+                "a stand-in has stopped being the block it stands in for:\n  "
                 + string.Join("\n  ", drifted.ToArray()));
 
-            Assert.True(worst < 4.4f,
-                "the worst drift has grown past the thruster's known 4.32x: " + worst.ToString("n2"));
+            Assert.True(worst < 1.001f,
+                "the worst stand-in is " + worst.ToString("n4") + "x its block, which is not derived");
         }
 
         /// <summary>
-        /// **The reactor's waste fraction is the drift that reaches furthest.** `Catalog` says a
-        /// quarter of a reactor's output becomes heat; `Cubes.xml` — which it claims to mirror —
-        /// says a hundredth. Any scenario quoting a reactor temperature quotes one twenty-five times
-        /// over-driven, and no player will ever see it.
+        /// **The reactor's waste fraction was the drift that reached furthest**, and it is the one
+        /// worth naming: the catalogue said a quarter of a reactor's output becomes heat where the
+        /// shipped definition says a hundredth, so every scenario quoting a reactor temperature
+        /// quoted one twenty-five times over-driven. A scenario reactor now wastes what a player's
+        /// reactor wastes.
         /// </summary>
         [Fact]
-        public void TheReactorsWasteFractionIsTwentyFiveTimesTheShippedOne()
+        public void AScenarioReactorWastesWhatAShippedOneWastes()
         {
-            BlockThermalProperties catalogue = Catalog.ReactorThermal();
+            BlockThermalProperties catalogue = Catalog.Reactor().Thermal;
 
             // The shipped reactor figure is the type entry rather than a subtype's, so it is read
             // from the derivation the game applies to any reactor.
@@ -121,8 +119,8 @@ namespace Thermodynamics.Tests
             output.WriteLine("catalogue ProducerWasteEnergy " + catalogue.ProducerWasteEnergy
                 + " against the shipped " + real.ProducerWasteEnergy);
 
-            Assert.Equal(0.25f, catalogue.ProducerWasteEnergy, 3);
-            Assert.Equal(0.01f, real.ProducerWasteEnergy, 3);
+            Assert.Equal(real.ProducerWasteEnergy, catalogue.ProducerWasteEnergy, 4);
+            Assert.Equal(0.01f, catalogue.ProducerWasteEnergy, 4);
         }
 
         /// <summary>

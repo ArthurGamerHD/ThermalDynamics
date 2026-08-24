@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Thermodynamics.Core;
 using Thermodynamics.Harness;
@@ -61,7 +62,31 @@ namespace Thermodynamics.Tests
             return names;
         }
 
-        /// <summary>Armour at 900 K, a thruster at 1,050 K and a reactor at 1,200 K, in that order.</summary>
+        /// <summary>Halfway between two ratings, which is above the first and below the second.</summary>
+        private static float Between(float low, float high)
+        {
+            return 0.5f * (low + high);
+        }
+
+        /// <summary>The rating a block carries, so a threshold can be read rather than written.</summary>
+        private static float Rating(ThermalSimulation simulation, string name)
+        {
+            IList<ThermalNode> nodes = simulation.Solver.Nodes;
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                if (nodes[i].Block.Model.Name == name) return nodes[i].Thermal.CriticalTemperature;
+            }
+
+            throw new InvalidOperationException("no block named " + name + " on the rig");
+        }
+
+        /// <summary>
+        /// Three blocks with three different ratings, in ascending order.
+        ///
+        /// The ratings themselves are read off the blocks rather than written here: the catalogue
+        /// derives its stand-ins from the blocks they stand in for, so the three figures follow the
+        /// shipped definitions and a literal would be pinning those instead of the mirror.
+        /// </summary>
         private static GridBuilder ThreeRatings()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -77,20 +102,32 @@ namespace Thermodynamics.Tests
             ThermalSimulation simulation = ThreeRatings().BuildSimulation(Settings(), 293.15f);
             simulation.RebuildAll();
 
-            // Above the armour, below the other two.
-            Assert.Equal(new[] { "LightArmorBlock" }, Burned(simulation, 1000f).ToArray());
+            float armour = Rating(simulation, "LightArmorBlock");
+            float reactor = Rating(simulation, "SmallReactor");
+            float thruster = Rating(simulation, "LargeThruster");
 
-            // Above the thruster as well.
-            Assert.Equal(new[] { "LargeThruster", "LightArmorBlock" }, Burned(simulation, 1100f).ToArray());
+            // The rig is only a test of the mirror while the three ratings are three numbers.
+            Assert.True(armour < reactor && reactor < thruster,
+                "the three ratings are " + armour + ", " + reactor + " and " + thruster
+                + ", which does not separate them");
+
+            // Above the armour, below the other two.
+            Assert.Equal(new[] { "LightArmorBlock" },
+                Burned(simulation, Between(armour, reactor)).ToArray());
+
+            // Above the reactor as well.
+            Assert.Equal(new[] { "LightArmorBlock", "SmallReactor" },
+                Burned(simulation, Between(reactor, thruster)).ToArray());
 
             // Above all three.
-            Assert.Equal(new[] { "LargeThruster", "LightArmorBlock", "SmallReactor" }, Burned(simulation, 1300f).ToArray());
+            Assert.Equal(new[] { "LargeThruster", "LightArmorBlock", "SmallReactor" },
+                Burned(simulation, thruster + 100f).ToArray());
         }
 
         /// <summary>
         /// The failure a stale mirror produces. Removing a node moves the last node into its slot,
-        /// so the reactor ends up holding the index the armour had. If the row does not follow it,
-        /// the reactor is judged at 900 K and burns two hundred kelvin early.
+        /// so the last block ends up holding the index the armour had. If the row does not follow
+        /// it, that block is judged at the armour's rating and burns hundreds of kelvin early.
         /// </summary>
         [Fact]
         public void ARatingFollowsItsBlockWhenARemovalMovesTheIndex()
@@ -102,15 +139,20 @@ namespace Thermodynamics.Tests
             // Settle the mirrored rows before the removal, so a stale row is a row that was right.
             Burned(simulation, 293.15f);
 
+            float reactor = Rating(simulation, "SmallReactor");
+            float thruster = Rating(simulation, "LargeThruster");
+
             BlockInstance armour = builder.Grid.GetAtCell(new Vector3I(0, 0, 0));
             Assert.NotNull(armour);
             simulation.RemoveBlock(armour);
 
-            // Between the thruster's rating and the reactor's: only the thruster may burn.
-            Assert.Equal(new[] { "LargeThruster" }, Burned(simulation, 1100f).ToArray());
+            // Between the reactor's rating and the thruster's: only the reactor may burn.
+            Assert.Equal(new[] { "SmallReactor" },
+                Burned(simulation, Between(reactor, thruster)).ToArray());
 
-            // And the reactor still burns when it should.
-            Assert.Equal(new[] { "LargeThruster", "SmallReactor" }, Burned(simulation, 1300f).ToArray());
+            // And the thruster still burns when it should.
+            Assert.Equal(new[] { "LargeThruster", "SmallReactor" },
+                Burned(simulation, thruster + 100f).ToArray());
         }
 
         /// <summary>
@@ -130,9 +172,15 @@ namespace Thermodynamics.Tests
             simulation.AddBlock(new BlockInstance(
                 Catalog.Reactor(), new Vector3I(8, 0, 0), BlockOrientation.Identity), 293.15f);
 
-            // The reactor's 1,200 K rating, not the armour's 900 K.
-            Assert.Equal(new[] { "LightArmorBlock" }, Burned(simulation, 1000f).ToArray());
-            Assert.Equal(new[] { "LightArmorBlock", "SmallReactor" }, Burned(simulation, 1300f).ToArray());
+            float armour = Rating(simulation, "LightArmorBlock");
+            float reactor = Rating(simulation, "SmallReactor");
+            Assert.True(armour < reactor, "the reactor must outrank the armour for this to judge anything");
+
+            // The reactor's own rating, not the armour's.
+            Assert.Equal(new[] { "LightArmorBlock" },
+                Burned(simulation, Between(armour, reactor)).ToArray());
+            Assert.Equal(new[] { "LightArmorBlock", "SmallReactor" },
+                Burned(simulation, reactor + 100f).ToArray());
         }
 
         /// <summary>

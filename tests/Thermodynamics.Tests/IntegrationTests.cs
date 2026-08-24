@@ -312,7 +312,7 @@ namespace Thermodynamics.Tests
         public void TheSealedRoomScenarioKeepsItsInteriorSealed()
         {
             ScenarioResult result = Scenarios.Run("sealed-room");
-            Assert.Contains("Reactor exposed faces: 0", result.Summary);
+            Assert.Contains("Its exposed faces: 0", result.Summary);
         }
 
         [Fact]

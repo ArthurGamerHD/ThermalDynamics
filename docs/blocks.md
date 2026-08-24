@@ -86,9 +86,9 @@ Practical build advice:
   Pinned by `LongerRingsCoupleHarderAndCarryTheSameFluid`.
 * A loop's temperature is saved and restored by member hash, so reloading cannot swap two loops'
   heat and rebuilding a ring does not reset it.
-* **Spread your sources around the ring; do not bother splitting it.** Four reactors bunched into one
-  stretch of a 32-pipe ring settle at 134 C; the same four spread evenly around the same ring settle
-  at 93 C. Dividing that ring into four separate rings with a pump each lands at 95 C — no better than
+* **Spread your sources around the ring; do not bother splitting it.** Four sources bunched into one
+  stretch of a 32-pipe ring settle at 140 C; the same four spread evenly around the same ring settle
+  at 91 C. Dividing that ring into four separate rings with a pump each lands at 93 C — no better than
   spreading, for four times the pumps. What saturates a loop is several sources dumping into one short
   run of pipe, not the length of the ring. Measured by the `loop-layout` scenario.
 * **A pump fitted the wrong way round is not broken — it drives the loop backwards**, and a loop
@@ -183,8 +183,8 @@ compartment to its walls, and the pump is just chilling a piece of hull. And the
 how much wall the room has in contact with the cooled block, not by the pump's rating: one wall of a
 large cabin is a small window to pull heat through.
 
-Measured by the `air-conditioning` scenario: a sealed cabin with a 60 kW reactor inside settles at
-−50 C with the pump off and −102 C with it on.
+Measured by the `air-conditioning` scenario: a sealed cabin with a 15 kW source inside settles at
+−60 C with the pump off and −106 C with it on.
 
 The terminal shows what it is moving, what it is drawing, and the coefficient between them. A pump
 with nothing bolted to one of its faces says so rather than silently doing nothing.
@@ -341,6 +341,7 @@ all, so it is the readout that works in any world.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | Re-quoted the `loop-layout` and `air-conditioning` figures after `C4`: the scenario catalogue's blocks derive from the ones they stand in for now, and the rigs state their load in watts of heat rather than in a reactor's output. Bunched-against-spread is 140 C against 91 C, four rings 93 C; the cabin settles at −60 C with the pump off and −106 C with it on. |
 | 2026-08-22 | Said that a coolant pump draws power — 50 kW large, 10 kW small, all of it becoming heat ([backlog.md](backlog.md) `C13`). It drew nothing until now. |
 | 2026-08-22 | Removed a trailing *Radiators and the heat pump* section that restated the [Radiator](#radiator) and [Heat pump](#heat-pump) sections above it in weaker form — the emissivity, the multiplier, the absent coolant ports and the Carnot cost were each already stated once. The one thing it said that they did not, that a pump pairs with a radiator on its hot side, moved into the heat pump's own section. |
 | 2026-08-22 | Added the standard header and this change log. |

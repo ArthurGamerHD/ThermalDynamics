@@ -107,6 +107,35 @@ namespace Thermodynamics.Harness
             return this;
         }
 
+        /// <summary>
+        /// Drives the last placed block to put <paramref name="watts"/> of heat into the hull,
+        /// whatever fraction of its power that block wastes.
+        ///
+        /// <para>
+        /// **A rig that wants a heat source should say so in watts of heat.** Saying it in watts of
+        /// *output* couples the rig to a block's efficiency, which is how every scenario in this
+        /// repository came to be quoted off a reactor wasting a quarter of its output where the
+        /// shipped one wastes a hundredth ([backlog.md](../../docs/backlog.md) `C4`). A rig that is
+        /// *about* a reactor still drives it at a real rating through <see cref="Producing"/>; this
+        /// is for the ones where the block is only a place to put watts.
+        /// </para>
+        /// </summary>
+        public GridBuilder Wasting(float watts)
+        {
+            if (Last == null) return this;
+
+            float fraction = Last.Model.Thermal.ProducerWasteEnergy;
+            if (fraction <= 0f)
+            {
+                throw new InvalidOperationException(
+                    Last.Model.Name + " wastes none of what it produces, so it cannot be a source"
+                    + " of " + watts.ToString("n0") + " W — place a block that does");
+            }
+
+            Last.PowerProducedWatts = watts / fraction;
+            return this;
+        }
+
         public GridBuilder Consuming(float watts)
         {
             if (Last != null) Last.PowerConsumedWatts = watts;

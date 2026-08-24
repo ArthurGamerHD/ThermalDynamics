@@ -232,7 +232,7 @@ namespace Thermodynamics.Tests
             GridBuilder builder = GridBuilder.Large();
             List<Vector3I> cells = PipeFitter.RectangleXZ(Vector3I.Zero, 6, 5);
             PipeFitter.BuildRing(builder, cells, -1, sinks);
-            builder.Place(Catalog.Reactor(), cells[2] + Vector3I.Down).Producing(500000f);
+            builder.Place(Catalog.Reactor(), cells[2] + Vector3I.Down).Wasting(125000f);
 
             ThermalSimulation simulation = builder.BuildSimulation(Isolated(), 300f);
             CoolantLoop loop = simulation.Solver.Loops[0];
@@ -519,7 +519,7 @@ namespace Thermodynamics.Tests
             GridBuilder builder = GridBuilder.Large();
             List<Vector3I> cells = PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3);
             PipeFitter.BuildRing(builder, cells, -1, sinks);
-            builder.Place(Catalog.Reactor(), cells[2] + Vector3I.Down).Producing(300000f);
+            builder.Place(Catalog.Reactor(), cells[2] + Vector3I.Down).Wasting(75000f);
 
             ThermalSimulation simulation = builder.BuildSimulation(settings, 300f);
             CoolantLoop loop = simulation.Solver.Loops[0];
@@ -773,7 +773,7 @@ namespace Thermodynamics.Tests
             GridBuilder builder = GridBuilder.Large();
             List<Vector3I> cells = PipeFitter.RectangleXZ(Vector3I.Zero, 5, 5);
             PipeFitter.BuildRing(builder, cells, -1, sinks, reversed);
-            builder.Place(Catalog.Reactor(), cells[2] + Vector3I.Down).Producing(300000f);
+            builder.Place(Catalog.Reactor(), cells[2] + Vector3I.Down).Wasting(75000f);
 
             ThermalSimulation simulation = builder.BuildSimulation(Isolated(), 300f);
             simulation.StepExact(4000, Worlds.Shadow());
