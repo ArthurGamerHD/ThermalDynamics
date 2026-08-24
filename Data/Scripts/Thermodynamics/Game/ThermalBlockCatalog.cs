@@ -389,7 +389,7 @@ namespace Thermodynamics
             if (definition == null) return properties.Clamp();
 
             properties.CoolantMassPerPipe = definition.CoolantMassPerPipe;
-            properties.Conductivity = definition.Conductivity;
+            properties.HeatTransferCoefficient = definition.HeatTransferCoefficient;
             properties.SpecificHeat = definition.SpecificHeat;
             properties.PipeContactMultiplier = definition.PipeContactMultiplier;
             properties.SinkContactMultiplier = definition.SinkContactMultiplier;
