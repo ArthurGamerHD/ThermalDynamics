@@ -221,6 +221,16 @@ for:
 | 8 | 4.31× | 2.48× | 0.185 K | 12.012 K | 0.269 K |
 | 4 | 8.61× | 4.49× | 2.062 K | 325.232 K | 25.719 K |
 
+**And every figure in that table is a *block* figure.** The ladder is gentle because the two
+overshoot clamps bound each exchange at the energy that brings a pair to equilibrium. **The coolant
+path has no such clamp**, and it is also the stiffest thing on a plumbed grid: measured at the
+shipped `Frequency` and clock, a reactor with nine plain blocks demands **one** substep and is
+unmoved by any ceiling, and the same nine plumbed as a ring demand **nine**. Refusing that is
+orderly to about 4.5× — 21.9 K of ring spread against 28.7 K — and at 9× the ring reaches
+**1.7 × 10¹¹ K**. So a refused block approximates and a refused loop diverges, and the ladder above
+should not be read as describing a plumbed grid. Nothing shipped reaches it — 64 granted against a
+demand of nine — and it is [backlog.md](backlog.md) `A10`.
+
 **Three things to read out of it.**
 
 **The approximation is free to about twice over-subscribed**, and the knee is between 2× and 3×:
@@ -838,6 +848,7 @@ conductivity 50 is conduction-stiff, and a material definition would fix them ou
 
 | Date | Change |
 | --- | --- |
+| 2026-08-24 | Recorded that the refusal ladder is a *block* ladder. The coolant path has no overshoot clamp and is the stiffest thing on a plumbed grid, so refusing its demand is orderly to about 4.5× and reaches 1.7e11 K at 9× — a cliff where the block path has a slope ([backlog.md](backlog.md) `A10`). |
 | 2026-08-23 | **Measured the per-block cap in air, which is where it has most to reach** ([backlog.md](backlog.md) `C3`, `C19`). Demand is 34.44 there against 22.97 in vacuum, a cap of 6 reaches 6.6 % of blocks against 3.4 %, and it buys **4.2×** for 0.607 K on the worst-placed block and 0.007 K on the hottest. Also corrected two columns that were vacuum figures in an air run: the demand and the floored count are read after a step now, and the count comes from the solver rather than from a conduction-only sum that could not see convection. |
 | 2026-08-23 | **Measured what the *global* ceiling costs when it refuses a demand**, which nothing had — the page had a floor sweep and no ceiling sweep, and [backlog.md](backlog.md) `C19` was answering the question by naming the floor, which ships off. Added [What refusing the demand costs](#what-refusing-the-demand-costs) and `bench ceiling`: free to about 2× over-subscribed, breaking between 2× and 3×, and the shipped breach of 1.15× worth 0.028 K on the hottest block over 600 simulated seconds. The error follows the ratio rather than the substep count, measured at two step lengths, which is what lets a rig answer for a population. |
 | 2026-08-22 | Labelled the two cap tables by their step length alone, and named the shipped one. They were labelled by which settings profiles ran at each rate, and the profiles are gone; the shipped `Frequency` is 4, so the quarter-second table is now the one a default world reads. |

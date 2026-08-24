@@ -1201,7 +1201,8 @@ at 115 % of the cap to 41–73 % of it, so the difference between them is spent 
 which is the same shape as the vacuum cost column that started this, and the reason that column
 could not decide anything either.
 
-**So the route is conduction ×4 with `HeatTimeScale` 90.** It centres the window it exists to
+**So the route is conduction ×4 with `HeatTimeScale` 90, and it is a trade rather than a free
+win** — what it costs is below. It centres the window it exists to
 reach — 165.4 s in 120–300 — holds it on 76 % of resampled fleets against the waste route's best of
 37 %, recovers in 2,940 s against a 3,600 s bound, keeps `G1` at 0 %, `G2` at 100 % and `G5` at
 100 %, and is the cheapest of its band in the environment `G6` is decided in. Between it and ×4/100
@@ -1214,12 +1215,39 @@ rather than a correction — and the route it was blocking is the worse one on t
 Conduction ×4 departs from a pace that is already an admitted 2.4× the world's, which is what
 `ConductionScale` is for.
 
-**What shipping it costs, sized rather than estimated.** Setting `ConductionScale` to 9.6 and
-`HeatTimeScale` to 90 fails **52 of 1,826 tests** across 28 classes — coolant flow, census fidelity,
-thresholds, substep behaviour, conduction pace, the cooling ladder and both client sweeps — and
-every temperature figure in this repository is measured at the shipped pair. It also needs `G7`
-re-scored on the 705 prefabs, which is the stated compatibility floor and the one criterion measured
-on ships nobody chose. That is its own commit by `E11`, and it is [backlog.md](backlog.md) `C24`.
+**What shipping it costs, sized by attempting it, and the attempt is what the three levers turn out
+to mean.** Setting `ConductionScale` to 9.6 and `HeatTimeScale` to 90 fails **52 of 1,826 tests**
+across 28 classes. Reading them rather than counting them, most are figures that legitimately move
+with the pair — and four are the mod's own guidance failing, each in the words its own test uses:
+
+* *"a coolant sink bought 73.5 K and the best surface dial bought 135.3 K; the surface dials have
+  caught up and the guidance needs revisiting"* — a coolant sink stops out-performing every surface
+  dial, which is what [blocks.md](blocks.md) tells a player to build for.
+* *"thirty-two bolted radiators took 25.6 K off 890 K, which is more than a bolt joint should buy"* —
+  bolting starts working, and *plumb it, do not bolt it* is guidance this contradicts.
+* *"the census hull's stiffest block is 1.00 times stiffer in air than out of it … the hull has
+  stopped responding to the air"* — the stiffest fitting on a hull stops feeling the atmosphere.
+* *"a plain armour block bolted to the reactor saved 2.42 K; the control is meant to lose"* — the
+  control in the cooling ladder stops being a control.
+
+**So the cost column that called this route *three of the mod's levers* was not rhetorical**, and
+this page's own earlier sentence — that the provenance argument made the choice easy — understated
+it. The route is still the one the criterion selects, by 76 % against 37 %; what is now on the table
+is that it buys that by making conduction strong enough to blunt three of the design signals the mod
+is built around. **That is a trade to take deliberately or not at all**, and it is why `C24` is a
+separate row rather than a follow-up commit.
+
+Two more things it needs. Every temperature figure in this repository is measured at the shipped
+pair and moves with it. And `G7` — the stated compatibility floor, the one criterion measured on
+ships nobody chose to put in a corpus — has to be re-scored on the 705 prefabs; both changes point
+the right way for it, and *points the right way* is not a measurement.
+
+**The attempt also found a defect that has nothing to do with the retune.** The coolant path has no
+overshoot clamp, so where a refused substep demand *approximates* on a block it *diverges* on a
+loop — and a loop is the stiffest thing on a plumbed grid. It is [backlog.md](backlog.md) `A10`,
+nothing shipped reaches it, and it is recorded because
+[stiffness.md](stiffness.md#what-refusing-the-demand-costs)'s refusal ladder reads as though it
+described a whole grid.
 
 ### The 300 m/s constraint
 
@@ -1318,6 +1346,7 @@ five ways a full sweep dies, and [backlog.md](backlog.md) for what is still open
 
 | Date | Change |
 | --- | --- |
+| 2026-08-24 | Corrected this page's own account of `C12`'s choice, from the attempt at shipping it. The conduction route's *three levers* are four named behaviours — a coolant sink stops out-performing surface dials, bolting starts working, the stiffest fitting stops responding to air, and the cooling ladder's control stops losing — so the route is a trade taken deliberately rather than the easy choice the previous entry implied. |
 | 2026-08-24 | **Chose `C12`'s route, and the choice inverted on evidence the cost column could not carry.** Both routes reach `G8`'s window; resampled from the same population, conduction ×4 holds it on 76 % of fleets and waste ×0.5 on 33–37 %, because the censored median has a cliff at half the hulls crossing and the waste route sits two hulls from it. Priced the waste route in air for the first time — the two routes had been compared on a cost measured for one and projected for the other — and both take `G6` from 115 % of the cap to 41–73 %, so the cost decides nothing. The route is conduction ×4 with `HeatTimeScale` 90; shipping it is `C24`. |
 | 2026-08-23 | **The loop's fluid coupling is stated as a heat transfer coefficient** ([backlog.md](backlog.md) `C20`): 160 W/(m²·K), which is exactly what the old quality-against-a-reference came to on a large grid, so every cooling figure on this page still describes the loop it was measured on. What moves is small grids, where the old formula implied 800 W/(m²·K) for the same fluid because it divided by half a cell — a small-grid ring now couples a fifth as hard, worth 45.7 K on a four-by-four rig. |
 | 2026-08-23 | **Authored the mod's first selective surface and measured what it is worth** ([backlog.md](backlog.md) `C15`). The radiator absorbed sunlight at its emissivity because nothing declared otherwise; `SolarAbsorptivity 0.1` is what a second-surface mirror or white paint gives, and it is worth **10.9 K** to a sunlit stack and nothing in shadow. The finding beside it: raising emissivity alone would buy 1.9 K in sunlight, because a better emitter that is also a better absorber gives it back — the two changes are complementary, and the obvious one alone is nearly worthless in the sun. |
