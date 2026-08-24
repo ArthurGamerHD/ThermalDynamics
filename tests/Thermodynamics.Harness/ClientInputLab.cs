@@ -301,10 +301,10 @@ namespace Thermodynamics.Harness
             /// <summary>
             /// Sealed compartments the hull has, which the server's air was put into.
             ///
-            /// **Zero voids the two room columns the way a cold server voids the readout ones**
+            /// **Zero voids the two room rows the way a cold server voids the readout columns**
             /// (`E8`): a hull with no compartment cannot disagree about one. The lab raises rather
-            /// than reports when a room knob is turned on such a hull, and this is what the report
-            /// reads to say so for the rows that did not.
+            /// than reports when a room knob is turned on such a hull, and the report prints this
+            /// count in its header so a reader can see what those rows had to work with.
             /// </summary>
             public int Rooms;
 
@@ -1000,6 +1000,14 @@ namespace Thermodynamics.Harness
             text.AppendLine("Each input a client drives its own simulation from, degraded, with the");
             text.AppendLine("correction off and on.");
             text.AppendLine();
+
+            // The two room rows are worth what the hull's compartments are worth, so the count is
+            // printed rather than assumed: a hull with none cannot be asked about a room at all,
+            // and the lab raises rather than reaching this table with a zero (E8).
+            int compartments = results.Count > 0 ? results[0].Rooms : 0;
+            text.AppendLine("Sealed compartments on the hull, holding air on the server: "
+                + compartments.ToString("n0"));
+            text.AppendLine();
             text.AppendLine("degradation         fix      peak K   standing K   misreading    worst   B/s");
 
             int judged = 0;
@@ -1038,19 +1046,6 @@ namespace Thermodynamics.Harness
             text.AppendLine("nothing whatever it peaked at, and a wrong input settles somewhere and stays. worst");
             text.AppendLine("is the largest number of blocks the two put on opposite sides of critical at once.");
             text.AppendLine();
-            bool anyRooms = false;
-            for (int i = 0; i < results.Count; i++)
-            {
-                if (results[i].Rooms > 0) anyRooms = true;
-            }
-
-            if (!anyRooms)
-            {
-                text.AppendLine("**This hull has no sealed compartment**, so the two room rows judged nothing and");
-                text.AppendLine("the lab refuses to run them rather than printing a zero (E8).");
-                text.AppendLine();
-            }
-
             text.AppendLine("Every magnitude here is a knob this lab turns rather than a figure measured from a");
             text.AppendLine("session; what the table answers is which inputs bias, which perturb, and whether");
             text.AppendLine("the correction reaches each.");

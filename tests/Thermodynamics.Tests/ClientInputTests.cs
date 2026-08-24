@@ -722,6 +722,57 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// **The magnitude behind the map knob, pinned rather than asserted**: a hull whose room
+        /// pass has not landed believes its own skin is a quarter larger than it is.
+        ///
+        /// <para>
+        /// `RoomMap.IsExternal` answers *true* for any cell it has no room for, so on an empty map
+        /// every interior face has open air behind it and radiates and convects to the sky. On the
+        /// sweep's own 2,000-block census hull that is 17,762.5 m² against 14,012.5 m² — 26.8 %
+        /// more — and it comes straight back when the pass lands, which is what makes the knob a
+        /// perturbation rather than damage.
+        /// </para>
+        ///
+        /// <para>
+        /// The figure is here because the lab's `room map lag` row is worth exactly this and a
+        /// number living only in a comment drifts. `RoomMapCompletionTests` records the same
+        /// mechanism at the other end of the scale, where a pass that gave up left 95 % of a hull
+        /// exposed against 34 %.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void AHullWithNoRoomMapBelievesItsSkinIsAQuarterLarger()
+        {
+            ThermalSimulation hull = Hulls.Driven(Hulls.Uncapped(), 2000);
+
+            float mapped = ExposedArea(hull);
+            Assert.True(hull.Rooms.Map.RoomCount > 0,
+                "the census hull has no compartment, so there is no interior to lose");
+
+            hull.Solver.RefreshExposure(new RoomMap());
+            float unmapped = ExposedArea(hull);
+
+            output.WriteLine("exposed area: {0:n1} m2 mapped, {1:n1} m2 unmapped, {2:n3}x",
+                mapped, unmapped, unmapped / mapped);
+
+            Assert.True(unmapped / mapped > 1.2f && unmapped / mapped < 1.35f,
+                "an unmapped hull exposed " + (unmapped / mapped) + " times the area of a mapped"
+                + " one, which is not the quarter this knob is worth");
+
+            // And the pass landing puts it back exactly, which is the half that makes it decay.
+            hull.Solver.RefreshExposure(hull.Rooms.Map);
+            Assert.Equal(mapped, ExposedArea(hull), 3);
+        }
+
+        private static float ExposedArea(ThermalSimulation hull)
+        {
+            IList<ThermalNode> nodes = hull.Solver.Nodes;
+            float total = 0f;
+            for (int i = 0; i < nodes.Count; i++) total += nodes[i].ExposedArea;
+            return total;
+        }
+
+        /// <summary>
         /// **And a map that never lands is the bound, which is a bias and the worst standing input
         /// in the sweep** — ahead of the wrong switch `F20` crowned.
         ///

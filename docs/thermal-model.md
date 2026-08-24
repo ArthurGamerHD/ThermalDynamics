@@ -548,9 +548,25 @@ reading it. Three things can empty a room and each can veto air on its own:
 | `IMyCubeGrid.IsRoomAtPositionAirtight` | does the game call this room sealed | that room holds nothing |
 | `IMyAirVent.GetOxygenLevel`, or `Depressurize` | how full is it | that much, or nothing |
 
-**None of them can insist on air, only refuse it**, because the two mistakes are not equal: air is
-heat capacity, so a room wrongly given it warms and cools like a room with a tonne of gas in it and
-drags every bounding surface along, where a room wrongly denied it only loses a little inertia.
+**None of them can insist on air, only refuse it**: the game owns pressurisation (`C9`) and this
+model has no standing to overrule it, so an answer that says *no air* is taken and an absence of an
+answer is not read as *air*.
+
+**The reason once given for that was that the two mistakes are unequal, and measurement says they
+are unequal the other way round.** Air was described as heat capacity — a room wrongly given it
+dragging its walls along, a room wrongly denied it losing only a little inertia. It is not mainly
+capacity. A link's conductance is `RoomConvectionCoefficient × faces × cellFaceArea` and carries no
+pressure term at all, so pressure decides whether a compartment's walls are coupled and, above zero,
+nothing else. Measured on a 2,000-block census hull settled under load in vacuum: the hottest block
+runs at **1,502.83 K** at every pressure from 0.2 to 1.0 — identical to two decimals across a
+fivefold change in air mass — and at **1,706.08 K** with the air gone, while the hull *mean* moves
+3.8 K. Room air is a **mixer, not a sink**: it barely changes the hull's energy balance and moves
+its hot spot by 203 K, which is the number overheat damage is taken off. So a room wrongly denied
+air is the expensive mistake and a room wrongly given it is nearly free, and the veto chain lands on
+the expensive side of that. It stays, because `C9` and not the error cost is what justifies it;
+whether the *fallback* should deny on uncertainty is [backlog.md](../docs/backlog.md) `C22`.
+`RoomAirCouplingTests` pins the pressure-independence and `ClientInputTests` the discontinuity a
+client's disagreement about pressure produces.
 
 The game's sealing test is consulted rather than this model's own room map because the two disagree,
 and the game is right: it knows the real shape of a sloped or half block where the room mapper knows
@@ -669,6 +685,7 @@ several tests compare against it so the differences stay pinned rather than reme
 
 | Date | Change |
 | --- | --- |
+| 2026-08-24 | Corrected the reason given for the pressure veto chain. It was justified by air being heat capacity, so that denying air wrongly cost only a little inertia; measured, the link conductance carries no pressure term, so denying air removes the whole coupling and costs 203 K on the hottest block while every pressure above zero is identical to two decimals. The chain stays — `C9` justifies it — and whether the fallback should deny on uncertainty is now [backlog.md](backlog.md) `C22` ([backlog.md](backlog.md) `F21`). |
 | 2026-08-22 | Wrote down what a coolant pump costs, now that it costs anything: 50 kW on a large grid, derived from the loop's own mass flow against two bar of head, all of it becoming heat because a circulator does no work that leaves the system ([backlog.md](backlog.md) `C13`). |
 | 2026-08-22 | The convection wind factor runs from 1 upward rather than from 0.5 to 1. Forced convection adds to natural convection; the old floor made a wind under about 50 m/s a net warmer, because most of a closed hull's faces do not point into it ([backlog.md](backlog.md) `B29`). The two-to-one contrast between a windward face and a lee one is unchanged. |
 | 2026-08-22 | Radiation in and radiation out are two coefficients. Emission keeps the emissivity; the sun and point sources read `SolarAbsorptivity`, which follows the emissivity unless authored, so the grey-body behaviour is the default rather than the only option ([backlog.md](backlog.md) `B27`). |

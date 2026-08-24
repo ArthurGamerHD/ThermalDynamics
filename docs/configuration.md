@@ -527,7 +527,7 @@ will not move it much.
 | `SolarEnergy` | 1000 W/m² | Solar irradiance above the atmosphere. |
 | `FrictionAtSpeedsAbove` | 50 m/s | Relative airspeed at which aerodynamic heating starts. |
 | `FrictionScale` | 0.001 | Coefficient on the v³ friction term. |
-| `RoomConvectionCoefficient` | 8 W/(m²·K) | Coupling between a room's air and the surfaces facing it. Lower than the planetary figure because room air is still. |
+| `RoomConvectionCoefficient` | 8 W/(m²·K) | Coupling between a room's air and the surfaces facing it. Lower than the planetary figure because room air is still. **It carries no pressure term**, so a compartment at a fiftieth of an atmosphere couples its walls as hard as a full one and pressure decides only whether the coupling exists — see [thermal-model.md](thermal-model.md#room-air). |
 | `RoomAirDensity` | 1.225 kg/m³ | Air density in a fully pressurised room. |
 | `SolarOcclusionInterval` | 12 | Solver steps between solar occlusion raycasts. The raycast is the most expensive thing a grid does and the sun moves slowly. |
 
@@ -1022,6 +1022,7 @@ one with a migration risk — is late rather than first.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-24 | Recorded that `RoomConvectionCoefficient` carries no pressure term, so a room's pressure decides whether its walls are coupled and, above zero, nothing else ([backlog.md](backlog.md) `F21`). |
 | 2026-08-23 | **Priced `A9`'s unbuilt top rung**, which had been described and never measured: resolving the planet's shadow per face removes an error linear in hull length, about a two-hundredth of a kelvin a metre — 0.73 K on a 150 m hull against the 1.97 K the cadence already costs it, and 11.33 K on a 2,500 m one. Below 300 m the cadence is the larger half. Added the table to [External shadow](#external-shadow). |
 | 2026-08-23 | `HeatGlow` is the last 100 K before a block's own critical temperature, superseding the two entries below it. The colour is unchanged and still absolute. |
 | 2026-08-23 | `HeatGlow` is back to incandescence — brightness and colour both functions of temperature alone — and the rating-keyed form of the entry below is withdrawn. |
