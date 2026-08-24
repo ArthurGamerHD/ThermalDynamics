@@ -130,6 +130,24 @@ namespace Thermodynamics.Harness
             public float ThrustErrorShare;
 
             /// <summary>
+            /// How often the client's solar occlusion flag disagrees with the server's, and for how
+            /// long. **The one input that is a binary**, so it is not wrong by an amount — it is
+            /// wrong by the entire solar term at once.
+            ///
+            /// <para>
+            /// Occlusion is resolved by raycasting against voxels and neighbouring grids, on each
+            /// machine's own budget and interval, against world state a client holds differently. A
+            /// ship a client believes is in shade while the server has it in full sun is the
+            /// largest single-step input error available ([backlog.md](../../docs/backlog.md)
+            /// `F18`). Written as a period and a duration, as `hitching` is, because a client that
+            /// is permanently wrong is a bound rather than a description.
+            /// </para>
+            /// </summary>
+            public float OcclusionWrongEverySeconds;
+
+            public float OcclusionWrongForSeconds = 3f;
+
+            /// <summary>
             /// The client is running the shipped defaults while the server is not. **A bias, and
             /// the worst case of one that should not happen**: settings replicate, and a client
             /// fetches them on load, so this is what a fetch that never landed would look like.
@@ -423,8 +441,18 @@ namespace Thermodynamics.Harness
                 float angle = seconds * (float)(Math.PI / 600d);
                 if (onClient) angle += Degrees(how.SunAngleDegrees);
 
-                return Worlds.Space(new Vector3(
+                EnvironmentSample sunlit = Worlds.Space(new Vector3(
                     (float)Math.Cos(angle), (float)Math.Sin(angle), 0.2f));
+
+                if (onClient && Disagreeing(how, seconds))
+                {
+                    // The whole solar term, gone. Both fields, because the solver reads the share
+                    // and the flag is what the share being one means.
+                    sunlit.IsSolarOccluded = true;
+                    sunlit.SolarOcclusion = 1f;
+                }
+
+                return sunlit;
             }
 
             // A planet day, which drives ambient and sun together out of one number.
@@ -436,6 +464,23 @@ namespace Thermodynamics.Harness
             if (onClient) air = Math.Max(0f, Math.Min(1f, air - how.AirDensityError));
 
             return Worlds.PlanetSurface(air, timeOfDay);
+        }
+
+        /// <summary>
+        /// Whether the client's occlusion flag is on the wrong side at this moment.
+        ///
+        /// A period and a duration rather than a share, so the disagreement is a stretch the hull
+        /// can cool through and then recover from — which is what a raycast resolved on the wrong
+        /// tick looks like — rather than a flicker that averages out inside one step.
+        /// </summary>
+        private static bool Disagreeing(Degradation how, float seconds)
+        {
+            if (how.OcclusionWrongEverySeconds <= 0f) return false;
+            if (how.OcclusionWrongForSeconds <= 0f) return false;
+            if (seconds < 0f) seconds = 0f;
+
+            float into = seconds % how.OcclusionWrongEverySeconds;
+            return into < how.OcclusionWrongForSeconds;
         }
 
         private static float Degrees(float degrees)
@@ -558,6 +603,13 @@ namespace Thermodynamics.Harness
                 },
                 new Degradation
                 {
+                    Name = "wrong shadow",
+                    Because = "its own raycast puts the hull in shade for 3 s of every 30, in full sun",
+                    OcclusionWrongEverySeconds = 30f,
+                    OcclusionWrongForSeconds = 3f,
+                },
+                new Degradation
+                {
                     Name = "thinner air",
                     Because = "its gas system says the hull is in 20 % less air than the server's",
                     AirDensityError = 0.2f,
@@ -585,6 +637,11 @@ namespace Thermodynamics.Harness
                 if (one.EnvironmentLagSeconds > everything.EnvironmentLagSeconds) everything.EnvironmentLagSeconds = one.EnvironmentLagSeconds;
                 if (one.SunAngleDegrees > everything.SunAngleDegrees) everything.SunAngleDegrees = one.SunAngleDegrees;
                 if (one.ThrustErrorShare > everything.ThrustErrorShare) everything.ThrustErrorShare = one.ThrustErrorShare;
+                if (one.OcclusionWrongEverySeconds > 0f)
+                {
+                    everything.OcclusionWrongEverySeconds = one.OcclusionWrongEverySeconds;
+                    everything.OcclusionWrongForSeconds = one.OcclusionWrongForSeconds;
+                }
                 if (one.PowerLagSeconds > everything.PowerLagSeconds) everything.PowerLagSeconds = one.PowerLagSeconds;
                 if (one.PowerErrorShare > everything.PowerErrorShare) everything.PowerErrorShare = one.PowerErrorShare;
                 if (one.AirDensityError > everything.AirDensityError) everything.AirDensityError = one.AirDensityError;

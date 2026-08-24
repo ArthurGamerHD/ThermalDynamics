@@ -322,5 +322,75 @@ namespace Thermodynamics.Tests
         {
             return ClientInputLab.Measure(how, ClientDriftLab.Correction.None, "burn", 240f, 400);
         }
+
+        /// <summary>
+        /// **The one binary input, and it turns out to be a perturbation rather than a bias.**
+        ///
+        /// <para>
+        /// Solar occlusion is resolved by raycasting on each machine's own budget, so a client can
+        /// hold a hull in shade while the server has it in full sun — wrong by the entire solar
+        /// term at once rather than by an amount ([backlog.md](../../docs/backlog.md) `F18`). It is
+        /// the largest single-step input error available, and that is exactly what it turns out to
+        /// be: large while it lasts and gone afterwards, because the model is dissipative and the
+        /// disagreement ends.
+        /// </para>
+        ///
+        /// <para>
+        /// Which makes it the opposite of `thrust error`, whose peak and standing error are the
+        /// same number. The two together are what the standing column was added to tell apart.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void AWrongShadowPeaksHardAndThenDecays()
+        {
+            ClientInputLab.Result result = Run(new ClientInputLab.Degradation
+            {
+                Name = "wrong shadow",
+                OcclusionWrongEverySeconds = 30f,
+                OcclusionWrongForSeconds = 3f,
+            });
+
+            output.WriteLine("intermittent: peak {0:n1} K, standing {1:n1} K",
+                result.PeakKelvin, result.StandingKelvin);
+
+            // It has to bite at all, or the decay below is the decay of nothing (`E8`).
+            Assert.True(result.PeakKelvin > 2f,
+                "a wrong shadow peaked at only " + result.PeakKelvin + " K, so the knob reached"
+                + " nothing and this judges nothing");
+
+            Assert.True(result.StandingKelvin < result.PeakKelvin * 0.5f,
+                "it peaked at " + result.PeakKelvin + " K and settled at " + result.StandingKelvin
+                + " K, which is a bias rather than the perturbation this pins");
+        }
+
+        /// <summary>
+        /// **And permanently wrong is a bias, which is the bound rather than the description.** A
+        /// client whose raycast never agrees settles a long way out and stays there; that is what
+        /// says the intermittent row above decays because the disagreement ends and not because
+        /// the solar term is small.
+        /// </summary>
+        [Fact]
+        public void AClientPermanentlyInTheWrongShadowSettlesThereInstead()
+        {
+            ClientInputLab.Result always = Run(new ClientInputLab.Degradation
+            {
+                Name = "always in shade",
+
+                // Every second of every second: the flag never agrees.
+                OcclusionWrongEverySeconds = 1f,
+                OcclusionWrongForSeconds = 1f,
+            });
+
+            output.WriteLine("permanent: peak {0:n1} K, standing {1:n1} K",
+                always.PeakKelvin, always.StandingKelvin);
+
+            Assert.True(always.StandingKelvin > 2f,
+                "a client permanently in the wrong shadow settled " + always.StandingKelvin
+                + " K out, which is not a bias");
+
+            Assert.True(always.StandingKelvin > always.PeakKelvin * 0.5f,
+                "it peaked at " + always.PeakKelvin + " K and settled at " + always.StandingKelvin
+                + " K, which is a perturbation rather than the bias this pins");
+        }
     }
 }

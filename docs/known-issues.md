@@ -326,8 +326,8 @@ each — and the shape is what decides the protocol.
 
 The simulation reads its state from three places: an `EnvironmentSample` the client builds itself
 from the world around it, block state the adapter reads off the game's own blocks, and the room map
-it floods locally. Enumerated against the code rather than remembered, **the sweep covers nine
-inputs and leaves thirteen**:
+it floods locally. Enumerated against the code rather than remembered, **the sweep covers ten
+inputs and leaves twelve**:
 
 | input | read from | covered | |
 | --- | --- | --- | --- |
@@ -341,6 +341,15 @@ inputs and leaves thirteen**:
 | thrust | `block.CurrentThrust` | yes | `thrust error`, on the `burn` scenario — physics state, *predicted* on a client rather than replicated, and a separate heat term from electrical power |
 | **grid velocity and relative wind** | `EnvironmentSample.GridVelocity` | **no** | the classic multiplayer prediction error, and it drives convective cooling in atmosphere |
 
+**The binary input is the loudest per step and among the quietest in what it leaves behind.** A
+client whose raycast puts the hull in shade for three seconds of every thirty peaks **17.3 K** from
+the server and settles at **2.8 K**: wrong by the entire solar term while it lasts, and gone
+afterwards, because the model is dissipative and the disagreement ends. The 5-second correction
+barely touches it — 2.84 K to 2.83 K — since it decays on its own anyway. A client that is
+*permanently* on the wrong side is the bound rather than the description, and it is a bias: peak
+11.4 K against a standing 10.8 K on the smaller rig the tests use. Either way it is far behind
+`wrong settings` at 121 K or `power lag` at 41 K.
+
 **Thrust is the worst input in the sweep, and it is not close.** Compared at the same 5 % error on a
 flying hull, a wrong thrust settles the client **17.8 K** from the server against block power's
 **1.8 K** — an order of magnitude, on the term that is *also* the largest on a burning ship. And it
@@ -349,7 +358,7 @@ all, and the 5-second correction only halves it. A hull at rest shows none of it
 the knob reaches the thrust term and nothing else. The reason is in the table above — the engine
 predicts physics state rather than sending it, so a client's thrust is its own guess about a ship
 whose physics it is not running. `ClientInputTests` pins both halves.
-| **solar occlusion** | raycast against voxels and grids | **no** | a *binary* flag over the whole solar input, resolved against world state a client holds differently |
+| solar occlusion | raycast against voxels and grids | yes | `wrong shadow` — a *binary* flag over the whole solar input, resolved against world state a client holds differently |
 | **altitude, depth, latitude** | grid position | **no** | position lag on a *moving* ship, which is not the same as a lag on a stationary one |
 | **weather and its intensity** | the game's weather | **no** | server-driven world state |
 | **the ten wind fields** | terrain and the wind solver | **no** | shelter, burial and channelling are all voxel-derived |
@@ -784,6 +793,7 @@ counters rather than milliseconds so it holds on any machine.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | **Solar occlusion is in the sweep** ([backlog.md](backlog.md) `F18`), which completes the environment half of the input surface. It is the one binary input and behaves like one: intermittent disagreement peaks 17.3 K and settles at 2.8 K — a perturbation, where thrust is a bias — and a client permanently on the wrong side settles at 10.8 K, which is the solar term itself and the bound. |
 | 2026-08-23 | **Thrust is in the degraded-input sweep, and it is the worst input there is** ([backlog.md](backlog.md) `F17`). At the same 5 % error on a flying hull it settles a client 17.8 K out against block power's 1.8 K, and at 20 % its peak and standing error are the same 71.1 K — a bias that never decays, on the one input the engine predicts rather than replicates. The sweep needed a scenario that flies: a hull at rest makes the knob measure nothing. |
 | 2026-08-23 | Priced the per-grid planet shadow limit rather than leaving it argued: resolving the planet per face is worth about 0.0045 K a metre of hull on the worst-placed block, which is 0.73 K on a 150 m ship against a 1.47 K cadence floor it does not touch. The limit stays, with a figure. |
 | 2026-08-23 | **Built `B4`'s transport**, which was the half of that row no lab could reach. `ThermalGridSync` is the session it happens in; `HotTailMessage`, `HotTailSchedule` and `HotTailState` are the wire, the timing and the bookkeeping, all game-free and covered by `HotTailSyncTests`. The protocol is the one the measurement chose and nothing more: the whole hull once when a client asks, then the band every five seconds, no budget, empty bands unsent, on a secure channel of its own. Two settings ship with it, `EnableTemperatureSync` and `TemperatureSyncInterval`. What no test reaches is registration, addressing and the send, so `/thermal sync` prints counters on both sides instead. |
