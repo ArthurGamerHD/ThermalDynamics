@@ -178,12 +178,19 @@ rather than per-volume, so it is a different kind of problem from the ones above
 second at 128 B/block and it is the only row that still climbs with grid size, so on a large ship
 it is first.
 
-### 2. Drop the solver's node lookup dictionary — ~36 B/block
+### 2. ~~Drop the solver's node lookup dictionary~~ — **done**, 49 B/block
 
-`nodesByKey` is a `Dictionary<long, ThermalNode>` mapping a block to its node. `BlockInstance`
-could carry the node index directly, which removes the dictionary and makes every lookup an array
-index instead of a hash. The coupling it introduces is that a block belongs to one solver, which
-is already true.
+`nodesByKey` was a `Dictionary<long, ThermalNode>` mapping a block to its node; `BlockInstance`
+carries `NodeIndex` instead, so every lookup is an array index rather than a hash. **Measured on a
+20,000-block ship, the solver row fell from 524 to 475 bytes a block** and the whole retained set
+from 1,097 to 1,048 — 49 B/block against the 36 estimated here, which is the dictionary's bucket
+and entry arrays rather than its entries alone.
+
+The coupling it introduces is that a block belongs to one solver, which was already true — and
+where it is not, the index is checked rather than trusted: a reader confirms the node it lands on is
+that block's, so an index left behind by a second solver resolves to *no node* exactly as a
+dictionary miss did. `NodeIndexTests` pins the whole of that against the dictionary rebuilt as an
+oracle, through both of the removal paths that move a node between slots.
 
 ### 3. Pack the per-node face data — ~70 B/block
 
@@ -271,6 +278,7 @@ counted per cell, which is §8 and §9.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | **§2 is done and it was worth more than it was estimated at.** The solver's node dictionary is gone and the block carries the index: 524 → **475 bytes a block** on the solver row, 1,097 → 1,048 retained, measured on a 20,000-block ship rather than counted. [backlog.md](backlog.md) `E1`. |
 | 2026-08-22 | Put the five completed changes in the present tense — each is a structure the code has, not a thing that was done — and moved the fifth up beside the other four instead of leaving it struck through in the list of what is still worth doing. |
 | 2026-08-22 | Added the standard header and this change log. |
 | 2026-08-21 | Held a room's cells in a list, and dropped a grid's second index on the key it already had — 34 B/block and 38 B/block back respectively. Corrected a page measured on a hull that no longer exists. |

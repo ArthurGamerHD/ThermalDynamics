@@ -47,6 +47,26 @@ namespace Thermodynamics.Core
         /// <summary>Stable key: the flattened <see cref="Position"/>.</summary>
         public long Key;
 
+        /// <summary>
+        /// Where this block's node sits in the solver's node list, or -1 when it has none.
+        ///
+        /// <para>
+        /// **The block carries the index instead of the solver carrying a dictionary.** A
+        /// `Dictionary&lt;long, ThermalNode&gt;` from key to node cost about 36 bytes a block for an
+        /// answer the block can hold in four ([backlog.md](../../../../docs/backlog.md) `E1`), and
+        /// every lookup was a hash where it is now an array index.
+        /// </para>
+        ///
+        /// <para>
+        /// **It is a hint, not an authority.** One instance belongs to one grid, but nothing stops
+        /// a caller registering the same instance with a second solver, and the second registration
+        /// would overwrite what the first wrote here. So every reader checks that the node it lands
+        /// on is this block's before believing it — a stale index resolves to *no node*, which is
+        /// what a dictionary miss did.
+        /// </para>
+        /// </summary>
+        public int NodeIndex = -1;
+
         private int[] gridSurfaces;
         private int[] gridStructuralSurfaces;
         private Vector3I[] gridCells;

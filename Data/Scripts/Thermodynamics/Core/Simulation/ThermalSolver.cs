@@ -42,7 +42,6 @@ namespace Thermodynamics.Core
         private readonly SurfaceMap surfaces;
 
         private readonly List<ThermalNode> nodes = new List<ThermalNode>();
-        private readonly Dictionary<long, ThermalNode> nodesByKey = new Dictionary<long, ThermalNode>();
         private readonly List<ThermalLink> links = new List<ThermalLink>();
         private readonly List<CoolantLoop> loops = new List<CoolantLoop>();
         private readonly List<RoomAirNode> roomAir = new List<RoomAirNode>();
@@ -523,12 +522,14 @@ namespace Thermodynamics.Core
         {
             if (block == null) throw new ArgumentNullException("block");
             if (block.Thermal.ExcludeFromSimulation) return null;
-            if (nodesByKey.ContainsKey(block.Key)) return nodesByKey[block.Key];
+
+            ThermalNode existing = GetNode(block);
+            if (existing != null) return existing;
 
             ThermalNode node = new ThermalNode(block, grid.GridSize, initialTemperature, settings.HeatTimeScale);
             node.Index = nodes.Count;
             nodes.Add(node);
-            nodesByKey[block.Key] = node;
+            block.NodeIndex = node.Index;
 
             // Appending moves no existing index and invalidates no existing link, so the node is
             // queued for incremental linking rather than dirtying the whole graph.
@@ -545,14 +546,14 @@ namespace Thermodynamics.Core
         {
             if (block == null) return false;
 
-            ThermalNode node;
-            if (!nodesByKey.TryGetValue(block.Key, out node)) return false;
+            ThermalNode node = GetNode(block);
+            if (node == null) return false;
 
             // A removal moves another node into the hole, so a step in flight would be summing
             // watts against indices that no longer refer to the same blocks.
             AbandonStep();
 
-            nodesByKey.Remove(block.Key);
+            block.NodeIndex = -1;
 
             // A node still waiting to be linked has no links and no chain entry, so it is dropped
             // from the queue rather than routed through the incremental removal path.
@@ -570,6 +571,7 @@ namespace Thermodynamics.Core
                 for (int i = node.Index; i < nodes.Count; i++)
                 {
                     nodes[i].Index = i;
+                    nodes[i].Block.NodeIndex = i;
                 }
                 resyncAll = true;
             }
@@ -598,8 +600,8 @@ namespace Thermodynamics.Core
         {
             if (block == null) return false;
 
-            ThermalNode node;
-            if (!nodesByKey.TryGetValue(block.Key, out node)) return false;
+            ThermalNode node = GetNode(block);
+            if (node == null) return false;
 
             // A full rebuild is already due, or the node has never been linked: either way the
             // links this would unpick do not exist yet.
@@ -640,11 +642,23 @@ namespace Thermodynamics.Core
             node.RefreshExposure();
         }
 
+        /// <summary>
+        /// This block's node, or null where it has none in *this* solver.
+        ///
+        /// The index lives on the block rather than in a dictionary here (`E1`), and it is checked
+        /// rather than trusted: an index left behind by another solver, or by a rebuild that moved
+        /// the node, resolves to null exactly as a dictionary miss did. See
+        /// <see cref="BlockInstance.NodeIndex"/>.
+        /// </summary>
         public ThermalNode GetNode(BlockInstance block)
         {
             if (block == null) return null;
-            ThermalNode node;
-            return nodesByKey.TryGetValue(block.Key, out node) ? node : null;
+
+            int index = block.NodeIndex;
+            if (index < 0 || index >= nodes.Count) return null;
+
+            ThermalNode node = nodes[index];
+            return node != null && ReferenceEquals(node.Block, block) ? node : null;
         }
 
         public ThermalNode GetNodeAt(Vector3I cell)
