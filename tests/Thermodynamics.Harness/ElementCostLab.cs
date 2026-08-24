@@ -206,7 +206,7 @@ namespace Thermodynamics.Harness
             faces = 0;
             for (int i = 0; i < nodes.Count; i++)
             {
-                for (int f = 0; f < Face.Count; f++) faces += nodes[i].ExposedFaces[f];
+                for (int f = 0; f < Face.Count; f++) faces += nodes[i].GetExposedFaces(f);
             }
 
             EnvironmentSample sample = environment

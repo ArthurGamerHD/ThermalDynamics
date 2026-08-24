@@ -192,12 +192,23 @@ that block's, so an index left behind by a second solver resolves to *no node* e
 dictionary miss did. `NodeIndexTests` pins the whole of that against the dictionary rebuilt as an
 oracle, through both of the removal paths that move a node between slots.
 
-### 3. Pack the per-node face data — ~70 B/block
+### 3. Pack the per-node face data — **the counts are done**, 48 B/block; ~48 left
 
-Each node keeps `ExposedFaces` as an `int[6]` — 48 bytes with its header and reference, to hold six
-small counts — and the solver mirrors six floats of face weights and six of sun-lit fraction beside
-it. The counts fit in one packed `int`, the weights are derivable from them, and the sun-lit array
-is only meaningful when self-shadowing is switched on.
+`ExposedFaces` was an `int[6]` on every node: 48 bytes of header and reference to hold 24 bytes of
+payload. It is one packed `long` now, ten bits a face — 1,023 against a real worst case of about a
+hundred, since the widest vanilla block is ten cells across — read and written through
+`GetExposedFaces` and `SetExposedFaces`. **Measured on a 20,000-block ship the solver row fell from
+475 to 427 bytes a block**, which is the array header and reference exactly. A count past the
+packing is clamped rather than wrapped, because wrapping would turn a fully exposed face into a bare
+one and a block that stops radiating looks like physics; `FacePackingTests` pins that and the
+round-trip.
+
+**The other two halves are not done, and they are a different kind of trade.** The solver mirrors
+six floats of face weight and six of sun-lit fraction per node in flat arrays — 24 bytes each, with
+no per-node header to save. The weights are derivable from the counts, but only by putting a divide
+back into the hot loop the flat arrays exist to feed; the sun-lit array is meaningful only when
+`SolarSelfShadowing` is on, which is the shipped default, so allocating it lazily buys nothing for
+most worlds. Both are a cost measurement rather than a packing job (`D7`).
 
 ### 4. Rooms as one cell array with per-room ranges — **half done**; ~9 MB at 126k left
 
@@ -278,6 +289,7 @@ counted per cell, which is §8 and §9.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | **§3's counts are packed**: `ExposedFaces` is one `long` rather than an `int[6]`, and the solver row falls 475 → **427 bytes a block** on a 20,000-block ship — the array's header and reference exactly. With §2 the same row is 524 → 427 and the whole retained set 1,097 → 1,000. [backlog.md](backlog.md) `E2`. |
 | 2026-08-23 | **§2 is done and it was worth more than it was estimated at.** The solver's node dictionary is gone and the block carries the index: 524 → **475 bytes a block** on the solver row, 1,097 → 1,048 retained, measured on a 20,000-block ship rather than counted. [backlog.md](backlog.md) `E1`. |
 | 2026-08-22 | Put the five completed changes in the present tense — each is a structure the code has, not a thing that was done — and moved the fifth up beside the other four instead of leaving it struck through in the list of what is still worth doing. |
 | 2026-08-22 | Added the standard header and this change log. |

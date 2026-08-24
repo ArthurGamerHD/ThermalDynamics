@@ -637,7 +637,7 @@ namespace Thermodynamics.Core
             surfaces.GetExposedFaces(block, rooms, exposureScratch);
             for (int f = 0; f < Face.Count; f++)
             {
-                node.ExposedFaces[f] = exposureScratch[f];
+                node.SetExposedFaces(f, exposureScratch[f]);
             }
             node.RefreshExposure();
         }
@@ -1080,7 +1080,7 @@ namespace Thermodynamics.Core
                 surfaces.GetExposedFaces(node.Block, exposureMap, exposureScratch);
                 for (int f = 0; f < Face.Count; f++)
                 {
-                    node.ExposedFaces[f] = exposureScratch[f];
+                    node.SetExposedFaces(f, exposureScratch[f]);
                 }
                 node.RefreshExposure();
             }
@@ -1137,7 +1137,7 @@ namespace Thermodynamics.Core
                 surfaces.GetExposedFaces(block, rooms, exposureScratch);
                 for (int f = 0; f < Face.Count; f++)
                 {
-                    node.ExposedFaces[f] = exposureScratch[f];
+                    node.SetExposedFaces(f, exposureScratch[f]);
                 }
                 node.RefreshExposure();
             }
@@ -1600,7 +1600,7 @@ namespace Thermodynamics.Core
                 float inverse = 1f / total;
                 for (int f = 0; f < Face.Count; f++)
                 {
-                    nodeFaceWeights[b + f] = node.ExposedFaces[f] * inverse;
+                    nodeFaceWeights[b + f] = node.GetExposedFaces(f) * inverse;
                 }
             }
         }

@@ -309,8 +309,8 @@ namespace Thermodynamics.Tests
             int[] expected = new int[Face.Count];
             for (int f = 0; f < Face.Count; f++)
             {
-                expected[f] = node.ExposedFaces[f];
-                node.ExposedFaces[f] = 0;
+                expected[f] = node.GetExposedFaces(f);
+                node.SetExposedFaces(f, 0);
             }
             node.RefreshExposure();
             Assert.Equal(0f, node.ExposedArea);
@@ -321,7 +321,7 @@ namespace Thermodynamics.Tests
             // map has just been rebuilt underneath it.
             for (int f = 0; f < Face.Count; f++)
             {
-                Assert.Equal(expected[f], node.ExposedFaces[f]);
+                Assert.Equal(expected[f], node.GetExposedFaces(f));
             }
             Assert.True(node.ExposedArea > 0f);
         }

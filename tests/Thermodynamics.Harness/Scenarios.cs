@@ -330,7 +330,7 @@ namespace Thermodynamics.Harness
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
             for (int i = 0; i < nodes.Count; i++)
             {
-                int cells = nodes[i].ExposedFaces[face];
+                int cells = nodes[i].GetExposedFaces(face);
                 if (cells == 0) continue;
 
                 exposed += cells;
