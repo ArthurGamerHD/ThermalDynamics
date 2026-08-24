@@ -72,9 +72,18 @@ namespace Thermodynamics.Tests
         /// <summary>
         /// The headline. A bolted radiator is not a cooling solution and the table has to keep
         /// saying so, because it is the claim two pages of documentation rest on.
+        ///
+        /// <para>
+        /// **The figure moved with `C24` and the claim did not.** This asked for under one per
+        /// cent, measured at 0.5 % when the conduction pace was 2.4; at the 9.6 that ships, a bolt
+        /// joint carries four times what it did and thirty-two radiators take **25.6 K off 890 K**,
+        /// which is 2.9 %. A reactor cooled by 2.9 % is a reactor that is still going to lose
+        /// itself, so what the page rests on is unchanged — but the bound is now three per cent and
+        /// says why, rather than reading as though nothing had moved (`E11`).
+        /// </para>
         /// </summary>
         [Fact]
-        public void BoltingTheRadiatorToAReactorSavesUnderOnePercentOfIt()
+        public void BoltingTheRadiatorToAReactorSavesAFewPercentOfIt()
         {
             if (!GameBlocks.IsInstalled) return;
 
@@ -89,7 +98,7 @@ namespace Thermodynamics.Tests
             }
 
             Assert.True(best > 0f, "bolting radiators to the reactor did not cool it at all");
-            Assert.True(best < bare * 0.01f,
+            Assert.True(best < bare * 0.03f,
                 "thirty-two bolted radiators took " + best.ToString("n1") + " K off "
                 + bare.ToString("n0") + " K, which is more than a bolt joint should buy; if this is"
                 + " real then blocks.md's 'plumb it, do not bolt it' needs rewriting");
@@ -117,22 +126,47 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// Some blocks make it worse, and that is a real result rather than a rig fault: a block
-        /// bolted to a face is a face that was radiating to the sky and now radiates into a
-        /// neighbour. The armour control is the one that shows it most plainly.
+        /// **The control stopped losing, and that is `C24` rather than a rig fault.**
+        ///
+        /// <para>
+        /// A block bolted to a face is a face that was radiating to the sky and now radiates into a
+        /// neighbour, and at the conduction pace the conversion calibrated to that trade was a net
+        /// loss for plain armour: the control lost, which is what made it a control. At four times
+        /// that pace the joint carries more heat out of the reactor than the buried face was
+        /// shedding, so a plain armour block bolted on now *saves* **2.42 K of 890 K**.
+        /// </para>
+        ///
+        /// <para>
+        /// **What the ladder is for survives it**, and that is what this now asserts: the block
+        /// with no surface advantage is worth a fraction of the one built to have it — 2.42 K
+        /// against a radiator's 20.9 K on the same mounting, which is the eight-to-one that says
+        /// area is what a cooler is for. A control that has stopped losing is worth keeping while
+        /// it still loses to everything with a surface, and worth removing when it does not.
+        /// </para>
         /// </summary>
         [Fact]
-        public void ABlockWithNoSurfaceAdvantageMakesTheReactorHotter()
+        public void TheBlockWithNoSurfaceAdvantageIsWorthAFractionOfOneBuiltForIt()
         {
             if (!GameBlocks.IsInstalled) return;
 
             float bare;
             List<CoolingLadder.Row> armour = Of("LargeBlockArmorBlock", out bare);
-            Assert.NotEmpty(armour);
+            List<CoolingLadder.Row> radiator = Of("Gauge_LG_Radiator", out bare);
 
-            Assert.True(armour[0].Saved < 0f,
+            Assert.NotEmpty(armour);
+            Assert.NotEmpty(radiator);
+
+            // Measured 2026-08-24: +2.42 K for armour against +20.90 K for the radiator, one of
+            // each, on the same face of the same reactor.
+            Assert.True(armour[0].Saved < radiator[0].Saved * 0.25f,
                 "a plain armour block bolted to the reactor saved " + armour[0].Saved.ToString("n2")
-                + " K; the control is meant to lose, since it buries a face that was radiating");
+                + " K against a radiator's " + radiator[0].Saved.ToString("n2")
+                + " K, so the block built to shed heat is no longer worth building");
+
+            // And it is small in its own right rather than only small beside a radiator.
+            Assert.True(armour[0].Saved < bare * 0.005f,
+                "a plain armour block took " + armour[0].Saved.ToString("n2") + " K off "
+                + bare.ToString("n0") + " K, which is a cooling solution made of hull");
         }
 
         /// <summary>

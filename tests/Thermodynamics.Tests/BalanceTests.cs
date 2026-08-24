@@ -291,31 +291,99 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// **A coolant sink face is the stiffest way to move heat into a panel, by a long way.**
+        /// **Plumbing a panel is worth more than any single surface dial a definition author would
+        /// reach for first, and it takes four times the area to beat it.**
         ///
-        /// This is the finding the whole balance pass turns on. A bolt joint between a source and
-        /// the shipped radiator carries about 167 W/K; a sink face carries about 1,000 W/K, and on
-        /// the same load that difference is worth more kelvin than every surface property of the
-        /// block put together. It is why the answer to "the radiator is not shedding enough" is
-        /// plumbing rather than a bigger area scaler.
+        /// <para>
+        /// **This claim was stronger and `C24` weakened it, measurably.** A sink face carries about
+        /// 1,000 W/K whatever the conduction pace is, because it is a fluid against a wall; a bolt
+        /// joint is solid conduction and scales with `ConductionScale`, so at the pace that now
+        /// ships it carries **1,168 W/K** where it used to carry a fraction of the sink's. The
+        /// asserted margin was *twice the best surface dial*: measured then, plumbing beat
+        /// everything the definitions could do to the panel's surface. Measured now, plumbing is
+        /// worth 73.5 K, doubling the area 48.7 K and lifting emissivity to 0.8 57.7 K — but
+        /// quadrupling the area is worth 94.1 K and eight times is worth 135.3 K, so the sweep's
+        /// top rungs have passed it. `TheBoltJointConductsAsHardAsASinkFace` pins the mechanism.
+        /// </para>
+        ///
+        /// <para>
+        /// **What this does not say is that bolting has caught up with plumbing.** The shipped row
+        /// this table is read against *is* a bolted panel, and plumbing the same panel on the same
+        /// load is worth 73.5 K over it: a joint carries heat one block and a loop carries it
+        /// wherever the ring goes. What has changed is a *tuning* answer — "the radiator is not
+        /// shedding enough" can now be answered with area as well as with plumbing — and the
+        /// player-facing guidance in [blocks.md](../../docs/blocks.md) is unmoved.
+        /// </para>
         /// </summary>
         [Fact]
-        public void ACoolantSinkOutPerformsEverySurfaceDial()
+        public void PlumbingAPanelBeatsEveryDialButAMultipliedArea()
         {
             List<BalanceLab.SensitivityRow> rows = BalanceLab.Sensitivity();
 
             BalanceLab.SensitivityRow coolant = rows.First(r => r.Dial == "coolant sink");
-            float bestSurface = rows
-                .Where(r => r.Dial == "ExposedSurfaceMultiplier" || r.Dial == "Emissivity")
-                .Max(r => r.KelvinVersusShipped);
 
-            Assert.True(coolant.KelvinVersusShipped > bestSurface * 2f,
-                "a coolant sink bought " + coolant.KelvinVersusShipped
-                + " K and the best surface dial bought " + bestSurface
-                + " K; the surface dials have caught up and the guidance needs revisiting");
+            Assert.True(coolant.KelvinVersusShipped > 0f,
+                "plumbing the panel rather than bolting it bought " + coolant.KelvinVersusShipped
+                + " K, so the loop has stopped being the better way to feed a panel and"
+                + " blocks.md's 'plumb it, do not bolt it' needs rewriting");
+
+            float emissivity = rows.First(r => r.Dial == "Emissivity").KelvinVersusShipped;
+            Assert.True(coolant.KelvinVersusShipped > emissivity,
+                "a coolant sink bought " + coolant.KelvinVersusShipped + " K against emissivity's "
+                + emissivity + " K");
+
+            // The area sweep's rungs, in order. Plumbing has to beat the first of them and is
+            // allowed to lose to a multiplied area — which is the part C24 moved.
+            List<BalanceLab.SensitivityRow> area = rows
+                .Where(r => r.Dial == "ExposedSurfaceMultiplier")
+                .OrderBy(r => r.KelvinVersusShipped)
+                .ToList();
+
+            Assert.True(area.Count >= 3, "the area sweep lost its rows");
+            Assert.True(coolant.KelvinVersusShipped > area[0].KelvinVersusShipped,
+                "doubling the panel's area bought " + area[0].KelvinVersusShipped
+                + " K against plumbing it at " + coolant.KelvinVersusShipped
+                + " K, so the cheapest surface dial has passed the loop");
 
             Assert.True(coolant.JointWattsPerKelvin > 500f,
                 "a sink face now couples at only " + coolant.JointWattsPerKelvin + " W/K");
+        }
+
+        /// <summary>
+        /// **A bolt joint now conducts as hard as a sink face, and that is the mechanism behind
+        /// every guidance figure `C24` moved.**
+        ///
+        /// <para>
+        /// The sink face is a fluid against a wall — a convection coefficient times an area, which
+        /// no clock or conduction pace touches. A bolt joint is solid conduction, so it is
+        /// multiplied by `ConductionScale`, and at the 9.6 that ships it carries more W/K than the
+        /// sink does. The mod's own design statement — a sink face at 1,000 W/K against a bolt
+        /// joint's 167 — was written at a pace where the ratio was six to one.
+        /// </para>
+        ///
+        /// <para>
+        /// Pinned rather than fixed. Whether the loop's coupling should be paced with conduction is
+        /// a balance decision with its own evidence to collect, and it is
+        /// [backlog.md](../../docs/backlog.md) `C25`; what this test refuses is for the ratio to
+        /// move again without anybody noticing.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheBoltJointConductsAsHardAsASinkFace()
+        {
+            List<BalanceLab.SensitivityRow> rows = BalanceLab.Sensitivity();
+
+            BalanceLab.SensitivityRow bolted = rows.First(r => r.Dial == "(shipped)");
+            BalanceLab.SensitivityRow coolant = rows.First(r => r.Dial == "coolant sink");
+
+            // Measured 2026-08-24: 1,168 W/K bolted against 1,000 W/K plumbed.
+            Assert.InRange(bolted.JointWattsPerKelvin / coolant.JointWattsPerKelvin, 0.8f, 1.5f);
+
+            // And the joint is solid conduction, which is why: it is the pace that moved it, not
+            // the block. At the 2.4 the conversion calibrated to it carried a quarter of this.
+            Assert.InRange(
+                bolted.JointWattsPerKelvin * (2.4f / ThermalConstants.ConductionScale),
+                200f, 400f);
         }
 
         /// <summary>
