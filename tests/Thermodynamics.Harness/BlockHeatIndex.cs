@@ -27,9 +27,11 @@ namespace Thermodynamics.Harness
         ///
         /// Every seconds-to-critical here is proportional to it, so a world running another value
         /// scales them by the ratio. It is named rather than read from a settings instance because
-        /// this class is a property of the definitions and must not depend on a session.
+        /// this class is a property of the definitions and must not depend on a session — and it
+        /// was 225 until `C24` moved the default to 90, which multiplies every one of those
+        /// seconds by two and a half.
         /// </summary>
-        public const float PaceHeatTimeScale = 225f;
+        public const float PaceHeatTimeScale = 90f;
 
         private static readonly float NeighbourConductivity =
             BlockMaterials.Steel.Conductivity * ThermalConstants.ConductionScale;

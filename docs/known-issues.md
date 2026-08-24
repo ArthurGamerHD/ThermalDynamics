@@ -954,7 +954,7 @@ The budget now counts `links + 4 × nodes` and ignores faces, four being the low
 the sizes where the bound binds at all.
 
 What this retires is the claim that only grids past a hundred thousand blocks reach the default. A
-step's cost is size times stiffness, and `TheShippedAllowanceFitsThisGridAndAHalvedOneDoesNot` pins
+step's cost is size times stiffness, and `TheShippedAllowanceFitsAGridAndAHalvedOneDoesNot` pins
 both halves on one 8,904-node rig: counting links alone, its 20,779 links bought 48 substeps against
 a demand of 23, so the budget did nothing at all; counting nodes as well, one substep over that rig
 costs 56,395 element visits. **Whether the allowance binds is a question about the step rate rather

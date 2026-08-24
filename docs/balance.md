@@ -565,7 +565,7 @@ what restoring their authored intent would cost:
 past its rating is six and a half seconds, which is the failure `C11` was opened for and `G5`
 forbids. This is recomputed rather than scaled, because the dial is not a square root: a block that
 settles just over its limit grinds down at a constant rate, so the slow end loses 6.8× where the
-fast end loses 3.1×. Pinned by `TheAuthoredDamageRuleWouldPutTheWholeEventInsideTenSeconds`.
+fast end loses 3.1×. Pinned by `TheAuthoredDamageRuleWouldPutTheWholeEventInsideAboutTenSeconds`.
 
 The per-block-type counterpart is [`BlockHeatIndex.SecondsFromCriticalToLoss`](../tests/Thermodynamics.Harness/BlockHeatIndex.cs),
 which integrates the same damage rule against a block's own hit points with the block alone in the

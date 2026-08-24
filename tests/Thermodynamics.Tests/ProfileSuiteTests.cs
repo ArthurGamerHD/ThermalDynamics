@@ -238,10 +238,18 @@ namespace Thermodynamics.Tests
                 + " reported as");
 
             // Still far too hot to be a ship, and that is the rig rather than the solver: it exists
-            // to raise a damage event on every step. The threshold column says so; the divergence
-            // column no longer does.
-            Assert.True(peak > ProfileSweep.DivergenceKelvin,
+            // to raise a damage event on every step.
+            //
+            // **It no longer passes the divergence marker, and that is `C24`.** The hottest block
+            // has one way out and it is conduction, so four times the conduction pace divides its
+            // excess over its neighbours by four: 11,279 K became **4,148 K**, under the 10,000 K
+            // the sweep marks a cell diverged at. The rig is asserted as absurd against a real
+            // ship rather than against that marker, which was never what made it absurd.
+            Assert.True(peak > 2000f,
                 "the burning rig is expected to be absurd: " + peak.ToString("n0") + " K");
+            Assert.True(peak < ProfileSweep.DivergenceKelvin,
+                "the burning rig is past the divergence marker again at " + peak.ToString("n0")
+                + " K, so the sweep will report it as a divergence and the note above is stale");
 
             // Energy in equals energy out. A converged state conserves and a divergent one does
             // not, so this is the claim that does not depend on watching it for long enough.
@@ -297,7 +305,12 @@ namespace Thermodynamics.Tests
             Assert.True(hottest.HeatGenerationWatts > 0f,
                 "and it is making the heat itself rather than receiving it");
 
-            Assert.True(exposedPeak < hottest.Temperature / 3f,
+            // **The gap is 1.8x where it was 4x, and the reason is the same one number.** A buried
+            // block's temperature is whatever gradient pushes its own watts down its only path, so
+            // its excess over the hull around it falls with the conduction pace: 2,822 K against
+            // 11,279 K became 2,324 K against 4,148 K. Still nowhere near, and no longer a factor
+            // of four.
+            Assert.True(exposedPeak < hottest.Temperature / 1.5f,
                 "a block that can radiate should be nowhere near it: " + exposedPeak.ToString("n0")
                 + " K against " + hottest.Temperature.ToString("n0") + " K");
         }

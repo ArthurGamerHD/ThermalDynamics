@@ -209,8 +209,13 @@ namespace Thermodynamics.Tests
             ThermalSettings settings = new ThermalSettings();
             settings.Derive();
 
+            // **A rate in simulated seconds, so it moves with the clock.** One lit face gains
+            // 0.36 K a second at the 90 `C24` ships and gained 0.91 K at 225, because a simulated
+            // second is two and a half times less thermal time. Every figure below it is seconds
+            // of sunlight times this, so the whole ladder scales with it — which is why the rung's
+            // worth is quoted per metre of hull rather than in kelvin.
             double perSecond = OcclusionLadderLab.KelvinPerLitSecond(settings);
-            Assert.InRange(perSecond, 0.5d, 1.5d);
+            Assert.InRange(perSecond, 0.2d, 0.6d);
 
             double[] lengths = { 150d, 600d, 2500d };
             List<OcclusionLadderLab.Extremity> rows = OcclusionLadderLab.Extremities(
@@ -227,7 +232,10 @@ namespace Thermodynamics.Tests
                     rows[i].LengthMetres, worst, perMetre);
 
                 // The rate is the finding, and it holds across a factor of sixteen in length.
-                Assert.InRange(perMetre, 0.0035d, 0.0055d);
+                // 0.0018 K a metre at the shipped clock, where it was 0.0045 at 225 — the same
+                // geometry costing 0.4 of the kelvin, since a slower clock covers less thermal
+                // ground in the seconds a hull is told the wrong thing about.
+                Assert.InRange(perMetre, 0.0014d, 0.0022d);
             }
 
             // An ordinary ship is a fraction of a kelvin, which is the reason the rung is not built.
