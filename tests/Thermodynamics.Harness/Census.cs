@@ -289,11 +289,36 @@ namespace Thermodynamics.Harness
             return Tiers.Length - 1;
         }
 
-        /// <summary>True when the block at <paramref name="index"/> is a heat producer.</summary>
+        /// <summary>
+        /// True when the block at <paramref name="index"/> is a heat producer.
+        ///
+        /// **This is the placement rule and not the identity.** It says which *cell* of a hull
+        /// being laid out gets a producer; what a node in a built hull is, is
+        /// <see cref="IsProducer(ThermalNode)"/>. The two agree on a hull built in the order it was
+        /// laid out, which is every hull here bar one — and `CensusTests` pins that they do, so the
+        /// pair cannot drift.
+        /// </summary>
         public static bool ProducesHeatAt(int index)
         {
             int period = (int)Math.Round(1f / ProducerShare);
             return period > 0 && (index % period) == 0;
+        }
+
+        /// <summary>
+        /// True when a node's block *is* a producer, whatever order the hull was built in.
+        ///
+        /// <para>
+        /// **Node index is not block identity, and taking it for one is what `F22` is about.** A
+        /// node's index comes from the order blocks were added, so a hull built cell by cell in a
+        /// different order is the same ship with a permuted index space — and a rule that drives
+        /// "every twentieth node" then drives twenty different blocks. Reading the model the cell
+        /// actually holds is the same answer on any build order.
+        /// </para>
+        /// </summary>
+        public static bool IsProducer(ThermalNode node)
+        {
+            return node != null && node.Block != null
+                && ReferenceEquals(node.Block.Model, Producer());
         }
 
         /// <summary>
@@ -342,7 +367,7 @@ namespace Thermodynamics.Harness
 
             for (int i = 0; i < nodes.Count; i++)
             {
-                if (!ProducesHeatAt(i)) continue;
+                if (!IsProducer(nodes[i])) continue;
 
                 // The waste fraction is what turns power into heat, so the power a producer draws
                 // is the heat it wants divided by that fraction.
@@ -381,7 +406,7 @@ namespace Thermodynamics.Harness
 
             for (int i = 0; i < nodes.Count; i++)
             {
-                if (!ProducesHeatAt(i)) continue;
+                if (!IsProducer(nodes[i])) continue;
 
                 float waste = nodes[i].Thermal.ConsumerWasteEnergy;
                 if (waste <= 0f) continue;

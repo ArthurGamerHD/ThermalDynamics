@@ -57,7 +57,7 @@ namespace Thermodynamics.Tests
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
             for (int i = 0; i < nodes.Count; i++)
             {
-                if (!Census.ProducesHeatAt(i)) continue;
+                if (!Census.IsProducer(nodes[i])) continue;
 
                 float waste = nodes[i].Thermal.ProducerWasteEnergy;
                 if (waste <= 0f) continue;

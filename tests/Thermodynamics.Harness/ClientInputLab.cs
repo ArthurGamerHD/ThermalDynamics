@@ -739,7 +739,7 @@ namespace Thermodynamics.Harness
 
             for (int i = 0; i < nodes.Count; i++)
             {
-                if (!Census.ProducesHeatAt(i)) continue;
+                if (!Census.IsProducer(nodes[i])) continue;
 
                 if (producer++ % period == 0)
                 {

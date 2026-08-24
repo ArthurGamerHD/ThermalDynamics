@@ -377,6 +377,41 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// **The placement rule and the identity agree on a hull built in the order it was laid
+        /// out**, which is what lets one of them be replaced by the other.
+        ///
+        /// <para>
+        /// `ProducesHeatAt(index)` decides which *cell* of a hull being laid out gets a producer;
+        /// `IsProducer(node)` reads the model the cell actually holds. Every hull in this
+        /// repository is built in placement order, so node index equals placement index and the two
+        /// answer identically — which is a coincidence of construction, not a property, and it is
+        /// exactly the assumption `F22` degrades. Driving a hull now reads the model, and this pins
+        /// that the change moved no block on any hull that is built normally.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheProducerPlacementRuleAndTheProducerIdentityPickTheSameBlocks()
+        {
+            ThermalSimulation simulation = Hull(2000);
+            IList<ThermalNode> nodes = simulation.Solver.Nodes;
+
+            int disagreements = 0;
+            int producers = 0;
+
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                bool byPlacement = Census.ProducesHeatAt(i);
+                bool byIdentity = Census.IsProducer(nodes[i]);
+
+                if (byIdentity) producers++;
+                if (byPlacement != byIdentity) disagreements++;
+            }
+
+            Assert.True(producers > 0, "the hull has no producer at all, so this judges nothing");
+            Assert.Equal(0, disagreements);
+        }
+
+        /// <summary>
         /// The census reproduces what the field ships did rather than what would be convenient:
         /// they got hot, and they did not burn. If a change to the tiers makes a census ship burn
         /// at its own rated power, the harness has stopped describing the game.
