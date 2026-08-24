@@ -610,6 +610,37 @@ frames the other 199 grids in the fleet evict its arrays: every resume is a cold
 price of spreading a step rather than staggering whole steps across frames, and it is not a bug —
 but it is a design question the ladder cannot ask, because the ladder runs one grid.
 
+#### And asked of a fleet, the trade is smaller than it looks
+
+`bench stagger` runs the same fleet twice: whole steps one grid at a time, and the same steps cut
+into eight slices and interleaved. Identical arithmetic over the same nodes in the same order, so
+what separates them is locality and nothing else.
+
+| Grids | 1,004 nodes each | 2,223 nodes each |
+| ---: | ---: | ---: |
+| 4 | −0.0 % | 0.0 % |
+| 16 | 1.0 % | 0.1 % |
+| 64 | 1.7 % | 5.5 % |
+| 242 | **12.2 %** | 5.0 % |
+
+**The penalty is set by the fleet's working set, not by any grid's size.** Four grids interleaved
+still fit in cache and spreading is free; two hundred do not and it costs 12 %. It appears once the
+fleet's arrays stop fitting — 64 grids of 2,223 nodes reaches it where 64 of 1,004 does not — which
+is why the single-grid ladder above could never see it.
+
+**The lump is 0.53 ms for a 1,004-node grid and 1.19 ms for a 2,223-node one**, flat across fleet
+sizes, because it is one grid's step and nothing else. That is the number the current design was
+chosen to avoid, and it is worth reading against what staggering actually changes: a frame still
+carries the same total work — `grids × Frequency / 60` steps' worth either way — so staggering does
+not add work to a frame, it makes the work a frame carries belong to fewer grids. What it gives up
+is *granularity*: a grid whose whole step will not fit the frame's budget can no longer be split.
+At about half a microsecond a node, that is roughly seven thousand nodes against a four-millisecond
+budget.
+
+So the shape the measurement points at is not one schedule or the other but a threshold: step whole
+the grids that fit, spread the ones that do not. `StaggerTests` pins that the penalty grows with the
+fleet and that the lump does not. [backlog.md](backlog.md) `D14`.
+
 **The eight-block row is not a stable figure.** It has swung from +48 % to +74 % across repeats of
 an unchanged tree, on a whole cost of a tenth of a millisecond for two hundred grids; its share
 column swings with it. Read the rows at 32 blocks and above, and the visit column, which do not
@@ -921,6 +952,7 @@ several times its neighbours' should be re-taken rather than explained.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | **Asked `D14`'s question of a fleet instead of a grid.** Spreading a step costs 12.2 % on 242 grids of 1,004 nodes and nothing at all on four — the penalty is the fleet's working set rather than any grid's size, which is why the single-grid ladder never saw it. The lump staggering would put on a frame is 0.53 ms for such a grid and flat in fleet size, and a frame carries the same total work either way, so what staggering really gives up is the ability to split a grid too big for the budget. `bench stagger`, `StaggerTests`. |
 | 2026-08-22 | Recorded row 11 in both tables and re-took the baseline on this machine. The step columns doubled because `Frequency` halved and the element allowance doubled with it; per simulated second is 8.948 ms before against 8.537 ms after, so the pass is cost-neutral and the 8,000-block ship went from 22 substeps granted to 44 with demand doubling to match. The machine is 26% slower than rows 0-8 in two runs twenty minutes apart, which is its state and not a loud sample, so only that one comparison is readable. Corrected two statements that the committed baseline is pinned at row 3; it is re-recorded whenever its keys change, which happened this pass. |
 | 2026-08-22 | Dropped the profile rows from [The configurations](#the-configurations) and from the report, with the five settings profiles they measured. The section is the substep cap alone now, and the committed baseline was re-recorded because its keys changed (`M6`). **The re-recording is 23% slower than row 3** — calibration 109.4 ms against 86.2, noise 0.129 ms against 0.043 — which the row 11 re-take reproduced, so it is the machine and not one loud run. The file's *timings* are not comparable to the figures quoted on this page; its keys, which is all `BenchmarkBaselineTests` reads, are. |
 | 2026-08-22 | Recorded row 10 of [the iteration log](#the-iteration-log), and marked its duration as not comparable rather than leaving a reader to compare it (`M7`). |

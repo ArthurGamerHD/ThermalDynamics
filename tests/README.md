@@ -313,6 +313,7 @@ dotnet run --project Thermodynamics.Sim -- bench floor --size 42000    # what a 
 dotnet run --project Thermodynamics.Sim -- bench ceiling --size 4000    # what refusing a substep demand costs, in air
 dotnet run --project Thermodynamics.Sim -- bench parallel --size 600    # one grid per thread: does a fleet pay for it
 dotnet run --project Thermodynamics.Sim -- bench surface                # what a selective surface on the radiator is worth
+dotnet run --project Thermodynamics.Sim -- bench stagger --size 600     # whole steps against spread ones: what locality costs
 dotnet run --project Thermodynamics.Sim -- bench steppath              # a step at the solver, against a step through the host
 dotnet run --project Thermodynamics.Sim -- bench smallgrids            # what one grid costs before any of its blocks do
 dotnet run --project Thermodynamics.Sim -- bench wattsclear            # what zeroing the watts row costs, up a size ladder
@@ -445,7 +446,7 @@ and left off it.
 | **Wind** | `WindFieldTests` `WindProfileTests` `GradientHeightTests` `WindSlopeTests` `WindTerrainTests` `WindCompassTests` `StormHeatingTests` `WindScenarioTests` `WindSolverContractTests` `WindLabTests` |
 | **Heat sources, damage and thresholds** | `HeatGenerationTests` `DamageTests` `CriticalTemperatureTests` `CriticalTemperatureMirrorTests` `OverheatEventTests` `SuitThermalTests` `IncandescenceTests` `HeatWarningTests` `HeatCueScanTests` `ThresholdTests` `HeatSourceTests` `HeatSourceMathTests` `HeatSourceCommandTests` `CustomHeatSourceTests` `MultiCellAndDamageTests` `ReactorWasteHeatTests` `GridHeatBalanceTests` `HottestNodeTests` `GlowGeometryTests` |
 | **Coolant loops and heat pumps** | `CoolantLoopTests` `PumpPowerTests` `CoolantFlowTests` `CoolantFaultTests` `PipeFitterTests` `HeatPumpTests` `CoolingScenarioClaimTests` |
-| **What a step costs, and what it must not change** | `LoadTests` `StepBudgetTests` `StepFixedCostTests` `StepPacingTests` `StepTermsTests` `SpreadStepTests` `PaceEquivalenceTests` `SweepSliceTests` `BufferGrowthTests` `IncrementalTopologyTests` `BlockRefreshTests` `CostRollupTests` `SolverReportingTests` `StressFindingsTests` |
+| **What a step costs, and what it must not change** | `LoadTests` `StepBudgetTests` `StepFixedCostTests` `StepPacingTests` `StepTermsTests` `SpreadStepTests` `StaggerTests` `PaceEquivalenceTests` `SweepSliceTests` `BufferGrowthTests` `IncrementalTopologyTests` `BlockRefreshTests` `CostRollupTests` `SolverReportingTests` `StressFindingsTests` |
 | **Bit-identity: an optimisation against what it replaced** | `PrecomputedEnvironmentTests` `FixedSourceRowTests` `WattsClearFusionTests` `ConductionClampGateTests` `DiagnosticBatchingTests` |
 | **Settings, storage and definitions** | `SettingsTests` `SettingsDefaultsTests` `SettingsWiringTests` `ValidationReportingTests` `StorageCodecTests` `SchedulerTests` `DefinitionTests` `DefinitionFileTests` `ShippedDefinitionTests` `AuthoredMaterialTests` `AuthoredWasteTests` `BlockDerivationTests` `SolarAbsorptivityTests` `SelectiveSurfaceTests` `MaterialOverrideTests` `FeatureToggleTests` `DefaultSettingsTests` `ProfileSuiteTests` `ProfileClockTests` `WorldSettingsTests` |
 | **Readouts a player sees** | `TemperatureScaleTests` `UnitsTests` |

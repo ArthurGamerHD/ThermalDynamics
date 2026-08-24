@@ -1088,6 +1088,28 @@ namespace Thermodynamics.Sim
                     return 0;
                 }
 
+                case "stagger":
+                {
+                    int[] sizes = { 4, 16, 64, 242 };
+                    int each = size > 0 ? size : 600;
+                    int slices = OptionInt(args, "--slices", 8);
+
+                    Console.WriteLine();
+                    Console.WriteLine("== stagger against spread, " + each.ToString("n0")
+                        + " blocks a grid ==");
+                    Console.WriteLine("  identical arithmetic either way; only the interleaving"
+                        + " differs, so the difference is locality");
+                    Console.WriteLine("  staggered: whole steps, one grid at a time. spread: one"
+                        + " step per grid cut into " + slices + " slices and interleaved");
+                    Console.WriteLine("  fastest of " + StaggerLab.Repeats + "; the lump is what one"
+                        + " frame carries when a grid is stepped whole");
+                    Console.WriteLine();
+
+                    Console.WriteLine(StaggerLab.Table(StaggerLab.Run(sizes, each, slices,
+                        message => Console.Error.WriteLine("  " + message))));
+                    return 0;
+                }
+
                 case "surface":
                 {
                     Console.WriteLine();
@@ -1340,6 +1362,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  bench ceiling --size N  what refusing a substep demand costs, in air");
             Console.WriteLine("  bench parallel --size N one grid per thread: does a fleet pay for it");
             Console.WriteLine("  bench surface           what a selective surface on the radiator is worth");
+            Console.WriteLine("  bench stagger --size N  whole steps against spread ones: what locality costs");
             Console.WriteLine("  bench report            full performance report; --baseline <csv> to compare");
             Console.WriteLine("  bench spike --size N    one block placed, split by stage");
             Console.WriteLine("  bench steppath          a step at the solver, against a step through the host");
