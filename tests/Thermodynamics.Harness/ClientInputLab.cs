@@ -254,6 +254,55 @@ namespace Thermodynamics.Harness
             public float RoomMapLagSeconds;
 
             /// <summary>
+            /// The client received the same blocks in a different order.
+            ///
+            /// <para>
+            /// **The one degradation that is not a degradation, and it is here to prove a design
+            /// choice.** Every block sits at the cell it sits at on the server and carries the
+            /// model it carries there, so the conduction graph, the surfaces, the rooms and the
+            /// physics are identical — the only thing that differs is the *node index*, which comes
+            /// from the order blocks were added and which two machines have no reason to agree on.
+            /// </para>
+            ///
+            /// <para>
+            /// It has to read exactly zero, twice over: zero disagreement, because the two hulls
+            /// are the same ship, and zero after the correction, because the hot-tail packet is
+            /// keyed on **position** rather than on index. An index-keyed packet would land every
+            /// temperature on the wrong block here and the row would be the loudest in the sweep,
+            /// which is what makes this the test of that choice
+            /// ([backlog.md](../../docs/backlog.md) `F22`).
+            /// </para>
+            /// </summary>
+            public int BuildOrderSeed;
+
+            /// <summary>
+            /// This share of the hull has not reached the client yet.
+            ///
+            /// <para>
+            /// **The first knob here that changes which numbers exist rather than what they are.**
+            /// A client that is still receiving a pasted blueprint, or that has not yet attached a
+            /// subgrid the server has, is not running the same simulation with worse inputs — it is
+            /// running a *different ship*: fewer nodes, a different conduction graph, and hull
+            /// surfaces exposed to the sky where the missing blocks would have covered them.
+            /// </para>
+            ///
+            /// <para>
+            /// Blocks are taken from the client rather than added to it, because the direction that
+            /// matters is a client behind the server: the server decides, and what a client has not
+            /// been told about yet is what it is missing ([backlog.md](../../docs/backlog.md)
+            /// `F22`).
+            /// </para>
+            /// </summary>
+            public float BlocksMissingShare;
+
+            /// <summary>
+            /// Simulated seconds before the missing blocks arrive. Zero — the default — means they
+            /// never do, which is the bound; a duration is the description, and it is the shape a
+            /// subgrid attaching late has.
+            /// </summary>
+            public float BlocksMissingSeconds;
+
+            /// <summary>
             /// The client is running the shipped defaults while the server is not. **A bias, and
             /// the worst case of one that should not happen**: settings replicate, and a client
             /// fetches them on load, so this is what a fetch that never landed would look like.
@@ -297,6 +346,16 @@ namespace Thermodynamics.Harness
 
             /// <summary>The largest single update, in blocks.</summary>
             public int PeakBlocksSent;
+
+            /// <summary>
+            /// The most blocks the server had that the client did not, at any sample.
+            ///
+            /// **A block the client has not been told about is not a block it is wrong about**, so
+            /// it is counted here rather than scored in the kelvin columns: the client holds no
+            /// opinion, and a readout cannot misread a block it is not drawing. It is the column
+            /// that says a row degraded *which numbers exist* rather than what they are.
+            /// </summary>
+            public int PeakMissing;
 
             /// <summary>
             /// Sealed compartments the hull has, which the server's air was put into.
@@ -395,7 +454,13 @@ namespace Thermodynamics.Harness
             ThermalSettings clientWorld = how.OnDefaultSettings ? world : serverWorld;
 
             ThermalSimulation server = Hulls.Driven(serverWorld, blocks);
-            ThermalSimulation client = Hulls.Driven(clientWorld, blocks);
+            ThermalSimulation client = Hulls.Driven(clientWorld, blocks, how.BuildOrderSeed);
+
+            // **Aligned by position, not by index**, which is a no-op on two hulls built the same
+            // way and the whole point on two that were not. A node's index is its arrival order, so
+            // seeding the spread by index gives two differently-ordered hulls two different
+            // temperature *fields* — a disagreement produced by the rig rather than by the client.
+            Align(client, server);
 
             // Capacity, not a flow, so it is set once on the hull rather than re-applied with the
             // load: the rota that produces it in game changes a block's mass, not its wattage.
@@ -466,6 +531,15 @@ namespace Thermodynamics.Harness
             // grid it has just built, an empty one. Applied after the warm-up rather than before
             // it, so the run starts from two hulls that agree and the disagreement is the
             // degradation rather than the warm-up.
+            // **Part of the hull has not reached the client yet, when the case says so.** Applied
+            // after the warm-up rather than before it, so the run starts from two hulls that agree
+            // and what follows is the degradation. Taking blocks away rebuilds the map under them,
+            // which is why the compartments are refilled here and why this runs before the map
+            // knob rather than after it.
+            List<BlockInstance> withheld = Withhold(client, how.BlocksMissingShare);
+            bool blocksPending = withheld.Count > 0;
+            if (blocksPending) Pressurise(client, clientPressure);
+
             bool mapPending = how.RoomMapLagSeconds > 0f;
             if (mapPending) Unmap(client);
 
@@ -517,6 +591,23 @@ namespace Thermodynamics.Harness
                     Remap(client, clientPressure);
                 }
 
+                if (blocksPending && how.BlocksMissingSeconds > 0f
+                    && elapsed >= how.BlocksMissingSeconds)
+                {
+                    blocksPending = false;
+                    Deliver(client, withheld);
+
+                    // The arriving blocks rebuilt the map under the hull, so the state the case put
+                    // on it has to be put back: the compartments' air, or the absence of a map
+                    // where that is what is being degraded. Their *masses* are already wrong by the
+                    // right amount — a withheld block kept the mass it was given before it left.
+                    if (mapPending) Unmap(client); else Pressurise(client, clientPressure);
+
+                    // And the new blocks are not driving anything until the hull is re-driven,
+                    // which a wattage that cannot equal anything forces at the next sample.
+                    clientWatts = float.NaN;
+                }
+
                 sinceUpdate += tick;
                 sinceSample += tick;
                 sinceHitch += tick;
@@ -531,9 +622,11 @@ namespace Thermodynamics.Harness
                 {
                     float worst;
                     int over;
-                    int disagreeing = Compare(server, client, out worst, out over);
+                    int absent;
+                    int disagreeing = Compare(server, client, out worst, out over, out absent);
 
                     if (over > result.PeakServerCritical) result.PeakServerCritical = over;
+                    if (absent > result.PeakMissing) result.PeakMissing = absent;
                     disagreements.Add(worst);
                     if (worst > result.PeakKelvin) result.PeakKelvin = worst;
                     if (disagreeing > result.PeakDisagreeing) result.PeakDisagreeing = disagreeing;
@@ -821,32 +914,129 @@ namespace Thermodynamics.Harness
             for (int i = 0; i < count; i++) nodes[i].Temperature = temperatures[i];
         }
 
-        /// <summary>Blocks on opposite sides of critical, and the worst disagreement in kelvin.</summary>
+        /// <summary>
+        /// Blocks on opposite sides of critical, and the worst disagreement in kelvin.
+        ///
+        /// <para>
+        /// **Matched by position rather than by index**, and that is not a refinement — it is the
+        /// only comparison that means anything once the two machines can disagree about *which*
+        /// blocks there are. A node's index is its arrival order, so an index-matched comparison of
+        /// two hulls built in different orders reads a large disagreement between blocks that are
+        /// not the same block, and of a hull missing a block it reads every index after the gap
+        /// against its neighbour. It is a no-op on two hulls built identically, which is every row
+        /// but two ([backlog.md](../../docs/backlog.md) `F22`).
+        /// </para>
+        ///
+        /// <para>
+        /// A block the client does not have is counted in <paramref name="missing"/> rather than
+        /// scored: the client is not wrong about its temperature, it has no opinion at all, and a
+        /// readout cannot misread a block it is not drawing. That count is what the row reports
+        /// instead.
+        /// </para>
+        /// </summary>
         private static int Compare(ThermalSimulation server, ThermalSimulation client,
-            out float worstKelvin, out int serverOverCritical)
+            out float worstKelvin, out int serverOverCritical, out int missing)
         {
             IList<ThermalNode> mine = server.Solver.Nodes;
-            IList<ThermalNode> theirs = client.Solver.Nodes;
 
             worstKelvin = 0f;
             serverOverCritical = 0;
+            missing = 0;
             int disagreeing = 0;
-            int count = Math.Min(mine.Count, theirs.Count);
 
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < mine.Count; i++)
             {
-                float difference = Math.Abs(mine[i].Temperature - theirs[i].Temperature);
+                ThermalNode ours = mine[i];
+                float critical = ours.Thermal.CriticalTemperature;
+                bool over = critical > 0f && ours.Temperature > critical;
+                if (over) serverOverCritical++;
+
+                ThermalNode yours = client.Solver.GetNodeAt(ours.Block.Position);
+                if (yours == null)
+                {
+                    missing++;
+                    continue;
+                }
+
+                float difference = Math.Abs(ours.Temperature - yours.Temperature);
                 if (difference > worstKelvin) worstKelvin = difference;
 
-                float critical = mine[i].Thermal.CriticalTemperature;
                 if (critical <= 0f) continue;
-
-                bool over = mine[i].Temperature > critical;
-                if (over) serverOverCritical++;
-                if (over != theirs[i].Temperature > critical) disagreeing++;
+                if (over != yours.Temperature > critical) disagreeing++;
             }
 
             return disagreeing;
+        }
+
+        /// <summary>
+        /// Copies every temperature the server holds onto the client's block at the same *cell*.
+        ///
+        /// Position rather than index, for the reason <see cref="Compare"/> is: two hulls built in
+        /// different orders hold the same ship at different indices, and a by-index copy would give
+        /// the client a scrambled temperature field before the run started.
+        /// </summary>
+        private static void Align(ThermalSimulation client, ThermalSimulation server)
+        {
+            IList<ThermalNode> mine = server.Solver.Nodes;
+
+            for (int i = 0; i < mine.Count; i++)
+            {
+                ThermalNode yours = client.Solver.GetNodeAt(mine[i].Block.Position);
+                if (yours != null) yours.Temperature = mine[i].Temperature;
+            }
+        }
+
+        /// <summary>
+        /// Takes <paramref name="share"/> of a hull's blocks away, as blocks a client has not been
+        /// told about yet, and hands back what was removed so it can arrive later.
+        ///
+        /// <para>
+        /// Every n-th block rather than a random draw, so a run is repeatable and two runs at one
+        /// share take the same blocks. **Producers are taken too**: a subgrid that has not attached
+        /// is a thruster pod or a reactor bay, not a spread of armour, and taking only structure
+        /// would make the knob a surface-area change with no heat behind it.
+        /// </para>
+        /// </summary>
+        private static List<BlockInstance> Withhold(ThermalSimulation simulation, float share)
+        {
+            List<BlockInstance> held = new List<BlockInstance>();
+            if (share <= 0f) return held;
+
+            IList<ThermalNode> nodes = simulation.Solver.Nodes;
+            int period = share >= 1f ? 1 : (int)Math.Round(1f / share);
+            if (period <= 0) period = 1;
+
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                if (i % period == 0) held.Add(nodes[i].Block);
+            }
+
+            // The hull is left with at least something, or the run is comparing a ship with an
+            // empty grid and every column reads the whole hull (`E8`).
+            if (held.Count >= nodes.Count) held.RemoveAt(held.Count - 1);
+
+            for (int i = 0; i < held.Count; i++) simulation.RemoveBlock(held[i]);
+
+            simulation.RebuildAll();
+            return held;
+        }
+
+        /// <summary>
+        /// The withheld blocks arrive.
+        ///
+        /// They come in at the world's default temperature, which is what a block appearing on a
+        /// grid gets: the simulation has no history for it and nothing tells it what the neighbours
+        /// are holding. That is a second, smaller wrongness riding on the first, and it is the
+        /// engine's rather than the rig's.
+        /// </summary>
+        private static void Deliver(ThermalSimulation simulation, List<BlockInstance> held)
+        {
+            if (held == null || held.Count == 0) return;
+
+            for (int i = 0; i < held.Count; i++) simulation.AddBlock(held[i]);
+
+            simulation.RebuildAll();
+            held.Clear();
         }
 
         /// <summary>
@@ -952,6 +1142,19 @@ namespace Thermodynamics.Harness
                 },
                 new Degradation
                 {
+                    Name = "build order",
+                    Because = "received the same blocks in a different order, which is no difference at all",
+                    BuildOrderSeed = 20260824,
+                },
+                new Degradation
+                {
+                    Name = "blocks missing",
+                    Because = "a tenth of the hull has not reached it for 60 s, as a subgrid attaching late",
+                    BlocksMissingShare = 0.1f,
+                    BlocksMissingSeconds = 60f,
+                },
+                new Degradation
+                {
                     Name = "wrong settings",
                     Because = "never received the world's settings, so it is running other physics",
                     OnDefaultSettings = true,
@@ -986,6 +1189,12 @@ namespace Thermodynamics.Harness
                 if (one.AirDensityError > everything.AirDensityError) everything.AirDensityError = one.AirDensityError;
                 if (one.RoomPressureError > everything.RoomPressureError) everything.RoomPressureError = one.RoomPressureError;
                 if (one.RoomMapLagSeconds > everything.RoomMapLagSeconds) everything.RoomMapLagSeconds = one.RoomMapLagSeconds;
+                if (one.BuildOrderSeed != 0) everything.BuildOrderSeed = one.BuildOrderSeed;
+                if (one.BlocksMissingShare > everything.BlocksMissingShare)
+                {
+                    everything.BlocksMissingShare = one.BlocksMissingShare;
+                    everything.BlocksMissingSeconds = one.BlocksMissingSeconds;
+                }
                 if (one.OnDefaultSettings) everything.OnDefaultSettings = true;
             }
 
@@ -1008,7 +1217,7 @@ namespace Thermodynamics.Harness
             text.AppendLine("Sealed compartments on the hull, holding air on the server: "
                 + compartments.ToString("n0"));
             text.AppendLine();
-            text.AppendLine("degradation         fix      peak K   standing K   misreading    worst   B/s");
+            text.AppendLine("degradation         fix      peak K   standing K   misreading    worst  absent   B/s");
 
             int judged = 0;
 
@@ -1020,7 +1229,7 @@ namespace Thermodynamics.Harness
                 if (anythingFailed) judged++;
 
                 text.AppendLine(string.Format(
-                    "{0,-20}{1,-9}{2,8}{3,13}{4,13}{5,9}{6,6}",
+                    "{0,-20}{1,-9}{2,8}{3,13}{4,13}{5,9}{6,8}{7,6}",
                     result.Name,
                     off ? "off" : result.Protocol.IntervalSeconds.ToString("n0") + " s"
                         + (result.Protocol.WholeHullOnJoin ? "+j" : ""),
@@ -1028,6 +1237,7 @@ namespace Thermodynamics.Harness
                     result.StandingKelvin.ToString("n2"),
                     anythingFailed ? result.SecondsMisreading.ToString("n0") + " s" : "nothing hot",
                     anythingFailed ? result.PeakDisagreeing.ToString("n0") : "-",
+                    result.PeakMissing.ToString("n0"),
                     result.BytesPerSecond.ToString("n0")));
             }
 
@@ -1044,7 +1254,10 @@ namespace Thermodynamics.Harness
             text.AppendLine("standing K is the mean disagreement over the final third of the run, and it is the");
             text.AppendLine("column that separates a perturbation from a bias: a one-off wrong state decays to");
             text.AppendLine("nothing whatever it peaked at, and a wrong input settles somewhere and stays. worst");
-            text.AppendLine("is the largest number of blocks the two put on opposite sides of critical at once.");
+            text.AppendLine("is the largest number of blocks the two put on opposite sides of critical at once,");
+            text.AppendLine("and absent is the largest number the server had that the client did not — a block a");
+            text.AppendLine("client has not been told about is not one it is wrong about, so it is counted rather");
+            text.AppendLine("than scored.");
             text.AppendLine();
             text.AppendLine("Every magnitude here is a knob this lab turns rather than a figure measured from a");
             text.AppendLine("session; what the table answers is which inputs bias, which perturb, and whether");

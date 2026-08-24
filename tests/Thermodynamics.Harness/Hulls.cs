@@ -57,10 +57,17 @@ namespace Thermodynamics.Harness
         /// of it agree perfectly, and agreement is the whole assertion those suites make — so the
         /// failure has to be raised where it happened, not left to a green test run.
         /// </summary>
-        public static ThermalSimulation Driven(ThermalSettings settings, int blocks = DefaultBlocks)
+        /// <param name="buildOrderSeed">
+        /// Permutes the order the same blocks are handed to the solver in, moving none of them.
+        /// Zero — the default — builds in placement order, which is what every other caller wants.
+        /// See <see cref="GridBuilder.ReorderPlacement"/>.
+        /// </param>
+        public static ThermalSimulation Driven(ThermalSettings settings, int blocks = DefaultBlocks,
+            int buildOrderSeed = 0)
         {
             GridBuilder builder = GridBuilder.Large();
             builder.PlaceCensus(LoadShapes.Build("ship", blocks));
+            builder.ReorderPlacement(buildOrderSeed);
 
             ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);
             simulation.RebuildAll();

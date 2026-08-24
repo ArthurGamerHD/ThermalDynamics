@@ -817,6 +817,263 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// **The same ship received in a different order differs only in the last bits**, and that
+        /// is a claim about a design decision rather than about physics.
+        ///
+        /// <para>
+        /// A node's index is its arrival order, and two machines have no reason to share one: a
+        /// client takes blocks in whatever order the engine streams them, a server has them in the
+        /// order they were welded or pasted. Every block here sits at the cell it sits at on the
+        /// server and carries the model it carries there, so the conduction graph, the surfaces,
+        /// the rooms and the physics are identical — only the index space differs.
+        /// </para>
+        ///
+        /// <para>
+        /// So the row reads zero to every instrument here, and it reads zero *through the
+        /// correction* too, because the hot-tail packet is keyed on block position rather than on
+        /// node index ([backlog.md](../../docs/backlog.md) `F22`). The permutation is checked
+        /// first: a rig that quietly built both hulls the same way would report this as passing
+        /// while measuring nothing (`E8`).
+        /// </para>
+        ///
+        /// <para>
+        /// **It is not bit-identical, and the reason is worth naming.** A node accumulates from its
+        /// links, and float addition is not associative, so a permuted node order sums the same
+        /// terms in a different order. Over four minutes that is **1.2e-4 K** — a thousandth of the
+        /// significance window, and an eight-hundredth of one quantum of the wire this correction
+        /// travels on. The order independence the threading work rests on is a claim about physics,
+        /// not about bits, and this is where the difference between the two is measured.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheSameShipInADifferentOrderDiffersOnlyInTheLastBits()
+        {
+            ClientInputLab.Degradation how = new ClientInputLab.Degradation
+            {
+                Name = "build order",
+                BuildOrderSeed = 20260824,
+            };
+
+            ClientInputLab.Result alone = Run(how);
+            ClientInputLab.Result corrected = Run(how, new ClientDriftLab.Correction
+            {
+                IntervalSeconds = 5f,
+                WholeHullOnJoin = true,
+            });
+
+            // The permutation is real, or the two zeroes below are the zeroes of two identical
+            // hulls and this judges nothing.
+            ThermalSimulation ordered = Hulls.Driven(Hulls.Uncapped(), Blocks);
+            ThermalSimulation shuffled = Hulls.Driven(Hulls.Uncapped(), Blocks, how.BuildOrderSeed);
+
+            int moved = 0;
+            IList<ThermalNode> theirs = ordered.Solver.Nodes;
+            for (int i = 0; i < theirs.Count; i++)
+            {
+                ThermalNode same = shuffled.Solver.GetNodeAt(theirs[i].Block.Position);
+                Assert.NotNull(same);
+                if (same.Index != theirs[i].Index) moved++;
+            }
+
+            output.WriteLine("{0:n0} of {1:n0} blocks changed index; peak {2:n3} K, corrected {3:n3} K",
+                moved, theirs.Count, alone.PeakKelvin, corrected.PeakKelvin);
+
+            Assert.True(moved > theirs.Count / 2,
+                "only " + moved + " of " + theirs.Count + " blocks changed index, so the rig did"
+                + " not really build the client's hull in a different order");
+
+            // Smaller than one quantum of the wire the correction travels on, which is the
+            // resolution below which nothing in this repository can tell two clients apart.
+            Assert.True(alone.PeakKelvin < HotTailCodec.TemperatureStep,
+                "the same ship in a different order disagreed by " + alone.PeakKelvin
+                + " K, which is more than rounding: the two hulls are not the same ship");
+
+            Assert.True(alone.StandingKelvin < HotTailCodec.TemperatureStep,
+                "it settled " + alone.StandingKelvin + " K out, which is a difference rather than"
+                + " an accumulation of rounding");
+
+            Assert.Equal(0, alone.PeakDisagreeing);
+            Assert.Equal(0, alone.PeakMissing);
+
+            // And the packet lands on the right blocks: an index-keyed one would not, which the
+            // test below measures.
+            Assert.True(corrected.PeakKelvin < HotTailCodec.TemperatureStep,
+                "the correction left the client " + corrected.PeakKelvin + " K out on a hull it"
+                + " agreed with, so it is not landing on the blocks it names");
+
+            Assert.Equal(0, corrected.PeakDisagreeing);
+        }
+
+        /// <summary>
+        /// **What the position key is buying, measured against the alternative rather than
+        /// asserted.**
+        ///
+        /// <para>
+        /// `HotTailCodec` spends eight of its ten bytes a block on a position key, and the reason
+        /// given is that node indices come from insertion order and two machines do not build a
+        /// grid in the same order. The row above shows the packet landing correctly on a permuted
+        /// hull; this shows what the cheaper key would have done to the same packet — every
+        /// temperature written onto whichever block happens to hold that index on the client.
+        /// </para>
+        ///
+        /// <para>
+        /// It is the counterfactual and not a defect: nothing in the mod applies a tail by index.
+        /// Without it, *the correction changed nothing* is equally consistent with the key being
+        /// unnecessary ([backlog.md](../../docs/backlog.md) `F22`).
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void AnIndexKeyedCorrectionWouldLandEveryTemperatureOnTheWrongBlock()
+        {
+            ThermalSimulation server = Hulls.Driven(Hulls.Uncapped(), Blocks);
+            ThermalSimulation client = Hulls.Driven(Hulls.Uncapped(), Blocks, 20260824);
+
+            // Two copies of one ship: the client takes the server's field by position, so before
+            // any correction they agree exactly.
+            IList<ThermalNode> mine = server.Solver.Nodes;
+            for (int i = 0; i < mine.Count; i++)
+            {
+                client.Solver.GetNodeAt(mine[i].Block.Position).Temperature = mine[i].Temperature;
+            }
+
+            Assert.Equal(0f, WorstDisagreement(server, client), 4);
+
+            // **The band is opened to the whole hull on purpose.** What is being measured is where
+            // a record lands, not which records are chosen, and a hull that has not been run hot
+            // has nothing inside the warning band to send.
+            List<StoredTemperature> tail = new List<StoredTemperature>();
+            server.ExportHotTail(float.MaxValue, 0, tail);
+            Assert.True(tail.Count > 0, "the server sent nothing, so this judges nothing");
+
+            // The same packet, keyed the cheap way: record n onto node n.
+            IList<ThermalNode> theirs = client.Solver.Nodes;
+            for (int i = 0; i < tail.Count && i < theirs.Count; i++)
+            {
+                theirs[i].Temperature = tail[i].Temperature;
+            }
+
+            float byIndex = WorstDisagreement(server, client);
+            output.WriteLine("{0:n0} blocks in the band; an index-keyed apply leaves {1:n1} K",
+                tail.Count, byIndex);
+
+            Assert.True(byIndex > 100f,
+                "an index-keyed correction left the client only " + byIndex + " K out on a permuted"
+                + " hull, so the position key is not buying what the codec says it is");
+        }
+
+        private static float WorstDisagreement(ThermalSimulation server, ThermalSimulation client)
+        {
+            IList<ThermalNode> mine = server.Solver.Nodes;
+            float worst = 0f;
+
+            for (int i = 0; i < mine.Count; i++)
+            {
+                ThermalNode yours = client.Solver.GetNodeAt(mine[i].Block.Position);
+                if (yours == null) continue;
+
+                float difference = Math.Abs(mine[i].Temperature - yours.Temperature);
+                if (difference > worst) worst = difference;
+            }
+
+            return worst;
+        }
+
+        /// <summary>
+        /// **A block a client has not been told about is not a block it is wrong about, and the
+        /// correction cannot reach one.**
+        ///
+        /// <para>
+        /// Every other row in this sweep degrades a number both machines hold. A client still
+        /// receiving a pasted blueprint, or one whose subgrid has not attached yet, holds *fewer
+        /// numbers*: a different node set, a different conduction graph, and hull surfaces open to
+        /// the sky where the missing blocks would have covered them. The hot-tail packet carries
+        /// temperatures for blocks, and a block that is absent takes none of them — so the
+        /// correction narrows what the client misreads about the hull it *has* and leaves the rest
+        /// exactly where it was ([backlog.md](../../docs/backlog.md) `F22`).
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheCorrectionNarrowsAPartialHullsReadoutAndCannotTouchWhatIsAbsent()
+        {
+            ClientInputLab.Degradation how = new ClientInputLab.Degradation
+            {
+                Name = "blocks missing",
+                BlocksMissingShare = 0.1f,
+            };
+
+            ClientInputLab.Result alone = Run(how);
+            ClientInputLab.Result corrected = Run(how, new ClientDriftLab.Correction
+            {
+                IntervalSeconds = 5f,
+                WholeHullOnJoin = true,
+            });
+
+            output.WriteLine("absent {0:n0} blocks; standing {1:n2} K uncorrected, {2:n2} K"
+                + " corrected; misread {3:n0} to {4:n0}", alone.PeakMissing, alone.StandingKelvin,
+                corrected.StandingKelvin, alone.PeakDisagreeing, corrected.PeakDisagreeing);
+
+            Assert.True(alone.PeakMissing > 0,
+                "the rig took no blocks away, so nothing here judges a partial hull");
+
+            Assert.Equal(alone.PeakMissing, corrected.PeakMissing);
+
+            Assert.True(alone.StandingKelvin > 10f,
+                "a hull a tenth short settled only " + alone.StandingKelvin + " K out, which is too"
+                + " small for the rest of this to be measuring anything");
+
+            Assert.True(corrected.PeakDisagreeing < alone.PeakDisagreeing,
+                "the correction did not narrow what the client misreads about the blocks it has: "
+                + corrected.PeakDisagreeing + " against " + alone.PeakDisagreeing);
+        }
+
+        /// <summary>
+        /// **Blocks arriving late are a perturbation and blocks never arriving are a bias**, which
+        /// is the same pair the room map turned out to be and for the same reason: one of them ends.
+        ///
+        /// <para>
+        /// The late case is the loudest transient in the whole sweep, and most of the peak is not
+        /// the missing hull at all — it is the *arrival*. A block that appears on a grid starts at
+        /// the world's default temperature, because the simulation has no history for it and
+        /// nothing tells it what its neighbours are holding, so a tenth of a hull at 1,000 K gains
+        /// a tenth of itself at 293 K in one step. That is the engine's wrongness rather than the
+        /// rig's, and it decays.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void BlocksArrivingLateAreAPerturbationAndBlocksNeverArrivingAreABias()
+        {
+            ClientInputLab.Result late = Run(new ClientInputLab.Degradation
+            {
+                Name = "blocks missing",
+                BlocksMissingShare = 0.1f,
+                BlocksMissingSeconds = 60f,
+            });
+
+            ClientInputLab.Result never = Run(new ClientInputLab.Degradation
+            {
+                Name = "blocks never arrive",
+                BlocksMissingShare = 0.1f,
+            });
+
+            output.WriteLine("late: peak {0:n1} K, standing {1:n2} K. never: peak {2:n1} K,"
+                + " standing {3:n2} K", late.PeakKelvin, late.StandingKelvin,
+                never.PeakKelvin, never.StandingKelvin);
+
+            Assert.True(late.PeakKelvin > never.PeakKelvin,
+                "a hull that gets its blocks back peaked at " + late.PeakKelvin + " K against "
+                + never.PeakKelvin + " K for one that never does, so the arrival is not the"
+                + " transient this pins");
+
+            Assert.True(late.StandingKelvin < late.PeakKelvin * 0.1f,
+                "the late case peaked at " + late.PeakKelvin + " K and settled at "
+                + late.StandingKelvin + " K, which is a bias rather than the perturbation this pins");
+
+            Assert.True(never.StandingKelvin > never.PeakKelvin * 0.5f,
+                "a hull that never gets its blocks peaked at " + never.PeakKelvin + " K and settled"
+                + " at " + never.StandingKelvin + " K, which is a perturbation rather than a bias");
+        }
+
+        /// <summary>
         /// **A hull with no sealed compartment is refused a room knob rather than reporting one as
         /// harmless.**
         ///

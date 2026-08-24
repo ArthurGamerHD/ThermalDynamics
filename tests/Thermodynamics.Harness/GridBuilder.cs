@@ -183,6 +183,48 @@ namespace Thermodynamics.Harness
         [ThreadStatic]
         public static Func<ThermalSettings, ThermalSettings> SettingsOverride;
 
+        /// <summary>
+        /// Permutes the order the placed blocks will be handed to the simulation in, moving none of
+        /// them.
+        ///
+        /// <para>
+        /// **The same ship with a different index space.** A node's index comes from the order
+        /// blocks were added, and two machines do not build a grid in the same order — a client
+        /// receives blocks in whatever order the engine streams them, a server has them in the
+        /// order they were welded or pasted. Every block stays at the cell it was placed at and
+        /// keeps the model it was placed with, so the conduction graph, the surfaces, the rooms and
+        /// the physics are identical: only the indices differ. That is what makes it the clean test
+        /// of a correction that is keyed on position rather than on index
+        /// ([backlog.md](../../docs/backlog.md) `F22`).
+        /// </para>
+        ///
+        /// <para>
+        /// Deterministic, so two runs at one seed build the same permutation; a seed of zero is a
+        /// no-op, which is what lets a caller pass the knob straight through.
+        /// </para>
+        /// </summary>
+        public GridBuilder ReorderPlacement(int seed)
+        {
+            if (seed == 0 || placed.Count < 2) return this;
+
+            uint state = (uint)seed;
+            if (state == 0u) state = 0x9E3779B9u;
+
+            for (int i = placed.Count - 1; i > 0; i--)
+            {
+                state ^= state << 13;
+                state ^= state >> 17;
+                state ^= state << 5;
+
+                int j = (int)(state % (uint)(i + 1));
+                BlockInstance swap = placed[i];
+                placed[i] = placed[j];
+                placed[j] = swap;
+            }
+
+            return this;
+        }
+
         public ThermalSimulation BuildSimulation(ThermalSettings settings = null, float initialTemperature = 293.15f)
         {
             ThermalSettings effective = settings ?? new ThermalSettings();
