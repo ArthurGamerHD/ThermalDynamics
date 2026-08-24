@@ -305,8 +305,14 @@ their figures are below, on the `burn` scenario that is theirs:
 | block masses 20 % out | 43.2 K | **32.11 K** | 184 → 86 blocks | `SweepMass` is a rota on both machines, and mass is heat capacity |
 | never got the settings | 160.0 K | **120.30 K** | 625 → 273 blocks | a fetch that never landed; other physics entirely |
 | no room map for 60 s | **474.7 K** | 0.01 K | 527 → 282 blocks | the flood fill has not published, so the hull has no interior — and then it has, and the client is right |
+| same blocks, different order | 0.0 K | 0.00 K | 0 → 0 blocks | two machines do not build a grid in the same order, and the packet is keyed on position rather than index |
+| a tenth of the hull missing for 60 s | **1,151.7 K** | 0.08 K | 1,078 → 656 blocks, 223 absent | a paste still streaming, or a subgrid that has not attached; it is a different ship, not a worse reading of this one |
 | a tenth of producers off | 385.0 K | **245.87 K** | 333 → 169 blocks | a switch on the wrong side, which is wrong by *all* of that block's heat |
-| all of it at once | 651.3 K | **239.85 K** | 576 → 399 blocks | the union of the rows above, computed not written |
+| all of it at once | 1,154.8 K | **215.86 K** | 1,246 → 693 blocks | the union of the rows above, computed not written |
+
+The sweep reports one more column than the table above: **absent**, the most blocks the server had
+that the client did not. Only the topology row has a number in it, and that is what the row is —
+every other degradation here is a client holding a wrong value for a block both machines have.
 
 **The hull's compartments hold air, and giving them the air a crewed ship has took about a seventh
 off every standing error in this table.** The census hull is built with four sealed rooms and the
@@ -322,7 +328,7 @@ input settles where the input puts it and stays there. So the convergence argume
 defect look cosmetic covers exactly one of these rows, and it is the one that was measured first.
 
 **The correction narrows a bias without removing it.** Against the combined case it takes the
-standing error from 239.9 K to 179.4 K and cuts how much of the hull is misread, 576 blocks to 399 —
+standing error from 215.9 K to 148.6 K and cuts how much of the hull is misread, 1,246 blocks to 693 —
 but the client's inputs are still wrong, so it re-diverges between updates. Against a bias the
 interval is the lever and five seconds is not enough; against a perturbation the join packet is the
 whole answer, 85 s to 5 s.
@@ -349,8 +355,8 @@ each — and the shape is what decides the protocol.
 
 The simulation reads its state from three places: an `EnvironmentSample` the client builds itself
 from the world around it, block state the adapter reads off the game's own blocks, and the room map
-it floods locally. Enumerated against the code rather than remembered, **the sweep covers fourteen
-inputs and leaves seven**:
+it floods locally. Enumerated against the code rather than remembered, **the sweep covers sixteen
+inputs and leaves five**:
 
 | input | read from | covered | |
 | --- | --- | --- | --- |
@@ -371,13 +377,13 @@ inputs and leaves seven**:
 | **the ten wind fields** | terrain and the wind solver | **no** | shelter, burial and channelling are all voxel-derived |
 | **room air pressure** | the game's gas system | yes | `room pressure` — `C9` says the mod reads the game's answer, so this is the input the mod least owns, and it is *binary*: worth almost nothing until it reaches zero |
 | **the room map itself** | a local flood fill | yes | `room map lag` — publishes atomically, so a client mid-pass holds no interior at all; `D2` measures the pass at 7,207 ticks on a million blocks |
-| **topology and subgrid attach** | block add and remove | **no** | placement order and attach timing change the conduction graph, not just a value in it |
-| **coolant loop identity** | loop signatures over topology | **no** | a loop is keyed by its shape, so a topology difference is a different loop |
+| **topology and subgrid attach** | block add and remove | yes | `build order`, `blocks missing` — placement order changes the index space and nothing else, and a missing block changes the conduction graph rather than a value in it |
+| **coolant loop identity** | loop signatures over topology | yes | `CoolantLoopTests` — the signature is an order-independent hash of the ring, so build order cannot move it and one pipe more is a different loop |
 | **registered heat sources** | the mod API | **no** | another mod's registrations need not reach a client |
 | **simulation speed** | the host's own clock | **no** | a server below 1.0 while a client is not, which is a *rate* difference rather than the dropped backlog `hitching` models |
 
-The rows that are still open are tracked as [backlog.md](backlog.md) `F22` and `F23`. None of them
-changes the protocol — the correction overwrites state and so does not care which input produced the
+The row that is still open is tracked as [backlog.md](backlog.md) `F23`. It does not
+change the protocol — the correction overwrites state and so does not care which input produced the
 disagreement — and each of them changes how much correcting there is to do.
 
 **A speed error reaches the cubic term, not the saturating one.** A client's velocity is predicted
@@ -467,6 +473,44 @@ sweep hull it is worse than the wrong switch's 245.87 K. Its two halves decompos
 110.3 K of it and believing in a quarter more skin is the remaining 180.7 K, so **the skin is the
 larger half**. That is what makes the room map unlike every other row here — the others are wrong
 about a number both machines hold, and this one is wrong about how much hull there is.
+
+**The same ship received in a different order is no difference at all, and that is a design
+decision rather than luck.** A node's index is its arrival order, and two machines have no reason to
+share one — a client takes blocks in whatever order the engine streams them, a server has them in
+the order they were welded or pasted. `HotTailCodec` spends eight of its ten bytes a block on a
+position key for exactly this. Measured against the alternative rather than asserted: on a hull
+whose 1,003 of 1,004 blocks changed index, the position-keyed packet leaves the client **1.2e-4 K**
+out and the same packet applied by index leaves it **492.0 K** out. The residual is float summation
+order rather than physics — a node accumulates from its links and float addition is not associative
+— and it is an eight-hundredth of one quantum of the wire it travels on. **The order independence
+the threading work rests on is a claim about physics, not about bits**, and this is where the two
+part company.
+
+**A block a client has not been told about is not a block it is wrong about.** Every other row in
+the sweep degrades a number both machines hold; a client still receiving a pasted blueprint, or one
+whose subgrid has not attached, holds *fewer numbers* — a different node set, a different conduction
+graph, and hull surfaces open to the sky where the missing blocks would have covered them. A tenth
+of the hull missing for 60 s is the **loudest row in the sweep at 1,151.7 K**, and most of that peak
+is not the missing hull at all: it is the *arrival*. A block appearing on a grid starts at the
+world's default temperature, because the simulation has no history for it and nothing tells it what
+its neighbours hold, so a tenth of a hull at 1,000 K gains a tenth of itself at 293 K in one step.
+That decays, to 0.08 K. **And the correction cannot reach what is absent**: it takes the misreading
+from 235 s to 80 s and the blocks misread at once from 1,078 to 656, and the 223 absent blocks are
+223 both times, because the packet carries temperatures for blocks and a block that is not there
+takes none of them.
+
+**The bound is a bias and it is the worst input measured anywhere in this lab.** A tenth of the hull
+that never arrives settles the client **380.5 K** out in vacuum and **740.7 K** flying, ahead of a
+room map that never lands at 290.95 K and a wrong switch at 245.87 K. Which is the ordering worth
+reading: **the three worst inputs are the three that are not errors in a number**, and they get
+worse in that order as the disagreement moves from how much heat a ship makes to what shape it is.
+
+**Coolant loop identity is the one place the mod keys state on shape, and it behaves the way the
+topology rows say it should.** A loop's signature is an order-independent hash of every pipe
+position in its ring, so build order cannot move it and two machines arrive at the same identity —
+and a ring one pipe longer is a *different* loop, whose temperature a save keyed on the old shape
+does not land on. That is intended: an index-keyed loop would let a reload put one loop's coolant
+into another. `CoolantLoopTests` pins both halves.
 
 Settings and pump controls *are* replicated. `SENetworkAPI` 2.0 runs on channel `30323` with three
 properties on it: the world's settings and the two pump throttles.
@@ -881,6 +925,7 @@ counters rather than milliseconds so it holds on any machine.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-24 | **Topology is in the sweep, and it is the half that changes which numbers exist** ([backlog.md](backlog.md) `F22`). `build order` gives the client the same blocks in a different arrival order and reads 1.2e-4 K, which is float summation order rather than physics — and the same packet applied by index rather than by position leaves 492.0 K, which is what the codec's eight-byte key is buying, measured rather than asserted. `blocks missing` takes a tenth of the hull away: the loudest row in the sweep at 1,151.7 K, most of it the *arrival* rather than the absence, decaying to 0.08 K — and its bound is a bias at 380.5 K in vacuum and 740.7 K flying, the worst input measured anywhere here. The correction narrows what a partial hull misreads and cannot touch the 223 blocks that are absent. The comparison itself moved to block position from node index, which is a no-op on two hulls built alike and the only comparison that means anything on two that are not. |
 | 2026-08-24 | **The room map and its air are in the sweep, and they are the two ends of its own axis** ([backlog.md](backlog.md) `F21`). Pressure is *binary*: the link conductance carries no pressure term, so a fifth of the air missing is 0.90 K and all of it is 110.3 K, and the last one per cent is worth more than the first ninety-nine. An unconverged room map is the loudest input measured here — 474.7 K in vacuum, 912.7 K in air, because an empty map makes the whole interior sky and the hull believes in 26.8 % more skin — and it settles at 0.01 K, so the loudest is also the one the correction has least reason to chase. The bound, a pass that never lands, is a bias at 290.95 K and out-settles the wrong switch. **Two rig changes came with it and every figure above was re-measured**: the sweep hull's four compartments now hold air, which is worth about a seventh off every standing error, and the suite's own rig moved from 400 blocks to 600 because the census hull grows its first sealed room between the two and both room knobs would otherwise have judged nothing (`E8`). |
 | 2026-08-24 | **Block state is in the sweep, and a wrong switch is the worst input in it outright** ([backlog.md](backlog.md) `F20`). A tenth of the producers on the wrong side of their own switch settles a client 281.0 K out against `wrong settings` at 142.8 K, because a block that is off is wrong by *all* of its heat rather than by a share of it — and at equal missing wattage the concentrated error is 61.0 K against 13.5 K spread. Mass is the opposite kind of input: it is capacity rather than watts, so it stands under a moving load and decays under a steady one, 38.45 K against 0.3 K. Integrity turned out to reach the model through mass and nothing else, so the row's three inputs are two knobs. |
 | 2026-08-23 | **Grid velocity is in the sweep** ([backlog.md](backlog.md) `F19`), which is the consequential third of that row. A 20 % speed error settles a flying client 14.0 K out — a bias, and it lands on friction rather than on convection, because one goes as the cube of airspeed and the other saturates. Position and weather are still unmodelled and the row says so. |
