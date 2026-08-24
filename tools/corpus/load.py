@@ -34,6 +34,8 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+import scoring  # noqa: E402
+
 from pairs import (  # noqa: E402
     CENSORED,
     G1_MAX_SHARE,
@@ -43,6 +45,7 @@ from pairs import (  # noqa: E402
     WARM_KELVIN,
     WINDOW,
     crossing_median,
+    crossings,
     median,
     number,
 )
@@ -75,22 +78,30 @@ def share(rows, predicate):
     return 100.0 * sum(1 for r in rows if predicate(r)) / len(rows)
 
 
+def settles(rows):
+    """Seconds to settle for every hull, censored above where it never did."""
+    values = []
+    for row in rows:
+        value = number(row, "seconds_to_settle")
+        values.append(value if value is not None and value >= 0 else float("inf"))
+    return values
+
+
 def recovery_median(rows):
     """Seconds to settle after the load stops, with a run that never settled ordered past the end.
 
     Same censoring as the crossing: a hull still moving at the ceiling is not absent from the
     population, it is past it. `Battery` reports -1 for that.
     """
-    values = []
-    for row in rows:
-        value = number(row, "seconds_to_settle")
-        values.append(value if value is not None and value >= 0 else float("inf"))
+    values = settles(rows)
 
     if not values:
         return None, 0, 0
 
     settled = sum(1 for v in values if v != float("inf"))
-    middle = median(sorted(values))
+
+    # The same median the crossing takes, from the one place it is defined (`P5`).
+    middle = scoring.censored_median(values)
     return (None if middle == float("inf") else middle), settled, len(values)
 
 
@@ -120,7 +131,7 @@ def main():
         print("load case: " + case + "   " + CASES.get(case, ""))
         print()
         print(f"{'cell':>18} {'waste':>6} {'clock':>6} | {'crossing p50':>12} {'crossed':>9}"
-              f" | {'recovery p50':>12} {'settled':>9} | {'ratio':>7} | {'G8':>4}"
+              f" | {'recovery p50':>12} {'settled':>9} | {'ratio':>7} | {'G8':>4} {'holds':>6}"
               f" {'G1':>6} {'G2':>6} {'G5':>6}")
 
         for name in order:
@@ -151,13 +162,25 @@ def main():
 
             ratio = (settle / crossing) if (crossing and settle) else None
 
+            # **How often the same cell still satisfies `G8` on a fleet drawn from the same
+            # population.** A censored median has a cliff at half the hulls, and a cell can sit a
+            # ship or two clear of it: the crossing share is what decides that, and it is not
+            # visible in the median itself. Paired, because `G8` is one criterion with two halves
+            # and both are medians over the same hulls.
+            by_ship = {r["ship"]: r for r in recovery}
+            paired = [r for r in loaded if r["ship"] in by_ship]
+            holds = scoring.joint_median_stability([
+                (crossings(paired), scoring.in_window(WINDOW[0], WINDOW[1])),
+                (settles([by_ship[r["ship"]] for r in paired]), scoring.within(RECOVERY_BOUND)),
+            ]) if paired else 0.0
+
             print(f"{name:>18} {waste:>6g} {clock:>6g} | "
                   + (f"{crossing:10.1f} s" if crossing is not None else f"{'censored':>12}")
                   + f" {crossed:4d}/{of:<4d} | "
                   + (f"{settle:10.1f} s" if settle is not None else f"{'censored':>12}")
                   + f" {settled:4d}/{settle_of:<4d} | "
                   + (f"{ratio:7.1f}" if ratio is not None else f"{'—':>7}")
-                  + f" | {('PASS' if g8 else '—'):>4}"
+                  + f" | {('PASS' if g8 else '—'):>4} {100 * holds:5.0f}%"
                   + f" {g1:5.1f}% {g2:5.1f}% {g5:5.1f}%"
                   + ("" if keeps else "   <- breaks a criterion it must keep"))
         print()
@@ -173,6 +196,11 @@ def main():
           f" {G1_MAX_SHARE:.0f}% critical at idle,")
     print(f"G2 at least {G2_MIN_SHARE:.0f}% reaching {WARM_KELVIN:.0f} K under load,"
           f" G5 at least {G5_MIN_SHARE:.0f}% recovered.")
+    print()
+    print("'holds' is how often a fleet resampled from the same population still satisfies G8, over")
+    print(f"{scoring.RESAMPLES:,} draws with replacement. Two cells with the same median can be half as")
+    print("likely to hold: the censored median has a cliff at half the hulls crossing, and how far a")
+    print("cell sits from it is not visible in the median. Read it as a property of the statistic.")
     print()
     print("'crossed' is the count with a crossing at all. A cell where fewer than half the hulls")
     print("cross has no median and cannot satisfy G8 whatever the survivors did (E9) — which is how")

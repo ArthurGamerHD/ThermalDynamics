@@ -168,18 +168,27 @@ namespace Thermodynamics.Harness
         };
 
         /// <summary>
-        /// The cells the air pass prices: the shipped control, and the four
-        /// [balance.md](../../docs/balance.md) found satisfy `G8`.
+        /// The cells the air pass prices: the shipped control, and every cell that satisfies `G8`.
         ///
-        /// **Only these five, because only these five are decidable.** Every other cell in the grid
-        /// either fails `G8` or is excluded by it, so what it costs in air changes nothing. The
-        /// control is here for the same reason it is in the main grid: a cost is a ratio, and a
-        /// ratio needs a denominator measured the same way.
+        /// **Only the cells that are decidable, because what a rejected cell costs in air changes
+        /// nothing.** The control is here for the same reason it is in the main grid: a cost is a
+        /// ratio, and a ratio needs a denominator measured the same way.
+        ///
+        /// <para>
+        /// **The four waste cells were added on 2026-08-24 and the omission was a real gap.** This
+        /// grid was written when the conduction route was the only one that satisfied `G8`; the
+        /// load grid then found a second route, and it was never priced in the environment `G6` is
+        /// decided in. The two routes were being compared on a cost measured for one of them and
+        /// projected for the other, which is exactly the comparison `P6` forbids
+        /// ([backlog.md](../../docs/backlog.md) `C12`).
+        /// </para>
         /// </summary>
         private static readonly float[][] AirGrid =
         {
-            new[] { 1f, 225f },
-            new[] { 4f, 120f }, new[] { 4f, 100f }, new[] { 4f, 90f }, new[] { 4f, 80f },
+            new[] { 1f, 225f, 1f },
+            new[] { 4f, 120f, 1f }, new[] { 4f, 100f, 1f }, new[] { 4f, 90f, 1f }, new[] { 4f, 80f, 1f },
+            new[] { 1f, 110f, 0.5f }, new[] { 1f, 100f, 0.5f },
+            new[] { 1f, 90f, 0.5f }, new[] { 1f, 80f, 0.5f },
         };
 
         /// <summary>One cell of the grid.</summary>

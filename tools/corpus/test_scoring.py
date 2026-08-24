@@ -99,6 +99,91 @@ class ABreachIsPricedBesideTheVerdictAndTheMarkerDoesNotMove(unittest.TestCase):
 
 
 
+class ACensoredMedianHasACliffAndTheBootstrapIsWhereItIs(unittest.TestCase):
+    """`C12`: two cells with the same median can be half as likely to hold on another fleet.
+
+    The censoring rule says a median in the tail is *never*. What it cannot say is how close a cell
+    is to that boundary, and the difference matters: the load grid's waste route puts 55 % of hulls
+    past critical and the conduction route 62.5 %, both above a half and both scoring a median in
+    the window — and resampled, one holds on 46 % of fleets and the other on 76 %.
+    """
+
+    def test_a_fleet_that_all_crosses_inside_the_window_always_holds(self):
+        self.assertEqual(1.0, scoring.median_stability(
+            [200.0] * 40, scoring.in_window(120.0, 300.0)))
+
+    def test_a_fleet_that_never_crosses_never_holds(self):
+        self.assertEqual(0.0, scoring.median_stability(
+            [scoring.INFINITE] * 40, scoring.in_window(120.0, 300.0)))
+
+    def test_a_median_in_the_window_can_still_be_a_coin_flip(self):
+        # Twenty-two of forty crossed, all of them inside the window, and the rest never. The
+        # median is in the window on the measured fleet; a resample loses it whenever fewer than
+        # half the draws are crossers, which is close to half the time.
+        series = [200.0] * 22 + [scoring.INFINITE] * 18
+        held = scoring.median_stability(series, scoring.in_window(120.0, 300.0))
+
+        self.assertEqual(200.0, scoring.censored_median(series))
+        self.assertTrue(0.4 < held < 0.85,
+                        "a cell two hulls clear of the cliff held on %.0f %% of fleets" % (100 * held))
+
+    def test_the_same_median_further_from_the_cliff_holds_far_more_often(self):
+        near = [200.0] * 22 + [scoring.INFINITE] * 18
+        clear = [200.0] * 30 + [scoring.INFINITE] * 10
+
+        self.assertEqual(scoring.censored_median(near), scoring.censored_median(clear))
+        self.assertGreater(scoring.median_stability(clear, scoring.in_window(120.0, 300.0)),
+                           scoring.median_stability(near, scoring.in_window(120.0, 300.0)) + 0.2)
+
+    def test_a_recovery_bound_reads_never_as_over_the_bound(self):
+        self.assertEqual(0.0, scoring.median_stability(
+            [scoring.INFINITE] * 20, scoring.within(3600.0)))
+        self.assertEqual(1.0, scoring.median_stability(
+            [1000.0] * 20, scoring.within(3600.0)))
+
+    def test_the_estimate_is_the_same_on_two_runs(self):
+        series = [200.0] * 22 + [scoring.INFINITE] * 18
+        self.assertEqual(scoring.median_stability(series, scoring.in_window(120.0, 300.0)),
+                         scoring.median_stability(series, scoring.in_window(120.0, 300.0)))
+
+    def test_the_joint_estimate_is_not_the_product_of_the_marginals(self):
+        # Two halves that fail on the *same* hulls: every fleet either holds both or neither, so
+        # the joint is the marginal rather than its square. Multiplying would have said 25 %.
+        crossing = [200.0] * 20 + [scoring.INFINITE] * 20
+        recovery = [1000.0] * 20 + [scoring.INFINITE] * 20
+
+        a = scoring.median_stability(crossing, scoring.in_window(120.0, 300.0))
+        both = scoring.joint_median_stability([
+            (crossing, scoring.in_window(120.0, 300.0)),
+            (recovery, scoring.within(3600.0)),
+        ])
+
+        self.assertAlmostEqual(a, both, places=6)
+
+    def test_a_half_that_always_holds_does_not_change_the_joint(self):
+        crossing = [200.0] * 22 + [scoring.INFINITE] * 18
+        recovery = [1000.0] * 40
+
+        self.assertAlmostEqual(
+            scoring.median_stability(crossing, scoring.in_window(120.0, 300.0)),
+            scoring.joint_median_stability([
+                (crossing, scoring.in_window(120.0, 300.0)),
+                (recovery, scoring.within(3600.0)),
+            ]), places=6)
+
+    def test_series_of_different_lengths_are_refused_rather_than_zipped(self):
+        with self.assertRaises(ValueError):
+            scoring.joint_median_stability([
+                ([1.0, 2.0], scoring.within(3.0)),
+                ([1.0], scoring.within(3.0)),
+            ])
+
+    def test_an_infinity_in_the_middle_stays_infinite_rather_than_averaging_away(self):
+        # The even-length boundary: two crossers and two not is not a median of "somewhere past
+        # the second one", it is no median at all.
+        self.assertEqual(scoring.INFINITE, scoring.censored_median([10.0, 20.0, scoring.INFINITE, scoring.INFINITE]))
+
+
 class CensoringBeginsAtABlocksOwnRatingRatherThanAtARoundNumber(unittest.TestCase):
     """`E9`, and the defect that made `C2` a decision about a harness artefact.
 

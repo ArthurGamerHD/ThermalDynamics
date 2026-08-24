@@ -29,6 +29,8 @@ import os
 import statistics
 import sys
 
+import scoring
+
 DATA = sys.argv[1] if len(sys.argv) > 1 else "out/pairs-2026-08-23"
 
 SHIPPED_CLOCK = 225.0
@@ -105,13 +107,15 @@ def crossing_median(rows):
     there is no median here — not that it is large, and not that it is the median of the third of
     the population that did cross.
     """
-    values = sorted(crossings(rows))
+    values = crossings(rows)
     crossed = sum(1 for v in values if v != INFINITE)
 
     if not values:
         return None, 0, 0
 
-    middle = statistics.median(values)
+    # One definition of this statistic, in `scoring.py` beside its tests, because the bootstrap
+    # that says how *stable* a median is has to take the same median the verdict does (`P5`).
+    middle = scoring.censored_median(values)
     return (None if middle == INFINITE else middle), crossed, len(values)
 
 

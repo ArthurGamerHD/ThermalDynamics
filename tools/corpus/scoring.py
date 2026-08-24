@@ -53,3 +53,126 @@ def peak_ran_away(peak):
     """The stronger flag: a peak past `RAN_AWAY_KELVIN` is not even an ordering."""
     return peak is not None and peak >= RAN_AWAY_KELVIN
 
+
+# ---- how stable a censored median is -------------------------------------------------------
+
+INFINITE = float("inf")
+
+# Resamples per estimate. Enough that the interval is stable to about a per cent, and cheap
+# enough to run inside a report: forty hulls resampled four thousand times is a millisecond.
+RESAMPLES = 4000
+
+
+def censored_median(values):
+    """The median of a series holding `float("inf")` for the runs that never got there.
+
+    **One definition, because two of these drifted once already.** An infinity in the middle stays
+    infinite — averaging `20.0` and `inf` is `inf` in float, which is the reading `G8` needs: with
+    exactly half the hulls crossed the 50th percentile is past the end of the run, and that is no
+    median rather than a large one. `pairs.crossing_median` calls this and maps the infinity to
+    `None` for its own callers.
+    """
+    values = sorted(values)
+    n = len(values)
+    if n == 0:
+        return INFINITE
+    if n % 2:
+        return values[n // 2]
+
+    return (values[n // 2 - 1] + values[n // 2]) / 2.0
+
+
+def joint_median_stability(entries, resamples=RESAMPLES, seed=20260824):
+    """The same bootstrap over several series at once, drawn from the same hulls.
+
+    `entries` is a list of `(series, predicate)`, every series indexed by the same hulls in the same
+    order. One draw of hulls is applied to all of them and the resample counts only when every
+    predicate holds, which is what a criterion with two halves needs: `G8` asks for a crossing
+    inside a window **and** a recovery inside a bound, on one fleet. Testing the two separately and
+    multiplying would assume they are independent, and they are not — both are medians over the
+    same hulls.
+    """
+    entries = [(list(series), predicate) for series, predicate in entries]
+    if not entries or not entries[0][0]:
+        return 0.0
+
+    size = len(entries[0][0])
+    for series, _ in entries:
+        if len(series) != size:
+            raise ValueError("every series must be indexed by the same hulls")
+
+    state = seed & 0xFFFFFFFF or 1
+    passed = 0
+
+    for _ in range(resamples):
+        picked = []
+        for _ in range(size):
+            state ^= (state << 13) & 0xFFFFFFFF
+            state ^= state >> 17
+            state ^= (state << 5) & 0xFFFFFFFF
+            picked.append(state % size)
+
+        if all(predicate(censored_median([series[i] for i in picked]))
+               for series, predicate in entries):
+            passed += 1
+
+    return passed / float(resamples)
+
+
+def median_stability(series, predicate, resamples=RESAMPLES, seed=20260824):
+    """How often a resampled fleet's median still satisfies `predicate`.
+
+    **A censored median has a cliff in it, and a cell can be measured on the wrong side of the
+    cliff without anything looking wrong.** The median is only defined while more than half the
+    hulls crossed; below that it is *never*, which is the reading `pairs.crossing_median` already
+    enforces. What that reading cannot show is how close a cell is to the boundary — a cell where
+    55 % of hulls cross has a median, and a fleet resampled from the same population drops it below
+    a half about half the time.
+
+    This is the bootstrap that says which. Each resample draws `len(series)` hulls with
+    replacement, takes the censored median, and asks the predicate. The share that pass is the
+    answer, and it is a statement about the *statistic* rather than about the physics: two cells
+    with the same median can be 47 % and 77 % reliable, and the repository has already been caught
+    once by a crossing share falling under a half ([backlog.md](../../docs/backlog.md) `C12`).
+
+    `series` holds one value per hull, with `float("inf")` for a hull that never crossed. `seed` is
+    fixed so a report and its test agree, and so two runs of a decision produce the same number.
+    """
+    values = list(series)
+    if not values:
+        return 0.0
+
+    state = seed & 0xFFFFFFFF or 1
+    passed = 0
+
+    for _ in range(resamples):
+        picked = []
+        for _ in range(len(values)):
+            # xorshift32 rather than `random`, so the number a report prints does not depend on
+            # what else in the process drew from the shared generator first.
+            state ^= (state << 13) & 0xFFFFFFFF
+            state ^= state >> 17
+            state ^= (state << 5) & 0xFFFFFFFF
+            picked.append(values[state % len(values)])
+
+        if predicate(censored_median(picked)):
+            passed += 1
+
+    return passed / float(resamples)
+
+
+def in_window(low, high):
+    """A predicate for `median_stability`: inside a closed window, and never is outside it."""
+    def test(value):
+        return value != INFINITE and low <= value <= high
+
+    return test
+
+
+def within(bound):
+    """A predicate for `median_stability`: at or under a bound, and never is over it."""
+    def test(value):
+        return value != INFINITE and value <= bound
+
+    return test
+
