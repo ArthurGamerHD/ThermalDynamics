@@ -210,7 +210,7 @@ back into the hot loop the flat arrays exist to feed; the sun-lit array is meani
 `SolarSelfShadowing` is on, which is the shipped default, so allocating it lazily buys nothing for
 most worlds. Both are a cost measurement rather than a packing job (`D7`).
 
-### 4. Rooms as one cell array with per-room ranges — **half done**; ~9 MB at 126k left
+### 4. Rooms as one cell array with per-room ranges — **done**
 
 Room cells are held twice: once per room, and once in `Dictionary<Vector3I, int> roomIndexByCell`.
 
@@ -224,11 +224,25 @@ The one caller that did search a room is the room *diagnostic*, which asks wheth
 onto a compartment. It builds a set for one room at a time and reuses it, so the cost is bounded by
 the largest compartment during a scan rather than by every compartment for the life of the grid.
 
-What is left is `roomIndexByCell`: about 31 bytes for every cell in a room, 8.7 MB at 126k blocks
-and 47 MB at 500k. A single `Vector3I[]` of all room cells sorted by room, with an `int[]` of range
-starts, holds both halves once at 12 bytes a cell — but the dictionary answers `RegionOf` on the
-exposure path, so replacing it means giving that lookup a different shape rather than deleting
-it.
+**And `roomIndexByCell` is done too, by freezing rather than by merging.** It cost about 31 bytes
+for every cell in a room. A map is written once — a flood adds cells one at a time, which a sorted
+array cannot — and then read for the life of the grid, so the dictionary is what a *running* pass
+writes into and is replaced when the pass completes by a sorted `long[]` of cell keys and a parallel
+`int[]` of rooms: **twelve bytes a cell**, and a binary search over contiguous memory instead of a
+hash and a bucket chase.
+
+Measured on a 20,000-block ship with 24,565 cells in 17 rooms, the room map falls from **107 to 72
+bytes a block** and the whole retained set from 1,000 to 966.
+
+Two details that are the difference between a saving and an increase. The dictionary is *replaced*
+rather than cleared — `Clear` keeps its buckets and entries, so freezing beside them would have
+added twelve bytes a cell rather than traded thirty-one for them, and `TrimExcess` does not exist on
+.NET Framework 4.8 (`C3`). And no timing claim is made either way: the exposure and room stages move
+within a run-to-run spread the scale ladder does not report, which is `M5` and not a result.
+
+`RoomMapFreezeTests` checks the frozen answer against a dictionary rebuilt from the per-room copy
+that remains — the code the arrays replaced — over every room cell and the six neighbours of each,
+so the misses are judged as well as the hits.
 
 ### 5. Move the node diagnostics out of the node — ~24 B/block
 
@@ -289,6 +303,7 @@ counted per cell, which is §8 and §9.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | **§4 is finished**: the room map's cell dictionary is frozen into sorted arrays when a pass completes, 31 → 12 bytes a cell. The room map falls from 107 to **72 bytes a block** on a 20,000-block ship and the retained set from 1,000 to 966. [backlog.md](backlog.md) `E3`. |
 | 2026-08-23 | **§3's counts are packed**: `ExposedFaces` is one `long` rather than an `int[6]`, and the solver row falls 475 → **427 bytes a block** on a 20,000-block ship — the array's header and reference exactly. With §2 the same row is 524 → 427 and the whole retained set 1,097 → 1,000. [backlog.md](backlog.md) `E2`. |
 | 2026-08-23 | **§2 is done and it was worth more than it was estimated at.** The solver's node dictionary is gone and the block carries the index: 524 → **475 bytes a block** on the solver row, 1,097 → 1,048 retained, measured on a 20,000-block ship rather than counted. [backlog.md](backlog.md) `E1`. |
 | 2026-08-22 | Put the five completed changes in the present tense — each is a structure the code has, not a thing that was done — and moved the fifth up beside the other four instead of leaving it struck through in the list of what is still worth doing. |
