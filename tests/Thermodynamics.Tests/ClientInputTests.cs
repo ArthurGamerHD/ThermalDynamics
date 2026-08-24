@@ -1074,6 +1074,157 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// **A rate difference is worth exactly what the load is doing and nothing else.**
+        ///
+        /// <para>
+        /// The mod advances one sixtieth of a simulated second per *simulation tick* rather than
+        /// per real second, so a machine executing fewer ticks a second is a machine whose thermal
+        /// clock runs slow — a server below 1.0 sim speed with a client at 1.0, or the reverse
+        /// ([backlog.md](../../docs/backlog.md) `F23`). It is the one degradation here in which the
+        /// client's inputs are all correct: it is not wrong about anything, it is *elsewhere on the
+        /// same trajectory*.
+        /// </para>
+        ///
+        /// <para>
+        /// Which is why it disappears at equilibrium. Two hulls heading to the same settled
+        /// temperature at different speeds agree once they arrive; two hulls chasing a load that
+        /// keeps moving never do. Both runs below are in the dark with the same degradation and
+        /// differ only in the load script, so the difference cannot be anything else — the same
+        /// construction `mass error` needs, and for a related reason, since neither capacity nor
+        /// clock appears in the balance a hull settles at.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void ARateDifferenceIsWorthWhatTheLoadIsDoingAndNothingElse()
+        {
+            ClientInputLab.Degradation how = new ClientInputLab.Degradation
+            {
+                Name = "slow clock",
+                SimSpeedError = -0.1f,
+            };
+
+            ClientInputLab.Result moving = InTheDark(how, ClientInputLab.LoadPeriodSeconds);
+            ClientInputLab.Result steady = InTheDark(how, 1e9f);
+
+            output.WriteLine("moving load: peak {0:n1} K, standing {1:n2} K. steady: peak {2:n1} K,"
+                + " standing {3:n2} K", moving.PeakKelvin, moving.StandingKelvin,
+                steady.PeakKelvin, steady.StandingKelvin);
+
+            Assert.True(moving.StandingKelvin > 5f,
+                "a 10 % clock error settled only " + moving.StandingKelvin + " K out under a moving"
+                + " load, which is too small for the comparison below to be measuring anything");
+
+            Assert.True(steady.StandingKelvin < 0.1f,
+                "under a load that stops moving a clock error should vanish; it settled at "
+                + steady.StandingKelvin + " K");
+
+            // And under the moving load it stands: twice the run does not shrink it, which is what
+            // says the two hulls are apart rather than converging.
+            ClientInputLab.Result longer = ClientInputLab.Measure(how,
+                ClientDriftLab.Correction.None, "sunlit", 480f, Blocks);
+            ClientInputLab.Result shorter = Run(how);
+
+            output.WriteLine("sunlit: {0:n2} K at 240 s, {1:n2} K at 480 s",
+                shorter.StandingKelvin, longer.StandingKelvin);
+
+            Assert.True(longer.StandingKelvin > shorter.StandingKelvin * 0.6f,
+                "the standing error fell from " + shorter.StandingKelvin + " K to "
+                + longer.StandingKelvin + " K over twice the run, which is a perturbation rather"
+                + " than the standing difference this pins");
+        }
+
+        /// <summary>
+        /// **The same lost time in lumps peaks five times higher than as a slope**, and settles in
+        /// much the same place — which is what says `hitching` and `slow clock` are one quantity in
+        /// two shapes.
+        ///
+        /// <para>
+        /// `hitching` loses five seconds of every thirty, which *is* five-sixths rate. The
+        /// mechanism once written beside it was a solver backlog being dropped, and nothing in the
+        /// mod does that: `ThermalGridScheduler` passes a constant frame length and
+        /// `ThermalSimulation.Update` banks work credit against it, so the ceiling that would
+        /// discard a backlog cannot bind at any legal `Frequency`. What a stalling machine does is
+        /// run fewer simulation ticks ([backlog.md](../../docs/backlog.md) `F23`).
+        /// </para>
+        ///
+        /// <para>
+        /// So the pair is worth measuring rather than merging: the average deficit decides where a
+        /// client settles, and how it is delivered decides how far wrong it gets on the way.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheSameLostTimeInLumpsPeaksFarHigherThanAsASlope()
+        {
+            // Five seconds of every thirty is a sixth of the client's time, however it arrives.
+            const float Deficit = 1f / 6f;
+
+            ClientInputLab.Result lumps = Run(new ClientInputLab.Degradation
+            {
+                Name = "hitching",
+                HitchEverySeconds = 30f,
+                HitchLosesSeconds = 5f,
+            });
+
+            ClientInputLab.Result slope = Run(new ClientInputLab.Degradation
+            {
+                Name = "slow clock",
+                SimSpeedError = -Deficit,
+            });
+
+            output.WriteLine("lumps: peak {0:n1} K, standing {1:n2} K. slope: peak {2:n1} K,"
+                + " standing {3:n2} K", lumps.PeakKelvin, lumps.StandingKelvin,
+                slope.PeakKelvin, slope.StandingKelvin);
+
+            Assert.True(slope.StandingKelvin > 5f,
+                "the smooth case settled only " + slope.StandingKelvin + " K out, which is too"
+                + " small for the comparison to be measuring anything");
+
+            Assert.True(lumps.PeakKelvin > 3f * slope.PeakKelvin,
+                "the same deficit in lumps peaked at " + lumps.PeakKelvin + " K against "
+                + slope.PeakKelvin + " K as a slope, so how it is delivered is not what decides"
+                + " the peak");
+
+            Assert.True(lumps.StandingKelvin < 2f * slope.StandingKelvin,
+                "the two settled " + lumps.StandingKelvin + " K and " + slope.StandingKelvin
+                + " K apart, so they are not the same average deficit after all");
+        }
+
+        /// <summary>
+        /// **A heat source the client never heard about is a bias, and it is the only input in the
+        /// sweep that comes from outside this mod entirely.**
+        ///
+        /// <para>
+        /// `ThermalHeatSources` is a registry another mod writes into through the API. A
+        /// registration is a call made on whichever machine that mod runs its logic on, and nothing
+        /// replicates it — so a client can be simulating a hull beside a furnace it does not know
+        /// exists ([backlog.md](../../docs/backlog.md) `F23`). What reaches the solver is an
+        /// `EnvironmentSample` with one fewer entry, and a missing steady watt is a standing error
+        /// by construction.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void AHeatSourceTheClientNeverHeardAboutIsABias()
+        {
+            ClientInputLab.Result result = Run(new ClientInputLab.Degradation
+            {
+                Name = "missing source",
+                MissingHeatSourceIrradiance = ClientInputLab.HeatSourceIrradiance,
+            });
+
+            output.WriteLine("peak {0:n2} K, standing {1:n2} K at {2:n0} W/m2",
+                result.PeakKelvin, result.StandingKelvin, ClientInputLab.HeatSourceIrradiance);
+
+            Assert.True(result.StandingKelvin > 0.1f,
+                "a source worth " + ClientInputLab.HeatSourceIrradiance + " W/m2 that the client"
+                + " never heard about settled it only " + result.StandingKelvin + " K out, so the"
+                + " knob reached nothing");
+
+            Assert.True(result.StandingKelvin > result.PeakKelvin * 0.5f,
+                "it peaked at " + result.PeakKelvin + " K and settled at " + result.StandingKelvin
+                + " K, which is a perturbation rather than the bias this pins");
+        }
+
+        /// <summary>
         /// **A hull with no sealed compartment is refused a room knob rather than reporting one as
         /// harmless.**
         ///

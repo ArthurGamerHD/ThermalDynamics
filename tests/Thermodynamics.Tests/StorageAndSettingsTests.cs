@@ -436,63 +436,22 @@ namespace Thermodynamics.Tests
     }
 
     /// <summary>
-    /// How real frames become simulated time.
+    /// The budgets a resumable pass gets, sized against a grid.
     ///
     /// <para>
-    /// The property worth protecting is that a stall does not become a burst: a server that froze for
-    /// two seconds must not then run two seconds of heat in one frame, because the frame after a stall
-    /// is the worst possible moment to do extra work.
+    /// How real frames become simulated time is tested in `HostAdapterTests`, against
+    /// `ThermalSimulation.Update`. It used to be tested here against a second step-credit
+    /// accumulator on `SimulationScheduler` that no shipped code called, and which has been removed
+    /// ([backlog.md](../../docs/backlog.md) `F23`).
     /// </para>
     /// </summary>
     public class SchedulerTests
     {
-        [Fact]
-        public void CreditAccumulatesAcrossShortFrames()
-        {
-            // Pinned rather than inherited: this asserts arithmetic about the step rate, and the
-            // shipped default is a product decision that has moved before and will again.
-            ThermalSettings settings = new ThermalSettings { Frequency = 4 };
-            settings.Derive();
-
-            SimulationScheduler scheduler = new SimulationScheduler(settings);
-
-            // a sixtieth of a second earns 4/60 of a step
-            int total = 0;
-            for (int i = 0; i < 60; i++)
-            {
-                total += scheduler.StepsDue(1f / 60f);
-            }
-
-            Assert.Equal(4, total);
-        }
-
-        [Fact]
-        public void SimulationSpeedMultipliesTheStepRate()
-        {
-            // The rate is pinned; what is being tested is the multiplier on top of it.
-            ThermalSettings settings = new ThermalSettings { Frequency = 4 };
-            settings.SimulationSpeed = 3f;
-            settings.Derive();
-
-            SimulationScheduler scheduler = new SimulationScheduler(settings);
-
-            int total = 0;
-            for (int i = 0; i < 60; i++) total += scheduler.StepsDue(1f / 60f, 64);
-
-            Assert.Equal(12, total);
-        }
-
-        [Fact]
-        public void ALongStallDoesNotProduceABurstOfSteps()
-        {
-            ThermalSettings settings = new ThermalSettings();
-            SimulationScheduler scheduler = new SimulationScheduler(settings);
-
-            int due = scheduler.StepsDue(60f, 4);
-
-            Assert.Equal(4, due);
-            Assert.Equal(0f, scheduler.Pending, 5);
-        }
+        // The step-rate claims that used to live here are now in `HostAdapterTests`, measured
+        // against `ThermalSimulation.Update` — the path the game drives. They were written against
+        // `SimulationScheduler.StepsDue`, a parallel step-credit accumulator no shipped code
+        // called, which has been removed (`F23`). What is left of this class is the budget
+        // arithmetic, which is live.
 
         [Fact]
         public void RoomMappingBudgetStaysWithinBounds()

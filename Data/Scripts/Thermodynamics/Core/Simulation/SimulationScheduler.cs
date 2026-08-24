@@ -3,85 +3,33 @@ using System;
 namespace Thermodynamics.Core
 {
     /// <summary>
-    /// Decides when a grid's solver runs, and sizes the budgets for its resumable passes.
+    /// Counts a grid's completed steps, and sizes the budgets for its resumable passes.
     ///
-    /// The solver is order-independent and energy-conserving, so the whole grid steps together and
-    /// what needs budgeting is how often a step runs rather than which blocks are in it.
+    /// <para>
+    /// **It does not decide when a step runs, and it used to look as though it did.** The pacing
+    /// lives in <see cref="ThermalSimulation.Update"/>, which banks work credit against the frame
+    /// it is given and spends it a slice at a time; this class carried a second, parallel
+    /// step-credit accumulator — `StepsDue`, `WouldStep` and the frame-length arithmetic under
+    /// them — that no shipped path ever called. Two pages and both client labs described *that*
+    /// mechanism as the live one, so a degraded-input row named a backlog drop the mod cannot
+    /// perform. Removed 2026-08-24; see [backlog.md](../../../../../docs/backlog.md) `F23`.
+    /// </para>
+    ///
+    /// <para>
+    /// The budget helpers are static because they are arithmetic over a grid's size rather than
+    /// state, and what remains of the instance is the step count the host reads to know whether a
+    /// tick stepped.
+    /// </para>
     /// </summary>
     public class SimulationScheduler
     {
-        private readonly ThermalSettings settings;
-
-        private float accumulator;
-
         public SimulationScheduler(ThermalSettings settings)
         {
             if (settings == null) throw new ArgumentNullException("settings");
-            this.settings = settings;
-        }
-
-        /// <summary>Simulated seconds each step advances.</summary>
-        public float StepSeconds
-        {
-            get { return settings.StepSeconds; }
-        }
-
-        /// <summary>Steps owed per real second.</summary>
-        public float StepsPerSecond
-        {
-            get { return settings.StepsPerSecond; }
         }
 
         /// <summary>Steps completed since construction.</summary>
         public long StepsRun { get; private set; }
-
-        /// <summary>Fractional step credit carried between frames.</summary>
-        public float Pending
-        {
-            get { return accumulator; }
-        }
-
-        /// <summary>
-        /// Adds the credit earned by one render frame and reports how many solver steps are due.
-        /// </summary>
-        /// <param name="frameSeconds">Real seconds since the previous call.</param>
-        /// <param name="maxStepsPerFrame">
-        /// Upper bound so a long frame or a paused session cannot produce a burst of steps.
-        /// </param>
-        public int StepsDue(float frameSeconds, int maxStepsPerFrame = 4)
-        {
-            if (frameSeconds <= 0f) return 0;
-
-            accumulator += frameSeconds * settings.StepsPerSecond;
-
-            int due = (int)accumulator;
-            if (due <= 0) return 0;
-
-            if (due > maxStepsPerFrame)
-            {
-                // Drop the backlog rather than catching up, so a long pause cannot cause a stall.
-                due = maxStepsPerFrame;
-                accumulator = 0f;
-            }
-            else
-            {
-                accumulator -= due;
-            }
-
-            StepsRun += due;
-            return due;
-        }
-
-        /// <summary>
-        /// Whether <see cref="StepsDue"/> would return anything this frame, without consuming the
-        /// credit. The host uses this to skip building an environment sample on frames that will
-        /// not step, since a sample costs a planet lookup and possibly a raycast.
-        /// </summary>
-        public bool WouldStep(float frameSeconds)
-        {
-            if (frameSeconds <= 0f) return false;
-            return accumulator + (frameSeconds * settings.StepsPerSecond) >= 1f;
-        }
 
         /// <summary>
         /// Cell budget for the room mapper this frame. Scales with grid size so a large grid is
@@ -147,7 +95,6 @@ namespace Thermodynamics.Core
 
         public void Reset()
         {
-            accumulator = 0f;
             StepsRun = 0;
         }
     }

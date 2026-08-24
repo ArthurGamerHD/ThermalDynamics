@@ -93,7 +93,7 @@ Session.Draw()                          client only
   └─ ThermalDebugPanel.Update()         the readout beside it; sweeps the grid a few times a second
 
 ThermalGridScheduler.Tick()             every frame, every grid
-  ├─ scheduler.WouldStep()?             no  → skip sampling entirely
+  ├─ Simulation.NeedsEnvironmentSample?  no → skip sampling entirely
   ├─ Sample()                           planet, air, wind, sun, occlusion, heat sources
   ├─ push heat pump state                switch and available power, before the step spends it
   ├─ Simulation.Update(dt, sample)
@@ -115,8 +115,18 @@ ThermalGridScheduler.Tick()             every frame, every grid
 
 Every grid is visited every frame and does the share of its current step that one frame is of the
 step's window, so the cost of a step is spread rather than landing whole on one frame. How often the
-simulation *steps* is `SimulationScheduler`'s business — `Frequency × SimulationSpeed` steps per real
-second, with fractional credit carried between frames. The scheduler is driven from the session
+simulation *steps* is `ThermalSimulation.Update`'s business — it banks `StepWorkUnits × frameSeconds
+× StepsPerSecond` of work credit each frame and spends it a slice at a time, so a step completes
+after `Frequency × SimulationSpeed` steps' worth of frames and never more than one per frame.
+`SimulationScheduler` counts completed steps and sizes the resumable passes' budgets; it used to
+carry a second, parallel step-credit accumulator that nothing called, and that is gone
+([backlog.md](backlog.md) `F23`).
+
+**The frame length is a constant sixtieth**, not measured real time, and `Session` runs on
+`MyUpdateOrder.Simulation` — so **simulated time is counted in simulation ticks rather than in real
+seconds**. A machine running below 1.0 sim speed executes fewer ticks per real second and its
+thermal clock runs slow with the rest of its world, which is correct on one machine and a divergence
+between two. The scheduler is driven from the session
 component rather than from the grid entity, because `MyCubeGrid` clears `EACH_FRAME` from its own
 update flags whenever its scheduled-work queue empties. See
 [load-and-hitching.md](load-and-hitching.md#what-keeps-the-spike-proportional) for what the spreading is worth.
@@ -206,6 +216,7 @@ pumps `ThermalSimulation` — which is exactly what the test harness does.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-24 | Corrected the update order and the pacing paragraph. The tick calls `Simulation.NeedsEnvironmentSample`, not `scheduler.WouldStep`, and step pacing is `ThermalSimulation.Update`'s work credit rather than `SimulationScheduler`'s — whose parallel step-credit accumulator no shipped path called and has been removed. Added what the constant frame length means: simulated time is counted in simulation ticks, so a machine below 1.0 sim speed has a thermal clock that runs slow ([backlog.md](backlog.md) `F23`). |
 | 2026-08-23 | Added the temperature replication: a third channel, a component in the adapter table, and a correction to the **Networking** claim that clients simply reach their own answers. They still do; the server now states the truth over the top of it. |
 | 2026-08-22 | Corrected two statements this page had gone on making after the code stopped supporting them. **Networking** said no `NetSync` property and no command was registered and that nothing replicates; three properties and a second, secure channel exist, and the section now says what each carries and why the split. **Update order** filed the per-grid block under "every 10th frame" while naming the scheduler that runs every grid every frame two lines below. Completed the adapter table, which named 22 of the 33 files under `Data/Scripts/Thermodynamics` — the scheduler, the settings sync and request paths, the room diagnostics, the coolant pump block, the wind overlay, the overlay budget, the planet probes and the three heat-source debug files were all absent. |
 | 2026-08-22 | Added the standard header and this change log. |

@@ -87,13 +87,21 @@ namespace Thermodynamics.Harness
         /// The client's machine, to the one extent this lab can model it.
         ///
         /// <para>
-        /// **Frame rate is not a divergence source and a hitch is.** The scheduler carries
-        /// fractional step credit between frames, so a client at ten frames a second still owes and
-        /// runs the same number of solver steps as one at sixty — it just runs them in bigger
-        /// groups. What loses simulated time is <see cref="SimulationScheduler.StepsDue"/> hitting
-        /// its per-frame cap, where it **drops the backlog rather than catching up** so a stall
-        /// cannot become a stutter. At the shipped eight steps a second and a cap of four, that
-        /// needs a frame over half a second: a world load, a large paste, an autosave, a hitch.
+        /// **What loses a client simulated time is running fewer simulation ticks, and that is a
+        /// rate difference.** The mod advances a fixed sixtieth of a simulated second per tick —
+        /// `ThermalGridScheduler` passes a constant frame length and `Session` runs on
+        /// `MyUpdateOrder.Simulation` — so simulated time is counted in ticks rather than in real
+        /// seconds, and a machine executing fewer of them per real second has a thermal clock that
+        /// runs slow. This lab's `hitch` is that deficit arriving in lumps.
+        /// </para>
+        ///
+        /// <para>
+        /// **The mechanism once named here was a solver backlog being dropped, and nothing in the
+        /// mod does that.** `ThermalSimulation.Update` banks work credit against the frame it is
+        /// handed and discards credit above one step's worth, which cannot bind at a constant
+        /// sixtieth at any legal `Frequency`; the second accumulator that did drop a backlog was on
+        /// `SimulationScheduler`, was called by no shipped path, and has been removed
+        /// ([backlog.md](../../docs/backlog.md) `F23`).
         /// </para>
         ///
         /// <para>

@@ -66,9 +66,18 @@ namespace Thermodynamics.Harness
             public float StaleSeconds;
 
             /// <summary>
-            /// Simulated seconds between the client dropping its solver backlog, which is what
-            /// <see cref="SimulationScheduler.StepsDue"/> does on a frame long enough to exceed its
-            /// per-frame cap. **A repeated perturbation.**
+            /// Simulated seconds between the client losing a lump of simulated time.
+            ///
+            /// <para>
+            /// **It is <see cref="SimSpeedError"/> arriving in lumps rather than a mechanism of its
+            /// own**, and the mechanism once named here was the wrong one: nothing in the mod drops
+            /// a solver backlog. `ThermalGridScheduler` passes a constant frame length and
+            /// `ThermalSimulation.Update` banks work credit against it, so the ceiling that would
+            /// discard a backlog cannot bind at any legal `Frequency`. What a stalling machine does
+            /// is run fewer simulation ticks, and simulated time is counted in ticks — so five
+            /// seconds lost of every thirty is five sixths rate, and the two rows measure the same
+            /// quantity in two shapes ([backlog.md](../../docs/backlog.md) `F23`).
+            /// </para>
             /// </summary>
             public float HitchEverySeconds;
 
@@ -301,6 +310,56 @@ namespace Thermodynamics.Harness
             /// subgrid attaching late has.
             /// </summary>
             public float BlocksMissingSeconds;
+
+            /// <summary>
+            /// The client advances simulated time at this share more or less than the server does.
+            ///
+            /// <para>
+            /// **A rate difference, which is the one shape dissipation cannot close.** Every other
+            /// knob here makes the client wrong about an input; this one leaves every input right
+            /// and puts the two machines at different points along the same trajectory. Two
+            /// simulations that agree about everything except *when they are* do not converge,
+            /// because neither is wrong — they are elsewhere.
+            /// </para>
+            ///
+            /// <para>
+            /// It is what the engine actually does. The mod advances one sixtieth of a simulated
+            /// second per *simulation tick*, not per real second — `ThermalGridScheduler` passes a
+            /// constant frame length and `Session` runs on `MyUpdateOrder.Simulation` — so a
+            /// machine executing fewer ticks per real second is a machine whose thermal clock runs
+            /// slow. A server below 1.0 sim speed with a client at 1.0, or the reverse, is exactly
+            /// that ([backlog.md](../../docs/backlog.md) `F23`).
+            /// </para>
+            ///
+            /// <para>
+            /// `hitching` is the same quantity arriving in lumps: a client that loses five seconds
+            /// of every thirty is a client running at five sixths rate. The two rows are here to be
+            /// compared, because a lump and a slope are not obviously the same thing until they are
+            /// measured side by side.
+            /// </para>
+            /// </summary>
+            public float SimSpeedError;
+
+            /// <summary>
+            /// A registered heat source the server has and the client does not, in W/m² at the hull.
+            ///
+            /// <para>
+            /// **The one input that arrives from outside this mod entirely.** `ThermalHeatSources`
+            /// is a registry another mod writes into through the API, and a registration is a call
+            /// made on whichever machine that mod is running its own logic on: it has no
+            /// replication behind it, so a client need never hear about it. What reaches the solver
+            /// is an `EnvironmentSample` with one fewer entry
+            /// ([backlog.md](../../docs/backlog.md) `F23`).
+            /// </para>
+            ///
+            /// <para>
+            /// Written as an irradiance rather than as watts because that is what the sample
+            /// carries: `ThermalHeatSources.Sample` resolves the inverse square and the range
+            /// cutoff on each machine, and what crosses into the solver is already W/m² at the
+            /// grid.
+            /// </para>
+            /// </summary>
+            public float MissingHeatSourceIrradiance;
 
             /// <summary>
             /// The client is running the shipped defaults while the server is not. **A bias, and
@@ -556,6 +615,7 @@ namespace Thermodynamics.Harness
             float sinceSample = 0f;
             float sinceHitch = 0f;
             float owed = 0f;
+            float clientOwed = 0f;
 
             float servedWatts = float.NaN;
             float clientWatts = float.NaN;
@@ -580,7 +640,13 @@ namespace Thermodynamics.Harness
                 }
                 else
                 {
-                    Advance(client, Sample(scenario, now - how.EnvironmentLagSeconds, how, true), tick);
+                    // **The client's own clock.** Its rate is the server's plus whatever the case
+                    // says, and the remainder is carried rather than rounded away: a step is a
+                    // quarter of a second and a tick is five, so discarding the fraction each time
+                    // would make a 10 % rate error into a 20 % one.
+                    clientOwed += tick * (1f + how.SimSpeedError);
+                    clientOwed -= Advance(client,
+                        Sample(scenario, now - how.EnvironmentLagSeconds, how, true), clientOwed);
                 }
 
                 elapsed += tick;
@@ -713,6 +779,27 @@ namespace Thermodynamics.Harness
         private static EnvironmentSample Sample(string scenario, float seconds, Degradation how,
             bool onClient)
         {
+            EnvironmentSample sample = Built(scenario, seconds, how, onClient);
+
+            // The registration the client never heard about. On the server's sample only, because
+            // the registry is a list another mod writes into on whichever machine it is running its
+            // own logic on, and nothing replicates it.
+            if (!onClient && how.MissingHeatSourceIrradiance > 0f)
+            {
+                sample.HeatSources = new[]
+                {
+                    new HeatSourceState(new Vector3(0f, -1f, 0f), how.MissingHeatSourceIrradiance),
+                };
+                sample.HeatSourceCount = 1;
+            }
+
+            return sample;
+        }
+
+        /// <summary>The scenario's own sample, before the registry is added to it.</summary>
+        private static EnvironmentSample Built(string scenario, float seconds, Degradation how,
+            bool onClient)
+        {
             if (seconds < 0f) seconds = 0f;
 
             if (scenario == "shadow") return Worlds.Shadow();
@@ -759,6 +846,17 @@ namespace Thermodynamics.Harness
 
             return Worlds.PlanetSurface(air, timeOfDay);
         }
+
+        /// <summary>
+        /// Irradiance the sweep's missing heat source puts on the hull, W/m².
+        ///
+        /// **A tenth of the sunlight the same hull is already standing in.** `SolarEnergy` ships at
+        /// 1,000 W/m², so this is a registered source worth a tenth of the sun — large enough to
+        /// read against the other rows and small enough that it is a *source beside the ship*
+        /// rather than a second star. Like every magnitude here it is a knob this lab turns; what
+        /// it is anchored to is the number the mod already uses for the sun.
+        /// </summary>
+        public const float HeatSourceIrradiance = 100f;
 
         /// <summary>
         /// Airspeed the `burn` scenario flies at, m/s. Above the friction threshold, so both the
@@ -892,11 +990,26 @@ namespace Thermodynamics.Harness
             Census.DriveCensus(simulation, watts);
         }
 
-        private static void Advance(ThermalSimulation simulation, EnvironmentSample environment,
+        /// <summary>
+        /// Steps a simulation forward, and reports the simulated seconds it actually advanced.
+        ///
+        /// The return value is what lets a caller run a clock at a rate the step length does not
+        /// divide: whole steps are taken and the remainder stays owed.
+        /// </summary>
+        private static float Advance(ThermalSimulation simulation, EnvironmentSample environment,
             float seconds)
         {
-            int steps = (int)Math.Round(seconds / simulation.Settings.StepSeconds);
+            if (seconds <= 0f) return 0f;
+
+            float step = simulation.Settings.StepSeconds;
+
+            // Truncated rather than rounded, so a caller carrying a remainder is never advanced
+            // past what it asked for — with a tolerance, because a whole number of steps must not
+            // come out one short when the division lands a bit under.
+            int steps = (int)((seconds / step) + 1e-3f);
             for (int i = 0; i < steps; i++) simulation.StepExact(1, environment);
+
+            return steps * step;
         }
 
         private static float[] Temperatures(ThermalSimulation simulation)
@@ -1063,7 +1176,7 @@ namespace Thermodynamics.Harness
                 new Degradation
                 {
                     Name = "hitching",
-                    Because = "drops its solver backlog every 30 s, as StepsDue does on a long frame",
+                    Because = "loses 5 s of simulated time every 30, which is a rate difference in lumps",
                     HitchEverySeconds = 30f,
                     HitchLosesSeconds = 5f,
                 },
@@ -1155,6 +1268,18 @@ namespace Thermodynamics.Harness
                 },
                 new Degradation
                 {
+                    Name = "slow clock",
+                    Because = "runs 10 % fewer simulation ticks a second, so its thermal clock is slow",
+                    SimSpeedError = -0.1f,
+                },
+                new Degradation
+                {
+                    Name = "missing source",
+                    Because = "another mod registered a heat source it never heard about",
+                    MissingHeatSourceIrradiance = HeatSourceIrradiance,
+                },
+                new Degradation
+                {
                     Name = "wrong settings",
                     Because = "never received the world's settings, so it is running other physics",
                     OnDefaultSettings = true,
@@ -1190,6 +1315,8 @@ namespace Thermodynamics.Harness
                 if (one.RoomPressureError > everything.RoomPressureError) everything.RoomPressureError = one.RoomPressureError;
                 if (one.RoomMapLagSeconds > everything.RoomMapLagSeconds) everything.RoomMapLagSeconds = one.RoomMapLagSeconds;
                 if (one.BuildOrderSeed != 0) everything.BuildOrderSeed = one.BuildOrderSeed;
+                if (Math.Abs(one.SimSpeedError) > Math.Abs(everything.SimSpeedError)) everything.SimSpeedError = one.SimSpeedError;
+                if (one.MissingHeatSourceIrradiance > everything.MissingHeatSourceIrradiance) everything.MissingHeatSourceIrradiance = one.MissingHeatSourceIrradiance;
                 if (one.BlocksMissingShare > everything.BlocksMissingShare)
                 {
                     everything.BlocksMissingShare = one.BlocksMissingShare;
