@@ -368,6 +368,16 @@ rather than an excuse to move a threshold (`E1`, `E11`). They are argued in
 [balance-lab.md](balance-lab.md#0-define-good-balance-before-collecting-anything) and measured in
 [balance.md](balance.md).
 
+**Every status below was measured before `C24`, on the pair the mod shipped until 2026-08-24, and
+two of them moved with it.** `G6` fails as written in the row below and passes at the pair that now
+ships — the panel's p99 substep demand in thick air went from 115 % of the cap to 55 % — and `G8`,
+the significance window this table does not carry, goes from holding on 1 % of resampled fleets to
+76 %. `G1`, `G2` and `G5` were re-scored on the forty-hull retest set at the new pair and hold. What
+has *not* been re-run is the 8,132-ship corpus itself, which is eight hours of compute, so every
+percentage in this table is quoted against the population as it was measured. See
+[balance.md](balance.md#the-route-is-chosen-and-it-is-the-one-the-cost-column-argued-against) and
+[backlog.md](backlog.md) `C24`.
+
 | # | Goal | Status against 8,132 corpus ships |
 | --- | --- | --- |
 | **G1** | **Idle is safe.** A ship at rest in the environment it was built for does not overheat. | **Holds.** 0.22% go critical at idle, against a ~1% gate. |
@@ -375,7 +385,7 @@ rather than an excuse to move a threshold (`E1`, `E11`). They are argued in
 | **G3** | **Cooling works.** Fitting radiators or a loop moves the outcome. | **Answered.** Plumbing works — a sink face carries 1,000 W/K against a bolt joint's 167 — and bolting makes more ships worse than better. It fits on 15% of *finished* hulls, which is a fact about retrofits rather than about the mechanic, now that cooling is stated as designed in. |
 | **G4** | **Design decides, not size.** Outcome follows what a builder controls. | **Holds, strongly.** Peak correlates +0.89 with worst local W/m² under load against +0.49 with block count. |
 | **G5** | **No death spiral.** A ship past critical that throttles to idle returns below critical in bounded time. | **Holds as written.** Its stated reason does not — see below. |
-| **G6** | **Affordable across the population**, at p95/p99 rather than at the mean. | **Fails in air, and had only been scored in vacuum.** Corpus p99 substep demand is 6.02 in vacuum against 64 granted; at 200 m/s in thick air the panel's p99 is **73.4**, fourteen of forty-nine hulls are over the cap, and at 300 m/s the *median* ship is. The atmospheric figure this row used to carry, 36.7, was taken at `Frequency` 8 and is exactly half. See [balance.md](balance.md#air-is-where-the-substep-budget-goes-and-the-shipped-pair-does-not-fit-it) and [backlog.md](backlog.md) `C19`. |
+| **G6** | **Affordable across the population**, at p95/p99 rather than at the mean. | **Passes at the pair `C24` ships, and the row below is the measurement that made it fail.** The panel's p99 demand in thick air at 200 m/s is **35.1 against 64 granted**, 55 % of the cap, where it was 73.4 — the retune divides every capacity by 0.4 and multiplies conduction by four, so the convection-limited demand that decides this criterion came down. What it costs is vacuum, where the same hull demands 1.6× what it did; [backlog.md](backlog.md) `C27` carries that. Previously, and the reason the criterion was on this list: **failed in air, and had only been scored in vacuum.** Corpus p99 substep demand is 6.02 in vacuum against 64 granted; at 200 m/s in thick air the panel's p99 is **73.4**, fourteen of forty-nine hulls are over the cap, and at 300 m/s the *median* ship is. The atmospheric figure this row used to carry, 36.7, was taken at `Frequency` 8 and is exactly half. See [balance.md](balance.md#air-is-where-the-substep-budget-goes-and-the-shipped-pair-does-not-fit-it) and [backlog.md](backlog.md) `C19`. |
 
 **G6 is not a balance criterion and is on the list on purpose.** The population's stiffness tail is
 what decides lumping, multirate stepping and the substep cap, and no synthetic ladder can show its
@@ -475,10 +485,18 @@ answer lives in.
 
 ### The pace the mod is meant to be played at
 
-`HeatTimeScale` is the clock and 1 is real. **A world runs the clock at 225** — with full
+`HeatTimeScale` is the clock and 1 is real. **A world runs the clock at 90** — with full
 integration accuracy, since real thermal time is physically honest and far too slow to play.
 Dividing every heat capacity by *k* is exactly running thermal time at *k*×, so equilibrium
 temperatures and every ratio between mechanisms are untouched; only the clock moves.
+
+**It ran at 225 until 2026-08-24, and what moved it was `G8`.** The most significant thermal event
+has to land in a 2–5 minute window, and at 225 nothing did: the median hull crossed its rating in
+10.4 seconds. The clock alone cannot fix that — slowing it enough puts the hull outside the hour
+`G8`'s other half allows for recovery — so the clock moved with the conduction pace, which is the
+one dial that lengthens a crossing without lengthening a recovery by as much.
+[balance.md](balance.md#the-route-is-chosen-and-it-is-the-one-the-cost-column-argued-against) has
+the evidence and [backlog.md](backlog.md) `C12` and `C24` are the decision and the applying.
 
 **There is one configuration, and it is the most faithful one the model has.** Presets were tried and
 removed: a preset makes a block's behaviour depend on which one a world happens to run, and it puts
