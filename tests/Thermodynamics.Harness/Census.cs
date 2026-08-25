@@ -53,7 +53,8 @@ namespace Thermodynamics.Harness
             /// Taken from the installed definition of <see cref="Example"/>, with **six** where the
             /// definition declares none — a definition that lists no mount points is a block whose
             /// mounts the game derives from its model geometry, not a block that mounts nowhere,
-            /// and the corpus walk makes the same fallback.
+            /// and the corpus walk makes the same fallback. `TheTiersCarryTheMountsTheirBlocksDeclare`
+            /// holds each figure to its definition.
             /// </para>
             ///
             /// <para>

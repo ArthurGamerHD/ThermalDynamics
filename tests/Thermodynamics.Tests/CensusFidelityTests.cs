@@ -51,6 +51,62 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
+        /// <summary>
+        /// **Each band mounts the way the block it was measured from mounts**, which is the
+        /// property `C26` was closed by and the one a refresh has to keep.
+        ///
+        /// <para>
+        /// A `SmallLight` declares one mount point and the three shaped-armour bands declare three,
+        /// four and five; a definition that declares none is a block whose mounts the game derives
+        /// from its model geometry, so it counts as six — the same fallback the corpus walk makes.
+        /// Held against the installed game rather than against a number typed here, because the
+        /// figure is a fact about the definitions and this is `M11`.
+        /// </para>
+        ///
+        /// <para>
+        /// **The machinery band is the stated exception.** `Example` documents a band rather than
+        /// defining it, and a band of every heavy device on a ship is not all gyroscopes — a gyro
+        /// declares a single mount on its bottom, and taking that for the band puts an eleven-tonne
+        /// block on one joint. It carries six, and this test says so out loud rather than letting
+        /// it read as drift.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheTiersCarryTheMountsTheirBlocksDeclare()
+        {
+            if (!GameBlocks.IsInstalled) return;
+
+            Dictionary<string, GameBlocks.Definition> bySubtype = GameBlocks.BySubtype();
+
+            foreach (Census.Tier tier in Census.Tiers)
+            {
+                GameBlocks.Definition definition;
+                Assert.True(bySubtype.TryGetValue(tier.Example, out definition),
+                    "the " + tier.Name + " band names " + tier.Example
+                    + ", which the installed game does not define");
+
+                int declared = 0;
+                for (int face = 0; face < definition.MountFaces.Length; face++)
+                {
+                    if (definition.MountFaces[face]) declared++;
+                }
+
+                if (declared == 0) declared = Face.Count;
+
+                if (tier.Name == "machinery")
+                {
+                    Assert.Equal(Face.Count, tier.MountFaces);
+                    Assert.Equal(1, declared);
+                    continue;
+                }
+
+                Assert.True(declared == tier.MountFaces,
+                    "the " + tier.Name + " band mounts on " + tier.MountFaces + " faces and "
+                    + tier.Example + " declares " + declared
+                    + "; refresh the tier or say why it differs, as the machinery band does");
+            }
+        }
+
         [Fact]
         public void TheTiersAreAWholePopulation()
         {
