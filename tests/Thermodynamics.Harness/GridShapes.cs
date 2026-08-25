@@ -193,6 +193,59 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
+        /// A station: a solid block of structure with sealed compartments cut out of it.
+        ///
+        /// <para>
+        /// **The shape a base takes, and the opposite of <see cref="Ship"/> in the one way that
+        /// decides cooling.** A hull is skin plus bulkheads and is mostly exposed; a station is
+        /// built outward from what it contains and is mostly interior, so at the same cell count it
+        /// has far less area to shed through (backlog.md `F27`). The compartments are what make it a
+        /// station rather than a solid cube: a base's most elaborate machinery — room air,
+        /// pressurisation, the flood fill that finds compartments — is the machinery that carries
+        /// the least evidence in this model.
+        /// </para>
+        ///
+        /// <para>
+        /// Compartments are laid on a lattice with <paramref name="wallThickness"/> of structure
+        /// between them, each hollowed to leave its own walls, so the result is sealed rooms rather
+        /// than one connected void. The cells this returns are structure; the holes are the rooms.
+        /// </para>
+        /// </summary>
+        /// <param name="extents">Outside size of the block, in cells.</param>
+        /// <param name="room">Inside size of one compartment, in cells.</param>
+        /// <param name="wallThickness">Cells of structure between one compartment and the next.</param>
+        public static HashSet<Vector3I> Station(
+            Vector3I extents,
+            Vector3I room,
+            int wallThickness = 1)
+        {
+            extents = new Vector3I(Math.Max(3, extents.X), Math.Max(3, extents.Y), Math.Max(3, extents.Z));
+            room = new Vector3I(Math.Max(1, room.X), Math.Max(1, room.Y), Math.Max(1, room.Z));
+            wallThickness = Math.Max(1, wallThickness);
+
+            HashSet<Vector3I> cells = SolidBox(Vector3I.Zero, extents);
+
+            // The pitch is a compartment plus the wall that follows it, and the first wall is the
+            // outer skin — so a compartment never opens onto the outside, which would make it a
+            // bay rather than a room.
+            Vector3I pitch = room + new Vector3I(wallThickness, wallThickness, wallThickness);
+
+            for (int z = wallThickness; z + room.Z + wallThickness <= extents.Z; z += pitch.Z)
+                for (int y = wallThickness; y + room.Y + wallThickness <= extents.Y; y += pitch.Y)
+                    for (int x = wallThickness; x + room.X + wallThickness <= extents.X; x += pitch.X)
+                    {
+                        for (int rz = 0; rz < room.Z; rz++)
+                            for (int ry = 0; ry < room.Y; ry++)
+                                for (int rx = 0; rx < room.X; rx++)
+                                {
+                                    cells.Remove(new Vector3I(x + rx, y + ry, z + rz));
+                                }
+                    }
+
+            return cells;
+        }
+
+        /// <summary>
         /// Pseudo-random accreted growth from a seed cell — the shape a grid takes when someone
         /// builds without a plan. Deterministic for a given seed.
         /// </summary>
@@ -263,6 +316,7 @@ namespace Thermodynamics.Harness
             yield return Pair("l-junction", LJunction(24, 3));
             yield return Pair("truss", Truss(60));
             yield return Pair("ship", Ship(28, 7, 9));
+            yield return Pair("station", Station(new Vector3I(13, 9, 13), new Vector3I(3, 3, 3)));
             yield return Pair("accreted", Accreted(400));
         }
 

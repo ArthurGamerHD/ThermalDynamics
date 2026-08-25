@@ -248,17 +248,31 @@ systems and radiator farms far better than a ship can.
   temperature? That converts the hope into a figure without inventing an affordance.
 
 **The shape.** One block count, one generation figure, two grids, and nothing else different
-(`P6`). The ship is `GridShapes.Ship`, which is the hull the library already uses. The station is a
-solid block of the same cell count with sealed compartments cut into it — mostly interior, static,
-with refineries running rather than thrusters. Both are run in space and on a planet surface,
-because a station's second claim is about radiators and a radiator on a planet is a different block.
+(`P6`). The ship is `GridShapes.Ship(40, 9, 12)`, the hull the library already uses, at **3,550**
+cells. The station is `GridShapes.Station((17, 15, 19), (3, 3, 3))` at **3,549** — one cell apart,
+which is luck rather than tuning and is worth having, because it means nothing has to be normalised.
+Both are run in space and on a planet surface, because a station's second claim is about radiators
+and a radiator on a planet is a different block.
+
+**The pair's geometry is settled before any of it is simulated, and it is exact.** Flood-filled from
+outside, the ship presents **3,452** external faces and the station **1,726** — a ratio of **2.00**,
+0.97 faces a cell against 0.49. So the subject of the comparison is one number: the station has
+exactly half the area to shed through, at the same block count.
+
+**Which sharpens prediction 2 before it is run, and the sharper form is the one to judge.** In
+vacuum the shedding is radiative, so halving the area doubles the `T⁴` each remaining face must
+carry and the *absolute* settling temperature should rise by `2^0.25 = 1.19×` — not by 2. On a
+planet, convection is linear in `ΔT` rather than quartic, so the same halving should roughly
+**double** the rise above ambient instead. Two different exponents from one geometric ratio is a
+falsifiable claim about which mechanism is carrying the heat, and it is a stronger test than the
+factor-of-two band below.
 
 **What is predicted, with the number that falsifies each.**
 
 | # | Prediction | Falsified by |
 | --- | --- | --- |
 | 1 | The station settles **hotter** than the ship at the same block count and the same watts. | The station settling at or below the ship. |
-| 2 | The gap is driven by **exposed faces per block**, not by block count: the ratio of settling rises should track the ratio of exposed area to within a factor of two. | A gap that does not move with exposed area — which would mean something other than geometry is carrying it. |
+| 2 | The gap is driven by **exposed faces per block**, not by block count: the ratio of settling rises should track the ratio of exposed area to within a factor of two. **Sharpened before the run** to `2^0.25` on absolute temperature in vacuum and about `2×` on the rise above ambient in air, from the exact 2.00 area ratio above. | A gap that does not move with exposed area; or a vacuum rise that is quartic-shaped in air, or linear-shaped in vacuum, which would mean the mechanism carrying the heat is not the one the geometry says. |
 | 3 | Room air **narrows** the gap rather than widening it, because a sealed compartment couples interior blocks to a mass that a bare interior block does not have. | The station running hotter still with room air on than with it off. |
 | 4 | The radiator area that brings the station to the ship's temperature is **more than the ship carries** and less than the station's own footprint — a cost, not an impossibility. | Either bound: no area sufficing, or the ship's own area sufficing. |
 
