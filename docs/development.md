@@ -140,7 +140,9 @@ while still reading as a description of the code.
 2. **A rules banner where the page argues a standing rule**, citing it by identifier — the rule is
    stated canonically in [rules.md](rules.md) and argued at length here, never the other way round.
 3. **A "Looking for / Go to" table** where a reader might reasonably be on the wrong page. This is
-   what stops the same subject being explained twice in two places.
+   what stops the same subject being explained twice in two places. **Four pages have none and
+   should not**: the two READMEs, [backlog.md](backlog.md) and [rules.md](rules.md) are indexes
+   rather than subjects, so a reader is never on them by mistake. Every other page carries one.
 4. **The body in the present tense**, describing what the code does now. **Not** what it used to do,
    what was tried, or what a past session found. **Two things read like history and are not**, and
    both stay: a measurement's before/after table is present-tense evidence, and a correction to

@@ -2,11 +2,16 @@
 
 Where a grid's memory goes, measured; and what can be given back.
 
-Companion to [load-and-hitching.md](load-and-hitching.md), which covers time rather than space, and
-to [scale-design.md §6](scale-design.md#6-data-structures), which budgets ~110 bytes a node for a
-million-block grid. This page is about the distance between that budget and where the code is.
+This page is about the distance between the budget `scale-design.md` sets and where the code is.
 
 > The rules argued here are stated canonically in [rules.md](rules.md): `E3` `M4` `M7`.
+
+| Looking for | Go to |
+| --- | --- |
+| What a grid costs in *time* as it grows | [load-and-hitching.md](load-and-hitching.md) |
+| The per-node budget a million-block grid is designed against | [scale-design.md](scale-design.md#6-data-structures) |
+| What the whole simulation costs, by size and feature | [benchmarks.md](benchmarks.md) |
+| Where the memory is actually allocated | [architecture.md](architecture.md#the-model) |
 
 Reproduce with `bench memory --size N`, from `tests/`. Build first: `dotnet run --no-build`
 against a stale output is how two of the figures below were first reported as unchanged by a change
@@ -303,6 +308,7 @@ counted per cell, which is §8 and §9.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Added the *Looking for* table this page's own conventions ask for. It carried the same pointers in prose, which is the shape a reader has to read rather than scan. |
 | 2026-08-23 | **§4 is finished**: the room map's cell dictionary is frozen into sorted arrays when a pass completes, 31 → 12 bytes a cell. The room map falls from 107 to **72 bytes a block** on a 20,000-block ship and the retained set from 1,000 to 966. [backlog.md](backlog.md) `E3`. |
 | 2026-08-23 | **§3's counts are packed**: `ExposedFaces` is one `long` rather than an `int[6]`, and the solver row falls 475 → **427 bytes a block** on a 20,000-block ship — the array's header and reference exactly. With §2 the same row is 524 → 427 and the whole retained set 1,097 → 1,000. [backlog.md](backlog.md) `E2`. |
 | 2026-08-23 | **§2 is done and it was worth more than it was estimated at.** The solver's node dictionary is gone and the block carries the index: 524 → **475 bytes a block** on the solver row, 1,097 → 1,048 retained, measured on a 20,000-block ship rather than counted. [backlog.md](backlog.md) `E1`. |

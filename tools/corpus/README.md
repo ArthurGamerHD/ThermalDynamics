@@ -7,6 +7,13 @@ each of these prints what it found and renders without the parts that are absent
 
 > The rules argued here are stated canonically in [rules.md](../../docs/rules.md): `E5` `M10`.
 
+| Looking for | Go to |
+| --- | --- |
+| The criteria these scripts score, and why each was written | [balance-lab.md](../../docs/balance-lab.md) |
+| What the population actually said | [balance.md](../../docs/balance.md) |
+| Running the walks that produce these datasets | [tests/README.md](../../tests/README.md) |
+| Every open item, one line each | [backlog.md](../../docs/backlog.md) |
+
 ```
 python3 tools/corpus/verdict.py out/corpus-2026-08-21     # the criteria, on the terminal
 python3 tools/corpus/cap.py out/cap-2026-08-24            # C3: what a per-block cap buys and costs
@@ -344,6 +351,7 @@ limit in [known-issues.md](../../docs/known-issues.md).
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Added the *Looking for* table. A reader arriving here often wants the criteria these scripts score rather than the scripts. |
 | 2026-08-24 | **`cap.py` scores the paired walk against the four predictions registered before it ran**, and the decision rule itself is in `scoring.cap_decision` rather than in prose — the two thresholds it compares against are the ones this repository already set for other reasons, 0.03 K accepted by `C19` and 0.6 K refused by `C3`, and having them under test is what stops a threshold being chosen once the data is in (`E1`, `E11`). Four sections: the identity the predicted benefit rests on, the work percentiles per arm against the shipped allowance, the peak deltas per scenario, and the cap's reach with the control's floored count printed beside it as the check that a control is a control. A row with no partner is counted and dropped rather than compared against a default. |
 | 2026-08-24 | **`CorpusCapWalk`: the same four air scenarios, run twice, with `MaxSubstepsPerBlock` off and at 6.** `C3` and `G6`'s failing cost half are one question — the cap is the only lever that lowers a step's work — and `C3` was undecided only because its cost had been measured on one hull. **Both arms run to the same simulated clock**, which is why it is a walk rather than a join onto `F11`'s dataset: `Battery.Run` stops at equilibrium, in air that is usually 120 s of 1,800, and the effect being measured is a hundredth of a kelvin against a stopping tolerance of a quarter of one. `Battery.RunForSeconds` takes the control's elapsed clock; `outcomes.csv` gains `run_seconds` and `cap` so a reader can see where a run stopped and which arm it is. |
 | 2026-08-24 | **`scoring.step_work` takes the walk's `substep_cost` column, and the two committed summaries have lost their `G6 work` rows.** The unit is `links + 4 × nodes` and no walk before today recorded a link count; the scorer was handed `joints`, which counts rotors and pistons *between grids*, so the expression evaluated to `4 × nodes` and every step-work figure published from either dataset is the node half alone — 1.51× low on a 2,000-block census hull. `outcomes.csv` carries `links` and `substep_cost` now, the second being `ThermalSimulation.SubstepCost` for the assembly's worst grid, since the allowance is per grid. Neither existing dataset can be rescored, so both summaries were regenerated and their work rows are simply gone: a statistic that vanishes between two runs is what `--baseline` reports as a finding, which is the right reading here (`P2`). `G6` prints as one half unmeasured rather than as a failure, and the per-scenario table keeps its demand columns with an em dash in the work ones. |
