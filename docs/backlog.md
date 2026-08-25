@@ -188,14 +188,15 @@ worth building twice.
 **A milestone is a row and its tasks are the rows under it**, named in it. A milestone is done when
 its tasks are.
 
-**Both cross a line this repository has drawn**, and it is named here rather than discovered later:
+**All three cross a line this repository has drawn**, and it is named here rather than discovered later:
 [document-of-intent.md](document-of-intent.md#what-this-mod-deliberately-is-not) says the mod is
 *not authoritative over the game's own systems*. Applying a force writes to the game's movement,
 which is a system the mod has only ever read — `ThermalGridEnvironment` takes
 `Grid.Physics.LinearVelocity` and nothing anywhere writes to `Physics`. It is not unprecedented
 (the mod already damages blocks, colours them and plays sounds) and it is not a small change of
-character either. **Whether the mod should push a ship at all is `K1`'s first question and not an
-assumption.**
+character either, and `K10` goes furthest by making a ship's top speed this mod's answer rather than
+the game's. **Whether the mod should push a ship at all is `K1`'s first question and not an
+assumption inside it.**
 
 | # | Item | Where |
 | --- | --- | --- |
