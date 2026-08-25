@@ -667,6 +667,44 @@ uncapped corpus sweep has taken a machine down.
 
 ---
 
+## What the mod does when it cannot afford itself
+
+**It slows down. It does not stutter, and it does not lie.**
+
+This is the failure mode the design chooses, and it is chosen rather than inherited: an
+over-subscribed grid gets a *shorter step at the same fidelity* rather than a coarser one, so its
+thermal clock runs behind the world's and nothing about the physics changes.
+[scale-design.md](scale-design.md#7-scheduling-budget-not-quota) states it for a scheduler that does
+not exist yet — *heat visibly diffusing a little slower is a far better failure mode than a stutter*
+— and `MaxElementVisitsPerStep` is that intent already shipped.
+
+**What was not stated is that it has a price, and it is the largest one the mod pays.** A slow clock
+is invisible on a parked ship, because two hulls heading for the same equilibrium agree once they
+arrive; under a load that is *moving* it is worth 1.19 K at a 5 % deficit and 36.98 K at 60 %. So
+this is not a free guarantee bought with an approximation nobody can see, and the tension with
+[fidelity is the default](#fidelity-is-the-default-a-saving-is-a-switch) is real — it is the first
+row of the [conflicts table](#where-the-goals-and-the-code-disagree) that neither side wins outright.
+The resolution the code follows is: **frame stability outranks fidelity, and the price is measured
+and paid down rather than denied.** `C27` doubled the allowance the day the price was first put in
+kelvin.
+
+**Determinism is chosen, not assumed.** The solver is order-independent by construction and a fleet
+stepped one grid per thread is bit-identical to one stepped in order, which is what makes
+parallelism safe to add. A wall-clock budget would end that — two machines would spend different
+budgets and reach different answers — so the scheduling design records the choice it would force:
+either the server alone simulates, or the budget is expressed in work units rather than in
+milliseconds. Nothing in the mod spends a wall-clock budget today.
+
+**A failure records itself whether or not anyone asked.** Everything else the mod observes is off
+unless something is reading it; a caught exception is not, because it costs nothing until the mod
+has already failed and by then it is the only evidence there will be. The first occurrence of each
+kind reaches the game log, the count reaches the closing summary, and a grid that has gone
+numerically bad counts as a fault too — a NaN destroys a save rather than degrading a frame. The
+guard exists so that a defect in this mod does not take the session with it, and the record exists
+so that the guard is not also a way of hiding the defect.
+
+---
+
 ## What the mod promises the things around it
 
 The mod is not alone. It sits inside a world somebody has already been playing, beside blocks it has
@@ -742,44 +780,6 @@ three channels exist.
   channel along: the from-the-server flag is the only thing that says a packet is the server's.
 * **The server is authoritative over damage** (`C10`). Every machine simulates, and exactly one
   machine destroys — so the one conclusion with a world-visible consequence is never reached twice.
-
----
-
-## What the mod does when it cannot afford itself
-
-**It slows down. It does not stutter, and it does not lie.**
-
-This is the failure mode the design chooses, and it is chosen rather than inherited: an
-over-subscribed grid gets a *shorter step at the same fidelity* rather than a coarser one, so its
-thermal clock runs behind the world's and nothing about the physics changes.
-[scale-design.md](scale-design.md#7-scheduling-budget-not-quota) states it for a scheduler that does
-not exist yet — *heat visibly diffusing a little slower is a far better failure mode than a stutter*
-— and `MaxElementVisitsPerStep` is that intent already shipped.
-
-**What was not stated is that it has a price, and it is the largest one the mod pays.** A slow clock
-is invisible on a parked ship, because two hulls heading for the same equilibrium agree once they
-arrive; under a load that is *moving* it is worth 1.19 K at a 5 % deficit and 36.98 K at 60 %. So
-this is not a free guarantee bought with an approximation nobody can see, and the tension with
-[fidelity is the default](#fidelity-is-the-default-a-saving-is-a-switch) is real — it is the first
-row of the [conflicts table](#where-the-goals-and-the-code-disagree) that neither side wins outright.
-The resolution the code follows is: **frame stability outranks fidelity, and the price is measured
-and paid down rather than denied.** `C27` doubled the allowance the day the price was first put in
-kelvin.
-
-**Determinism is chosen, not assumed.** The solver is order-independent by construction and a fleet
-stepped one grid per thread is bit-identical to one stepped in order, which is what makes
-parallelism safe to add. A wall-clock budget would end that — two machines would spend different
-budgets and reach different answers — so the scheduling design records the choice it would force:
-either the server alone simulates, or the budget is expressed in work units rather than in
-milliseconds. Nothing in the mod spends a wall-clock budget today.
-
-**A failure records itself whether or not anyone asked.** Everything else the mod observes is off
-unless something is reading it; a caught exception is not, because it costs nothing until the mod
-has already failed and by then it is the only evidence there will be. The first occurrence of each
-kind reaches the game log, the count reaches the closing summary, and a grid that has gone
-numerically bad counts as a fault too — a NaN destroys a save rather than degrading a frame. The
-guard exists so that a defect in this mod does not take the session with it, and the record exists
-so that the guard is not also a way of hiding the defect.
 
 ---
 
