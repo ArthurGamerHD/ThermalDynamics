@@ -116,6 +116,49 @@ exceed it run their simulated time slower than real time rather than being refus
 > (`P6`). What the scorer needs is any walk's `blocks`, `joints` and a substep column, so it prices
 > whichever run it is handed.
 
+### What the corpus in air is expected to say, written before it says it
+
+`CorpusAirWalk` is running as this is written. The prediction goes here first, with the numbers
+that would falsify it, because a projection that is only compared to the data after the fact is a
+projection that will be found to have been right (`E1`, `P3`).
+
+**The two comparisons the walk makes, and why the anchor is in it.** The 2026-08-21 survey was
+walked at `ConductionScale` 2.4 and `HeatTimeScale` 225; the air walk runs at the pair that ships.
+So the air walk against the old survey moves *two* things at once and settles nothing on its own
+(`P6`). What it carries instead is `vacuum-shadow` alongside its three atmospheric scenarios, on the
+same ships in the same run:
+
+* **air against vacuum, at the shipped pair** — the walk's own `reentry` against its own
+  `vacuum-shadow`. Everything but the world held equal. This is the comparison `F11` exists for.
+* **the pair, in vacuum** — the walk's `vacuum-shadow` against the survey's `idle`, which is the
+  same simulation under another name (`M8`). Everything but the configuration held equal.
+
+**The prediction.** From the 40-hull panel at the pair that ships, air multiplies a p99 substep
+demand by **2.81** — `reentry` 35.12 against `vacuum-shadow` 12.51 — and `C24` multiplies a vacuum
+demand by about 1.6. Carried onto the survey's own figures:
+
+| | vacuum, old pair | expected vacuum, shipped pair | expected re-entry, shipped pair |
+| --- | ---: | ---: | ---: |
+| demand p99 | 3.58 | ~5.7 | ~16 |
+| step work p99 | 881,279 | ~1.41 M | **~3.96 M** |
+
+**So the cost half is predicted to land within about 30 % of the 4,000,000 allowance, either side.**
+That is the whole point of writing it down: the projection cannot distinguish pass from fail, and
+whichever it is, it is a finding rather than a confirmation.
+
+* **The demand half is predicted to pass comfortably** — about 16 against 64 granted, a quarter of
+  the cap. A p99 anywhere near 64 would mean the panel's air multiplier does not describe the
+  population at all.
+* **What would falsify the projection**: a re-entry work p99 below 3 M or above 5 M. The panel is
+  forty hulls chosen to be typical, not a random sample, so its air multiplier transferring to eight
+  thousand is the assumption under every number above and the one most likely to be wrong.
+* **If the cost half fails**, `C27`'s doubling was necessary and not sufficient, and the next
+  question is the size of the tail — 29 ships or two thousand — which decides whether the allowance
+  is a setting a few worlds raise or a default that is still wrong.
+* **If it passes**, the projection was pessimistic, and the reason will be worth having: the corpus
+  median hull is 1,110 blocks against the panel's selection, and a small hull's demand is set by its
+  stiffest fitting rather than by its size.
+
 **G7 holds.** All 705 prefabs, 461,428 blocks, idle: not one crosses critical, let alone loses a
 block. The same 705 flown hard lose 616, which is the control rather than the criterion — see
 [balance.md](balance.md#the-compatibility-floor-holds).
