@@ -33,7 +33,13 @@ import scoring
 
 DATA = sys.argv[1] if len(sys.argv) > 1 else "out/pairs-2026-08-23"
 
-SHIPPED_CLOCK = 225.0
+# The clock of this sweep's control cell, which is what shipped when the sweep was designed.
+#
+# **It is the baseline and not the shipped configuration.** `C24` shipped `ConductionScale` 9.6 and
+# `HeatTimeScale` 90 on 2026-08-24 — conductivity x4 at a clock of 90 in this sweep's coordinates,
+# which is a cell of the grid rather than the control. Every "control" here means the cell the grid
+# was laid out around; `air.py` carries the same correction.
+BASELINE_CLOCK = 225.0
 
 # G8, as balance-lab.md wrote it down before this run — and its settling half as corrected before
 # this dataset was scored, which is the recovery time rather than an idle settling time. Idle in
@@ -231,7 +237,7 @@ def main():
             print(f"    conductivity x{key[0]:g}, clock {key[1]:g}: "
                   f"{len(per_cell[key])} of {expected} runs")
 
-    control = (1.0, SHIPPED_CLOCK)
+    control = (1.0, BASELINE_CLOCK)
     if control not in per_cell:
         print()
         print("no shipped cell in this dataset, so nothing has a baseline")
@@ -355,7 +361,7 @@ def main():
 
     for key in cells:
         c, h = key
-        if c == 1.0 or h == SHIPPED_CLOCK:
+        if c == 1.0 or h == BASELINE_CLOCK:
             continue
 
         # An edge that was never run is a different absence from an edge that ran and had no
@@ -364,7 +370,7 @@ def main():
             no_edge += 1
             continue
 
-        edge_c = cell_crossing((c, SHIPPED_CLOCK))
+        edge_c = cell_crossing((c, BASELINE_CLOCK))
         edge_h = cell_crossing((1.0, h))
         measured = cell_crossing(key)
 

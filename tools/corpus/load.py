@@ -52,8 +52,6 @@ from pairs import (  # noqa: E402
 
 DATA = sys.argv[1] if len(sys.argv) > 1 else "out/load-2026-08-23"
 
-SHIPPED_CLOCK = 225.0
-
 # What each load case is, in one line, because a table of three is unreadable without them.
 CASES = {
     "full-electrical": "(every jump drive charging, for the whole run — a bound)",
