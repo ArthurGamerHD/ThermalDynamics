@@ -411,6 +411,36 @@ four-figure count rather than a two-figure one.
 published station population to check it against — the corpus is ships — so this is a specimen and
 the blocks-a-room figure belongs to this geometry rather than to bases in general.
 
+### What re-taking the census will move, written before it is re-taken
+
+`A13` fixed the blueprint reader and left every dataset on disk measured through the broken one.
+The census is the cheap half — it costs a build rather than a simulation, so the whole corpus is
+minutes — and it is what `panel.py`, `provenance.py` and every composition figure read. What it
+should say is predicted here first, from the 400-ship parse that priced the defect (`E1`).
+
+**The question.** By how much does the corrected reader move the population's composition, and is
+the 400-ship stride sample it was priced on representative of the 8,142?
+
+**Four predictions, each with what would falsify it.**
+
+| | prediction | falsified by |
+| --- | --- | --- |
+| the cost | full-load waste rises **8 to 10 %** over the 2026-08-21 census, bracketing the sample's 8.89 % | a rise under 6 % or over 13 % |
+| the reach | **60 to 75 %** of ships hold at least one corrected block, bracketing the sample's 68.8 % | a share outside that band |
+| the population | the ship count is **unchanged**, because no ship in the sample changed side on the vanilla filter | any change in how many ships the census admits |
+| the type | `OxygenGenerator` appears with an empty-subtype row for the first time, and it is the **most common** generator in the file | the vanilla generator still absent, or outnumbered by `OxygenGeneratorSmall` |
+
+The cost band is wider than the sample's point estimate because a stride sample of 400 is 4.9 % of
+the population and the quantity is a sum over blocks, not a per-ship mean — a handful of large hulls
+carrying many gravity generators moves it. **If it lands outside the band the sample was not
+representative**, and every figure priced on that sample — the ones now standing in `A13`'s row and
+on three pages — is a figure about 400 ships and has to say so (`P1`).
+
+**What this does not re-take.** The stepped walks: the survey's outcome rows, the air walk, the cap
+walk, the floor walk. Those are hours each and they are what `G1`, `G2`, `G5` and `G6` are scored
+on, so **`A13` is not closed by this run** — a corrected census tells the balance criteria nothing
+until the walks are re-run against it.
+
 ### What flooring an over-budget grid does, written before it is measured
 
 `CorpusFloorWalk` is built and **has produced nothing**. The question, the statistic, the decision
