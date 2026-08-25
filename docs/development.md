@@ -142,8 +142,12 @@ while still reading as a description of the code.
 3. **A "Looking for / Go to" table** where a reader might reasonably be on the wrong page. This is
    what stops the same subject being explained twice in two places.
 4. **The body in the present tense**, describing what the code does now. **Not** what it used to do,
-   what was tried, or what a past session found. A measurement's before/after table is present-tense
-   evidence and stays; the narrative around it does not.
+   what was tried, or what a past session found. **Two things read like history and are not**, and
+   both stay: a measurement's before/after table is present-tense evidence, and a correction to
+   something this repository published has to sit where the wrong figure sat, naming what it said
+   (`E10`). What goes is the narrative around them — *this section used to be organised differently*,
+   *that field is gone now*. Swept 2026-08-25: thirty-six sentences in page bodies still say *used
+   to* and every one is a correction or a before/after; the seven that were neither are rewritten.
 5. **Most important information first.** What the thing *is* precedes how it was arrived at; the
    evidence and the engine survey that justify a model come after the model.
 6. **A `## Change log` last**, newest first, one row per date: `| Date | Change |`. This is the only
@@ -198,6 +202,7 @@ Naming pattern under `Models/Gauge/{LG,SG}/`:
 
 | Suffix | Meaning |
 | --- | --- |
+| 2026-08-25 | Said which two things read like history and stay — a before/after measurement, and an `E10` correction sitting where the wrong figure sat — because a flat *present tense only* reading of this convention deletes exactly the evidence the rules require. Also scoped the two-line comment limit to a comment inside a body, measured. |
 | 2026-08-22 | Took the repository layout tree and the build-and-test instructions off the [README](../README.md), which is written to be pasted into the workshop and read by a player ([backlog.md](backlog.md) `H5`). Nothing in them was wrong; they were in the wrong place, and the documentation index moved to [docs/README.md](README.md) for the same reason. |
 | *(none)* | Full-detail model |
 | `_LOD1` … `_LOD3` | Progressively lower detail |

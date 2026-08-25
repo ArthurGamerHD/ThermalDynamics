@@ -118,9 +118,8 @@ step's window, so the cost of a step is spread rather than landing whole on one 
 simulation *steps* is `ThermalSimulation.Update`'s business — it banks `StepWorkUnits × frameSeconds
 × StepsPerSecond` of work credit each frame and spends it a slice at a time, so a step completes
 after `Frequency × SimulationSpeed` steps' worth of frames and never more than one per frame.
-`SimulationScheduler` counts completed steps and sizes the resumable passes' budgets; it used to
-carry a second, parallel step-credit accumulator that nothing called, and that is gone
-([backlog.md](backlog.md) `F23`).
+`SimulationScheduler` counts completed steps and sizes the resumable passes' budgets, and holds no
+step-credit of its own: one accumulator paces the simulation and it is the one above.
 
 **The frame length is a constant sixtieth**, not measured real time, and `Session` runs on
 `MyUpdateOrder.Simulation` — so **simulated time is counted in simulation ticks rather than in real
@@ -216,6 +215,7 @@ pumps `ThermalSimulation` — which is exactly what the test harness does.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Said what `SimulationScheduler` holds rather than what it no longer holds (`R12`). The removed accumulator is a revision and belongs in a change log, which is where `F23` recorded it. |
 | 2026-08-24 | Corrected the update order and the pacing paragraph. The tick calls `Simulation.NeedsEnvironmentSample`, not `scheduler.WouldStep`, and step pacing is `ThermalSimulation.Update`'s work credit rather than `SimulationScheduler`'s — whose parallel step-credit accumulator no shipped path called and has been removed. Added what the constant frame length means: simulated time is counted in simulation ticks, so a machine below 1.0 sim speed has a thermal clock that runs slow ([backlog.md](backlog.md) `F23`). |
 | 2026-08-23 | Added the temperature replication: a third channel, a component in the adapter table, and a correction to the **Networking** claim that clients simply reach their own answers. They still do; the server now states the truth over the top of it. |
 | 2026-08-22 | Corrected two statements this page had gone on making after the code stopped supporting them. **Networking** said no `NetSync` property and no command was registered and that nothing replicates; three properties and a second, secure channel exist, and the section now says what each carries and why the split. **Update order** filed the per-grid block under "every 10th frame" while naming the scheduler that runs every grid every frame two lines below. Completed the adapter table, which named 22 of the 33 files under `Data/Scripts/Thermodynamics` — the scheduler, the settings sync and request paths, the room diagnostics, the coolant pump block, the wind overlay, the overlay budget, the planet probes and the three heat-source debug files were all absent. |

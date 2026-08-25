@@ -54,9 +54,8 @@ four folders.
 
 Sixty-eight settings on a single scroll is a list to be searched by eye, and an administrator
 usually arrives wanting one part of it. **One system to a page, with its own switch at the top.**
-Four switches used to share a "Mechanisms" page because they were all switches, which is filing by
-part of speech: switching convection off belongs above the convection dials, where you can see what
-it governs.
+Grouping the switches together would be filing by part of speech: switching convection off belongs
+above the convection dials, where a reader can see what it governs.
 
 A page whose system still keeps most of its numbers in a definition file says so, rather than
 looking broken with one switch on it. A setting named on no page still gets a control, on a final
@@ -769,7 +768,7 @@ predictable near equilibrium at the cost of making cheap, small-gap cooling less
 
 ## The suit
 
-A player in a burning compartment used to be the one place heat stopped being consequential. These
+A player in a burning compartment is the one place heat would otherwise stop being consequential. These
 settings are the suit that decides otherwise, and they describe a machine rather than a threshold:
 the occupant is held at body temperature by a cooler, so a hot room is survivable while the cooler
 keeps up and lethal past the point where it does not.
@@ -1217,6 +1216,7 @@ one with a migration risk — is late rather than first.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Three sentences in the body described a past layout rather than the present one (`R12`): the menu's grouping, the suit's opening, and the allowance's cost ladder. Each states what is now the case; the ladder's own table moved to [benchmarks.md](benchmarks.md#what-the-rate-it-trades-away-is-worth), which owns the measurement. |
 | 2026-08-25 | **The allowance's cost ladder existed here and in [benchmarks.md](benchmarks.md#what-the-rate-it-trades-away-is-worth), which is two copies of one measurement.** This page states what it costs — 1.19 K at a 5 % deficit rising to 36.98 K at 60 % — and that page owns the table, the rig it was taken on and the convexity that made a ladder necessary rather than one point and a slope. A measurement written down twice is two things that can drift (`D3`). |
 | 2026-08-24 | **`MaxElementVisitsPerStep` is 4,000,000, from 2,000,000, because what it gives up was priced for the first time.** The bound makes a step shorter rather than coarser, so nothing is approximated and the grid's thermal clock runs slow instead — worth 1.19 K standing at a 5 % deficit and 36.98 K at 60 % under a moving load, and 0.00 K under a steady one. It also binds in **air** rather than in vacuum, at about a third the grid size: at the old value a driven census hull kept all of real time to 32,000 blocks in vacuum, 16,000 on a planet and 9,000 in flight. Beside 0.028 K for the substep ceiling this world accepts and 0.607 K for the per-block cap it refuses to ship as a default, that made this the largest approximation shipped and the only one never measured. A frame is bounded at 266,667 element visits instead of 133,333. Old value kept visible here and in [What a shortened step costs](#what-a-shortened-step-costs) (`E11`), and [backlog.md](backlog.md) `C27` carries the reasoning. |
 | 2026-08-24 | **The approximation the defaults shipped on is gone, and `HeatTimeScale` is 90.** `C24` applied `C12`'s retune — `ConductionScale` 2.4 → 9.6 and the clock 225 → 90 — and the substep ceiling it was breaching is decided by a convection-limited demand, so that demand came down with the clock: the 40-hull panel's worst p99 is **35.12 of 64**, 55 % of the cap, with **0 of 40 hulls refused** in every environment measured, where 8 of 40 were refused in re-entry before. `G6` passes on the configuration that ships. Renamed the section to say so, kept the reasoning, and recorded the one row that went the other way: vacuum demands 1.6× what it did ([backlog.md](backlog.md) `C27`). |
