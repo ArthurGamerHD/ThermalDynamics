@@ -17,6 +17,7 @@ each of these prints what it found and renders without the parts that are absent
 ```
 python3 tools/corpus/verdict.py out/corpus-2026-08-21     # the criteria, on the terminal
 python3 tools/corpus/cap.py out/cap-2026-08-25            # C3: what a per-block cap buys and costs
+python3 tools/corpus/reproduce.py out/cap-2026-08-24 out/cap-2026-08-25  # did a restart reproduce?
 python3 tools/corpus/pace.py out/cap-2026-08-25/progress.txt \
     --reference out/air-corpus-2026-08-24/progress.txt \
     --outcomes  out/air-corpus-2026-08-24/outcomes.csv   # what a running walk will cost
@@ -358,12 +359,22 @@ reading as sourced and as invented — six per cent of the corpus's waste heat.
 python3 -m unittest discover -s tools/corpus -p 'test_*.py'
 ```
 
+`reproduce.py` answers the other question about two datasets: not whether the population moved, which
+is `--baseline`, but whether two runs that overlap wrote the same numbers on the ships they share
+(`E7`). A walk is restarted rather than resumed whenever the code moved underneath it (`M1`), and the
+overlap with what the old run finished is then a free reproduction check — on 2026-08-25 the cap
+walk's first **552 rows matched the abandoned partial exactly**, on all 22 compared columns, which
+turned *three commits touched the harness and none was checked for behaviour* from an assumption
+into a measurement. It reports rows only one side has rather than dropping them, because two
+datasets with nothing in common otherwise print a perfect reproduction.
+
 `test_scoring.py` pins that rule and the two thresholds `G8` is scored at, `test_provenance.py`
 pins the four provenance counts against the ones `AuthoredWasteTests` pins, so the two readers of
-one grammar cannot drift apart quietly (`D3`), and `test_pace.py` pins what a progress file can be
+one grammar cannot drift apart quietly (`D3`), `test_pace.py` pins what a progress file can be
 asked — that a repeated final line is not a stall, that the ratio is taken over the files two walks
 share rather than the time they ran, and that the block-share estimate is reported as the spread it
-has. Changing any of them fails a check rather than moving a number nobody is watching. They are the
+has, and `test_reproduce.py` pins that a comparison
+with nothing in common is not a reproduction. Changing any of them fails a check rather than moving a number nobody is watching. They are the
 only checks over the scorers and are not part of the `dotnet test` suite; run them when a scorer
 changes.
 
@@ -379,6 +390,7 @@ limit in [known-issues.md](../../docs/known-issues.md).
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Added [`reproduce.py`](reproduce.py): whether two walks that overlap wrote the same numbers on the ships they share. Its first use was the cap walk's restart, whose 552 shared rows matched the abandoned partial exactly on all 22 compared columns. |
 | 2026-08-25 | Added the one way a sweep costs a session rather than a run: a walk in progress fails the suite's wall-clock tests, because they are measuring a machine the walk is using every core of. Measured — the suite was green before the cap walk and `SolverCostPerLinkStaysProportional` was 3.14× its limit during it. |
 | 2026-08-25 | Added [`pace.py`](pace.py): what a running walk will cost, and the check that says whether the estimate means anything. The block-share rate that abandoned the first cap walk is reported as the spread it has and then run over the finished air walk, where the answer is known. |
 | 2026-08-25 | Added the *Looking for* table. A reader arriving here often wants the criteria these scripts score rather than the scripts. |
