@@ -103,7 +103,7 @@ namespace Thermodynamics.Harness
             /// <summary>
             /// `MaxSubstepsPerBlock` this row ran at. 0 is off, which is what ships.
             ///
-            /// **The second arm of `C30`'s question.** The allowance does not approximate — it
+            /// **The second arm of the over-budget question.** The allowance does not approximate — it
             /// shortens the step, so an over-budget grid falls behind real time by an unbounded
             /// amount. A per-block cap lowers the *demand* instead, so the same grid keeps up and
             /// pays a bounded error on its stiffest blocks. Measuring both on one hull at one
@@ -168,7 +168,7 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
-        /// The same sweep with `FloorBlocksWhenOverBudget` set, which is `C30`'s mechanism rather
+        /// The same sweep with `FloorBlocksWhenOverBudget` set, which is the shipped switch's mechanism rather
         /// than its comparison.
         ///
         /// The cap arm below sets `MaxSubstepsPerBlock`, a world setting that reaches every hull;
@@ -207,7 +207,7 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
-        /// The same sweep with a per-block cap on each row as well, which is `C30`'s comparison.
+        /// The same sweep with a per-block cap on each row as well, which is the comparison against a per-block cap.
         ///
         /// The cap is applied to the same hull as the row beside it and the rate is read as a delta
         /// over the window, so a row differs from its neighbour in the cap and nothing else (`P6`).

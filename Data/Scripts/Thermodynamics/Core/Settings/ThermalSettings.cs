@@ -239,7 +239,7 @@ namespace Thermodynamics.Core
         /// The allowance bounds a step's work by making the step *shorter*, so an over-budget grid
         /// advances less simulated time per real second — a loss of the whole clock, with no bound
         /// on it. Flooring the stiffest blocks lowers the demand instead, so the step stays whole
-        /// and the cost is a bounded error on the blocks it re-masses. See backlog.md `C30`.
+        /// and the cost is a bounded error on the blocks it re-masses. See configuration.md, FloorBlocksWhenOverBudget.
         /// </para>
         ///
         /// <para>

@@ -214,7 +214,7 @@ namespace Thermodynamics
         /// demand to what the budget grants, so nothing is shortened and the grid keeps its whole
         /// clock; what it charges is the error on the blocks it re-masses, measured across all
         /// 8,144 published blueprints at **0.024 K** at p99. Nine to thirty-seven kelvin against
-        /// twenty-four thousandths of one — see backlog.md `C30`.
+        /// twenty-four thousandths of one — see configuration.md, FloorBlocksWhenOverBudget.
         /// </para>
         ///
         /// <para>

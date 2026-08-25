@@ -8,7 +8,7 @@ namespace Thermodynamics.Tests
 {
     /// <summary>
     /// **A shortened step against a floored one, on the same hull at the same allowance** —
-    /// backlog.md `C30`.
+    /// configuration.md, under FloorBlocksWhenOverBudget.
     ///
     /// <para>
     /// `C3` measured a per-block cap on all 8,144 published blueprints and refused it as a global
@@ -183,20 +183,20 @@ namespace Thermodynamics.Tests
             output.WriteLine("  blocks floored : clock {0:n1}% of real, and the cap's own p99 over "
                 + "the population is {1:n3} K", 100d * floored.Rate, CapKelvinP99);
 
-            // **The claim under `C30`, and the only one this rig can make.** The cap is worth
+            // **The claim the shipped switch rests on, and the only one this rig can make.** The cap is worth
             // swapping in only if it gives the clock back; whether the error it charges instead is
             // smaller is the second half, and that comparison is printed rather than asserted
             // because one side of it comes from a population and the other from this hull.
             Assert.True(floored.Rate > bound.Rate,
                 "the cap did not give the clock back: " + (100d * floored.Rate).ToString("n1")
                 + "% against " + (100d * bound.Rate).ToString("n1") + "% with the step shortened, "
-                + "so there is nothing to trade and `C30` is answered no");
+                + "so there is nothing to trade and the swap is answered no");
 
             // And it has to be the demand that moved, not the hull.
             Assert.True(floored.Demand < bound.Demand,
                 "the cap did not lower the demand on this hull — " + floored.Demand.ToString("n2")
                 + " against " + bound.Demand.ToString("n2") + " — so this rig is not measuring the "
-                + "mechanism `C30` is about");
+                + "mechanism the switch is about");
         }
     }
 }

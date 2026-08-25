@@ -367,6 +367,50 @@ decide whether the risk is real:
 session, and the decision is a trade against the sweep's own latency. What it can do is replace *a
 station-scale risk with no evidence* with a count.
 
+#### What it said: the count is real, the core half is not the problem
+
+`RoomSweepLab`, run 2026-08-25 on an idle machine.
+
+| shape | blocks | rooms | blocks/room | map ms | core sweep | % real time |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| ship 40×9 | 3,550 | **3** | 1,183 | 50.9 | 0.6 µs | 0.0000 |
+| station 17×15×19 | 3,549 | **48** | 73.9 | 19.0 | 12.2 µs | 0.0006 |
+| station 21×19×23 | 6,477 | 100 | 64.8 | 36.4 | 3.9 µs | 0.0002 |
+| station 27×23×27 | 11,907 | 180 | 66.2 | 57.6 | 10.2 µs | 0.0005 |
+| station 35×31×35 | 25,879 | 448 | 57.8 | 84.0 | 47.7 µs | 0.0024 |
+| station 43×39×43 | 47,811 | **900** | 53.1 | 173.9 | 206.1 µs | 0.0103 |
+
+| # | prediction | reading | |
+| --- | --- | --- | --- |
+| 1 | blocks a room holds within 25 % across the ladder | 73.9 → **53.1**, a drift of 28 % | **just fails** |
+| 2 | about 1,350 compartments on a 100,000-block station | 53 blocks a room and still falling gives about **1,900** | holds, and understates |
+| 3 | core half linear in rooms and small | **small** — 0.0103 % of real time at 900 rooms — but **not linear** | half fails |
+| 4 | a ship of the same block count carries far fewer | **3 against 48**, a factor of 16 | holds |
+
+**The count is the finding and it is worse than predicted.** A station carries a compartment for
+every 53 to 74 blocks where a ship carries one per 1,183. At the same 3,550 blocks that is 48 rooms
+against 3, and the shipped 0.054 % was measured on **twelve** — so the multiplier on the two host
+calls is one to two orders of magnitude larger than anything that has been measured in a session.
+
+**Prediction 1 fails in a direction that makes prediction 2 worse.** Blocks a room drifts *down* with
+size, because a bigger box is proportionally more room and less wall, so the extrapolation is
+conservative rather than optimistic.
+
+**Prediction 3's failure is the one to keep.** The core half is not linear: 180 → 900 rooms is 5×
+the rooms and 20× the time, because the per-room cost itself grows with the grid — 0.106 µs a room
+at 448, 0.229 µs at 900. `SetRoomPressure` rebuilds a room's links, and that gets dearer as the grid
+around it does. It is still only 0.0103 % of real time at 900 rooms, so **the core half does not
+justify the rota** — but it is not a figure that can be extrapolated to 1,900 rooms by doubling.
+
+**So `A4` keeps its shape and loses its excuse.** The rota is still a judgement about the two host
+calls and still needs a session to price them (`F5`). What has changed is that the multiplier is no
+longer unknown: it is roughly **a compartment per 60 blocks of station**, and a large base is a
+four-figure count rather than a two-figure one.
+
+**Scope.** One synthetic shape, at one compartment size, on one machine (`E2`). There is no
+published station population to check it against — the corpus is ships — so this is a specimen and
+the blocks-a-room figure belongs to this geometry rather than to bases in general.
+
 ### What flooring an over-budget grid does, written before it is measured
 
 `CorpusFloorWalk` is built and **has produced nothing**. The question, the statistic, the decision

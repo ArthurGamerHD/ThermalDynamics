@@ -8,7 +8,7 @@ using VRageMath;
 namespace Thermodynamics.Harness
 {
     /// <summary>
-    /// **What the room pressure sweep costs at station scale**, which `A4` deferred the rota on and
+    /// **What the room pressure sweep costs at station scale**, which the room-pressure rota was deferred on and
     /// could not answer because every grid in the library and in the corpus is a ship.
     ///
     /// <para>

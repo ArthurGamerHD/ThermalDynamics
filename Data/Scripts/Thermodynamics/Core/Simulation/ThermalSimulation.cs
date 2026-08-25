@@ -249,7 +249,7 @@ namespace Thermodynamics.Core
             // **The grid cannot afford its demand, and there are two ways to spend less.**
             // Shortening the step below costs the whole clock and has no bound on it; flooring the
             // stiffest blocks to what the budget grants costs a bounded error on those blocks and
-            // keeps the step whole. `C30` measured the two and they are three orders of magnitude
+            // keeps the step whole. configuration.md measured the two and they are three orders of magnitude
             // apart, so the choice is a setting rather than an argument (`C7`).
             if (settings.FloorBlocksWhenOverBudget && solver.AdaptiveSubstepFloor != substepBudget)
             {

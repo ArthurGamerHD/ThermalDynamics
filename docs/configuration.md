@@ -530,8 +530,25 @@ and collect none of the throughput. This engages per grid and per step, only whe
 and the cap it applies is exactly what that grid can afford rather than a number chosen in advance.
 The two compose: with both on, the tighter cap wins.
 
-**Off by default**, because it changes what an over-budget grid does and a default is its own
-decision.
+**Off by default, and now measured on a population rather than argued from one hull.**
+`CorpusFloorWalk` walked all 294 published ships the allowance binds on — 291 produced paired cells,
+1,164 of them — against a decision rule fixed before the data: p99 Δpeak at or under 0.03 K ships it
+on, at or over 0.6 K keeps it off.
+
+**It came in at 27.76 K, with a maximum of 48.21 K.** So it stays off. Two of the four predictions
+held perfectly — no run lost simulated time, nothing was ever floored in the control arm, and the
+floor never made a grid stiffer — and the two that failed are the two that decide it: it reaches
+**13.05 %** of blocks where a fixed cap of 6 reached 5.83 %, and it costs three orders of magnitude
+more than predicted.
+
+**The median cell is free and the tail is ruinous**, 0.006 K against a p99 of 27.76 K, and the tail
+is not predictable from how far the floor has to lift — cells barely over budget still reach a p99
+of 32 K. Nothing gates it into safety without gating it out of usefulness: every filter tried either
+misses the 0.6 K threshold or keeps under 14 % of the cells the mechanism engages on. The figures
+are in [balance-lab.md](balance-lab.md#what-it-did-the-floor-is-safe-exact-about-the-clock-and-far-too-expensive-to-default),
+and they describe the ships the allowance binds on and no others.
+
+The switch stays, because a world that wants its clock more than its accuracy can still have it.
 
 ## Changing settings from a client
 
@@ -1284,6 +1301,7 @@ one with a migration risk — is late rather than first.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | **`FloorBlocksWhenOverBudget` stays off, decided on 294 ships rather than on one hull** ([backlog.md](backlog.md) `C30`). Against a rule fixed before the data — 0.03 K ships it on, 0.6 K keeps it off — the population p99 is **27.76 K**. Its safety half is perfect: no lost clock, nothing floored in the control, never stiffer. Its cost half is not, and no gate rescues it without gating it out of existence. The switch stays for a world that would rather have its clock. |
 | 2026-08-25 | Added `FloorBlocksWhenOverBudget` ([backlog.md](backlog.md) `C30`): when a grid cannot afford its demand, floor its stiffest blocks to what the allowance grants instead of shortening its step. Off by default. The measurement behind it is nine to thirty-seven kelvin of lost clock against the cap's own 0.024 K. |
 | 2026-08-25 | `MaxSubstepsPerBlock` stays off by default, decided on all 8,144 published blueprints rather than on one hull ([backlog.md](backlog.md) `C3`). The population p99 is 0.2820 K, under the figure that had kept it out; what decides it is that the error is charged per block and the throughput is collected per grid, so four fifths of the ships people publish would pay and collect nothing. |
 | 2026-08-25 | Added `HeatTerminalPanel` ([backlog.md](backlog.md) `B40`), the switch for the one output of the mod a world could not turn off. Default `true`, so nothing a player has changes; client-owned, like the other two presentation switches. It gates the panel's text and its refresh and leaves the block's own controls alone. |
