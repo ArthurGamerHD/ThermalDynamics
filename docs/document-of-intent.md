@@ -227,6 +227,37 @@ destroys every large reactor in every world, so the fraction is chosen so the *c
 where they should. Applying a real number to a fictional rating compounds the fiction rather than
 correcting it. See [balance.md](balance.md#reactor-waste-heat).
 
+### Where something is modelled, it is modelled as a mechanism rather than as a threshold
+
+The prior above says when to take a shortcut. This says what the thing that is *not* shortened looks
+like:
+
+> *Prefer a machine with inputs and a limit over a number with a comparison. A threshold is what is
+> left when nobody could find the mechanism.*
+
+It is a disposition rather than a rule, and it is stated because it is the single most consistent
+habit in the code and was written down nowhere:
+
+* **The suit is a cooler, not a survivable temperature.** The occupant is held at body temperature
+  while a 500 W rating keeps up with what leaks in through 2.5 W/K, so the survivable room is
+  **derived** — `310 + 500/2.5` = 510 K — and moving either input moves it. An open helmet is a
+  tenfold conductance rather than a second rule, and the second threshold falls out at 330 K on its
+  own.
+* **A coolant pump is a motor.** It draws power and makes waste heat like any other motor, and its
+  50 kW rating is `ṁ ΔP / (ρ η)` rather than a chosen figure. Its waste fraction is 1 because a
+  circulator does no work that leaves the system.
+* **A heat pump is priced by Carnot** — cheap across a small difference and ruinous across a large
+  one — which is what makes it a different block from a radiator rather than a stronger one.
+* **The glow's colour is the Planckian locus**, computed from Planck's law against the CIE 1931
+  observer, so 500 K is deep red and 2,000 K is orange whatever the block is rated for.
+* **The warning cue reads an equilibrium off a rate** rather than extrapolating a straight line, so
+  a block heading somewhere below its rating is not warned about at all.
+
+**Where the mechanism is the wrong answer, it says so and why.** The glow's *brightness* is
+deliberately not incandescence, because keying it to the physics leaves 26 % of block types dying
+with no visual warning at all. That is the prior above overriding this one, and the two are in the
+order they are written in: perceptibility first, mechanism second.
+
 ### Fidelity is the default; a saving is a switch
 
 The prior above decides what gets *built*. This decides what gets **shipped on**:
@@ -319,7 +350,7 @@ The core speaks no game type, so it builds and runs outside the session in secon
 makes it testable, profilable, drivable by another mod, and portable to another engine — the four
 are one property, not four.
 
-**Checked by** `C5` (`CoreIsolationTests`). The suite is 1,829 tests, 33 deterministic scenarios and
+**Checked by** `C5` (`CoreIsolationTests`). The suite is 1,856 tests, 33 deterministic scenarios and
 a load benchmark that reaches a million blocks in one grid.
 
 ### Open — the API is part of the contract
@@ -363,33 +394,51 @@ the developer sit alongside it:
 
 ## Balance goals
 
-Six criteria, written down before any data was collected so that a run which fails them is a finding
-rather than an excuse to move a threshold (`E1`, `E11`). They are argued in
+Eight criteria, each written down before the data that scores it, so that a run which fails one is a
+finding rather than an excuse to move a threshold (`E1`, `E11`). They are argued in
 [balance-lab.md](balance-lab.md#0-define-good-balance-before-collecting-anything) and measured in
-[balance.md](balance.md).
+[balance.md](balance.md). Six are in the table below; `G7` and `G8` came later and are stated under
+it.
 
-**Every status below was measured before `C24`, on the pair the mod shipped until 2026-08-24, and
-two of them moved with it.** `G6` fails as written in the row below and passes at the pair that now
-ships — the panel's p99 substep demand in thick air went from 115 % of the cap to 55 % — and `G8`,
-the significance window this table does not carry, goes from holding on 1 % of resampled fleets to
-76 %. `G1`, `G2` and `G5` were re-scored on the forty-hull retest set at the new pair and hold. What
-has *not* been re-run is the 8,132-ship corpus itself, which is eight hours of compute, so every
-percentage in this table is quoted against the population as it was measured. See
-[balance.md](balance.md#the-route-is-chosen-and-it-is-the-one-the-cost-column-argued-against) and
-[backlog.md](backlog.md) `C24`.
+**Read every percentage below as the population as it was measured, not as the population under the
+configuration that ships.** `G1`, `G2`, `G4` and `G5` were scored on the 2026-08-21 corpus at the
+pair the mod shipped until 2026-08-24, and re-scored on the forty-hull retest set at the pair that
+ships now, where they hold. `G6` is the one whose status has moved twice since, and the row says
+where it stands. `G7` and `G8` were written after this table and are stated below it rather than in
+it.
+
+**Six criteria became eight, and both additions came from a gap this table made visible.** `G7` is
+the compatibility floor — *a ship the game spawns survives arrival* — and `G8` is the significance
+window, which had been the mod's own stated balance target for as long as it had been unscored. That
+is the pattern worth keeping: a target that is not a criterion is a target nothing can fail.
 
 | # | Goal | Status against 8,132 corpus ships |
 | --- | --- | --- |
-| **G1** | **Idle is safe.** A ship at rest in the environment it was built for does not overheat. | **Holds.** 0.22% go critical at idle, against a ~1% gate. |
+| **G1** | **Idle is safe.** A ship at rest in the environment it was built for does not overheat. | **Holds, and it holds in air too.** 0.22 % go critical at idle in vacuum against a ~1 % gate — and **0.02 %** across the 2026-08-24 air walk, which the corpus had never been asked, because air cools. |
 | **G2** | **Load bites.** Under sustained full power a meaningful share of uncooled ships reach a warning state. | **Holds.** 65.5% of ships carrying no jump drive reach 400 K under full electrical load, against a ~20% gate. |
 | **G3** | **Cooling works.** Fitting radiators or a loop moves the outcome. | **Answered.** Plumbing works — a sink face carries 1,000 W/K against a bolt joint's 167 — and bolting makes more ships worse than better. It fits on 15% of *finished* hulls, which is a fact about retrofits rather than about the mechanic, now that cooling is stated as designed in. |
 | **G4** | **Design decides, not size.** Outcome follows what a builder controls. | **Holds, strongly.** Peak correlates +0.89 with worst local W/m² under load against +0.49 with block count. |
 | **G5** | **No death spiral.** A ship past critical that throttles to idle returns below critical in bounded time. | **Holds as written.** Its stated reason does not — see below. |
-| **G6** | **Affordable across the population**, at p95/p99 rather than at the mean. | **Both halves pass, and the cost half had never been produced.** The demand half passes at the pair `C24` ships; the cost half — *step cost at p95/p99*, which the criterion has always asked for — is scored as work rather than time and holds at **p99 881,279 element visits against the 4,000,000 a step is granted** *(that figure is withdrawn — it was scored with the joint count in place of the link count, so the true value is 0.88–1.54 M; still inside the allowance, so this verdict is unchanged)*, with 8 ships of the corpus past it, the smallest at 159,449 blocks (`C23`, `C27`). Both halves were scored in **vacuum**, which is where this criterion's demand half read as passing for months; projected into air the cost half's p99 is near 4 million, and walking the corpus in air rather than projecting it is `F11`. What follows is the measurement that made the demand half fail. The panel's p99 demand in thick air at 200 m/s is **35.1 against 64 granted**, 55 % of the cap, where it was 73.4 — the retune divides every capacity by 0.4 and multiplies conduction by four, so the convection-limited demand that decides this criterion came down. What it costs is vacuum, where the same hull demands 1.6× what it did; [backlog.md](backlog.md) `C27` carries that. Previously, and the reason the criterion was on this list: **failed in air, and had only been scored in vacuum.** Corpus p99 substep demand is 6.02 in vacuum against 64 granted; at 200 m/s in thick air the panel's p99 is **73.4**, fourteen of forty-nine hulls are over the cap, and at 300 m/s the *median* ship is. The atmospheric figure this row used to carry, 36.7, was taken at `Frequency` 8 and is exactly half. See [balance.md](balance.md#air-is-where-the-substep-budget-goes-and-the-shipped-pair-does-not-fit-it) and [backlog.md](backlog.md) `C19`. |
+| **G6** | **Affordable across the population**, at p95/p99 rather than at the mean. | **The demand half passes with room; the cost half fails in air, and its figures are withdrawn pending a re-walk.** *Demand*: corpus p99 **34.8 substeps against 64 granted** over the 32,575 runs of the 2026-08-24 air walk, where the panel had read 115 % of the cap before `C24` and 55 % after it. *Cost*: `F11` walked the corpus in air and the criterion failed in three of the four worlds, holding only in vacuum, with **2.73 % of published hulls past the element-visit allowance** in at least one air scenario — the smallest at 28,781 blocks. **Every step-work number this repository has published is withdrawn**, because the unit is `links + 4 × nodes` and the scorer was handed the *joint* count in place of the link count, so it was evaluating the node half alone — 1.51× low on a census hull. That makes the air figure worse rather than better and moves no verdict; the corrected measurement is the paired walk under `C3`. See [balance-lab.md](balance-lab.md), [backlog.md](backlog.md) `F11`, `C3`, `C23`, `C27`. |
 
 **G6 is not a balance criterion and is on the list on purpose.** The population's stiffness tail is
 what decides lumping, multirate stepping and the substep cap, and no synthetic ladder can show its
 shape.
+
+**The two later criteria, and why each was added.**
+
+* **`G7` — a ship the game spawns survives arrival.** Every vanilla prefab, idle, in the environment
+  its category spawns into, for five simulated minutes, loses no block. It was added because the
+  compatibility floor was a promise this page made and nothing scored, and it **holds**: 705
+  prefabs, 461,428 blocks, not one crossing critical. See
+  [Cooling is designed in](#cooling-is-designed-in--and-a-vanilla-ship-still-has-to-survive).
+* **`G8` — the significant event lands in the window, and the ship is usable again inside a
+  session.** The median time from load to the first block crossing critical falls in 120–300
+  simulated seconds, *and* the median hull finishes cooling within an hour. It was added because
+  [the pace the mod is meant to be played at](#the-pace-the-mod-is-meant-to-be-played-at) had been
+  the stated balance target for as long as it had been unscored — and once scored it failed, at a
+  median crossing of 10.4 s, which is what moved the defaults. Both halves are one criterion because
+  one clock governs both.
 
 ### Cooling is designed in — and a vanilla ship still has to survive
 
@@ -606,6 +655,123 @@ uncapped corpus sweep has taken a machine down.
 
 ---
 
+## What the mod promises the things around it
+
+The mod is not alone. It sits inside a world somebody has already been playing, beside blocks it has
+never heard of, under mods written against it, and across a wire from a client it does not control.
+**Every one of those relationships has been honoured consistently in the code and stated nowhere**,
+which is how it comes to be a section rather than a rule: a promise nobody wrote down is a promise
+the next change breaks by accident.
+
+### To an existing world: nothing a player already has is quietly lost
+
+**The mod is added to worlds that are years old and returns to worlds it has already saved.** Both
+directions matter, and the pattern the code follows is the same in all four places it appears:
+*read what the old thing meant, and add rather than replace.*
+
+* **A save from an older build loads, and a save from a newer one loads on an older build.**
+  `ThermalStorageCodec` reads version 1, and version 2 grew **by adding a section rather than by
+  changing its marker**, so a reader skips what it does not recognise. A room whose shape changed
+  while the world was closed simply starts from its surfaces, exactly as it would have done
+  mid-session.
+* **A renamed definition property keeps its old spelling.** Both are read, current first. Definition
+  Extensions matches on the string, so dropping the retired name would silently revert a
+  third-party definition to the shipped defaults **with no error and no log line** — which is the
+  worst shape a break can take. The old names are not planned for removal.
+* **A setting's name is its address.** `/thermal set`, the mod API and the settings sync all reach a
+  setting by name. Where the file is organised may change; what a setting is called may not.
+* **A world's tuned values survive a change to the file that holds them.** Defaults live on the
+  fields, so a reader that finds nothing leaves them alone — which is exactly why regrouping the
+  config file has to migrate the old flat shape first, and why that step is last rather than first
+  in [where the settings surface is going](configuration.md#where-the-settings-surface-is-going).
+
+**This is not a promise of forever.** The API's own wording is the honest form of it — *keys will
+not change meaning within a major version, new keys may be added, and a missing key means an older
+build* — and the same reading applies to the other three.
+
+### To a block it has never heard of: derive, do not guess
+
+**A definition is optional.** A block from any mod gets thermal properties derived from what the
+game already says it is built of, and `Cubes.xml` carries only deliberate deviations from that
+derivation rather than an entry per type. Two consequences are the intent rather than the mechanism:
+
+* **A partial entry is merged, not substituted.** An author who wants one block to run hotter writes
+  a `CriticalTemperature` and nothing else, and keeps the material its components imply. That is
+  what makes a third-party definition a one-line change instead of a table.
+* **Landing on the global fallback counts as no answer.** The fallback describes mild steel, which
+  was the best guess available before build cost could be read and is a worse one now — so it does
+  not override a derivation that actually describes the block.
+
+This is the same disposition as the naming convention in
+[every thermal property is a dial](#every-thermal-property-is-a-dial): a definition should read as a
+description of the material, so that somebody can write one without asking anyone.
+
+### To another mod: the API is a contract with four guarantees
+
+[api.md](api.md#guarantees) states them and this is what they are for. **No call throws into the
+caller** — bad arguments come back as `false`, `0` or `NaN`, because an exception crossing a mod
+boundary lands in somebody else's session with this mod's name on it. **No call is bound to a thread
+or an update phase.** **Delegate signatures use whitelisted types only**, so an in-game script and a
+mod can both bind. And **keys do not change meaning within a major version**.
+
+The delegate table is a dictionary of strings to delegates, so a caller finds a wrong name out at
+run time in a session this repository will never see. That is what makes [api.md](api.md) part of
+the contract rather than a description of it (`R9`).
+
+### To a client: the server trusts nothing the client asserts about itself
+
+The split of what is replicated is in [the section below](#what-the-mod-owes-a-multiplayer-client);
+this is the part that is about trust rather than about traffic, and it is the reason two of the
+three channels exist.
+
+* **An administrator's authority is checked against something the sender did not write.** A
+  setting change from a client goes over the engine's own secure handler, because `SENetworkAPI`'s
+  sender id is a field the sender fills in and a promote-level check cannot be gated on it.
+* **A client may not write temperatures onto another client's simulation.** Same reasoning one
+  channel along: the from-the-server flag is the only thing that says a packet is the server's.
+* **The server is authoritative over damage** (`C10`). Every machine simulates, and exactly one
+  machine destroys — so the one conclusion with a world-visible consequence is never reached twice.
+
+---
+
+## What the mod does when it cannot afford itself
+
+**It slows down. It does not stutter, and it does not lie.**
+
+This is the failure mode the design chooses, and it is chosen rather than inherited: an
+over-subscribed grid gets a *shorter step at the same fidelity* rather than a coarser one, so its
+thermal clock runs behind the world's and nothing about the physics changes.
+[scale-design.md](scale-design.md#7-scheduling-budget-not-quota) states it for a scheduler that does
+not exist yet — *heat visibly diffusing a little slower is a far better failure mode than a stutter*
+— and `MaxElementVisitsPerStep` is that intent already shipped.
+
+**What was not stated is that it has a price, and it is the largest one the mod pays.** A slow clock
+is invisible on a parked ship, because two hulls heading for the same equilibrium agree once they
+arrive; under a load that is *moving* it is worth 1.19 K at a 5 % deficit and 36.98 K at 60 %. So
+this is not a free guarantee bought with an approximation nobody can see, and the tension with
+[fidelity is the default](#fidelity-is-the-default-a-saving-is-a-switch) is real — it is the first
+row of the [conflicts table](#where-the-goals-and-the-code-disagree) that neither side wins outright.
+The resolution the code follows is: **frame stability outranks fidelity, and the price is measured
+and paid down rather than denied.** `C27` doubled the allowance the day the price was first put in
+kelvin.
+
+**Determinism is chosen, not assumed.** The solver is order-independent by construction and a fleet
+stepped one grid per thread is bit-identical to one stepped in order, which is what makes
+parallelism safe to add. A wall-clock budget would end that — two machines would spend different
+budgets and reach different answers — so the scheduling design records the choice it would force:
+either the server alone simulates, or the budget is expressed in work units rather than in
+milliseconds. Nothing in the mod spends a wall-clock budget today.
+
+**A failure records itself whether or not anyone asked.** Everything else the mod observes is off
+unless something is reading it; a caught exception is not, because it costs nothing until the mod
+has already failed and by then it is the only evidence there will be. The first occurrence of each
+kind reaches the game log, the count reaches the closing summary, and a grid that has gone
+numerically bad counts as a fault too — a NaN destroys a save rather than degrading a frame. The
+guard exists so that a defect in this mod does not take the session with it, and the record exists
+so that the guard is not also a way of hiding the defect.
+
+---
+
 ## What the mod owes a multiplayer client
 
 **As little traffic as possible, and deviation is acceptable to a point.** Keeping every block's
@@ -677,14 +843,17 @@ about intent rather than a decision on the developer's behalf.
 
 | Conflict | Resolution |
 | --- | --- |
+| **The element-visit allowance against *fidelity is the default*.** `MaxElementVisitsPerStep` ships at 4,000,000 rather than at `0`, which is its faithful end — so the shipped default is not the most faithful configuration the model has, which is what [that section](#fidelity-is-the-default-a-saving-is-a-switch) and `C15` both ask for. `TheDefaultIsFrameBounded` states the reason as *the budget costs no accuracy*. | **The reason as stated is false, and the default is right anyway.** The bound shortens a step rather than coarsening it, so nothing is *approximated* — but the grid's thermal clock then runs behind the world's, and `C27` priced that at **1.19 K standing at a 5 % deficit and 36.98 K at 60 % under a moving load**, against 0.028 K for the substep ceiling this world accepts and 0.607 K for the per-block cap it refuses. So it is the largest approximation the mod ships, not a free one. **What the code follows is that frame stability outranks fidelity**: a mod that drops frames is uninstalled whatever its physics is, and the honest form of the promise is [slow down, do not stutter](#what-the-mod-does-when-it-cannot-afford-itself). The price is paid down rather than denied — the allowance doubled the day it was first put in kelvin — and the comment's *costs no accuracy* wants correcting where it sits. |
+| **`G6`'s cost half against the unit it was scored in.** The criterion compares a step's element visits against what the allowance grants, in `links + 4 × nodes`. Every figure published for it was computed with the corpus's `joints` column standing in for the link count. | **The measurement wins, the criterion does not move, and the figures are withdrawn.** A joint is a mechanical joint *between grids* — a rotor or a piston — and there are none on almost every blueprint, so `links + 4 × nodes` was evaluating to `4 × nodes`: the node half alone, **1.51× low** on a 2,000-block census hull and low by its own link-to-node ratio on any other. Neither existing dataset can be rescored, because the count was never recorded, so `verdict.py` reports the cost half as *unmeasured* rather than reprinting the old arithmetic and `G6` reads as one half unscored rather than as failing (`E8`, `P2`). No verdict changes: the vacuum figure stays inside the allowance and the air one was already outside it. This is the same class of error as the `2.125`-against-`4` correction of the same week, one level down — that one had the right count in the wrong currency. |
+| **The corpus as the population against the corpus as *what people publish*.** Every population figure this repository quotes is over 8,142 workshop blueprints, and the scale target, the stiffness tail and four of the eight criteria are decided on them. | **The code follows the blueprints and the pages say what that cannot see.** A blueprint is the closest signal available to *the designs people build and fly* — ranked by unique subscriptions rather than by votes, which would over-weight the spectacular, or by date, which would over-weight the untested. What it cannot see is a world: a station grown over months, or several hulls welded into one, reaches sizes nobody publishes. That is exactly why `G5`'s answer moved the scale *target* to 250,000 and left the million as an uncapped stress bound rather than dismissing it. A population of blueprints is a ceiling on ambition, not on possibility. |
 | **`G5`'s rationale against the measured damage timing.** `G5` is *"a player must be able to react to a warning"*. Of ships that cross critical under full electrical load the median crosses at **8.9 s**, and at p10 at 3.5 s. | **Resolved: the goal holds, and the conflict was a mis-measurement.** The crossing is the moment the damage rate leaves *zero*, not the moment a block is lost — the first block goes at a median **37.0 s**, and with the cue's three-second lead the median pilot has **40 s** from the first warning. `G5` holds as written and its rationale holds too. See [balance.md](balance.md#how-long-a-block-has-after-it-crosses). |
 | **The 2–5 minute significance window against `HeatTimeScale` 225.** The balance target asks for the most significant thermal event to land in a 2–5 minute window. **No block in the game lands in it** at the shipped pair, and none can be made to at 225 by the clock alone: of the 72 block types that cannot cool themselves, 0 fall in 120–300 s. | **Resolved 2026-08-24 by choosing, and the choice is a trade rather than a free win.** Both routes reach the window on the measured fleet — across the 421.9 s jump-drive charge the shipped pair puts the median hull past its rating at **10.4 s**, conduction ×4 at 165.4 s and waste ×0.5 at 134.5 s — so the question was never which works. **Resampled from the same population, conduction ×4 holds `G8` on 76 % of fleets and waste ×0.5 on 33–37 %**: the crossing median is censored above, it exists only while more than half the hulls cross, and the waste route puts 22 of 40 past critical against conduction's 25. Two hulls either way is a criterion satisfied or a criterion with no median at all. So the provenance argument that had settled this *against* conduction was an argument against the route that turns out to be worse on the criterion itself. **What conduction costs is the conflict this row is about, and attempting to ship it priced it**: at ×4 a coolant sink stops out-performing the best surface dial (73.5 K against a dial's 135.3 K), bolting starts working, the stiffest fitting stops responding to air, and the cooling ladder's control stops losing — *there must be a lever* is what buys `G8`'s timing. **The route is chosen and applied**, on 2026-08-24: the defaults are `ConductionScale` 9.6 and `HeatTimeScale` 90, `G7` was re-scored first at 0 of 705 prefabs crossing critical, and `G6` passed as a side effect — the demand it is scored on is convection-limited and came down with the clock, from 115 % of the substep cap to 55 %. Reading the 47 tests the pair moved opened four rows: [backlog.md](backlog.md) `C25`, `C26`, `C27`, `C28`. Previously, and corrected — the load route was read as the better trade on cost and provenance, before either was measured against how often the criterion holds: | The load route is the better trade, and the provenance it was held up on is now settled against it: weighted by the heat they carry, **76.3 %** of a loaded fleet's waste comes through a fraction derived from the efficiency the game itself states and 15.3 % through an invention, so waste ×0.5 halves a sourced number and is an admitted balance knob rather than a correction. [backlog.md](backlog.md) `C12`, `C21`. Previously, and corrected: | With every jump drive charging the median hull crosses critical in 10.4 s; with them full fewer than half the hulls ever cross, in the shipped configuration and in both retunes alike. Drives are 71.3 % of the load's heat, so the mod is both too fast and too slow depending on one block. `G8`'s *most significant thermal event* is the drive charging, which is a transient, and both bounds model it as permanent or absent — so what is missing is a duty-cycled load case ([backlog.md](backlog.md) `F13`), not a dial. Previously read as a choice between two retunes: | Two dials reach the window. Conduction ×4 with `HeatTimeScale` 80–120 reaches it and **costs three levers**: a coolant sink stops out-performing the best surface dial, bolting starts working, a buried 300 MW reactor settles inside its rating, and the stiffest block stops responding to air — which is *there must be a lever* going away to buy `G8`'s timing. The load — waste ×0.5 with the clock at 80–110, at conductivity ×1 — reaches the same window with every lever untouched, at 0.43× the substep demand, and **costs a quarter of the bite** instead: the median hull peaks 264 K cooler and loses one block rather than four. What decides between them, or says neither is needed, is that the load scenario charges every jump drive continuously ([backlog.md](backlog.md) `F13`) and half the waste heat is inside the distance between that bound and a realistic load. Full detail: [balance.md](balance.md#the-load-reaches-the-window-too-and-costs-the-bite-instead-of-the-levers). Previously: | Conductivity ×4 with `HeatTimeScale` 80–120 reaches the window — crossing 124–186 s, recovery inside the hour, `G1`, `G2` and `G5` kept — and costs *less* than what ships in air, where the budget is actually spent. **Built and measured 2026-08-23, and it is not the price that stops it.** At ×4 a coolant sink stops out-performing the best surface dial, bolting a radiator starts working, a 300 MW reactor buried in armour settles inside its rating, and the stiffest block on the census hull stops responding to air. That is `G3`'s lever and this page's *there must be a lever* going away to buy `G8`'s timing, and the sweep that chose ×4 never scored `G3`. **What has not been tried is a dial that is not transport** — waste heat and the critical temperatures move the crossing without touching the conduction pace at all. [backlog.md](backlog.md) `C12`. |
 | **`G2` "the criterion the current build most likely fails"** against the corpus, where G2 passes at 65.5%. | **The corpus is correct; the prediction was written before it.** The prediction stands in [balance-lab.md](balance-lab.md) as a criterion's original wording, which is right — a criterion is not edited once the data arrives (`E11`). Read the status from [balance.md](balance.md), not from the prediction. |
 | **"The radiator is a block you plumb"** against the retrofit measurement, where a plumbed ring fits on **15%** of warm hulls and bolting — which fits nearly everywhere — makes more ships worse than better. | **Resolved: cooling is designed in.** A hull laid out with heat in mind is the ship the mod is for, so a 15% retrofit rate is not the failure it looks like — it is the measurement of how many finished hulls happen to have room. What the answer does *not* license is a balance that breaks unmodified ships, which is the floor stated in [Cooling is designed in](#cooling-is-designed-in--and-a-vanilla-ship-still-has-to-survive). `G3` should be scored against designed-in cooling, not against retrofits. |
 | **"Light: a grid's cost is one pass over its links per substep"** against the measured per-node cost of the environment pass. | **The measurement wins and the goal is unchanged.** The step budget already counts `links + 4 × nodes`. The README's wording predates the measurement and understates what a substep does. |
-| **`MaxSubstepsPerBlock 6` recommended in the field** against the shipped default of `0` (off). | **The shipped default stands, and the recommendation is weaker than it was.** Re-measured at the shipped `Frequency 8`, a cap of 6 buys 1.6× rather than 3.4× — the original table was taken at `Frequency 4` and read as if it were the default. Still a clear win, no longer a dramatic one, and open as [backlog](backlog.md) C3. |
+| **`MaxSubstepsPerBlock 6` recommended in the field** against the shipped default of `0` (off). | **The shipped default stands, and the argument that set it has inverted twice.** It was made a switch because the cap cost 0.607 K on the worst-placed block — twenty times what the substep ceiling's breach costs, and on the other side of what a player can see. Re-measured at `C24`'s pair on the hull `C26` refreshed, the same cap costs **0.028 K**, which is the same size as the breach the mod accepts: the argument that separated the two mechanisms is gone. And `F11` gave the cap a second reason to exist that it did not have — `G6`'s cost half fails in air, and the cap is the only lever that lowers a step's *work*. **Being measured on the population now**, paired arm against arm on one clock, with the predictions and the decision rule fixed first ([backlog](backlog.md) `C3`, [balance-lab.md](balance-lab.md#what-a-per-block-cap-does-to-the-population-written-before-it-is-measured)). Until that lands the default is unchanged, because a default moves in its own commit with its own evidence. |
 | **Natural feedback against the Light goal.** The README says *"every readout, diagnostic and overlay is off unless something is reading it"*. [Natural feedback](#natural-feedback--built) is the first presentation feature meant to be **on** by default — a player who has not opened anything is exactly who it is for. | **Both stand, and the resolution is a definition rather than a compromise.** Feedback that only runs when a block is near its limit *is* "something reading it" — the reader is the block's own state, not a player with a panel open. What it must not do is cost anything on a ship where nothing is hot, which makes the trigger a threshold test on a ratio the solver already computes, and `C7` still applies: it needs its own switch like every other mechanism. **Built, and the cost is one comparison per grid** — the hottest block against the lower of the glow's floor and the coolest block's watch point — with `HeatGlow` and `HeatWarningSound` as the two switches. |
-| **The README's stated audience against what it currently carries.** The README is meant to be pasteable into the workshop and readable by a non-technical player, with one section for modders. It currently also carries a repository layout tree, a building-and-testing section and the documentation index — three sections written for somebody who has cloned the repository. | **The intent is newer than the page, and the page has not been changed to match it.** Nothing is wrong with the content; it is in the wrong place for the audience the page is for. Moving the layout and the build instructions under [development.md](development.md) and reducing the documentation index to one link is the change this asks for, and it is not made here. |
+| ~~**The README's stated audience against what it currently carries.**~~ | **Resolved 2026-08-22, and this row was left standing for two days after the change it asked for was made.** The layout tree and the build section are under [development.md](development.md), the index is [docs/README.md](README.md), and the README carries one link to each. Kept as a row rather than deleted because the *shape* of the mistake is worth seeing: a conflicts table is a list of live disagreements, and a resolved row that reads as live is the same defect as a stale figure. |
 | **The census hull as "a worst case" against "what a ship does".** It makes 12.1 kW a block against a real median of 335 W — the 96th percentile. | **Resolved 2026-08-24: it is both, by property, and the conflict was in the quoting.** The hull is *typical* in stiffness and *extreme* in heat, and each is what its own kind of figure needs — `C26` put it in the population's trough because a cost figure has to describe what a server pays, and it stays a 96th-percentile heat maker because a temperature figure has to be a ceiling. So a temperature taken on it is an **upper bound** and a cost figure taken on it describes the population; every approximation this mod has accepted on such a temperature is safer under that reading, not shakier. `TheCensusHullMakesFarMoreHeatThanARealShip` pins the heat half and `TheCensusHullIsInsideThePopulationItStandsIn` the stiffness half, so the pair fails if either moves quietly. [backlog.md](backlog.md) `C14`. |
 
 ---
