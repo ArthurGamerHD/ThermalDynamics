@@ -510,12 +510,38 @@ radiate through its own faces, and what it can conduct into its neighbours. A la
 against a small conductance and no exposure is a *layout* result; a generation with **no** exit at
 all is a defect.
 
-**Sealed blocks are bounded rather than asserted to zero.** Twenty-four remain across the corpus,
-all on one ship, `UNSC Panama` — 0.002 % of 1.15 million blocks. They are armour cubes that mount on
-every face, have no neighbour in any direction, and still report no exposed face, which a synthetic
-grid of two disconnected blocks says should be impossible. That one is unexplained and open;
-`CorpusSurvey` holds the bound so a regression to the earlier scale fails while one ship does not
-hold the suite hostage.
+**Sealed blocks are bounded rather than asserted to zero, and the bound is a share for a reason.**
+Over the 2026-08-21 corpus: **1,184 blocks across 331 ships of 45.2 million**, which is 0.0026 %.
+`CorpusSurvey` holds the share so a regression to the earlier scale fails while a handful of ships
+do not hold the suite hostage.
+
+> **This page said twenty-four, all on one ship, of 1.15 million blocks until 2026-08-24.** That
+> was a figure from a sample carried forward as a figure about the population — the share was right
+> to within a rounding, which is why nobody caught it, and every other number in the sentence was
+> wrong by one to two orders of magnitude (`E2`).
+
+**What they are, measured with `bench sealed`, and there are two kinds.**
+
+The larger kind is **not armour**: it is `LargeBlockGyro`, 307 of the 330 on the seven worst ships.
+The game's own definition declares exactly one mount point, `Bottom`, so a gyro whose bottom face
+looks at empty space and whose other five are buried has no joint to conduct through and no face
+onto the outside to radiate from. That is the model's own rule — *blocks that touch without mount
+surfaces on both sides conduct nothing*, [thermal-model.md](thermal-model.md) — working exactly as
+written, on a block that **makes heat**. It is a consequence of the design rather than a fault in
+it, and it is what the rule costs.
+
+The smaller kind is the one this page called impossible, and it is not. An armour cube standing
+alone inside an **interior void** mounts on all six faces and has no neighbour on any of them —
+and none of those six neighbouring cells is *external*, so `SurfaceMap.GetExposedFaces` counts no
+exposed face, by the definition it is written to. The synthetic grid of two disconnected blocks
+cannot reproduce it because two blocks in open space have external neighbours; what the case needs
+is an enclosing hull, and the corpus has hulls.
+
+> **And the count is a property of the scenario as well as of the ship.** Air is a block's third
+> exit — `BuildRoomLinks` gives every node with a face onto a room a link to that room's air — but
+> a lab hull is built unpressurised, so `bench sealed` reports *0 of 623 rooms hold air* and the
+> third exit is not there to be had. The same blocks in a pressurised compartment are not sealed.
+> The test counts air where there is any; on the corpus battery there is none.
 
 ## Open questions
 
@@ -529,7 +555,9 @@ hold the suite hostage.
 * **Whether `Census` should be replaced or kept beside the corpus.** Its tiers are a hypothesis the
   corpus can now test; if they hold, that is worth knowing, and if they do not, every scale figure
   taken on them wants re-reading.
-* **One unexplained ship in the sealed-block bound**, above.
+* ~~One unexplained ship in the sealed-block bound~~ — **settled 2026-08-24**, and it was neither
+  one ship nor unexplained: 1,184 blocks over 331 ships, mostly gyros bolting to nothing because
+  the game gives a gyro one mount face. See the sealed-block paragraph above.
 * **The 25-block size floor is an unexamined constant.** It has never been varied to see whether it
   changes a population figure.
 
@@ -539,6 +567,7 @@ hold the suite hostage.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-24 | **Settled the sealed-block anomaly, and corrected a sample figure that had been standing as a population one.** This page said twenty-four sealed blocks, all on `UNSC Panama`, of 1.15 million — the 2026-08-21 corpus says **1,184 across 331 ships of 45.2 million**, and the *share* was right to a rounding, which is why nobody caught the rest (`E2`). Measured with `bench sealed`, there are two kinds and neither is impossible: `LargeBlockGyro`, 307 of the 330 on the seven worst ships, whose game definition declares one mount point so a gyro with its bottom face against empty space bolts to nothing while being buried — the model's *touch without mounts conducts nothing* rule working, on a block that makes heat; and an armour cube alone in an interior void, whose six free faces all look into cells that are not external and so count as unexposed by definition. The synthetic two-block grid could never reproduce the second because two blocks in open space have external neighbours. Also: air is a third exit and the sealed test never looked at it, so `HotSpotLab.IsSealed` is now one definition shared with `CorpusSurvey` and the report prints how many rooms hold air — on an unpressurised lab hull, none. |
 | 2026-08-24 | **Re-scored `G6`'s cost half in the currency the allowance is spent in, and against the bound that ships after `C27`.** The work was measured with `2.125 × nodes + links`, which is `SubstepWork` — the unit a step is cut into frame-sized *slices* in — and compared against a bound denominated in `links + 4 × nodes`, which is what a step's length is divided by when the allowance decides whether to shorten it. Two currencies, 1.45× apart on a census hull, either side of one comparison; and the substep column was granted where the allowance reads demanded. Re-scored: p50 10,911, p95 269,154, **p99 883,675**, 29 runs past the 4,000,000 across 8 ships from 159,449 blocks up, where it read p99 446,707 and fifteen runs across three ships against 2,000,000. **The verdict is unchanged and the restriction under it is now stated where the figure is**: five vacuum scenarios, which is exactly what let this criterion's *demand* half read as passing for months, and projecting into air puts the corpus p99 level with the bound. |
 | 2026-08-24 | **Wrote down `G6`'s cost half, before scoring anything against it** (`E11`). The criterion has always said *substep demand and step cost* and only the demand had ever been produced. The cost is stated as **work** rather than as time — `substeps × (2.125 × nodes + links)`, the solver's own charge, derivable from every corpus walk already taken — and the bound is `MaxElementVisitsPerStep` at 2,000,000, which is the mod's own statement of what a grid's step may cost and the point past which a grid's simulated time runs slower than real time. *(Both figures moved later the same day: the unit to `links + 4 × nodes`, which is the one the allowance is spent in, and the bound to 4,000,000 — see the rows below.)* It fails at p99, the same percentile and shape as the demand half. [backlog.md](backlog.md) `C23`. |
 | 2026-08-24 | Two notes on `G6`, neither of which moves it (`P3`). Its marker is a fidelity marker rather than a cost one — a demand above the cap is the cap bounding cost, and the shipped breach *buys* 1.15× of the step for 0.028 K. And the step-cost half of its own sentence has never been produced, because the corpus carries no timing column; that gap is now `C23` ([backlog.md](backlog.md) `C19`). |
