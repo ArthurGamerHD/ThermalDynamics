@@ -85,6 +85,13 @@ def load(name, *extra_key):
     statistic that silently double-weights part of its population is the exact failure this whole
     lab exists to prevent — so the duplicates still come out, and the count is still printed, which
     is also how a reader learns which kind of dataset they are holding.
+
+    **A paired walk is not a walk with duplicates in it**, and reading one as the other is the
+    failure this function exists to prevent, arriving through the front door. `CorpusCapWalk` writes
+    two rows per ship and scenario that differ only in the `cap` column, so a key without `cap`
+    calls half of them duplicates and silently drops an entire arm — on a dry run of the 2026-08-25
+    dataset it reported "912 duplicate rows" and scored `G6` on whichever arm happened to be first.
+    The arm is part of a row's identity wherever the dataset carries one.
     """
     path = os.path.join(DATA, name + ".csv")
     if not os.path.exists(path):
@@ -92,7 +99,17 @@ def load(name, *extra_key):
     with open(path) as handle:
         rows = list(csv.DictReader(handle))
 
+    arms, shipped = scoring.split_arms(rows)
+    if arms:
+        print(f"note: {name}.csv is a paired walk carrying arms {', '.join(arms)}; "
+              f"scoring the {len(shipped):,} rows of the arm that ships and leaving "
+              f"{len(rows) - len(shipped):,} to cap.py")
+        rows = shipped
+
     key = KEY + extra_key
+    if rows and "cap" in rows[0]:
+        key = key + ("cap",)
+
     if not rows or any(k not in rows[0] for k in key):
         return rows
 

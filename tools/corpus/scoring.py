@@ -393,3 +393,24 @@ def delta_peak(control, capped):
         return None
 
     return abs(capped - control)
+
+
+def split_arms(rows):
+    """`(arms, shipped rows)` for a paired walk, or `([], rows)` for an ordinary one.
+
+    **A paired dataset is scored on the arm that ships, not on both.** Every criterion this file
+    reports is about the shipped configuration, and mixing two configurations into one percentile is
+    two experiments read as one (`M1`, `P6`). The other arm is not discarded quietly — the caller
+    counts and names it, and `cap.py` is the tool that compares them.
+
+    The shipped arm is `cap` 0 or absent, because 0 is what `MaxSubstepsPerBlock` ships at and a
+    walk with no such column has only one arm to begin with.
+    """
+    if not rows:
+        return [], rows
+
+    arms = sorted({row.get("cap", "") for row in rows})
+    if len(arms) < 2:
+        return [], rows
+
+    return arms, [row for row in rows if row.get("cap", "") in ("", "0")]

@@ -100,6 +100,12 @@ vacuum and in air. It reports **every statistic on either side**, so one the oth
 carry shows as an em dash rather than being dropped: a scenario present in one walk and absent from
 the other is the finding, not a gap to be joined away.
 
+**A paired dataset is scored on the arm that ships.** `verdict.py` says so on the first line when it
+meets one, and leaves the other arm to `cap.py`. It did not always: keyed by ship and scenario, the
+capped arm read as *912 duplicate rows* and half the dataset was dropped under a note about a resume
+that had not happened. It kept the right arm by accident, which is the worst way to be right — found
+on a dry run before the walk landed, and pinned by `test_scoring.py`.
+
 **Read `dataset ships` first.** The corpus is sorted largest-first, so a walk stopped early is not
 a small sample of the population — it is the wrong end of one, and every percentile it reports is a
 percentile of the biggest ships in the corpus. A partial dataset carries exactly the columns a
@@ -390,6 +396,7 @@ limit in [known-issues.md](../../docs/known-issues.md).
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Fixed `verdict.py` reading a paired walk's second arm as duplicate rows. It keyed a row by ship and scenario, so `CorpusCapWalk`'s capped arm looked like the same run written twice: half the dataset was dropped, under a note blaming a resume that had not happened, and the arm it kept was the right one by accident. The arm is part of a row's identity now, and a paired dataset is scored on the one that ships with both named on the first line (`M1`, `P6`). |
 | 2026-08-25 | Added [`reproduce.py`](reproduce.py): whether two walks that overlap wrote the same numbers on the ships they share. Its first use was the cap walk's restart, whose 552 shared rows matched the abandoned partial exactly on all 22 compared columns. |
 | 2026-08-25 | Added the one way a sweep costs a session rather than a run: a walk in progress fails the suite's wall-clock tests, because they are measuring a machine the walk is using every core of. Measured — the suite was green before the cap walk and `SolverCostPerLinkStaysProportional` was 3.14× its limit during it. |
 | 2026-08-25 | Added [`pace.py`](pace.py): what a running walk will cost, and the check that says whether the estimate means anything. The block-share rate that abandoned the first cap walk is reported as the spread it has and then run over the finished air walk, where the answer is known. |

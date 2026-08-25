@@ -377,3 +377,41 @@ class PerBlockCap(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class APairedWalkIsScoredOnTheArmThatShips(unittest.TestCase):
+    """A paired dataset carries two configurations, and every criterion is about one of them.
+
+    The defect this pins was found on a dry run before the data landed: `verdict.py` keyed a row by
+    ship and scenario, so the capped arm read as *912 duplicate rows* and half the dataset was
+    dropped with a note about a resume that had not happened. It kept the right arm by accident.
+    """
+
+    @staticmethod
+    def arm(cap, peak):
+        return {"ship": "a", "workshop_id": "1", "scenario": "reentry",
+                "cap": cap, "peak_k": str(peak)}
+
+    def test_an_ordinary_walk_is_not_split(self):
+        rows = [self.arm("0", 300), self.arm("0", 310)]
+        arms, shipped = scoring.split_arms(rows)
+        self.assertEqual([], arms)
+        self.assertEqual(rows, shipped)
+
+    def test_a_walk_with_no_cap_column_at_all_is_not_split(self):
+        rows = [{"ship": "a", "scenario": "reentry"}]
+        arms, shipped = scoring.split_arms(rows)
+        self.assertEqual([], arms)
+        self.assertEqual(rows, shipped)
+
+    def test_a_paired_walk_keeps_the_shipped_arm_and_names_both(self):
+        rows = [self.arm("0", 300), self.arm("6", 290)]
+        arms, shipped = scoring.split_arms(rows)
+        self.assertEqual(["0", "6"], arms)
+        self.assertEqual([rows[0]], shipped)
+
+    def test_the_two_arms_of_one_run_are_not_duplicates_of_each_other(self):
+        # The failure itself: keyed without the arm, these are one row seen twice.
+        rows = [self.arm("0", 300), self.arm("6", 290)]
+        self.assertNotEqual(rows[0]["cap"], rows[1]["cap"])
+        self.assertEqual(rows[0]["scenario"], rows[1]["scenario"])
