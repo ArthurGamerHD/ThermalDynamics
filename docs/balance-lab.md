@@ -437,6 +437,40 @@ blocks, and a bounded approximation in place of an unbounded lag. What has *not*
 the comparison that decides it — a shortened step against a floored one, on the same hull, at the
 same clock — and that is [backlog.md](backlog.md) `C30` rather than a conclusion here.
 
+### What the swap is worth, measured on the hulls where the budget binds
+
+`C30`'s question is whether replacing a shortened step with a floored one is an improvement or a
+different loss. `CapVersusAllowanceTests` runs both on one hull at one allowance, at the sizes `C3`
+found the allowance actually binds at, in flight:
+
+| blocks | allowance | cap | demand | granted | clock | what the lost clock stands at |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 32,800 | 4,000,000 | off | 27.49 | 20 | **72.5 %** | 9.081 K |
+| 32,800 | 4,000,000 | 6 | 6.00 | 20 | **100.0 %** | 0 |
+| 64,463 | 4,000,000 | off | 27.49 | 10 | **36.2 %** | 36.976 K *(past the ladder)* |
+| 64,463 | 4,000,000 | 6 | 6.00 | 10 | **100.0 %** | 0 |
+
+**A shortened step is not an approximation, it is a slow clock**, and the mechanism `F23` priced.
+The 64,463-block hull keeps **36.2 %** of real time at the allowance that ships: its thermal
+simulation runs at a third speed for as long as the load lasts. Priced on the measured rate ladder
+that is **36.98 K standing**, and the deficit is past the last rung the ladder measured, so the
+figure is a floor rather than a reading.
+
+**The cap removes the deficit entirely** because it removes the cause: demand falls from 27.49 to
+6.00, which is inside the 10 substeps the budget grants, so nothing is shortened and the grid keeps
+its whole clock. What it charges instead is the population figure from `C3` — **0.024 K at p99** on
+the pairs whose control had stopped moving.
+
+**So the swap is worth nine to thirty-seven kelvin against twenty-four thousandths of one.** That is
+three orders of magnitude and it is not a close call.
+
+**The scope both halves carry** (`P1`). The kelvin price of a lost clock is read off
+`AllowanceLab.PriceRates`, which runs the mechanism on its own rig under a **moving** load — which
+is where a clock error shows at all, since `F23` measured 0.00 K under a steady one. So these are
+upper bounds for a ship whose load keeps changing and say nothing about a settled grid. And the
+cap's 0.024 K is a population figure rather than this hull's. The two sides are therefore compared
+in order of magnitude rather than subtracted.
+
 **And the walk rescores `G6` itself.** Its uncapped arm is the first corpus dataset to carry
 `substep_cost`, so it replaces the withdrawn figures above rather than merely being compared with
 them — and because it repeats `F11`'s four scenarios on the same ships, its demand column is a
@@ -898,6 +932,7 @@ is an enclosing hull, and the corpus has hulls.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | **Measured `C30`'s comparison: a shortened step against a floored one, on one hull at one allowance.** At the shipped 4,000,000 a 64,463-block hull in flight keeps **36.2 % of real time** — a slow clock standing at **36.98 K**, past the last rung the price ladder measured — and a cap of 6 takes its demand from 27.49 to 6.00, inside the granted 10, so it keeps **100 %**. Against the cap's own **0.024 K**. Three orders of magnitude, and not a close call. |
 | 2026-08-25 | **Decided `C3`: `MaxSubstepsPerBlock` stays 0.** The p99 landed in the judgement band at 0.2820 K, and the rule reserved that band on the condition it would not be decided by the cap rescuing a criterion — it does rescue one, and that is set aside. What decides it is who pays: the error is per block and the benefit is per grid, so four fifths of the population is charged in full and collects nothing. `G6`'s cost half therefore stays failing, and its route is named rather than left open — a cap that engages when a grid is over its allowance, which is `C30`. |
 | 2026-08-25 | **`CorpusCapWalk` finished: 8,144 blueprints, four scenarios, two arms, 3 h 51 m, and three of its four registered predictions hold.** The identity is exact on all 32,576 pairs, the benefit lands at **2,180,352** inside the 1.7–2.9 M projected and takes `G6`'s cost half from 1.82× the allowance to 0.55×, and the reach is **5.83 %** inside the 3–10 % band. The cost prediction fails on its second half: p99 **0.2820 K** as predicted, max **48.22 K** against the 10 predicted, on giants and not on censored runs. **The finding nobody predicted is the shape of the trade**: stiffness is per block and the allowance is per grid, so the cap re-masses 7.4 % of the blocks on the smallest hulls and 3.1 % on the largest while no hull under 5,000 blocks is over the allowance at all — 80 % of the corpus pays in full and collects nothing. |
 | 2026-08-25 | **Recorded a limit of the paired design while the walk was still running and the verdict was not known.** Both arms run to the same clock, which stops the stopping rule being part of the difference and does not make that clock an equilibrium: the settle test tolerates 0.25 K a minute, which over an 1,800 s scenario is 7.5 K, and a cap changes the *rate* a hull approaches its answer at. On the walk's first 360 ships the pairs more than a kelvin apart have a control still moving at a median 0.03 K/s against a population median of 0.001. `cap.py` prints the deltas split on whether the control had stopped moving, **beside** the registered statistic and not instead of it — the decision rule is scored on what it was written against (`E11`). |

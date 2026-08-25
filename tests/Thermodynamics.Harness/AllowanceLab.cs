@@ -100,6 +100,17 @@ namespace Thermodynamics.Harness
             /// <summary>The allowance this row ran under. 0 is the bound switched off.</summary>
             public int Allowance;
 
+            /// <summary>
+            /// `MaxSubstepsPerBlock` this row ran at. 0 is off, which is what ships.
+            ///
+            /// **The second arm of `C30`'s question.** The allowance does not approximate — it
+            /// shortens the step, so an over-budget grid falls behind real time by an unbounded
+            /// amount. A per-block cap lowers the *demand* instead, so the same grid keeps up and
+            /// pays a bounded error on its stiffest blocks. Measuring both on one hull at one
+            /// allowance is the comparison that says which loss is smaller.
+            /// </summary>
+            public int Cap;
+
             /// <summary>Element visits one substep over this grid costs: links plus four times nodes.</summary>
             public long SubstepCost;
 
@@ -153,6 +164,18 @@ namespace Thermodynamics.Harness
         public static List<Row> Run(string shape, IList<int> sizes, IList<int> allowances,
             IList<string> worlds, int frames, Action<string> log)
         {
+            return Run(shape, sizes, allowances, worlds, new[] { 0 }, frames, log);
+        }
+
+        /// <summary>
+        /// The same sweep with a per-block cap on each row as well, which is `C30`'s comparison.
+        ///
+        /// The cap is applied to the same hull as the row beside it and the rate is read as a delta
+        /// over the window, so a row differs from its neighbour in the cap and nothing else (`P6`).
+        /// </summary>
+        public static List<Row> Run(string shape, IList<int> sizes, IList<int> allowances,
+            IList<string> worlds, IList<int> caps, int frames, Action<string> log)
+        {
             List<Row> rows = new List<Row>();
 
             for (int w = 0; w < worlds.Count; w++)
@@ -168,13 +191,18 @@ namespace Thermodynamics.Harness
 
                     for (int a = 0; a < allowances.Count; a++)
                     {
-                        if (log != null)
+                        for (int c = 0; c < caps.Count; c++)
                         {
-                            log(worlds[w] + " " + sizes[s].ToString("n0") + ", allowance "
-                                + (allowances[a] == 0 ? "off" : allowances[a].ToString("n0")));
-                        }
+                            if (log != null)
+                            {
+                                log(worlds[w] + " " + sizes[s].ToString("n0") + ", allowance "
+                                    + (allowances[a] == 0 ? "off" : allowances[a].ToString("n0"))
+                                    + ", cap " + (caps[c] == 0 ? "off" : caps[c].ToString()));
+                            }
 
-                        rows.Add(Measure(simulation, worlds[w], sizes[s], allowances[a], frames));
+                            rows.Add(Measure(simulation, worlds[w], sizes[s], allowances[a],
+                                caps[c], frames));
+                        }
                     }
                 }
             }
@@ -183,9 +211,10 @@ namespace Thermodynamics.Harness
         }
 
         private static Row Measure(ThermalSimulation simulation, string world, int target,
-            int allowance, int frames)
+            int allowance, int cap, int frames)
         {
             Row row = new Row();
+            row.Cap = cap;
             row.World = world;
             row.TargetBlocks = target;
             row.Blocks = simulation.Solver.Nodes.Count;
@@ -195,6 +224,7 @@ namespace Thermodynamics.Harness
             EnvironmentSample sample = World(world);
 
             simulation.Settings.MaxElementVisitsPerStep = allowance;
+            simulation.Settings.MaxSubstepsPerBlock = cap;
             simulation.Settings.Derive();
 
             row.SubstepCost = simulation.SubstepCost;
