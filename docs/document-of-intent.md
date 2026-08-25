@@ -825,6 +825,43 @@ so that the guard is not also a way of hiding the defect.
 
 ---
 
+## What language the mod speaks
+
+**The mod speaks the player's language where it sits inside the game's HUD, and English where it is
+the mod talking about itself.** The boundary is not a compromise between the two — it follows from a
+commitment this page already made: the readouts are drawn through Rich HUD *so that a player reads a
+temperature the way they read a power figure, with nothing mod-shaped announcing itself*. The game's
+own HUD is localised. A readout that is not is mod-shaped by definition.
+
+Counted over `Data/Scripts`, the distinct strings the mod puts in front of a person are:
+
+| Surface | Distinct strings | Language |
+| --- | ---: | --- |
+| Block names and descriptions | 30 | **localised**, and already done |
+| The crosshair readout, cockpit summary, terminal panel and cues | **47** | **localised** — inside the game's HUD |
+| The settings menu | 248 | English |
+| Chat replies | 90 | English |
+| Debug overlays | 113 | English |
+| Telemetry files | 604 | English, and not on screen at all |
+
+**So the surface that has to be translatable is forty-seven strings**, about four per cent of what
+the mod writes, and the mechanism is already proven by the thirty block names in
+[MyTexts.resx](../Data/Localization/MyTexts.resx).
+
+**And the rest is English on purpose rather than by neglect.** A settings label is the name of a
+value that appears in the world's configuration file, in [configuration.md](configuration.md) and in
+this repository in English; translating the label without the file makes the two harder to connect,
+not easier. Chat replies answer commands that are typed in English. Debug overlays and telemetry are
+read by whoever is diagnosing the mod, which is the same audience as the source.
+
+**One thing is unverified and blocks the work rather than the decision**: whether a mod's own
+`MyTexts` keys resolve at runtime from C#, as opposed to inside a definition where they demonstrably
+do. Nothing outside a session can answer it, and shipping a readout that draws a key name instead of
+a temperature is worse than shipping one in English — so the forty-seven wait on that check the same
+way `A9` waits on `F5`. See [backlog.md](backlog.md) `B39`.
+
+---
+
 ## What the mod promises the things around it
 
 The mod is not alone. It sits inside a world somebody has already been playing, beside blocks it has
@@ -1002,13 +1039,14 @@ holds the things where the intent is stated and the route is not; here the inten
 None of them is a defect and most may want no more than a sentence — but the sentence is not there,
 and until it is, the answer is whatever the next change happens to imply.
 
-**Numbers 1, 2 and 5 are settled and their numbers are not reused**, because the pages that cite
+**Numbers 1, 2, 5 and 6 are settled and their numbers are not reused**, because the pages that cite
 these entries cite them by number. All three were answered on 2026-08-25: *what a player does with
 their hands* is [Acting on heat by hand](#acting-on-heat-by-hand--out-of-scope-and-priced), *what
 the mod's blocks cost to build* is
 [What a block costs to build](#what-a-block-costs-to-build--what-the-game-charges-and-nothing-invented),
-and *the visual channel, and who can read it* is
-[Who the glow is for](#who-the-glow-is-for--brightness-and-colour-as-a-refinement).
+*the visual channel, and who can read it* is
+[Who the glow is for](#who-the-glow-is-for--brightness-and-colour-as-a-refinement), and *what
+language the mod speaks* is [What language the mod speaks](#what-language-the-mod-speaks).
 
 ### 3. Creative mode, and the tools that skip the game
 
@@ -1042,18 +1080,6 @@ as anyone is reading, and a setting's name has no stated boundary of any kind.
 The honest reading today is *nothing has ever broken*, which is a fine position to hold and a poor
 one to hold accidentally. **Nothing checks it either** — `ModApiShapeTests` pins the shape of the
 table, and no test relates a change in that shape to the number a caller is told to trust.
-
-### 6. What language the mod speaks
-
-Thirty display names and descriptions are localisation keys in
-[MyTexts.resx](../Data/Localization/MyTexts.resx), which is the game's own mechanism and the right
-one. **Everything else the mod puts on screen is an English string literal in C#** — every settings
-menu label and description, the cockpit summary, the crosshair readout, the terminal panel, the chat
-command replies and the extinguisher's own text.
-
-Nothing states whether the mod is meant to be translatable. If it is, the runtime text is the work
-and it is not started; if it is not, that is a decision worth writing down, because the split as it
-stands reads as a half-finished intention rather than a choice.
 
 ### 7. Heat that leaves the world
 
@@ -1145,6 +1171,7 @@ as a *second* change rather than as a substitute. [backlog](backlog.md) `D19`.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | **Took a position on what language the mod speaks, which was the sixth void.** The boundary follows from a commitment already on this page rather than from a preference: the readouts are drawn through Rich HUD so that nothing mod-shaped announces itself, and the game's own HUD is localised. Counted, the surface inside the game's HUD is **47 distinct strings** — four per cent of what the mod writes — against 248 in the settings menu, 90 in chat replies, 113 in debug overlays and 604 in telemetry files, all of which are the mod talking about itself and stay English. The work is blocked on one thing only a session can answer, which is `B39`. |
 | 2026-08-25 | **Took a position on who the glow is for, which was the fifth void, and the measurement made it an easier question than it looked.** The colour channel moves less than a just-noticeable difference across their own glow band for **88 of the 101** block types in the installed catalogue — not only the 28 pinned under the Draper point — and the best any block manages is ΔE 4.76. So brightness is the channel and colour is a refinement, the warning is legible without colour, the sound cue is a redundant channel on purpose from here, and no fact may be carried by hue alone. |
 | 2026-08-25 | **Took a position on what a block costs to build, which was the second void.** There is no vanilla comparator for a block that moves heat, so the eighteen `Cubes.xml` definitions are placed inside the distribution the game prices its own 1,434 blocks over — kilograms a cubic metre, seconds of welding a kilogram, PCU a block — and all eighteen sit inside it. The position: the lever costs what the game charges for a block of that size and mass, and the mod does not invent an economy. The recipe is also not secretly a thermal dial: at four times a radiator stack's mass the source settles within a hundredth of a kelvin and only the transient moves, 24 to 112 s. |
 | 2026-08-25 | **Took a position on what a player does with their hands, which was the first of the voids and had no number under it.** `HandCoolingLab` prices the tool against a real five-kilogram CO2 bottle: undoing one crossing is 26 bottles at the median of the 72 vanilla types that cook themselves and 20 discharging at once to beat the block's own 32 s window, which is 3.3 MW — a large radiator with a trigger. And 71 of the 72 shed everything they make in their own best case, so the block is not where the problem is. The position: a player perceives heat and does not act on it by hand, the extinguisher is the instrument that names the block to change, and what would reopen it is a block-scale intervention rather than a bigger bottle. |
