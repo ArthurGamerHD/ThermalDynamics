@@ -240,8 +240,8 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// The same promise for held coolant, which is a fourth section on the same rule
-        /// (backlog.md `A12`). A world saved with a broken ring in it has to open on a build that
+        /// The same promise for held coolant, which is a fourth section on the same rule.
+        /// A world saved with a broken ring in it has to open on a build that
         /// has never heard of one: the ring will be traced as broken there too, the coolant will be
         /// lost as it was before the fix, and nothing else about the save is disturbed — which is
         /// the whole of what `P15` promises.

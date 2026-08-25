@@ -27,7 +27,7 @@ namespace Thermodynamics.Tests
     /// </para>
     ///
     /// <para>
-    /// **A third of it used to** (backlog.md `A12`). The spill mixed each parcel into its pipe at
+    /// **A third of it used to.** The spill mixed each parcel into its pipe at
     /// `(T_n·M_n + T_s·M_s) / (M_n + M_s)` and then left the node at `M_n`, so the energy landing
     /// was `mixed × M_n` where `T_n·M_n + T_s·M_s` went in and `M_s / (M_n + M_s)` of the ring's
     /// heat — 67.9 % on a large grid — was destroyed by two capacities nobody chose. The pipe now
@@ -294,8 +294,8 @@ namespace Thermodynamics.Tests
         /// <summary>
         /// **Coolant a pipe is holding survives a save and a load.** The block temperature is
         /// written whatever happens, so a reload that dropped the capacity would put the mixed
-        /// temperature onto the bare pipe and destroy exactly the fraction the mix conserved — `A12`
-        /// again, on a slower trigger.
+        /// temperature onto the bare pipe and destroy exactly the fraction the mix conserved, on a
+        /// slower trigger.
         /// </summary>
         [Fact]
         public void HeldCoolantSurvivesASaveAndLoad()

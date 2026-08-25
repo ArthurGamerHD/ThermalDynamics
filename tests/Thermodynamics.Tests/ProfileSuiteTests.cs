@@ -104,6 +104,69 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// **The two profiles that describe the shipping world read it rather than restate it.**
+        /// `shipped` *is* the default configuration and `candidate` is that
+        /// configuration with the realism departures it names — so neither may carry a literal
+        /// clock or substep ceiling of its own.
+        ///
+        /// <para>
+        /// This exists because the drift was silent and lasted a retune: `candidate` carried
+        /// `HeatTimeScale = 225` and `MaxSubsteps = 16` after `C24` shipped 90 and 64, so a
+        /// comparison whose whole purpose is *how far is the shipping world from physics* was
+        /// answering it about a world that had been retired. Nothing looked wrong — every column
+        /// still added up, which is exactly why a test has to say it.
+        /// </para>
+        ///
+        /// <para>
+        /// It reads the fields rather than `ToSettings()` deliberately: the failure was a literal in
+        /// a profile, and a derivation that happened to agree would hide the next one.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheProfilesThatDescribeTheShippingWorldReadItRatherThanRestateIt()
+        {
+            ThermalSettings shipped = new ThermalSettings();
+
+            BalanceProfile[] follow = { BalanceProfile.Shipped(), BalanceProfile.Candidate() };
+
+            foreach (BalanceProfile profile in follow)
+            {
+                Assert.True(profile.HeatTimeScale == shipped.HeatTimeScale,
+                    profile.Name + " runs HeatTimeScale " + profile.HeatTimeScale
+                    + " against a shipped " + shipped.HeatTimeScale);
+
+                Assert.True(profile.Frequency == shipped.Frequency,
+                    profile.Name + " runs Frequency " + profile.Frequency
+                    + " against a shipped " + shipped.Frequency);
+
+                Assert.True(profile.MaxSubsteps == shipped.MaxSubsteps,
+                    profile.Name + " runs MaxSubsteps " + profile.MaxSubsteps
+                    + " against a shipped " + shipped.MaxSubsteps);
+            }
+
+            // `shipped` is the world's conduction pace too; `candidate`'s departure is that it is
+            // the *real* one, so the two must not agree here or the comparison has no subject.
+            Assert.Equal(ThermalConstants.ConductionScale, BalanceProfile.Shipped().ConductionPace, 4);
+            Assert.Equal(1f, BalanceProfile.Candidate().ConductionPace, 4);
+        }
+
+        /// <summary>
+        /// **A profile left unset lands on the shipping world, not a retired one.** The field
+        /// defaults are what a profile added later inherits, and they were the pre-`C24` pair.
+        /// </summary>
+        [Fact]
+        public void AnUnsetProfileInheritsTheShippingWorld()
+        {
+            ThermalSettings shipped = new ThermalSettings();
+            BalanceProfile bare = new BalanceProfile();
+
+            Assert.Equal(shipped.HeatTimeScale, bare.HeatTimeScale, 4);
+            Assert.Equal(shipped.Frequency, bare.Frequency);
+            Assert.Equal(shipped.MaxSubsteps, bare.MaxSubsteps);
+            Assert.Equal(ThermalConstants.ConductionScale, bare.ConductionPace, 4);
+        }
+
+        /// <summary>
         /// Every profile is distinct in something the solver reads. Two profiles that derive to the
         /// same settings would make the comparison table look like agreement.
         /// </summary>

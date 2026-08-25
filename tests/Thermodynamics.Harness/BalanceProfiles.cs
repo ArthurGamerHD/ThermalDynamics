@@ -38,22 +38,33 @@ namespace Thermodynamics.Harness
         /// of about half an hour.
         ///
         /// **The value here is a field default and not a claim about what ships** —
-        /// <see cref="Shipped"/> reads the real defaults, and every other profile states its own.
+        /// <see cref="Shipped"/> and <see cref="Candidate"/> read the real defaults, and every other
+        /// profile states its own. It is the shipped figure anyway, so that a profile added later
+        /// and left unset lands on the world rather than on a retired one.
         /// </summary>
-        public float HeatTimeScale = 225f;
+        public float HeatTimeScale = 90f;
 
         /// <summary>
-        /// Multiplies every block's real conductivity. 1 is the world; the mod ships 2.4.
+        /// Multiplies every block's real conductivity. 1 is the world; the mod ships 9.6, and
+        /// shipped 2.4 until `C24`.
         ///
         /// Applied here by scaling the material figures the harness builds blocks from, so no core
         /// setting has to exist for this to be measured.
         /// </summary>
-        public float ConductionPace = 2.4f;
+        public float ConductionPace = ThermalConstants.ConductionScale;
 
         // ---- integration ---------------------------------------------------------------------
 
-        public int Frequency = 4;
-        public int MaxSubsteps = 16;
+        /// <summary>
+        /// Solver steps a second and the substep ceiling. **Defaulted to what ships**, on the same
+        /// rule as the two paces above: `MaxSubsteps` sat at 16 here long after the shipped figure
+        /// became 64, which is a default that describes a retired world.
+        /// </summary>
+        public int Frequency = new ThermalSettings().Frequency;
+
+        /// <summary>See <see cref="Frequency"/>.</summary>
+        public int MaxSubsteps = new ThermalSettings().MaxSubsteps;
+
         public bool ClampOvershoot = true;
 
         // ---- environment ---------------------------------------------------------------------
@@ -224,17 +235,36 @@ namespace Thermodynamics.Harness
         /// real solar constant, the segmented fluid, every mechanism on — and spends its budget
         /// only where realism is genuinely expensive, which is the thermal clock. It is the
         /// hypothesis this comparison exists to test, not a conclusion.
+        ///
+        /// <para>
+        /// **The clock and the integrator are read off <see cref="ThermalSettings"/>, for the same
+        /// reason <see cref="Shipped"/> reads them**, and realism.md records what correcting it cost.
+        /// *A game's pace* is
+        /// whatever pace the game is shipping, so restating it here made this profile a claim about
+        /// a world that no longer existed: it carried `HeatTimeScale = 225` and `MaxSubsteps = 16`,
+        /// the pair that shipped before `C24`, against a shipped 90 and 64. Nothing about the
+        /// comparison was wrong except which world it was about — which is the worst way for a
+        /// figure to be wrong, because every column still added up.
+        /// </para>
+        ///
+        /// <para>
+        /// What it states for itself is only what it departs on: real conductivity, the real solar
+        /// constant and background, the segmented fluid, and a reactor waste fraction between
+        /// <c>physical</c>'s and the shipped one.
+        /// </para>
         /// </summary>
         public static BalanceProfile Candidate()
         {
+            ThermalSettings shipped = new ThermalSettings();
+
             return new BalanceProfile
             {
                 Name = "candidate",
                 Intent = "real materials and constants, game clock",
-                HeatTimeScale = 225f,
+                HeatTimeScale = shipped.HeatTimeScale,
                 ConductionPace = 1f,
-                Frequency = 4,
-                MaxSubsteps = 16,
+                Frequency = shipped.Frequency,
+                MaxSubsteps = shipped.MaxSubsteps,
                 SolarEnergy = 1361f,
                 VacuumTemperature = 2.725f,
                 WellMixedCoolant = false,

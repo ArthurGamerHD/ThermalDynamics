@@ -878,8 +878,8 @@ namespace Thermodynamics.Core
         /// block.
         ///
         /// <para>
-        /// **The pipe takes the parcel's heat capacity as well as its temperature**
-        /// (backlog.md `A12`). Mixing to
+        /// **The pipe takes the parcel's heat capacity as well as its temperature**, and
+        /// thermal-model.md argues why under Coolant loops. Mixing to
         /// `(T_n·M_n + T_s·M_s) / (M_n + M_s)` and then leaving the node at `M_n` lands
         /// `mixed × M_n` where `T_n·M_n + T_s·M_s` went in, so `M_s / (M_n + M_s)` of the ring's
         /// heat is destroyed — 67.9 % on a large grid, where a pipe node holds 941 J/K against its

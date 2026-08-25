@@ -28,6 +28,40 @@ python3 tools/corpus/panel.py out/census-2026-08-21/census.csv \
                              out/census-2026-08-21 out/knobs-2026-08-21   # every dataset, one page
 ```
 
+## Ask what the smallest run that answers the question is, before launching one
+
+**A full sweep is meant to be rare.** It is hours of the machine, it blocks every other walk while it
+runs, and its evidence is almost always carried by a small part of the population. So the first step
+of designing a walk is working out the subset that can answer the question, and the second is saying
+what that subset cannot answer. Reach for the whole population when the *distribution over the
+population* is the finding — `G5`'s stress bound and `C3`'s who-pays argument both were — and not
+otherwise.
+
+Three levers, in the order worth trying:
+
+| Lever | What it does |
+| --- | --- |
+| `THERMAL_CORPUS_ONLY=<file>` | Walks a named selection. This is the strong one: `CorpusFloorWalk` walks 294 blueprints rather than 8,144 because the mechanism only engages where the allowance binds, and the rule that picked them lives in the selection file (`M10`). |
+| `THERMAL_CORPUS_SHIPS=N` | Walks a stride sample. Right for *does this walk work*, wrong for a tail — a p99 read off a sample of 40 rests on one observation. |
+| Stopping early | The corpus is walked largest first, so a walk whose finding lives in the large hulls has it long before it ends — the same fact as *read progress in bytes, not files* below, used as a lever rather than as a warning. |
+
+**The third lever is usually the biggest and it is the one nobody reaches for.** Selection saves less
+than it looks, because cost goes with block count and the ships that carry a finding are the
+expensive ones: dropping every ship under 60,000 blocks from the floor walk's selection removes 196
+of its 294 ships — two thirds by count — and only **34 %** of the work. Whereas the floor walk had
+38 of the 47 ships over 100,000 blocks measured **79 ships in**, a quarter of the way through.
+
+**Which band matters is a question the walk itself answers, and it answered it here.** The floor's
+error on the first 241 floored cells is a median of 0.027 K with a p99 of 28 K, and the tail is not
+spread across the population: **nothing under 60,000 blocks exceeds 0.58 K**, every one of the 20
+cells over 1 K is above 100,000, and `vacuum-shadow` supplies 11 of the 21 such cells from 37. A
+walk that has covered its band has its finding whatever is left in the queue.
+
+**Read the partial dataset before deciding to wait.** `outcomes.csv` is written per batch, so the
+question *has the finding stopped moving* can be asked of a walk in flight. That is not a licence to
+quote a partial run as a population figure — `P1` and `P2` still bind, and a figure from a stopped
+walk carries the count it was stopped at.
+
 ## The three walks over the whole population
 
 `CorpusSurvey` runs five scenarios and every one of them is vacuum. `CorpusAirWalk` runs the four
@@ -417,6 +451,7 @@ limit in [known-issues.md](../../docs/known-issues.md).
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Wrote down that a full sweep is rare by intent and that the smallest run which answers the question comes first, with the three levers and which is actually worth reaching for. The measured part is that **selection is the weakest of them**: cutting the floor walk's 294 ships to the 98 over 60,000 blocks — the only band where the floor's error exceeds 1 K — drops two thirds of the ships and 34 % of the work, because cost goes with blocks. Stopping early is the strong lever, since largest-first puts the informative hulls at the front. |
 | 2026-08-25 | Recorded the `pgrep` half of the pattern-matching trap beside the `pkill` half: a shell loop that waits on a walk by name contains the name, so it matches itself, never exits, and makes a later `pgrep` answer that the walk is still running after it has finished. |
 | 2026-08-25 | `cap.py` splits its cost figure on whether the control had actually stopped moving, beside the registered statistic. The settle test is an average over a chunk and tolerates 0.25 K a minute; the split uses the instantaneous rate at the end. On the cap walk's first 360 ships the two differ by two orders of magnitude, which is a statement about the instrument rather than about the cap. |
 | 2026-08-25 | `cap.py` now scores all four registered predictions rather than three. The benefit had been scored only as *does `G6` pass*, which is the criterion and not the prediction — the pre-registration's falsifier runs both ways, and a p99 under 1.5 M would falsify the projection while the criterion passed. The cost had printed its figures and judged nothing. Both bands live in `scoring.py` beside the decision rule, and the two are kept apart: a prediction can be falsified while the decision is unchanged. |

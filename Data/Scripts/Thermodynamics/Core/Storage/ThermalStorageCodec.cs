@@ -37,8 +37,8 @@ namespace Thermodynamics.Core
     /// <para>
     /// It is saved because it is heat capacity that no other saved value implies. The block's
     /// temperature is written whatever happens, so a reload that dropped the capacity would put the
-    /// mixed temperature onto the bare pipe and destroy the fraction the mix had just conserved —
-    /// the `A12` loss again, on a slower trigger.
+    /// mixed temperature onto the bare pipe and destroy the fraction the mix had just conserved,
+    /// on a slower trigger.
     /// </para>
     /// </summary>
     public struct StoredHeldCoolant
