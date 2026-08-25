@@ -221,14 +221,14 @@ is what to run and where to read the answer.
 | `coolers` | Which block in the whole game is the best cooling in it, stacked one to thirty-two against the largest reactor at plate rating, in shadow? | `CoolingLadderTests` | [balance.md](../docs/balance.md#the-same-question-asked-of-the-whole-game) |
 | `reactors` | What fraction of a reactor's output should become heat, across three orders of magnitude of rating? Every vanilla reactor at six fractions and three loads, in two rigs — **bare** in shadow on a 2.7 K sky, and **skinned** under one cell of light armour. | `ReactorWasteHeatTests` | [balance.md](../docs/balance.md#reactor-waste-heat) |
 | `retrofit --ships 500 [--csv out/]` | Can cooling be fitted to ships people actually built? A real hull is parsed, run under load to find where its heat is, and the mod's blocks go into the cells that hull left free — bolted and plumbed. | `RetrofitTests` | [balance-lab.md](../docs/balance-lab.md#0-define-good-balance-before-collecting-anything) |
-| `stiffness [--csv out/]` | What does a ship's stiffest block demand of a step, asked of 8,102 workshop hulls rather than one save? Nothing is stepped: stiffness is a property of a built grid and the world it is asked about. | `DecorativeStiffnessTests` | [stiffness.md](../docs/stiffness.md#the-same-question-asked-of-eight-thousand-real-ships) |
+| `stiffness [--csv out/]` | What does a ship's stiffest block demand of a step, asked of 8,105 workshop hulls rather than one save? **Three minutes, and it is what re-baselines `Census.Corpus` whenever a default moves** — the cheapest way to ask a population anything. Nothing is stepped: stiffness is a property of a built grid and the world it is asked about. | `DecorativeStiffnessTests` | [stiffness.md](../docs/stiffness.md#the-same-question-asked-of-eight-thousand-real-ships) |
 
 ```bash
 dotnet run --project Thermodynamics.Sim -- balance --csv out/
 dotnet run --project Thermodynamics.Sim -- coolers
 dotnet run --project Thermodynamics.Sim -- reactors
 dotnet run --project Thermodynamics.Sim -- retrofit --ships 500 --csv out/
-dotnet run --project Thermodynamics.Sim -- stiffness --csv out/     # ~4 min
+dotnet run --project Thermodynamics.Sim -- stiffness --csv out/     # ~3 min
 ```
 
 Two things about how these read the world are the harness's business rather than the finding's.
