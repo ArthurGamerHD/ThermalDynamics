@@ -225,6 +225,48 @@ whichever it is, it is a finding rather than a confirmation.
   median hull is 1,110 blocks against the panel's selection, and a small hull's demand is set by its
   stiffest fitting rather than by its size.
 
+### What a station is, and what its extra room is worth, written before it is measured
+
+`F27` says a base is intended to be a thermal problem and that nothing in the lab measures one.
+Every scenario in the library is a ship, a rig or a component, and the corpus is published
+blueprints, which are overwhelmingly ships. The question, the shape, the statistic and the
+falsifiers go here before the scenario runs (`E1`, `E11`).
+
+**The intent asserts two things and only one of them is a measurement.** [The document of
+intent](document-of-intent.md#a-base-is-a-thermal-problem-too-and-the-place-cooling-can-be-done-properly)
+says a station heats, has to be managed, and *in exchange* gets the room to run elaborate coolant
+systems and radiator farms far better than a ship can.
+
+* **(a) A station is harder to cool than a ship.** This is geometry and nothing else. A hull sheds
+  through exposed faces; a station is mostly interior, so at the same block count it has less skin
+  to shed through and must run hotter for the same generation. Measurable with no authored choice in
+  it, which is what makes it the half worth pinning.
+* **(b) A station can be cooled better, because it can afford more plant.** This is not a
+  measurement. *What a station can afford* is a design assertion, and a scenario that assumed a
+  number would be measuring the assumption. So the lab does not ask whether the room exists — it
+  **prices** it: how much radiator area does the station need to reach the ship's settling
+  temperature? That converts the hope into a figure without inventing an affordance.
+
+**The shape.** One block count, one generation figure, two grids, and nothing else different
+(`P6`). The ship is `GridShapes.Ship`, which is the hull the library already uses. The station is a
+solid block of the same cell count with sealed compartments cut into it — mostly interior, static,
+with refineries running rather than thrusters. Both are run in space and on a planet surface,
+because a station's second claim is about radiators and a radiator on a planet is a different block.
+
+**What is predicted, with the number that falsifies each.**
+
+| # | Prediction | Falsified by |
+| --- | --- | --- |
+| 1 | The station settles **hotter** than the ship at the same block count and the same watts. | The station settling at or below the ship. |
+| 2 | The gap is driven by **exposed faces per block**, not by block count: the ratio of settling rises should track the ratio of exposed area to within a factor of two. | A gap that does not move with exposed area — which would mean something other than geometry is carrying it. |
+| 3 | Room air **narrows** the gap rather than widening it, because a sealed compartment couples interior blocks to a mass that a bare interior block does not have. | The station running hotter still with room air on than with it off. |
+| 4 | The radiator area that brings the station to the ship's temperature is **more than the ship carries** and less than the station's own footprint — a cost, not an impossibility. | Either bound: no area sufficing, or the ship's own area sufficing. |
+
+**And one thing this cannot answer.** Whether a *player's* station is like this station. The corpus
+is ships, so there is no published population to check the shape against, and that is `F27`'s own
+observation rather than something the scenario fixes. The scenario is a specimen and is reported as
+one (`E2`).
+
 ### What flooring an over-budget grid does, written before it is measured
 
 `CorpusFloorWalk` is built and **has produced nothing**. The question, the statistic, the decision
