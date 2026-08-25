@@ -96,7 +96,7 @@ sufficient. See [development.md](../docs/development.md#repo-conventions) for th
 ```bash
 cd tests
 
-dotnet test                                    # the whole suite, five and a half minutes
+dotnet test                                    # the whole suite, two and a half minutes
 dotnet test --filter "speed!=slow"             # the fast lane, six seconds
 dotnet run --project Thermodynamics.Sim -- list
 dotnet run --project Thermodynamics.Sim -- run reactor
@@ -125,8 +125,10 @@ the fast lane was **3 m 45 s** — against the fifteen seconds this page claimed
 built for `C24`, `C26`, `C27` and `D19` step whole hulls and none of them was tagged. One class,
 `ClientInputTests`, was 143 s of it on its own: twenty-eight tests, each a 480-second run of a
 1,004-node hull, and `C26` doubled that clock from 240 s the same week. Nineteen classes are tagged
-now and the fast lane is **6 s over 1,554 of the 1,852 cases** — 7, 6, 7 across three runs, so the
-figure is the fastest of three and the spread is a second (`M4`).
+now and the fast lane is **4 s over 1,585 of the 1,884 cases** — 6, 4, 5 across three runs, so the
+figure is the fastest of three and the spread is two seconds (`M4`). It was 6 s over 1,554 of 1,852
+when the lanes were re-sorted on 2026-08-24, so twenty cases have been added and nothing has slowed
+down.
 
 *Nothing checks it*, and that is why it rotted. The honest check would be a class's own measured
 cost, which a test inside that class cannot read; the naming rule that looks available — *a class
@@ -136,7 +138,9 @@ third most expensive things in the suite. So the rule is stated, the measurement
 refresh is: take the durations, tag what crossed two seconds (`R11` — an unchecked rule is a hope,
 and marking it says so).
 
-**The whole suite is 5 m 23 s**, and the fast lane is what a change is iterated against. The suite
+**The whole suite is 2 m 34 s**, and the fast lane is what a change is iterated against. It was
+published here as 5 m 23 s until 2026-08-25 and had not been that for some time — the first
+measurement of the day, before anything was changed, was 2 m 55 s over the same 1,864 cases. The suite
 also spent months at five minutes for a different reason — one test read the whole blueprint corpus
 on every run despite its own class's opt-in rule, 4 m 57 s of a 5 m 4 s suite. It is behind
 `THERMAL_CORPUS_TESTS` now, where the rest of its class already was.
@@ -150,7 +154,7 @@ elapsed time.
 **Eight rather than one per core, measured.** On this repository's 32-core machine, over the 1,825
 cases the suite held on 2026-08-24, it is **1 m 41 s at one worker, 38 s at eight, and 1 m 47 s at
 thirty-two** — one per core is no faster than serial, because the tests are memory-bound and
-thirty-two of them thrash each other's cache. *(The suite is 5 m 23 s now at the same eight workers:
+thirty-two of them thrash each other's cache. *(The suite is 2 m 34 s now at the same eight workers:
 what grew is the work, not the scheduling. It is 550 s of test time against 323 s of wall clock, and
 the ceiling is one class — xUnit parallelises collections, a class is a collection, and
 `ClientInputTests` is 143 s of serial work inside one of them.)*
@@ -542,6 +546,7 @@ and left off it.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Re-measured both lanes on an idle machine, because the figures here had gone stale in the cheap direction: the whole suite is **2 m 34 s** over 1,884 cases where this page said 5 m 23 s, and the fast lane is **4 s** over 1,585 where it said 6 s over 1,554. Fastest of three with the spread quoted (`M4`). The stale figure was not caught by anything, which is the same reason the lane rule rotted: a suite's own cost is a number a test inside it cannot read. |
 | 2026-08-24 | The suite size on this page is 1,829 rather than 1,769. `EveryQuotedSuiteSizeIsCurrent` allows a page to fall a tenth behind and it had not, so this is bringing a figure current rather than fixing a break. |
 | 2026-08-24 | **The fast lane had stopped being fast, by a factor of fifteen, and the rule that sorts the two lanes is a cost rule now.** Measured: 3 m 45 s against the fifteen seconds this page claimed, because every lab built for `C24`, `C26`, `C27` and `D19` steps whole hulls and none of them carried the trait — `ClientInputTests` alone was 143 s of it, twenty-eight tests each running a 1,004-node hull for the 480 simulated seconds `C26` doubled it to. Nineteen classes tagged; the lane is **6 s over 1,554 cases** and the whole suite is 5 m 23 s. The old rule named a subject — *the scenario batteries* — and a subject rule only sorts what somebody remembered to look at. Nothing checks the new one either, and the section says so and says why. |
 | 2026-08-24 | The suite runs eight at a time. The isolation the corpus walks need is theirs now — `[Collection("alone")]`, with `EveryCorpusWalkDeclaresThatItRunsAlone` to keep it — rather than `maxParallelThreads: 1` for every class in the project: 1 m 41 s to 38 s over 1,825 cases. Eight rather than one per core, because thirty-two workers measured no faster than one ([backlog.md](../docs/backlog.md) `F8`). |

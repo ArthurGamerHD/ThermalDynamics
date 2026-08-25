@@ -459,7 +459,7 @@ The core speaks no game type, so it builds and runs outside the session in secon
 makes it testable, profilable, drivable by another mod, and portable to another engine — the four
 are one property, not four.
 
-**Checked by** `C5` (`CoreIsolationTests`). The suite is 1,864 tests, 33 deterministic scenarios and
+**Checked by** `C5` (`CoreIsolationTests`). The suite is 1,884 tests, 33 deterministic scenarios and
 a load benchmark that reaches a million blocks in one grid.
 
 ### Open — the API is part of the contract
