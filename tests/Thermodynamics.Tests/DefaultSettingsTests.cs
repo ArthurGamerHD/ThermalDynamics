@@ -142,9 +142,17 @@ namespace Thermodynamics.Tests
         /// <summary>
         /// **A step is bounded, so no single grid can drop a hundred-millisecond step into a frame.**
         ///
-        /// The budget costs no accuracy — it shortens a step rather than coarsening it, so an
+        /// The budget costs no *accuracy* — it shortens a step rather than coarsening it, so an
         /// oversized grid advances less simulated time at the same fidelity instead of stuttering at
         /// full rate. That is why it is the one bound a faithful default keeps.
+        ///
+        /// **What that sentence leaves out is what the lost time is worth, and `C27` priced it.** A
+        /// slow thermal clock is 0.00 K on a parked ship, because two hulls heading for the same
+        /// equilibrium agree once they arrive; under a load that is *moving* it is 1.19 K standing
+        /// at a 5 % deficit and 36.98 K at 60 %. Beside 0.028 K for the substep ceiling this world
+        /// accepts and 0.607 K for the per-block cap it refuses, that makes this the largest
+        /// approximation the mod ships rather than a free guarantee — which is why the allowance
+        /// doubled the day it was first measured. See configuration.md, What a shortened step costs.
         /// </summary>
         [Fact]
         public void TheDefaultIsFrameBounded()
