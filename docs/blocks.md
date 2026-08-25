@@ -140,9 +140,18 @@ area, and more than any surface property a definition would reach for first. Wha
 
 > **The joint itself is no longer the weak end**, and that is a change. It carried about 167 W/K
 > against the sink's 1,000 when this was written; a joint is solid conduction and the pace of that
-> is four times what it was since `C24`, so it carries **1,168 W/K** — as hard as the fluid. The
-> guidance holds because of reach rather than because of rate, and whether the loop's coupling
-> should be paced along with conduction is [backlog.md](backlog.md) `C25`.
+> is four times what it was since `C24`, so it carries **1,168 W/K** — as hard as the fluid, and a
+> little harder. **So a steel bolt out-couples a water-cooled plate, face for face, and that is
+> kept** (`C25`, decided 2026-08-24). It is a statement about this world's conduction pace rather
+> than about steel and water: solid conduction runs at 9.6× real materials because `G8`'s
+> significance window was bought with it, while the loop's coupling is 160 W/(m²·K), which is what
+> the transfer physically is. Pacing the fluid with `ConductionScale` too would put a coefficient no
+> fluid has into the model and give the game back the second conduction pace `C20` removed — and it
+> was measured during `C12`: it recovers a coolant sink from 73.3 K to 108.2 K against the best
+> surface dial's 135.3 K, so it pays for a plumbed hull's substep demand and still does not restore
+> the ordering it was for. **The guidance holds because of reach rather than because of rate**, and
+> that is now the whole of the claim: a joint carries heat one block, and a ring carries it wherever
+> the ring goes.
 
 A panel bolted straight onto a hot block is limited by what it can radiate rather than by what
 reaches it, which is why the second one you bolt on is worth 3 K and the eighth is worth nothing. Past a certain load it goes further than useless: bolted to a block already saturated,

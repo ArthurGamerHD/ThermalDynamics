@@ -99,8 +99,16 @@ definition's figure in **real W/(m·K)** — mild steel 50, glass 1, copper 400 
 the material rather than a balance dial. It was 2.4 until `C24`, which is the value that puts mild
 steel exactly where the pre-conversion world put it; the shipped pace is four times that, and what
 bought it is `G8`'s significance window — see
-[balance.md](balance.md#the-route-is-chosen-and-it-is-the-one-the-cost-column-argued-against). A coolant loop's `Conductivity` is still the older 0…1 quality
-against a 200 W/(m·K) reference; see [definitions.md](definitions.md#conductivity-is-in-real-wmk).
+[balance.md](balance.md#the-route-is-chosen-and-it-is-the-one-the-cost-column-argued-against).
+
+**A coolant loop's coupling is not this.** It is a heat transfer coefficient in W/(m²·K) — 160,
+what the transfer physically is — and no conduction pace touches it, because it is a fluid against
+a wall rather than a solid against a solid (`C20`). This paragraph said it was still the older 0…1
+quality against a 200 W/(m·K) reference until 2026-08-24, and pointed at a page that already said
+otherwise. One consequence is deliberate and is `C25`: a bolt joint carries 1,168 W/K where a sink
+face carries 1,000, so in this world a steel bolt out-couples a water-cooled plate face for face.
+See [definitions.md](definitions.md#conductivity-is-in-real-wmk) and
+[blocks.md](blocks.md).
 
 Blocks that touch without mount surfaces on both sides conduct **nothing**. This is what makes
 armour skins, offset blocks and open frames behave differently from a solid slab.
