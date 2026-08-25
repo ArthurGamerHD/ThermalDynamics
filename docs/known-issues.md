@@ -119,10 +119,12 @@ justified the limit — *per-block would need the ray count to scale with block 
 terrain and voxels and does **not** hold for the planet: `OcclusionMath.IsOccludedBySphere` is a
 normalise, a dot and an `atan` with no ray in it, so evaluating it per exposed face is arithmetic on
 a pass the self-shadow already walks. What was never measured is what it would be worth, and read
-per block that is **linear in hull length at about 0.0045 K a metre**: 0.17 K on a 25 m hull, 0.73 K
-at 150 m, 2.77 K at 600 m and 11.33 K at 2,500 m, on the worst-placed block of a crossing. The
-cadence the rung does not touch already costs every hull 1.47 K, so **below 300 m the interval is
-the larger half of the error and above it the geometry is**. The limit therefore stays taken, with a
+per block that is **linear in hull length at about 0.0018 K a metre**: 0.07 K on a 25 m hull, 0.29 K
+at 150 m, 1.11 K at 600 m and 4.53 K at 2,500 m, on the worst-placed block of a crossing. The
+cadence the rung does not touch adds about half a kelvin whatever the hull, so **below 300 m the
+interval is the larger half of the error and above it the geometry is**. *(The figures were 0.0045 K
+a metre against a 1.47 K cadence until `C24` took `HeatTimeScale` from 225 to 90; the geometry did
+not move, the kelvin a second of sunlight buys did.)* The limit therefore stays taken, with a
 number on it rather than an argument: see [configuration.md](configuration.md#external-shadow).
 
 **Point sources are not occluded.** A registered heat source heats through walls and through other
@@ -1046,6 +1048,7 @@ counters rather than milliseconds so it holds on any machine.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Refreshed the per-face shadow figures, which had been quoted from a page rather than from the lab and had gone stale when `C24` moved the clock: 0.0018 K a metre against a cadence of about half a kelvin, where this page said 0.0045 against 1.47. The table they come from is now pinned to `OcclusionLadderTests`. |
 | 2026-08-24 | **Bounded the two coupled paths, which closes `A10`.** The pairwise overshoot clamp is the whole bound a block needs and half the bound a lumped mass needs: a parcel carries a link to every pipe on it and a room's air one to every surface bounding it, and the node on the other end of a sink face is pulled on by the fluid and by everything it is bolted to. Each bound held and the node went past both. The per-node relaxation the conduction pass already used now applies to the coupled passes too, which makes every substep a convex combination of the temperatures around a node. Measured where the plumbing sets the demand: **1.3e25 K before, 1,799 K after** at 9.7× over-subscribed, and a thin room refused one substep of thirty went from 3,839 K of spread to inside the 300 K it started at. Inert while the demand is granted — the block ladder is unchanged to three decimals — and `bench ceiling --fixture rings|pressurised` is what draws the other two ladders. |
 | 2026-08-24 | **The coolant path has no overshoot clamp** ([backlog.md](backlog.md) `A10`), so a refused substep demand approximates on a block and diverges on a loop — and on a hull carrying nothing stiffer the loop is what sets the demand, nine substeps where the same nine blocks unplumbed ask for one. Orderly to 4.5× over-subscribed, 1.7e11 K at 9×, and nothing shipped reaches it. Found by attempting `C24`, whose clock change put a test fixture's deliberately-refused ring past the cliff. |
 | 2026-08-24 | **The clock is in the sweep, and the mechanism the sweep had been naming turned out not to exist** ([backlog.md](backlog.md) `F23`). Simulated time is counted in simulation ticks, so a machine below 1.0 sim speed has a thermal clock that runs slow: a 10 % error settles 18.69 K out under a moving load and 0.00 K under a steady one, because two hulls heading to the same equilibrium at different speeds agree once they arrive. `hitching` is the same deficit in lumps — at an equal deficit it peaks 206.0 K against a slope's 39.7 K and settles within a fifth of it — and the backlog drop written beside it for months was `SimulationScheduler.StepsDue`, a second step-credit accumulator no shipped path called. Removed, with the step-rate tests moved onto `ThermalSimulation.Update`. Also added `missing source`, the one input that comes from outside this mod: 0.73 K standing for a registration worth a tenth of the sun. |

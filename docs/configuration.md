@@ -1057,15 +1057,18 @@ contributes nothing, that error is:
 
 | Hull | Worst block, geometry alone | at the shipped 12-step cadence |
 | --- | ---: | ---: |
-| 25 m | 0.17 K | 1.47 K |
-| 150 m | 0.73 K | 1.97 K |
-| 600 m | 2.77 K | 4.07 K |
-| 2,500 m | 11.33 K | 12.54 K |
+| 25 m | 0.07 K | 0.59 K |
+| 150 m | 0.29 K | 0.79 K |
+| 600 m | 1.11 K | 1.63 K |
+| 2,500 m | 4.53 K | 5.02 K |
 
-*One lit face of a 500 kg steel-plate block gains 0.905 K a second of sunlight at the shipped clock,
-which is the conversion every figure above rests on.*
+*One lit face of a 500 kg steel-plate block gains 0.36 K a second of sunlight at the shipped clock,
+which is the conversion every figure above rests on.* **The whole table moves with `HeatTimeScale`,
+and it has**: it read 0.905 K a second and 0.73 K at 150 m until `C24` took the clock from 225 to 90,
+which is 0.4 of the thermal ground covered in the seconds a hull is told the wrong thing about.
+`OcclusionLadderTests` prints these four rows, so the table has a source rather than a history.
 
-**It is linear in length and it is under a kelvin for anything under 200 m**, so on the ships people
+**It is linear in length and it is under a kelvin for anything under 550 m**, so on the ships people
 build it is a fraction of what the cadence already costs — below 300 m the cadence is the larger half
 of the error, and above it the geometry is. That is what decides the top rung: it is a change about
 how long ships are rather than about how good the model is, and nothing in the shipped configuration
@@ -1216,6 +1219,7 @@ one with a migration risk — is late rather than first.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | **`A9`'s per-face table had gone stale with the clock, on three pages, while the test that produces it printed the right figures throughout.** `C24` took `HeatTimeScale` from 225 to 90 and every kelvin in that table is seconds of sunlight times a rate that moves with the clock, so the rung is worth **0.0018 K a metre, not 0.0045** — 0.29 K on a 150 m hull against 0.73 K. The crossover is unmoved at about 300 m, because both halves scaled together. `OcclusionLadderTests` now reads this table out of this page and fails when it does not match the lab, so the next clock change is loud. |
 | 2026-08-25 | Three sentences in the body described a past layout rather than the present one (`R12`): the menu's grouping, the suit's opening, and the allowance's cost ladder. Each states what is now the case; the ladder's own table moved to [benchmarks.md](benchmarks.md#what-the-rate-it-trades-away-is-worth), which owns the measurement. |
 | 2026-08-25 | **The allowance's cost ladder existed here and in [benchmarks.md](benchmarks.md#what-the-rate-it-trades-away-is-worth), which is two copies of one measurement.** This page states what it costs — 1.19 K at a 5 % deficit rising to 36.98 K at 60 % — and that page owns the table, the rig it was taken on and the convexity that made a ladder necessary rather than one point and a slope. A measurement written down twice is two things that can drift (`D3`). |
 | 2026-08-24 | **`MaxElementVisitsPerStep` is 4,000,000, from 2,000,000, because what it gives up was priced for the first time.** The bound makes a step shorter rather than coarser, so nothing is approximated and the grid's thermal clock runs slow instead — worth 1.19 K standing at a 5 % deficit and 36.98 K at 60 % under a moving load, and 0.00 K under a steady one. It also binds in **air** rather than in vacuum, at about a third the grid size: at the old value a driven census hull kept all of real time to 32,000 blocks in vacuum, 16,000 on a planet and 9,000 in flight. Beside 0.028 K for the substep ceiling this world accepts and 0.607 K for the per-block cap it refuses to ship as a default, that made this the largest approximation shipped and the only one never measured. A frame is bounded at 266,667 element visits instead of 133,333. Old value kept visible here and in [What a shortened step costs](#what-a-shortened-step-costs) (`E11`), and [backlog.md](backlog.md) `C27` carries the reasoning. |

@@ -350,11 +350,14 @@ reading as sourced and as invented — six per cent of the corpus's waste heat.
 python3 -m unittest discover -s tools/corpus -p 'test_*.py'
 ```
 
-`test_scoring.py` pins that rule and the two thresholds `G8` is scored at, and `test_provenance.py`
+`test_scoring.py` pins that rule and the two thresholds `G8` is scored at, `test_provenance.py`
 pins the four provenance counts against the ones `AuthoredWasteTests` pins, so the two readers of
-one grammar cannot drift apart quietly (`D3`). Changing either fails a check rather than moving a
-number nobody is watching. They are the only checks over the scorers and are not part of the
-`dotnet test` suite; run them when a scorer changes.
+one grammar cannot drift apart quietly (`D3`), and `test_pace.py` pins what a progress file can be
+asked — that a repeated final line is not a stall, that the ratio is taken over the files two walks
+share rather than the time they ran, and that the block-share estimate is reported as the spread it
+has. Changing any of them fails a check rather than moving a number nobody is watching. They are the
+only checks over the scorers and are not part of the `dotnet test` suite; run them when a scorer
+changes.
 
 ---
 

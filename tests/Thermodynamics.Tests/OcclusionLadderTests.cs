@@ -217,29 +217,42 @@ namespace Thermodynamics.Tests
             double perSecond = OcclusionLadderLab.KelvinPerLitSecond(settings);
             Assert.InRange(perSecond, 0.2d, 0.6d);
 
-            double[] lengths = { 150d, 600d, 2500d };
+            // **The table configuration.md prints, produced rather than quoted.** The shortest hull
+            // is here for the page and not for the rate: 25 m is four block lengths, and over a
+            // crossing that short the error is set by where the cadence falls rather than by the
+            // geometry, so it sits above the band the three longer hulls hold to.
+            double[] lengths = { 25d, 150d, 600d, 2500d };
+
             List<OcclusionLadderLab.Extremity> rows = OcclusionLadderLab.Extremities(
                 lengths, SolarOcclusionSampler.MaxSamples, 1, 4f, perSecond);
 
+            List<OcclusionLadderLab.Extremity> shipped = OcclusionLadderLab.Extremities(
+                lengths, SolarOcclusionSampler.MaxSamples, 12, 4f, perSecond);
+
             Assert.Equal(lengths.Length, rows.Count);
+            Assert.Equal(lengths.Length, shipped.Count);
+
+            output.WriteLine("{0:n2} K a second of sunlight on one lit face", perSecond);
 
             for (int i = 0; i < rows.Count; i++)
             {
-                double worst = Math.Max(rows[i].SurplusKelvin, rows[i].DeficitKelvin);
+                double worst = Worst(rows[i]);
                 double perMetre = worst / rows[i].LengthMetres;
 
-                output.WriteLine("{0:n0} m: {1:n2} K, {2:n5} K/m",
-                    rows[i].LengthMetres, worst, perMetre);
+                output.WriteLine("{0:n0} m: {1:n2} K geometry, {2:n2} K at the shipped cadence, "
+                    + "{3:n5} K/m", rows[i].LengthMetres, worst, Worst(shipped[i]), perMetre);
 
                 // The rate is the finding, and it holds across a factor of sixteen in length.
                 // 0.0018 K a metre at the shipped clock, where it was 0.0045 at 225 — the same
                 // geometry costing 0.4 of the kelvin, since a slower clock covers less thermal
                 // ground in the seconds a hull is told the wrong thing about.
+                if (rows[i].LengthMetres < 150d) continue;
+
                 Assert.InRange(perMetre, 0.0014d, 0.0022d);
             }
 
             // An ordinary ship is a fraction of a kelvin, which is the reason the rung is not built.
-            double ordinary = Math.Max(rows[0].SurplusKelvin, rows[0].DeficitKelvin);
+            double ordinary = Worst(rows[1]);
             Assert.True(ordinary < 1.0d,
                 "a 150 m hull's worst block is out by " + ordinary.ToString("n2") + " K");
         }
@@ -269,6 +282,127 @@ namespace Thermodynamics.Tests
             Assert.True(spatial < shipped * 0.5d,
                 "the geometry is " + spatial.ToString("n2") + " K of a shipped "
                 + shipped.ToString("n2") + " K, so the cadence is not the larger half");
+        }
+
+        /// <summary>
+        /// **The table configuration.md prints is the one the lab produces**, to the hundredth of
+        /// a kelvin it is printed to.
+        ///
+        /// <para>
+        /// This exists because the figures drifted and nothing said so. `C24` took `HeatTimeScale`
+        /// from 225 to 90 on 2026-08-24 and every kelvin in that table is seconds of sunlight times
+        /// a rate that moves with the clock, so all four rows went stale the moment the pair
+        /// shipped — and they stayed stale on three pages while the test above printed the right
+        /// ones, because each page had quoted the last page rather than the lab (`P1`, `E11`).
+        /// **A number a page copies from another page has no source**, and a drifted copy does not
+        /// throw. This one does.
+        /// </para>
+        ///
+        /// <para>
+        /// It reads the rendered table rather than a fixture, so the check fails on the thing a
+        /// reader actually sees. Rewording the surrounding prose is free; changing a figure without
+        /// re-measuring is not.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheTableConfigurationPrintsIsTheOneTheLabProduces()
+        {
+            string path = System.IO.Path.Combine(
+                Thermodynamics.Harness.ShippedBlocks.RepoRoot(), "docs", "configuration.md");
+
+            Assert.True(System.IO.File.Exists(path), "no configuration.md at " + path);
+
+            List<string> printed = new List<string>();
+            bool inTable = false;
+
+            foreach (string line in System.IO.File.ReadAllLines(path))
+            {
+                string trimmed = line.Trim();
+
+                if (trimmed.StartsWith("| Hull |", StringComparison.Ordinal)
+                    && trimmed.Contains("shipped 12-step cadence"))
+                {
+                    inTable = true;
+                    continue;
+                }
+
+                if (!inTable) continue;
+                if (!trimmed.StartsWith("|", StringComparison.Ordinal)) break;
+                if (trimmed.StartsWith("| ---", StringComparison.Ordinal)) continue;
+
+                printed.Add(trimmed);
+            }
+
+            // **A check that found no table would report success**, which is the failure this whole
+            // class of test exists to prevent (`E8`). Four rows, and the heading has to be the one
+            // above — a reworded heading is a table this test is no longer reading.
+            Assert.True(printed.Count == 4,
+                "found " + printed.Count + " rows under configuration.md's per-face table, not 4, "
+                + "so this test is reading the wrong table or none");
+
+            ThermalSettings settings = new ThermalSettings();
+            settings.Derive();
+
+            double perSecond = OcclusionLadderLab.KelvinPerLitSecond(settings);
+            double[] lengths = { 25d, 150d, 600d, 2500d };
+
+            List<OcclusionLadderLab.Extremity> geometry = OcclusionLadderLab.Extremities(
+                lengths, SolarOcclusionSampler.MaxSamples, 1, 4f, perSecond);
+
+            List<OcclusionLadderLab.Extremity> cadence = OcclusionLadderLab.Extremities(
+                lengths, SolarOcclusionSampler.MaxSamples, 12, 4f, perSecond);
+
+            List<string> wrong = new List<string>();
+
+            for (int i = 0; i < lengths.Length; i++)
+            {
+                string[] cells = printed[i].Split('|');
+                Assert.True(cells.Length >= 4, "row " + i + " of the table has no three cells");
+
+                double hull = Kelvin(cells[1].Replace("m", ""));
+                double statedGeometry = Kelvin(cells[2]);
+                double statedCadence = Kelvin(cells[3]);
+
+                if (Math.Abs(hull - lengths[i]) > 0.5d)
+                {
+                    wrong.Add("row " + i + " is a " + hull + " m hull where the lab measured "
+                        + lengths[i] + " m");
+                    continue;
+                }
+
+                Compare(wrong, lengths[i], "geometry alone", statedGeometry, Worst(geometry[i]));
+                Compare(wrong, lengths[i], "at the shipped cadence", statedCadence,
+                    Worst(cadence[i]));
+            }
+
+            wrong.Sort(StringComparer.Ordinal);
+            Assert.True(wrong.Count == 0,
+                "configuration.md prints figures the lab does not produce:\n  "
+                + string.Join("\n  ", wrong.ToArray()));
+        }
+
+        /// <summary>
+        /// One printed figure against one measured one, at the precision the page prints.
+        ///
+        /// **Half of the last printed digit**, so rounding is allowed and re-measuring is not
+        /// optional. A looser tolerance would let the whole table go stale by a clock change again,
+        /// which is exactly what happened.
+        /// </summary>
+        private static void Compare(List<string> wrong, double length, string column,
+            double printed, double measured)
+        {
+            if (Math.Abs(printed - measured) <= 0.005d) return;
+
+            wrong.Add(length.ToString("n0") + " m, " + column + ": the page says "
+                + printed.ToString("n2") + " K and the lab measures " + measured.ToString("n2")
+                + " K");
+        }
+
+        /// <summary>A table cell as a number, with its unit and its markdown taken off.</summary>
+        private static double Kelvin(string cell)
+        {
+            string text = cell.Replace("K", "").Replace("*", "").Replace(",", "").Trim();
+            return double.Parse(text, System.Globalization.CultureInfo.InvariantCulture);
         }
 
         private static double Worst(OcclusionLadderLab.Extremity row)
