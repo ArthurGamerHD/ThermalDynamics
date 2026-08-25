@@ -623,6 +623,14 @@ different, and that could not be said while one of them was free.
 An under-supplied pump circulates proportionally slower rather than stopping, so a ship whose
 reactors are failing loses its cooling gradually rather than all at once.
 
+**There is one cooler this does not reach, and the engine is why.** A player's suit regulates in both
+directions and charges nothing for it: `IMyCharacter` exposes `SuitEnergyLevel` to read and nothing
+to write, so a mod cannot take a player's suit charge. That is a limit rather than a decision — the
+coupling exists in the one direction the game allows, since what the mod *can* see is a flat suit and
+a flat suit does not regulate. It is recorded here rather than left as an inconsistency somebody
+finds in the code, and it is worth revisiting only if a setter ever appears
+([backlog.md](backlog.md) `C16`).
+
 ### What a block costs to build — what the game charges, and nothing invented
 
 **The lever costs what the game charges for a block of that size and mass.** There is no comparator
@@ -1228,6 +1236,7 @@ as a *second* change rather than as a substitute. [backlog](backlog.md) `D19`.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Recorded the one cooler *a cooling system costs power* does not reach and why ([backlog.md](backlog.md) `C16`): the suit regulates for free because `IMyCharacter` exposes `SuitEnergyLevel` to read and nothing to write. An engine limit rather than an inconsistency, and now stated beside the goal it qualifies. |
 | 2026-08-25 | Made the position on a second heat mod deliverable rather than nearly: `HeatTerminalPanel` is the switch the terminal panel never had, so a world running two can turn every output of this one off and keep the simulation and the API. |
 | 2026-08-25 | **Took a position on a second heat mod in the same world, which was the eighth and last void — and with it this page has none.** The mod behaves as though it is alone because it cannot tell that it is not, and guessing would be worse: everything it owns outright cannot collide, and the four things a block has only one of can. The answer is the switches — a world running two turns this one's consequences off and keeps its simulation and its API — so two mods both applying consequences is unsupported and said so. One switch is missing for that to be complete, which is `B40`. |
 | 2026-08-25 | **Wrote the seventh void down where it belongs, which was the whole of what it asked for.** Heat leaves the world with a block that leaves it and arrives at ambient with one that is built; energy conservation is an invariant about a step and says nothing across a change in the population. It is a deliberate limit — the alternative is a grinder that heats the ship around it — and it now sits in [known-issues.md](known-issues.md#deliberate-limits) with a test pinning both halves. |
