@@ -493,8 +493,12 @@ Two caveats apply to every figure below:
 
 ### The shape, in one table
 
-Deduplicated, shipped settings, `HeatTimeScale` 225. Seconds are simulated seconds; at
-`SimulationSpeed` 1 they are the seconds a player waits.
+Deduplicated, the 2026-08-21 vacuum survey, at the settings that shipped when it was run:
+`ConductionScale` 2.4 and `HeatTimeScale` 225. **That is not the pair that ships now** — `C24` moved
+it to 9.6 and 90 on 2026-08-24 — so every seconds column below is a reading of a configuration this
+mod no longer has, kept because the *shape* it shows is what the argument for the retune rests on
+and no walk has yet re-read it in vacuum. Seconds are simulated seconds; at `SimulationSpeed` 1 they
+are the seconds a player waits.
 
 | Scenario | peak p50 | critical | s to critical p50 | settle p50 | substeps p50/p95/p99 |
 | --- | ---: | ---: | ---: | ---: | --- |
@@ -545,10 +549,10 @@ computed over the deduplicated outcomes, counting only ships that cross:
 | `full-electrical` | 3,516 | 3.5 s | **8.9 s** |
 | `burn-forward` | 5,481 | 2.9 s | **5.6 s** |
 
-**These are seconds of play, not of physical time.** `HeatTimeScale` is 225, so nine seconds at the
-controls is about thirty-four minutes of real heating. That compression is the point of the dial —
-heat is meant to happen on a human scale — and this is the first measurement of where it put the
-hottest designs.
+**These are seconds of play, not of physical time.** `HeatTimeScale` was 225 when this was measured
+and is 90 now, so nine seconds at the controls was about thirty-four minutes of real heating and is
+about fourteen today. That compression is the point of the dial — heat is meant to happen on a human
+scale — and this is the first measurement of where it put the hottest designs.
 
 **Lowering the dial is not the answer**, because it moves the inert ships too and the spread between
 the two groups is only about twelvefold. What separates them is per-block: a producer whose waste
@@ -1417,6 +1421,7 @@ five ways a full sweep dies, and [backlog.md](backlog.md) for what is still open
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Scoped the 2026-08-21 vacuum survey's tables to the pair they were taken at. *The shape, in one table* said **shipped settings, `HeatTimeScale` 225** and *How fast a ship crosses critical* said `HeatTimeScale` **is** 225; `C24` moved the pair to 9.6 and 90 on 2026-08-24, so both read as current and were not (`P1`). Nothing was re-measured — no walk has re-read the population in vacuum at the pair that ships — so the figures stand with their scope on them rather than being withdrawn. |
 | 2026-08-24 | **Decided `C28`: the reactor fraction stays at 0.01, and the claim it supported comes down.** Re-measured at the pair that ships, 0.02 still cooks two of the four reactors *bare*, which is the bound this page calls unbuildable — so `C24` did not move which fraction is the only one where both bounds hold, and 0.01 is kept because the alternative was measured rather than for want of one. What did move is what it buys: burying a 300 MW reactor costs **50.7 K** rather than 355 K, about five per cent of the block's headroom, so *where a reactor is installed is a decision rather than a detail, and the first thing that makes a player want a coolant loop* is corrected in place. The population had already said the same and nobody had read it against the claim — `reactor-waste` swept sixteen-fold moves the corpus peak p50 by 3 %. The bite is thrusters and drives. |
 | 2026-08-24 | Corrected this page's own account of `C12`'s choice, from the attempt at shipping it. The conduction route's *three levers* are four named behaviours — a coolant sink stops out-performing surface dials, bolting starts working, the stiffest fitting stops responding to air, and the cooling ladder's control stops losing — so the route is a trade taken deliberately rather than the easy choice the previous entry implied. |
 | 2026-08-24 | **Shipped it, and read what it cost.** `ConductionScale` 9.6 and `HeatTimeScale` 90 are the defaults; `G7` was re-scored first — 0 of 705 prefabs crossing critical at idle, 481 of them still losing a block flown hard — and `G6` passes on the shipped configuration for the first time, at 55 % of the substep cap in the worst environment against 115 %. Reading the 47 tests the pair moved found four rows rather than four figures: a bolt joint conducts as hard as a coolant sink face (`C25`), the census hull has left the population at the shipped cap (`C26`), solver cost moved from air to vacuum (`C27`), and the reactor's fraction was chosen against a bound this removes (`C28`). Three blocks came off the known-impossible list and the population's two stiffness modes closed to 2.3× apart. |
