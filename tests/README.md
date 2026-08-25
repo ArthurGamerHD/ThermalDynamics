@@ -91,6 +91,43 @@ project cannot check. `IndexOutOfRangeException` and `ArgumentOutOfRangeExceptio
 prohibited in game and both compile happily here, so a green test run is necessary but not
 sufficient. See [development.md](../docs/development.md#repo-conventions) for the list.
 
+## Running heavy work on a shared machine
+
+**This machine is shared with three other projects that also run heavy workloads.** Four agents each
+starting a 32-thread suite do not get four suites four times slower — they get four suites that
+measure each other, and an editor that stops responding. Serialize with `heavy`, which is `W5`:
+
+```bash
+heavy status                                             # who holds it, who is waiting
+heavy run --for "thermaldynamics: full suite" -- dotnet test
+heavy log 20                                             # both sides of the last twenty windows
+```
+
+Exit **75** means the window was not free and *nothing ran* — try later rather than running
+unlocked. `~/.local/bin/HEAVY.md` is the tool's own page.
+
+| Hold the window | Do not |
+| --- | --- |
+| A corpus walk — `CorpusSurvey`, `CorpusAirWalk`, `CorpusCapWalk`, `CorpusFloorWalk`. Hours. | A `--filter`ed run of one class |
+| The whole suite | The fast lane, `--filter "speed!=slow"` |
+| `LoadTests`, `bench`, and every scenario or lab that reports a duration | An incremental build |
+| `Thermodynamics.Sim -- sweep / profiles / features / roomsweep / station` | A linter, `git`, reading or editing |
+| A release build of the mod | `--version`, `--help` |
+
+**`LoadTests` is the worked example.** Its timings fail against their own limits whenever anything
+else holds the cores — measured at **3.14×** and **3.10×** the limit, both times against a corpus
+walk in another process, and passing 3/3 in isolation. A suite pass taken beside other work reports
+failures that are about the machine. If you must run the suite unlocked, exclude them:
+
+```bash
+dotnet test --filter "FullyQualifiedName!~LoadTests"
+```
+
+**Clean up after a build.** `dotnet build-server shutdown` does *not* reap the `nodeReuse` MSBuild
+worker nodes; they idle out after ten to fifteen minutes and hold about 128 MB each until they do.
+Kill them if the machine is wanted. They are also why `heavy` closes its lock descriptor before
+running a command — a daemon that inherits it keeps the window held after the run has ended.
+
 ## Running it
 
 ```bash
@@ -547,6 +584,7 @@ and left off it.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Wrote down that the machine is shared and what on this page is heavy enough to serialize with `heavy run` (`W5`), including the `LoadTests` case where a timing failed twice against a corpus walk in another process rather than against the code, and how to exclude them when the suite has to run unlocked. |
 | 2026-08-25 | Added the `station` scenario, which is the first thing in the library that is not a ship, a rig or a component ([backlog.md](../docs/backlog.md) `F27`). It runs a station against a ship matched to one cell with exactly half the external faces, in vacuum and in air at two loads, and prices what roof radiators are worth. `ScenarioClaimTests` pins both halves of its conclusion, and `TheStationAndTheShipAreMatchedOnBlocksAndHalvedOnArea` checks the pair off the shapes rather than off the scenario, so a change that quietly unmatches them fails there rather than moving every figure `F27` rests on. |
 | 2026-08-25 | **A walk launched from a git worktree recorded `unknown` for its commit**, which is what a walk on a machine with no repository records — so the one thing provenance exists to make loud was silent for anyone building on a branch checkout. `.git` is a directory in a clone and a *file* naming one in a worktree; `CorpusRecord.Commit` now follows it, and looks for a loose ref in the common directory a worktree shares with its clone before falling back to `packed-refs`. Found by `AWalkWritesWhatBuildItRanOn`, which was written to catch exactly this and had never had a worktree to catch it on. Its own summary also claimed a `dirty` marker no line of the method produced; the claim is gone and the reason it is not cheap to have is written down instead. |
 | 2026-08-25 | Re-measured both lanes on an idle machine, because the figures here had gone stale in the cheap direction: the whole suite is **2 m 34 s** over 1,884 cases where this page said 5 m 23 s, and the fast lane is **4 s** over 1,585 where it said 6 s over 1,554. Fastest of three with the spread quoted (`M4`). The stale figure was not caught by anything, which is the same reason the lane rule rotted: a suite's own cost is a number a test inside it cannot read. |

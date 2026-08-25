@@ -412,6 +412,61 @@ the defaults.
 about the 96 % it does not touch — which is the point of the mechanism and also the reason its
 percentiles must never be quoted as population figures.
 
+### What it did: the floor is safe, exact about the clock, and far too expensive to default
+
+`CorpusFloorWalk` finished 2026-08-25 — 291 ships, 1,164 paired cells, 2 h 42 m. Scored against the
+rule fixed above, before the data.
+
+| | prediction | reading | |
+| --- | --- | --- | --- |
+| the clock | no run loses simulated time | **0** cells of 1,164 ran the two arms on different clocks | holds |
+| the safety | never stiffens, never floors in the control | **0** and **0** | holds |
+| the reach | fewer blocks than `C3`'s cap of 6 reached, 5.83 % | **13.05 %** of blocks, more than double | **fails** |
+| the cost | Δpeak p99 **under 0.03 K** | **27.76 K**, and a maximum of 48.21 K | **fails, by three orders of magnitude** |
+
+**So the decision rule decides it: `FloorBlocksWhenOverBudget` stays off.** The rule said p99 at or
+over 0.6 K and it stays off with `G6`'s cost half open and no lever left. p99 is 27.76 K. That it
+would have rescued a criterion was set aside in advance and is set aside now.
+
+**The cost prediction's argument was wrong in a way worth keeping.** It reasoned that a cap of
+*budget* approximates less than a fixed cap of 6, from the 64,463-block rig where the budget was 10.
+The budget is not small on this population — the median grant where the floor engages is **17**
+substeps and only 7 % of engaged cells are granted fewer than 6 — so the reasoning was right and the
+conclusion still wrong. What it missed is that the cost is not a function of the grant at all.
+
+**The median cell is free and the tail is ruinous.** Δpeak is **0.006 K** at the median and 0.44 K
+at p90; 31 % of engaged cells exceed 0.03 K and 8.5 % exceed 0.6 K. And the tail is not predictable
+from how far the floor has to lift: correlating cost against over-subscription over 729 cells gives
+**r = 0.305** in log-log, and every band has a bad tail — cells barely over budget, under 1.05×,
+still reach a p99 of 32 K.
+
+**Which forecloses the obvious repair.** If the damage were confined to grids the floor has to lift
+a long way, a gate would fix it. Every gate tried either fails to reach 0.6 K or gates the mechanism
+out of existence:
+
+| gate | cells kept of 729 | p99 |
+| --- | ---: | ---: |
+| none, as built | 729 | 27.76 K |
+| air scenarios only | 675 | 5.78 K |
+| over-subscription under 1.25× | 316 | 25.65 K |
+| floor under 1 % of the grid | 543 | 20.47 K |
+| grids under 100k blocks | 556 | 17.68 K |
+| floor under 0.1 % of the grid | 179 | 0.79 K |
+| air **and** under 0.1 % floored | 172 | 0.69 K |
+| air, under 0.1 %, and under 1.25× | 100 | **0.27 K** |
+| fewer than 10 blocks floored | 59 | **0.37 K** |
+
+Nothing reaches the threshold while keeping more than **14 %** of the cells the mechanism engages
+on. A mechanism that is safe only where it does almost nothing is not a default, and it is not a
+refinement waiting to be built either — that is the finding, and it is why this row closes rather
+than becoming a smaller one.
+
+**Scope.** These are the ships the element-visit allowance binds on and no others: 294 selected out
+of 8,144, of which 291 produced paired cells. Nothing here is a population figure and none of it
+describes the 96 % the mechanism never reaches (`P1`, `P2`). The block-weighted 13.05 % is
+especially narrow — **15 % of the floored blocks come from the 16 largest cells alone**, where a
+grant of 1 substep floors 91 % of the grid; per cell the median share floored is **0.32 %**.
+
 ### What a per-block cap does to the population, written before it is measured
 
 `CorpusCapWalk` **finished on 2026-08-25 at 05:08**, all 8,144 blueprints in 3 h 51 m, after being

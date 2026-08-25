@@ -107,7 +107,7 @@ reason. See [testing the reduction](#testing-the-reduction).
 
 | # | Principle | Rules |
 | --- | --- | --- |
-| **P1** | **A figure carries its scope.** A number without its population, its basis and its clock is not a number; a sample stands for a population only by a written rule. | `E2` `E3` `E6` `M10` `M11` `J3` |
+| **P1** | **A figure carries its scope.** A number without its population, its basis and its clock is not a number; a sample stands for a population only by a written rule — and a duration carries the machine it was taken on. | `E2` `E3` `E6` `M10` `M11` `J3` `W5` |
 | **P2** | **What the instrument could not see is part of the result.** Censoring, the noise floor, an unfinished sweep, a check that judged nothing, a discarded exception and a place nobody looked are the same failure: reading a blind spot as a value. | `E4` `E8` `E9` `M4` `M5` `D4` `D9` |
 | **P3** | **The claim is fixed before the data and corrected in place after.** A criterion that can move once the numbers are in is not a criterion; a finding that is corrected somewhere other than where it was published is not corrected. | `E1` `E10` `E11` `M9` `D5` `R12` |
 | **P4** | **Nothing is its own oracle.** A test that asks the model the same question twice agrees with whatever the model does; a harness fault looks exactly like physics. | `E7` `D1` `D7` `D8` |
@@ -287,6 +287,7 @@ That asymmetry is not closed and is recorded here rather than left implicit.
 | **W4** | No call across the mod's API throws into its caller | absolute | P9 | — |
 | **W1** | A saved world loads on the build that wrote it, and on the ones either side | absolute | P15 | `StorageAndSettingsTests` |
 | **W2** | A name something outside this repository addresses is never repurposed | absolute | P15 | `TheRetiredPropertyNamesAreStillRead` `NoSettingReusesANumberThatWasDeliberatelyRetired` |
+| **W5** | A measurement holds the machine | absolute | P1 | `heavy log` |
 | **R1** | *The repository is the mod folder* | low value | P11 | absorbed into P11 |
 | **R2** | Build output and the corpus live outside it | absolute | P11 | `Directory.Build.props` |
 | **R3** | No credential is written into the tree | absolute | P11 | `CredentialScanTests` |
@@ -366,6 +367,32 @@ to thirty, which made every scale figure about six times too cheap.
 *Applies to:* `Census` and `Census.Field`.
 *Checked by:* `CensusFidelityTests`.
 *From:* [benchmarks.md](benchmarks.md#keeping-it-honest), [tests/README.md](../tests/README.md).
+
+#### W5 — A measurement holds the machine
+
+**This machine is shared with three other projects that run heavy workloads on it. Anything that
+will use most of it for more than a few seconds, and every figure that is a duration, runs inside
+`heavy run`.**
+
+    heavy run --for "thermaldynamics: <what>" -- <command>
+
+A timing taken while another project is compiling measures the compile. That is not a matter of
+degree — it is the difference between a benchmark and a number, and it produces a figure whose
+stated scope is a lie, which is `P1` from the other side. It has been measured twice here:
+`LoadTests.SolverCostPerLinkStaysProportional` failed at **3.14×** and **3.10×** its own limit, both
+times against a corpus walk in another process, and passes 3/3 alone. Nothing about the mod was
+wrong on either occasion.
+
+**Do not lock what is not heavy.** A single test, an incremental build, a linter, `git`. Locking
+those means queuing for the rest of your life, and so does everyone else. `heavy status` says
+whether you would wait; exit **75** means the machine was busy and nothing ran, so try later rather
+than running unlocked.
+
+*Applies to:* corpus walks, the full suite, `LoadTests`, `bench`, every `Thermodynamics.Sim` lab,
+and any release build. [tests/README.md](../tests/README.md#running-heavy-work-on-a-shared-machine)
+lists them and `~/.local/bin/HEAVY.md` is the tool's own page.
+*Checked by:* — judgement, and `heavy log`, which shows both sides of every window.
+*From:* `~/.local/bin/HEAVY.md`.
 
 ### P2 — What the instrument could not see is part of the result
 
@@ -1576,6 +1603,7 @@ right and this page is stale**; say so and fix it here.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Added `W5` — a measurement holds the machine. This machine is shared with three other projects and nothing in the repository said so, which is how two suite passes came to report `LoadTests` failures that were about the machine rather than about the code. It is `P1` from the other side: a duration taken next to somebody else's compile is a figure whose stated scope is untrue. |
 | 2026-08-25 | Said what this page's identifiers share with [backlog.md](backlog.md)'s and what was decided about it (`H8`): eleven collide, 215 citations would have to be resolved by hand to remap them, and the errors of that diff would be silent — so the set is frozen by a check rather than paid off. |
 | 2026-08-25 | **`R16`, and the 155 links it found.** *A pointer in code is plain text, never a markdown link* was written into [development.md](development.md#and-in-the-code) after two such links were found rotted, and nothing checked it — a link inside a `.cs` file renders nowhere, so nobody clicks it, nobody finds out it is wrong, and `EveryRelativeLinkResolves` reads markdown only. The one form of cross-reference here that nothing checked was the one written in the syntax that looks checked, and 155 had accumulated across 91 files. Flattening them cost nothing, because every link text was already the page's own name. `NoPointerInCodeIsWrittenAsALink` holds it, and it demonstrated that it works by failing on the first draft of its own summary, where the example was quoted verbatim. |
 | 2026-08-25 | **`R15`, and thirteen dead citations in shipped code on its first run.** `R11` fails when a rule names a check that has stopped running; nothing failed when a *citation* named a rule or a backlog row that had stopped existing, and `EveryRuleCitedByAPageExists` reads documentation banners while **425 citations of the same shape live in `.cs` and `.py` files**. A backlog row is deleted when it closes, so every comment citing it becomes a dead reference that reads exactly like a live one: `C20` in six files, three of them compiled by the game, and `C13` in three more. All thirteen now name the page that holds the argument, in plain text as the comment convention asks. |

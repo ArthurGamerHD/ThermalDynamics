@@ -62,6 +62,10 @@ namespace Thermodynamics.Sim
                     Console.Write(OcclusionLadderLab.Report());
                     return 0;
 
+                case "roomsweep":
+                    Console.Write(RoomSweepLab.Report());
+                    return 0;
+
                 case "profiles":
                     Console.Write(ProfileLab.Report());
                     return 0;
