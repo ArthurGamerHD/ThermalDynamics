@@ -215,6 +215,81 @@ whichever it is, it is a finding rather than a confirmation.
   median hull is 1,110 blocks against the panel's selection, and a small hull's demand is set by its
   stiffest fitting rather than by its size.
 
+### What a per-block cap does to the population, written before it is measured
+
+`CorpusCapWalk` is being built as this is written and has produced nothing. The question, the
+statistic, the decision rule and the numbers that would falsify each prediction go here first
+(`E1`, `E11`), because a saving measured after the decision to ship it has been taken is a saving
+that will be found to be cheap.
+
+**The question, and why it is one question rather than two.** [backlog.md](backlog.md) `C3` asks
+whether `MaxSubstepsPerBlock 6` should be a default; `G6`'s cost half fails in air. They are the
+same question. The cap is the one lever that lowers a step's *work* — it raises the mirrored heat
+capacity of any element demanding more substeps than the cap grants, so the grid's demand becomes
+`min(demand, cap)` and the work falls with it — and `C3` is undecided only because what it costs has
+been measured on **one hull**.
+
+**Why not simply raise the allowance.** It is the other lever and it is the wrong one, and saying so
+before the data is part of the pre-registration. `G6` asks whether a *ship* is affordable. Raising
+`MaxElementVisitsPerStep` until the p99 fits does not make a ship cheaper; it moves the same work
+into the frame, and the criterion would then pass by having been re-pointed at a bound chosen to let
+it pass — which is `E11` exactly. The allowance moves when what a shortened step gives up is priced
+against what the frame costs, which is what `C27` did this morning and is not what this walk is
+about.
+
+**The design, and the one thing it has to get right.** Every ship, the four `PairLab.AirScenarios`,
+two arms: the cap off as it ships, and `MaxSubstepsPerBlock 6`. **The two arms run to the same
+simulated clock**, which is the whole reason this is a new walk rather than a second dataset joined
+to `F11`'s. `Battery.Run` stops when the hottest block moves less than 0.25 K in a 60-second chunk,
+so two arms of the same ship stop at different instants — and the difference the cap is expected to
+make is a hundredth of a kelvin, two orders of magnitude *under* that stopping tolerance. So the
+uncapped arm runs first and its elapsed clock is handed to the capped one (`M1`, `P6`). Comparing
+two settle-stopped runs would have measured the stopping rule.
+
+**Four predictions, each with what would falsify it.**
+
+| | prediction | falsified by |
+| --- | --- | --- |
+| the identity | capped demand is `min(uncapped demand, 6)` on every ship and scenario | any run differing by more than 1 % |
+| the benefit | work p99 **≈ 2.5 M** against the 4,000,000 allowance — `G6`'s cost half passes | a capped p99 over 4 M, or under 1.5 M |
+| the cost | Δpeak p99 **under 1 K**, max under 10 K | a p99 over 1 K |
+| the reach | the cap holds back **3–10 %** of all blocks in air | outside that band |
+
+The benefit figure is arithmetic rather than a guess, and it is stated with its own weakness. Taking
+the 2026-08-24 air walk's 32,575 rows and replacing each demand with `min(demand, 6)` gives a work
+p99 of 1,679,952 in the unit those rows were scored in — which is the node half alone, so the
+corrected figure is that times a hull's link-to-node ratio, about 1.5. Hence 2.5 M, and hence a
+range of 1.7–2.9 M rather than a number. **A projection of the same dataset is not a measurement of
+it**: the substitution assumes the identity in the row above, which is the first thing the walk
+checks.
+
+The cost prediction is the weak one and is the reason for the walk. Its only evidence is **one
+hull**: 0.028 K on the worst-placed block of a driven census hull in thick air, and 0.017 K on the
+hottest ([backlog.md](backlog.md) `C3`). A population is not one hull, and the ships this cap
+reaches hardest are the ones with the stiffest fittings, which is not what a census hull is built
+from. A p99 in the tenths of a kelvin would be unsurprising; a p99 in whole kelvin would mean the
+cap re-masses hulls a player watches heat move through, which is what `stiffness.md` warns of below
+its own cliff.
+
+**The decision rule, fixed now.** The mod ships fidelity by default and a saving as a switch, and
+this repository has two calibration points for what *imperceptible* means: **0.028 K** is accepted
+as the price of the substep ceiling's breach, and **0.607 K** is what keeps `MaxSubstepsPerBlock`
+out of the defaults today. So:
+
+* **p99 Δpeak at or under 0.03 K** — ship the cap as the default. It costs what the mod already
+  accepts elsewhere and it closes `G6`'s cost half.
+* **p99 Δpeak at or over 0.6 K** — it stays a switch. That is the number that made it one, measured
+  on a population instead of a hull, and `G6`'s cost half stays open with the allowance as the only
+  remaining lever.
+* **between them** — a judgement, argued when the number is in, and argued in the open (`E11`).
+  Nothing about that band is decided here except that it will not be decided by whether the cap
+  happens to rescue a criterion.
+
+**And the walk rescores `G6` itself.** Its uncapped arm is the first corpus dataset to carry
+`substep_cost`, so it replaces the withdrawn figures above rather than merely being compared with
+them — and because it repeats `F11`'s four scenarios on the same ships, its demand column is a
+reproduction check on that walk (`E7`).
+
 **G7 holds.** All 705 prefabs, 461,428 blocks, idle: not one crosses critical, let alone loses a
 block. The same 705 flown hard lose 616, which is the control rather than the criterion — see
 [balance.md](balance.md#the-compatibility-floor-holds).
@@ -673,6 +748,7 @@ is an enclosing hull, and the corpus has hulls.
 | --- | --- |
 | 2026-08-24 | **One definition of a percentile, where there were two.** `air.py` interpolated between the two ranks a quantile falls between and `verdict.py` took `values[int(q × n)]`, and these pages print the two side by side — a corpus p99 against a panel p99. On forty thousand samples they agree to a third of a per cent, which is why nobody noticed; on **forty** they do not agree at all, because `int(0.99 × 40)` is 39 and the fortieth of forty is the maximum. A p99 that is the largest reading in the set is not a percentile, and a forty-hull panel is a set this repository scores. The interpolating one survives, because every published panel figure was computed with it; the corpus figures move by up to 0.3 % and are re-quoted (`P5`, `P3`). |
 | 2026-08-24 | **Settled the sealed-block anomaly, and corrected a sample figure that had been standing as a population one.** This page said twenty-four sealed blocks, all on `UNSC Panama`, of 1.15 million — the 2026-08-21 corpus says **1,184 across 331 ships of 45.2 million**, and the *share* was right to a rounding, which is why nobody caught the rest (`E2`). Measured with `bench sealed`, there are two kinds and neither is impossible: `LargeBlockGyro`, 307 of the 330 on the seven worst ships, whose game definition declares one mount point so a gyro with its bottom face against empty space bolts to nothing while being buried — the model's *touch without mounts conducts nothing* rule working, on a block that makes heat; and an armour cube alone in an interior void, whose six free faces all look into cells that are not external and so count as unexposed by definition. The synthetic two-block grid could never reproduce the second because two blocks in open space have external neighbours. Also: air is a third exit and the sealed test never looked at it, so `HotSpotLab.IsSealed` is now one definition shared with `CorpusSurvey` and the report prints how many rooms hold air — on an unpressurised lab hull, none. |
+| 2026-08-24 | **Wrote down what a per-block cap is expected to do to the population, before building the walk that measures it** (`E1`, `E11`). `C3` — whether `MaxSubstepsPerBlock 6` ships — and `G6`'s failing cost half are one question, because the cap is the only lever that lowers a step's work and `C3` is undecided only because its cost has been measured on one hull. Four predictions with their falsifiers, and a decision rule fixed against the two calibration points this repository already has for *imperceptible*: 0.028 K accepted, 0.607 K refused. Also recorded, before the data: raising the allowance is the other lever and is the wrong one, because it moves the work into the frame rather than making a ship affordable, and a criterion that passes by being re-pointed at a bound chosen to let it pass has not passed. The design's one hard requirement is that both arms run to the **same simulated clock** — the effect is a hundredth of a kelvin and `Battery.Run`'s settle tolerance is a quarter of one, so two settle-stopped arms would measure the stopping rule (`M1`, `P6`). |
 | 2026-08-24 | **The link count in `G6`'s cost half was the *joint* count, so every step-work figure this repository has published is the node half of the unit alone.** The unit is `links + 4 × nodes`; the corpus carried no link column and `verdict.py` was handed `joints`, which counts rotors and pistons *between grids* and is nought on almost every blueprint — so the expression evaluated to `4 × nodes`. On a 2,000-block census hull that is **1.51× low**, at 2.06 links a block; on any other hull it is low by that hull's own ratio, so no factor is applied and the walk records `ThermalSimulation.SubstepCost` per run instead. **No verdict moves**: the air walk's p99 is really 5.8–10.2 M against a 4,000,000 allowance and was already failing, and the vacuum survey's is 0.88–1.54 M and still holds. The figures cannot be recovered from the datasets that produced them, so `verdict.py` reports the cost half as *unmeasured* on any walk without the column rather than reprinting the old arithmetic (`E8`, `P2`), and `G6` reads as one half unscored rather than as a failure. `StepWorkUnitTests` pins the harness side and `number()` now reads a missing column as absent rather than crashing (`C8`). |
 | 2026-08-24 | **Re-scored `G6`'s cost half in the currency the allowance is spent in, and against the bound that ships after `C27`.** The work was measured with `2.125 × nodes + links`, which is `SubstepWork` — the unit a step is cut into frame-sized *slices* in — and compared against a bound denominated in `links + 4 × nodes`, which is what a step's length is divided by when the allowance decides whether to shorten it. Two currencies, 1.45× apart on a census hull, either side of one comparison; and the substep column was granted where the allowance reads demanded. Re-scored: p50 10,909, p95 269,153, **p99 881,279**, 29 runs past the 4,000,000 across 8 ships from 159,449 blocks up, where it read p99 446,707 and fifteen runs across three ships against 2,000,000. **The verdict is unchanged and the restriction under it is now stated where the figure is**: five vacuum scenarios, which is exactly what let this criterion's *demand* half read as passing for months, and projecting into air puts the corpus p99 level with the bound. |
 | 2026-08-24 | **Wrote down `G6`'s cost half, before scoring anything against it** (`E11`). The criterion has always said *substep demand and step cost* and only the demand had ever been produced. The cost is stated as **work** rather than as time — `substeps × (2.125 × nodes + links)`, the solver's own charge, derivable from every corpus walk already taken — and the bound is `MaxElementVisitsPerStep` at 2,000,000, which is the mod's own statement of what a grid's step may cost and the point past which a grid's simulated time runs slower than real time. *(Both figures moved later the same day: the unit to `links + 4 × nodes`, which is the one the allowance is spent in, and the bound to 4,000,000 — see the rows below.)* It fails at p99, the same percentile and shape as the demand half. [backlog.md](backlog.md) `C23`. |
