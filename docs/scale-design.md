@@ -34,7 +34,7 @@ waste memory.
 | Block *storage* stops enumerating cells | **not done** — `GridModel.blocksByCell`, `SurfaceMap.states` and `BlockInstance.Cells` are still one entry per occupied cell. This is the one thing between the model and an SE2 grid; the maths above is already there. `Se2LatticeTests` marks the line between them. |
 | Room mapping off the block lattice | not done |
 | Struct-of-arrays solver state | **done for the step** — the substep loop reads flat arrays mirrored from the nodes, refreshed only for nodes that changed. The node objects remain the public face. |
-| One grid per thread | **measured, not built** — `bench parallel`: 10.17x on a 242-grid fleet at 32 threads, 7.09x at eight, 3.35x on an uneven fleet, hand-off 1.6-6.8 us. See [One grid per thread, measured](#one-grid-per-thread-measured) |
+| One grid per thread | **measured and built, shipping off** — `ParallelGrids`; `bench parallel`: 10.17x on a 242-grid fleet at 32 threads, 7.09x at eight, 3.35x on an uneven fleet, hand-off 1.6-6.8 us. See [One grid per thread, measured and built](#one-grid-per-thread-measured-and-built) |
 | Stiffness / multirate | not done — but now **measured**: `LastStepWasClamped` is reported per grid as "steps clamped by substep cap" |
 | Land `Core/` in the live mod | **done** — the adapter is [`Game/`](../Data/Scripts/Thermodynamics/Game); the legacy per-cell path is deleted |
 | Instrument | **done** — [`ISimulationProfiler`](../Data/Scripts/Thermodynamics/Core/Simulation/SimulationProfiler.cs) times topology, room mapping, exposure and solver; see [telemetry.md](telemetry.md) |
@@ -359,7 +359,16 @@ and 24 000 live objects per grid is collection pressure the mod does not need to
 
 ---
 
-## One grid per thread, measured
+## One grid per thread, measured and built
+
+> **Built 2026-08-24, and it ships off.** `ParallelGrids` fans the solving half of a frame across
+> the engine's own workers; the two halves either side of it — the world sample and the pump state
+> before, the damage, the sweeps and every shared telemetry total after — stay on the game thread,
+> which is the boundary `ParallelTickTests` holds as text because no harness can construct a game
+> component to hold it any other way. What a session still has to answer is in
+> [configuration.md](configuration.md#solving-a-fleet-in-parallel): the engine's scheduler is not
+> the framework's, a mod shares a machine with the game it runs inside, and a worker's exception has
+> never had to reach a log.
 
 [backlog.md](backlog.md) `D19` asks for the machine to be used and the game thread to be left
 alone, and says *measure before adopting* — because the two figures available pointed opposite

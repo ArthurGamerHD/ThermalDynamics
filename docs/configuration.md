@@ -356,6 +356,41 @@ configuration rather than the criterion (`E11`, `P3`). See
 [stiffness.md](stiffness.md#what-refusing-the-demand-costs) for what a refusal costs on each of the
 three paths that carry heat, which is the question that outlives this one.
 
+### Solving a fleet in parallel
+
+`ParallelGrids` is off, and it is the one setting in this file whose default is a **gap rather than
+a choice**.
+
+**What it does.** A frame's grids are prepared on the game thread, solved on the engine's own
+worker threads, and applied on the game thread — solve in parallel, apply on the game thread, which
+is the shape `MyAPIGateway.Parallel` is built for and the one the solver's invariants allow: order
+independence is one of the three, so a fleet stepped one grid per work item lands on the same
+numbers as a fleet stepped in order. What may not move off the game thread is anything that reads
+or writes the game, and that is exactly what the two halves either side of the solve are: the world
+sample, the pump state, the damage, the block writes and every shared telemetry total.
+
+**What it is worth, measured before it was built.** A 242-grid fleet of 1,004-node grids:
+
+| threads | fleet | one grid | uneven fleet |
+| --- | ---: | ---: | ---: |
+| 32 | **10.17×** | 0.99× | 3.35× |
+| 8 | **7.09×** | — | — |
+
+The hand-off costs 1.6–6.8 µs against a grid's own 0.54 ms, so a single-grid world pays nothing
+measurable and a fleet is bounded by its largest grid — which is why an uneven fleet gives 3.35×
+and why splitting *one* grid is a separate question rather than a substitute.
+
+**What a session has to answer before it ships on**, none of which a harness can:
+
+* The engine's own scheduler is not the framework's. `MyAPIGateway.Parallel` hands work to the
+  game's pool, which is also running the game.
+* How many threads a mod may take on a machine it shares with the thing it is running inside.
+* Whether an exception on a worker reaches a log the way one on the game thread does. The mod holds
+  it and reports it on the game thread for that reason, and that path has never run in a session.
+
+Until then it is a switch a server operator can turn on, and
+[backlog.md](backlog.md) `D19` carries what closing it needs.
+
 ### `MaxSubstepsPerBlock`
 
 A step is divided into as many substeps as the **stiffest** block on the grid needs, and every
@@ -604,6 +639,7 @@ will not move it much.
 | `HeatTimeScale` | 90 | How much faster than real physics heat moves. Divides every heat capacity. It was 225 until `C24`, which moved it to put the most significant thermal event inside the 2–5 minute window `G8` asks for — see [balance.md](balance.md#the-route-is-chosen-and-it-is-the-one-the-cost-column-argued-against). |
 | `MaxElementVisitsPerStep` | 2000000 | Most element visits one step may make — substeps times its links plus four times its nodes — before the step is shortened to fit. 0 removes the bound. **Moves with `Frequency`**: a step is spread across the frames of its window, so this figure and the step rate together set the per-frame cost. See below. |
 | `MaxSubstepsPerBlock` | 0 (off) | Most substeps any single block may demand of the whole grid before it is treated as heavier than it is. The cheapest large win there is on a real ship. See below. |
+| `ParallelGrids` | `false` | Solve a frame's grids on the engine's worker threads rather than one after another on the game thread. Measured at **10.17×** on a 242-grid fleet and 0.99× on a single grid. **Ships off**, and what a session has to answer first is [Solving a fleet in parallel](#solving-a-fleet-in-parallel). |
 | `MaxSubsteps` | 64 | Most substeps one step may be cut into, whatever the grid asks for. A grid refused here integrates a step too long for its stiffest block, and the overshoot clamps carry the difference. **It bound in thick air at flying speed until `C24`, and no measured hull reaches it now** — see [The approximation that shipped on](#the-approximation-that-shipped-on-and-no-longer-does). |
 | `ClampConductionOvershoot` | `true` | Caps each exchange at the energy that equalises the pair, and every exchange arriving at one node, one parcel of coolant or one room's air at the energy that equalises that. Off reproduces the original unbounded solver. Skipped, at no change to the result, on any step short enough that no element can overshoot — see [benchmarks.md](benchmarks.md#the-overshoot-clamp-ab). |
 | `ClampEnvironmentOvershoot` | `true` | The same for radiation and convection: neither may carry a block past ambient in one substep. This is what bounds a step that is deliberately far too long. |

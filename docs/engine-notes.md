@@ -120,7 +120,7 @@ split is *solve in parallel, apply on the game thread* via `InvokeOnGameThread`.
 costs 1.6–6.8 µs a step against a 1,004-node grid's own 0.54 ms, so a single grid stepped through
 the fan-out comes back at 0.99× — and a 242-grid fleet at 10.17× on 32 threads, 7.09× on eight.
 The 0.128 ms figure is real and is still three hundred times a hand-off. See
-[scale-design.md](scale-design.md#one-grid-per-thread-measured).
+[scale-design.md](scale-design.md#one-grid-per-thread-measured-and-built).
 
 ## Planets already describe their own climate
 

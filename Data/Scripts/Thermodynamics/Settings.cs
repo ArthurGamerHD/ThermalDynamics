@@ -166,6 +166,22 @@ namespace Thermodynamics
         /// </summary>
         [ProtoMember(84)] public int MaxSubstepsPerBlock = 0;
 
+        /// <summary>
+        /// Whether a frame's grids are solved on the engine's worker threads rather than one after
+        /// another on the game thread.
+        ///
+        /// <para>
+        /// **Off, and it is the one setting here whose default is a gap rather than a choice.** The
+        /// mechanism is built and its shape is the one the solver's invariants allow — solve in
+        /// parallel, apply on the game thread — and it is measured at **10.17×** on a 242-grid fleet
+        /// with 32 threads, 7.09× on eight, 3.35× on an uneven fleet and 0.99× on a single grid. What
+        /// no harness can answer is what the engine's own scheduler does with a mod's work while it
+        /// is also running the game, so it ships off until a session says.
+        /// See configuration.md, Solving a fleet in parallel, and backlog.md `D19`.
+        /// </para>
+        /// </summary>
+        [ProtoMember(127)] public bool ParallelGrids = false;
+
         // ---- environment -------------------------------------------------------------------
 
         [ProtoMember(40)] public float VacuumTemperature = 2.7f;
@@ -753,7 +769,7 @@ namespace Thermodynamics
                 "DebugOverlayMaxBoxes",
                 "HeatGlow", "HeatWarningSound",
                 "RoomOverlayMinKelvin", "RoomOverlayMaxKelvin",
-                "EnableTemperatureSync", "TemperatureSyncInterval",
+                "EnableTemperatureSync", "TemperatureSyncInterval", "ParallelGrids",
                 "EnableTelemetry", "TelemetrySampleStride", "TelemetryPlanetProbes",
 
                 "LoopLargeGridFlowRate", "LoopSmallGridFlowRate", "LoopCoolantMassPerPipe",
@@ -839,6 +855,7 @@ namespace Thermodynamics
                 case "RoomOverlayMinKelvin": return RoomOverlayMinKelvin;
                 case "RoomOverlayMaxKelvin": return RoomOverlayMaxKelvin;
                 case "EnableTemperatureSync": return Flag(EnableTemperatureSync);
+                case "ParallelGrids": return Flag(ParallelGrids);
                 case "TemperatureSyncInterval": return TemperatureSyncInterval;
                 case "EnableTelemetry": return Flag(EnableTelemetry);
                 case "TelemetrySampleStride": return TelemetrySampleStride;
@@ -948,6 +965,7 @@ namespace Thermodynamics
                 case "HeatGlow": HeatGlow = Flag(value); return true;
                 case "HeatWarningSound": HeatWarningSound = Flag(value); return true;
                 case "EnableTemperatureSync": EnableTemperatureSync = Flag(value); return true;
+                case "ParallelGrids": ParallelGrids = Flag(value); return true;
                 case "TemperatureSyncInterval": TemperatureSyncInterval = value; return true;
                 case "EnableTelemetry": EnableTelemetry = Flag(value); Telemetry.SetEnabled(EnableTelemetry); return true;
                 case "TelemetrySampleStride": TelemetrySampleStride = (int)value; return true;
