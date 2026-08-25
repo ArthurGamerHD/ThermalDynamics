@@ -16,14 +16,15 @@ python3 tools/corpus/panel.py out/census-2026-08-21/census.csv \
                              out/census-2026-08-21 out/knobs-2026-08-21   # every dataset, one page
 ```
 
-## The two walks over the whole population
+## The three walks over the whole population
 
 `CorpusSurvey` runs five scenarios and every one of them is vacuum. `CorpusAirWalk` runs the four
 [`PairLab.AirScenarios`](../../tests/Thermodynamics.Harness/PairLab.cs) — `vacuum-shadow` as the
 anchor, then `surface-hot-noon`, `storm-parked` and `reentry` — because both halves of `G6` are
-decided in air and the survey has never seen any (`F11`). They are separate walks with separate
-resume records and separate data directories, so a figure quoted from one is not silently a figure
-from a run of the other (`M1`).
+decided in air and the survey has never seen any (`F11`). `CorpusCapWalk` runs those same four
+**twice**, with `MaxSubstepsPerBlock` off and at 6, which is `C3` and `G6`'s cost half as one
+experiment. They are separate walks with separate resume records and separate data directories, so a
+figure quoted from one is not silently a figure from a run of the other (`M1`).
 
 ```bash
 THERMAL_CORPUS_TESTS=1 THERMAL_CORPUS_DATA=$PWD/out/air-2026-08-24 \
@@ -31,7 +32,19 @@ THERMAL_CORPUS_TESTS=1 THERMAL_CORPUS_DATA=$PWD/out/air-2026-08-24 \
     systemd-run --user --scope -p MemoryMax=24G -p MemorySwapMax=0 --quiet \
     dotnet test -c Release --no-build tests/Thermodynamics.Tests \
         --filter "FullyQualifiedName~CorpusAirWalk"
+
+THERMAL_CORPUS_TESTS=1 THERMAL_CORPUS_DATA=$PWD/out/cap-2026-08-24 \
+    THERMAL_CORPUS_PROGRESS=$PWD/out/cap-2026-08-24/progress.txt \
+    systemd-run --user --scope -p MemoryMax=24G -p MemorySwapMax=0 --quiet \
+    dotnet test -c Release --no-build tests/Thermodynamics.Tests \
+        --filter "FullyQualifiedName~CorpusCapWalk"
 ```
+
+**A paired walk costs about twice an unpaired one, and not because it runs twice.** Every run in
+`CorpusAirWalk` stops at equilibrium, and in air that is usually two chunks of an 1,800-second
+scenario; the capped arm cannot stop there, because it has to stop where its own control stopped
+(`M1`). `THERMAL_CORPUS_SHIPS=40` walks a stride sample instead of the population, which is how to
+see that a walk works before committing the hours — the sample for this one was 320 runs in 77 s.
 
 **`THERMAL_CORPUS_DATA` must be absolute.** The test host's working directory is the test project's
 output directory, not the repository, so a relative path writes the dataset somewhere nobody will
@@ -330,6 +343,7 @@ limit in [known-issues.md](../../docs/known-issues.md).
 
 | Date | Change |
 | --- | --- |
+| 2026-08-24 | **`CorpusCapWalk`: the same four air scenarios, run twice, with `MaxSubstepsPerBlock` off and at 6.** `C3` and `G6`'s failing cost half are one question — the cap is the only lever that lowers a step's work — and `C3` was undecided only because its cost had been measured on one hull. **Both arms run to the same simulated clock**, which is why it is a walk rather than a join onto `F11`'s dataset: `Battery.Run` stops at equilibrium, in air that is usually 120 s of 1,800, and the effect being measured is a hundredth of a kelvin against a stopping tolerance of a quarter of one. `Battery.RunForSeconds` takes the control's elapsed clock; `outcomes.csv` gains `run_seconds` and `cap` so a reader can see where a run stopped and which arm it is. |
 | 2026-08-24 | **`scoring.step_work` takes the walk's `substep_cost` column, and the two committed summaries have lost their `G6 work` rows.** The unit is `links + 4 × nodes` and no walk before today recorded a link count; the scorer was handed `joints`, which counts rotors and pistons *between grids*, so the expression evaluated to `4 × nodes` and every step-work figure published from either dataset is the node half alone — 1.51× low on a 2,000-block census hull. `outcomes.csv` carries `links` and `substep_cost` now, the second being `ThermalSimulation.SubstepCost` for the assembly's worst grid, since the allowance is per grid. Neither existing dataset can be rescored, so both summaries were regenerated and their work rows are simply gone: a statistic that vanishes between two runs is what `--baseline` reports as a finding, which is the right reading here (`P2`). `G6` prints as one half unmeasured rather than as a failure, and the per-scenario table keeps its demand columns with an em dash in the work ones. |
 | 2026-08-24 | `scoring.censored_median` is the one definition of the statistic `G8` is scored on, and `pairs.py` and `load.py` both call it — two copies of it had already drifted at the even-length boundary. Added `joint_median_stability`, the bootstrap that says how often a resampled fleet still satisfies a two-halved criterion, drawn once so the two medians stay paired; `load.py` prints it as a `holds` column. It is what decided `C12`: two cells with the same median were 37 % and 76 % likely to hold. |
 | 2026-08-24 | **`THERMAL_CORPUS_DATA` is resolved against the test host's working directory, not the repository root.** A relative path writes a whole dataset into `.build/…/bin/Release/net9.0/out/` and the run passes, having recorded nothing where anyone will look for it. Pass an absolute path. |

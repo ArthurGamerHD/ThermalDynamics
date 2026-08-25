@@ -283,6 +283,35 @@ namespace Thermodynamics.Harness
         public static ScenarioOutcome Run(Blueprints.Ship ship, Scenario scenario,
             ThermalSettings settings = null)
         {
+            return Run(ship, scenario, settings, -1f);
+        }
+
+        /// <summary>
+        /// The same run stopped at a stated simulated clock rather than at equilibrium.
+        ///
+        /// <para>
+        /// **For a paired experiment, where the stopping rule cannot be part of the difference.**
+        /// <see cref="RunUntilSettled"/> stops when the hottest block moves less than
+        /// <see cref="SettleWithin"/> in a chunk, so two configurations of the same ship stop at
+        /// different instants — and a difference smaller than that tolerance, which is what a
+        /// per-block substep cap produces, is then a reading of the stopping rule rather than of
+        /// the cap (`M1`, `P6`). The control arm runs first and hands its own elapsed clock here.
+        /// </para>
+        ///
+        /// <para>
+        /// A negative or zero clock means *stop at equilibrium*, which is what
+        /// <see cref="Run(Blueprints.Ship, Scenario, ThermalSettings)"/> asks for.
+        /// </para>
+        /// </summary>
+        public static ScenarioOutcome RunForSeconds(Blueprints.Ship ship, Scenario scenario,
+            float seconds, ThermalSettings settings = null)
+        {
+            return Run(ship, scenario, settings, seconds);
+        }
+
+        private static ScenarioOutcome Run(Blueprints.Ship ship, Scenario scenario,
+            ThermalSettings settings, float fixedSeconds)
+        {
             ShipAssembly assembly = ship.Build(settings ?? new ThermalSettings());
             assembly.CollectDiagnostics(true);
 
@@ -297,9 +326,13 @@ namespace Thermodynamics.Harness
             // question becomes whether it comes back down.
             if (scenario.Name == "recovery")
             {
-                RunUntilSettled(runner, scenario.Seconds);
+                // Half the clock each side of the throttle, so a fixed-clock pair splits where the
+                // settle-stopped control did rather than at some other point in the event.
+                float half = fixedSeconds > 0f ? fixedSeconds * 0.5f : scenario.Seconds;
+                Advance(runner, half, fixedSeconds);
                 ShipLoad.Apply(assembly, ShipLoad.State.Idle);
-                RunUntilSettled(runner, scenario.Seconds);
+                Advance(runner, fixedSeconds > 0f ? fixedSeconds - half : scenario.Seconds,
+                    fixedSeconds);
             }
             else if (scenario.Then != null)
             {
@@ -311,21 +344,23 @@ namespace Thermodynamics.Harness
                     ? scenario.Seconds
                     : scenario.ThenAfterSeconds(assembly);
 
-                if (first > scenario.Seconds) first = scenario.Seconds;
+                float ceiling = fixedSeconds > 0f ? fixedSeconds : scenario.Seconds;
+                if (first > ceiling) first = ceiling;
                 if (first > 0f) runner.Run(first);
 
                 ShipLoad.Apply(assembly, scenario.Then);
-                RunUntilSettled(runner, scenario.Seconds - first);
+                Advance(runner, ceiling - first, fixedSeconds);
             }
             else
             {
-                RunUntilSettled(runner, scenario.Seconds);
+                Advance(runner, fixedSeconds > 0f ? fixedSeconds : scenario.Seconds, fixedSeconds);
             }
 
             ScenarioOutcome outcome = ScenarioOutcome.Read(assembly, ship.Name, scenario.Name);
             outcome.WorkshopId = ship.WorkshopId;
             outcome.SecondsToCritical = runner.SecondsToCritical;
             outcome.SecondsToFirstLoss = runner.SecondsToFirstLoss;
+            outcome.RunSeconds = runner.ElapsedSeconds;
 
             Settle(outcome, runner);
             return outcome;
@@ -336,6 +371,33 @@ namespace Thermodynamics.Harness
 
         /// <summary>Simulated seconds per chunk. The resolution the settle test can see.</summary>
         public const float Chunk = 60f;
+
+        /// <summary>
+        /// Steps a phase of a run: to equilibrium when the caller wants equilibrium, and to the
+        /// clock when the caller has one to match.
+        /// </summary>
+        private static void Advance(AssemblyRunner runner, float seconds, float fixedSeconds)
+        {
+            if (seconds <= 0f) return;
+
+            if (fixedSeconds > 0f)
+            {
+                // **In the same chunks the settle path uses**, because the sample history is what
+                // the settling time and the peak rate are read from — one sample over the whole
+                // span would leave the paired arm with two columns the control has and it does not.
+                float done = 0f;
+                while (done < seconds)
+                {
+                    float chunk = Math.Min(Chunk, seconds - done);
+                    runner.Run(chunk);
+                    done += chunk;
+                }
+
+                return;
+            }
+
+            RunUntilSettled(runner, seconds);
+        }
 
         /// <summary>
         /// Steps until the hottest block stops moving, or until the ceiling is reached.

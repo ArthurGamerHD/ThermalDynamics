@@ -166,6 +166,27 @@ namespace Thermodynamics.Harness
         public int Links;
 
         /// <summary>
+        /// Simulated seconds the run actually advanced, which is not the scenario's clock: almost
+        /// every battery run stops at equilibrium first.
+        ///
+        /// **A comparison holds the stopping point equal** (`M1`), and until this column existed a
+        /// dataset could not say where a run stopped — so two runs of the same ship under two
+        /// configurations were comparable only by assumption. It is what a paired arm is handed
+        /// through <see cref="Battery.RunForSeconds"/>.
+        /// </summary>
+        public float RunSeconds;
+
+        /// <summary>
+        /// `MaxSubstepsPerBlock` in force for this run, and 0 for the off it ships as.
+        ///
+        /// **The column that makes a paired dataset readable.** Two arms of the same ship in the
+        /// same scenario are two rows that differ in nothing a reader can see without it, and a
+        /// dataset whose arms cannot be told apart is a dataset with twice as many rows and no
+        /// experiment in it.
+        /// </summary>
+        public int SubstepsPerBlockCap;
+
+        /// <summary>
         /// What one substep costs the assembly's most expensive grid, in element visits — the unit
         /// `MaxElementVisitsPerStep` is spent in, and per grid because the bound is per grid.
         ///
