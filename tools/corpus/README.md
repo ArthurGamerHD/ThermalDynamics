@@ -100,6 +100,17 @@ vacuum and in air. It reports **every statistic on either side**, so one the oth
 carry shows as an em dash rather than being dropped: a scenario present in one walk and absent from
 the other is the finding, not a gap to be joined away.
 
+**Every dataset says what build it came from.** `provenance.txt` is written beside the outcomes on a
+walk's first batch: the walk's name and start, the commit `HEAD` pointed at, and a digest of
+`Cubes.xml` and `Materials.xml` — the two files whose contents decide what a walk measures and which
+a commit hash says nothing about when they are edited and not committed. A resumed walk appends a
+second block rather than overwriting, so a dataset assembled across two builds says so.
+
+It exists because the alternative was paid for once. The 2026-08-24 air walk finished **one minute
+after** a commit that took twenty-seven `ConsumerWasteEnergy` fractions from 0.9 to 1.0, and
+establishing that took comparing its rows against a later walk with `reproduce.py` and then reading
+the git log for the window between them. Datasets collected before 2026-08-25 have no such file.
+
 **A paired dataset is scored on the arm that ships.** `verdict.py` says so on the first line when it
 meets one, and leaves the other arm to `cap.py`. It did not always: keyed by ship and scenario, the
 capped arm read as *912 duplicate rows* and half the dataset was dropped under a note about a resume
@@ -396,6 +407,7 @@ limit in [known-issues.md](../../docs/known-issues.md).
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Every walk now writes `provenance.txt` beside its outcomes: the commit and a digest of the two definition files whose contents decide what it measured. Hooked into `CorpusFixture.Sweep` rather than into each walk, because a walk that has to remember is a walk that will not. |
 | 2026-08-25 | Renamed `air.py`'s ratio column from *vs shipped* to *vs baseline*, and made it print which cell ships. The column compares every cell with the sweep's own control, conductivity x1 at a clock of 225 — which stopped being the shipped configuration when `C24` shipped x4 at 90, a row of the same table. The arithmetic was never wrong; the word was. |
 | 2026-08-25 | Fixed `verdict.py` reading a paired walk's second arm as duplicate rows. It keyed a row by ship and scenario, so `CorpusCapWalk`'s capped arm looked like the same run written twice: half the dataset was dropped, under a note blaming a resume that had not happened, and the arm it kept was the right one by accident. The arm is part of a row's identity now, and a paired dataset is scored on the one that ships with both named on the first line (`M1`, `P6`). |
 | 2026-08-25 | Added [`reproduce.py`](reproduce.py): whether two walks that overlap wrote the same numbers on the ships they share. Its first use was the cap walk's restart, whose 552 shared rows matched the abandoned partial exactly on all 22 compared columns. |

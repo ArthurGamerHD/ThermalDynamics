@@ -36,6 +36,147 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// **What build a dataset was collected on, written beside it.**
+        ///
+        /// <para>
+        /// A walk is hours long and its output outlives the tree it came from. On 2026-08-25 the
+        /// 2026-08-24 air walk was found to have finished **one minute after** a commit that moved
+        /// twenty-seven waste fractions — it had loaded the old ones at process start — and the only
+        /// way to establish that was to compare its rows with a later walk and then read the git log
+        /// for the window between them. A dataset that records its own build makes that a lookup
+        /// (`P1`, `E5`).
+        /// </para>
+        ///
+        /// <para>
+        /// It records the commit, whether the tree was dirty, and a hash of the two definition files
+        /// a walk's numbers actually depend on — because a clean commit says nothing about
+        /// `Cubes.xml` being edited and not committed, which is exactly how a walk ends up
+        /// measuring a world that never existed.
+        /// </para>
+        ///
+        /// <para>
+        /// Written once per run, on the first batch, and never overwritten: a resumed walk appends
+        /// a second block, so a dataset assembled across two builds says so rather than claiming
+        /// the second.
+        /// </para>
+        /// </summary>
+        public static void Provenance(string walk)
+        {
+            string directory = Directory();
+            if (directory == null) return;
+
+            lock (Gate)
+            {
+                if (!Started.Add("provenance:" + walk)) return;
+            }
+
+            StringBuilder text = new StringBuilder();
+            text.Append("walk ").Append(walk)
+                .Append(" started ").Append(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"))
+                .AppendLine();
+            text.Append("commit ").AppendLine(Commit());
+            text.Append("Cubes.xml ").AppendLine(HashOf(Path.Combine(Root(), "Data", "Cubes.xml")));
+            text.Append("Materials.xml ")
+                .AppendLine(HashOf(Path.Combine(Root(), "Data", "Materials.xml")));
+
+            try
+            {
+                File.AppendAllText(Path.Combine(directory, "provenance.txt"), text.ToString());
+            }
+            catch (IOException)
+            {
+                // Provenance must never be the reason a walk fails.
+            }
+        }
+
+        private static string Root()
+        {
+            return ShippedBlocks.RepoRoot();
+        }
+
+        /// <summary>
+        /// The commit `HEAD` points at, read from `.git` rather than by running git — the harness
+        /// has no process to spawn and a walk must not depend on one being available.
+        ///
+        /// **Says `unknown` rather than guessing**, and says `dirty` when anything is uncommitted,
+        /// because a clean-looking hash on a dirty tree is worse than no hash at all.
+        /// </summary>
+        private static string Commit()
+        {
+            try
+            {
+                string git = Path.Combine(Root(), ".git");
+                string head = File.ReadAllText(Path.Combine(git, "HEAD")).Trim();
+
+                string hash;
+                if (head.StartsWith("ref:", StringComparison.Ordinal))
+                {
+                    string reference = head.Substring(4).Trim();
+                    string path = Path.Combine(git, reference.Replace('/', Path.DirectorySeparatorChar));
+
+                    if (File.Exists(path))
+                    {
+                        hash = File.ReadAllText(path).Trim();
+                    }
+                    else
+                    {
+                        hash = Packed(git, reference);
+                    }
+                }
+                else
+                {
+                    hash = head;
+                }
+
+                return string.IsNullOrEmpty(hash) ? "unknown" : hash;
+            }
+            catch (IOException)
+            {
+                return "unknown";
+            }
+        }
+
+        /// <summary>A reference that lives in `packed-refs` rather than as a loose file.</summary>
+        private static string Packed(string git, string reference)
+        {
+            string path = Path.Combine(git, "packed-refs");
+            if (!File.Exists(path)) return null;
+
+            foreach (string line in File.ReadAllLines(path))
+            {
+                if (!line.EndsWith(" " + reference, StringComparison.Ordinal)) continue;
+
+                return line.Substring(0, line.IndexOf(' '));
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// A stable digest of a file, or `missing` — the definitions decide what a walk measures,
+        /// and a commit hash says nothing about one edited and not committed.
+        /// </summary>
+        private static string HashOf(string path)
+        {
+            try
+            {
+                if (!File.Exists(path)) return "missing";
+
+                using (System.Security.Cryptography.SHA256 sha =
+                    System.Security.Cryptography.SHA256.Create())
+                using (FileStream stream = File.OpenRead(path))
+                {
+                    return BitConverter.ToString(sha.ComputeHash(stream))
+                        .Replace("-", "").ToLowerInvariant().Substring(0, 16);
+                }
+            }
+            catch (IOException)
+            {
+                return "unreadable";
+            }
+        }
+
+        /// <summary>
         /// Appends rows to <paramref name="name"/>.csv, writing the header the first time that file
         /// is touched in this run.
         /// </summary>
