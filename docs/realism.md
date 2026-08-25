@@ -238,15 +238,17 @@ separately rather than reported as defects — otherwise four correct results bu
 ## Known limits of this suite
 
 * **Scenario run lengths are fixed to the shipped clock, and now they can be asked not to be.** A
-  world 225× slower is still climbing when a run ends: 72 of 136 cells are transients, mostly
-  `physical`'s, and the report marks them rather than letting one read as an equilibrium.
-  `ScenarioRunner.DurationScale` scales a run to a profile's own clock and
+  world the clock's whole factor slower is still climbing when a run ends: 72 of 136 cells are
+  transients, mostly `physical`'s, and the report marks them rather than letting one read as an
+  equilibrium. `ScenarioRunner.DurationScale` scales a run to a profile's own clock and
   `ProfileSweep.MeasureAtItsOwnClock` sets it from the ratio, which is what settled the matrix's
   last unexplained divergence above. **It is not the sweep's default because the sweep would stop
   being runnable**: seven of the physical column's cells alone ran past twenty minutes before being
-  cut, against a whole sweep of minutes today — the cost is the 225× itself, and it lands on every
-  cell of that column. So a cell is asked at its own clock when a reading turns on it, and the
-  column stays marked otherwise.
+  cut, against a whole sweep of minutes today — the cost is the factor itself, which was **225×**
+  when the cells above were measured and is **90×** since `C24`, and it lands on every cell of that
+  column. So a cell is asked at its own clock when a reading turns on it, and the column stays
+  marked otherwise. **The whole comparison is due a re-measurement at the pair that ships**, which
+  is [backlog.md](backlog.md) `C29`.
 * **The divergence flag is a 10,000 K threshold**, so it catches both genuine runaway and
   absurd-but-stable steady states. A buried 40 MW reactor really does reach tens of thousands of
   kelvin in this model, because conduction can only carry about 1.8 kW/K away from one cell.
@@ -263,6 +265,7 @@ separately rather than reported as defects — otherwise four correct results bu
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Scoped the run-length limit's cost to the clock it is a cost *of*: the factor was 225× when these cells were measured and is 90× since `C24`, so the sweep is about two and a half times cheaper to ask at its own clock than this page said. Pointed at `C29`, which is the re-measurement the whole comparison is due. |
 | 2026-08-24 | **The loop path's stiffness ceiling is gone rather than raised.** `A10` applied the per-node relaxation to the coupled passes, so the block on the other end of a sink face is bounded as well as the parcel. Re-run across the same ladder and past the end of it, the deliberately refused ring spreads 15.1 K at brass and 14.7 K at **sixteen times copper** — flat, so the material sets no limit on this path any more and what decides the spread is the refusal. |
 | 2026-08-23 | **The matrix's last unexplained divergence is not one.** `physical / x-overloaded` reads 11,662 K at a scenario clock cut for a world 225× faster; given the same physical duration the shipped column gets, it settles at about 1,300 K, converged and unstarved. So every divergence in the matrix is now starvation or the clock, and `physical` has no instability. `ScenarioRunner.DurationScale` is the mechanism ([backlog.md](backlog.md) `C8`) and is deliberately not the sweep's default: the 225× lands on every cell of that column and seven rigs alone ran past twenty minutes. |
 | 2026-08-22 | Re-measured the divergence counts under the corrected rule. Eight of the ten cells the column reported were converged answers: `candidate` and `shipped` have none at all, and `arcade` has one — `air-conditioning` at 21,900 K and 100% starved, which is the case the starvation argument always rested on. The other survivor, `physical / x-overloaded`, is the one cell where the test cannot separate a divergence from a run stopped too early, because a scenario clock cut for the shipped world ends while a 225×-slower one is still climbing. |
