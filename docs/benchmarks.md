@@ -69,9 +69,16 @@ them is accuracy given up. In flight the gap is widest — see
 
 | rung | blocks | links | step | demanded | per element visit |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| 8,000 | 8,904 | 20,779 | 1.12 ms | 22.0 | 1.71 ns |
-| 32,000 | 32,800 | 73,787 | 3.54 ms | 18.5 | 1.75 ns |
-| 125,000 | 126,731 | 277,967 | 16.4 ms | 21.7 | 1.85 ns |
+| 8,000 | 8,904 | 18,333 | 1.13 ms | 23.2 | 1.73 ns |
+| 32,000 | 32,800 | 64,964 | 4.79 ms | 27.5 | 1.75 ns |
+| 125,000 | 126,731 | 247,350 | 16.7 ms | 23.6 | 1.86 ns |
+
+*Re-run 2026-08-24 at `C24`'s pair on the hull `C26` refreshed. **A hull has about a tenth fewer
+links** — the tiers carry the mount points of the blocks they stand for, so a shaped armour block
+joins on three or four faces rather than six — and the demand is what the two changes leave: four
+times the conduction pace against two and a half times the capacity, on a hull whose lightest band
+no longer carries six joints. Cost per element visit is unmoved, which is what says the step got
+smaller rather than slower.*
 
 **Cost per element visit is now flat across the ladder** — 1.82, 1.87, 1.91 ns — where it used to
 climb from 2.8 to 6.1. The climb was the two passes that reached through the node objects to the
@@ -84,18 +91,24 @@ Every shape in every world, because which is worst depends on which world:
 
 | | step ms | substeps demanded |
 | --- | ---: | ---: |
-| ship, vacuum | 0.62 | 11.6 |
-| ship, atmosphere | 0.83 | 15.5 |
-| ship, flight at 300 m/s | 1.11 | **22.0** |
-| cube, vacuum | 0.58 | 11.4 |
-| cube, flight | 0.90 | 18.5 |
-| truss, vacuum | 0.26 | **7.9** |
-| truss, atmosphere | 0.53 | 16.8 |
-| truss, flight | 0.78 | **25.5** |
+| ship, vacuum | 0.37 | 6.7 |
+| ship, atmosphere | 0.83 | 16.3 |
+| ship, flight at 300 m/s | 1.13 | **23.2** |
+| cube, vacuum | 0.33 | 6.8 |
+| cube, flight | 0.87 | 19.3 |
+| truss, vacuum | 0.25 | **7.2** |
+| truss, atmosphere | 0.50 | 16.7 |
+| truss, flight | 0.69 | **23.6** |
 
-**A truss is the cheapest hull in vacuum and the stiffest in flight** — 7.9 substeps to 25.5, a
+**A truss is the cheapest hull in vacuum and the stiffest in flight** — 7.2 substeps to 23.6, a
 threefold inversion. One link per node and nothing to convect with makes it trivial in space;
 every node being exposed makes convection a per-node term on all of them once there is air.
+
+*Re-run 2026-08-24. The vacuum column halved and the flight column barely moved, which is the same
+fact the rest of this pass keeps finding: `C24` divides every capacity by 0.4 and multiplies
+conduction by four, so a convection-limited demand falls and a conduction-limited one rises, and
+vacuum is the column made of conduction. The truss is no longer the softest hull in vacuum — a ship
+is — because a truss's demand was always its exposure and the ship's was its joints.*
 
 Until this section existed, every benchmark in this repository ran a **ship in vacuum**, which is
 the cheapest of those nine on the axis that matters. Worse, `AtmosphereFactor` is zero in vacuum,
@@ -952,6 +965,7 @@ several times its neighbours' should be re-taken rather than explained.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-24 | **Re-ran the ladder and the environments at `C24`'s pair on the hull `C26` refreshed.** A hull carries about a tenth fewer links, because each census band now mounts the way the block it stands for does; the vacuum demand halved and the flight demand barely moved, which is the retune's shape — a convection-limited demand falls with the clock and a conduction-limited one rises with the pace. Cost per element visit is unmoved at 1.73–1.86 ns, which is what says the step got smaller rather than slower. Figures elsewhere on this page that are quoted from a particular run and not re-taken carry the date they were measured. |
 | 2026-08-23 | **Asked `D14`'s question of a fleet instead of a grid.** Spreading a step costs 12.2 % on 242 grids of 1,004 nodes and nothing at all on four — the penalty is the fleet's working set rather than any grid's size, which is why the single-grid ladder never saw it. The lump staggering would put on a frame is 0.53 ms for such a grid and flat in fleet size, and a frame carries the same total work either way, so what staggering really gives up is the ability to split a grid too big for the budget. `bench stagger`, `StaggerTests`. |
 | 2026-08-22 | Recorded row 11 in both tables and re-took the baseline on this machine. The step columns doubled because `Frequency` halved and the element allowance doubled with it; per simulated second is 8.948 ms before against 8.537 ms after, so the pass is cost-neutral and the 8,000-block ship went from 22 substeps granted to 44 with demand doubling to match. The machine is 26% slower than rows 0-8 in two runs twenty minutes apart, which is its state and not a loud sample, so only that one comparison is readable. Corrected two statements that the committed baseline is pinned at row 3; it is re-recorded whenever its keys change, which happened this pass. |
 | 2026-08-22 | Dropped the profile rows from [The configurations](#the-configurations) and from the report, with the five settings profiles they measured. The section is the substep cap alone now, and the committed baseline was re-recorded because its keys changed (`M6`). **The re-recording is 23% slower than row 3** — calibration 109.4 ms against 86.2, noise 0.129 ms against 0.043 — which the row 11 re-take reproduced, so it is the machine and not one loud run. The file's *timings* are not comparable to the figures quoted on this page; its keys, which is all `BenchmarkBaselineTests` reads, are. |
