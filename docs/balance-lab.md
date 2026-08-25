@@ -225,6 +225,51 @@ whichever it is, it is a finding rather than a confirmation.
   median hull is 1,110 blocks against the panel's selection, and a small hull's demand is set by its
   stiffest fitting rather than by its size.
 
+### What flooring an over-budget grid does, written before it is measured
+
+`CorpusFloorWalk` is built and **has produced nothing**. The question, the statistic, the decision
+rule and the numbers that would falsify each prediction go here first (`E1`, `E11`).
+
+**The question.** `C30` built `FloorBlocksWhenOverBudget` and shipped it off. When a grid cannot
+afford the substeps its demand asks for, it floors the stiffest blocks to what the allowance grants
+instead of shortening the step. Should that be the default?
+
+**Why 294 ships and not 8,144.** The mechanism engages only where the budget binds, so 7,850
+published hulls never reach the branch. The 294 are every ship whose step work exceeds the allowance
+in at least one air scenario, read out of the cap walk's control arm; the rule is in
+`out/floor-2026-08-25/selection.txt` beside the dataset (`M10`). They run 18,855 to 641,711 blocks,
+median 42,623. **A figure from this walk is a figure about the ships the allowance binds on and
+about no others**, and every statement of it has to say so (`P1`).
+
+**Four predictions, each with what would falsify it.**
+
+| | prediction | falsified by |
+| --- | --- | --- |
+| the clock | the floored arm keeps its whole step: **no run loses simulated time** where the control does | any floored run still shortening its step |
+| the reach | the floor holds back **fewer** blocks than `C3`'s fixed cap of 6 did, because the grant is larger than 6 | a share at or above the 5.83 % that cap reached in air |
+| the cost | Δpeak p99 **under 0.03 K** — the figure this mod already accepts — because the grant is a gentler cap than 6 and 6 cost 0.024 K at rest | a p99 over 0.28 K, which is what the fixed cap cost across the whole population |
+| the safety | the floor never makes a grid stiffer, and never floors anything in the control arm | either, once |
+
+The cost prediction is the one with an argument rather than a measurement behind it, and the
+argument is that a cap of `budget` approximates less than a cap of 6 on the same hull — on the
+64,463-block rig `C30` measured, the budget was 10. **If the population disagrees, the reason will be
+that the ships the allowance binds on are not the ships the cap walk's percentiles were drawn from**,
+which is the whole reason this is a separate walk rather than an inference.
+
+**The decision rule, fixed now.** The same two calibration points the mod already has: **0.03 K** is
+accepted as the price of the substep ceiling's breach and **0.6 K** is what kept a fixed cap out of
+the defaults.
+
+* **p99 Δpeak at or under 0.03 K** — ship it on. It costs what the mod already accepts, and what it
+  buys is a third to two thirds of a grid's clock back on the hulls that are losing it.
+* **p99 Δpeak at or over 0.6 K** — it stays off, and `G6`'s cost half stays open with no lever left.
+* **between them** — a judgement, argued in the open, and **not decided by whether it rescues a
+  criterion** (`E11`). It does rescue one; that is set aside in advance, as it was for `C3`.
+
+**What this walk cannot say.** It measures the ships the allowance binds on, so it says nothing
+about the 96 % it does not touch — which is the point of the mechanism and also the reason its
+percentiles must never be quoted as population figures.
+
 ### What a per-block cap does to the population, written before it is measured
 
 `CorpusCapWalk` **finished on 2026-08-25 at 05:08**, all 8,144 blueprints in 3 h 51 m, after being

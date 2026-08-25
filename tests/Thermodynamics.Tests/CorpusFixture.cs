@@ -244,6 +244,8 @@ namespace Thermodynamics.Tests
                 corpus = remaining;
             }
 
+            corpus = Only(corpus);
+
             int cap;
             string configured = Environment.GetEnvironmentVariable("THERMAL_CORPUS_SHIPS");
             if (string.IsNullOrEmpty(configured) || !int.TryParse(configured, out cap) || cap <= 0)
@@ -263,6 +265,62 @@ namespace Thermodynamics.Tests
             }
 
             return sample;
+        }
+
+        /// <summary>
+        /// The corpus narrowed to the blueprints named in the file <c>THERMAL_CORPUS_ONLY</c> points
+        /// at, or unchanged when it points at nothing.
+        ///
+        /// <para>
+        /// **A stratified walk needs its selection written down, not implied** (`M10`). A stride
+        /// sample can be described in a sentence — every nth file — but a walk of *the ships a
+        /// mechanism can affect* cannot, because the rule that chose them lives in whatever dataset
+        /// it was read from. So the list is a file, the file carries the rule in its own comments,
+        /// and it sits beside the dataset the walk writes.
+        /// </para>
+        ///
+        /// <para>
+        /// **A path in the list that is not in the corpus is a fault, not a skip.** It means the
+        /// list was built against a different corpus than the one being walked, and every figure
+        /// that came out would be over a population nobody can name.
+        /// </para>
+        /// </summary>
+        private static List<string> Only(List<string> corpus)
+        {
+            string path = Environment.GetEnvironmentVariable("THERMAL_CORPUS_ONLY");
+            if (string.IsNullOrEmpty(path)) return corpus;
+
+            Assert.True(System.IO.File.Exists(path),
+                "THERMAL_CORPUS_ONLY names " + path + ", which does not exist");
+
+            HashSet<string> wanted = new HashSet<string>(StringComparer.Ordinal);
+            foreach (string line in System.IO.File.ReadAllLines(path))
+            {
+                string trimmed = line.Trim();
+                if (trimmed.Length == 0 || trimmed.StartsWith("#", StringComparison.Ordinal)) continue;
+
+                wanted.Add(trimmed);
+            }
+
+            Assert.True(wanted.Count > 0, "THERMAL_CORPUS_ONLY at " + path + " names no blueprints");
+
+            List<string> chosen = new List<string>();
+            HashSet<string> found = new HashSet<string>(StringComparer.Ordinal);
+
+            for (int i = 0; i < corpus.Count; i++)
+            {
+                if (!wanted.Contains(corpus[i])) continue;
+
+                chosen.Add(corpus[i]);
+                found.Add(corpus[i]);
+            }
+
+            Assert.True(found.Count == wanted.Count,
+                "THERMAL_CORPUS_ONLY names " + wanted.Count + " blueprints and the corpus holds "
+                + found.Count + " of them, so this list was built against a different corpus");
+
+            Note("walking " + chosen.Count + " blueprints named by " + path);
+            return chosen;
         }
 
         /// <summary>
