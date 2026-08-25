@@ -345,6 +345,26 @@ def percentiles(values):
 # substep demand costs this much on the hottest block of a driven census hull over 600 simulated
 # seconds, and `C19` closed by keeping the cap and letting `G6` fail rather than paying for
 # fidelity nobody can perceive.
+# ---- the four predictions, as balance-lab.md registered them before the walk ------------------
+#
+# **These are the falsifiers, not the decision rule.** A prediction and a decision are different
+# questions and the pre-registration keeps them apart: the predictions say what the walk was
+# expected to find, and `CAP_ACCEPTED_KELVIN` / `CAP_REFUSED_KELVIN` below say what would be done
+# about it. A prediction can be falsified while the decision is unchanged, and that is worth seeing.
+
+#: The predicted capped work p99, and the band outside which the prediction is falsified. The
+#: figure was arithmetic — the air walk's rows with each demand replaced by min(demand, 6), times a
+#: hull's link-to-node ratio — so *under* the band falsifies it as surely as over.
+CAP_BENEFIT_BAND = (1500000.0, 4000000.0)
+
+#: The predicted delta-peak: p99 under a kelvin, max under ten. Its only evidence was one hull, and
+#: the pre-registration says so.
+CAP_COST_P99_KELVIN = 1.0
+CAP_COST_MAX_KELVIN = 10.0
+
+#: The predicted share of blocks the cap holds back, in air.
+CAP_REACH_BAND = (3.0, 10.0)
+
 CAP_ACCEPTED_KELVIN = 0.03
 
 # What the mod already refuses as the price of a default: `MaxSubstepsPerBlock 6` cost this much on

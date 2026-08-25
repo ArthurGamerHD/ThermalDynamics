@@ -170,11 +170,23 @@ def main():
 
     if capped_p:
         past = sum(1 for v in capped_values if not scoring.keeps_up(v))
+        low, high = scoring.CAP_BENEFIT_BAND
+
+        # **Two answers, and they are different questions.** Whether `G6`'s cost half passes under
+        # the cap is the criterion; whether the walk found what the pre-registration predicted is
+        # the prediction, and its falsifier runs in both directions — a p99 *under* 1.5 M would mean
+        # the projection that produced 2.5 M was wrong, even though the criterion would pass.
         verdict(f"the benefit: G6's cost half under a cap of {cap}",
                 capped_p["p99"] <= allowance,
                 f"work p99 {capped_p['p99']:,.0f} against {allowance:,.0f} granted, from "
                 f"{control_p['p99']:,.0f} uncapped — {past:,} of {len(capped_values):,} runs still "
                 f"past it")
+
+        verdict("the benefit, as predicted rather than as scored",
+                low <= capped_p["p99"] <= high,
+                f"work p99 {capped_p['p99']:,.0f} against the {low:,.0f}-{high:,.0f} registered "
+                f"before the walk — a figure under the band falsifies the projection as surely as "
+                f"one over it")
 
     # ---- the cost ----------------------------------------------------------------------------
     deltas = []
@@ -206,11 +218,15 @@ def main():
         over_accepted = sum(1 for v in values if v > scoring.CAP_ACCEPTED_KELVIN)
         over_refused = sum(1 for v in values if v > scoring.CAP_REFUSED_KELVIN)
 
-        verdict(f"the cost: what a cap of {cap} moves a peak by", None,
-                f"p99 {p['p99']:.4f} K, max {p['max']:.4f} K; {over_accepted:,} of {len(values):,} "
-                f"pairs move more than the {scoring.CAP_ACCEPTED_KELVIN} K this mod already "
-                f"accepts and {over_refused:,} more than the {scoring.CAP_REFUSED_KELVIN} K it "
-                f"refuses")
+        verdict(f"the cost: what a cap of {cap} moves a peak by",
+                p["p99"] < scoring.CAP_COST_P99_KELVIN
+                and p["max"] < scoring.CAP_COST_MAX_KELVIN,
+                f"p99 {p['p99']:.4f} K and max {p['max']:.4f} K against the predicted "
+                f"p99 under {scoring.CAP_COST_P99_KELVIN:g} K and max under "
+                f"{scoring.CAP_COST_MAX_KELVIN:g} K\n"
+                f"        {over_accepted:,} of {len(values):,} pairs move more than the "
+                f"{scoring.CAP_ACCEPTED_KELVIN} K this mod already accepts and {over_refused:,} "
+                f"more than the {scoring.CAP_REFUSED_KELVIN} K it refuses")
 
         print(f"\n        the rule, fixed before the walk: at or under "
               f"{scoring.CAP_ACCEPTED_KELVIN} K it ships, at or over "
@@ -255,11 +271,12 @@ def main():
     if blocks:
         share = 100.0 * floored / blocks
         air_share = 100.0 * air_floored / air_blocks if air_blocks else 0.0
-        held = "?" if not air_blocks else (3.0 <= air_share <= 10.0)
+        low, high = scoring.CAP_REACH_BAND
+        held = "?" if not air_blocks else (low <= air_share <= high)
 
         verdict(f"the reach: what a cap of {cap} holds back", held,
                 f"in air, {air_floored:,.0f} of {air_blocks:,.0f} node-runs, {air_share:.2f} % "
-                f"against the 3-10 % predicted\n"
+                f"against the {low:g}-{high:g} % predicted\n"
                 f"        over all four scenarios including the vacuum anchor, "
                 f"{floored:,.0f} of {blocks:,.0f}, {share:.2f} %\n"
                 f"        the control floored {control_floored:,.0f}, which must be nought or it "

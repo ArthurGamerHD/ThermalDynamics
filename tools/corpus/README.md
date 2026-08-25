@@ -410,6 +410,7 @@ limit in [known-issues.md](../../docs/known-issues.md).
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | `cap.py` now scores all four registered predictions rather than three. The benefit had been scored only as *does `G6` pass*, which is the criterion and not the prediction — the pre-registration's falsifier runs both ways, and a p99 under 1.5 M would falsify the projection while the criterion passed. The cost had printed its figures and judged nothing. Both bands live in `scoring.py` beside the decision rule, and the two are kept apart: a prediction can be falsified while the decision is unchanged. |
 | 2026-08-25 | `cap.py` scores the reach prediction over the air scenarios, which is how it was written — *the cap holds back 3-10 % of all blocks in air*. It had been counting the vacuum anchor too, where the cap is expected to bind least, which dilutes the share by a quarter and scores a band nobody registered. Both figures print; the band is read against the air one. |
 | 2026-08-25 | `verdict.py` prints a dataset's `provenance.txt` and records it into `--csv`, so a figure quoted from a committed summary carries the build it was measured on. A dataset without one is named as such rather than assumed current. |
 | 2026-08-25 | Every walk now writes `provenance.txt` beside its outcomes: the commit and a digest of the two definition files whose contents decide what it measured. Hooked into `CorpusFixture.Sweep` rather than into each walk, because a walk that has to remember is a walk that will not. |
