@@ -410,6 +410,7 @@ limit in [known-issues.md](../../docs/known-issues.md).
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | `cap.py` scores the reach prediction over the air scenarios, which is how it was written — *the cap holds back 3-10 % of all blocks in air*. It had been counting the vacuum anchor too, where the cap is expected to bind least, which dilutes the share by a quarter and scores a band nobody registered. Both figures print; the band is read against the air one. |
 | 2026-08-25 | `verdict.py` prints a dataset's `provenance.txt` and records it into `--csv`, so a figure quoted from a committed summary carries the build it was measured on. A dataset without one is named as such rather than assumed current. |
 | 2026-08-25 | Every walk now writes `provenance.txt` beside its outcomes: the commit and a digest of the two definition files whose contents decide what it measured. Hooked into `CorpusFixture.Sweep` rather than into each walk, because a walk that has to remember is a walk that will not. |
 | 2026-08-25 | Renamed `air.py`'s ratio column from *vs shipped* to *vs baseline*, and made it print which cell ships. The column compares every cell with the sweep's own control, conductivity x1 at a clock of 225 — which stopped being the shipped configuration when `C24` shipped x4 at 90, a row of the same table. The arithmetic was never wrong; the word was. |

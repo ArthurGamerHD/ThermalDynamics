@@ -33,6 +33,10 @@ DATA = sys.argv[1] if len(sys.argv) > 1 else "out/cap-2026-08-24"
 # rising wind. The same order `air.py` uses, so two reports of one experiment read alike.
 ORDER = ["vacuum-shadow", "surface-hot-noon", "storm-parked", "reentry"]
 
+# The scenario with no air in it. It is the walk's control and is not part of *in air*, which is how
+# the reach prediction is worded.
+ANCHOR = "vacuum-shadow"
+
 # The arm the walk ran, and the value `C3` is about. Read from the data rather than assumed: a
 # dataset walked at another cap must not be scored as though it were this one.
 OFF = 0
@@ -221,23 +225,45 @@ def main():
             print(f"        {delta:>10.4f} K  {key[0][:44]:44} {key[2]}")
 
     # ---- the reach ---------------------------------------------------------------------------
+    #
+    # **Scored over the air scenarios, because that is how the prediction was written**: *the cap
+    # holds back 3-10 % of all blocks in air*. The anchor is vacuum-shadow and the cap is expected
+    # to bind least there, so folding it in dilutes the share by a quarter and scores a band nobody
+    # registered. Both are printed, and the one the band is read against is the air one.
     floored = 0
     blocks = 0
+    air_floored = 0
+    air_blocks = 0
     control_floored = 0
+
     for _, control, capped in pairs:
         f = number(capped, "floored")
         b = number(capped, "blocks")
         if f is None or b is None:
             continue
+
         floored += f
         blocks += b
         control_floored += number(control, "floored") or 0
 
+        if capped.get("scenario") == ANCHOR:
+            continue
+
+        air_floored += f
+        air_blocks += b
+
     if blocks:
         share = 100.0 * floored / blocks
-        verdict(f"the reach: what a cap of {cap} holds back", None,
-                f"{floored:,.0f} of {blocks:,.0f} node-runs, {share:.2f} % — and the control "
-                f"floored {control_floored:,.0f}, which must be nought or it is not a control")
+        air_share = 100.0 * air_floored / air_blocks if air_blocks else 0.0
+        held = "?" if not air_blocks else (3.0 <= air_share <= 10.0)
+
+        verdict(f"the reach: what a cap of {cap} holds back", held,
+                f"in air, {air_floored:,.0f} of {air_blocks:,.0f} node-runs, {air_share:.2f} % "
+                f"against the 3-10 % predicted\n"
+                f"        over all four scenarios including the vacuum anchor, "
+                f"{floored:,.0f} of {blocks:,.0f}, {share:.2f} %\n"
+                f"        the control floored {control_floored:,.0f}, which must be nought or it "
+                f"is not a control")
 
 
 if __name__ == "__main__":
