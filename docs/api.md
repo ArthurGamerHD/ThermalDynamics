@@ -160,12 +160,26 @@ game session, and its two seams are meant to be used:
 * Keys will not change meaning within a major version. New keys may be added; missing keys mean an
   older build, so test for null after casting.
 
+**What moves the major, stated so a caller knows what the number is worth.** It moves when a caller
+written against the previous major could still bind and then be wrong: a key that goes away, a key
+whose signature changes — a widened `Func`, a `MyTuple` grown a field — or a key whose meaning or
+units change while its signature does not. A key that is *added* does not move it. The first two are
+checked against a recorded surface in `tests/Thermodynamics.Tests/ApiSurface.txt`, which also fails
+the suite if the version moves without a break, because a caller refused for nothing is a break too.
+See [document-of-intent.md](document-of-intent.md#what-the-version-number-governs-and-what-moves-it).
+
+**This number governs the delegate table and nothing else.** The mod carries no version of its own,
+and the three promises it makes to a world rather than to a caller — the save format, the retired
+definition names, a setting's name — sit under no number at all, because they are *never* rather
+than *not within a major*.
+
 ---
 
 ## Change log
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Said what moves the major version, which the page had told a caller to trust without saying what it was worth ([backlog.md](backlog.md) `B37`). It moves when a caller written against the previous major could still bind and then be wrong; an added key does not move it. Two of the three cases are now checked against a recorded surface. |
 | 2026-08-22 | Added the standard header and this change log. |
 | 2026-08-21 | Checked every link on this page against the files and headings it names. |
 | 2026-08-19 | Added what a grid vents against what it makes. Renamed the definition dials that said the wrong thing, and the API entries with them. |

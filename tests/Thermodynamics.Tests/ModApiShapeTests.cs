@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
 using Xunit;
@@ -92,6 +93,129 @@ namespace Thermodynamics.Tests
         private static string Normalise(string signature)
         {
             return Regex.Replace(signature, @"\s+", "");
+        }
+
+        /// <summary>
+        /// **What moves the API's major version, checked rather than described.**
+        ///
+        /// <para>
+        /// backlog.md `B37`: `ThermalApi.Version` is 1 and
+        /// api.md tells a caller to read it and refuse a major it was
+        /// not written against, so *keys do not change meaning within a major version* is a
+        /// promise with a referent. What was undeclared is which change moves it — and a removed
+        /// key, a widened signature and a grown `MyTuple` were all reachable without anybody
+        /// deciding, because `EveryEntryHasTheSignatureTheApiPageGivesIt` compares the table with
+        /// the page and neither of them with the number.
+        /// </para>
+        ///
+        /// <para>
+        /// **The rule is one sentence: the major moves when a caller written against the previous
+        /// major could still bind and then be wrong.** A key that goes away and a key whose
+        /// signature changes both do that — a caller binds by name and casts to the exact delegate
+        /// type, so a widened `Func` or a `MyTuple` with another field fails at the cast or, worse,
+        /// binds against a stale copy. A key that is *added* does not: a caller that has never
+        /// heard of it is unaffected.
+        /// </para>
+        ///
+        /// <para>
+        /// Meaning-without-signature — watts becoming kilowatts, a delegate returning `NaN` where
+        /// it returned zero — is the one this cannot see, and it is named in `ApiSurface.txt` so
+        /// that the file is where the whole rule lives rather than only the half a test can reach
+        /// (`R11`).
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void ApiVersionMovesWhenTheSurfaceBreaks()
+        {
+            string path = Path.Combine(RepoRoot(), "tests", "Thermodynamics.Tests",
+                "ApiSurface.txt");
+
+            Assert.True(File.Exists(path), "no recorded API surface at " + path);
+
+            Dictionary<string, string> recorded =
+                new Dictionary<string, string>(StringComparer.Ordinal);
+            int recordedVersion = 0;
+
+            foreach (string line in File.ReadAllLines(path))
+            {
+                string trimmed = line.Trim();
+                if (trimmed.Length == 0 || trimmed.StartsWith("#", StringComparison.Ordinal)) continue;
+
+                int split = trimmed.IndexOf('=');
+                Assert.True(split > 0, "unreadable line in ApiSurface.txt: " + trimmed);
+
+                string name = trimmed.Substring(0, split);
+                string value = trimmed.Substring(split + 1);
+
+                if (name == "version")
+                {
+                    recordedVersion = int.Parse(value, CultureInfo.InvariantCulture);
+                    continue;
+                }
+
+                recorded[name] = value;
+            }
+
+            Assert.True(recorded.Count > 5,
+                "the recorded surface holds " + recorded.Count + " entries, so this check would "
+                + "pass whatever the table said");
+
+            Dictionary<string, string> declared = Declared();
+            List<string> breaking = new List<string>();
+            List<string> added = new List<string>();
+
+            foreach (KeyValuePair<string, string> entry in recorded)
+            {
+                string signature;
+                if (!declared.TryGetValue(entry.Key, out signature))
+                {
+                    breaking.Add(entry.Key + " is gone");
+                    continue;
+                }
+
+                if (signature != entry.Value)
+                {
+                    breaking.Add(entry.Key + " was " + entry.Value + " and is " + signature);
+                }
+            }
+
+            foreach (KeyValuePair<string, string> entry in declared)
+            {
+                if (!recorded.ContainsKey(entry.Key)) added.Add(entry.Key);
+            }
+
+            int current = DeclaredVersion();
+
+            // **An addition is not a break**, and saying so here is what keeps the file honest:
+            // without this the only way to add a key would be to move the major, and the rule the
+            // page states would quietly stop being the rule the tree follows.
+            if (breaking.Count == 0)
+            {
+                Assert.True(current == recordedVersion,
+                    "the API surface has not broken — " + added.Count + " key(s) added, nothing "
+                    + "removed or reshaped — but ThermalApi.Version is " + current
+                    + " against the recorded " + recordedVersion + ". A major that moves without a "
+                    + "break is a caller refused for nothing.");
+                return;
+            }
+
+            breaking.Sort(StringComparer.Ordinal);
+            Assert.True(current > recordedVersion,
+                "the API surface broke and ThermalApi.Version is still " + current
+                + ". Either put it back or move the version and regenerate ApiSurface.txt in the "
+                + "same commit:\n  " + string.Join("\n  ", breaking.ToArray()));
+        }
+
+        /// <summary>`ThermalApi.Version`, read from the source rather than linked to.</summary>
+        private static int DeclaredVersion()
+        {
+            string source = File.ReadAllText(Path.Combine(RepoRoot(),
+                "Data", "Scripts", "Thermodynamics", "ThermalApi.cs"));
+
+            Match match = Regex.Match(source, @"public\s+const\s+int\s+Version\s*=\s*(\d+)");
+            Assert.True(match.Success, "ThermalApi.cs declares no `public const int Version`");
+
+            return int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
         }
 
         [Fact]

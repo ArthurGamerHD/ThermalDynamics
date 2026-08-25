@@ -927,6 +927,39 @@ directions matter, and the pattern the code follows is the same in all four plac
 not change meaning within a major version, new keys may be added, and a missing key means an older
 build* — and the same reading applies to the other three.
 
+### What the version number governs, and what moves it
+
+**`ThermalApi.Version` governs the delegate table and nothing else.** It is `1`, it is served as
+`ApiVersion`, and [api.md](api.md#binding) tells a caller to read it and refuse a major it was not
+written against. The mod itself carries no number: `modinfo.sbmi` has a workshop id and no version,
+no build is stamped, and the only other version string in the tree belongs to the vendored
+`NetworkAPI`. That is the right shape — a number exists where somebody outside has to make a
+decision from it, and nowhere else.
+
+**The major moves when a caller written against the previous major could still bind and then be
+wrong.** That one sentence decides every case that used to be undeclared:
+
+| Change | Major moves | Why |
+| --- | --- | --- |
+| a key goes away | **yes** | the caller's lookup fails, or it silently keeps a stale delegate |
+| a key's signature changes — a widened `Func`, a `MyTuple` grown a field | **yes** | a caller casts to the exact delegate type |
+| a key's meaning or units change while its signature does not | **yes** | the worst case: it binds, runs and is wrong |
+| a key is added | no | a caller that has never heard of it is unaffected |
+
+**Two of the three are checked** (`ApiVersionMovesWhenTheSurfaceBreaks`): the published surface is
+recorded in `ApiSurface.txt` beside the major it belongs to, and a removal or a reshape fails the
+suite unless `ThermalApi.Version` has gone up in the same commit. A version that moves *without* a
+break fails too, because a caller refused for nothing is also a break. The third — meaning without
+signature — is the one no test can see, and it is written into that file so the whole rule lives in
+one place rather than only the half a check can reach.
+
+**The other three promises sit under no number, and they are stronger for it.** The save format
+grows by adding sections rather than by moving its marker, the retired definition names are read for
+as long as anyone is reading, and a setting's name is its address. None of those has a boundary
+because none of them is planned to have one: they are *never* rather than *not within a major*. If
+one ever needs to break, it needs its own statement here, not a bump to a number that governs
+something else.
+
 ### To a block it has never heard of: derive, do not guess
 
 **A definition is optional.** A block from any mod gets thermal properties derived from what the
@@ -1070,38 +1103,17 @@ holds the things where the intent is stated and the route is not; here the inten
 None of them is a defect and most may want no more than a sentence — but the sentence is not there,
 and until it is, the answer is whatever the next change happens to imply.
 
-**Numbers 1, 2, 3, 5 and 6 are settled and their numbers are not reused**, because the pages that cite
+**Numbers 1, 2, 3, 4, 5 and 6 are settled and their numbers are not reused**, because the pages that cite
 these entries cite them by number. All three were answered on 2026-08-25: *what a player does with
 their hands* is [Acting on heat by hand](#acting-on-heat-by-hand--out-of-scope-and-priced), *what
 the mod's blocks cost to build* is
 [What a block costs to build](#what-a-block-costs-to-build--what-the-game-charges-and-nothing-invented),
 *the visual channel, and who can read it* is
 [Who the glow is for](#who-the-glow-is-for--brightness-and-colour-as-a-refinement), *what
-language the mod speaks* is [What language the mod speaks](#what-language-the-mod-speaks), and
-*creative mode, and the tools that skip the game* is
-[When the game's own rules are suspended](#when-the-games-own-rules-are-suspended).
-
-### 4. What a version boundary would be for
-
-**The API has one and it is the only thing that does.** `ThermalApi.Version` is `1`, it is served as
-`ApiVersion`, and [api.md](api.md#binding) tells a caller to read it and refuse a major it was not
-written against. So the guarantee that *keys do not change meaning within a major version* has a
-referent after all — which is more than the rest of the mod has: `modinfo.sbmi` carries a workshop
-id and no number, no build is stamped, and the only other version string in the tree is the vendored
-`NetworkAPI`'s `2.0.0`, which is somebody else's.
-
-**What is undeclared is what would move it, and what it governs.** Nothing says which change to the
-delegate table is a major one — a removed key plainly, a key whose meaning shifts plainly, but a
-signature widened, a `MyTuple` grown a field, a delegate that starts returning `NaN` where it
-returned `0` are all reachable without anybody deciding. And nothing says whether the *other three*
-promises in [what the mod promises the things around it](#what-the-mod-promises-the-things-around-it)
-sit under that number or under nothing at all: the save format is versioned separately and
-deliberately grows without moving its marker, the retired definition names are promised for as long
-as anyone is reading, and a setting's name has no stated boundary of any kind.
-
-The honest reading today is *nothing has ever broken*, which is a fine position to hold and a poor
-one to hold accidentally. **Nothing checks it either** — `ModApiShapeTests` pins the shape of the
-table, and no test relates a change in that shape to the number a caller is told to trust.
+language the mod speaks* is [What language the mod speaks](#what-language-the-mod-speaks), *creative mode, and the tools that skip the game* is
+[When the game's own rules are suspended](#when-the-games-own-rules-are-suspended), and *what a
+version boundary would be for* is
+[What the version number governs](#what-the-version-number-governs-and-what-moves-it).
 
 ### 7. Heat that leaves the world
 
@@ -1193,6 +1205,7 @@ as a *second* change rather than as a substitute. [backlog](backlog.md) `D19`.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | **Said what the version number governs and what moves it, which was the fourth void.** `ThermalApi.Version` governs the delegate table and nothing else, and the major moves when a caller written against the previous major could still bind and then be wrong — which decides a removed key, a reshaped signature and a changed meaning alike, and leaves an added key alone. Two of the three are now checked against a recorded surface; the third is written where the rule lives. The other three promises sit under no number because they are *never* rather than *not within a major*. |
 | 2026-08-25 | **Took a position on what heat does when the game's own rules are suspended, which was the third void.** Creative suspends scarcity and heat is physics: the game keeps damaging, accelerating and colliding blocks in a creative world and only stops charging for them, so a hull that would cook in survival cooks in creative because it is the same hull. The lever is a setting rather than a mode. `SuspendedRulesTests` pins that nothing in `Data/Scripts` reads the game mode, the creative flags or the creative tools. |
 | 2026-08-25 | **Took a position on what language the mod speaks, which was the sixth void.** The boundary follows from a commitment already on this page rather than from a preference: the readouts are drawn through Rich HUD so that nothing mod-shaped announces itself, and the game's own HUD is localised. Counted, the surface inside the game's HUD is **47 distinct strings** — four per cent of what the mod writes — against 248 in the settings menu, 90 in chat replies, 113 in debug overlays and 604 in telemetry files, all of which are the mod talking about itself and stay English. The work is blocked on one thing only a session can answer, which is `B39`. |
 | 2026-08-25 | **Took a position on who the glow is for, which was the fifth void, and the measurement made it an easier question than it looked.** The colour channel moves less than a just-noticeable difference across their own glow band for **88 of the 101** block types in the installed catalogue — not only the 28 pinned under the Draper point — and the best any block manages is ΔE 4.76. So brightness is the channel and colour is a refinement, the warning is legible without colour, the sound cue is a redundant channel on purpose from here, and no fact may be carried by hue alone. |
