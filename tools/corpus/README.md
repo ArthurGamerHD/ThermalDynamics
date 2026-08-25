@@ -181,6 +181,13 @@ rest of the suite run in parallel again.
 had just started, killing the recovery along with the corpse. Use a pattern that cannot match the new
 invocation.
 
+**And watch what a `pgrep` pattern matches**, which is the same trap wearing the other hat. A shell
+loop written as `until ! pgrep -f CorpusCapWalk; do sleep 120; done` contains the string it is
+looking for, so it matches *itself* and never exits — and a later `pgrep` run to ask whether the
+walk is still going answers **yes** long after it finished. On 2026-08-25 five such waiters were
+left running after a walk that had ended cleanly. Wait on something the walk owns rather than on its
+name: the last line of `progress.txt`, or the `Passed!` in its log.
+
 **Cap the memory.** An uncapped run has taken the machine down with it; wrap it in
 `systemd-run --scope -p MemoryMax=…` so the run dies instead of the session.
 
@@ -410,6 +417,7 @@ limit in [known-issues.md](../../docs/known-issues.md).
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Recorded the `pgrep` half of the pattern-matching trap beside the `pkill` half: a shell loop that waits on a walk by name contains the name, so it matches itself, never exits, and makes a later `pgrep` answer that the walk is still running after it has finished. |
 | 2026-08-25 | `cap.py` splits its cost figure on whether the control had actually stopped moving, beside the registered statistic. The settle test is an average over a chunk and tolerates 0.25 K a minute; the split uses the instantaneous rate at the end. On the cap walk's first 360 ships the two differ by two orders of magnitude, which is a statement about the instrument rather than about the cap. |
 | 2026-08-25 | `cap.py` now scores all four registered predictions rather than three. The benefit had been scored only as *does `G6` pass*, which is the criterion and not the prediction — the pre-registration's falsifier runs both ways, and a p99 under 1.5 M would falsify the projection while the criterion passed. The cost had printed its figures and judged nothing. Both bands live in `scoring.py` beside the decision rule, and the two are kept apart: a prediction can be falsified while the decision is unchanged. |
 | 2026-08-25 | `cap.py` scores the reach prediction over the air scenarios, which is how it was written — *the cap holds back 3-10 % of all blocks in air*. It had been counting the vacuum anchor too, where the cap is expected to bind least, which dilutes the share by a quarter and scores a band nobody registered. Both figures print; the band is read against the air one. |
