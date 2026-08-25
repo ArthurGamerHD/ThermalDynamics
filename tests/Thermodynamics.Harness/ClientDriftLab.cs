@@ -28,7 +28,7 @@ namespace Thermodynamics.Harness
     /// </para>
     ///
     /// <para>
-    /// See known-issues.md, and [backlog.md](../../docs/backlog.md) `B4`.
+    /// See known-issues.md, and backlog.md `B4`.
     /// </para>
     /// </summary>
     public static class ClientDriftLab
@@ -101,7 +101,7 @@ namespace Thermodynamics.Harness
         /// handed and discards credit above one step's worth, which cannot bind at a constant
         /// sixtieth at any legal `Frequency`; the second accumulator that did drop a backlog was on
         /// `SimulationScheduler`, was called by no shipped path, and has been removed
-        /// ([backlog.md](../../docs/backlog.md) `F23`).
+        /// (backlog.md `F23`).
         /// </para>
         ///
         /// <para>

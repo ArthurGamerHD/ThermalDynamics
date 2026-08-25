@@ -19,7 +19,7 @@ namespace Thermodynamics.Harness
     /// <para>
     /// So a rig states the length it needs at the clock it was tuned at, and this converts. The
     /// same reasoning as <see cref="ScenarioRunner.DurationScale"/>, which does it for scenarios,
-    /// and [backlog.md](../../docs/backlog.md) `C8`.
+    /// and backlog.md `C8`.
     /// </para>
     /// </summary>
     public static class LabClock

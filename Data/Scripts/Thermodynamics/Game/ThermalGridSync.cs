@@ -18,8 +18,8 @@ namespace Thermodynamics
     /// saved at, so for 150 to 305 s it shows a block on the wrong side of its own critical
     /// temperature — against a damage event that runs a median 37 s from the load to the first
     /// block lost. The readout was wrong about the one thing it is for, for longer than the thing
-    /// lasted. See [known-issues.md](../../../../docs/known-issues.md) and
-    /// [backlog.md](../../../../docs/backlog.md) `B30`.
+    /// lasted. See known-issues.md and
+    /// backlog.md `B30`.
     /// </para>
     ///
     /// <para>

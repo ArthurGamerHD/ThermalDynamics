@@ -82,7 +82,7 @@ namespace Thermodynamics.Tests
         /// <para>
         /// The intent is that a feature is configured as a list of options from `off` to
         /// `realistic`, and the settings surface is not that shape yet — so
-        /// [configuration.md](../../docs/configuration.md) carries an inventory of how far each
+        /// configuration.md carries an inventory of how far each
         /// mechanism is from it. **An inventory that a new mechanism can be added behind is a
         /// document that says the gap is smaller than it is**, which is the drift this catches:
         /// every `Enable*` switch has to appear in the inventory section, by name.
@@ -144,7 +144,7 @@ namespace Thermodynamics.Tests
         /// invisible to it, because it has no setting to enumerate. Wind was exactly that until
         /// 2026-08-24 — a whole model with ends and no `off`, listed in this very inventory with
         /// its own row saying so, and passing every check the suite had (`C7`,
-        /// [backlog.md](../../docs/backlog.md) `B31`).
+        /// backlog.md `B31`).
         /// </para>
         ///
         /// <para>

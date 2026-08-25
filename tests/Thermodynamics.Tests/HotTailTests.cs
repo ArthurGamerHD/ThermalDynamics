@@ -23,7 +23,7 @@ namespace Thermodynamics.Tests
     /// hand-made list, because the claim that matters — the budget keeps the blocks nearest failing
     /// — is about an ordering over blocks with different critical temperatures, and a rig where
     /// every block fails at the same temperature cannot tell that ordering from ordering by kelvin
-    /// (`E7`). See [backlog.md](../../docs/backlog.md) `B4`.
+    /// (`E7`). See backlog.md `B4`.
     /// </para>
     /// </summary>
     [Trait("speed", "slow")]

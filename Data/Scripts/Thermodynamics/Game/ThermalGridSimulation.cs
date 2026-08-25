@@ -66,7 +66,7 @@ namespace Thermodynamics
         /// of every pump. Returns false when this grid has nothing to do.
         ///
         /// <para>
-        /// **The split exists so a fleet can be stepped in parallel** — [backlog.md](../../docs/backlog.md)
+        /// **The split exists so a fleet can be stepped in parallel** — backlog.md
         /// `D19`, measured at 10.17× on 32 threads — and it is the boundary rather than the
         /// threading that matters: everything that touches the game happens here or in
         /// <see cref="PublishTick"/>, and <see cref="SolveTick"/> touches nothing outside its own

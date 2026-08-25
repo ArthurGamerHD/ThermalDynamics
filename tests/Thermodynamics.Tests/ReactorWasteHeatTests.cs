@@ -74,7 +74,7 @@ namespace Thermodynamics.Tests
         /// its faces on open space, which no arrangement can improve on, and the 300 MW one goes
         /// past critical once wrapped in hull, which is what makes where it is installed a
         /// decision. 0.01 was the only candidate where both held —
-        /// [balance.md](../../docs/balance.md), Reactor waste heat.
+        /// balance.md, Reactor waste heat.
         /// </para>
         ///
         /// <para>
@@ -84,7 +84,7 @@ namespace Thermodynamics.Tests
         /// 50.7 K rather than 355 K**, and there is no fraction that restores the old shape: at
         /// 0.02 the skinned case does cook, and so do two of the four bare, which is the bound the
         /// page calls unbuildable. So the signal is smaller rather than moved, and what to do about
-        /// it is [backlog.md](../../docs/backlog.md) `C28`.
+        /// it is backlog.md `C28`.
         /// </para>
         ///
         /// <para>

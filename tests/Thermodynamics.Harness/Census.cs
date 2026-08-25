@@ -45,7 +45,7 @@ namespace Thermodynamics.Harness
             /// Every tier was built with <c>BlockModel.Solid</c>, which mounts everywhere, so the
             /// lightest band — 20 kg against neighbours of 440 — carried six joints where its own
             /// definition declares one. That is the whole of the gap between the census hull and
-            /// the population it stands in for ([backlog.md](../../docs/backlog.md) `C26`), and it
+            /// the population it stands in for (backlog.md `C26`), and it
             /// is `M11`: the tier describes the block it was measured from.
             /// </para>
             ///
@@ -495,7 +495,7 @@ namespace Thermodynamics.Harness
         /// buried block's demand is all conduction and quadrupled with the pace while a real ship's
         /// exposed one is mostly convection and fell with the clock: the hull left the population it
         /// stands in for at 36.75 substeps against a corpus maximum of 22.41. That is
-        /// [backlog.md](../../docs/backlog.md) `C26`, and this is `M11` — the synthetic ship is
+        /// backlog.md `C26`, and this is `M11` — the synthetic ship is
         /// refreshed against the field.
         /// </para>
         ///
@@ -767,7 +767,7 @@ namespace Thermodynamics.Harness
         /// </para>
         ///
         /// <para>
-        /// It exists for the degraded-input sweep ([backlog.md](../../docs/backlog.md) `F17`),
+        /// It exists for the degraded-input sweep (backlog.md `F17`),
         /// where thrust is the one input the engine *predicts* on a client rather than replicating,
         /// so a client's is its own guess about a ship whose physics it is not running.
         /// </para>

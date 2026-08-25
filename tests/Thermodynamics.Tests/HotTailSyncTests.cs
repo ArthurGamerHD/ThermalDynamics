@@ -22,7 +22,7 @@ namespace Thermodynamics.Tests
     /// it would be applied to whichever hull received it, because block positions are only an
     /// identity inside a grid. And a ledger that is never pruned costs one entry per grid that has
     /// ever existed per player who has ever joined — invisible in a session with one player, and a
-    /// leak on the servers this mod is for. See [backlog.md](../../docs/backlog.md) `B30`.
+    /// leak on the servers this mod is for. See backlog.md `B30`.
     /// </para>
     /// </summary>
     public class HotTailSyncTests

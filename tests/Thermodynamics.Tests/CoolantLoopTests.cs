@@ -218,7 +218,7 @@ namespace Thermodynamics.Tests
         /// client receives blocks in whatever order the engine streams them. If the signature moved
         /// with build order, a client's loop would be a *different loop* from the server's, and a
         /// saved or replicated coolant temperature would land on nothing
-        /// ([backlog.md](../../docs/backlog.md) `F22`).
+        /// (backlog.md `F22`).
         /// </para>
         /// </summary>
         [Fact]

@@ -83,7 +83,7 @@ namespace Thermodynamics.Harness
         /// **Thermal time runs at `HeatTimeScale`, and a scenario clock does not.** A scenario cut
         /// to 3,600 s reaches equilibrium in the shipped world and ends a 225×-slower one while it
         /// is still climbing, so a column of such runs is a column of transients read as
-        /// equilibria — [backlog.md](../../docs/backlog.md) `C8`, and `M1` in practice: two runs
+        /// equilibria — backlog.md `C8`, and `M1` in practice: two runs
         /// stopped on different physical states are not comparable however alike their clocks look.
         /// A caller comparing across clocks sets this to the ratio between them.
         /// </para>

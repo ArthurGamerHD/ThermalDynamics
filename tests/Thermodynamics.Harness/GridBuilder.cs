@@ -115,7 +115,7 @@ namespace Thermodynamics.Harness
         /// **A rig that wants a heat source should say so in watts of heat.** Saying it in watts of
         /// *output* couples the rig to a block's efficiency, which is how every scenario in this
         /// repository came to be quoted off a reactor wasting a quarter of its output where the
-        /// shipped one wastes a hundredth ([backlog.md](../../docs/backlog.md) `C4`). A rig that is
+        /// shipped one wastes a hundredth (backlog.md `C4`). A rig that is
         /// *about* a reactor still drives it at a real rating through <see cref="Producing"/>; this
         /// is for the ones where the block is only a place to put watts.
         /// </para>
@@ -195,7 +195,7 @@ namespace Thermodynamics.Harness
         /// keeps the model it was placed with, so the conduction graph, the surfaces, the rooms and
         /// the physics are identical: only the indices differ. That is what makes it the clean test
         /// of a correction that is keyed on position rather than on index
-        /// ([backlog.md](../../docs/backlog.md) `F22`).
+        /// (backlog.md `F22`).
         /// </para>
         ///
         /// <para>

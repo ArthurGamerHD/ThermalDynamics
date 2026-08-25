@@ -334,7 +334,7 @@ namespace Thermodynamics.Tests
         /// <para>
         /// The solver used to apply the whole overshoot as damage on **every update**, so at the
         /// shipped `Frequency` of 8 the dial bit eight times harder than it does now. That is one
-        /// of the three changes [backlog.md](../../docs/backlog.md) `C2` says the authored values
+        /// of the three changes backlog.md `C2` says the authored values
         /// predate — and re-running the shipped definitions at eight times the dial shows restoring
         /// their authored intent would put the median block's whole life past its rating inside ten
         /// seconds, which is the failure `C11` was opened for and `G5` forbids.

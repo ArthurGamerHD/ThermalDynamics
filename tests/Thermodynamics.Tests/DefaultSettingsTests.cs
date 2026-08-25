@@ -67,7 +67,7 @@ namespace Thermodynamics.Tests
         /// flying speed. It is worth 0.028 K on the hottest block, which is below every instrument
         /// this repository has, so by `P14` the cheap form simply *is* the model and there is
         /// nothing to switch — see the comment on `MaxSubsteps` below, and
-        /// [backlog.md](../../docs/backlog.md) `C19`.
+        /// backlog.md `C19`.
         /// </para>
         /// </summary>
         [Fact]
@@ -115,7 +115,7 @@ namespace Thermodynamics.Tests
             // `P14` exists to refuse. `MaxSubstepsPerBlock` is the same kind of approximation at
             // 0.607 K on the worst-placed block, which is twenty times more and on the other side
             // of what a player can see — so that one is a switch and this one is the model.
-            // ([backlog.md](../../docs/backlog.md) `C19`, and stiffness.md, What refusing the
+            // (backlog.md `C19`, and stiffness.md, What refusing the
             // demand costs.)
             Assert.True(shipped.MaxSubsteps >= 64,
                 "MaxSubsteps of " + shipped.MaxSubsteps + " refuses the stability estimate in more"

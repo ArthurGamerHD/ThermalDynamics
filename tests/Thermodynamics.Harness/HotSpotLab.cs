@@ -147,7 +147,7 @@ namespace Thermodynamics.Harness
         /// requires the cell beyond it to reach the outside — so a block standing in a void inside a
         /// pressurised hull has no external face at all. If it also bolts to nothing it reads as
         /// having no exit, and it has one: `ThermalSolver.BuildRoomLinks` gives every node with a
-        /// face onto a room a link to that room's air. See [backlog.md](../../docs/backlog.md)
+        /// face onto a room a link to that room's air. See backlog.md
         /// `F14`.
         /// </summary>
         public static HashSet<int> NodesTouchingAir(ThermalSolver solver)

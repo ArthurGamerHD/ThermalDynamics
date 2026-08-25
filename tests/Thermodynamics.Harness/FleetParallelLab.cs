@@ -10,7 +10,7 @@ namespace Thermodynamics.Harness
 {
     /// <summary>
     /// **Does solving one grid per thread pay, and from what fleet size?** The measurement
-    /// [backlog.md](../../docs/backlog.md) `D19` asks for before anything is threaded.
+    /// backlog.md `D19` asks for before anything is threaded.
     ///
     /// <para>
     /// The two figures the row carries point opposite ways: eight thousand blocks solve in

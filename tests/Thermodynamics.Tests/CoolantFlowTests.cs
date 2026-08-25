@@ -512,7 +512,7 @@ namespace Thermodynamics.Tests
         /// approximates rather than diverges.**
         ///
         /// <para>
-        /// It did diverge, and that was [backlog.md](../../docs/backlog.md) `A10`. Conduction and
+        /// It did diverge, and that was backlog.md `A10`. Conduction and
         /// the environment each have an overshoot clamp — `ClampConductionOvershoot` and
         /// `ClampEnvironmentOvershoot`, both on by default — which is what makes the shipped breach
         /// `C19` measured worth 0.028 K instead of a number. The coolant path had the pairwise half
@@ -536,7 +536,7 @@ namespace Thermodynamics.Tests
         /// **nine**, so on a hull carrying nothing stiffer the loop is what sets the demand. On a
         /// census hull it is not — light fittings set 23 either way, which `tests/README.md`
         /// measures — so this is a claim about a hull with a loop and little else. The ladder is in
-        /// [stiffness.md](../../docs/stiffness.md), What refusing the demand costs, and
+        /// stiffness.md, What refusing the demand costs, and
         /// `bench ceiling --fixture rings` is what draws it.
         /// </para>
         /// </summary>

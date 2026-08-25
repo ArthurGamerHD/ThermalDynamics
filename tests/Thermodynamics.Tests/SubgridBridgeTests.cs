@@ -10,7 +10,7 @@ namespace Thermodynamics.Tests
     /// A blueprint's subgrids are one machine, and heat crosses between them.
     ///
     /// <para>
-    /// [backlog](../../docs/backlog.md) `F12` said the opposite — that "subgrids are read as
+    /// backlog.md `F12` said the opposite — that "subgrids are read as
     /// separate ships" and "the lab does not reassemble them", so every corpus figure was taken on
     /// a hull the game would not have simulated that way. It is not true, and had not been for as
     /// long as `ShipAssembly` existed: 747 of the first 1,002 ships of the 2026-08-22 sweep hold

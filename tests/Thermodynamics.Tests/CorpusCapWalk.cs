@@ -11,13 +11,13 @@ namespace Thermodynamics.Tests
     /// and with `MaxSubstepsPerBlock 6`.
     ///
     /// <para>
-    /// **Why it exists.** [backlog.md](../../docs/backlog.md) `C3` asks whether that cap should be
+    /// **Why it exists.** backlog.md `C3` asks whether that cap should be
     /// a default and is undecided only because what it costs has been measured on *one hull* —
     /// 0.028 K on the worst-placed block of a driven census hull. `G6`'s cost half fails in air
     /// (`F11`), and the cap is the one lever that lowers a step's work rather than moving it into
     /// the frame. They are the same question, and this is the measurement. What the walk is
     /// expected to say was written into
-    /// [balance-lab.md](../../docs/balance-lab.md#what-a-per-block-cap-does-to-the-population-written-before-it-is-measured)
+    /// balance-lab.md
     /// with its falsifiers before any of this ran (`E1`, `E11`).
     /// </para>
     ///
@@ -53,7 +53,7 @@ namespace Thermodynamics.Tests
         ///
         /// **Six rather than the four the measurement supports on its own**, because six is the
         /// value `C3` has carried since it was re-measured at `C24`'s pair and is what a decision
-        /// would ship. The reach curve in [stiffness.md](../../docs/stiffness.md) says a cap of 8
+        /// would ship. The reach curve in stiffness.md says a cap of 8
         /// holds back 0.92 % of the corpus's blocks and a cap of 4 holds back 23.22 %, so six is
         /// inside the band where the population's own answer is unmeasured, which is the point.
         /// </summary>

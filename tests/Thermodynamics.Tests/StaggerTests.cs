@@ -7,7 +7,7 @@ namespace Thermodynamics.Tests
 {
     /// <summary>
     /// **What spreading a step across frames costs, and what staggering whole steps would cost
-    /// instead** — the trade [backlog.md](../../docs/backlog.md) `D14` asks to re-decide.
+    /// instead** — the trade backlog.md `D14` asks to re-decide.
     ///
     /// <para>
     /// Both schedules do identical arithmetic over the same nodes in the same order; only the
@@ -42,7 +42,7 @@ namespace Thermodynamics.Tests
         /// fifth, so a floor of a third is already several times the largest effect either could
         /// find and past it there is nothing to see rather than something small. Refused in
         /// practice at load average 37 with a corpus walk on every core, where the spread reaches
-        /// 500 % ([backlog.md](../../docs/backlog.md) `A11`).
+        /// 500 % (backlog.md `A11`).
         /// </para>
         /// </summary>
         private const double UnreadableFloor = 0.30d;
@@ -134,7 +134,7 @@ namespace Thermodynamics.Tests
         /// computed from repeat-to-repeat spread cannot see it — which is how this failed at a
         /// floor of 6 % with the lump reading 0.103 ms at four grids against 0.289 ms at
         /// sixty-four, an hour after the refusal gate was added to catch exactly this
-        /// ([backlog.md](../../docs/backlog.md) `A11`).
+        /// (backlog.md `A11`).
         /// </para>
         ///
         /// <para>

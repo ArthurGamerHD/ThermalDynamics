@@ -39,7 +39,7 @@ namespace Thermodynamics.Core
     ///
     /// <para>
     /// **Separate from the codec rather than folded into its header**, because the codec's format
-    /// is what [known-issues.md](../../../../../docs/known-issues.md) quotes bandwidth figures
+    /// is what known-issues.md quotes bandwidth figures
     /// against. Ten bytes of envelope per packet is a constant that can be stated; a changed record
     /// format would make every measured figure in that table quietly wrong (`P2`).
     /// </para>

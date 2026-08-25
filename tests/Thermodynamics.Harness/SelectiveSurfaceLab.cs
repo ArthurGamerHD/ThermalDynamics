@@ -8,7 +8,7 @@ namespace Thermodynamics.Harness
 {
     /// <summary>
     /// **What a selective surface on the radiator would be worth**, which is the measurement
-    /// [backlog.md](../../docs/backlog.md) `C15` asks for before anyone authors one.
+    /// backlog.md `C15` asks for before anyone authors one.
     ///
     /// <para>
     /// `SolarAbsorptivity` is separate from `Emissivity` and no shipped block declares one, so

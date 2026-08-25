@@ -28,7 +28,7 @@ namespace Thermodynamics.Core
         /// <para>
         /// **An `int[6]` cost 48 bytes a node to hold six small counts** — the array's header and
         /// the reference to it, for 24 bytes of payload
-        /// ([backlog.md](../../../../docs/backlog.md) `E2`). Ten bits a face holds 1,023, which is
+        /// (backlog.md `E2`). Ten bits a face holds 1,023, which is
         /// larger than any face of any block the game has: the widest vanilla block is ten cells
         /// across, so a hundred is the most a single face can carry.
         /// </para>

@@ -14,7 +14,7 @@ namespace Thermodynamics.Tests
     /// </para>
     ///
     /// <para>
-    /// The cap tables in [stiffness.md](../../docs/stiffness.md) were taken at <c>Frequency 4</c>
+    /// The cap tables in stiffness.md were taken at <c>Frequency 4</c>
     /// and read for a year as if they described the shipped default, which had moved to
     /// <c>Frequency 8</c>. Every speed-up on the page was therefore about twice what a default
     /// world would see, and the backlog item arguing for a shipped cap was reasoned from it. The

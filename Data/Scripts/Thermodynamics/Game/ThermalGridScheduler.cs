@@ -58,7 +58,7 @@ namespace Thermodynamics
         /// </para>
         ///
         /// <para>
-        /// **Measured before it was built** ([backlog.md](../../docs/backlog.md) `D19`): a 242-grid
+        /// **Measured before it was built** (backlog.md `D19`): a 242-grid
         /// fleet is **10.17×** faster on 32 threads and 7.09× on eight, for a hand-off of 1.6–6.8 µs
         /// against a grid's own 0.54 ms — and an uneven fleet gives 3.35×, because a frame cannot
         /// finish before its largest grid does. One grid alone is 0.99×, so this is a fleet's

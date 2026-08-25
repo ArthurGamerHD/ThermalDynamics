@@ -23,7 +23,7 @@ namespace Thermodynamics.Tests
     /// 2026-08-20 fleet dump — flown in an atmosphere averaging 0.73 air density — `SmallLight`
     /// demands 22.7 substeps at its worst with 3 % of that demand coming from conduction, and
     /// 12,764 of 123,784 blocks are stiff mostly through radiation and convection. See
-    /// [stiffness.md](../../docs/stiffness.md).
+    /// stiffness.md.
     /// </para>
     /// </summary>
     public class DecorativeStiffnessTests

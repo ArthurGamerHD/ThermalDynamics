@@ -38,7 +38,7 @@ namespace Thermodynamics.Core
         /// **A map is written once and then read for the life of the grid**, and a dictionary keyed
         /// on `Vector3I` costs about 31 bytes a cell to hold twelve bytes of answer — 8.7 MB at
         /// 126,000 blocks and 47 at half a million, which is the row that still climbs with grid
-        /// size ([backlog.md](../../../../docs/backlog.md) `E3`). Frozen into a sorted `long[]` of
+        /// size (backlog.md `E3`). Frozen into a sorted `long[]` of
         /// cell keys and a parallel `int[]` of rooms, the same answer is twelve bytes a cell and a
         /// binary search over contiguous memory rather than a hash and a bucket chase.
         /// </para>

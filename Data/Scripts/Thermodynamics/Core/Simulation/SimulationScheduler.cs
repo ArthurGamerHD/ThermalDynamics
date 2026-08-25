@@ -12,7 +12,7 @@ namespace Thermodynamics.Core
     /// step-credit accumulator — `StepsDue`, `WouldStep` and the frame-length arithmetic under
     /// them — that no shipped path ever called. Two pages and both client labs described *that*
     /// mechanism as the live one, so a degraded-input row named a backlog drop the mod cannot
-    /// perform. Removed 2026-08-24; see [backlog.md](../../../../../docs/backlog.md) `F23`.
+    /// perform. Removed 2026-08-24; see backlog.md `F23`.
     /// </para>
     ///
     /// <para>

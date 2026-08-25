@@ -10,7 +10,7 @@ namespace Thermodynamics.Tests
 {
     /// <summary>
     /// **Whether one grid per thread is safe today**, which is the half of
-    /// [backlog.md](../../docs/backlog.md) `D19` a test can settle without a session.
+    /// backlog.md `D19` a test can settle without a session.
     ///
     /// <para>
     /// The mod is not threaded and the intent is that it should be. Two things have to be true

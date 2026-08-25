@@ -17,7 +17,7 @@ namespace Thermodynamics.Tests
     /// vacuum, and projected through the panel's own air-to-vacuum ratio it lands near four million
     /// against the four million the allowance grants (`C27`). A projection of a projection is
     /// standing where a measurement belongs, and this is the measurement.
-    /// [backlog.md](../../docs/backlog.md) `F11`.
+    /// backlog.md `F11`.
     /// </para>
     ///
     /// <para>
@@ -30,7 +30,7 @@ namespace Thermodynamics.Tests
     ///
     /// <para>
     /// **What it judges, and what it only records.** The population criteria are scored downstream
-    /// by `verdict.py` against the markers written in [balance-lab.md](../../docs/balance-lab.md),
+    /// by `verdict.py` against the markers written in balance-lab.md,
     /// which is where they belong and where they were written before any of this data existed
     /// (`E1`, `E11`). What this walk asserts is the two things only a run in air can check — that
     /// the convection path actually carried watts, and that no ship is *cheaper* in air than in

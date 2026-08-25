@@ -13,7 +13,7 @@ namespace Thermodynamics.Tests
     /// <para>
     /// The solver kept a `Dictionary&lt;long, ThermalNode&gt;` from block key to node — about 49
     /// bytes a block, measured, for an answer the block can hold in four
-    /// ([backlog.md](../../docs/backlog.md) `E1`). A change whose whole purpose is cost has to be
+    /// (backlog.md `E1`). A change whose whole purpose is cost has to be
     /// pinned against the code it replaced (`D8`), and here that code is reconstructible: the
     /// dictionary is exactly `node.Block.Key → node` over the live node list, so these build it and
     /// require the index to agree with it.

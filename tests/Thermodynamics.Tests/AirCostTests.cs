@@ -25,7 +25,7 @@ namespace Thermodynamics.Tests
     /// by `tools/corpus/air.py`. What is checkable without them is the mechanism that produces it,
     /// and a rig that isolates one term is a better test of that than a hull where the two are
     /// mixed in proportions nobody chose (`E7`). See
-    /// [balance.md](../../docs/balance.md#air-is-where-the-substep-budget-goes).
+    /// balance.md.
     /// </para>
     /// </summary>
     public class AirCostTests

@@ -424,7 +424,7 @@ namespace Thermodynamics.Tests
         /// so the windiest weather lands exactly on `StormFraction` and the stillest cannot fall
         /// below `CalmFraction` — the whole spread is the ratio of those two. Multiplying the share
         /// instead let a sandstorm's 2.25 carry the wind past the planet's own ceiling, which is
-        /// [backlog](../../docs/backlog.md) `B17`.
+        /// backlog.md `B17`.
         /// </para>
         /// </summary>
         [Fact]

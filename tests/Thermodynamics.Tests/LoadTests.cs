@@ -740,7 +740,7 @@ namespace Thermodynamics.Tests
         /// so the size at which an allowance stops covering came down with it. Vacuum is also the
         /// generous end: the same hull in flight demands three to four times the substeps and
         /// reaches the same ceiling at a third of the size, which is what `C27` found and what
-        /// doubled the allowance. [backlog.md](../../docs/backlog.md) `C27` carries both.
+        /// doubled the allowance. backlog.md `C27` carries both.
         /// </para>
         /// </summary>
         [Fact]

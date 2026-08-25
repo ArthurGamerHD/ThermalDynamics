@@ -37,7 +37,7 @@ namespace Thermodynamics.Harness
     /// </para>
     ///
     /// <para>
-    /// See known-issues.md and [backlog.md](../../docs/backlog.md) `B4`.
+    /// See known-issues.md and backlog.md `B4`.
     /// </para>
     /// </summary>
     public static class ClientInputLab
@@ -76,7 +76,7 @@ namespace Thermodynamics.Harness
             /// discard a backlog cannot bind at any legal `Frequency`. What a stalling machine does
             /// is run fewer simulation ticks, and simulated time is counted in ticks — so five
             /// seconds lost of every thirty is five sixths rate, and the two rows measure the same
-            /// quantity in two shapes ([backlog.md](../../docs/backlog.md) `F23`).
+            /// quantity in two shapes (backlog.md `F23`).
             /// </para>
             /// </summary>
             public float HitchEverySeconds;
@@ -128,7 +128,7 @@ namespace Thermodynamics.Harness
             /// engine *predicts* it on a client rather than sending it, so a client's thrust is its
             /// own guess about a ship whose physics it is not running. On a burning hull that is
             /// the largest heat term there is
-            /// ([backlog.md](../../docs/backlog.md) `F17`).
+            /// (backlog.md `F17`).
             /// </para>
             ///
             /// <para>
@@ -148,8 +148,8 @@ namespace Thermodynamics.Harness
             /// `h = h0 (1 + 0.1 sqrt(v))` — so a fifth more speed is a few per cent more cooling;
             /// aerodynamic friction goes as the **cube** of airspeed, so the same fifth is 1.7x the
             /// heating. That asymmetry is what the 300 m/s constraint in
-            /// [balance.md](../../docs/balance.md#the-300-ms-constraint) is about, and this is the
-            /// same asymmetry arriving as a client's guess ([backlog.md](../../docs/backlog.md)
+            /// balance.md is about, and this is the
+            /// same asymmetry arriving as a client's guess (backlog.md
             /// `F19`).
             /// </para>
             ///
@@ -169,7 +169,7 @@ namespace Thermodynamics.Harness
             /// Occlusion is resolved by raycasting against voxels and neighbouring grids, on each
             /// machine's own budget and interval, against world state a client holds differently. A
             /// ship a client believes is in shade while the server has it in full sun is the
-            /// largest single-step input error available ([backlog.md](../../docs/backlog.md)
+            /// largest single-step input error available (backlog.md
             /// `F18`). Written as a period and a duration, as `hitching` is, because a client that
             /// is permanently wrong is a bound rather than a description.
             /// </para>
@@ -195,7 +195,7 @@ namespace Thermodynamics.Harness
             /// progress and damage the mass is derived from replicate on their own schedule on
             /// top of that. Integrity reaches the model through nothing else: no path in the mod
             /// reads it, so a damaged block is a lighter block and that is all it is
-            /// ([backlog.md](../../docs/backlog.md) `F20`).
+            /// (backlog.md `F20`).
             /// </para>
             /// </summary>
             public float MassErrorShare;
@@ -208,7 +208,7 @@ namespace Thermodynamics.Harness
             /// hull.** A block that is off draws no power and makes no waste heat, so a client
             /// that has the switch on the wrong side is not wrong by a percentage of that block's
             /// heat — it is wrong by all of it, on some blocks and not others
-            /// ([backlog.md](../../docs/backlog.md) `F20`).
+            /// (backlog.md `F20`).
             /// </para>
             ///
             /// <para>
@@ -234,7 +234,7 @@ namespace Thermodynamics.Harness
             /// by `C9` — world pressurisation, the game's airtightness answer and a vent's reported
             /// level, each able to veto air and none able to require it — so a client's answer is
             /// *that machine's* gas system's answer, arrived at on its own schedule
-            /// ([backlog.md](../../docs/backlog.md) `F21`).
+            /// (backlog.md `F21`).
             /// </para>
             /// </summary>
             public float RoomPressureError;
@@ -257,7 +257,7 @@ namespace Thermodynamics.Harness
             /// It converges on its own schedule and each machine runs its own: `D2` measures 7,207
             /// ticks on a million blocks. Written as a duration rather than a share because that
             /// is the shape of it — a client is wrong about the whole interior until the pass
-            /// lands, and then it is right ([backlog.md](../../docs/backlog.md) `F21`).
+            /// lands, and then it is right (backlog.md `F21`).
             /// </para>
             /// </summary>
             public float RoomMapLagSeconds;
@@ -279,7 +279,7 @@ namespace Thermodynamics.Harness
             /// keyed on **position** rather than on index. An index-keyed packet would land every
             /// temperature on the wrong block here and the row would be the loudest in the sweep,
             /// which is what makes this the test of that choice
-            /// ([backlog.md](../../docs/backlog.md) `F22`).
+            /// (backlog.md `F22`).
             /// </para>
             /// </summary>
             public int BuildOrderSeed;
@@ -298,7 +298,7 @@ namespace Thermodynamics.Harness
             /// <para>
             /// Blocks are taken from the client rather than added to it, because the direction that
             /// matters is a client behind the server: the server decides, and what a client has not
-            /// been told about yet is what it is missing ([backlog.md](../../docs/backlog.md)
+            /// been told about yet is what it is missing (backlog.md
             /// `F22`).
             /// </para>
             /// </summary>
@@ -328,7 +328,7 @@ namespace Thermodynamics.Harness
             /// constant frame length and `Session` runs on `MyUpdateOrder.Simulation` — so a
             /// machine executing fewer ticks per real second is a machine whose thermal clock runs
             /// slow. A server below 1.0 sim speed with a client at 1.0, or the reverse, is exactly
-            /// that ([backlog.md](../../docs/backlog.md) `F23`).
+            /// that (backlog.md `F23`).
             /// </para>
             ///
             /// <para>
@@ -349,7 +349,7 @@ namespace Thermodynamics.Harness
             /// made on whichever machine that mod is running its own logic on: it has no
             /// replication behind it, so a client need never hear about it. What reaches the solver
             /// is an `EnvironmentSample` with one fewer entry
-            /// ([backlog.md](../../docs/backlog.md) `F23`).
+            /// (backlog.md `F23`).
             /// </para>
             ///
             /// <para>
@@ -1046,7 +1046,7 @@ namespace Thermodynamics.Harness
         /// two hulls built in different orders reads a large disagreement between blocks that are
         /// not the same block, and of a hull missing a block it reads every index after the gap
         /// against its neighbour. It is a no-op on two hulls built identically, which is every row
-        /// but two ([backlog.md](../../docs/backlog.md) `F22`).
+        /// but two (backlog.md `F22`).
         /// </para>
         ///
         /// <para>

@@ -16,7 +16,7 @@ namespace Thermodynamics.Tests
     /// additionally runs a Roslyn analyzer over a positive whitelist, so a type can resolve here
     /// and be refused there. That happened: `Units.Watts` took an `IFormatProvider`, the build was
     /// green, and the mod would not load. See
-    /// [known-issues.md](../../docs/known-issues.md#the-whitelist-is-not-the-assemblies-and-building-the-mod-project-does-not-check-it).
+    /// known-issues.md.
     /// </para>
     /// </summary>
     public class ScriptWhitelistTests

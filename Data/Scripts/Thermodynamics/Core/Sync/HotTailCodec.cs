@@ -12,7 +12,7 @@ namespace Thermodynamics.Core
     /// anything, because the model is dissipative — but it is on the wrong side of a block's
     /// critical temperature for 150 to 305 s while it does, against a damage event that runs a
     /// median 37 s. The readout is wrong about the one thing it is for, for longer than the thing
-    /// lasts. See known-issues.md and [backlog.md](../../../../../docs/backlog.md) `B30`.
+    /// lasts. See known-issues.md and backlog.md `B30`.
     /// </para>
     ///
     /// <para>

@@ -48,7 +48,7 @@ namespace Thermodynamics.Tests
         /// accumulator that no shipped code called — the pacing is `ThermalSimulation.Update`,
         /// which banks work credit against the frame it is handed and spends it a slice at a time.
         /// A test on the wrong one of those is why a degraded-input row spent months naming a
-        /// mechanism the mod cannot perform ([backlog.md](../../docs/backlog.md) `F23`).
+        /// mechanism the mod cannot perform (backlog.md `F23`).
         /// </para>
         /// </summary>
         [Fact]

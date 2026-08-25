@@ -25,7 +25,7 @@ namespace Thermodynamics.Tests
     /// <para>
     /// The runs are short and small because the claims are about shape. The figures a decision is
     /// quoted from come from `-- inputs`, at sizes and clocks a suite has no business running.
-    /// See [backlog.md](../../docs/backlog.md) `B4`.
+    /// See backlog.md `B4`.
     /// </para>
     /// </summary>
     [Trait("speed", "slow")]
@@ -280,7 +280,7 @@ namespace Thermodynamics.Tests
 
         /// <summary>
         /// **Thrust is a bias that never decays, and per unit of error it is the worst input there
-        /// is** — which is what [backlog.md](../../docs/backlog.md) `F17` suspected and nothing had
+        /// is** — which is what backlog.md `F17` suspected and nothing had
         /// measured.
         ///
         /// <para>
@@ -382,7 +382,7 @@ namespace Thermodynamics.Tests
         /// <para>
         /// Solar occlusion is resolved by raycasting on each machine's own budget, so a client can
         /// hold a hull in shade while the server has it in full sun — wrong by the entire solar
-        /// term at once rather than by an amount ([backlog.md](../../docs/backlog.md) `F18`). It is
+        /// term at once rather than by an amount (backlog.md `F18`). It is
         /// the largest single-step input error available, and that is exactly what it turns out to
         /// be: large while it lasts and gone afterwards, because the model is dissipative and the
         /// disagreement ends.
@@ -470,7 +470,7 @@ namespace Thermodynamics.Tests
         /// a few per cent more cooling; aerodynamic friction goes as the *cube* of airspeed, so the
         /// same fifth is 1.7× the heating. A client that is guessing fast therefore runs hot rather
         /// than cold, and the error stands rather than decaying
-        /// ([backlog.md](../../docs/backlog.md) `F19`).
+        /// (backlog.md `F19`).
         /// </para>
         /// </summary>
         [Fact]
@@ -525,7 +525,7 @@ namespace Thermodynamics.Tests
         /// unlike every other input in the sweep.
         ///
         /// <para>
-        /// Mass is heat capacity ([backlog.md](../../docs/backlog.md) `F20`), and capacity does not
+        /// Mass is heat capacity (backlog.md `F20`), and capacity does not
         /// appear in the balance a hull settles at: the temperature where losses equal generation
         /// is set by area, emissivity, conductance and watts, and by nothing about how much metal
         /// is being heated. What capacity sets is *how long* the hull takes to get there. So a
@@ -585,7 +585,7 @@ namespace Thermodynamics.Tests
         /// the error sits — concentrated on a tenth of the blocks, or spread over all of them — and
         /// that is the whole claim, because the readout is a per-block one and the hull cannot
         /// conduct fast enough to average a missing thruster away
-        /// ([backlog.md](../../docs/backlog.md) `F20`).
+        /// (backlog.md `F20`).
         /// </para>
         /// </summary>
         [Fact]
@@ -648,7 +648,7 @@ namespace Thermodynamics.Tests
         ///
         /// <para>
         /// So a client's disagreement about pressure is worth almost nothing until it crosses zero,
-        /// and then it is worth the whole coupling ([backlog.md](../../docs/backlog.md) `F21`).
+        /// and then it is worth the whole coupling (backlog.md `F21`).
         /// </para>
         /// </summary>
         [Fact]
@@ -717,7 +717,7 @@ namespace Thermodynamics.Tests
         /// then has open air behind it (`RoomMap.IsExternal`), so the hull radiates from a skin 27 %
         /// larger than the server's and the compartments have no air to couple through. Then the
         /// pass lands and the client is simply right, which is what makes this a perturbation where
-        /// `room pressure` is a bias ([backlog.md](../../docs/backlog.md) `F21`).
+        /// `room pressure` is a bias (backlog.md `F21`).
         /// </para>
         ///
         /// <para>
@@ -884,7 +884,7 @@ namespace Thermodynamics.Tests
         /// <para>
         /// So the row reads zero to every instrument here, and it reads zero *through the
         /// correction* too, because the hot-tail packet is keyed on block position rather than on
-        /// node index ([backlog.md](../../docs/backlog.md) `F22`). The permutation is checked
+        /// node index (backlog.md `F22`). The permutation is checked
         /// first: a rig that quietly built both hulls the same way would report this as passing
         /// while measuring nothing (`E8`).
         /// </para>
@@ -972,7 +972,7 @@ namespace Thermodynamics.Tests
         /// <para>
         /// It is the counterfactual and not a defect: nothing in the mod applies a tail by index.
         /// Without it, *the correction changed nothing* is equally consistent with the key being
-        /// unnecessary ([backlog.md](../../docs/backlog.md) `F22`).
+        /// unnecessary (backlog.md `F22`).
         /// </para>
         /// </summary>
         [Fact]
@@ -1042,7 +1042,7 @@ namespace Thermodynamics.Tests
         /// the sky where the missing blocks would have covered them. The hot-tail packet carries
         /// temperatures for blocks, and a block that is absent takes none of them — so the
         /// correction narrows what the client misreads about the hull it *has* and leaves the rest
-        /// exactly where it was ([backlog.md](../../docs/backlog.md) `F22`).
+        /// exactly where it was (backlog.md `F22`).
         /// </para>
         /// </summary>
         [Fact]
@@ -1133,7 +1133,7 @@ namespace Thermodynamics.Tests
         /// The mod advances one sixtieth of a simulated second per *simulation tick* rather than
         /// per real second, so a machine executing fewer ticks a second is a machine whose thermal
         /// clock runs slow — a server below 1.0 sim speed with a client at 1.0, or the reverse
-        /// ([backlog.md](../../docs/backlog.md) `F23`). It is the one degradation here in which the
+        /// (backlog.md `F23`). It is the one degradation here in which the
         /// client's inputs are all correct: it is not wrong about anything, it is *elsewhere on the
         /// same trajectory*.
         /// </para>
@@ -1197,7 +1197,7 @@ namespace Thermodynamics.Tests
         /// mod does that: `ThermalGridScheduler` passes a constant frame length and
         /// `ThermalSimulation.Update` banks work credit against it, so the ceiling that would
         /// discard a backlog cannot bind at any legal `Frequency`. What a stalling machine does is
-        /// run fewer simulation ticks ([backlog.md](../../docs/backlog.md) `F23`).
+        /// run fewer simulation ticks (backlog.md `F23`).
         /// </para>
         ///
         /// <para>
@@ -1250,7 +1250,7 @@ namespace Thermodynamics.Tests
         /// `ThermalHeatSources` is a registry another mod writes into through the API. A
         /// registration is a call made on whichever machine that mod runs its logic on, and nothing
         /// replicates it — so a client can be simulating a hull beside a furnace it does not know
-        /// exists ([backlog.md](../../docs/backlog.md) `F23`). What reaches the solver is an
+        /// exists (backlog.md `F23`). What reaches the solver is an
         /// `EnvironmentSample` with one fewer entry, and a missing steady watt is a standing error
         /// by construction.
         /// </para>
@@ -1325,7 +1325,7 @@ namespace Thermodynamics.Tests
         /// strictly proportional to the mass the adapter last polled. Whether the *game* moves
         /// that mass with build progress or damage is an engine question no harness can settle,
         /// and the two pages of this repository that touch it disagree
-        /// ([backlog.md](../../docs/backlog.md) `F24`).
+        /// (backlog.md `F24`).
         /// </para>
         /// </summary>
         [Fact]

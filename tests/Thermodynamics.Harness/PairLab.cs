@@ -48,7 +48,7 @@ namespace Thermodynamics.Harness
         /// <item><description>
         /// <b>The two edges are the published single-dial curves.</b> Conductivity ×1 down the clock
         /// and the clock at 225 up the conductivity are exactly the rows
-        /// [balance.md](../../docs/balance.md) already carries, so the grid re-measures them rather
+        /// balance.md already carries, so the grid re-measures them rather
         /// than assuming them — and the interaction is then testable as *is the interior what the
         /// two edges predict*, which is the actual open question.
         /// </description></item>
@@ -60,7 +60,7 @@ namespace Thermodynamics.Harness
         /// </description></item>
         /// <item><description>
         /// <b>The projection and its neighbours.</b> (4, 15) is the pair
-        /// [balance.md](../../docs/balance.md) projects lands a ~200 s crossing at ~0.7 substeps;
+        /// balance.md projects lands a ~200 s crossing at ~0.7 substeps;
         /// (2, 15), (8, 15), (4, 25) and (4, 11) bracket it in both directions, so a projection
         /// that is wrong is wrong by a measurable amount rather than just wrong.
         /// </description></item>
@@ -137,7 +137,7 @@ namespace Thermodynamics.Harness
         /// a grid that asks whether the mod makes too much heat cannot rest on it. Running both
         /// states over the same cells makes the load a bracket rather than a number, and it is what
         /// tells apart *the mod makes twice the heat it should* from *the scenario over-states the
-        /// load*. See [backlog.md](../../docs/backlog.md) `F13`.
+        /// load*. See backlog.md `F13`.
         /// </para>
         /// </summary>
         public static readonly string[] LoadScenarios =
@@ -155,7 +155,7 @@ namespace Thermodynamics.Harness
         /// <para>
         /// Four rather than the panel's six, and each earns its place. `vacuum-shadow` ties this
         /// pass to the vacuum data it has to be read beside. The other three are the two anchors of
-        /// the convection fit [balance.md](../../docs/balance.md) validated — `h = 1` at
+        /// the convection fit balance.md validated — `h = 1` at
         /// `surface-hot-noon` and `h = 2` at `storm-parked` — and the held-out point it was tested
         /// against, `reentry` at 200 m/s, which is also the worst measured case. Keeping the fit's
         /// own three points means this pass can be read as *what the retune does to that fit*
@@ -180,7 +180,7 @@ namespace Thermodynamics.Harness
         /// load grid then found a second route, and it was never priced in the environment `G6` is
         /// decided in. The two routes were being compared on a cost measured for one of them and
         /// projected for the other, which is exactly the comparison `P6` forbids
-        /// ([backlog.md](../../docs/backlog.md) `C12`).
+        /// (backlog.md `C12`).
         /// </para>
         /// </summary>
         private static readonly float[][] AirGrid =

@@ -12,7 +12,7 @@ namespace Thermodynamics.Tests
     /// <para>
     /// Block temperatures are not replicated: a client re-simulates from the same inputs, and a
     /// client joining mid-session starts from whatever the world was last saved at. The open
-    /// question was how far it may drift before it has to be corrected ([backlog](../../docs/backlog.md)
+    /// question was how far it may drift before it has to be corrected (backlog.md
     /// `B4`), and the answer is that the model is dissipative — the disagreement decays on its own,
     /// so what matters is how fast, and what the readout says while it lasts.
     /// </para>

@@ -27,12 +27,12 @@ namespace Thermodynamics.Tests
     /// you plumb*, inverted, and nothing said so except four balance tests failing for what read
     /// like unrelated reasons. Moving the loop's pace with it recovered 73.3 K to 108.2 K and did
     /// not restore the ordering, which is a separate finding and is
-    /// [balance.md](../../docs/balance.md#what-the-retune-was-measured-to-cost)'s.
+    /// balance.md's.
     /// </para>
     ///
     /// <para>
     /// So what is left to hold is the solid pace itself and the coefficient the loop shipped at,
-    /// both of which every cooling figure in [balance.md](../../docs/balance.md) was measured
+    /// both of which every cooling figure in balance.md was measured
     /// against. The failure they prevent is the same one: a balance change nobody chose, in a
     /// mechanism nobody was editing.
     /// </para>
@@ -94,11 +94,11 @@ namespace Thermodynamics.Tests
         /// <para>
         /// **2.4 was the calibration and 9.6 is a balance choice on top of it.** 2.4 is what puts
         /// mild steel exactly where the old 0…1 quality value put it, which is what the real-unit
-        /// conversion was built around — see [definitions.md](../../docs/definitions.md) — and the
+        /// conversion was built around — see definitions.md — and the
         /// shipped pace is four times that, because nothing else reaches the 2–5 minute
         /// significance window `G8` asks for without pushing the hull out of a session. Both
         /// numbers are asserted, so the ratio between them is the thing that cannot move quietly.
-        /// [balance.md](../../docs/balance.md), The route is chosen; [backlog.md](../../docs/backlog.md)
+        /// balance.md, The route is chosen; backlog.md
         /// `C12`, `C24`.
         /// </para>
         /// </summary>

@@ -17,7 +17,7 @@ namespace Thermodynamics.Tests
     /// carried the *small-grid* battery's mass under a large-grid name, and `ReactorThermal` said a
     /// quarter of a reactor's output becomes heat where the shipped definition says a hundredth.
     /// Every scenario in this repository is built out of these, so every scenario temperature was
-    /// quoted off them. [backlog](../../docs/backlog.md) `C4`.
+    /// quoted off them. backlog.md `C4`.
     /// </para>
     ///
     /// <para>

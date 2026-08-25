@@ -14,7 +14,7 @@ namespace Thermodynamics.Tests
     /// significance window that way costs three of the mod's levers. The load is the dial that is
     /// not transport: it changes how much heat a ship makes without changing how the heat moves,
     /// and measured over the retest set it reaches the same window at conductivity ×1. See
-    /// [balance.md](../../docs/balance.md#the-load-reaches-the-window-too-and-costs-the-bite-instead-of-the-levers).
+    /// balance.md.
     /// </para>
     ///
     /// <para>

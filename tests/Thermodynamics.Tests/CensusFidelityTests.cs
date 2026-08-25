@@ -28,7 +28,7 @@ namespace Thermodynamics.Tests
     /// **And the hull has left the population at the one cap that ships.** At a per-block cap of 8
     /// it floors 6.91 % of its own blocks against a real population's 0.92 % — seven times as many
     /// — while at caps of 4, 2 and 1 it is inside the population as it always was. That is
-    /// [backlog.md](../../docs/backlog.md) `C26`, pinned below rather than asserted around.
+    /// backlog.md `C26`, pinned below rather than asserted around.
     /// </para>
     /// </summary>
     public class CensusFidelityTests

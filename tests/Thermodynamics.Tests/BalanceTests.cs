@@ -312,7 +312,7 @@ namespace Thermodynamics.Tests
         /// load is worth 73.5 K over it: a joint carries heat one block and a loop carries it
         /// wherever the ring goes. What has changed is a *tuning* answer — "the radiator is not
         /// shedding enough" can now be answered with area as well as with plumbing — and the
-        /// player-facing guidance in [blocks.md](../../docs/blocks.md) is unmoved.
+        /// player-facing guidance in blocks.md is unmoved.
         /// </para>
         /// </summary>
         [Fact]
@@ -364,7 +364,7 @@ namespace Thermodynamics.Tests
         /// <para>
         /// Pinned rather than fixed. Whether the loop's coupling should be paced with conduction is
         /// a balance decision with its own evidence to collect, and it is
-        /// [backlog.md](../../docs/backlog.md) `C25`; what this test refuses is for the ratio to
+        /// backlog.md `C25`; what this test refuses is for the ratio to
         /// move again without anybody noticing.
         /// </para>
         /// </summary>

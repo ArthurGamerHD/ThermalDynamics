@@ -56,7 +56,7 @@ namespace Thermodynamics.Tests
         /// that a zero ceiling produces a still, directionless result with every modulation
         /// neutral. That is why the switch sets the ceiling rather than adding a branch. If this
         /// ever stopped being true, `EnableWind = false` would leave a wind blowing and nothing
-        /// else would say so (`C7`, and [backlog.md](../../docs/backlog.md) `B31`).
+        /// else would say so (`C7`, and backlog.md `B31`).
         /// </para>
         ///
         /// <para>

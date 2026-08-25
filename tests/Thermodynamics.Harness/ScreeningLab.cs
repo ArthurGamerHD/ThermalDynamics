@@ -9,7 +9,7 @@ namespace Thermodynamics.Harness
     /// Step 2 of the balance lab: every ship in a corpus measured without running it forward, and
     /// the panel of specimens that population reduces to.
     ///
-    /// See [balance-lab.md](../../docs/balance-lab.md).
+    /// See balance-lab.md.
     /// </summary>
     public static class ScreeningLab
     {

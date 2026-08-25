@@ -10,7 +10,7 @@ namespace Thermodynamics.Tests
     ///
     /// <para>
     /// A node kept its exposed faces as an `int[6]`: 48 bytes to hold 24 bytes of payload, once per
-    /// node ([backlog.md](../../docs/backlog.md) `E2`). Ten bits a face holds 1,023 against a real
+    /// node (backlog.md `E2`). Ten bits a face holds 1,023 against a real
     /// worst case of about a hundred — the widest vanilla block is ten cells across — so the
     /// packing is lossless for anything the game has, and these say what happens at the edge rather
     /// than leaving it to be discovered.

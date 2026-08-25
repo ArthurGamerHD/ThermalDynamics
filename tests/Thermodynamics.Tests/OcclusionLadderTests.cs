@@ -11,7 +11,7 @@ namespace Thermodynamics.Tests
     /// What `SolarOcclusionSamples` buys, and what it does not.
     ///
     /// <para>
-    /// [backlog.md](../../docs/backlog.md) `A9` ranks the shipped occlusion default second of
+    /// backlog.md `A9` ranks the shipped occlusion default second of
     /// everything open, on the ground that one ray from the grid's centre makes a ship flip between
     /// fully lit and fully dark and that *fidelity is the default* forbids shipping the cheap form of
     /// a difference a player can see. **The premise is right and the dial is the wrong one**, which

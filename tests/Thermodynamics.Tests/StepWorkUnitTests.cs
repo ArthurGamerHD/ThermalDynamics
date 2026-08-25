@@ -13,7 +13,7 @@ namespace Thermodynamics.Tests
     /// `G6`'s cost half compares a step's element visits against `MaxElementVisitsPerStep`. The
     /// mod's own statement of that cost is <see cref="ThermalSimulation.SubstepCost"/>, which is
     /// `links + 4 x nodes`: a substep runs a conduction pass that is per *link* and an environment
-    /// pass that is per *node*, and [benchmarks.md](../../docs/benchmarks.md) measured the weight
+    /// pass that is per *node*, and benchmarks.md measured the weight
     /// between them rather than assuming it.
     /// </para>
     ///

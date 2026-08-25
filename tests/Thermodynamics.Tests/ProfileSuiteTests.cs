@@ -208,8 +208,8 @@ namespace Thermodynamics.Tests
         /// block is one with **no exposed face at all**. Its only way out is 1,317 W/K of
         /// conduction into neighbours that are themselves buried and hot, and the temperature that
         /// pushes 2.22 MW down that path is 11,279 K. The peak among blocks that *can* radiate is
-        /// 2,822 K. See [known-issues.md](../../docs/known-issues.md) and
-        /// [realism.md](../../docs/realism.md).
+        /// 2,822 K. See known-issues.md and
+        /// realism.md.
         /// </para>
         ///
         /// <para>

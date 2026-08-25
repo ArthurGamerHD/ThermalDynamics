@@ -442,7 +442,7 @@ namespace Thermodynamics.Tests
     /// How real frames become simulated time is tested in `HostAdapterTests`, against
     /// `ThermalSimulation.Update`. It used to be tested here against a second step-credit
     /// accumulator on `SimulationScheduler` that no shipped code called, and which has been removed
-    /// ([backlog.md](../../docs/backlog.md) `F23`).
+    /// (backlog.md `F23`).
     /// </para>
     /// </summary>
     public class SchedulerTests

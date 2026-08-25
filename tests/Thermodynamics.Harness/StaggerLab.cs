@@ -9,7 +9,7 @@ namespace Thermodynamics.Harness
 {
     /// <summary>
     /// **Whether a fleet is cheaper stepped grid by grid or slice by slice**, which is the trade
-    /// [backlog.md](../../docs/backlog.md) `D14` asks to re-decide now that the lump is measurable.
+    /// backlog.md `D14` asks to re-decide now that the lump is measurable.
     ///
     /// <para>
     /// A step is spread across the frames of its own window so no single frame carries a whole
@@ -42,7 +42,7 @@ namespace Thermodynamics.Harness
         /// a reading a single scheduler hiccup lands inside all five times, and the two rungs were
         /// then divided by each other as though they had been measured the same way. That is what
         /// made the lump read 0.75 ms at four grids against 0.13 ms at sixty-four whenever the
-        /// machine was busy ([backlog.md](../../docs/backlog.md) `A11`).
+        /// machine was busy (backlog.md `A11`).
         /// </para>
         ///
         /// <para>

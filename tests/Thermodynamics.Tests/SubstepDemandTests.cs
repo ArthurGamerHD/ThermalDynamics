@@ -127,7 +127,7 @@ namespace Thermodynamics.Tests
         /// the convection half is where it was: 17.41 in air against 7.64 in vacuum, where the
         /// same fitting used to be over four times stiffer. The whole population moved with it —
         /// the corpus median hull's stiffest block is 1.07 times stiffer in air where it was 2.34
-        /// ([backlog.md](../../docs/backlog.md) `C24`, and <see cref="Census.Corpus"/>) — so this
+        /// (backlog.md `C24`, and <see cref="Census.Corpus"/>) — so this
         /// is the model rather than the rig. What it does *not* say is that air has stopped cooling
         /// a hull: the environment terms are untouched and this is a statement about which term
         /// sets a substep count.

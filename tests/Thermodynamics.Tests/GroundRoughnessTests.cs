@@ -9,7 +9,7 @@ namespace Thermodynamics.Tests
     /// <para>
     /// It used to be one number for a whole world, while the ground material under a grid was
     /// already being classified for the temperature model — and roughness is exactly what it should
-    /// vary with. [backlog](../../docs/backlog.md) `B16`.
+    /// vary with. backlog.md `B16`.
     /// </para>
     ///
     /// <para>

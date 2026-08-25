@@ -80,7 +80,7 @@ changed category**, which is the useful result: the boundary was right and its s
 not. The consequence is still what makes a rule worth writing down — it is the
 [one observation](#the-one-observation) above — it is simply not what separates these two piles.
 
-**A rule is not low value merely because nothing checks it.** Twenty-one of the sixty-two rules
+**A rule is not low value merely because nothing checks it.** Twenty-one of the sixty-eight rules
 that are still rules are unchecked and say so, and two more are *reported* rather than checked,
 which is weaker and is written as such. Restructuring `Models/` is caught by nothing and costs a
 re-export of every block model; a promote-level check gated on a forgeable field is caught by
@@ -111,7 +111,7 @@ reason. See [testing the reduction](#testing-the-reduction).
 | **P2** | **What the instrument could not see is part of the result.** Censoring, the noise floor, an unfinished sweep, a check that judged nothing, a discarded exception and a place nobody looked are the same failure: reading a blind spot as a value. | `E4` `E8` `E9` `M4` `M5` `D4` `D9` |
 | **P3** | **The claim is fixed before the data and corrected in place after.** A criterion that can move once the numbers are in is not a criterion; a finding that is corrected somewhere other than where it was published is not corrected. | `E1` `E10` `E11` `M9` `D5` `R12` |
 | **P4** | **Nothing is its own oracle.** A test that asks the model the same question twice agrees with whatever the model does; a harness fault looks exactly like physics. | `E7` `D1` `D7` `D8` |
-| **P5** | **One definition, and at least one consumer.** Two definitions drift, and the drift is silent in both directions; zero consumers means the thing does not exist however well it is written and tested. | `E5` `D2` `D3` `M6` `R7` `R8` `R9` `R10` `R11` `R13` `R14` `R15` |
+| **P5** | **One definition, and at least one consumer.** Two definitions drift, and the drift is silent in both directions; zero consumers means the thing does not exist however well it is written and tested. | `E5` `D2` `D3` `M6` `R7` `R8` `R9` `R10` `R11` `R13` `R14` `R15` `R16` |
 | **P6** | **A comparison holds everything but the subject equal.** Two numbers are comparable only when the stop criterion, the machine, the key and the baseline were the same. | `M1` `M2` `M3` `M7` `O4` |
 | **P7** | **The game is the authority.** The local build and the suite are an approximation of a compiler and a whitelist neither of them can see, and where the game already answers a question — what is sealed, what is destroyed, who sent this — the mod reads that answer instead of forming its own. | `C1` `C2` `C3` `C11` `C9` `C10` `W3` |
 | **P8** | **Off means off, and costs nothing.** A mechanism nobody is using must cost nothing, and the way to turn it off must be unambiguous. | `C4` `C7` `C8` `C15` |
@@ -299,6 +299,7 @@ That asymmetry is not closed and is recorded here rather than left implicit.
 | **R10** | Every test class says what it is for | absolute | P5 | `EveryTestClassSaysWhatItIsFor` |
 | **R11** | A check is cited only if it runs | absolute | P5 | `EveryCheckCitedByTheRulesPageResolves` |
 | **R15** | An identifier cited anywhere resolves to something that exists | absolute | P5 | `EveryCitedIdentifierResolves` |
+| **R16** | A pointer in code is plain text, never a link | absolute | P5 | `NoPointerInCodeIsWrittenAsALink` |
 | **R12** | A page states its scope, describes the present, and logs its changes | absolute | P3 | partly |
 | **R13** | A standing rule is stated here once, and argued elsewhere | absolute | P5 | `EveryRuleCitedByAPageExists` |
 | **R14** | A comment names something that is there | absolute | P5 | `NoDocCommentDescribesSomethingThatIsNotThere` |
@@ -311,9 +312,9 @@ That asymmetry is not closed and is recorded here rather than left implicit.
 | **J2** | *Light, isolated, tested, open* | low value | — | absorbed into `C4` `C5` `C7` `R9` |
 | **J3** | The corpus filters are strict, and their cost is recorded | conditional | P1 | `BlueprintTests` |
 
-Seventy rows: **sixty absolute, seven conditional, three low value.** The last three are retired as
-rules and kept only so a citation to them does not dangle, so sixty-seven of these are rules a
-change can be measured against. Twenty-one of them are unchecked and say so, and two more are
+Seventy-one rows: **sixty-one absolute, seven conditional, three low value.** The last three are
+retired as rules and kept only so a citation to them does not dangle, so sixty-eight of these are
+rules a change can be measured against. Twenty-one of them are unchecked and say so, and two more are
 *reported* rather than checked, which is weaker and is written as such.
 
 ---
@@ -831,6 +832,26 @@ first run: `C20` in six files including three the game compiles, and `C13` in th
 the two share a namespace — [backlog.md](backlog.md) carries that as H8 — and it says instead that
 the citation resolves to one of them, which is what stops a dropped identifier rotting in a comment.
 *From:* this page, and the pass that added it.
+
+#### R16 — A pointer in code is plain text, never a link
+
+**A comment that names a page writes the page's name — `See stiffness.md, A per-block substep
+cap.` — and never a relative markdown link.**
+
+A link inside a `.cs` file **renders nowhere**. Nobody clicks it, so nobody finds out it is wrong,
+and `EveryRelativeLinkResolves` reads markdown only — so the one form of cross-reference here that
+nothing checked was the one written in the syntax that looks checked. `Settings.cs` carried
+`[backlog.md](backlog.md)`, a relative path from `Data/Scripts/Thermodynamics` to a file four
+directories above it.
+
+The convention was written down in [development.md](development.md#and-in-the-code) after two such
+links were found rotted, one into a directory that does not exist. **155 more had accumulated since,
+across 91 files**, which is what an unchecked convention does. Flattening them cost nothing, because
+every link text was already the page's own name.
+
+*Applies to:* every `.cs` file outside the vendored paths.
+*Checked by:* `NoPointerInCodeIsWrittenAsALink`.
+*From:* [development.md](development.md#and-in-the-code).
 
 ### P6 — A comparison holds everything but the subject equal
 
@@ -1526,6 +1547,7 @@ right and this page is stale**; say so and fix it here.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | **`R16`, and the 155 links it found.** *A pointer in code is plain text, never a markdown link* was written into [development.md](development.md#and-in-the-code) after two such links were found rotted, and nothing checked it — a link inside a `.cs` file renders nowhere, so nobody clicks it, nobody finds out it is wrong, and `EveryRelativeLinkResolves` reads markdown only. The one form of cross-reference here that nothing checked was the one written in the syntax that looks checked, and 155 had accumulated across 91 files. Flattening them cost nothing, because every link text was already the page's own name. `NoPointerInCodeIsWrittenAsALink` holds it, and it demonstrated that it works by failing on the first draft of its own summary, where the example was quoted verbatim. |
 | 2026-08-25 | **`R15`, and thirteen dead citations in shipped code on its first run.** `R11` fails when a rule names a check that has stopped running; nothing failed when a *citation* named a rule or a backlog row that had stopped existing, and `EveryRuleCitedByAPageExists` reads documentation banners while **425 citations of the same shape live in `.cs` and `.py` files**. A backlog row is deleted when it closes, so every comment citing it becomes a dead reference that reads exactly like a live one: `C20` in six files, three of them compiled by the game, and `C13` in three more. All thirteen now name the page that holds the argument, in plain text as the comment convention asks. |
 | 2026-08-25 | **The four rules added today are `W1`–`W4`, and the letter was chosen because everything else collides.** [backlog.md](backlog.md) and this page share a letter-and-number namespace and fifteen identifiers are currently both a rule and an open item — `C3` is *target `net48`* here and *whether to ship `MaxSubstepsPerBlock 6`* there. They were first issued as `C16`–`C19`, which are four live backlog rows, and moved before the commit landed. Nothing else is renamed: the backlog's numbers are its rows' names and never move, and remapping this page's three colliding letters would touch 362 citations in code alone. That is a decision and it is [backlog.md](backlog.md) H8. What is fixed is that it stops growing. |
 | 2026-08-25 | **The categories are absolute, conditional and low value, and the first two are now one question.** The first category was *load-bearing* and its test was the consequence of breaking it, which is true of nearly every rule here and is the wrong axis to sort on: it made the boundary with *conditional*, which is about scope, a comparison between two different things. Re-audited under *does it ever stand down*, **not one rule changed category** — the boundary was right and its stated reason was not. |

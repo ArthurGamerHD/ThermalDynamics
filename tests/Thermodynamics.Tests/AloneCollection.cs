@@ -19,8 +19,8 @@ namespace Thermodynamics.Tests
     /// `xunit.runner.json` set `maxParallelThreads: 1` for every class in the suite, so every run
     /// paid three times its duration for the isolation of walks that most runs never execute —
     /// 53.1 s serial against 16.7 s at eight threads, with the same passing count either way.
-    /// Stated as `O4` in [rules.md](../../docs/rules.md); the row that asked for this is
-    /// [backlog.md](../../docs/backlog.md) `F8`.
+    /// Stated as `O4` in rules.md; the row that asked for this is
+    /// backlog.md `F8`.
     /// </para>
     ///
     /// <para>

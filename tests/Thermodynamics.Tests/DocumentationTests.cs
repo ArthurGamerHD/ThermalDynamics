@@ -1061,7 +1061,7 @@ namespace Thermodynamics.Tests
         ///
         /// <para>
         /// **It has to accept both pages, and that is the finding rather than a compromise.**
-        /// [rules.md](../../docs/rules.md) and [backlog.md](../../docs/backlog.md) share a
+        /// rules.md and backlog.md share a
         /// letter-and-number namespace and fifteen identifiers are currently both a rule and an open
         /// item — `C3` is *target `net48`* on one page and *whether to ship
         /// `MaxSubstepsPerBlock 6`* on the other. So this cannot say which page a citation means; it
@@ -1112,6 +1112,65 @@ namespace Thermodynamics.Tests
             Assert.True(dangling.Count == 0,
                 "identifiers cited in source that are neither a rule in docs/rules.md nor a row in"
                 + " docs/backlog.md:\n  " + string.Join("\n  ", dangling.ToArray()));
+        }
+
+        /// <summary>
+        /// A pointer in code is plain text, never a markdown link.
+        ///
+        /// <para>
+        /// A link inside a `.cs` file **renders nowhere**. Nobody clicks it, so nobody finds out it
+        /// is wrong, and `EveryRelativeLinkResolves` reads markdown only — so the one form of
+        /// cross-reference in this repository that nothing checked was the one written in the
+        /// syntax that looks checked. `Settings.cs` carried one whose text and whose target were both
+        /// the bare word `backlog.md` — a relative path from `Data/Scripts/Thermodynamics` to a file
+        /// four directories above it.
+        /// </para>
+        ///
+        /// <para>
+        /// **It cannot tell an example from a pointer**, which it demonstrated by failing on the
+        /// first draft of this summary, where the offending link was quoted verbatim. That is the
+        /// right trade: a check that tried to exempt examples would exempt the next real one.
+        /// </para>
+        ///
+        /// <para>
+        /// 155 of them existed when this was written, in 91 files. Flattening them cost nothing,
+        /// because every link text was already the page's own name: `See known-issues.md and
+        /// backlog.md B30` is what the reader wanted and what the convention asked for.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void NoPointerInCodeIsWrittenAsALink()
+        {
+            List<string> links = new List<string>();
+            int files = 0;
+
+            foreach (string file in SourceFiles())
+            {
+                string relative = Relative(file);
+                if (!relative.EndsWith(".cs", StringComparison.Ordinal)) continue;
+                if (relative.Contains("RichHudFramework")) continue;
+                if (relative.Contains("NetworkAPI")) continue;
+
+                files++;
+                string[] lines = File.ReadAllLines(file);
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    if (Regex.IsMatch(lines[i], @"\[[^\]]+\]\([^)]*\.md[^)]*\)"))
+                    {
+                        links.Add(relative + ":" + (i + 1));
+                    }
+                }
+            }
+
+            Assert.True(files > 200,
+                "only " + files + " source files were read, so this test is looking in the wrong"
+                + " place and would pass whatever the tree held");
+
+            links.Sort(StringComparer.Ordinal);
+            Assert.True(links.Count == 0,
+                "markdown links inside .cs files, which render nowhere and are checked by nothing"
+                + " (R16) — write the page's name as plain text instead:\n  "
+                + string.Join("\n  ", links.ToArray()));
         }
 
         private static string BacklogPage()
@@ -1343,7 +1402,7 @@ namespace Thermodynamics.Tests
         /// and two of them at once are two thread pools thrashing one cache. The isolation used to
         /// be `maxParallelThreads: 1` for the whole project, which charged every run three times
         /// its duration for the sake of walks most runs never execute
-        /// ([backlog.md](../../docs/backlog.md) `F8`).
+        /// (backlog.md `F8`).
         /// </para>
         ///
         /// <para>

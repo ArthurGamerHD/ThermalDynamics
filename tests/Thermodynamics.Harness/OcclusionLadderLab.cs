@@ -10,7 +10,7 @@ namespace Thermodynamics.Harness
     /// What raising <c>SolarOcclusionSamples</c> actually buys, in joules into the hull.
     ///
     /// <para>
-    /// **The question [backlog.md](../../docs/backlog.md) `A9` asks is whether the shipped default is
+    /// **The question backlog.md `A9` asks is whether the shipped default is
     /// the cheap rung of a ladder, and it is** — one sample is a single ray from the grid's centre,
     /// so a ship is lit or dark all at once and flips the moment its middle crosses. What no page
     /// had was the size of that error, and without it *fidelity is the default* is an argument

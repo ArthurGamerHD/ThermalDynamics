@@ -10,7 +10,7 @@ namespace Thermodynamics.Harness
     /// **The six blocks that stand in for vanilla ones are derived from them**, through
     /// <see cref="Vanilla"/>'s transcribed build costs and the shipped derivation: same size, same
     /// mass, same thermal properties a player's block has. They were hand-typed approximations
-    /// until [backlog.md](../../docs/backlog.md) `C4`, and four of the six were out by more than
+    /// until backlog.md `C4`, and four of the six were out by more than
     /// five per cent — so a scenario temperature was quoted off a block nobody had compared with
     /// the thing it mirrors.
     ///
@@ -81,7 +81,7 @@ namespace Thermodynamics.Harness
         /// A reactor-flavoured material preset: graphite-shielded steel, rated to 1,200 K.
         ///
         /// **Not what a scenario reactor is made of any more** — `Catalog.Reactor()` derives from
-        /// the block it stands in for ([backlog.md](../../docs/backlog.md) `C4`). This is kept for
+        /// the block it stands in for (backlog.md `C4`). This is kept for
         /// the rigs that want *a hot-rated block* rather than a reactor: a heater with a fraction
         /// of one, a profile sweep's source, a block with no rating. Its waste fractions are the
         /// preset's own and describe nothing that ships.
@@ -130,7 +130,7 @@ namespace Thermodynamics.Harness
         /// and the thermal properties the shipped derivation gives that build cost.
         ///
         /// <para>
-        /// **This is what closed [backlog.md](../../docs/backlog.md) `C4`.** The six stand-ins were
+        /// **This is what closed backlog.md `C4`.** The six stand-ins were
         /// hand-typed approximations and four of them were out by more than five per cent — the
         /// large thruster by 4.32x, the battery by 3.70x because it carried the *small-grid*
         /// battery's mass under a large-grid name — while `Catalog.ReactorThermal` said a quarter

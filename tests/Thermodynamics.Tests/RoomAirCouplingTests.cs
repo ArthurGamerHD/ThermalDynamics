@@ -114,7 +114,7 @@ namespace Thermodynamics.Tests
         /// room is is worth almost nothing until it crosses zero, and then it is worth the whole
         /// 30 kW/K of coupling. Pinned here rather than only in the lab, because it is a property of
         /// the model and it is what makes the veto chain in
-        /// [thermal-model.md](../../docs/thermal-model.md) an asymmetric choice.
+        /// thermal-model.md an asymmetric choice.
         /// </para>
         /// </summary>
         [Fact]
@@ -161,7 +161,7 @@ namespace Thermodynamics.Tests
         /// </para>
         ///
         /// <para>
-        /// Written with [backlog.md](../../docs/backlog.md) `A10`, which was the same defect on the
+        /// Written with backlog.md `A10`, which was the same defect on the
         /// coolant path and was found there first. The bound is the per-node relaxation applied to
         /// the coupled passes: with it a substep is a convex combination of the temperatures
         /// pulling on a node, and cannot leave the range they span.

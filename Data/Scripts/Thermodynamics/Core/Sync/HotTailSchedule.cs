@@ -22,7 +22,7 @@ namespace Thermodynamics.Core
     /// hull is stale leaves 145 s of 560 s misread on the census hull however often it is sent,
     /// because a corrected block conducts to stale neighbours; stating the hull once and then
     /// tracking the band takes it to nothing. The evidence is in
-    /// [known-issues.md](../../../../../docs/known-issues.md), measured by `ClientDriftLab`.
+    /// known-issues.md, measured by `ClientDriftLab`.
     /// </para>
     ///
     /// <para>

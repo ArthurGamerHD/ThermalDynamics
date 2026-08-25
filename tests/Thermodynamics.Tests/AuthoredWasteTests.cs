@@ -18,7 +18,7 @@ namespace Thermodynamics.Tests
     /// a `ConsumerWasteEnergy` claimed nothing, which is how the jump drive came to sit at `0.15`
     /// under the note *"storage is efficient; the dump is not"* while its own definition stated
     /// `PowerEfficiency 0.8` — on the block carrying most of the corpus's full-load waste heat. See
-    /// [backlog.md](../../docs/backlog.md) `C21`.
+    /// backlog.md `C21`.
     /// </para>
     ///
     /// <para>

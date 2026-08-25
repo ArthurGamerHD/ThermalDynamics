@@ -53,7 +53,7 @@ namespace Thermodynamics.Core
         /// <para>
         /// **The block carries the index instead of the solver carrying a dictionary.** A
         /// `Dictionary&lt;long, ThermalNode&gt;` from key to node cost about 36 bytes a block for an
-        /// answer the block can hold in four ([backlog.md](../../../../docs/backlog.md) `E1`), and
+        /// answer the block can hold in four (backlog.md `E1`), and
         /// every lookup was a hash where it is now an array index.
         /// </para>
         ///

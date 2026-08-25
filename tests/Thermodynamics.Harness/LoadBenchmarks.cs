@@ -1692,7 +1692,7 @@ namespace Thermodynamics.Harness
         /// tens of them at flying speed in thick atmosphere, so a ceiling sweep taken in vacuum
         /// measures a bound that never binds. The default here is thick air at 200 m/s, which is
         /// the `reentry` scenario's airflow and the environment
-        /// [balance.md](../../docs/balance.md) scores `G6` in.
+        /// balance.md scores `G6` in.
         /// </para>
         ///
         /// <para>
@@ -1746,7 +1746,7 @@ namespace Thermodynamics.Harness
         /// granted. **1.15 is the shipped configuration's own breach** — the 49-ship panel's p99
         /// demand of 73.4 against the 64 `MaxSubsteps` grants — and the rest of the ladder is there
         /// so a reader can see where the approximation stops being free.
-        /// See [balance.md](../../docs/balance.md), Air is where the substep budget goes.
+        /// See balance.md, Air is where the substep budget goes.
         /// </summary>
         public static readonly float[] Oversubscriptions = { 1.15f, 1.5f, 2f, 3f, 4.5f, 9f };
 

@@ -174,7 +174,7 @@ namespace Thermodynamics.Tests
         /// that arithmetic is what the real-unit conversion was checked against. The shipped clock
         /// is **90**, two and a half times slower, because the significance window `G8` asks for is
         /// not reachable at 225 by any dial that keeps the hull inside a session — see
-        /// [balance.md](../../docs/balance.md), The route is chosen. Both are asserted so neither
+        /// balance.md, The route is chosen. Both are asserted so neither
         /// can move quietly.
         /// </para>
         /// </summary>

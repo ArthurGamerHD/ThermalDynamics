@@ -131,7 +131,7 @@ namespace Thermodynamics.Tests
         ///
         /// <para>
         /// Conduction reaches it and costs three of the mod's levers doing so, measured in
-        /// [balance.md](../../docs/balance.md). This grid moves how much heat a ship makes instead
+        /// balance.md. This grid moves how much heat a ship makes instead
         /// of how it travels, against the clock, and scores the same criteria.
         /// </para>
         ///

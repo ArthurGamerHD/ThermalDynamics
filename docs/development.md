@@ -169,6 +169,10 @@ relative markdown link. A link inside a `.cs` file renders nowhere, so nobody cl
 notices when it breaks; `EveryAnchorNamesAHeading` reads markdown only. Both of the two that existed
 in the tree had rotted, one of them into a directory that does not exist.
 
+**This is `R16` and it is checked now.** It was a convention nothing enforced for three days and 155
+more links accumulated across 91 files in that time, including one in `Settings.cs` pointing four
+directories above where it sat. `NoPointerInCodeIsWrittenAsALink` fails on any of them.
+
 The exception is a **test class summary**, which `R10` makes the canonical statement of what that
 class is for — "in its own summary, not in an index". There is no page to move it to, so it stays
 where it is.

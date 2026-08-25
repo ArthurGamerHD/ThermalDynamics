@@ -13,7 +13,7 @@ namespace Thermodynamics.Tests
     ///
     /// <para>
     /// **A comment reading `real units: aluminium` beside a `237` is a claim, and nothing checked
-    /// it.** That is the shape of [backlog.md](../../docs/backlog.md) `C2` — the authored values
+    /// it.** That is the shape of backlog.md `C2` — the authored values
     /// predate three changes to the model that reads them, and no reader could tell which numbers
     /// still meant what they said. These checks do not decide whether a value is *balanced*; they
     /// decide whether it is what it claims to be, which is the part a test can settle and the part

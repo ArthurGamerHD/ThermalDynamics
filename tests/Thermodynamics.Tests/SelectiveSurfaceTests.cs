@@ -13,7 +13,7 @@ namespace Thermodynamics.Tests
     /// `SolarAbsorptivity` has been separate from `Emissivity` since the two were split, and no
     /// block declared one — so a radiator absorbed sunlight at the rate it emitted it, which is the
     /// single combination real radiators are finished to avoid.
-    /// [backlog.md](../../docs/backlog.md) `C15` asked whether to author one; these hold the answer
+    /// backlog.md `C15` asked whether to author one; these hold the answer
     /// and the measurement it rests on. See balance.md, What a selective surface is worth.
     /// </para>
     /// </summary>

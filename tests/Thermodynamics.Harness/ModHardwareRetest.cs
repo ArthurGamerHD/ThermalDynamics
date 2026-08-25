@@ -45,7 +45,7 @@ namespace Thermodynamics.Harness
         /// Stated as heat rather than as a reactor's output, because the rig is about what the
         /// cooling hardware does with a load and not about what a reactor wastes — and while it was
         /// stated as output it was quietly a quarter of it, on a catalogue reactor that wasted
-        /// twenty-five times what the shipped one does ([backlog.md](../../docs/backlog.md) `C4`).
+        /// twenty-five times what the shipped one does (backlog.md `C4`).
         /// 75 kW is what the old 300 kW at that fraction actually delivered, so the rigs carry the
         /// same load they always did.
         /// </summary>

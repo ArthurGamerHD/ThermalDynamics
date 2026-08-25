@@ -32,7 +32,7 @@ namespace Thermodynamics
     /// are the two places this mod reaches for something it cannot exercise offline; both are
     /// guarded so a block without an emissive material or an audio definition is skipped rather
     /// than throwing, and the whole pass is inside the tick's own handler. Recorded as a gap in
-    /// [known-issues.md](../../../../docs/known-issues.md).
+    /// known-issues.md.
     /// </para>
     /// </summary>
     public partial class ThermalGrid

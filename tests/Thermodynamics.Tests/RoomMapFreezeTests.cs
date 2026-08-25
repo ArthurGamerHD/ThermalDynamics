@@ -14,7 +14,7 @@ namespace Thermodynamics.Tests
     /// <para>
     /// Room cells were held twice: once per room, and once in a `Dictionary&lt;Vector3I, int&gt;`
     /// costing about 31 bytes a cell — the one memory row that still climbs with grid size
-    /// ([backlog.md](../../docs/backlog.md) `E3`). A map is written once and read for the life of
+    /// (backlog.md `E3`). A map is written once and read for the life of
     /// the grid, so when a pass completes the dictionary is replaced by a sorted `long[]` of cell
     /// keys and a parallel `int[]` of rooms: twelve bytes a cell, and a binary search over
     /// contiguous memory instead of a hash and a bucket chase.

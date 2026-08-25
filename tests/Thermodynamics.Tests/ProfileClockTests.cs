@@ -7,7 +7,7 @@ namespace Thermodynamics.Tests
 {
     /// <summary>
     /// **Whether the realism sweep's one unexplained divergence is a divergence at all**, which is
-    /// what [backlog.md](../../docs/backlog.md) `C8` leaves open.
+    /// what backlog.md `C8` leaves open.
     ///
     /// <para>
     /// Scenario run lengths are cut for the shipped world and thermal time runs at `HeatTimeScale`,

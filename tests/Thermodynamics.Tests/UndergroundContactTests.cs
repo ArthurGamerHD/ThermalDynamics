@@ -12,7 +12,7 @@ namespace Thermodynamics.Tests
     /// It used to be air. A grid under the surface took the planet's ambient from the rock — which
     /// is right — and exchanged with it at the planet's *convection* coefficient, which is the
     /// figure for moving air. Rock contact was not modelled, so 50 W/(m² K) was the nearest
-    /// available answer. [backlog](../../docs/backlog.md) `A16`.
+    /// available answer. backlog.md `A16`.
     /// </para>
     ///
     /// <para>

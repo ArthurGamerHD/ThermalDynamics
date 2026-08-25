@@ -12,7 +12,7 @@ namespace Thermodynamics.Tests
     /// half of a block's definition. A conductivity claiming aluminium is checked; a
     /// `ConsumerWasteEnergy` claimed nothing at all until this existed, which is how the jump drive
     /// sat at 0.15 by assertion while its own definition stated an efficiency. See
-    /// [backlog.md](../../docs/backlog.md) `C21`.
+    /// backlog.md `C21`.
     /// </para>
     ///
     /// <para>

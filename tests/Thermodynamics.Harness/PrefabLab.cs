@@ -18,7 +18,7 @@ namespace Thermodynamics.Harness
     ///
     /// <para>
     /// **The criterion was written down before this ran** and is in
-    /// [balance-lab.md](../../docs/balance-lab.md): idle, in the environment the prefab's own
+    /// balance-lab.md: idle, in the environment the prefab's own
     /// category spawns into, for five simulated minutes, losing no block. Every term of it is a
     /// decision argued there rather than a convenience taken here (`E11`).
     /// </para>

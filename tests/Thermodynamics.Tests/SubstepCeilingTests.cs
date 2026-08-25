@@ -6,7 +6,7 @@ namespace Thermodynamics.Tests
 {
     /// <summary>
     /// **What it costs when `MaxSubsteps` refuses the demand**, which is the question
-    /// [backlog.md](../../docs/backlog.md) `C19` answered by assertion.
+    /// backlog.md `C19` answered by assertion.
     ///
     /// <para>
     /// The shipped configuration's p99 substep demand in thick air at 200 m/s is 73.4 against the
@@ -21,7 +21,7 @@ namespace Thermodynamics.Tests
     /// **The quantity is the over-subscription, not the substep count**, and that is what makes a
     /// rig able to answer for a population it is not a member of: 72 demanded of 62 and 36 demanded
     /// of 31 are the same approximation, and these tests assert they cost the same. The ladder and
-    /// the figures are in [stiffness.md](../../docs/stiffness.md#what-refusing-the-demand-costs).
+    /// the figures are in stiffness.md.
     /// </para>
     /// </summary>
     [Trait("speed", "slow")]
@@ -119,13 +119,13 @@ namespace Thermodynamics.Tests
         /// the block ladder above cannot answer for.
         ///
         /// <para>
-        /// Every figure in [stiffness.md](../../docs/stiffness.md#what-refusing-the-demand-costs)
+        /// Every figure in stiffness.md
         /// was a block figure for as long as the page existed, and blocks are the one element whose
         /// exchanges are all pairwise. A coolant parcel is one mass carrying a link to every pipe
         /// on it and a pipe with a sink face is a node carrying a link to the parcel and to
         /// everything it is bolted to, so a refused step there used to leave the range the
         /// temperatures around a node span — 1.3e25 K on this fixture, against 1,799 K now.
-        /// That was [backlog.md](../../docs/backlog.md) `A10`.
+        /// That was backlog.md `A10`.
         /// </para>
         ///
         /// <para>

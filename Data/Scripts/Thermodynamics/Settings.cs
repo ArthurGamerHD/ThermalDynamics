@@ -129,7 +129,7 @@ namespace Thermodynamics
         /// It had no switch at all until 2026-08-24, which made it the one mechanism a world could
         /// not turn off (`C7`) — the nearest thing was zeroing `WindTerrainInfluence`,
         /// `WindSlopeStrength` and `WindDiurnalAmplitude`, which removes the modulations and leaves
-        /// the wind. See [backlog.md](backlog.md) `B31`.
+        /// the wind. See backlog.md `B31`.
         /// </para>
         /// </summary>
         [ProtoMember(128)] public bool EnableWind = true;
