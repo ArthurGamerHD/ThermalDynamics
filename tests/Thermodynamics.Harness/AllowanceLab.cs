@@ -33,10 +33,12 @@ namespace Thermodynamics.Harness
     ///
     /// <para>
     /// **What a lost rate costs is not a millisecond**: a grid at 73 % of real time runs a thermal
-    /// clock 27 % slow, which is the mechanism `F23` priced at one point — 19.25 K standing under a
-    /// moving load at a 10 % error, and 0.00 K under a steady one. The sweep here reaches deficits
-    /// several times that, so <see cref="PriceRates"/> runs the same mechanism up a ladder rather
-    /// than reading `F23`'s point as a slope, and <see cref="RateCost"/> reads a row off it.
+    /// clock 27 % slow, which is the mechanism `F23` priced — under a load that keeps moving, and at
+    /// 0.00 K under one that stops. It priced it at *one* deficit and on its own rig, so the number
+    /// is not transferable: 19.25 K on the smaller hull in the dark, 2.52 K on the degraded-input
+    /// sweep's 2,000-block planet rig, both at a 10 % error. The sweep here reaches deficits six
+    /// times that, so <see cref="PriceRates"/> runs the same mechanism up a ladder on one rig rather
+    /// than reading any single point as a slope, and <see cref="RateCost"/> reads a row off it.
     /// </para>
     /// </summary>
     public static class AllowanceLab

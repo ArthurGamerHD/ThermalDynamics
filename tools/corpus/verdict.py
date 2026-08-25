@@ -136,6 +136,10 @@ if idle:
     verdict("G1", "Idle is safe.", share <= 1.0,
             f"{critical} of {len(idle)} idle runs had a block over critical ({share:.2f} %)",
             "more than ~1 % of the corpus goes critical at idle")
+else:
+    verdict("G1", "Idle is safe.", None,
+            "neither idle nor vacuum-shadow is in this dataset",
+            "more than ~1 % of the corpus goes critical at idle")
 
 # ---- G2: load bites ---------------------------------------------------------------------
 loaded = by_scenario.get("full-electrical", [])
@@ -146,6 +150,11 @@ if loaded:
     verdict("G2", "Load bites.", share >= 20.0,
             f"{warm} of {len(loaded)} reached {WARM_KELVIN:.0f} K under full electrical load "
             f"({share:.1f} %)",
+            "fewer than ~20 % ever get warm")
+else:
+    verdict("G2", "Load bites.", None,
+            "the full-electrical scenario is not in this dataset — it is a load case, and a walk "
+            "of idle environments cannot answer it",
             "fewer than ~20 % ever get warm")
 
 # ---- G5: no death spiral ----------------------------------------------------------------
@@ -168,7 +177,11 @@ if demand:
     p = percentiles(demand)
     granted = [number(r, "substeps_granted") for r in outcomes]
     granted = [g for g in granted if g is not None]
-    cap = max(granted) if granted else 0
+
+    # The shipped `MaxSubsteps`, not the largest count this dataset happened to be granted. See
+    # scoring.SHIPPED_SUBSTEP_CAP for why the second is not a cap at all.
+    cap = scoring.SHIPPED_SUBSTEP_CAP
+    highest = max(granted) if granted else 0
     # The cost half of the same criterion, in the solver's own unit rather than in milliseconds:
     # a step's element visits against what `MaxElementVisitsPerStep` grants one. See
     # balance-lab.md, G6's cost half, which was written down before this was scored (`E11`).
@@ -192,7 +205,8 @@ if demand:
 
     verdict("G6", "Affordable across the population.", demand_ok and cost_ok,
             f"substep demand p50 {p['p50']:.1f}, p95 {p['p95']:.1f}, p99 {p['p99']:.1f}, "
-            f"max {p['max']:.1f}; highest granted {cap:.0f}" + oversubscription_note(p["p99"], cap),
+            f"max {p['max']:.1f}; against {cap:.0f} granted, highest reached {highest:.0f}"
+            + oversubscription_note(p["p99"], cap),
             "p99 substep demand exceeds what the shipped caps grant, or p99 step work exceeds "
             "the shipped element-visit allowance")
 
@@ -203,6 +217,33 @@ if demand:
               f"{allowance:,.0f} granted"
               + (f"; {over:,} of {len(work):,} runs are past it — those grids run slower than "
                  f"real time" if over else "; every run fits"))
+
+    # **And the same two statistics per scenario, because both are properties of the world.**
+    # The criterion is one figure over the dataset and stays that way (`E11`); this is the
+    # breakdown that says which environment produced it. A dataset of one scenario prints one row
+    # and repeats the verdict above, which is honest rather than redundant: it is what says the
+    # figure is that world's and not a population's.
+    if len(by_scenario) > 1:
+        print(f"\n        {'scenario':18}{'runs':>8}{'demand p50':>12}{'demand p99':>12}"
+              f"{'work p50':>12}{'work p99':>12}{'over':>7}")
+        for name in sorted(by_scenario):
+            rows = by_scenario[name]
+            demands = [d for d in (number(r, "substeps_demanded") for r in rows) if d is not None]
+            works = []
+            for row in rows:
+                substeps = number(row, "substeps_demanded")
+                if substeps is None:
+                    substeps = number(row, "substeps_granted")
+                cost = scoring.step_work(number(row, "blocks"), number(row, "joints"), substeps)
+                if cost is not None:
+                    works.append(cost)
+            if not demands or not works:
+                continue
+            d = percentiles(demands)
+            w = percentiles(works)
+            past = sum(1 for value in works if not scoring.keeps_up(value))
+            print(f"        {name:18}{len(rows):>8,}{d['p50']:>12.1f}{d['p99']:>12.1f}"
+                  f"{w['p50']:>12,.0f}{w['p99']:>12,.0f}{past:>7,}")
     else:
         print("        step work:  not derivable from this dataset — it needs blocks, joints and "
               "a substep column, and one of them is missing")

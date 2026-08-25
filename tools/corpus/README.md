@@ -16,6 +16,30 @@ python3 tools/corpus/panel.py out/census-2026-08-21/census.csv \
                              out/census-2026-08-21 out/knobs-2026-08-21   # every dataset, one page
 ```
 
+## The two walks over the whole population
+
+`CorpusSurvey` runs five scenarios and every one of them is vacuum. `CorpusAirWalk` runs the four
+[`PairLab.AirScenarios`](../../tests/Thermodynamics.Harness/PairLab.cs) — `vacuum-shadow` as the
+anchor, then `surface-hot-noon`, `storm-parked` and `reentry` — because both halves of `G6` are
+decided in air and the survey has never seen any (`F11`). They are separate walks with separate
+resume records and separate data directories, so a figure quoted from one is not silently a figure
+from a run of the other (`M1`).
+
+```bash
+THERMAL_CORPUS_TESTS=1 THERMAL_CORPUS_DATA=$PWD/out/air-2026-08-24 \
+    THERMAL_CORPUS_PROGRESS=$PWD/out/air-2026-08-24/progress.txt \
+    systemd-run --user --scope -p MemoryMax=24G -p MemorySwapMax=0 --quiet \
+    dotnet test -c Release --no-build tests/Thermodynamics.Tests \
+        --filter "FullyQualifiedName~CorpusAirWalk"
+```
+
+**`THERMAL_CORPUS_DATA` must be absolute.** The test host's working directory is the test project's
+output directory, not the repository, so a relative path writes the dataset somewhere nobody will
+look for it. Everything else on this page applies unchanged: no hang timeout, one walk at a time, a
+memory cap, and relaunch to resume.
+
+---
+
 `verdict.py` evaluates the criteria written down in [balance-lab.md](../../docs/balance-lab.md)
 before the data was collected, so a run that fails them is a finding rather than an excuse to move a
 threshold. It reports G1, G2, G5 and G6, says plainly that G3 and G4 are not answerable from this

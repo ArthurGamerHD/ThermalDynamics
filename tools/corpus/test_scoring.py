@@ -252,6 +252,12 @@ class StepWork(unittest.TestCase):
         # criterion moves with it rather than describing a configuration nobody runs.
         self.assertEqual(4000000.0, scoring.SHIPPED_VISIT_ALLOWANCE)
 
+    def test_the_substep_cap_is_the_shipped_one_and_not_the_datasets_own_maximum(self):
+        # `MaxSubsteps` in ThermalSettings. verdict.py used max(substeps_granted) until
+        # 2026-08-24, which is ceil(max demand) on any population nothing clamps -- so the demand
+        # half of G6 was comparing a population against itself and could not fail.
+        self.assertEqual(64.0, scoring.SHIPPED_SUBSTEP_CAP)
+
 
 if __name__ == "__main__":
     unittest.main()

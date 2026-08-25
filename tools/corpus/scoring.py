@@ -199,6 +199,18 @@ NODE_COST_IN_LINKS = 4.0
 # costs. See configuration.md, What a shortened step costs, and balance-lab.md for G6's cost half.
 SHIPPED_VISIT_ALLOWANCE = 4000000.0
 
+# What the shipped `MaxSubsteps` grants one step, whatever a grid asks for. The other half of
+# `G6`'s "what the shipped caps grant", and pinned here for the same reason the allowance is: the
+# criterion has to score the configuration that ships.
+#
+# **`verdict.py` used the largest `substeps_granted` in the dataset until 2026-08-24, and that is
+# not a cap — it is the largest demand the population happened to make.** Granted is `ceil(demand)`
+# until something clamps it, so on a population nothing clamps, `max(granted)` is `ceil(max
+# demand)`, which is never below p99. The demand half was passing by construction: it compared a
+# population against itself. Every figure it produced in vacuum was true anyway, because the real
+# margin there is 4.6 against 64.
+SHIPPED_SUBSTEP_CAP = 64.0
+
 
 def step_work(nodes, links, substeps):
     """Element visits one step of a grid charges, which is the cost half of `G6`.
