@@ -993,6 +993,56 @@ namespace Thermodynamics.Sim
                     return 0;
                 }
 
+                case "allowance":
+                {
+                    // What MaxElementVisitsPerStep costs and what it buys, across grid size and
+                    // world. backlog.md C27.
+                    List<int> allowanceSizes = new List<int>();
+                    foreach (int rung in AllowanceLab.DefaultSizes)
+                    {
+                        if (rung <= max) allowanceSizes.Add(rung);
+                    }
+
+                    int allowanceFrames = ticks > 0 ? ticks : AllowanceLab.DefaultFrames;
+                    string allowanceOut = csvDirectory ?? "out";
+
+                    Console.WriteLine();
+                    Console.WriteLine("== element-visit allowance, " + shape + ", "
+                        + allowanceFrames + " frames ==");
+                    Console.WriteLine("  A step is spread across the frames of its own window, so"
+                        + " an allowance V at Frequency f");
+                    Console.WriteLine("  bounds a frame at V * f / 60 element visits. The trade is"
+                        + " frame milliseconds against");
+                    Console.WriteLine("  the share of simulated time a grid keeps; the kelvin"
+                        + " column converts the second at F23's rate.");
+                    Console.WriteLine();
+
+                    List<AllowanceLab.PriceRow> allowancePrices = AllowanceLab.PriceRates(
+                        AllowanceLab.DefaultDeficits,
+                        message => Console.Error.WriteLine("  " + message));
+
+                    List<AllowanceLab.Row> allowanceRows = AllowanceLab.Run(shape, allowanceSizes,
+                        AllowanceLab.DefaultAllowances, AllowanceLab.DefaultWorlds,
+                        allowanceFrames, message => Console.Error.WriteLine("  " + message));
+
+                    Console.WriteLine("-- what a lost rate is worth, under a moving load --");
+                    Console.WriteLine();
+                    Console.WriteLine(AllowanceLab.PriceTable(allowancePrices));
+                    Console.WriteLine("-- what each allowance costs and buys --");
+                    Console.WriteLine();
+                    Console.WriteLine(AllowanceLab.Table(allowanceRows, allowancePrices));
+
+                    Directory.CreateDirectory(allowanceOut);
+                    string allowancePath = Path.Combine(allowanceOut, "allowance.csv");
+                    File.WriteAllText(allowancePath,
+                        AllowanceLab.Csv(allowanceRows, allowancePrices));
+                    string allowancePricePath = Path.Combine(allowanceOut, "allowance-rate.csv");
+                    File.WriteAllText(allowancePricePath, AllowanceLab.PriceCsv(allowancePrices));
+                    Console.WriteLine("csv -> " + allowancePath);
+                    Console.WriteLine("csv -> " + allowancePricePath);
+                    return 0;
+                }
+
                 case "rowfill":
                 {
                     int fillBlocks = size > 0 ? size : 32000;
@@ -1383,6 +1433,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  bench smallgrids        what one grid costs before any of its blocks do");
             Console.WriteLine("  bench wattsclear        what zeroing the watts row costs, up a size ladder");
             Console.WriteLine("  bench rowfill           what the first substep of a step pays over a later one");
+            Console.WriteLine("  bench allowance         what the element-visit allowance costs, and what it buys");
             Console.WriteLine("  bench pace  --size N    does slowing sim and raising transfer save anything");
             Console.WriteLine("  bench reach --length N  how fast heat crosses a grid, against what it costs");
             Console.WriteLine("  bench memory --size N   where a grid's memory goes, by structure");

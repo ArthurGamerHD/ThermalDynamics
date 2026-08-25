@@ -815,6 +815,126 @@ what the default buys in game.
 
 ---
 
+## What the allowance is worth
+
+`MaxElementVisitsPerStep` is the one shipped bound whose unit had never been priced. The section
+above measures what a *node* is worth in links, which is how the unit was built; this measures what
+the unit itself costs in milliseconds, and what the thing it trades away costs in kelvin.
+
+```bash
+cd tests
+dotnet run --project Thermodynamics.Sim -- bench allowance --csv out/bench
+dotnet run --project Thermodynamics.Sim -- bench allowance --max 32000
+```
+
+### It is a per-frame budget wearing a per-step name
+
+A step is spread across the frames of its own window — `ThermalSimulation.Update` banks
+`StepWorkUnits × frameSeconds × StepsPerSecond` of credit a frame — so an allowance of `V` at
+`Frequency f` bounds a frame at **`V × f / 60`** element visits, whatever the grid. At the shipped
+2,000,000 and `Frequency` 4 that is **133,333 visits a frame**, and it is the only quantity the
+setting controls. `AnAllowanceIsAPerFrameBudgetScaledByTheStepRate` measures the ceiling off a
+throttled grid rather than deriving it, and lands within one substep of it.
+
+That is also why the setting moved with `Frequency` in 2026-08-22 instead of staying put, and why a
+figure quoted per *step* is the wrong unit to argue about.
+
+### The unit had no measured cost, because nothing divided by it
+
+Every *ns per element visit* figure this repository publishes — [the ladder](#the-ladder), and the
+`ns per element visit` field a telemetry dump prints — divides solver milliseconds by
+`nodes + links`. The budget counts `links + 4 × nodes`. On a census hull those differ by very close
+to **2×**, so converting the shipped allowance into milliseconds through either published figure
+overstates its cost by about a factor of two. Both figures are correct for what they say; neither is
+the setting's own currency, which is why the allowance could not be chosen against a frame.
+
+Measured in the currency the setting counts in, on a driven census hull:
+
+| blocks | vacuum | atmosphere | flight |
+| ---: | ---: | ---: | ---: |
+| 8,904 | 1.05 | 0.99 | 0.95 |
+| 32,800 | 1.08 | 1.01 | 0.98 |
+| 126,731 | 1.24 | 1.07 | 1.03 |
+
+*ns per element visit, `links + 4 × nodes`, harness, best of three, 2026-08-24.* Multiplied by the
+`nodes + links` ratio — 2.01 across these three rungs — that is **1.88 to 2.50 ns** in the ladder's
+unit, against the ladder's own 1.73–1.86. The gap is the right size and in the right direction:
+these rows are the *host* path, which asks how long a step it can afford before starting one, and
+[the two step paths](#the-two-step-paths) is what that question costs.
+
+### Where it binds, which is air rather than vacuum
+
+The share of real time a settled, driven hull keeps at each allowance. **100 % means the bound was
+never reached**, and a bound that is not reached costs nothing at all (`P8`).
+
+| blocks | allowance | vacuum | atmosphere | flight |
+| ---: | ---: | ---: | ---: | ---: |
+| 8,904 | 2,000,000 | 100 % | 100 % | 100 % |
+| 16,558 | 2,000,000 | 100 % | 100 % | **84.2 %** |
+| 32,800 | 2,000,000 | 100 % | **52.7 %** | **36.2 %** |
+| 64,463 | 2,000,000 | **68.9 %** | **26.3 %** | **18.1 %** |
+| 126,731 | 2,000,000 | **27.2 %** | **11.9 %** | **8.5 %** |
+| 32,800 | 4,000,000 | 100 % | 100 % | **72.5 %** |
+| 64,463 | 4,000,000 | 100 % | **52.7 %** | **36.2 %** |
+| 126,731 | 4,000,000 | **68.0 %** | **29.8 %** | **21.2 %** |
+
+**The demand is three to four times larger in flight than in vacuum** — 23.6 to 27.5 substeps
+against 6.8 to 7.3 — because air puts a convection term on every exposed node, and three times the
+demand reaches the same ceiling at a third of the size. So the size at which the shipped allowance
+stops covering a hull is about 32,000 blocks in vacuum, 16,000 in atmosphere and **9,000 in
+flight**.
+
+[backlog.md](backlog.md) `C27` measured this in vacuum, which is the cheapest of the nine worlds on
+the axis that matters and the same reading [the environments](#the-environments) exists to stop
+anyone taking again.
+
+### What the rate it trades away is worth
+
+A grid whose step the allowance shortens is not made less accurate — each step is as faithful as it
+was and there are fewer of them, so **its thermal clock runs slow**. That is the quantity `F23`
+measured with `ClientInputLab`'s `SimSpeedError`, at one point: 2.52 K standing at a 10 % deficit on
+the sweep's own rig, under a moving load, and 0.00 K under a steady one.
+
+One point is a slope only if the curve through it is straight, and the deficits above reach past
+60 %, so `bench allowance` runs the same mechanism up a ladder instead:
+
+| deficit | peak K | standing K | K per unit |
+| ---: | ---: | ---: | ---: |
+| 5 % | 5.36 | 1.19 | 23.7 |
+| 10 % | 10.99 | 2.52 | 25.2 |
+| 20 % | 23.29 | 5.79 | 29.0 |
+| 30 % | 36.99 | 10.16 | 33.9 |
+| 45 % | 61.00 | 20.01 | 44.5 |
+| 60 % | 90.84 | 36.98 | 61.6 |
+
+*2,000-block census hull, planet, 600 s of thermal time, load alternating every 120 s.* The 10 % row
+reproduces the degraded-input sweep's published `slow clock` figure exactly, which is the check that
+the two are the same experiment (`P4`), and
+`ThePriceLadderLandsOnTheSweepsOwnSlowClockRow` holds them to it.
+
+**The curve is convex**, 23.7 K per unit at the shallow end and 61.6 at the deep one, so a straight
+line through `F23`'s point under-reports the deep end by two and a half times. Rows past 60 % are
+printed with a `>` rather than extrapolated (`P2`).
+
+**The scope the kelvin column carries** (`P1`): it is a hull under a *moving* load, which is the only
+place a clock error shows at all. It is an upper bound on a ship whose load is steadier and says
+nothing about a settled grid, because two hulls heading to the same equilibrium at different speeds
+agree once they arrive.
+
+### What that makes it, beside the approximations the mod has already priced
+
+| approximation | what it costs | what it is |
+| --- | --- | --- |
+| the substep ceiling `C19` accepted | 0.028 K on the hottest block | shipped, and recorded as a limit |
+| `MaxSubstepsPerBlock 6` (`C3`) | 0.607 K on the worst-placed block | **not** a default — a switch, on that figure |
+| the element-visit allowance | 4.4 K at 16,558 blocks in flight, >37 K at 32,800 | shipped as a default |
+
+Same hull family, same rules, three orders of magnitude apart. The allowance is by a wide margin the
+largest approximation the mod ships and was the only one never priced — not because anyone chose
+that, but because a millisecond and a kelvin had never been put in the same sentence for it.
+
+---
+
 ## The iteration log
 
 One row per pass over this repository, so a change over many sessions reads as a trend rather than
@@ -965,6 +1085,7 @@ several times its neighbours' should be re-taken rather than explained.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-24 | **Priced the element-visit allowance, in its own unit and in kelvin, and both halves were new.** `bench allowance` sweeps grid size, world and allowance through the host's frame-paced entry point — the one path where the bound is in force — and reports what a grid keeps of real time beside what a frame costs. **Two findings.** No published *ns per element visit* figure in this repository is in the unit the budget counts in: the ladder and the telemetry dump both divide by `nodes + links` where the budget counts `links + 4 × nodes`, about 2× apart, so the allowance had never been convertible into milliseconds at all. And it binds in **air**, not vacuum — a hull keeps 100 % of real time to 32,000 blocks in vacuum, 16,000 in atmosphere and 9,000 in flight — where [backlog.md](backlog.md) `C27` had measured only the vacuum column. What the lost rate costs is measured up a ladder rather than read off `F23`'s one point, because the curve is convex: 1.19 K standing at a 5 % deficit and 36.98 K at 60 %, the 10 % row reproducing the degraded-input sweep exactly. |
 | 2026-08-24 | **Re-ran the ladder and the environments at `C24`'s pair on the hull `C26` refreshed.** A hull carries about a tenth fewer links, because each census band now mounts the way the block it stands for does; the vacuum demand halved and the flight demand barely moved, which is the retune's shape — a convection-limited demand falls with the clock and a conduction-limited one rises with the pace. Cost per element visit is unmoved at 1.73–1.86 ns, which is what says the step got smaller rather than slower. Figures elsewhere on this page that are quoted from a particular run and not re-taken carry the date they were measured. |
 | 2026-08-23 | **Asked `D14`'s question of a fleet instead of a grid.** Spreading a step costs 12.2 % on 242 grids of 1,004 nodes and nothing at all on four — the penalty is the fleet's working set rather than any grid's size, which is why the single-grid ladder never saw it. The lump staggering would put on a frame is 0.53 ms for such a grid and flat in fleet size, and a frame carries the same total work either way, so what staggering really gives up is the ability to split a grid too big for the budget. `bench stagger`, `StaggerTests`. |
 | 2026-08-22 | Recorded row 11 in both tables and re-took the baseline on this machine. The step columns doubled because `Frequency` halved and the element allowance doubled with it; per simulated second is 8.948 ms before against 8.537 ms after, so the pass is cost-neutral and the 8,000-block ship went from 22 substeps granted to 44 with demand doubling to match. The machine is 26% slower than rows 0-8 in two runs twenty minutes apart, which is its state and not a loud sample, so only that one comparison is readable. Corrected two statements that the committed baseline is pinned at row 3; it is re-recorded whenever its keys change, which happened this pass. |
