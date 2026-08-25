@@ -61,9 +61,13 @@ the solver's own unit, and compared against a bound the mod already ships.
 
 * **The statistic.** A step's work in element visits, in the unit the allowance is denominated in:
   `substeps × (links + 4 × nodes)`, which is `ThermalSimulation.SubstepCost` and is what a step's
-  length is divided by when the bound decides whether to shorten it. None of it is a clock. The
-  corpus records `blocks`, `joints` and both substep columns per ship, so it is derivable from every
-  walk already taken.
+  length is divided by when the bound decides whether to shorten it. None of it is a clock. **The
+  walk records that cost per run** — the mod's own figure for the assembly's most expensive grid,
+  since the allowance is per grid — rather than the scorer rebuilding it from columns.
+
+  > **It said *derivable from `blocks`, `joints` and a substep column* until 2026-08-24, and it is
+  > not.** `joints` is the mechanical joints between grids and is nought on most blueprints, so that
+  > derivation dropped the link term entirely. See the correction below.
 
   > **The weight was 2.125 until 2026-08-24, and that is a real figure about the solver that is the
   > wrong one here.** It is `ThermalSolverStep.SubstepWork` — the buffers cleared, the environment
@@ -82,6 +86,30 @@ the solver's own unit, and compared against a bound the mod already ships.
 * **What it does not cover.** One grid at a time. A fleet's cost is the sum over grids and the
   allowance is per grid, so this says a *ship* is affordable rather than that a *session* is —
   which is `D19`'s question and is measured on a fleet rather than on a population.
+
+> **Every step-work figure below is withdrawn: the link count was the joint count.**
+>
+> **Corrected 2026-08-24.** The unit is `links + 4 × nodes` and the corpus has never carried a link
+> column, so `verdict.py` was handed `joints` — which is the count of *mechanical joints between
+> grids*, a rotor or a piston, and is nought on almost every blueprint. `links + 4 × nodes` was
+> therefore evaluating to `4 × nodes`, and **every step-work figure this repository has published is
+> the node half of the unit alone.** On a 2,000-block census hull that is **1.51× low** — 2.06 links
+> a block — and on any other hull it is low by that hull's own link-to-node ratio, which is why no
+> factor is applied here and the walk records the cost instead (`StepWorkUnitTests`).
+>
+> **What it does to the verdicts: nothing, and it makes the failure worse.** A hull's ratio is
+> between nought and about three links a block, so the true figure is between 1.0× and 1.75× what is
+> written below. The air walk's p99 of 5,812,731 is really between 5.8 M and 10.2 M against a
+> 4,000,000 allowance — already failing, and failing harder. The vacuum survey's 881,279 is between
+> 0.88 M and 1.54 M against the same allowance — still holding. **No verdict on this page moves; every
+> number on it does**, and the numbers cannot be recovered from the datasets that produced them
+> because the count they need was never recorded (`P2`). They are replaced by a walk carrying the
+> `substep_cost` column, and until it lands `verdict.py` reports `G6`'s cost half as *unmeasured*
+> rather than reprinting the old arithmetic.
+>
+> This is the same class of error as the 2.125-against-4 correction below, one level down: that one
+> had the right count in the wrong currency, this one has the wrong count. The figures are left as
+> written rather than deleted (`E11`, `E10`).
 
 **Scored in air, and the cost half fails.** Over the 32,575 runs of the 2026-08-24 air walk — the
 whole corpus, four scenarios, at the pair that ships: **demand p50 7.9, p95 30.2, p99 34.8** against
@@ -129,7 +157,9 @@ exceed it run their simulated time slower than real time rather than being refus
 > the 2,000,000 it granted before. Both are projections of a projection and neither is a
 > measurement; what would settle it is walking the corpus in air, which is `F11`, and eight hours
 > (`P6`). What the scorer needs is any walk's `blocks`, `joints` and a substep column, so it prices
-> whichever run it is handed.
+> whichever run it is handed. *(Corrected 2026-08-24: what it needs is `substep_cost` and a substep
+> column. `joints` is not the link count and no walk before that date carries one — see the
+> withdrawal above.)*
 
 ### What the corpus in air is expected to say, written before it says it
 
@@ -643,6 +673,7 @@ is an enclosing hull, and the corpus has hulls.
 | --- | --- |
 | 2026-08-24 | **One definition of a percentile, where there were two.** `air.py` interpolated between the two ranks a quantile falls between and `verdict.py` took `values[int(q × n)]`, and these pages print the two side by side — a corpus p99 against a panel p99. On forty thousand samples they agree to a third of a per cent, which is why nobody noticed; on **forty** they do not agree at all, because `int(0.99 × 40)` is 39 and the fortieth of forty is the maximum. A p99 that is the largest reading in the set is not a percentile, and a forty-hull panel is a set this repository scores. The interpolating one survives, because every published panel figure was computed with it; the corpus figures move by up to 0.3 % and are re-quoted (`P5`, `P3`). |
 | 2026-08-24 | **Settled the sealed-block anomaly, and corrected a sample figure that had been standing as a population one.** This page said twenty-four sealed blocks, all on `UNSC Panama`, of 1.15 million — the 2026-08-21 corpus says **1,184 across 331 ships of 45.2 million**, and the *share* was right to a rounding, which is why nobody caught the rest (`E2`). Measured with `bench sealed`, there are two kinds and neither is impossible: `LargeBlockGyro`, 307 of the 330 on the seven worst ships, whose game definition declares one mount point so a gyro with its bottom face against empty space bolts to nothing while being buried — the model's *touch without mounts conducts nothing* rule working, on a block that makes heat; and an armour cube alone in an interior void, whose six free faces all look into cells that are not external and so count as unexposed by definition. The synthetic two-block grid could never reproduce the second because two blocks in open space have external neighbours. Also: air is a third exit and the sealed test never looked at it, so `HotSpotLab.IsSealed` is now one definition shared with `CorpusSurvey` and the report prints how many rooms hold air — on an unpressurised lab hull, none. |
+| 2026-08-24 | **The link count in `G6`'s cost half was the *joint* count, so every step-work figure this repository has published is the node half of the unit alone.** The unit is `links + 4 × nodes`; the corpus carried no link column and `verdict.py` was handed `joints`, which counts rotors and pistons *between grids* and is nought on almost every blueprint — so the expression evaluated to `4 × nodes`. On a 2,000-block census hull that is **1.51× low**, at 2.06 links a block; on any other hull it is low by that hull's own ratio, so no factor is applied and the walk records `ThermalSimulation.SubstepCost` per run instead. **No verdict moves**: the air walk's p99 is really 5.8–10.2 M against a 4,000,000 allowance and was already failing, and the vacuum survey's is 0.88–1.54 M and still holds. The figures cannot be recovered from the datasets that produced them, so `verdict.py` reports the cost half as *unmeasured* on any walk without the column rather than reprinting the old arithmetic (`E8`, `P2`), and `G6` reads as one half unscored rather than as a failure. `StepWorkUnitTests` pins the harness side and `number()` now reads a missing column as absent rather than crashing (`C8`). |
 | 2026-08-24 | **Re-scored `G6`'s cost half in the currency the allowance is spent in, and against the bound that ships after `C27`.** The work was measured with `2.125 × nodes + links`, which is `SubstepWork` — the unit a step is cut into frame-sized *slices* in — and compared against a bound denominated in `links + 4 × nodes`, which is what a step's length is divided by when the allowance decides whether to shorten it. Two currencies, 1.45× apart on a census hull, either side of one comparison; and the substep column was granted where the allowance reads demanded. Re-scored: p50 10,909, p95 269,153, **p99 881,279**, 29 runs past the 4,000,000 across 8 ships from 159,449 blocks up, where it read p99 446,707 and fifteen runs across three ships against 2,000,000. **The verdict is unchanged and the restriction under it is now stated where the figure is**: five vacuum scenarios, which is exactly what let this criterion's *demand* half read as passing for months, and projecting into air puts the corpus p99 level with the bound. |
 | 2026-08-24 | **Wrote down `G6`'s cost half, before scoring anything against it** (`E11`). The criterion has always said *substep demand and step cost* and only the demand had ever been produced. The cost is stated as **work** rather than as time — `substeps × (2.125 × nodes + links)`, the solver's own charge, derivable from every corpus walk already taken — and the bound is `MaxElementVisitsPerStep` at 2,000,000, which is the mod's own statement of what a grid's step may cost and the point past which a grid's simulated time runs slower than real time. *(Both figures moved later the same day: the unit to `links + 4 × nodes`, which is the one the allowance is spent in, and the bound to 4,000,000 — see the rows below.)* It fails at p99, the same percentile and shape as the demand half. [backlog.md](backlog.md) `C23`. |
 | 2026-08-24 | Two notes on `G6`, neither of which moves it (`P3`). Its marker is a fidelity marker rather than a cost one — a demand above the cap is the cap bounding cost, and the shipped breach *buys* 1.15× of the step for 0.028 K. And the step-cost half of its own sentence has never been produced, because the corpus carries no timing column; that gap is now `C23` ([backlog.md](backlog.md) `C19`). |

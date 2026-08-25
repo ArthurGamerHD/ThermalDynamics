@@ -60,6 +60,49 @@ namespace Thermodynamics.Harness
             }
         }
 
+        /// <summary>
+        /// Thermal links across every grid — block touching block, which is what a substep's
+        /// conduction pass visits.
+        ///
+        /// **Not <see cref="Bridges"/>.** A bridge is a rotor or a piston between two grids and
+        /// there are usually none; a link is a face two blocks share and there are one to three per
+        /// block. `G6`'s cost half was scored with the joint count standing in for the link count,
+        /// which left the whole conduction half of a substep out of the figure.
+        /// </summary>
+        public int LinkCount
+        {
+            get
+            {
+                int total = 0;
+                for (int i = 0; i < Simulations.Count; i++) total += Simulations[i].Solver.LinkCount;
+                return total;
+            }
+        }
+
+        /// <summary>
+        /// What one substep costs the grid that costs the most, in the unit
+        /// <c>MaxElementVisitsPerStep</c> is spent in.
+        ///
+        /// **Per grid, because the allowance is per grid.** A blueprint with two hulls on a rotor is
+        /// two simulations, each bounded on its own, so summing them scores a ship the bound never
+        /// sees. On the 8,144-ship corpus that distinction is small — most blueprints are one grid —
+        /// and it is the difference between scoring the mechanism and scoring a number near it.
+        /// </summary>
+        public long WorstGridSubstepCost
+        {
+            get
+            {
+                long worst = 0;
+                for (int i = 0; i < Simulations.Count; i++)
+                {
+                    long cost = Simulations[i].SubstepCost;
+                    if (cost > worst) worst = cost;
+                }
+
+                return worst;
+            }
+        }
+
         public void CollectDiagnostics(bool on)
         {
             for (int i = 0; i < Simulations.Count; i++) Simulations[i].Solver.CollectDiagnostics = on;

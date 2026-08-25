@@ -12,24 +12,10 @@ G6 demand p95,30.195,substeps
 G6 demand p99,34.779,substeps
 G6 demand max,36.614,substeps
 G6 substep cap,64,substeps
-G6 work p50,45322,element visits
-G6 work p95,1652490,element visits
-G6 work p99,5812731,element visits
-G6 work max,75905586,element visits
-G6 visit allowance,4000000,element visits
-G6 runs over the allowance,556,
-G6 verdict,fails,
+G6 verdict,unanswered,
 G6 reentry demand p99,34.782,substeps
-G6 reentry work p99,8451030,element visits
-G6 reentry runs over the allowance,222,
 G6 storm-parked demand p99,30.309,substeps
-G6 storm-parked work p99,7321903,element visits
-G6 storm-parked runs over the allowance,186,
 G6 surface-hot-noon demand p99,19.234,substeps
-G6 surface-hot-noon work p99,4663327,element visits
-G6 surface-hot-noon runs over the allowance,105,
 G6 vacuum-shadow demand p99,11.405,substeps
-G6 vacuum-shadow work p99,2551718,element visits
-G6 vacuum-shadow runs over the allowance,43,
 G3 verdict,unanswered,
 G4 verdict,unanswered,

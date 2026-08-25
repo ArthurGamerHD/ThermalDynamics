@@ -154,6 +154,26 @@ namespace Thermodynamics.Harness
         public float SubstepsDemanded;
         public int SubstepsGranted;
 
+        /// <summary>
+        /// Thermal links across the whole assembly — block touching block.
+        ///
+        /// **The column `G6`'s cost half needed and did not have.** A substep runs a conduction
+        /// pass that is per link and an environment pass that is per node, and the allowance is
+        /// denominated in `links + 4 x nodes`; the corpus carried `Joints`, which is the mechanical
+        /// joints *between grids* and is nought on most blueprints, so every step-work figure this
+        /// repository published was the node half alone.
+        /// </summary>
+        public int Links;
+
+        /// <summary>
+        /// What one substep costs the assembly's most expensive grid, in element visits — the unit
+        /// `MaxElementVisitsPerStep` is spent in, and per grid because the bound is per grid.
+        ///
+        /// Read from <see cref="ThermalSimulation.SubstepCost"/> rather than recomputed here, so
+        /// the corpus is scored in the mod's own arithmetic instead of in a copy of it (`P5`).
+        /// </summary>
+        public long SubstepCost;
+
         public override string ToString()
         {
             return Ship + " / " + Scenario + ": " + PeakKelvin.ToString("n0") + " K peak";
@@ -180,6 +200,8 @@ namespace Thermodynamics.Harness
                 VentedWatts = assembly.VentedWatts,
                 SubstepsDemanded = assembly.RequiredSubsteps,
                 SubstepsGranted = assembly.GrantedSubsteps,
+                Links = assembly.LinkCount,
+                SubstepCost = assembly.WorstGridSubstepCost,
             };
 
             if (outcome.Blocks == 0) return outcome;

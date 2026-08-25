@@ -212,12 +212,27 @@ class CensoringBeginsAtABlocksOwnRatingRatherThanAtARoundNumber(unittest.TestCas
 class StepWork(unittest.TestCase):
     """`G6`'s cost half: work in the solver's own unit, against the allowance the mod ships."""
 
-    def test_a_step_costs_its_substeps_times_its_elements(self):
-        # One substep over 1,000 nodes and 2,000 links: 4,000 node visits and 2,000 link visits.
-        self.assertAlmostEqual(6000.0, scoring.step_work(1000, 2000, 1), places=3)
+    def test_a_step_costs_its_substeps_times_what_one_substep_costs(self):
+        # One substep of a grid whose `SubstepCost` the walk recorded as 6,000 -- 1,000 nodes at
+        # four visits each and 2,000 links at one.
+        self.assertAlmostEqual(6000.0, scoring.step_work(6000, 1), places=3)
 
         # And it is linear in the substeps, which is what makes it the cost the cap decides.
-        self.assertAlmostEqual(60000.0, scoring.step_work(1000, 2000, 10), places=3)
+        self.assertAlmostEqual(60000.0, scoring.step_work(6000, 10), places=3)
+
+    def test_the_cost_comes_from_the_walk_rather_than_being_rebuilt_here(self):
+        """The defect this signature exists to make impossible.
+
+        `step_work` took `(nodes, links, substeps)` until 2026-08-24 and every caller handed it the
+        `joints` column for `links`. A joint is a rotor or a piston between two grids and there are
+        none on most blueprints, so `links + 4 x nodes` evaluated to `4 x nodes` and every published
+        step-work figure was the node half alone -- 1.51x low on a 2,000-block census hull. The
+        signature now takes the cost the walk recorded from `ThermalSimulation.SubstepCost`, so
+        there is no second place for the arithmetic to be got wrong (`P5`).
+        """
+        # Nothing here can be handed a node count and a link count any more: one number, and it is
+        # the mod's own.
+        self.assertAlmostEqual(12000.0, scoring.step_work(6000, 2), places=3)
 
     def test_the_unit_is_the_one_the_allowance_is_denominated_in(self):
         # The weight is `ThermalSettings.NodeCostInLinks`, which is what
@@ -228,13 +243,14 @@ class StepWork(unittest.TestCase):
         self.assertEqual(4.0, scoring.NODE_COST_IN_LINKS)
 
     def test_a_missing_column_reports_nothing_rather_than_a_figure_built_from_a_zero(self):
-        self.assertIsNone(scoring.step_work(None, 2000, 4))
-        self.assertIsNone(scoring.step_work(1000, None, 4))
-        self.assertIsNone(scoring.step_work(1000, 2000, None))
+        # A walk taken before the `substep_cost` column existed reports no cost at all, which is
+        # what makes `G6` read as one half unmeasured rather than as a failure (`E8`, `P2`).
+        self.assertIsNone(scoring.step_work(None, 4))
+        self.assertIsNone(scoring.step_work(6000, None))
 
-        # A walk that recorded no blocks, or a row whose step never ran, is not a free step.
-        self.assertIsNone(scoring.step_work(0, 2000, 4))
-        self.assertIsNone(scoring.step_work(1000, 2000, 0))
+        # A grid with no elements, or a row whose step never ran, is not a free step.
+        self.assertIsNone(scoring.step_work(0, 4))
+        self.assertIsNone(scoring.step_work(6000, 0))
 
     def test_a_grid_keeps_real_time_until_its_step_passes_the_allowance(self):
         allowance = scoring.SHIPPED_VISIT_ALLOWANCE

@@ -20,27 +20,11 @@ G6 demand p95,3.518,substeps
 G6 demand p99,4.646,substeps
 G6 demand max,12.275,substeps
 G6 substep cap,64,substeps
-G6 work p50,10909,element visits
-G6 work p95,269153,element visits
-G6 work p99,881279,element visits
-G6 work max,10014111,element visits
-G6 visit allowance,4000000,element visits
-G6 runs over the allowance,29,
-G6 verdict,holds,
+G6 verdict,unanswered,
 G6 burn-forward demand p99,4.89,substeps
-G6 burn-forward work p99,943289,element visits
-G6 burn-forward runs over the allowance,7,
 G6 full-electrical demand p99,6.023,substeps
-G6 full-electrical work p99,987776,element visits
-G6 full-electrical runs over the allowance,6,
 G6 idle demand p99,3.576,substeps
-G6 idle work p99,802403,element visits
-G6 idle runs over the allowance,5,
 G6 recovery demand p99,3.627,substeps
-G6 recovery work p99,828175,element visits
-G6 recovery runs over the allowance,6,
 G6 vacuum-sunlit demand p99,3.62,substeps
-G6 vacuum-sunlit work p99,814255,element visits
-G6 vacuum-sunlit runs over the allowance,5,
 G3 verdict,unanswered,
 G4 verdict,unanswered,

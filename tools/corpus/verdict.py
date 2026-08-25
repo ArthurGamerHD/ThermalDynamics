@@ -58,9 +58,15 @@ WARM_KELVIN = 400.0
 
 
 def number(row, key):
+    """A column as a float, or None where the dataset does not carry it.
+
+    **A missing column reads the same as an empty cell** (`C8`). `KeyError` is in the list because
+    a walk that predates a column has no such key at all, and the first caller to ask an old
+    dataset for a new column crashed the report rather than reporting the column as unmeasured.
+    """
     try:
         return float(row[key])
-    except (TypeError, ValueError):
+    except (KeyError, TypeError, ValueError):
         return None
 
 
@@ -251,7 +257,7 @@ if demand:
         substeps = number(row, "substeps_demanded")
         if substeps is None:
             substeps = number(row, "substeps_granted")
-        cost = scoring.step_work(number(row, "blocks"), number(row, "joints"), substeps)
+        cost = scoring.step_work(number(row, "substep_cost"), substeps)
         if cost is not None:
             work.append(cost)
 
@@ -275,10 +281,18 @@ if demand:
 
     demand_ok = p["p99"] <= cap
 
-    verdict("G6", "Affordable across the population.", demand_ok and cost_ok,
+    # **A half that was not measured is not a half that failed** (`P2`, `E8`). A dataset with no
+    # `substep_cost` column can score the demand and nothing else, and a criterion with one half
+    # unmeasured has no verdict — reporting it as a failure would read as evidence against the
+    # configuration when it is evidence about the walk.
+    outcome = (demand_ok and cost_ok) if cost_p else None
+
+    verdict("G6", "Affordable across the population.", outcome,
             f"substep demand p50 {p['p50']:.1f}, p95 {p['p95']:.1f}, p99 {p['p99']:.1f}, "
             f"max {p['max']:.1f}; against {cap:.0f} granted, highest reached {highest:.0f}"
-            + oversubscription_note(p["p99"], cap),
+            + oversubscription_note(p["p99"], cap)
+            + ("" if cost_p else "; the cost half is unmeasured on this dataset, so the criterion "
+                                 "has no verdict"),
             "p99 substep demand exceeds what the shipped caps grant, or p99 step work exceeds "
             "the shipped element-visit allowance")
 
@@ -296,6 +310,9 @@ if demand:
     # and repeats the verdict above, which is honest rather than redundant: it is what says the
     # figure is that world's and not a population's.
     if len(by_scenario) > 1:
+        # **The demand columns survive a dataset with no cost column.** One half of the criterion
+        # being unmeasured is not a reason to withhold the other; an em dash in the work columns
+        # says which one it is (`P2`).
         print(f"\n        {'scenario':18}{'runs':>8}{'demand p50':>12}{'demand p99':>12}"
               f"{'work p50':>12}{'work p99':>12}{'over':>7}")
         for name in sorted(by_scenario):
@@ -306,22 +323,33 @@ if demand:
                 substeps = number(row, "substeps_demanded")
                 if substeps is None:
                     substeps = number(row, "substeps_granted")
-                cost = scoring.step_work(number(row, "blocks"), number(row, "joints"), substeps)
+                cost = scoring.step_work(number(row, "substep_cost"), substeps)
                 if cost is not None:
                     works.append(cost)
-            if not demands or not works:
+            if not demands:
                 continue
             d = percentiles(demands)
+            record(f"G6 {name} demand p99", round(d["p99"], 3), "substeps")
+
+            if not works:
+                print(f"        {name:18}{len(rows):>8,}{d['p50']:>12.1f}{d['p99']:>12.1f}"
+                      f"{scoring.ABSENT:>12}{scoring.ABSENT:>12}{scoring.ABSENT:>7}")
+                continue
+
             w = percentiles(works)
             past = sum(1 for value in works if not scoring.keeps_up(value))
-            record(f"G6 {name} demand p99", round(d["p99"], 3), "substeps")
             record(f"G6 {name} work p99", int(w["p99"]), "element visits")
             record(f"G6 {name} runs over the allowance", past)
             print(f"        {name:18}{len(rows):>8,}{d['p50']:>12.1f}{d['p99']:>12.1f}"
                   f"{w['p50']:>12,.0f}{w['p99']:>12,.0f}{past:>7,}")
-    else:
-        print("        step work:  not derivable from this dataset — it needs blocks, joints and "
-              "a substep column, and one of them is missing")
+    if not cost_p:
+        # **Not a zero, and not the old formula.** Every walk taken before 2026-08-24 carries
+        # `blocks` and `joints` but no `substep_cost`, and `joints` is the count of mechanical
+        # joints between grids rather than of thermal links — so scoring those datasets at all
+        # would reproduce the node-half-only figure this column exists to replace (`E8`, `P2`).
+        print("        step work:  not derivable from this dataset — it needs the `substep_cost` "
+              "column, which walks before 2026-08-24 do not carry. What stood here was scored "
+              "with `joints` for the link count and is the node half alone; re-walk to score it.")
 
 # ---- G3 / G4: not answerable from this dataset -------------------------------------------
 verdict("G3", "Cooling works.", None,

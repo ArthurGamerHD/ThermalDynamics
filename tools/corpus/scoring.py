@@ -181,6 +181,12 @@ def within(bound):
 # Element visits a substep charges per node, from `ThermalSettings.NodeCostInLinks` — the weight
 # `MaxElementVisitsPerStep` is denominated in. Links are one visit each and are added separately.
 #
+# **Nothing here multiplies by it any more, and that is the point.** `step_work` reads the walk's
+# `substep_cost` column, which is `ThermalSimulation.SubstepCost` — the mod's own arithmetic, taken
+# from the run that produced the row. This constant is the *label* a report prints beside the
+# figure, and the pinned statement of what the unit is, so a reader is told the currency without a
+# second implementation of it existing to drift (`P5`).
+#
 # **This was 2.125 until 2026-08-24, and 2.125 is a real number about the solver that is the wrong
 # one here.** It is `ThermalSolverStep.SubstepWork`: the buffers cleared, the environment pass, the
 # apply pass and one more walk, which is how a step is cut into frame-sized slices. The *allowance*
@@ -212,8 +218,12 @@ SHIPPED_VISIT_ALLOWANCE = 4000000.0
 SHIPPED_SUBSTEP_CAP = 64.0
 
 
-def step_work(nodes, links, substeps):
+def step_work(substep_cost, substeps):
     """Element visits one step of a grid charges, which is the cost half of `G6`.
+
+    `substep_cost` is the walk's `substep_cost` column: `ThermalSimulation.SubstepCost` for the
+    assembly's most expensive grid, which is `links + 4 x nodes` read out of the mod rather than
+    rebuilt here (`P5`). Per grid, because `MaxElementVisitsPerStep` is per grid.
 
     `substeps` is the demand rather than what was granted wherever a walk records both: the
     allowance shortens a step by comparing the *demand* against what it can afford, so a granted
@@ -222,18 +232,25 @@ def step_work(nodes, links, substeps):
 
     **A cost that is not a clock.** The corpus deliberately carries no timing column — a per-ship
     millisecond figure taken across thousands of hulls on a shared machine measures the machine —
-    so the statistic is the work the solver charges itself and paces on, which every walk already
-    records as `blocks`, `joints` and `substeps_granted`.
+    so the statistic is the work the solver charges itself and paces on.
 
-    Returns None where any input is missing, so a walk that predates a column reports nothing
-    rather than a figure built from a zero.
+    **This took `blocks` and `joints` until 2026-08-24, and `joints` is not the link count.** A
+    joint is a rotor or a piston between two grids and there are none on most blueprints; a link is
+    a face two blocks share and there are one to three per block. So `links + 4 x nodes` was
+    evaluating to `4 x nodes` and every step-work figure this repository published was the node
+    half alone — 1.51x low on a 2,000-block census hull, and low by a ship's own link-to-node ratio
+    on any other, which is why the walk records the cost rather than a factor being applied here.
+    `StepWorkUnitTests` pins it on the harness side.
+
+    Returns None where any input is missing, so a walk that predates the column reports nothing
+    rather than a figure built from a zero (`E8`, `P2`).
     """
-    if nodes is None or links is None or substeps is None:
+    if substep_cost is None or substeps is None:
         return None
-    if nodes <= 0 or substeps <= 0:
+    if substep_cost <= 0 or substeps <= 0:
         return None
 
-    return substeps * ((NODE_COST_IN_LINKS * nodes) + links)
+    return substeps * substep_cost
 
 
 def keeps_up(work, allowance=SHIPPED_VISIT_ALLOWANCE):
