@@ -318,9 +318,16 @@ namespace Thermodynamics.Tests
 
         /// <summary>
         /// The census hull runs far hotter than a real ship, and the arithmetic of that stays put.
-        /// Pinned as a **characterisation, not a target**: whether the benchmark hull should be a worst
-        /// case or a typical ship is a decision, and this fails if the answer changes without anyone
-        /// saying so. See stiffness.md, The census hull is a 96th-percentile ship for heat.
+        ///
+        /// <para>
+        /// **Decided (`C14`, 2026-08-24): the hull is typical in stiffness and extreme in heat, on
+        /// purpose, and this pins the second half.** They are two properties rather than two
+        /// answers — a cost figure has to describe what a server pays, so `C26` put the hull in the
+        /// population's trough for that; a temperature figure has to be a ceiling, so this one
+        /// stays at the 96th percentile. What follows is a rule about quoting: a temperature taken
+        /// on this hull is an **upper bound**. See stiffness.md, The census hull is a
+        /// 96th-percentile ship for heat.
+        /// </para>
         /// </summary>
         [Fact]
         public void TheCensusHullMakesFarMoreHeatThanARealShip()

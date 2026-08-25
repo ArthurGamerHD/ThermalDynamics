@@ -876,9 +876,31 @@ ship.
 
 **This reaches no stiffness figure.** Substep demand is capacity, conduction and exposure, and no
 watt appears in it, so everything above this section stands. It reaches every *temperature* figure.
-A benchmark hull that runs hot is a reasonable choice for a worst case and a poor one for "what a
-ship does", and which of the two the census is meant to be is a decision rather than a defect —
-`TheCensusHullMakesFarMoreHeatThanARealShip` records it and fails if the answer changes quietly.
+
+**Decided 2026-08-24 (`C14`): it is both, by property, and that is the right shape for a benchmark
+hull rather than a contradiction.** The hull is *typical* in the thing that decides cost and
+*extreme* in the thing that decides temperature, and those are two different properties of one hull
+rather than two answers to one question:
+
+* **Stiffness — typical, deliberately.** `C26` refreshed the tiers to carry the mount points of the
+  blocks they stand for precisely so the hull would sit in the population's trough: 12.71 substeps
+  in air at about the 60th percentile, four exposed faces against a real ship's mean of 3.46, an air
+  ratio of 1.00 against a corpus median of 1.07. A cost figure has to describe what a server
+  actually pays, so this one is a hull in the middle of the population.
+* **Heat — the 96th percentile, deliberately.** A temperature figure has to be a ceiling somebody
+  can rely on. Softening the tiers toward the median ship would make every temperature in this
+  repository describe a hull that is thirty-six times cooler per block, which is not a bound at all.
+
+**So the rule that follows is about quoting rather than about the hull.** A temperature taken on
+the census hull is an **upper bound**, and it is worth noticing that every approximation this mod
+has accepted on such a figure gets *safer* under that reading, not shakier: `C19`'s ceiling breach
+costs at most 0.028 K, and `MaxSubstepsPerBlock 6` at most 0.607 K. A cost or substep figure taken
+on it describes the population and needs no such caveat.
+
+`TheCensusHullMakesFarMoreHeatThanARealShip` pins the heat characterisation, and
+`TheCensusHullIsInsideThePopulationItStandsIn` with `TheCensusHullFeelsAirLikeARealHullDoes` pin the
+stiffness one — so the set fails if either half moves quietly and the decision above stops being
+true.
 
 ### The cap curve holds where the cap is actually set
 
@@ -981,6 +1003,7 @@ conductivity 50 is conduction-stiff, and a material definition would fix them ou
 
 | Date | Change |
 | --- | --- |
+| 2026-08-24 | **Decided `C14`: the census hull is typical in stiffness and extreme in heat, on purpose.** The section above framed that as an open question — a worst case or a typical ship — and the two are properties rather than answers. A cost figure has to describe what a server pays, which is why `C26` put the hull in the population's trough; a temperature figure has to be a ceiling, which is why it stays at the 96th percentile for heat. The rule that follows is about quoting: a temperature taken on this hull is an upper bound, and every approximation accepted on such a figure — `C19`'s 0.028 K, `MaxSubstepsPerBlock 6`'s 0.607 K — is safer under that reading rather than shakier. |
 | 2026-08-24 | **Re-ran both per-block cap sweeps at the pair and hull that now ship, and what the cap is worth inverted.** In vacuum the hull demands 7.35 substeps rather than 22.97, so no cap above six binds and a cap of 6 buys nothing; in thick air at 200 m/s it demands 24.97 rather than 34.44 and a cap of 6 buys 3.1× for **0.028 K** on the worst-placed block against the 0.607 K that made it a switch. That is the same size as the ceiling breach `C19` accepted, so the number separating the two mechanisms is gone — [backlog.md](backlog.md) `C3`. |
 | 2026-08-24 | **Refreshed the census tiers against the blocks they were measured from, which closes [backlog.md](backlog.md) `C26`.** Every tier was a solid cube mounting on all six faces, and `SmallLight` declares one mount point while the three shaped-armour bands declare three, four and five — so the hull's lightest band carried six joints where the block it stands for carries one. The hull demanded 36.75 substeps in air against a population running 6.20 to 22.41 and now demands **12.71**, its stiffest block has four exposed faces against a real 3.46, and its air ratio is 1.97 against a population median of 1.07. Blocks are also laid out the way the game makes a player lay them out: every one bolted to something, and the lightest band on the surface. |
 | 2026-08-24 | **Walked the corpus again at `C24`'s pair, and the population changed shape rather than scale.** 8,105 ships in 190 s: the two modes closed from 5.9× apart to 2.3×, half the population now sits between them where six per cent did, and air has stopped making much difference to *stiffness* anywhere — the median hull's stiffest block is 1.07 times stiffer in air where it was 2.34. The census hull went the other way and is now stiffer than every ship in the corpus, flooring 6.91 % of its own blocks at the shipped cap against a real 0.92 % ([backlog.md](backlog.md) `C26`). The two field observations cannot be placed against any of it: they were taken in sessions at the pair before. |
