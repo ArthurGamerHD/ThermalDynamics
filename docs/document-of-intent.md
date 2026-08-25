@@ -662,10 +662,25 @@ rather than where the hull allows, run the ring the long way round, and face the
 the sun for good. So *cooling is designed in* is most true where there is freedom to design, and a
 base is where the mod's own lever is most available rather than where it stops mattering.
 
-**None of that is measured.** Every scenario in the battery is a ship, a rig or a component, and the
-corpus is published blueprints, which are overwhelmingly ships. The most elaborate part of the model
-— room air, pressurisation, the flood fill that finds compartments — is the part a base leans on
-hardest and the part with the least evidence under it. [backlog.md](backlog.md) `F27`.
+**Measured 2026-08-25, and the first half is confirmed while the emphasis of the second is wrong.**
+The `station` scenario runs a station against a ship matched to one cell, 3,549 against 3,550, with
+the station carrying exactly half the external faces. It settles **284.4 K** above ambient against
+the ship's **236.1 K**, so a base is harder to cool and the claim above stands.
+
+**What it gets in exchange is room to run *transport*, and that is not the same as room for
+radiators.** In vacuum the penalty is the halved area and behaves like it. In air it is three times
+larger than area explains, because convection pins the skin near ambient and what binds is the
+conduction path from the middle out: the station's interior sits **39.9 K above its own skin** where
+the ship's sits below it. Radiators standing on its roof help monotonically and never enough —
+**153 of them, 43 % of the station's own block count, still does not reach a ship of the same
+size**. So *elaborate coolant systems* is the load-bearing half of the sentence above and *radiator
+farms* is the half that reads better than it measures: a loop is a path out of the middle, and area
+is what a path delivers to. The figures are in
+[balance-lab.md](balance-lab.md#what-it-said-two-of-four-hold-and-the-two-that-fail-agree-on-why).
+
+**Room air is the part a base leans on hardest and it moves almost nothing here**: 0.31 K in 284,
+across 48 pressurised compartments. That is a specimen and not a population — the corpus is ships,
+so there is no published station population to check the shape against.
 
 ### Who it is balanced for
 
@@ -1418,6 +1433,7 @@ as a *second* change rather than as a substitute. [backlog](backlog.md) `D19`.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | **Measured the base claim and kept it, with its emphasis corrected.** A station really is harder to cool than a ship of the same block count — 284.4 K above ambient against 236.1 — and *what a base gets in exchange* is room to run **transport** rather than room for surface. On a planet its penalty is three times what its halved area explains, because the binding resistance is the path from its middle to its skin: 39.9 K of interior-to-skin drop where a ship has none. Radiator area helps and cannot close it, at 43 % of the station's blocks. So this page's pairing of *elaborate coolant systems and radiator farms* keeps the first and demotes the second, on evidence rather than on preference. |
 | 2026-08-25 | **Corrected the hand-tool position the same day it was written, and the measurement is what changed it.** The extinguisher fires expendable ammunition that cools a block as *damage mitigation*; the earlier closure priced *cooling a ship*, which is a different question and impossible. Damage tracks the overshoot, so half a bottle pulls the median block 10 K back from its rating where 26 bottles would be needed to return it to ambient — and 90 bottles do nothing for the worst block, which is what keeps it an emergency tool. Also: a base's advantage is **layout freedom rather than size**, and **nothing is refused yet by sequencing** — soft limits wait until testing has found the hard boundaries. |
 | 2026-08-25 | **A base is a thermal problem, and the place cooling can be done properly** — it heats and has to be managed, and what it gets in exchange is room, so elaborate loops and radiator farms work far better there than on a ship. None of it is measured: every scenario is a ship or a rig, the corpus is blueprints, and room air is the part a base leans on hardest with the least evidence under it (`F27`). **And the compatibility promises bind from release, which has not happened** — before then a behaviour change is checked against the corpus rather than against a promise, and the identifiers are reserved rather than depended upon, so a rename that includes them is available now and will not be later. |
 | 2026-08-25 | **Three more decisions.** The readouts exist to *show*, not to diagnose — a player who sees a glow and hears a warning has enough, and working out the fix is the Engineering in Space Engineers. Two consequences: the mod has to announce it is there, which today it does not (`B41`), and *clear* is a higher bar than *present*. The workshop corpus is the population the mod is balanced against, its skew known and accepted. And the mod does not apologise for its cost: no guided troubleshooting, and the performance criterion is the author's own play. Also narrowed the open-API position — the mod is judged self-contained, so what an add-on does to balance is the player's business. |

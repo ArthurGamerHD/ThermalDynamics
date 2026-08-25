@@ -210,6 +210,7 @@ The rule is `O4` in [rules.md](../docs/rules.md); the row that asked for the nar
 | `loop-stiffness` | A long ring is the stiffest thing a player can build cheaply. Does the substep estimate see it? |
 | `loop-layout` | One ring or several, and where to put the sinks? Splitting buys nothing; spreading the sources buys 41 K. |
 | `air-conditioning` | Can a heat pump cool a room? Yes, through a wall, and only a pressurised one. |
+| `station` | Is a base harder to cool than a ship of the same size? Yes, and in air the reason is depth rather than area: its interior sits 39.9 K above its own skin. |
 
 > **`perf` and `solver` are not the same measurement.** `perf` steps a settled cube of one block
 > type, where nearly every link joins two cells at the same temperature — and the conduction
@@ -546,6 +547,7 @@ and left off it.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Added the `station` scenario, which is the first thing in the library that is not a ship, a rig or a component ([backlog.md](../docs/backlog.md) `F27`). It runs a station against a ship matched to one cell with exactly half the external faces, in vacuum and in air at two loads, and prices what roof radiators are worth. `ScenarioClaimTests` pins both halves of its conclusion, and `TheStationAndTheShipAreMatchedOnBlocksAndHalvedOnArea` checks the pair off the shapes rather than off the scenario, so a change that quietly unmatches them fails there rather than moving every figure `F27` rests on. |
 | 2026-08-25 | **A walk launched from a git worktree recorded `unknown` for its commit**, which is what a walk on a machine with no repository records — so the one thing provenance exists to make loud was silent for anyone building on a branch checkout. `.git` is a directory in a clone and a *file* naming one in a worktree; `CorpusRecord.Commit` now follows it, and looks for a loose ref in the common directory a worktree shares with its clone before falling back to `packed-refs`. Found by `AWalkWritesWhatBuildItRanOn`, which was written to catch exactly this and had never had a worktree to catch it on. Its own summary also claimed a `dirty` marker no line of the method produced; the claim is gone and the reason it is not cheap to have is written down instead. |
 | 2026-08-25 | Re-measured both lanes on an idle machine, because the figures here had gone stale in the cheap direction: the whole suite is **2 m 34 s** over 1,884 cases where this page said 5 m 23 s, and the fast lane is **4 s** over 1,585 where it said 6 s over 1,554. Fastest of three with the spread quoted (`M4`). The stale figure was not caught by anything, which is the same reason the lane rule rotted: a suite's own cost is a number a test inside it cannot read. |
 | 2026-08-24 | The suite size on this page is 1,829 rather than 1,769. `EveryQuotedSuiteSizeIsCurrent` allows a page to fall a tenth behind and it had not, so this is bringing a figure current rather than fixing a break. |

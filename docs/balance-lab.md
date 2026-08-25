@@ -281,6 +281,61 @@ is ships, so there is no published population to check the shape against, and th
 observation rather than something the scenario fixes. The scenario is a specimen and is reported as
 one (`E2`).
 
+### What it said: two of four hold, and the two that fail agree on why
+
+Run 2026-08-25, every arm flat to 0.0000 K over its last two samples.
+
+| # | Prediction | Reading | |
+| --- | --- | --- | --- |
+| 1 | The station settles hotter | **284.4 K** above ambient against the ship's **236.1 K**, holding **1.205×** the heat | holds |
+| 2 vac | `2^0.25 = 1.189×` on absolute temperature | **1.203×** | holds, to 1.2 % |
+| 2 air | about `2×` on the rise above ambient | **6.01×** | **fails** |
+| 3 | Room air narrows the gap | narrows it, by **0.31 K** in 284 across 48 pressurised compartments | holds, and is negligible |
+| 4 | Bolted-on radiator area reaches the ship's figure | the roof saturates at **153** radiators — **43 %** of the station's own block count — at **243.9 K** against 236.1 | **fails** |
+
+**Prediction 2's air half fails for a real reason, not a numerical one.** The first suspicion was
+that 6.01× was two near-zero numbers being divided, since at 600 kW both grids settle within a few
+kelvin of ambient. Repeated at ten times the load it reads **6.013×** — 34.6 K against 5.8 K, the
+same ratio to three figures across a factor of ten. So the area argument is right in vacuum and
+wrong in air by a factor of three, and the scenario reports skin mean against interior mean to say
+where the difference sits:
+
+| | skin | interior | drop |
+| --- | --- | --- | --- |
+| station, vacuum | 11.5 °C | 15.9 °C | **+4.4 K** over 2,019 blocks |
+| ship, vacuum | −34.0 °C | −35.5 °C | −1.5 K over 855 blocks |
+| station, air at 6 MW | 21.9 °C | 61.8 °C | **+39.9 K** over 2,019 blocks |
+| ship, air at 6 MW | 16.7 °C | 12.8 °C | −3.9 K over 855 blocks |
+
+**In air, convection pins the skin near ambient and the binding resistance stops being the skin.**
+What is left is the conduction path from the middle of the grid out to it, and the station has 2,019
+interior blocks against the ship's 855. Its interior sits 39.9 K above its own skin where the ship's
+sits *below* its skin. That is the whole of the missing factor of three, and it is the finding this
+scenario exists to have produced: **a base's thermal problem on a planet is getting heat out of the
+middle, not off the surface.**
+
+**Which is why prediction 4 fails the way it does.** Radiators standing on the roof do work — 284.4,
+274.8, 267.7, 263.6, 257.3, 246.7, 243.9 K across 0, 8, 16, 32, 64, 128 and the 153 the roof holds —
+monotonically, and never enough. Adding 43 % of the station's block count in radiators does not
+reach a ship of the same size, because area was never the binding term.
+
+**The intent is vindicated and its emphasis is not.** [The document of
+intent](document-of-intent.md#a-base-is-a-thermal-problem-too-and-the-place-cooling-can-be-done-properly)
+pairs *elaborate coolant systems* with *radiator farms*. The measurement says the first is the
+load-bearing half: a coolant loop is a transport path that bypasses the conduction bottleneck, and a
+radiator farm addresses a bottleneck that is not the binding one in air. A base's advantage is the
+room to run **transport**, and the surface area is what the transport delivers to.
+
+**Two rig errors were found by these predictions failing, and both are recorded where they
+happened.** The first draft read the *hottest block* and reported the station cooler than the ship,
+which is true and measures the wrong thing — the hottest block is a source, and what sets its
+temperature is the structure it is bolted to rather than the grid's skin. The second bolted
+radiators to a side face; `Catalog.Radiator()` carries mount surfaces on its top and bottom faces
+only, so they touched the hull, shaded the skin they covered and conducted nothing, and the ladder
+read *hotter with every radiator added*. `ScenarioClaimTests.RadiatorsHelpWhenTheyStandClearAndHurtWhenTheyDoNot`
+had already pinned that flush panels hurt; this was the same fact arriving from the other direction.
+
+
 ### What flooring an over-budget grid does, written before it is measured
 
 `CorpusFloorWalk` is built and **has produced nothing**. The question, the statistic, the decision

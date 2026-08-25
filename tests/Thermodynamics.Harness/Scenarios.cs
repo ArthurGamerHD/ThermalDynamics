@@ -56,6 +56,7 @@ namespace Thermodynamics.Harness
             "loop-stiffness",
             "loop-layout",
             "air-conditioning",
+            "station",
         };
 
         public static ScenarioResult Run(string name)
@@ -95,6 +96,7 @@ namespace Thermodynamics.Harness
                 case "loop-stiffness": return LoopStiffness();
                 case "loop-layout": return LoopLayout();
                 case "air-conditioning": return AirConditioning();
+                case "station": return Station();
                 default:
                     throw new ArgumentException("Unknown scenario: " + name);
             }
@@ -2255,6 +2257,380 @@ namespace Thermodynamics.Harness
             runner.Run(5000f, 1000f);
 
             return air == null ? 0f : air.Temperature;
+        }
+
+        // ---- the station -----------------------------------------------------------------------
+        //
+        // Every other scenario in this file is a ship, a rig or a component, and the corpus is
+        // published blueprints, which are overwhelmingly ships. `F27` is that gap: the intent says a
+        // base heats, has to be managed, and in exchange gets the room to run cooling properly, and
+        // nothing measured either half.
+
+        /// <summary>
+        /// A station against a ship of the same block count, which is the half of the intent's
+        /// claim that is a measurement rather than an assertion.
+        ///
+        /// <para>
+        /// **The pair matches to one cell.** `GridShapes.Ship(40, 9, 12)` is 3,550 cells and
+        /// `GridShapes.Station((17, 15, 19), (3, 3, 3))` is 3,549, so nothing has to be normalised
+        /// and the only thing that differs is where the blocks are. The station carries exactly
+        /// **half** the ship's external face count, measured from the geometry before any of this
+        /// was simulated — which is the whole subject, and why the same watts must land differently.
+        /// </para>
+        ///
+        /// <para>
+        /// Run in vacuum and on a planet surface, because the two shed by different mechanisms and
+        /// the geometry predicts different exponents: radiation carries `T⁴`, so halving the area
+        /// should raise the absolute temperature by `2^0.25`, while convection is linear in `ΔT`,
+        /// so halving it should roughly double the rise above ambient. What is expected, and what
+        /// falsifies it, is in balance-lab.md and was written before this ran.
+        /// </para>
+        /// </summary>
+        public static ScenarioResult Station()
+        {
+            StringBuilder summary = new StringBuilder();
+
+            StationCase shipVacuum = RunHull(false, false, 0);
+            StationCase stationVacuum = RunHull(true, false, 0);
+            StationCase shipAir = RunHull(false, true, 0);
+            StationCase stationAir = RunHull(true, true, 0);
+
+            summary.Append(stationVacuum.Blocks.ToString("n0")).Append(" cells of station in ")
+                   .Append(stationVacuum.PressurisedRooms).Append(" pressurised compartments against ")
+                   .Append(shipVacuum.Blocks.ToString("n0")).Append(" of ship in ")
+                   .Append(shipVacuum.PressurisedRooms).Append(", ")
+                   .Append(stationVacuum.ExternalFaces.ToString("n0")).Append(" exposed faces against ")
+                   .Append(shipVacuum.ExternalFaces.ToString("n0")).Append(" (")
+                   .Append(Ratio(shipVacuum.ExternalFaces, stationVacuum.ExternalFaces))
+                   .Append("x), carrying the same ")
+                   .Append((StationWatts / 1000f).ToString("n0")).Append(" kW. ");
+
+            // **The whole-grid mean, not the hottest block.** The first draft of this scenario read
+            // the hottest block and reported the station *cooler*, which was true and measured the
+            // wrong thing: the hottest block is a source, and what sets a source's temperature is
+            // how much structure it is bolted to rather than how much skin the grid has. Shedding
+            // area is a property of the whole grid, so the statistic has to be one too.
+            float shipVacuumRise = shipVacuum.Mean - shipVacuum.Ambient;
+            float stationVacuumRise = stationVacuum.Mean - stationVacuum.Ambient;
+
+            summary.Append("In vacuum the station's mean block settles ")
+                   .Append(stationVacuumRise.ToString("n1")).Append(" K above ambient against the ship's ")
+                   .Append(shipVacuumRise.ToString("n1")).Append(" K, holding ")
+                   .Append(Ratio(stationVacuum.HeatAboveAmbient, shipVacuum.HeatAboveAmbient))
+                   .Append("x the heat; its mean sits at ")
+                   .Append(Ratio(stationVacuum.Mean, shipVacuum.Mean))
+                   .Append("x the ship's on absolute temperature, against the ")
+                   .Append(Math.Pow(2.0, 0.25).ToString("n3"))
+                   .Append("x a halved radiating area predicts. Hottest block ")
+                   .Append(C(stationVacuum.Hottest)).Append(" against ").Append(C(shipVacuum.Hottest))
+                   .Append(", which is the source's own neighbourhood and not the grid's. ");
+
+            float shipAirRise = shipAir.Mean - shipAir.Ambient;
+            float stationAirRise = stationAir.Mean - stationAir.Ambient;
+
+            summary.Append("On a planet the station's mean settles ").Append(stationAirRise.ToString("n1"))
+                   .Append(" K above ambient against the ship's ").Append(shipAirRise.ToString("n1"))
+                   .Append(" K, which is ").Append(Ratio(stationAirRise, shipAirRise))
+                   .Append("x on the rise against the 2x a halved convecting area predicts. ");
+
+            StationCase stationNoAir = RunHull(true, false, 0, roomAir: false);
+            float noAirRise = stationNoAir.Mean - stationNoAir.Ambient;
+            summary.Append("With room air off the station's mean sits ").Append(noAirRise.ToString("n1"))
+                   .Append(" K above ambient, ")
+                   .Append(Math.Abs(noAirRise - stationVacuumRise).ToString("n2")).Append(" K ")
+                   .Append(noAirRise > stationVacuumRise ? "hotter" : "cooler")
+                   .Append(" than with it on across ").Append(stationVacuum.PressurisedRooms)
+                   .Append(" compartments. ");
+
+            // The air arms above settle within a few kelvin of ambient, so the ratio of two rises is
+            // a ratio of two small numbers and the convective exponent is not really under test
+            // there (`P2`). Repeated at ten times the load, where it is.
+            StationCase shipHot = RunHull(false, true, 0, watts: StationWatts * 10f);
+            StationCase stationHot = RunHull(true, true, 0, watts: StationWatts * 10f);
+            float shipHotRise = shipHot.Mean - shipHot.Ambient;
+            float stationHotRise = stationHot.Mean - stationHot.Ambient;
+
+            summary.Append("At ten times the load, where the air rises are large enough to divide, ")
+                   .Append(stationHotRise.ToString("n1")).Append(" K against ")
+                   .Append(shipHotRise.ToString("n1")).Append(" K, a ratio of ")
+                   .Append(Ratio(stationHotRise, shipHotRise))
+                   .Append("x — the same ratio at a tenth of the load, so it is not two small "
+                           + "numbers being divided. ");
+
+            // Where the gap sits: on the skin, or between the skin and the middle.
+            summary.Append("Skin against interior, station then ship: in vacuum ")
+                   .Append(Gap(stationVacuum)).Append(" and ").Append(Gap(shipVacuum))
+                   .Append("; in air at ten times the load ")
+                   .Append(Gap(stationHot)).Append(" and ").Append(Gap(shipHot)).Append(". ");
+
+            int[] ladder = { 0, 8, 16, 32, 64, 128, 256 };
+            int reached = -1;
+            float reachedRise = 0f;
+            int lastCount = -1;
+
+            summary.Append("Radiators standing on the station's roof, against the ship's unaided ")
+                   .Append(shipVacuumRise.ToString("n1")).Append(" K, with the station's own "
+                   + "exposed-face count beside each: ");
+
+            for (int i = 0; i < ladder.Length; i++)
+            {
+                StationCase priced = RunHull(true, false, ladder[i]);
+                if (priced.Radiators == lastCount) continue;
+                lastCount = priced.Radiators;
+
+                float rise = priced.Mean - priced.Ambient;
+
+                summary.Append(priced.Radiators).Append(" -> ").Append(rise.ToString("n1"))
+                       .Append(" K at ").Append(priced.ExternalFaces.ToString("n0")).Append(" faces, ");
+
+                if (reached < 0 && rise <= shipVacuumRise)
+                {
+                    reached = priced.Radiators;
+                    reachedRise = rise;
+                }
+            }
+
+            summary.Append(reached < 0
+                ? "and the roof runs out before the ship's figure is reached, so bolted-on area "
+                  + "buys a station real cooling and not enough of it."
+                : "and " + reached + " reach it, at " + reachedRise.ToString("n1")
+                  + " K, which is what the room a base has is worth in blocks.");
+
+            summary.Append(" Every arm was flat to ")
+                   .Append(Math.Max(Math.Max(shipVacuum.SettleDrift, stationVacuum.SettleDrift),
+                                    Math.Max(shipAir.SettleDrift, stationAir.SettleDrift)).ToString("n4"))
+                   .Append(" K or better over its last two samples.");
+
+            return Result("station", stationVacuum.Runner, summary.ToString());
+        }
+
+        /// <summary>Watts every arm of the station scenario carries, so only the shape differs.</summary>
+        private const float StationWatts = 600000f;
+
+        private class StationCase
+        {
+            public ScenarioRunner Runner;
+            public int Blocks;
+            public int ExternalFaces;
+            public int PressurisedRooms;
+            public int Radiators;
+            public float Hottest;
+            public float Mean;
+            public float Ambient;
+            public float HeatAboveAmbient;
+            public float SkinMean;
+            public float InsideMean;
+            public int InsideCount;
+            public float SettleDrift;
+        }
+
+        /// <summary>Skin mean, interior mean and the drop between them, for one arm.</summary>
+        private static string Gap(StationCase c)
+        {
+            if (c.InsideCount == 0) return "no interior";
+            return C(c.SkinMean) + " skin, " + C(c.InsideMean) + " inside ("
+                + (c.InsideMean - c.SkinMean).ToString("n1") + " K over " + c.InsideCount + " blocks)";
+        }
+
+        private static string Ratio(float a, float b)
+        {
+            return b == 0f ? "n/a" : (a / b).ToString("n3");
+        }
+
+        /// <summary>
+        /// One arm: a station or a ship, in vacuum or on a planet, with a given number of its skin
+        /// blocks replaced by radiators. Everything but those three things is identical between
+        /// arms (`P6`), including the block count, because the radiators are a substitution rather
+        /// than an addition.
+        /// </summary>
+        private static StationCase RunHull(bool station, bool planet, int radiators,
+            bool roomAir = true, float watts = StationWatts)
+        {
+            GridBuilder builder = GridBuilder.Large();
+
+            List<Vector3I> cells = new List<Vector3I>(station
+                ? GridShapes.Station(new Vector3I(17, 15, 19), new Vector3I(3, 3, 3))
+                : GridShapes.Ship(40, 9, 12));
+
+            // Sorted so the arms place blocks in the same order whatever the hash set's iteration
+            // does, which is what makes two runs of one arm identical.
+            cells.Sort(CellOrder);
+
+            Vector3I min = cells[0];
+            Vector3I max = cells[0];
+            for (int i = 1; i < cells.Count; i++)
+            {
+                min = Vector3I.Min(min, cells[i]);
+                max = Vector3I.Max(max, cells[i]);
+            }
+
+            Vector3 centre = new Vector3(
+                (min.X + max.X) * 0.5f, (min.Y + max.Y) * 0.5f, (min.Z + max.Z) * 0.5f);
+
+            BlockModel armour = Catalog.LightArmor();
+            foreach (Vector3I cell in cells) builder.Place(armour, cell);
+
+            // **Radiators are bolted to the outside of one face, not substituted into the skin.**
+            // A radiator is a 1x5x2 block, so it cannot take a skin cell's place; and a radiating
+            // area that is not conducted to is not a cooling system, which is the point the pricing
+            // arm exists to make. They tile the `+X` face flush against it, so each is in contact
+            // with the hull and heat has to reach it the way it would on a real base.
+            //
+            // These are *added* blocks. The pricing arm is asking what extra plant a station needs,
+            // so the added count is the answer rather than a confound — the two unaided arms both
+            // carry none, which is where the shapes are compared.
+            // **They stand on the roof, because a radiator only mounts on its top and bottom
+            // faces.** Bolted to a side face it touches the hull and conducts nothing — the first
+            // draft did exactly that, and the ladder read *hotter with every radiator added*: the
+            // blocks were shading the skin they covered and taking no heat off it. The 1x5x2 model
+            // stands 5 cells tall on a 1x2 footprint, so the roof takes them the right way up.
+            int placedRadiators = 0;
+            if (radiators > 0)
+            {
+                BlockModel radiator = Catalog.Radiator();
+                HashSet<Vector3I> occupied = new HashSet<Vector3I>(cells, Vector3I.Comparer);
+
+                for (int z = min.Z; z + 1 <= max.Z && placedRadiators < radiators; z += 2)
+                {
+                    for (int x = min.X; x <= max.X && placedRadiators < radiators; x += 1)
+                    {
+                        // Only where the hull is there to bolt to, so a radiator never floats over
+                        // a compartment the shape left open.
+                        bool backed = true;
+                        for (int dz = 0; dz < 2 && backed; dz++)
+                            backed = occupied.Contains(new Vector3I(x, max.Y, z + dz));
+
+                        if (!backed) continue;
+
+                        builder.Place(radiator, new Vector3I(x, max.Y + 1, z));
+                        placedRadiators++;
+                    }
+                }
+            }
+
+            ThermalSettings settings = new ThermalSettings();
+            settings.EnableRoomAir = roomAir;
+            settings.EnableFriction = false;
+            settings.EnableSolarHeat = false;
+            settings.EnableDamage = false;
+
+            ThermalSimulation simulation = builder.BuildSimulation(settings.Derive(), 293.15f);
+            while (simulation.HasPendingWork) simulation.Update(1f / 60f, Worlds.Shadow());
+
+            // **Every compartment is pressurised, or the room air switch reaches nothing.** The
+            // first draft of this scenario left them at zero and reported the two arms agreeing to
+            // 0.0 K, which is what a switch wired to nothing looks like from the outside.
+            int pressurised = 0;
+            if (roomAir)
+            {
+                IList<List<Vector3I>> rooms = simulation.Rooms.Map.Rooms;
+                for (int i = 0; i < rooms.Count; i++)
+                {
+                    if (rooms[i].Count == 0) continue;
+                    if (simulation.SetRoomPressure(rooms[i][0], 1f)) pressurised++;
+                }
+            }
+
+            // The load is spread over the blocks nearest the centre of the bounding box, which is
+            // where a station's refineries and a ship's reactors both sit, and is the placement
+            // that does not favour either shape.
+            List<ThermalNode> nodes = new List<ThermalNode>();
+            for (int i = 0; i < simulation.Solver.Nodes.Count; i++) nodes.Add(simulation.Solver.Nodes[i]);
+
+            nodes.Sort(delegate (ThermalNode a, ThermalNode b)
+            {
+                float da = Vector3.DistanceSquared(new Vector3(a.Block.Position), centre);
+                float db = Vector3.DistanceSquared(new Vector3(b.Block.Position), centre);
+                int byDistance = da.CompareTo(db);
+                return byDistance != 0 ? byDistance : a.Index.CompareTo(b.Index);
+            });
+
+            const int Sources = 12;
+            float each = watts / Sources;
+            for (int i = 0; i < Sources && i < nodes.Count; i++)
+            {
+                nodes[i].Block.PowerConsumedWatts = each;
+                nodes[i].Block.Thermal.ConsumerWasteEnergy = 1f;
+                nodes[i].RefreshHeatGeneration();
+            }
+
+            int externalFaces = 0;
+            for (int i = 0; i < simulation.Solver.Nodes.Count; i++)
+            {
+                externalFaces += simulation.Solver.Nodes[i].TotalExposedFaces;
+            }
+
+            ScenarioRunner runner = new ScenarioRunner(simulation);
+            runner.Environment = planet
+                ? (Func<float, EnvironmentSample>)(t => Worlds.PlanetSurface(1f, 0.25f))
+                : (t => Worlds.Shadow());
+            // **10,000 s, not the 20,000 the first run used.** Every arm was flat to 0.0000 K over
+            // its last two samples there and the CSV shows them stopping by 6,000, so the second
+            // half was buying nothing and this scenario is the most expensive in the library. The
+            // drift figure below is what makes the shortening safe rather than hopeful: it is
+            // reported in the summary, so a run that stopped early says so.
+            runner.Run(10000f, 1000f);
+
+            float ambient = runner.Final.AmbientTemperature;
+            float heat = 0f;
+
+            // **Split by whether a block can see out.** A simple area argument says the rise scales
+            // with 1/area whatever the medium; if that holds in vacuum and fails in air, the extra
+            // must be the path from the middle to the skin rather than the skin itself, and these
+            // two means are what says so.
+            double skinTotal = 0d, insideTotal = 0d;
+            int skinCount = 0, insideCount = 0;
+
+            for (int i = 0; i < simulation.Solver.Nodes.Count; i++)
+            {
+                ThermalNode node = simulation.Solver.Nodes[i];
+                heat += (node.Temperature - ambient) * node.ThermalMass;
+
+                if (node.TotalExposedFaces > 0) { skinTotal += node.Temperature; skinCount++; }
+                else { insideTotal += node.Temperature; insideCount++; }
+            }
+
+            // **A settling figure that was still climbing is not a settling figure** (`P2`). The
+            // movement over the last two samples is reported beside every reading that uses it.
+            int last = runner.Samples.Count - 1;
+            float drift = last > 0
+                ? Math.Abs(runner.Samples[last].MeanTemperature - runner.Samples[last - 1].MeanTemperature)
+                : float.NaN;
+
+            return new StationCase
+            {
+                Runner = runner,
+                Blocks = simulation.Solver.Nodes.Count,
+                ExternalFaces = externalFaces,
+                PressurisedRooms = pressurised,
+                Radiators = placedRadiators,
+                Hottest = runner.Final.HottestTemperature,
+                Mean = runner.Final.MeanTemperature,
+                Ambient = ambient,
+                HeatAboveAmbient = heat,
+                SkinMean = skinCount == 0 ? float.NaN : (float)(skinTotal / skinCount),
+                InsideMean = insideCount == 0 ? float.NaN : (float)(insideTotal / insideCount),
+                InsideCount = insideCount,
+                SettleDrift = drift,
+            };
+        }
+
+        private static int CellOrder(Vector3I a, Vector3I b)
+        {
+            if (a.Z != b.Z) return a.Z.CompareTo(b.Z);
+            if (a.Y != b.Y) return a.Y.CompareTo(b.Y);
+            return a.X.CompareTo(b.X);
+        }
+
+        /// <summary>Faces of this cell with no block on the other side, from the shape alone.</summary>
+        private static int OpenSides(HashSet<Vector3I> occupied, Vector3I cell)
+        {
+            int open = 0;
+            for (int face = 0; face < Face.Count; face++)
+            {
+                if (!occupied.Contains(cell + Face.Offsets[face])) open++;
+            }
+            return open;
         }
 
         private static ScenarioResult Result(string name, ScenarioRunner runner, string summary)

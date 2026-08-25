@@ -3,6 +3,8 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using Thermodynamics.Core;
 using Thermodynamics.Harness;
+using VRageMath;
+using Xunit;
 
 namespace Thermodynamics.Tests
 {
@@ -220,6 +222,122 @@ namespace Thermodynamics.Tests
 
             // The deadzone is measured from sea level, so deep rock high up is still cold rock.
             Assert.Equal(hundredMetres, mountain, 0);
+        }
+
+        /// <summary>
+        /// **A station is harder to cool than a ship of the same size, and the reason changes with
+        /// the medium.** `F27`'s three conclusions, each of which would be worse than no scenario if
+        /// it could quietly invert.
+        ///
+        /// <para>
+        /// The pair is matched to one cell and the station carries exactly half the ship's external
+        /// faces, so the comparison has one subject. In vacuum the penalty is that halved area and
+        /// the simple `2^0.25` argument holds; in air it is not the area at all — convection pins
+        /// the skin near ambient and what is left is the conduction path from the middle out, which
+        /// the station has far more of.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void AStationIsHarderToCoolThanAShipAndForADifferentReasonInAir()
+        {
+            string summary = Scenarios.Run("station").Summary;
+
+            Match vacuum = Regex.Match(summary,
+                @"In vacuum the station's mean block settles ([\d,.]+) K above ambient against the ship's ([\d,.]+) K");
+            Assert.True(vacuum.Success, "the vacuum comparison is not in the summary: " + summary);
+
+            float stationVacuum = Parse(vacuum.Groups[1].Value);
+            float shipVacuum = Parse(vacuum.Groups[2].Value);
+
+            Assert.True(stationVacuum > shipVacuum,
+                "the station settled " + stationVacuum + " K against the ship's " + shipVacuum
+                + " K, so the shape that has half the area to shed through is no longer the hotter one");
+
+            // The air arm at ten times the load, which is where the ratio is worth dividing.
+            Match air = Regex.Match(summary,
+                @"At ten times the load, where the air rises are large enough to divide, ([\d,.]+) K against ([\d,.]+) K");
+            Assert.True(air.Success, "the loaded air comparison is not in the summary: " + summary);
+
+            float stationAir = Parse(air.Groups[1].Value);
+            float shipAir = Parse(air.Groups[2].Value);
+
+            Assert.True(stationAir > shipAir,
+                "the station settled " + stationAir + " K against the ship's " + shipAir + " K in air");
+
+            // **And the air penalty is the larger one, which is the finding.** Halving the area
+            // predicts about 2x either way; vacuum lands near it and air is three times past it,
+            // because in air the binding resistance is the path to the skin rather than the skin.
+            float vacuumRatio = stationVacuum / shipVacuum;
+            float airRatio = stationAir / shipAir;
+
+            Assert.True(airRatio > 2f * vacuumRatio,
+                "air is " + airRatio.ToString("n2") + "x and vacuum " + vacuumRatio.ToString("n2")
+                + "x, so the two media no longer disagree about what a station's penalty is");
+        }
+
+        /// <summary>
+        /// **The subject of that comparison is exactly a factor of two, and it is geometry.** Read
+        /// off the shapes rather than off the scenario, so a change to either shape that quietly
+        /// unmatches the pair fails here rather than moving every figure `F27` rests on.
+        /// </summary>
+        [Fact]
+        public void TheStationAndTheShipAreMatchedOnBlocksAndHalvedOnArea()
+        {
+            HashSet<Vector3I> ship = GridShapes.Ship(40, 9, 12);
+            HashSet<Vector3I> station = GridShapes.Station(new Vector3I(17, 15, 19), new Vector3I(3, 3, 3));
+
+            Assert.InRange(station.Count, ship.Count - 5, ship.Count + 5);
+
+            int shipFaces = ExternalFaces(ship);
+            int stationFaces = ExternalFaces(station);
+
+            Assert.True(stationFaces > 0 && shipFaces > 0, "a shape with no outside is not a hull");
+
+            float ratio = shipFaces / (float)stationFaces;
+            Assert.InRange(ratio, 1.9f, 2.1f);
+        }
+
+        /// <summary>Faces of a shape reachable from outside it, by flood fill.</summary>
+        private static int ExternalFaces(HashSet<Vector3I> cells)
+        {
+            Vector3I min = new Vector3I(int.MaxValue, int.MaxValue, int.MaxValue);
+            Vector3I max = new Vector3I(int.MinValue, int.MinValue, int.MinValue);
+            foreach (Vector3I cell in cells)
+            {
+                min = Vector3I.Min(min, cell);
+                max = Vector3I.Max(max, cell);
+            }
+            min -= Vector3I.One;
+            max += Vector3I.One;
+
+            HashSet<Vector3I> outside = new HashSet<Vector3I>(Vector3I.Comparer);
+            Queue<Vector3I> queue = new Queue<Vector3I>();
+            outside.Add(min);
+            queue.Enqueue(min);
+
+            while (queue.Count > 0)
+            {
+                Vector3I at = queue.Dequeue();
+                for (int face = 0; face < Face.Count; face++)
+                {
+                    Vector3I next = at + Face.Offsets[face];
+                    if (next.X < min.X || next.Y < min.Y || next.Z < min.Z) continue;
+                    if (next.X > max.X || next.Y > max.Y || next.Z > max.Z) continue;
+                    if (cells.Contains(next) || outside.Contains(next)) continue;
+                    outside.Add(next);
+                    queue.Enqueue(next);
+                }
+            }
+
+            int faces = 0;
+            foreach (Vector3I cell in cells)
+            {
+                for (int face = 0; face < Face.Count; face++)
+                {
+                    if (outside.Contains(cell + Face.Offsets[face])) faces++;
+                }
+            }
+            return faces;
         }
 
         private static float Parse(string value)
