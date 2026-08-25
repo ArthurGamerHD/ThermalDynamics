@@ -36,6 +36,13 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// The definition files whose contents decide what a walk measures. Named rather than
+        /// globbed, so a file that is added and not listed shows up as a gap in this list rather
+        /// than as a hash that quietly appears one day and not the next.
+        /// </summary>
+        private static readonly string[] Definitions = { "Cubes.xml", "Loops.xml", "Planets.xml" };
+
+        /// <summary>
         /// **What build a dataset was collected on, written beside it.**
         ///
         /// <para>
@@ -48,10 +55,9 @@ namespace Thermodynamics.Tests
         /// </para>
         ///
         /// <para>
-        /// It records the commit, whether the tree was dirty, and a hash of the two definition files
-        /// a walk's numbers actually depend on — because a clean commit says nothing about
-        /// `Cubes.xml` being edited and not committed, which is exactly how a walk ends up
-        /// measuring a world that never existed.
+        /// It records the commit and a hash of each definition file a walk's numbers depend on,
+        /// because a clean commit says nothing about `Cubes.xml` being edited and not committed,
+        /// which is exactly how a walk ends up measuring a world that never existed.
         /// </para>
         ///
         /// <para>
@@ -75,9 +81,11 @@ namespace Thermodynamics.Tests
                 .Append(" started ").Append(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"))
                 .AppendLine();
             text.Append("commit ").AppendLine(Commit());
-            text.Append("Cubes.xml ").AppendLine(HashOf(Path.Combine(Root(), "Data", "Cubes.xml")));
-            text.Append("Materials.xml ")
-                .AppendLine(HashOf(Path.Combine(Root(), "Data", "Materials.xml")));
+            foreach (string definition in Definitions)
+            {
+                text.Append(definition).Append(' ')
+                    .AppendLine(HashOf(Path.Combine(Root(), "Data", definition)));
+            }
 
             try
             {

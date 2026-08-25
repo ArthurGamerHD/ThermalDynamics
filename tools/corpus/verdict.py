@@ -163,6 +163,31 @@ record("dataset ships", walked)
 record("dataset ships.csv rows", len(ships))
 record("dataset scenarios", len(set(r.get("scenario") for r in outcomes)))
 
+# **What build the dataset was collected on**, printed and recorded so a figure quoted from a
+# summary carries the world it was measured in. Datasets collected before 2026-08-25 have no such
+# file, and *absent* is said rather than assumed: the 2026-08-24 air walk turned out to have been
+# collected one minute after a definition change, and nothing in its output said so.
+provenance = os.path.join(DATA, "provenance.txt")
+if os.path.exists(provenance):
+    with open(provenance, encoding="utf-8") as handle:
+        for line in handle:
+            line = line.strip()
+            if not line:
+                continue
+
+            print(f"  {line}")
+
+            # A comment is context for a reader and not a statistic; recording it would put prose
+            # in the summary's value column.
+            if line.startswith("#"):
+                continue
+
+            name, _, value = line.partition(" ")
+            record("provenance " + name, value)
+else:
+    print("  provenance: not recorded — this dataset predates 2026-08-25")
+    record("provenance", "absent")
+
 # **The population figures the documentation quotes.** Sealed blocks are here because a page said
 # twenty-four of them on one ship where the dataset says 1,184 across 331 (`F14`); the share it
 # also quoted was right, which is how it survived.
