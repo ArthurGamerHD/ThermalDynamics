@@ -19,6 +19,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+import scoring
 from scoring import oversubscription_note
 
 DATA = sys.argv[1] if len(sys.argv) > 1 else "out/corpus-2026-08-21"
@@ -168,10 +169,38 @@ if demand:
     granted = [number(r, "substeps_granted") for r in outcomes]
     granted = [g for g in granted if g is not None]
     cap = max(granted) if granted else 0
-    verdict("G6", "Affordable across the population.", p["p99"] <= cap,
+    # The cost half of the same criterion, in the solver's own unit rather than in milliseconds:
+    # a step's element visits against what `MaxElementVisitsPerStep` grants one. See
+    # balance-lab.md, G6's cost half, which was written down before this was scored (`E11`).
+    work = []
+    for row in outcomes:
+        cost = scoring.step_work(
+            number(row, "blocks"), number(row, "joints"), number(row, "substeps_granted"))
+        if cost is not None:
+            work.append(cost)
+
+    allowance = scoring.SHIPPED_VISIT_ALLOWANCE
+    cost_p = percentiles(work) if work else {}
+    cost_ok = bool(cost_p) and cost_p["p99"] <= allowance
+    over = sum(1 for w in work if not scoring.keeps_up(w))
+
+    demand_ok = p["p99"] <= cap
+
+    verdict("G6", "Affordable across the population.", demand_ok and cost_ok,
             f"substep demand p50 {p['p50']:.1f}, p95 {p['p95']:.1f}, p99 {p['p99']:.1f}, "
             f"max {p['max']:.1f}; highest granted {cap:.0f}" + oversubscription_note(p["p99"], cap),
-            "p99 substep demand exceeds what the shipped caps grant")
+            "p99 substep demand exceeds what the shipped caps grant, or p99 step work exceeds "
+            "the shipped element-visit allowance")
+
+    if cost_p:
+        print(f"        step work:  p50 {cost_p['p50']:,.0f}, p95 {cost_p['p95']:,.0f}, "
+              f"p99 {cost_p['p99']:,.0f}, max {cost_p['max']:,.0f} element visits against "
+              f"{allowance:,.0f} granted"
+              + (f"; {over:,} of {len(work):,} runs are past it — those grids run slower than "
+                 f"real time" if over else "; every run fits"))
+    else:
+        print("        step work:  not derivable from this dataset — it needs blocks, joints and "
+              "substeps_granted, and one of them is missing")
 
 # ---- G3 / G4: not answerable from this dataset -------------------------------------------
 verdict("G3", "Cooling works.", None,

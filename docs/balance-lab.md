@@ -74,6 +74,20 @@ the solver's own unit, and compared against a bound the mod already ships.
   allowance is per grid, so this says a *ship* is affordable rather than that a *session* is —
   which is `D19`'s question and is measured on a fleet rather than on a population.
 
+**Scored, and it holds.** Over the 40,660 runs of the 2026-08-21 survey that carry all three
+columns: **p50 7,293 element visits, p95 174,996, p99 446,707** against the 2,000,000 the allowance
+grants — the ninety-ninth percentile is a fifth of what a step may cost. **Fifteen runs are past
+it, and they are three ships**: `Large Grid 2094` at 432,231 blocks, `WH40K SENIORIOUS VICTORY` at
+366,225 and an `Executor Class Super Star Destroyer` at 349,161, each in `vacuum-sunlit` at three
+substeps. So the allowance covers a ship of about three hundred thousand blocks, and the three that
+exceed it run their simulated time slower than real time rather than being refused anything.
+
+> **The dataset is the survey as it was walked**, at `ConductionScale` 2.4 and `HeatTimeScale` 225
+> and in the five vacuum scenarios. `C24` multiplies a vacuum demand by about 1.6, which would put
+> p99 near 715,000 — still a third of the allowance — and re-walking the corpus to say that rather
+> than project it is eight hours (`P6`). What the scorer needs is any walk's `blocks`, `joints` and
+> `substeps_granted`, so it prices whichever run it is handed.
+
 **G7 holds.** All 705 prefabs, 461,428 blocks, idle: not one crosses critical, let alone loses a
 block. The same 705 flown hard lose 616, which is the control rather than the criterion — see
 [balance.md](balance.md#the-compatibility-floor-holds).

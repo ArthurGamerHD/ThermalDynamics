@@ -209,5 +209,41 @@ class CensoringBeginsAtABlocksOwnRatingRatherThanAtARoundNumber(unittest.TestCas
         self.assertFalse(scoring.peak_ran_away(1228.0))
 
 
+class StepWork(unittest.TestCase):
+    """`G6`'s cost half: work in the solver's own unit, against the allowance the mod ships."""
+
+    def test_a_step_costs_its_substeps_times_its_elements(self):
+        # One substep over 1,000 nodes and 2,000 links: 2,125 node visits and 2,000 link visits.
+        self.assertAlmostEqual(4125.0, scoring.step_work(1000, 2000, 1), places=3)
+
+        # And it is linear in the substeps, which is what makes it the cost the cap decides.
+        self.assertAlmostEqual(41250.0, scoring.step_work(1000, 2000, 10), places=3)
+
+    def test_a_missing_column_reports_nothing_rather_than_a_figure_built_from_a_zero(self):
+        self.assertIsNone(scoring.step_work(None, 2000, 4))
+        self.assertIsNone(scoring.step_work(1000, None, 4))
+        self.assertIsNone(scoring.step_work(1000, 2000, None))
+
+        # A walk that recorded no blocks, or a row whose step never ran, is not a free step.
+        self.assertIsNone(scoring.step_work(0, 2000, 4))
+        self.assertIsNone(scoring.step_work(1000, 2000, 0))
+
+    def test_a_grid_keeps_real_time_until_its_step_passes_the_allowance(self):
+        allowance = scoring.SHIPPED_VISIT_ALLOWANCE
+
+        self.assertTrue(scoring.keeps_up(allowance - 1))
+        self.assertTrue(scoring.keeps_up(allowance))
+        self.assertFalse(scoring.keeps_up(allowance + 1))
+
+        # Nothing measured is not something that keeps up (`E8`).
+        self.assertFalse(scoring.keeps_up(None))
+
+    def test_the_allowance_is_the_shipped_one(self):
+        # Pinned against the default in ThermalSettings rather than left as a number here: the
+        # bound is the mod's own statement of what a step may cost, and if that moves this
+        # criterion moves with it rather than describing a configuration nobody runs.
+        self.assertEqual(2000000.0, scoring.SHIPPED_VISIT_ALLOWANCE)
+
+
 if __name__ == "__main__":
     unittest.main()

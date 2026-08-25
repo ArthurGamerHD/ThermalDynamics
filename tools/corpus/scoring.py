@@ -176,3 +176,41 @@ def within(bound):
 
     return test
 
+# ---- what a step costs, in the solver's own unit -------------------------------------------
+
+# Element visits a substep charges per node, from `ThermalSolverStep.SubstepWork`: the buffers
+# cleared (an eighth), the environment pass, the apply pass, and one more walk of the nodes. Links
+# are one visit each and are added separately. Heat sources multiply the node term and a corpus
+# ship has none registered, so they are absent here and the figure is a lower bound where a world
+# adds them.
+VISITS_PER_NODE = 2.125
+
+# What the shipped `MaxElementVisitsPerStep` grants one grid's step. Not a threshold invented for
+# this criterion: it is the mod's own statement of what a step may cost, and a step past it is
+# spread over more frames rather than refused — so the grid's simulated time runs slower than real
+# time. See configuration.md, and balance-lab.md for G6's cost half.
+SHIPPED_VISIT_ALLOWANCE = 2000000.0
+
+
+def step_work(nodes, links, substeps):
+    """Element visits one step of a grid charges, which is the cost half of `G6`.
+
+    **A cost that is not a clock.** The corpus deliberately carries no timing column — a per-ship
+    millisecond figure taken across thousands of hulls on a shared machine measures the machine —
+    so the statistic is the work the solver charges itself and paces on, which every walk already
+    records as `blocks`, `joints` and `substeps_granted`.
+
+    Returns None where any input is missing, so a walk that predates a column reports nothing
+    rather than a figure built from a zero.
+    """
+    if nodes is None or links is None or substeps is None:
+        return None
+    if nodes <= 0 or substeps <= 0:
+        return None
+
+    return substeps * ((VISITS_PER_NODE * nodes) + links)
+
+
+def keeps_up(work, allowance=SHIPPED_VISIT_ALLOWANCE):
+    """Whether a step of this cost fits the allowance, which is whether the grid keeps real time."""
+    return work is not None and work <= allowance
