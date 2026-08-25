@@ -12,8 +12,18 @@ rules. Where two statements of intent conflict, this page says which the code cu
 Where there is no intent at all, this page says that too, because an undeclared intent is decided by
 whoever touches the file next.
 
+**Four kinds of thing are on this page, and they are kept apart on purpose.** Most of it is
+**intent** — what the mod is for and what it is trying to be. [One
+section](#where-the-goals-and-the-code-disagree) is **conflicts**: places where two statements this
+repository makes disagree, with a column saying which the implementation currently follows, which is
+evidence about intent rather than a decision taken on the developer's behalf. [One
+is](#where-there-is-no-intent-at-all) **voids**: subjects the mod already ships or already refuses
+with no statement anywhere about whether that is right. And [the
+last](#open-questions-with-a-stated-intent) is **open questions**, where the position is stated and
+the route is not. A void and an open question look alike from a distance and are not the same work.
+
 > The rules argued here are stated canonically in [rules.md](rules.md): `E3` `E5` `E10` `E11` `D6`
-> `D7` `C9` `C10` `R14`, and the principles P3, P7, P10 and P14 they follow from.
+> `D7` `C7` `C9` `C10` `C15` `R14`, and the principles P3, P7, P10, P13 and P14 they follow from.
 
 | Looking for | Go to |
 | --- | --- |
@@ -891,8 +901,8 @@ to do in it but leave.
 
 ### 2. What the mod's blocks cost to build
 
-Nine block definitions carry component lists, build times and PCU, and **none of the three is
-derived, defended or measured anywhere**. A large radiator is thirty steel plates and 1 PCU; a
+**Nineteen block definitions carry component lists, build times and PCU, and none of the three is
+derived, defended or measured anywhere.** A large radiator is thirty steel plates and 1 PCU; a
 coolant pipe is one large tube, ten construction components and ten steel plates; a pump and a heat
 pump are 100 PCU each. [balance.md](balance.md) prices every block *thermally* against the vanilla
 blocks it competes with and says nothing about what any of them costs to build.
