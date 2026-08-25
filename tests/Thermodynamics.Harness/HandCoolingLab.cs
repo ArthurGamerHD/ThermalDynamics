@@ -78,6 +78,9 @@ namespace Thermodynamics.Harness
         {
             public string Subtype;
 
+            /// <summary>The block's own rating, K — the line damage starts at.</summary>
+            public float CriticalKelvin;
+
             /// <summary>Waste watts at full rating.</summary>
             public float WasteWatts;
 
@@ -181,6 +184,7 @@ namespace Thermodynamics.Harness
                 prices.Add(new Price
                 {
                     Subtype = reading.Subtype,
+                    CriticalKelvin = reading.CriticalKelvin,
                     WasteWatts = reading.Watts,
                     HoldWatts = hold,
                     ReturnJoules = physical

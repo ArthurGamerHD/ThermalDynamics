@@ -168,6 +168,64 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// **Pulling a block back from the brink is a different question from cooling it, and the
+        /// answers differ by an order of magnitude.**
+        ///
+        /// <para>
+        /// The tests above price *undoing a crossing* — returning a block from its rating to
+        /// ambient — and it comes to twenty-six bottles at the median. That is the wrong question
+        /// for a damage-mitigation tool. The solver damages an overheating block at
+        /// `(T − critical) × OverheatDamagePerKelvin` a second, so what stops the damage is removing
+        /// the *overshoot*, not the heat. A block fifty kelvin over its rating needs fifty kelvin
+        /// taken off it, and the block's whole rise above ambient is several hundred.
+        /// </para>
+        ///
+        /// <para>
+        /// This prices that, because it is the number an ammunition design needs.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void PullingABlockBackFromItsRatingIsCheapEnoughForAHandTool()
+        {
+            List<HandCoolingLab.Price> prices = Priced();
+            if (prices.Count == 0) return;
+
+            foreach (double overshoot in new[] { 10d, 25d, 50d, 100d })
+            {
+                List<float> bottles = new List<float>();
+
+                foreach (HandCoolingLab.Price price in prices)
+                {
+                    // Physical capacity, back out of the return figure: that is capacity times the
+                    // whole rise from ambient to the rating.
+                    float rise = price.ReturnJoules <= 0f ? 0f : price.ReturnJoules;
+                    if (rise <= 0f) continue;
+
+                    float perKelvin = rise / (price.CriticalKelvin - BlockHeatIndex.AmbientKelvin);
+                    bottles.Add((float)(perKelvin * overshoot) / HandCoolingLab.BottleJoules);
+                }
+
+                bottles.Sort();
+
+                output.WriteLine("{0:n0} K back from the rating: median {1:n1} bottles, "
+                    + "p90 {2:n1}, worst {3:n0}",
+                    overshoot,
+                    HandCoolingLab.Quantile(bottles, 0.5d),
+                    HandCoolingLab.Quantile(bottles, 0.9d),
+                    bottles[bottles.Count - 1]);
+
+                if (overshoot > 50d) continue;
+
+                // The claim: for the overshoot a damage-mitigation tool is about, the median block
+                // is within a hand tool's reach where returning it to ambient is not.
+                Assert.True(HandCoolingLab.Quantile(bottles, 0.5d) < 10f,
+                    "pulling the median block " + overshoot + " K back takes "
+                    + HandCoolingLab.Quantile(bottles, 0.5d).ToString("n1")
+                    + " bottles, which is not a hand tool");
+            }
+        }
+
+        /// <summary>
         /// **The bottle is a real object and its arithmetic is checked here**, so that a change to
         /// the reference is a change somebody made rather than a number that drifted.
         /// </summary>

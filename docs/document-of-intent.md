@@ -318,49 +318,57 @@ This is the one place where the [governing prior](#the-governing-prior-game-mod-
 settle the question. The prior says take the cheap form where the difference cannot be perceived —
 here the difference is *entirely* perception, so the cheap form is not obviously the right one.
 
-### Acting on heat by hand — out of scope, and priced
+### Acting on heat by hand — damage mitigation, and priced
 
-**A player perceives heat and does not act on it directly.** Every lever this page names is
-something a builder puts on a hull in advance: a radiator, a loop, a heat pump, a different place
-for the reactor. The extinguisher is an instrument in the sense above — a 15 m raycast, a
-temperature and heat-coloured billboards over the block and its thermal neighbours — and the
-`Bottle` it fires removes no heat. **That is the design**, and until 2026-08-25 nothing said so.
+**A player can act on heat, and the tool for it is the extinguisher.** It fires expendable
+ammunition that cools a block rapidly, at a cost in that ammunition. It is **damage mitigation, not
+cooling**: the thing you reach for when a block is about to go, not a way to run a ship hot.
 
-**The position was taken from a measurement rather than a preference** (`HandCoolingTests`,
-[balance.md](balance.md#what-a-hand-tool-would-have-to-be-worth)). Seventy-two vanilla block types
-reach their own critical temperature under their own waste heat. Against a five-kilogram CO2
-extinguisher — 3.3 MJ if every gram of it lands on the block, which is not how an extinguisher
-works — the job is:
+> **This section said the opposite for a few hours on 2026-08-25 and the measurement is what
+> changed.** It concluded that hand-scale action was out of scope because there is no hand-sized way
+> to cool a ship — which is true, and is the wrong question. The tool is not asked to undo a
+> crossing; it is asked to buy time on one block.
 
-| | to return one block to ambient | to do it inside the block's own window |
-| --- | ---: | ---: |
-| easiest block in the game | 1.6 bottles | 2.8 bottles at once |
-| median | **26 bottles** | **20 bottles at once** |
-| ninetieth percentile | 461 bottles | 77 bottles at once |
+**The two questions differ by an order of magnitude, which is what makes the design work.** Against
+a five-kilogram CO2 bottle — 3.3 MJ if every gram lands, which is not how an extinguisher works —
+over the 72 vanilla block types that reach their own critical temperature:
 
-The window is the median 32 s a block survives after it crosses. Twenty bottles discharging at once
-is 3.3 MW, and **a tool that moves three megawatts is a block, not something carried in a hand** —
-it is a large radiator with a trigger. So the tool is not merely too small; there is no hand-sized
-version of it.
+| | median block | ninetieth percentile | worst |
+| --- | ---: | ---: | ---: |
+| return it from its rating to ambient | 26 bottles | 461 | 7,818 |
+| pull it 10 K back from its rating | **0.5 bottles** | 15.9 | 90 |
+| pull it 50 K back | **2.4 bottles** | 79.4 | 448 |
 
-**And the tool would be at the wrong place even if it were big enough.** Given every face radiating
-to deep space and every face bolted to armour held at ambient, **71 of the 72 shed everything they
-make** at their own critical temperature. They do not cook because they cannot lose their own heat;
-they cook because the hull around them cannot lose it for them. A bottle applied to the block does
-not change the hull, which is *cooling is designed in* stated as an arithmetic property of the
-vanilla blocks rather than as a preference.
+The solver damages an overheating block at `(T − critical) × OverheatDamagePerKelvin` a second, so
+what stops the damage is removing the *overshoot* rather than the heat — and an overshoot is tens of
+kelvin where the rise from ambient is hundreds.
 
-**So what a player's hands are for is finding out which block is the problem**, and that is what the
-tool already does. Standing in a compartment that is failing, the correct action for a person is to
-leave it — and leaving is not nothing, because the suit models what staying costs them. The
-mod's answer to *what do I do about this* is a change to the ship, made afterwards, with the block
-the scanner named.
+**So the tool saves ordinary blocks and cannot save the big ones**, which is the mechanic rather than
+a limitation of it: half a bottle pulls a median block back from the brink, and ninety do nothing for
+a capital reactor. A player who wants their reactor to survive still has to build for it.
 
-**What would reopen this.** A tool that removed heat at the megawatt scale, or a block-scale
-intervention a player triggers — a purge valve, a coolant dump — is a different proposal and is not
-refused here: the measurement above says only that it cannot be hand-held. **The name is kept**:
-what a player picks up is an extinguisher because that is what the object is in the fiction, and
-what it does is on its own HUD the moment they equip it.
+**What it does not become is a cooling system.** Twenty bottles discharging at once is 3.3 MW, which
+is a large radiator with a trigger; the numbers above are what keeps the extinguisher an emergency
+measure instead. `HandCoolingTests` holds both halves.
+
+### Thermal vision — wanted, method unknown
+
+**A thermal camera view is an aspiration, not a rejected idea.** An earlier heat overlay was built
+and removed, and the limit recorded from it — *mods get no shader, no post-process and no frame
+buffer* — is true and is the obstacle rather than the answer. The x-ray block overlay keeps the part
+of that work worth keeping, since a debug view *wants* to see through a hull, but it is a debug view
+and not the thing.
+
+**The route is genuinely unknown and is expected to be indirect.** Candidates worth investigating,
+none of them straightforward: whether any shader or material parameter is reachable from a mod at
+all; billboards or transparent materials, which is how the extinguisher overlay already draws;
+particle effects as a rendering surface; and per-block emissive, which is the one path the engine
+definitely exposes and which overlaps with the glow described above.
+
+This is the one place where the [governing prior](#the-governing-prior-game-mod-first) does not
+settle the question. The prior says take the cheap form where the difference cannot be perceived —
+here the difference is *entirely* perception, so the cheap form is not obviously the right one.
+
 
 ---
 
@@ -646,12 +654,13 @@ thinking about it should find that out. **What a base gets in exchange is room**
 elaborate coolant systems and radiator farms far more effectively than a ship can, and that is the
 intent rather than an accident of the model.
 
-The reasons follow from the model rather than from preference. A ship pays for cooling in mass and
-in the thrust to carry it; a base pays for it in components alone. A coolant ring needs a topology
-and a radiator needs area, and only a base has the space for either at scale. A ship changes
-attitude constantly, so its sunward face changes; a base can be built shaded and stay shaded. So
-*cooling is designed in* is most true where there is room to design — which makes a base the place
-the mod's own lever is most available, not the place it stops mattering.
+**The advantage is layout, not size.** A base can be *rearranged* around its cooling in a way a ship
+cannot: nothing else constrains its shape. A ship's form is decided by thrust, mass, silhouette and —
+once drag ships — by the air it moves through, so cooling competes with all of them for where a block
+goes. A base has none of those constraints, so a player can put the refinery where the loop wants it
+rather than where the hull allows, run the ring the long way round, and face the radiators away from
+the sun for good. So *cooling is designed in* is most true where there is freedom to design, and a
+base is where the mod's own lever is most available rather than where it stops mattering.
 
 **None of that is measured.** Every scenario in the battery is a ship, a rig or a component, and the
 corpus is published blueprints, which are overwhelmingly ships. The most elaborate part of the model
@@ -1248,6 +1257,13 @@ occupied cell, which is what a 0.25 m lattice cannot afford. See
 
 ## What this mod deliberately is not
 
+**Nothing is refused yet, and that is sequencing rather than permissiveness.** Every mechanism has an
+off switch, every dial takes the value it is given, and the API accepts any registration. Whether
+there are combinations the mod should refuse — configurations that are silently broken rather than
+merely slow — is a question that needs the hard boundaries found first. **Soft limits come after
+extensive testing has said where the end state actually breaks down**, because a guardrail placed
+before the edge is known is a guess that will be in the wrong place and will be trusted anyway.
+
 Recorded so nobody rediscovers a decision as a bug. Each carries its price in
 [known-issues.md](known-issues.md#deliberate-limits).
 
@@ -1322,7 +1338,7 @@ alone, and both were settled by following where the *game* draws a line rather t
 
 | | Void | Where the position lives now |
 | --- | --- | --- |
-| 1 | What a player does with their hands | [Acting on heat by hand](#acting-on-heat-by-hand--out-of-scope-and-priced) |
+| 1 | What a player does with their hands | [Acting on heat by hand](#acting-on-heat-by-hand--damage-mitigation-and-priced) |
 | 2 | What the mod's blocks cost to build | [What a block costs to build](#what-a-block-costs-to-build--what-the-game-charges-and-nothing-invented) |
 | 3 | Creative mode, and the tools that skip the game | [When the game's own rules are suspended](#when-the-games-own-rules-are-suspended) |
 | 4 | What a version boundary would be for | [What the version number governs](#what-the-version-number-governs-and-what-moves-it) |
@@ -1402,6 +1418,7 @@ as a *second* change rather than as a substitute. [backlog](backlog.md) `D19`.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | **Corrected the hand-tool position the same day it was written, and the measurement is what changed it.** The extinguisher fires expendable ammunition that cools a block as *damage mitigation*; the earlier closure priced *cooling a ship*, which is a different question and impossible. Damage tracks the overshoot, so half a bottle pulls the median block 10 K back from its rating where 26 bottles would be needed to return it to ambient — and 90 bottles do nothing for the worst block, which is what keeps it an emergency tool. Also: a base's advantage is **layout freedom rather than size**, and **nothing is refused yet by sequencing** — soft limits wait until testing has found the hard boundaries. |
 | 2026-08-25 | **A base is a thermal problem, and the place cooling can be done properly** — it heats and has to be managed, and what it gets in exchange is room, so elaborate loops and radiator farms work far better there than on a ship. None of it is measured: every scenario is a ship or a rig, the corpus is blueprints, and room air is the part a base leans on hardest with the least evidence under it (`F27`). **And the compatibility promises bind from release, which has not happened** — before then a behaviour change is checked against the corpus rather than against a promise, and the identifiers are reserved rather than depended upon, so a rename that includes them is available now and will not be later. |
 | 2026-08-25 | **Three more decisions.** The readouts exist to *show*, not to diagnose — a player who sees a glow and hears a warning has enough, and working out the fix is the Engineering in Space Engineers. Two consequences: the mod has to announce it is there, which today it does not (`B41`), and *clear* is a higher bar than *present*. The workshop corpus is the population the mod is balanced against, its skew known and accepted. And the mod does not apologise for its cost: no guided troubleshooting, and the performance criterion is the author's own play. Also narrowed the open-API position — the mod is judged self-contained, so what an add-on does to balance is the player's business. |
 | 2026-08-25 | **Three more intent decisions, and one retraction.** Single player is the design centre and multiplayer is a low priority that still has to work, with the server stress case written as a number rather than a mood. The two-to-five-minute window keeps a floor under it: **nothing may be destroyed in the first minute of a world**. The API is open and unbounded — any mod may register anything, because a player chooses their mod list — which converts the mod's duty from *bounding* add-ons to *attributing* them, and means every published balance figure is a claim about this mod alone. Retracted: the claim that heat could be switched off entirely, because it would have unpicked the shared surface walk that is the reason force belongs in this mod at all. |

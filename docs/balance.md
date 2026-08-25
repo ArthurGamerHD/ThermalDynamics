@@ -807,7 +807,7 @@ not priced here; naming it is the whole of what this measurement can say about i
 ### What a hand tool would have to be worth
 
 The same index answers a question that is not about balance at all:
-[document-of-intent.md](document-of-intent.md#acting-on-heat-by-hand--out-of-scope-and-priced) had
+[document-of-intent.md](document-of-intent.md#acting-on-heat-by-hand--damage-mitigation-and-priced) had
 no position on whether a player should be able to act on heat with their hands, and it could not
 take one without a number. `HandCoolingLab` supplies it, and the comparison is deliberately physical
 — watts of waste against watts of cooling, joules stored against joules absorbed — because

@@ -220,11 +220,13 @@ watt the block draws into the hot side; a waste fraction on top would charge the
 
 ## Extinguisher (hand tool)
 
-A rifle-class hand item that acts as a **thermal scanner**, not a cooling device. **That is the
-design and it is priced**: undoing one crossing by hand is twenty-six five-kilogram CO2 bottles at
-the median block and twenty discharging at once to beat the block's own window, which is a large
-radiator with a trigger rather than something carried — see
-[document-of-intent.md](document-of-intent.md#acting-on-heat-by-hand--out-of-scope-and-priced) and
+A rifle-class hand item. Today it is a **thermal scanner**; the intent is that it also **cools a
+block rapidly, using expendable ammunition, as damage mitigation** — the thing you reach for when a
+block is about to go. **The two halves are priced**: undoing a crossing by hand is twenty-six
+five-kilogram CO2 bottles at the median block and twenty at once to beat its window, which is a
+large radiator with a trigger; but pulling that same block *ten kelvin back from its rating* is half
+a bottle, because damage tracks the overshoot rather than the heat. See
+[document-of-intent.md](document-of-intent.md#acting-on-heat-by-hand--damage-mitigation-and-priced) and
 [balance.md](balance.md#what-a-hand-tool-would-have-to-be-worth).
 
 | Definition | File |
