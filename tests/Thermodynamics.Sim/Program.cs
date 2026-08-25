@@ -993,6 +993,55 @@ namespace Thermodynamics.Sim
                     return 0;
                 }
 
+                case "franken":
+                {
+                    // A million-block grid welded out of real workshop ships, which no published
+                    // blueprint is. backlog.md G5.
+                    int frankenTarget = size > 0 ? size : 1000000;
+                    string ships = Option(args, "--ships", "out/corpus-2026-08-21/ships.csv");
+
+                    List<KeyValuePair<int, string>> paths = FrankenHull.LargestFirst(ships);
+                    if (paths.Count == 0)
+                    {
+                        Console.Error.WriteLine("no blueprints listed in " + ships
+                            + " — point --ships at a survey's ships.csv");
+                        return 1;
+                    }
+
+                    Console.WriteLine();
+                    Console.WriteLine("== franken hull, " + frankenTarget.ToString("n0")
+                        + " blocks from " + paths.Count.ToString("n0")
+                        + " blueprints, largest first ==");
+                    Console.WriteLine("  Every figure here is about the stress bound. This is the"
+                        + " biggest ships in the corpus,");
+                    Console.WriteLine("  tiled — which is what a million-block grid would have to"
+                        + " be made of, and nobody's median.");
+                    Console.WriteLine();
+
+                    FrankenHull.Manifest manifest = new FrankenHull.Manifest();
+                    System.Diagnostics.Stopwatch frankenBuild =
+                        System.Diagnostics.Stopwatch.StartNew();
+                    GridBuilder welded = FrankenHull.Build(paths, frankenTarget, manifest,
+                        message => Console.Error.WriteLine("  " + message));
+                    frankenBuild.Stop();
+
+                    Console.WriteLine("  " + manifest.Describe());
+                    Console.WriteLine("  read and tiled in "
+                        + frankenBuild.Elapsed.TotalSeconds.ToString("n1") + " s");
+                    Console.WriteLine();
+
+                    for (int i = 0; i < manifest.Ships.Count; i++)
+                    {
+                        Console.WriteLine("    " + manifest.Copies[i].ToString().PadLeft(5) + "x  "
+                            + manifest.Ships[i]);
+                    }
+
+                    Console.WriteLine();
+                    Console.WriteLine(LoadBenchmarks.Table(
+                        new List<ScaleRow> { LoadBenchmarks.MeasureBuilt(welded) }));
+                    return 0;
+                }
+
                 case "allowance":
                 {
                     // What MaxElementVisitsPerStep costs and what it buys, across grid size and
@@ -1434,6 +1483,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  bench wattsclear        what zeroing the watts row costs, up a size ladder");
             Console.WriteLine("  bench rowfill           what the first substep of a step pays over a later one");
             Console.WriteLine("  bench allowance         what the element-visit allowance costs, and what it buys");
+            Console.WriteLine("  bench franken --size N  a grid of N blocks welded out of real workshop ships");
             Console.WriteLine("  bench pace  --size N    does slowing sim and raising transfer save anything");
             Console.WriteLine("  bench reach --length N  how fast heat crosses a grid, against what it costs");
             Console.WriteLine("  bench memory --size N   where a grid's memory goes, by structure");

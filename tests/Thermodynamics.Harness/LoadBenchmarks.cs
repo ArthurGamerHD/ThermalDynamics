@@ -181,15 +181,7 @@ namespace Thermodynamics.Harness
 
         private static ScaleRow MeasureScale(string shape, int targetCells)
         {
-            ScaleRow row = new ScaleRow();
-            row.Shape = shape;
-            row.TargetBlocks = targetCells;
-
             HashSet<Vector3I> cells = LoadShapes.Build(shape, targetCells);
-
-            long before = GC.GetTotalMemory(true);
-
-            Stopwatch build = Stopwatch.StartNew();
 
             // Built from the measured block census, because substep count is set by the
             // *stiffest* node on the grid and therefore by its lightest block. This ladder used
@@ -200,6 +192,28 @@ namespace Thermodynamics.Harness
             // magnitude softer than the ones it described. See <see cref="Census"/>.
             GridBuilder builder = GridBuilder.Large();
             builder.PlaceCensus(cells);
+
+            return MeasureBuilt(builder, shape, targetCells);
+        }
+
+        /// <summary>
+        /// The ladder's whole measurement, on a hull somebody else built.
+        ///
+        /// **Split out for `FrankenHull`**, which welds real workshop ships into one grid: the
+        /// point of that rig is the block *mixture*, which no shape argument can describe, and
+        /// every column below is worth exactly as much on a hull that came from blueprints as on
+        /// one dealt from the census. See backlog.md `G5`.
+        /// </summary>
+        public static ScaleRow MeasureBuilt(GridBuilder builder, string shape = "franken",
+            int targetCells = 0)
+        {
+            ScaleRow row = new ScaleRow();
+            row.Shape = shape;
+            row.TargetBlocks = targetCells > 0 ? targetCells : builder.Placed.Count;
+
+            long before = GC.GetTotalMemory(true);
+
+            Stopwatch build = Stopwatch.StartNew();
 
             ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), builder.Grid);
             for (int i = 0; i < builder.Placed.Count; i++)

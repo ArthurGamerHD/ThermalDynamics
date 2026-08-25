@@ -523,9 +523,12 @@ but a quarter of a million at real pace is the figure the design is for.
 > between them — which mattered, because they are answered by different work: 250k is a tuning
 > problem and a million is a structural one. **Over 8,132 published workshop blueprints, not one
 > reaches a million blocks in a grid**: the largest is 641,711, ten pass a quarter of a million, and
-> the ninety-ninth percentile is 70,141. What a blueprint population cannot see is a station grown
-> in one world over months, so this is a ceiling on ambition rather than on possibility — which is
-> exactly why a million stays as a stress bound and the ladder still runs there.
+> the ninety-ninth percentile is 70,141. **What a blueprint population cannot see is what a world
+> contains**: a station grown over months, or several hulls welded into one, reaches sizes nobody
+> publishes — so this is a ceiling on ambition rather than on possibility, and a million-block grid
+> is something a player can build even though nobody has posted one. That is exactly why it stays an
+> uncapped stress bound, and why `bench franken` now welds the corpus's largest ships into a single
+> grid: a bound is worth measuring on a real block mixture rather than on synthetic census tiers.
 > [backlog.md](backlog.md) `G5`, [scale-design.md](scale-design.md#9-risks-and-open-questions).
 
 Measured against the current ladder, on hulls built from the block census:

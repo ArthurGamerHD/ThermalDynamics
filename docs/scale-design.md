@@ -798,10 +798,15 @@ Properties the design must preserve as it gets clever. These are the regression 
   activity tracking is the design the population calls for, with lumping the complexity it does not.
 
   **What blueprints cannot say, and it is the reason the bound stays uncapped**: a station grown in
-  one world over months is never published, so this population has a ceiling on ambition rather than
-  on possibility. The ladder therefore keeps running to a million and beyond as a stress bound —
-  which is what [document-of-intent.md](document-of-intent.md#the-scale-target) already said about
-  everything *above* the target — and what changes is which of the two numbers the design is for.
+  one world over months is never published, and neither is a hull welded out of several ships — both
+  reach sizes nobody posts. So this population has a ceiling on ambition rather than on possibility,
+  a million-block grid is something a player can build, and the ladder keeps running there as a
+  stress bound. What changes is only which of the two numbers the design is *for*.
+
+  **And the bound is now measurable on real blocks.** `bench franken` reads the corpus's largest
+  ships and tiles their main grids into one grid until it reaches a target, so a figure at the bound
+  describes a real block mixture — a capital ship's proportion of armour to machinery, its conveyor
+  runs, its thruster banks — rather than census tiers dealt into a shape. See `FrankenHull`.
 
   **A second measurement points the same way and bites much lower.** At the configuration that ships
   after `C27`, a driven census hull in air stops keeping real time between 32,000 and 64,000 blocks
