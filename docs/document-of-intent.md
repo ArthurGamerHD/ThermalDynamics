@@ -227,6 +227,50 @@ This is the one place where the [governing prior](#the-governing-prior-game-mod-
 settle the question. The prior says take the cheap form where the difference cannot be perceived —
 here the difference is *entirely* perception, so the cheap form is not obviously the right one.
 
+### Acting on heat by hand — out of scope, and priced
+
+**A player perceives heat and does not act on it directly.** Every lever this page names is
+something a builder puts on a hull in advance: a radiator, a loop, a heat pump, a different place
+for the reactor. The extinguisher is an instrument in the sense above — a 15 m raycast, a
+temperature and heat-coloured billboards over the block and its thermal neighbours — and the
+`Bottle` it fires removes no heat. **That is the design**, and until 2026-08-25 nothing said so.
+
+**The position was taken from a measurement rather than a preference** (`HandCoolingTests`,
+[balance.md](balance.md#what-a-hand-tool-would-have-to-be-worth)). Seventy-two vanilla block types
+reach their own critical temperature under their own waste heat. Against a five-kilogram CO2
+extinguisher — 3.3 MJ if every gram of it lands on the block, which is not how an extinguisher
+works — the job is:
+
+| | to return one block to ambient | to do it inside the block's own window |
+| --- | ---: | ---: |
+| easiest block in the game | 1.6 bottles | 2.8 bottles at once |
+| median | **26 bottles** | **20 bottles at once** |
+| ninetieth percentile | 461 bottles | 77 bottles at once |
+
+The window is the median 32 s a block survives after it crosses. Twenty bottles discharging at once
+is 3.3 MW, and **a tool that moves three megawatts is a block, not something carried in a hand** —
+it is a large radiator with a trigger. So the tool is not merely too small; there is no hand-sized
+version of it.
+
+**And the tool would be at the wrong place even if it were big enough.** Given every face radiating
+to deep space and every face bolted to armour held at ambient, **71 of the 72 shed everything they
+make** at their own critical temperature. They do not cook because they cannot lose their own heat;
+they cook because the hull around them cannot lose it for them. A bottle applied to the block does
+not change the hull, which is *cooling is designed in* stated as an arithmetic property of the
+vanilla blocks rather than as a preference.
+
+**So what a player's hands are for is finding out which block is the problem**, and that is what the
+tool already does. Standing in a compartment that is failing, the correct action for a person is to
+leave it — and leaving is not nothing, because the suit models what staying costs them. The
+mod's answer to *what do I do about this* is a change to the ship, made afterwards, with the block
+the scanner named.
+
+**What would reopen this.** A tool that removed heat at the megawatt scale, or a block-scale
+intervention a player triggers — a purge valve, a coolant dump — is a different proposal and is not
+refused here: the measurement above says only that it cannot be hand-held. **The name is kept**:
+what a player picks up is an extinguisher because that is what the object is in the fiction, and
+what it does is on its own HUD the moment they equip it.
+
 ---
 
 ## The governing prior: game mod first
@@ -894,23 +938,9 @@ holds the things where the intent is stated and the route is not; here the inten
 None of them is a defect and most may want no more than a sentence — but the sentence is not there,
 and until it is, the answer is whatever the next change happens to imply.
 
-### 1. What a player does with their hands
-
-**The mod ships an extinguisher and it does not extinguish anything.** It is a thermal scanner: a
-15 m raycast, a temperature in °C at the lower left, and heat-coloured billboards over the block and
-its neighbours. Its `Bottle` ammo does zero damage, zero trajectory and zero impulse, and firing it
-produces a particle effect and a sound. There is also a decorative wall block of the same name.
-
-Nothing states whether a player should be able to **act** on heat directly — cool a block, vent a
-compartment, carry a coolant canister — or why they should not. The three commitments in
-[the purpose](#the-purpose) say the outcome must be *answerable*, and every lever named there is
-something a builder puts on a hull in advance: a radiator, a loop, a heat pump, a different place
-for the reactor. A player standing in front of a block that is about to fail has, by that reading,
-already lost — and it is not clear whether that is the design or an omission.
-
-**Why it matters more than it looks.** The suit exists precisely so that a person in a burning
-compartment is part of the simulation. Having put the player in the room, the mod gives them nothing
-to do in it but leave.
+**Number 1 is settled and its number is not reused**, because the pages that cite these entries cite
+them by number: *what a player does with their hands* was answered on 2026-08-25 and the position is
+[Acting on heat by hand](#acting-on-heat-by-hand--out-of-scope-and-priced).
 
 ### 2. What the mod's blocks cost to build
 
@@ -1091,6 +1121,7 @@ as a *second* change rather than as a substitute. [backlog](backlog.md) `D19`.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | **Took a position on what a player does with their hands, which was the first of the voids and had no number under it.** `HandCoolingLab` prices the tool against a real five-kilogram CO2 bottle: undoing one crossing is 26 bottles at the median of the 72 vanilla types that cook themselves and 20 discharging at once to beat the block's own 32 s window, which is 3.3 MW — a large radiator with a trigger. And 71 of the 72 shed everything they make in their own best case, so the block is not where the problem is. The position: a player perceives heat and does not act on it by hand, the extinguisher is the instrument that names the block to change, and what would reopen it is a block-scale intervention rather than a bigger bottle. |
 | 2026-08-24 | **A full sweep of the tree for intent, and it found four subjects the code had always followed and no page had ever stated.** Added [what the mod promises the things around it](#what-the-mod-promises-the-things-around-it) — to an existing world, to a block it has never heard of, to another mod, and to a client — which gathers the save format's forward compatibility, the retired definition names, a setting's name as an address, the derive-don't-guess rule for third-party blocks, the API's four guarantees, and the two trust boundaries that decide which network channel a message takes. Added [what the mod does when it cannot afford itself](#what-the-mod-does-when-it-cannot-afford-itself): it slows down rather than stuttering, determinism is chosen rather than assumed, and a fault records itself whether or not anyone asked. Added [where something is modelled, it is modelled as a mechanism rather than as a threshold](#where-something-is-modelled-it-is-modelled-as-a-mechanism-rather-than-as-a-threshold), which is the most consistent habit in the code and had been written down nowhere. |
 | 2026-08-24 | **Checked every claim in the new voids section against the code rather than the documentation, and two of them changed.** The version void was overstated and is corrected in the row below. The visual-channel void was *understated*: `Incandescence`'s colour table starts at 800 K with a pure-red first entry and clamps below it, and the 26 % of block types rated under the Draper point at 798 K are exactly the blocks whose colour therefore never moves through their whole glow band. So the two-channel design is a one-channel design on a quarter of the game **for every player**, by construction — which the code says where `DraperKelvin` is defined and no page had carried. The rest verified as written: no code path in the mod knows what creative mode is, `RemoveBlock` drops a node with no redistribution of its energy, the extinguisher's ammo does zero damage, zero trajectory and zero impulse, and the settings menu's labels and descriptions are English string literals. |
 | 2026-08-24 | **Corrected the version void, which I had overstated by reading the documentation instead of the code.** It said nothing in the repository defines a version. `ThermalApi.Version` is `1`, served as `ApiVersion`, and [api.md](api.md#binding) already tells a caller to read it and refuse a major it was not written against — so the API's guarantee has a referent. What is actually missing is smaller and sharper: what would move that number, whether the save format, the retired definition names and the setting names sit under it or under nothing, and a check relating a change in the delegate table's shape to the number a caller is told to trust. |

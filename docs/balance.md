@@ -748,6 +748,38 @@ block**, because total hull area is irrelevant when the heat cannot travel: bloc
 conductance is about 112 W/K, so moving megawatts even one block needs thousands of kelvin. **Area
 has to be *near* the source to count.**
 
+### What a hand tool would have to be worth
+
+The same index answers a question that is not about balance at all:
+[document-of-intent.md](document-of-intent.md#acting-on-heat-by-hand--out-of-scope-and-priced) had
+no position on whether a player should be able to act on heat with their hands, and it could not
+take one without a number. `HandCoolingLab` supplies it, and the comparison is deliberately physical
+— watts of waste against watts of cooling, joules stored against joules absorbed — because
+`HeatTimeScale` makes a kelvin cheaper for both sides by the same factor and so cannot move the
+ratio.
+
+The reference tool is a five-kilogram CO2 extinguisher: **3.3 MJ** and **165 kW** while it
+discharges, assuming every gram of it lands on the block, which is not how an extinguisher works.
+Against the 72 vanilla block types that reach their own critical temperature under their own waste:
+
+| | bottles to return the block to ambient | bottles at once to do it inside its own window |
+| --- | ---: | ---: |
+| easiest block in the game | 1.6 | 2.8 |
+| median | **26** | **20** |
+| ninetieth percentile | 461 | 77 |
+
+The window is the median **32 s** between the crossing and the loss, from
+[How long a block has after it crosses](#how-long-a-block-has-after-it-crosses). Twenty bottles at
+once is 3.3 MW; a tool that moves three megawatts is a large radiator with a trigger.
+
+**And 71 of the 72 have no surplus at all in the best case.** With every face radiating to deep
+space and every face bolted to armour held at ambient, all but the prototech reactor shed everything
+they make at their own critical temperature. They cook because the hull cannot lose their heat for
+them, which is why a tool aimed at the block is at the wrong place rather than merely too small —
+and which is [Cooling is designed
+in](document-of-intent.md#cooling-is-designed-in--and-a-vanilla-ship-still-has-to-survive) as
+arithmetic over the vanilla definitions rather than as a claim.
+
 ### Cooling has to remove watts, not add area
 
 The model behaves as clean radiative equilibrium, so **T scales as the fourth root of area**:
@@ -1421,6 +1453,7 @@ five ways a full sweep dies, and [backlog.md](backlog.md) for what is still open
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Added [What a hand tool would have to be worth](#what-a-hand-tool-would-have-to-be-worth), which the block index could answer all along and nobody had asked: 26 five-kilogram CO2 bottles to return the median cooking block to ambient, 20 at once to do it inside its own window, and 71 of 72 with no surplus at all in the best case. It closes [backlog.md](backlog.md) `B32`, and the comparison is in watts and joules so that `HeatTimeScale` cannot move it. |
 | 2026-08-25 | Scoped the 2026-08-21 vacuum survey's tables to the pair they were taken at. *The shape, in one table* said **shipped settings, `HeatTimeScale` 225** and *How fast a ship crosses critical* said `HeatTimeScale` **is** 225; `C24` moved the pair to 9.6 and 90 on 2026-08-24, so both read as current and were not (`P1`). Nothing was re-measured — no walk has re-read the population in vacuum at the pair that ships — so the figures stand with their scope on them rather than being withdrawn. |
 | 2026-08-24 | **Decided `C28`: the reactor fraction stays at 0.01, and the claim it supported comes down.** Re-measured at the pair that ships, 0.02 still cooks two of the four reactors *bare*, which is the bound this page calls unbuildable — so `C24` did not move which fraction is the only one where both bounds hold, and 0.01 is kept because the alternative was measured rather than for want of one. What did move is what it buys: burying a 300 MW reactor costs **50.7 K** rather than 355 K, about five per cent of the block's headroom, so *where a reactor is installed is a decision rather than a detail, and the first thing that makes a player want a coolant loop* is corrected in place. The population had already said the same and nobody had read it against the claim — `reactor-waste` swept sixteen-fold moves the corpus peak p50 by 3 %. The bite is thrusters and drives. |
 | 2026-08-24 | Corrected this page's own account of `C12`'s choice, from the attempt at shipping it. The conduction route's *three levers* are four named behaviours — a coolant sink stops out-performing surface dials, bolting starts working, the stiffest fitting stops responding to air, and the cooling ladder's control stops losing — so the route is a trade taken deliberately rather than the easy choice the previous entry implied. |
