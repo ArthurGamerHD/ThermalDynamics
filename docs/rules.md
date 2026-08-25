@@ -32,7 +32,9 @@ and four fields:
 
 * **Applies to** — the scope. A rule with no scope is a rule that will one day forbid something
   useful. Most errors found while assembling this page were rules stated more broadly than the
-  evidence behind them.
+  evidence behind them. **A scope does not make a rule conditional**: nearly every rule here names
+  a subject, and what puts one in the [conditional](#conditional) pile is that inside its subject
+  there are cases where the right thing to do is the other thing.
 * **Checked by** — the test, script or build setting that fails when the rule is broken. A dash
   means nothing checks it; that is not a defect in every case, but an unchecked rule is a hope,
   and marking it says so. *Reported by* is weaker than *checked by* and is written as such: a
@@ -309,8 +311,10 @@ That asymmetry is not closed and is recorded here rather than left implicit.
 | **J2** | *Light, isolated, tested, open* | low value | — | absorbed into `C4` `C5` `C7` `R9` |
 | **J3** | The corpus filters are strict, and their cost is recorded | conditional | P1 | `BlueprintTests` |
 
-Sixty absolute, seven conditional, three low value — sixty-nine rows, of which three
-are retired and kept only so a citation to them does not dangle.
+Seventy rows: **sixty absolute, seven conditional, three low value.** The last three are retired as
+rules and kept only so a citation to them does not dangle, so sixty-seven of these are rules a
+change can be measured against. Twenty-one of them are unchecked and say so, and two more are
+*reported* rather than checked, which is weaker and is written as such.
 
 ---
 
@@ -452,6 +456,20 @@ step runs once per grid per frame; the count keeps rising and reaches the closin
 *Checked by:* `AnomalyRegistryTests`.
 *From:* [telemetry.md](telemetry.md#faults-are-recorded-whether-or-not-collection-is-running).
 
+#### D4 — Test the state before the first step, and the artefacts the mod writes
+
+**Both are where a fault survives longest, because both look like output rather than behaviour
+and neither changes a temperature.**
+
+Three faults found in one pass over a field dump had exactly that shape: a grid's substep demand
+was conduction-only until it had stepped, a grid's one-off build was charged to no row in the
+cost table, and a block type's peak temperature could sit below its own maximum. Every test
+measures a grid *after* stepping it, and nothing read the report the mod writes about itself.
+
+*Applies to:* new instrumentation, new report rows, and anything read outside a step.
+*Checked by:* `DumpAuditTests`, `FieldDumpTests`.
+*From:* [tests/README.md](../tests/README.md).
+
 ### P3 — The claim is fixed before the data and corrected in place after
 
 #### E1 — Criteria before data
@@ -524,24 +542,6 @@ on a regression to the earlier scale without letting one unexplained ship hold t
 rather than in the standalone walk that used to carry it.
 *From:* [tests/README.md](../tests/README.md), [known-issues.md](known-issues.md).
 
-#### R15 — An identifier cited anywhere resolves to something that exists
-
-**A rule or a backlog row cited in a comment, a test summary or a script is one that is still on the
-page it belongs to.**
-
-`R11` is this rule pointed the other way — it fails when a rule names a check that has stopped
-running — and between them there was a hole big enough to hide in. `EveryRuleCitedByAPageExists`
-reads documentation banners; **425 citations of the same shape live in `.cs` and `.py` files** and
-nothing read those at all. A backlog row is deleted when it closes, so every comment citing it
-becomes a dead reference that reads exactly like a live one, and the check found thirteen on its
-first run: `C20` in six files including three the game compiles, and `C13` in three more.
-
-*Applies to:* every `.cs` and `.py` file outside the vendored paths.
-*Checked by:* `EveryCitedIdentifierResolves`. It cannot say *which* page a citation means, because
-the two share a namespace — [backlog.md](backlog.md) carries that as H8 — and it says instead that
-the citation resolves to one of them, which is what stops a dropped identifier rotting in a comment.
-*From:* this page, and the pass that added it.
-
 #### R12 — A page states its scope, describes the present, and logs its changes
 
 **Every page opens by saying what it covers and what it does not, its body is in the present tense,
@@ -595,20 +595,6 @@ symptom — that shape is a harness fault until proven otherwise.
 `AStoreIsNotBothChargingAndDischarging` — and `LabInvariantTests` holds the units guard, that no
 definition claims a preposterous amount of power.
 *From:* [balance-lab.md](balance-lab.md).
-
-#### D4 — Test the state before the first step, and the artefacts the mod writes
-
-**Both are where a fault survives longest, because both look like output rather than behaviour
-and neither changes a temperature.**
-
-Three faults found in one pass over a field dump had exactly that shape: a grid's substep demand
-was conduction-only until it had stepped, a grid's one-off build was charged to no row in the
-cost table, and a block type's peak temperature could sit below its own maximum. Every test
-measures a grid *after* stepping it, and nothing read the report the mod writes about itself.
-
-*Applies to:* new instrumentation, new report rows, and anything read outside a step.
-*Checked by:* `DumpAuditTests`, `FieldDumpTests`.
-*From:* [tests/README.md](../tests/README.md).
 
 #### D8 — An optimisation is pinned against the code it replaced
 
@@ -827,6 +813,24 @@ member, so neither shape can be innocent. It states rather than hides its limit:
 somewhere with no comment of its own is invisible to it. Nothing checks the length, which is
 judgement.
 *From:* [document-of-intent.md](document-of-intent.md#what-a-code-comment-is-for).
+
+#### R15 — An identifier cited anywhere resolves to something that exists
+
+**A rule or a backlog row cited in a comment, a test summary or a script is one that is still on the
+page it belongs to.**
+
+`R11` is this rule pointed the other way — it fails when a rule names a check that has stopped
+running — and between them there was a hole big enough to hide in. `EveryRuleCitedByAPageExists`
+reads documentation banners; **425 citations of the same shape live in `.cs` and `.py` files** and
+nothing read those at all. A backlog row is deleted when it closes, so every comment citing it
+becomes a dead reference that reads exactly like a live one, and the check found thirteen on its
+first run: `C20` in six files including three the game compiles, and `C13` in three more.
+
+*Applies to:* every `.cs` and `.py` file outside the vendored paths.
+*Checked by:* `EveryCitedIdentifierResolves`. It cannot say *which* page a citation means, because
+the two share a namespace — [backlog.md](backlog.md) carries that as H8 — and it says instead that
+the citation resolves to one of them, which is what stops a dropped identifier rotting in a comment.
+*From:* this page, and the pass that added it.
 
 ### P6 — A comparison holds everything but the subject equal
 
@@ -1248,7 +1252,7 @@ run for. A ship is not symmetric, so both thrust and travel expand to six direct
 
 ---
 
-### O4 — Corpus walks run alone
+#### O4 — Corpus walks run alone
 
 **A test that walks the corpus, or that asserts on wall-clock time, declares the collection that
 disables parallelism; nothing else in the suite does.**
