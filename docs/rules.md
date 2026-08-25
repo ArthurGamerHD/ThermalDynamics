@@ -780,16 +780,25 @@ solution build fails on a break the suite cannot see.
 #### C9 — The game's own answer is read, never overridden
 
 **Where the game already decides something — whether a room is sealed, how much oxygen it holds —
-this model reads that answer rather than forming its own, and every source may veto air while none
-may require it.**
+this model reads that answer rather than forming its own, and every source that *answers* may veto
+air while none may require it. Silence is not an answer.**
 
 Three things can empty a room: a world with oxygen or pressurisation off, the game's own sealing
-test, and the vents. Each is a veto and none is a requirement. The asymmetry is not tidiness. Air
-is heat capacity, so a room wrongly given air warms and cools as a mass of gas that every bounding
-surface exchanges with, while a room wrongly denied air loses only some interior inertia — the two
-errors are not the same size. The models disagree by construction, because this model's rooms are
-pieces of the game's and its cells are coarser than a sloped block, so what matters is the
-direction of a disagreement rather than its existence.
+test, and a reported level. Each is a veto and none is a requirement. **The asymmetry is because
+the game owns pressurisation and this model has no standing to overrule it** — every veto is
+somebody saying no, and there is nothing for a requirement to be built out of. The models disagree
+by construction, because this model's rooms are pieces of the game's and its cells are coarser than
+a sloped block, so what matters is the direction of a disagreement rather than its existence.
+
+> **This rule used to justify itself by the size of the two errors, and that was measured false**
+> (`P3`, `C22`, `F21`). It said air is heat capacity, so a room wrongly *given* air drags every
+> bounding surface along while a room wrongly *denied* it loses only some interior inertia. A
+> link's conductance carries no pressure term, so room air is a **mixer rather than a sink**: on a
+> settled 2,000-block census hull the hottest block reads 1,502.83 K at every pressure from 0.2 to
+> 1.0 and **1,706.08 K** with the air gone, while the hull *mean* moves 3.8 K. The two errors are
+> the same size — about 203 K, on the block overheat damage is taken off — and they differ only in
+> sign. The rule survives on its first reason; what did not survive was extending it to the case
+> where **nothing answered at all**, which was reading a lookup that missed as a fourth veto.
 
 *Applies to:* room pressure, air density, and anything else the game already answers.
 *Checked by:* `RoomPressureTests` — one case per veto — and `RoomAirPressureTests`, which reports

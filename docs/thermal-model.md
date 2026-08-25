@@ -552,8 +552,8 @@ reading it. Three things can empty a room and each can veto air on its own:
 | `IMyAirVent.GetOxygenLevel`, or `Depressurize` | how full is it | that much, or nothing |
 
 **None of them can insist on air, only refuse it**: the game owns pressurisation (`C9`) and this
-model has no standing to overrule it, so an answer that says *no air* is taken and an absence of an
-answer is not read as *air*.
+model has no standing to overrule it, so an answer that says *no air* is taken. **An absence of an
+answer is not one of them**, and was read as one until 2026-08-24 — see below.
 
 **The reason once given for that was that the two mistakes are unequal, and measurement says they
 are unequal the other way round.** Air was described as heat capacity — a room wrongly given it
@@ -564,12 +564,24 @@ nothing else. Measured on a 2,000-block census hull settled under load in vacuum
 runs at **1,502.83 K** at every pressure from 0.2 to 1.0 — identical to two decimals across a
 fivefold change in air mass — and at **1,706.08 K** with the air gone, while the hull *mean* moves
 3.8 K. Room air is a **mixer, not a sink**: it barely changes the hull's energy balance and moves
-its hot spot by 203 K, which is the number overheat damage is taken off. So a room wrongly denied
-air is the expensive mistake and a room wrongly given it is nearly free, and the veto chain lands on
-the expensive side of that. It stays, because `C9` and not the error cost is what justifies it;
-whether the *fallback* should deny on uncertainty is [backlog.md](../docs/backlog.md) `C22`.
-`RoomAirCouplingTests` pins the pressure-independence and `ClientInputTests` the discontinuity a
-client's disagreement about pressure produces.
+its hot spot by 203 K, which is the number overheat damage is taken off.
+
+**So the two errors are the same size and differ in sign.** A room wrongly denied air is computed
+203 K too hot, and a room wrongly given it 203 K too cool. What is not symmetric is what each costs
+a player: too hot destroys a block that should have survived, and too cool fails to threaten one
+that should have been. The chain can only ever deny, so its bias is toward the first.
+
+**The chain stays and the fallback moved** (`C22`, 2026-08-24). It stays because `C9` and not the
+error cost is what justifies it — every veto is the game or the world *answering*, and there is
+nothing for a requirement to be built out of. What did not survive is treating **silence** as a
+fourth veto: a compartment the game calls airtight, on a world where pressurisation is on, that no
+lookup found a level for is a lookup that missed rather than an answer of empty — and a miss is
+exactly what two models with different room shapes produce. `RoomPressure.Level` returns
+`AssumedWhenUnanswered` there. Any positive value would behave identically, since the measurement
+above says the level does not matter above zero; what the constant decides is whether the room mixes
+at all. `RoomPressureTests` pins that silence does not defeat a veto, `RoomAirCouplingTests` the
+pressure-independence and `ClientInputTests` the discontinuity a client's disagreement about
+pressure produces.
 
 The game's sealing test is consulted rather than this model's own room map because the two disagree,
 and the game is right: it knows the real shape of a sloped or half block where the room mapper knows
@@ -688,6 +700,7 @@ several tests compare against it so the differences stay pinned rather than reme
 
 | Date | Change |
 | --- | --- |
+| 2026-08-24 | **Silence stopped being a veto** (`C22`). `RoomPressure.Level` treated *nothing reported* and *reported empty* identically, though the parameter's own documentation said they were distinct. The three vetoes are each the game or the world answering; a compartment the game calls airtight, on a pressurised world, that no lookup found a level for is a lookup that missed — which is what two models with different room shapes produce — and it now takes `AssumedWhenUnanswered`. Also corrected the error-size claim above: the two mistakes are the *same* size, about 203 K, and differ in sign; what is asymmetric is that too hot destroys a block which should have survived. |
 | 2026-08-24 | Corrected the reason given for the pressure veto chain. It was justified by air being heat capacity, so that denying air wrongly cost only a little inertia; measured, the link conductance carries no pressure term, so denying air removes the whole coupling and costs 203 K on the hottest block while every pressure above zero is identical to two decimals. The chain stays — `C9` justifies it — and whether the fallback should deny on uncertainty is now [backlog.md](backlog.md) `C22` ([backlog.md](backlog.md) `F21`). |
 | 2026-08-22 | Wrote down what a coolant pump costs, now that it costs anything: 50 kW on a large grid, derived from the loop's own mass flow against two bar of head, all of it becoming heat because a circulator does no work that leaves the system ([backlog.md](backlog.md) `C13`). |
 | 2026-08-22 | The convection wind factor runs from 1 upward rather than from 0.5 to 1. Forced convection adds to natural convection; the old floor made a wind under about 50 m/s a net warmer, because most of a closed hull's faces do not point into it ([backlog.md](backlog.md) `B29`). The two-to-one contrast between a windward face and a lee one is unchanged. |

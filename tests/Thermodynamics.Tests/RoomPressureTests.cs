@@ -6,10 +6,10 @@ namespace Thermodynamics.Tests
     /// <summary>
     /// Whether a room holds air, decided from the game's answers rather than this model's.
     ///
-    /// Every one of those answers can veto air and none can insist on it, because the two mistakes
-    /// are not equal: air is heat capacity, so a room wrongly given it warms and cools like a room
-    /// with a tonne of gas in it and drags every surface around it along, while a room wrongly
-    /// denied it only loses a little inertia.
+    /// Every one of those answers can veto air and none can insist on it — not because the two
+    /// mistakes are different sizes, which was the reason written down here and is measured false,
+    /// but because the game owns pressurisation and this model has no standing to overrule it.
+    /// **Silence is not one of those answers**, and treating it as one is what `C22` corrected.
     /// </summary>
     public class RoomPressureTests
     {
@@ -36,21 +36,50 @@ namespace Thermodynamics.Tests
             Assert.Equal(0.4f, RoomPressure.Level(true, true, 0.4f), 5);
         }
 
+        /// <summary>
+        /// **Reporting empty is an answer; reporting nothing is not** (`C22`).
+        ///
+        /// <para>
+        /// The two were distinct in the input and identical in the output until 2026-08-24 — the
+        /// parameter's own documentation said they were different and the code said `&lt;= 0`. What
+        /// silence actually means here is a compartment the game calls airtight, on a world where
+        /// pressurisation is on, that no lookup found a level for: a lookup that missed rather than
+        /// an answer of empty, which is exactly what two models with different room shapes produce.
+        /// </para>
+        /// </summary>
         [Fact]
-        public void NothingReportingIsNotTheSameAsReportingEmptyButGivesTheSameAnswer()
+        public void ReportingEmptyEmptiesTheRoomAndReportingNothingDoesNot()
         {
-            // A room with no vent cannot be measured, and an unmeasured room is treated as empty
-            // rather than guessed at. Distinct in the input so the caller can tell the two apart.
-            Assert.Equal(0f, RoomPressure.Level(true, true, RoomPressure.NotReported), 5);
             Assert.Equal(0f, RoomPressure.Level(true, true, 0f), 5);
+
+            Assert.Equal(RoomPressure.AssumedWhenUnanswered,
+                RoomPressure.Level(true, true, RoomPressure.NotReported), 5);
+            Assert.True(RoomPressure.AssumedWhenUnanswered > 0f);
             Assert.True(RoomPressure.NotReported < 0f);
+        }
+
+        /// <summary>
+        /// **Silence does not defeat a veto.** The assumption is the last step and only the last
+        /// step: a world without pressurisation and a room the game does not seal are still empty
+        /// with nothing reported, because those are answers.
+        /// </summary>
+        [Fact]
+        public void AnUnansweredRoomIsStillEmptyWhereSomethingElseSaidNo()
+        {
+            Assert.Equal(0f, RoomPressure.Level(false, true, RoomPressure.NotReported), 5);
+            Assert.Equal(0f, RoomPressure.Level(true, false, RoomPressure.NotReported), 5);
+            Assert.Equal(0f, RoomPressure.Level(false, false, RoomPressure.NotReported), 5);
         }
 
         [Fact]
         public void AnImpossibleReadingIsClampedRatherThanTrusted()
         {
             Assert.Equal(1f, RoomPressure.Level(true, true, 4f), 5);
-            Assert.Equal(0f, RoomPressure.Level(true, true, -3f), 5);
+
+            // Any negative is the sentinel rather than a reading: nothing reports a negative
+            // pressure, so there is no "impossibly low" case to tell apart from silence.
+            Assert.Equal(RoomPressure.AssumedWhenUnanswered,
+                RoomPressure.Level(true, true, -3f), 5);
         }
     }
 
