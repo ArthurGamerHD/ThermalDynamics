@@ -35,8 +35,13 @@ COLUMNS = [
 ]
 
 
-def rows(directory):
-    """Every outcome row of a dataset, keyed by ship, workshop id, scenario and arm."""
+def rows(directory, arm=None):
+    """Every outcome row of a dataset, keyed by ship, workshop id, scenario and arm.
+
+    `arm` keeps only the rows of a paired walk whose `cap` matches, which is what makes a paired
+    dataset comparable with an unpaired one — `CorpusCapWalk`'s control arm *is* `CorpusAirWalk`
+    repeated, and reproducing that is the point of running the two.
+    """
     path = os.path.join(directory, "outcomes.csv")
     if not os.path.exists(path):
         print(f"no outcomes at {path}")
@@ -45,15 +50,23 @@ def rows(directory):
     keyed = {}
     with open(path, newline="", encoding="utf-8") as handle:
         for row in csv.DictReader(handle):
+            if arm is not None and "cap" in row and normalise(row["cap"]) != normalise(arm):
+                continue
+
             keyed[key(row)] = row
 
     return keyed
 
 
+def normalise(cap):
+    """`0` and a missing column are the same arm: the cap off, which is what ships."""
+    return "" if cap in (None, "", "0") else cap
+
+
 def key(row):
-    """A row's identity. `cap` is absent in a walk with one arm, which is its own answer."""
+    """A row's identity, with the arm normalised so an unpaired walk keys like a control arm."""
     return (row.get("ship", ""), row.get("workshop_id", ""),
-            row.get("scenario", ""), row.get("cap", ""))
+            row.get("scenario", ""), normalise(row.get("cap", "")))
 
 
 def difference(before, after, column):
@@ -99,10 +112,12 @@ def main():
     parser.add_argument("--tolerance", type=float, default=1e-6,
                         help="relative difference that counts as a mismatch (default 1e-6)")
     parser.add_argument("--show", type=int, default=10, help="mismatches to print")
+    parser.add_argument("--arm", default="0",
+                        help="which arm of a paired walk to compare (default 0, the cap off)")
     args = parser.parse_args()
 
-    before = rows(args.before)
-    after = rows(args.after)
+    before = rows(args.before, args.arm)
+    after = rows(args.after, args.arm)
 
     shared, mismatches, worst = compare(before, after, args.tolerance)
 

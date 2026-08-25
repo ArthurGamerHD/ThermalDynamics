@@ -111,6 +111,16 @@ the solver's own unit, and compared against a bound the mod already ships.
 > had the right count in the wrong currency, this one has the wrong count. The figures are left as
 > written rather than deleted (`E11`, `E10`).
 
+> **The walk predates `C21`'s waste correction by one minute, and it costs the demand half nothing.**
+> `f91e5dc` took twenty-seven `ConsumerWasteEnergy` fractions from 0.9 to 1.0 at 21:06 and this walk
+> finished at 21:07, so it ran on the old values throughout. Compared row for row against the cap
+> walk's control arm, which is this walk repeated on the current definitions
+> ([reproduce.py](../tools/corpus/reproduce.py), 1,236 shared runs): **substep demand is identical
+> on every one of them, to the last bit**, because demand is conductance over capacity and carries
+> no waste term. What moved is generation — **+0.60 % at the median, +4.2 % at p95, +11.0 % at
+> worst** — and peaks with it, at **0 % median and 2.1 % worst**. So the demand figures below stand
+> as measured; the watt and peak figures are low by those amounts.
+
 **Scored in air, and the cost half fails.** Over the 32,575 runs of the 2026-08-24 air walk — the
 whole corpus, four scenarios, at the pair that ships: **demand p50 7.9, p95 30.2, p99 34.8** against
 64 granted, so the demand half passes with a wide margin; and **step work p50 45,323, p95 1,652,491,
@@ -789,6 +799,7 @@ is an enclosing hull, and the corpus has hulls.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | **The 2026-08-24 air walk predates `C21`'s waste correction by one minute, and `reproduce.py` found it by comparing the walk with the cap walk's control arm.** `f91e5dc` took twenty-seven `ConsumerWasteEnergy` fractions from 0.9 to 1.0 at 21:06; the walk finished at 21:07 and had loaded the old ones. Over 1,236 shared runs the **substep demand is identical to the last bit** — demand is conductance over capacity and has no waste term — while generation moved +0.60 % at the median and +11.0 % at worst, and peaks 0 % at the median and 2.1 % at worst. The demand figures stand; the watt and peak ones are low by that much and are marked rather than withdrawn (`E10`). |
 | 2026-08-25 | **The cap walk's restart reproduced the abandoned run exactly**, which is the return on having restarted rather than resumed: 552 shared rows, 22 columns, worst relative difference zero. Three commits had touched the solver and the harness in between and none had been checked for behaviour; they were inert, and that is now measured rather than assumed (`E7`). [reproduce.py](../tools/corpus/reproduce.py) is the check, with `test_reproduce.py` pinning that a comparison with nothing in common is not a reproduction. |
 | 2026-08-25 | **The estimate that abandoned `CorpusCapWalk` was checked against a walk whose answer is known, and it fails the check.** The walk was stopped at 45 minutes on *past ten hours*, projected from the share of the population's blocks covered over the rate they were being covered at. The corpus is walked largest first, so that rate falls throughout every healthy run, and a progress mark is ten files — one capital hull or ten fighters. Run over `CorpusAirWalk`, which finished in **104 minutes**, the same estimator projects **104 to 428 minutes, median 154** over that walk's own first 35 (`P4`). The estimate that survives is the ratio: a second arm sharing one parse is **2x by construction** and **1.95x** measured over the fifty files the two walks share, so the walk costs **3.4 hours**. [pace.py](../tools/corpus/pace.py) is that arithmetic, with `test_pace.py` pinning it; no cheaper design was built, and the paragraph above says why. The walk was restarted rather than resumed, because three commits touched the solver and the harness in between (`M1`). |
 | 2026-08-24 | **One definition of a percentile, where there were two.** `air.py` interpolated between the two ranks a quantile falls between and `verdict.py` took `values[int(q × n)]`, and these pages print the two side by side — a corpus p99 against a panel p99. On forty thousand samples they agree to a third of a per cent, which is why nobody noticed; on **forty** they do not agree at all, because `int(0.99 × 40)` is 39 and the fortieth of forty is the maximum. A p99 that is the largest reading in the set is not a percentile, and a forty-hull panel is a set this repository scores. The interpolating one survives, because every published panel figure was computed with it; the corpus figures move by up to 0.3 % and are re-quoted (`P5`, `P3`). |
