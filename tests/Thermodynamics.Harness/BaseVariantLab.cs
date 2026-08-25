@@ -55,6 +55,18 @@ namespace Thermodynamics.Harness
             /// <summary>Files that would not parse, counted rather than dropped (`O5`).</summary>
             public int FilesUnread;
 
+            /// <summary>
+            /// Ships the corpus filter rejects as non-vanilla.
+            ///
+            /// **Here because a resolver change moves the population before it moves a
+            /// measurement.** The corpus admits only ships whose every block resolves, so a fix
+            /// that resolves *more* block kinds can only admit more ships — but a fix that resolves
+            /// them to the wrong grid size would reject ships that used to pass, and the walk after
+            /// it would be over a different set of hulls with no sign that anything had moved
+            /// (`J3`).
+            /// </summary>
+            public int ShipsRejected;
+
             /// <summary>Ships carrying at least one corrected block.</summary>
             public int ShipsAffected;
 
@@ -119,6 +131,7 @@ namespace Thermodynamics.Harness
                 foreach (Blueprints.Ship ship in ships)
                 {
                     reading.ShipsRead++;
+                    if (!ship.IsVanilla) reading.ShipsRejected++;
                     bool affected = false;
 
                     foreach (Blueprints.Grid grid in ship.Grids)
@@ -307,6 +320,8 @@ namespace Thermodynamics.Harness
             sb.AppendLine("read " + reading.ShipsRead.ToString("n0") + " ships, "
                 + reading.BlocksRead.ToString("n0") + " blocks; "
                 + reading.FilesUnread.ToString("n0") + " files would not parse");
+            sb.AppendLine(reading.ShipsRejected.ToString("n0")
+                + " ships hold a block that resolves to nothing, so the corpus filter rejects them");
             sb.AppendLine("corrected " + reading.BlocksCorrected.ToString("n0") + " blocks on "
                 + reading.ShipsAffected.ToString("n0") + " ships");
             sb.AppendLine();
