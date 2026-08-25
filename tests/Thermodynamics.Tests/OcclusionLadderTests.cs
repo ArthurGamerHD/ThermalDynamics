@@ -382,6 +382,93 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// **No page states a per-metre figure the lab does not produce**, wherever it states it.
+        ///
+        /// <para>
+        /// The check above reads the per-face *table* and could not see the same number quoted in a
+        /// sentence — which is exactly where the fourth stale copy was found, hours after the other
+        /// three were fixed, in configuration.md's rungs inventory.
+        /// A check that catches three of four sites reads as having caught them all (`E8`).
+        /// </para>
+        ///
+        /// <para>
+        /// **Change-log rows are exempt and nothing else is.** A dated row records what a figure
+        /// *was*, which is history and must not be rewritten (`R12`); a sentence in a page's body
+        /// describes the present.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void NoPageQuotesAPerMetreFigureTheLabDoesNotProduce()
+        {
+            ThermalSettings settings = new ThermalSettings();
+            settings.Derive();
+
+            double perSecond = OcclusionLadderLab.KelvinPerLitSecond(settings);
+            List<OcclusionLadderLab.Extremity> rows = OcclusionLadderLab.Extremities(
+                new[] { 150d, 600d, 2500d }, SolarOcclusionSampler.MaxSamples, 1, 4f, perSecond);
+
+            // **A band rather than a number**, because the rate is *about* a value: it runs 0.00196
+            // at 150 m to 0.00181 at 2,500 m, and a page quoting one figure for all three is
+            // quoting the band. A single length would make the tolerance decide which page passes.
+            double low = double.MaxValue;
+            double high = 0d;
+
+            foreach (OcclusionLadderLab.Extremity row in rows)
+            {
+                double rate = Worst(row) / row.LengthMetres;
+                if (rate < low) low = rate;
+                if (rate > high) high = rate;
+            }
+
+            string docs = System.IO.Path.Combine(
+                Thermodynamics.Harness.ShippedBlocks.RepoRoot(), "docs");
+
+            List<string> wrong = new List<string>();
+            int quoted = 0;
+
+            foreach (string path in System.IO.Directory.GetFiles(docs, "*.md"))
+            {
+                foreach (string line in System.IO.File.ReadAllLines(path))
+                {
+                    string trimmed = line.TrimStart();
+
+                    // A change-log row. It records what a figure was, and history is not corrected.
+                    if (trimmed.StartsWith("| 20", StringComparison.Ordinal)) continue;
+
+                    foreach (System.Text.RegularExpressions.Match match in
+                        System.Text.RegularExpressions.Regex.Matches(line,
+                            @"([0-9]*\.[0-9]+) K a metre"))
+                    {
+                        quoted++;
+
+                        double stated = double.Parse(match.Groups[1].Value,
+                            System.Globalization.CultureInfo.InvariantCulture);
+
+                        // Half of the last printed digit outside the band at either end.
+                        double slack = Math.Pow(10d, -match.Groups[1].Value.Length + 2) / 2d;
+                        if (stated >= low - slack && stated <= high + slack) continue;
+
+                        wrong.Add(System.IO.Path.GetFileName(path) + " says "
+                            + stated.ToString("n5") + " K a metre");
+                    }
+                }
+            }
+
+            // **A scan that matched nothing would report success.** The figure is quoted in at
+            // least two places by design — the backlog's ranked row and its own row — so a pattern
+            // that stopped matching would pass silently.
+            Assert.True(quoted >= 2,
+                "only " + quoted + " per-metre figures were found in the documentation, so this "
+                + "check is no longer reading what it was written to read");
+
+            wrong.Sort(StringComparer.Ordinal);
+            Assert.True(wrong.Count == 0,
+                "the lab measures " + low.ToString("n5") + " to " + high.ToString("n5")
+                + " K a metre:\n  "
+                + string.Join("\n  ", wrong.ToArray()));
+        }
+
+        /// <summary>
         /// One printed figure against one measured one, at the precision the page prints.
         ///
         /// **Half of the last printed digit**, so rounding is allowed and re-measuring is not

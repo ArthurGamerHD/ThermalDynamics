@@ -139,9 +139,9 @@ a pass the self-shadow already walks. What was never measured is what it would b
 per block that is **linear in hull length at about 0.0018 K a metre**: 0.07 K on a 25 m hull, 0.29 K
 at 150 m, 1.11 K at 600 m and 4.53 K at 2,500 m, on the worst-placed block of a crossing. The
 cadence the rung does not touch adds about half a kelvin whatever the hull, so **below 300 m the
-interval is the larger half of the error and above it the geometry is**. *(The figures were 0.0045 K
-a metre against a 1.47 K cadence until `C24` took `HeatTimeScale` from 225 to 90; the geometry did
-not move, the kelvin a second of sunlight buys did.)* The limit therefore stays taken, with a
+interval is the larger half of the error and above it the geometry is**. *(Every figure here scales with
+`HeatTimeScale` and moved when `C24` took it from 225 to 90: the geometry did not change, the kelvin
+a second of sunlight buys did. The change log below carries what they were.)* The limit therefore stays taken, with a
 number on it rather than an argument: see [configuration.md](configuration.md#external-shadow).
 
 **Point sources are not occluded.** A registered heat source heats through walls and through other
