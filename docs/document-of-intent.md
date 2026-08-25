@@ -1026,6 +1026,13 @@ composition that actually works: one mod owns the consequences, the other is rea
 `ThermalApi`. **Two mods both applying consequences is unsupported**, and that is now a sentence
 rather than an unexamined case.
 
+**One mod beside this one can be detected, and it is worth naming because it is the exception.**
+[RelativeTopSpeed](https://github.com/Gauge/RelativeTopSpeed) publishes an API and speaks the same
+`SENetworkAPI` this repository vendors, so *is something else already slowing ships down* is a
+question with an answer — unlike *is something else already simulating heat*, which is not. Today
+the two do not collide at all, because RTS applies a force and no heat while this model applies heat
+and no force. [backlog.md](backlog.md) `K1` would end that, and `K14` is where the answer belongs.
+
 **Every output can be turned off, and the last one that could not was fixed for this.** The
 terminal panel had no setting of its own until 2026-08-25 — every other thing the mod draws was
 already behind something — so `HeatTerminalPanel` exists and the *clutter* row above can be turned
@@ -1110,9 +1117,10 @@ frame buffer. That is a statement about difficulty, not about intent — it is w
   model's, and none of the three sources that can empty a room may insist on air — only refuse it.
   **The mod reads a grid's velocity and writes nothing to its physics**, which is the same rule one
   system across: [backlog.md](backlog.md) `K1` proposes applying the drag the friction term already
-  accounts for the energy of, and that would be the first time this mod moved something the game
-  moves. It is listed as a milestone rather than done, and *whether the mod should push a ship at
-  all* is the first question in it rather than an assumption inside it.
+  accounts for the energy of, and `K10` proposes going further and owning what a ship's top speed
+  is. Either would be the first time this mod moved something the game moves. They are listed as
+  milestones rather than done, and *whether the mod should push a ship at all* is the first question
+  in them rather than an assumption inside them.
 
 ---
 
@@ -1243,6 +1251,7 @@ as a *second* change rather than as a substitute. [backlog](backlog.md) `D19`.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Named the one neighbouring mod that *can* be detected, which is the exception that makes the rule above readable: [RelativeTopSpeed](https://github.com/Gauge/RelativeTopSpeed) publishes an API and speaks the same network layer this repository vendors. Today it and this model do not collide — it applies a force and no heat, this applies heat and no force — and [backlog.md](backlog.md) `K1` would end that. |
 | 2026-08-25 | Named the line the two new feature milestones cross. The mod reads a grid's velocity and writes nothing to its physics; [backlog.md](backlog.md) `K1` would apply the drag the friction term already computes the energy of, which is the first time it would move something the game moves. Recorded beside *not authoritative over the game's own systems* rather than left for whoever writes the code to decide. |
 | 2026-08-25 | Gave the language table a source. `LocalisationSurfaceTests` counts the five surfaces and holds the claim the decision rests on — that the surface inside the game's HUD is a small fraction of what the mod writes — as a band rather than as a number, because the count is heuristic (`E5`). |
 | 2026-08-25 | Recorded the one cooler *a cooling system costs power* does not reach and why ([backlog.md](backlog.md) `C16`): the suit regulates for free because `IMyCharacter` exposes `SuitEnergyLevel` to read and nothing to write. An engine limit rather than an inconsistency, and now stated beside the goal it qualifies. |
