@@ -128,6 +128,43 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// **No base variant's type id is also some other block's subtype**, which is the one
+        /// assumption <c>GameBlocks.ByModelName</c> rests on and the one the game could break
+        /// without telling anyone.
+        ///
+        /// <para>
+        /// A placed block carries its subtype as its name, or its type where the game states no
+        /// subtype, and a dozen lookups resolve a block from that name. A real subtype wins a
+        /// collision, so if the game ever shipped a block whose subtype is `OxygenGenerator` the
+        /// vanilla generator would stop resolving and would silently take that block's power,
+        /// mass and material. There are none today. This is what says so tomorrow.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void NoBaseVariantsTypeIdIsAlsoSomeOtherBlocksSubtype()
+        {
+            if (!GameBlocks.IsInstalled) return;
+
+            Dictionary<string, GameBlocks.Definition> bySubtype = GameBlocks.BySubtype();
+            List<string> collided = new List<string>();
+
+            foreach (GameBlocks.Definition variant in GameBlocks.BaseVariants().Values)
+            {
+                GameBlocks.Definition other;
+                if (bySubtype.TryGetValue(variant.TypeId, out other) && other.SubtypeId.Length > 0)
+                {
+                    collided.Add(variant.TypeId + " is also the subtype of a " + other.TypeId);
+                }
+            }
+
+            Assert.True(GameBlocks.BaseVariants().Count > 5,
+                "only " + GameBlocks.BaseVariants().Count + " base variants were found, so this"
+                + " test is looking in the wrong place and would pass on any collision");
+
+            Assert.True(collided.Count == 0, string.Join("\n  ", collided.ToArray()));
+        }
+
+        /// <summary>
         /// The small-grid half of the same rule. Two of the thirteen base variants are small-grid
         /// blocks, so a resolver keyed on type alone would build a small-grid gun onto a large
         /// hull — which is the failure the named-subtype path already refuses.
