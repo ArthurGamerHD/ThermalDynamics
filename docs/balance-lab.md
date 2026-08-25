@@ -336,6 +336,37 @@ read *hotter with every radiator added*. `ScenarioClaimTests.RadiatorsHelpWhenTh
 had already pinned that flush panels hurt; this was the same fact arriving from the other direction.
 
 
+### What the room sweep costs at station scale, written before it is measured
+
+`A4` says `SweepRoomPressure` is the one whole-grid pass in the mod that is not a rota or a budgeted
+slice: two game API calls per compartment, every eight steps, bounded by compartment count rather
+than block count. It was measured at **0.054 % of real time on twelve compartments** and the rota
+was then deliberately *not* built, on the grounds that it is a station-scale risk with no evidence
+behind it — because there was no station. `F27` built one.
+
+**What the lab can settle and what it cannot.** The two calls per room are `GameOxygenAt` and
+`IsRoomAtPositionAirtight`, both host API, so their cost is a session question and stays one — it is
+`F5`'s shape, not something a harness can fake. What the lab owns is the two things that actually
+decide whether the risk is real:
+
+* **How many compartments a station has**, which is the multiplier on everything, and which nothing
+  has ever measured because every grid in the library and the corpus is a ship.
+* **The core half of the sweep**, `ThermalSimulation.SetRoomPressure` per room, which rebuilds each
+  room's links to the blocks around it and is this repository's own code.
+
+**What is predicted, with the number that falsifies each.**
+
+| # | Prediction | Falsified by |
+| --- | --- | --- |
+| 1 | Compartments scale with **blocks**, not with area or with the square of anything: a station's rooms come from its volume and so do its blocks. The `F27` station is 3,549 blocks in 48 compartments, so about **74 blocks a room**, and the ratio should hold within 25 % across a size ladder. | A ratio that drifts with size — which would mean the count is bounded by something other than volume and the extrapolation below is wrong. |
+| 2 | So a **100,000-block station carries on the order of 1,350 compartments**, against the twelve the shipped figure was taken on — two orders of magnitude, and 2,700 game calls every eight steps. | A ladder that extrapolates to materially fewer, which would retire the risk rather than confirm it. |
+| 3 | The **core half is linear in rooms and small**: `SetRoomPressure` per room should cost microseconds, so the whole non-API sweep stays well under a per cent of a frame even at that count. | A superlinear curve, or a per-room cost large enough that the core half alone justifies the rota. |
+| 4 | A **ship of the same block count carries far fewer rooms**, so this is a station problem specifically rather than a grid-size problem. | Comparable counts, which would mean `A4` was never about stations. |
+
+**And what this cannot decide.** Whether to build the rota. That needs the per-call cost, which is a
+session, and the decision is a trade against the sweep's own latency. What it can do is replace *a
+station-scale risk with no evidence* with a count.
+
 ### What flooring an over-budget grid does, written before it is measured
 
 `CorpusFloorWalk` is built and **has produced nothing**. The question, the statistic, the decision
