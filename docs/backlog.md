@@ -153,7 +153,11 @@ Ordered by how much a published figure depends on the gap.
 
 ## H. Repository hygiene
 
-**Empty.** Every row is done: five dead invariants and a dead batching walk deleted, an opt-in whose
+| # | Item | Where |
+| --- | --- | --- |
+| H8 | **[rules.md](rules.md) and this page share an identifier namespace, and fifteen identifiers are currently both a rule and an open item.** `C3` is *target `net48`, and never reference the native assembly* there and *whether to ship `MaxSubstepsPerBlock 6`* here; so are `E2`, `E4`, `C7`, `C8` and `D1`–`D6`. A reader resolves it from context; a check cannot, and a commit message citing `C3` means one of two unrelated things. **The two namespaces are only disjoint by letter**, and the rules page's letters are historical — its own text says the classification is orthogonal to them — where this page's letters name its sections. So the cheap fix is to remap the rules page's three colliding letters, and the cost is **362 citations in code** plus every documentation banner. **It has stopped growing**: `W` was chosen for the four rules added 2026-08-25 because it collides with nothing, and `EveryCitedIdentifierResolves` now fails on a citation that is neither a rule nor a row here. What is undecided is whether to pay the remap. | [rules.md](rules.md) |
+
+Everything else here is done: five dead invariants and a dead batching walk deleted, an opt-in whose
 off position could not be spelled, a resume that counted the wrong thing, three sections of the
 README moved to the audience they were written for, five merged branches gone, and the corpus
 directory pruned from 68 GB to 32 with every blueprint that has ever yielded a ship still in it.

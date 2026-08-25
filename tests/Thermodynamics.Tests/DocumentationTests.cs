@@ -974,7 +974,7 @@ namespace Thermodynamics.Tests
         private static HashSet<string> StatedRules()
         {
             HashSet<string> rules = new HashSet<string>(StringComparer.Ordinal);
-            foreach (Match m in Regex.Matches(RulesPage(), @"(?m)^#{3,4}\s+([EMDCROJ]\d{1,2})\s+—"))
+            foreach (Match m in Regex.Matches(RulesPage(), @"(?m)^#{3,4}\s+([EMDCROJW]\d{1,2})\s+—"))
             {
                 rules.Add(m.Groups[1].Value);
             }
@@ -1022,7 +1022,7 @@ namespace Thermodynamics.Tests
 
                     banners++;
                     int cited = 0;
-                    foreach (Match m in Regex.Matches(banner.ToString(), @"`([EMDCROJ]\d{1,2})`"))
+                    foreach (Match m in Regex.Matches(banner.ToString(), @"`([EMDCROJW]\d{1,2})`"))
                     {
                         cited++;
                         if (!stated.Contains(m.Groups[1].Value))
@@ -1049,6 +1049,94 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// Every identifier cited anywhere in the tree resolves to a rule or to a backlog row.
+        ///
+        /// <para>
+        /// **The gap this closes ran in the direction nothing checked.** `EveryRuleCitedByAPageExists`
+        /// reads documentation banners, so a rule renamed or dropped is caught where a *page* cites
+        /// it — and 425 citations of the same shape live in `.cs` and `.py` files, where nothing
+        /// looked. A citation to an identifier that no longer exists reads exactly like one that
+        /// resolves.
+        /// </para>
+        ///
+        /// <para>
+        /// **It has to accept both pages, and that is the finding rather than a compromise.**
+        /// [rules.md](../../docs/rules.md) and [backlog.md](../../docs/backlog.md) share a
+        /// letter-and-number namespace and fifteen identifiers are currently both a rule and an open
+        /// item — `C3` is *target `net48`* on one page and *whether to ship
+        /// `MaxSubstepsPerBlock 6`* on the other. So this cannot say which page a citation means; it
+        /// says the citation resolves to one of them, which is what stops a dropped identifier
+        /// rotting quietly in a comment. `H8` carries the ambiguity itself.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void EveryCitedIdentifierResolves()
+        {
+            HashSet<string> known = new HashSet<string>(StatedRules(), StringComparer.Ordinal);
+            foreach (Match m in Regex.Matches(BacklogPage(), @"(?m)^\|\s*([A-Z]\d{1,2})\s*\|"))
+            {
+                known.Add(m.Groups[1].Value);
+            }
+
+            Assert.True(known.Count > 100,
+                "only " + known.Count + " identifiers were read out of the two pages, so this test"
+                + " is parsing them wrongly and would pass on any citation at all");
+
+            List<string> dangling = new List<string>();
+            int cited = 0;
+
+            foreach (string file in SourceFiles())
+            {
+                string relative = Relative(file);
+
+                // Vendored code carries its authors' own identifiers and is replaced, not edited
+                // (`R6`); a change log records what was true when it was written (`R12`).
+                if (relative.Contains("RichHudFramework")) continue;
+                if (relative.Contains("NetworkAPI")) continue;
+
+                foreach (Match m in Regex.Matches(File.ReadAllText(file), @"`([EMDCROJW]\d{1,2})`"))
+                {
+                    cited++;
+                    if (!known.Contains(m.Groups[1].Value))
+                    {
+                        dangling.Add(relative + " cites `" + m.Groups[1].Value + "`");
+                    }
+                }
+            }
+
+            Assert.True(cited > 200,
+                "only " + cited + " identifiers were found cited in source, so this test is looking"
+                + " in the wrong place and would pass whatever a comment said");
+
+            dangling.Sort(StringComparer.Ordinal);
+            Assert.True(dangling.Count == 0,
+                "identifiers cited in source that are neither a rule in docs/rules.md nor a row in"
+                + " docs/backlog.md:\n  " + string.Join("\n  ", dangling.ToArray()));
+        }
+
+        private static string BacklogPage()
+        {
+            return File.ReadAllText(Path.Combine(RepoRoot(), "docs", "backlog.md"));
+        }
+
+        /// <summary>Every source file a citation could sit in: the mod, the tests, the tools.</summary>
+        private static IEnumerable<string> SourceFiles()
+        {
+            string[] patterns = { "*.cs", "*.py" };
+            foreach (string pattern in patterns)
+            {
+                foreach (string file in Directory.GetFiles(RepoRoot(), pattern, SearchOption.AllDirectories))
+                {
+                    string relative = Relative(file);
+                    if (relative.Contains("/bin/") || relative.Contains("/obj/")) continue;
+                    if (relative.StartsWith("out/", StringComparison.Ordinal)) continue;
+
+                    yield return file;
+                }
+            }
+        }
+
+        /// <summary>
         /// The rules page indexes every rule it states, and states every rule it indexes.
         ///
         /// <para>
@@ -1067,7 +1155,7 @@ namespace Thermodynamics.Tests
             HashSet<string> indexed = new HashSet<string>(StringComparer.Ordinal);
             HashSet<string> lowValue = new HashSet<string>(StringComparer.Ordinal);
 
-            foreach (Match m in Regex.Matches(page, @"(?m)^\|\s*\*\*([EMDCROJ]\d{1,2})\*\*\s*\|([^|]*)\|([^|]*)\|"))
+            foreach (Match m in Regex.Matches(page, @"(?m)^\|\s*\*\*([EMDCROJW]\d{1,2})\*\*\s*\|([^|]*)\|([^|]*)\|"))
             {
                 indexed.Add(m.Groups[1].Value);
                 if (m.Groups[3].Value.IndexOf("low value", StringComparison.Ordinal) >= 0)
@@ -1098,7 +1186,7 @@ namespace Thermodynamics.Tests
             HashSet<string> underAPrinciple = new HashSet<string>(StringComparer.Ordinal);
             foreach (Match row in Regex.Matches(page, @"(?m)^\|\s*\*\*(P\d{1,2})\*\*\s*\|(.*)$"))
             {
-                foreach (Match cited in Regex.Matches(row.Groups[2].Value, @"`([EMDCROJ]\d{1,2})`"))
+                foreach (Match cited in Regex.Matches(row.Groups[2].Value, @"`([EMDCROJW]\d{1,2})`"))
                 {
                     underAPrinciple.Add(cited.Groups[1].Value);
                 }

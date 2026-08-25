@@ -93,7 +93,8 @@ namespace Thermodynamics
         /// It is small against what a ring carries — 680 kW per kelvin of difference around it —
         /// which is the point: a circulator is not a refrigerator, and the mod's heat pump pays a
         /// third of what it moves. Both blocks exist because those two prices are different, and
-        /// that was not expressible while one of them was free. See backlog `C13`.
+        /// that was not expressible while one of them was free. See document-of-intent.md, A cooling system
+        /// costs power, and makes heat doing it.
         /// </para>
         /// </summary>
         public const float LargeGridPumpWatts = 50000f;

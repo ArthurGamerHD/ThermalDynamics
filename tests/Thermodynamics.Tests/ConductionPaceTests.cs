@@ -15,7 +15,7 @@ namespace Thermodynamics.Tests
     /// block, and block to a bolted panel. The coolant loop's fluid coupling used to have its own,
     /// a 0…1 quality against a reference conductivity of 200 W/(m·K), and nothing in the code made
     /// the two agree: the ratio between them is what decides whether plumbing beats bolting
-    /// ([backlog.md](../../docs/backlog.md) `C20`). It is a heat transfer coefficient in W/(m²·K)
+    /// It is a heat transfer coefficient in W/(m²·K)
     /// now — what the transfer physically is — so there is one pace and one dial rather than two
     /// that had to be moved together.
     /// </para>

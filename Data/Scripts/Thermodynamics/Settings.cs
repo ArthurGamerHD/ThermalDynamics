@@ -251,7 +251,7 @@ namespace Thermodynamics
         /// How well heat crosses between the coolant and the wall it touches, W/(m²·K).
         ///
         /// **Replaces `LoopConductivity`, which was a 0…1 quality against a reference conductivity**
-        /// and gave the game a second conduction pace ([backlog.md](../../docs/backlog.md) `C20`).
+        /// and gave the game a second conduction pace. See configuration.md, Coolant loops.
         /// A new member number rather than a reused one, so a world saved before this reads its old
         /// quality out of 86 and is migrated rather than silently reinterpreted as a coefficient of
         /// one.
@@ -493,7 +493,7 @@ namespace Thermodynamics
         /// `LoopConductivity` was a 0…1 quality that the loop multiplied by 200 W/(m·K) and divided
         /// by half a cell; on a large grid that came to 160 W/(m²·K), which is what
         /// <see cref="LoopHeatTransferCoefficient"/> now holds directly
-        /// ([backlog.md](../../docs/backlog.md) `C20`). A world that moved the old dial gets the
+        /// directly. A world that moved the old dial gets the
         /// same *relative* change on the new one, and the legacy field is spent so a later load
         /// does not apply it twice.
         /// </para>

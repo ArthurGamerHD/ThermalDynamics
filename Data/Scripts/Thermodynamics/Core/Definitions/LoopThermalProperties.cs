@@ -22,7 +22,7 @@ namespace Thermodynamics.Core
         /// **A convective coefficient, because that is what the transfer is.** It was a 0…1 quality
         /// against a reference conductivity of 200 W/(m·K), divided by half a cell — which gave the
         /// game a second conduction pace nothing reconciled with the first
-        /// ([backlog.md](../../../../docs/backlog.md) `C20`), and made the coefficient it implied
+        /// and made the coefficient it implied
         /// depend on grid size: 160 on a large grid and **800 on a small one**, for the same fluid
         /// against the same wall. Convection has no length in it, so neither does this.
         /// </para>

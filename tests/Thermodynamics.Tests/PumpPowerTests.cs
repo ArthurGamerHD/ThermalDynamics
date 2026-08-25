@@ -13,7 +13,7 @@ namespace Thermodynamics.Tests
     /// `CoolantPump.MaxPowerWatts` was declared and assigned nowhere, so a loop was free once built
     /// while a heat pump paid for every watt it lifted. The asymmetry is right — a circulator is
     /// not a refrigerator — but nothing had ever said so, and the mod's own intent is that *a
-    /// cooling system costs power and makes heat doing it*. [backlog](../../docs/backlog.md) `C13`.
+    /// cooling system costs power and makes heat doing it*.
     /// </para>
     ///
     /// <para>

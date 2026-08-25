@@ -58,7 +58,7 @@ namespace Thermodynamics
         /// https://www.engineeringtoolbox.com/thermal-conductivity-metals-d_858.html
         /// </summary>
         [ProtoMember(5)]
-        /// <summary>Fluid-to-wall heat transfer coefficient, W/(m²·K). See `C20`.</summary>
+        /// <summary>Fluid-to-wall heat transfer coefficient, W/(m²·K). See thermal-model.md, Coolant loops.</summary>
         public float HeatTransferCoefficient = 160f;
 
         /// <summary>

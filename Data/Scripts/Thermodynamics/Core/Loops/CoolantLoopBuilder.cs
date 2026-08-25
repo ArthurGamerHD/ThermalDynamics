@@ -283,7 +283,7 @@ namespace Thermodynamics.Core
         /// **`h · A`, with no length in it**, because fluid-to-wall transfer is convective: the
         /// resistance is the boundary layer against the wall, not a thickness of anything. It used
         /// to be a conductivity over half a cell, which made the coefficient it implied five times
-        /// larger on a small grid than on a large one for the same fluid (`C20`).
+        /// larger on a small grid than on a large one for the same fluid.
         /// </summary>
         public static float PipeConductance(GridModel grid, BlockInstance pipe, LoopThermalProperties properties)
         {

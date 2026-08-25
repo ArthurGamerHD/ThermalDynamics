@@ -32,7 +32,7 @@ namespace Thermodynamics.Tests
         ///
         /// `Version` is the config file's schema number, which a player never sets and a migration
         /// rewrites. `LegacyLoopConductivity` is a retired dial kept only so a world saved before
-        /// `C20` can be migrated onto the coefficient that replaced it, and it is spent as it is
+        /// the retired loop quality can be migrated onto the coefficient that replaced it, and it is spent as it is
         /// read.
         /// </summary>
         private static readonly HashSet<string> NotTunable =

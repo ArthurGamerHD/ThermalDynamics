@@ -44,7 +44,18 @@ and four fields:
 
 Rules are cited by identifier (`E3`, `M6`) in commit messages and in review. The letter is the
 subject — **E**vidence, **M**ethod, **D**efect, **C**ode, **R**epository, **O**perations,
-**J**udgement — and is historical: the classification below is orthogonal to it.
+**J**udgement, **W**orld-outside — and is historical: the classification below is orthogonal to it.
+
+> **The letters collide with [backlog.md](backlog.md)'s, and fifteen identifiers are currently both
+> a rule and an open item.** `C3` is *target `net48`, and never reference the native assembly* on
+> this page and *whether to ship `MaxSubstepsPerBlock 6`* on that one; `E2`, `E4`, `C7`, `C8` and
+> `D1`–`D6` are the same. A reader resolves it from context and a check cannot. Nothing is renamed
+> here, because the backlog's numbers are its rows' names and never move, and remapping this page's
+> three colliding letters would touch 362 citations in code alone — that is a decision, and it is
+> [backlog.md](backlog.md) `H8` rather than something taken in passing. **What is fixed is that it
+> stops growing**: `W` was chosen for the four rules added on 2026-08-25 precisely because it
+> collides with nothing, and any letter issued here from now on is checked against both pages
+> first.
 
 ## The three categories
 
@@ -85,7 +96,7 @@ to a specific artefact.
 **Fourteen held for eleven rules and then one arrived that none of them generated.** Every rule
 added after the first reduction landed under a principle that already existed — six of them, which
 was the only evidence available that fourteen was the right number — until a sweep of the tree for
-unstated intent produced `C16` and `C17`: a save must load on the builds either side of the one
+unstated intent produced `W1` and `W2`: a save must load on the builds either side of the one
 that wrote it, and a name something outside this repository addresses may never be repurposed.
 Neither follows from *one definition and one consumer*, from *the repository is the publish*, or
 from *do not edit what you cannot regenerate*. What they have in common is `P15`, and stating it
@@ -98,17 +109,17 @@ reason. See [testing the reduction](#testing-the-reduction).
 | **P2** | **What the instrument could not see is part of the result.** Censoring, the noise floor, an unfinished sweep, a check that judged nothing, a discarded exception and a place nobody looked are the same failure: reading a blind spot as a value. | `E4` `E8` `E9` `M4` `M5` `D4` `D9` |
 | **P3** | **The claim is fixed before the data and corrected in place after.** A criterion that can move once the numbers are in is not a criterion; a finding that is corrected somewhere other than where it was published is not corrected. | `E1` `E10` `E11` `M9` `D5` `R12` |
 | **P4** | **Nothing is its own oracle.** A test that asks the model the same question twice agrees with whatever the model does; a harness fault looks exactly like physics. | `E7` `D1` `D7` `D8` |
-| **P5** | **One definition, and at least one consumer.** Two definitions drift, and the drift is silent in both directions; zero consumers means the thing does not exist however well it is written and tested. | `E5` `D2` `D3` `M6` `R7` `R8` `R9` `R10` `R11` `R13` `R14` |
+| **P5** | **One definition, and at least one consumer.** Two definitions drift, and the drift is silent in both directions; zero consumers means the thing does not exist however well it is written and tested. | `E5` `D2` `D3` `M6` `R7` `R8` `R9` `R10` `R11` `R13` `R14` `R15` |
 | **P6** | **A comparison holds everything but the subject equal.** Two numbers are comparable only when the stop criterion, the machine, the key and the baseline were the same. | `M1` `M2` `M3` `M7` `O4` |
-| **P7** | **The game is the authority.** The local build and the suite are an approximation of a compiler and a whitelist neither of them can see, and where the game already answers a question — what is sealed, what is destroyed, who sent this — the mod reads that answer instead of forming its own. | `C1` `C2` `C3` `C11` `C9` `C10` `C18` |
+| **P7** | **The game is the authority.** The local build and the suite are an approximation of a compiler and a whitelist neither of them can see, and where the game already answers a question — what is sealed, what is destroyed, who sent this — the mod reads that answer instead of forming its own. | `C1` `C2` `C3` `C11` `C9` `C10` `W3` |
 | **P8** | **Off means off, and costs nothing.** A mechanism nobody is using must cost nothing, and the way to turn it off must be unambiguous. | `C4` `C7` `C8` `C15` |
-| **P9** | **The core is a library the game happens to call.** That is what makes it testable in seconds, profilable, drivable by other mods and portable to another engine — and a library is also something that must not throw into a caller who never knew it was there. | `C5` `R9` `C19` |
+| **P9** | **The core is a library the game happens to call.** That is what makes it testable in seconds, profilable, drivable by other mods and portable to another engine — and a library is also something that must not throw into a caller who never knew it was there. | `C5` `R9` `W4` |
 | **P10** | **The solver's three invariants are the definition of correctness.** Order independence, energy conservation, boundedness — everything else is tuning. | `C6` |
 | **P11** | **The repository is the publish.** Everything committed here reaches the workshop, so what must not ship must not be here. | `R2` `R3` |
 | **P12** | **Do not edit what this repository cannot regenerate.** Model binaries and vendored code have their source of truth outside this tree. | `R4` `R6` |
 | **P13** | **A long run is designed for its own death.** It will be killed — by the OOM killer, a timeout, a mistake or a power cut — so cap it, resume it, and never let a timer guess its duration. | `O1` `O2` `O3` `O5` |
 | **P14** | **Unobservable fidelity is cost.** Take the cheap form where the difference cannot be perceived, say what it gives up, and write the price down. Where it *can* be perceived, the cheap form is a rung on the feature's own ladder rather than the default. | `D6` `M8` `O4` `C15` |
-| **P15** | **What is already in someone else's world is frozen.** A save, a setting name, a serialization number, a property name and a workshop id exist where this repository cannot reach them: add to them, never repurpose them. | `C16` `C17` `R5` |
+| **P15** | **What is already in someone else's world is frozen.** A save, a setting name, a serialization number, a property name and a workshop id exist where this repository cannot reach them: add to them, never repurpose them. | `W1` `W2` `R5` |
 
 ### Testing the reduction
 
@@ -191,7 +202,7 @@ result: it says the rule list is already at its irreducible size rather than mer
 | --- | --- |
 | `M4` + `M5` — the noise floor | One is how to measure and the other is how to read. *Keep the fastest of N and publish the spread* is an instruction to a runner; *a figure inside the floor has not moved* is an instruction to a reader, and the reader is usually not the runner. |
 | `E10` + `E11` — changing something published | One is about a finding that turned out **wrong** and one about a criterion that is **not wrong**. The second carries two obligations the first does not: keep the old value visible, and do not put the change in the commit that carries the run it would have failed. |
-| `C9` + `C10` + `C18` — an authority elsewhere | The shared idea is P7 and is already stated there. What is actionable is the difference: what is sealed, what is destroyed, who sent this. A rule that has to be unpacked into three before it can be applied is a principle, and this one already exists. |
+| `C9` + `C10` + `W3` — an authority elsewhere | The shared idea is P7 and is already stated there. What is actionable is the difference: what is sealed, what is destroyed, who sent this. A rule that has to be unpacked into three before it can be applied is a principle, and this one already exists. |
 | The seven join rules under P5 — `R7` `R8` `R9` `R10` `R11` `R13` `R14` | These *are* one idea on seven artefacts, and that idea is P5. Merging them would collapse seven subjects and seven distinct checks into one rule whose *Checked by* field is a list, which is the structure the page uses principles to avoid. |
 
 **Two rules were re-filed, and one of those is what produced P15.**
@@ -214,7 +225,7 @@ comparable to one that was not. `C15` is P14 for *realistic is the default* and 
 itself, being, in the words of the commit that added it, `C7` grown a dimension.
 
 **Sufficiency was re-tested against the material added since**, which was the intent sweep of
-2026-08-24. It produced five rules — `C16`, `C17`, `C18`, `C19`, `D9` — and the split of where they
+2026-08-24. It produced five rules — `W1`, `W2`, `W3`, `W4`, `D9` — and the split of where they
 landed is the evidence: three under principles that already existed, and two under nothing, which
 is P15. **Four of the five were already enforced by tests that no rule cited**, and that is a gap in
 the *one place* claim running in the direction nothing checks. `R11` fails when a rule names a check
@@ -270,10 +281,10 @@ That asymmetry is not closed and is recorded here rather than left implicit.
 | **C8** | Absent and empty mean the same thing | absolute | P8 | — |
 | **C9** | The game's own answer is read, never overridden | absolute | P7 | `RoomPressureTests` |
 | **C10** | The server is authoritative over damage | absolute | P7 | — |
-| **C18** | An authority check reads what the engine supplies, never what the sender wrote | absolute | P7 | — |
-| **C19** | No call across the mod's API throws into its caller | absolute | P9 | — |
-| **C16** | A saved world loads on the build that wrote it, and on the ones either side | absolute | P15 | `StorageAndSettingsTests` |
-| **C17** | A name something outside this repository addresses is never repurposed | absolute | P15 | `TheRetiredPropertyNamesAreStillRead` `NoSettingReusesANumberThatWasDeliberatelyRetired` |
+| **W3** | An authority check reads what the engine supplies, never what the sender wrote | absolute | P7 | — |
+| **W4** | No call across the mod's API throws into its caller | absolute | P9 | — |
+| **W1** | A saved world loads on the build that wrote it, and on the ones either side | absolute | P15 | `StorageAndSettingsTests` |
+| **W2** | A name something outside this repository addresses is never repurposed | absolute | P15 | `TheRetiredPropertyNamesAreStillRead` `NoSettingReusesANumberThatWasDeliberatelyRetired` |
 | **R1** | *The repository is the mod folder* | low value | P11 | absorbed into P11 |
 | **R2** | Build output and the corpus live outside it | absolute | P11 | `Directory.Build.props` |
 | **R3** | No credential is written into the tree | absolute | P11 | `CredentialScanTests` |
@@ -285,6 +296,7 @@ That asymmetry is not closed and is recorded here rather than left implicit.
 | **R9** | The API page is part of the contract | absolute | P5 P9 | `EveryModApiEntryIsDocumented` `ModApiShapeTests` |
 | **R10** | Every test class says what it is for | absolute | P5 | `EveryTestClassSaysWhatItIsFor` |
 | **R11** | A check is cited only if it runs | absolute | P5 | `EveryCheckCitedByTheRulesPageResolves` |
+| **R15** | An identifier cited anywhere resolves to something that exists | absolute | P5 | `EveryCitedIdentifierResolves` |
 | **R12** | A page states its scope, describes the present, and logs its changes | absolute | P3 | partly |
 | **R13** | A standing rule is stated here once, and argued elsewhere | absolute | P5 | `EveryRuleCitedByAPageExists` |
 | **R14** | A comment names something that is there | absolute | P5 | `NoDocCommentDescribesSomethingThatIsNotThere` |
@@ -297,7 +309,7 @@ That asymmetry is not closed and is recorded here rather than left implicit.
 | **J2** | *Light, isolated, tested, open* | low value | — | absorbed into `C4` `C5` `C7` `R9` |
 | **J3** | The corpus filters are strict, and their cost is recorded | conditional | P1 | `BlueprintTests` |
 
-Fifty-nine absolute, seven conditional, three low value — sixty-nine rows, of which three
+Sixty absolute, seven conditional, three low value — sixty-nine rows, of which three
 are retired and kept only so a citation to them does not dangle.
 
 ---
@@ -511,6 +523,24 @@ on a regression to the earlier scale without letting one unexplained ship hold t
 *Checked by:* the pinned tests themselves. The sealed-block bound now lives in `CorpusSurvey`
 rather than in the standalone walk that used to carry it.
 *From:* [tests/README.md](../tests/README.md), [known-issues.md](known-issues.md).
+
+#### R15 — An identifier cited anywhere resolves to something that exists
+
+**A rule or a backlog row cited in a comment, a test summary or a script is one that is still on the
+page it belongs to.**
+
+`R11` is this rule pointed the other way — it fails when a rule names a check that has stopped
+running — and between them there was a hole big enough to hide in. `EveryRuleCitedByAPageExists`
+reads documentation banners; **425 citations of the same shape live in `.cs` and `.py` files** and
+nothing read those at all. A backlog row is deleted when it closes, so every comment citing it
+becomes a dead reference that reads exactly like a live one, and the check found thirteen on its
+first run: `C20` in six files including three the game compiles, and `C13` in three more.
+
+*Applies to:* every `.cs` and `.py` file outside the vendored paths.
+*Checked by:* `EveryCitedIdentifierResolves`. It cannot say *which* page a citation means, because
+the two share a namespace — [backlog.md](backlog.md) carries that as H8 — and it says instead that
+the citation resolves to one of them, which is what stops a dropped identifier rotting in a comment.
+*From:* this page, and the pass that added it.
 
 #### R12 — A page states its scope, describes the present, and logs its changes
 
@@ -936,7 +966,7 @@ undecided, and that question does not touch this rule.
 *From:* [document-of-intent.md](document-of-intent.md#what-the-mod-owes-a-multiplayer-client),
 [known-issues.md](known-issues.md).
 
-#### C18 — An authority check reads what the engine supplies, never what the sender wrote
+#### W3 — An authority check reads what the engine supplies, never what the sender wrote
 
 **Whether a message may do something is decided from a value the engine filled in, and never from
 one carried in the payload.**
@@ -1043,7 +1073,7 @@ world, and it is the boundary an SE2 adapter would bind to.
 *Checked by:* `CoreIsolationTests`.
 *From:* [tests/README.md](../tests/README.md), [architecture.md](architecture.md).
 
-#### C19 — No call across the mod's API throws into its caller
+#### W4 — No call across the mod's API throws into its caller
 
 **A bad argument comes back as `false`, `0` or `NaN`, and a subscriber that throws is dropped rather
 than allowed to stop the simulation.**
@@ -1254,7 +1284,7 @@ repurposed or quietly dropped. That is a different idea from P12 — P12 says do
 cannot rebuild, and this says do not break what you cannot recall — and it is why `R5` sits here
 rather than there: a workshop id is not hard to regenerate, it is impossible to un-publish.
 
-#### C16 — A saved world loads on the build that wrote it, and on the ones either side
+#### W1 — A saved world loads on the build that wrote it, and on the ones either side
 
 **The storage format grows by adding a section rather than by changing its marker, and every older
 format it has ever written is still read.**
@@ -1270,7 +1300,7 @@ read what you used to write.
 `APayloadWithNoRoomSectionDecodesToNoRooms`, `EveryTruncationOfAValidPayloadIsRejected`.
 *From:* [architecture.md](architecture.md#persistence).
 
-#### C17 — A name something outside this repository addresses is never repurposed
+#### W2 — A name something outside this repository addresses is never repurposed
 
 **A setting name, a serialization number, a definition property name and an API key are addresses
 held by worlds and mods that will never be re-read here. Alias them, add to them, and never point
@@ -1492,9 +1522,11 @@ right and this page is stale**; say so and fix it here.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | **`R15`, and thirteen dead citations in shipped code on its first run.** `R11` fails when a rule names a check that has stopped running; nothing failed when a *citation* named a rule or a backlog row that had stopped existing, and `EveryRuleCitedByAPageExists` reads documentation banners while **425 citations of the same shape live in `.cs` and `.py` files**. A backlog row is deleted when it closes, so every comment citing it becomes a dead reference that reads exactly like a live one: `C20` in six files, three of them compiled by the game, and `C13` in three more. All thirteen now name the page that holds the argument, in plain text as the comment convention asks. |
+| 2026-08-25 | **The four rules added today are `W1`–`W4`, and the letter was chosen because everything else collides.** [backlog.md](backlog.md) and this page share a letter-and-number namespace and fifteen identifiers are currently both a rule and an open item — `C3` is *target `net48`* here and *whether to ship `MaxSubstepsPerBlock 6`* there. They were first issued as `C16`–`C19`, which are four live backlog rows, and moved before the commit landed. Nothing else is renamed: the backlog's numbers are its rows' names and never move, and remapping this page's three colliding letters would touch 362 citations in code alone. That is a decision and it is [backlog.md](backlog.md) H8. What is fixed is that it stops growing. |
 | 2026-08-25 | **The categories are absolute, conditional and low value, and the first two are now one question.** The first category was *load-bearing* and its test was the consequence of breaking it, which is true of nearly every rule here and is the wrong axis to sort on: it made the boundary with *conditional*, which is about scope, a comparison between two different things. Re-audited under *does it ever stand down*, **not one rule changed category** — the boundary was right and its stated reason was not. |
-| 2026-08-25 | **Re-tested the reduction from scratch, and the rejections are the result.** Two more principle-level mergers attempted and both rejected: `P8` with `P14` produces a heading that has to be unpacked before it applies to either side, and `P10` generates one rule but carries the clause that makes every other argument here safe — *everything else is tuning*. Four rule-level mergers attempted and all four rejected, which says the list is at its irreducible size rather than asserting it: `M4`+`M5` are an instruction to a runner and one to a reader, `E10`+`E11` differ by two obligations, `C9`+`C10`+`C18` share only their principle, and the seven join rules under `P5` *are* that principle applied to seven artefacts with seven checks. **Two rules were re-filed**: `R5` to `P15`, and `D4` from `P4` to `P2` — *both are where a fault survives longest, because nobody looks there* is a blind spot read as a value, not an oracle problem, and `D8` beside it is genuinely `P4` and says so in its own words. **Two gained a second principle** on the precedent `R9` set: `O4` is `P6` for its wall-clock half and `C15` is `P8` for the ladder itself. |
-| 2026-08-25 | **Five rules the repository already enforced and had never stated, and the fifteenth principle two of them needed.** A sweep of the tree for unstated intent found them; four were already held by tests that no rule cited, which is the *one place* claim failing in the direction nothing checks — `R11` catches a rule naming a dead check and nothing catches a live check enforcing an unstated rule. `C16` a saved world loads on the builds either side of the one that wrote it; `C17` a name something outside this repository addresses is never repurposed; `C18` an authority check reads what the engine supplies, never what the sender wrote; `C19` no call across the mod's API throws into its caller; `D9` a fault is recorded whether or not collection is running. `C18` landed under `P7` and `D9` under `P2`, which is more evidence for those two. `C19` widened `P9`: a library is not only reachable without the session, it is safe to call. `C16` and `C17` landed under nothing, and `P15` is what they needed — *what is already in someone else's world is frozen* — which also moved `R5` out of `P12`, where a workshop id had been filed as *hard to regenerate* when what it actually is, is impossible to un-publish. |
+| 2026-08-25 | **Re-tested the reduction from scratch, and the rejections are the result.** Two more principle-level mergers attempted and both rejected: `P8` with `P14` produces a heading that has to be unpacked before it applies to either side, and `P10` generates one rule but carries the clause that makes every other argument here safe — *everything else is tuning*. Four rule-level mergers attempted and all four rejected, which says the list is at its irreducible size rather than asserting it: `M4`+`M5` are an instruction to a runner and one to a reader, `E10`+`E11` differ by two obligations, `C9`+`C10`+`W3` share only their principle, and the seven join rules under `P5` *are* that principle applied to seven artefacts with seven checks. **Two rules were re-filed**: `R5` to `P15`, and `D4` from `P4` to `P2` — *both are where a fault survives longest, because nobody looks there* is a blind spot read as a value, not an oracle problem, and `D8` beside it is genuinely `P4` and says so in its own words. **Two gained a second principle** on the precedent `R9` set: `O4` is `P6` for its wall-clock half and `C15` is `P8` for the ladder itself. |
+| 2026-08-25 | **Five rules the repository already enforced and had never stated, and the fifteenth principle two of them needed.** A sweep of the tree for unstated intent found them; four were already held by tests that no rule cited, which is the *one place* claim failing in the direction nothing checks — `R11` catches a rule naming a dead check and nothing catches a live check enforcing an unstated rule. `W1` a saved world loads on the builds either side of the one that wrote it; `W2` a name something outside this repository addresses is never repurposed; `W3` an authority check reads what the engine supplies, never what the sender wrote; `W4` no call across the mod's API throws into its caller; `D9` a fault is recorded whether or not collection is running. `W3` landed under `P7` and `D9` under `P2`, which is more evidence for those two. `W4` widened `P9`: a library is not only reachable without the session, it is safe to call. `W1` and `W2` landed under nothing, and `P15` is what they needed — *what is already in someone else's world is frozen* — which also moved `R5` out of `P12`, where a workshop id had been filed as *hard to regenerate* when what it actually is, is impossible to un-publish. |
 | 2026-08-24 | Added `C15`, which is `C7` grown a dimension: a mechanism's configuration runs from `off` to `realistic` rather than being a boolean, and a cheaper form that exists in the model belongs on that list. Stated after the intent it comes from, and it found one violation on the day it was written — `WellMixedCoolant`, read by the solver and settable by nothing. |
 | 2026-08-24 | Added `C11`, after the mod failed to compile for two commits while the whole suite passed. Two thirds of the adapter under `Game/` was compiled by nothing the workflow runs, so a rename in `Core` was invisible until a world load. `Generic.csproj` is in the test solution now, and its twenty-seven hard-coded Steam paths resolve through `$(SEBinPath)` — being unbuildable anywhere but this machine was the reason it could not be in the build in the first place ([backlog.md](backlog.md) `F25`). |
 | 2026-08-22 | `R9` covers the signature as well as the name, and `ModApiShapeTests` checks it. A failed cast returns null rather than throwing, so a signature that moves on one side alone gives another mod a feature that silently does nothing ([backlog.md](backlog.md) `F1`). |

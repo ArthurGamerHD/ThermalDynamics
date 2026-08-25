@@ -153,8 +153,10 @@ while still reading as a description of the code.
 
 Checks that hold this in place: `EveryDocumentIsInTheIndex`, `EveryPageHasAChangeLog`,
 `EveryRelativeLinkResolves`, `EveryAnchorNamesAHeading`, `NoPageNamesATestThatHasBeenRenamed`,
-`EveryQuotedSuiteSizeIsCurrent`, `EveryRuleCitedByAPageExists` and
-`TheRulesPageIndexesEveryRuleItStates`.
+`EveryQuotedSuiteSizeIsCurrent`, `EveryRuleCitedByAPageExists`,
+`TheRulesPageIndexesEveryRuleItStates` and `EveryCitedIdentifierResolves` — the last of which reads
+`.cs` and `.py` files rather than markdown, because a rule or a backlog row cited in a comment is
+a reference that rots exactly like a dead link and nothing was reading those.
 
 ### And in the code
 
