@@ -239,3 +239,42 @@ def step_work(nodes, links, substeps):
 def keeps_up(work, allowance=SHIPPED_VISIT_ALLOWANCE):
     """Whether a step of this cost fits the allowance, which is whether the grid keeps real time."""
     return work is not None and work <= allowance
+
+
+# ---- reading one run against another --------------------------------------------------------
+
+
+def compare(before, now):
+    """Rows of `(statistic, was, became, change)` for every statistic on either side that moved.
+
+    **Every key on either side, not the intersection.** A statistic that appeared or vanished is
+    the finding when two walks are compared — a scenario the other dataset does not carry, a column
+    a walk predates — and an inner join drops exactly those (`P2`). Absent reads as an em dash
+    rather than as a zero, because nought is a measurement.
+
+    `change` is a percentage where both sides are numbers and the baseline is non-zero, and empty
+    otherwise: there is no percentage between two words, and none from nothing.
+    """
+    rows = []
+
+    for statistic in sorted(set(before) | set(now)):
+        was = before.get(statistic, ABSENT)
+        became = now.get(statistic, ABSENT)
+        if str(was) == str(became):
+            continue
+
+        change = ""
+        try:
+            a, b = float(was), float(became)
+            if a:
+                change = "%+.1f%%" % ((b / a - 1.0) * 100.0)
+        except (TypeError, ValueError):
+            pass
+
+        rows.append((statistic, was, became, change))
+
+    return rows
+
+
+# What a statistic reads as when a dataset does not carry it at all.
+ABSENT = "\u2014"

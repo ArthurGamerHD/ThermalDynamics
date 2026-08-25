@@ -40,6 +40,35 @@ memory cap, and relaunch to resume.
 
 ---
 
+## A figure a page quotes has a source in the tree
+
+The datasets are gigabytes and are not committed, so until 2026-08-24 every corpus number in the
+documentation was a number with no source anybody could check it against — and one of them drifted
+by two orders of magnitude before it was compared back (`F14`: *twenty-four sealed blocks on one
+ship* against a dataset saying 1,184 across 331).
+
+`verdict.py --csv <path>` writes the figures it prints as `statistic,value,unit`. That file is
+kilobytes and is committed:
+[`summary-2026-08-21.csv`](summary-2026-08-21.csv) is the vacuum survey.
+
+```bash
+python3 tools/corpus/verdict.py out/corpus-2026-08-21 --csv tools/corpus/summary-2026-08-21.csv
+python3 tools/corpus/verdict.py out/air-2026-08-24 --baseline tools/corpus/summary-2026-08-21.csv
+```
+
+`--baseline` prints what moved, which is how one walk is read against another — the same corpus in
+vacuum and in air. It reports **every statistic on either side**, so one the other dataset does not
+carry shows as an em dash rather than being dropped: a scenario present in one walk and absent from
+the other is the finding, not a gap to be joined away.
+
+**Read `dataset ships` first.** The corpus is sorted largest-first, so a walk stopped early is not
+a small sample of the population — it is the wrong end of one, and every percentile it reports is a
+percentile of the biggest ships in the corpus. A partial dataset carries exactly the columns a
+finished one does. The count is taken from the outcomes rather than from `ships.csv`, which a walk
+may legitimately not write.
+
+---
+
 `verdict.py` evaluates the criteria written down in [balance-lab.md](../../docs/balance-lab.md)
 before the data was collected, so a run that fails them is a finding rather than an excuse to move a
 threshold. It reports G1, G2, G5 and G6, says plainly that G3 and G4 are not answerable from this

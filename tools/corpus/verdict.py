@@ -10,7 +10,16 @@ This reads the corpus dataset and computes the ones the data can answer. G3 need
 comparison and G4 needs exposure per watt, neither of which is in this dataset yet; they are
 reported as not-yet-answerable rather than quietly skipped.
 
-Usage: verdict.py [data-dir]
+Usage: verdict.py [data-dir] [--csv <path>] [--baseline <path>]
+
+`--csv` writes the figures this prints as `statistic,value,unit` rows. **That is what makes a
+population figure quotable**: the datasets are gigabytes and are not committed, so every number a
+documentation page takes from one has until now been a number with no source in the tree, and one
+of them drifted by two orders of magnitude before anyone compared it back (`F14`). A summary is
+kilobytes, is committed, and diffs.
+
+`--baseline` reads such a file and prints what moved, which is how one dataset is read against
+another — the vacuum survey against the same corpus in air, for instance (`F11`).
 """
 import csv
 import os
@@ -22,7 +31,27 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import scoring
 from scoring import oversubscription_note
 
-DATA = sys.argv[1] if len(sys.argv) > 1 else "out/corpus-2026-08-21"
+ARGS = [a for a in sys.argv[1:] if not a.startswith("--")]
+DATA = ARGS[0] if ARGS else "out/corpus-2026-08-21"
+
+def flag(name, fallback=None):
+    if name not in sys.argv:
+        return fallback
+    at = sys.argv.index(name)
+    return sys.argv[at + 1] if at + 1 < len(sys.argv) else fallback
+
+
+CSV_OUT = flag("--csv", "summary.csv") if "--csv" in sys.argv else None
+BASELINE = flag("--baseline")
+
+# Every figure worth quoting, in the order it was produced.
+FIGURES = []
+
+
+def record(statistic, value, unit=""):
+    """Keeps a figure so it can be written out, and returns it so a caller can print it too."""
+    FIGURES.append((statistic, value, unit))
+    return value
 
 # Steel gives up around here; a block over its critical temperature is taking damage.
 WARM_KELVIN = 400.0
@@ -100,7 +129,39 @@ by_scenario = {}
 for row in outcomes:
     by_scenario.setdefault(row["scenario"], []).append(row)
 
-print(f"corpus dataset: {len(outcomes):,} outcome rows, {len(ships):,} ship rows")
+# **The ship count comes from the outcomes, not from ships.csv.** A walk that records outcomes and
+# not ships is a legitimate shape — `CorpusAirWalk` deliberately writes no ships.csv, because a
+# hull's structure belongs to the hull rather than to the world it is run in — and reading the
+# count off the file that happens to be absent reports a population of nought. It is also the
+# figure that says a dataset is *partial*: a walk killed at hour one has every column a finished
+# one has, over the ships it reached, and the corpus is sorted largest-first, so a partial read is
+# not a small population but the wrong end of one (`P13`, and the standing warning that partial
+# corpus results mislead badly).
+walked = len(set((r.get("ship"), r.get("workshop_id")) for r in outcomes))
+
+print(f"corpus dataset: {len(outcomes):,} outcome rows over {walked:,} ships, "
+      f"{len(ships):,} ship rows")
+record("dataset outcome rows", len(outcomes))
+record("dataset ships", walked)
+record("dataset ships.csv rows", len(ships))
+record("dataset scenarios", len(set(r.get("scenario") for r in outcomes)))
+
+# **The population figures the documentation quotes.** Sealed blocks are here because a page said
+# twenty-four of them on one ship where the dataset says 1,184 across 331 (`F14`); the share it
+# also quoted was right, which is how it survived.
+_blocks = [number(r, "blocks") for r in ships]
+_blocks = sorted(b for b in _blocks if b is not None)
+if _blocks:
+    record("population blocks", int(sum(_blocks)))
+    record("population blocks p50", int(_blocks[len(_blocks) // 2]))
+    record("population blocks p99", int(_blocks[min(len(_blocks) - 1, int(0.99 * len(_blocks)))]))
+
+_sealed = [number(r, "sealed_blocks") for r in ships]
+_sealed = [v for v in _sealed if v is not None]
+if _sealed and _blocks:
+    record("sealed blocks", int(sum(_sealed)))
+    record("sealed ships", sum(1 for v in _sealed if v > 0))
+    record("sealed block share", round(100.0 * sum(_sealed) / sum(_blocks), 5), "%")
 print(f"scenarios: {', '.join(sorted(by_scenario))}\n")
 
 print("peak temperature by scenario")
@@ -122,6 +183,7 @@ print("=" * 78)
 
 
 def verdict(tag, claim, ok, detail, fails_when):
+    record(tag + " verdict", "holds" if ok is True else ("fails" if ok is False else "unanswered"))
     mark = "HOLDS" if ok is True else ("FAILS" if ok is False else "  ?  ")
     print(f"\n[{mark}] {tag}  {claim}")
     print(f"        fails when: {fails_when}")
@@ -133,6 +195,7 @@ idle = by_scenario.get("idle", []) + by_scenario.get("vacuum-shadow", [])
 if idle:
     critical = sum(1 for r in idle if number(r, "over_critical") and number(r, "over_critical") > 0)
     share = pct(critical, len(idle))
+    record("G1 idle critical share", round(share, 4), "%")
     verdict("G1", "Idle is safe.", share <= 1.0,
             f"{critical} of {len(idle)} idle runs had a block over critical ({share:.2f} %)",
             "more than ~1 % of the corpus goes critical at idle")
@@ -147,6 +210,7 @@ if loaded:
     warm = sum(1 for r in loaded
                if number(r, "peak_k") is not None and number(r, "peak_k") >= WARM_KELVIN)
     share = pct(warm, len(loaded))
+    record("G2 warm share", round(share, 3), "%")
     verdict("G2", "Load bites.", share >= 20.0,
             f"{warm} of {len(loaded)} reached {WARM_KELVIN:.0f} K under full electrical load "
             f"({share:.1f} %)",
@@ -162,6 +226,7 @@ recovery = by_scenario.get("recovery", [])
 if recovery:
     returned = sum(1 for r in recovery
                    if number(r, "over_critical") == 0)
+    record("G5 recovered share", round(pct(returned, len(recovery)), 3), "%")
     verdict("G5", "No death spiral.", pct(returned, len(recovery)) > 95.0,
             f"{returned} of {len(recovery)} recovered below critical after throttling to idle",
             "recovery time unbounded, or damage continues after the load stops")
@@ -200,6 +265,19 @@ if demand:
     cost_p = percentiles(work) if work else {}
     cost_ok = bool(cost_p) and cost_p["p99"] <= allowance
     over = sum(1 for w in work if not scoring.keeps_up(w))
+
+    record("G6 demand p50", round(p["p50"], 3), "substeps")
+    record("G6 demand p95", round(p["p95"], 3), "substeps")
+    record("G6 demand p99", round(p["p99"], 3), "substeps")
+    record("G6 demand max", round(p["max"], 3), "substeps")
+    record("G6 substep cap", int(cap), "substeps")
+    if cost_p:
+        record("G6 work p50", int(cost_p["p50"]), "element visits")
+        record("G6 work p95", int(cost_p["p95"]), "element visits")
+        record("G6 work p99", int(cost_p["p99"]), "element visits")
+        record("G6 work max", int(cost_p["max"]), "element visits")
+        record("G6 visit allowance", int(allowance), "element visits")
+        record("G6 runs over the allowance", over)
 
     demand_ok = p["p99"] <= cap
 
@@ -242,6 +320,9 @@ if demand:
             d = percentiles(demands)
             w = percentiles(works)
             past = sum(1 for value in works if not scoring.keeps_up(value))
+            record(f"G6 {name} demand p99", round(d["p99"], 3), "substeps")
+            record(f"G6 {name} work p99", int(w["p99"]), "element visits")
+            record(f"G6 {name} runs over the allowance", past)
             print(f"        {name:18}{len(rows):>8,}{d['p50']:>12.1f}{d['p99']:>12.1f}"
                   f"{w['p50']:>12,.0f}{w['p99']:>12,.0f}{past:>7,}")
     else:
@@ -381,3 +462,31 @@ for name, count in sorted(hot_run.items(), key=lambda kv: -kv[1])[:10]:
 print("\n  A type far larger in the runaway column than in the last one is over-producing,")
 print("  under-massed, or too weakly coupled to its neighbours — a dozen definitions, not the solver.")
 
+
+
+# ---- the summary --------------------------------------------------------------------------
+
+if CSV_OUT:
+    with open(CSV_OUT, "w", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["statistic", "value", "unit"])
+        for statistic, value, unit in FIGURES:
+            writer.writerow([statistic, value, unit])
+    print(f"\ncsv -> {CSV_OUT}  ({len(FIGURES)} figures)")
+
+if BASELINE:
+    if not os.path.exists(BASELINE):
+        print(f"\nbaseline not found: {BASELINE}")
+    else:
+        with open(BASELINE) as handle:
+            before = {r["statistic"]: r["value"] for r in csv.DictReader(handle)}
+
+        now = dict((statistic, value) for statistic, value, _ in FIGURES)
+
+        print("\n" + "=" * 78)
+        print(f"AGAINST {BASELINE}")
+        print("=" * 78)
+        print(f"\n  {'statistic':38}{'baseline':>16}{'now':>16}  {'change':>9}")
+
+        for statistic, was, became, change in scoring.compare(before, now):
+            print(f"  {statistic[:36]:38}{str(was):>16}{str(became):>16}  {change:>9}")

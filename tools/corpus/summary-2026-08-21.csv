@@ -1,0 +1,46 @@
+statistic,value,unit
+dataset outcome rows,40660,
+dataset ships,8132,
+dataset ships.csv rows,8132,
+dataset scenarios,5,
+population blocks,45204987,
+population blocks p50,1110,
+population blocks p99,70141,
+sealed blocks,1184,
+sealed ships,331,
+sealed block share,0.00262,%
+G1 idle critical share,0.2213,%
+G1 verdict,holds,
+G2 warm share,75.074,%
+G2 verdict,holds,
+G5 recovered share,97.012,%
+G5 verdict,holds,
+G6 demand p50,2.338,substeps
+G6 demand p95,3.519,substeps
+G6 demand p99,4.648,substeps
+G6 demand max,12.275,substeps
+G6 substep cap,64,substeps
+G6 work p50,10911,element visits
+G6 work p95,269153,element visits
+G6 work p99,883675,element visits
+G6 work max,10014111,element visits
+G6 visit allowance,4000000,element visits
+G6 runs over the allowance,29,
+G6 verdict,holds,
+G6 burn-forward demand p99,4.904,substeps
+G6 burn-forward work p99,943457,element visits
+G6 burn-forward runs over the allowance,7,
+G6 full-electrical demand p99,6.026,substeps
+G6 full-electrical work p99,991220,element visits
+G6 full-electrical runs over the allowance,6,
+G6 idle demand p99,3.576,substeps
+G6 idle work p99,803020,element visits
+G6 idle runs over the allowance,5,
+G6 recovery demand p99,3.627,substeps
+G6 recovery work p99,828769,element visits
+G6 recovery runs over the allowance,6,
+G6 vacuum-sunlit demand p99,3.621,substeps
+G6 vacuum-sunlit work p99,818665,element visits
+G6 vacuum-sunlit runs over the allowance,5,
+G3 verdict,unanswered,
+G4 verdict,unanswered,

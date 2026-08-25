@@ -259,5 +259,34 @@ class StepWork(unittest.TestCase):
         self.assertEqual(64.0, scoring.SHIPPED_SUBSTEP_CAP)
 
 
+class Compare(unittest.TestCase):
+    """Reading one run against another, which is how a walk in air is read against one in vacuum."""
+
+    def test_only_what_moved_is_reported(self):
+        rows = scoring.compare({"a": "1", "b": "2"}, {"a": "1", "b": "3"})
+        self.assertEqual(1, len(rows))
+        self.assertEqual("b", rows[0][0])
+
+    def test_a_statistic_on_one_side_only_is_a_row_rather_than_a_drop(self):
+        # The whole reason this is a union: a scenario the other dataset does not carry is the
+        # finding, and an inner join is exactly what hides it.
+        rows = dict((r[0], r) for r in scoring.compare({"gone": "5"}, {"new": "7"}))
+
+        self.assertEqual(scoring.ABSENT, rows["gone"][2])
+        self.assertEqual(scoring.ABSENT, rows["new"][1])
+
+        # Absent is not nought, so neither carries a percentage.
+        self.assertEqual("", rows["gone"][3])
+        self.assertEqual("", rows["new"][3])
+
+    def test_a_percentage_needs_two_numbers_and_a_baseline_to_divide_by(self):
+        self.assertEqual("+100.0%", scoring.compare({"a": "2"}, {"a": "4"})[0][3])
+        self.assertEqual("-50.0%", scoring.compare({"a": "2"}, {"a": "1"})[0][3])
+
+        # A verdict is a word, and nought is not something to divide by.
+        self.assertEqual("", scoring.compare({"a": "holds"}, {"a": "fails"})[0][3])
+        self.assertEqual("", scoring.compare({"a": "0"}, {"a": "3"})[0][3])
+
+
 if __name__ == "__main__":
     unittest.main()
