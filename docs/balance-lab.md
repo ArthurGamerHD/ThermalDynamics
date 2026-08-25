@@ -404,6 +404,39 @@ over it, capped or not**.
 So **6,548 of 8,144 ships — 80 % of the corpus — are charged the cap's error in full and can collect
 none of its benefit.** The 469 ships over 20,000 blocks collect all of it.
 
+### The judgement, argued in the open
+
+The p99 is **0.2820 K**, which is between the 0.03 K that would have shipped it and the 0.6 K that
+would have kept it a switch — the band the rule reserved for a judgement, on the condition that it
+*would not be decided by whether the cap happens to rescue a criterion*. It does rescue one. That is
+set aside, as promised.
+
+**`MaxSubstepsPerBlock` stays 0, and the reason is who pays rather than how much.** 0.282 K is not
+too much on its own; the mod has accepted 0.03 K elsewhere and refused 0.607 K, and this sits under
+the figure it refused. What decides it is the table above: the error is charged per block and the
+benefit is collected per grid, so **6,548 of 8,144 ships pay in full and collect nothing**. A saving
+four fifths of the population cannot use is the exact case
+[fidelity is the default; a saving is a switch](document-of-intent.md#fidelity-is-the-default-a-saving-is-a-switch)
+exists for, and shipping it would be taking a fifth of the population's problem out of the other
+four fifths' fidelity.
+
+**And leaving it as a switch is not an answer either**, because `G6`'s cost half then stays failing
+with the only lever that moves it behind a setting nobody will find.
+
+**What the measurement points at is a third thing, and the pre-registration did not consider it.**
+The allowance does not approximate — `ThermalSimulation.AffordableStepSeconds` **shortens the step**
+when a grid cannot afford its demand, so an over-budget grid falls behind real time. That is a
+fidelity loss too, and an unbounded one. The cap is an approximation with a measured price:
+**0.024 K at p99 on the pairs whose control had stopped moving**, under the 0.03 K this mod already
+accepts. And the grid already knows which case it is in, because the budget is evaluated per grid
+per step.
+
+So the route for `G6`'s cost half is a cap that engages **when a grid is over its allowance**:
+nothing on the four fifths that never reach it, the whole benefit on the 469 ships over 20,000
+blocks, and a bounded approximation in place of an unbounded lag. What has *not* been measured is
+the comparison that decides it — a shortened step against a floored one, on the same hull, at the
+same clock — and that is [backlog.md](backlog.md) `C30` rather than a conclusion here.
+
 **And the walk rescores `G6` itself.** Its uncapped arm is the first corpus dataset to carry
 `substep_cost`, so it replaces the withdrawn figures above rather than merely being compared with
 them — and because it repeats `F11`'s four scenarios on the same ships, its demand column is a
@@ -865,6 +898,7 @@ is an enclosing hull, and the corpus has hulls.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | **Decided `C3`: `MaxSubstepsPerBlock` stays 0.** The p99 landed in the judgement band at 0.2820 K, and the rule reserved that band on the condition it would not be decided by the cap rescuing a criterion — it does rescue one, and that is set aside. What decides it is who pays: the error is per block and the benefit is per grid, so four fifths of the population is charged in full and collects nothing. `G6`'s cost half therefore stays failing, and its route is named rather than left open — a cap that engages when a grid is over its allowance, which is `C30`. |
 | 2026-08-25 | **`CorpusCapWalk` finished: 8,144 blueprints, four scenarios, two arms, 3 h 51 m, and three of its four registered predictions hold.** The identity is exact on all 32,576 pairs, the benefit lands at **2,180,352** inside the 1.7–2.9 M projected and takes `G6`'s cost half from 1.82× the allowance to 0.55×, and the reach is **5.83 %** inside the 3–10 % band. The cost prediction fails on its second half: p99 **0.2820 K** as predicted, max **48.22 K** against the 10 predicted, on giants and not on censored runs. **The finding nobody predicted is the shape of the trade**: stiffness is per block and the allowance is per grid, so the cap re-masses 7.4 % of the blocks on the smallest hulls and 3.1 % on the largest while no hull under 5,000 blocks is over the allowance at all — 80 % of the corpus pays in full and collects nothing. |
 | 2026-08-25 | **Recorded a limit of the paired design while the walk was still running and the verdict was not known.** Both arms run to the same clock, which stops the stopping rule being part of the difference and does not make that clock an equilibrium: the settle test tolerates 0.25 K a minute, which over an 1,800 s scenario is 7.5 K, and a cap changes the *rate* a hull approaches its answer at. On the walk's first 360 ships the pairs more than a kelvin apart have a control still moving at a median 0.03 K/s against a population median of 0.001. `cap.py` prints the deltas split on whether the control had stopped moving, **beside** the registered statistic and not instead of it — the decision rule is scored on what it was written against (`E11`). |
 | 2026-08-25 | **The 2026-08-24 air walk predates `C21`'s waste correction by one minute, and `reproduce.py` found it by comparing the walk with the cap walk's control arm.** `f91e5dc` took twenty-seven `ConsumerWasteEnergy` fractions from 0.9 to 1.0 at 21:06; the walk finished at 21:07 and had loaded the old ones. Over 1,236 shared runs the **substep demand is identical to the last bit** — demand is conductance over capacity and has no waste term — while generation moved +0.60 % at the median and +11.0 % at worst, and peaks 0 % at the median and 2.1 % at worst. The demand figures stand; the watt and peak ones are low by that much and are marked rather than withdrawn (`E10`). |

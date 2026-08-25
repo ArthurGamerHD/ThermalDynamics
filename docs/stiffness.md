@@ -389,6 +389,19 @@ figures at the pair and hull that produced the original table:
 | **6** | 6.00 | 223 | **2.8x** | 1,450 (3.4 %) | 0.341 K | 0.094 K |
 | 1 | 1.00 | 108 | 5.8x | 14,138 (32.7 %) | 5.915 K | 1.518 K |
 
+**And the population says the tables above are the wrong hull to decide on.** Every figure here is
+one hull; `CorpusCapWalk` put a cap of 6 against all 8,144 published blueprints in four scenarios on
+2026-08-25, and the census hull's **0.028 K worst block** turns out to be near the population's
+*median*, not its worst. Across 32,576 paired runs the delta-peak p99 is **0.2820 K** and the max is
+**48.22 K**, and the ten furthest-apart pairs are all hulls between 79,460 and 155,010 blocks.
+
+**The reach curve below is also the wrong way round for deciding a default.** It reads as though a
+cap touches more of a big ship; measured over the population it is the reverse, because stiffness is
+a block's property and not a hull's — 7.4 % of the blocks on hulls under a thousand against 3.1 % on
+hulls over sixty thousand. What scales with hull size is not the reach but the *benefit*: no run
+under 5,000 blocks is over its element-visit allowance at all, and 72 % of runs over 60,000 blocks
+are. See [balance-lab.md](balance-lab.md#and-the-trade-is-the-wrong-way-round-the-cost-is-per-block-the-benefit-is-per-grid).
+
 **And in air, which is where a floor has most to reach and where the tables above do not look.**
 Convection is what makes a light block stiff, so a vacuum sweep understates both what a cap reaches
 and what it buys. The same 20,916-node hull, driven, in thick air at 200 m/s —
@@ -1003,6 +1016,7 @@ conductivity 50 is conduction-stiff, and a material definition would fix them ou
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Put the population beside the one-hull sweeps ([backlog.md](backlog.md) `C3`). The census hull's 0.028 K worst block is near the population's median rather than its worst — the p99 over 32,576 paired runs is 0.2820 K and the max 48.22 K — and the reach runs the opposite way to what these tables suggest, because stiffness is a block's property and not a hull's. |
 | 2026-08-24 | **Decided `C14`: the census hull is typical in stiffness and extreme in heat, on purpose.** The section above framed that as an open question — a worst case or a typical ship — and the two are properties rather than answers. A cost figure has to describe what a server pays, which is why `C26` put the hull in the population's trough; a temperature figure has to be a ceiling, which is why it stays at the 96th percentile for heat. The rule that follows is about quoting: a temperature taken on this hull is an upper bound, and every approximation accepted on such a figure — `C19`'s 0.028 K, `MaxSubstepsPerBlock 6`'s 0.607 K — is safer under that reading rather than shakier. |
 | 2026-08-24 | **Re-ran both per-block cap sweeps at the pair and hull that now ship, and what the cap is worth inverted.** In vacuum the hull demands 7.35 substeps rather than 22.97, so no cap above six binds and a cap of 6 buys nothing; in thick air at 200 m/s it demands 24.97 rather than 34.44 and a cap of 6 buys 3.1× for **0.028 K** on the worst-placed block against the 0.607 K that made it a switch. That is the same size as the ceiling breach `C19` accepted, so the number separating the two mechanisms is gone — [backlog.md](backlog.md) `C3`. |
 | 2026-08-24 | **Refreshed the census tiers against the blocks they were measured from, which closes [backlog.md](backlog.md) `C26`.** Every tier was a solid cube mounting on all six faces, and `SmallLight` declares one mount point while the three shaped-armour bands declare three, four and five — so the hull's lightest band carried six joints where the block it stands for carries one. The hull demanded 36.75 substeps in air against a population running 6.20 to 22.41 and now demands **12.71**, its stiffest block has four exposed faces against a real 3.46, and its air ratio is 1.97 against a population median of 1.07. Blocks are also laid out the way the game makes a player lay them out: every one bolted to something, and the lightest band on the surface. |

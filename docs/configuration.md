@@ -475,7 +475,18 @@ Hence a rule worth remembering: **while `MaxSubstepsPerBlock <= MaxSubsteps` the
 never engage**, and every step is genuinely short enough for the grid it is integrating. Raising one
 without the other starts refusing steps instead.
 
-It is off by default because it is an approximation, and a mod that models heat should not make
+**It is off by default, and since 2026-08-25 that is a measurement rather than a principle.**
+`CorpusCapWalk` ran all 8,144 published blueprints through four scenarios twice, with the cap off
+and at 6, and the answer is in the shape of the trade rather than in the size of the error: a cap of
+6 costs a p99 of **0.2820 K** across the population — under the 0.607 K that had kept it out — but
+**stiffness is a property of a block and this allowance is a property of a grid**. A light fitting
+demands the same substeps on a fighter as on a dreadnought, so the cap re-masses **7.4 % of the
+blocks on hulls under a thousand and 3.1 % on hulls over sixty thousand**, while **no run under
+5,000 blocks is over `MaxElementVisitsPerStep` at all**. Four fifths of the ships people publish
+would pay the error and collect none of the throughput. See
+[balance-lab.md](balance-lab.md#the-judgement-argued-in-the-open).
+
+It is also an approximation, and a mod that models heat should not make
 one on a player's behalf without being asked. On a world with large ships in it, turning it on is
 the single largest thing that can be done for frame time — and unlike `MaxElementVisitsPerStep`, it
 buys the throughput back rather than trading it away: a ship that stops needing more substeps than
@@ -1237,6 +1248,7 @@ one with a migration risk — is late rather than first.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | `MaxSubstepsPerBlock` stays off by default, decided on all 8,144 published blueprints rather than on one hull ([backlog.md](backlog.md) `C3`). The population p99 is 0.2820 K, under the figure that had kept it out; what decides it is that the error is charged per block and the throughput is collected per grid, so four fifths of the ships people publish would pay and collect nothing. |
 | 2026-08-25 | Added `HeatTerminalPanel` ([backlog.md](backlog.md) `B40`), the switch for the one output of the mod a world could not turn off. Default `true`, so nothing a player has changes; client-owned, like the other two presentation switches. It gates the panel's text and its refresh and leaves the block's own controls alone. |
 | 2026-08-25 | Corrected the fourth site of `A9`'s per-metre figure, which the pass earlier the same day missed: the rungs inventory said 0.0045 K a metre where the lab says 0.0018. The check added that morning reads the per-face *table* and could not see a figure quoted in prose, which is the limit of that kind of check and is why the number is now stated in one place and pointed at from the other. |
 | 2026-08-25 | Said what the colour channel is a signal *about*, which [backlog.md](backlog.md) `B34` needed measured: within one block's glow band it moves less than a just-noticeable difference for 88 of 101 block types, and between the coolest and hottest rated blocks it is ΔE 13.72. It distinguishes blocks, not moments. |
