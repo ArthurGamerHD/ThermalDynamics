@@ -638,6 +638,26 @@ they are the two ends of the same dial under load.
 > `LegacyContent` — so they are not simulated. And one prefab is stored gzipped, which the parser
 > now un-gzips; before that it was one ship the floor was never measured on.
 
+### A base is a thermal problem too, and the place cooling can be done properly
+
+**Decided 2026-08-25.** A station is not something that quietly works while ships are the
+interesting case. It heats, it has to be managed, and a player who builds a refinery hall without
+thinking about it should find that out. **What a base gets in exchange is room**: it can run
+elaborate coolant systems and radiator farms far more effectively than a ship can, and that is the
+intent rather than an accident of the model.
+
+The reasons follow from the model rather than from preference. A ship pays for cooling in mass and
+in the thrust to carry it; a base pays for it in components alone. A coolant ring needs a topology
+and a radiator needs area, and only a base has the space for either at scale. A ship changes
+attitude constantly, so its sunward face changes; a base can be built shaded and stay shaded. So
+*cooling is designed in* is most true where there is room to design — which makes a base the place
+the mod's own lever is most available, not the place it stops mattering.
+
+**None of that is measured.** Every scenario in the battery is a ship, a rig or a component, and the
+corpus is published blueprints, which are overwhelmingly ships. The most elaborate part of the model
+— room air, pressurisation, the flood fill that finds compartments — is the part a base leans on
+hardest and the part with the least evidence under it. [backlog.md](backlog.md) `F27`.
+
 ### Who it is balanced for
 
 **Vanilla play, in the knowledge that worlds and blocks get modded.** The mod has to be a jack of
@@ -999,6 +1019,16 @@ which is how it comes to be a section rather than a rule: a promise nobody wrote
 the next change breaks by accident.
 
 ### To an existing world: nothing a player already has is quietly lost
+
+> **These promises bind from release, and the mod is not released yet (2026-08-25).** Before then a
+> behaviour change is checked against the corpus — which is what the corpus is for — rather than
+> against a compatibility promise, and *the player suffers* is an acceptable answer to a change that
+> makes the mod better. **Two things follow that are easy to get backwards.** The identifiers a
+> world holds — block subtypes, the mod-storage GUID, the retired definition names — are *reserved*
+> rather than depended upon, so a rename that includes them is available now and will not be after
+> release; `modinfo.sbmi` carries workshop id 2985582372 today, which reserves the entry without
+> making anyone's world depend on it. And the machinery below is built and worth keeping regardless:
+> it costs nothing to have, and the day it starts mattering is a day nobody gets to choose.
 
 **The mod is added to worlds that are years old and returns to worlds it has already saved.** Both
 directions matter, and the pattern the code follows is the same in all four places it appears:
@@ -1372,6 +1402,7 @@ as a *second* change rather than as a substitute. [backlog](backlog.md) `D19`.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | **A base is a thermal problem, and the place cooling can be done properly** — it heats and has to be managed, and what it gets in exchange is room, so elaborate loops and radiator farms work far better there than on a ship. None of it is measured: every scenario is a ship or a rig, the corpus is blueprints, and room air is the part a base leans on hardest with the least evidence under it (`F27`). **And the compatibility promises bind from release, which has not happened** — before then a behaviour change is checked against the corpus rather than against a promise, and the identifiers are reserved rather than depended upon, so a rename that includes them is available now and will not be later. |
 | 2026-08-25 | **Three more decisions.** The readouts exist to *show*, not to diagnose — a player who sees a glow and hears a warning has enough, and working out the fix is the Engineering in Space Engineers. Two consequences: the mod has to announce it is there, which today it does not (`B41`), and *clear* is a higher bar than *present*. The workshop corpus is the population the mod is balanced against, its skew known and accepted. And the mod does not apologise for its cost: no guided troubleshooting, and the performance criterion is the author's own play. Also narrowed the open-API position — the mod is judged self-contained, so what an add-on does to balance is the player's business. |
 | 2026-08-25 | **Three more intent decisions, and one retraction.** Single player is the design centre and multiplayer is a low priority that still has to work, with the server stress case written as a number rather than a mood. The two-to-five-minute window keeps a floor under it: **nothing may be destroyed in the first minute of a world**. The API is open and unbounded — any mod may register anything, because a player chooses their mod list — which converts the mod's duty from *bounding* add-ons to *attributing* them, and means every published balance figure is a claim about this mod alone. Retracted: the claim that heat could be switched off entirely, because it would have unpicked the shared surface walk that is the reason force belongs in this mod at all. |
 | 2026-08-25 | Recorded the answer to a neighbouring mod that is better than detecting it: an interface. [backlog.md](backlog.md) `K17` has one mod own the force on a constraint group while others contribute to its inputs, which is what a control-surface or jet-engine mod needs anyway — and a stronger coupling than the heat API has asked for, because a registered surface changes how a ship flies rather than what temperature it reaches. |
