@@ -950,14 +950,28 @@ The honest reading today is *nothing has ever broken*, which is a fine position 
 one to hold accidentally. **Nothing checks it either** — `ModApiShapeTests` pins the shape of the
 table, and no test relates a change in that shape to the number a caller is told to trust.
 
-### 5. The visual channel, and a player who cannot use it
+### 5. The visual channel, and who can read it
 
 The glow carries two facts in two channels: **brightness says how close to failing, colour says how
-hot.** That split is deliberate and it is good design for a player who can read both. Nothing states
-what the other player gets. Red against orange is the one distinction a common form of colour
-blindness does not make, and it is exactly the distinction the colour channel carries.
+hot.** The split is deliberate, both halves are measured, and it is good design for a player who can
+read both. What is unstated is who that is.
 
-The sound cue covers part of the gap, and covers it **by accident**: it was added to reach a block
+**The colour channel is already flat on a quarter of the game, for everybody.** `Incandescence`'s
+locus table starts at **800 K** and its first entry is pure red — `1.0, 0.0, 0.0`, no green at all —
+and it is clamped below that, because a real solid has no visible colour to report under the Draper
+point at 798 K. The brightness band is deliberately *not* keyed to that line, precisely because
+**26 % of block types are rated below it** (`AQuarterOfBlockTypesWouldNeverGlowIfTheBrightnessWerePhysical`,
+measured against the installed game). Those are the same blocks: a block rated under 800 K spends
+its whole hundred-kelvin glow band beneath the table's floor, so its colour never moves and
+brightness is the only channel it has. The code says this where the constant is defined; no page has
+ever carried it.
+
+**So the question is two questions and neither is asked.** For a quarter of the game the two-channel
+design is a one-channel design *by construction*, which may well be fine — brightness is the channel
+that carries the urgent fact. For the rest, red against orange is the one distinction a common form
+of colour blindness does not make, and it is exactly the distinction the colour channel carries.
+
+The sound cue covers part of both gaps and covers it **by accident**: it was added to reach a block
 behind another, a block off screen, and a player looking the other way — not to be the redundant
 channel for a player who cannot separate the colours. Whether the readouts, the overlay and the glow
 are meant to be usable without colour is unstated, and it is the kind of thing that is cheap to
@@ -1066,6 +1080,7 @@ as a *second* change rather than as a substitute. [backlog](backlog.md) `D19`.
 | Date | Change |
 | --- | --- |
 | 2026-08-24 | **A full sweep of the tree for intent, and it found four subjects the code had always followed and no page had ever stated.** Added [what the mod promises the things around it](#what-the-mod-promises-the-things-around-it) — to an existing world, to a block it has never heard of, to another mod, and to a client — which gathers the save format's forward compatibility, the retired definition names, a setting's name as an address, the derive-don't-guess rule for third-party blocks, the API's four guarantees, and the two trust boundaries that decide which network channel a message takes. Added [what the mod does when it cannot afford itself](#what-the-mod-does-when-it-cannot-afford-itself): it slows down rather than stuttering, determinism is chosen rather than assumed, and a fault records itself whether or not anyone asked. Added [where something is modelled, it is modelled as a mechanism rather than as a threshold](#where-something-is-modelled-it-is-modelled-as-a-mechanism-rather-than-as-a-threshold), which is the most consistent habit in the code and had been written down nowhere. |
+| 2026-08-24 | **Checked every claim in the new voids section against the code rather than the documentation, and two of them changed.** The version void was overstated and is corrected in the row below. The visual-channel void was *understated*: `Incandescence`'s colour table starts at 800 K with a pure-red first entry and clamps below it, and the 26 % of block types rated under the Draper point at 798 K are exactly the blocks whose colour therefore never moves through their whole glow band. So the two-channel design is a one-channel design on a quarter of the game **for every player**, by construction — which the code says where `DraperKelvin` is defined and no page had carried. The rest verified as written: no code path in the mod knows what creative mode is, `RemoveBlock` drops a node with no redistribution of its energy, the extinguisher's ammo does zero damage, zero trajectory and zero impulse, and the settings menu's labels and descriptions are English string literals. |
 | 2026-08-24 | **Corrected the version void, which I had overstated by reading the documentation instead of the code.** It said nothing in the repository defines a version. `ThermalApi.Version` is `1`, served as `ApiVersion`, and [api.md](api.md#binding) already tells a caller to read it and refuse a major it was not written against — so the API's guarantee has a referent. What is actually missing is smaller and sharper: what would move that number, whether the save format, the retired definition names and the setting names sit under it or under nothing, and a check relating a change in the delegate table's shape to the number a caller is told to trust. |
 | 2026-08-24 | **Rewrote *what is still undecided* as two sections, because it was conflating two different things.** [Where there is no intent at all](#where-there-is-no-intent-at-all) is eight subjects the mod already ships or already refuses with no statement anywhere about whether that is right — what a player does with their hands, what the blocks cost to build, creative mode, where a version boundary is, the visual channel and a player who cannot use it, what language the mod speaks, heat that leaves the world, and another mod that also simulates heat. [Open questions with a stated intent](#open-questions-with-a-stated-intent) is the four that have a position and lack a route. Two entries that were settled are marked as such rather than left reading as open. |
 | 2026-08-24 | **Three conflicts added and two rows corrected.** The element-visit allowance against *fidelity is the default* — the shipped default is not the faithful end, and `TheDefaultIsFrameBounded`'s stated reason, *the budget costs no accuracy*, is true about a step and silent about the consequence, which `C27` later priced at up to 36.98 K; what the code follows is that frame stability outranks fidelity and the price is paid down rather than denied. `G6`'s cost half against the unit it was scored in. And the corpus as the population against the corpus as what people publish. The README-audience row was resolved two days earlier and left standing, which is the same defect as a stale figure; the `MaxSubstepsPerBlock` row carries an argument that has now inverted twice. `G6`'s status is rewritten and `G1` gains its air reading; six criteria are stated as the eight they became. |
