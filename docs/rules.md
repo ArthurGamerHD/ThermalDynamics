@@ -388,6 +388,13 @@ those means queuing for the rest of your life, and so does everyone else. `heavy
 whether you would wait; exit **75** means the machine was busy and nothing ran, so try later rather
 than running unlocked.
 
+**And read a contended run's log before believing its exit code.** Twice on 2026-08-25 a suite
+queued behind two other projects came back non-zero having run no tests at all — `MSBUILD : error
+MSB4166: Child node exited prematurely`, a build worker reaped under memory pressure. Held on a
+quiet machine the same tree passes 1,915 of 1,915. A run that reports no totals ran nothing, which
+is the same shape as `E8`: the loud thing to check is not whether it failed but whether it judged
+anything.
+
 *Applies to:* corpus walks, the full suite, `LoadTests`, `bench`, every `Thermodynamics.Sim` lab,
 and any release build. [tests/README.md](../tests/README.md#running-heavy-work-on-a-shared-machine)
 lists them and `~/.local/bin/HEAVY.md` is the tool's own page.
@@ -1609,6 +1616,7 @@ right and this page is stale**; say so and fix it here.
 | --- | --- |
 | 2026-08-25 | `E5`'s check reads source comments as well as pages. The gap was demonstrated rather than argued: the panel grew from 36 ships to 50, every page was corrected, and `KnobSweep`'s own summary — the file a reader opens to find out what the sweep does — went on saying 36. Extending it found two more stale counts in comments. What it still cannot do is now written into the rule: it matches one phrasing, because the other phrasing in the tree is how a figure is correctly scoped to the run it came from. |
 
+| 2026-08-25 | Extended `W5` with how a contended run lies. A suite queued behind two other projects came back non-zero twice having run no tests — a reaped MSBuild worker, not a failure — and the log reads the same as a real one to anything grepping for a verdict. The reading instruction is now in the rule and the worked case is in [tests/README.md](../tests/README.md#running-heavy-work-on-a-shared-machine).
 | 2026-08-25 | Added `W5` — a measurement holds the machine. This machine is shared with three other projects and nothing in the repository said so, which is how two suite passes came to report `LoadTests` failures that were about the machine rather than about the code. It is `P1` from the other side: a duration taken next to somebody else's compile is a figure whose stated scope is untrue. |
 | 2026-08-25 | Said what this page's identifiers share with [backlog.md](backlog.md)'s and what was decided about it (`H8`): eleven collide, 215 citations would have to be resolved by hand to remap them, and the errors of that diff would be silent — so the set is frozen by a check rather than paid off. |
 | 2026-08-25 | **`R16`, and the 155 links it found.** *A pointer in code is plain text, never a markdown link* was written into [development.md](development.md#and-in-the-code) after two such links were found rotted, and nothing checked it — a link inside a `.cs` file renders nowhere, so nobody clicks it, nobody finds out it is wrong, and `EveryRelativeLinkResolves` reads markdown only. The one form of cross-reference here that nothing checked was the one written in the syntax that looks checked, and 155 had accumulated across 91 files. Flattening them cost nothing, because every link text was already the page's own name. `NoPointerInCodeIsWrittenAsALink` holds it, and it demonstrated that it works by failing on the first draft of its own summary, where the example was quoted verbatim. |

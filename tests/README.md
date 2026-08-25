@@ -128,6 +128,19 @@ worker nodes; they idle out after ten to fifteen minutes and hold about 128 MB e
 Kill them if the machine is wanted. They are also why `heavy` closes its lock descriptor before
 running a command — a daemon that inherits it keeps the window held after the run has ended.
 
+**A killed build node is not a test failure, and it reads exactly like one.** Twice on 2026-08-25 a
+queued suite came back non-zero having run no tests at all:
+
+```
+MSBUILD : error MSB4166: Child node "3" exited prematurely. Shutting down.
+```
+
+That is a build worker being reaped under memory pressure while two other projects held the
+machine — the run never reached a test, and a log skimmed for `Failed!` shows nothing either way.
+**A suite that reports no totals ran nothing**; read the head of the log before believing a
+non-zero exit is about the code. Waiting for the window is the fix, and `-m:1` avoids the
+multi-node build entirely for a run queued behind someone else's work.
+
 ## Running it
 
 ```bash
