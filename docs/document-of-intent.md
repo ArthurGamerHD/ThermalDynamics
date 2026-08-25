@@ -858,11 +858,133 @@ about intent rather than a decision on the developer's behalf.
 
 ---
 
-## What is still undecided
+## Where there is no intent at all
 
-The eight areas this page opened with as having no stated intent are now answered, and are stated
-above rather than here. What follows is what those answers left open — smaller questions, but each
-one still decided by whoever touches the file next.
+**An undeclared intent is decided by whoever touches the file next**, which is the reason this page
+exists, so the subjects nobody has stated a position on belong on it as plainly as the ones that are
+settled. Every entry below was found by reading the tree for what it *does* and asking what says
+why: each names something the mod already ships or already refuses, with no statement anywhere about
+whether that is right.
+
+**These are voids, not open questions.** The [section after this one](#open-questions-with-a-stated-intent)
+holds the things where the intent is stated and the route is not; here the intent itself is missing.
+None of them is a defect and most may want no more than a sentence — but the sentence is not there,
+and until it is, the answer is whatever the next change happens to imply.
+
+### 1. What a player does with their hands
+
+**The mod ships an extinguisher and it does not extinguish anything.** It is a thermal scanner: a
+15 m raycast, a temperature in °C at the lower left, and heat-coloured billboards over the block and
+its neighbours. Its `Bottle` ammo does zero damage, zero trajectory and zero impulse, and firing it
+produces a particle effect and a sound. There is also a decorative wall block of the same name.
+
+Nothing states whether a player should be able to **act** on heat directly — cool a block, vent a
+compartment, carry a coolant canister — or why they should not. The three commitments in
+[the purpose](#the-purpose) say the outcome must be *answerable*, and every lever named there is
+something a builder puts on a hull in advance: a radiator, a loop, a heat pump, a different place
+for the reactor. A player standing in front of a block that is about to fail has, by that reading,
+already lost — and it is not clear whether that is the design or an omission.
+
+**Why it matters more than it looks.** The suit exists precisely so that a person in a burning
+compartment is part of the simulation. Having put the player in the room, the mod gives them nothing
+to do in it but leave.
+
+### 2. What the mod's blocks cost to build
+
+Nine block definitions carry component lists, build times and PCU, and **none of the three is
+derived, defended or measured anywhere**. A large radiator is thirty steel plates and 1 PCU; a
+coolant pipe is one large tube, ten construction components and ten steel plates; a pump and a heat
+pump are 100 PCU each. [balance.md](balance.md) prices every block *thermally* against the vanilla
+blocks it competes with and says nothing about what any of them costs to build.
+
+**And the build cost is already a thermal dial, set for a different reason.** A block's mass is the
+sum of its components, heat capacity is `mass × specific heat`, so the component list decides how
+much heat the block swallows before it warms. The two purposes are the same number and only one of
+them has been thought about.
+
+The mod's central balance claim is that cooling is designed in and there must be a lever. A lever
+that costs thirty steel plates is a different balance from one that costs a refinery run, and
+nothing says which this is meant to be.
+
+### 3. Creative mode, and the tools that skip the game
+
+Nothing anywhere states what heat should do when the game's own rules are suspended. A ship spawned
+whole, a block placed instantly, a player in god mode, a world with no grinding and no components —
+the simulation runs identically through all of it, because no code path knows the difference.
+
+That may well be right: heat is a property of a ship rather than of how it was paid for, and a
+creative builder who wants no heat has `EnableDamage`. But it has never been said, and the
+neighbouring cases have — a ship the game spawns is `G7`, and a world somebody adds the mod to is
+`G1`.
+
+### 4. Where a version boundary is
+
+[api.md](api.md#guarantees) promises that **keys will not change meaning within a major version**,
+and nothing in this repository defines a version. `modinfo.sbmi` carries a workshop id and no
+number; no build is stamped; the save format has an internal marker that is deliberately *not* a
+version boundary, since v2 grew by adding a section rather than by changing it.
+
+So the strongest compatibility promise the mod makes has no referent, and the honest reading today
+is *nothing has ever broken*. That is a fine position to hold and a poor one to hold accidentally:
+what is undeclared is what a major version would be **for** — which of the promises in
+[what the mod promises the things around it](#what-the-mod-promises-the-things-around-it) may be
+broken at one, and which are meant to hold for the life of the mod.
+
+### 5. The visual channel, and a player who cannot use it
+
+The glow carries two facts in two channels: **brightness says how close to failing, colour says how
+hot.** That split is deliberate and it is good design for a player who can read both. Nothing states
+what the other player gets. Red against orange is the one distinction a common form of colour
+blindness does not make, and it is exactly the distinction the colour channel carries.
+
+The sound cue covers part of the gap, and covers it **by accident**: it was added to reach a block
+behind another, a block off screen, and a player looking the other way — not to be the redundant
+channel for a player who cannot separate the colours. Whether the readouts, the overlay and the glow
+are meant to be usable without colour is unstated, and it is the kind of thing that is cheap to
+decide now and expensive to retrofit.
+
+### 6. What language the mod speaks
+
+Thirty display names and descriptions are localisation keys in
+[MyTexts.resx](../Data/Localization/MyTexts.resx), which is the game's own mechanism and the right
+one. **Everything else the mod puts on screen is an English string literal in C#** — every settings
+menu label and description, the cockpit summary, the crosshair readout, the terminal panel, the chat
+command replies and the extinguisher's own text.
+
+Nothing states whether the mod is meant to be translatable. If it is, the runtime text is the work
+and it is not started; if it is not, that is a decision worth writing down, because the split as it
+stands reads as a half-finished intention rather than a choice.
+
+### 7. Heat that leaves the world
+
+A block that is destroyed takes its heat with it. A block ground down takes its heat with it. A
+block welded into place arrives at ambient. Energy conservation is one of the three invariants and
+it is a statement about a *step*: the moment the block population changes, energy enters or leaves
+the world with no accounting at all.
+
+**This is almost certainly right** — the alternative is a grinder that heats the ship around it, and
+`P14` would refuse to build that for what it costs. What is missing is that it is not written down
+anywhere, including in the [deliberate limits](known-issues.md#deliberate-limits) that exist to stop
+exactly this being rediscovered as a bug (`D6`). The lab's censoring limit covers the
+*measurement* side of destruction and says nothing about the energy.
+
+### 8. Another mod that also simulates heat
+
+The mod publishes a delegate table, reads a shared definition mechanism, attaches components to
+blocks, and claims a mod-storage GUID. Nothing states what happens when a second mod in the same
+world does the same thing — two mods writing block temperatures, two damage sources over the same
+threshold, two readouts on the same terminal.
+
+It may be that nothing can be done about it, in which case that is the sentence. Today the position
+is unstated, and [the API's guarantees](#to-another-mod-the-api-is-a-contract-with-four-guarantees)
+describe the mod as something to build **on** without ever saying what it is to sit **beside**.
+
+---
+
+## Open questions with a stated intent
+
+The difference from the section above is that these have a position and lack a route. Each is
+tracked in [backlog.md](backlog.md); what is here is why the answer is not obvious.
 
 ### 1. How a thermal camera could be built
 
@@ -870,7 +992,7 @@ The intent is stated and the route is not known. Mods get no shader, no post-pro
 buffer; the candidates are per-block emissive (the one path the engine definitely exposes),
 transparent materials, particle effects as a rendering surface, and whether any material parameter
 is reachable at all. **This is a research task before it is a design task.**
-[backlog](backlog.md) B24.
+[backlog](backlog.md) `B24`.
 
 ### 2. The warning cue itself
 
@@ -882,7 +1004,7 @@ and which wants hearing in a cockpit rather than deciding on paper. **Three seco
 lead now that the window is measured**: the median ship loses its first block 37 s after the load
 and 24 s after the crossing, so the cue is early rather than late. [backlog](backlog.md) `F15`.
 
-### 3. How far a client may drift — measured, and the point is still not chosen
+### 3. How far a client may drift
 
 **Two of the three unknowns are answered and the one this item is about is not.** *What measures it*
 is `-- inputs`, which degrades every input a client drives its own simulation from and reports the
@@ -897,15 +1019,7 @@ that never lands (290.95 K), a switch on the wrong side (245.87 K) — and nothi
 is a drift a player should be allowed to see. See
 [What the mod owes a multiplayer client](#what-the-mod-owes-a-multiplayer-client).
 
-### 4. Whether the compatibility floor becomes a scored criterion — settled
-
-**It is `G7`, and it was written down before the prefabs were first run**, which is what this item
-asked for. *Every vanilla prefab, idle, in the environment its category spawns into, for five
-simulated minutes, loses no block.* It holds: all 705 prefabs, 461,428 blocks, not one crossing
-critical — and the same 705 flown hard lose 616, which is the control rather than the criterion. See
-[balance-lab.md](balance-lab.md) and [balance.md](balance.md#the-compatibility-floor-holds).
-
-### 5. What "as much of the CPU as possible" means concretely
+### 4. What "as much of the CPU as possible" means concretely
 
 The direction is unambiguous and the target is not: how many threads, and whether the mod may
 saturate a machine a server is sharing with other mods.
@@ -917,19 +1031,23 @@ grid through the same fan-out is 0.99×, so the hand-off is neither free nor a b
 it is the largest ship — an uneven fleet gives 3.35× — which is the argument for splitting one grid
 as a *second* change rather than as a substitute. [backlog](backlog.md) `D19`.
 
-### 6. Where the visual ramp starts — settled
+### 5. Two that were on this list and are settled
 
-**A hundred kelvin below the block's own critical temperature, and full at it.** The *probably* in
-"the threshold temperature should probably dictate much of what that means" is gone: the threshold
-dictates the brightness entirely, as a fixed band rather than a share of it. The colour is the half
-that stayed physical. See [Natural feedback](#natural-feedback--built).
+* **Whether the compatibility floor becomes a scored criterion.** It is `G7`, written down before
+  the prefabs were first run, and it holds: 705 prefabs, 461,428 blocks, not one crossing critical,
+  against the same 705 flown hard losing 616.
+* **Where the visual ramp starts.** A hundred kelvin below the block's own critical temperature, and
+  full at it — a fixed band rather than a share of the rating, so the same distance from failure
+  looks the same on a decorative block and on a large thruster.
 
----
 
 ## Change log
 
 | Date | Change |
 | --- | --- |
+| 2026-08-24 | **A full sweep of the tree for intent, and it found four subjects the code had always followed and no page had ever stated.** Added [what the mod promises the things around it](#what-the-mod-promises-the-things-around-it) — to an existing world, to a block it has never heard of, to another mod, and to a client — which gathers the save format's forward compatibility, the retired definition names, a setting's name as an address, the derive-don't-guess rule for third-party blocks, the API's four guarantees, and the two trust boundaries that decide which network channel a message takes. Added [what the mod does when it cannot afford itself](#what-the-mod-does-when-it-cannot-afford-itself): it slows down rather than stuttering, determinism is chosen rather than assumed, and a fault records itself whether or not anyone asked. Added [where something is modelled, it is modelled as a mechanism rather than as a threshold](#where-something-is-modelled-it-is-modelled-as-a-mechanism-rather-than-as-a-threshold), which is the most consistent habit in the code and had been written down nowhere. |
+| 2026-08-24 | **Rewrote *what is still undecided* as two sections, because it was conflating two different things.** [Where there is no intent at all](#where-there-is-no-intent-at-all) is eight subjects the mod already ships or already refuses with no statement anywhere about whether that is right — what a player does with their hands, what the blocks cost to build, creative mode, where a version boundary is, the visual channel and a player who cannot use it, what language the mod speaks, heat that leaves the world, and another mod that also simulates heat. [Open questions with a stated intent](#open-questions-with-a-stated-intent) is the four that have a position and lack a route. Two entries that were settled are marked as such rather than left reading as open. |
+| 2026-08-24 | **Three conflicts added and two rows corrected.** The element-visit allowance against *fidelity is the default* — the shipped default is not the faithful end, and `TheDefaultIsFrameBounded`'s stated reason, *the budget costs no accuracy*, is false at up to 36.98 K; what the code follows is that frame stability outranks fidelity and the price is paid down rather than denied. `G6`'s cost half against the unit it was scored in. And the corpus as the population against the corpus as what people publish. The README-audience row was resolved two days earlier and left standing, which is the same defect as a stale figure; the `MaxSubstepsPerBlock` row carries an argument that has now inverted twice. `G6`'s status is rewritten and `G1` gains its air reading; six criteria are stated as the eight they became. |
 | 2026-08-24 | **The fleet half of *use the machine* is built, and ships off.** A grid's tick splits into prepare on the game thread, solve anywhere, publish on the game thread, and a frame's solves can be fanned out through the engine's own workers — 10.17× on a 242-grid fleet, 0.99× on one grid. It ships `false` because what is left is not a measurement but three questions only a session answers, and this page's own rule is that an approximation nobody asked for does not go in front of a player: a mod taking threads on a shared machine is that shape ([backlog.md](backlog.md) `D19`). |
 | 2026-08-24 | **The largest approximation the mod shipped turned out to be the one nobody had priced, and the default moved.** `MaxElementVisitsPerStep` shortens a step rather than coarsening it, so a grid that reaches it is not less accurate — its thermal clock runs slow. Measured, that is worth 1.19 K standing at a 5 % deficit and 36.98 K at 60 % under a moving load, against the 0.028 K this world accepts for the substep ceiling and the 0.607 K that keeps `MaxSubstepsPerBlock` out of the defaults. *Fidelity is the default and a saving is a switch* is what decided it: the allowance is 4,000,000, from 2,000,000 ([backlog.md](backlog.md) `C27`). |
 | 2026-08-24 | **Recorded that the fleet half of *use the machine* is built.** This page still said nothing in the mod was threaded, three commits after `D19` built the three-phase tick and the scheduler that fans a frame's solves out. |
