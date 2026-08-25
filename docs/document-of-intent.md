@@ -264,9 +264,11 @@ habit in the code and was written down nowhere:
   a block heading somewhere below its rating is not warned about at all.
 
 **Where the mechanism is the wrong answer, it says so and why.** The glow's *brightness* is
-deliberately not incandescence, because keying it to the physics leaves 26 % of block types dying
-with no visual warning at all. That is the prior above overriding this one, and the two are in the
-order they are written in: perceptibility first, mechanism second.
+deliberately not incandescence, because keying it to the physics would leave a quarter of the game's
+block types dying with no visual warning at all —
+[the measurement is under Natural feedback](#natural-feedback--built). That is the prior above
+overriding this one, and the two are in the order they are written in: perceptibility first,
+mechanism second.
 
 ### Fidelity is the default; a saving is a switch
 
@@ -724,9 +726,8 @@ boundary lands in somebody else's session with this mod's name on it. **No call 
 or an update phase.** **Delegate signatures use whitelisted types only**, so an in-game script and a
 mod can both bind. And **keys do not change meaning within a major version**.
 
-The delegate table is a dictionary of strings to delegates, so a caller finds a wrong name out at
-run time in a session this repository will never see. That is what makes [api.md](api.md) part of
-the contract rather than a description of it (`R9`).
+Together they are what makes the table safe to publish at all — the *why* under
+[Open](#open--the-api-is-part-of-the-contract), which states the goal and the check.
 
 ### To a client: the server trusts nothing the client asserts about itself
 
