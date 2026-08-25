@@ -24,16 +24,19 @@ one of them, and this one had drifted.
 Ranked by what a player would feel, not by what is cheapest or most interesting. Every row is one of
 the mod's own stated goals failing to reach the player.
 
-**`F11` closed and handed this list a decision rather than a task.** The corpus has been walked in
-air, `G6`'s cost half fails there, and what to do about it is `C3` — whether `MaxSubstepsPerBlock 6`
-ships as a default — because the cap is the only lever that lowers a step's *work* rather than
-moving it into the frame. That is being measured on the whole population now, paired, with its
-predictions and its decision rule written down first. Under it are the two rows that were always
-blocked on something a lab cannot reach, a session and a raycast.
+**`C3` closed on 2026-08-25 and handed this list a narrower task than the one it replaced.** The
+corpus has now been walked twice — in air by `F11`, and paired under a per-block cap — and `G6`'s
+cost half still fails: step work p99 is **1.82× the allowance** on 733 of 32,575 runs. The cap
+answers it and is not being shipped, because the error is charged per block and the throughput is
+collected per grid, so four fifths of the published population would pay and collect nothing. What
+is left is the same lever aimed only where the budget binds, which is `C30`, and it needs one
+measurement rather than a population walk: a shortened step against a floored one, on the same hull
+at the same clock. Under it are the two rows that were always blocked on something a lab cannot
+reach, a session and a raycast.
 
 | | Item | Why it is here |
 | --- | --- | --- |
-| 1 | **C3** — `G6`'s cost half fails in air, and a per-block cap is the only lever that answers it | `F11` walked the corpus in air and the cost half failed: step work p99 over the allowance, in three of four worlds, on 2.73 % of published hulls. Raising the allowance moves the work into the frame rather than making a ship affordable, so the question is the cap — and the cap is undecided only because what it costs has been measured on **one hull**. `CorpusCapWalk` is walking eight thousand, paired arm against arm on one clock, with [the predictions and the decision rule written down first](balance-lab.md#what-a-per-block-cap-does-to-the-population-written-before-it-is-measured). It costs 3.4 hours, not the ten the abandoned run's own progress estimate claimed. |
+| 1 | **C30** — `G6`'s cost half needs the cap aimed where the budget binds, and one measurement decides it | `C3` measured a global cap on all 8,144 blueprints and refused it: the error is per block, the benefit is per grid, and no run under 5,000 blocks is over the allowance at all. Where the budget *does* bind, today's behaviour is not an approximation but an unbounded lag — `AffordableStepSeconds` shortens the step. Swapping that for a bounded 0.024 K needs the two priced against each other on one hull, which is a lab afternoon rather than four hours of corpus. |
 | 2 | **B30** — the temperature replication has never run in a session | `B4`'s transport is built, and the half of it a test can reach is the half that was never in doubt. Registration, addressing, the sync-distance gate and the send are host code; what stands in for a test is a pair of counters, and nobody has read them yet. |
 | 3 | **A9** — occlusion ships its cheapest rung as the default, and the rung above it is worth 0.0018 K a metre | **Measured and demoted twice**: the sample count changes the energy absorbed by nothing, the interval is the dial that does, and resolving the planet per face — the unbuilt top rung — removes 0.29 K on a 150 m hull against the 0.79 K its cadence already costs at the clock that ships. Blocked on `F5`, and no longer competing with anything on this list. |
 
