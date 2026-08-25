@@ -16,7 +16,10 @@ each of these prints what it found and renders without the parts that are absent
 
 ```
 python3 tools/corpus/verdict.py out/corpus-2026-08-21     # the criteria, on the terminal
-python3 tools/corpus/cap.py out/cap-2026-08-24            # C3: what a per-block cap buys and costs
+python3 tools/corpus/cap.py out/cap-2026-08-25            # C3: what a per-block cap buys and costs
+python3 tools/corpus/pace.py out/cap-2026-08-25/progress.txt \
+    --reference out/air-corpus-2026-08-24/progress.txt \
+    --outcomes  out/air-corpus-2026-08-24/outcomes.csv   # what a running walk will cost
 ./tools/corpus/build-report.sh out/corpus-2026-08-21      # the survey as one page
 python3 tools/corpus/panel.py out/census-2026-08-21/census.csv \
                              out/corpus-2026-08-21/outcomes.csv   # rebuild the standing panel
@@ -41,8 +44,8 @@ THERMAL_CORPUS_TESTS=1 THERMAL_CORPUS_DATA=$PWD/out/air-2026-08-24 \
     dotnet test -c Release --no-build tests/Thermodynamics.Tests \
         --filter "FullyQualifiedName~CorpusAirWalk"
 
-THERMAL_CORPUS_TESTS=1 THERMAL_CORPUS_DATA=$PWD/out/cap-2026-08-24 \
-    THERMAL_CORPUS_PROGRESS=$PWD/out/cap-2026-08-24/progress.txt \
+THERMAL_CORPUS_TESTS=1 THERMAL_CORPUS_DATA=$PWD/out/cap-2026-08-25 \
+    THERMAL_CORPUS_PROGRESS=$PWD/out/cap-2026-08-25/progress.txt \
     systemd-run --user --scope -p MemoryMax=24G -p MemorySwapMax=0 --quiet \
     dotnet test -c Release --no-build tests/Thermodynamics.Tests \
         --filter "FullyQualifiedName~CorpusCapWalk"
@@ -53,6 +56,20 @@ THERMAL_CORPUS_TESTS=1 THERMAL_CORPUS_DATA=$PWD/out/cap-2026-08-24 \
 scenario; the capped arm cannot stop there, because it has to stop where its own control stopped
 (`M1`). `THERMAL_CORPUS_SHIPS=40` walks a stride sample instead of the population, which is how to
 see that a walk works before committing the hours — the sample for this one was 320 runs in 77 s.
+
+**Twice is a ceiling, and it is the estimate to use.** The cap walk is the air walk's four
+scenarios with a second arm on each, and the two arms share one blueprint parse, so the second arm
+can only ever add what it simulates. Measured over the fifty files the two walks' progress records
+share, the cap walk is **1.95x** the air walk per file, and the air walk finished in 104 minutes —
+so the cap walk is **about three and a half hours**, with 2x as a bound nothing about the machine
+can move.
+
+**Do not estimate a walk from the rate it is covering blocks at.** That is what abandoned the first
+cap walk, and it is not an instrument: the corpus is walked largest first, so blocks-per-minute
+falls throughout every healthy run, and a mark is ten files, which here can be one capital hull or
+ten fighters. `pace.py` prints that estimate as the spread it has and then runs it over the
+*finished* air walk, where the answer is known — over that walk's own first 35 minutes it projects
+104 to 428 minutes, median 154, against the 104 it took (`P4`).
 
 **`THERMAL_CORPUS_DATA` must be absolute.** The test host's working directory is the test project's
 output directory, not the repository, so a relative path writes the dataset somewhere nobody will
@@ -351,6 +368,7 @@ limit in [known-issues.md](../../docs/known-issues.md).
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Added [`pace.py`](pace.py): what a running walk will cost, and the check that says whether the estimate means anything. The block-share rate that abandoned the first cap walk is reported as the spread it has and then run over the finished air walk, where the answer is known. |
 | 2026-08-25 | Added the *Looking for* table. A reader arriving here often wants the criteria these scripts score rather than the scripts. |
 | 2026-08-24 | **`cap.py` scores the paired walk against the four predictions registered before it ran**, and the decision rule itself is in `scoring.cap_decision` rather than in prose — the two thresholds it compares against are the ones this repository already set for other reasons, 0.03 K accepted by `C19` and 0.6 K refused by `C3`, and having them under test is what stops a threshold being chosen once the data is in (`E1`, `E11`). Four sections: the identity the predicted benefit rests on, the work percentiles per arm against the shipped allowance, the peak deltas per scenario, and the cap's reach with the control's floored count printed beside it as the check that a control is a control. A row with no partner is counted and dropped rather than compared against a default. |
 | 2026-08-24 | **`CorpusCapWalk`: the same four air scenarios, run twice, with `MaxSubstepsPerBlock` off and at 6.** `C3` and `G6`'s failing cost half are one question — the cap is the only lever that lowers a step's work — and `C3` was undecided only because its cost had been measured on one hull. **Both arms run to the same simulated clock**, which is why it is a walk rather than a join onto `F11`'s dataset: `Battery.Run` stops at equilibrium, in air that is usually 120 s of 1,800, and the effect being measured is a hundredth of a kelvin against a stopping tolerance of a quarter of one. `Battery.RunForSeconds` takes the control's elapsed clock; `outcomes.csv` gains `run_seconds` and `cap` so a reader can see where a run stopped and which arm it is. |

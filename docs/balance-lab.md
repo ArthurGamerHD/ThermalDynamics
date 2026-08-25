@@ -217,24 +217,47 @@ whichever it is, it is a finding rather than a confirmation.
 
 ### What a per-block cap does to the population, written before it is measured
 
-`CorpusCapWalk` is built and **has produced nothing**: it was launched on 2026-08-24, ran 69 of
-8,144 blueprints and was stopped. The question, the statistic, the decision rule and the numbers
-that would falsify each prediction go here first (`E1`, `E11`), because a saving measured after the
-decision to ship it has been taken is a saving that will be found to be cheap. Nothing below is
-scored against anything.
+`CorpusCapWalk` is running as of 2026-08-25 and **has produced nothing yet**: it was launched on
+2026-08-24, ran 69 of 8,144 blueprints, was stopped on an estimate that turned out not to be one,
+and is walking the population again from the start. The question, the statistic, the decision rule
+and the numbers that would falsify each prediction go here first (`E1`, `E11`), because a saving
+measured after the decision to ship it has been taken is a saving that will be found to be cheap.
+Nothing below is scored against anything.
 
-> **What stopping it measured, which is the walk's own cost.** At 45 minutes it had covered **10 %
-> of the corpus's blocks** and the rate was *falling* — about 0.14 % a minute over the last
-> interval against 0.24 % averaged from the start. A pairing costs about twice an unpaired walk only
-> while ships are large; once the giants are cleared the per-*ship* overhead dominates, and this
-> walk pays it 8,144 times over eight runs each where `F11` paid it over four. The honest
-> extrapolation is **past ten hours**, not the 3.5 the design note projected from `F11`'s
-> wall-clock. The resume record and its 69 blueprints are kept (`O3`), so relaunching continues
-> rather than restarts — but **resuming it is a decision, not a default**: a cheaper design that
-> answers the same four predictions, whether by fewer scenarios or by a stratified sample with its
-> selection rule written down (`M10`), is worth costing first. The estimate that said 3.5 hours was
-> taken from a 40-ship stride sample, which is exactly the part of the corpus where the per-ship
-> overhead is hidden.
+> **What stopping it measured was the estimator, and the estimator was wrong.** The walk was
+> abandoned at 45 minutes on a projection of *past ten hours*, taken from the share of the
+> population's blocks it had covered divided by the rate it was covering them at — 0.14 % a minute
+> over the last interval against 0.24 % averaged from the start, a rate that was *falling*.
+>
+> **The corpus is walked largest first, so that rate falls throughout every healthy run.** The fall
+> is a property of the ordering rather than of the walk, and a progress mark is ten files, which on
+> a largest-first corpus can be one capital hull or ten fighters. Run the same estimator over
+> `CorpusAirWalk`, which finished in **104 minutes**, and over that walk's own first 35 minutes it
+> projects **104 to 428 minutes, median 154** — a five-fold spread around an answer already known
+> ([pace.py](../tools/corpus/pace.py), `P4`). It is not an instrument, and nothing should have been
+> decided on it.
+>
+> **What the cost actually is: three and a half hours.** The cap walk is the air walk's four
+> scenarios with a second arm on each, and the two arms share one blueprint parse, so the second arm
+> can only add what it simulates and **2x is a ceiling by construction**. Over the fifty files the
+> two walks' progress records share, the measured ratio is **1.95x**, and 1.95 x 104 minutes is
+> 3.4 hours. The design note's original 3.5 hours was right; it was taken from a 40-ship stride
+> sample, which is the part of the corpus where the per-ship overhead is hidden, so it was right for
+> a reason that does not support it — and the figure that overturned it was worse.
+>
+> **So no cheaper design was built, and that is a decision rather than an omission.** A stratified
+> sample would have to defend its selection rule (`M10`) and would answer the reach prediction — a
+> share of *all* blocks in the population — only under that rule's own assumptions; dropping the
+> vacuum anchor would save a quarter of a walk and cost the control that says air cannot make a hull
+> softer. Neither is worth an hour and a half against a population walk that answers all four
+> predictions as written.
+>
+> **The 69 blueprints of the abandoned run were not resumed onto**, because three commits touched
+> the solver and the harness between that run and this one, and none of the three was checked for
+> behaviour — two were documentation passes over comments and one closed a definition-id collision,
+> which is exactly the shape of change that looks inert and is not. Restarting costs 35 minutes of the 3.4 hours and buys a dataset collected under one
+> build (`M1`) — and the new run's first 69 ships are then a reproduction check on the old partial
+> for nothing (`E7`).
 
 **The question, and why it is one question rather than two.** [backlog.md](backlog.md) `C3` asks
 whether `MaxSubstepsPerBlock 6` should be a default; `G6`'s cost half fails in air. They are the
@@ -760,6 +783,7 @@ is an enclosing hull, and the corpus has hulls.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | **The estimate that abandoned `CorpusCapWalk` was checked against a walk whose answer is known, and it fails the check.** The walk was stopped at 45 minutes on *past ten hours*, projected from the share of the population's blocks covered over the rate they were being covered at. The corpus is walked largest first, so that rate falls throughout every healthy run, and a progress mark is ten files — one capital hull or ten fighters. Run over `CorpusAirWalk`, which finished in **104 minutes**, the same estimator projects **104 to 428 minutes, median 154** over that walk's own first 35 (`P4`). The estimate that survives is the ratio: a second arm sharing one parse is **2x by construction** and **1.95x** measured over the fifty files the two walks share, so the walk costs **3.4 hours**. [pace.py](../tools/corpus/pace.py) is that arithmetic, with `test_pace.py` pinning it; no cheaper design was built, and the paragraph above says why. The walk was restarted rather than resumed, because three commits touched the solver and the harness in between (`M1`). |
 | 2026-08-24 | **One definition of a percentile, where there were two.** `air.py` interpolated between the two ranks a quantile falls between and `verdict.py` took `values[int(q × n)]`, and these pages print the two side by side — a corpus p99 against a panel p99. On forty thousand samples they agree to a third of a per cent, which is why nobody noticed; on **forty** they do not agree at all, because `int(0.99 × 40)` is 39 and the fortieth of forty is the maximum. A p99 that is the largest reading in the set is not a percentile, and a forty-hull panel is a set this repository scores. The interpolating one survives, because every published panel figure was computed with it; the corpus figures move by up to 0.3 % and are re-quoted (`P5`, `P3`). |
 | 2026-08-24 | **Settled the sealed-block anomaly, and corrected a sample figure that had been standing as a population one.** This page said twenty-four sealed blocks, all on `UNSC Panama`, of 1.15 million — the 2026-08-21 corpus says **1,184 across 331 ships of 45.2 million**, and the *share* was right to a rounding, which is why nobody caught the rest (`E2`). Measured with `bench sealed`, there are two kinds and neither is impossible: `LargeBlockGyro`, 307 of the 330 on the seven worst ships, whose game definition declares one mount point so a gyro with its bottom face against empty space bolts to nothing while being buried — the model's *touch without mounts conducts nothing* rule working, on a block that makes heat; and an armour cube alone in an interior void, whose six free faces all look into cells that are not external and so count as unexposed by definition. The synthetic two-block grid could never reproduce the second because two blocks in open space have external neighbours. Also: air is a third exit and the sealed test never looked at it, so `HotSpotLab.IsSealed` is now one definition shared with `CorpusSurvey` and the report prints how many rooms hold air — on an unpressurised lab hull, none. |
 | 2026-08-24 | **`CorpusCapWalk` was launched, ran 69 of 8,144 blueprints and was stopped, and the finding is the walk's own cost.** At 45 minutes it had covered 10 % of the corpus's blocks with the rate *falling* — 0.14 % a minute over the last interval against 0.24 % averaged from the start — which extrapolates past **ten hours** rather than the 3.5 the design note projected from `F11`'s wall-clock. The projection was wrong because it was taken on a 40-ship stride sample, and a stride sample is exactly where the per-*ship* overhead hides: pairing costs about twice an unpaired walk only while ships are large, and once the giants are cleared this walk pays a fixed per-ship cost 8,144 times over eight runs each where `F11` paid it over four. The resume record is kept (`O3`) and nothing is scored: **a partial sweep is not a result** (`E4`), and resuming is now a decision rather than a default. |
