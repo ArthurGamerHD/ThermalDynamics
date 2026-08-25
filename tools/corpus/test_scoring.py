@@ -334,5 +334,46 @@ class Compare(unittest.TestCase):
         self.assertEqual("", scoring.compare({"a": "0"}, {"a": "3"})[0][3])
 
 
+
+class PerBlockCap(unittest.TestCase):
+    """`C3`'s decision rule, which was written down before the walk that produces its number."""
+
+    def test_the_two_thresholds_are_the_ones_the_mod_already_set(self):
+        # Neither is invented for this decision. 0.03 K is what `C19` accepted as the price of the
+        # substep ceiling's breach; 0.6 K is what made `MaxSubstepsPerBlock` a switch rather than a
+        # default in the first place. A rule built from thresholds chosen once the data is in is
+        # not a rule (`E1`, `E11`).
+        self.assertEqual(0.03, scoring.CAP_ACCEPTED_KELVIN)
+        self.assertEqual(0.6, scoring.CAP_REFUSED_KELVIN)
+
+    def test_a_cost_the_mod_already_accepts_ships(self):
+        self.assertEqual("ship", scoring.cap_decision(0.0))
+        self.assertEqual("ship", scoring.cap_decision(0.028))
+        self.assertEqual("ship", scoring.cap_decision(scoring.CAP_ACCEPTED_KELVIN))
+
+    def test_a_cost_the_mod_already_refuses_stays_a_switch(self):
+        self.assertEqual("switch", scoring.cap_decision(scoring.CAP_REFUSED_KELVIN))
+        self.assertEqual("switch", scoring.cap_decision(0.607))
+        self.assertEqual("switch", scoring.cap_decision(12.0))
+
+    def test_between_them_is_an_argument_rather_than_a_threshold(self):
+        self.assertEqual("judgement", scoring.cap_decision(0.031))
+        self.assertEqual("judgement", scoring.cap_decision(0.3))
+        self.assertEqual("judgement", scoring.cap_decision(0.599))
+
+    def test_an_unmeasured_cost_decides_nothing(self):
+        self.assertIsNone(scoring.cap_decision(None))
+
+    def test_a_delta_is_absolute_because_a_cap_can_cool_as_well_as_heat(self):
+        # The floor raises the capacity of the stiffest elements, which slows a transient in
+        # whichever direction it was going -- so a capped hull finishing *below* its control is the
+        # same size of error as one finishing above it.
+        self.assertAlmostEqual(0.25, scoring.delta_peak(300.0, 300.25), places=6)
+        self.assertAlmostEqual(0.25, scoring.delta_peak(300.0, 299.75), places=6)
+
+    def test_a_pair_missing_an_arm_reports_nothing(self):
+        self.assertIsNone(scoring.delta_peak(None, 300.0))
+        self.assertIsNone(scoring.delta_peak(300.0, None))
+
 if __name__ == "__main__":
     unittest.main()

@@ -337,3 +337,59 @@ def percentiles(values):
         "p99": percentile(ordered, 0.99),
         "max": ordered[-1],
     }
+
+
+# ---- the per-block cap, and the rule that decides whether it ships -------------------------
+
+# What the mod already accepts as the price of an approximation it ships: refusing 1.15x of the
+# substep demand costs this much on the hottest block of a driven census hull over 600 simulated
+# seconds, and `C19` closed by keeping the cap and letting `G6` fail rather than paying for
+# fidelity nobody can perceive.
+CAP_ACCEPTED_KELVIN = 0.03
+
+# What the mod already refuses as the price of a default: `MaxSubstepsPerBlock 6` cost this much on
+# the worst-placed block when it was first measured, and that is what made it a switch rather than
+# a default. See backlog.md, C3.
+CAP_REFUSED_KELVIN = 0.6
+
+
+def cap_decision(p99_delta_kelvin):
+    """Whether a per-block cap's measured cost puts it inside what the mod already accepts.
+
+    **Written before the walk that produces the number** (`E1`, `E11`), which is the whole point:
+    the two thresholds are not invented for this decision, they are the two calibration points this
+    repository already has for what *imperceptible* means, and both were set by decisions taken for
+    other reasons. Returns one of `ship`, `switch` or `judgement`.
+
+    `judgement` is not a failure to decide. It is the statement that the number landed between the
+    thing the mod accepts and the thing it refuses, where nothing but an argument can settle it --
+    and that argument belongs in the open, in the commit that moves a default, rather than in a
+    threshold chosen once the data is in.
+
+    Returns None for no measurement, because an unmeasured cost decides nothing (`E8`).
+    """
+    if p99_delta_kelvin is None:
+        return None
+
+    if p99_delta_kelvin <= CAP_ACCEPTED_KELVIN:
+        return "ship"
+    if p99_delta_kelvin >= CAP_REFUSED_KELVIN:
+        return "switch"
+
+    return "judgement"
+
+
+def delta_peak(control, capped):
+    """How far apart two arms of one paired run finished, in kelvin.
+
+    Absolute, because a cap can leave a block cooler as well as hotter: it raises the capacity of
+    the stiffest elements, which slows a transient in whichever direction the transient was going.
+    The claim being scored is *how wrong*, not *how much hotter*.
+
+    Returns None where either arm has no peak, so a pair that did not both run reports nothing
+    rather than a delta against a zero.
+    """
+    if control is None or capped is None:
+        return None
+
+    return abs(capped - control)
