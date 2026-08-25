@@ -4,8 +4,8 @@ What this mod deliberately does not model, what is still open, and the failure p
 carrying forward. Open work is tracked one line each in [backlog.md](backlog.md); this page carries
 the argument behind each entry.
 
-> The rules argued here are stated canonically in [rules.md](rules.md): `E2` `E9` `D3` `D5` `D6`,
-> and the principle P14 the deliberate limits follow from.
+> The rules argued here are stated canonically in [rules.md](rules.md): `E2` `E9` `D2` `D3` `D5`
+> `D6` `C9`, and the principle P14 the deliberate limits follow from.
 
 | Looking for | Go to |
 | --- | --- |
@@ -714,9 +714,15 @@ would show.
 
 ## Failure patterns worth remembering
 
-Each of these is stated as the rule it produced. The defect that produced it is the evidence, and
-the date it was found is in the [change log](#change-log). They are grouped by the shape of the
-failure rather than by the subsystem, because the shape is what repeats.
+**This section is evidence, not rules.** Each entry is the defect that produced a standing lesson,
+and where that lesson is a rule this repository is bound by, the rule is stated once in
+[rules.md](rules.md) and this is the page it points back to (`R13`). Reading it the other way round
+is what the heading used to invite — it said *each of these is stated as the rule it produced* — and
+two of them had drifted into restating a rule's own sentence beside it.
+
+They are grouped by the shape of the failure rather than by the subsystem, because the shape is what
+repeats. Four produced a rule and name it; the rest are engine behaviour or model behaviour that
+cost a defect once and is worth not paying for twice. Dates are in the [change log](#change-log).
 
 ### A mechanism can be correct everywhere it is exercised and inert everywhere it runs
 
@@ -759,6 +765,8 @@ than against literals, because silently *becoming* the default is the failure be
 it on drew nothing. Found by grepping for *readers* of a setting rather than by using it — which is
 the check worth running over the whole settings list, and is now `SettingsWiringTests`.
 
+*The rule it produced:* `D2` — hunt for what is built, documented and reached by nothing.
+
 ### One definition read by two parsers drifts, silently, in both directions
 
 Block thermal properties are read twice: `ThermalCellDefinition` asks Definition Extensions for them
@@ -776,6 +784,8 @@ every corpus run and every scenario, and by nothing in a game.
 `BothParsersKnowTheSamePropertyNames` compares the two name lists in both directions. It is textual,
 because the in-game reader cannot be linked into the test project — which is the same reason the two
 parsers exist, and therefore the reason a check on them has to be.
+
+*The rule it produced:* `D3` — where one thing exists twice, a test compares the two.
 
 ### A number can be right in the solver and attached to nothing
 
@@ -795,6 +805,8 @@ block's behaviour, because behaviour was never the thing that broke. See
 `HydrogenEngine`, so the derivation charges a 400 MW plant a combustion engine's 0.60 waste
 fraction: 240 MW of heat out of a 3×2×2 block. It needs a per-subtype override — see
 [backlog.md](backlog.md).
+
+*The rule it produced:* `D2`, from the other side: the number was reached by nothing.
 
 ### A diagnostic that reports zero while working is worse than no diagnostic
 
@@ -886,6 +898,8 @@ the game, 11 of 12 agreeing with `IsRoomAtPositionAirtight`. That is the argumen
 before fixing — the sealing test looked guilty from the counts alone and was not. The comparison now
 runs every dump and is reported per compartment. See
 [thermal-model.md](thermal-model.md#diagnostics).
+
+*The rule it produced:* `C9` — the game's own answer is read, never overridden.
 
 ### A guard has to test what it claims to test
 
@@ -1055,6 +1069,7 @@ counters rather than milliseconds so it holds on any machine.
 | 2026-08-22 | Reopened the per-grid shadow limit as designed work. It was recorded as a simplification taken on purpose, which `D6` is satisfied by, but the cost argument behind it treated three occluders as one: the planet's test is analytic and costs no ray, so the per-block objection was never true of the one occluder a player notices. Now [backlog](backlog.md) `A9`. |
 | 2026-08-22 | Filed the burning-ship divergence as an open defect. It had been carried on [realism.md](realism.md) as a starved-integrator finding; re-measuring it showed 0% starved, so the explanation is withdrawn and the defect stands with its cause unknown. |
 | 2026-08-22 | Repointed the step-budget paragraph at the renamed test and at the shipped rate, which moved from eight steps a second to four when the settings profiles were removed. |
+| 2026-08-25 | **The failure-pattern section is evidence and now says so.** Its heading claimed *each of these is stated as the rule it produced*, which is `R13` inverted — a rule is stated once, in [rules.md](rules.md), and argued on the page that holds the evidence. Two entries had drifted into restating a rule's own sentence beside it. The four that produced a rule name it (`D2` twice, `D3`, `C9`); the rest are engine or model behaviour that cost a defect once and is worth not paying for twice. |
 | 2026-08-24 | **Added the element-visit allowance to the deliberate limits, which is where the mod's largest shipped approximation should have been all along** (`D6`). It was missing because *the budget costs no accuracy* is true — a bounded step is shortened rather than coarsened — and reads as *nothing is lost*. What is lost is time, and `C27` priced it: 0.00 K on a parked ship, 1.19 K standing at a 5 % deficit and 36.98 K at 60 % under a moving load, against 0.028 K for the substep ceiling this world accepts and 0.607 K for the per-block cap it refuses. A limit nobody wrote down is the defect this section exists to prevent, and this one had been described three times elsewhere as a defect history and never once as a limit. |
 | 2026-08-22 | Moved the thermal view out of the deliberate limits. It was filed there on the grounds that mods get no shader — which is a statement about difficulty, not a simplification taken on purpose, and a limit is only a limit when it is chosen (`D6`). It is an open problem, and the intent to have one is stated in [document-of-intent.md](document-of-intent.md#thermal-vision--wanted-method-unknown). Recorded the absence of any non-instrument feedback beside it. |
 | 2026-08-22 | Absorbed `bugs-and-performance.md`, the record of the first extraction pass. Every one of its thirty-two findings is resolved in the current code — including the eleven whose headings carried no *fixed* marker, each re-verified against the source during this pass — so the page survives as the dated entries below and the patterns above rather than as a defect list. Restructured around the shape of each failure rather than its subsystem; promoted the deliberate limits to the top; moved the corpus balance findings to [balance.md](balance.md), which is where the dataset they come from is described. Removed two limits that the per-room gas-system read had already retired ("a room with no air vent holds no air" and "pressurisation is only known through air vents") and corrected a third: block `Conductivity` is real W/(m·K), and it is the *coolant loop's* that is still a 0…1 quality. Merged the two sections both titled "Fixed, worth remembering". |
