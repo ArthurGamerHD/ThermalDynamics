@@ -23,6 +23,40 @@ namespace Thermodynamics.Core
         public float ThermalMass { get; private set; }
 
         /// <summary>
+        /// Heat capacity of coolant this block is holding outside any loop, in real J/K before
+        /// <see cref="HeatTimeScale"/>. Zero for every block that is not a pipe whose ring has been
+        /// broken.
+        ///
+        /// <para>
+        /// A ring that stops being a ring has no successor loop and its parcels have nowhere to
+        /// live, so each pipe takes the parcel that was inside it. Taking only the *temperature*
+        /// destroys `M_s / (M_n + M_s)` of the ring's heat; taking the mass as well is exact,
+        /// because the fluid really is still in the block. It is handed back the moment a ring runs
+        /// through this pipe again, which is exact in the other direction too: a mixture is at one
+        /// temperature, so splitting it at that temperature conserves energy term by term.
+        /// </para>
+        ///
+        /// <para>
+        /// It is a separate field rather than a bigger <see cref="BlockInstance.Mass"/> because the
+        /// host owns that figure and recomputes it from build progress, damage and inventory; a
+        /// value this model added would be overwritten the next time the game reported one.
+        /// </para>
+        /// </summary>
+        public float HeldCoolantCapacity
+        {
+            get { return heldCoolantCapacity; }
+            set
+            {
+                float clamped = value > 0f ? value : 0f;
+                if (clamped == heldCoolantCapacity) return;
+                heldCoolantCapacity = clamped;
+                RefreshThermalMass();
+            }
+        }
+
+        private float heldCoolantCapacity;
+
+        /// <summary>
         /// Exposed cell faces per face direction, six counts packed into one field.
         ///
         /// <para>
@@ -177,7 +211,12 @@ namespace Thermodynamics.Core
         public void RefreshThermalMass()
         {
             float mass = Math.Max(0f, Block.Mass);
-            float capacity = (Thermal.SpecificHeat * mass) / heatTimeScale;
+
+            // Held coolant is stated in real J/K like the block's own, so it goes through the same
+            // divide. Storing the divided figure instead would leave it on whatever clock was
+            // running when the ring broke, and a world that changed `HeatTimeScale` afterwards
+            // would carry one capacity on two clocks with nothing saying so.
+            float capacity = (((Thermal.SpecificHeat * mass) + heldCoolantCapacity) / heatTimeScale);
             ThermalMass = Math.Max(ThermalConstants.MinimumThermalMass, capacity);
             StateDirty = true;
         }

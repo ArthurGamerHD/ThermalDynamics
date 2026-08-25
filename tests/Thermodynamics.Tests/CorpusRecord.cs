@@ -106,30 +106,43 @@ namespace Thermodynamics.Tests
         /// The commit `HEAD` points at, read from `.git` rather than by running git — the harness
         /// has no process to spawn and a walk must not depend on one being available.
         ///
-        /// **Says `unknown` rather than guessing**, and says `dirty` when anything is uncommitted,
-        /// because a clean-looking hash on a dirty tree is worse than no hash at all.
+        /// **Says `unknown` rather than guessing.** It does not say whether the tree is clean: that
+        /// needs the index and every file's stat, which is a `git status` and not a file read. What
+        /// stands in for it is the definition hashes beside the commit, which are what decides what
+        /// a walk measures. This summary used to claim a `dirty` marker that no line of the method
+        /// produced.
+        ///
+        /// <para>
+        /// **`.git` is a directory in a clone and a file in a worktree**, and the file names the
+        /// directory to read instead. Following it matters because a walk launched from a worktree
+        /// otherwise recorded `unknown` and looked exactly like a walk on a machine with no
+        /// repository at all — the silent half of the failure this record exists to prevent. Loose
+        /// refs live in the *common* directory a worktree shares with its clone, so a reference is
+        /// looked for there as well before `packed-refs` is tried.
+        /// </para>
         /// </summary>
         private static string Commit()
         {
             try
             {
-                string git = Path.Combine(Root(), ".git");
+                string git = GitDirectory();
+                if (git == null) return "unknown";
+
+                string common = CommonDirectory(git);
                 string head = File.ReadAllText(Path.Combine(git, "HEAD")).Trim();
 
                 string hash;
                 if (head.StartsWith("ref:", StringComparison.Ordinal))
                 {
                     string reference = head.Substring(4).Trim();
-                    string path = Path.Combine(git, reference.Replace('/', Path.DirectorySeparatorChar));
+                    string relative = reference.Replace('/', Path.DirectorySeparatorChar);
 
-                    if (File.Exists(path))
-                    {
-                        hash = File.ReadAllText(path).Trim();
-                    }
-                    else
-                    {
-                        hash = Packed(git, reference);
-                    }
+                    string path = Path.Combine(git, relative);
+                    if (!File.Exists(path)) path = Path.Combine(common, relative);
+
+                    hash = File.Exists(path)
+                        ? File.ReadAllText(path).Trim()
+                        : Packed(common, reference);
                 }
                 else
                 {
@@ -142,6 +155,48 @@ namespace Thermodynamics.Tests
             {
                 return "unknown";
             }
+        }
+
+        /// <summary>
+        /// The directory holding this checkout's `HEAD`: `.git` itself in a clone, and whatever the
+        /// `gitdir:` line names in a worktree, where `.git` is a file. Null when neither is there.
+        /// </summary>
+        private static string GitDirectory()
+        {
+            // `System.IO.` spelled out: this class has a `Directory()` of its own — the dataset
+            // directory — and the unqualified name resolves to it.
+            string root = Root();
+            string git = Path.Combine(root, ".git");
+
+            if (System.IO.Directory.Exists(git)) return git;
+            if (!File.Exists(git)) return null;
+
+            string text = File.ReadAllText(git).Trim();
+            if (!text.StartsWith("gitdir:", StringComparison.Ordinal)) return null;
+
+            string named = text.Substring("gitdir:".Length).Trim();
+            if (named.Length == 0) return null;
+
+            // Git writes it absolute here and is allowed to write it relative, which is resolved
+            // against the directory the `.git` file is in.
+            string resolved = Path.IsPathRooted(named) ? named : Path.Combine(root, named);
+            return System.IO.Directory.Exists(resolved) ? resolved : null;
+        }
+
+        /// <summary>
+        /// The directory a worktree shares with its clone — refs, objects and `packed-refs` all live
+        /// there. Named by a `commondir` file beside `HEAD`; without one, this *is* the clone.
+        /// </summary>
+        private static string CommonDirectory(string git)
+        {
+            string marker = Path.Combine(git, "commondir");
+            if (!File.Exists(marker)) return git;
+
+            string named = File.ReadAllText(marker).Trim();
+            if (named.Length == 0) return git;
+
+            string resolved = Path.IsPathRooted(named) ? named : Path.Combine(git, named);
+            return System.IO.Directory.Exists(resolved) ? resolved : git;
         }
 
         /// <summary>A reference that lives in `packed-refs` rather than as a loose file.</summary>

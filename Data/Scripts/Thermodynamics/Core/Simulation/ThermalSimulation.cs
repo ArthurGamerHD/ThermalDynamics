@@ -884,14 +884,26 @@ namespace Thermodynamics.Core
         /// </summary>
         public int RoomsRestored { get; private set; }
 
-        /// <summary>Encodes every block, loop and room air temperature.</summary>
+        /// <summary>
+        /// Encodes every block, loop and room air temperature, and the coolant any pipe is holding
+        /// outside a loop.
+        /// </summary>
         public string Save()
         {
             List<StoredTemperature> blocks = new List<StoredTemperature>(solver.Nodes.Count);
+
+            // Sized for the common case, which is none: a pipe holds coolant only between its ring
+            // being broken and being rebuilt.
+            List<StoredHeldCoolant> held = null;
+
             for (int i = 0; i < solver.Nodes.Count; i++)
             {
                 ThermalNode node = solver.Nodes[i];
                 blocks.Add(new StoredTemperature(node.Block.Position, node.Temperature));
+
+                if (node.HeldCoolantCapacity <= 0f) continue;
+                if (held == null) held = new List<StoredHeldCoolant>();
+                held.Add(new StoredHeldCoolant(node.Block.Position, node.HeldCoolantCapacity));
             }
 
             List<StoredLoop> loops = new List<StoredLoop>(solver.Loops.Count);
@@ -912,7 +924,7 @@ namespace Thermodynamics.Core
                 rooms.Add(new StoredRoom(air[i].Anchor, air[i].Temperature));
             }
 
-            return ThermalStorageCodec.Encode(blocks, loops, rooms);
+            return ThermalStorageCodec.Encode(blocks, loops, rooms, held);
         }
 
         /// <summary>
@@ -928,8 +940,9 @@ namespace Thermodynamics.Core
             List<StoredTemperature> blocks = new List<StoredTemperature>();
             List<StoredLoop> storedLoops = new List<StoredLoop>();
             List<StoredRoom> storedRooms = new List<StoredRoom>();
+            List<StoredHeldCoolant> storedHeld = new List<StoredHeldCoolant>();
 
-            if (!ThermalStorageCodec.TryDecode(data, blocks, storedLoops, storedRooms)) return 0;
+            if (!ThermalStorageCodec.TryDecode(data, blocks, storedLoops, storedRooms, storedHeld)) return 0;
 
             int restored = 0;
             for (int i = 0; i < blocks.Count; i++)
@@ -954,9 +967,37 @@ namespace Thermodynamics.Core
                 }
             }
 
+            // **A pipe the rebuild put back in a ring is refused its saved coolant**, because the
+            // ring gave it a parcel of its own and taking both would create the heat capacity twice
+            // over. It can happen without anything being wrong with the save: `Load` runs after
+            // `RebuildAll`, so a blueprint edited between the save and the load — or a build that
+            // traces a ring this one did not — arrives with the ring whole and the record stale.
+            for (int i = 0; i < storedHeld.Count; i++)
+            {
+                BlockInstance block = grid.GetAtCell(storedHeld[i].Position);
+                if (block == null) continue;
+
+                ThermalNode node = solver.GetNode(block);
+                if (node == null) continue;
+                if (IsInALoop(block)) continue;
+
+                node.HeldCoolantCapacity = storedHeld[i].Capacity;
+            }
+
             RoomsRestored = solver.RestoreRoomAir(storedRooms);
 
             return restored;
+        }
+
+        /// <summary>Whether any live loop runs through this block. See <see cref="Load"/>.</summary>
+        private bool IsInALoop(BlockInstance block)
+        {
+            IList<CoolantLoop> live = solver.Loops;
+            for (int i = 0; i < live.Count; i++)
+            {
+                if (live[i].Contains(block)) return true;
+            }
+            return false;
         }
 
         /// <summary>

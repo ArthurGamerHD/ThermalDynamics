@@ -30,6 +30,29 @@ namespace Thermodynamics.Core
         }
     }
 
+    /// <summary>
+    /// One pipe's held coolant, keyed by its cell: the real J/K it absorbed when its ring was
+    /// broken, before <see cref="Thermodynamics.Core.ThermalSettings.HeatTimeScale"/>.
+    ///
+    /// <para>
+    /// It is saved because it is heat capacity that no other saved value implies. The block's
+    /// temperature is written whatever happens, so a reload that dropped the capacity would put the
+    /// mixed temperature onto the bare pipe and destroy the fraction the mix had just conserved —
+    /// the `A12` loss again, on a slower trigger.
+    /// </para>
+    /// </summary>
+    public struct StoredHeldCoolant
+    {
+        public Vector3I Position;
+        public float Capacity;
+
+        public StoredHeldCoolant(Vector3I position, float capacity)
+        {
+            Position = position;
+            Capacity = capacity;
+        }
+    }
+
     /// <summary>One saved room air temperature, keyed by the room's anchor cell.</summary>
     public struct StoredRoom
     {
@@ -55,6 +78,7 @@ namespace Thermodynamics.Core
         private const byte SectionBlocks = 1;
         private const byte SectionLoops = 2;
         private const byte SectionRooms = 3;
+        private const byte SectionHeldCoolant = 4;
 
         private const int LegacyRecordSize = 6;
         private const int LegacyLoopRecordSize = 3;
@@ -73,9 +97,21 @@ namespace Thermodynamics.Core
         /// <summary>Encodes block, loop and room air temperatures in the current format.</summary>
         public static string Encode(IList<StoredTemperature> blocks, IList<StoredLoop> loops, IList<StoredRoom> rooms)
         {
+            return Encode(blocks, loops, rooms, null);
+        }
+
+        /// <summary>
+        /// Encodes block, loop, room air and held coolant in the current format. Held coolant is a
+        /// fourth section rather than a new marker, so a build that predates it reads the three it
+        /// knows and skips this one instead of rejecting the payload.
+        /// </summary>
+        public static string Encode(IList<StoredTemperature> blocks, IList<StoredLoop> loops,
+            IList<StoredRoom> rooms, IList<StoredHeldCoolant> held)
+        {
             int blockCount = blocks == null ? 0 : blocks.Count;
             int loopCount = loops == null ? 0 : loops.Count;
             int roomCount = rooms == null ? 0 : rooms.Count;
+            int heldCount = held == null ? 0 : held.Count;
 
             int size = 1
                 + (1 + Int32Size + (blockCount * RecordSize))
@@ -84,6 +120,10 @@ namespace Thermodynamics.Core
             // A world with room air disabled writes no section rather than an empty one, so the
             // format costs nothing when the feature is unused.
             if (roomCount > 0) size += 1 + Int32Size + (roomCount * RecordSize);
+
+            // The same rule, and it earns more here: a pipe holds coolant only between a ring
+            // breaking and being rebuilt, so on almost every grid ever saved this section is absent.
+            if (heldCount > 0) size += 1 + Int32Size + (heldCount * RecordSize);
 
             byte[] bytes = new byte[size];
             int at = 0;
@@ -122,6 +162,19 @@ namespace Thermodynamics.Core
                 }
             }
 
+            if (heldCount > 0)
+            {
+                bytes[at++] = SectionHeldCoolant;
+                WriteInt32(bytes, ref at, heldCount);
+
+                for (int i = 0; i < heldCount; i++)
+                {
+                    StoredHeldCoolant entry = held[i];
+                    WriteInt64(bytes, ref at, GridMath.Key(entry.Position));
+                    WriteSingle(bytes, ref at, entry.Capacity);
+                }
+            }
+
             return Convert.ToBase64String(bytes);
         }
 
@@ -140,9 +193,21 @@ namespace Thermodynamics.Core
         /// </summary>
         public static bool TryDecode(string data, List<StoredTemperature> blocks, List<StoredLoop> loops, List<StoredRoom> rooms)
         {
+            return TryDecode(data, blocks, loops, rooms, null);
+        }
+
+        /// <summary>
+        /// Decodes either format, including held coolant. A payload written before pipes could hold
+        /// any — which is every payload a released build has written — leaves
+        /// <paramref name="held"/> empty.
+        /// </summary>
+        public static bool TryDecode(string data, List<StoredTemperature> blocks, List<StoredLoop> loops,
+            List<StoredRoom> rooms, List<StoredHeldCoolant> held)
+        {
             if (blocks != null) blocks.Clear();
             if (loops != null) loops.Clear();
             if (rooms != null) rooms.Clear();
+            if (held != null) held.Clear();
 
             if (string.IsNullOrEmpty(data)) return false;
 
@@ -160,13 +225,14 @@ namespace Thermodynamics.Core
 
             if (bytes[0] == Version2Marker)
             {
-                return TryDecodeVersion2(bytes, blocks, loops, rooms);
+                return TryDecodeVersion2(bytes, blocks, loops, rooms, held);
             }
 
             return TryDecodeLegacyBlocks(bytes, blocks);
         }
 
-        private static bool TryDecodeVersion2(byte[] bytes, List<StoredTemperature> blocks, List<StoredLoop> loops, List<StoredRoom> rooms)
+        private static bool TryDecodeVersion2(byte[] bytes, List<StoredTemperature> blocks,
+            List<StoredLoop> loops, List<StoredRoom> rooms, List<StoredHeldCoolant> held)
         {
             // Every read is bounds checked up front rather than caught afterwards: the in-game
             // script compiler's whitelist prohibits IndexOutOfRangeException, so a truncated payload
@@ -200,6 +266,10 @@ namespace Thermodynamics.Core
                     else if (section == SectionRooms)
                     {
                         if (rooms != null) rooms.Add(new StoredRoom(GridMath.FromKey(key), temperature));
+                    }
+                    else if (section == SectionHeldCoolant)
+                    {
+                        if (held != null) held.Add(new StoredHeldCoolant(GridMath.FromKey(key), temperature));
                     }
                 }
             }

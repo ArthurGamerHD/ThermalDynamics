@@ -75,7 +75,12 @@ namespace Thermodynamics.Core
         /// </summary>
         public float SegmentTemperature(int index)
         {
-            if (segments == null || index < 0 || index >= segmentCount) return seeded;
+            // **Bounded by the pipe count, not the parcel count.** `ParcelOf` already folds a pipe
+            // index onto a parcel slot, and the two counts differ under `WellMixedCoolant`, where
+            // the ring is one parcel however many pipes it has: guarding on the parcel count there
+            // sent every pipe past the first to `seeded` instead of to the fluid.
+            if (segments == null || segmentCount == 0) return seeded;
+            if (index < 0 || index >= Pipes.Count) return seeded;
             return segments[ParcelOf(index)];
         }
 
@@ -114,7 +119,10 @@ namespace Thermodynamics.Core
         /// </summary>
         public void SetSegmentTemperature(int pipeIndex, float temperature)
         {
-            if (segments == null || pipeIndex < 0 || pipeIndex >= segmentCount) return;
+            // The same bound, and the same reason: under `WellMixedCoolant` this silently did
+            // nothing for every pipe but the first.
+            if (segments == null || segmentCount == 0) return;
+            if (pipeIndex < 0 || pipeIndex >= Pipes.Count) return;
 
             segments[ParcelOf(pipeIndex)] = temperature < ThermalConstants.MinimumTemperature
                 ? ThermalConstants.MinimumTemperature

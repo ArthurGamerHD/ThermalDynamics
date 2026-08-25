@@ -239,6 +239,63 @@ namespace Thermodynamics.Tests
             Assert.Empty(rooms);
         }
 
+        /// <summary>
+        /// The same promise for held coolant, which is a fourth section on the same rule
+        /// (backlog.md `A12`). A world saved with a broken ring in it has to open on a build that
+        /// has never heard of one: the ring will be traced as broken there too, the coolant will be
+        /// lost as it was before the fix, and nothing else about the save is disturbed — which is
+        /// the whole of what `P15` promises.
+        /// </summary>
+        [Fact]
+        public void AReaderThatDoesNotKnowAboutHeldCoolantStillReadsEverythingElse()
+        {
+            List<StoredTemperature> blocks = new List<StoredTemperature>
+            {
+                new StoredTemperature(new Vector3I(1, 2, 3), 455.5f),
+            };
+            List<StoredLoop> loops = new List<StoredLoop> { new StoredLoop(4242L, 310.25f) };
+            List<StoredRoom> rooms = new List<StoredRoom> { new StoredRoom(Vector3I.Zero, 290f) };
+            List<StoredHeldCoolant> held = new List<StoredHeldCoolant>
+            {
+                new StoredHeldCoolant(new Vector3I(4, 5, 6), 6422000f),
+            };
+
+            string encoded = ThermalStorageCodec.Encode(blocks, loops, rooms, held);
+
+            List<StoredTemperature> decodedBlocks = new List<StoredTemperature>();
+            List<StoredLoop> decodedLoops = new List<StoredLoop>();
+            List<StoredRoom> decodedRooms = new List<StoredRoom>();
+            Assert.True(ThermalStorageCodec.TryDecode(encoded, decodedBlocks, decodedLoops, decodedRooms));
+
+            Assert.Equal(455.5f, decodedBlocks[0].Temperature, 4);
+            Assert.Equal(310.25f, decodedLoops[0].Temperature, 4);
+            Assert.Equal(290f, decodedRooms[0].Temperature, 4);
+
+            // And this reader does know about it, so the section is really there to be skipped —
+            // without this the test above would pass on a payload that never carried one.
+            List<StoredHeldCoolant> decodedHeld = new List<StoredHeldCoolant>();
+            Assert.True(ThermalStorageCodec.TryDecode(encoded, null, null, null, decodedHeld));
+            Assert.Single(decodedHeld);
+            Assert.Equal(new Vector3I(4, 5, 6), decodedHeld[0].Position);
+            Assert.Equal(6422000f, decodedHeld[0].Capacity, 0);
+        }
+
+        /// <summary>A save from before pipes could hold coolant loads with none.</summary>
+        [Fact]
+        public void APayloadWithNoHeldCoolantSectionDecodesToNone()
+        {
+            List<StoredTemperature> blocks = new List<StoredTemperature>
+            {
+                new StoredTemperature(Vector3I.Zero, 300f),
+            };
+
+            List<StoredHeldCoolant> held = new List<StoredHeldCoolant>();
+            Assert.True(ThermalStorageCodec.TryDecode(
+                ThermalStorageCodec.Encode(blocks, null), null, null, null, held));
+
+            Assert.Empty(held);
+        }
+
         /// <summary>A record count far larger than the payload must not be trusted.</summary>
         [Fact]
         public void AnOversizedRecordCountIsRejected()

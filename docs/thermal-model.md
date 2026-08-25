@@ -411,6 +411,20 @@ within a per cent of `1/N` for any ring length `N`. Breaking a ring into two rin
 leaves, must lose **nothing**. No pipe may end hotter than the parcel it absorbed. These are the
 falsifiers: a figure that is not `1/N`, a split that loses heat, or a pipe above its parcel.
 
+**It ran. Three of the four hold and the fourth could not be built.** The loss is `1/N` at ring
+lengths 8, 10 and 14 — 12.50 %, 10.00 % and 7.14 %, each of them 1,146,272 J to the joule, which is
+one parcel — and the hottest pipe after a spill is 698.19 K against the 900 K parcel it absorbed.
+The reweld returns the broken ring's heat exactly: 14,901,537 J before it and 14,901,539 J after.
+
+**The split falsifier is not constructible and is withdrawn rather than quietly dropped.** Breaking
+a ring into two rings needs a pipe with three ports, and the shipped pipes have two — straight and
+corner — so no block a player can add makes the builder trace one ring as two. What stands in its
+place tests the same claim harder: grinding one pipe out and welding it back, repeatedly. The first
+grind costs one parcel, **the second grind of the same pipe costs nothing at all** because the
+reweld handed that pipe an ambient parcel, and the next hot pipe costs one parcel again. Draining a
+ring is therefore a walk round it at one parcel a pipe, which is the price grinding any block pays.
+The figures are in `HeatLaunderingTests`, which measures them rather than pinning the old fraction.
+
 A pipe destroyed with the ring takes no share and holds nothing, which is right — that coolant left
 with the block, and it is the one loss on this path that is a decision rather than an artefact.
 
@@ -754,6 +768,7 @@ several tests compare against it so the differences stay pinned rather than reme
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | **A broken ring keeps its coolant's heat, and the two thirds it used to destroy were an accident of two capacities** ([backlog.md](backlog.md) `A12`). The spill mixed each parcel into its pipe at `(T_n·M_n + T_s·M_s) / (M_n + M_s)` and then left the node at `M_n`, so `M_s / (M_n + M_s)` of the ring's heat — **67.9 %** on a large grid, 941 J/K of pipe against 1,889 of parcel — landed nowhere. The pipe now takes the parcel's heat capacity along with its temperature and hands both back when a ring re-forms through it, so grinding a pipe out of an eight-pipe ring costs **one eighth**, which is the parcel that left inside the block, and splitting a ring costs nothing. **Predicted before it was run** and the prediction stands at three ring lengths. Two further defects came out of the same code and are fixed with it: under `WellMixedCoolant` the spill handed *every* pipe the whole ring's fluid, and `SegmentTemperature`/`SetSegmentTemperature` bounded a **pipe** index by the **parcel** count, so in that model every pipe after the first read and wrote nothing. |
 | 2026-08-25 | Said what the friction expression is: drag power, with `FrictionScale` standing in for `½ C_d`. The model computes what the air takes from a ship's energy and returns none of it to the ship's motion — a median 5.05 MW on the published population at `reentry`, which is 16.8 kN never applied. Whether it should be is [backlog.md](backlog.md) `K1`, and the coefficient is why it is not obvious. |
 | 2026-08-25 | Stated the wind factor's floor as present-tense evidence rather than as what it *used to be* (`R12`), and absorbed the measured consequence — a 2 MW hull settling 0.9 K hotter in a 40 m/s wind — from the twelve-line comment in `ThermalSolver` that had been carrying it. The comment names this section now. |
 | 2026-08-24 | **Silence stopped being a veto** (`C22`). `RoomPressure.Level` treated *nothing reported* and *reported empty* identically, though the parameter's own documentation said they were distinct. The three vetoes are each the game or the world answering; a compartment the game calls airtight, on a pressurised world, that no lookup found a level for is a lookup that missed — which is what two models with different room shapes produce — and it now takes `AssumedWhenUnanswered`. Also corrected the error-size claim above: the two mistakes are the *same* size, about 203 K, and differ in sign; what is asymmetric is that too hot destroys a block which should have survived. |

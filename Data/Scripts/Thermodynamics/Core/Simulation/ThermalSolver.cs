@@ -873,9 +873,27 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Pours the coolant of every loop with no successor into the pipes that were carrying it, in
-        /// proportion to their capacity. A pipe destroyed with the ring takes no share, which is
-        /// right: that coolant left with the block.
+        /// Moves the coolant of every loop with no successor into the pipes that were carrying it.
+        /// A pipe destroyed with the ring takes no share, which is right: that coolant left with the
+        /// block.
+        ///
+        /// <para>
+        /// **The pipe takes the parcel's heat capacity as well as its temperature**
+        /// (backlog.md `A12`). Mixing to
+        /// `(T_n·M_n + T_s·M_s) / (M_n + M_s)` and then leaving the node at `M_n` lands
+        /// `mixed × M_n` where `T_n·M_n + T_s·M_s` went in, so `M_s / (M_n + M_s)` of the ring's
+        /// heat is destroyed — 67.9 % on a large grid, where a pipe node holds 941 J/K against its
+        /// parcel's 1,889. Carrying the mass on the node as
+        /// <see cref="ThermalNode.HeldCoolantCapacity"/> makes the same mix exact, and it is the
+        /// truthful statement anyway: the fluid is still in the pipe, it has just stopped going
+        /// anywhere.
+        /// </para>
+        ///
+        /// <para>
+        /// The alternative that also conserves — pour the energy in at the node's own capacity —
+        /// puts a 900 K parcel into that 941 J/K pipe at 2,106 K and destroys it. Boundedness is
+        /// one of the solver's three invariants and this path is not where it gets traded.
+        /// </para>
         /// </summary>
         private void SpillDissolvedLoops(List<CoolantLoop> newLoops)
         {
@@ -900,9 +918,22 @@ namespace Thermodynamics.Core
                 // Each pipe takes the parcel that was inside it and comes to one temperature with it,
                 // rather than the ring being averaged first. Local, exact, and it needs no decision
                 // about where a destroyed pipe's coolant went — it went with the block.
-                float segmentMass = dying.SegmentThermalMass;
+                //
+                // **The share is the ring's fluid divided by its pipes, not `SegmentThermalMass`.**
+                // The two agree parcel-for-parcel in the normal model and do not under
+                // `WellMixedCoolant`, where the ring is expressed as one parcel holding all of it
+                // (`CoolantLoop.RefreshThermalMass`) — so reading the segment capacity there handed
+                // every pipe the whole ring's fluid.
+                int pipes = dying.Pipes.Count;
+                if (pipes <= 0) continue;
 
-                for (int p = 0; p < dying.Pipes.Count; p++)
+                float segmentMass = dying.ThermalMass / pipes;
+                if (segmentMass <= 0f) continue;
+
+                // Stated in real J/K, because that is the unit the node holds it in.
+                float segmentCapacity = segmentMass * dying.HeatTimeScale;
+
+                for (int p = 0; p < pipes; p++)
                 {
                     ThermalNode node = GetNode(dying.Pipes[p]);
                     if (node == null) continue;
@@ -917,7 +948,93 @@ namespace Thermodynamics.Core
                     node.Temperature = mixed < ThermalConstants.MinimumTemperature
                         ? ThermalConstants.MinimumTemperature
                         : mixed;
+
+                    // After the temperature, so the mix is computed against the capacity the node
+                    // had while the two were still separate.
+                    node.HeldCoolantCapacity = node.HeldCoolantCapacity + segmentCapacity;
                 }
+            }
+        }
+
+        /// <summary>
+        /// Takes back into <paramref name="loop"/> whatever coolant its pipes are holding outside
+        /// any loop, and seeds each parcel from the pipe that was holding it.
+        ///
+        /// <para>
+        /// A pipe holds coolant only after <see cref="SpillDissolvedLoops"/> put it there, so this
+        /// is a no-op on every ring that has not been broken and rebuilt. Where it does fire, the
+        /// pipe and its fluid are at the same temperature — that is what the spill left them at —
+        /// so handing the capacity back and seeding the parcel at the node's temperature conserves
+        /// energy exactly on both sides.
+        /// </para>
+        ///
+        /// <para>
+        /// **It is written per parcel rather than per pipe because the two are not the same count.**
+        /// Under `WellMixedCoolant` a ring of any length holds one parcel, so several pipes hand
+        /// their coolant to the same one and a pipe-by-pipe assignment would let the last of them
+        /// decide the temperature of all the fluid. Each parcel therefore takes the *energy* its
+        /// pipes returned, and whatever share of it no pipe covered — a rewelded pipe brings its
+        /// capacity back but no fluid — arrives at the temperature the ring already holds. Where
+        /// there is one parcel per pipe the covered share is the whole parcel and this reduces to
+        /// `T_parcel = T_pipe` exactly.
+        /// </para>
+        /// </summary>
+        private void ReclaimHeldCoolant(CoolantLoop loop)
+        {
+            int pipes = loop.Pipes.Count;
+            int parcels = loop.ParcelCount;
+            if (pipes <= 0 || parcels <= 0) return;
+
+            float parcelMass = loop.SegmentThermalMass;
+            if (parcelMass <= 0f) return;
+
+            float[] energy = null;
+            float[] capacity = null;
+            int[] representative = null;
+
+            for (int p = 0; p < pipes; p++)
+            {
+                ThermalNode node = GetNode(loop.Pipes[p]);
+                if (node == null || node.HeldCoolantCapacity <= 0f) continue;
+
+                // Nothing is allocated on the path a ring that was never broken takes, which is
+                // every rebuild but the one after a grind.
+                if (energy == null)
+                {
+                    energy = new float[parcels];
+                    capacity = new float[parcels];
+                    representative = new int[parcels];
+                    for (int i = 0; i < parcels; i++) representative[i] = -1;
+                }
+
+                // The node holds it in real J/K; the loop works in the scaled figure.
+                float share = node.HeldCoolantCapacity / loop.HeatTimeScale;
+
+                int slot = loop.ParcelOf(p);
+                energy[slot] += node.Temperature * share;
+                capacity[slot] += share;
+                if (representative[slot] < 0) representative[slot] = p;
+
+                node.HeldCoolantCapacity = 0f;
+            }
+
+            if (energy == null) return;
+
+            // Read once, before any parcel is written: the uncovered share arrives at the ring's
+            // standing temperature, and that must be the same figure for every parcel.
+            float standing = loop.Temperature;
+
+            for (int slot = 0; slot < parcels; slot++)
+            {
+                if (representative[slot] < 0) continue;
+
+                float covered = capacity[slot];
+                if (covered > parcelMass) covered = parcelMass;
+
+                float uncovered = parcelMass - covered;
+                float landed = (energy[slot] * (covered / capacity[slot])) + (standing * uncovered);
+
+                loop.SetSegmentTemperature(representative[slot], landed / parcelMass);
             }
         }
 
@@ -980,6 +1097,13 @@ namespace Thermodynamics.Core
                         fresh.PowerAvailable = kept.PowerAvailable;
                         fresh.MaxPowerWatts = kept.MaxPowerWatts;
                     }
+
+                    // The other half of the spill: a pipe holding coolant outside any loop hands it
+                    // straight back to the ring that has just formed through it. Exact, because the
+                    // pipe and the fluid it absorbed are at one temperature — splitting a mixture
+                    // at its own temperature moves no energy — and it is what makes rebuilding a
+                    // broken ring cost nothing rather than paying the mix twice.
+                    ReclaimHeldCoolant(loop);
 
                     loop.RefreshFlow();
                     BuildLoopLinks(loop);
