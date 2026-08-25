@@ -261,6 +261,21 @@ game-feel coefficient. `v_rel` is the wind minus the grid's own velocity, compos
 still air. The wind is the mod's own field rather than the engine's rating — see
 [environment.md](environment.md#wind).
 
+**This expression is drag power, and the momentum is not taken.** Real drag power is
+`½ C_d ρ A v³` — the same expression, with `FrictionScale` in the place of `½ C_d` and
+`A_exposed × faceWeight` in the place of the frontal area. So the model computes what the air does
+to the ship's *energy* every step, turns it into heat in the hull, and removes nothing from the
+ship's motion: nothing anywhere writes to `Physics`, only reads `LinearVelocity` from it. Measured
+over the 8,144 published blueprints at `reentry` — 300 m/s in 0.8 density air — the median hull is
+given **5.05 MW** this way, the ninety-fifth **218 MW**, and every one of them something. At 300 m/s
+a median 5.05 MW is **16.8 kN** of force that is never applied.
+
+**Whether it should be applied is [backlog.md](backlog.md) `K1`, and it is not obvious.** The
+coefficient is the reason: `FrictionScale` is 0.001, which as `½ C_d` implies a drag coefficient of
+0.002 against roughly 1 for a bluff body. That is right for heat and wrong for force, because only
+a fraction of the work done against drag lands as heat in the surface — the rest goes into the wake
+— so the two are different numbers and neither can be read off the other.
+
 ### Waste heat
 
 Recomputed only when the game reports a change, never per step
@@ -709,6 +724,7 @@ several tests compare against it so the differences stay pinned rather than reme
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Said what the friction expression is: drag power, with `FrictionScale` standing in for `½ C_d`. The model computes what the air takes from a ship's energy and returns none of it to the ship's motion — a median 5.05 MW on the published population at `reentry`, which is 16.8 kN never applied. Whether it should be is [backlog.md](backlog.md) `K1`, and the coefficient is why it is not obvious. |
 | 2026-08-25 | Stated the wind factor's floor as present-tense evidence rather than as what it *used to be* (`R12`), and absorbed the measured consequence — a 2 MW hull settling 0.9 K hotter in a 40 m/s wind — from the twelve-line comment in `ThermalSolver` that had been carrying it. The comment names this section now. |
 | 2026-08-24 | **Silence stopped being a veto** (`C22`). `RoomPressure.Level` treated *nothing reported* and *reported empty* identically, though the parameter's own documentation said they were distinct. The three vetoes are each the game or the world answering; a compartment the game calls airtight, on a pressurised world, that no lookup found a level for is a lookup that missed — which is what two models with different room shapes produce — and it now takes `AssumedWhenUnanswered`. Also corrected the error-size claim above: the two mistakes are the *same* size, about 203 K, and differ in sign; what is asymmetric is that too hot destroys a block which should have survived. |
 | 2026-08-24 | Corrected the reason given for the pressure veto chain. It was justified by air being heat capacity, so that denying air wrongly cost only a little inertia; measured, the link conductance carries no pressure term, so denying air removes the whole coupling and costs 203 K on the hottest block while every pressure above zero is identical to two decimals. The chain stays — `C9` justifies it — and whether the fallback should deny on uncertainty is now [backlog.md](backlog.md) `C22` ([backlog.md](backlog.md) `F21`). |

@@ -1108,6 +1108,11 @@ frame buffer. That is a statement about difficulty, not about intent — it is w
   peak above critical describes the harness rather than the mod. Crossing times are unaffected.
 * **Not authoritative over the game's own systems.** Room pressure is the game's answer, not this
   model's, and none of the three sources that can empty a room may insist on air — only refuse it.
+  **The mod reads a grid's velocity and writes nothing to its physics**, which is the same rule one
+  system across: [backlog.md](backlog.md) `K1` proposes applying the drag the friction term already
+  accounts for the energy of, and that would be the first time this mod moved something the game
+  moves. It is listed as a milestone rather than done, and *whether the mod should push a ship at
+  all* is the first question in it rather than an assumption inside it.
 
 ---
 
@@ -1238,6 +1243,7 @@ as a *second* change rather than as a substitute. [backlog](backlog.md) `D19`.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Named the line the two new feature milestones cross. The mod reads a grid's velocity and writes nothing to its physics; [backlog.md](backlog.md) `K1` would apply the drag the friction term already computes the energy of, which is the first time it would move something the game moves. Recorded beside *not authoritative over the game's own systems* rather than left for whoever writes the code to decide. |
 | 2026-08-25 | Gave the language table a source. `LocalisationSurfaceTests` counts the five surfaces and holds the claim the decision rests on — that the surface inside the game's HUD is a small fraction of what the mod writes — as a band rather than as a number, because the count is heuristic (`E5`). |
 | 2026-08-25 | Recorded the one cooler *a cooling system costs power* does not reach and why ([backlog.md](backlog.md) `C16`): the suit regulates for free because `IMyCharacter` exposes `SuitEnergyLevel` to read and nothing to write. An engine limit rather than an inconsistency, and now stated beside the goal it qualifies. |
 | 2026-08-25 | Made the position on a second heat mod deliverable rather than nearly: `HeatTerminalPanel` is the switch the terminal panel never had, so a world running two can turn every output of this one off and keep the simulation and the API. |
