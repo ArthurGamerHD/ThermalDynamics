@@ -324,6 +324,28 @@ from. A p99 in the tenths of a kelvin would be unsurprising; a p99 in whole kelv
 cap re-masses hulls a player watches heat move through, which is what `stiffness.md` warns of below
 its own cliff.
 
+**A reading about the instrument, written down while the walk is still running and the verdict is
+not known.** The two arms run to the same simulated clock, which is what stops the *stopping rule*
+being part of the difference. It does not make that clock an equilibrium. `Battery.Run` stops when
+the hottest block moves less than 0.25 K in a sixty-second chunk, and a hull drifting at exactly
+that rate passes the test for ever — held for the rest of an 1,800 s scenario it is another 7.5 K.
+So two arms can both be *settled* and still be tens of kelvin apart, because each is still
+travelling at its own speed and a cap changes that speed: it raises the mirrored capacity of the
+stiffest elements, which is a change to the **rate** and not to where the run ends up.
+
+Measured on the walk's first 360 ships — the wrong end of the population, so the numbers below are
+not a result — the pairs more than a kelvin apart have a control still moving at a median
+**0.03 K/s**, seven times the tolerance, against a population median of 0.001. Splitting the same
+deltas on whether the control's own peak had stopped moving when it was read separates them by two
+orders of magnitude.
+
+**So `cap.py` prints that split beside the registered statistic and not instead of it.** The
+decision rule below was written against the unsplit p99 and is scored against the unsplit p99;
+re-pointing it at a subset chosen after the data is `E11` exactly. What the split is for is the
+argument that follows the number: *how far apart two arms are on the way somewhere* and *what the
+approximation costs at equilibrium* are both real and are not the same quantity, and a reader
+deciding whether a saving is worth taking needs to be told which one they are looking at.
+
 **The decision rule, fixed now.** The mod ships fidelity by default and a saving as a switch, and
 this repository has two calibration points for what *imperceptible* means: **0.028 K** is accepted
 as the price of the substep ceiling's breach, and **0.607 K** is what keeps `MaxSubstepsPerBlock`
@@ -799,6 +821,7 @@ is an enclosing hull, and the corpus has hulls.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | **Recorded a limit of the paired design while the walk was still running and the verdict was not known.** Both arms run to the same clock, which stops the stopping rule being part of the difference and does not make that clock an equilibrium: the settle test tolerates 0.25 K a minute, which over an 1,800 s scenario is 7.5 K, and a cap changes the *rate* a hull approaches its answer at. On the walk's first 360 ships the pairs more than a kelvin apart have a control still moving at a median 0.03 K/s against a population median of 0.001. `cap.py` prints the deltas split on whether the control had stopped moving, **beside** the registered statistic and not instead of it — the decision rule is scored on what it was written against (`E11`). |
 | 2026-08-25 | **The 2026-08-24 air walk predates `C21`'s waste correction by one minute, and `reproduce.py` found it by comparing the walk with the cap walk's control arm.** `f91e5dc` took twenty-seven `ConsumerWasteEnergy` fractions from 0.9 to 1.0 at 21:06; the walk finished at 21:07 and had loaded the old ones. Over 1,236 shared runs the **substep demand is identical to the last bit** — demand is conductance over capacity and has no waste term — while generation moved +0.60 % at the median and +11.0 % at worst, and peaks 0 % at the median and 2.1 % at worst. The demand figures stand; the watt and peak ones are low by that much and are marked rather than withdrawn (`E10`). |
 | 2026-08-25 | **The cap walk's restart reproduced the abandoned run exactly**, which is the return on having restarted rather than resumed: 552 shared rows, 22 columns, worst relative difference zero. Three commits had touched the solver and the harness in between and none had been checked for behaviour; they were inert, and that is now measured rather than assumed (`E7`). [reproduce.py](../tools/corpus/reproduce.py) is the check, with `test_reproduce.py` pinning that a comparison with nothing in common is not a reproduction. |
 | 2026-08-25 | **The estimate that abandoned `CorpusCapWalk` was checked against a walk whose answer is known, and it fails the check.** The walk was stopped at 45 minutes on *past ten hours*, projected from the share of the population's blocks covered over the rate they were being covered at. The corpus is walked largest first, so that rate falls throughout every healthy run, and a progress mark is ten files — one capital hull or ten fighters. Run over `CorpusAirWalk`, which finished in **104 minutes**, the same estimator projects **104 to 428 minutes, median 154** over that walk's own first 35 (`P4`). The estimate that survives is the ratio: a second arm sharing one parse is **2x by construction** and **1.95x** measured over the fifty files the two walks share, so the walk costs **3.4 hours**. [pace.py](../tools/corpus/pace.py) is that arithmetic, with `test_pace.py` pinning it; no cheaper design was built, and the paragraph above says why. The walk was restarted rather than resumed, because three commits touched the solver and the harness in between (`M1`). |

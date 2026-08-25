@@ -357,6 +357,15 @@ def percentiles(values):
 #: hull's link-to-node ratio — so *under* the band falsifies it as surely as over.
 CAP_BENEFIT_BAND = (1500000.0, 4000000.0)
 
+#: The rate the settle test tolerates, in kelvin a second: 0.25 K over a sixty-second chunk.
+#:
+#: **A run that satisfies it is not a run that has stopped.** Held for the rest of a 1,800 s
+#: scenario, that rate is another 7.5 K — so two arms can both be *settled* by this criterion and
+#: still be tens of kelvin apart, because each is still travelling at its own speed. It is used to
+#: split the cost figure into the pairs where both arms are at rest and the pairs where they are
+#: not; see `at_rest`.
+SETTLE_RATE_KELVIN_PER_SECOND = 0.25 / 60.0
+
 #: The predicted delta-peak: p99 under a kelvin, max under ten. Its only evidence was one hull, and
 #: the pre-registration says so.
 CAP_COST_P99_KELVIN = 1.0
@@ -434,3 +443,24 @@ def split_arms(rows):
         return [], rows
 
     return arms, [row for row in rows if row.get("cap", "") in ("", "0")]
+
+
+def at_rest(control_peak_rate):
+    """Whether a run had actually stopped moving when it was read.
+
+    **The settle test is an average over a chunk and this is the instantaneous rate at the end**,
+    which are different questions: a hull drifting at exactly the tolerated rate passes the first
+    for ever. On the cap walk the pairs more than a kelvin apart have a control still moving at a
+    median 0.03 K/s — seven times the tolerance — while the population's median is 0.001.
+
+    So a delta read on a travelling pair is *how far apart two arms are on the way somewhere*, and a
+    delta read on a resting pair is what the approximation costs at equilibrium. Both are real; they
+    are not the same number and a criterion written for one should not be scored on the other
+    without saying so.
+
+    Returns None where the dataset does not carry the rate, which is every walk before this one.
+    """
+    if control_peak_rate is None:
+        return None
+
+    return abs(control_peak_rate) < SETTLE_RATE_KELVIN_PER_SECOND

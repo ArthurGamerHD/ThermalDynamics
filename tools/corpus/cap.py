@@ -198,6 +198,24 @@ def main():
         deltas.append((delta, key))
         by_scenario[key[2]].append(delta)
 
+    # **The same deltas split by whether the control had stopped moving**, which is a different
+    # question from whether it *settled*: the settle test is an average over a chunk and a hull
+    # drifting at exactly the tolerated rate passes it for ever. Reported beside the registered
+    # statistic rather than instead of it — the decision rule was written against the unsplit
+    # figure, and re-pointing it after the data is `E11` exactly.
+    resting = []
+    travelling = []
+    for key, control, capped in pairs:
+        delta = scoring.delta_peak(number(control, "peak_k"), number(capped, "peak_k"))
+        if delta is None:
+            continue
+
+        rest = scoring.at_rest(number(control, "peak_rate_k_per_s"))
+        if rest is None:
+            continue
+
+        (resting if rest else travelling).append(delta)
+
     if deltas:
         values = [d for d, _ in deltas]
         p = scoring.percentiles(values)
@@ -227,6 +245,21 @@ def main():
                 f"        {over_accepted:,} of {len(values):,} pairs move more than the "
                 f"{scoring.CAP_ACCEPTED_KELVIN} K this mod already accepts and {over_refused:,} "
                 f"more than the {scoring.CAP_REFUSED_KELVIN} K it refuses")
+
+        if resting or travelling:
+            print(f"\n        the same deltas, split by whether the control had stopped moving")
+            for name, series in (("at rest", resting), ("still travelling", travelling)):
+                if not series:
+                    print(f"        {name:18}{'—':>9}")
+                    continue
+
+                q = scoring.percentiles(series)
+                print(f"        {name:18}{len(series):>9,}{q['p50']:>12.4f}{q['p95']:>12.4f}"
+                      f"{q['p99']:>12.4f}{q['max']:>12.4f}")
+
+            print(f"        at rest means the control's own peak was moving slower than "
+                  f"{scoring.SETTLE_RATE_KELVIN_PER_SECOND:.5f} K/s when it was read, which is the "
+                  f"rate the settle test tolerates")
 
         print(f"\n        the rule, fixed before the walk: at or under "
               f"{scoring.CAP_ACCEPTED_KELVIN} K it ships, at or over "
