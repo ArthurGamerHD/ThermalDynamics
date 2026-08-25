@@ -54,12 +54,13 @@ exposure map, several readers. That is why aerodynamic force belongs here rather
 its own, and it is the only reason: *we already have the data* is an engineering argument, and this
 is the design one.
 
-**Every consequence can be switched off entirely, heat included.** A world that wants drag and no
-thermal simulation must be able to have it, and pay nothing for the half it turned off. That is
-stronger than the per-mechanism switches this page already promises, and it is a claim about
-architecture rather than about settings: it means the surface model is shared infrastructure that
-the thermal solver *uses*, not a stage inside it. It is not true today — the friction term is
-computed inside the solver's own node loop — and [backlog.md](backlog.md) `K19` is the work.
+> **A stronger claim was made here for a few hours on 2026-08-25 and withdrawn**: that every
+> consequence could be switched off entirely, heat included, and cost nothing when off. It was
+> retracted once its implication was read. Heat being removable would force the surface model out
+> of the thermal solver into something both it and the force model consume — and **the shared walk
+> is the whole reason aerodynamic force belongs in this mod at all**. Unpicking it to make one half
+> optional would have cost the argument that put them together. Heat stays load-bearing; the
+> per-mechanism switches are what a world tunes with.
 
 **Consequential includes the player.** Heat that only ever damages blocks stops at the airlock, and
 a burning compartment that a person can stand in is the mod saying the temperature does not really
@@ -541,6 +542,15 @@ pair the mod shipped until 2026-08-24, and re-scored on the forty-hull retest se
 ships now, where they hold. `G6` is the one whose status has moved twice since, and the row says
 where it stands. `G7` and `G8` were written after this table and are stated below it rather than in
 it.
+
+**The window has a floor under it, and it is the stronger of the two statements.** The most
+significant thermal event lands in two to five minutes — long enough to notice, short enough to
+matter — and **nothing may be destroyed in the first minute of a world**. A player who adds this mod
+to a world they already have, or starts a new one with it, must not lose a block before they have
+understood that heat is now a thing. The compatibility floor measures one half of that already: 705
+prefabs, arriving idle, not one crossing critical. What it does not cover is a world somebody has
+already built into, and the population's idle result is the nearest evidence — not one of 8,144
+published hulls goes critical at idle.
 
 **Six criteria became eight, and both additions came from a gap this table made visible.** `G7` is
 the compatibility floor — *a ship the game spawns survives arrival* — and `G8` is the significance
@@ -1028,6 +1038,21 @@ description of the material, so that somebody can write one without asking anyon
 
 ### To another mod: the API is a contract with four guarantees
 
+**Decided 2026-08-25: the API is open and unbounded, and that is a position rather than an
+oversight.** Any mod may call any endpoint and register whatever it needs to tell this one how it
+behaves — a control surface, a drag profile, a heat source, a threshold. Registrations are **not
+capped, not vetted and not refused for being unbalanced**: a player chooses their mod list, and a
+mod that ruins their game is a choice they made. The intent is that an add-on has *as much* control
+over this system's inputs and as much visibility of its outputs as can be given.
+
+**What follows from that is a duty to attribute rather than to bound.** If the mod will not refuse a
+registration, it has to be able to say what registrations are doing — otherwise every handling
+complaint, every frame-time complaint and every "my ship exploded" arrives as this mod's bug. So the
+diagnostics owe a reader the count and the contribution of what other mods have registered
+([backlog.md](backlog.md) `K21`). **And the criteria stop being claims about a modded world**: every
+balance and affordability figure this repository publishes is measured on this mod alone, and none
+of them survives contact with an add-on that registers a megawatt.
+
 [api.md](api.md#guarantees) states them and this is what they are for. **No call throws into the
 caller** — bad arguments come back as `false`, `0` or `NaN`, because an exception crossing a mod
 boundary lands in somebody else's session with this mod's name on it. **No call is bound to a thread
@@ -1102,6 +1127,13 @@ three channels exist.
 ---
 
 ## What the mod owes a multiplayer client
+
+**Single player is the design centre, decided 2026-08-25.** Multiplayer has to work and is not what
+the mod is tuned against: where the two compete for attention, the single-player experience wins.
+Two consequences follow and are better stated than discovered. The replication layer **has never run
+in a session** and that is an accepted risk rather than an urgent one. And the stress case for a
+server is written down as a number — **50 players connected, up to 20 of them watching the same 20
+grids** — so that when it is built it is built against something ([backlog.md](backlog.md) `K20`).
 
 **As little traffic as possible, and deviation is acceptable to a point.** Keeping every block's
 temperature in sync across the network would degrade the thing the mod is trying to protect, so the
@@ -1297,6 +1329,7 @@ as a *second* change rather than as a substitute. [backlog](backlog.md) `D19`.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | **Three more intent decisions, and one retraction.** Single player is the design centre and multiplayer is a low priority that still has to work, with the server stress case written as a number rather than a mood. The two-to-five-minute window keeps a floor under it: **nothing may be destroyed in the first minute of a world**. The API is open and unbounded — any mod may register anything, because a player chooses their mod list — which converts the mod's duty from *bounding* add-ons to *attributing* them, and means every published balance figure is a claim about this mod alone. Retracted: the claim that heat could be switched off entirely, because it would have unpicked the shared surface walk that is the reason force belongs in this mod at all. |
 | 2026-08-25 | Recorded the answer to a neighbouring mod that is better than detecting it: an interface. [backlog.md](backlog.md) `K17` has one mod own the force on a constraint group while others contribute to its inputs, which is what a control-surface or jet-engine mod needs anyway — and a stronger coupling than the heat API has asked for, because a registered surface changes how a ship flies rather than what temperature it reaches. |
 | 2026-08-25 | Named the one neighbouring mod that *can* be detected, which is the exception that makes the rule above readable: [RelativeTopSpeed](https://github.com/Gauge/RelativeTopSpeed) publishes an API and speaks the same network layer this repository vendors. Today it and this model do not collide — it applies a force and no heat, this applies heat and no force — and [backlog.md](backlog.md) `K1` would end that. |
 | 2026-08-25 | Named the line the two new feature milestones cross. The mod reads a grid's velocity and writes nothing to its physics; [backlog.md](backlog.md) `K1` would apply the drag the friction term already computes the energy of, which is the first time it would move something the game moves. Recorded beside *not authoritative over the game's own systems* rather than left for whoever writes the code to decide. |
