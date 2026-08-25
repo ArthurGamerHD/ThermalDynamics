@@ -1026,6 +1026,13 @@ composition that actually works: one mod owns the consequences, the other is rea
 `ThermalApi`. **Two mods both applying consequences is unsupported**, and that is now a sentence
 rather than an unexamined case.
 
+**The better answer than detection is an interface, and it is on the list.** Two mods each applying
+their own force to one ship is a collision; one mod owning the force while the others contribute to
+its inputs is an architecture — a control surface registering a surface, a jet engine declaring a
+smaller profile nose-on. That is [backlog.md](backlog.md) `K17`, and it is a stronger coupling than
+the heat API has ever asked for: a registered heat source changes a temperature, a registered
+surface changes how a ship flies.
+
 **One mod beside this one can be detected, and it is worth naming because it is the exception.**
 [RelativeTopSpeed](https://github.com/Gauge/RelativeTopSpeed) publishes an API and speaks the same
 `SENetworkAPI` this repository vendors, so *is something else already slowing ships down* is a
@@ -1251,6 +1258,7 @@ as a *second* change rather than as a substitute. [backlog](backlog.md) `D19`.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Recorded the answer to a neighbouring mod that is better than detecting it: an interface. [backlog.md](backlog.md) `K17` has one mod own the force on a constraint group while others contribute to its inputs, which is what a control-surface or jet-engine mod needs anyway — and a stronger coupling than the heat API has asked for, because a registered surface changes how a ship flies rather than what temperature it reaches. |
 | 2026-08-25 | Named the one neighbouring mod that *can* be detected, which is the exception that makes the rule above readable: [RelativeTopSpeed](https://github.com/Gauge/RelativeTopSpeed) publishes an API and speaks the same network layer this repository vendors. Today it and this model do not collide — it applies a force and no heat, this applies heat and no force — and [backlog.md](backlog.md) `K1` would end that. |
 | 2026-08-25 | Named the line the two new feature milestones cross. The mod reads a grid's velocity and writes nothing to its physics; [backlog.md](backlog.md) `K1` would apply the drag the friction term already computes the energy of, which is the first time it would move something the game moves. Recorded beside *not authoritative over the game's own systems* rather than left for whoever writes the code to decide. |
 | 2026-08-25 | Gave the language table a source. `LocalisationSurfaceTests` counts the five surfaces and holds the claim the decision rests on — that the surface inside the game's HUD is a small fraction of what the mod writes — as a band rather than as a number, because the count is heuristic (`E5`). |
