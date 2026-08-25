@@ -49,28 +49,6 @@ namespace Thermodynamics.Core
         /// <summary>Aerodynamic heating at speed in atmosphere.</summary>
         public bool EnableFriction = true;
 
-        /// <summary>
-        /// The wind field: a direction and a speed for a point on a planet, and everything that
-        /// shapes them — the boundary-layer profile, terrain speed-up and shelter, slope
-        /// channelling, the diurnal cycle and burial.
-        ///
-        /// <para>
-        /// **Off is no wind at all, not the game's wind unmodelled**, because the game has no wind
-        /// vector to fall back to: what it exposes is `MaxWindSpeed × airDensity`, a ceiling
-        /// identical at pole and equator, which environment.md records as unusable as a wind. Every
-        /// direction and speed this model reports is its own, so removing the model removes the
-        /// wind. A grid still feels its own motion through the air.
-        /// </para>
-        ///
-        /// <para>
-        /// It had no switch at all until 2026-08-24, which made it the one mechanism a world could
-        /// not turn off (`C7`) — the nearest thing was zeroing `WindTerrainInfluence`,
-        /// `WindSlopeStrength` and `WindDiurnalAmplitude`, which removes the modulations and leaves
-        /// the wind. See [backlog.md](backlog.md) `B31`.
-        /// </para>
-        /// </summary>
-        public bool EnableWind = true;
-
         /// <summary>Damage above a block's critical temperature.</summary>
         public bool EnableDamage = true;
 

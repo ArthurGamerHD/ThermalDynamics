@@ -99,23 +99,6 @@ namespace Thermodynamics.Harness
             return Apply(t);
         }
 
-        /// <summary>
-        /// A thruster-flavoured material preset. As <see cref="ReactorThermal"/>: kept for rigs
-        /// that want its shape, and no longer what `Catalog.Thruster()` is made of.
-        /// </summary>
-        public static BlockThermalProperties ThrusterThermal()
-        {
-            BlockThermalProperties t = RawDefault();
-            t.Conductivity = 50f;      // steel and nickel alloy
-            t.SpecificHeat = 450f;     // steel and nickel alloy
-            t.Emissivity = 0.15f;
-            t.ProducerWasteEnergy = 0f;
-            t.ConsumerWasteEnergy = 0.25f;
-            t.CriticalTemperature = 1050f;
-            t.OverheatDamagePerKelvin = 0.25f;
-            return Apply(t);
-        }
-
         public static BlockThermalProperties RadiatorThermal()
         {
             BlockThermalProperties t = RawDefault();

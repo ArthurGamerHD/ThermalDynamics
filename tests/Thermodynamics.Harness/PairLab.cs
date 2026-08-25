@@ -227,22 +227,6 @@ namespace Thermodynamics.Harness
                 get { return Conductivity * Clock / ShippedClock; }
             }
 
-            /// <summary>
-            /// The crossing this cell is expected to have, from the two composition rules the grid
-            /// above measured and this one is testing an extension of.
-            ///
-            /// **A projection, printed beside the measurement rather than instead of it.**
-            /// `crossing × clock` is a constant per conductivity, held to 1.5 % across every cell
-            /// that has a median; whether the load composes the same way — `crossing ∝ 1 / waste`,
-            /// because a block heats at the rate it is driven — is exactly what this grid is for.
-            /// The last projection of this shape was out by a factor of five.
-            /// </summary>
-            public float ProjectedCrossingSeconds(float constantAtThisConductivity)
-            {
-                if (Clock <= 0f || Waste <= 0f) return -1f;
-                return constantAtThisConductivity / (Clock * Waste);
-            }
-
             public string Name
             {
                 get

@@ -1368,15 +1368,6 @@ namespace Thermodynamics.Harness
             public float MaxError;
             public double RmsError;
             /// <summary>
-            /// Retired. It used to be the worst error among the blocks the floor moved, which
-            /// needed a per-node "was this floored" list the lab computed from conduction alone —
-            /// and that list was wrong in air, where convection is what makes a block stiff. The
-            /// count now comes from the solver, which reads the same terms the floor does, and the
-            /// worst error is reported over every node instead.
-            /// </summary>
-            public float MaxFlooredError;
-
-            /// <summary>
             /// Hottest block at the end of the run, and how far that is from the uncapped run's.
             ///
             /// The figure that decides overheat damage, and the one a diffusion test cannot

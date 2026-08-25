@@ -124,39 +124,49 @@ namespace Thermodynamics.Tests
         /// **And the lump is flat in fleet size**, which is what says it is a property of one
         /// grid's step rather than of the schedule: staggering does not make a frame carry more
         /// work, it makes the work a frame carries belong to fewer grids.
+        ///
+        /// <para>
+        /// **Asserted on work, reported in milliseconds, and the second half is why this test was
+        /// flaky.** The claim was held on a ratio of two timings taken at two fleet sizes, and
+        /// that ratio is a claim about the machine's cache: 64 grids of 600 nodes is a working set
+        /// an order of magnitude larger than four of them, so a machine busy with something else
+        /// evicts the big one and not the small one. The penalty is **steady**, so a noise floor
+        /// computed from repeat-to-repeat spread cannot see it — which is how this failed at a
+        /// floor of 6 % with the lump reading 0.103 ms at four grids against 0.289 ms at
+        /// sixty-four, an hour after the refusal gate was added to catch exactly this
+        /// ([backlog.md](../../docs/backlog.md) `A11`).
+        /// </para>
+        ///
+        /// <para>
+        /// So the regression this exists for — per-grid cost growing with fleet size, which is what
+        /// a per-fleet scan smuggled into the per-grid path would do — is held on the solver's own
+        /// work counters, which do not depend on the machine at all. `LoadTests` states the same
+        /// principle: *a millisecond threshold is a claim about the machine, and "placing one block
+        /// must not visit every node" is a claim about the algorithm.* The milliseconds are printed
+        /// beside it, and `bench stagger` is where they are read deliberately.
+        /// </para>
         /// </summary>
         [Fact]
         public void TheLumpIsOneGridsStepAndDoesNotGrowWithTheFleet()
         {
             List<StaggerLab.Row> rows = StaggerLab.Run(new[] { 4, 64 }, NodesEach, 8);
 
-            double small = rows[0].LumpMs;
-            double large = rows[1].LumpMs;
+            output.WriteLine("lump {0:n0} work units at {1} grids, {2:n0} at {3}"
+                + "  ({4:n3} ms and {5:n3} ms, which the machine decides)",
+                rows[0].LumpWork, rows[0].Grids, rows[1].LumpWork, rows[1].Grids,
+                rows[0].LumpMs, rows[1].LumpMs);
 
-            double floor = System.Math.Max(rows[0].StaggeredSpread, rows[1].StaggeredSpread) - 1d;
+            Assert.True(rows[0].LumpWork > 0d, "a grid's step charged no work");
 
-            output.WriteLine("lump {0:n3} ms at 4 grids x {1} rounds, {2:n3} ms at 64 x {3};"
-                + " noise floor {4:P1}",
-                small, rows[0].Rounds, large, rows[1].Rounds, floor);
-
-            Assert.True(small > 0d, "a grid's step measured as nothing");
-
-            // The same instrument at both rungs, which is what this claim rests on: it divides one
-            // rung's reading by the other's, so a window of four milliseconds against one of
-            // seventy is the whole difference before any grid is stepped (`P6`, `A11`).
+            // The same instrument at both rungs. Kept even though the assertion below no longer
+            // needs it, because the milliseconds printed above are still read by a person and were
+            // being taken over windows an order of magnitude apart (`P6`, `A11`).
             Assert.Equal(StaggerLab.GridStepsPerRepeat, rows[0].Grids * rows[0].Rounds);
             Assert.Equal(StaggerLab.GridStepsPerRepeat, rows[1].Grids * rows[1].Rounds);
 
-            if (floor >= UnreadableFloor)
-            {
-                output.WriteLine("REFUSED: the repeats spread {0:P0}, so a 1.5x bound on the ratio"
-                    + " of two readings taken through it says nothing.", floor);
-                return;
-            }
-
-            Assert.True(large < small * 1.5d && small < large * 1.5d,
-                "the lump moved from " + small + " ms to " + large + " ms with the fleet size,"
-                + " so it is not one grid's step");
+            // Identical, not merely close: the fleet a grid is stepped alongside changes nothing
+            // about what its own step charges, so this is exact arithmetic rather than a tolerance.
+            Assert.Equal(rows[0].LumpWork, rows[1].LumpWork, 6);
         }
     }
 }

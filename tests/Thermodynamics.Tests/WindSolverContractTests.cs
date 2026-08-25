@@ -48,8 +48,11 @@ namespace Thermodynamics.Tests
         /// **What switching the wind off has to mean, held where the switch's behaviour lives.**
         ///
         /// <para>
-        /// `EnableWind` is read in `ThermalGridEnvironment` and `PlanetProbes`, which are game
-        /// code a harness cannot construct — so what is testable is the thing the gate relies on:
+        /// `EnableWind` lives on the game's `Settings` and is read in `ThermalGridEnvironment` and
+        /// `PlanetProbes`, which are game code a harness cannot construct — it is not on
+        /// `ThermalSettings`, for the reason `EnableTemperatureSync` is not: the wind *field* is
+        /// produced by the host, from a planet and a position the core is never handed. So what is
+        /// testable is the thing the gate relies on:
         /// that a zero ceiling produces a still, directionless result with every modulation
         /// neutral. That is why the switch sets the ceiling rather than adding a branch. If this
         /// ever stopped being true, `EnableWind = false` would leave a wind blowing and nothing

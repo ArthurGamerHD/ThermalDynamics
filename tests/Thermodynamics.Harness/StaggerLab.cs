@@ -98,6 +98,21 @@ namespace Thermodynamics.Harness
             {
                 get { return Grids <= 0 ? 0d : StaggeredMs / Grids; }
             }
+
+            /// <summary>
+            /// Element visits one grid's whole step charges, summed over the fleet and divided by
+            /// it — the same quantity <see cref="LumpMs"/> reports, in work rather than in time.
+            ///
+            /// <para>
+            /// **This is the readable half of the lump claim.** A millisecond is a claim about the
+            /// machine (`M4`), and a *ratio* of two milliseconds taken at two fleet sizes is a
+            /// claim about the machine's cache — which a noise floor computed from repeats cannot
+            /// see, because a busy machine biases the larger working set steadily rather than
+            /// jitterily. The work a grid's step charges does not depend on how many other grids
+            /// there are, on any machine, and that is the regression the claim is really for.
+            /// </para>
+            /// </summary>
+            public double LumpWork;
         }
 
         public static List<Row> Run(IList<int> fleetSizes, int nodesEach, int slices,
@@ -125,6 +140,12 @@ namespace Thermodynamics.Harness
 
                 int rounds = RoundsFor(grids);
                 row.Rounds = rounds;
+
+                // Read once, before the timed repeats: it is the same on every one of them.
+                Staggered(fleet, settings, state, 1);
+                long work = 0;
+                for (int i = 0; i < fleet.Count; i++) work += fleet[i].Solver.StepWorkUnits;
+                row.LumpWork = work / (double)grids;
 
                 Staggered(fleet, settings, state, 2);
                 Spread(fleet, settings, state, 2, slices);
@@ -223,6 +244,7 @@ namespace Thermodynamics.Harness
               .Append("spread".PadLeft(10))
               .Append("spreading costs".PadLeft(17))
               .Append("lump".PadLeft(9))
+              .Append("lump work".PadLeft(12))
               .Append("noise".PadLeft(14))
               .Append('\n');
 
@@ -239,6 +261,7 @@ namespace Thermodynamics.Harness
                   .Append(((row.Penalty - 1d) * 100d).ToString("n1").PadLeft(16))
                   .Append("%")
                   .Append((row.LumpMs.ToString("n3") + " ms").PadLeft(9))
+                  .Append(row.LumpWork.ToString("n0").PadLeft(12))
                   .Append((row.StaggeredSpread.ToString("n2") + "/"
                       + row.SpreadSpread.ToString("n2") + "x").PadLeft(14))
                   .Append('\n');
