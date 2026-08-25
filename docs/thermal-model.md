@@ -385,6 +385,36 @@ Rings are traced from the ports each block declares, so any block size or orient
 special cases, and each ring is found once whichever pipe the search starts from. A loop keeps its
 heat across a rebuild through an order-independent hash of its members.
 
+**When a ring stops being a ring, its coolant stays in the pipes that were holding it.** Grinding
+out a pipe, or the pump — which is a ring member itself — leaves a chain rather than a ring, and the
+builder traces rings only, so the loop has no successor and its parcels have nowhere to live. The
+pipe each parcel was inside takes it: the node comes to the mixed temperature of the two,
+`mixed = (T_n·M_n + T_s·M_s) / (M_n + M_s)`, **and its heat capacity becomes `M_n + M_s`**, because
+the fluid is still in the block. That mass is *held coolant* — carried on the node, saved with the
+grid, and handed straight back the moment a ring runs through that pipe again, which is exact
+because a mixture is at one temperature and splitting it at that temperature conserves energy
+term by term.
+
+Both halves are needed and neither alone works. Taking the mixed temperature without the mass
+destroys `M_s / (M_n + M_s)` of the ring's heat — 67.9 % on a large-grid ring, where a pipe node
+holds 941 J/K against its parcel's 1,889 — which is the accident this replaced. Taking the mass
+without the temperature is the same energy at the wrong place. Pouring the parcel's energy into the
+node at its own capacity would conserve it and put a 900 K parcel's heat into a 941 J/K pipe as
+2,106 K, destroying the pipe: energy conserved by breaking boundedness, which is not a trade this
+solver makes anywhere else.
+
+**What this predicts, written before it was run.** On the eight-pipe large-grid ring
+`HeatLaunderingTests` builds, with every parcel at 900 K and every pipe at ambient, popping one pipe
+and rewelding it must lose **one eighth** of the ring's heat above ambient — the parcel that left
+with the block — against the 67.9 % the mixed-temperature-only spill lost, and the loss must be
+within a per cent of `1/N` for any ring length `N`. Breaking a ring into two rings, where no block
+leaves, must lose **nothing**. No pipe may end hotter than the parcel it absorbed. These are the
+falsifiers: a figure that is not `1/N`, a split that loses heat, or a pipe above its parcel.
+
+A pipe destroyed with the ring takes no share and holds nothing, which is right — that coolant left
+with the block, and it is the one loss on this path that is a decision rather than an artefact.
+
+
 Radiators are ordinary blocks with high emissivity and a surface-area multiplier. A loop dumps heat
 into space by pressing a sink face against one: the panel takes the loop's heat by conduction and
 sheds it by radiation from its exposed faces.
