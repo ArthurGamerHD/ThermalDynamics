@@ -63,28 +63,37 @@ category is about what the rule buys, not about who enforces it.
 
 ## The principles
 
-Fourteen principles account for every rule on this page. They are the reduction: if the rule list
+Fifteen principles account for every rule on this page. They are the reduction: if the rule list
 were lost, these are what would have to be re-derived, and each rule below is one of them applied
-to a specific artefact. Six rules have been added since the reduction and every one of them landed
-under a principle that already existed, which is the only evidence available that the fourteen are
-the right fourteen — see [testing the reduction](#testing-the-reduction).
+to a specific artefact.
+
+**Fourteen held for eleven rules and then one arrived that none of them generated.** Every rule
+added after the first reduction landed under a principle that already existed — six of them, which
+was the only evidence available that fourteen was the right number — until a sweep of the tree for
+unstated intent produced `C16` and `C17`: a save must load on the builds either side of the one
+that wrote it, and a name something outside this repository addresses may never be repurposed.
+Neither follows from *one definition and one consumer*, from *the repository is the publish*, or
+from *do not edit what you cannot regenerate*. What they have in common is `P15`, and stating it
+moved `R5` — the workshop identity files — out of `P12`, where it had been filed for the wrong
+reason. See [testing the reduction](#testing-the-reduction).
 
 | # | Principle | Rules |
 | --- | --- | --- |
 | **P1** | **A figure carries its scope.** A number without its population, its basis and its clock is not a number; a sample stands for a population only by a written rule. | `E2` `E3` `E6` `M10` `M11` `J3` |
-| **P2** | **What the instrument could not see is part of the result.** Censoring, the noise floor, an unfinished sweep and a check that judged nothing are all the same failure: reading a blind spot as a value. | `E4` `E8` `E9` `M4` `M5` |
+| **P2** | **What the instrument could not see is part of the result.** Censoring, the noise floor, an unfinished sweep, a check that judged nothing and a discarded exception are the same failure: reading a blind spot as a value. | `E4` `E8` `E9` `M4` `M5` `D9` |
 | **P3** | **The claim is fixed before the data and corrected in place after.** A criterion that can move once the numbers are in is not a criterion; a finding that is corrected somewhere other than where it was published is not corrected. | `E1` `E10` `E11` `M9` `D5` `R12` |
 | **P4** | **Nothing is its own oracle.** A test that asks the model the same question twice agrees with whatever the model does; a harness fault looks exactly like physics. | `E7` `D1` `D4` `D7` `D8` |
 | **P5** | **One definition, and at least one consumer.** Two definitions drift, and the drift is silent in both directions; zero consumers means the thing does not exist however well it is written and tested. | `E5` `D2` `D3` `M6` `R7` `R8` `R9` `R10` `R11` `R13` `R14` |
 | **P6** | **A comparison holds everything but the subject equal.** Two numbers are comparable only when the stop criterion, the machine, the key and the baseline were the same. | `M1` `M2` `M3` `M7` |
-| **P7** | **The game is the authority.** The local build and the suite are an approximation of a compiler and a whitelist neither of them can see, and where the game already answers a question — what is sealed, what is destroyed — the mod reads that answer instead of forming its own. | `C1` `C2` `C3` `C11` `C9` `C10` |
+| **P7** | **The game is the authority.** The local build and the suite are an approximation of a compiler and a whitelist neither of them can see, and where the game already answers a question — what is sealed, what is destroyed, who sent this — the mod reads that answer instead of forming its own. | `C1` `C2` `C3` `C11` `C9` `C10` `C18` |
 | **P8** | **Off means off, and costs nothing.** A mechanism nobody is using must cost nothing, and the way to turn it off must be unambiguous. | `C4` `C7` `C8` |
-| **P9** | **The core is a library the game happens to call.** That is what makes it testable in seconds, profilable, drivable by other mods and portable to another engine. | `C5` `R9` |
+| **P9** | **The core is a library the game happens to call.** That is what makes it testable in seconds, profilable, drivable by other mods and portable to another engine — and a library is also something that must not throw into a caller who never knew it was there. | `C5` `R9` `C19` |
 | **P10** | **The solver's three invariants are the definition of correctness.** Order independence, energy conservation, boundedness — everything else is tuning. | `C6` |
 | **P11** | **The repository is the publish.** Everything committed here reaches the workshop, so what must not ship must not be here. | `R2` `R3` |
-| **P12** | **Do not edit what this repository cannot regenerate.** Model binaries, workshop identity and vendored code have their source of truth outside this tree. | `R4` `R5` `R6` |
+| **P12** | **Do not edit what this repository cannot regenerate.** Model binaries and vendored code have their source of truth outside this tree. | `R4` `R6` |
 | **P13** | **A long run is designed for its own death.** It will be killed — by the OOM killer, a timeout, a mistake or a power cut — so cap it, resume it, and never let a timer guess its duration. | `O1` `O2` `O3` `O5` |
 | **P14** | **Unobservable fidelity is cost.** Take the cheap form where the difference cannot be perceived, say what it gives up, and write the price down. Where it *can* be perceived, the cheap form is a rung on the feature's own ladder rather than the default. | `D6` `M8` `O4` `C15` |
+| **P15** | **What is already in someone else's world is frozen.** A save, a setting name, a serialization number, a property name and a workshop id exist where this repository cannot reach them: add to them, never repurpose them. | `C16` `C17` `R5` |
 
 ### Testing the reduction
 
@@ -176,6 +185,7 @@ under [low value](#low-value) so a citation to them does not dangle.
 | **D6** | A deliberate simplification is recorded as a limit | load-bearing | P14 | — |
 | **D7** | Measure before replacing what the counts accuse | conditional | P4 | — |
 | **D8** | An optimisation is pinned against the code it replaced | load-bearing | P4 | `SolverAb` and the five bit-identity suites |
+| **D9** | A fault is recorded whether or not collection is running | load-bearing | P2 | `AnomalyRegistryTests` |
 | **C1** | C# 6 only | load-bearing | P7 | `LangVersion` on the core project |
 | **C2** | The whitelist covers types the local build accepts | load-bearing | P7 | — |
 | **C3** | Target `net48`, and never reference the native assembly | load-bearing | P7 | the build |
@@ -188,11 +198,15 @@ under [low value](#low-value) so a citation to them does not dangle.
 | **C8** | Absent and empty mean the same thing | load-bearing | P8 | — |
 | **C9** | The game's own answer is read, never overridden | load-bearing | P7 | `RoomPressureTests` |
 | **C10** | The server is authoritative over damage | load-bearing | P7 | — |
+| **C18** | An authority check reads what the engine supplies, never what the sender wrote | load-bearing | P7 | — |
+| **C19** | No call across the mod's API throws into its caller | load-bearing | P9 | — |
+| **C16** | A saved world loads on the build that wrote it, and on the ones either side | load-bearing | P15 | `StorageAndSettingsTests` |
+| **C17** | A name something outside this repository addresses is never repurposed | load-bearing | P15 | `TheRetiredPropertyNamesAreStillRead` `NoSettingReusesANumberThatWasDeliberatelyRetired` |
 | **R1** | *The repository is the mod folder* | low value | P11 | absorbed into P11 |
 | **R2** | Build output and the corpus live outside it | load-bearing | P11 | `Directory.Build.props` |
 | **R3** | No credential is written into the tree | load-bearing | P11 | `CredentialScanTests` |
 | **R4** | `Models/` is not restructured | load-bearing | P12 | — |
-| **R5** | The workshop identity files are not regenerated | load-bearing | P12 | — |
+| **R5** | The workshop identity files are not regenerated | load-bearing | P15 | — |
 | **R6** | Vendored code is replaced, never edited | load-bearing | P12 | — |
 | **R7** | Every document is indexed, and every link resolves | load-bearing | P5 | `DocumentationTests` |
 | **R8** | Every setting is documented, wired, and read by something | load-bearing | P5 | `ConfigurationDocTests` `SettingsWiringTests` |
@@ -211,8 +225,7 @@ under [low value](#low-value) so a citation to them does not dangle.
 | **J2** | *Light, isolated, tested, open* | low value | — | absorbed into `C4` `C5` `C7` `R9` |
 | **J3** | The corpus filters are strict, and their cost is recorded | conditional | P1 | `BlueprintTests` |
 
-Fifty-three load-bearing, seven conditional, three low value. Sixteen of the load-bearing rules have
-no automated check, and say so.
+Fifty-nine load-bearing, seven conditional, three low value.
 
 ---
 
@@ -335,6 +348,24 @@ that had previously been unmeasurable.
 *Applies to:* every benchmark comparison.
 *Checked by:* `PerformanceReportTests` — the comparison declines to count them.
 *From:* [benchmarks.md](benchmarks.md#reading-a-comparison).
+
+#### D9 — A fault is recorded whether or not collection is running
+
+**A caught exception, and a grid that has gone numerically bad, are written down even when telemetry
+is off.**
+
+Everything else the mod observes costs something on every healthy frame and is rightly off unless
+somebody is reading it. A fault is not: it costs nothing until the mod has already failed, and by
+then it is the only evidence there will be. Gated together with observation, all twenty-two `catch`
+blocks in the adapter discarded their exception, wrote nothing to any file, and left the grid
+running in whatever state the throw abandoned it in — including the guard around `ThermalGrid.Tick`,
+whose own comment said an exception named there was worth more than a crash dump and which named it
+nowhere. Only the first occurrence of each kind is logged as it happens, because a throw inside a
+step runs once per grid per frame; the count keeps rising and reaches the closing summary.
+
+*Applies to:* every `catch` in the mod, and the NaN guard on a grid.
+*Checked by:* `AnomalyRegistryTests`.
+*From:* [telemetry.md](telemetry.md#faults-are-recorded-whether-or-not-collection-is-running).
 
 ### P3 — The claim is fixed before the data and corrected in place after
 
@@ -832,6 +863,23 @@ undecided, and that question does not touch this rule.
 *From:* [document-of-intent.md](document-of-intent.md#what-the-mod-owes-a-multiplayer-client),
 [known-issues.md](known-issues.md).
 
+#### C18 — An authority check reads what the engine supplies, never what the sender wrote
+
+**Whether a message may do something is decided from a value the engine filled in, and never from
+one carried in the payload.**
+
+`SENetworkAPI`'s sender id is a field the sender writes, so a promote-level check gated on it is a
+check a client can pass by asserting that it should. The engine's own secure handler supplies the
+sender and a from-the-server flag that a client cannot set, which is why the settings-request path
+and the temperature channel are on it and the ordinary state channel is not. Same idea one step
+along: a client must not be able to write temperatures onto another client's simulation, and the
+from-the-server flag is the only thing that says a packet is the server's.
+
+*Applies to:* every check that decides whether a received message may change something.
+*Checked by:* — nothing; the paths it guards exist only in a session.
+*From:* [architecture.md](architecture.md#networking),
+[document-of-intent.md](document-of-intent.md#to-a-client-the-server-trusts-nothing-the-client-asserts-about-itself).
+
 ### P8 — Off means off, and costs nothing
 
 #### C4 — Nothing allocates on the stepping path
@@ -906,6 +954,10 @@ than repeating it.
 
 ### P9 — The core is a library the game happens to call
 
+A library is used by code its author never sees, which is two obligations rather than one: it must
+be *reachable* without dragging the session in, and it must be *safe to call* — a library that
+throws into its caller has moved its own failure into somebody else's program.
+
 #### C5 — The core speaks no game type
 
 **The simulation references exactly one Space Engineers assembly, `VRage.Math`, and no public
@@ -917,6 +969,22 @@ world, and it is the boundary an SE2 adapter would bind to.
 *Applies to:* `Data/Scripts/Thermodynamics/Core`.
 *Checked by:* `CoreIsolationTests`.
 *From:* [tests/README.md](../tests/README.md), [architecture.md](architecture.md).
+
+#### C19 — No call across the mod's API throws into its caller
+
+**A bad argument comes back as `false`, `0` or `NaN`, and a subscriber that throws is dropped rather
+than allowed to stop the simulation.**
+
+An exception crossing a mod boundary lands in somebody else's session with this mod's name on it,
+and the caller cannot catch what it did not know it was calling. The same reasoning runs the other
+way for the callbacks this mod invokes: one misbehaving consumer of a threshold must not stop heat
+moving for everything else in the world, so `RaiseThreshold` catches, records and unsubscribes.
+
+*Applies to:* every delegate in the table, and every callback the mod invokes.
+*Checked by:* — nothing. `ModApiShapeTests` pins the table's *shape*; that no entry throws is
+discipline, and the closest thing to a check is that every implementation null-guards its way to a
+return value.
+*From:* [api.md](api.md#guarantees).
 
 ### P10 — The solver's three invariants are the definition of correctness
 
@@ -980,15 +1048,6 @@ fix is re-exporting the models — which needs the source scene, not this reposi
 
 *Applies to:* `Models/` and everything under it.
 *Checked by:* — nothing; both `note.txt` files say so and that is all.
-*From:* [development.md](development.md).
-
-#### R5 — The workshop identity files are not regenerated
-
-**`modinfo.sbmi` holds the workshop id; regenerating it publishes the mod as a new item, and
-every subscriber stays on the old one.**
-
-*Applies to:* `modinfo.sbmi`, `metadata.mod`.
-*Checked by:* — judgement.
 *From:* [development.md](development.md).
 
 #### R6 — Vendored code is replaced, never edited
@@ -1113,6 +1172,60 @@ compares two cache regimes a few per cent apart, and its own noise guard is what
 **Why load-bearing.** A project-wide setting cannot be forgotten and an attribute on a class can:
 a new walk written without it does not fail, it runs beside another walk and takes the suite's
 duration with it. That is a silent failure, which is what this page is for.
+
+### P15 — What is already in someone else's world is frozen
+
+A save file, a setting name, a definition property name, an API key and a workshop id all exist in
+worlds this repository will never see and cannot reach. They may be **added to**; they may not be
+repurposed or quietly dropped. That is a different idea from P12 — P12 says do not edit what you
+cannot rebuild, and this says do not break what you cannot recall — and it is why `R5` sits here
+rather than there: a workshop id is not hard to regenerate, it is impossible to un-publish.
+
+#### C16 — A saved world loads on the build that wrote it, and on the ones either side
+
+**The storage format grows by adding a section rather than by changing its marker, and every older
+format it has ever written is still read.**
+
+A save that fails to load is a world's heat lost; a save that loads *partially* is worse, because
+nothing says so. Version 2 grew a room-air section and a reader that predates it skips what it does
+not recognise, so a save written now still loads on an older build — and a version 1 payload still
+decodes on this one. The same shape holds for anything else written into world storage: append, and
+read what you used to write.
+
+*Applies to:* `ThermalStorageCodec` and anything written into `MyModStorageComponent`.
+*Checked by:* `LegacyPayloadsStillLoad`, `AReaderThatDoesNotKnowAboutRoomsStillReadsBlocksAndLoops`,
+`APayloadWithNoRoomSectionDecodesToNoRooms`, `EveryTruncationOfAValidPayloadIsRejected`.
+*From:* [architecture.md](architecture.md#persistence).
+
+#### C17 — A name something outside this repository addresses is never repurposed
+
+**A setting name, a serialization number, a definition property name and an API key are addresses
+held by worlds and mods that will never be re-read here. Alias them, add to them, and never point
+one at something else.**
+
+The failure is silent in the worst way available. Definition Extensions matches on the property
+name string, so dropping a retired spelling reverts every third-party definition written before the
+rename to the shipped defaults — no error, no log line, and a mod whose blocks have stopped being
+what they say they are. A reused `ProtoMember` number decodes an old save's value into the wrong
+field. A renamed setting breaks `/thermal set`, the API and the settings sync at once, for
+everybody who had tuned it.
+
+*Applies to:* setting names and their `ProtoMember` numbers, `<ModExtensions>` property names, and
+the mod API's keys and signatures.
+*Checked by:* `TheRetiredPropertyNamesAreStillRead` (the harness parser only, and it says so),
+`NoSettingReusesANumberThatWasDeliberatelyRetired`, `EveryNamedSettingCanBeReadAndWritten`,
+`EveryEntryHasTheSignatureTheApiPageGivesIt`.
+*From:* [definitions.md](definitions.md#retired-property-names),
+[document-of-intent.md](document-of-intent.md#to-an-existing-world-nothing-a-player-already-has-is-quietly-lost).
+
+#### R5 — The workshop identity files are not regenerated
+
+**`modinfo.sbmi` holds the workshop id; regenerating it publishes the mod as a new item, and
+every subscriber stays on the old one.**
+
+*Applies to:* `modinfo.sbmi`, `metadata.mod`.
+*Checked by:* — judgement.
+*From:* [development.md](development.md).
 
 ## Conditional
 
@@ -1306,6 +1419,7 @@ right and this page is stale**; say so and fix it here.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | **Five rules the repository already enforced and had never stated, and the fifteenth principle two of them needed.** A sweep of the tree for unstated intent found them; four were already held by tests that no rule cited, which is the *one place* claim failing in the direction nothing checks — `R11` catches a rule naming a dead check and nothing catches a live check enforcing an unstated rule. `C16` a saved world loads on the builds either side of the one that wrote it; `C17` a name something outside this repository addresses is never repurposed; `C18` an authority check reads what the engine supplies, never what the sender wrote; `C19` no call across the mod's API throws into its caller; `D9` a fault is recorded whether or not collection is running. `C18` landed under `P7` and `D9` under `P2`, which is more evidence for those two. `C19` widened `P9`: a library is not only reachable without the session, it is safe to call. `C16` and `C17` landed under nothing, and `P15` is what they needed — *what is already in someone else's world is frozen* — which also moved `R5` out of `P12`, where a workshop id had been filed as *hard to regenerate* when what it actually is, is impossible to un-publish. |
 | 2026-08-24 | Added `C15`, which is `C7` grown a dimension: a mechanism's configuration runs from `off` to `realistic` rather than being a boolean, and a cheaper form that exists in the model belongs on that list. Stated after the intent it comes from, and it found one violation on the day it was written — `WellMixedCoolant`, read by the solver and settable by nothing. |
 | 2026-08-24 | Added `C11`, after the mod failed to compile for two commits while the whole suite passed. Two thirds of the adapter under `Game/` was compiled by nothing the workflow runs, so a rename in `Core` was invisible until a world load. `Generic.csproj` is in the test solution now, and its twenty-seven hard-coded Steam paths resolve through `$(SEBinPath)` — being unbuildable anywhere but this machine was the reason it could not be in the build in the first place ([backlog.md](backlog.md) `F25`). |
 | 2026-08-22 | `R9` covers the signature as well as the name, and `ModApiShapeTests` checks it. A failed cast returns null rather than throwing, so a signature that moves on one side alone gives another mod a feature that silently does nothing ([backlog.md](backlog.md) `F1`). |
