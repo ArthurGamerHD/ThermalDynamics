@@ -928,19 +928,27 @@ creative builder who wants no heat has `EnableDamage`. But it has never been sai
 neighbouring cases have — a ship the game spawns is `G7`, and a world somebody adds the mod to is
 `G1`.
 
-### 4. Where a version boundary is
+### 4. What a version boundary would be for
 
-[api.md](api.md#guarantees) promises that **keys will not change meaning within a major version**,
-and nothing in this repository defines a version. `modinfo.sbmi` carries a workshop id and no number;
-no build is stamped; the save format has an internal marker that is deliberately *not* a version
-boundary, since v2 grew by adding a section rather than by changing it. The one version string in
-the tree — `2.0.0` — belongs to the vendored `NetworkAPI` and is somebody else's.
+**The API has one and it is the only thing that does.** `ThermalApi.Version` is `1`, it is served as
+`ApiVersion`, and [api.md](api.md#binding) tells a caller to read it and refuse a major it was not
+written against. So the guarantee that *keys do not change meaning within a major version* has a
+referent after all — which is more than the rest of the mod has: `modinfo.sbmi` carries a workshop
+id and no number, no build is stamped, and the only other version string in the tree is the vendored
+`NetworkAPI`'s `2.0.0`, which is somebody else's.
 
-So the strongest compatibility promise the mod makes has no referent, and the honest reading today
-is *nothing has ever broken*. That is a fine position to hold and a poor one to hold accidentally:
-what is undeclared is what a major version would be **for** — which of the promises in
-[what the mod promises the things around it](#what-the-mod-promises-the-things-around-it) may be
-broken at one, and which are meant to hold for the life of the mod.
+**What is undeclared is what would move it, and what it governs.** Nothing says which change to the
+delegate table is a major one — a removed key plainly, a key whose meaning shifts plainly, but a
+signature widened, a `MyTuple` grown a field, a delegate that starts returning `NaN` where it
+returned `0` are all reachable without anybody deciding. And nothing says whether the *other three*
+promises in [what the mod promises the things around it](#what-the-mod-promises-the-things-around-it)
+sit under that number or under nothing at all: the save format is versioned separately and
+deliberately grows without moving its marker, the retired definition names are promised for as long
+as anyone is reading, and a setting's name has no stated boundary of any kind.
+
+The honest reading today is *nothing has ever broken*, which is a fine position to hold and a poor
+one to hold accidentally. **Nothing checks it either** — `ModApiShapeTests` pins the shape of the
+table, and no test relates a change in that shape to the number a caller is told to trust.
 
 ### 5. The visual channel, and a player who cannot use it
 
@@ -1058,6 +1066,7 @@ as a *second* change rather than as a substitute. [backlog](backlog.md) `D19`.
 | Date | Change |
 | --- | --- |
 | 2026-08-24 | **A full sweep of the tree for intent, and it found four subjects the code had always followed and no page had ever stated.** Added [what the mod promises the things around it](#what-the-mod-promises-the-things-around-it) — to an existing world, to a block it has never heard of, to another mod, and to a client — which gathers the save format's forward compatibility, the retired definition names, a setting's name as an address, the derive-don't-guess rule for third-party blocks, the API's four guarantees, and the two trust boundaries that decide which network channel a message takes. Added [what the mod does when it cannot afford itself](#what-the-mod-does-when-it-cannot-afford-itself): it slows down rather than stuttering, determinism is chosen rather than assumed, and a fault records itself whether or not anyone asked. Added [where something is modelled, it is modelled as a mechanism rather than as a threshold](#where-something-is-modelled-it-is-modelled-as-a-mechanism-rather-than-as-a-threshold), which is the most consistent habit in the code and had been written down nowhere. |
+| 2026-08-24 | **Corrected the version void, which I had overstated by reading the documentation instead of the code.** It said nothing in the repository defines a version. `ThermalApi.Version` is `1`, served as `ApiVersion`, and [api.md](api.md#binding) already tells a caller to read it and refuse a major it was not written against — so the API's guarantee has a referent. What is actually missing is smaller and sharper: what would move that number, whether the save format, the retired definition names and the setting names sit under it or under nothing, and a check relating a change in the delegate table's shape to the number a caller is told to trust. |
 | 2026-08-24 | **Rewrote *what is still undecided* as two sections, because it was conflating two different things.** [Where there is no intent at all](#where-there-is-no-intent-at-all) is eight subjects the mod already ships or already refuses with no statement anywhere about whether that is right — what a player does with their hands, what the blocks cost to build, creative mode, where a version boundary is, the visual channel and a player who cannot use it, what language the mod speaks, heat that leaves the world, and another mod that also simulates heat. [Open questions with a stated intent](#open-questions-with-a-stated-intent) is the four that have a position and lack a route. Two entries that were settled are marked as such rather than left reading as open. |
 | 2026-08-24 | **Three conflicts added and two rows corrected.** The element-visit allowance against *fidelity is the default* — the shipped default is not the faithful end, and `TheDefaultIsFrameBounded`'s stated reason, *the budget costs no accuracy*, is true about a step and silent about the consequence, which `C27` later priced at up to 36.98 K; what the code follows is that frame stability outranks fidelity and the price is paid down rather than denied. `G6`'s cost half against the unit it was scored in. And the corpus as the population against the corpus as what people publish. The README-audience row was resolved two days earlier and left standing, which is the same defect as a stale figure; the `MaxSubstepsPerBlock` row carries an argument that has now inverted twice. `G6`'s status is rewritten and `G1` gains its air reading; six criteria are stated as the eight they became. |
 | 2026-08-24 | **The fleet half of *use the machine* is built, and ships off.** A grid's tick splits into prepare on the game thread, solve anywhere, publish on the game thread, and a frame's solves can be fanned out through the engine's own workers — 10.17× on a 242-grid fleet, 0.99× on one grid. It ships `false` because what is left is not a measurement but three questions only a session answers, and this page's own rule is that an approximation nobody asked for does not go in front of a player: a mod taking threads on a shared machine is that shape ([backlog.md](backlog.md) `D19`). |
