@@ -36,24 +36,50 @@ the route is not. A void and an open question look alike from a distance and are
 
 ## The purpose
 
-**Heat is a resource a player reasons about.** Every block has a temperature, that temperature is
-consequential, and a player who is overheating can find out why and do something about it.
+> **The scope widened on 2026-08-25 and this section widened with it.** The mod was written as a
+> thermal mod and the three commitments below were written about heat. Drag, lift and a ship's top
+> speed are none of those things, and they arrived because the mod already computes what they need
+> — so *the surface model is the mod* and heat is one thing done with it. **The name no longer fits
+> and is due to change**; what cannot change with it is any identifier a world already holds — the
+> block subtypes, the mod-storage GUID, the workshop id — because a world that has them is owed
+> them (`P15`, `W2`). Renaming is a display and documentation change only.
+
+**A grid's surfaces meet an environment, and what happens there is a resource a player reasons
+about.** Every block has a temperature and an exposure; both are consequential; and a player whose
+ship is overheating, or will not accelerate, can find out why and do something about it.
+
+**Heat is one consequence of that model and not the whole of it.** The same per-face walk that
+decides what a block radiates, absorbs and convects also decides what the air pushes against — one
+exposure map, several readers. That is why aerodynamic force belongs here rather than in a mod of
+its own, and it is the only reason: *we already have the data* is an engineering argument, and this
+is the design one.
+
+**Every consequence can be switched off entirely, heat included.** A world that wants drag and no
+thermal simulation must be able to have it, and pay nothing for the half it turned off. That is
+stronger than the per-mechanism switches this page already promises, and it is a claim about
+architecture rather than about settings: it means the surface model is shared infrastructure that
+the thermal solver *uses*, not a stage inside it. It is not true today — the friction term is
+computed inside the solver's own node loop — and [backlog.md](backlog.md) `K19` is the work.
 
 **Consequential includes the player.** Heat that only ever damages blocks stops at the airlock, and
 a burning compartment that a person can stand in is the mod saying the temperature does not really
 matter. The suit is what closes that — a machine that holds its occupant and can be beaten, rather
 than a threshold — and it is described in [configuration.md](configuration.md#the-suit).
 
-Three commitments follow, and they are the test for whether a feature belongs:
+Three commitments follow, and they are the test for whether a feature belongs. **They were written
+about heat and generalised on 2026-08-25 by changing one noun**, which is the evidence that the
+widening is honest rather than convenient — a scope that needed the tests loosened would be a scope
+that did not belong:
 
-1. **It has to be legible.** A player must be able to ask "is this ship able to cool itself at all"
-   and get an answer. That question is why the grid heat balance exists — `made` against `vented`,
-   in watts, on the cockpit panel and through the API.
+1. **It has to be legible.** A player must be able to ask "is this ship able to cool itself at all",
+   or "why will this ship not go faster", and get an answer. That question is why the grid heat
+   balance exists — `made` against `vented`, in watts, on the cockpit panel and through the API —
+   and it is why a centre of lift is drawn beside a centre of mass rather than on its own.
 2. **It has to be caused.** The outcome must follow from what a builder chose, not from how big the
    ship is. That is `G4` below, and it is the criterion the corpus most clearly passes.
 3. **It has to be answerable.** There must be a lever — a radiator, a loop, a heat pump, a different
-   place to put the reactor — that visibly changes the outcome. That is `G3`, and the lever that
-   works is plumbing rather than bolting.
+   place to put the reactor, a different shape — that visibly changes the outcome. That is `G3`,
+   and the lever that works is plumbing rather than bolting.
 
 **It is a framework as well as a mod.** Everything the simulation knows is readable and everything
 it does is drivable from another mod, through a delegate table passed by mod message. The intent is
@@ -796,6 +822,19 @@ uncapped corpus sweep has taken a machine down.
 ---
 
 ## What the mod does when it cannot afford itself
+
+**Decided 2026-08-25: it runs slow, and it does not approximate to keep up.** When a grid cannot
+afford the substeps its demand asks for, the step is shortened and the grid's thermal clock falls
+behind real time — measured at 36 % of real on a 64,000-block hull in flight at the shipped
+allowance. The alternative was built the same day and ships **off**: flooring the stiffest blocks to
+what the budget grants keeps the clock whole for about 0.024 K.
+
+**The reason for choosing the slow clock is that the player has the dials and the mod does not have
+their intent.** An approximation applied on their behalf is the mod deciding that a number they
+cannot see matters less than a frame rate they can, and this page refuses that elsewhere. **What
+makes it a fair choice rather than a silent one is that the degradation is visible**: the settings
+menu's status reads `substeps N of M asked, X floored, Y% rate`, so a world running behind says so
+and the dials that fix it are on the same screen.
 
 **It slows down. It does not stutter, and it does not lie.**
 
