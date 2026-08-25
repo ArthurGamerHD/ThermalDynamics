@@ -847,7 +847,10 @@ A readout, diagnostic or overlay that is off costs nothing. This is what makes t
 in the benchmark report readable and what lets a server operator pay only for what they use.
 
 *Applies to:* every mechanism, readout and diagnostic.
-*Checked by:* `FeatureToggleTests`, and the benchmark feature table measures each cost.
+*Checked by:* `FeatureToggleTests` and the benchmark feature table for what a switch *costs*;
+`ConfigurationDocTests.EveryMechanismInTheLadderInventoryHasASwitchOrSaysItHasNoLadder` for whether
+one exists at all. The second is there because the first cannot find a mechanism that has no switch
+to test — wind had none for months, with a row in the inventory saying so, and every check passed.
 *From:* [README.md](../README.md), [configuration.md](configuration.md).
 
 #### C15 — A feature's configuration runs from `off` to `realistic`

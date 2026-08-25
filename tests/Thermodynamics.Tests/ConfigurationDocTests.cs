@@ -135,6 +135,87 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// **And the same question asked the other way round, which is the direction that finds a
+        /// mechanism with no switch at all.**
+        ///
+        /// <para>
+        /// The test above walks the `Enable*` settings and asks whether each is classified. That
+        /// can only ever find a switch nobody documented; a *mechanism* nobody gave a switch is
+        /// invisible to it, because it has no setting to enumerate. Wind was exactly that until
+        /// 2026-08-24 — a whole model with ends and no `off`, listed in this very inventory with
+        /// its own row saying so, and passing every check the suite had (`C7`,
+        /// [backlog.md](../../docs/backlog.md) `B31`).
+        /// </para>
+        ///
+        /// <para>
+        /// So every row of the inventory must name an `Enable*` that exists, **or** declare in its
+        /// rung column that it has no ladder to switch: `1` for a mechanism whose only rung is the
+        /// one it has, `scalars` for the integration dials, which are not a feature, and an em dash
+        /// for a row that names no setting at all. A row that claims a ladder and offers no switch
+        /// is the failure this catches, and the wording it used to get away with was `continuous`.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void EveryMechanismInTheLadderInventoryHasASwitchOrSaysItHasNoLadder()
+        {
+            string doc = File.ReadAllText(Path.Combine(RepoRoot(), "docs", "configuration.md"));
+
+            const string Heading = "## Every mechanism, and the rungs it has";
+            int start = doc.IndexOf(Heading, StringComparison.Ordinal);
+            Assert.True(start >= 0, "docs/configuration.md has no ladder inventory section");
+
+            int end = doc.IndexOf("\n## ", start + Heading.Length, StringComparison.Ordinal);
+            string inventory = end < 0 ? doc.Substring(start) : doc.Substring(start, end - start);
+
+            HashSet<string> switches = new HashSet<string>(StringComparer.Ordinal);
+            foreach (string name in Declared())
+            {
+                if (name.StartsWith("Enable", StringComparison.Ordinal)) switches.Add(name);
+            }
+
+            // A row saying its ladder has one rung, that it is not a feature, or that it is
+            // configured by nothing at all, is a row with nothing to switch.
+            HashSet<string> noLadder = new HashSet<string>(StringComparer.Ordinal)
+                { "1", "scalars", "—", "-" };
+
+            List<string> switchless = new List<string>();
+            int rows = 0;
+
+            foreach (string line in inventory.Split('\n'))
+            {
+                string row = line.Trim();
+                if (!row.StartsWith("|", StringComparison.Ordinal)) continue;
+
+                string[] cells = row.Trim('|').Split('|');
+                if (cells.Length < 3) continue;
+
+                string mechanism = cells[0].Trim();
+                if (mechanism == "Mechanism" || mechanism.StartsWith("---", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                rows++;
+                if (noLadder.Contains(cells[2].Trim())) continue;
+
+                bool named = false;
+                foreach (string name in switches)
+                {
+                    if (cells[1].Contains("`" + name + "`")) { named = true; break; }
+                }
+
+                if (!named) switchless.Add(mechanism + " — configured by " + cells[1].Trim());
+            }
+
+            Assert.True(rows > 10,
+                "only " + rows + " inventory rows were read, so this test is not reading the table");
+
+            Assert.True(switchless.Count == 0,
+                "mechanisms in configuration.md's ladder inventory with a ladder and no switch to"
+                + " turn them off, which is `C7`:\n  " + string.Join("\n  ", switchless.ToArray()));
+        }
+
+        /// <summary>
         /// **Nothing in the model is a rung a world cannot reach.**
         ///
         /// <para>
