@@ -761,26 +761,43 @@ That is the same finding [C9 in the backlog](backlog.md) reached from one save, 
 a population, and it is why the per-block cap is the lever this page argues for: the two modes are
 separated by a handful of block types, not by ship design.
 
-### The census hull sat in the trough, and `C24` put it outside the population
+### The census hull sits in the trough, and it took a refresh to keep it there
 
-The hull every benchmark here is built on landed at 23.39 in air — the 65th percentile, and *in the
-trough between the two modes*, a value about six per cent of real ships had. For a benchmark that
-was a fair choice: neither of the two things a ship usually was, but between them rather than
-outside them.
+The hull every benchmark here is built on landed at 23.39 in air before `C24` — the 65th
+percentile, and *in the trough between the two modes*, a value about six per cent of real ships
+had. For a benchmark that was a fair choice: neither of the two things a ship usually was, but
+between them rather than outside them.
 
-**At the pair that ships it asks for 36.75, against a population running 6.20 to 22.41** — 1.64
-times the stiffest of 8,105 real ships. The hull's stiffest blocks are buried, so their demand is
-conduction and rose fourfold with the pace; a real ship's stiffest block is an exposed light whose
-demand is convection and fell with the clock. At a per-block cap of 8 the hull floors **6.91 %** of
-its own blocks against a real population's 0.92 %, while at caps of 4, 2 and 1 it is inside the
-population as it always was.
+**`C24` put it outside the population and finding out why is `C26`.** At the pair that ships the
+hull asked for **36.75** substeps against a corpus running 6.20 to 22.41 — 1.64 times the stiffest
+of 8,105 real ships — and at a per-block cap of 8 it floored 6.91 % of its own blocks against a real
+population's 0.92 %. The retune did not cause that; it made it visible, because a buried block's
+demand is all conduction and quadrupled with the pace while a real ship's exposed one is mostly
+convection and fell with the clock.
 
-That is [backlog.md](backlog.md) `C26`, and the fix is `M11`'s — refresh the census tiers against
-the corpus at this pair, which moves every benchmark figure in this repository and is its own piece
-of work. Until then the hull is a **conservative bound for cost**, since it asks for more substeps
-than any real ship, and a poor stand-in for a fidelity question.
-`TheCensusHullIsStifferThanEveryShipInTheCorpus` and
-`TheCensusHullIsFarMoreReachableThanARealPopulationAtTheShippedCap` pin both halves.
+**The cause was mount points, and it is exactly the kind of thing `M11` exists for.** Every census
+tier was built as a solid cube that mounts on all six faces, so the lightest band — 20 kg against
+neighbours of 440 — carried six joints. `SmallLight` declares **one** mount point; the three shaped
+armour bands declare three, four and five. A light bolted into a hull by six faces is a block no
+builder can place and the stiffest thing on any hull that has one.
+
+Each band now carries what the block it was measured from declares, and a hull is laid out the way
+the game makes a player lay one out — **every block bolted to something**, since the game will not
+let you place one that attaches to nothing, and the lightest band on the surface rather than dealt
+wherever a hash puts it. The result, measured the same way as the population:
+
+| | before `C26` | after | the population |
+| --- | ---: | ---: | --- |
+| substeps demanded in air | 36.75 | **12.71** | 6.20 – 22.41, median 7.90 |
+| its stiffest block's own air ÷ vacuum | 1.00 | **1.97** | p10 1.00, median 1.07, p90 2.52 |
+| exposed faces on that block | 0 | **4** | 3.46 on average |
+| share of blocks a cap of 8 reaches | 6.91 % | **0 %** | 0.92 % |
+
+Inside the population on every row, at about its 60th percentile for stiffness. The last row is the
+one that is still not the population's, in the other direction and much smaller: a cap of 8 reaches
+the *tail* — the ships whose stiffest block asks 18 to 22 substeps — and one median hull does not
+have a tail. A synthetic hull cannot be both a median ship and a population, and
+`TheShippedCapReachesThePopulationsTailAndNotATypicalHull` says which of the two this is.
 
 How much of that stiffness comes from the air is the second question, and it has to be asked of
 **one block**:
@@ -790,16 +807,15 @@ How much of that stiffness comes from the air is the second question, and it has
 | a real ship, p10 | **1.00** | 1.04 |
 | a real ship, median | **1.07** | 2.34 |
 | a real ship, p90 | **2.52** | 6.89 |
-| the census hull | **1.00** | 1.20 – 1.50 |
+| the census hull | **1.97** | 1.20 – 1.50 |
 
 **Air has stopped making much difference to *stiffness*, for every hull in the game.** The median
 ship's stiffest block is 1.07 times stiffer in air than out of it where it was 2.34, and a tenth of
-them are exactly 1.00 — so the census hull's own 1.00 is the population's floor rather than the
-fidelity gap it used to be. What this does *not* say is that air has stopped cooling a hull: the
-environment terms are untouched, and this is a statement about which term sets a substep count. The
-old reason for the gap is still visible in the exposure column: the block that sets a real ship's
-air peak has **3.46 exposed faces** on average, down from 5.26, and the census hull's has none at
-all. `TheCensusHullFeelsAirLikeARealHullDoes` holds it inside the population at both ends.
+them are exactly 1.00 — the pace `C24` ships makes a block's neighbours, rather than the sky, decide
+what it demands. What this does *not* say is that air has stopped cooling a hull: the environment
+terms are untouched, and this is a statement about which term sets a substep count. The census hull
+is above the population's median on this row rather than below it, because its stiffest block is now
+an exposed light like a real ship's.
 
 > **It has to be the same block, and that is `E6`.** A hull's *air peak* over its *vacuum peak* is
 > 1.02, which reads as a hull that does not notice air at all — and describes no block, because the
@@ -832,12 +848,12 @@ ship does", and which of the two the census is meant to be is a decision rather 
 `MaxSubstepsPerBlock` is chosen from how much of a hull a cap holds back, and that curve came from
 the 189 stepping grids of one telemetry dump. Over **2.4 million blocks of 8,102 workshop ships**:
 
-| per-block cap | corpus, at the pair that ships | corpus, before `C24` | one field dump |
-| ---: | ---: | ---: | ---: |
-| 8 | **0.92 %** | 1.59 % | 1.16 % |
-| 4 | **23.22 %** | 7.20 % | 6.01 % |
-| 2 | **40.33 %** | 35.54 % | 23.68 % |
-| 1 | **75.89 %** | 52.53 % | 39.10 % |
+| per-block cap | corpus, at the pair that ships | corpus, before `C24` | one field dump | the census hull |
+| ---: | ---: | ---: | ---: | ---: |
+| 8 | **0.92 %** | 1.59 % | 1.16 % | 0 % |
+| 4 | **23.22 %** | 7.20 % | 6.01 % | 15.25 % |
+| 2 | **40.33 %** | 35.54 % | 23.68 % | 29.02 % |
+| 1 | **75.89 %** | 52.53 % | 39.10 % | 57.25 % |
 
 **They agree where the choice is made and part company where it is not.** At the cap anyone would
 ship, all three columns are inside half a percentage point of each other, so the reach of a shipped
@@ -928,6 +944,7 @@ conductivity 50 is conduction-stiff, and a material definition would fix them ou
 
 | Date | Change |
 | --- | --- |
+| 2026-08-24 | **Refreshed the census tiers against the blocks they were measured from, which closes [backlog.md](backlog.md) `C26`.** Every tier was a solid cube mounting on all six faces, and `SmallLight` declares one mount point while the three shaped-armour bands declare three, four and five — so the hull's lightest band carried six joints where the block it stands for carries one. The hull demanded 36.75 substeps in air against a population running 6.20 to 22.41 and now demands **12.71**, its stiffest block has four exposed faces against a real 3.46, and its air ratio is 1.97 against a population median of 1.07. Blocks are also laid out the way the game makes a player lay them out: every one bolted to something, and the lightest band on the surface. |
 | 2026-08-24 | **Walked the corpus again at `C24`'s pair, and the population changed shape rather than scale.** 8,105 ships in 190 s: the two modes closed from 5.9× apart to 2.3×, half the population now sits between them where six per cent did, and air has stopped making much difference to *stiffness* anywhere — the median hull's stiffest block is 1.07 times stiffer in air where it was 2.34. The census hull went the other way and is now stiffer than every ship in the corpus, flooring 6.91 % of its own blocks at the shipped cap against a real 0.92 % ([backlog.md](backlog.md) `C26`). The two field observations cannot be placed against any of it: they were taken in sessions at the pair before. |
 | 2026-08-24 | **Bounded the coupled paths and measured their ladders**, which closes [backlog.md](backlog.md) `A10`. The pairwise clamp is half the bound a lumped mass needs — a parcel carries a link to every pipe on it, a room's air one to every surface, and the node on the other end of a sink face is pulled on by both the fluid and its neighbours. The per-node relaxation now applies to both coupled passes, which makes a substep a convex combination of the temperatures around a node. On the fixture where the plumbing sets the demand, 9.7× over-subscribed: **1.3e25 K before, 1,799 K after**; a thin room refused one substep of thirty went from 3,839 K of spread to inside the 300 K it started at. The block ladder is unmoved to three decimals. `bench ceiling` grew `--fixture census|plumbed|pressurised|rings`, because the ladder had been a block ladder for as long as it had existed and said so nowhere. |
 | 2026-08-24 | Recorded that the refusal ladder is a *block* ladder. The coolant path has no overshoot clamp and on a hull carrying nothing stiffer is what sets the demand, so refusing it is orderly to about 4.5× and reaches 1.7e11 K at 9× — a cliff where the block path has a slope ([backlog.md](backlog.md) `A10`). |

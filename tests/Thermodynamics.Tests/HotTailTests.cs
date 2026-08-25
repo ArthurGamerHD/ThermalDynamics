@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Thermodynamics.Core;
 using Thermodynamics.Harness;
@@ -235,8 +236,16 @@ namespace Thermodynamics.Tests
             for (int i = 0; i < tail.Count; i++)
             {
                 Assert.Equal(tail[i].Position, back[i].Position);
-                Assert.Equal(tail[i].Temperature, back[i].Temperature,
-                    (int)0 + 1);   // one decimal: the tenth-kelvin quantum the codec packs at
+
+                // **Inside the quantum, not to a decimal place.** The codec packs at a tenth of a
+                // kelvin, so a decoded value is within half a quantum of what went in — and a
+                // temperature that lands on a rounding boundary, 877.25 K against a decoded
+                // 877.30 K, is exactly that and fails a decimal-place comparison. The claim is the
+                // quantum, so the assertion is the quantum.
+                Assert.True(
+                    Math.Abs(tail[i].Temperature - back[i].Temperature) <= 0.05f + 1e-4f,
+                    "packed " + tail[i].Temperature + " K and got " + back[i].Temperature
+                    + " K back, which is outside the tenth-kelvin quantum the codec packs at");
             }
         }
 

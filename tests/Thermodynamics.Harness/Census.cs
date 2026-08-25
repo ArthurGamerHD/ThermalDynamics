@@ -36,6 +36,40 @@ namespace Thermodynamics.Harness
             /// <summary>Mean temperature the band takes damage above, K.</summary>
             public float CriticalTemperature;
 
+            /// <summary>
+            /// How many of the band's six faces carry a mount point, which is how many neighbours a
+            /// block of it can conduct to.
+            ///
+            /// <para>
+            /// **A light hangs off a hull by one face and this table used to bolt it on by six.**
+            /// Every tier was built with <c>BlockModel.Solid</c>, which mounts everywhere, so the
+            /// lightest band — 20 kg against neighbours of 440 — carried six joints where its own
+            /// definition declares one. That is the whole of the gap between the census hull and
+            /// the population it stands in for ([backlog.md](../../docs/backlog.md) `C26`), and it
+            /// is `M11`: the tier describes the block it was measured from.
+            /// </para>
+            ///
+            /// <para>
+            /// Taken from the installed definition of <see cref="Example"/>, with **six** where the
+            /// definition declares none — a definition that lists no mount points is a block whose
+            /// mounts the game derives from its model geometry, not a block that mounts nowhere,
+            /// and the corpus walk makes the same fallback.
+            /// </para>
+            ///
+            /// <para>
+            /// **The machinery band is the one exception, and it is six rather than its example's
+            /// one.** `Example` is *the most populous subtype in the band, for the record* — it
+            /// documents the band rather than defining it — and a band of every heavy device on a
+            /// ship is not all gyroscopes. A gyro declares a single mount point on its bottom;
+            /// assemblers, refineries and containers mount all round. Taking the gyro's one for the
+            /// whole band puts an eleven-tonne block on a single joint, which is a hull with a
+            /// thermal dead end in it rather than a hull with machinery in it. The bands where the
+            /// example *is* the band — lights, and the three shaped-armour bands — carry what their
+            /// blocks declare.
+            /// </para>
+            /// </summary>
+            public int MountFaces = 6;
+
             /// <summary>The most populous subtype in the band, for the record.</summary>
             public string Example;
         }
@@ -48,14 +82,14 @@ namespace Thermodynamics.Harness
         /// </summary>
         public static readonly Tier[] Tiers =
         {
-            new Tier { Name = "light fitting",   Share = 0.012f, Mass =    20f, Conductivity = 50f, CriticalTemperature =  900f, Example = "SmallLight" },
-            new Tier { Name = "armour tip",      Share = 0.068f, Mass =    59f, Conductivity = 50f, CriticalTemperature =  900f, Example = "LargeBlockArmorCorner2Tip" },
-            new Tier { Name = "armour slope",    Share = 0.147f, Mass =   108f, Conductivity = 50f, CriticalTemperature =  900f, Example = "LargeBlockArmorSlope2Tip" },
-            new Tier { Name = "half armour",     Share = 0.104f, Mass =   194f, Conductivity = 50f, CriticalTemperature =  900f, Example = "LargeHalfArmorBlock" },
-            new Tier { Name = "light armour",    Share = 0.347f, Mass =   440f, Conductivity = 50f, CriticalTemperature =  900f, Example = "LargeBlockArmorBlock" },
-            new Tier { Name = "conveyor",        Share = 0.157f, Mass =   750f, Conductivity = 50f, CriticalTemperature =  900f, Example = "ConveyorTubeDuctT" },
-            new Tier { Name = "heavy armour",    Share = 0.135f, Mass =  2430f, Conductivity = 56.667f, CriticalTemperature =  931f, Example = "LargeHeavyBlockArmorBlock" },
-            new Tier { Name = "machinery",       Share = 0.030f, Mass = 11281f, Conductivity = 55f, CriticalTemperature =  929f, Example = "LargeBlockGyro" },
+            new Tier { Name = "light fitting",   Share = 0.012f, Mass =    20f, Conductivity = 50f, CriticalTemperature =  900f, MountFaces = 1, Example = "SmallLight" },
+            new Tier { Name = "armour tip",      Share = 0.068f, Mass =    59f, Conductivity = 50f, CriticalTemperature =  900f, MountFaces = 3, Example = "LargeBlockArmorCorner2Tip" },
+            new Tier { Name = "armour slope",    Share = 0.147f, Mass =   108f, Conductivity = 50f, CriticalTemperature =  900f, MountFaces = 4, Example = "LargeBlockArmorSlope2Tip" },
+            new Tier { Name = "half armour",     Share = 0.104f, Mass =   194f, Conductivity = 50f, CriticalTemperature =  900f, MountFaces = 5, Example = "LargeHalfArmorBlock" },
+            new Tier { Name = "light armour",    Share = 0.347f, Mass =   440f, Conductivity = 50f, CriticalTemperature =  900f, MountFaces = 6, Example = "LargeBlockArmorBlock" },
+            new Tier { Name = "conveyor",        Share = 0.157f, Mass =   750f, Conductivity = 50f, CriticalTemperature =  900f, MountFaces = 6, Example = "ConveyorTubeDuctT" },
+            new Tier { Name = "heavy armour",    Share = 0.135f, Mass =  2430f, Conductivity = 56.667f, CriticalTemperature =  931f, MountFaces = 6, Example = "LargeHeavyBlockArmorBlock" },
+            new Tier { Name = "machinery",       Share = 0.030f, Mass = 11281f, Conductivity = 55f, CriticalTemperature =  929f, MountFaces = 6, Example = "LargeBlockGyro" },
         };
 
         /// <summary>
@@ -305,11 +339,37 @@ namespace Thermodynamics.Harness
                 thermal.Conductivity = tier.Conductivity;
                 thermal.CriticalTemperature = tier.CriticalTemperature;
 
-                built[i] = BlockModel.Solid(tier.Name, Vector3I.One, tier.Mass, thermal);
+                built[i] = Mounted(tier.Name, tier.Mass, thermal, tier.MountFaces);
             }
 
             models = built;
             return models;
+        }
+
+        /// <summary>
+        /// A one-cell block that mounts on <paramref name="mountFaces"/> of its six faces and seals
+        /// all of them.
+        ///
+        /// The faces are taken in a fixed order, so a band with one mount always bolts to the same
+        /// side and two hulls built the same way are the same ship. Which side it is does not
+        /// matter to the population figure — what matters is how many joints a block of the band
+        /// has, since a joint is what makes it stiff. Sealing is untouched: a light is airtight and
+        /// its exposure comes from whether a neighbour is there at all.
+        /// </summary>
+        private static BlockModel Mounted(
+            string name, float mass, BlockThermalProperties thermal, int mountFaces)
+        {
+            BlockModel model = BlockModel.Solid(name, Vector3I.One, mass, thermal);
+            if (mountFaces >= Face.Count) return model;
+
+            int state = CellSurface.SelfAirtightMask;
+            for (int face = 0; face < Face.Count; face++)
+            {
+                state = CellSurface.WithSelfMount(state, face, face < mountFaces);
+            }
+
+            for (int i = 0; i < model.LocalSurfaces.Length; i++) model.LocalSurfaces[i] = state;
+            return model;
         }
 
         /// <summary>
@@ -388,17 +448,273 @@ namespace Thermodynamics.Harness
             BlockModel[] tiers = Models();
             BlockModel source = Producer();
 
-            int index = 0;
-            foreach (Vector3I cell in cells)
+            List<Vector3I> layout = new List<Vector3I>(cells);
+            int[] tierOf = new int[layout.Count];
+            HashSet<Vector3I> filled = new HashSet<Vector3I>(layout);
+
+            for (int i = 0; i < layout.Count; i++) tierOf[i] = TierAt(i);
+
+            SurfaceTheLightestTier(layout, tierOf, filled);
+
+            BlockOrientation[] orientations = Bolt(layout, tierOf, tiers, filled);
+
+            for (int i = 0; i < layout.Count; i++)
             {
-                // A producer stands in place of whatever tier the cell would have held, so the
-                // remaining tiers keep their proportions to each other and the hull keeps its
-                // block count.
-                builder.Place(ProducesHeatAt(index) ? source : tiers[TierAt(index)], cell);
-                index++;
+                if (ProducesHeatAt(i))
+                {
+                    // A producer stands in place of whatever tier the cell would have held, so the
+                    // remaining tiers keep their proportions to each other and the hull keeps its
+                    // block count.
+                    builder.Place(source, layout[i]);
+                    continue;
+                }
+
+                BlockModel model = tiers[tierOf[i]];
+                builder.Place(model, layout[i], orientations[i]);
             }
 
             return builder;
+        }
+
+        /// <summary>
+        /// Moves the lightest tier onto the hull's surface, swapping it with whatever was there.
+        ///
+        /// <para>
+        /// **A real ship's stiffest block is one somebody could see.** Measured over 8,105 workshop
+        /// hulls, the block that sets a ship's substep demand in air has **3.46 exposed faces** on
+        /// average and a light sets it on 45 % of them — a light hangs off a hull. The census hull
+        /// deals its tiers out by a hash of a block's position in the layout, so its light fittings
+        /// landed wherever that put them, and the ones that landed inside had six armour neighbours
+        /// and no sky: a 20 kg body with six joints into 440 kg blocks and nothing to radiate from
+        /// is stiffer than anything a builder can make.
+        /// </para>
+        ///
+        /// <para>
+        /// **It went unnoticed while conduction ran at 2.4 and `C24` made it visible**, because a
+        /// buried block's demand is all conduction and quadrupled with the pace while a real ship's
+        /// exposed one is mostly convection and fell with the clock: the hull left the population it
+        /// stands in for at 36.75 substeps against a corpus maximum of 22.41. That is
+        /// [backlog.md](../../docs/backlog.md) `C26`, and this is `M11` — the synthetic ship is
+        /// refreshed against the field.
+        /// </para>
+        ///
+        /// <para>
+        /// **Counts are preserved exactly**: this is a permutation of tier onto cell, so every tier
+        /// keeps the share <see cref="TierAt"/> gave it and the hull keeps its block count. Producer
+        /// cells are left where they are, since which cell makes heat is its own placement rule and
+        /// moving it would change what the hull generates as well as where.
+        /// </para>
+        /// </summary>
+        private static void SurfaceTheLightestTier(
+            List<Vector3I> layout, int[] tierOf, HashSet<Vector3I> filled)
+        {
+            const int Lightest = 0;
+
+            List<int> buried = new List<int>();
+            List<int> exposedElsewhere = new List<int>();
+            int[] faces = new int[layout.Count];
+
+            for (int i = 0; i < layout.Count; i++)
+            {
+                faces[i] = ExposedFaces(layout[i], filled);
+                if (ProducesHeatAt(i)) continue;
+
+                if (tierOf[i] == Lightest && faces[i] == 0) buried.Add(i);
+                else if (tierOf[i] != Lightest && faces[i] > 0) exposedElsewhere.Add(i);
+            }
+
+            // **The most exposed cells first, not merely exposed ones.** A hull is mostly flat, so
+            // taking the first surface cell in layout order puts every light on a face with one
+            // open side, where the block that sets a real ship's demand has 3.46. Sorted by open
+            // faces, the lights take the corners and edges a ship hangs them off. Ties keep layout
+            // order, so the result is the same on every run and every build order (`E5`).
+            exposedElsewhere.Sort(delegate(int a, int b)
+            {
+                int byFaces = faces[b].CompareTo(faces[a]);
+                return byFaces != 0 ? byFaces : a.CompareTo(b);
+            });
+
+            // Whatever was on the surface takes the buried cell in exchange, so the swap moves two
+            // blocks and changes no count.
+            int swaps = Math.Min(buried.Count, exposedElsewhere.Count);
+            for (int s = 0; s < swaps; s++)
+            {
+                int inside = buried[s];
+                int outside = exposedElsewhere[s];
+
+                tierOf[inside] = tierOf[outside];
+                tierOf[outside] = Lightest;
+            }
+        }
+
+        /// <summary>
+        /// Turns every block so that it is bolted to something, and to as much as it can be.
+        ///
+        /// <para>
+        /// **The game will not let a player place a block that attaches to nothing**, and a hull
+        /// built out of blocks that mount on some of their faces has to respect that or it is not a
+        /// hull anybody could build. A `LargeBlockGyro` declares one mount point, on its bottom; a
+        /// `SmallLight` declares one. Placed at the identity they all point the same way, and a
+        /// block whose one mount face happens to look at another block that does not mount back has
+        /// **no joints at all** — a body with nothing to conduct to, cooling toward the sky on an
+        /// asymptote that never arrives. Two hulls run at different clocks then never agree about
+        /// it, which is a rig measuring its own hull rather than the input it is about (`E8`).
+        /// </para>
+        ///
+        /// <para>
+        /// So orientations are chosen in layout order: each block takes the one that joins the most
+        /// neighbours, counting a neighbour already placed only where it mounts back and one not
+        /// yet placed where it still could. Deterministic, so two hulls built alike are the same
+        /// ship, and what it cannot fix — a block every neighbour refuses — it reports rather than
+        /// hides.
+        /// </para>
+        /// </summary>
+        private static BlockOrientation[] Bolt(
+            List<Vector3I> layout, int[] tierOf, BlockModel[] tiers, HashSet<Vector3I> filled)
+        {
+            BlockOrientation[] chosen = new BlockOrientation[layout.Count];
+            Dictionary<Vector3I, int> at = new Dictionary<Vector3I, int>(layout.Count);
+            bool[] placed = new bool[layout.Count];
+
+            for (int i = 0; i < layout.Count; i++) at[layout[i]] = i;
+
+            for (int i = 0; i < layout.Count; i++)
+            {
+                // A producer is a solid block and mounts everywhere; leave it at the identity.
+                if (ProducesHeatAt(i))
+                {
+                    chosen[i] = BlockOrientation.Identity;
+                    placed[i] = true;
+                    continue;
+                }
+
+                int state = tiers[tierOf[i]].LocalSurfaces[0];
+                int best = -1;
+
+                foreach (BlockOrientation candidate in Orientations())
+                {
+                    int joined = 0;
+
+                    for (int face = 0; face < Face.Count; face++)
+                    {
+                        if (!CellSurface.SelfMount(state, face)) continue;
+
+                        Vector3I toward = candidate.Rotate(Face.Offsets[face]);
+
+                        int neighbour;
+                        if (!at.TryGetValue(layout[i] + toward, out neighbour)) continue;
+
+                        // An unplaced neighbour still counts: it has not chosen a side yet and can
+                        // take one that mounts back. A placed one counts only if it did.
+                        if (!placed[neighbour] || MountsToward(tiers, tierOf, chosen, neighbour, -toward))
+                        {
+                            joined++;
+                        }
+                    }
+
+                    if (joined <= best) continue;
+
+                    best = joined;
+                    chosen[i] = candidate;
+                }
+
+                placed[i] = true;
+            }
+
+            return chosen;
+        }
+
+        /// <summary>Whether a placed block carries a mount point on the grid direction given.</summary>
+        private static bool MountsToward(
+            BlockModel[] tiers, int[] tierOf, BlockOrientation[] chosen, int index, Vector3I toward)
+        {
+            int state = tiers[tierOf[index]].LocalSurfaces[0];
+
+            for (int face = 0; face < Face.Count; face++)
+            {
+                if (!CellSurface.SelfMount(state, face)) continue;
+                if (chosen[index].Rotate(Face.Offsets[face]) == toward) return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Turns a block so the faces it mounts on are faces that have something to mount to.
+        ///
+        /// <para>
+        /// **A block that mounts on one face is bolted to something with it.** A light hangs off a
+        /// wall; it does not hang off the empty side of one. Placing every partial-mount tier at
+        /// the identity points its one mount face the same way whatever is around it, and a light
+        /// whose mount face happens to look at open space is a block with *no joints at all* —
+        /// twenty kilograms with nothing to conduct to, cooling toward the sky on an asymptote that
+        /// never arrives. That is the shape `E8` is about: it does not fail, it quietly measures a
+        /// hull that is not the one being described.
+        /// </para>
+        ///
+        /// <para>
+        /// So the orientation is chosen per cell: the candidate whose mount faces cover the most
+        /// occupied neighbours, ties going to the first in a fixed order so two hulls built alike
+        /// are the same ship. It is what a builder does without thinking about it.
+        /// </para>
+        /// </summary>
+        private static BlockOrientation FacingItsNeighbours(
+            BlockModel model, Vector3I cell, HashSet<Vector3I> filled)
+        {
+            int state = model.LocalSurfaces[0];
+            int best = -1;
+            BlockOrientation chosen = BlockOrientation.Identity;
+
+            foreach (BlockOrientation candidate in Orientations())
+            {
+                int joined = 0;
+
+                for (int face = 0; face < Face.Count; face++)
+                {
+                    if (!CellSurface.SelfMount(state, face)) continue;
+                    if (filled.Contains(cell + candidate.Rotate(Face.Offsets[face]))) joined++;
+                }
+
+                if (joined <= best) continue;
+
+                best = joined;
+                chosen = candidate;
+            }
+
+            return chosen;
+        }
+
+        /// <summary>The twenty-four ways a block can be turned, in a fixed order.</summary>
+        private static IEnumerable<BlockOrientation> Orientations()
+        {
+            Array directions = Enum.GetValues(typeof(Base6Directions.Direction));
+
+            foreach (Base6Directions.Direction forward in directions)
+            {
+                foreach (Base6Directions.Direction up in directions)
+                {
+                    Vector3 f = Base6Directions.GetVector(forward);
+                    Vector3 u = Base6Directions.GetVector(up);
+                    if (Math.Abs(Vector3.Dot(f, u)) > 0.001f) continue;
+
+                    yield return new BlockOrientation(forward, up);
+                }
+            }
+        }
+
+        /// <summary>How many of a cell's six faces have nothing bolted to them.</summary>
+        private static int ExposedFaces(Vector3I cell, HashSet<Vector3I> filled)
+        {
+            int open = 0;
+
+            if (!filled.Contains(cell + Vector3I.Up)) open++;
+            if (!filled.Contains(cell + Vector3I.Down)) open++;
+            if (!filled.Contains(cell + Vector3I.Left)) open++;
+            if (!filled.Contains(cell + Vector3I.Right)) open++;
+            if (!filled.Contains(cell + Vector3I.Forward)) open++;
+            if (!filled.Contains(cell + Vector3I.Backward)) open++;
+
+            return open;
         }
 
         /// <summary>

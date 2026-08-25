@@ -91,9 +91,12 @@ namespace Thermodynamics.Tests
         /// which is exactly the alignment the two corrected tables in stiffness.md show, row for
         /// row, one cap apart. Reading either table without its rate slides the whole column.
         /// </summary>
+        // **Only the caps that still bind.** The pair is what the test is about, and a cap that
+        // raises nothing at both rates makes the two sides agree on zero — which `C26` did to the
+        // top of this ladder: the census hull's stiffest tier used to demand 18 substeps at
+        // `Frequency` 8 and demands 3.24 now that its light fittings mount on one face rather than
+        // six, like the block they stand for. Caps of 4 and 8 are inert on it.
         [Theory]
-        [InlineData(8, 16)]
-        [InlineData(4, 8)]
         [InlineData(2, 4)]
         [InlineData(1, 2)]
         public void ACapMeansTheSameFloorAtTwiceTheRateAndTwiceTheCap(int fastCap, int slowCap)
@@ -121,12 +124,13 @@ namespace Thermodynamics.Tests
         /// <para>
         /// This is the one that would have caught the reading directly. The old page credited
         /// `MaxSubstepsPerBlock 16` with removing 172 blocks' worth of stiffness; at the rate that
-        /// shipped then it removed none, because the hull asked for about eleven. **`C24` took the
-        /// hull past sixteen** — four times the conduction pace against two and a half times the
-        /// capacity — so a cap of sixteen now binds on it, and the inert case this test is about
-        /// is a cap of thirty-two. The demand is asserted rather than assumed, so the next time
-        /// the hull crosses a cap this fails rather than passing on a cap that quietly started
-        /// working.
+        /// shipped then it removed none, because the hull asked for about eleven. **The hull has
+        /// been past sixteen and back**: `C24` took it there — four times the conduction pace
+        /// against two and a half times the capacity — and `C26` brought it to **3.24**, because
+        /// its light fittings now mount on one face like the block they stand for rather than on
+        /// six. The inert case is a cap of 4. The demand is asserted rather than assumed, so the
+        /// next time the hull crosses a cap this fails rather than passing on a cap that quietly
+        /// started working.
         /// </para>
         /// </summary>
         [Fact]
@@ -135,9 +139,9 @@ namespace Thermodynamics.Tests
             ThermalSimulation uncapped = Hull(8);
             float demand = Demand(uncapped);
 
-            Assert.InRange(demand, 16f, 32f);
+            Assert.InRange(demand, 2f, 4f);
 
-            ThermalSimulation capped = Hull(8, 32);
+            ThermalSimulation capped = Hull(8, 4);
 
             Assert.Equal(demand, Demand(capped), 3);
             Assert.Equal(0, capped.Solver.FlooredNodes);

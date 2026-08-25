@@ -50,11 +50,24 @@ namespace Thermodynamics.Tests
         /// </summary>
         private const int Blocks = ClientInputLab.SmallestHullWithACompartment;
 
+        /// <summary>
+        /// Simulated seconds every run here asks for, before the clock stretches it.
+        ///
+        /// **It was 240 and `C26` doubled it.** The census hull's blocks now mount the way the
+        /// blocks they stand for do — a light on one face, a gyro on its bottom — so the hull is
+        /// less coupled than the solid one it replaced and its slowest tail takes longer to
+        /// arrive. Every figure this class reads is a *standing* error, what is left once a
+        /// perturbation has decayed, and at 240 s the decay was still finishing: a 10 % clock error
+        /// under a steady load read 0.66 K where it reads 0.02 K at 360 and 0.00 at 480. Measured
+        /// rather than doubled on principle.
+        /// </summary>
+        private const float Seconds = 480f;
+
         private static ClientInputLab.Result Run(ClientInputLab.Degradation how,
             ClientDriftLab.Correction fix = null)
         {
             return ClientInputLab.Measure(how, fix ?? ClientDriftLab.Correction.None,
-                "sunlit", 240f, Blocks);
+                "sunlit", Seconds, Blocks);
         }
 
         /// <summary>
@@ -357,7 +370,7 @@ namespace Thermodynamics.Tests
         /// still climbing as a perturbation — which is `C8` arriving in a different lab.
         /// </summary>
         private static ClientInputLab.Result Flying(ClientInputLab.Degradation how,
-            float seconds = 240f)
+            float seconds = Seconds)
         {
             return ClientInputLab.Measure(how, ClientDriftLab.Correction.None, "burn", seconds, Blocks);
         }
@@ -420,16 +433,30 @@ namespace Thermodynamics.Tests
                 OcclusionWrongForSeconds = 1f,
             });
 
-            output.WriteLine("permanent: peak {0:n1} K, standing {1:n1} K",
-                always.PeakKelvin, always.StandingKelvin);
+            // **Read against a longer run rather than against its own peak.** A bias is an error
+            // that does not decay, and what says so is that twice the run leaves it where it was.
+            // Its peak is not the test: on the census hull the arrival transient is larger than
+            // the bias it settles to — 13.0 K against 5.5 K — so a threshold on the peak measures
+            // how hard the hull was hit rather than whether what is left is standing.
+            ClientInputLab.Result longer = ClientInputLab.Measure(
+                new ClientInputLab.Degradation
+                {
+                    Name = "always in shade",
+                    OcclusionWrongEverySeconds = 1f,
+                    OcclusionWrongForSeconds = 1f,
+                },
+                ClientDriftLab.Correction.None, "sunlit", Seconds * 2f, Blocks);
+
+            output.WriteLine("permanent: peak {0:n1} K, standing {1:n1} K; twice the run {2:n1} K",
+                always.PeakKelvin, always.StandingKelvin, longer.StandingKelvin);
 
             Assert.True(always.StandingKelvin > 2f,
                 "a client permanently in the wrong shadow settled " + always.StandingKelvin
                 + " K out, which is not a bias");
 
-            Assert.True(always.StandingKelvin > always.PeakKelvin * 0.5f,
-                "it peaked at " + always.PeakKelvin + " K and settled at " + always.StandingKelvin
-                + " K, which is a perturbation rather than the bias this pins");
+            Assert.True(longer.StandingKelvin > always.StandingKelvin * 0.9f,
+                "it settled " + always.StandingKelvin + " K out and " + longer.StandingKelvin
+                + " K out over twice the run, so it is decaying rather than standing");
         }
 
         /// <summary>
@@ -489,7 +516,7 @@ namespace Thermodynamics.Tests
         private static ClientInputLab.Result InTheDark(ClientInputLab.Degradation how, float period)
         {
             return ClientInputLab.Measure(how, ClientDriftLab.Correction.None,
-                "shadow", 240f, Blocks, period);
+                "shadow", Seconds, Blocks, period);
         }
 
         /// <summary>
@@ -731,8 +758,13 @@ namespace Thermodynamics.Tests
                 "an unmapped hull peaked at " + shorter.PeakKelvin + " K against "
                 + airGone.PeakKelvin + " K for the air alone, so the skin is not the larger half");
 
-            Assert.True(longer.StandingKelvin < shorter.StandingKelvin,
-                "the standing error did not fall over twice the run — " + shorter.StandingKelvin
+            // **Not falling any further is what a finished decay looks like.** This asked for a
+            // fall over twice the run, which was the reading while the base run was still
+            // decaying; on the refreshed census hull the same knob is down to 0.0018 K at the base
+            // length and stays there, so what the claim needs is that it does not *rise* and that
+            // it is a thousandth of its peak, which is the assertion below.
+            Assert.True(longer.StandingKelvin <= shorter.StandingKelvin + 0.01f,
+                "the standing error rose over twice the run — " + shorter.StandingKelvin
                 + " K to " + longer.StandingKelvin + " K — which is a bias rather than the"
                 + " perturbation this pins");
 

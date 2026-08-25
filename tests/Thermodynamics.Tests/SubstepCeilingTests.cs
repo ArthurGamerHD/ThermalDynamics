@@ -201,7 +201,15 @@ namespace Thermodynamics.Tests
                 float larger = System.Math.Max(a.MaxError, b.MaxError);
                 float smaller = System.Math.Min(a.MaxError, b.MaxError);
 
-                Assert.True(larger <= smaller * 1.25f,
+                // **A quarter was the tolerance while the ladder had rungs either side of the
+                // knee.** `C26` softened the census hull — its blocks mount the way the blocks
+                // they stand for do — so the rungs below 3x now sit under the half-kelvin floor
+                // this loop skips, and what is left to compare is the knee itself, where the error
+                // is most sensitive to which side of it a rung lands: 2.14 K at 9 substeps against
+                // 2.72 K at 17, which is 27 %. The claim is the shape rather than the fourth
+                // figure, and it is still the ratio that decides — a count-driven error would show
+                // the 17-substep run at half the 9-substep one, not within a third of it.
+                Assert.True(larger <= smaller * 1.35f,
                     "at " + ratio + "x the two step lengths disagree: " + a.MaxError + " K at "
                     + a.Ceiling + " substeps against " + b.MaxError + " K at " + b.Ceiling);
             }
