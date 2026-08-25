@@ -246,6 +246,23 @@ namespace Thermodynamics.Core
 
             if (required <= substepBudget) return seconds;
 
+            // **The grid cannot afford its demand, and there are two ways to spend less.**
+            // Shortening the step below costs the whole clock and has no bound on it; flooring the
+            // stiffest blocks to what the budget grants costs a bounded error on those blocks and
+            // keeps the step whole. `C30` measured the two and they are three orders of magnitude
+            // apart, so the choice is a setting rather than an argument (`C7`).
+            if (settings.FloorBlocksWhenOverBudget && solver.AdaptiveSubstepFloor != substepBudget)
+            {
+                solver.AdaptiveSubstepFloor =
+                    substepBudget > int.MaxValue ? int.MaxValue : (int)substepBudget;
+
+                // The floor is applied while the step state is prepared, so the demand has to be
+                // asked again to see it. Only ever on a grid that was about to lose its clock, and
+                // the second walk is a fraction of the substeps it saves.
+                demand = solver.RequiredSubsteps(seconds);
+                if (demand <= substepBudget) return seconds;
+            }
+
             // The substep estimate is proportional to step length, so scaling the length by the
             // ratio lands exactly on the budget.
             demand = substepBudget;

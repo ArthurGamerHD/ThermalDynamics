@@ -232,6 +232,25 @@ namespace Thermodynamics.Core
         public int MaxSubstepsPerBlock = 0;
 
         /// <summary>
+        /// When a grid cannot afford the substeps its demand asks for, floor its stiffest blocks to
+        /// what <see cref="MaxElementVisitsPerStep"/> grants instead of shortening its step.
+        ///
+        /// <para>
+        /// The allowance bounds a step's work by making the step *shorter*, so an over-budget grid
+        /// advances less simulated time per real second — a loss of the whole clock, with no bound
+        /// on it. Flooring the stiffest blocks lowers the demand instead, so the step stays whole
+        /// and the cost is a bounded error on the blocks it re-masses. See backlog.md `C30`.
+        /// </para>
+        ///
+        /// <para>
+        /// **Not <see cref="MaxSubstepsPerBlock"/> under another name.** That reaches every hull;
+        /// this engages per grid and per step, only where the budget binds, and the cap it applies
+        /// is what that grid can afford rather than a number chosen in advance.
+        /// </para>
+        /// </summary>
+        public bool FloorBlocksWhenOverBudget = false;
+
+        /// <summary>
         /// When true, damage per second is <c>(T - critical) * OverheatDamagePerKelvin</c>. When
         /// false, that figure is applied per solver step, making total damage scale with
         /// <see cref="Frequency"/>.

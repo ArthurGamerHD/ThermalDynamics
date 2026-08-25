@@ -196,6 +196,44 @@ namespace Thermodynamics
         [ProtoMember(84)] public int MaxSubstepsPerBlock = 0;
 
         /// <summary>
+        /// When a grid cannot afford the substeps its demand asks for, floor its stiffest blocks to
+        /// what the allowance grants instead of shortening its step.
+        ///
+        /// <para>
+        /// **What shortening the step actually costs is the whole clock, and it has no bound.**
+        /// `MaxElementVisitsPerStep` bounds a step's work by making the step *shorter*, so an
+        /// over-budget grid advances less simulated time per real second and its thermal
+        /// simulation runs slow for as long as the load lasts. Measured on a 64,463-block hull in
+        /// flight at the shipped allowance, that is **36.2 % of real time**, which the measured
+        /// rate ladder stands at **36.98 K** — and past the last rung it measured, so a floor
+        /// rather than a reading.
+        /// </para>
+        ///
+        /// <para>
+        /// **Flooring the stiffest blocks is a bounded approximation instead.** It lowers the
+        /// demand to what the budget grants, so nothing is shortened and the grid keeps its whole
+        /// clock; what it charges is the error on the blocks it re-masses, measured across all
+        /// 8,144 published blueprints at **0.024 K** at p99. Nine to thirty-seven kelvin against
+        /// twenty-four thousandths of one — see backlog.md `C30`.
+        /// </para>
+        ///
+        /// <para>
+        /// **It is not `MaxSubstepsPerBlock` with a different name.** That is a world setting and
+        /// reaches every hull, which is why `C3` refused it as a default: no run under 5,000 blocks
+        /// is over the allowance at all, so four fifths of a published population would pay the
+        /// error and collect none of the throughput. This engages per grid and per step, only where
+        /// the budget binds, and the cap it applies is exactly what that grid can afford rather
+        /// than a number chosen in advance.
+        /// </para>
+        ///
+        /// <para>
+        /// Off by default: it changes what an over-budget grid does, and a default change is its
+        /// own decision (`E11`).
+        /// </para>
+        /// </summary>
+        [ProtoMember(130)] public bool FloorBlocksWhenOverBudget = false;
+
+        /// <summary>
         /// Whether a frame's grids are solved on the engine's worker threads rather than one after
         /// another on the game thread.
         ///
@@ -733,6 +771,7 @@ namespace Thermodynamics
             core.MaxElementVisitsPerStep = MaxElementVisitsPerStep;
             core.MaxSubsteps = MaxSubsteps;
             core.MaxSubstepsPerBlock = MaxSubstepsPerBlock;
+            core.FloorBlocksWhenOverBudget = FloorBlocksWhenOverBudget;
 
             core.VacuumTemperature = VacuumTemperature;
             core.SolarEnergy = SolarEnergy;
@@ -805,7 +844,7 @@ namespace Thermodynamics
                 "EnableHeatPumps",
                 "ClampConductionOvershoot", "ClampEnvironmentOvershoot", "DamageIsPerSecond",
                 "Frequency", "SimulationSpeed", "HeatTimeScale", "MaxElementVisitsPerStep",
-                "MaxSubsteps", "MaxSubstepsPerBlock",
+                "MaxSubsteps", "MaxSubstepsPerBlock", "FloorBlocksWhenOverBudget",
                 "VacuumTemperature", "SolarEnergy", "FrictionAtSpeedsAbove", "FrictionScale",
                 "RoomConvectionCoefficient", "RoomAirDensity", "SolarOcclusionInterval",
                 "ClimateGroundInfluence", "ClimateWeatherInfluence",
@@ -871,6 +910,7 @@ namespace Thermodynamics
                 case "MaxElementVisitsPerStep": return MaxElementVisitsPerStep;
                 case "MaxSubsteps": return MaxSubsteps;
                 case "MaxSubstepsPerBlock": return MaxSubstepsPerBlock;
+                case "FloorBlocksWhenOverBudget": return Flag(FloorBlocksWhenOverBudget);
                 case "VacuumTemperature": return VacuumTemperature;
                 case "SolarEnergy": return SolarEnergy;
                 case "FrictionAtSpeedsAbove": return FrictionAtSpeedsAbove;
@@ -977,6 +1017,7 @@ namespace Thermodynamics
                 case "MaxElementVisitsPerStep": MaxElementVisitsPerStep = (int)value; return true;
                 case "MaxSubsteps": MaxSubsteps = (int)value; return true;
                 case "MaxSubstepsPerBlock": MaxSubstepsPerBlock = (int)value; return true;
+                case "FloorBlocksWhenOverBudget": FloorBlocksWhenOverBudget = Flag(value); return true;
                 case "VacuumTemperature": VacuumTemperature = value; return true;
                 case "SolarEnergy": SolarEnergy = value; return true;
                 case "FrictionAtSpeedsAbove": FrictionAtSpeedsAbove = value; return true;

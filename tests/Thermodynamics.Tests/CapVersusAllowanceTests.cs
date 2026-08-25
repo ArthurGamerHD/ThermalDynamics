@@ -54,6 +54,77 @@ namespace Thermodynamics.Tests
         /// </summary>
         private const double CapKelvinP99 = 0.024d;
 
+        /// <summary>
+        /// **Off, it changes nothing at all** — the claim every optional mechanism in this mod has
+        /// to make (`P8`), and the one a change to the step path is most likely to break.
+        ///
+        /// The comparison is the rate and the demand on a hull the allowance is binding hard on,
+        /// which is where the new branch is live. A grid that is *not* over budget never reaches
+        /// the branch, so it is the over-budget one that has to be identical.
+        /// </summary>
+        [Fact]
+        public void OffItDoesNotReachTheStepPathAtAll()
+        {
+            int[] sizes = { 64000 };
+            int[] allowances = { 4000000 };
+            string[] worlds = { "flight" };
+
+            List<AllowanceLab.Row> before = AllowanceLab.Run("ship", sizes, allowances, worlds,
+                new[] { 0 }, AllowanceLab.DefaultFrames, null);
+
+            List<AllowanceLab.Row> after = AllowanceLab.RunFloored("ship", sizes, allowances,
+                worlds, false, AllowanceLab.DefaultFrames, null);
+
+            Assert.Single(before);
+            Assert.Single(after);
+
+            output.WriteLine("demand {0:n4} against {1:n4}; granted {2} against {3}",
+                before[0].Demand, after[0].Demand, before[0].Granted, after[0].Granted);
+
+            Assert.Equal(before[0].Demand, after[0].Demand);
+            Assert.Equal(before[0].Granted, after[0].Granted);
+        }
+
+        /// <summary>
+        /// **On, an over-budget grid keeps its whole clock**, which is the mechanism.
+        ///
+        /// The demand falls to what the budget grants rather than to a number chosen in advance —
+        /// that is the difference from `MaxSubstepsPerBlock`, and it is what makes the setting cost
+        /// nothing on the four fifths of the population that never reach the allowance.
+        /// </summary>
+        [Fact]
+        public void OnAnOverBudgetGridKeepsItsClockByFlooringToWhatItCanAfford()
+        {
+            int[] sizes = { 64000 };
+            int[] allowances = { 4000000 };
+            string[] worlds = { "flight" };
+
+            List<AllowanceLab.Row> shortened = AllowanceLab.RunFloored("ship", sizes, allowances,
+                worlds, false, AllowanceLab.DefaultFrames, null);
+
+            List<AllowanceLab.Row> floored = AllowanceLab.RunFloored("ship", sizes, allowances,
+                worlds, true, AllowanceLab.DefaultFrames, null);
+
+            output.WriteLine("step shortened: demand {0:n2}, granted {1}, clock {2:n1}%",
+                shortened[0].Demand, shortened[0].Granted, 100d * shortened[0].Rate);
+            output.WriteLine("blocks floored: demand {0:n2}, granted {1}, clock {2:n1}%",
+                floored[0].Demand, floored[0].Granted, 100d * floored[0].Rate);
+
+            Assert.True(shortened[0].Rate < 0.9d,
+                "the allowance is not binding on this hull — it keeps "
+                + (100d * shortened[0].Rate).ToString("n1") + "% of real time with the step "
+                + "shortened — so this test is not measuring the branch it is about");
+
+            // **The demand lands on the budget rather than under it.** A floor tighter than the
+            // budget would be approximating more than the grid asked for; one looser would leave
+            // the step shortened after all.
+            Assert.InRange(floored[0].Demand, 1f, floored[0].Granted + 0.01f);
+
+            Assert.True(floored[0].Rate > 0.99d,
+                "the grid still lost its clock: " + (100d * floored[0].Rate).ToString("n1")
+                + "% of real time, so flooring did not remove the deficit it was meant to");
+        }
+
         [Fact]
         public void WhereTheBudgetBindsTheCapKeepsTheClockThatTheAllowanceGivesAway()
         {

@@ -498,6 +498,41 @@ raise — see [telemetry.md](telemetry.md#substeps). The projection is the same 
 setting uses, and `SubstepFloorTests` asserts the two agree, so one baseline dump answers the
 question for that world without running the experiment.
 
+### `FloorBlocksWhenOverBudget`
+
+**A grid that cannot afford its demand has to spend less, and there are two ways.** Today it
+shortens its step: `MaxElementVisitsPerStep` bounds a step's work by making the step cover less
+simulated time, so the grid advances slower than real time and its whole thermal clock runs behind
+for as long as the load lasts. That is not an approximation with a price on one block — it is the
+entire simulation running slow, and nothing bounds how slow.
+
+**The other way is to lower the demand.** Flooring the stiffest blocks to what the budget grants
+leaves the step whole and charges an error on the blocks it re-masses. Measured on one hull at the
+shipped allowance ([backlog.md](backlog.md) `C30`):
+
+| hull, in flight | demand | granted | clock | what that stands at |
+| --- | ---: | ---: | ---: | ---: |
+| 32,800 blocks, step shortened | 27.49 | 20 | 72.5 % | 9.08 K |
+| 32,800 blocks, blocks floored | 6.00 | 20 | **100 %** | the cap's 0.024 K |
+| 64,463 blocks, step shortened | 27.49 | 10 | 36.2 % | 36.98 K, past the ladder |
+| 64,463 blocks, blocks floored | 6.00 | 10 | **100 %** | the cap's 0.024 K |
+
+**Nine to thirty-seven kelvin against twenty-four thousandths of one.** The kelvin price of a lost
+clock is read off a measured ladder run under a *moving* load, which is the only place a clock error
+shows at all, so it is an upper bound for a ship whose load keeps changing and says nothing about a
+settled one.
+
+**It is not `MaxSubstepsPerBlock` under another name**, and the difference is the whole of why
+[backlog.md](backlog.md) `C3` refused that one as a default. `MaxSubstepsPerBlock` is a world
+setting and reaches every hull; measured over all 8,144 published blueprints, **no run under 5,000
+blocks is over the allowance at all**, so four fifths of the ships people build would pay its error
+and collect none of the throughput. This engages per grid and per step, only where the budget binds,
+and the cap it applies is exactly what that grid can afford rather than a number chosen in advance.
+The two compose: with both on, the tighter cap wins.
+
+**Off by default**, because it changes what an over-budget grid does and a default is its own
+decision.
+
 ## Changing settings from a client
 
 Every setting except the four presentation switches is world state, owned by the server. A client
@@ -698,6 +733,7 @@ will not move it much.
 | `HeatTimeScale` | 90 | How much faster than real physics heat moves. Divides every heat capacity. It was 225 until `C24`, which moved it to put the most significant thermal event inside the 2–5 minute window `G8` asks for — see [balance.md](balance.md#the-route-is-chosen-and-it-is-the-one-the-cost-column-argued-against). |
 | `MaxElementVisitsPerStep` | 4000000 | Most element visits one step may make — substeps times its links plus four times its nodes — before the step is shortened to fit. 0 removes the bound. **Moves with `Frequency`**: a step is spread across the frames of its window, so this figure and the step rate together set the per-frame cost — at `Frequency` 4 it bounds a frame at 266,667 visits. It was 2,000,000 until `C27` priced what a shortened step costs; see [What a shortened step costs](#what-a-shortened-step-costs). |
 | `MaxSubstepsPerBlock` | 0 (off) | Most substeps any single block may demand of the whole grid before it is treated as heavier than it is. The cheapest large win there is on a real ship. See below. |
+| `FloorBlocksWhenOverBudget` | `false` | When a grid cannot afford the substeps its demand asks for, floor its stiffest blocks to what `MaxElementVisitsPerStep` grants instead of shortening its step. Engages per grid and per step, only where the budget binds. See below. |
 | `ParallelGrids` | `false` | Solve a frame's grids on the engine's worker threads rather than one after another on the game thread. Measured at **10.17×** on a 242-grid fleet and 0.99× on a single grid. **Ships off**, and what a session has to answer first is [Solving a fleet in parallel](#solving-a-fleet-in-parallel). |
 | `MaxSubsteps` | 64 | Most substeps one step may be cut into, whatever the grid asks for. A grid refused here integrates a step too long for its stiffest block, and the overshoot clamps carry the difference. **It bound in thick air at flying speed until `C24`, and no measured hull reaches it now** — see [The approximation that shipped on](#the-approximation-that-shipped-on-and-no-longer-does). |
 | `ClampConductionOvershoot` | `true` | Caps each exchange at the energy that equalises the pair, and every exchange arriving at one node, one parcel of coolant or one room's air at the energy that equalises that. Off reproduces the original unbounded solver. Skipped, at no change to the result, on any step short enough that no element can overshoot — see [benchmarks.md](benchmarks.md#the-overshoot-clamp-ab). |
@@ -1248,6 +1284,7 @@ one with a migration risk — is late rather than first.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Added `FloorBlocksWhenOverBudget` ([backlog.md](backlog.md) `C30`): when a grid cannot afford its demand, floor its stiffest blocks to what the allowance grants instead of shortening its step. Off by default. The measurement behind it is nine to thirty-seven kelvin of lost clock against the cap's own 0.024 K. |
 | 2026-08-25 | `MaxSubstepsPerBlock` stays off by default, decided on all 8,144 published blueprints rather than on one hull ([backlog.md](backlog.md) `C3`). The population p99 is 0.2820 K, under the figure that had kept it out; what decides it is that the error is charged per block and the throughput is collected per grid, so four fifths of the ships people publish would pay and collect nothing. |
 | 2026-08-25 | Added `HeatTerminalPanel` ([backlog.md](backlog.md) `B40`), the switch for the one output of the mod a world could not turn off. Default `true`, so nothing a player has changes; client-owned, like the other two presentation switches. It gates the panel's text and its refresh and leaves the block's own controls alone. |
 | 2026-08-25 | Corrected the fourth site of `A9`'s per-metre figure, which the pass earlier the same day missed: the rungs inventory said 0.0045 K a metre where the lab says 0.0018. The check added that morning reads the per-face *table* and could not see a figure quoted in prose, which is the limit of that kind of check and is why the number is now stated in one place and pointed at from the other. |

@@ -168,6 +168,45 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
+        /// The same sweep with `FloorBlocksWhenOverBudget` set, which is `C30`'s mechanism rather
+        /// than its comparison.
+        ///
+        /// The cap arm below sets `MaxSubstepsPerBlock`, a world setting that reaches every hull;
+        /// this sets the switch that engages only where the budget binds and floors to what the
+        /// grid can afford. They answer different questions and both are needed: the first says
+        /// what flooring is worth, the second says whether the mechanism does it.
+        /// </summary>
+        public static List<Row> RunFloored(string shape, IList<int> sizes, IList<int> allowances,
+            IList<string> worlds, bool floorWhenOverBudget, int frames, Action<string> log)
+        {
+            List<Row> rows = new List<Row>();
+
+            for (int w = 0; w < worlds.Count; w++)
+            {
+                for (int s = 0; s < sizes.Count; s++)
+                {
+                    ThermalSimulation simulation = LoadBenchmarks.BuildSettled(shape, sizes[s]);
+                    Census.DriveCensus(simulation);
+                    simulation.Settings.FloorBlocksWhenOverBudget = floorWhenOverBudget;
+
+                    for (int a = 0; a < allowances.Count; a++)
+                    {
+                        if (log != null)
+                        {
+                            log(worlds[w] + " " + sizes[s].ToString("n0") + ", allowance "
+                                + (allowances[a] == 0 ? "off" : allowances[a].ToString("n0"))
+                                + ", floor " + (floorWhenOverBudget ? "on" : "off"));
+                        }
+
+                        rows.Add(Measure(simulation, worlds[w], sizes[s], allowances[a], 0, frames));
+                    }
+                }
+            }
+
+            return rows;
+        }
+
+        /// <summary>
         /// The same sweep with a per-block cap on each row as well, which is `C30`'s comparison.
         ///
         /// The cap is applied to the same hull as the row beside it and the rate is read as a delta

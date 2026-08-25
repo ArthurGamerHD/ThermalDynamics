@@ -2925,6 +2925,44 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
+        /// A per-block substep cap the caller sets for one step, or 0 for none.
+        ///
+        /// <para>
+        /// **Set by the grid, not by the world.** `MaxSubstepsPerBlock` is a world setting and
+        /// applies everywhere; this is what <see cref="ThermalSimulation"/> asks for when a grid
+        /// cannot afford the substeps its own demand asks for. The two are different questions —
+        /// one is a fidelity choice a player makes, the other is what this grid can pay for this
+        /// step — and backlog.md `C3` is why they are not the same
+        /// number: a cap that reaches every hull charges four fifths of a population for a
+        /// throughput only the largest can collect.
+        /// </para>
+        /// </summary>
+        public int AdaptiveSubstepFloor;
+
+        /// <summary>
+        /// The cap actually applied: the tighter of the world's and the grid's, with 0 meaning
+        /// *no cap* on either side rather than the tightest possible one.
+        ///
+        /// **The smaller number is the stronger cap**, because it is the number of substeps a node
+        /// is allowed to demand. Taking the minimum of two live caps is therefore taking whichever
+        /// approximates more, which is the safe direction: a world that has asked for
+        /// `MaxSubstepsPerBlock 4` does not get 10 back because a grid could afford 10.
+        /// </summary>
+        public int EffectiveSubstepFloor
+        {
+            get
+            {
+                int world = settings.MaxSubstepsPerBlock;
+                int grid = AdaptiveSubstepFloor;
+
+                if (world <= 0) return grid <= 0 ? 0 : grid;
+                if (grid <= 0) return world;
+
+                return world < grid ? world : grid;
+            }
+        }
+
+        /// <summary>
         /// Raises the mirrored heat capacity of any node demanding more than
         /// <c>MaxSubstepsPerBlock</c> substeps of the whole grid, to
         /// <c>C &gt;= G * dt / (safety * cap)</c>. Only the mirrored row moves, so every readout still
@@ -2935,7 +2973,7 @@ namespace Thermodynamics.Core
         {
             FlooredNodes = 0;
 
-            int cap = settings.MaxSubstepsPerBlock;
+            int cap = EffectiveSubstepFloor;
             if (cap <= 0) return;
 
             float step = settings.StepSeconds;
@@ -3088,7 +3126,7 @@ namespace Thermodynamics.Core
         /// </summary>
         private float EffectiveLoopMass(int index)
         {
-            if (settings.MaxSubstepsPerBlock <= 0 || index >= loopEffectiveMass.Length
+            if (EffectiveSubstepFloor <= 0 || index >= loopEffectiveMass.Length
                 || loopEffectiveMass[index] <= 0f)
             {
                 return loops[index].SegmentThermalMass;
@@ -3103,7 +3141,7 @@ namespace Thermodynamics.Core
         /// </summary>
         private float EffectiveRoomMass(int index)
         {
-            if (settings.MaxSubstepsPerBlock <= 0 || index >= roomEffectiveMass.Length
+            if (EffectiveSubstepFloor <= 0 || index >= roomEffectiveMass.Length
                 || roomEffectiveMass[index] <= 0f)
             {
                 return roomAir[index].ThermalMass;
