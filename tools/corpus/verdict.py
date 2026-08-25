@@ -111,15 +111,9 @@ def pct(part, whole):
     return 0.0 if not whole else 100.0 * part / whole
 
 
-def percentiles(values):
-    if not values:
-        return {}
-    values = sorted(values)
-
-    def at(q):
-        return values[min(len(values) - 1, int(q * len(values)))]
-
-    return {"min": values[0], "p50": at(0.5), "p95": at(0.95), "p99": at(0.99), "max": values[-1]}
+# One definition, in scoring.py, shared with air.py. See scoring.percentile for why there was more
+# than one and which survived.
+percentiles = scoring.percentiles
 
 
 outcomes = load("outcomes", "scenario")

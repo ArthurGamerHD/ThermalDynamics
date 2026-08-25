@@ -278,3 +278,45 @@ def compare(before, now):
 
 # What a statistic reads as when a dataset does not carry it at all.
 ABSENT = "\u2014"
+
+
+# ---- percentiles ----------------------------------------------------------------------------
+
+
+def percentile(values, q):
+    """The `q` quantile, interpolated between the two ranks it falls between.
+
+    **One definition, because there were two** (`P5`). `air.py` interpolated and `verdict.py` took
+    `values[int(q * n)]`, and the documentation prints their outputs side by side — a corpus p99
+    against a panel p99. On tens of thousands of samples the two agree to a third of a per cent; on
+    forty they do not agree at all, because `int(0.99 * 40)` is 39 and the fortieth value of forty
+    is the **maximum**. A p99 that is the largest reading in the set is not a percentile, and every
+    figure this repository publishes for the panel is interpolated, so that is the definition kept.
+
+    Returns None for an empty series, which is what an unmeasured thing reports (`E8`).
+    """
+    ordered = sorted(values)
+    if not ordered:
+        return None
+    if len(ordered) == 1:
+        return ordered[0]
+
+    at = (len(ordered) - 1) * q
+    low = int(at)
+    high = min(low + 1, len(ordered) - 1)
+    return ordered[low] + (ordered[high] - ordered[low]) * (at - low)
+
+
+def percentiles(values):
+    """The five figures a population row prints, all from `percentile`."""
+    ordered = sorted(values)
+    if not ordered:
+        return {}
+
+    return {
+        "min": ordered[0],
+        "p50": percentile(ordered, 0.5),
+        "p95": percentile(ordered, 0.95),
+        "p99": percentile(ordered, 0.99),
+        "max": ordered[-1],
+    }

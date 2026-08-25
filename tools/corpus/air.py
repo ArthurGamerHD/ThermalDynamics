@@ -26,6 +26,10 @@ import os
 import statistics
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import scoring
+
 DATA = sys.argv[1] if len(sys.argv) > 1 else "out/air-2026-08-23"
 
 SHIPPED_CLOCK = 225.0
@@ -61,15 +65,9 @@ def load(name):
         return list(csv.DictReader(handle))
 
 
-def percentile(values, q):
-    if not values:
-        return None
-    ordered = sorted(values)
-    if len(ordered) == 1:
-        return ordered[0]
-    i = (len(ordered) - 1) * q
-    lo, hi = int(i), min(int(i) + 1, len(ordered) - 1)
-    return ordered[lo] + (ordered[hi] - ordered[lo]) * (i - lo)
+# One definition, in scoring.py, shared with verdict.py — this is the one that survived, and every
+# panel figure this repository publishes was computed with it.
+percentile = scoring.percentile
 
 
 def cell_name(conductivity, clock):

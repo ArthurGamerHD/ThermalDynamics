@@ -259,6 +259,36 @@ class StepWork(unittest.TestCase):
         self.assertEqual(64.0, scoring.SHIPPED_SUBSTEP_CAP)
 
 
+class Percentiles(unittest.TestCase):
+    """One definition, because there were two and the documentation prints them side by side."""
+
+    def test_a_quantile_is_interpolated_between_the_ranks_it_falls_between(self):
+        self.assertAlmostEqual(2.5, scoring.percentile([1, 2, 3, 4], 0.5), places=6)
+        self.assertAlmostEqual(1.0, scoring.percentile([1, 2, 3, 4], 0.0), places=6)
+        self.assertAlmostEqual(4.0, scoring.percentile([1, 2, 3, 4], 1.0), places=6)
+
+    def test_a_p99_of_forty_readings_is_not_the_largest_of_them(self):
+        # The whole reason this moved. verdict.py took `values[int(q * n)]`, and `int(0.99 * 40)`
+        # is 39 -- the fortieth of forty, which is the maximum. A p99 that is the largest reading
+        # in the set is not a percentile, and a forty-hull panel is a set this repository scores.
+        forty = list(range(1, 41))
+
+        self.assertEqual(40, max(forty))
+        self.assertLess(scoring.percentile(forty, 0.99), 40)
+        self.assertAlmostEqual(39.61, scoring.percentile(forty, 0.99), places=2)
+
+    def test_nothing_measured_has_no_percentile(self):
+        self.assertIsNone(scoring.percentile([], 0.5))
+        self.assertEqual({}, scoring.percentiles([]))
+
+    def test_one_reading_is_its_own_every_percentile(self):
+        self.assertEqual(7, scoring.percentile([7], 0.99))
+        row = scoring.percentiles([7])
+        self.assertEqual(7, row["min"])
+        self.assertEqual(7, row["p99"])
+        self.assertEqual(7, row["max"])
+
+
 class Compare(unittest.TestCase):
     """Reading one run against another, which is how a walk in air is read against one in vacuum."""
 
