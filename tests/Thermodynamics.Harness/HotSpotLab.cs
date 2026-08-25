@@ -140,7 +140,51 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
-        /// Every block on every ship with no exit at all — no exposed face and no conduction.
+        /// The nodes this grid's room air is linked to, by index.
+        ///
+        /// **Air is a block's third exit and the sealed test used to miss it.** A face that looks
+        /// into a sealed compartment is deliberately *not* exposed — `SurfaceMap.GetExposedFaces`
+        /// requires the cell beyond it to reach the outside — so a block standing in a void inside a
+        /// pressurised hull has no external face at all. If it also bolts to nothing it reads as
+        /// having no exit, and it has one: `ThermalSolver.BuildRoomLinks` gives every node with a
+        /// face onto a room a link to that room's air. See backlog.md
+        /// `F14`.
+        /// </summary>
+        public static HashSet<int> NodesTouchingAir(ThermalSolver solver)
+        {
+            HashSet<int> touching = new HashSet<int>();
+            if (solver == null) return touching;
+
+            IList<RoomAirNode> air = solver.RoomAir;
+            for (int r = 0; r < air.Count; r++)
+            {
+                IList<RoomLink> links = air[r].Links;
+                for (int l = 0; l < links.Count; l++) touching.Add(links[l].NodeIndex);
+            }
+
+            return touching;
+        }
+
+        /// <summary>
+        /// Whether a block has no way to shed heat at all: no face onto the outside, no conduction
+        /// joint, and no room air against it.
+        ///
+        /// **One definition, two consumers** (`P5`): this report and `CorpusSurvey`'s population
+        /// bound. They disagreed once already — the survey counted a block coupled to air as sealed
+        /// and the corpus figure quoted in balance-lab.md was taken from that count.
+        /// </summary>
+        public static bool IsSealed(ThermalSolver solver, int index, HashSet<int> touchingAir)
+        {
+            if (solver == null || index < 0 || index >= solver.Nodes.Count) return false;
+            if (solver.Nodes[index].ExposedArea > 0f) return false;
+            if (solver.NodeConductanceTotal(index) > 0f) return false;
+
+            return touchingAir == null || !touchingAir.Contains(index);
+        }
+
+        /// <summary>
+        /// Every block on every ship with no exit at all — no exposed face, no conduction and no
+        /// air against it.
         ///
         /// Kept beside the hot-spot dump because it is the same question asked of the whole corpus
         /// rather than of one block: a sealed block heats without bound and has no symptom but its
@@ -158,6 +202,8 @@ namespace Thermodynamics.Harness
             List<string> examples = new List<string>();
             int total = 0;
             int incomplete = 0;
+            int roomsWithAir = 0;
+            int rooms = 0;
 
             foreach (Blueprints.Ship ship in corpus.Usable)
             {
@@ -175,11 +221,16 @@ namespace Thermodynamics.Harness
                 for (int g = 0; g < assembly.Simulations.Count; g++)
                 {
                     ThermalSolver solver = assembly.Simulations[g].Solver;
+                    HashSet<int> touchingAir = NodesTouchingAir(solver);
+
+                    IList<RoomAirNode> air = solver.RoomAir;
+                    rooms += air.Count;
+                    for (int a = 0; a < air.Count; a++) if (air[a].HasAir) roomsWithAir++;
 
                     for (int i = 0; i < solver.Nodes.Count; i++)
                     {
                         ThermalNode node = solver.Nodes[i];
-                        if (node.ExposedArea > 0f || solver.NodeConductanceTotal(i) > 0f) continue;
+                        if (!IsSealed(solver, i, touchingAir)) continue;
 
                         int count;
                         counts.TryGetValue(node.Block.Name, out count);
@@ -196,6 +247,13 @@ namespace Thermodynamics.Harness
 
             sb.Append("SEALED BLOCKS  ").Append(total).AppendLine(" across the corpus");
             sb.Append("  ").Append(incomplete).AppendLine(" grids whose room map did not finish");
+
+            // **Air is a block's third exit, and a lab hull has none unless something pressurises
+            // it.** Printed rather than assumed, because a count taken on unpressurised hulls is a
+            // count of blocks sealed *in that scenario* — the same blocks in a pressurised
+            // compartment have a room to shed into and are not sealed at all.
+            sb.Append("  ").Append(roomsWithAir).Append(" of ").Append(rooms)
+              .AppendLine(" rooms hold air, so that many blocks have a third exit");
             sb.AppendLine();
 
             if (examples.Count > 0)

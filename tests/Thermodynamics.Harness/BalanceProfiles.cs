@@ -6,8 +6,8 @@ namespace Thermodynamics.Harness
 {
     /// <summary>
     /// **How physically true the model is**, as a simulated environment rather than as a setting — the
-    /// axis the mod itself has no dial for, because <c>HeatTimeScale</c> makes it deliberately 225
-    /// times faster than the world and nothing shipped can turn that off.
+    /// axis the mod itself has no dial for, because <c>HeatTimeScale</c> makes it deliberately
+    /// ninety times faster than the world and nothing shipped can turn that off.
     ///
     /// <para>
     /// This carries every knob that moves the balance, not just the integration ones: the two pace
@@ -30,11 +30,15 @@ namespace Thermodynamics.Harness
         // ---- the two pace scales ------------------------------------------------------------
 
         /// <summary>
-        /// Divides every heat capacity. 1 is the world; the mod ships 225.
+        /// Divides every heat capacity. 1 is the world; the mod ships 90, and shipped 225 until
+        /// `C24`.
         ///
         /// The single largest departure from physics in the whole model, and the one that makes it
         /// a game: real steel at real specific heat gives a large-grid armour block a time constant
         /// of about half an hour.
+        ///
+        /// **The value here is a field default and not a claim about what ships** —
+        /// <see cref="Shipped"/> reads the real defaults, and every other profile states its own.
         /// </summary>
         public float HeatTimeScale = 225f;
 

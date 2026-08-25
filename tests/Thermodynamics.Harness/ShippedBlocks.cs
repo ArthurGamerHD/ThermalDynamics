@@ -325,12 +325,33 @@ namespace Thermodynamics.Harness
         public static BlockThermalProperties DeriveWithFunction(IList<BlockComponent> components,
             string typeId)
         {
+            return DeriveWithFunction(components, typeId, 0f);
+        }
+
+        /// <summary>
+        /// The same, for a block whose own definition states what it does with the power it draws.
+        ///
+        /// **The stated efficiency beats the type entry, because it describes the block and the
+        /// entry describes a family.** The jump drive is the only family in the game that states
+        /// one — 0.8 on the vanilla drive and its reskin, 0.9 on the two prototech ones — and a
+        /// type entry cannot say both. Zero means the definition is silent, which is every other
+        /// block; the rule itself is <see cref="BlockThermalDerivation.WasteFromEfficiency"/>, in
+        /// `Core`, because the mod reads the same efficiency off a live definition and two readers
+        /// of one rule cannot answer differently (`P5`).
+        /// </summary>
+        public static BlockThermalProperties DeriveWithFunction(IList<BlockComponent> components,
+            string typeId, float statedEfficiency)
+        {
             BlockThermalProperties properties = BlockThermalDerivation.Derive(components);
             Function function = FunctionOf(typeId);
             properties.ProducerWasteEnergy = function.ProducerWasteEnergy;
             properties.ConsumerWasteEnergy = function.ConsumerWasteEnergy;
             properties.ExposedSurfaceMultiplier = function.ExposedSurfaceMultiplier;
             properties.OverheatDamagePerKelvin = function.OverheatDamagePerKelvin;
+
+            float stated = BlockThermalDerivation.WasteFromEfficiency(statedEfficiency);
+            if (stated >= 0f) properties.ConsumerWasteEnergy = stated;
+
             return properties.Clamp();
         }
 

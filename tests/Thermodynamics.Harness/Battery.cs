@@ -30,6 +30,24 @@ namespace Thermodynamics.Harness
 
             /// <summary>What this scenario is here to find out. Printed with the results.</summary>
             public string Question;
+
+            /// <summary>
+            /// A second state to switch to partway through, or null for a scenario that holds one
+            /// state throughout.
+            ///
+            /// **The shape a transient needs, and the reason it is here rather than named in the
+            /// runner.** `recovery` has switched state mid-run since it was written, by a test on
+            /// its own name — which works for one case and cannot be reused, so the next transient
+            /// would be a second special case in the same method. This is that generalised.
+            /// </summary>
+            public ShipLoad.State Then;
+
+            /// <summary>
+            /// Simulated seconds the first state runs for before <see cref="Then"/> replaces it,
+            /// as a function of the ship — because the length of a transient is a property of the
+            /// hardware and not a number a scenario gets to choose.
+            /// </summary>
+            public Func<ShipAssembly, float> ThenAfterSeconds;
         }
 
         /// <summary>Air density of an earthlike surface, and of a thin one.</summary>
@@ -122,6 +140,24 @@ namespace Thermodynamics.Harness
                 Question = "G2: every consumer at rating, reactors supplying what they ask",
                 Environment = t => Worlds.Shadow(),
                 Load = ShipLoad.State.Full,
+            });
+
+            scenarios.Add(new Scenario
+            {
+                Name = "jump-charge",
+                Question = "G8: the ship charges its drives, finishes, and holds — the real event",
+                Environment = t => Worlds.Shadow(),
+                Load = ShipLoad.State.Full,
+                Then = ShipLoad.State.Charged,
+                ThenAfterSeconds = ShipLoad.ChargeSeconds,
+            });
+
+            scenarios.Add(new Scenario
+            {
+                Name = "full-electrical-charged",
+                Question = "the same load with the jump drives charged rather than charging",
+                Environment = t => Worlds.Shadow(),
+                Load = ShipLoad.State.Charged,
             });
 
             scenarios.Add(new Scenario
@@ -247,6 +283,35 @@ namespace Thermodynamics.Harness
         public static ScenarioOutcome Run(Blueprints.Ship ship, Scenario scenario,
             ThermalSettings settings = null)
         {
+            return Run(ship, scenario, settings, -1f);
+        }
+
+        /// <summary>
+        /// The same run stopped at a stated simulated clock rather than at equilibrium.
+        ///
+        /// <para>
+        /// **For a paired experiment, where the stopping rule cannot be part of the difference.**
+        /// <see cref="RunUntilSettled"/> stops when the hottest block moves less than
+        /// <see cref="SettleWithin"/> in a chunk, so two configurations of the same ship stop at
+        /// different instants — and a difference smaller than that tolerance, which is what a
+        /// per-block substep cap produces, is then a reading of the stopping rule rather than of
+        /// the cap (`M1`, `P6`). The control arm runs first and hands its own elapsed clock here.
+        /// </para>
+        ///
+        /// <para>
+        /// A negative or zero clock means *stop at equilibrium*, which is what
+        /// <see cref="Run(Blueprints.Ship, Scenario, ThermalSettings)"/> asks for.
+        /// </para>
+        /// </summary>
+        public static ScenarioOutcome RunForSeconds(Blueprints.Ship ship, Scenario scenario,
+            float seconds, ThermalSettings settings = null)
+        {
+            return Run(ship, scenario, settings, seconds);
+        }
+
+        private static ScenarioOutcome Run(Blueprints.Ship ship, Scenario scenario,
+            ThermalSettings settings, float fixedSeconds)
+        {
             ShipAssembly assembly = ship.Build(settings ?? new ThermalSettings());
             assembly.CollectDiagnostics(true);
 
@@ -261,19 +326,41 @@ namespace Thermodynamics.Harness
             // question becomes whether it comes back down.
             if (scenario.Name == "recovery")
             {
-                RunUntilSettled(runner, scenario.Seconds);
+                // Half the clock each side of the throttle, so a fixed-clock pair splits where the
+                // settle-stopped control did rather than at some other point in the event.
+                float half = fixedSeconds > 0f ? fixedSeconds * 0.5f : scenario.Seconds;
+                Advance(runner, half, fixedSeconds);
                 ShipLoad.Apply(assembly, ShipLoad.State.Idle);
-                RunUntilSettled(runner, scenario.Seconds);
+                Advance(runner, fixedSeconds > 0f ? fixedSeconds - half : scenario.Seconds,
+                    fixedSeconds);
+            }
+            else if (scenario.Then != null)
+            {
+                // **Run to the clock, not to a settle.** The first half of a transient is an event
+                // with a length the hardware sets, and stopping it early because the hull stopped
+                // moving would measure a shorter event than the ship actually has — which is the
+                // whole quantity the case exists to report.
+                float first = scenario.ThenAfterSeconds == null
+                    ? scenario.Seconds
+                    : scenario.ThenAfterSeconds(assembly);
+
+                float ceiling = fixedSeconds > 0f ? fixedSeconds : scenario.Seconds;
+                if (first > ceiling) first = ceiling;
+                if (first > 0f) runner.Run(first);
+
+                ShipLoad.Apply(assembly, scenario.Then);
+                Advance(runner, ceiling - first, fixedSeconds);
             }
             else
             {
-                RunUntilSettled(runner, scenario.Seconds);
+                Advance(runner, fixedSeconds > 0f ? fixedSeconds : scenario.Seconds, fixedSeconds);
             }
 
             ScenarioOutcome outcome = ScenarioOutcome.Read(assembly, ship.Name, scenario.Name);
             outcome.WorkshopId = ship.WorkshopId;
             outcome.SecondsToCritical = runner.SecondsToCritical;
             outcome.SecondsToFirstLoss = runner.SecondsToFirstLoss;
+            outcome.RunSeconds = runner.ElapsedSeconds;
 
             Settle(outcome, runner);
             return outcome;
@@ -284,6 +371,33 @@ namespace Thermodynamics.Harness
 
         /// <summary>Simulated seconds per chunk. The resolution the settle test can see.</summary>
         public const float Chunk = 60f;
+
+        /// <summary>
+        /// Steps a phase of a run: to equilibrium when the caller wants equilibrium, and to the
+        /// clock when the caller has one to match.
+        /// </summary>
+        private static void Advance(AssemblyRunner runner, float seconds, float fixedSeconds)
+        {
+            if (seconds <= 0f) return;
+
+            if (fixedSeconds > 0f)
+            {
+                // **In the same chunks the settle path uses**, because the sample history is what
+                // the settling time and the peak rate are read from — one sample over the whole
+                // span would leave the paired arm with two columns the control has and it does not.
+                float done = 0f;
+                while (done < seconds)
+                {
+                    float chunk = Math.Min(Chunk, seconds - done);
+                    runner.Run(chunk);
+                    done += chunk;
+                }
+
+                return;
+            }
+
+            RunUntilSettled(runner, seconds);
+        }
 
         /// <summary>
         /// Steps until the hottest block stops moving, or until the ceiling is reached.
@@ -320,25 +434,50 @@ namespace Thermodynamics.Harness
         /// is deliberate — resolving them finely would mean sampling every step, and they are used
         /// to sort ships rather than to decide anything on their own.
         /// </summary>
+
+        /// <summary>Kelvin of the final value a sample must be inside to count as settled.</summary>
+        public const float SettledWithinOfFinal = 5f;
+
+        /// <summary>
+        /// Seconds until the hottest-block trace first came within
+        /// <see cref="SettledWithinOfFinal"/> of where it ended, or -1 if it never did.
+        ///
+        /// <para>
+        /// **This is a settling time only when the block moved.** A hull that barely changed over
+        /// the whole run is inside 5 K of its final value at the first sample and reports
+        /// <see cref="Chunk"/>, so *has not begun* and *has finished* come out as the same number.
+        /// It is not the limitation <see cref="ScenarioOutcome.BulkDriftKelvinPerSecond"/> guards —
+        /// that one is one block settling ahead of the hull, and a hull that never started has a
+        /// small drift too. Pinned by <c>SettleReadingTests</c>, and it is why `G8`'s settling half
+        /// is scored on a scenario where the hull is driven somewhere rather than at idle.
+        /// </para>
+        /// </summary>
+        public static float SettleSeconds(IList<float> samples, float final)
+        {
+            if (samples == null || samples.Count < 2) return -1f;
+
+            for (int i = 1; i < samples.Count; i++)
+            {
+                if (Math.Abs(samples[i] - final) <= SettledWithinOfFinal) return (i + 1) * Chunk;
+            }
+
+            return -1f;
+        }
+
         private static void Settle(ScenarioOutcome outcome, AssemblyRunner runner)
         {
             List<float> samples = runner.Hottest;
             if (samples.Count < 2) return;
 
-            float final = outcome.PeakKelvin;
             float fastest = 0f;
 
             for (int i = 1; i < samples.Count; i++)
             {
                 float rate = Math.Abs(samples[i] - samples[i - 1]) / Chunk;
                 if (rate > fastest) fastest = rate;
-
-                if (outcome.SecondsToSettle < 0f && Math.Abs(samples[i] - final) <= 5f)
-                {
-                    outcome.SecondsToSettle = (i + 1) * Chunk;
-                }
             }
 
+            outcome.SecondsToSettle = SettleSeconds(samples, outcome.PeakKelvin);
             outcome.PeakRateKelvinPerSecond = fastest;
 
             BulkDrift(outcome, runner);

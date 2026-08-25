@@ -2,11 +2,16 @@
 
 Where a grid's memory goes, measured; and what can be given back.
 
-Companion to [load-and-hitching.md](load-and-hitching.md), which covers time rather than space, and
-to [scale-design.md §6](scale-design.md#6-data-structures), which budgets ~110 bytes a node for a
-million-block grid. This page is about the distance between that budget and where the code is.
+This page is about the distance between the budget `scale-design.md` sets and where the code is.
 
 > The rules argued here are stated canonically in [rules.md](rules.md): `E3` `M4` `M7`.
+
+| Looking for | Go to |
+| --- | --- |
+| What a grid costs in *time* as it grows | [load-and-hitching.md](load-and-hitching.md) |
+| The per-node budget a million-block grid is designed against | [scale-design.md](scale-design.md#6-data-structures) |
+| What the whole simulation costs, by size and feature | [benchmarks.md](benchmarks.md) |
+| Where the memory is actually allocated | [architecture.md](architecture.md#the-model) |
 
 Reproduce with `bench memory --size N`, from `tests/`. Build first: `dotnet run --no-build`
 against a stale output is how two of the figures below were first reported as unchanged by a change
@@ -178,21 +183,39 @@ rather than per-volume, so it is a different kind of problem from the ones above
 second at 128 B/block and it is the only row that still climbs with grid size, so on a large ship
 it is first.
 
-### 2. Drop the solver's node lookup dictionary — ~36 B/block
+### 2. ~~Drop the solver's node lookup dictionary~~ — **done**, 49 B/block
 
-`nodesByKey` is a `Dictionary<long, ThermalNode>` mapping a block to its node. `BlockInstance`
-could carry the node index directly, which removes the dictionary and makes every lookup an array
-index instead of a hash. The coupling it introduces is that a block belongs to one solver, which
-is already true.
+`nodesByKey` was a `Dictionary<long, ThermalNode>` mapping a block to its node; `BlockInstance`
+carries `NodeIndex` instead, so every lookup is an array index rather than a hash. **Measured on a
+20,000-block ship, the solver row fell from 524 to 475 bytes a block** and the whole retained set
+from 1,097 to 1,048 — 49 B/block against the 36 estimated here, which is the dictionary's bucket
+and entry arrays rather than its entries alone.
 
-### 3. Pack the per-node face data — ~70 B/block
+The coupling it introduces is that a block belongs to one solver, which was already true — and
+where it is not, the index is checked rather than trusted: a reader confirms the node it lands on is
+that block's, so an index left behind by a second solver resolves to *no node* exactly as a
+dictionary miss did. `NodeIndexTests` pins the whole of that against the dictionary rebuilt as an
+oracle, through both of the removal paths that move a node between slots.
 
-Each node keeps `ExposedFaces` as an `int[6]` — 48 bytes with its header and reference, to hold six
-small counts — and the solver mirrors six floats of face weights and six of sun-lit fraction beside
-it. The counts fit in one packed `int`, the weights are derivable from them, and the sun-lit array
-is only meaningful when self-shadowing is switched on.
+### 3. Pack the per-node face data — **the counts are done**, 48 B/block; ~48 left
 
-### 4. Rooms as one cell array with per-room ranges — **half done**; ~9 MB at 126k left
+`ExposedFaces` was an `int[6]` on every node: 48 bytes of header and reference to hold 24 bytes of
+payload. It is one packed `long` now, ten bits a face — 1,023 against a real worst case of about a
+hundred, since the widest vanilla block is ten cells across — read and written through
+`GetExposedFaces` and `SetExposedFaces`. **Measured on a 20,000-block ship the solver row fell from
+475 to 427 bytes a block**, which is the array header and reference exactly. A count past the
+packing is clamped rather than wrapped, because wrapping would turn a fully exposed face into a bare
+one and a block that stops radiating looks like physics; `FacePackingTests` pins that and the
+round-trip.
+
+**The other two halves are not done, and they are a different kind of trade.** The solver mirrors
+six floats of face weight and six of sun-lit fraction per node in flat arrays — 24 bytes each, with
+no per-node header to save. The weights are derivable from the counts, but only by putting a divide
+back into the hot loop the flat arrays exist to feed; the sun-lit array is meaningful only when
+`SolarSelfShadowing` is on, which is the shipped default, so allocating it lazily buys nothing for
+most worlds. Both are a cost measurement rather than a packing job (`D7`).
+
+### 4. Rooms as one cell array with per-room ranges — **done**
 
 Room cells are held twice: once per room, and once in `Dictionary<Vector3I, int> roomIndexByCell`.
 
@@ -206,11 +229,25 @@ The one caller that did search a room is the room *diagnostic*, which asks wheth
 onto a compartment. It builds a set for one room at a time and reuses it, so the cost is bounded by
 the largest compartment during a scan rather than by every compartment for the life of the grid.
 
-What is left is `roomIndexByCell`: about 31 bytes for every cell in a room, 8.7 MB at 126k blocks
-and 47 MB at 500k. A single `Vector3I[]` of all room cells sorted by room, with an `int[]` of range
-starts, holds both halves once at 12 bytes a cell — but the dictionary answers `RegionOf` on the
-exposure path, so replacing it means giving that lookup a different shape rather than deleting
-it.
+**And `roomIndexByCell` is done too, by freezing rather than by merging.** It cost about 31 bytes
+for every cell in a room. A map is written once — a flood adds cells one at a time, which a sorted
+array cannot — and then read for the life of the grid, so the dictionary is what a *running* pass
+writes into and is replaced when the pass completes by a sorted `long[]` of cell keys and a parallel
+`int[]` of rooms: **twelve bytes a cell**, and a binary search over contiguous memory instead of a
+hash and a bucket chase.
+
+Measured on a 20,000-block ship with 24,565 cells in 17 rooms, the room map falls from **107 to 72
+bytes a block** and the whole retained set from 1,000 to 966.
+
+Two details that are the difference between a saving and an increase. The dictionary is *replaced*
+rather than cleared — `Clear` keeps its buckets and entries, so freezing beside them would have
+added twelve bytes a cell rather than traded thirty-one for them, and `TrimExcess` does not exist on
+.NET Framework 4.8 (`C3`). And no timing claim is made either way: the exposure and room stages move
+within a run-to-run spread the scale ladder does not report, which is `M5` and not a result.
+
+`RoomMapFreezeTests` checks the frozen answer against a dictionary rebuilt from the per-room copy
+that remains — the code the arrays replaced — over every room cell and the six neighbours of each,
+so the misses are judged as well as the hits.
 
 ### 5. Move the node diagnostics out of the node — ~24 B/block
 
@@ -271,6 +308,10 @@ counted per cell, which is §8 and §9.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Added the *Looking for* table this page's own conventions ask for. It carried the same pointers in prose, which is the shape a reader has to read rather than scan. |
+| 2026-08-23 | **§4 is finished**: the room map's cell dictionary is frozen into sorted arrays when a pass completes, 31 → 12 bytes a cell. The room map falls from 107 to **72 bytes a block** on a 20,000-block ship and the retained set from 1,000 to 966. [backlog.md](backlog.md) `E3`. |
+| 2026-08-23 | **§3's counts are packed**: `ExposedFaces` is one `long` rather than an `int[6]`, and the solver row falls 475 → **427 bytes a block** on a 20,000-block ship — the array's header and reference exactly. With §2 the same row is 524 → 427 and the whole retained set 1,097 → 1,000. [backlog.md](backlog.md) `E2`. |
+| 2026-08-23 | **§2 is done and it was worth more than it was estimated at.** The solver's node dictionary is gone and the block carries the index: 524 → **475 bytes a block** on the solver row, 1,097 → 1,048 retained, measured on a 20,000-block ship rather than counted. [backlog.md](backlog.md) `E1`. |
 | 2026-08-22 | Put the five completed changes in the present tense — each is a structure the code has, not a thing that was done — and moved the fifth up beside the other four instead of leaving it struck through in the list of what is still worth doing. |
 | 2026-08-22 | Added the standard header and this change log. |
 | 2026-08-21 | Held a room's cells in a list, and dropped a grid's second index on the key it already had — 34 B/block and 38 B/block back respectively. Corrected a page measured on a hull that no longer exists. |

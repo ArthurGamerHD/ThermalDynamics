@@ -334,7 +334,7 @@ namespace Thermodynamics.Tests
         /// <para>
         /// The solver used to apply the whole overshoot as damage on **every update**, so at the
         /// shipped `Frequency` of 8 the dial bit eight times harder than it does now. That is one
-        /// of the three changes [backlog.md](../../docs/backlog.md) `C2` says the authored values
+        /// of the three changes backlog.md `C2` says the authored values
         /// predate — and re-running the shipped definitions at eight times the dial shows restoring
         /// their authored intent would put the median block's whole life past its rating inside ten
         /// seconds, which is the failure `C11` was opened for and `G5` forbids.
@@ -346,9 +346,17 @@ namespace Thermodynamics.Tests
         /// that tail is linear in the dial. Blocks near the fast end lose about 2.8×, the slow end
         /// up to 8×. See balance.md, How long a block has after it crosses.
         /// </para>
+        ///
+        /// <para>
+        /// **The seconds moved with `C24` and the comparison did not.** Every figure here is
+        /// proportional to the clock, which went from 225 to 90, so the same two rules now read
+        /// 32.7 s shipped against **10.1 s** authored where they read 13.1 s against 4.0 s. What
+        /// the test asserts is the ratio and the size of the authored figure — a third of the
+        /// shipped rule, and about ten seconds — rather than a bound the clock alone can cross.
+        /// </para>
         /// </summary>
         [Fact]
-        public void TheAuthoredDamageRuleWouldPutTheWholeEventInsideTenSeconds()
+        public void TheAuthoredDamageRuleWouldPutTheWholeEventInsideAboutTenSeconds()
         {
             if (!GameBlocks.IsInstalled) return;
 
@@ -387,8 +395,12 @@ namespace Thermodynamics.Tests
 
             Assert.True(shippedMedian > 20f,
                 "the shipped rule gives the median block " + shippedMedian.ToString("n1") + " s");
-            Assert.True(authoredMedian < 10f,
+            Assert.True(authoredMedian < 15f,
                 "the authored rule gives the median block " + authoredMedian.ToString("n1") + " s");
+            Assert.True(authoredMedian < shippedMedian / 3f,
+                "the authored rule gives the median block " + authoredMedian.ToString("n1")
+                + " s against the shipped rule's " + shippedMedian.ToString("n1")
+                + " s, so restoring it would cost less than the third it costs now");
         }
 
         private static float Percentile(List<float> values, int percent)

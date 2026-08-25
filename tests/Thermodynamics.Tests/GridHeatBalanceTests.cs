@@ -91,7 +91,10 @@ namespace Thermodynamics.Tests
             EnvironmentSample sample;
             ThermalSimulation simulation = Rig(50000f, out sample);
 
-            for (int step = 0; step < 20000; step++) simulation.StepExact(1, sample);
+            // Long enough to be at equilibrium, which is a length of thermal time: at the clock
+            // `C24` ships, twenty thousand steps leave this rig still climbing and the two figures
+            // are then compared mid-transient. See LabClock.
+            for (int step = 0; step < LabClock.Steps(20000); step++) simulation.StepExact(1, sample);
 
             // Throughput is not heat: a reactor turns a fraction of what it delivers into waste,
             // so the figure to check against is what the blocks actually make.

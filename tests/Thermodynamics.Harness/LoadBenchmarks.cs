@@ -181,15 +181,7 @@ namespace Thermodynamics.Harness
 
         private static ScaleRow MeasureScale(string shape, int targetCells)
         {
-            ScaleRow row = new ScaleRow();
-            row.Shape = shape;
-            row.TargetBlocks = targetCells;
-
             HashSet<Vector3I> cells = LoadShapes.Build(shape, targetCells);
-
-            long before = GC.GetTotalMemory(true);
-
-            Stopwatch build = Stopwatch.StartNew();
 
             // Built from the measured block census, because substep count is set by the
             // *stiffest* node on the grid and therefore by its lightest block. This ladder used
@@ -200,6 +192,28 @@ namespace Thermodynamics.Harness
             // magnitude softer than the ones it described. See <see cref="Census"/>.
             GridBuilder builder = GridBuilder.Large();
             builder.PlaceCensus(cells);
+
+            return MeasureBuilt(builder, shape, targetCells);
+        }
+
+        /// <summary>
+        /// The ladder's whole measurement, on a hull somebody else built.
+        ///
+        /// **Split out for `FrankenHull`**, which welds real workshop ships into one grid: the
+        /// point of that rig is the block *mixture*, which no shape argument can describe, and
+        /// every column below is worth exactly as much on a hull that came from blueprints as on
+        /// one dealt from the census. See backlog.md `G5`.
+        /// </summary>
+        public static ScaleRow MeasureBuilt(GridBuilder builder, string shape = "franken",
+            int targetCells = 0)
+        {
+            ScaleRow row = new ScaleRow();
+            row.Shape = shape;
+            row.TargetBlocks = targetCells > 0 ? targetCells : builder.Placed.Count;
+
+            long before = GC.GetTotalMemory(true);
+
+            Stopwatch build = Stopwatch.StartNew();
 
             ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), builder.Grid);
             for (int i = 0; i < builder.Placed.Count; i++)
@@ -1367,8 +1381,6 @@ namespace Thermodynamics.Harness
             public int Floored;
             public float MaxError;
             public double RmsError;
-            public float MaxFlooredError;
-
             /// <summary>
             /// Hottest block at the end of the run, and how far that is from the uncapped run's.
             ///
@@ -1392,6 +1404,9 @@ namespace Thermodynamics.Harness
             /// speed-up on the page.
             /// </summary>
             public float StepSeconds;
+
+            /// <summary>Airspeed the row was measured at, m/s. Zero is vacuum.</summary>
+            public float AirSpeed;
         }
 
         /// <summary>
@@ -1402,20 +1417,22 @@ namespace Thermodynamics.Harness
         /// See stiffness.md, A per-block substep cap.
         /// </summary>
         public static List<FloorRow> SubstepFloor(string shape, int size, int steps,
-            IList<int> caps, Action<string> log = null, bool driven = false, int frequency = 0)
+            IList<int> caps, Action<string> log = null, bool driven = false, int frequency = 0,
+            float airSpeed = 0f)
         {
             List<FloorRow> rows = new List<FloorRow>();
             float[] reference = null;
             float referencePeak = 0f;
 
             // The first row measured would otherwise be measuring the JIT.
-            RunFloor(shape, Math.Min(size, 2000), 2, 0, null, driven, frequency);
+            RunFloor(shape, Math.Min(size, 2000), 2, 0, null, driven, frequency, airSpeed);
 
             for (int i = 0; i < caps.Count; i++)
             {
                 if (log != null) log("cap " + caps[i]);
 
-                FloorRow row = RunFloor(shape, size, steps, caps[i], reference, driven, frequency);
+                FloorRow row = RunFloor(shape, size, steps, caps[i], reference, driven, frequency,
+                    airSpeed);
                 if (reference == null)
                 {
                     reference = lastTemperatures;
@@ -1433,7 +1450,7 @@ namespace Thermodynamics.Harness
         private static float[] lastTemperatures;
 
         private static FloorRow RunFloor(string shape, int size, int steps, int cap,
-            float[] reference, bool driven, int frequency)
+            float[] reference, bool driven, int frequency, float airSpeed)
         {
             HashSet<Vector3I> cells = LoadShapes.Build(shape, size);
 
@@ -1476,35 +1493,27 @@ namespace Thermodynamics.Harness
                 SeedSpread(simulation);
             }
 
-            bool[] isFloored = new bool[count];
-            int floored = 0;
-            if (cap > 0)
-            {
-                float[] conductance = new float[count];
-                IList<ThermalLink> links = simulation.Solver.Links;
-                for (int i = 0; i < links.Count; i++)
-                {
-                    conductance[links[i].NodeA] += links[i].Conductance;
-                    conductance[links[i].NodeB] += links[i].Conductance;
-                }
 
-                float perConductance = settings.StepSeconds / (ThermalSolver.StabilitySafetyFactor * cap);
-                for (int i = 0; i < count; i++)
-                {
-                    if (nodes[i].ThermalMass >= conductance[i] * perConductance) continue;
-                    isFloored[i] = true;
-                    floored++;
-                }
-            }
-
-            EnvironmentSample sample = Worlds.Space(new Vector3(0f, 1f, 0f));
+            // **Air is where a per-block floor has most to reach**, because convection is what
+            // makes a light block stiff — the vacuum column is the one the floor was designed
+            // against and the one that understates it. See backlog.md, `C3` and `C19`.
+            EnvironmentSample sample = airSpeed > 0f
+                ? Worlds.Flight(1f, airSpeed)
+                : Worlds.Space(new Vector3(0f, 1f, 0f));
 
             FloorRow row = new FloorRow();
             row.Cap = cap;
+            row.AirSpeed = airSpeed;
             row.StepSeconds = settings.StepSeconds;
             row.Nodes = count;
-            row.Floored = floored;
-            row.RequiredSubsteps = simulation.Solver.RequiredSubsteps(settings.StepSeconds);
+            // Both read after a step rather than before one, and both for the same reason: the
+            // stability estimate and the floor read the environment, so a demand taken before the
+            // grid has met its air is a vacuum figure wearing an atmospheric label — which is what
+            // this table said the first time it was run in air.
+            simulation.StepExact(1, sample);
+
+            row.RequiredSubsteps = simulation.Solver.LastRequiredSubsteps;
+            row.Floored = cap > 0 ? simulation.Solver.FlooredNodes : 0;
 
             Stopwatch watch = Stopwatch.StartNew();
             simulation.StepExact(steps, sample);
@@ -1527,7 +1536,7 @@ namespace Thermodynamics.Harness
                     float error = Math.Abs(result[i] - reference[i]);
                     sumSquares += (double)error * error;
                     if (error > row.MaxError) row.MaxError = error;
-                    if (isFloored[i] && error > row.MaxFlooredError) row.MaxFlooredError = error;
+
                 }
 
                 row.RmsError = Math.Sqrt(sumSquares / count);
@@ -1550,7 +1559,6 @@ namespace Thermodynamics.Harness
               .Append("peakErr".PadLeft(10))
               .Append("maxErr K".PadLeft(11))
               .Append("rmsErr K".PadLeft(11))
-              .Append("maxErr floored".PadLeft(16))
               .Append('\n');
 
             // Stated rather than assumed: every figure below is proportional to it.
@@ -1560,7 +1568,11 @@ namespace Thermodynamics.Harness
                   .Append(rows[0].StepSeconds.ToString("n4"))
                   .Append(" s (Frequency ")
                   .Append((1f / rows[0].StepSeconds).ToString("n0"))
-                  .Append("), and every substep count below is proportional to it\n");
+                  .Append("), ")
+                  .Append(rows[0].AirSpeed > 0f
+                      ? "thick air at " + rows[0].AirSpeed.ToString("n0") + " m/s"
+                      : "vacuum")
+                  .Append(", and every substep count below is proportional to the step\n");
             }
 
             double baseline = rows.Count > 0 ? rows[0].Milliseconds : 0;
@@ -1579,7 +1591,374 @@ namespace Thermodynamics.Harness
                   .Append((i == 0 ? "-" : row.PeakError.ToString("n3")).PadLeft(10))
                   .Append((i == 0 ? "-" : row.MaxError.ToString("n4")).PadLeft(11))
                   .Append((i == 0 ? "-" : row.RmsError.ToString("n4")).PadLeft(11))
-                  .Append((i == 0 ? "-" : row.MaxFlooredError.ToString("n4")).PadLeft(16))
+                  .Append('\n');
+            }
+
+            return sb.ToString();
+        }
+
+        // ---- the substep ceiling -----------------------------------------------------------
+
+        /// <summary>
+        /// One row of the substep ceiling sweep: what refusing a demand does to the answer.
+        ///
+        /// The floor sweep above is the other half of the same question. `MaxSubstepsPerBlock`
+        /// declines to resolve a *block* and says so by raising its capacity; `MaxSubsteps`
+        /// declines to resolve the *step* and says nothing at all — it hands back the ceiling and
+        /// integrates a demand it refused. See stiffness.md, What refusing the demand costs.
+        /// </summary>
+        public class CeilingRow
+        {
+            /// <summary>The <c>MaxSubsteps</c> this row ran at.</summary>
+            public int Ceiling;
+
+            /// <summary>What the stiffest element asked for at the start of the run.</summary>
+            public float RequiredSubsteps;
+
+            /// <summary>Substeps actually granted, averaged over the run.</summary>
+            public double MeanGranted;
+
+            /// <summary>
+            /// How far the ceiling is over-subscribed: what was demanded over what it granted.
+            ///
+            /// **The ratio is the quantity, not the count.** A demand of 73 refused to 64 and a
+            /// demand of 36 refused to 32 are the same approximation asked of the integrator, which
+            /// is what lets a rig answer for a population it is not a member of.
+            /// </summary>
+            public float Oversubscription;
+
+            /// <summary>Whether the ceiling refused what the estimate asked for.</summary>
+            public bool Bound;
+
+            public double Milliseconds;
+            public int Nodes;
+
+            /// <summary>Worst and root-mean-square departure from the run that was granted its demand.</summary>
+            public float MaxError;
+            public double RmsError;
+
+            /// <summary>
+            /// Hottest block at the end of the run, and how far that is from the granted run's.
+            ///
+            /// The figure overheat damage is taken off, so it is the one that says whether a
+            /// refused demand changes what happens to a player's ship rather than only what the
+            /// numbers look like.
+            /// </summary>
+            public float PeakTemperature;
+            public float PeakError;
+
+            /// <summary>Simulated seconds in one solver step; every substep figure is proportional to it.</summary>
+            public float StepSeconds;
+
+            /// <summary>Airspeed the run was made at, m/s, and the air density it met.</summary>
+            public float Speed;
+            public float AirDensity;
+
+            /// <summary>Which hull this row was measured on. See <see cref="CeilingFixtures"/>.</summary>
+            public string Fixture;
+
+            /// <summary>What the fixture built, so a row cannot report a plumbed hull with no ring.</summary>
+            public int CoolantLoops;
+            public int RoomsWithAir;
+
+            /// <summary>Hottest coolant parcel or room air at the end of the run, K.</summary>
+            public float PeakCoupledTemperature;
+        }
+
+        /// <summary>
+        /// The hulls the ceiling sweep can be asked for, one per element that carries heat.
+        ///
+        /// The ladder was measured on blocks alone for as long as it existed, and blocks are the
+        /// one element whose exchanges are all pairwise. A coolant parcel and a room's air are
+        /// each one mass carrying every link on it, which is the shape a pairwise bound cannot
+        /// hold on its own. See stiffness.md, What refusing the demand costs.
+        /// </summary>
+        public static class CeilingFixtures
+        {
+            public const string Census = "census";
+            public const string Plumbed = "plumbed";
+            public const string Pressurised = "pressurised";
+
+            /// <summary>Reactors cooled by rings: the hull where the plumbing sets the demand.</summary>
+            public const string Rings = "rings";
+        }
+
+        /// <summary>
+        /// What <c>MaxSubsteps</c> refusing a demand costs, swept across ceilings, in the
+        /// environment where the demand is actually large.
+        ///
+        /// <para>
+        /// **Air is the case, not vacuum.** The same hull demands a few substeps in vacuum and
+        /// tens of them at flying speed in thick atmosphere, so a ceiling sweep taken in vacuum
+        /// measures a bound that never binds. The default here is thick air at 200 m/s, which is
+        /// the `reentry` scenario's airflow and the environment
+        /// balance.md scores `G6` in.
+        /// </para>
+        ///
+        /// <para>
+        /// Error is against the run granted everything it asked for, in the same way the floor
+        /// sweep is, because the question is how far the approximation moves the answer rather
+        /// than whether either run is right in some absolute sense (`E7`).
+        /// </para>
+        /// </summary>
+        public static List<CeilingRow> SubstepCeiling(string shape, int size, int steps,
+            IList<int> ceilings, Action<string> log = null, bool driven = false, int frequency = 0,
+            float speed = 200f, float airDensity = 1f, string fixture = CeilingFixtures.Census,
+            float flow = 0f)
+        {
+            List<CeilingRow> rows = new List<CeilingRow>();
+            float[] reference = null;
+            float referencePeak = 0f;
+
+            // The first row measured would otherwise be measuring the JIT.
+            CeilingRow probe = RunCeiling(shape, Math.Min(size, 2000), 2, Hulls.Unbounded, null,
+                driven, frequency, speed, airDensity, fixture, flow);
+
+            // No ceilings given means the ladder of over-subscriptions rather than a ladder of
+            // counts, resolved against what this hull in this air actually demands. A ceiling of 64
+            // means nothing on a hull that asks for six.
+            if (ceilings == null || ceilings.Count == 0)
+            {
+                ceilings = CeilingLadder(probe.RequiredSubsteps);
+            }
+
+            for (int i = 0; i < ceilings.Count; i++)
+            {
+                if (log != null) log("ceiling " + ceilings[i]);
+
+                CeilingRow row = RunCeiling(shape, size, steps, ceilings[i], reference, driven,
+                    frequency, speed, airDensity, fixture, flow);
+                if (reference == null)
+                {
+                    reference = lastTemperatures;
+                    referencePeak = row.PeakTemperature;
+                }
+
+                row.PeakError = row.PeakTemperature - referencePeak;
+                rows.Add(row);
+            }
+
+            return rows;
+        }
+
+        /// <summary>
+        /// The over-subscriptions the sweep asks about: what fraction of its demand a step is
+        /// granted. **1.15 is the shipped configuration's own breach** — the 49-ship panel's p99
+        /// demand of 73.4 against the 64 `MaxSubsteps` grants — and the rest of the ladder is there
+        /// so a reader can see where the approximation stops being free.
+        /// See balance.md, Air is where the substep budget goes.
+        /// </summary>
+        public static readonly float[] Oversubscriptions = { 1.15f, 1.5f, 2f, 3f, 4.5f, 9f };
+
+        /// <summary>Ceilings that put a demand at each rung of <see cref="Oversubscriptions"/>.</summary>
+        public static List<int> CeilingLadder(float demand)
+        {
+            List<int> ceilings = new List<int>();
+            ceilings.Add(Hulls.Unbounded);
+
+            for (int i = 0; i < Oversubscriptions.Length; i++)
+            {
+                int ceiling = (int)Math.Round(demand / Oversubscriptions[i]);
+                if (ceiling < 1) ceiling = 1;
+                if (!ceilings.Contains(ceiling)) ceilings.Add(ceiling);
+            }
+
+            return ceilings;
+        }
+
+        private static CeilingRow RunCeiling(string shape, int size, int steps, int ceiling,
+            float[] reference, bool driven, int frequency, float speed, float airDensity,
+            string fixture, float flow)
+        {
+            ThermalSettings settings = new ThermalSettings();
+            if (frequency > 0) settings.Frequency = frequency;
+
+            // The ceiling is the subject. The visit budget is not: it shortens a step rather than
+            // coarsening it, which is a different approximation and would be mixed into the error.
+            settings.MaxSubsteps = ceiling;
+            settings.MaxElementVisitsPerStep = 0;
+            settings.Derive();
+
+            // The fixture decides which element carries the heat. The two lumped masses are built
+            // by WorstCases, which counts what it managed to build — a plumbed hull with no ring
+            // is the failure this sweep would otherwise report as a result.
+            ThermalSimulation simulation;
+            WorstCases.Built built = null;
+
+            if (fixture == CeilingFixtures.Plumbed)
+            {
+                built = WorstCases.Plumbed(shape, size, 8, settings);
+                simulation = built.Simulation;
+            }
+            else if (fixture == CeilingFixtures.Rings)
+            {
+                // Sized in rings rather than in blocks: ten cells each, and the point of the
+                // fixture is what one ring does rather than how many there are.
+                built = WorstCases.HeatedRings(Math.Max(1, size / 10), Census.ProducerWatts, settings,
+                    flow);
+                simulation = built.Simulation;
+            }
+            else if (fixture == CeilingFixtures.Pressurised)
+            {
+                built = WorstCases.Pressurised(shape, size, settings);
+                simulation = built.Simulation;
+            }
+            else
+            {
+                GridBuilder builder = GridBuilder.Large();
+                builder.PlaceCensus(LoadShapes.Build(shape, size));
+
+                simulation = new ThermalSimulation(settings, builder.Grid);
+                for (int i = 0; i < builder.Placed.Count; i++)
+                {
+                    simulation.Solver.AddBlock(builder.Placed[i], 293.15f);
+                }
+                simulation.RebuildAll();
+            }
+
+            IList<ThermalNode> nodes = simulation.Solver.Nodes;
+            int count = nodes.Count;
+
+            if (driven)
+            {
+                Census.DriveCensus(simulation);
+            }
+            else
+            {
+                SeedSpread(simulation);
+            }
+
+            EnvironmentSample sample = Worlds.Flight(airDensity, speed);
+
+            CeilingRow row = new CeilingRow();
+            row.Ceiling = ceiling;
+            row.StepSeconds = settings.StepSeconds;
+            row.Nodes = count;
+            row.Speed = speed;
+            row.AirDensity = airDensity;
+            row.Fixture = fixture;
+            row.CoolantLoops = built != null ? built.CoolantLoops : 0;
+            row.RoomsWithAir = built != null ? built.RoomsWithAir : 0;
+
+            // Taken against the environment the run is made in: the estimate reads the convection
+            // coefficient, so a demand sampled in vacuum is the wrong number by the whole reason
+            // this sweep exists.
+            simulation.StepExact(1, sample);
+            row.RequiredSubsteps = simulation.Solver.LastRequiredSubsteps;
+
+            simulation.Work.Reset();
+            Stopwatch watch = Stopwatch.StartNew();
+            simulation.StepExact(steps, sample);
+            watch.Stop();
+            row.Milliseconds = watch.Elapsed.TotalMilliseconds;
+
+            row.MeanGranted = simulation.Work.SolverSteps > 0
+                ? (double)simulation.Work.SolverSubsteps / simulation.Work.SolverSteps
+                : 0d;
+            row.Bound = ceiling < row.RequiredSubsteps;
+            row.Oversubscription = ceiling > 0 && row.Bound
+                ? row.RequiredSubsteps / ceiling
+                : 1f;
+
+            float[] result = new float[count];
+            for (int i = 0; i < count; i++)
+            {
+                result[i] = nodes[i].Temperature;
+                if (result[i] > row.PeakTemperature) row.PeakTemperature = result[i];
+            }
+            lastTemperatures = result;
+
+            // The lumped masses read apart from the blocks. A ring that has run away shows in a
+            // block peak only through the links it is already overshooting on, and whether a
+            // refused demand approximates or diverges on the path that carries the heat is the
+            // whole question this sweep exists to ask.
+            IList<CoolantLoop> loops = simulation.Solver.Loops;
+            for (int l = 0; l < loops.Count; l++)
+            {
+                float hottest = loops[l].HottestSegment;
+                if (hottest > row.PeakCoupledTemperature) row.PeakCoupledTemperature = hottest;
+            }
+
+            IList<RoomAirNode> air = simulation.Solver.RoomAir;
+            for (int r = 0; r < air.Count; r++)
+            {
+                if (!air[r].HasAir) continue;
+                if (air[r].Temperature > row.PeakCoupledTemperature)
+                {
+                    row.PeakCoupledTemperature = air[r].Temperature;
+                }
+            }
+
+            if (reference != null && reference.Length == count)
+            {
+                double sumSquares = 0;
+                for (int i = 0; i < count; i++)
+                {
+                    float error = Math.Abs(result[i] - reference[i]);
+                    sumSquares += (double)error * error;
+                    if (error > row.MaxError) row.MaxError = error;
+                }
+
+                row.RmsError = Math.Sqrt(sumSquares / count);
+            }
+
+            return row;
+        }
+
+        public static string CeilingTable(IList<CeilingRow> rows)
+        {
+            StringBuilder sb = new StringBuilder();
+
+            sb.Append("ceiling".PadLeft(9))
+              .Append("demanded".PadLeft(10))
+              .Append("granted".PadLeft(10))
+              .Append("over".PadLeft(7))
+              .Append("ms".PadLeft(10))
+              .Append("x granted".PadLeft(11))
+              .Append("peak K".PadLeft(10))
+              .Append("coupled K".PadLeft(12))
+              .Append("peakErr".PadLeft(10))
+              .Append("maxErr K".PadLeft(11))
+              .Append("rmsErr K".PadLeft(11))
+              .Append('\n');
+
+            if (rows.Count > 0)
+            {
+                sb.Append("  step ")
+                  .Append(rows[0].StepSeconds.ToString("n4"))
+                  .Append(" s (Frequency ")
+                  .Append((1f / rows[0].StepSeconds).ToString("n0"))
+                  .Append("), air ")
+                  .Append(rows[0].AirDensity.ToString("n2"))
+                  .Append(" at ")
+                  .Append(rows[0].Speed.ToString("n0"))
+                  .Append(" m/s, ")
+                  .Append(rows[0].Nodes.ToString("n0"))
+                  .Append(" nodes, ")
+                  .Append(rows[0].Fixture ?? CeilingFixtures.Census)
+                  .Append(rows[0].CoolantLoops > 0 ? ", " + rows[0].CoolantLoops + " rings" : "")
+                  .Append(rows[0].RoomsWithAir > 0 ? ", " + rows[0].RoomsWithAir + " rooms of air" : "")
+                  .Append('\n');
+            }
+
+            double baseline = rows.Count > 0 ? rows[0].Milliseconds : 0;
+
+            for (int i = 0; i < rows.Count; i++)
+            {
+                CeilingRow row = rows[i];
+
+                sb.Append((row.Ceiling >= Hulls.Unbounded ? "granted" : row.Ceiling.ToString()).PadLeft(9))
+                  .Append(row.RequiredSubsteps.ToString("n2").PadLeft(10))
+                  .Append(row.MeanGranted.ToString("n2").PadLeft(10))
+                  .Append((row.Bound ? row.Oversubscription.ToString("n2") + "x" : "-").PadLeft(7))
+                  .Append(row.Milliseconds.ToString("n0").PadLeft(10))
+                  .Append((row.Milliseconds <= 0 ? "-" : (baseline / row.Milliseconds).ToString("n2") + "x").PadLeft(11))
+                  .Append(row.PeakTemperature.ToString("n1").PadLeft(10))
+                  .Append((row.PeakCoupledTemperature > 0f
+                      ? row.PeakCoupledTemperature.ToString("n1") : "-").PadLeft(12))
+                  .Append((i == 0 ? "-" : row.PeakError.ToString("n3")).PadLeft(10))
+                  .Append((i == 0 ? "-" : row.MaxError.ToString("n4")).PadLeft(11))
+                  .Append((i == 0 ? "-" : row.RmsError.ToString("n4")).PadLeft(11))
                   .Append('\n');
             }
 

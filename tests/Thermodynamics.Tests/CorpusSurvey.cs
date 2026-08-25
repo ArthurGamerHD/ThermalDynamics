@@ -19,6 +19,7 @@ namespace Thermodynamics.Tests
     /// See balance-lab.md, and balance.md, The population.
     /// </para>
     /// </summary>
+    [Collection("alone")]
     public class CorpusSurvey
     {
         /// <summary>The scenarios a corpus ship is measured under. Distinct by construction.</summary>
@@ -170,11 +171,15 @@ namespace Thermodynamics.Tests
                 ThermalSolver solver = assembly.Simulations[g].Solver;
                 if (solver.Nodes.Count < 2) continue;
 
+                // One definition of *sealed*, shared with `bench sealed`, which is the tool that
+                // explains a count this only produces (`P5`). The two disagreed until 2026-08-24:
+                // this one counted a block coupled to room air as sealed.
+                System.Collections.Generic.HashSet<int> touchingAir =
+                    HotSpotLab.NodesTouchingAir(solver);
+
                 for (int i = 0; i < solver.Nodes.Count; i++)
                 {
-                    if (solver.Nodes[i].ExposedArea > 0f) continue;
-                    if (solver.NodeConductanceTotal(i) > 0f) continue;
-                    surveyed.SealedBlocks++;
+                    if (HotSpotLab.IsSealed(solver, i, touchingAir)) surveyed.SealedBlocks++;
                 }
             }
 

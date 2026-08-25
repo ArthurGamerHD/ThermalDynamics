@@ -9,7 +9,7 @@ namespace Thermodynamics.Harness
     /// Step 3 of the balance lab: a panel of ships through the whole scenario battery, and the
     /// matrix that comes out.
     ///
-    /// See [balance-lab.md](../../docs/balance-lab.md).
+    /// See balance-lab.md.
     /// </summary>
     public static class BatteryLab
     {

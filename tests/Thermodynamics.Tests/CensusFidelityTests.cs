@@ -11,6 +11,25 @@ namespace Thermodynamics.Tests
     /// rather than of the simulation**. They hold <see cref="Census"/> against the field observations
     /// recorded beside it and fail when the two drift apart; refresh both together when a dump arrives
     /// (`M11`). See stiffness.md, How close the synthetic tests are to a real ship.
+    ///
+    /// <para>
+    /// **Two of the three references here were taken at a pace that no longer ships, and only one
+    /// of them can be re-measured.** `C24` moved `ConductionScale` and `HeatTimeScale` together,
+    /// and a substep demand is a conductance over a capacity, so every stiffness figure in this
+    /// class moved with them and none by the same factor. The corpus walk was re-run — 8,105
+    /// blueprints, 190 s — and <see cref="Census.Corpus"/> carries the new figures with the old
+    /// ones beside them. <see cref="Census.Field"/> cannot be: it is two ships from two vanished
+    /// sessions, and re-taking it needs a live session on the new pair. So the corpus is the
+    /// reference where there is a choice, and where a test still reads the dump it says which pace
+    /// each side was taken at (`P6`).
+    /// </para>
+    ///
+    /// <para>
+    /// **And the hull has left the population at the one cap that ships.** At a per-block cap of 8
+    /// it floors 6.91 % of its own blocks against a real population's 0.92 % — seven times as many
+    /// — while at caps of 4, 2 and 1 it is inside the population as it always was. That is
+    /// backlog.md `C26`, pinned below rather than asserted around.
+    /// </para>
     /// </summary>
     public class CensusFidelityTests
     {
@@ -32,6 +51,62 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
+        /// <summary>
+        /// **Each band mounts the way the block it was measured from mounts**, which is the
+        /// property `C26` was closed by and the one a refresh has to keep.
+        ///
+        /// <para>
+        /// A `SmallLight` declares one mount point and the three shaped-armour bands declare three,
+        /// four and five; a definition that declares none is a block whose mounts the game derives
+        /// from its model geometry, so it counts as six — the same fallback the corpus walk makes.
+        /// Held against the installed game rather than against a number typed here, because the
+        /// figure is a fact about the definitions and this is `M11`.
+        /// </para>
+        ///
+        /// <para>
+        /// **The machinery band is the stated exception.** `Example` documents a band rather than
+        /// defining it, and a band of every heavy device on a ship is not all gyroscopes — a gyro
+        /// declares a single mount on its bottom, and taking that for the band puts an eleven-tonne
+        /// block on one joint. It carries six, and this test says so out loud rather than letting
+        /// it read as drift.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheTiersCarryTheMountsTheirBlocksDeclare()
+        {
+            if (!GameBlocks.IsInstalled) return;
+
+            Dictionary<string, GameBlocks.Definition> bySubtype = GameBlocks.BySubtype();
+
+            foreach (Census.Tier tier in Census.Tiers)
+            {
+                GameBlocks.Definition definition;
+                Assert.True(bySubtype.TryGetValue(tier.Example, out definition),
+                    "the " + tier.Name + " band names " + tier.Example
+                    + ", which the installed game does not define");
+
+                int declared = 0;
+                for (int face = 0; face < definition.MountFaces.Length; face++)
+                {
+                    if (definition.MountFaces[face]) declared++;
+                }
+
+                if (declared == 0) declared = Face.Count;
+
+                if (tier.Name == "machinery")
+                {
+                    Assert.Equal(Face.Count, tier.MountFaces);
+                    Assert.Equal(1, declared);
+                    continue;
+                }
+
+                Assert.True(declared == tier.MountFaces,
+                    "the " + tier.Name + " band mounts on " + tier.MountFaces + " faces and "
+                    + tier.Example + " declares " + declared
+                    + "; refresh the tier or say why it differs, as the machinery band does");
+            }
+        }
+
         [Fact]
         public void TheTiersAreAWholePopulation()
         {
@@ -51,17 +126,20 @@ namespace Thermodynamics.Tests
         /// it for. This is the assertion that would have caught the original catalogue.
         /// </summary>
         [Fact]
-        public void ACensusHullIsAsStiffAsAFieldShip()
+        public void ACensusHullIsAsStiffAsARealShip()
         {
             ThermalSimulation simulation = Hull(4000);
             float demand = simulation.Solver.RequiredSubsteps(simulation.Settings.StepSeconds);
 
-            // Generous either side of the observed range: the point is the order of magnitude,
-            // and one ship is one ship.
-            Assert.True(demand > Census.Field.LeastDemand * 0.6f && demand < Census.Field.MostDemand * 1.6f,
+            // **Read against the corpus rather than the dump**, which is the same change every
+            // comparison in this class has made: two ships measured at a pair that no longer ships
+            // cannot bound a hull measured at the one that does (`P6`). Generous either side: the
+            // point is the order of magnitude, and this is a vacuum figure against an air
+            // population.
+            Assert.True(demand > Census.Corpus.AirP10 * 0.6f && demand < Census.Corpus.AirMax * 1.6f,
                 "the census hull asks for " + demand.ToString("n2")
-                + " substeps against a field range of " + Census.Field.LeastDemand
-                + " to " + Census.Field.MostDemand
+                + " substeps against a corpus range of " + Census.Corpus.AirP10
+                + " to " + Census.Corpus.AirMax
                 + "; the harness has drifted away from the ships it is meant to describe");
         }
 
@@ -78,12 +156,16 @@ namespace Thermodynamics.Tests
         /// updated when a dump arrives.
         /// </remarks>
         [Theory]
-        [InlineData(8, Census.Field.RaisedAtCap8)]
-        [InlineData(4, Census.Field.RaisedAtCap4)]
-        [InlineData(2, Census.Field.RaisedAtCap2)]
-        [InlineData(1, Census.Field.RaisedAtCap1)]
-        public void ACapReachesAboutAsMuchOfTheHullAsItReachesOfAFieldShip(int cap, float fieldShare)
+        [InlineData(4, Census.Corpus.FlooredAtCap4)]
+        [InlineData(2, Census.Corpus.FlooredAtCap2)]
+        [InlineData(1, Census.Corpus.FlooredAtCap1)]
+        public void ACapReachesAboutAsMuchOfTheHullAsItReachesOfARealPopulation(
+            int cap, float corpusShare)
         {
+            // **Read against the corpus rather than the dump.** Both were the same question once;
+            // only one of them could be asked again at the pace that now ships, and 8,105 ships
+            // measured on this pair beat two measured on the last one (`P6`, `M10`). Cap 8 is not
+            // here because the hull is out of the population there, which is its own test below.
             ThermalSimulation simulation = Hull(4000, cap);
             ThermalSolver.SubstepProfile profile = simulation.Solver.ProfileSubsteps();
 
@@ -94,12 +176,14 @@ namespace Thermodynamics.Tests
 
             // Wide, because the census has eight discrete tiers where a ship has a continuum, so
             // blocks bunch at tier boundaries. What is being caught is a harness that has stopped
-            // resembling a ship at all, not one that is a few per cent out.
-            Assert.True(share > fieldShare * 0.25 && share < fieldShare * 4.0,
+            // resembling a ship at all, not one that is a few per cent out. Measured 2026-08-24:
+            // 19.93 % against 23.22 %, 29.23 % against 40.33 %, 59.71 % against 75.89 %.
+            Assert.True(share > corpusShare * 0.25 && share < corpusShare * 4.0,
                 "cap " + cap + " raises " + (100 * share).ToString("n1")
-                + "% of the census hull against " + (100 * fieldShare).ToString("n1")
-                + "% of the field ship");
+                + "% of the census hull against " + (100 * corpusShare).ToString("n1")
+                + "% of a real population");
         }
+
 
         // ---- against the corpus, rather than against two ships ---------------------------------
 
@@ -129,16 +213,66 @@ namespace Thermodynamics.Tests
         /// </para>
         /// </summary>
         [Fact]
-        public void TheCensusHullIsAsStiffAsRealShipsAreInAir()
+        public void TheCensusHullIsInsideThePopulationItStandsIn()
         {
             StiffnessLab.Row hull = CensusHull();
 
+            // **It was outside, and refreshing the tiers put it back.** `C24` exposed the gap and
+            // `C26` found it: every tier was built as a solid block that mounts on all six faces,
+            // so the lightest band — 20 kg against neighbours of 440 — carried six joints where a
+            // `SmallLight`'s own definition declares one. Measured now, the hull demands 12.71
+            // substeps of a quarter-second step in air against a corpus running 6.20 to 22.41,
+            // which is about the 58th percentile, and its stiffest block has four exposed faces
+            // against a real ship's mean of 3.46.
             Assert.True(hull.Air > Census.Corpus.AirP10 && hull.Air < Census.Corpus.AirMax,
                 "the census hull demands " + hull.Air.ToString("n2")
                 + " substeps of a quarter-second step in air, against a corpus of "
                 + Census.Corpus.Ships.ToString("n0") + " real ships spanning "
                 + Census.Corpus.AirP10 + " to " + Census.Corpus.AirMax
                 + "; the harness has left the population it is meant to describe");
+
+            // And in the middle of it rather than at an edge, which is what makes it a stand-in
+            // for a ship rather than for one end of the workshop.
+            Assert.InRange(hull.Air, Census.Corpus.AirP50 * 0.75f, Census.Corpus.AirP90);
+        }
+
+        /// <summary>
+        /// **A typical hull has none of the tail the shipped cap reaches**, and that is a
+        /// characterisation rather than a defect.
+        ///
+        /// <para>
+        /// `MaxSubstepsPerBlock` is off by default and 8 is the value the docs discuss; over the
+        /// corpus it holds back 0.92 % of all blocks, which live in the upper tail — the ships
+        /// whose stiffest block asks 18 to 22 substeps of a quarter-second step. The census hull is
+        /// one hull at about the 58th percentile, so it does not have that tail and a cap of 8
+        /// floors nothing on it. A synthetic hull cannot be both a median ship and a population.
+        /// </para>
+        ///
+        /// <para>
+        /// Pinned so that it stays a *small* difference in the direction it is in. The gap that
+        /// mattered was the other way round — 6.91 % of the hull against 0.92 % of the population
+        /// — which is what `C26` was opened for and closed by refreshing the tiers.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheShippedCapReachesThePopulationsTailAndNotATypicalHull()
+        {
+            ThermalSimulation simulation = Hull(4000, 8);
+            ThermalSolver.SubstepProfile profile = simulation.Solver.ProfileSubsteps();
+
+            int index = Array.IndexOf(ThermalSolver.SubstepProfile.ProjectedCaps, 8);
+            double share = (double)profile.CapNodesFloored[index] / profile.Nodes;
+
+            Assert.True(share < Census.Corpus.FlooredAtCap8,
+                "a cap of 8 floors " + (100 * share).ToString("n2")
+                + " % of the census hull against " + (100 * Census.Corpus.FlooredAtCap8).ToString("n2")
+                + " % of a real population, so the hull has grown a tail the population's median"
+                + " ship does not have");
+
+            // The population's own figure is the small one: this is a fraction of a per cent
+            // either way, and what it says is which ships a cap reaches rather than how much of
+            // any one of them.
+            Assert.InRange(Census.Corpus.FlooredAtCap8, 0f, 0.02f);
         }
 
         /// <summary>
@@ -163,7 +297,13 @@ namespace Thermodynamics.Tests
 
             float ratio = StiffnessLab.Ratio(hull);
 
-            Assert.True(ratio > Census.Corpus.AirRatioP10,
+            // **The population came down to meet the hull.** This asked for more than the corpus
+            // tenth percentile of 1.04 and the hull read 1.20 to 1.50; at the pace `C24` ships a
+            // block's neighbours set its demand, the corpus median is 1.07 and its tenth
+            // percentile is exactly 1.00, and the hull is 1.00 with it. So the hull is at the
+            // population's floor rather than below it, and what was a fidelity gap is now a
+            // property of every hull in the game.
+            Assert.True(ratio >= Census.Corpus.AirRatioP10,
                 "the census hull's stiffest block is " + ratio.ToString("n2")
                 + " times stiffer in air than out of it, below the tenth percentile of "
                 + Census.Corpus.AirRatioP10 + " over " + Census.Corpus.Ships.ToString("n0")
@@ -178,9 +318,16 @@ namespace Thermodynamics.Tests
 
         /// <summary>
         /// The census hull runs far hotter than a real ship, and the arithmetic of that stays put.
-        /// Pinned as a **characterisation, not a target**: whether the benchmark hull should be a worst
-        /// case or a typical ship is a decision, and this fails if the answer changes without anyone
-        /// saying so. See stiffness.md, The census hull is a 96th-percentile ship for heat.
+        ///
+        /// <para>
+        /// **Decided (`C14`, 2026-08-24): the hull is typical in stiffness and extreme in heat, on
+        /// purpose, and this pins the second half.** They are two properties rather than two
+        /// answers — a cost figure has to describe what a server pays, so `C26` put the hull in the
+        /// population's trough for that; a temperature figure has to be a ceiling, so this one
+        /// stays at the 96th percentile. What follows is a rule about quoting: a temperature taken
+        /// on this hull is an **upper bound**. See stiffness.md, The census hull is a
+        /// 96th-percentile ship for heat.
+        /// </para>
         /// </summary>
         [Fact]
         public void TheCensusHullMakesFarMoreHeatThanARealShip()
@@ -202,29 +349,37 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// The two figures a live session reported are ordinary ships, which is what makes them
-        /// usable evidence at all.
+        /// **The field observations are evidence about a pace this mod no longer runs at**, and
+        /// that is what this now says.
         ///
         /// <para>
-        /// They were the only evidence for a long time. Now they can be placed: 21.35 at the 63rd
-        /// percentile of the corpus in air and 31.25 at the 85th. Had either landed in the last
-        /// percent, everything built on them would have been built on an outlier.
+        /// They were the only evidence for a long time, and once the corpus existed they could be
+        /// placed: 21.35 at the 63rd percentile in air and 31.25 at the 85th, which is what made
+        /// them usable — had either landed in the last per cent, everything built on them would
+        /// have been built on an outlier. `C24` moved both defaults, the corpus was walked again
+        /// at the new pair and these two ships cannot be: they are two sessions that no longer
+        /// exist. Placed against the new population they read at the hundredth percentile, and the
+        /// reason is the pace rather than the ships.
+        /// </para>
+        ///
+        /// <para>
+        /// So this asserts the staleness rather than pretending to a comparison. It fails when a
+        /// dump arrives and <see cref="Census.Field"/> is refreshed with it — which is `M11`
+        /// working, and the moment to restore the claim above.
         /// </para>
         /// </summary>
         [Fact]
-        public void TheFieldObservationsAreOrdinaryShips()
+        public void TheFieldObservationsAreFromAPaceThatNoLongerShips()
         {
-            Assert.True(Census.Field.LeastDemand > Census.Corpus.AirP10
-                        && Census.Field.LeastDemand < Census.Corpus.AirMax,
-                "the quieter field ship at " + Census.Field.LeastDemand
-                + " is outside the corpus range " + Census.Corpus.AirP10
-                + " to " + Census.Corpus.AirMax);
-
-            Assert.True(Census.Field.MostDemand > Census.Corpus.AirP10
-                        && Census.Field.MostDemand < Census.Corpus.AirMax,
+            Assert.True(Census.Field.MostDemand > Census.Corpus.AirMax,
                 "the stiffer field ship at " + Census.Field.MostDemand
-                + " is outside the corpus range " + Census.Corpus.AirP10
-                + " to " + Census.Corpus.AirMax);
+                + " is back inside the corpus range " + Census.Corpus.AirP10 + " to "
+                + Census.Corpus.AirMax + ", so a dump has been taken at the shipped pair and the"
+                + " claim this test replaced can come back");
+
+            // Not by so much that the dump has stopped being about ships at all: it is one pace
+            // change away, not a different measurement.
+            Assert.InRange(Census.Field.MostDemand / Census.Corpus.AirMax, 1f, 3f);
         }
 
         /// <summary>
@@ -238,20 +393,36 @@ namespace Thermodynamics.Tests
         /// </para>
         /// </summary>
         [Fact]
-        public void TheTwoModesOfTheCorpusAreFarApart()
+        public void TheTwoModesOfTheCorpusHaveClosed()
         {
-            Assert.True(Census.Corpus.LitP50 > Census.Corpus.StructuralP50 * 4f,
+            // **The re-measurement this test was written to catch has happened.** It asserted the
+            // two modes were more than four times apart and said in its own summary that if they
+            // ever came together, every statement in this repository about "a typical ship's
+            // stiffness" becomes sayable and several of them should be rewritten. At the pace
+            // `C24` ships they are 2.3x apart — 16.83 against 7.23, where it was 28.51 against
+            // 4.81 — and half the population sits between them where six per cent did.
+            Assert.True(Census.Corpus.LitP50 > Census.Corpus.StructuralP50 * 2f,
                 "a light-limited ship demands " + Census.Corpus.LitP50 + " against a structure"
                 + "-limited ship's " + Census.Corpus.StructuralP50
-                + "; the population is no longer two groups and a median now means something");
+                + "; the two modes have merged entirely and a median describes the population");
 
+            Assert.True(Census.Corpus.LitP50 < Census.Corpus.StructuralP50 * 4f,
+                "the two modes are " + (Census.Corpus.LitP50 / Census.Corpus.StructuralP50)
+                + "x apart, which is the split population this repository used to describe; the"
+                + " pages that stopped quoting a typical ship can start again");
+
+            // What did not move at all: which blocks set the count, and on how many ships.
             Assert.True(Census.Corpus.LitShare > 0.2f && Census.Corpus.LitShare < 0.8f,
                 "a light sets the substep count on " + (100f * Census.Corpus.LitShare).ToString("n0")
                 + "% of ships, which is no longer a split population");
 
-            // The median sits with the structural mode, so quoting it as "a typical ship" describes
-            // the softer half only.
-            Assert.True(Census.Corpus.AirP50 < Census.Corpus.LitP50 * 0.5f,
+            // And the population is genuinely filled in between them rather than the two modes
+            // having simply moved: this is what makes the median mean something.
+            Assert.InRange(Census.Corpus.BetweenTheModes, 0.3f, 0.7f);
+
+            // The median still sits with the structural mode, so it is the softer half a single
+            // figure describes best.
+            Assert.True(Census.Corpus.AirP50 < Census.Corpus.LitP50,
                 "the corpus median has moved into the lit mode");
         }
 
@@ -264,16 +435,27 @@ namespace Thermodynamics.Tests
         [Fact]
         public void TheFieldCapCurveMatchesTheCorpusWhereTheCapIsActuallySet()
         {
+            // **Still agreement at the cap anyone would ship**, which is the claim: 0.92 % of real
+            // blocks against the dump's 1.16 %, on two populations measured at two different paces
+            // — so this is the weaker form of the same statement, that a cap of 8 reaches under a
+            // per cent of real blocks whichever pace it is asked at.
             Assert.True(Census.Corpus.FlooredAtCap8 < Census.Field.RaisedAtCap8 * 2f,
                 "a cap of 8 holds back " + (100f * Census.Corpus.FlooredAtCap8).ToString("n2")
                 + " % of real blocks against the dump's "
                 + (100f * Census.Field.RaisedAtCap8).ToString("n2")
                 + " %; the shipped cap was chosen on a curve the population no longer has");
 
-            Assert.True(Census.Corpus.FlooredAtCap4 < Census.Field.RaisedAtCap4 * 2f,
+            // **And they part company below it, which they always did — further now.** A cap of 4
+            // reaches 23.22 % of the corpus at this pace against 7.20 % at the last one and the
+            // dump's 6.01 %, because the population's soft mode has come up to meet its stiff one.
+            // The divergence is a finding rather than a failure: it is below where any cap is set,
+            // and both halves of it are recorded.
+            Assert.True(Census.Corpus.FlooredAtCap4 > Census.Field.RaisedAtCap4 * 2f,
                 "a cap of 4 holds back " + (100f * Census.Corpus.FlooredAtCap4).ToString("n2")
                 + " % of real blocks against the dump's "
-                + (100f * Census.Field.RaisedAtCap4).ToString("n2") + " %");
+                + (100f * Census.Field.RaisedAtCap4).ToString("n2")
+                + " %, so the two curves agree below the shipped cap and the note beside them"
+                + " needs rewriting");
 
             // The curve is monotonic in the cap, which is the one thing about it that is arithmetic
             // rather than measurement.
@@ -374,6 +556,41 @@ namespace Thermodynamics.Tests
                     "the " + Census.Tiers[i].Name + " tier is rated hotter than the blocks that"
                     + " make the heat, which would make structure the thing that burns first");
             }
+        }
+
+        /// <summary>
+        /// **The placement rule and the identity agree on a hull built in the order it was laid
+        /// out**, which is what lets one of them be replaced by the other.
+        ///
+        /// <para>
+        /// `ProducesHeatAt(index)` decides which *cell* of a hull being laid out gets a producer;
+        /// `IsProducer(node)` reads the model the cell actually holds. Every hull in this
+        /// repository is built in placement order, so node index equals placement index and the two
+        /// answer identically — which is a coincidence of construction, not a property, and it is
+        /// exactly the assumption `F22` degrades. Driving a hull now reads the model, and this pins
+        /// that the change moved no block on any hull that is built normally.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheProducerPlacementRuleAndTheProducerIdentityPickTheSameBlocks()
+        {
+            ThermalSimulation simulation = Hull(2000);
+            IList<ThermalNode> nodes = simulation.Solver.Nodes;
+
+            int disagreements = 0;
+            int producers = 0;
+
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                bool byPlacement = Census.ProducesHeatAt(i);
+                bool byIdentity = Census.IsProducer(nodes[i]);
+
+                if (byIdentity) producers++;
+                if (byPlacement != byIdentity) disagreements++;
+            }
+
+            Assert.True(producers > 0, "the hull has no producer at all, so this judges nothing");
+            Assert.Equal(0, disagreements);
         }
 
         /// <summary>

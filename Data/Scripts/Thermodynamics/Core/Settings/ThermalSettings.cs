@@ -98,7 +98,7 @@ namespace Thermodynamics.Core
         /// Factor by which thermal time runs faster than real physics; divides every heat capacity.
         /// 1 is fully physical. See configuration.md, Time and pace.
         /// </summary>
-        public float HeatTimeScale = 225f;
+        public float HeatTimeScale = 90f;
 
         // ---- environment ------------------------------------------------------------------
 
@@ -198,14 +198,25 @@ namespace Thermodynamics.Core
         /// See configuration.md, Solver.
         /// </summary>
         /// <remarks>
+        /// <para>
         /// **This bounds a step, and smoothness is a property of a frame.** A frame does
         /// <c>budget * frameSeconds * StepsPerSecond</c> of work, so the two are related by
         /// <see cref="Frequency"/>: at half the step rate a step spans twice as many frames and the
-        /// same budget costs half as much per frame. The figure moved with <c>Frequency</c> from 8 to
-        /// 4 for that reason — 2,000,000 at four steps a second is the per-frame cost 1,000,000 was at
-        /// eight, and it keeps the bound off the grids it was never meant to reach.
+        /// same budget costs half as much per frame. At 4,000,000 and <c>Frequency</c> 4 a frame is
+        /// bounded at 266,667 element visits, which is the only quantity this setting controls.
+        /// </para>
+        /// <para>
+        /// **4,000,000 since 2026-08-24, from 2,000,000, and what moved was the fidelity it costs
+        /// rather than the milliseconds it saves.** Measured: a hull that reaches the bound is not
+        /// made less accurate — each step is as faithful as it was and there are fewer of them, so
+        /// its thermal clock runs slow, worth 4.4 K standing on a 16,558-block hull in flight at the
+        /// old value and more than 37 K at 32,800. Against 0.028 K for the substep ceiling this
+        /// world accepts and 0.607 K for the per-block cap it refuses to ship as a default, that
+        /// made this the largest approximation the mod shipped. See benchmarks.md, What the
+        /// allowance is worth, and backlog.md `C27`.
+        /// </para>
         /// </remarks>
-        public int MaxElementVisitsPerStep = 2000000;
+        public int MaxElementVisitsPerStep = 4000000;
 
         /// <summary>
         /// What one node is worth, in links, when a step's cost is counted. Measured rather than

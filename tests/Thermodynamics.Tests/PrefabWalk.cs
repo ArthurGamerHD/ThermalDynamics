@@ -13,7 +13,7 @@ namespace Thermodynamics.Tests
     /// game puts in front of a player whether they want them or not — cargo ships, drones,
     /// encounters, unknown signals, respawn pods — and a mod that destroys them as they arrive is
     /// broken however good its physics is. The criterion is stated in
-    /// [balance-lab.md](../../docs/balance-lab.md) and was written before any of this ran (`E11`).
+    /// balance-lab.md and was written before any of this ran (`E11`).
     /// </para>
     ///
     /// <para>
@@ -28,6 +28,7 @@ namespace Thermodynamics.Tests
     /// install.
     /// </para>
     /// </summary>
+    [Trait("speed", "slow")]
     public class PrefabWalk
     {
         /// <summary>

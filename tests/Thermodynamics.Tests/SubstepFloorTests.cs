@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Thermodynamics.Core;
 using Thermodynamics.Harness;
 using VRageMath;
+using Xunit.Abstractions;
 
 namespace Thermodynamics.Tests
 {
@@ -28,6 +29,13 @@ namespace Thermodynamics.Tests
     /// </summary>
     public class SubstepFloorTests
     {
+        private readonly ITestOutputHelper output;
+
+        public SubstepFloorTests(ITestOutputHelper output)
+        {
+            this.output = output;
+        }
+
         /// <summary>A 16 kg fitting, the block the field dump found setting the substep count.</summary>
         private static BlockModel LightFitting()
         {
@@ -207,8 +215,11 @@ namespace Thermodynamics.Tests
             capped.StepExact(40, sample);
             float early = WorstDifference(uncapped, capped);
 
-            uncapped.StepExact(4000, sample);
-            capped.StepExact(4000, sample);
+            // A length of thermal time rather than of steps: at the clock `C24` ships, four
+            // thousand steps leave the hull still moving and the difference half-decayed — 3.15 K
+            // to 1.58 K, which is a decay that has not finished rather than one that failed.
+            uncapped.StepExact(LabClock.Steps(4000), sample);
+            capped.StepExact(LabClock.Steps(4000), sample);
             float late = WorstDifference(uncapped, capped);
 
             Assert.True(early > 0f, "the floor changed nothing at all, so the test is not testing it");
@@ -406,12 +417,12 @@ namespace Thermodynamics.Tests
         [Fact]
         public void TheCapReachesRoomAirAndNotOnlyBlocks()
         {
-            ThermalSimulation open = Sealed(Settings(0));
+            ThermalSimulation open = Sealed(SealedSettings(0));
             float before = open.Solver.RequiredSubsteps(open.Settings.StepSeconds);
 
             Assert.True(open.Solver.RoomAir.Count > 0, "the test hull holds no air");
 
-            ThermalSimulation capped = Sealed(Settings(1));
+            ThermalSimulation capped = Sealed(SealedSettings(1));
             float after = capped.Solver.RequiredSubsteps(capped.Settings.StepSeconds);
 
             Assert.True(before > 1f,
@@ -419,6 +430,25 @@ namespace Thermodynamics.Tests
             Assert.True(after <= 1f + 0.001f,
                 "cap 1 left the grid asking for " + after + " substeps, so something it cannot"
                 + " reach is still setting the count");
+        }
+
+        /// <summary>
+        /// The same settings at half the rate, for the sealed rig alone.
+        ///
+        /// **A cap of one is only a cap where something asks for more than one.** A substep demand
+        /// is proportional to the step it is counted against, and `C24` slowed the clock by two and
+        /// a half — so this one-cell compartment's air, which asked for 2.3 substeps of a
+        /// quarter-second step, now asks for 0.94 and a cap of one is inert on it. At a half-second
+        /// step it asks for 1.88 and the rig is the rig again. Nothing else in this class needs the
+        /// change, which is why it is here rather than in <see cref="Settings"/>.
+        /// </summary>
+        private static ThermalSettings SealedSettings(int cap)
+        {
+            ThermalSettings settings = new ThermalSettings { Frequency = 2 };
+            settings.MaxSubstepsPerBlock = cap;
+            settings.MaxSubsteps = 4096;
+            settings.MaxElementVisitsPerStep = 0;
+            return settings.Derive();
         }
 
         /// <summary>A sealed one-cell compartment with air in it, walled in armour.</summary>
@@ -459,6 +489,55 @@ namespace Thermodynamics.Tests
             {
                 Assert.Equal(a.Solver.Nodes[i].Temperature, b.Solver.Nodes[i].Temperature);
             }
+        }
+
+        /// <summary>
+        /// **The floor bounds the whole grid's demand, which is what makes it `C19`'s third route.**
+        ///
+        /// <para>
+        /// The atmospheric breach is a demand of 73.4 against the 64 the ceiling grants. A per-block
+        /// floor does not refuse that demand, it removes it: every node it raises stops asking for
+        /// more than the cap, so the grid's own estimate lands on the cap and the ceiling never
+        /// binds. Asserted in air, because convection is what makes the demand large in the first
+        /// place and a vacuum rig would agree for the wrong reason.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheFloorTakesTheWholeGridsDemandDownToItsCap()
+        {
+            const int Cap = 6;
+
+            ThermalSettings uncapped = Settings(0);
+            ThermalSettings capped = Settings(Cap);
+
+            float demanded = DemandInAir(uncapped);
+            float bounded = DemandInAir(capped);
+
+            output.WriteLine("demand {0:n2} uncapped, {1:n2} at a cap of {2}", demanded, bounded, Cap);
+
+            // The rig has to be stiff enough in air for the cap to be doing anything (`E8`).
+            Assert.True(demanded > Cap * 2f,
+                "the hull demands only " + demanded + " substeps in air, so a cap of " + Cap
+                + " has nothing to bound and this judges nothing");
+
+            Assert.True(bounded <= Cap + 0.01f,
+                "the cap left the grid demanding " + bounded + " against a cap of " + Cap);
+        }
+
+        /// <summary>What the stiffest element asks of a step, with the grid in thick air.</summary>
+        private static float DemandInAir(ThermalSettings settings)
+        {
+            GridBuilder builder = GridBuilder.Large();
+            builder.Fill(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(4, 4, 4));
+            builder.Place(LightFitting(), new Vector3I(2, 4, 2));
+
+            ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);
+            simulation.RebuildAll();
+
+            // Stepped once first: the estimate reads the environment, so a demand taken before the
+            // grid has met its air is a vacuum figure.
+            simulation.StepExact(1, Worlds.Flight(1f, 200f));
+            return simulation.Solver.LastRequiredSubsteps;
         }
     }
 }

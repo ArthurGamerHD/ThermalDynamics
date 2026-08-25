@@ -57,7 +57,7 @@ namespace Thermodynamics.Tests
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
             for (int i = 0; i < nodes.Count; i++)
             {
-                if (!Census.ProducesHeatAt(i)) continue;
+                if (!Census.IsProducer(nodes[i])) continue;
 
                 float waste = nodes[i].Thermal.ProducerWasteEnergy;
                 if (waste <= 0f) continue;
@@ -161,6 +161,13 @@ namespace Thermodynamics.Tests
 
                 ThermalSimulation simulation = Driven(settings, 2000, Census.ProducerWatts * 12f);
 
+                // **Warmed until it is burning, then measured.** The hull starts spread across
+                // 250-750 K and has to reach a rating before there is any damage to compare, and
+                // at the clock `C24` ships four seconds from cold reaches none — which reads as
+                // two frequencies agreeing on zero (`E8`). The warm-up is the same simulated time
+                // on both sides, which is what the comparison needs (`M1`).
+                simulation.StepExact(frequencies[f] * LabClock.Steps(60), Worlds.Shadow());
+
                 // The same simulated time either way: four seconds of it.
                 List<OverheatEvent> events = RunCollecting(simulation, frequencies[f] * 4);
 
@@ -195,7 +202,11 @@ namespace Thermodynamics.Tests
         [Fact]
         public void TheSubstepCapDoesNotChangeWhetherAHullBurns()
         {
-            const int Steps = 600;
+            // A length of thermal time: where a hull settles is the claim, and at the clock `C24`
+            // ships six hundred steps leave the capped and uncapped runs both still climbing —
+            // 5.4 K apart on the hottest block, which is the lag rather than the settled
+            // difference this is about. See LabClock.
+            int Steps = LabClock.Steps(600);
 
             ThermalSimulation uncapped = Driven(Settings(0), 2000, Census.ProducerWatts * 12f);
             List<OverheatEvent> uncappedEvents = RunCollecting(uncapped, Steps);

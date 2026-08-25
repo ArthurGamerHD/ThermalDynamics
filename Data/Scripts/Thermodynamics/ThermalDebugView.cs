@@ -345,7 +345,7 @@ namespace Thermodynamics
 
                 for (int face = 0; face < Face.Count; face++)
                 {
-                    if (node.ExposedFaces[face] == 0) continue;
+                    if (node.GetExposedFaces(face) == 0) continue;
 
                     Vector3 localNormal = Face.Normals[face];
                     Vector3D normal = Vector3D.TransformNormal(localNormal, gridMatrix);

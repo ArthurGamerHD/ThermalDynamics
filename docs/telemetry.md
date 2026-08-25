@@ -115,7 +115,7 @@ which is the difference worth knowing. Pinned by `GridHealthTests`.
 | Per-frame cost | nothing is accumulated and no frame is closed; one test |
 | Per-mechanism watts | `CollectDiagnostics` is false, so the solver does not compute or store them |
 
-The last row is the one that used to be unavoidable. Radiation, convection, solar and friction
+The last row is the one that is hardest to make free. Radiation, convection, solar and friction
 watts per block are diagnostics that nothing in the simulation reads; they are now produced only
 for a report or for a client with the crosshair readout on. A dedicated server in ordinary play
 writes none of them.
@@ -241,7 +241,7 @@ it is printed rather than clamped.
   build                               a grid's one-off graph, rooms and exposure, before tick one
 ```
 
-**`build` is a root, and used to be nothing at all.** A grid builds its conduction graph, floods
+**`build` is a root of its own.** A grid builds its conduction graph, floods
 its rooms and computes its exposure once, from the entity's own `UpdateOnceBeforeFrame` — outside
 the session frame, outside any grid's update, and outside the save/load pair. It was timed into the
 three stage rows regardless, which the table indents under `grid simulation`, so on a grid that had
@@ -293,7 +293,16 @@ keeping up with, and the simulated seconds it chose not to advance. The `Cost` s
 how many grids are below real time and which is slowest, with a line saying what that means, so
 nobody reads a slow-cooling ship as a physics bug.
 
-A grid at 100 % has never hit the budget, which below roughly a hundred thousand blocks is always.
+A grid at 100 % has never hit the budget. **This paragraph used to say that was always true below
+roughly a hundred thousand blocks, and it is not** — that reading came from vacuum, and air puts a
+convection term on every exposed node. At the shipped 4,000,000 a driven census hull keeps all of
+real time to about 64,000 blocks in vacuum, 32,000 on a planet surface and 16,000 in flight
+([benchmarks.md](benchmarks.md#what-the-allowance-is-worth)).
+
+**What a rate below 100 % is worth is measured now**, and it is what the load is doing rather than
+what the grid is: a clock 10 % slow stands 2.52 K out under a moving load and 0.00 K under a steady
+one, rising to 36.98 K at 60 % slow. So this figure matters most on the ship a player is actually
+flying, which is the one it is hardest to notice on.
 
 ## Substeps
 
@@ -784,6 +793,7 @@ rest.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Two headings described what a row *used to* be rather than what it is (`R12`). `build` is a root of its own; the per-mechanism watts row is the one hardest to make free. |
 | 2026-08-22 | Renamed `game_temperature` to `game_comfort`. `GetTemperatureInPoint` returns a 0..1 fraction and zero wherever there is no oxygen, so the old name claimed two things it is not ([backlog.md](backlog.md) `B23`). A dump written under the old name is still read, and `TheComfortColumnIsReadableUnderEitherName` keeps it that way. |
 | 2026-08-22 | Added the standard header and this change log. |
 | 2026-08-21 | Gave every substep count the step length it was counted against, and filed one overheat event per block per step rather than per substep — which had been multiplying the reported critical-block count by the grid's substep demand. |

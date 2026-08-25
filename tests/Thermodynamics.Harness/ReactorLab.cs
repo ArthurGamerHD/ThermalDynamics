@@ -87,6 +87,16 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
+        /// The sweep at one stated fraction, for a test that has to ask what a different one would
+        /// do — which is what `C28` needs, since the fraction the mod ships is no longer the one
+        /// where a reactor's installation decides whether it survives.
+        /// </summary>
+        public static List<Row> Run(float fraction)
+        {
+            return SweepAt(new float[] { fraction });
+        }
+
+        /// <summary>
         /// Results are cached by fraction: every row is a pure function of the shipped XML and the
         /// two figures above it, and a suite that asserts on five of them should pay for one run.
         /// </summary>

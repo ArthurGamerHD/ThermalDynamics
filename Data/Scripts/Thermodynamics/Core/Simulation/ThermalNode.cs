@@ -22,8 +22,51 @@ namespace Thermodynamics.Core
         /// <summary>Heat capacity of the whole block, J/K. Never below a small floor.</summary>
         public float ThermalMass { get; private set; }
 
-        /// <summary>Exposed cell faces, per face direction.</summary>
-        public readonly int[] ExposedFaces = new int[Face.Count];
+        /// <summary>
+        /// Exposed cell faces per face direction, six counts packed into one field.
+        ///
+        /// <para>
+        /// **An `int[6]` cost 48 bytes a node to hold six small counts** — the array's header and
+        /// the reference to it, for 24 bytes of payload
+        /// (backlog.md `E2`). Ten bits a face holds 1,023, which is
+        /// larger than any face of any block the game has: the widest vanilla block is ten cells
+        /// across, so a hundred is the most a single face can carry.
+        /// </para>
+        ///
+        /// <para>
+        /// Read and written through <see cref="GetExposedFaces"/> and
+        /// <see cref="SetExposedFaces"/>, which is what keeps the packing in one place.
+        /// </para>
+        /// </summary>
+        private long exposedFaces;
+
+        /// <summary>Bits each face's count occupies. Ten holds 1,023 against a real worst case of 100.</summary>
+        private const int FaceBits = 10;
+
+        private const long FaceMask = (1L << FaceBits) - 1L;
+
+        /// <summary>The largest count a face can hold before the packing would lose it.</summary>
+        public const int MaxExposedPerFace = (int)FaceMask;
+
+        /// <summary>Exposed cell faces in one direction.</summary>
+        public int GetExposedFaces(int face)
+        {
+            return (int)((exposedFaces >> (face * FaceBits)) & FaceMask);
+        }
+
+        /// <summary>
+        /// Sets one direction's count. A count past what the packing holds is clamped rather than
+        /// wrapped: losing the high bits would silently turn a fully exposed face into a bare one,
+        /// and the clamp is unreachable for any block the game ships.
+        /// </summary>
+        public void SetExposedFaces(int face, int count)
+        {
+            if (count < 0) count = 0;
+            if (count > MaxExposedPerFace) count = MaxExposedPerFace;
+
+            int shift = face * FaceBits;
+            exposedFaces = (exposedFaces & ~(FaceMask << shift)) | ((long)count << shift);
+        }
 
         /// <summary>Total exposed cell faces.</summary>
         public int TotalExposedFaces { get; private set; }
@@ -139,13 +182,13 @@ namespace Thermodynamics.Core
             StateDirty = true;
         }
 
-        /// <summary>Recomputes the exposure-derived values from <see cref="ExposedFaces"/>.</summary>
+        /// <summary>Recomputes the exposure-derived values from the packed face counts.</summary>
         public void RefreshExposure()
         {
             int total = 0;
             for (int i = 0; i < Face.Count; i++)
             {
-                total += ExposedFaces[i];
+                total += GetExposedFaces(i);
             }
 
             TotalExposedFaces = total;

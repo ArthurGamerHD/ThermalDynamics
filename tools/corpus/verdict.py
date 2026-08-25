@@ -10,23 +10,63 @@ This reads the corpus dataset and computes the ones the data can answer. G3 need
 comparison and G4 needs exposure per watt, neither of which is in this dataset yet; they are
 reported as not-yet-answerable rather than quietly skipped.
 
-Usage: verdict.py [data-dir]
+Usage: verdict.py [data-dir] [--csv <path>] [--baseline <path>]
+
+`--csv` writes the figures this prints as `statistic,value,unit` rows. **That is what makes a
+population figure quotable**: the datasets are gigabytes and are not committed, so every number a
+documentation page takes from one has until now been a number with no source in the tree, and one
+of them drifted by two orders of magnitude before anyone compared it back (`F14`). A summary is
+kilobytes, is committed, and diffs.
+
+`--baseline` reads such a file and prints what moved, which is how one dataset is read against
+another — the vacuum survey against the same corpus in air, for instance (`F11`).
 """
 import csv
 import os
 import statistics
 import sys
 
-DATA = sys.argv[1] if len(sys.argv) > 1 else "out/corpus-2026-08-21"
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import scoring
+from scoring import oversubscription_note
+
+ARGS = [a for a in sys.argv[1:] if not a.startswith("--")]
+DATA = ARGS[0] if ARGS else "out/corpus-2026-08-21"
+
+def flag(name, fallback=None):
+    if name not in sys.argv:
+        return fallback
+    at = sys.argv.index(name)
+    return sys.argv[at + 1] if at + 1 < len(sys.argv) else fallback
+
+
+CSV_OUT = flag("--csv", "summary.csv") if "--csv" in sys.argv else None
+BASELINE = flag("--baseline")
+
+# Every figure worth quoting, in the order it was produced.
+FIGURES = []
+
+
+def record(statistic, value, unit=""):
+    """Keeps a figure so it can be written out, and returns it so a caller can print it too."""
+    FIGURES.append((statistic, value, unit))
+    return value
 
 # Steel gives up around here; a block over its critical temperature is taking damage.
 WARM_KELVIN = 400.0
 
 
 def number(row, key):
+    """A column as a float, or None where the dataset does not carry it.
+
+    **A missing column reads the same as an empty cell** (`C8`). `KeyError` is in the list because
+    a walk that predates a column has no such key at all, and the first caller to ask an old
+    dataset for a new column crashed the report rather than reporting the column as unmeasured.
+    """
     try:
         return float(row[key])
-    except (TypeError, ValueError):
+    except (KeyError, TypeError, ValueError):
         return None
 
 
@@ -45,6 +85,13 @@ def load(name, *extra_key):
     statistic that silently double-weights part of its population is the exact failure this whole
     lab exists to prevent — so the duplicates still come out, and the count is still printed, which
     is also how a reader learns which kind of dataset they are holding.
+
+    **A paired walk is not a walk with duplicates in it**, and reading one as the other is the
+    failure this function exists to prevent, arriving through the front door. `CorpusCapWalk` writes
+    two rows per ship and scenario that differ only in the `cap` column, so a key without `cap`
+    calls half of them duplicates and silently drops an entire arm — on a dry run of the 2026-08-25
+    dataset it reported "912 duplicate rows" and scored `G6` on whichever arm happened to be first.
+    The arm is part of a row's identity wherever the dataset carries one.
     """
     path = os.path.join(DATA, name + ".csv")
     if not os.path.exists(path):
@@ -52,7 +99,17 @@ def load(name, *extra_key):
     with open(path) as handle:
         rows = list(csv.DictReader(handle))
 
+    arms, shipped = scoring.split_arms(rows)
+    if arms:
+        print(f"note: {name}.csv is a paired walk carrying arms {', '.join(arms)}; "
+              f"scoring the {len(shipped):,} rows of the arm that ships and leaving "
+              f"{len(rows) - len(shipped):,} to cap.py")
+        rows = shipped
+
     key = KEY + extra_key
+    if rows and "cap" in rows[0]:
+        key = key + ("cap",)
+
     if not rows or any(k not in rows[0] for k in key):
         return rows
 
@@ -77,15 +134,9 @@ def pct(part, whole):
     return 0.0 if not whole else 100.0 * part / whole
 
 
-def percentiles(values):
-    if not values:
-        return {}
-    values = sorted(values)
-
-    def at(q):
-        return values[min(len(values) - 1, int(q * len(values)))]
-
-    return {"min": values[0], "p50": at(0.5), "p95": at(0.95), "p99": at(0.99), "max": values[-1]}
+# One definition, in scoring.py, shared with air.py. See scoring.percentile for why there was more
+# than one and which survived.
+percentiles = scoring.percentiles
 
 
 outcomes = load("outcomes", "scenario")
@@ -95,7 +146,64 @@ by_scenario = {}
 for row in outcomes:
     by_scenario.setdefault(row["scenario"], []).append(row)
 
-print(f"corpus dataset: {len(outcomes):,} outcome rows, {len(ships):,} ship rows")
+# **The ship count comes from the outcomes, not from ships.csv.** A walk that records outcomes and
+# not ships is a legitimate shape — `CorpusAirWalk` deliberately writes no ships.csv, because a
+# hull's structure belongs to the hull rather than to the world it is run in — and reading the
+# count off the file that happens to be absent reports a population of nought. It is also the
+# figure that says a dataset is *partial*: a walk killed at hour one has every column a finished
+# one has, over the ships it reached, and the corpus is sorted largest-first, so a partial read is
+# not a small population but the wrong end of one (`P13`, and the standing warning that partial
+# corpus results mislead badly).
+walked = len(set((r.get("ship"), r.get("workshop_id")) for r in outcomes))
+
+print(f"corpus dataset: {len(outcomes):,} outcome rows over {walked:,} ships, "
+      f"{len(ships):,} ship rows")
+record("dataset outcome rows", len(outcomes))
+record("dataset ships", walked)
+record("dataset ships.csv rows", len(ships))
+record("dataset scenarios", len(set(r.get("scenario") for r in outcomes)))
+
+# **What build the dataset was collected on**, printed and recorded so a figure quoted from a
+# summary carries the world it was measured in. Datasets collected before 2026-08-25 have no such
+# file, and *absent* is said rather than assumed: the 2026-08-24 air walk turned out to have been
+# collected one minute after a definition change, and nothing in its output said so.
+provenance = os.path.join(DATA, "provenance.txt")
+if os.path.exists(provenance):
+    with open(provenance, encoding="utf-8") as handle:
+        for line in handle:
+            line = line.strip()
+            if not line:
+                continue
+
+            print(f"  {line}")
+
+            # A comment is context for a reader and not a statistic; recording it would put prose
+            # in the summary's value column.
+            if line.startswith("#"):
+                continue
+
+            name, _, value = line.partition(" ")
+            record("provenance " + name, value)
+else:
+    print("  provenance: not recorded — this dataset predates 2026-08-25")
+    record("provenance", "absent")
+
+# **The population figures the documentation quotes.** Sealed blocks are here because a page said
+# twenty-four of them on one ship where the dataset says 1,184 across 331 (`F14`); the share it
+# also quoted was right, which is how it survived.
+_blocks = [number(r, "blocks") for r in ships]
+_blocks = sorted(b for b in _blocks if b is not None)
+if _blocks:
+    record("population blocks", int(sum(_blocks)))
+    record("population blocks p50", int(_blocks[len(_blocks) // 2]))
+    record("population blocks p99", int(_blocks[min(len(_blocks) - 1, int(0.99 * len(_blocks)))]))
+
+_sealed = [number(r, "sealed_blocks") for r in ships]
+_sealed = [v for v in _sealed if v is not None]
+if _sealed and _blocks:
+    record("sealed blocks", int(sum(_sealed)))
+    record("sealed ships", sum(1 for v in _sealed if v > 0))
+    record("sealed block share", round(100.0 * sum(_sealed) / sum(_blocks), 5), "%")
 print(f"scenarios: {', '.join(sorted(by_scenario))}\n")
 
 print("peak temperature by scenario")
@@ -117,6 +225,7 @@ print("=" * 78)
 
 
 def verdict(tag, claim, ok, detail, fails_when):
+    record(tag + " verdict", "holds" if ok is True else ("fails" if ok is False else "unanswered"))
     mark = "HOLDS" if ok is True else ("FAILS" if ok is False else "  ?  ")
     print(f"\n[{mark}] {tag}  {claim}")
     print(f"        fails when: {fails_when}")
@@ -128,8 +237,13 @@ idle = by_scenario.get("idle", []) + by_scenario.get("vacuum-shadow", [])
 if idle:
     critical = sum(1 for r in idle if number(r, "over_critical") and number(r, "over_critical") > 0)
     share = pct(critical, len(idle))
+    record("G1 idle critical share", round(share, 4), "%")
     verdict("G1", "Idle is safe.", share <= 1.0,
             f"{critical} of {len(idle)} idle runs had a block over critical ({share:.2f} %)",
+            "more than ~1 % of the corpus goes critical at idle")
+else:
+    verdict("G1", "Idle is safe.", None,
+            "neither idle nor vacuum-shadow is in this dataset",
             "more than ~1 % of the corpus goes critical at idle")
 
 # ---- G2: load bites ---------------------------------------------------------------------
@@ -138,9 +252,15 @@ if loaded:
     warm = sum(1 for r in loaded
                if number(r, "peak_k") is not None and number(r, "peak_k") >= WARM_KELVIN)
     share = pct(warm, len(loaded))
+    record("G2 warm share", round(share, 3), "%")
     verdict("G2", "Load bites.", share >= 20.0,
             f"{warm} of {len(loaded)} reached {WARM_KELVIN:.0f} K under full electrical load "
             f"({share:.1f} %)",
+            "fewer than ~20 % ever get warm")
+else:
+    verdict("G2", "Load bites.", None,
+            "the full-electrical scenario is not in this dataset — it is a load case, and a walk "
+            "of idle environments cannot answer it",
             "fewer than ~20 % ever get warm")
 
 # ---- G5: no death spiral ----------------------------------------------------------------
@@ -148,6 +268,7 @@ recovery = by_scenario.get("recovery", [])
 if recovery:
     returned = sum(1 for r in recovery
                    if number(r, "over_critical") == 0)
+    record("G5 recovered share", round(pct(returned, len(recovery)), 3), "%")
     verdict("G5", "No death spiral.", pct(returned, len(recovery)) > 95.0,
             f"{returned} of {len(recovery)} recovered below critical after throttling to idle",
             "recovery time unbounded, or damage continues after the load stops")
@@ -163,11 +284,114 @@ if demand:
     p = percentiles(demand)
     granted = [number(r, "substeps_granted") for r in outcomes]
     granted = [g for g in granted if g is not None]
-    cap = max(granted) if granted else 0
-    verdict("G6", "Affordable across the population.", p["p99"] <= cap,
+
+    # The shipped `MaxSubsteps`, not the largest count this dataset happened to be granted. See
+    # scoring.SHIPPED_SUBSTEP_CAP for why the second is not a cap at all.
+    cap = scoring.SHIPPED_SUBSTEP_CAP
+    highest = max(granted) if granted else 0
+    # The cost half of the same criterion, in the solver's own unit rather than in milliseconds:
+    # a step's element visits against what `MaxElementVisitsPerStep` grants one. See
+    # balance-lab.md, G6's cost half, which was written down before this was scored (`E11`).
+    work = []
+    for row in outcomes:
+        # Demanded rather than granted: the allowance decides by comparing the demand against what
+        # it can afford, so a granted count is the answer rather than the question.
+        substeps = number(row, "substeps_demanded")
+        if substeps is None:
+            substeps = number(row, "substeps_granted")
+        cost = scoring.step_work(number(row, "substep_cost"), substeps)
+        if cost is not None:
+            work.append(cost)
+
+    allowance = scoring.SHIPPED_VISIT_ALLOWANCE
+    cost_p = percentiles(work) if work else {}
+    cost_ok = bool(cost_p) and cost_p["p99"] <= allowance
+    over = sum(1 for w in work if not scoring.keeps_up(w))
+
+    record("G6 demand p50", round(p["p50"], 3), "substeps")
+    record("G6 demand p95", round(p["p95"], 3), "substeps")
+    record("G6 demand p99", round(p["p99"], 3), "substeps")
+    record("G6 demand max", round(p["max"], 3), "substeps")
+    record("G6 substep cap", int(cap), "substeps")
+    if cost_p:
+        record("G6 work p50", int(cost_p["p50"]), "element visits")
+        record("G6 work p95", int(cost_p["p95"]), "element visits")
+        record("G6 work p99", int(cost_p["p99"]), "element visits")
+        record("G6 work max", int(cost_p["max"]), "element visits")
+        record("G6 visit allowance", int(allowance), "element visits")
+        record("G6 runs over the allowance", over)
+
+    demand_ok = p["p99"] <= cap
+
+    # **A half that was not measured is not a half that failed** (`P2`, `E8`). A dataset with no
+    # `substep_cost` column can score the demand and nothing else, and a criterion with one half
+    # unmeasured has no verdict — reporting it as a failure would read as evidence against the
+    # configuration when it is evidence about the walk.
+    outcome = (demand_ok and cost_ok) if cost_p else None
+
+    verdict("G6", "Affordable across the population.", outcome,
             f"substep demand p50 {p['p50']:.1f}, p95 {p['p95']:.1f}, p99 {p['p99']:.1f}, "
-            f"max {p['max']:.1f}; highest granted {cap:.0f}",
-            "p99 substep demand exceeds what the shipped caps grant")
+            f"max {p['max']:.1f}; against {cap:.0f} granted, highest reached {highest:.0f}"
+            + oversubscription_note(p["p99"], cap)
+            + ("" if cost_p else "; the cost half is unmeasured on this dataset, so the criterion "
+                                 "has no verdict"),
+            "p99 substep demand exceeds what the shipped caps grant, or p99 step work exceeds "
+            "the shipped element-visit allowance")
+
+    if cost_p:
+        print(f"        step work:  p50 {cost_p['p50']:,.0f}, p95 {cost_p['p95']:,.0f}, "
+              f"p99 {cost_p['p99']:,.0f}, max {cost_p['max']:,.0f} element visits "
+              f"(links + {scoring.NODE_COST_IN_LINKS:.0f} x nodes) against "
+              f"{allowance:,.0f} granted"
+              + (f"; {over:,} of {len(work):,} runs are past it — those grids run slower than "
+                 f"real time" if over else "; every run fits"))
+
+    # **And the same two statistics per scenario, because both are properties of the world.**
+    # The criterion is one figure over the dataset and stays that way (`E11`); this is the
+    # breakdown that says which environment produced it. A dataset of one scenario prints one row
+    # and repeats the verdict above, which is honest rather than redundant: it is what says the
+    # figure is that world's and not a population's.
+    if len(by_scenario) > 1:
+        # **The demand columns survive a dataset with no cost column.** One half of the criterion
+        # being unmeasured is not a reason to withhold the other; an em dash in the work columns
+        # says which one it is (`P2`).
+        print(f"\n        {'scenario':18}{'runs':>8}{'demand p50':>12}{'demand p99':>12}"
+              f"{'work p50':>12}{'work p99':>12}{'over':>7}")
+        for name in sorted(by_scenario):
+            rows = by_scenario[name]
+            demands = [d for d in (number(r, "substeps_demanded") for r in rows) if d is not None]
+            works = []
+            for row in rows:
+                substeps = number(row, "substeps_demanded")
+                if substeps is None:
+                    substeps = number(row, "substeps_granted")
+                cost = scoring.step_work(number(row, "substep_cost"), substeps)
+                if cost is not None:
+                    works.append(cost)
+            if not demands:
+                continue
+            d = percentiles(demands)
+            record(f"G6 {name} demand p99", round(d["p99"], 3), "substeps")
+
+            if not works:
+                print(f"        {name:18}{len(rows):>8,}{d['p50']:>12.1f}{d['p99']:>12.1f}"
+                      f"{scoring.ABSENT:>12}{scoring.ABSENT:>12}{scoring.ABSENT:>7}")
+                continue
+
+            w = percentiles(works)
+            past = sum(1 for value in works if not scoring.keeps_up(value))
+            record(f"G6 {name} work p99", int(w["p99"]), "element visits")
+            record(f"G6 {name} runs over the allowance", past)
+            print(f"        {name:18}{len(rows):>8,}{d['p50']:>12.1f}{d['p99']:>12.1f}"
+                  f"{w['p50']:>12,.0f}{w['p99']:>12,.0f}{past:>7,}")
+    if not cost_p:
+        # **Not a zero, and not the old formula.** Every walk taken before 2026-08-24 carries
+        # `blocks` and `joints` but no `substep_cost`, and `joints` is the count of mechanical
+        # joints between grids rather than of thermal links — so scoring those datasets at all
+        # would reproduce the node-half-only figure this column exists to replace (`E8`, `P2`).
+        print("        step work:  not derivable from this dataset — it needs the `substep_cost` "
+              "column, which walks before 2026-08-24 do not carry. What stood here was scored "
+              "with `joints` for the link count and is the node half alone; re-walk to score it.")
 
 # ---- G3 / G4: not answerable from this dataset -------------------------------------------
 verdict("G3", "Cooling works.", None,
@@ -230,6 +454,10 @@ print(f"  ships with at least one runaway scenario: {len(runaway_ships):,} of "
 print("\n" + "=" * 78)
 print("TIME TO CRITICAL — when a warning could fire, not when anything is lost")
 print("=" * 78)
+print("\n  The quantiles are over the ships that reached critical, which is the share in the")
+print("  first column and not the population. A median here is 'how fast do the ships that")
+print("  overheat overheat', not 'when does a ship overheat' — pairs.py scores G8 on the second")
+print("  and they are different numbers wherever the share is not one (E9).")
 print(f"\n  {'scenario':18}{'reach critical':>16}{'p10':>8}{'median':>9}{'p90':>8}")
 for name in sorted(by_scenario):
     rows_ = by_scenario[name]
@@ -298,3 +526,31 @@ for name, count in sorted(hot_run.items(), key=lambda kv: -kv[1])[:10]:
 print("\n  A type far larger in the runaway column than in the last one is over-producing,")
 print("  under-massed, or too weakly coupled to its neighbours — a dozen definitions, not the solver.")
 
+
+
+# ---- the summary --------------------------------------------------------------------------
+
+if CSV_OUT:
+    with open(CSV_OUT, "w", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["statistic", "value", "unit"])
+        for statistic, value, unit in FIGURES:
+            writer.writerow([statistic, value, unit])
+    print(f"\ncsv -> {CSV_OUT}  ({len(FIGURES)} figures)")
+
+if BASELINE:
+    if not os.path.exists(BASELINE):
+        print(f"\nbaseline not found: {BASELINE}")
+    else:
+        with open(BASELINE) as handle:
+            before = {r["statistic"]: r["value"] for r in csv.DictReader(handle)}
+
+        now = dict((statistic, value) for statistic, value, _ in FIGURES)
+
+        print("\n" + "=" * 78)
+        print(f"AGAINST {BASELINE}")
+        print("=" * 78)
+        print(f"\n  {'statistic':38}{'baseline':>16}{'now':>16}  {'change':>9}")
+
+        for statistic, was, became, change in scoring.compare(before, now):
+            print(f"  {statistic[:36]:38}{str(was):>16}{str(became):>16}  {change:>9}")

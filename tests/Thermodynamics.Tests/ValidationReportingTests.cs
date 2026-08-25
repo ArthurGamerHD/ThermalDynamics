@@ -10,7 +10,7 @@ namespace Thermodynamics.Tests
     /// <para>
     /// `BlockThermalProperties.Validate` and `ThermalSettings.Validate` were correct and tested for
     /// as long as they existed, and were called from nowhere the game runs — the whole of
-    /// [backlog](../../docs/backlog.md) `A19`, and the defect class `D2` exists to catch: built,
+    /// backlog.md `A19`, and the defect class `D2` exists to catch: built,
     /// documented, reached by nothing. Tests that call a validator directly cannot see that, which
     /// is why these test the collector instead: what it says, how often it says it, and that a
     /// finding survives having nowhere to write it.

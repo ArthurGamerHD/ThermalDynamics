@@ -1,0 +1,21 @@
+statistic,value,unit
+dataset outcome rows,32576,
+dataset ships,8144,
+dataset ships.csv rows,0,
+dataset scenarios,4,
+G1 idle critical share,0.0246,%
+G1 verdict,holds,
+G2 verdict,unanswered,
+G5 verdict,unanswered,
+G6 demand p50,7.876,substeps
+G6 demand p95,30.195,substeps
+G6 demand p99,34.779,substeps
+G6 demand max,36.614,substeps
+G6 substep cap,64,substeps
+G6 verdict,unanswered,
+G6 reentry demand p99,34.782,substeps
+G6 storm-parked demand p99,30.309,substeps
+G6 surface-hot-noon demand p99,19.234,substeps
+G6 vacuum-shadow demand p99,11.405,substeps
+G3 verdict,unanswered,
+G4 verdict,unanswered,

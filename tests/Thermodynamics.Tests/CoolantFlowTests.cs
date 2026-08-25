@@ -232,7 +232,7 @@ namespace Thermodynamics.Tests
             GridBuilder builder = GridBuilder.Large();
             List<Vector3I> cells = PipeFitter.RectangleXZ(Vector3I.Zero, 6, 5);
             PipeFitter.BuildRing(builder, cells, -1, sinks);
-            builder.Place(Catalog.Reactor(), cells[2] + Vector3I.Down).Producing(500000f);
+            builder.Place(Catalog.Reactor(), cells[2] + Vector3I.Down).Wasting(125000f);
 
             ThermalSimulation simulation = builder.BuildSimulation(Isolated(), 300f);
             CoolantLoop loop = simulation.Solver.Loops[0];
@@ -242,19 +242,24 @@ namespace Thermodynamics.Tests
             loop.RefreshFlow();
             Assert.Equal(0f, loop.FlowSegmentsPerSecond);
 
-            simulation.StepExact(2000, Worlds.Shadow());
+            simulation.StepExact(LabClock.Steps(2000), Worlds.Shadow());
 
+            // **37.2 K at the pace `C24` ships, where it asked for fifty.** A stopped ring is not
+            // an isolated one: the pipes are bolted to each other and conduct round the ring
+            // whatever the fluid is doing, and at four times the conduction pace that path carries
+            // four times as much. What the model exists to show is that the fluid does not move —
+            // which is the difference between this figure and the one below, not its size.
             float spread = loop.HottestSegment - loop.ColdestSegment;
-            Assert.True(spread > 50f,
+            Assert.True(spread > 25f,
                 "with nothing circulating the ring should be unevenly hot, spread was " + spread + " K");
 
             // Now run the pumps and the ring evens out.
             for (int i = 0; i < loop.Pumps.Count; i++) loop.Pumps[i].Enabled = true;
             loop.RefreshFlow();
-            simulation.StepExact(2000, Worlds.Shadow());
+            simulation.StepExact(LabClock.Steps(2000), Worlds.Shadow());
 
             float mixed = loop.HottestSegment - loop.ColdestSegment;
-            Assert.True(mixed < spread,
+            Assert.True(mixed < spread * 0.5f,
                 "circulating should even the ring out: " + spread + " K then " + mixed + " K");
         }
     
@@ -502,6 +507,234 @@ namespace Thermodynamics.Tests
             }
         }
 
+        /// <summary>
+        /// **On a hull carrying nothing stiffer the ring sets the substep demand, and refusing it
+        /// approximates rather than diverges.**
+        ///
+        /// <para>
+        /// It did diverge, and that was backlog.md `A10`. Conduction and
+        /// the environment each have an overshoot clamp — `ClampConductionOvershoot` and
+        /// `ClampEnvironmentOvershoot`, both on by default — which is what makes the shipped breach
+        /// `C19` measured worth 0.028 K instead of a number. The coolant path had the pairwise half
+        /// of that clamp and the ring's own limit, and neither can see the *block* on the other end
+        /// of a sink face: a pipe bolted to a reactor takes the energy that equalises it from the
+        /// parcel and the energy that equalises it from every neighbour it is bolted to, in the
+        /// same substep. Two bounds that each hold on their own, and a node past both of them.
+        /// </para>
+        ///
+        /// <para>
+        /// The fix is the per-node relaxation the conduction pass already used, applied to the
+        /// coupled paths as well, which makes every node's substep a convex combination of the
+        /// temperatures pulling on it — so a node cannot be driven past the hottest of them
+        /// whatever the substep length is. It costs nothing while the demand is granted, which is
+        /// what `TheClampIsInertWhileTheDemandIsGranted` pins.
+        /// </para>
+        ///
+        /// <para>
+        /// Measured at the shipped `Frequency` and clock: the same reactor and blocks with no ring
+        /// demand **one** substep and are unmoved by any cap; with a nine-pipe ring they demand
+        /// **nine**, so on a hull carrying nothing stiffer the loop is what sets the demand. On a
+        /// census hull it is not — light fittings set 23 either way, which `tests/README.md`
+        /// measures — so this is a claim about a hull with a loop and little else. The ladder is in
+        /// stiffness.md, What refusing the demand costs, and
+        /// `bench ceiling --fixture rings` is what draws it.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void RefusingTheRingsDemandApproximatesRatherThanDiverging()
+        {
+            float bare = DemandOfTheHullWithoutItsRing();
+            float withRing = DemandOfTheHeatedRing(4096);
+
+            Assert.Equal(1f, bare, 0);
+            Assert.True(withRing >= 8f,
+                "the ring demanded only " + withRing + " substeps, so it is not what sets the"
+                + " demand on this grid and the rest of this measures nothing");
+
+            // **The rungs are fractions of the demand, not substep counts.** The over-subscription
+            // is the quantity — stiffness.md says so and `SubstepCeilingTests` asserts it — and the
+            // demand itself moves with the pace: this ring asked for nine substeps at the pace the
+            // conversion calibrated to and asks for about thirty-six at the one `C24` ships, so a
+            // ceiling of two is 4.5x over-subscribed on one and eighteen times on the other.
+            int halfWay = Ceiling(withRing, 4.5f);
+            int hard = Ceiling(withRing, 9f);
+
+            float granted = SpreadAcrossAHeatedRing(1f, 4096);
+            float halved = SpreadAcrossAHeatedRing(1f, halfWay);
+            float refused = SpreadAcrossAHeatedRing(1f, hard);
+
+            // Orderly at about 4.5x over-subscribed: a third more spread, not a different kind of
+            // number.
+            Assert.True(halved < granted * 1.5f,
+                "granting " + halfWay + " substeps of " + withRing + " left the ring at "
+                + halved + " K against "
+                + granted + " K granted in full, which is not the approximation this pins");
+
+            // And past it, still an approximation. This is the assertion A10 was open on: it read
+            // `refused > 1e6f` and it was measuring 1.7e11 K.
+            Assert.True(refused < granted * 4f,
+                "granting " + hard + " substeps of " + withRing + " left the ring at "
+                + refused + " K against "
+                + granted + " K granted in full; the coolant path has lost its bound and A10 is"
+                + " open again");
+
+            // Refusing more of the demand must cost more, not less. A bound that holds at nine
+            // times over-subscribed and not at four is a cliff somebody has to find by falling off
+            // it.
+            Assert.True(refused >= halved * 0.99f,
+                hard + " substeps left the ring at " + refused + " K and " + halfWay + " left it at "
+                + halved + " K, so the error is not monotone in what was refused");
+        }
+
+        /// <summary>
+        /// **The clamp changes nothing while the step is granted the substeps it asked for**, which
+        /// is every step on every grid this mod ships to except the ones over `MaxSubsteps`.
+        ///
+        /// The per-node relaxation is a factor of `mass / (h * conductance)` held at one, and the
+        /// substep estimate is that same ratio with the safety factor in it — so a granted step is
+        /// a step where every factor is one by construction. Asserted rather than reasoned, because
+        /// the reasoning is what a rounding difference in either formula would falsify: a ring
+        /// stepped at its demand reads the same temperature to seven figures whichever way the
+        /// clamp is set.
+        /// </summary>
+        [Fact]
+        public void TheClampIsInertWhileTheDemandIsGranted()
+        {
+            float clamped = SpreadAcrossAHeatedRing(1f, 4096);
+
+            ThermalSimulation unclamped = HeatedRing(1f, 4096);
+            unclamped.Settings.ClampConductionOvershoot = false;
+            unclamped.StepExact(300, Worlds.Shadow());
+
+            CoolantLoop loop = unclamped.Solver.Loops[0];
+            float bare = loop.HottestSegment - loop.ColdestSegment;
+
+            Assert.Equal(bare, clamped, 5);
+        }
+
+        /// <summary>
+        /// **A node cannot be driven past the hottest thing pulling on it**, however short of
+        /// substeps the step is.
+        ///
+        /// This is the property the per-node relaxation buys and the reason it is the right shape
+        /// of fix rather than a larger constant somewhere: with every exchange at a node scaled so
+        /// their sum cannot exceed the energy that equalises it, the substep is a convex
+        /// combination of the temperatures around that node, and a convex combination of numbers
+        /// bounded by the hottest of them. The ring is what makes the test hard — a parcel is one
+        /// mass carrying a link to every pipe on it, and a pipe with a sink face is a node carrying
+        /// a link to the parcel and to everything it is bolted to.
+        /// </summary>
+        [Fact]
+        public void NoNodeIsDrivenPastTheHottestThingPullingOnIt()
+        {
+            // One substep of the nine the ring asks for, and the reactor left running the whole
+            // time: the case that used to reach 1.7e11 K.
+            ThermalSimulation simulation = HeatedRing(64f, 1);
+
+            float hottest = 0f;
+            IList<ThermalNode> nodes = simulation.Solver.Nodes;
+
+            for (int step = 0; step < 600; step++)
+            {
+                simulation.StepExact(1, Worlds.Shadow());
+
+                for (int i = 0; i < nodes.Count; i++)
+                {
+                    if (nodes[i].Temperature > hottest) hottest = nodes[i].Temperature;
+                }
+            }
+
+            // The reactor is the only source, and what bounds the grid is where the reactor
+            // settles rather than any figure chosen here. Nothing may run away from it.
+            float reactor = 0f;
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                if (nodes[i].Block.PowerProducedWatts <= 0f) continue;
+                if (nodes[i].Temperature > reactor) reactor = nodes[i].Temperature;
+            }
+
+            Assert.True(hottest <= reactor * 1.05f,
+                "the hottest node reached " + hottest + " K against the reactor's " + reactor
+                + " K, so something was driven past the only thing making heat");
+        }
+
+        /// <summary>The ceiling that puts a demand at a stated over-subscription, at least one.</summary>
+        private static int Ceiling(float demand, float oversubscription)
+        {
+            int ceiling = (int)Math.Round(demand / oversubscription);
+            return ceiling < 1 ? 1 : ceiling;
+        }
+
+        /// <summary>The substeps the heated ring asks for, at a chosen ceiling.</summary>
+        private static float DemandOfTheHeatedRing(int maxSubsteps)
+        {
+            ThermalSimulation simulation = HeatedRing(1f, maxSubsteps);
+            simulation.StepExact(300, Worlds.Shadow());
+            return simulation.Solver.LastSubsteps;
+        }
+
+        /// <summary>
+        /// The same reactor and the same nine blocks, as plain armour rather than as a ring.
+        ///
+        /// The control the measurement above needs: without it, *nine substeps* is a number about
+        /// this grid rather than about its plumbing.
+        /// </summary>
+        private static float DemandOfTheHullWithoutItsRing()
+        {
+            ThermalSettings settings = HeatedRingSettings(4096);
+
+            GridBuilder builder = GridBuilder.Large();
+            List<Vector3I> cells = PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3);
+            foreach (Vector3I cell in cells) builder.Place(Catalog.LightArmor(), cell);
+            builder.Place(Catalog.Reactor(), cells[2] + Vector3I.Down).Wasting(75000f);
+
+            ThermalSimulation simulation = builder.BuildSimulation(settings, 300f);
+            simulation.StepExact(300, Worlds.Shadow());
+            return simulation.Solver.LastSubsteps;
+        }
+
+        private static ThermalSettings HeatedRingSettings(int maxSubsteps)
+        {
+            ThermalSettings settings = new ThermalSettings();
+            settings.EnableEnvironment = false;
+            settings.EnableDamage = false;
+            settings.MaxSubsteps = maxSubsteps;
+            settings.MaxSubstepsPerBlock = 0;
+            settings.MaxElementVisitsPerStep = 0;
+            settings.Derive();
+            return settings;
+        }
+
+        private static ThermalSimulation HeatedRing(float segmentsPerSecond, int maxSubsteps)
+        {
+            Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
+            sinks[2] = Vector3I.Down;
+
+            GridBuilder builder = GridBuilder.Large();
+            List<Vector3I> cells = PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3);
+            PipeFitter.BuildRing(builder, cells, -1, sinks);
+            builder.Place(Catalog.Reactor(), cells[2] + Vector3I.Down).Wasting(75000f);
+
+            ThermalSimulation simulation = builder.BuildSimulation(
+                HeatedRingSettings(maxSubsteps), 300f);
+
+            CoolantLoop loop = simulation.Solver.Loops[0];
+            loop.Properties.LargeGridFlowRate = segmentsPerSecond * loop.ParcelLengthMetres;
+            loop.Properties.SmallGridFlowRate = loop.Properties.LargeGridFlowRate;
+            loop.RefreshFlow();
+            return simulation;
+        }
+
+        /// <summary>The heated ring's spread at a chosen substep ceiling.</summary>
+        private static float SpreadAcrossAHeatedRing(float segmentsPerSecond, int maxSubsteps)
+        {
+            ThermalSimulation simulation = HeatedRing(segmentsPerSecond, maxSubsteps);
+            simulation.StepExact(300, Worlds.Shadow());
+
+            CoolantLoop loop = simulation.Solver.Loops[0];
+            return loop.HottestSegment - loop.ColdestSegment;
+        }
+
         private static float SpreadAcrossAHeatedRing(float segmentsPerSecond)
         {
             ThermalSettings settings = new ThermalSettings();
@@ -519,7 +752,7 @@ namespace Thermodynamics.Tests
             GridBuilder builder = GridBuilder.Large();
             List<Vector3I> cells = PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3);
             PipeFitter.BuildRing(builder, cells, -1, sinks);
-            builder.Place(Catalog.Reactor(), cells[2] + Vector3I.Down).Producing(300000f);
+            builder.Place(Catalog.Reactor(), cells[2] + Vector3I.Down).Wasting(75000f);
 
             ThermalSimulation simulation = builder.BuildSimulation(settings, 300f);
             CoolantLoop loop = simulation.Solver.Loops[0];
@@ -773,7 +1006,7 @@ namespace Thermodynamics.Tests
             GridBuilder builder = GridBuilder.Large();
             List<Vector3I> cells = PipeFitter.RectangleXZ(Vector3I.Zero, 5, 5);
             PipeFitter.BuildRing(builder, cells, -1, sinks, reversed);
-            builder.Place(Catalog.Reactor(), cells[2] + Vector3I.Down).Producing(300000f);
+            builder.Place(Catalog.Reactor(), cells[2] + Vector3I.Down).Wasting(75000f);
 
             ThermalSimulation simulation = builder.BuildSimulation(Isolated(), 300f);
             simulation.StepExact(4000, Worlds.Shadow());

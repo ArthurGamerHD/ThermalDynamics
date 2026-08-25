@@ -209,6 +209,79 @@ namespace Thermodynamics.Tests
             Assert.NotEqual(0L, first);
         }
 
+        /// <summary>
+        /// **A loop's identity does not depend on the order its pipes were built in**, which is
+        /// what makes it an identity two machines can both arrive at.
+        ///
+        /// <para>
+        /// The signature is an order-independent hash of every pipe position in the ring, and a
+        /// client receives blocks in whatever order the engine streams them. If the signature moved
+        /// with build order, a client's loop would be a *different loop* from the server's, and a
+        /// saved or replicated coolant temperature would land on nothing
+        /// (backlog.md `F22`).
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void ALoopKeepsItsIdentityWhateverOrderItsPipesArrivedIn()
+        {
+            GridBuilder ordered = GridBuilder.Large();
+            PipeFitter.BuildRing(ordered, PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3));
+
+            GridBuilder shuffled = GridBuilder.Large();
+            PipeFitter.BuildRing(shuffled, PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3));
+            shuffled.ReorderPlacement(20260824);
+
+            CoolantLoop first = ordered.BuildSimulation(Isolated()).Solver.Loops[0];
+            CoolantLoop second = shuffled.BuildSimulation(Isolated()).Solver.Loops[0];
+
+            Assert.NotEqual(0L, first.Signature);
+            Assert.Equal(first.Signature, second.Signature);
+            Assert.Equal(first.PipeCount, second.PipeCount);
+        }
+
+        /// <summary>
+        /// **One pipe more is a different loop, not the same loop with more pipe in it** — so a
+        /// temperature saved against the old shape does not come back to the new one.
+        ///
+        /// <para>
+        /// That is the intended behaviour and the reason the identity is a hash of the ring rather
+        /// than an index: an index-keyed loop would let a reload put one loop's coolant temperature
+        /// into another. What it costs is that a client whose ring differs by a single block does
+        /// not hold a *wrong* loop temperature, it holds a different loop — which is the whole of
+        /// what `F22` says about topology, in the one place the mod keys state on shape.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void ARingOnePipeLongerIsADifferentLoopAndDoesNotTakeTheOldOnesTemperature()
+        {
+            GridBuilder builder = GridBuilder.Large();
+            PipeFitter.BuildRing(builder, PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3));
+
+            ThermalSimulation simulation = builder.BuildSimulation(Isolated());
+            CoolantLoop loop = simulation.Solver.Loops[0];
+
+            long before = loop.Signature;
+            loop.Temperature = 400f;
+
+            string saved = simulation.Save();
+
+            // The same ring one cell longer in one direction: every pipe of the old ring that
+            // survives is still where it was, and the shape is not the shape that was saved.
+            GridBuilder grown = GridBuilder.Large();
+            PipeFitter.BuildRing(grown, PipeFitter.RectangleXZ(Vector3I.Zero, 4, 3));
+
+            ThermalSimulation after = grown.BuildSimulation(Isolated());
+            CoolantLoop wider = after.Solver.Loops[0];
+
+            Assert.NotEqual(before, wider.Signature);
+
+            float untouched = wider.Temperature;
+            after.Load(saved);
+
+            Assert.Equal(untouched, after.Solver.Loops[0].Temperature, 3);
+            Assert.NotEqual(400f, after.Solver.Loops[0].Temperature);
+        }
+
         [Fact]
         public void ARebuildKeepsTheCoolantTemperature()
         {

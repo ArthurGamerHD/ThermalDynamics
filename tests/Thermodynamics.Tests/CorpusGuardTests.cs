@@ -11,7 +11,7 @@ namespace Thermodynamics.Tests
     /// **The opt-in gate read an empty value as opted in.** It tested `THERMAL_CORPUS_TESTS`
     /// against null, and on Linux `THERMAL_CORPUS_TESTS=` is a variable that exists and holds
     /// nothing — so the obvious way to write "off" turned every corpus walk on. That is `C8` and
-    /// [backlog](../../docs/backlog.md) `H3`.
+    /// backlog.md `H3`.
     /// </para>
     ///
     /// <para>

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Text;
 using Thermodynamics.Core;
@@ -50,6 +51,9 @@ namespace Thermodynamics.Sim
 
                 case "drift":
                     return DriftCommand(args);
+
+                case "inputs":
+                    return InputsCommand(args);
 
                 case "prefabs":
                     return PrefabCommand(args);
@@ -258,6 +262,95 @@ namespace Thermodynamics.Sim
 
             Console.Write(ClientDriftLab.Report(runs));
 
+            // The correction sweep, on the worst of the three staleness rungs: what a protocol
+            // that states the near-critical band on an interval buys, and what it costs.
+            List<ClientDriftLab.Run> corrected = new List<ClientDriftLab.Run>();
+            if (HasFlag(args, "--correct"))
+            {
+                float worst = stale[stale.Length - 1];
+                float[] intervals = { 1f, 5f, 15f, 60f };
+                int[] budgets = { 0, 1000 };
+
+                corrected.Add(ClientDriftLab.Measure(scenario, worst, watch, blocks, null,
+                    ClientDriftLab.Correction.None));
+
+                for (int i = 0; i < intervals.Length; i++)
+                {
+                    for (int b = 0; b < budgets.Length; b++)
+                    {
+                        corrected.Add(ClientDriftLab.Measure(scenario, worst, watch, blocks, null,
+                            new ClientDriftLab.Correction
+                            {
+                                IntervalSeconds = intervals[i],
+                                MaxBlocks = budgets[b],
+                            }));
+                    }
+                }
+
+                // The composition the two above point at: state the whole hull once when the
+                // client joins, then track the band. The expensive packet happens once instead of
+                // every interval.
+                for (int i = 0; i < intervals.Length; i++)
+                {
+                    corrected.Add(ClientDriftLab.Measure(scenario, worst, watch, blocks, null,
+                        new ClientDriftLab.Correction
+                        {
+                            IntervalSeconds = intervals[i],
+                            WholeHullOnJoin = true,
+                        }));
+                }
+
+                // **The diagnostic, not a proposal.** Replicating every block that can fail is far
+                // more than a session would send; what it answers is whether the residual left by
+                // the band is the update interval or the un-replicated hull around it dragging the
+                // corrected blocks back. Without this row that question is an opinion.
+                for (int i = 0; i < intervals.Length; i++)
+                {
+                    corrected.Add(ClientDriftLab.Measure(scenario, worst, watch, blocks, null,
+                        new ClientDriftLab.Correction
+                        {
+                            IntervalSeconds = intervals[i],
+                            BandKelvin = 100000f,
+                        }));
+                }
+
+                Console.WriteLine();
+                Console.Write(ClientDriftLab.CorrectionReport(corrected));
+            }
+
+            // The hardware sweep: a client that keeps losing simulated time, which is the one
+            // property of somebody else's machine this lab can reach.
+            List<ClientDriftLab.Run> hitching = new List<ClientDriftLab.Run>();
+            if (HasFlag(args, "--hitch"))
+            {
+                float[] every = { 0f, 60f, 30f, 10f };
+                float[] costs = { 1f, 5f };
+
+                for (int i = 0; i < every.Length; i++)
+                {
+                    for (int c = 0; c < costs.Length; c++)
+                    {
+                        if (every[i] <= 0f && c > 0) continue;
+
+                        ClientDriftLab.Machine host = new ClientDriftLab.Machine
+                        {
+                            HitchEverySeconds = every[i],
+                            HitchLosesSeconds = costs[c],
+                        };
+
+                        hitching.Add(ClientDriftLab.Measure(scenario, 0f, watch, blocks, null,
+                            ClientDriftLab.Correction.None, host));
+
+                        hitching.Add(ClientDriftLab.Measure(scenario, 0f, watch, blocks, null,
+                            new ClientDriftLab.Correction { IntervalSeconds = 5f, MaxBlocks = 250 },
+                            host));
+                    }
+                }
+
+                Console.WriteLine();
+                Console.Write(ClientDriftLab.HitchReport(hitching));
+            }
+
             string directory = ValueAfter(args, "--csv");
             if (directory != null)
             {
@@ -280,6 +373,119 @@ namespace Thermodynamics.Sim
 
                 Directory.CreateDirectory(directory);
                 string path = Path.Combine(directory, "drift.csv");
+                File.WriteAllText(path, csv.ToString());
+                Console.WriteLine();
+                Console.WriteLine("wrote " + path);
+
+                if (corrected.Count > 0)
+                {
+                    StringBuilder sweep = new StringBuilder();
+                    sweep.AppendLine("scenario,blocks,stale_s,interval_s,band_k,max_blocks,"
+                        + "misreading_s,showing_safe_s,crying_wolf_s,updates,bytes,bytes_per_s,peak_blocks,dropped");
+
+                    foreach (ClientDriftLab.Run run in corrected)
+                    {
+                        sweep.Append(run.Scenario).Append(',').Append(run.Blocks).Append(',')
+                             .Append(run.StaleSeconds.ToString("0.###")).Append(',')
+                             .Append(run.Protocol.IntervalSeconds.ToString("0.###")).Append(',')
+                             .Append(run.Protocol.BandKelvin.ToString("0.###")).Append(',')
+                             .Append(run.Protocol.MaxBlocks).Append(',')
+                             .Append(run.SecondsMisreadingCritical.ToString("0.###")).Append(',')
+                             .Append(run.SecondsShowingSafe.ToString("0.###")).Append(',')
+                             .Append(run.SecondsCryingWolf.ToString("0.###")).Append(',')
+                             .Append(run.Updates).Append(',').Append(run.Bytes).Append(',')
+                             .Append(run.BytesPerSecond.ToString("0.##")).Append(',')
+                             .Append(run.PeakBlocksSent).Append(',')
+                             .Append(run.BlocksDropped).AppendLine();
+                    }
+
+                    string sweepPath = Path.Combine(directory, "drift-correction.csv");
+                    File.WriteAllText(sweepPath, sweep.ToString());
+                    Console.WriteLine("wrote " + sweepPath);
+                }
+            }
+
+            return 0;
+        }
+
+        /// <summary>
+        /// Every input a client drives its own simulation from, degraded one at a time and then all
+        /// at once, with the correction off and on.
+        ///
+        /// The question this answers that `drift` does not: which of those inputs is a
+        /// **perturbation**, which decays on its own, and which is a **bias**, which does not — and
+        /// therefore which of them the readout needs a protocol for rather than patience.
+        /// </summary>
+        private static int InputsCommand(string[] args)
+        {
+            string scenario = ValueAfter(args, "--scenario") ?? "planet";
+
+            float watch = 600f;
+            string configured = ValueAfter(args, "--watch");
+            if (configured != null) float.TryParse(configured, out watch);
+
+            int blocks = 2000;
+            string sized = ValueAfter(args, "--size");
+            if (sized != null) int.TryParse(sized, out blocks);
+
+            ClientDriftLab.Correction fix = new ClientDriftLab.Correction
+            {
+                IntervalSeconds = 5f,
+                WholeHullOnJoin = true,
+            };
+
+            Console.WriteLine("A client whose view of the world is worse than the server's.");
+            Console.WriteLine("Hull: " + blocks.ToString("n0") + " census blocks, " + scenario
+                + ", " + watch.ToString("n0") + " simulated seconds, load alternating every "
+                + ClientInputLab.LoadPeriodSeconds.ToString("n0") + " s.");
+            Console.WriteLine();
+
+            List<ClientInputLab.Degradation> cases = ClientInputLab.All();
+            List<ClientInputLab.Result> results = new List<ClientInputLab.Result>();
+
+            foreach (ClientInputLab.Degradation one in cases)
+            {
+                results.Add(ClientInputLab.Measure(one, ClientDriftLab.Correction.None,
+                    scenario, watch, blocks));
+                results.Add(ClientInputLab.Measure(one, fix, scenario, watch, blocks));
+            }
+
+            Console.Write(ClientInputLab.Report(results));
+            Console.WriteLine();
+            Console.WriteLine("What each case degrades, and why that is what the engine does:");
+            Console.WriteLine();
+
+            foreach (ClientInputLab.Degradation one in cases)
+            {
+                Console.WriteLine("  " + one.Name.PadRight(20) + one.Because);
+            }
+
+            string directory = ValueAfter(args, "--csv");
+            if (directory != null)
+            {
+                StringBuilder csv = new StringBuilder();
+                csv.AppendLine("degradation,scenario,blocks,correction_s,whole_hull_on_join,"
+                    + "peak_k,standing_k,misreading_s,peak_disagreeing,peak_server_critical,"
+                    + "peak_blocks_sent,bytes_per_s");
+
+                foreach (ClientInputLab.Result result in results)
+                {
+                    bool off = result.Protocol == null || result.Protocol.IntervalSeconds <= 0f;
+                    csv.Append('"').Append(result.Name).Append('"').Append(',')
+                       .Append(result.Scenario).Append(',').Append(result.Blocks).Append(',')
+                       .Append(off ? "0" : result.Protocol.IntervalSeconds.ToString("0.###")).Append(',')
+                       .Append(!off && result.Protocol.WholeHullOnJoin ? "1" : "0").Append(',')
+                       .Append(result.PeakKelvin.ToString("0.####")).Append(',')
+                       .Append(result.StandingKelvin.ToString("0.####")).Append(',')
+                       .Append(result.SecondsMisreading.ToString("0.###")).Append(',')
+                       .Append(result.PeakDisagreeing).Append(',')
+                       .Append(result.PeakServerCritical).Append(',')
+                       .Append(result.PeakBlocksSent).Append(',')
+                       .Append(result.BytesPerSecond.ToString("0.##")).AppendLine();
+                }
+
+                Directory.CreateDirectory(directory);
+                string path = Path.Combine(directory, "client-inputs.csv");
                 File.WriteAllText(path, csv.ToString());
                 Console.WriteLine();
                 Console.WriteLine("wrote " + path);
@@ -443,6 +649,16 @@ namespace Thermodynamics.Sim
             return 0;
         }
 
+        /// <summary>Whether a bare flag is present, for options that take no value.</summary>
+        private static bool HasFlag(string[] args, string flag)
+        {
+            for (int i = 0; i < args.Length; i++)
+            {
+                if (args[i] == flag) return true;
+            }
+            return false;
+        }
+
         private static string ValueAfter(string[] args, string flag)
         {
             for (int i = 0; i < args.Length - 1; i++)
@@ -514,6 +730,9 @@ namespace Thermodynamics.Sim
         ///   bench weld  --size 250000         a block welded on every tick
         ///   bench load  --size 1000000        what building the grid costs before tick one
         ///   bench floor --size 42000           what a per-block substep cap buys, and costs
+        ///   bench ceiling --size 42000         what refusing a substep demand costs, in air
+        ///   bench ceiling --fixture rings       the same, where the plumbing sets the demand
+        ///   bench parallel --size 600           one grid per thread: does a fleet pay for it
         ///   bench report --csv out/            the full performance report, as a CSV to diff
         ///   bench report --baseline out/performance.csv   the same, against an earlier one
         /// </summary>
@@ -774,6 +993,105 @@ namespace Thermodynamics.Sim
                     return 0;
                 }
 
+                case "franken":
+                {
+                    // A million-block grid welded out of real workshop ships, which no published
+                    // blueprint is. backlog.md G5.
+                    int frankenTarget = size > 0 ? size : 1000000;
+                    string ships = Option(args, "--ships", "out/corpus-2026-08-21/ships.csv");
+
+                    List<KeyValuePair<int, string>> paths = FrankenHull.LargestFirst(ships);
+                    if (paths.Count == 0)
+                    {
+                        Console.Error.WriteLine("no blueprints listed in " + ships
+                            + " — point --ships at a survey's ships.csv");
+                        return 1;
+                    }
+
+                    Console.WriteLine();
+                    Console.WriteLine("== franken hull, " + frankenTarget.ToString("n0")
+                        + " blocks from " + paths.Count.ToString("n0")
+                        + " blueprints, largest first ==");
+                    Console.WriteLine("  Every figure here is about the stress bound. This is the"
+                        + " biggest ships in the corpus,");
+                    Console.WriteLine("  tiled — which is what a million-block grid would have to"
+                        + " be made of, and nobody's median.");
+                    Console.WriteLine();
+
+                    FrankenHull.Manifest manifest = new FrankenHull.Manifest();
+                    System.Diagnostics.Stopwatch frankenBuild =
+                        System.Diagnostics.Stopwatch.StartNew();
+                    GridBuilder welded = FrankenHull.Build(paths, frankenTarget, manifest,
+                        message => Console.Error.WriteLine("  " + message));
+                    frankenBuild.Stop();
+
+                    Console.WriteLine("  " + manifest.Describe());
+                    Console.WriteLine("  read and tiled in "
+                        + frankenBuild.Elapsed.TotalSeconds.ToString("n1") + " s");
+                    Console.WriteLine();
+
+                    for (int i = 0; i < manifest.Ships.Count; i++)
+                    {
+                        Console.WriteLine("    " + manifest.Copies[i].ToString().PadLeft(5) + "x  "
+                            + manifest.Ships[i]);
+                    }
+
+                    Console.WriteLine();
+                    Console.WriteLine(LoadBenchmarks.Table(
+                        new List<ScaleRow> { LoadBenchmarks.MeasureBuilt(welded) }));
+                    return 0;
+                }
+
+                case "allowance":
+                {
+                    // What MaxElementVisitsPerStep costs and what it buys, across grid size and
+                    // world. backlog.md C27.
+                    List<int> allowanceSizes = new List<int>();
+                    foreach (int rung in AllowanceLab.DefaultSizes)
+                    {
+                        if (rung <= max) allowanceSizes.Add(rung);
+                    }
+
+                    int allowanceFrames = ticks > 0 ? ticks : AllowanceLab.DefaultFrames;
+                    string allowanceOut = csvDirectory ?? "out";
+
+                    Console.WriteLine();
+                    Console.WriteLine("== element-visit allowance, " + shape + ", "
+                        + allowanceFrames + " frames ==");
+                    Console.WriteLine("  A step is spread across the frames of its own window, so"
+                        + " an allowance V at Frequency f");
+                    Console.WriteLine("  bounds a frame at V * f / 60 element visits. The trade is"
+                        + " frame milliseconds against");
+                    Console.WriteLine("  the share of simulated time a grid keeps; the kelvin"
+                        + " column converts the second at F23's rate.");
+                    Console.WriteLine();
+
+                    List<AllowanceLab.PriceRow> allowancePrices = AllowanceLab.PriceRates(
+                        AllowanceLab.DefaultDeficits,
+                        message => Console.Error.WriteLine("  " + message));
+
+                    List<AllowanceLab.Row> allowanceRows = AllowanceLab.Run(shape, allowanceSizes,
+                        AllowanceLab.DefaultAllowances, AllowanceLab.DefaultWorlds,
+                        allowanceFrames, message => Console.Error.WriteLine("  " + message));
+
+                    Console.WriteLine("-- what a lost rate is worth, under a moving load --");
+                    Console.WriteLine();
+                    Console.WriteLine(AllowanceLab.PriceTable(allowancePrices));
+                    Console.WriteLine("-- what each allowance costs and buys --");
+                    Console.WriteLine();
+                    Console.WriteLine(AllowanceLab.Table(allowanceRows, allowancePrices));
+
+                    Directory.CreateDirectory(allowanceOut);
+                    string allowancePath = Path.Combine(allowanceOut, "allowance.csv");
+                    File.WriteAllText(allowancePath,
+                        AllowanceLab.Csv(allowanceRows, allowancePrices));
+                    string allowancePricePath = Path.Combine(allowanceOut, "allowance-rate.csv");
+                    File.WriteAllText(allowancePricePath, AllowanceLab.PriceCsv(allowancePrices));
+                    Console.WriteLine("csv -> " + allowancePath);
+                    Console.WriteLine("csv -> " + allowancePricePath);
+                    return 0;
+                }
+
                 case "rowfill":
                 {
                     int fillBlocks = size > 0 ? size : 32000;
@@ -870,6 +1188,104 @@ namespace Thermodynamics.Sim
                     return 0;
                 }
 
+                case "stagger":
+                {
+                    int[] sizes = { 4, 16, 64, 242 };
+                    int each = size > 0 ? size : 600;
+                    int slices = OptionInt(args, "--slices", 8);
+
+                    Console.WriteLine();
+                    Console.WriteLine("== stagger against spread, " + each.ToString("n0")
+                        + " blocks a grid ==");
+                    Console.WriteLine("  identical arithmetic either way; only the interleaving"
+                        + " differs, so the difference is locality");
+                    Console.WriteLine("  staggered: whole steps, one grid at a time. spread: one"
+                        + " step per grid cut into " + slices + " slices and interleaved");
+                    Console.WriteLine("  fastest of " + StaggerLab.Repeats + "; the lump is what one"
+                        + " frame carries when a grid is stepped whole");
+                    Console.WriteLine();
+
+                    Console.WriteLine(StaggerLab.Table(StaggerLab.Run(sizes, each, slices,
+                        message => Console.Error.WriteLine("  " + message))));
+                    return 0;
+                }
+
+                case "surface":
+                {
+                    Console.WriteLine();
+                    Console.Write(SelectiveSurfaceLab.Report(
+                        OptionInt(args, "--radiators", 8)));
+                    return 0;
+                }
+
+                case "parallel":
+                {
+                    int[] sizes = { 1, 2, 4, 8, 16, 32, 64, 128, 242 };
+                    int threads = OptionInt(args, "--threads", Environment.ProcessorCount);
+                    int each = size > 0 ? size : 600;
+
+                    Console.WriteLine();
+                    Console.WriteLine("== fleet parallelism, " + each.ToString("n0")
+                        + " blocks a grid ==");
+                    Console.WriteLine("  One grid per work item, joined every fleet-step, against"
+                        + " the same fleet stepped in order.");
+                    Console.WriteLine("  " + threads + " threads of " + Environment.ProcessorCount
+                        + ". Fastest of " + FleetParallelLab.Repeats + " repeats; the noise column"
+                        + " is slowest over fastest for each side.");
+                    Console.WriteLine("  Hand-off is the same fan-out with nothing in the body -"
+                        + " a lower bound on the engine's own.");
+                    Console.WriteLine();
+
+                    Console.WriteLine(FleetParallelLab.Table(FleetParallelLab.Run(
+                        sizes, each, threads,
+                        message => Console.Error.WriteLine("  " + message))));
+
+                    // A server's fleet is a few capital ships among many small ones, and the
+                    // largest grid is the floor under a fleet-step however many threads there are.
+                    int[] uneven = { 8000, 4000, 2000, 1000, 600, 600, 400, 400, 300, 300,
+                                     200, 200, 200, 150, 150, 150, 100, 100, 100, 100 };
+                    Console.WriteLine("  uneven fleet: " + uneven.Length + " grids, "
+                        + uneven[0].ToString("n0") + " blocks down to " + uneven[uneven.Length - 1]);
+                    Console.WriteLine(FleetParallelLab.Table(new List<FleetParallelLab.Row>
+                    {
+                        FleetParallelLab.RunUneven(uneven, threads,
+                            message => Console.Error.WriteLine("  " + message)),
+                    }));
+                    return 0;
+                }
+
+                case "ceiling":
+                {
+                    float speed = OptionFloat(args, "--speed", 200f);
+                    string fixture = Option(args, "--fixture",
+                        LoadBenchmarks.CeilingFixtures.Census);
+
+                    Console.WriteLine();
+                    Console.WriteLine("== substep ceiling, " + fixture + " " + shape + " "
+                        + size.ToString("n0") + " ==");
+                    Console.WriteLine("  MaxSubsteps swept, on a hull built from the measured block"
+                        + " census, in thick air at " + speed.ToString("n0") + " m/s.");
+                    Console.WriteLine("  " + (ticks > 0 ? ticks : 200) + " steps, "
+                        + (Has(args, "--driven")
+                            ? "the census share of heat producers run to equilibrium"
+                            : "temperatures spread 250-750 K")
+                        + ". Error is against the run granted its demand.");
+                    Console.WriteLine("  --speed N sets the airflow; air is where the demand is,"
+                        + " and in vacuum no ceiling binds.");
+                    Console.WriteLine("  --fixture census|plumbed|pressurised|rings chooses which"
+                        + " element carries the heat: blocks alone, a census hull with rings beside"
+                        + " it, one with air in its compartments, or reactors cooled by rings —"
+                        + " which is the only one where the plumbing sets the demand.");
+                    Console.WriteLine();
+
+                    Console.WriteLine(LoadBenchmarks.CeilingTable(LoadBenchmarks.SubstepCeiling(
+                        shape, size, ticks > 0 ? ticks : 200, null,
+                        message => Console.Error.WriteLine("  " + message),
+                        Has(args, "--driven"), OptionInt(args, "--frequency", 0), speed, 1f,
+                        fixture, OptionFloat(args, "--flow", 0f))));
+                    return 0;
+                }
+
                 case "floor":
                 {
                     int[] caps = { 0, 32, 16, 8, 6, 4, 3, 2, 1 };
@@ -884,13 +1300,15 @@ namespace Thermodynamics.Sim
                             : "temperatures spread 250-750 K")
                         + ", vacuum. Error is against the uncapped run.");
                     Console.WriteLine("  --frequency N sets the step length; every substep count"
-                        + " below is proportional to it.");
+                        + " below is proportional to it. --speed N flies it through thick air,"
+                        + " which is where a floor has most to reach.");
                     Console.WriteLine();
 
                     Console.WriteLine(LoadBenchmarks.FloorTable(LoadBenchmarks.SubstepFloor(
                         shape, size, ticks > 0 ? ticks : 200, caps,
                         message => Console.Error.WriteLine("  " + message),
-                        Has(args, "--driven"), OptionInt(args, "--frequency", 0))));
+                        Has(args, "--driven"), OptionInt(args, "--frequency", 0),
+                        OptionFloat(args, "--speed", 0f))));
                     return 0;
                 }
 
@@ -948,6 +1366,15 @@ namespace Thermodynamics.Sim
             string raw = Option(args, flag, null);
             int value;
             return raw != null && int.TryParse(raw, out value) ? value : fallback;
+        }
+
+        private static float OptionFloat(string[] args, string flag, float fallback)
+        {
+            string raw = Option(args, flag, null);
+            float value;
+            return raw != null
+                && float.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out value)
+                ? value : fallback;
         }
 
         private static void PrintTable(ScenarioResult result)
@@ -1029,6 +1456,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("    --csv <dir>               one row per prefab");
             Console.WriteLine("    --load                    full load instead of idle: the control, not G7");
             Console.WriteLine("  drift                   how long a client that joined stale stays wrong");
+            Console.WriteLine("  inputs                  each input a client drives its sim from, degraded");
             Console.WriteLine("  occlusion               what a terminator crossing costs at each rung of the shadow ladder");
             Console.WriteLine("    --scenario shadow|sunlit|planet  --watch <s> --size N --csv <dir>");
             Console.WriteLine("  planets                 every shipped world's climate, and where each figure came from");
@@ -1041,12 +1469,21 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  bench weld  --size N    a block welded on every tick");
             Console.WriteLine("  bench load  --size N    what building the grid costs before tick one");
             Console.WriteLine("  bench floor --size N    what a per-block substep cap buys, and costs");
+            Console.WriteLine("  bench ceiling --size N  what refusing a substep demand costs, in air");
+            Console.WriteLine("      --fixture census|plumbed|pressurised|rings   which element carries it");
+            Console.WriteLine("      --flow N   parcels a second on the rings fixture; above one a"
+                + " substep the ring mixes rather than carries");
+            Console.WriteLine("  bench parallel --size N one grid per thread: does a fleet pay for it");
+            Console.WriteLine("  bench surface           what a selective surface on the radiator is worth");
+            Console.WriteLine("  bench stagger --size N  whole steps against spread ones: what locality costs");
             Console.WriteLine("  bench report            full performance report; --baseline <csv> to compare");
             Console.WriteLine("  bench spike --size N    one block placed, split by stage");
             Console.WriteLine("  bench steppath          a step at the solver, against a step through the host");
             Console.WriteLine("  bench smallgrids        what one grid costs before any of its blocks do");
             Console.WriteLine("  bench wattsclear        what zeroing the watts row costs, up a size ladder");
             Console.WriteLine("  bench rowfill           what the first substep of a step pays over a later one");
+            Console.WriteLine("  bench allowance         what the element-visit allowance costs, and what it buys");
+            Console.WriteLine("  bench franken --size N  a grid of N blocks welded out of real workshop ships");
             Console.WriteLine("  bench pace  --size N    does slowing sim and raising transfer save anything");
             Console.WriteLine("  bench reach --length N  how fast heat crosses a grid, against what it costs");
             Console.WriteLine("  bench memory --size N   where a grid's memory goes, by structure");

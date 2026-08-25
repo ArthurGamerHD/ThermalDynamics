@@ -33,6 +33,26 @@ namespace Thermodynamics.Harness
             public readonly bool[] MountFaces = new bool[Face.Count];
 
             /// <summary>
+            /// Energy a jump drive holds when full, in joules, or zero for anything else.
+            ///
+            /// The definitions give it as `PowerNeededForJump` in megawatt-hours; this is that
+            /// times 3.6 GJ. With <see cref="PowerEfficiency"/> and
+            /// <see cref="PowerDrawWatts"/> it is what says how long the charge lasts, which is the
+            /// length of the largest thermal event most ships have.
+            /// </summary>
+            public float JumpEnergyJoules;
+
+            /// <summary>
+            /// Fraction of drawn power that reaches the store, from `PowerEfficiency`.
+            ///
+            /// **Zero means the definition does not say**, which is every block in the game but the
+            /// four jump drives. It is not *stores none of it*: reading an absent field as total
+            /// loss would turn every block into a heater, which is why
+            /// <see cref="BlockThermalDerivation.WasteFromEfficiency"/> takes zero as silence.
+            /// </summary>
+            public float PowerEfficiency;
+
+            /// <summary>
             /// Whether the definition listed any mount points at all.
             ///
             /// **A definition that lists none is not a block that mounts nowhere** — it is a block
@@ -93,6 +113,38 @@ namespace Thermodynamics.Harness
             /// </para>
             /// </summary>
             public float Integrity;
+
+            /// <summary>
+            /// Declared PCU, or zero where the definition does not say — which is most of the
+            /// game, since the engine defaults an absent `PCU` to 1.
+            ///
+            /// **Read as declared rather than defaulted**, because zero and one are different
+            /// claims: one is a block the author priced and zero is a block nobody did, and
+            /// substituting the engine's default here would erase which of the two a figure is
+            /// over (`C8`).
+            /// </summary>
+            public int Pcu;
+
+            /// <summary>Seconds to weld the block at the game's base speed, from `BuildTimeSeconds`.</summary>
+            public float BuildSeconds;
+
+            /// <summary>Cells the block occupies.</summary>
+            public int CellCount
+            {
+                get { return Math.Abs(Size.X * Size.Y * Size.Z); }
+            }
+
+            /// <summary>Metres a cell of this block's grid size measures, the game's own two values.</summary>
+            public float GridSize
+            {
+                get { return Large ? 2.5f : 0.5f; }
+            }
+
+            /// <summary>Cubic metres the block's cells enclose.</summary>
+            public float VolumeCubicMetres
+            {
+                get { return CellCount * GridSize * GridSize * GridSize; }
+            }
 
             /// <summary>Kilograms, summed from the components.</summary>
             public float Mass
@@ -334,6 +386,13 @@ namespace Thermodynamics.Harness
                         Megawatts(definition, "OperationalPowerConsumption"))));
             if (block.TypeId == "Thrust") block.ThrustNewtons = Number(definition, "ForceMagnitude");
 
+            // Megawatt-hours in the definitions, joules everywhere in this model.
+            block.JumpEnergyJoules = Number(definition, "PowerNeededForJump") * 3600f
+                * ThermalConstants.MegawattsToWatts;
+
+            float efficiency = Number(definition, "PowerEfficiency");
+            if (efficiency > 0f) block.PowerEfficiency = efficiency;
+
             bool airtight;
             string airtightText = (string)definition.Element("IsAirTight");
             if (airtightText != null && bool.TryParse(airtightText, out airtight)) block.Airtight = airtight;
@@ -350,6 +409,15 @@ namespace Thermodynamics.Harness
                     block.HasDeclaredMounts = true;
                 }
             }
+
+            int pcu;
+            if (int.TryParse((string)definition.Element("PCU"), NumberStyles.Integer,
+                    CultureInfo.InvariantCulture, out pcu))
+            {
+                block.Pcu = pcu;
+            }
+
+            block.BuildSeconds = Number(definition, "BuildTimeSeconds");
 
             XElement components = definition.Element("Components");
             if (components != null)

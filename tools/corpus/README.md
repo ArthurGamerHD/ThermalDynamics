@@ -7,14 +7,126 @@ each of these prints what it found and renders without the parts that are absent
 
 > The rules argued here are stated canonically in [rules.md](../../docs/rules.md): `E5` `M10`.
 
+| Looking for | Go to |
+| --- | --- |
+| The criteria these scripts score, and why each was written | [balance-lab.md](../../docs/balance-lab.md) |
+| What the population actually said | [balance.md](../../docs/balance.md) |
+| Running the walks that produce these datasets | [tests/README.md](../../tests/README.md) |
+| Every open item, one line each | [backlog.md](../../docs/backlog.md) |
+
 ```
 python3 tools/corpus/verdict.py out/corpus-2026-08-21     # the criteria, on the terminal
+python3 tools/corpus/cap.py out/cap-2026-08-25            # C3: what a per-block cap buys and costs
+python3 tools/corpus/reproduce.py out/cap-2026-08-24 out/cap-2026-08-25  # did a restart reproduce?
+python3 tools/corpus/pace.py out/cap-2026-08-25/progress.txt \
+    --reference out/air-corpus-2026-08-24/progress.txt \
+    --outcomes  out/air-corpus-2026-08-24/outcomes.csv   # what a running walk will cost
 ./tools/corpus/build-report.sh out/corpus-2026-08-21      # the survey as one page
 python3 tools/corpus/panel.py out/census-2026-08-21/census.csv \
                              out/corpus-2026-08-21/outcomes.csv   # rebuild the standing panel
 ./tools/corpus/build-bench.sh out/corpus-2026-08-21 \
                              out/census-2026-08-21 out/knobs-2026-08-21   # every dataset, one page
 ```
+
+## The three walks over the whole population
+
+`CorpusSurvey` runs five scenarios and every one of them is vacuum. `CorpusAirWalk` runs the four
+[`PairLab.AirScenarios`](../../tests/Thermodynamics.Harness/PairLab.cs) — `vacuum-shadow` as the
+anchor, then `surface-hot-noon`, `storm-parked` and `reentry` — because both halves of `G6` are
+decided in air and the survey has never seen any (`F11`). `CorpusCapWalk` runs those same four
+**twice**, with `MaxSubstepsPerBlock` off and at 6, which is `C3` and `G6`'s cost half as one
+experiment. They are separate walks with separate resume records and separate data directories, so a
+figure quoted from one is not silently a figure from a run of the other (`M1`).
+
+```bash
+THERMAL_CORPUS_TESTS=1 THERMAL_CORPUS_DATA=$PWD/out/air-2026-08-24 \
+    THERMAL_CORPUS_PROGRESS=$PWD/out/air-2026-08-24/progress.txt \
+    systemd-run --user --scope -p MemoryMax=24G -p MemorySwapMax=0 --quiet \
+    dotnet test -c Release --no-build tests/Thermodynamics.Tests \
+        --filter "FullyQualifiedName~CorpusAirWalk"
+
+THERMAL_CORPUS_TESTS=1 THERMAL_CORPUS_DATA=$PWD/out/cap-2026-08-25 \
+    THERMAL_CORPUS_PROGRESS=$PWD/out/cap-2026-08-25/progress.txt \
+    systemd-run --user --scope -p MemoryMax=24G -p MemorySwapMax=0 --quiet \
+    dotnet test -c Release --no-build tests/Thermodynamics.Tests \
+        --filter "FullyQualifiedName~CorpusCapWalk"
+```
+
+**A paired walk costs about twice an unpaired one, and not because it runs twice.** Every run in
+`CorpusAirWalk` stops at equilibrium, and in air that is usually two chunks of an 1,800-second
+scenario; the capped arm cannot stop there, because it has to stop where its own control stopped
+(`M1`). `THERMAL_CORPUS_SHIPS=40` walks a stride sample instead of the population, which is how to
+see that a walk works before committing the hours — the sample for this one was 320 runs in 77 s.
+
+**Twice is a ceiling, and it is the estimate to use.** The cap walk is the air walk's four
+scenarios with a second arm on each, and the two arms share one blueprint parse, so the second arm
+can only ever add what it simulates. Measured over the fifty files the two walks' progress records
+share, the cap walk is **1.95x** the air walk per file, and the air walk finished in 104 minutes —
+so the cap walk is **about three and a half hours**, with 2x as a bound nothing about the machine
+can move.
+
+**Do not estimate a walk from the rate it is covering blocks at.** That is what abandoned the first
+cap walk, and it is not an instrument: the corpus is walked largest first, so blocks-per-minute
+falls throughout every healthy run, and a mark is ten files, which here can be one capital hull or
+ten fighters. `pace.py` prints that estimate as the spread it has and then runs it over the
+*finished* air walk, where the answer is known — over that walk's own first 35 minutes it projects
+104 to 428 minutes, median 154, against the 104 it took (`P4`).
+
+**`THERMAL_CORPUS_DATA` must be absolute.** The test host's working directory is the test project's
+output directory, not the repository, so a relative path writes the dataset somewhere nobody will
+look for it. Everything else on this page applies unchanged: no hang timeout, one walk at a time, a
+memory cap, and relaunch to resume.
+
+---
+
+## A figure a page quotes has a source in the tree
+
+The datasets are gigabytes and are not committed, so until 2026-08-24 every corpus number in the
+documentation was a number with no source anybody could check it against — and one of them drifted
+by two orders of magnitude before it was compared back (`F14`: *twenty-four sealed blocks on one
+ship* against a dataset saying 1,184 across 331).
+
+`verdict.py --csv <path>` writes the figures it prints as `statistic,value,unit`. That file is
+kilobytes and is committed:
+[`summary-2026-08-21.csv`](summary-2026-08-21.csv) is the vacuum survey.
+
+```bash
+python3 tools/corpus/verdict.py out/corpus-2026-08-21 --csv tools/corpus/summary-2026-08-21.csv
+python3 tools/corpus/verdict.py out/air-2026-08-24 --baseline tools/corpus/summary-2026-08-21.csv
+```
+
+`--baseline` prints what moved, which is how one walk is read against another — the same corpus in
+vacuum and in air. It reports **every statistic on either side**, so one the other dataset does not
+carry shows as an em dash rather than being dropped: a scenario present in one walk and absent from
+the other is the finding, not a gap to be joined away.
+
+**Every dataset says what build it came from.** `provenance.txt` is written beside the outcomes on a
+walk's first batch: the walk's name and start, the commit `HEAD` pointed at, and a digest of
+`Cubes.xml` and `Materials.xml` — the two files whose contents decide what a walk measures and which
+a commit hash says nothing about when they are edited and not committed. A resumed walk appends a
+second block rather than overwriting, so a dataset assembled across two builds says so.
+
+`verdict.py` prints it and `--csv` records it, so a figure quoted from a committed summary carries
+the world it was measured in. A dataset with no such file says so rather than being assumed current.
+
+It exists because the alternative was paid for once. The 2026-08-24 air walk finished **one minute
+after** a commit that took twenty-seven `ConsumerWasteEnergy` fractions from 0.9 to 1.0, and
+establishing that took comparing its rows against a later walk with `reproduce.py` and then reading
+the git log for the window between them. Datasets collected before 2026-08-25 have no such file.
+
+**A paired dataset is scored on the arm that ships.** `verdict.py` says so on the first line when it
+meets one, and leaves the other arm to `cap.py`. It did not always: keyed by ship and scenario, the
+capped arm read as *912 duplicate rows* and half the dataset was dropped under a note about a resume
+that had not happened. It kept the right arm by accident, which is the worst way to be right — found
+on a dry run before the walk landed, and pinned by `test_scoring.py`.
+
+**Read `dataset ships` first.** The corpus is sorted largest-first, so a walk stopped early is not
+a small sample of the population — it is the wrong end of one, and every percentile it reports is a
+percentile of the biggest ships in the corpus. A partial dataset carries exactly the columns a
+finished one does. The count is taken from the outcomes rather than from `ships.csv`, which a walk
+may legitimately not write.
+
+---
 
 `verdict.py` evaluates the criteria written down in [balance-lab.md](../../docs/balance-lab.md)
 before the data was collected, so a run that fails them is a finding rather than an excuse to move a
@@ -69,6 +181,13 @@ rest of the suite run in parallel again.
 had just started, killing the recovery along with the corpse. Use a pattern that cannot match the new
 invocation.
 
+**And watch what a `pgrep` pattern matches**, which is the same trap wearing the other hat. A shell
+loop written as `until ! pgrep -f CorpusCapWalk; do sleep 120; done` contains the string it is
+looking for, so it matches *itself* and never exits — and a later `pgrep` run to ask whether the
+walk is still going answers **yes** long after it finished. On 2026-08-25 five such waiters were
+left running after a walk that had ended cleanly. Wait on something the walk owns rather than on its
+name: the last line of `progress.txt`, or the `Passed!` in its log.
+
 **Cap the memory.** An uncapped run has taken the machine down with it; wrap it in
 `systemd-run --scope -p MemoryMax=…` so the run dies instead of the session.
 
@@ -92,6 +211,14 @@ python3 -c "import csv,sys;[print(r['path']) for r in csv.DictReader(open(sys.ar
 One caveat, and it is the reason this is a recovery rather than the normal path: a blueprint holding
 several ships that was interrupted part way through appears in `ships.csv` and would be skipped with
 ships still to do. That is one file of nine thousand, against a whole run.
+
+**And one that costs a session rather than a run: do not read the suite while a walk is running.** The tests that assert an elapsed time are
+measuring a machine a walk is using every core of, and they fail on it: on 2026-08-25 the full suite
+was green before a cap walk started (1,864 of 1,864) and `LoadTests.SolverCostPerLinkStaysProportional`
+failed during it at **3.14×** its own limit, reporting 17.63 ns a link visit against 5.62. Nothing is
+wrong with the mod when that happens. `[Collection("alone")]` keeps those tests from colliding with
+the rest of the suite and can do nothing about a walk in another process, which is the same
+observation as `O4` one process up. The fast lane is fine to run; a full pass waits for the walk.
 
 **Read progress in bytes, not files.** The corpus is sorted largest-first, so file 500 of 9,981 is
 5 % of the files and 50 % of the work. `THERMAL_CORPUS_PROGRESS` reports both.
@@ -180,6 +307,104 @@ reaches nothing here by construction: the corpus filters admit vanilla ships, so
 forty carries a coolant pipe or a radiator. Those two are measured on a rig instead —
 `dotnet run --project Thermodynamics.Sim -- conductance`.
 
+`PairSweep` reads the same set for a different question. `G8` — the significance window — is a claim
+about two dials interacting, and every sweep before it moves one; this runs a grid of conduction
+against the clock and `pairs.py` scores `G8` on every cell beside the criteria a cell must not break
+to be usable.
+
+```
+THERMAL_CORPUS_TESTS=1 THERMAL_CORPUS_DATA=$PWD/out/pairs-2026-08-23 \
+    dotnet test --filter "FullyQualifiedName~EveryPairOfConductionAndClockGetsAMeasuredCell"
+python3 tools/corpus/pairs.py out/pairs-2026-08-23
+```
+
+**And the load pass, which is the third question the class answers.** It runs three load cases. `full-electrical`
+charges every jump drive for the whole run and `full-electrical-charged` never charges one; drives
+are 71.3 % of the corpus's full-load waste heat, so those two bracket what a loaded ship makes.
+**`jump-charge` is the one `G8` is scored on**: a drive fills in 421.9 s — 3 MWh at 32 MW with 0.8
+efficiency, every figure off the game's own definition — so the scenario charges for exactly that
+and then holds, which is the event rather than a bound on it. Conduction and the clock are
+both transport; `EveryLoadAndClockPairGetsAMeasuredCell` moves how much heat a ship makes against
+the clock instead, and `load.py` scores the same criteria. Ten minutes on the retest set. It imports
+`pairs.py`'s thresholds and censoring rather than restating them, because two scorers that drift
+apart disagree about the same criterion silently.
+
+```
+THERMAL_CORPUS_TESTS=1 THERMAL_CORPUS_DATA=$PWD/out/load-2026-08-23 \
+    dotnet test --filter "FullyQualifiedName~EveryLoadAndClockPairGetsAMeasuredCell"
+python3 tools/corpus/load.py out/load-2026-08-23
+```
+
+**The same class carries the air pass, and it is a different question with a different filter.**
+`G6` is a cost criterion and the grid above is three vacuum scenarios, where substeps are cheap;
+the budget is spent on convection. `EveryCandidateCellIsPricedInAir` runs the shipped pair and the
+four cells that satisfy `G8` through four atmospheric scenarios, and `air.py` scores `G6` on each.
+Two minutes on the retest set, five on the panel — air runs are short because the scenarios are.
+
+```
+THERMAL_CORPUS_TESTS=1 THERMAL_CORPUS_DATA=$PWD/out/air-2026-08-23 \
+    dotnet test --filter "FullyQualifiedName~EveryCandidateCellIsPricedInAir"
+python3 tools/corpus/air.py out/air-2026-08-23
+```
+
+It was run on both populations on purpose. The two answer within 0.3 % of each other, which is what
+says the `G6` breach it found is a property of the configuration rather than of a sample — the one
+check available while [backlog.md](../../docs/backlog.md) `F11` stands and the corpus itself has
+never seen air. Point `THERMAL_PANEL` at `tools/corpus/panel.csv` for the second population.
+
+Under two hours for the first sixteen cells, resumable the same way, and the grid grew to
+twenty-five in two searches guided by what the earlier cells measured. **Not a full grid**: the two
+edges are the single-dial curves, so the interaction is testable as *is the interior what the edges
+predict* rather than assumed; the interior is the equal-cost diagonal — substep demand goes as
+conductivity × clock — plus the pair [balance.md](../../docs/balance.md) projected and the four
+cells bracketing it; and the two corners are where the measured curves said a cell satisfying `G8`
+would have to be. **Run length scales with the clock**, capped at twice `G8`'s own bound, because
+a fixed ceiling reports a still-climbing hull as settled at the ceiling and a censored settling time
+cannot fail a criterion about settling.
+
+**A hull that never crossed critical is censored above, not dropped.** The first reading of this
+grid took the crossing median over the hulls that crossed and reported two cells at conductivity ×8
+as satisfying `G8` — where 27 of 40 hulls never reach critical at all. `pairs.py` now orders a
+non-crosser past every crosser, exactly as it already ordered a non-settler past the recovery bound,
+so a cell where fewer than half ever cross prints `censored` and has no median (`E9`).
+
+**`provenance.py` weights a census by where its heat's numbers came from.** Every waste fraction in
+`Cubes.xml` states a provenance ([definitions.md](../../docs/definitions.md#every-waste-fraction-says-where-it-came-from-and-most-of-them-say-invented)),
+and counting those says how much of the *file* is sourced rather than how much of the *heat* is. It
+reads a census `composition.csv` — per ship, per subtype, watts wasted at full electrical load — and
+prints both, plus which block types carry the invented share.
+
+```
+python3 tools/corpus/provenance.py out/census-2026-08-21/composition.csv
+```
+
+Seconds, on a census that already exists. A block that generates power is weighted by its producer
+fraction and everything else by its consumer one, which is the difference between a hydrogen engine
+reading as sourced and as invented — six per cent of the corpus's waste heat.
+
+```
+python3 -m unittest discover -s tools/corpus -p 'test_*.py'
+```
+
+`reproduce.py` answers the other question about two datasets: not whether the population moved, which
+is `--baseline`, but whether two runs that overlap wrote the same numbers on the ships they share
+(`E7`). A walk is restarted rather than resumed whenever the code moved underneath it (`M1`), and the
+overlap with what the old run finished is then a free reproduction check — on 2026-08-25 the cap
+walk's first **552 rows matched the abandoned partial exactly**, on all 22 compared columns, which
+turned *three commits touched the harness and none was checked for behaviour* from an assumption
+into a measurement. It reports rows only one side has rather than dropping them, because two
+datasets with nothing in common otherwise print a perfect reproduction.
+
+`test_scoring.py` pins that rule and the two thresholds `G8` is scored at, `test_provenance.py`
+pins the four provenance counts against the ones `AuthoredWasteTests` pins, so the two readers of
+one grammar cannot drift apart quietly (`D3`), `test_pace.py` pins what a progress file can be
+asked — that a repeated final line is not a stall, that the ratio is taken over the files two walks
+share rather than the time they ran, and that the block-share estimate is reported as the spread it
+has, and `test_reproduce.py` pins that a comparison
+with nothing in common is not a reproduction. Changing any of them fails a check rather than moving a number nobody is watching. They are the
+only checks over the scorers and are not part of the `dotnet test` suite; run them when a scorer
+changes.
+
 ---
 
 **Read the peak columns with the censoring in mind.** The harness never destroys an overheating
@@ -192,8 +417,33 @@ limit in [known-issues.md](../../docs/known-issues.md).
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Recorded the `pgrep` half of the pattern-matching trap beside the `pkill` half: a shell loop that waits on a walk by name contains the name, so it matches itself, never exits, and makes a later `pgrep` answer that the walk is still running after it has finished. |
+| 2026-08-25 | `cap.py` splits its cost figure on whether the control had actually stopped moving, beside the registered statistic. The settle test is an average over a chunk and tolerates 0.25 K a minute; the split uses the instantaneous rate at the end. On the cap walk's first 360 ships the two differ by two orders of magnitude, which is a statement about the instrument rather than about the cap. |
+| 2026-08-25 | `cap.py` now scores all four registered predictions rather than three. The benefit had been scored only as *does `G6` pass*, which is the criterion and not the prediction — the pre-registration's falsifier runs both ways, and a p99 under 1.5 M would falsify the projection while the criterion passed. The cost had printed its figures and judged nothing. Both bands live in `scoring.py` beside the decision rule, and the two are kept apart: a prediction can be falsified while the decision is unchanged. |
+| 2026-08-25 | `cap.py` scores the reach prediction over the air scenarios, which is how it was written — *the cap holds back 3-10 % of all blocks in air*. It had been counting the vacuum anchor too, where the cap is expected to bind least, which dilutes the share by a quarter and scores a band nobody registered. Both figures print; the band is read against the air one. |
+| 2026-08-25 | `verdict.py` prints a dataset's `provenance.txt` and records it into `--csv`, so a figure quoted from a committed summary carries the build it was measured on. A dataset without one is named as such rather than assumed current. |
+| 2026-08-25 | Every walk now writes `provenance.txt` beside its outcomes: the commit and a digest of the two definition files whose contents decide what it measured. Hooked into `CorpusFixture.Sweep` rather than into each walk, because a walk that has to remember is a walk that will not. |
+| 2026-08-25 | Renamed `air.py`'s ratio column from *vs shipped* to *vs baseline*, and made it print which cell ships. The column compares every cell with the sweep's own control, conductivity x1 at a clock of 225 — which stopped being the shipped configuration when `C24` shipped x4 at 90, a row of the same table. The arithmetic was never wrong; the word was. |
+| 2026-08-25 | Fixed `verdict.py` reading a paired walk's second arm as duplicate rows. It keyed a row by ship and scenario, so `CorpusCapWalk`'s capped arm looked like the same run written twice: half the dataset was dropped, under a note blaming a resume that had not happened, and the arm it kept was the right one by accident. The arm is part of a row's identity now, and a paired dataset is scored on the one that ships with both named on the first line (`M1`, `P6`). |
+| 2026-08-25 | Added [`reproduce.py`](reproduce.py): whether two walks that overlap wrote the same numbers on the ships they share. Its first use was the cap walk's restart, whose 552 shared rows matched the abandoned partial exactly on all 22 compared columns. |
+| 2026-08-25 | Added the one way a sweep costs a session rather than a run: a walk in progress fails the suite's wall-clock tests, because they are measuring a machine the walk is using every core of. Measured — the suite was green before the cap walk and `SolverCostPerLinkStaysProportional` was 3.14× its limit during it. |
+| 2026-08-25 | Added [`pace.py`](pace.py): what a running walk will cost, and the check that says whether the estimate means anything. The block-share rate that abandoned the first cap walk is reported as the spread it has and then run over the finished air walk, where the answer is known. |
+| 2026-08-25 | Added the *Looking for* table. A reader arriving here often wants the criteria these scripts score rather than the scripts. |
+| 2026-08-24 | **`cap.py` scores the paired walk against the four predictions registered before it ran**, and the decision rule itself is in `scoring.cap_decision` rather than in prose — the two thresholds it compares against are the ones this repository already set for other reasons, 0.03 K accepted by `C19` and 0.6 K refused by `C3`, and having them under test is what stops a threshold being chosen once the data is in (`E1`, `E11`). Four sections: the identity the predicted benefit rests on, the work percentiles per arm against the shipped allowance, the peak deltas per scenario, and the cap's reach with the control's floored count printed beside it as the check that a control is a control. A row with no partner is counted and dropped rather than compared against a default. |
+| 2026-08-24 | **`CorpusCapWalk`: the same four air scenarios, run twice, with `MaxSubstepsPerBlock` off and at 6.** `C3` and `G6`'s failing cost half are one question — the cap is the only lever that lowers a step's work — and `C3` was undecided only because its cost had been measured on one hull. **Both arms run to the same simulated clock**, which is why it is a walk rather than a join onto `F11`'s dataset: `Battery.Run` stops at equilibrium, in air that is usually 120 s of 1,800, and the effect being measured is a hundredth of a kelvin against a stopping tolerance of a quarter of one. `Battery.RunForSeconds` takes the control's elapsed clock; `outcomes.csv` gains `run_seconds` and `cap` so a reader can see where a run stopped and which arm it is. |
+| 2026-08-24 | **`scoring.step_work` takes the walk's `substep_cost` column, and the two committed summaries have lost their `G6 work` rows.** The unit is `links + 4 × nodes` and no walk before today recorded a link count; the scorer was handed `joints`, which counts rotors and pistons *between grids*, so the expression evaluated to `4 × nodes` and every step-work figure published from either dataset is the node half alone — 1.51× low on a 2,000-block census hull. `outcomes.csv` carries `links` and `substep_cost` now, the second being `ThermalSimulation.SubstepCost` for the assembly's worst grid, since the allowance is per grid. Neither existing dataset can be rescored, so both summaries were regenerated and their work rows are simply gone: a statistic that vanishes between two runs is what `--baseline` reports as a finding, which is the right reading here (`P2`). `G6` prints as one half unmeasured rather than as a failure, and the per-scenario table keeps its demand columns with an em dash in the work ones. |
+| 2026-08-24 | `scoring.censored_median` is the one definition of the statistic `G8` is scored on, and `pairs.py` and `load.py` both call it — two copies of it had already drifted at the even-length boundary. Added `joint_median_stability`, the bootstrap that says how often a resampled fleet still satisfies a two-halved criterion, drawn once so the two medians stay paired; `load.py` prints it as a `holds` column. It is what decided `C12`: two cells with the same median were 37 % and 76 % likely to hold. |
+| 2026-08-24 | **`THERMAL_CORPUS_DATA` is resolved against the test host's working directory, not the repository root.** A relative path writes a whole dataset into `.build/…/bin/Release/net9.0/out/` and the run passes, having recorded nothing where anyone will look for it. Pass an absolute path. |
+| 2026-08-23 | Gave the load pass `jump-charge`, the case `G8` is scored on: the drives charge for the 421.9 s their own definition implies, finish, and the ship holds. `Battery.Scenario` gained `Then` and `ThenAfterSeconds` for it, which also generalises the name-matched special case `recovery` had been carried by since it was written. |
+| 2026-08-23 | Gave the load pass its second load case, `full-electrical-charged`, which is what answers `F13`: with the drives full nothing in either of `C12`'s routes has a median crossing at all. The dial that makes it possible found a defect on the way — the jump drive was filed as a *tool*, so `State.Consumers` never reached it — and the change is neutral on 1,794 rows of the previous dataset. |
+| 2026-08-23 | Added the load pass and `load.py`: the load against the clock, which is the dial that is not transport. Three grids share one run loop, one row format and one resume-record-per-pass now; the row format gained a `waste` column, and a cell that does not move the load keeps the name the two earlier grids wrote so their records still match the cells they were taken on. |
+| 2026-08-23 | Added the air pass and `air.py`: the same cells `pairs.py` scores for `G8`, priced in the environment `G6` is decided in. It found the shipped configuration over the substep cap at 200 m/s and every atmospheric figure in [balance.md](../../docs/balance.md) exactly half, taken before `Frequency` went 8 to 4 ([backlog.md](../../docs/backlog.md) `C19`). The two sweeps share one run loop and one row format; what differs is which cells and which scenarios, and each keeps its own resume record so one cannot mark a ship done for the other. |
+| 2026-08-23 | Scored `G8` and found it satisfied at conductivity ×4 with `HeatTimeScale` 80–120. Fixed the defect that had to be fixed first: `pairs.py` took the crossing median over the hulls that crossed, so conductivity ×8 — where 27 of 40 hulls never reach critical — read as the grid's best cell. Non-crossers are censored above now, `test_scoring.py` pins it, and `verdict.py`'s time-to-critical table says in words that its quantiles are over the ships that reached. |
 | 2026-08-23 | Pruned the corpus directory from 68 GB to 32 GB and wrote down [what is in it](#what-is-in-the-corpus-directory-and-what-is-beside-it). 20.6 GB of leavings deleted, 1,840 barren blueprints and 8 oversized ones moved aside rather than deleted because `F14` still has the 25-block floor untested. The inference that a blueprint is barren was checked by parsing all 1,852 — 12 were usable ships and are back — which is also what added `corpus --list`. Fixed `Unpack`, which had silently skipped three legacy archives whose entry names are truncated. |
+| 2026-08-23 | Added `PairSweep` and `pairs.py`: conduction against the clock, sixteen cells, scoring `G8` ([backlog.md](../../docs/backlog.md) `C12`). The three sweeps' CSV reading, blueprint resolution and resume record are one `ShipSet` now rather than three copies. |
 | 2026-08-23 | Wired the retest set to something: `ConductanceRetestWalk` runs it against the world before conductance became real units, and `retest.py` reads the result against G1, G2 and G5 as `verdict.py` already computes them ([backlog.md](../../docs/backlog.md) `C2`). |
+| 2026-08-23 | `verdict.py` prices a `G6` breach beside the verdict — the marker stays where it was written (`E11`), and a reader sees whether a failure is 0.03 K or a hull integrated wrong. The arithmetic moved to `scoring.py` so a test can call it without running a report. `air.py`'s footer no longer says a refused step floors a block's capacity; that mechanism ships off. |
+| 2026-08-23 | Added `provenance.py` and `test_provenance.py`: how much of a fleet's waste heat rests on a fraction nobody sourced. [backlog.md](../../docs/backlog.md) `C21`. |
 | 2026-08-23 | Added `typical.py` and [the retest set](#the-retest-set): the panel picks extremes for a dial sweep, this picks the middle for a regression. |
 | 2026-08-22 | Split the crossing from the loss everywhere the pages had run them together. The survey report's headline said a ship *loses its first block* after nine seconds where it meant *crosses critical*, its table's `First loss` column was the crossing and its `Blocks lost` column was blocks over critical, and the bench page repeated all three. `seconds_to_first_loss` is packed and shown beside the crossing, and reads as absent on every dataset collected before it existed. |
 | 2026-08-22 | The resume is a record rather than a count. A walk writes `done-<walk>.txt` as it finishes each blueprint and reads it on the next start, so relaunching is the whole procedure and `THERMAL_CORPUS_SKIP` is gone ([backlog.md](../../docs/backlog.md) `H2`). Said that off is now spellable in `THERMAL_CORPUS_TESTS` every way anyone reaches for (`H3`). |

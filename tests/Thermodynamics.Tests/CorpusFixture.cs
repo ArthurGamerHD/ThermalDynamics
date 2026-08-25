@@ -417,6 +417,11 @@ namespace Thermodynamics.Tests
 
             GameBlocks.BySubtype();
 
+            // **Every dataset records the build it was collected on**, here rather than in each
+            // walk, because a walk that has to remember is a walk that will not. See
+            // `CorpusRecord.Provenance` for what it cost to establish once without it.
+            CorpusRecord.Provenance(label);
+
             object collect = new object();
             int files = 0;
             int ships = 0;

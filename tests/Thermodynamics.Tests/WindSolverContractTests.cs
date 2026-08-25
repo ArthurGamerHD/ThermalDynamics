@@ -44,6 +44,54 @@ namespace Thermodynamics.Tests
             return inputs;
         }
 
+        /// <summary>
+        /// **What switching the wind off has to mean, held where the switch's behaviour lives.**
+        ///
+        /// <para>
+        /// `EnableWind` lives on the game's `Settings` and is read in `ThermalGridEnvironment` and
+        /// `PlanetProbes`, which are game code a harness cannot construct — it is not on
+        /// `ThermalSettings`, for the reason `EnableTemperatureSync` is not: the wind *field* is
+        /// produced by the host, from a planet and a position the core is never handed. So what is
+        /// testable is the thing the gate relies on:
+        /// that a zero ceiling produces a still, directionless result with every modulation
+        /// neutral. That is why the switch sets the ceiling rather than adding a branch. If this
+        /// ever stopped being true, `EnableWind = false` would leave a wind blowing and nothing
+        /// else would say so (`C7`, and backlog.md `B31`).
+        /// </para>
+        ///
+        /// <para>
+        /// Every other input is left at a lively setting — a 74 m/s ceiling's worth of weather, a
+        /// hillside, full terrain and slope influence — so the result is the ceiling's doing and
+        /// not a still input somewhere else.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void ANoughtCeilingIsAStillDirectionlessWindWithEveryModulationNeutral()
+        {
+            WindSolver.Inputs inputs = Reasonable();
+            inputs.Ceiling = 0f;
+
+            WindSolver.Result result = WindSolver.Solve(ref inputs);
+
+            Assert.Equal(0f, result.Speed);
+            Assert.Equal(Vector3.Zero, result.Direction);
+            Assert.Equal(0f, result.BandShare);
+            Assert.Equal(0f, result.SlopeSpeed);
+            Assert.Equal(0f, result.Gradient);
+            Assert.Equal(0f, result.ChannelDegrees);
+
+            // The multipliers read as *no change* rather than as nothing, so a reader of the
+            // telemetry sees a wind that is absent rather than one that is being shut down.
+            Assert.Equal(1f, result.Profile);
+            Assert.Equal(1f, result.Burial);
+            Assert.Equal(1f, result.SpeedUp);
+            Assert.Equal(1f, result.Shelter);
+
+            // And the same inputs with a ceiling do blow, or the case above proves nothing (`E8`).
+            WindSolver.Inputs blowing = Reasonable();
+            Assert.True(WindSolver.Solve(ref blowing).Speed > 0f);
+        }
+
         private static float[] Hillside(float rise)
         {
             float[] heights = new float[WindTerrain.SampleCount];

@@ -152,6 +152,67 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
+        /// A reactor cooled by a ring, and nothing else: the hull where the plumbing is what sets
+        /// the substep demand.
+        ///
+        /// <para>
+        /// <see cref="Plumbed"/> is the cost fixture and this is the stability one. Its rings sit
+        /// beside the hull carrying nothing, because what it measures is the passes a loop adds to
+        /// a step; on a census hull a light fitting demands more substeps than any ring, so a ring
+        /// there can neither set the demand nor show what refusing it does. Here the loop is the
+        /// stiffest thing on the grid by construction — measured, nine substeps against the one the
+        /// same blocks unplumbed ask for.
+        /// </para>
+        ///
+        /// <para>
+        /// One ring is three by three with a reactor under a sink face; <paramref name="rings"/>
+        /// stacks them along Y so a fixture can be grown without changing what it is a fixture of.
+        /// See stiffness.md, What refusing the demand costs.
+        /// </para>
+        /// </summary>
+        public static Built HeatedRings(int rings = 1, float wasteWatts = 75000f,
+            ThermalSettings settings = null, float parcelsPerSecond = 0f)
+        {
+            if (rings < 1) rings = 1;
+
+            GridBuilder builder = GridBuilder.Large();
+
+            for (int r = 0; r < rings; r++)
+            {
+                List<Vector3I> cells = PipeFitter.RectangleXZ(new Vector3I(0, r * 3, 0), 3, 3);
+
+                // The sink faces down, and the reactor goes under it: a ring only carries heat
+                // where it is bolted to something making it.
+                Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
+                sinks[2] = Vector3I.Down;
+
+                PipeFitter.BuildRing(builder, cells, -1, sinks);
+                builder.Place(Catalog.Reactor(), cells[2] + Vector3I.Down).Wasting(wasteWatts);
+            }
+
+            Built built = Finish(builder.BuildSimulation(Defaults(settings), 300f));
+            built.Producers = rings;
+
+            // Zero leaves the shipped flow alone. A ring lapping faster than a substep is a regime
+            // rather than a speed — above one parcel a substep the transport stops being carried
+            // and becomes mixing — and it is the regime the loop path used to come apart in. See
+            // CoolantFlowTests, and thermal-model.md, Coolant loops.
+            if (parcelsPerSecond > 0f)
+            {
+                IList<CoolantLoop> loops = built.Simulation.Solver.Loops;
+                for (int l = 0; l < loops.Count; l++)
+                {
+                    CoolantLoop loop = loops[l];
+                    loop.Properties.LargeGridFlowRate = parcelsPerSecond * loop.ParcelLengthMetres;
+                    loop.Properties.SmallGridFlowRate = loop.Properties.LargeGridFlowRate;
+                    loop.RefreshFlow();
+                }
+            }
+
+            return built;
+        }
+
+        /// <summary>
         /// A hull driven hard enough that blocks cross their rating and damage events are raised
         /// every step.
         ///

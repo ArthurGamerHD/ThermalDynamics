@@ -12,7 +12,7 @@ namespace Thermodynamics.Tests
     /// that standing over their ground — Titan's atmosphere is 285 m deep, Europa's and the Moon's
     /// are 570 and under, and Triton's peaks stand in vacuum outright. The vertical profile was
     /// being asked about heights with no air at them, and the only thing keeping the answer sane
-    /// was the engine's own wind ceiling reaching zero first. [backlog](../../docs/backlog.md)
+    /// was the engine's own wind ceiling reaching zero first. backlog.md
     /// `B20`.
     /// </para>
     /// </summary>

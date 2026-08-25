@@ -47,12 +47,13 @@ namespace Thermodynamics
         private const string Solver = "Solver";
         private const string Environment = "Environment";
         private const string Display = "Display";
+        private const string Multiplayer = "Multiplayer";
         private const string Other = "Other";
 
         /// <summary>Sections in the order the page reads, top to bottom.</summary>
         private static readonly string[] Order =
         {
-            Transfer, Solar, Occlusion, Systems, Solver, Environment, Display, Other,
+            Transfer, Solar, Occlusion, Systems, Solver, Environment, Multiplayer, Display, Other,
         };
 
         /// <summary>
@@ -77,17 +78,21 @@ namespace Thermodynamics
             { "EnableWasteHeat", new Entry(Systems, "Waste heat", "Power producers, consumers and thrusters turning throughput into heat.", 0, 1) },
             { "EnablePlanets", new Entry(Systems, "Planets", "Per-planet ambient, air and ground temperatures.", 0, 1) },
             { "EnableFriction", new Entry(Systems, "Friction", "Atmospheric heating above the speed threshold.", 0, 1) },
+            { "EnableWind", new Entry(Environment, "Wind", "The wind field and everything that shapes it. Off is no wind anywhere: the game gives a ceiling rather than a wind, so every direction and speed here is this mod's. A grid still feels its own motion through the air.", 0, 1) },
             { "EnableDamage", new Entry(Systems, "Overheat damage", "Blocks above their critical temperature take damage.", 0, 1) },
             { "EnableCoolantLoops", new Entry(Systems, "Coolant loops", "Closed pipe rings acting as one fluid mass.", 0, 1) },
             { "EnableRoomAir", new Entry(Systems, "Room air", "Sealed rooms hold an air mass that carries heat.", 0, 1) },
             { "EnableHeatPumps", new Entry(Systems, "Heat pumps", "The block that moves heat up a gradient for an electrical cost.", 0, 1) },
+
+            { "EnableTemperatureSync", new Entry(Multiplayer, "Replicate temperatures", "The server tells each client what its blocks are actually at: the whole ship once when the ship arrives, then whatever is near failing. Off leaves every client guessing, and a client that guesses can show a block safe for the whole time it is burning.", 0, 1) },
+            { "TemperatureSyncInterval", new Entry(Multiplayer, "Update interval", "Seconds between updates about the blocks near failing. Longer is cheaper; the whole ship is still stated once whatever this says.", 0.5f, 60f) },
 
             // These four had no entry at all, so they fell through to "Other — not yet described"
             // at the bottom of the page, unlabelled and untooltipped. They are the four the field
             // tuning is entirely about: what a step costs and whether it stays stable.
             { "MaxSubsteps", new Entry(Solver, "Substep ceiling", "Most substeps one step may divide itself into. The stability estimate asks for as many as the stiffest block needs; this is the ceiling on granting it, and reaching it is reported as a clamped step.", 1, 64, true) },
             { "MaxSubstepsPerBlock", new Entry(Solver, "Per-block cap", "Most substeps any single block may demand of the whole grid before its heat capacity is floored. 0 leaves every block alone. A handful of light fittings otherwise set the cost of a whole ship. Raise the substep ceiling with it.", 0, 32, true) },
-            { "MaxElementVisitsPerStep", new Entry(Solver, "Step budget", "Most element visits one step may make — substeps times links plus four times nodes — before the step is shortened to fit. 0 removes the bound. Trades simulation rate for frame smoothness on very large grids.", 0, 4000000, true) },
+            { "MaxElementVisitsPerStep", new Entry(Solver, "Step budget", "Most element visits one step may make — substeps times links plus four times nodes — before the step is shortened to fit. 0 removes the bound. Trades simulation rate for frame smoothness on very large grids.", 0, 8000000, true) },
             { "ClampEnvironmentOvershoot", new Entry(Solver, "Clamp environment", "Stops radiation or convection carrying a block past ambient in one substep. Leave on.", 0, 1) },
 
             { "ClampConductionOvershoot", new Entry(Solver, "Clamp conduction", "Stops a step from pushing two blocks past each other's temperature. Leave on.", 0, 1) },
@@ -101,7 +106,7 @@ namespace Thermodynamics
             { "LoopSmallGridFlowRate", new Entry(Systems, "Flow rate, small", "The same for a small grid. Split because it is a balance dial rather than a physical constant: a small-grid pump is a smaller machine driving a shorter ring.", 0f, 40f) },
             { "LoopCoolantMassPerPipe", new Entry(Systems, "Coolant per pipe", "Coolant carried by one pipe block, kg. More is more capacity for the same coupling, so a ring holds heat more steadily and asks less of the integrator.", 1f, 400f) },
             { "LoopSpecificHeat", new Entry(Systems, "Coolant specific heat", "J/(kg K). Water-glycol is about 3400, which is what the shipped fluid is.", 100f, 6000f) },
-            { "LoopConductivity", new Entry(Systems, "Coolant conductivity", "How well heat crosses between the fluid and the pipe carrying it, 0..1.", 0f, 1f) },
+            { "LoopHeatTransferCoefficient", new Entry(Systems, "Coolant heat transfer", "How well heat crosses between the fluid and the wall it touches, W/(m2 K). Convective, so there is no thickness in it: a few hundred is a slow liquid flow and a few thousand is a fast one.", 0f, 2000f) },
             { "LoopPipeContactMultiplier", new Entry(Systems, "Pipe contact", "Scales the coupling between the fluid and its own pipe.", 0f, 5f) },
             { "LoopSinkContactMultiplier", new Entry(Systems, "Sink contact", "Scales the coupling through a sink face into whatever is mounted against it. The stiffest path in the mod: a bolt joint carries 167 W/K and a sink face 1,000.", 0f, 5f) },
             { "LoopStagnantTransferFraction", new Entry(Systems, "Stagnant transfer", "What a stopped ring still carries between neighbouring parcels, 0..1. A ring with no pump is a heat buffer rather than a conductor.", 0f, 1f) },
@@ -142,6 +147,7 @@ namespace Thermodynamics
 
             { "HeatGlow", new Entry(Display, "Blocks glow when hot", "A block glows over the last 100 K before its own critical temperature, full at it and above, so a glow means it is about to go rather than that it is warm. The colour is what a body that hot really looks like: deep red low down, orange high up.", 0, 1) },
             { "HeatWarningSound", new Entry(Display, "Overheat cue", "A cue in the cockpit as a block comes up on its own rating and as it passes it. Heard only by the player at the controls.", 0, 1) },
+            { "HeatTerminalPanel", new Entry(Display, "Terminal readout", "The thermal panel in a block's terminal detail pane. Off leaves the block's own controls alone and draws no text, which is what a world running a second heat mod wants.", 0, 1) },
 
             { "DebugTextOnScreen", new Entry(Display, "Crosshair readout", "Everything the simulation knows about the block being looked at. Also makes the solver record per-mechanism watts, which is not free.", 0, 1) },
             { "DebugSolarRaycast", new Entry(Display, "Draw sun ray", "The sun ray from each grid, white when lit and red when occluded.", 0, 1) },
@@ -323,7 +329,7 @@ namespace Thermodynamics
                 new Leaf("Coolant loops",
                     "EnableCoolantLoops",
                     "LoopLargeGridFlowRate", "LoopSmallGridFlowRate",
-                    "LoopCoolantMassPerPipe", "LoopSpecificHeat", "LoopConductivity",
+                    "LoopCoolantMassPerPipe", "LoopSpecificHeat", "LoopHeatTransferCoefficient",
                     "LoopPipeContactMultiplier", "LoopSinkContactMultiplier",
                     "LoopStagnantTransferFraction"),
                 new Leaf("Heat pumps",
@@ -339,6 +345,10 @@ namespace Thermodynamics
                 new Leaf("Point sources",
                     "EnableHeatSources")),
 
+            new Folder("Multiplayer",
+                new Leaf("Temperatures",
+                    "EnableTemperatureSync", "TemperatureSyncInterval")),
+
             new Folder("World",
                 new Leaf("Climate",
                     "EnablePlanets", "ClimateGroundInfluence", "ClimateWeatherInfluence",
@@ -347,7 +357,15 @@ namespace Thermodynamics
                     "PlanetConvectionCoefficient", "PlanetSolarDecay"),
                 new Leaf("Underground",
                     "PlanetUndergroundTemperature", "PlanetUndergroundDampingDepth",
-                    "PlanetCoreTemperature", "PlanetSealevelDeadzone")),
+                    "PlanetCoreTemperature", "PlanetSealevelDeadzone"),
+
+                // Its own switch at the top of it, like every other system's page. The wind dials
+                // used to fall through to the leftovers page, which is where a mechanism with no
+                // switch ends up (`C7`).
+                new Leaf("Wind",
+                    "EnableWind", "WindRoughnessLength", "WindGradientHeight",
+                    "WindDiurnalAmplitude", "WindDiurnalCrossover",
+                    "WindTerrainInfluence", "WindTerrainRadius", "WindSlopeStrength")),
         };
 
         /// <summary>
@@ -374,7 +392,7 @@ namespace Thermodynamics
         /// server says; the telemetry pair belongs to the world.
         /// </summary>
         private static readonly Leaf DebugPage = new Leaf("Debug",
-            "HeatGlow", "HeatWarningSound",
+            "HeatGlow", "HeatWarningSound", "HeatTerminalPanel",
             "DebugTextOnScreen", "DebugBlockOverlay", "DebugSolarRaycast", "DebugWindRaycast",
             "DebugWindOverlay", "DebugWindIndicator",
             "RoomOverlayMinKelvin", "RoomOverlayMaxKelvin",

@@ -36,6 +36,41 @@ namespace Thermodynamics.Harness
             /// <summary>Mean temperature the band takes damage above, K.</summary>
             public float CriticalTemperature;
 
+            /// <summary>
+            /// How many of the band's six faces carry a mount point, which is how many neighbours a
+            /// block of it can conduct to.
+            ///
+            /// <para>
+            /// **A light hangs off a hull by one face and this table used to bolt it on by six.**
+            /// Every tier was built with <c>BlockModel.Solid</c>, which mounts everywhere, so the
+            /// lightest band — 20 kg against neighbours of 440 — carried six joints where its own
+            /// definition declares one. That is the whole of the gap between the census hull and
+            /// the population it stands in for (backlog.md `C26`), and it
+            /// is `M11`: the tier describes the block it was measured from.
+            /// </para>
+            ///
+            /// <para>
+            /// Taken from the installed definition of <see cref="Example"/>, with **six** where the
+            /// definition declares none — a definition that lists no mount points is a block whose
+            /// mounts the game derives from its model geometry, not a block that mounts nowhere,
+            /// and the corpus walk makes the same fallback. `TheTiersCarryTheMountsTheirBlocksDeclare`
+            /// holds each figure to its definition.
+            /// </para>
+            ///
+            /// <para>
+            /// **The machinery band is the one exception, and it is six rather than its example's
+            /// one.** `Example` is *the most populous subtype in the band, for the record* — it
+            /// documents the band rather than defining it — and a band of every heavy device on a
+            /// ship is not all gyroscopes. A gyro declares a single mount point on its bottom;
+            /// assemblers, refineries and containers mount all round. Taking the gyro's one for the
+            /// whole band puts an eleven-tonne block on a single joint, which is a hull with a
+            /// thermal dead end in it rather than a hull with machinery in it. The bands where the
+            /// example *is* the band — lights, and the three shaped-armour bands — carry what their
+            /// blocks declare.
+            /// </para>
+            /// </summary>
+            public int MountFaces = 6;
+
             /// <summary>The most populous subtype in the band, for the record.</summary>
             public string Example;
         }
@@ -48,14 +83,14 @@ namespace Thermodynamics.Harness
         /// </summary>
         public static readonly Tier[] Tiers =
         {
-            new Tier { Name = "light fitting",   Share = 0.012f, Mass =    20f, Conductivity = 50f, CriticalTemperature =  900f, Example = "SmallLight" },
-            new Tier { Name = "armour tip",      Share = 0.068f, Mass =    59f, Conductivity = 50f, CriticalTemperature =  900f, Example = "LargeBlockArmorCorner2Tip" },
-            new Tier { Name = "armour slope",    Share = 0.147f, Mass =   108f, Conductivity = 50f, CriticalTemperature =  900f, Example = "LargeBlockArmorSlope2Tip" },
-            new Tier { Name = "half armour",     Share = 0.104f, Mass =   194f, Conductivity = 50f, CriticalTemperature =  900f, Example = "LargeHalfArmorBlock" },
-            new Tier { Name = "light armour",    Share = 0.347f, Mass =   440f, Conductivity = 50f, CriticalTemperature =  900f, Example = "LargeBlockArmorBlock" },
-            new Tier { Name = "conveyor",        Share = 0.157f, Mass =   750f, Conductivity = 50f, CriticalTemperature =  900f, Example = "ConveyorTubeDuctT" },
-            new Tier { Name = "heavy armour",    Share = 0.135f, Mass =  2430f, Conductivity = 56.667f, CriticalTemperature =  931f, Example = "LargeHeavyBlockArmorBlock" },
-            new Tier { Name = "machinery",       Share = 0.030f, Mass = 11281f, Conductivity = 55f, CriticalTemperature =  929f, Example = "LargeBlockGyro" },
+            new Tier { Name = "light fitting",   Share = 0.012f, Mass =    20f, Conductivity = 50f, CriticalTemperature =  900f, MountFaces = 1, Example = "SmallLight" },
+            new Tier { Name = "armour tip",      Share = 0.068f, Mass =    59f, Conductivity = 50f, CriticalTemperature =  900f, MountFaces = 3, Example = "LargeBlockArmorCorner2Tip" },
+            new Tier { Name = "armour slope",    Share = 0.147f, Mass =   108f, Conductivity = 50f, CriticalTemperature =  900f, MountFaces = 4, Example = "LargeBlockArmorSlope2Tip" },
+            new Tier { Name = "half armour",     Share = 0.104f, Mass =   194f, Conductivity = 50f, CriticalTemperature =  900f, MountFaces = 5, Example = "LargeHalfArmorBlock" },
+            new Tier { Name = "light armour",    Share = 0.347f, Mass =   440f, Conductivity = 50f, CriticalTemperature =  900f, MountFaces = 6, Example = "LargeBlockArmorBlock" },
+            new Tier { Name = "conveyor",        Share = 0.157f, Mass =   750f, Conductivity = 50f, CriticalTemperature =  900f, MountFaces = 6, Example = "ConveyorTubeDuctT" },
+            new Tier { Name = "heavy armour",    Share = 0.135f, Mass =  2430f, Conductivity = 56.667f, CriticalTemperature =  931f, MountFaces = 6, Example = "LargeHeavyBlockArmorBlock" },
+            new Tier { Name = "machinery",       Share = 0.030f, Mass = 11281f, Conductivity = 55f, CriticalTemperature =  929f, MountFaces = 6, Example = "LargeBlockGyro" },
         };
 
         /// <summary>
@@ -99,7 +134,7 @@ namespace Thermodynamics.Harness
             thermal.Conductivity = 56.667f;
             thermal.CriticalTemperature = ProducerCriticalTemperature;
 
-            producer = BlockModel.Solid("producer", Vector3I.One, ProducerMass, thermal);
+            producer = BlockModel.Solid(ProducerName, Vector3I.One, ProducerMass, thermal);
             return producer;
         }
 
@@ -155,60 +190,99 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
-        /// The same quantities over **8,102 real workshop blueprints**, taken by <c>StiffnessLab</c>
+        /// The same quantities over **8,105 real workshop blueprints**, taken by <c>StiffnessLab</c>
         /// where <see cref="Field"/> is two ships from two vanished sessions. Quoted for a
         /// quarter-second step — <c>Frequency 4</c>, the basis <see cref="Field"/> used — in still
         /// sea-level air at noon, which is a *lower* bound.
         /// See stiffness.md, The same question asked of eight thousand real ships.
+        ///
+        /// <para>
+        /// **Re-measured 2026-08-24 at the pace `C24` ships**, and the figures beside each constant
+        /// are what the same walk read at `ConductionScale` 2.4 and `HeatTimeScale` 225. A substep
+        /// demand is a conductance over a capacity, so both defaults move every number here and
+        /// neither moves them by the same factor: a block whose demand is conduction rises with the
+        /// pace and one whose demand is convection falls with the clock. Comparing a hull measured
+        /// at one pair against a population measured at the other is the comparison `P6` forbids,
+        /// and it is why this walk was re-run rather than the constants adjusted.
+        /// </para>
+        ///
+        /// <para>
+        /// **The population changed shape, not only scale**, and two claims this repository rested
+        /// on went with it. The two modes have closed — a light-limited ship demands 16.83 against
+        /// a structure-limited ship's 7.23, where it was 28.51 against 4.81 — and 49 % of ships now
+        /// sit between 8 and 28 substeps where six per cent did. And air has stopped making much
+        /// difference to *stiffness*: the median hull's stiffest block is 1.07 times stiffer in air
+        /// than out of it, where it was 2.34. Neither says anything about how well air *cools* a
+        /// hull, which is the environment term and is untouched; both say that at four times the
+        /// conduction pace what sets a block's substep demand is its neighbours.
+        /// </para>
         /// </summary>
         public static class Corpus
         {
-            /// <summary>Ships measured. Of 9,989 blueprints; the rest are modded, tiny or unreadable.</summary>
-            public const int Ships = 8102;
+            /// <summary>Ships measured, of 8,144 blueprints; 39 are over the 64 MB reader cap.</summary>
+            public const int Ships = 8105;
 
-            // In air. The percentiles either side of the median are close together and the ones
-            // above it are far apart, which is the bimodality below rather than a long tail.
-            public const float AirP10 = 4.26f;
-            public const float AirP50 = 6.61f;
-            public const float AirP90 = 33.09f;
-            public const float AirMax = 34.45f;
-
-            /// <summary>In vacuum, where the same ships are three to five times softer.</summary>
-            public const float VacuumP50 = 4.79f;
-            public const float VacuumP90 = 6.34f;
-            public const float VacuumMax = 8.64f;
+            // In air. Was 4.26 / 6.61 / 33.09 / 34.45 before C24; the top of the distribution came
+            // down with the clock while the bottom of it went up with the conduction pace, which is
+            // the two modes closing.
+            public const float AirP10 = 6.20f;
+            public const float AirP50 = 7.90f;
+            public const float AirP90 = 18.42f;
+            public const float AirMax = 22.41f;
 
             /// <summary>
-            /// **The population has two modes and nothing much between them.**
-            ///
-            /// A ship's substep count is set by a light or a camera on 45 % of hulls and by armour
-            /// or structure on the rest, and the two groups do not overlap: 28.51 against 4.81 at
-            /// the median. Between 8 and 28 substeps there are about six per cent of ships. A
-            /// single figure describing "a typical ship" therefore describes almost nobody, which
-            /// is the thing two field observations could not have shown.
+            /// In vacuum, where the same ships used to be three to five times softer and are now
+            /// barely softer at all. Was 4.79 / 6.34 / 8.64.
             /// </summary>
-            public const float LitP50 = 28.51f;
-            public const float StructuralP50 = 4.81f;
-            public const float LitShare = 0.450f;
+            public const float VacuumP50 = 7.40f;
+            public const float VacuumP90 = 10.01f;
+            public const float VacuumMax = 13.35f;
+
+            /// <summary>
+            /// **The population had two modes and nothing much between them, and `C24` closed the
+            /// gap.**
+            ///
+            /// A ship's substep count is still set by a light or a camera on 45 % of hulls and by
+            /// armour or structure on the rest — that share did not move at all, 0.4496 against
+            /// 0.450 — but the two groups now differ by 2.3× where they differed by 5.9×: 16.83
+            /// against 7.23, where it was 28.51 against 4.81. Between 8 and 28 substeps there are
+            /// now **49 %** of ships against about six per cent. So a single figure describing "a
+            /// typical ship" describes rather more of them than it used to, and the statements in
+            /// this repository that refuse to quote one are the ones to re-read.
+            /// </summary>
+            public const float LitP50 = 16.83f;
+            public const float StructuralP50 = 7.23f;
+            public const float LitShare = 0.4496f;
+
+            /// <summary>Share of ships between the two modes, 8 to 28 substeps. Was about 0.06.</summary>
+            public const float BetweenTheModes = 0.492f;
 
             /// <summary>
             /// How much stiffer air makes the block that sets a hull's air peak: **the same block's**
-            /// air demand over its own vacuum demand, since two peaks are not a ratio (`E6`). The
-            /// census hull is inside the population at 1.20–1.50 against a real median of 2.34.
+            /// air demand over its own vacuum demand, since two peaks are not a ratio (`E6`).
+            ///
+            /// Was 1.04 / 2.34 / 6.89. At four times the conduction pace a block's neighbours set
+            /// its demand and the air barely adds to it, so the median hull is 1.07 and a tenth of
+            /// them are exactly 1.00 — which is what makes the census hull's own 1.00 ordinary
+            /// rather than the fidelity gap it used to be.
             /// </summary>
-            public const float AirRatioP10 = 1.04f;
-            public const float AirRatioP50 = 2.34f;
-            public const float AirRatioP90 = 6.89f;
+            public const float AirRatioP10 = 1.00f;
+            public const float AirRatioP50 = 1.07f;
+            public const float AirRatioP90 = 2.52f;
 
             /// <summary>
-            /// The census hull's own, on the same basis. Its stiffest block has one or two exposed
-            /// faces where a real ship's has 5.26 on average, so it feels less of the air than a
-            /// typical hull does — a fidelity gap worth recording rather than a defect.
+            /// The census hull's own, on the same basis. Was 1.50 against a population median of
+            /// 2.34; it is now 1.00 against 1.07, so the hull has stopped feeling the air and so
+            /// has a tenth of the population.
             /// </summary>
-            public const float CensusAirRatio = 1.50f;
+            public const float CensusAirRatio = 1.00f;
 
-            /// <summary>Exposed faces on the block that sets a real ship's air peak, mean.</summary>
-            public const float StiffestFacesMean = 5.26f;
+            /// <summary>
+            /// Exposed faces on the block that sets a real ship's air peak, mean. Was 5.26: the
+            /// block that sets the peak has moved inboard along with everything else the pace
+            /// changed.
+            /// </summary>
+            public const float StiffestFacesMean = 3.46f;
 
             // ---- what a real ship makes, against what the census hull makes -------------------
 
@@ -234,11 +308,20 @@ namespace Thermodynamics.Harness
             /// siblings from one dump. **They agree where the choice is made and diverge where it is
             /// not**, which is what confirms the shipped cap's reach.
             /// See stiffness.md, The cap curve holds where the cap is actually set.
+            ///
+            /// <para>
+            /// Re-measured 2026-08-24 at the pace `C24` ships; it read 0.0159 / 0.0720 / 0.3554 /
+            /// 0.5253 before. **The shipped cap of 8 still reaches under a per cent of real blocks**
+            /// — 0.92 %, where it was 1.59 % — and every cap below it reaches more than it did,
+            /// because the population's soft mode has come up to meet the stiff one. The dump it is
+            /// read against was taken before the retune and cannot be re-measured, which is why the
+            /// tests that compare the two now say so rather than pretending to a like-for-like.
+            /// </para>
             /// </summary>
-            public const float FlooredAtCap8 = 0.0159f;
-            public const float FlooredAtCap4 = 0.0720f;
-            public const float FlooredAtCap2 = 0.3554f;
-            public const float FlooredAtCap1 = 0.5253f;
+            public const float FlooredAtCap8 = 0.0092f;
+            public const float FlooredAtCap4 = 0.2322f;
+            public const float FlooredAtCap2 = 0.4033f;
+            public const float FlooredAtCap1 = 0.7589f;
         }
 
         private static BlockModel[] models;
@@ -257,11 +340,37 @@ namespace Thermodynamics.Harness
                 thermal.Conductivity = tier.Conductivity;
                 thermal.CriticalTemperature = tier.CriticalTemperature;
 
-                built[i] = BlockModel.Solid(tier.Name, Vector3I.One, tier.Mass, thermal);
+                built[i] = Mounted(tier.Name, tier.Mass, thermal, tier.MountFaces);
             }
 
             models = built;
             return models;
+        }
+
+        /// <summary>
+        /// A one-cell block that mounts on <paramref name="mountFaces"/> of its six faces and seals
+        /// all of them.
+        ///
+        /// The faces are taken in a fixed order, so a band with one mount always bolts to the same
+        /// side and two hulls built the same way are the same ship. Which side it is does not
+        /// matter to the population figure — what matters is how many joints a block of the band
+        /// has, since a joint is what makes it stiff. Sealing is untouched: a light is airtight and
+        /// its exposure comes from whether a neighbour is there at all.
+        /// </summary>
+        private static BlockModel Mounted(
+            string name, float mass, BlockThermalProperties thermal, int mountFaces)
+        {
+            BlockModel model = BlockModel.Solid(name, Vector3I.One, mass, thermal);
+            if (mountFaces >= Face.Count) return model;
+
+            int state = CellSurface.SelfAirtightMask;
+            for (int face = 0; face < Face.Count; face++)
+            {
+                state = CellSurface.WithSelfMount(state, face, face < mountFaces);
+            }
+
+            for (int i = 0; i < model.LocalSurfaces.Length; i++) model.LocalSurfaces[i] = state;
+            return model;
         }
 
         /// <summary>
@@ -289,12 +398,45 @@ namespace Thermodynamics.Harness
             return Tiers.Length - 1;
         }
 
-        /// <summary>True when the block at <paramref name="index"/> is a heat producer.</summary>
+        /// <summary>
+        /// True when the block at <paramref name="index"/> is a heat producer.
+        ///
+        /// **This is the placement rule and not the identity.** It says which *cell* of a hull
+        /// being laid out gets a producer; what a node in a built hull is, is
+        /// <see cref="IsProducer(ThermalNode)"/>. The two agree on a hull built in the order it was
+        /// laid out, which is every hull here bar one — and `CensusTests` pins that they do, so the
+        /// pair cannot drift.
+        /// </summary>
         public static bool ProducesHeatAt(int index)
         {
             int period = (int)Math.Round(1f / ProducerShare);
             return period > 0 && (index % period) == 0;
         }
+
+        /// <summary>
+        /// True when a node's block *is* a producer, whatever order the hull was built in.
+        ///
+        /// <para>
+        /// **Node index is not block identity, and taking it for one is what `F22` is about.** A
+        /// node's index comes from the order blocks were added, so a hull built cell by cell in a
+        /// different order is the same ship with a permuted index space — and a rule that drives
+        /// "every twentieth node" then drives twenty different blocks. Reading the model the cell
+        /// actually holds is the same answer on any build order.
+        /// </para>
+        /// </summary>
+        public static bool IsProducer(ThermalNode node)
+        {
+            if (node == null || node.Block == null || node.Block.Model == null) return false;
+
+            // By name rather than by reference. The model cache is a plain lazy field, so two
+            // threads racing to build it can each hand out their own instance — and a reference
+            // test would then quietly answer *no* for a perfectly good producer, which is a hull
+            // driving nothing and reporting that it did (`E8`).
+            return node.Block.Model.Name == ProducerName;
+        }
+
+        /// <summary>The model name a producer carries, which is its identity on any build order.</summary>
+        public const string ProducerName = "producer";
 
         /// <summary>
         /// Places one block per cell in the measured proportions, and returns the builder.
@@ -307,17 +449,273 @@ namespace Thermodynamics.Harness
             BlockModel[] tiers = Models();
             BlockModel source = Producer();
 
-            int index = 0;
-            foreach (Vector3I cell in cells)
+            List<Vector3I> layout = new List<Vector3I>(cells);
+            int[] tierOf = new int[layout.Count];
+            HashSet<Vector3I> filled = new HashSet<Vector3I>(layout);
+
+            for (int i = 0; i < layout.Count; i++) tierOf[i] = TierAt(i);
+
+            SurfaceTheLightestTier(layout, tierOf, filled);
+
+            BlockOrientation[] orientations = Bolt(layout, tierOf, tiers, filled);
+
+            for (int i = 0; i < layout.Count; i++)
             {
-                // A producer stands in place of whatever tier the cell would have held, so the
-                // remaining tiers keep their proportions to each other and the hull keeps its
-                // block count.
-                builder.Place(ProducesHeatAt(index) ? source : tiers[TierAt(index)], cell);
-                index++;
+                if (ProducesHeatAt(i))
+                {
+                    // A producer stands in place of whatever tier the cell would have held, so the
+                    // remaining tiers keep their proportions to each other and the hull keeps its
+                    // block count.
+                    builder.Place(source, layout[i]);
+                    continue;
+                }
+
+                BlockModel model = tiers[tierOf[i]];
+                builder.Place(model, layout[i], orientations[i]);
             }
 
             return builder;
+        }
+
+        /// <summary>
+        /// Moves the lightest tier onto the hull's surface, swapping it with whatever was there.
+        ///
+        /// <para>
+        /// **A real ship's stiffest block is one somebody could see.** Measured over 8,105 workshop
+        /// hulls, the block that sets a ship's substep demand in air has **3.46 exposed faces** on
+        /// average and a light sets it on 45 % of them — a light hangs off a hull. The census hull
+        /// deals its tiers out by a hash of a block's position in the layout, so its light fittings
+        /// landed wherever that put them, and the ones that landed inside had six armour neighbours
+        /// and no sky: a 20 kg body with six joints into 440 kg blocks and nothing to radiate from
+        /// is stiffer than anything a builder can make.
+        /// </para>
+        ///
+        /// <para>
+        /// **It went unnoticed while conduction ran at 2.4 and `C24` made it visible**, because a
+        /// buried block's demand is all conduction and quadrupled with the pace while a real ship's
+        /// exposed one is mostly convection and fell with the clock: the hull left the population it
+        /// stands in for at 36.75 substeps against a corpus maximum of 22.41. That is
+        /// backlog.md `C26`, and this is `M11` — the synthetic ship is
+        /// refreshed against the field.
+        /// </para>
+        ///
+        /// <para>
+        /// **Counts are preserved exactly**: this is a permutation of tier onto cell, so every tier
+        /// keeps the share <see cref="TierAt"/> gave it and the hull keeps its block count. Producer
+        /// cells are left where they are, since which cell makes heat is its own placement rule and
+        /// moving it would change what the hull generates as well as where.
+        /// </para>
+        /// </summary>
+        private static void SurfaceTheLightestTier(
+            List<Vector3I> layout, int[] tierOf, HashSet<Vector3I> filled)
+        {
+            const int Lightest = 0;
+
+            List<int> buried = new List<int>();
+            List<int> exposedElsewhere = new List<int>();
+            int[] faces = new int[layout.Count];
+
+            for (int i = 0; i < layout.Count; i++)
+            {
+                faces[i] = ExposedFaces(layout[i], filled);
+                if (ProducesHeatAt(i)) continue;
+
+                if (tierOf[i] == Lightest && faces[i] == 0) buried.Add(i);
+                else if (tierOf[i] != Lightest && faces[i] > 0) exposedElsewhere.Add(i);
+            }
+
+            // **The most exposed cells first, not merely exposed ones.** A hull is mostly flat, so
+            // taking the first surface cell in layout order puts every light on a face with one
+            // open side, where the block that sets a real ship's demand has 3.46. Sorted by open
+            // faces, the lights take the corners and edges a ship hangs them off. Ties keep layout
+            // order, so the result is the same on every run and every build order (`E5`).
+            exposedElsewhere.Sort(delegate(int a, int b)
+            {
+                int byFaces = faces[b].CompareTo(faces[a]);
+                return byFaces != 0 ? byFaces : a.CompareTo(b);
+            });
+
+            // Whatever was on the surface takes the buried cell in exchange, so the swap moves two
+            // blocks and changes no count.
+            int swaps = Math.Min(buried.Count, exposedElsewhere.Count);
+            for (int s = 0; s < swaps; s++)
+            {
+                int inside = buried[s];
+                int outside = exposedElsewhere[s];
+
+                tierOf[inside] = tierOf[outside];
+                tierOf[outside] = Lightest;
+            }
+        }
+
+        /// <summary>
+        /// Turns every block so that it is bolted to something, and to as much as it can be.
+        ///
+        /// <para>
+        /// **The game will not let a player place a block that attaches to nothing**, and a hull
+        /// built out of blocks that mount on some of their faces has to respect that or it is not a
+        /// hull anybody could build. A `LargeBlockGyro` declares one mount point, on its bottom; a
+        /// `SmallLight` declares one. Placed at the identity they all point the same way, and a
+        /// block whose one mount face happens to look at another block that does not mount back has
+        /// **no joints at all** — a body with nothing to conduct to, cooling toward the sky on an
+        /// asymptote that never arrives. Two hulls run at different clocks then never agree about
+        /// it, which is a rig measuring its own hull rather than the input it is about (`E8`).
+        /// </para>
+        ///
+        /// <para>
+        /// So orientations are chosen in layout order: each block takes the one that joins the most
+        /// neighbours, counting a neighbour already placed only where it mounts back and one not
+        /// yet placed where it still could. Deterministic, so two hulls built alike are the same
+        /// ship, and what it cannot fix — a block every neighbour refuses — it reports rather than
+        /// hides.
+        /// </para>
+        /// </summary>
+        private static BlockOrientation[] Bolt(
+            List<Vector3I> layout, int[] tierOf, BlockModel[] tiers, HashSet<Vector3I> filled)
+        {
+            BlockOrientation[] chosen = new BlockOrientation[layout.Count];
+            Dictionary<Vector3I, int> at = new Dictionary<Vector3I, int>(layout.Count);
+            bool[] placed = new bool[layout.Count];
+
+            for (int i = 0; i < layout.Count; i++) at[layout[i]] = i;
+
+            for (int i = 0; i < layout.Count; i++)
+            {
+                // A producer is a solid block and mounts everywhere; leave it at the identity.
+                if (ProducesHeatAt(i))
+                {
+                    chosen[i] = BlockOrientation.Identity;
+                    placed[i] = true;
+                    continue;
+                }
+
+                int state = tiers[tierOf[i]].LocalSurfaces[0];
+                int best = -1;
+
+                foreach (BlockOrientation candidate in Orientations())
+                {
+                    int joined = 0;
+
+                    for (int face = 0; face < Face.Count; face++)
+                    {
+                        if (!CellSurface.SelfMount(state, face)) continue;
+
+                        Vector3I toward = candidate.Rotate(Face.Offsets[face]);
+
+                        int neighbour;
+                        if (!at.TryGetValue(layout[i] + toward, out neighbour)) continue;
+
+                        // An unplaced neighbour still counts: it has not chosen a side yet and can
+                        // take one that mounts back. A placed one counts only if it did.
+                        if (!placed[neighbour] || MountsToward(tiers, tierOf, chosen, neighbour, -toward))
+                        {
+                            joined++;
+                        }
+                    }
+
+                    if (joined <= best) continue;
+
+                    best = joined;
+                    chosen[i] = candidate;
+                }
+
+                placed[i] = true;
+            }
+
+            return chosen;
+        }
+
+        /// <summary>Whether a placed block carries a mount point on the grid direction given.</summary>
+        private static bool MountsToward(
+            BlockModel[] tiers, int[] tierOf, BlockOrientation[] chosen, int index, Vector3I toward)
+        {
+            int state = tiers[tierOf[index]].LocalSurfaces[0];
+
+            for (int face = 0; face < Face.Count; face++)
+            {
+                if (!CellSurface.SelfMount(state, face)) continue;
+                if (chosen[index].Rotate(Face.Offsets[face]) == toward) return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Turns a block so the faces it mounts on are faces that have something to mount to.
+        ///
+        /// <para>
+        /// **A block that mounts on one face is bolted to something with it.** A light hangs off a
+        /// wall; it does not hang off the empty side of one. Placing every partial-mount tier at
+        /// the identity points its one mount face the same way whatever is around it, and a light
+        /// whose mount face happens to look at open space is a block with *no joints at all* —
+        /// twenty kilograms with nothing to conduct to, cooling toward the sky on an asymptote that
+        /// never arrives. That is the shape `E8` is about: it does not fail, it quietly measures a
+        /// hull that is not the one being described.
+        /// </para>
+        ///
+        /// <para>
+        /// So the orientation is chosen per cell: the candidate whose mount faces cover the most
+        /// occupied neighbours, ties going to the first in a fixed order so two hulls built alike
+        /// are the same ship. It is what a builder does without thinking about it.
+        /// </para>
+        /// </summary>
+        private static BlockOrientation FacingItsNeighbours(
+            BlockModel model, Vector3I cell, HashSet<Vector3I> filled)
+        {
+            int state = model.LocalSurfaces[0];
+            int best = -1;
+            BlockOrientation chosen = BlockOrientation.Identity;
+
+            foreach (BlockOrientation candidate in Orientations())
+            {
+                int joined = 0;
+
+                for (int face = 0; face < Face.Count; face++)
+                {
+                    if (!CellSurface.SelfMount(state, face)) continue;
+                    if (filled.Contains(cell + candidate.Rotate(Face.Offsets[face]))) joined++;
+                }
+
+                if (joined <= best) continue;
+
+                best = joined;
+                chosen = candidate;
+            }
+
+            return chosen;
+        }
+
+        /// <summary>The twenty-four ways a block can be turned, in a fixed order.</summary>
+        private static IEnumerable<BlockOrientation> Orientations()
+        {
+            Array directions = Enum.GetValues(typeof(Base6Directions.Direction));
+
+            foreach (Base6Directions.Direction forward in directions)
+            {
+                foreach (Base6Directions.Direction up in directions)
+                {
+                    Vector3 f = Base6Directions.GetVector(forward);
+                    Vector3 u = Base6Directions.GetVector(up);
+                    if (Math.Abs(Vector3.Dot(f, u)) > 0.001f) continue;
+
+                    yield return new BlockOrientation(forward, up);
+                }
+            }
+        }
+
+        /// <summary>How many of a cell's six faces have nothing bolted to them.</summary>
+        private static int ExposedFaces(Vector3I cell, HashSet<Vector3I> filled)
+        {
+            int open = 0;
+
+            if (!filled.Contains(cell + Vector3I.Up)) open++;
+            if (!filled.Contains(cell + Vector3I.Down)) open++;
+            if (!filled.Contains(cell + Vector3I.Left)) open++;
+            if (!filled.Contains(cell + Vector3I.Right)) open++;
+            if (!filled.Contains(cell + Vector3I.Forward)) open++;
+            if (!filled.Contains(cell + Vector3I.Backward)) open++;
+
+            return open;
         }
 
         /// <summary>
@@ -342,7 +740,7 @@ namespace Thermodynamics.Harness
 
             for (int i = 0; i < nodes.Count; i++)
             {
-                if (!ProducesHeatAt(i)) continue;
+                if (!IsProducer(nodes[i])) continue;
 
                 // The waste fraction is what turns power into heat, so the power a producer draws
                 // is the heat it wants divided by that fraction.
@@ -355,6 +753,43 @@ namespace Thermodynamics.Harness
             }
 
             return producers;
+        }
+
+        /// <summary>
+        /// Puts <paramref name="watts"/> of *thrust* heat on every heat producer of the hull, as a
+        /// watt-equivalent of force rather than as power drawn.
+        ///
+        /// <para>
+        /// **A thruster is charged against its thrust and not against its draw**, which is what
+        /// makes a hydrogen thruster heat at all — it draws no electricity. The solver reads
+        /// `ThrustWatts` through `ConsumerWasteEnergy`, so this is a separate term from
+        /// <see cref="DriveCensus"/> and stacks with it: a ship under way is making both.
+        /// </para>
+        ///
+        /// <para>
+        /// It exists for the degraded-input sweep (backlog.md `F17`),
+        /// where thrust is the one input the engine *predicts* on a client rather than replicating,
+        /// so a client's is its own guess about a ship whose physics it is not running.
+        /// </para>
+        /// </summary>
+        public static int DriveThrust(ThermalSimulation simulation, float watts)
+        {
+            IList<ThermalNode> nodes = simulation.Solver.Nodes;
+            int thrusters = 0;
+
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                if (!IsProducer(nodes[i])) continue;
+
+                float waste = nodes[i].Thermal.ConsumerWasteEnergy;
+                if (waste <= 0f) continue;
+
+                nodes[i].Block.ThrustWatts = watts / waste;
+                nodes[i].RefreshHeatGeneration();
+                thrusters++;
+            }
+
+            return thrusters;
         }
     }
 }

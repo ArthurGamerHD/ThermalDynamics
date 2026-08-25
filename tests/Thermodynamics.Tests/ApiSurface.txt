@@ -1,0 +1,29 @@
+# The mod API's published surface, at the major version below.
+#
+# What moves the major: a key that goes away, a key whose signature changes, or a key whose
+# meaning or units change while its signature does not. What does not: a key that is added.
+# The rule behind all three is one sentence — the major moves when a caller written against the
+# previous major could still bind and then be wrong.
+#
+# `ApiVersionMovesWhenTheSurfaceBreaks` compares this file against ThermalApi.cs and fails on a
+# breaking change unless ThermalApi.Version has gone up. Regenerate it in the same commit that
+# moves the version, and never in one that does not.
+version=1
+AddBlockHeat=Func<IMySlimBlock,float,bool>
+AddHeatSource=Func<IMyEntity,float,float,int>
+AddHeatSourceAt=Func<Vector3D,float,float,int>
+AddThreshold=Func<float,int,Action<IMySlimBlock,int,float,float,bool>,int>
+ApiVersion=Func<int>
+GetBlockTemperature=Func<IMySlimBlock,float>
+GetBlockThermals=Func<IMySlimBlock,MyTuple<float,float,float,int>>
+GetGridHeatBalance=Func<IMyCubeGrid,MyTuple<float,float>>
+GetGridSummary=Func<IMyCubeGrid,MyTuple<float,float,int,int>>
+GetRoom=Func<IMyCubeGrid,Vector3I,MyTuple<bool,float,float,float>>
+GetSetting=Func<string,float>
+ListSettings=Func<List<string>>
+RemoveHeatSource=Func<int,bool>
+RemoveThreshold=Func<int,bool>
+SetBlockTemperature=Func<IMySlimBlock,float,bool>
+SetRoomPressure=Func<IMyCubeGrid,Vector3I,float,bool>
+SetSetting=Func<string,float,bool>
+UpdateHeatSource=Func<int,float,bool>

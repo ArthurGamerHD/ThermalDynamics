@@ -23,17 +23,27 @@
 Engineers compiles `Data/Scripts/**/*.cs` itself at world load; the produced `Generic.dll` is
 not shipped or loaded.
 
+**It is a member of `tests/Thermodynamics.slnx`, so the suite's own build compiles it** — building
+the test solution is what checks the mod, and `rules.md` `C11` is why. The test projects link
+`Core/` and a handful of adapter files; everything else that touches the game's assemblies is
+compiled here and nowhere else, so leaving this project out of the build made a rename in `Core`
+invisible until a world load.
+
 ```bash
-dotnet build Generic.csproj -c Release
+dotnet build tests/Thermodynamics.slnx      # everything, mod project included
+dotnet build Generic.csproj -c Release      # the mod project alone
 ```
 
-The `<HintPath>` entries are absolute and point at this machine's Steam library:
+Every `<HintPath>` resolves through `$(SEBinPath)`, which
+[Directory.Build.props](../Directory.Build.props) locates: `SE_BIN` if it is set, then the default
+Steam install on Linux, then the one on Windows. If none of them exists the build says so by name
+rather than producing an unresolved reference per assembly:
 
-```
-/home/gauge/Steam/SteamLibrary/steamapps/common/SpaceEngineers/Bin64/
+```bash
+SE_BIN=/path/to/SpaceEngineers/Bin64 dotnet build tests/Thermodynamics.slnx
 ```
 
-Adjust them for another machine. Two things about that reference set are easy to get wrong:
+Two things about that reference set are easy to get wrong:
 
 * **Target `net48`, not `net472`.** `VRage.Platform.Windows` and its RestSharp dependency are
   built against .NET Framework 4.8; at 4.7.2 they silently fail to resolve.
@@ -130,10 +140,16 @@ while still reading as a description of the code.
 2. **A rules banner where the page argues a standing rule**, citing it by identifier — the rule is
    stated canonically in [rules.md](rules.md) and argued at length here, never the other way round.
 3. **A "Looking for / Go to" table** where a reader might reasonably be on the wrong page. This is
-   what stops the same subject being explained twice in two places.
+   what stops the same subject being explained twice in two places. **Four pages have none and
+   should not**: the two READMEs, [backlog.md](backlog.md) and [rules.md](rules.md) are indexes
+   rather than subjects, so a reader is never on them by mistake. Every other page carries one.
 4. **The body in the present tense**, describing what the code does now. **Not** what it used to do,
-   what was tried, or what a past session found. A measurement's before/after table is present-tense
-   evidence and stays; the narrative around it does not.
+   what was tried, or what a past session found. **Two things read like history and are not**, and
+   both stay: a measurement's before/after table is present-tense evidence, and a correction to
+   something this repository published has to sit where the wrong figure sat, naming what it said
+   (`E10`). What goes is the narrative around them — *this section used to be organised differently*,
+   *that field is gone now*. Swept 2026-08-25: thirty-six sentences in page bodies still say *used
+   to* and every one is a correction or a before/after; the seven that were neither are rewritten.
 5. **Most important information first.** What the thing *is* precedes how it was arrived at; the
    evidence and the engine survey that justify a model come after the model.
 6. **A `## Change log` last**, newest first, one row per date: `| Date | Change |`. This is the only
@@ -143,8 +159,10 @@ while still reading as a description of the code.
 
 Checks that hold this in place: `EveryDocumentIsInTheIndex`, `EveryPageHasAChangeLog`,
 `EveryRelativeLinkResolves`, `EveryAnchorNamesAHeading`, `NoPageNamesATestThatHasBeenRenamed`,
-`EveryQuotedSuiteSizeIsCurrent`, `EveryRuleCitedByAPageExists` and
-`TheRulesPageIndexesEveryRuleItStates`.
+`EveryQuotedSuiteSizeIsCurrent`, `EveryRuleCitedByAPageExists`,
+`TheRulesPageIndexesEveryRuleItStates` and `EveryCitedIdentifierResolves` — the last of which reads
+`.cs` and `.py` files rather than markdown, because a rule or a backlog row cited in a comment is
+a reference that rots exactly like a dead link and nothing was reading those.
 
 ### And in the code
 
@@ -157,9 +175,20 @@ relative markdown link. A link inside a `.cs` file renders nowhere, so nobody cl
 notices when it breaks; `EveryAnchorNamesAHeading` reads markdown only. Both of the two that existed
 in the tree had rotted, one of them into a directory that does not exist.
 
+**This is `R16` and it is checked now.** It was a convention nothing enforced for three days and 155
+more links accumulated across 91 files in that time, including one in `Settings.cs` pointing four
+directories above where it sat. `NoPointerInCodeIsWrittenAsALink` fails on any of them.
+
 The exception is a **test class summary**, which `R10` makes the canonical statement of what that
 class is for — "in its own summary, not in an index". There is no page to move it to, so it stays
 where it is.
+
+**And the two-line limit is about a comment inside a body, not about a summary.** Measured over the
+tree: 2,347 running `//` comments, 73 % of them one or two lines and 72 over five — the limit
+describes those, and they are the ones that rot, because they sit beside code that moves. The 4,838
+`///` summaries run to 24,380 lines and 62 % are longer than two lines; a summary sits on a name,
+which does not move under it, and the longest of them carry an experiment's controls. The test on a
+summary is `R14`'s: does it state what the thing is, or argue what a page argues?
 
 ## Do not restructure `Models/`
 
@@ -175,6 +204,7 @@ Naming pattern under `Models/Gauge/{LG,SG}/`:
 
 | Suffix | Meaning |
 | --- | --- |
+| 2026-08-25 | Said which two things read like history and stay — a before/after measurement, and an `E10` correction sitting where the wrong figure sat — because a flat *present tense only* reading of this convention deletes exactly the evidence the rules require. Also scoped the two-line comment limit to a comment inside a body, measured. |
 | 2026-08-22 | Took the repository layout tree and the build-and-test instructions off the [README](../README.md), which is written to be pasted into the workshop and read by a player ([backlog.md](backlog.md) `H5`). Nothing in them was wrong; they were in the wrong place, and the documentation index moved to [docs/README.md](README.md) for the same reason. |
 | *(none)* | Full-detail model |
 | `_LOD1` … `_LOD3` | Progressively lower detail |

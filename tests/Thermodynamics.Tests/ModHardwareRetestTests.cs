@@ -73,13 +73,16 @@ namespace Thermodynamics.Tests
                 "the stiffer radiator should not leave the source hotter: "
                 + shipped.SourceKelvin + " K shipped against " + before.SourceKelvin + " K before");
 
-            // **Measured 2026-08-23: 12.07 K at eight radiators**, rising from 5.34 K at one and
-            // flat at 12.44 K by thirty-two. Pinned as a band rather than a point because the
-            // figure moves with any change to the radiator's area or emissivity; what must not
-            // change quietly is that 2.84x the conductance is worth about a dozen kelvin on a stack
-            // whose limit is the area it radiates from rather than the rate heat reaches it.
+            // **Measured 2026-08-24 at the pace C24 ships: 21.12 K at eight radiators**, rising
+            // from 4.12 K at one and flat at 24.90 K by thirty-two. It was 12.07 K at eight before
+            // the retune, on the same 2.84x — four times the pace carries more of the difference
+            // into the stack, which is the same fact as every other row this retune moved. Pinned
+            // as a band rather than a point because the figure moves with any change to the
+            // radiator's area or emissivity; what must not change quietly is that 2.84x the
+            // conductance is worth a few tens of kelvin on a stack whose limit is the area it
+            // radiates from rather than the rate heat reaches it.
             float saved = before.SourceKelvin - shipped.SourceKelvin;
-            Assert.InRange(saved, 5f, 20f);
+            Assert.InRange(saved, 10f, 35f);
         }
 
         /// <summary>
@@ -120,19 +123,35 @@ namespace Thermodynamics.Tests
         /// Both rigs have to have actually run: a rig whose source never heated is a rig whose
         /// comparison is two room temperatures, and it reports "no change" in the same shape as a
         /// real null result (`E8`).
+        ///
+        /// <para>
+        /// **Read against the unloaded rig rather than against a temperature.** This asked for
+        /// 310 K, which was a fact about the old conduction pace and not about the load: at the
+        /// pace `C24` ships, eight radiators hold a 75 kW source at 272 K, which is the stack
+        /// working rather than the rig idling. The control is the same stack with nothing making
+        /// heat, which falls to the sky in shadow — so what says a rig is loaded is the distance
+        /// between the two.
+        /// </para>
         /// </summary>
         [Fact]
         public void BothRigsHeatTheirSource()
         {
             ModHardwareRetest.Row stack = ModHardwareRetest.RadiatorStack(8, false);
             ModHardwareRetest.Row ring = ModHardwareRetest.CoolantRing(6, 5, false);
+            ModHardwareRetest.Row unloaded = ModHardwareRetest.RadiatorStack(8, false, 0f);
 
-            Assert.True(stack.SourceKelvin > 310f,
-                "the radiator rig's source only reached " + stack.SourceKelvin + " K, so it is not "
-                + "under load and the comparison means nothing");
-            Assert.True(ring.SourceKelvin > 310f,
-                "the ring rig's source only reached " + ring.SourceKelvin + " K, so it is not under "
-                + "load and the comparison means nothing");
+            Assert.True(unloaded.SourceKelvin < 100f,
+                "the unloaded stack settled at " + unloaded.SourceKelvin + " K, so it is not the"
+                + " control this reads the loaded rigs against");
+
+            Assert.True(stack.SourceKelvin > unloaded.SourceKelvin + 150f,
+                "the radiator rig's source reached " + stack.SourceKelvin + " K against "
+                + unloaded.SourceKelvin + " K with no load, so it is not under load and the"
+                + " comparison means nothing");
+            Assert.True(ring.SourceKelvin > unloaded.SourceKelvin + 150f,
+                "the ring rig's source reached " + ring.SourceKelvin + " K against "
+                + unloaded.SourceKelvin + " K with no load, so it is not under load and the"
+                + " comparison means nothing");
         }
 
         /// <summary>

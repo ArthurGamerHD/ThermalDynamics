@@ -18,6 +18,7 @@ namespace Thermodynamics.Tests
     /// item — see engine-notes.md and scale-design.md, Implementation status.
     /// </para>
     /// </summary>
+    [Collection("alone")]
     public class Se2LatticeTests
     {
         /// <summary>The common lattice the eight SE2 block sizes share.</summary>

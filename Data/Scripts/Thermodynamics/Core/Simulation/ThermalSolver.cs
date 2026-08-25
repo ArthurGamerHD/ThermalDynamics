@@ -42,7 +42,6 @@ namespace Thermodynamics.Core
         private readonly SurfaceMap surfaces;
 
         private readonly List<ThermalNode> nodes = new List<ThermalNode>();
-        private readonly Dictionary<long, ThermalNode> nodesByKey = new Dictionary<long, ThermalNode>();
         private readonly List<ThermalLink> links = new List<ThermalLink>();
         private readonly List<CoolantLoop> loops = new List<CoolantLoop>();
         private readonly List<RoomAirNode> roomAir = new List<RoomAirNode>();
@@ -443,9 +442,6 @@ namespace Thermodynamics.Core
         public float LastRequiredSubsteps { get; private set; }
 
         /// <summary>
-        /// Substeps one node alone would need for a full step, from its real heat capacity.
-        /// <see cref="LastRequiredSubsteps"/> is the maximum of this over all nodes. Public so
-        /// <summary>
         /// W/K out of one node through every link it has — the conductive half of what a block can
         /// shed, and the only half a buried block has.
         /// </summary>
@@ -457,6 +453,9 @@ namespace Thermodynamics.Core
             return nodeConductanceTotal[index];
         }
 
+        /// <summary>
+        /// Substeps one node alone would need for a full step, from its real heat capacity.
+        /// <see cref="LastRequiredSubsteps"/> is the maximum of this over all nodes. Public so
         /// per-block-type telemetry can attribute a grid's substep count to specific definitions.
         /// </summary>
         public float NodeSubstepDemand(int index)
@@ -523,12 +522,14 @@ namespace Thermodynamics.Core
         {
             if (block == null) throw new ArgumentNullException("block");
             if (block.Thermal.ExcludeFromSimulation) return null;
-            if (nodesByKey.ContainsKey(block.Key)) return nodesByKey[block.Key];
+
+            ThermalNode existing = GetNode(block);
+            if (existing != null) return existing;
 
             ThermalNode node = new ThermalNode(block, grid.GridSize, initialTemperature, settings.HeatTimeScale);
             node.Index = nodes.Count;
             nodes.Add(node);
-            nodesByKey[block.Key] = node;
+            block.NodeIndex = node.Index;
 
             // Appending moves no existing index and invalidates no existing link, so the node is
             // queued for incremental linking rather than dirtying the whole graph.
@@ -545,14 +546,14 @@ namespace Thermodynamics.Core
         {
             if (block == null) return false;
 
-            ThermalNode node;
-            if (!nodesByKey.TryGetValue(block.Key, out node)) return false;
+            ThermalNode node = GetNode(block);
+            if (node == null) return false;
 
             // A removal moves another node into the hole, so a step in flight would be summing
             // watts against indices that no longer refer to the same blocks.
             AbandonStep();
 
-            nodesByKey.Remove(block.Key);
+            block.NodeIndex = -1;
 
             // A node still waiting to be linked has no links and no chain entry, so it is dropped
             // from the queue rather than routed through the incremental removal path.
@@ -570,6 +571,7 @@ namespace Thermodynamics.Core
                 for (int i = node.Index; i < nodes.Count; i++)
                 {
                     nodes[i].Index = i;
+                    nodes[i].Block.NodeIndex = i;
                 }
                 resyncAll = true;
             }
@@ -598,8 +600,8 @@ namespace Thermodynamics.Core
         {
             if (block == null) return false;
 
-            ThermalNode node;
-            if (!nodesByKey.TryGetValue(block.Key, out node)) return false;
+            ThermalNode node = GetNode(block);
+            if (node == null) return false;
 
             // A full rebuild is already due, or the node has never been linked: either way the
             // links this would unpick do not exist yet.
@@ -635,16 +637,28 @@ namespace Thermodynamics.Core
             surfaces.GetExposedFaces(block, rooms, exposureScratch);
             for (int f = 0; f < Face.Count; f++)
             {
-                node.ExposedFaces[f] = exposureScratch[f];
+                node.SetExposedFaces(f, exposureScratch[f]);
             }
             node.RefreshExposure();
         }
 
+        /// <summary>
+        /// This block's node, or null where it has none in *this* solver.
+        ///
+        /// The index lives on the block rather than in a dictionary here (`E1`), and it is checked
+        /// rather than trusted: an index left behind by another solver, or by a rebuild that moved
+        /// the node, resolves to null exactly as a dictionary miss did. See
+        /// <see cref="BlockInstance.NodeIndex"/>.
+        /// </summary>
         public ThermalNode GetNode(BlockInstance block)
         {
             if (block == null) return null;
-            ThermalNode node;
-            return nodesByKey.TryGetValue(block.Key, out node) ? node : null;
+
+            int index = block.NodeIndex;
+            if (index < 0 || index >= nodes.Count) return null;
+
+            ThermalNode node = nodes[index];
+            return node != null && ReferenceEquals(node.Block, block) ? node : null;
         }
 
         public ThermalNode GetNodeAt(Vector3I cell)
@@ -1066,7 +1080,7 @@ namespace Thermodynamics.Core
                 surfaces.GetExposedFaces(node.Block, exposureMap, exposureScratch);
                 for (int f = 0; f < Face.Count; f++)
                 {
-                    node.ExposedFaces[f] = exposureScratch[f];
+                    node.SetExposedFaces(f, exposureScratch[f]);
                 }
                 node.RefreshExposure();
             }
@@ -1123,7 +1137,7 @@ namespace Thermodynamics.Core
                 surfaces.GetExposedFaces(block, rooms, exposureScratch);
                 for (int f = 0; f < Face.Count; f++)
                 {
-                    node.ExposedFaces[f] = exposureScratch[f];
+                    node.SetExposedFaces(f, exposureScratch[f]);
                 }
                 node.RefreshExposure();
             }
@@ -1586,7 +1600,7 @@ namespace Thermodynamics.Core
                 float inverse = 1f / total;
                 for (int f = 0; f < Face.Count; f++)
                 {
-                    nodeFaceWeights[b + f] = node.ExposedFaces[f] * inverse;
+                    nodeFaceWeights[b + f] = node.GetExposedFaces(f) * inverse;
                 }
             }
         }
@@ -1622,6 +1636,20 @@ namespace Thermodynamics.Core
             for (int i = 0; i < linkCount; i++)
             {
                 if (h * linkConductance[i] >= ClampBindingMargin * linkMassFactor[i]) return true;
+            }
+
+            // The two lumped masses, on their own terms. A node's total covers the links a loop or
+            // a room hangs on it, and says nothing about whether the fluid or the air on the other
+            // end of them can be overshot: a parcel is one mass carrying every link on it.
+            for (int l = 0; l < loops.Count; l++)
+            {
+                if (h * SegmentConductance(l) >= ClampBindingMargin * EffectiveLoopMass(l)) return true;
+            }
+
+            for (int r = 0; r < roomAir.Count; r++)
+            {
+                if (!roomAir[r].HasAir) continue;
+                if (h * RoomConductance(r) >= ClampBindingMargin * EffectiveRoomMass(r)) return true;
             }
 
             return false;
@@ -1883,18 +1911,8 @@ namespace Thermodynamics.Core
                             + (f4 * windWeights[4]) + (f5 * windWeights[5]);
                     }
 
-                    // A face in the airflow sheds more heat, and one in the lee sheds what it would
-                    // have shed in still air — **never less**. Forced convection adds to natural
-                    // convection rather than replacing it, so the factor spans 1..2 rather than
-                    // 0.5..1, and the contrast between a windward face and a lee one is the same
-                    // two-to-one it always was.
-                    //
-                    // Spanning 0.5..1 made wind a net *warmer* below about 50 m/s: most of a closed
-                    // hull's exposed faces do not point into the wind, so the geometric term lost
-                    // more than the speed term gained, and a hull making 2 MW settled 0.9 K hotter
-                    // in a 40 m/s wind than in still air. See backlog B29.
-                    //
-                    // It depends on geometry and wind, not temperature.
+                    // Spans 1..2, so a lee face sheds what still air sheds and never less.
+                    // Geometry and wind, not temperature. See thermal-model.md, Convection.
                     float windFactor = windy ? 1f + wind : 1f;
 
                     nodeConvectionRow[i] = convecting
@@ -2275,7 +2293,9 @@ namespace Thermodynamics.Core
         {
             if (!settings.EnableCoolantLoops) return;
 
-            bool clamp = settings.ClampConductionOvershoot;
+            // The live flag rather than the setting: it is what says the per-node relaxation row
+            // was filled this step, and a step that cannot overshoot has nothing to clamp.
+            bool clamp = ConductionClampLive;
 
             for (int l = 0; l < loops.Count; l++)
             {
@@ -2341,8 +2361,14 @@ namespace Thermodynamics.Core
                             loop.SegmentThermalMass,
                             nodeThermalMass[link.NodeIndex]);
 
-                        // Then the ring's own limit, which the pairwise bound cannot see.
-                        exchange *= relaxation;
+                        // Then the stricter of the two ends' own limits, which no pairwise bound can
+                        // see: the ring's, so one parcel's links cannot together overshoot it, and
+                        // the block's, so a sink face and the neighbours it is bolted to cannot.
+                        // Applied to one exchange, so what leaves the parcel still enters the block.
+                        // stiffness.md, What refusing the demand costs.
+                        float scale = relaxation;
+                        if (nodeRelaxation[link.NodeIndex] < scale) scale = nodeRelaxation[link.NodeIndex];
+                        if (scale < 1f) exchange *= scale;
                     }
 
                     nodeWatts[link.NodeIndex] += exchange;
@@ -2368,7 +2394,8 @@ namespace Thermodynamics.Core
         {
             if (!settings.EnableRoomAir) return;
 
-            bool clamp = settings.ClampConductionOvershoot;
+            // As in AccumulateLoops: the live flag is what says the relaxation row exists.
+            bool clamp = ConductionClampLive;
             bool diagnostics = CollectDiagnostics;
 
             if (diagnostics)
@@ -2386,6 +2413,21 @@ namespace Thermodynamics.Core
 
                 float airTemperature = air.Temperature;
 
+                // The air's own limit, in the shape a parcel of coolant takes it: what every
+                // surface bounding the room pulls, together, against the capacity of the air
+                // between them.
+                float roomRelaxation = 1f;
+                if (clamp && h > 0f)
+                {
+                    float mass = EffectiveRoomMass(r);
+                    float total = RoomConductance(r);
+                    if (mass > 0f && total > 0f)
+                    {
+                        float stable = mass / (h * total);
+                        if (stable < 1f) roomRelaxation = stable;
+                    }
+                }
+
                 for (int i = 0; i < air.Links.Count; i++)
                 {
                     RoomLink link = air.Links[i];
@@ -2400,6 +2442,13 @@ namespace Thermodynamics.Core
                             watts, h, difference,
                             air.ThermalMass,
                             nodeThermalMass[link.NodeIndex]);
+
+                        // The same two limits the ring takes: a room's air touches every surface
+                        // bounding it, so its links are the many-to-one shape the pairwise bound
+                        // cannot hold, and so are a bulkhead's.
+                        float scale = roomRelaxation;
+                        if (nodeRelaxation[link.NodeIndex] < scale) scale = nodeRelaxation[link.NodeIndex];
+                        if (scale < 1f) watts *= scale;
                     }
 
                     nodeWatts[link.NodeIndex] += watts;

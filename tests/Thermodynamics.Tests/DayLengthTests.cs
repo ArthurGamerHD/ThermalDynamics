@@ -12,7 +12,7 @@ namespace Thermodynamics.Tests
     /// `AmbientLagSeconds` was 45 absolute seconds against a rotation a server sets to anything: it
     /// attenuates a four-minute day to less than half and does nothing at all to a two-hour one, so
     /// one authored figure meant a different climate on every world it was applied to.
-    /// [backlog](../../docs/backlog.md) `C6`.
+    /// backlog.md `C6`.
     /// </para>
     ///
     /// <para>

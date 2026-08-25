@@ -26,6 +26,7 @@ namespace Thermodynamics.Tests
     /// would catch.
     /// </para>
     /// </summary>
+    [Trait("speed", "slow")]
     public class SunLitSliceTests
     {
         /// <summary>Large enough that no budget below completes a sweep in one frame.</summary>

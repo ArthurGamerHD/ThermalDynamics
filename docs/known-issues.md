@@ -4,8 +4,8 @@ What this mod deliberately does not model, what is still open, and the failure p
 carrying forward. Open work is tracked one line each in [backlog.md](backlog.md); this page carries
 the argument behind each entry.
 
-> The rules argued here are stated canonically in [rules.md](rules.md): `E2` `E9` `D3` `D5` `D6`,
-> and the principle P14 the deliberate limits follow from.
+> The rules argued here are stated canonically in [rules.md](rules.md): `E2` `E9` `D2` `D3` `D5`
+> `D6` `C9`, and the principle P14 the deliberate limits follow from.
 
 | Looking for | Go to |
 | --- | --- |
@@ -20,6 +20,23 @@ the argument behind each entry.
 
 Each of these is a simplification taken on purpose, with the price written down. A limit is not a
 defect; a limit nobody wrote down is.
+
+**Heat leaves the world with a block that leaves it, and arrives at ambient with one that is
+built.** Energy conservation is one of the three solver invariants and it is a statement about a
+*step*: within a step nothing is created or lost, to the last bit. The moment the block population
+changes it is not a statement about anything. A destroyed block takes its energy with it, a block
+ground down takes its energy with it, and a welded block arrives at the world's ambient temperature
+whatever it is bolted to — so energy leaves and enters with no accounting at all.
+
+**This is on purpose and the alternative is worse.** Conserving it means a grinder that heats the
+ship around it and a welder that chills it, which is a mechanism a player would never connect to a
+cause, at the cost of a redistribution pass on every block change (`P14`). What it costs as it
+stands is that a hull losing blocks in a fire cools slightly faster than the physics says, in the
+one situation where nobody is reading a number.
+
+`EnergyIsNotConservedWhenTheBlockPopulationChanges` pins both halves — the total falls by exactly
+the departing node's energy, no neighbour moves, and a welded block arrives at ambient — because a
+limit that is only described is a limit somebody rediscovers as a bug (`D5`).
 
 **The lab never destroys a block, so a peak temperature above critical is not a prediction.** The
 solver raises an `OverheatEvent` when a node passes its critical temperature, but applying that
@@ -44,20 +61,88 @@ Closing it properly means the harness modelling destruction — removing the nod
 graph, and stopping the source — which is a solver-wide change to answer a question the censored
 reading already answers.
 
+**A refused substep demand is an approximation on every path now, and on two of them it was a
+divergence.** Fixed 2026-08-24, and it was [backlog.md](backlog.md) `A10`. The pairwise overshoot
+clamp bounds one exchange at the energy that brings *that pair* to equilibrium, which is the whole
+bound a block needs and half the bound a lumped mass needs: a coolant parcel carries a link to every
+pipe on it and a room's air a link to every surface bounding it, so their links together could take
+several times the energy that equalises them. The other end had the same shape — a pipe with a sink
+face is a node pulled on by the parcel and by everything it is bolted to. Each bound held and the
+node went past both. Measured on the fixture where the plumbing sets the demand, at 9.7× over-
+subscribed with the ring mixing: **1.3 × 10²⁵ K before, 1,799 K after**, against 335 K granted in
+full. The room path was the same defect and never had a test on it: a thin room refused one substep
+of thirty reached **3,839 K** of spread on a hull that started 300 K apart with nothing making heat.
+
+The fix is the per-node relaxation the conduction pass already used, applied to the coupled passes
+too — every exchange at a node scaled so their sum cannot exceed the energy that equalises it, which
+makes a substep a convex combination of the temperatures pulling on that node and so unable to leave
+the range they span. It is inert while the demand is granted, which is every step on every grid this
+mod ships to except the ones over `MaxSubsteps`, and the block ladder below is unmoved by it to
+three decimal places. `RefusingTheRingsDemandApproximatesRatherThanDiverging`,
+`NoNodeIsDrivenPastTheHottestThingPullingOnIt`, `RefusingTheAirsDemandApproximatesRatherThanDiverging`
+and `TheClampIsInertWhileTheDemandIsGranted` pin the four halves of that.
+
+**The global substep ceiling used to bind in thick air at flying speed, and `C24` closed it.**
+`MaxSubsteps` grants 64. In vacuum a 49-ship panel of real hulls asked 7.1 at p95 and nothing was
+close to it; at 200 m/s in thick air the same panel's p99 demand was **73.4 and 14 of 50 hulls were
+refused**, every one at 1.14–1.15× over-subscribed. A refused step is integrated at the ceiling with
+the overshoot clamps bounding each exchange, and it cost **0.028 K** on the hottest block over 600
+simulated seconds.
+
+At the pair that now ships the same 40-hull panel's worst p99 is **35.12 of 64** — 55 % of the cap,
+**0 of 40 hulls refused** in every environment, and 60 % projected to 300 m/s. The demand this
+criterion is decided by is convection-limited, so it came down with the clock, and `G6` passes on
+the shipped configuration. What went the other way is vacuum, where the same hulls demand 1.6× what
+they did: nothing near the cap, but the element-visit allowance is a different bound and the retune
+does reach it. **`C27` measured that and found the premise the wrong way round** — the allowance
+binds in *air*, at about a third the grid size vacuum needs, and what it costs was priced and the
+default doubled. See [configuration.md](configuration.md#what-a-shortened-step-costs).
+
+The trade the old breach represented is kept in
+[configuration.md](configuration.md#the-approximation-that-shipped-on-and-no-longer-does), because
+it is the reasoning a future retune would need again rather than a fact about what ships.
+
+**A grid the element-visit allowance binds runs its thermal clock slow, and that is the largest
+approximation this mod ships.** `MaxElementVisitsPerStep` grants 4,000,000 element visits to one
+grid's step, and a step that costs more is spread over more frames rather than being refused
+anything — so nothing is *coarsened*, no exchange is clamped, and every substep is exactly as
+faithful as it would have been. What is lost is time: the grid's heat advances slower than the
+world's.
+
+**It sat outside this list until 2026-08-24 because "no accuracy is lost" reads as "nothing is
+lost", and `C27` priced the difference.** A slow clock is worth **0.00 K on a parked ship** — two
+hulls heading for the same equilibrium agree once they arrive — and under a load that is *moving*
+it is **1.19 K standing at a 5 % deficit and 36.98 K at 60 %**. Beside 0.028 K for the substep
+ceiling this world accepts and 0.607 K for the per-block cap it refuses to ship, that makes this the
+biggest thing the mod gives up by default and the last of the three to be measured.
+
+**Where it binds is air, not vacuum, and at about a third the grid size.** A settled, driven census
+hull kept all of real time to about 32,000 blocks in vacuum, 16,000 on a planet surface and 9,000 in
+flight at the 2,000,000 this setting carried before `C27`; seven ships in eight in the corpus are
+under 8,904 blocks and never reach it in any world. `0` removes the bound and is the faithful end of
+the ladder — the shipped default is deliberately not that end, which is the one place the defaults
+are not the most faithful configuration the model has, and
+[document-of-intent.md](document-of-intent.md#where-the-goals-and-the-code-disagree) carries why.
+See [configuration.md](configuration.md#what-a-shortened-step-costs).
+
 **Planet and asteroid shadow is per grid; only other grids shade individual faces.** A grid's own
 shadow is per face (`SolarSelfShadowing`) and so is another grid's (`SolarGridShadows = full`), but a
 planet's or an asteroid's dims the whole grid by the share of sampled rays that were blocked
 (`SolarOcclusionSamples`). A capital ship crossing a terminator therefore ramps rather than
 switching, but never carries a shadow edge across its own hull.
 
-**This is no longer filed as a limit taken and left.** It is now the top rung of
-[backlog](backlog.md) `A9`, which asks for occlusion as an ordered ladder of configurations from a
-single centre ray to per-face shadow for every occluder, with the most realistic rung shipped by
-default. The cost objection that justified the limit — *per-block would need the ray count to scale
-with block count* — survives for terrain and voxels and does **not** hold for the planet, which is
-the occluder that matters: `OcclusionMath.IsOccludedBySphere` is a normalise, a dot and an `atan`
-with no ray in it, so evaluating it per exposed face is arithmetic on a pass the self-shadow already
-walks.
+**It is the top rung of [backlog](backlog.md) `A9`, and it is now priced.** The cost objection that
+justified the limit — *per-block would need the ray count to scale with block count* — survives for
+terrain and voxels and does **not** hold for the planet: `OcclusionMath.IsOccludedBySphere` is a
+normalise, a dot and an `atan` with no ray in it, so evaluating it per exposed face is arithmetic on
+a pass the self-shadow already walks. What was never measured is what it would be worth, and read
+per block that is **linear in hull length at about 0.0018 K a metre**: 0.07 K on a 25 m hull, 0.29 K
+at 150 m, 1.11 K at 600 m and 4.53 K at 2,500 m, on the worst-placed block of a crossing. The
+cadence the rung does not touch adds about half a kelvin whatever the hull, so **below 300 m the
+interval is the larger half of the error and above it the geometry is**. *(Every figure here scales with
+`HeatTimeScale` and moved when `C24` took it from 225 to 90: the geometry did not change, the kelvin
+a second of sunlight buys did. The change log below carries what they were.)* The limit therefore stays taken, with a
+number on it rather than an argument: see [configuration.md](configuration.md#external-shadow).
 
 **Point sources are not occluded.** A registered heat source heats through walls and through other
 ships. Occlusion is left to the host, which can simply not register a source it knows is hidden.
@@ -75,6 +160,13 @@ difference would be invisible next to the heat its neighbours carry, and trackin
 per-block event on the construction path plus a rule for what a half-built block conducts. The
 machinery to support it exists — `RefreshBlock` handles a geometry change correctly and cheaply —
 so this can be revisited by hooking build state to it, and nothing else would need to change.
+
+**The *same mass* half of that is an assumption rather than a measurement**, and it may already be
+false. `SweepMass` polls `IMySlimBlock.Mass` every eight steps, which is a poll rather than the
+event this paragraph says nothing raises — so if the game reports a partially-built block as
+lighter, its heat capacity is already following build state and this limit is describing a mod that
+no longer exists. Conductivity and mounting are unaffected either way. It is
+[backlog.md](backlog.md) `F24`, and only a session answers it.
 
 **A surface is two constants, not a spectrum.** Emission and absorption are separate numbers now —
 `Emissivity` and `SolarAbsorptivity`, the second following the first unless a definition declares it
@@ -145,10 +237,25 @@ spot is the price of not burying every real finding under three hundred false on
 
 ## Open defects
 
-**Temperatures are not reconciled between server and clients.** Clients run their own simulation
-from the same inputs and reach the same answers, but nothing reconciles them: a client that joins
-mid-session starts from saved temperatures, and divergence is never corrected. Damage and settings
-are server authoritative, so nothing a client believes changes what happens to the ship.
+**Temperatures were not reconciled between server and clients. They are now, and the transport is
+the one part of it no test can reach.** Clients run their own simulation from the same inputs, and a
+client that joins mid-session starts from saved temperatures; nothing corrected the difference.
+`ThermalGridSync` does: a client that has finished building a grid asks the server to state it, the
+server answers with every block, and after that it states the near-critical band every
+`TemperatureSyncInterval` seconds. Both halves and their interval come from the measurements below,
+and the protocol classes are `HotTailMessage`, `HotTailSchedule` and `HotTailState` under
+`Core/Sync`, all of which are game-free and tested.
+
+**What is still open is the session.** Registration, addressing, the sync-distance gate and the send
+itself are host code that cannot run outside a live server, so none of it is covered by a test and
+none of it can be. What stands in for one is a pair of counters: `/thermal sync` prints what this
+machine has sent, asked for, refused and applied, and running it on both sides is what says which
+half is not moving. The mechanism has a switch for the same reason — `EnableTemperatureSync` — and
+the failure it guards against is the one this repository keeps finding: a mechanism correct
+everywhere it is exercised and inert everywhere it runs.
+
+Damage and settings remain server authoritative, so nothing a client believes changes what happens
+to the ship. What a client believes is what it is *shown*, which is the whole point.
 
 **Measured, and it is not as cosmetic as it reads.** `-- drift` runs the same hull twice from states
 a stated distance apart and watches the disagreement decay — the model is dissipative, so a client
@@ -175,7 +282,355 @@ over, which is the readout being wrong about the one thing it is for.
 worst block is 105 K out against a mean of 20 K, so a single scalar per grid would correct the
 armour and leave the blocks that matter wrong. What has to be replicated is the near-critical tail —
 1,700 to 2,000 blocks of 8,904 on this hull, which makes 12.1 kW a block against a real median of
-335 W and is therefore an upper bound on how long that tail is. Tracked as [backlog](backlog.md) B4.
+335 W and is therefore an upper bound on how long that tail is. What was built from it, and what
+is still untested about it, is [backlog](backlog.md) `B30`.
+
+### The protocol is measured, and the near-critical tail alone is not it
+
+`HotTailCodec` is the packet: the blocks inside the band the glow already draws — the last 100 K
+before each block's own critical temperature — at ten bytes each, keyed by grid position rather than
+by node index, because node indices come from block insertion order and two machines do not build a
+grid in the same order. `-- drift --correct` runs it against a server and charges it for the drift
+it allows: every reading is taken at the end of an interval rather than after an update, and the run
+advances by the finer of the two cadences, both of which were flattering the protocol before they
+were fixed.
+
+**On the census hull, correcting the tail on an interval does not close the gap**, and the reason is
+not the interval:
+
+| what is sent | interval | misreading | wrong blocks, mean / worst | bytes a second |
+| --- | ---: | ---: | ---: | ---: |
+| nothing | — | 560 s | 75.0 / 648 | 0 |
+| the band | 5 s | 145 s | 7.3 / 648 | 6,151 |
+| the band | 60 s | 185 s | 10.6 / 648 | 513 |
+| **every block** | 5 s | **5 s** | 5.4 / 648 | 18,861 |
+| **the whole hull once, then the band** | 60 s | **0 s** | **0.0 / 0** | **670** |
+
+Replicating every block continuously fixes it and costs thirty times the bandwidth, which is what
+says the residual is **the un-replicated hull rather than the update rate**: the corrected blocks
+conduct to neighbours that are still stale, and a block crossing into the band arrives with its
+client-side twin far behind. Stating the whole hull **once**, when the client joins, removes the
+same residual for one packet — 94 KB on a 9,430-node hull — after which the band is tracking rather
+than repairing, and even a sixty-second interval leaves the readout right for the whole run. The
+steady cost is the band alone; the join packet amortises to 157 B/s over ten minutes and to nothing
+over a session.
+
+**A budget makes it worse, not cheaper.** Capping an update at 1,000 blocks on a hull whose band is
+3,075 takes the misreading from 145 s to 240 s, because the 2,075 blocks cut are exactly the ones
+the correction existed to carry. The budget's own blind spot is counted and printed rather than
+inferred (`P2`); what it is for is a hull whose band does not fit a packet at all, and on this hull
+it does.
+
+### What was built from that measurement, and what it costs
+
+The shipped protocol is the last row of the table above and nothing else. `ThermalGridSync` runs a
+pass every thirty frames — half a second, deliberately coarser than a frame and finer than the
+interval it serves — and for each live grid states it to each client that is owed something and is
+inside the world's sync distance. Outside that distance there is no grid on the client to correct.
+
+**The client asks; the server does not offer.** Only the client knows when it has finished building
+a grid, and a snapshot that arrives before it has is a snapshot every record of which is dropped for
+naming a block that does not exist yet. A request that goes unanswered is repeated with a doubling
+backoff capped at a minute, because a client that gave up would hold a stale hull for the rest of
+the session — the exact defect this closes. A request repeated inside five seconds is refused, so a
+client asking in a loop cannot make the server transmit a 94 KB hull per frame.
+
+**A hull larger than one message is sent as several, and each is complete.** There is no sequence
+number and nothing to reassemble: a slice is a whole legal packet, applied on arrival, so a lost one
+costs its own records rather than the hull. The bound is 2,048 records — under 21 KB — and it is a
+packet-size limit rather than a rate limit, because a message the transport refuses is a correction
+that never arrives.
+
+**No budget.** Capping an update is measured above to make the misreading *worse*, from 145 s to
+240 s, because the blocks a cap drops are exactly the ones the correction is for. What a hull too
+large for one message gets instead is more messages.
+
+**An empty band is not transmitted.** A ship with nothing near failing has nothing to correct, and
+the alternative is a header per grid per client per interval for the whole population of a server,
+forever. So the steady cost is the size of the emergency rather than the size of the world: nothing
+on a quiet ship, and about 6 KB/s per client in range on the hottest hull in the corpus while it
+burns.
+
+**On its own secure channel**, `30325`, for the reason `SettingsRequests` is on `30324`: the shared
+channel's sender id is a field the sender wrote, and the engine's secure handler supplies one the
+transport verified plus a from-the-server flag a client cannot forge. Temperatures that did not come
+from the server are dropped, and a request that reaches a client rather than the server is dropped —
+either would be one client writing onto another's simulation.
+
+**What the envelope costs.** Every figure in the table above is the codec's bytes. The wire adds ten
+bytes per message for a marker, a kind and the grid's entity id — the grid has to be named, because
+block positions are only an identity inside one grid — which at the shipped interval is 2 B/s.
+
+### A client's inputs are a different defect from a client's state, and only one of them decays
+
+Everything above is a **perturbation** — one wrong initial state — and it decays because the model
+is dissipative. A client's *inputs* are not perturbations. `-- inputs` degrades each one a client
+drives its own simulation from, alone and together, and separates the two by whether the
+disagreement is still there at the end of the run:
+
+A 2,000-block hull in sunlit vacuum, ten minutes, the load alternating every two minutes so a lag
+has something to lag. **Still wrong at the end** is the mean disagreement over the final third.
+`thrust error` and `speed error` are absent because this hull is not flying and they read zero here;
+their figures are below, on the `burn` scenario that is theirs:
+
+| what is degraded | peak | still wrong at the end | misread, uncorrected → corrected | why that is what the engine does |
+| --- | ---: | ---: | ---: | --- |
+| nothing | 0.0 K | 0.00 K | 0 → 0 blocks | the control: two clients on one world must agree exactly |
+| joined 60 s stale | 20.0 K | **0.00 K** | 85 s → **5 s** | restoring a save; it happens once and decays |
+| environment sampled 2 s late | 1.3 K | 0.41 K | 30 s → 25 s | position and orientation replicate on their own schedule |
+| sun 5° off | 1.9 K | 1.18 K | 210 s → 130 s | replicated orientation trails the server's |
+| thinner air | 0.0 K | 0.00 K | 0 → 0 | nothing to disagree about in vacuum; a planet run is what tests this |
+| compartments a fifth emptier | 1.9 K | 0.90 K | 4 → 3 blocks | the game's gas system answering differently, which is worth almost nothing until it reaches zero |
+| block power 5 % out | 38.0 K | **24.40 K** | 166 → 62 blocks | whatever the game's own block replication rounds |
+| block power 2 s late | 245.5 K | **30.05 K** | 397 → 399 blocks | a throttle change reaching the client late |
+| loses 5 s of every 30 | 233.9 K | **49.68 K** | 395 → 397 blocks | a machine running fewer simulation ticks, and simulated time is counted in ticks |
+| its clock runs 10 % slow | 25.6 K | **18.69 K** | 120 → 54 blocks | sim speed below 1.0 on one machine and not the other — every input right, and elsewhere on the same curve |
+| a heat source it never heard about | 1.1 K | 0.73 K | 7 → 4 blocks | another mod's API registration, which nothing replicates |
+| shade for 3 s of every 30 | 16.4 K | 3.52 K | 12 → 11 blocks | its own raycast on its own budget; wrong by the whole solar term while it lasts |
+| block masses 20 % out | 43.2 K | **32.11 K** | 184 → 86 blocks | `SweepMass` is a rota on both machines, and mass is heat capacity |
+| never got the settings | 160.0 K | **120.30 K** | 625 → 273 blocks | a fetch that never landed; other physics entirely |
+| no room map for 60 s | **474.7 K** | 0.01 K | 527 → 282 blocks | the flood fill has not published, so the hull has no interior — and then it has, and the client is right |
+| same blocks, different order | 0.0 K | 0.00 K | 0 → 0 blocks | two machines do not build a grid in the same order, and the packet is keyed on position rather than index |
+| a tenth of the hull missing for 60 s | **1,151.7 K** | 0.08 K | 1,078 → 656 blocks, 223 absent | a paste still streaming, or a subgrid that has not attached; it is a different ship, not a worse reading of this one |
+| a tenth of producers off | 385.0 K | **245.87 K** | 333 → 169 blocks | a switch on the wrong side, which is wrong by *all* of that block's heat |
+| all of it at once | 1,154.9 K | **214.76 K** | 1,248 → 670 blocks | the union of the rows above, computed not written |
+
+The sweep reports one more column than the table above: **absent**, the most blocks the server had
+that the client did not. Only the topology row has a number in it, and that is what the row is —
+every other degradation here is a client holding a wrong value for a block both machines have.
+
+**The hull's compartments hold air, and giving them the air a crewed ship has took about a seventh
+off every standing error in this table.** The census hull is built with four sealed rooms and the
+host owns whether they are pressurised (`C9`), so a harness that never says leaves them in vacuum —
+which is what every figure before 2026-08-24 was measured on. Air is a **mixer** rather than a sink:
+it couples every surface bounding a compartment to every other at 30 kW/K, so a per-block error gets
+averaged across a room before it is read. Measured on the same hull settled under load, the air
+moves the *hottest block* 203 K and the hull mean 3.8 K, and overheat damage is taken off the
+hottest block.
+
+**The third column is the finding.** A stale join settles at nothing whatever it peaked at; a wrong
+input settles where the input puts it and stays there. So the convergence argument that made this
+defect look cosmetic covers exactly one of these rows, and it is the one that was measured first.
+
+**The correction narrows a bias without removing it.** Against the combined case it takes the
+standing error from 214.8 K to 142.6 K and cuts how much of the hull is misread, 1,248 blocks to 670 —
+but the client's inputs are still wrong, so it re-diverges between updates. Against a bias the
+interval is the lever and five seconds is not enough; against a perturbation the join packet is the
+whole answer, 85 s to 5 s.
+
+**Read the seconds column with the block counts beside it.** *At least one block wrong* is a harsh
+binary on a hull of two thousand: `never got the settings` reads 490 s both uncorrected and
+corrected while the blocks misread at once fall from 625 to 273. The count is the figure that moved.
+
+**The control row found a defect in the correction itself.** With the packet applied unconditionally,
+a client that was *exactly* right went to misreading one block for ten seconds of the run — because
+the wire carries tenths of a kelvin, and writing a received value onto a node that already matches
+it moves the node by up to half a quantum, which is enough to flip a block sitting on its own
+critical temperature. A block already agreeing to within the packet's own resolution is now left
+alone: the correction has to be able to do nothing. It is pinned by `HotTailTests`, and it is why
+the control row is run at all.
+
+**What none of this models**, stated rather than assumed: two instances of one solver in one
+process, so there is no latency, no loss, no send queue, and no engine behaviour behind any degraded
+input. Every magnitude in that table is a knob the lab turns, not a figure measured from a session.
+What it answers is the shape — which inputs bias, which perturb, and whether the correction reaches
+each — and the shape is what decides the protocol.
+
+### The sweep is not the whole input surface, and here is what is missing
+
+The simulation reads its state from three places: an `EnvironmentSample` the client builds itself
+from the world around it, block state the adapter reads off the game's own blocks, and the room map
+it floods locally. Enumerated against the code rather than remembered, **the sweep covers eighteen
+inputs and leaves three**:
+
+| input | read from | covered | |
+| --- | --- | --- | --- |
+| initial temperatures | the save | yes | `stale join` |
+| step schedule | `SimulationScheduler` | yes | `hitching` |
+| settings | replicated | yes | `wrong settings` |
+| sun direction | grid orientation | yes | `sun angle` |
+| ambient and air density | `PlanetManager` | yes | `thinner air` |
+| block electrical power | `MyResourceSourceComponent` | yes | `power lag`, `power error` |
+| whole-sample staleness | the client's own tick | yes | `environment lag` |
+| thrust | `block.CurrentThrust` | yes | `thrust error`, on the `burn` scenario — physics state, *predicted* on a client rather than replicated, and a separate heat term from electrical power |
+| grid velocity and relative wind | `EnvironmentSample.GridVelocity` | yes | `speed error`, on the `burn` scenario — the classic multiplayer prediction error, and it drives both convective cooling and aerodynamic friction |
+| solar occlusion | raycast against voxels and grids | yes | `wrong shadow` — a *binary* flag over the whole solar input, resolved against world state a client holds differently |
+| block mass and integrity | `SweepMass`, a rota | yes | `mass error` — swept every 8 steps and capped at 4,096 blocks, so a large grid's masses lag by design on *both* machines and the two rotas are not in step |
+| block enabled and functional state | the game's block | yes | `blocks off` — a block turned off on one machine and not the other, which is a binary *per block* rather than per hull |
+| **altitude, depth, latitude** | grid position | **no** | position lag on a *moving* ship, which is not the same as a lag on a stationary one |
+| **weather and its intensity** | the game's weather | **no** | server-driven world state |
+| **the ten wind fields** | terrain and the wind solver | **no** | shelter, burial and channelling are all voxel-derived |
+| **room air pressure** | the game's gas system | yes | `room pressure` — `C9` says the mod reads the game's answer, so this is the input the mod least owns, and it is *binary*: worth almost nothing until it reaches zero |
+| **the room map itself** | a local flood fill | yes | `room map lag` — publishes atomically, so a client mid-pass holds no interior at all; `D2` measures the pass at 7,207 ticks on a million blocks |
+| **topology and subgrid attach** | block add and remove | yes | `build order`, `blocks missing` — placement order changes the index space and nothing else, and a missing block changes the conduction graph rather than a value in it |
+| **coolant loop identity** | loop signatures over topology | yes | `CoolantLoopTests` — the signature is an order-independent hash of the ring, so build order cannot move it and one pipe more is a different loop |
+| **registered heat sources** | the mod API | yes | `missing source` — a registry another mod writes into, with no replication behind it, so a client can be beside a furnace it does not know exists |
+| **simulation speed** | the host's own tick rate | yes | `slow clock` — the mod counts simulated time in *simulation ticks*, so a machine running fewer of them has a thermal clock that runs slow; `hitching` is the same deficit in lumps |
+
+The three rows still open are the environment ones, tracked as [backlog.md](backlog.md) `F19`: a
+ship's position, the weather, and the ten wind fields. None of them changes the protocol — the
+correction overwrites state and so does not care which input produced the disagreement — and each of
+them changes how much correcting there is to do.
+
+**A speed error reaches the cubic term, not the saturating one.** A client's velocity is predicted
+rather than replicated, and it feeds two terms of very different shape: forced convection saturates,
+so a fifth more speed is a few per cent more cooling, while aerodynamic friction goes as the *cube*
+of airspeed, so the same fifth is 1.7× the heating. Measured, a 20 % speed error settles a flying
+client **13.8 K** from the server — a bias, and the asymmetry the
+[300 m/s constraint](balance.md#the-300-ms-constraint) is about, arriving as a client's guess.
+
+**The binary input is the loudest per step and among the quietest in what it leaves behind.** A
+client whose raycast puts the hull in shade for three seconds of every thirty peaks **16.4 K** from
+the server and settles at **3.5 K**: wrong by the entire solar term while it lasts, and gone
+afterwards, because the model is dissipative and the disagreement ends. The 5-second correction
+barely touches it — 3.52 K to 3.51 K — since it decays on its own anyway. A client that is
+*permanently* on the wrong side is the bound rather than the description, and it is a bias: peak
+12.4 K against a standing 11.9 K on the smaller rig the tests use.
+
+**Thrust is the worst input *per unit of error* in the sweep, and it is not close.** Compared at the
+same 5 % error on a flying hull, a wrong thrust settles the client **17.5 K** from the server against
+block power's **1.8 K** — an order of magnitude, on the term that is *also* the largest on a burning
+ship. And it is a pure bias: at 20 % its peak and its standing error are the same 70.1 K, so it never
+decays at all, and the 5-second correction only halves it. A hull at rest shows none of it, which is
+what says the knob reaches the thrust term and nothing else. The reason is in the table above — the
+engine predicts physics state rather than sending it, so a client's thrust is its own guess about a
+ship whose physics it is not running. `ClientInputTests` pins both halves.
+
+**A wrong switch is the worst of the sweep's own rows, and it is not an error in a number.** A block
+that is off draws no power and makes no waste heat, so a client holding the switch on the wrong side
+is not wrong by a percentage of that block's heat — it is wrong by *all* of it, on some blocks and
+not others. Only a *bound* beats it: a room map that never lands settles at 290.95 K against this
+row's 245.87 K, and that is a client which never finishes a flood fill rather than one that is 60 s
+behind. A tenth of the producers silenced peaks **385.0 K** and
+settles at **245.9 K**, ahead of `wrong settings` at 120.3 K, and it is most of what `all at once` is
+made of. **Where the error lands is what decides that, not how much of it there is**: at equal
+missing wattage — a tenth of the producers making nothing against every producer making a tenth less
+— the concentrated case settles **54.7 K** out against the spread case's **13.5 K** on the smaller
+rig the tests use. The hull cannot conduct fast enough to average a dead thruster away, and the
+readout is per block.
+
+**A mass error is the one input that is not an error in a heat flow at all.** Mass is heat capacity,
+so it moves the divisor rather than the watts — and capacity does not appear in the balance a hull
+settles at, only in how long it takes to get there. So its shape is set by the *load* rather than by
+the input: 20 % out settles **32.11 K** under the sweep's alternating load, and on the smaller rig
+33.8 K under that same load against **0.0 K** when the load stops moving, from a 14.6 K peak. Both
+of those runs are in the dark with the same degradation and differ only in the load script, so the
+difference cannot be anything else. It is also the only degradation in the sweep that comes from a
+rota running on *both* machines rather than from something the client alone gets wrong.
+
+**Mass is the only channel block condition has into the model, and whether anything comes down it
+is unsettled.** No path in the mod reads a build ratio or an integrity figure — `ClientInputTests`
+pins that by scanning `Data/Scripts`, because a claim about what code does *not* do rots the moment
+somebody adds the line — so the sweep has a mass knob rather than a separate damage one. What that
+leaves open is the engine end: `SweepMass` polls `IMySlimBlock.Mass`, and whether the game moves it
+with build progress or with damage decides whether block condition is an input at all. **The
+deliberate limit above assumes it does not** — *a block at 10 % construction has the same mass* —
+and that assumption predates the rota, which is a poll rather than the event the limit says nothing
+raises. Nothing offline can settle it; it is [backlog.md](backlog.md) `F24`.
+
+**Room air pressure is a binary input wearing the clothes of a continuous one, and the last one per
+cent of it is worth more than the first ninety-nine.** Pressure is the game's answer rather than
+this model's (`C9`), and it reaches the simulation twice: it scales the air's heat capacity, and it
+decides whether the room has air *at all*. Only the second of those moves anything that lasts — a
+link's conductance is `RoomConvectionCoefficient × faces × cellFaceArea` and carries **no pressure
+term**, so a compartment at a fiftieth of an atmosphere couples its walls exactly as hard as a full
+one and differs only in inertia, which is the `mass error` finding arriving through another input.
+Measured on the smaller rig: a client that believes the compartments are a fifth empty settles
+**0.40 K** out, 99 % empty settles **1.96 K** out, and *empty* settles **9.11 K** out. On the sweep
+hull the same knob is 0.90 K at a fifth and **110.3 K** at zero. So the input the mod least owns
+turns out not to be graded at all: it costs nothing until it crosses zero, and then it costs the
+whole coupling. `RoomAirCouplingTests` pins the mechanism and `ClientInputTests` the discontinuity.
+
+**A room map that has not landed is the loudest input in the sweep and leaves the least behind.**
+The mapper publishes atomically — `RoomMapper.Map` is never partially built — so a client mid-pass
+is not holding a rough map, it is holding the previous one, which on a grid it has just built is
+*empty*. `RoomMap.IsExternal` answers true for every cell it has no room for, so the whole interior
+becomes sky: **17,762.5 m² of exposed skin against 14,012.5 m², 26.8 % more**, and no compartment
+holding air. A client 60 s behind its own flood fill peaks **474.7 K** from the server in vacuum and
+**912.7 K** in air — the largest single-input peak measured anywhere in this lab, and larger in air
+because the extra skin *convects* rather than only radiating — and then the pass lands and it
+settles at **0.01 K**. It is a perturbation, and the shape is the opposite of `blocks off`: the
+loudest thing here is the one the correction has least reason to chase.
+
+**The bound is the other way round, and it out-settles every other input.** A client whose pass
+never lands — `D2` measures the flood fill at 7,207 ticks on a million blocks, and a grid that
+restarts faster than it finishes publishes nothing — is a bias, and at 290.95 K standing on the
+sweep hull it is worse than the wrong switch's 245.87 K. Its two halves decompose: losing the air is
+110.3 K of it and believing in a quarter more skin is the remaining 180.7 K, so **the skin is the
+larger half**. That is what makes the room map unlike every other row here — the others are wrong
+about a number both machines hold, and this one is wrong about how much hull there is.
+
+**The same ship received in a different order is no difference at all, and that is a design
+decision rather than luck.** A node's index is its arrival order, and two machines have no reason to
+share one — a client takes blocks in whatever order the engine streams them, a server has them in
+the order they were welded or pasted. `HotTailCodec` spends eight of its ten bytes a block on a
+position key for exactly this. Measured against the alternative rather than asserted: on a hull
+whose 1,003 of 1,004 blocks changed index, the position-keyed packet leaves the client **1.2e-4 K**
+out and the same packet applied by index leaves it **492.0 K** out. The residual is float summation
+order rather than physics — a node accumulates from its links and float addition is not associative
+— and it is an eight-hundredth of one quantum of the wire it travels on. **The order independence
+the threading work rests on is a claim about physics, not about bits**, and this is where the two
+part company.
+
+**A block a client has not been told about is not a block it is wrong about.** Every other row in
+the sweep degrades a number both machines hold; a client still receiving a pasted blueprint, or one
+whose subgrid has not attached, holds *fewer numbers* — a different node set, a different conduction
+graph, and hull surfaces open to the sky where the missing blocks would have covered them. A tenth
+of the hull missing for 60 s is the **loudest row in the sweep at 1,151.7 K**, and most of that peak
+is not the missing hull at all: it is the *arrival*. A block appearing on a grid starts at the
+world's default temperature, because the simulation has no history for it and nothing tells it what
+its neighbours hold, so a tenth of a hull at 1,000 K gains a tenth of itself at 293 K in one step.
+That decays, to 0.08 K. **And the correction cannot reach what is absent**: it takes the misreading
+from 235 s to 80 s and the blocks misread at once from 1,078 to 656, and the 223 absent blocks are
+223 both times, because the packet carries temperatures for blocks and a block that is not there
+takes none of them.
+
+**The bound is a bias and it is the worst input measured anywhere in this lab.** A tenth of the hull
+that never arrives settles the client **380.5 K** out in vacuum and **740.7 K** flying, ahead of a
+room map that never lands at 290.95 K and a wrong switch at 245.87 K. Which is the ordering worth
+reading: **the three worst inputs are the three that are not errors in a number**, and they get
+worse in that order as the disagreement moves from how much heat a ship makes to what shape it is.
+
+**Coolant loop identity is the one place the mod keys state on shape, and it behaves the way the
+topology rows say it should.** A loop's signature is an order-independent hash of every pipe
+position in its ring, so build order cannot move it and two machines arrive at the same identity —
+and a ring one pipe longer is a *different* loop, whose temperature a save keyed on the old shape
+does not land on. That is intended: an index-keyed loop would let a reload put one loop's coolant
+into another. `CoolantLoopTests` pins both halves.
+
+**A rate difference is worth exactly what the load is doing and nothing else, and it is the one
+degradation where the client's inputs are all correct.** The mod advances a fixed sixtieth of a
+simulated second per *simulation tick* rather than per real second — `ThermalGridScheduler` passes a
+constant frame length and `Session` runs on `MyUpdateOrder.Simulation` — so simulated time is
+counted in ticks, and a machine executing fewer of them per real second has a thermal clock that
+runs slow. That is correct on one machine, where the whole world slows together, and a divergence
+between two. The client is not wrong about anything; it is *elsewhere on the same trajectory*, which
+is why no amount of dissipation closes it. Measured on the smaller rig, a 10 % clock error settles
+**19.25 K** out under a load that keeps moving and **0.00 K** under one that stops, from a 0.55 K
+peak — both runs in the dark with the same degradation, differing only in the load script. Two hulls
+heading to the same equilibrium at different speeds agree once they arrive.
+
+**And `hitching` is that same deficit arriving in lumps, which changes the peak and not the
+settling.** Five seconds lost of every thirty *is* five-sixths rate. At an equal deficit the lumpy
+case peaks **206.0 K** against the smooth one's **39.7 K** and the two settle at 39.6 K and 33.7 K —
+so the average deficit decides where a client ends up and the delivery decides how far wrong it gets
+on the way.
+
+**The mechanism written beside `hitching` for months was one the mod cannot perform**, and that is
+worth recording as a defect rather than as a correction. It said the client dropped a solver backlog
+at `SimulationScheduler.StepsDue`'s per-frame cap. `ThermalSimulation.Update` is what paces a step:
+it banks work credit against the frame it is handed and discards credit above one step's worth,
+which at a constant sixtieth cannot bind at any legal `Frequency`. The accumulator that *did* drop a
+backlog was a second, parallel one on `SimulationScheduler`, called by no shipped path, tested on its
+own terms, and pointed at by two labs and two pages as though it were the live one. It is removed,
+and the step-rate tests now run against the path the game drives — nothing in `Data/Scripts` broke
+when it went, which is the whole of the evidence that it was dead.
+
+**A heat source the client never heard about is a small standing bias, and it is the only input here
+that comes from outside this mod.** `ThermalHeatSources` is a registry another mod writes into
+through the API; a registration is a call made on whichever machine that mod runs its logic on, and
+nothing replicates it. A source worth a tenth of the sun settles a client **0.73 K** out and stays
+there.
 
 Settings and pump controls *are* replicated. `SENetworkAPI` 2.0 runs on channel `30323` with three
 properties on it: the world's settings and the two pump throttles.
@@ -278,9 +733,15 @@ would show.
 
 ## Failure patterns worth remembering
 
-Each of these is stated as the rule it produced. The defect that produced it is the evidence, and
-the date it was found is in the [change log](#change-log). They are grouped by the shape of the
-failure rather than by the subsystem, because the shape is what repeats.
+**This section is evidence, not rules.** Each entry is the defect that produced a standing lesson,
+and where that lesson is a rule this repository is bound by, the rule is stated once in
+[rules.md](rules.md) and this is the page it points back to (`R13`). Reading it the other way round
+is what the heading used to invite — it said *each of these is stated as the rule it produced* — and
+two of them had drifted into restating a rule's own sentence beside it.
+
+They are grouped by the shape of the failure rather than by the subsystem, because the shape is what
+repeats. Four produced a rule and name it; the rest are engine behaviour or model behaviour that
+cost a defect once and is worth not paying for twice. Dates are in the [change log](#change-log).
 
 ### A mechanism can be correct everywhere it is exercised and inert everywhere it runs
 
@@ -323,6 +784,8 @@ than against literals, because silently *becoming* the default is the failure be
 it on drew nothing. Found by grepping for *readers* of a setting rather than by using it — which is
 the check worth running over the whole settings list, and is now `SettingsWiringTests`.
 
+*The rule it produced:* `D2` — hunt for what is built, documented and reached by nothing.
+
 ### One definition read by two parsers drifts, silently, in both directions
 
 Block thermal properties are read twice: `ThermalCellDefinition` asks Definition Extensions for them
@@ -340,6 +803,8 @@ every corpus run and every scenario, and by nothing in a game.
 `BothParsersKnowTheSamePropertyNames` compares the two name lists in both directions. It is textual,
 because the in-game reader cannot be linked into the test project — which is the same reason the two
 parsers exist, and therefore the reason a check on them has to be.
+
+*The rule it produced:* `D3` — where one thing exists twice, a test compares the two.
 
 ### A number can be right in the solver and attached to nothing
 
@@ -359,6 +824,8 @@ block's behaviour, because behaviour was never the thing that broke. See
 `HydrogenEngine`, so the derivation charges a 400 MW plant a combustion engine's 0.60 waste
 fraction: 240 MW of heat out of a 3×2×2 block. It needs a per-subtype override — see
 [backlog.md](backlog.md).
+
+*The rule it produced:* `D2`, from the other side: the number was reached by nothing.
 
 ### A diagnostic that reports zero while working is worse than no diagnostic
 
@@ -451,6 +918,8 @@ before fixing — the sealing test looked guilty from the counts alone and was n
 runs every dump and is reported per compartment. See
 [thermal-model.md](thermal-model.md#diagnostics).
 
+*The rule it produced:* `C9` — the game's own answer is read, never overridden.
+
 ### A guard has to test what it claims to test
 
 **A lag needs to know it has no history.** Ambient started each session at the `VacuumTemperature`
@@ -542,13 +1011,19 @@ The budget now counts `links + 4 × nodes` and ignores faces, four being the low
 the sizes where the bound binds at all.
 
 What this retires is the claim that only grids past a hundred thousand blocks reach the default. A
-step's cost is size times stiffness, and `TheShippedAllowanceFitsThisGridAndAHalvedOneDoesNot` pins
-both halves on one 8,904-node rig: counting links alone, its 20,779 links bought 48 substeps against
-a demand of 23, so the budget did nothing at all; counting nodes as well, one substep over that rig
-costs 56,395 element visits. **Whether the allowance binds is a question about the step rate rather
-than about block count** — the same rig asks 23 substeps at the shipped quarter-second step and about
-12 at an eighth-second one, which is why the allowance moved with `Frequency` and why halving it now
-throttles this grid. A world whose config predates the rename takes the new default rather than
+step's cost is size times stiffness, and `TheShippedAllowanceFitsAGridAndAHalvedOneDoesNot` pins
+both halves: counting links alone a rig's links buy more substeps than it asks for, so the budget
+does nothing at all; counting nodes as well, a substep over a 64,000-block hull costs about 383,000
+element visits and the shipped allowance of four million covers it while half of it does not.
+**Whether the allowance binds is a question about the step rate and the world rather than about
+block count** — a hull asks twice as many substeps of a quarter-second step as of an eighth-second
+one, which is why the allowance moved with `Frequency`, and three to four times as many in air as in
+vacuum, which is what `C27` found and what doubled it.
+
+> The figures here were 8,904 nodes, 20,779 links and a demand of 23 at the shipped rate. Both
+> defaults moved on 2026-08-24 (`C24`) and the census hull with them (`C26`), so the rig that
+> demonstrates the point is a 32,000-block hull now rather than an 8,000-block one: the same hull
+> demands 6.67 substeps in vacuum where it demanded 23. A world whose config predates the rename takes the new default rather than
 importing its old number, which would be a value in the wrong unit; the load path logs when it drops
 one.
 
@@ -590,6 +1065,20 @@ counters rather than milliseconds so it holds on any machine.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Wrote down the limit that had never been written down anywhere ([backlog.md](backlog.md) `F26`): heat leaves the world with a block that leaves it and arrives at ambient with one that is built. Energy conservation is an invariant about a step and says nothing across a change in the population. Pinned by a test, so it is not rediscovered as a bug. |
+| 2026-08-25 | Refreshed the per-face shadow figures, which had been quoted from a page rather than from the lab and had gone stale when `C24` moved the clock: 0.0018 K a metre against a cadence of about half a kelvin, where this page said 0.0045 against 1.47. The table they come from is now pinned to `OcclusionLadderTests`. |
+| 2026-08-24 | **Bounded the two coupled paths, which closes `A10`.** The pairwise overshoot clamp is the whole bound a block needs and half the bound a lumped mass needs: a parcel carries a link to every pipe on it and a room's air one to every surface bounding it, and the node on the other end of a sink face is pulled on by the fluid and by everything it is bolted to. Each bound held and the node went past both. The per-node relaxation the conduction pass already used now applies to the coupled passes too, which makes every substep a convex combination of the temperatures around a node. Measured where the plumbing sets the demand: **1.3e25 K before, 1,799 K after** at 9.7× over-subscribed, and a thin room refused one substep of thirty went from 3,839 K of spread to inside the 300 K it started at. Inert while the demand is granted — the block ladder is unchanged to three decimals — and `bench ceiling --fixture rings|pressurised` is what draws the other two ladders. |
+| 2026-08-24 | **The coolant path has no overshoot clamp** ([backlog.md](backlog.md) `A10`), so a refused substep demand approximates on a block and diverges on a loop — and on a hull carrying nothing stiffer the loop is what sets the demand, nine substeps where the same nine blocks unplumbed ask for one. Orderly to 4.5× over-subscribed, 1.7e11 K at 9×, and nothing shipped reaches it. Found by attempting `C24`, whose clock change put a test fixture's deliberately-refused ring past the cliff. |
+| 2026-08-24 | **The clock is in the sweep, and the mechanism the sweep had been naming turned out not to exist** ([backlog.md](backlog.md) `F23`). Simulated time is counted in simulation ticks, so a machine below 1.0 sim speed has a thermal clock that runs slow: a 10 % error settles 18.69 K out under a moving load and 0.00 K under a steady one, because two hulls heading to the same equilibrium at different speeds agree once they arrive. `hitching` is the same deficit in lumps — at an equal deficit it peaks 206.0 K against a slope's 39.7 K and settles within a fifth of it — and the backlog drop written beside it for months was `SimulationScheduler.StepsDue`, a second step-credit accumulator no shipped path called. Removed, with the step-rate tests moved onto `ThermalSimulation.Update`. Also added `missing source`, the one input that comes from outside this mod: 0.73 K standing for a registration worth a tenth of the sun. |
+| 2026-08-24 | **Topology is in the sweep, and it is the half that changes which numbers exist** ([backlog.md](backlog.md) `F22`). `build order` gives the client the same blocks in a different arrival order and reads 1.2e-4 K, which is float summation order rather than physics — and the same packet applied by index rather than by position leaves 492.0 K, which is what the codec's eight-byte key is buying, measured rather than asserted. `blocks missing` takes a tenth of the hull away: the loudest row in the sweep at 1,151.7 K, most of it the *arrival* rather than the absence, decaying to 0.08 K — and its bound is a bias at 380.5 K in vacuum and 740.7 K flying, the worst input measured anywhere here. The correction narrows what a partial hull misreads and cannot touch the 223 blocks that are absent. The comparison itself moved to block position from node index, which is a no-op on two hulls built alike and the only comparison that means anything on two that are not. |
+| 2026-08-24 | **The room map and its air are in the sweep, and they are the two ends of its own axis** ([backlog.md](backlog.md) `F21`). Pressure is *binary*: the link conductance carries no pressure term, so a fifth of the air missing is 0.90 K and all of it is 110.3 K, and the last one per cent is worth more than the first ninety-nine. An unconverged room map is the loudest input measured here — 474.7 K in vacuum, 912.7 K in air, because an empty map makes the whole interior sky and the hull believes in 26.8 % more skin — and it settles at 0.01 K, so the loudest is also the one the correction has least reason to chase. The bound, a pass that never lands, is a bias at 290.95 K and out-settles the wrong switch. **Two rig changes came with it and every figure above was re-measured**: the sweep hull's four compartments now hold air, which is worth about a seventh off every standing error, and the suite's own rig moved from 400 blocks to 600 because the census hull grows its first sealed room between the two and both room knobs would otherwise have judged nothing (`E8`). |
+| 2026-08-24 | **Block state is in the sweep, and a wrong switch is the worst input in it outright** ([backlog.md](backlog.md) `F20`). A tenth of the producers on the wrong side of their own switch settles a client 281.0 K out against `wrong settings` at 142.8 K, because a block that is off is wrong by *all* of its heat rather than by a share of it — and at equal missing wattage the concentrated error is 61.0 K against 13.5 K spread. Mass is the opposite kind of input: it is capacity rather than watts, so it stands under a moving load and decays under a steady one, 38.45 K against 0.3 K. Integrity turned out to reach the model through mass and nothing else, so the row's three inputs are two knobs. |
+| 2026-08-23 | **Grid velocity is in the sweep** ([backlog.md](backlog.md) `F19`), which is the consequential third of that row. A 20 % speed error settles a flying client 14.0 K out — a bias, and it lands on friction rather than on convection, because one goes as the cube of airspeed and the other saturates. Position and weather are still unmodelled and the row says so. |
+| 2026-08-23 | **Solar occlusion is in the sweep** ([backlog.md](backlog.md) `F18`), which completes the environment half of the input surface. It is the one binary input and behaves like one: intermittent disagreement peaks 17.3 K and settles at 2.8 K — a perturbation, where thrust is a bias — and a client permanently on the wrong side settles at 10.8 K, which is the solar term itself and the bound. |
+| 2026-08-23 | **Thrust is in the degraded-input sweep, and it is the worst input there is** ([backlog.md](backlog.md) `F17`). At the same 5 % error on a flying hull it settles a client 17.8 K out against block power's 1.8 K, and at 20 % its peak and standing error are the same 71.1 K — a bias that never decays, on the one input the engine predicts rather than replicates. The sweep needed a scenario that flies: a hull at rest makes the knob measure nothing. |
+| 2026-08-23 | Priced the per-grid planet shadow limit rather than leaving it argued: resolving the planet per face is worth about 0.0045 K a metre of hull on the worst-placed block, which is 0.73 K on a 150 m ship against a 1.47 K cadence floor it does not touch. The limit stays, with a figure. |
+| 2026-08-23 | **Built `B4`'s transport**, which was the half of that row no lab could reach. `ThermalGridSync` is the session it happens in; `HotTailMessage`, `HotTailSchedule` and `HotTailState` are the wire, the timing and the bookkeeping, all game-free and covered by `HotTailSyncTests`. The protocol is the one the measurement chose and nothing more: the whole hull once when a client asks, then the band every five seconds, no budget, empty bands unsent, on a secure channel of its own. Two settings ship with it, `EnableTemperatureSync` and `TemperatureSyncInterval`. What no test reaches is registration, addressing and the send, so `/thermal sync` prints counters on both sides instead. |
+| 2026-08-23 | **Measured the fix for `B4` rather than only the defect, and both halves changed what the row said.** The near-critical tail alone does not close the gap on the census hull — 560 s of misreading to 145 s, and the residual is the un-replicated hull rather than the update rate, because a corrected block conducts to stale neighbours. Stating the whole hull **once at the join** and then tracking the band takes it to **0 s at every interval down to sixty seconds**, for one 94 KB packet and 513 B/s after it. And `-- inputs` found that the convergence argument this row rested on covers one of eight causes: a stale join settles at 0.25 K, while a wrong input — power 2 s late, a dropped backlog, settings that never arrived — settles at 44, 58 and 116 K and stays there. A bias does not decay, and the correction narrows one without removing it. |
 | 2026-08-23 | Built the guard the entry above asked for ([backlog.md](backlog.md) `F16`), so this is now a limit with a check under it rather than a warning to remember. |
 | 2026-08-23 | Recorded that the mod project's build is not the game's check, after `Units.Watts` took an `IFormatProvider` and the mod failed to compile in a session while building clean here. The whitelist was read out of `SpaceEngineers.Game.MySpaceGameDefaultIlChecker` rather than guessed at: `System` is not an allowed namespace, only a named list of its types, and `IFormatProvider` is not on it. Opened `F16` for the check that would have caught it. |
 | 2026-08-23 | The glow is back to incandescence, which leaves the limit above where it was: a model with no emissive material still cannot show it. |
@@ -601,6 +1090,8 @@ counters rather than milliseconds so it holds on any machine.
 | 2026-08-22 | Reopened the per-grid shadow limit as designed work. It was recorded as a simplification taken on purpose, which `D6` is satisfied by, but the cost argument behind it treated three occluders as one: the planet's test is analytic and costs no ray, so the per-block objection was never true of the one occluder a player notices. Now [backlog](backlog.md) `A9`. |
 | 2026-08-22 | Filed the burning-ship divergence as an open defect. It had been carried on [realism.md](realism.md) as a starved-integrator finding; re-measuring it showed 0% starved, so the explanation is withdrawn and the defect stands with its cause unknown. |
 | 2026-08-22 | Repointed the step-budget paragraph at the renamed test and at the shipped rate, which moved from eight steps a second to four when the settings profiles were removed. |
+| 2026-08-25 | **The failure-pattern section is evidence and now says so.** Its heading claimed *each of these is stated as the rule it produced*, which is `R13` inverted — a rule is stated once, in [rules.md](rules.md), and argued on the page that holds the evidence. Two entries had drifted into restating a rule's own sentence beside it. The four that produced a rule name it (`D2` twice, `D3`, `C9`); the rest are engine or model behaviour that cost a defect once and is worth not paying for twice. |
+| 2026-08-24 | **Added the element-visit allowance to the deliberate limits, which is where the mod's largest shipped approximation should have been all along** (`D6`). It was missing because *the budget costs no accuracy* is true — a bounded step is shortened rather than coarsened — and reads as *nothing is lost*. What is lost is time, and `C27` priced it: 0.00 K on a parked ship, 1.19 K standing at a 5 % deficit and 36.98 K at 60 % under a moving load, against 0.028 K for the substep ceiling this world accepts and 0.607 K for the per-block cap it refuses. A limit nobody wrote down is the defect this section exists to prevent, and this one had been described three times elsewhere as a defect history and never once as a limit. |
 | 2026-08-22 | Moved the thermal view out of the deliberate limits. It was filed there on the grounds that mods get no shader — which is a statement about difficulty, not a simplification taken on purpose, and a limit is only a limit when it is chosen (`D6`). It is an open problem, and the intent to have one is stated in [document-of-intent.md](document-of-intent.md#thermal-vision--wanted-method-unknown). Recorded the absence of any non-instrument feedback beside it. |
 | 2026-08-22 | Absorbed `bugs-and-performance.md`, the record of the first extraction pass. Every one of its thirty-two findings is resolved in the current code — including the eleven whose headings carried no *fixed* marker, each re-verified against the source during this pass — so the page survives as the dated entries below and the patterns above rather than as a defect list. Restructured around the shape of each failure rather than its subsystem; promoted the deliberate limits to the top; moved the corpus balance findings to [balance.md](balance.md), which is where the dataset they come from is described. Removed two limits that the per-room gas-system read had already retired ("a room with no air vent holds no air" and "pressurisation is only known through air vents") and corrected a third: block `Conductivity` is real W/(m·K), and it is the *coolant loop's* that is still a 0…1 quality. Merged the two sections both titled "Fixed, worth remembering". |
 | 2026-08-21 | Recorded the buffer-growth NaN, the unguarded shape caches on the block-placement path, and the substep mass floor computing from its own previous answer. Recorded the censoring limit that makes every peak above critical a statement about the harness. |

@@ -82,6 +82,11 @@ namespace Thermodynamics
             // who really sent a packet — see SettingsRequests.
             SettingsRequests.Register();
 
+            // The same reasoning one channel further along: a client must not be able to write
+            // temperatures onto another client's simulation, and the server must not serve a hull
+            // to a player id somebody else named — see ThermalGridSync.
+            ThermalGridSync.Register();
+
             // Published from Init so a mod loading after this one still finds it: a late consumer
             // requests the table and it is re-sent.
             ThermalApi.Register();
@@ -121,6 +126,7 @@ namespace Thermodynamics
             ThermalApi.Unregister();
             ThermalTerminal.Unregister();
             SettingsRequests.Unregister();
+            ThermalGridSync.Unregister();
             Instance = null;
 
             if (_commandRegistered && MyAPIGateway.Utilities != null)
@@ -193,6 +199,10 @@ namespace Thermodynamics
                 ThermalBridges.Update(ThermalGrid.TickSeconds);
                 ThermalTerminal.Update();
             }
+
+            // Temperatures to the clients that are owed them. Its own cadence, and it returns
+            // immediately in single player.
+            ThermalGridSync.Tick();
 
             // The suit, on its own cadence: a player's thermal mass is large enough that a second
             // is fine resolution, and the pass costs a bounding-box test per live grid per player.
@@ -654,6 +664,11 @@ namespace Thermodynamics
                 + " | MaxSubsteps " + Settings.Instance.MaxSubsteps
                 + " | MaxSubstepsPerBlock " + Settings.Instance.MaxSubstepsPerBlock
                 + " | MaxElementVisits " + Settings.Instance.MaxElementVisitsPerStep.ToString("n0"));
+
+            // Temperatures replicate on their own channel and their own schedule, so a settings
+            // digest that agrees says nothing about them. Both sides print their counters and the
+            // pair says which half is not moving.
+            Reply("  " + ThermalGridSync.Report());
 
             if (!server) Reply("  digests differ? run /thermal sync fetch, then this again");
         }

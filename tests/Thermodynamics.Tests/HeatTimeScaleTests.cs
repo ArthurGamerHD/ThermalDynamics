@@ -142,9 +142,10 @@ namespace Thermodynamics.Tests
             properties.CoolantMassPerPipe = 500f;
 
             CoolantLoop physical = new CoolantLoop(properties, 300f, 1f);
-            CoolantLoop accelerated = new CoolantLoop(properties, 300f, 225f);
+            CoolantLoop accelerated = new CoolantLoop(properties, 300f, new ThermalSettings().HeatTimeScale);
 
-            Assert.Equal(225f, physical.ThermalMass / accelerated.ThermalMass, 2);
+            Assert.Equal(new ThermalSettings().HeatTimeScale,
+                physical.ThermalMass / accelerated.ThermalMass, 2);
         }
 
         [Fact]
@@ -164,18 +165,31 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// The definitions now carry real material values. This is the arithmetic that says the
-        /// shipped default reproduces the pace the mod had when they were written as 1–6.
+        /// **The shipped clock and what it used to be**, which are two different questions since
+        /// `C24`.
+        ///
+        /// <para>
+        /// 225 is the clock that reproduces the pace the mod had when the definitions were written
+        /// as 1–6: steel's real 450 J/(kg·K) over 225 is the 2 that definition used to carry, and
+        /// that arithmetic is what the real-unit conversion was checked against. The shipped clock
+        /// is **90**, two and a half times slower, because the significance window `G8` asks for is
+        /// not reachable at 225 by any dial that keeps the hull inside a session — see
+        /// balance.md, The route is chosen. Both are asserted so neither
+        /// can move quietly.
+        /// </para>
         /// </summary>
         [Fact]
-        public void TheShippedDefaultReproducesTheOldEffectiveCapacity()
+        public void TheShippedClockIsSlowerThanTheOneTheConversionReproduced()
         {
             ThermalSettings settings = new ThermalSettings();
 
-            const float steel = 450f;      // Data/Cubes.xml, DefaultThermodynamics
-            const float legacyValue = 2f;  // what that definition used to carry
+            const float steel = 450f;         // Data/Cubes.xml, DefaultThermodynamics
+            const float legacyValue = 2f;     // what that definition used to carry
+            const float conversionClock = 225f;
 
-            Assert.Equal(legacyValue, steel / settings.HeatTimeScale, 3);
+            Assert.Equal(legacyValue, steel / conversionClock, 3);
+            Assert.Equal(90f, settings.HeatTimeScale, 3);
+            Assert.Equal(2.5f, conversionClock / settings.HeatTimeScale, 3);
         }
     }
 }

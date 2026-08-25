@@ -39,9 +39,24 @@ namespace Thermodynamics.Tests
         /// Blocks known to be unable to shed their own heat under any arrangement, with the index
         /// measured when each was recorded.
         ///
-        /// Both are already findings. `LargeJumpDrive` is 67 % of the corpus's full-load heat and
-        /// every one of the 2,255 ships carrying one loses a block. `LargeHydrogenEngine` is the
-        /// hottest block on 34 % of runaway rows against 4 % of rows overall.
+        /// <para>
+        /// **`C24` took three of the four off this list, and that is the list working.** The index
+        /// is waste over what a block can shed at its own critical temperature, and *shed* is
+        /// radiation from its own skin plus conduction into whatever it is bolted to — so four
+        /// times the conduction pace lets a block export four times as much into the hull. The
+        /// hydrogen engine and its reskin went from 1.54 to **0.43**, and the small prototech jump
+        /// drive from 1.68 to **0.29**: at the pace that ships they are the hull's problem rather
+        /// than impossible, which is what `SelfIndex` measures and is still above one for all
+        /// three. Removing an entry is meant to be the last step of fixing a block, and a retune
+        /// that fixes three of them counts.
+        /// </para>
+        ///
+        /// <para>
+        /// `LargePrototechReactor` stays, at 6.33 rather than 17.9: a definition accident no pace
+        /// can reach. `LargeJumpDrive` was never on this list — it is 67 % of the corpus's
+        /// full-load heat and every one of the 2,255 ships carrying one loses a block, on a
+        /// `SelfIndex` of 7.4 rather than an index above one.
+        /// </para>
         /// </summary>
         private static readonly Dictionary<string, string> KnownImpossible =
             new Dictionary<string, string>(StringComparer.Ordinal)
@@ -54,9 +69,10 @@ namespace Thermodynamics.Tests
                 { "LargePrototechReactor", "index 17.9 — 400 MW at a combustion engine's 0.60, "
                     + "because its TypeId is HydrogenEngine rather than Reactor" },
 
-                { "LargeHydrogenEngine", "index 1.54 — 0.60 waste fraction on a 5 MW plant in 3x3x3" },
-                { "LargeHydrogenEngineReskin", "index 1.54 — the same block under another name" },
-                { "SmallPrototechJumpDrive", "index 1.68 — 3.6 MW into a small-grid block" },
+                // Taken off 2026-08-24 by C24, with the figures they left on:
+                //   LargeHydrogenEngine        1.54 -> 0.43   0.60 waste on a 5 MW plant in 3x3x3
+                //   LargeHydrogenEngineReskin  1.54 -> 0.43   the same block under another name
+                //   SmallPrototechJumpDrive    1.68 -> 0.29   3.6 MW into a small-grid block
             };
 
         [Fact]
@@ -130,8 +146,11 @@ namespace Thermodynamics.Tests
             BlockHeatIndex.Reading reading = BlockHeatIndex.Measure(rating);
             Assert.NotNull(reading);
 
-            // 32 MW of draw at the shipped 0.15.
-            Assert.InRange(reading.Watts, 4.79e6f, 4.81e6f);
+            // 32 MW of draw at 0.2, which is 1 - the PowerEfficiency 0.8 the game's own definition
+            // states for this block. It was 4.8 MW while the fraction was authored at 0.15 by
+            // assertion; the jump drive is the one family in the game whose efficiency is published,
+            // and it carries 71.3 % of the corpus's full-load waste heat.
+            Assert.InRange(reading.Watts, 6.39e6f, 6.41e6f);
 
             // Bare 3x3x2 on a large grid: 2*(9+6+6) cells of face at 6.25 m2 each.
             Assert.Equal(262.5f, reading.AreaSquareMetres, 1);

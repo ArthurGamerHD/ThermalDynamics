@@ -15,8 +15,25 @@ namespace Thermodynamics.Core
         /// </summary>
         public float CoolantMassPerPipe = 50f;
 
-        /// <summary>Transfer quality, 0..1.</summary>
-        public float Conductivity = 1f;
+        /// <summary>
+        /// How well heat crosses between the fluid and the wall it touches, W/(m²·K).
+        ///
+        /// <para>
+        /// **A convective coefficient, because that is what the transfer is.** It was a 0…1 quality
+        /// against a reference conductivity of 200 W/(m·K), divided by half a cell — which gave the
+        /// game a second conduction pace nothing reconciled with the first
+        /// and made the coefficient it implied
+        /// depend on grid size: 160 on a large grid and **800 on a small one**, for the same fluid
+        /// against the same wall. Convection has no length in it, so neither does this.
+        /// </para>
+        ///
+        /// <para>
+        /// 160 is what the shipped large-grid loop was already running at, so a large grid is
+        /// unchanged. Forced convection of a water-glycol mix in a pipe is a few hundred to a few
+        /// thousand; 160 is a slow flow, which is what a ring driven by one pump is.
+        /// </para>
+        /// </summary>
+        public float HeatTransferCoefficient = 160f;
 
         /// <summary>
         /// Specific heat capacity of the coolant, real J/(kg K). Water-glycol is about 3400, against
@@ -82,7 +99,7 @@ namespace Thermodynamics.Core
             LargeGridFlowRate = Math.Max(0f, LargeGridFlowRate);
             SmallGridFlowRate = Math.Max(0f, SmallGridFlowRate);
             StagnantTransferFraction = Math.Max(0f, Math.Min(1f, StagnantTransferFraction));
-            Conductivity = Math.Max(0f, Math.Min(1f, Conductivity));
+            HeatTransferCoefficient = Math.Max(0f, HeatTransferCoefficient);
             SpecificHeat = Math.Max(ThermalConstants.MinimumThermalMass, SpecificHeat);
             PipeContactMultiplier = Math.Max(0f, PipeContactMultiplier);
             SinkContactMultiplier = Math.Max(0f, SinkContactMultiplier);

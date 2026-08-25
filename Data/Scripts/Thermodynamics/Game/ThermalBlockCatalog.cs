@@ -281,6 +281,18 @@ namespace Thermodynamics
         }
 
         /// <summary>
+        /// What a block's own definition says reaches its store, or zero where it says nothing.
+        ///
+        /// The jump drive is the only family in the game that states one — 0.8 for the vanilla
+        /// drive and its reskin, 0.9 for the two prototech ones.
+        /// </summary>
+        private static float StatedEfficiency(MyCubeBlockDefinition block)
+        {
+            MyJumpDriveDefinition drive = block as MyJumpDriveDefinition;
+            return drive == null ? 0f : drive.PowerEfficiency;
+        }
+
+        /// <summary>
         /// The thermal properties of a block: the blend of the materials its build components make it,
         /// with whatever a definition actually declared laid over the top, property by property.
         /// Derivation is the floor rather than the fallback of last resort, which is what turns a
@@ -331,6 +343,16 @@ namespace Thermodynamics
             if (definition.WasDeclared(ThermalCellDefinition.DeclaredProperties.HeatSourceWatts))
                 properties.HeatSourceWatts = definition.HeatSourceWatts;
 
+            // **A block whose own definition states what it does with the power it draws beats the
+            // type entry, and loses to a subtype entry.** A type entry describes a family and
+            // cannot say both 0.8 and 0.9; a subtype entry describes this block and is a
+            // deliberate override. See definitions.md, Where a block's properties come from.
+            if (definition.ResolvedAt != ThermalCellDefinition.Resolution.Subtype)
+            {
+                float stated = BlockThermalDerivation.WasteFromEfficiency(StatedEfficiency(block));
+                if (stated >= 0f) properties.ConsumerWasteEnergy = stated;
+            }
+
             // Before the clamp, and only here: this is the one path an authored value reaches, and
             // once Clamp has run there is no problem left to describe. See ThermalValidation.
             Core.ThermalValidation.Check(
@@ -367,7 +389,7 @@ namespace Thermodynamics
             if (definition == null) return properties.Clamp();
 
             properties.CoolantMassPerPipe = definition.CoolantMassPerPipe;
-            properties.Conductivity = definition.Conductivity;
+            properties.HeatTransferCoefficient = definition.HeatTransferCoefficient;
             properties.SpecificHeat = definition.SpecificHeat;
             properties.PipeContactMultiplier = definition.PipeContactMultiplier;
             properties.SinkContactMultiplier = definition.SinkContactMultiplier;
@@ -433,8 +455,8 @@ namespace Thermodynamics
             if (Moved(world.LoopCoolantMassPerPipe, shipped.LoopCoolantMassPerPipe))
                 properties.CoolantMassPerPipe = world.LoopCoolantMassPerPipe;
 
-            if (Moved(world.LoopConductivity, shipped.LoopConductivity))
-                properties.Conductivity = world.LoopConductivity;
+            if (Moved(world.LoopHeatTransferCoefficient, shipped.LoopHeatTransferCoefficient))
+                properties.HeatTransferCoefficient = world.LoopHeatTransferCoefficient;
 
             if (Moved(world.LoopSpecificHeat, shipped.LoopSpecificHeat))
                 properties.SpecificHeat = world.LoopSpecificHeat;

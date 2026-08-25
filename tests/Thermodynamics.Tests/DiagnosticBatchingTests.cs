@@ -23,6 +23,7 @@ namespace Thermodynamics.Tests
     /// moment than the one it claims.
     /// </para>
     /// </summary>
+    [Trait("speed", "slow")]
     public class DiagnosticBatchingTests
     {
         private static ThermalSimulation Build(bool everySubstep, int maxSubsteps)

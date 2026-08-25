@@ -116,12 +116,25 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// Air is the whole point of asking. A fitting in a sea-level atmosphere is several times
-        /// stiffer than the same fitting in vacuum, because convection over a full cell's exposed
-        /// area dwarfs both its conduction and its radiation.
+        /// Air is the whole point of asking. A fitting in a sea-level atmosphere is stiffer than
+        /// the same fitting in vacuum, because convection over a full cell's exposed area is
+        /// larger than its radiation and — at the pace the conversion calibrated to — than its
+        /// conduction as well.
+        ///
+        /// <para>
+        /// **It was four times and it is 2.3.** `C24` took `ConductionScale` to four times what it
+        /// was, so the conduction half of this fitting's stability rate is four times larger and
+        /// the convection half is where it was: 17.41 in air against 7.64 in vacuum, where the
+        /// same fitting used to be over four times stiffer. The whole population moved with it —
+        /// the corpus median hull's stiffest block is 1.07 times stiffer in air where it was 2.34
+        /// (backlog.md `C24`, and <see cref="Census.Corpus"/>) — so this
+        /// is the model rather than the rig. What it does *not* say is that air has stopped cooling
+        /// a hull: the environment terms are untouched and this is a statement about which term
+        /// sets a substep count.
+        /// </para>
         /// </summary>
         [Fact]
-        public void TheSameFittingIsSeveralTimesStifferInAirThanInVacuum()
+        public void TheSameFittingIsStifferInAirThanInVacuum()
         {
             ThermalSettings settings = Settings();
             ThermalSimulation simulation = Fitting(settings);
@@ -130,7 +143,7 @@ namespace Thermodynamics.Tests
             float vacuum = Peak(simulation.Solver);
             float inAir = Peak(simulation.Solver, ref air);
 
-            Assert.True(inAir > vacuum * 4f,
+            Assert.True(inAir > vacuum * 2f,
                 "in air " + inAir + " against vacuum " + vacuum);
         }
 

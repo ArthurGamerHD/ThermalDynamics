@@ -234,7 +234,7 @@ namespace Thermodynamics.Tests
         /// Earth's reach 0.14 %, so the linear laws the terrain factors come from ran past their
         /// clips on ordinary ground and *every* site read exactly the cap — which meant terrain had
         /// stopped telling one place from another, the only thing it was there to do.
-        /// [backlog](../../docs/backlog.md) `B19`.
+        /// backlog.md `B19`.
         /// </para>
         ///
         /// <para>

@@ -95,9 +95,20 @@ Two conductors in series: centre of A to the interface, interface to centre of B
 block's half-depth along the contact axis, so a long block conducts more slowly end to end than a
 cube does. `k = Conductivity × ThermalConstants.ConductionScale`, where `Conductivity` is the
 definition's figure in **real W/(m·K)** — mild steel 50, glass 1, copper 400 — and `ConductionScale`
-(2.4) is one global constant setting the game's pace, so the definition stays a description of the
-material rather than a balance dial. A coolant loop's `Conductivity` is still the older 0…1 quality
-against a 200 W/(m·K) reference; see [definitions.md](definitions.md#conductivity-is-in-real-wmk).
+(**9.6**) is one global constant setting the game's pace, so the definition stays a description of
+the material rather than a balance dial. It was 2.4 until `C24`, which is the value that puts mild
+steel exactly where the pre-conversion world put it; the shipped pace is four times that, and what
+bought it is `G8`'s significance window — see
+[balance.md](balance.md#the-route-is-chosen-and-it-is-the-one-the-cost-column-argued-against).
+
+**A coolant loop's coupling is not this.** It is a heat transfer coefficient in W/(m²·K) — 160,
+what the transfer physically is — and no conduction pace touches it, because it is a fluid against
+a wall rather than a solid against a solid (`C20`). This paragraph said it was still the older 0…1
+quality against a 200 W/(m·K) reference until 2026-08-24, and pointed at a page that already said
+otherwise. One consequence is deliberate and is `C25`: a bolt joint carries 1,168 W/K where a sink
+face carries 1,000, so in this world a steel bolt out-couples a water-cooled plate face for face.
+See [definitions.md](definitions.md#conductivity-is-in-real-wmk) and
+[blocks.md](blocks.md).
 
 Blocks that touch without mount surfaces on both sides conduct **nothing**. This is what makes
 armour skins, offset blocks and open frames behave differently from a solid slab.
@@ -144,10 +155,11 @@ windFactor = 1 + faceWeight(wind)                (1.0 in still air)
 faces, so a face turned into the airflow sheds twice what one in the lee does.
 
 **A wind never sheds less than still air.** Forced convection adds to natural convection rather
-than replacing it, so the factor runs from 1 upward and a lee face keeps exactly what it had. The
-factor used to run 0.5 to 1, which had the same two-to-one contrast and the wrong floor: most of a
-closed hull's exposed faces do not point into the wind, so the geometric term lost more than the
-speed term gained and a wind under about 50 m/s came out a net *warmer*.
+than replacing it, so the factor runs from 1 upward and a lee face keeps what it has. A floor of
+0.5 gives the same two-to-one contrast and the wrong answer: most of a closed hull's exposed faces
+do not point into the wind, the geometric term then loses more than the speed term gains, and a wind
+under about 50 m/s is a net **warmer** — a hull making 2 MW settles 0.9 K hotter in a 40 m/s wind
+than in still air.
 
 Radiation and convection are blended by how fluid the atmosphere is:
 
@@ -548,9 +560,37 @@ reading it. Three things can empty a room and each can veto air on its own:
 | `IMyCubeGrid.IsRoomAtPositionAirtight` | does the game call this room sealed | that room holds nothing |
 | `IMyAirVent.GetOxygenLevel`, or `Depressurize` | how full is it | that much, or nothing |
 
-**None of them can insist on air, only refuse it**, because the two mistakes are not equal: air is
-heat capacity, so a room wrongly given it warms and cools like a room with a tonne of gas in it and
-drags every bounding surface along, where a room wrongly denied it only loses a little inertia.
+**None of them can insist on air, only refuse it**: the game owns pressurisation (`C9`) and this
+model has no standing to overrule it, so an answer that says *no air* is taken. **An absence of an
+answer is not one of them**, and was read as one until 2026-08-24 — see below.
+
+**The reason once given for that was that the two mistakes are unequal, and measurement says they
+are unequal the other way round.** Air was described as heat capacity — a room wrongly given it
+dragging its walls along, a room wrongly denied it losing only a little inertia. It is not mainly
+capacity. A link's conductance is `RoomConvectionCoefficient × faces × cellFaceArea` and carries no
+pressure term at all, so pressure decides whether a compartment's walls are coupled and, above zero,
+nothing else. Measured on a 2,000-block census hull settled under load in vacuum: the hottest block
+runs at **1,502.83 K** at every pressure from 0.2 to 1.0 — identical to two decimals across a
+fivefold change in air mass — and at **1,706.08 K** with the air gone, while the hull *mean* moves
+3.8 K. Room air is a **mixer, not a sink**: it barely changes the hull's energy balance and moves
+its hot spot by 203 K, which is the number overheat damage is taken off.
+
+**So the two errors are the same size and differ in sign.** A room wrongly denied air is computed
+203 K too hot, and a room wrongly given it 203 K too cool. What is not symmetric is what each costs
+a player: too hot destroys a block that should have survived, and too cool fails to threaten one
+that should have been. The chain can only ever deny, so its bias is toward the first.
+
+**The chain stays and the fallback moved** (`C22`, 2026-08-24). It stays because `C9` and not the
+error cost is what justifies it — every veto is the game or the world *answering*, and there is
+nothing for a requirement to be built out of. What did not survive is treating **silence** as a
+fourth veto: a compartment the game calls airtight, on a world where pressurisation is on, that no
+lookup found a level for is a lookup that missed rather than an answer of empty — and a miss is
+exactly what two models with different room shapes produce. `RoomPressure.Level` returns
+`AssumedWhenUnanswered` there. Any positive value would behave identically, since the measurement
+above says the level does not matter above zero; what the constant decides is whether the room mixes
+at all. `RoomPressureTests` pins that silence does not defeat a veto, `RoomAirCouplingTests` the
+pressure-independence and `ClientInputTests` the discontinuity a client's disagreement about
+pressure produces.
 
 The game's sealing test is consulted rather than this model's own room map because the two disagree,
 and the game is right: it knows the real shape of a sloped or half block where the room mapper knows
@@ -669,6 +709,9 @@ several tests compare against it so the differences stay pinned rather than reme
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Stated the wind factor's floor as present-tense evidence rather than as what it *used to be* (`R12`), and absorbed the measured consequence — a 2 MW hull settling 0.9 K hotter in a 40 m/s wind — from the twelve-line comment in `ThermalSolver` that had been carrying it. The comment names this section now. |
+| 2026-08-24 | **Silence stopped being a veto** (`C22`). `RoomPressure.Level` treated *nothing reported* and *reported empty* identically, though the parameter's own documentation said they were distinct. The three vetoes are each the game or the world answering; a compartment the game calls airtight, on a pressurised world, that no lookup found a level for is a lookup that missed — which is what two models with different room shapes produce — and it now takes `AssumedWhenUnanswered`. Also corrected the error-size claim above: the two mistakes are the *same* size, about 203 K, and differ in sign; what is asymmetric is that too hot destroys a block which should have survived. |
+| 2026-08-24 | Corrected the reason given for the pressure veto chain. It was justified by air being heat capacity, so that denying air wrongly cost only a little inertia; measured, the link conductance carries no pressure term, so denying air removes the whole coupling and costs 203 K on the hottest block while every pressure above zero is identical to two decimals. The chain stays — `C9` justifies it — and whether the fallback should deny on uncertainty is now [backlog.md](backlog.md) `C22` ([backlog.md](backlog.md) `F21`). |
 | 2026-08-22 | Wrote down what a coolant pump costs, now that it costs anything: 50 kW on a large grid, derived from the loop's own mass flow against two bar of head, all of it becoming heat because a circulator does no work that leaves the system ([backlog.md](backlog.md) `C13`). |
 | 2026-08-22 | The convection wind factor runs from 1 upward rather than from 0.5 to 1. Forced convection adds to natural convection; the old floor made a wind under about 50 m/s a net warmer, because most of a closed hull's faces do not point into it ([backlog.md](backlog.md) `B29`). The two-to-one contrast between a windward face and a lee one is unchanged. |
 | 2026-08-22 | Radiation in and radiation out are two coefficients. Emission keeps the emissivity; the sun and point sources read `SolarAbsorptivity`, which follows the emissivity unless authored, so the grey-body behaviour is the default rather than the only option ([backlog.md](backlog.md) `B27`). |

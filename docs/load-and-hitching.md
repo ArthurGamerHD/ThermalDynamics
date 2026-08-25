@@ -555,6 +555,36 @@ other direction, and reached without asking anyone to retune a world. What was f
 generous is now about right, and it is right for the reason the arithmetic says rather than by
 being trimmed until it looked sensible.
 
+### And the calibration it rests on was never re-taken
+
+The paragraph above ends the story at 2026-08-21 and the story kept going. Two things moved under it
+and neither was noticed until `C27` asked whether the default should move with `C24`'s retune.
+
+**The rate the default was calibrated against is gone.** 1,000,000 was "roughly one 60 fps frame at
+the harness's measured 16 ns per visit", when a visit was a *link* visit and the setting was called
+`MaxLinkVisitsPerStep`. Removing the two passes that reached through the node objects took the same
+step from 623 ms to 118 ms and the rate to 4.7 ns, and the harness today measures **about 1 ns** per
+element visit in the unit the budget now counts in — which on this hull is **3.1 ns a link visit**,
+a fifth of what the calibration assumed. The default has moved once since, and for an unrelated
+reason (`Frequency`). Nobody re-took the calibration, because the figure it would be re-taken
+against is in the wrong unit — which is the next paragraph.
+
+**And the figure a reader would re-calibrate with is in a different unit.** Every *ns per element
+visit* on this page, in [benchmarks.md](benchmarks.md#the-ladder) and in a telemetry dump divides by
+`nodes + links`; the budget counts `links + 4 × nodes`, which on a census hull is very close to
+twice as many. So anyone converting the shipped allowance into milliseconds through a published
+figure would have overstated it by about two, and nobody could have converted it correctly from
+anything written down.
+
+**What it is actually worth is now measured in its own unit**, along with what the simulated time it
+trades away costs in kelvin — see [benchmarks.md](benchmarks.md#what-the-allowance-is-worth) and
+`bench allowance`. The short form: the allowance is a **per-frame** budget, `V × Frequency / 60`
+element visits, so the 2,000,000 that shipped until `C27` granted 133,333 visits a frame; it binds
+in **air** rather than in vacuum, at about 9,000 blocks in flight against 32,000 in vacuum; and what
+a shortened step costs is a slow thermal clock, worth 1.19 K standing at a 5 % deficit and 36.98 K
+at 60 % under a moving load. **The default is 4,000,000 since**, which is that trade and nothing
+else — see [configuration.md](configuration.md#what-a-shortened-step-costs).
+
 ## What is still open
 
 Roughly in order of how much a million-block grid would notice.

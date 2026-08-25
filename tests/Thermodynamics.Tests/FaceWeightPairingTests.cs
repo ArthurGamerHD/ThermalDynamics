@@ -51,7 +51,7 @@ namespace Thermodynamics.Tests
             {
                 ThermalNode node = nodes[i];
                 if (node.TotalExposedFaces != 1) continue;
-                if (node.ExposedFaces[face] <= 0) continue;
+                if (node.GetExposedFaces(face) <= 0) continue;
                 return node;
             }
 

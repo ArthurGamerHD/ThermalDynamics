@@ -13,7 +13,7 @@ in the prose. The conventions are in
 | Document | Contents |
 | --- | --- |
 | [document-of-intent.md](document-of-intent.md) | What the mod is for and the goals it is measured against, where those goals conflict with the code, and where no intent has been stated at all. |
-| [rules.md](rules.md) | The standing rules, in one place: fourteen principles, the rules that follow from them, and whether each is load-bearing, conditional or not worth keeping. |
+| [rules.md](rules.md) | The standing rules, in one place: fifteen principles, the rules that follow from them, and whether each is absolute, conditional or not worth keeping. |
 | [architecture.md](architecture.md) | Component layout, update order, grid lifecycle, persistence. |
 | [backlog.md](backlog.md) | Every open item across these documents, categorised, one line each. |
 

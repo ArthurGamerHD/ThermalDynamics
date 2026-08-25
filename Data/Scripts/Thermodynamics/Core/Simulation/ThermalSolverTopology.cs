@@ -225,6 +225,7 @@ namespace Thermodynamics.Core
 
                 nodes[index] = moved;
                 moved.Index = index;
+                moved.Block.NodeIndex = index;
 
                 nodeFirstLink[index] = nodeFirstLink[last];
                 nodeConductanceTotal[index] = nodeConductanceTotal[last];
@@ -246,6 +247,12 @@ namespace Thermodynamics.Core
         /// <paramref name="to"/>. Room air is the one that matters most: it is not rebuilt until a
         /// mapping pass completes, thousands of ticks on a large grid, and a stale index there pours a
         /// room's heat into whichever block inherited it.
+        ///
+        /// <para>
+        /// The moved node's own block is repaired by its caller rather than here, because this is
+        /// also called where no node moved. <see cref="BlockInstance.NodeIndex"/> is the other
+        /// holder of a node index and the newest one.
+        /// </para>
         /// </summary>
         private void RepointNode(int from, int to)
         {

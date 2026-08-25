@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
-using System.Xml.Linq;
 using System.Text.RegularExpressions;
 using Thermodynamics.Core;
 using Xunit;
@@ -15,7 +13,7 @@ namespace Thermodynamics.Tests
     ///
     /// <para>
     /// **A comment reading `real units: aluminium` beside a `237` is a claim, and nothing checked
-    /// it.** That is the shape of [backlog.md](../../docs/backlog.md) `C2` — the authored values
+    /// it.** That is the shape of backlog.md `C2` — the authored values
     /// predate three changes to the model that reads them, and no reader could tell which numbers
     /// still meant what they said. These checks do not decide whether a value is *balanced*; they
     /// decide whether it is what it claims to be, which is the part a test can settle and the part
@@ -43,91 +41,15 @@ namespace Thermodynamics.Tests
         /// <summary>The two properties this file states in real units.</summary>
         private static readonly string[] Material = { "Conductivity", "SpecificHeat" };
 
-        private class Authored
-        {
-            public string TypeId;
-            public string SubtypeId;
-            public string Property;
-            public float Value;
-
-            /// <summary>The comment sitting immediately above it, or empty.</summary>
-            public string Note;
-
-            public override string ToString()
-            {
-                return TypeId + "/" + SubtypeId + " " + Property + " = "
-                    + Value.ToString(CultureInfo.InvariantCulture);
-            }
-        }
-
         /// <summary>
         /// Every authored `Conductivity` and `SpecificHeat` in `Cubes.xml`, with the comment above
-        /// it — which is where the provenance lives, so the comment is data here rather than prose.
+        /// each — which is where the provenance lives, so the comment is data here rather than
+        /// prose. The reading itself is <see cref="AuthoredValues"/>, shared with
+        /// <see cref="AuthoredWasteTests"/>.
         /// </summary>
-        private static List<Authored> Read()
+        private static List<AuthoredValues.Entry> Read()
         {
-            List<Authored> found = new List<Authored>();
-
-            string path = Path.Combine(RepoRoot(), "Data", "Cubes.xml");
-            XDocument document = XDocument.Load(path, LoadOptions.PreserveWhitespace);
-
-            foreach (XElement definition in document.Descendants("Definition"))
-            {
-                XElement id = definition.Element("Id");
-                if (id == null) continue;
-
-                string type = Text(id.Element("TypeId"));
-                string subtype = Text(id.Element("SubtypeId"));
-
-                foreach (XElement group in definition.Descendants("Group"))
-                {
-                    foreach (XElement element in group.Elements())
-                    {
-                        if (element.Name != "Decimal") continue;
-
-                        string property = (string)element.Attribute("Name");
-                        if (Array.IndexOf(Material, property) < 0) continue;
-
-                        float value;
-                        if (!float.TryParse((string)element.Attribute("Value"),
-                            NumberStyles.Float, CultureInfo.InvariantCulture, out value))
-                        {
-                            continue;
-                        }
-
-                        found.Add(new Authored
-                        {
-                            TypeId = type,
-                            SubtypeId = subtype,
-                            Property = property,
-                            Value = value,
-                            Note = NoteAbove(element),
-                        });
-                    }
-                }
-            }
-
-            return found;
-        }
-
-        /// <summary>The text of the comment immediately above an element, or empty.</summary>
-        private static string NoteAbove(XElement element)
-        {
-            XNode node = element.PreviousNode;
-            while (node != null)
-            {
-                XComment comment = node as XComment;
-                if (comment != null) return (comment.Value ?? "").Trim();
-
-                // Whitespace between the two is formatting; anything else means the comment above
-                // belongs to something other than this element.
-                XText text = node as XText;
-                if (text == null || !string.IsNullOrWhiteSpace(text.Value)) return "";
-
-                node = node.PreviousNode;
-            }
-
-            return "";
+            return AuthoredValues.Read(Material);
         }
 
         /// <summary>The material a note claims, or null where it claims none.</summary>
@@ -152,13 +74,13 @@ namespace Thermodynamics.Tests
         [Fact]
         public void EveryFigureThatNamesAMaterialMatchesIt()
         {
-            List<Authored> authored = Read();
+            List<AuthoredValues.Entry> authored = Read();
             Assert.NotEmpty(authored);
 
             int judged = 0;
             List<string> wrong = new List<string>();
 
-            foreach (Authored entry in authored)
+            foreach (AuthoredValues.Entry entry in authored)
             {
                 string material = Claimed(entry.Note);
                 if (material == null || !ReferenceMaterials.IsKnown(material)) continue;
@@ -191,12 +113,12 @@ namespace Thermodynamics.Tests
         [Fact]
         public void EveryFigureSaysWhereItCameFrom()
         {
-            List<Authored> authored = Read();
+            List<AuthoredValues.Entry> authored = Read();
             Assert.NotEmpty(authored);
 
             List<string> unexplained = new List<string>();
 
-            foreach (Authored entry in authored)
+            foreach (AuthoredValues.Entry entry in authored)
             {
                 string material = Claimed(entry.Note);
 
@@ -229,18 +151,6 @@ namespace Thermodynamics.Tests
             Assert.Equal("aluminium", Claimed("W/(m K), real units: aluminium"));
             Assert.False(ReferenceMaterials.IsKnown("unobtanium"));
             Assert.Throws<ArgumentException>(delegate { ReferenceMaterials.Get("unobtanium"); });
-        }
-
-        private static string Text(XElement element)
-        {
-            return element == null ? "" : (element.Value ?? "").Trim();
-        }
-
-        private static string RepoRoot()
-        {
-            // The build output no longer sits inside the repository, so walking up from the
-            // assembly does not find it. See Directory.Build.props.
-            return Thermodynamics.Harness.ShippedBlocks.RepoRoot();
         }
     }
 }

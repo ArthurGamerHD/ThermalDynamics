@@ -15,6 +15,7 @@ namespace Thermodynamics.Tests
     /// See benchmarks.md, The overshoot clamp A/B.
     /// </para>
     /// </summary>
+    [Trait("speed", "slow")]
     public class ConductionClampGateTests
     {
         /// <summary>

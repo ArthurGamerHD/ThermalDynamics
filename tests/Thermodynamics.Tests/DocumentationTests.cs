@@ -309,6 +309,12 @@ namespace Thermodynamics.Tests
                 },
                 new QuotedCount
                 {
+                    Noun = "waste fractions",
+                    Actual = WasteFractionCount,
+                    Tolerance = 0f,
+                },
+                new QuotedCount
+                {
                     Noun = "test classes",
                     Actual = TestClassCount,
                     Tolerance = 0.1f,
@@ -338,6 +344,19 @@ namespace Thermodynamics.Tests
             if (!File.Exists(path)) return -1;
 
             return Regex.Matches(File.ReadAllText(path), @"<(?:Decimal|Bool)\s+Name=").Count;
+        }
+
+        /// <summary>
+        /// Waste fractions authored in `Cubes.xml`. Each one states its provenance, so a page
+        /// quoting how many there are is quoting the size of the ledger `AuthoredWasteTests` keeps.
+        /// </summary>
+        private static int WasteFractionCount()
+        {
+            string path = Path.Combine(RepoRoot(), "Data", "Cubes.xml");
+            if (!File.Exists(path)) return -1;
+
+            return Regex.Matches(File.ReadAllText(path),
+                "<Decimal\\s+Name=\"(?:Producer|Consumer)WasteEnergy\"").Count;
         }
 
         /// <summary>Classes in the test project that hold cases.</summary>
@@ -793,11 +812,22 @@ namespace Thermodynamics.Tests
         /// </para>
         ///
         /// <para>
-        /// Two <c>&lt;summary&gt;</c> blocks in a row is the signature, because C# allows only one per
-        /// member: the first belongs to something that is gone. It is a narrow test — an orphan that
-        /// lands somewhere with no comment of its own is invisible to it — and narrow and cheap beats
-        /// nothing, which is what checked this before. Run against a deliberate orphan in both
-        /// spellings before being believed; the first version caught only the multi-line one.
+        /// **Two signatures, and they are different faults.** *Closed then reopened* — a
+        /// <c>&lt;/summary&gt;</c> whose next line opens another — is a member that has gone, leaving its
+        /// comment resting on the one below. *Opened twice* — a second <c>&lt;summary&gt;</c> reached
+        /// before the first is closed — is a member that has been **inserted into the middle of
+        /// somebody else's comment**, which leaves two doc comments broken rather than one: the tail
+        /// of the first now hangs under the newcomer's body and describes the member after it. The
+        /// second signature was added after one was found in `ThermalSolver`, where
+        /// <c>NodeConductanceTotal</c> had landed inside <c>NodeSubstepDemand</c>'s summary and the
+        /// closed-then-reopened test could not see it.
+        /// </para>
+        ///
+        /// <para>
+        /// It is still a narrow test — an orphan that lands somewhere with no comment of its own is
+        /// invisible to it — and narrow and cheap beats nothing, which is what checked this before.
+        /// Run against a deliberate orphan in every spelling before being believed; the first
+        /// version caught only the multi-line one of the first signature.
         /// </para>
         /// </summary>
         [Fact]
@@ -835,7 +865,46 @@ namespace Thermodynamics.Tests
                         if (!current.EndsWith("</summary>", StringComparison.Ordinal)) continue;
                         if (!lines[i + 1].Trim().StartsWith("/// <summary>", StringComparison.Ordinal)) continue;
 
-                        orphans.Add(relative + ":" + (i + 1));
+                        orphans.Add(relative + ":" + (i + 1) + " — closed and reopened");
+                    }
+
+                    // The second signature: a summary opened while one is already open. A run of
+                    // `///` lines is one comment, and anything that is not a `///` line ends it —
+                    // so an unbalanced tag cannot leak into the next member's comment and report
+                    // there instead.
+                    int openedAt = -1;
+
+                    for (int i = 0; i < lines.Length; i++)
+                    {
+                        string current = lines[i].Trim();
+                        if (!current.StartsWith("///", StringComparison.Ordinal))
+                        {
+                            openedAt = -1;
+                            continue;
+                        }
+
+                        int at = 0;
+                        while (at < current.Length)
+                        {
+                            int open = current.IndexOf("<summary>", at, StringComparison.Ordinal);
+                            int close = current.IndexOf("</summary>", at, StringComparison.Ordinal);
+
+                            // `</summary>` contains no `<summary>`, so a close is never mistaken
+                            // for an open — but it does sit one character later, and taking the
+                            // earlier index without that guard would read every close as an open.
+                            if (close >= 0 && (open < 0 || close < open))
+                            {
+                                openedAt = -1;
+                                at = close + "</summary>".Length;
+                                continue;
+                            }
+
+                            if (open < 0) break;
+
+                            if (openedAt >= 0) orphans.Add(relative + ":" + (openedAt + 1) + " — opened twice");
+                            openedAt = i;
+                            at = open + "<summary>".Length;
+                        }
                     }
                 }
             }
@@ -905,7 +974,7 @@ namespace Thermodynamics.Tests
         private static HashSet<string> StatedRules()
         {
             HashSet<string> rules = new HashSet<string>(StringComparer.Ordinal);
-            foreach (Match m in Regex.Matches(RulesPage(), @"(?m)^#{3,4}\s+([EMDCROJ]\d{1,2})\s+—"))
+            foreach (Match m in Regex.Matches(RulesPage(), @"(?m)^#{3,4}\s+([EMDCROJW]\d{1,2})\s+—"))
             {
                 rules.Add(m.Groups[1].Value);
             }
@@ -953,7 +1022,7 @@ namespace Thermodynamics.Tests
 
                     banners++;
                     int cited = 0;
-                    foreach (Match m in Regex.Matches(banner.ToString(), @"`([EMDCROJ]\d{1,2})`"))
+                    foreach (Match m in Regex.Matches(banner.ToString(), @"`([EMDCROJW]\d{1,2})`"))
                     {
                         cited++;
                         if (!stated.Contains(m.Groups[1].Value))
@@ -980,6 +1049,225 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// Every identifier cited anywhere in the tree resolves to a rule or to a backlog row.
+        ///
+        /// <para>
+        /// **The gap this closes ran in the direction nothing checked.** `EveryRuleCitedByAPageExists`
+        /// reads documentation banners, so a rule renamed or dropped is caught where a *page* cites
+        /// it — and 425 citations of the same shape live in `.cs` and `.py` files, where nothing
+        /// looked. A citation to an identifier that no longer exists reads exactly like one that
+        /// resolves.
+        /// </para>
+        ///
+        /// <para>
+        /// **It has to accept both pages, and that is the finding rather than a compromise.**
+        /// rules.md and backlog.md share a
+        /// letter-and-number namespace and fifteen identifiers are currently both a rule and an open
+        /// item — `C3` is *target `net48`* on one page and *whether to ship
+        /// `MaxSubstepsPerBlock 6`* on the other. So this cannot say which page a citation means; it
+        /// says the citation resolves to one of them, which is what stops a dropped identifier
+        /// rotting quietly in a comment. `H8` carries the ambiguity itself.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void EveryCitedIdentifierResolves()
+        {
+            HashSet<string> known = new HashSet<string>(StatedRules(), StringComparer.Ordinal);
+            foreach (Match m in Regex.Matches(BacklogPage(), @"(?m)^\|\s*([A-Z]\d{1,2})\s*\|"))
+            {
+                known.Add(m.Groups[1].Value);
+            }
+
+            Assert.True(known.Count > 100,
+                "only " + known.Count + " identifiers were read out of the two pages, so this test"
+                + " is parsing them wrongly and would pass on any citation at all");
+
+            List<string> dangling = new List<string>();
+            int cited = 0;
+
+            foreach (string file in SourceFiles())
+            {
+                string relative = Relative(file);
+
+                // Vendored code carries its authors' own identifiers and is replaced, not edited
+                // (`R6`); a change log records what was true when it was written (`R12`).
+                if (relative.Contains("RichHudFramework")) continue;
+                if (relative.Contains("NetworkAPI")) continue;
+
+                foreach (Match m in Regex.Matches(File.ReadAllText(file), @"`([EMDCROJW]\d{1,2})`"))
+                {
+                    cited++;
+                    if (!known.Contains(m.Groups[1].Value))
+                    {
+                        dangling.Add(relative + " cites `" + m.Groups[1].Value + "`");
+                    }
+                }
+            }
+
+            Assert.True(cited > 200,
+                "only " + cited + " identifiers were found cited in source, so this test is looking"
+                + " in the wrong place and would pass whatever a comment said");
+
+            dangling.Sort(StringComparer.Ordinal);
+            Assert.True(dangling.Count == 0,
+                "identifiers cited in source that are neither a rule in docs/rules.md nor a row in"
+                + " docs/backlog.md:\n  " + string.Join("\n  ", dangling.ToArray()));
+        }
+
+        /// <summary>
+        /// **The two pages' shared identifiers are these eleven and no more.**
+        ///
+        /// <para>
+        /// backlog.md `H8`: rules.md and that page share a
+        /// letter-and-number namespace, so `C3` is *target `net48`* on one and *whether to ship
+        /// `MaxSubstepsPerBlock 6`* on the other, and a commit message citing it means one of two
+        /// unrelated things. `EveryCitedIdentifierResolves` above accepts either page and cannot
+        /// say which was meant — that is deliberate, and it leaves the ambiguity itself unchecked.
+        /// </para>
+        ///
+        /// <para>
+        /// **The remap was costed and refused.** The rules page's letters are historical and its
+        /// own text says the classification is orthogonal to them, so remapping its side is the
+        /// cheap direction — but every one of the 215 citations of the eleven would have to be
+        /// resolved to a page by hand first, and a citation resolved wrongly reads exactly like one
+        /// resolved rightly. That is a large diff whose errors are silent, paid to remove an
+        /// ambiguity no reader has been recorded as tripping over.
+        /// </para>
+        ///
+        /// <para>
+        /// **So the decision is to freeze it rather than pay it.** The set is listed below and this
+        /// fails if it grows: a new rule or a new backlog row may not take an identifier the other
+        /// page already uses. `W` was chosen for the four rules added on 2026-08-25 for exactly that
+        /// reason, and this is what makes that a rule rather than a habit (`R11`). The set shrinks
+        /// on its own as rows are retired, and a shrink is not a failure.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheTwoPagesShareNoIdentifierTheyDidNotAlreadyShare()
+        {
+            // Frozen 2026-08-25 at eleven. Remove an entry when the backlog row that caused it is
+            // retired; never add one.
+            HashSet<string> allowed = new HashSet<string>(new[]
+            {
+                "C3", "C7", "C8", "D1", "D2", "D3", "D4", "D5", "D6", "E2", "E4",
+            }, StringComparer.Ordinal);
+
+            HashSet<string> rules = new HashSet<string>(StatedRules(), StringComparer.Ordinal);
+
+            HashSet<string> rows = new HashSet<string>(StringComparer.Ordinal);
+            foreach (Match m in Regex.Matches(BacklogPage(), @"(?m)^\|\s*([A-Z]\d{1,2})\s*\|"))
+            {
+                rows.Add(m.Groups[1].Value);
+            }
+
+            // **A check that read one of the pages wrongly would report success**, because an empty
+            // set collides with everything and nothing (`E8`).
+            Assert.True(rules.Count > 50,
+                "only " + rules.Count + " rules were read out of docs/rules.md");
+            Assert.True(rows.Count > 40,
+                "only " + rows.Count + " rows were read out of docs/backlog.md");
+
+            List<string> shared = new List<string>();
+            foreach (string identifier in rules)
+            {
+                if (rows.Contains(identifier)) shared.Add(identifier);
+            }
+
+            List<string> added = new List<string>();
+            foreach (string identifier in shared)
+            {
+                if (!allowed.Contains(identifier)) added.Add(identifier);
+            }
+
+            added.Sort(StringComparer.Ordinal);
+            Assert.True(added.Count == 0,
+                added.Count + " identifier(s) now mean one thing in docs/rules.md and another in"
+                + " docs/backlog.md that did not before. Pick a letter the other page does not use:"
+                + "\n  " + string.Join("\n  ", added.ToArray()));
+        }
+
+        /// <summary>
+        /// A pointer in code is plain text, never a markdown link.
+        ///
+        /// <para>
+        /// A link inside a `.cs` file **renders nowhere**. Nobody clicks it, so nobody finds out it
+        /// is wrong, and `EveryRelativeLinkResolves` reads markdown only — so the one form of
+        /// cross-reference in this repository that nothing checked was the one written in the
+        /// syntax that looks checked. `Settings.cs` carried one whose text and whose target were both
+        /// the bare word `backlog.md` — a relative path from `Data/Scripts/Thermodynamics` to a file
+        /// four directories above it.
+        /// </para>
+        ///
+        /// <para>
+        /// **It cannot tell an example from a pointer**, which it demonstrated by failing on the
+        /// first draft of this summary, where the offending link was quoted verbatim. That is the
+        /// right trade: a check that tried to exempt examples would exempt the next real one.
+        /// </para>
+        ///
+        /// <para>
+        /// 155 of them existed when this was written, in 91 files. Flattening them cost nothing,
+        /// because every link text was already the page's own name: `See known-issues.md and
+        /// backlog.md B30` is what the reader wanted and what the convention asked for.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void NoPointerInCodeIsWrittenAsALink()
+        {
+            List<string> links = new List<string>();
+            int files = 0;
+
+            foreach (string file in SourceFiles())
+            {
+                string relative = Relative(file);
+                if (!relative.EndsWith(".cs", StringComparison.Ordinal)) continue;
+                if (relative.Contains("RichHudFramework")) continue;
+                if (relative.Contains("NetworkAPI")) continue;
+
+                files++;
+                string[] lines = File.ReadAllLines(file);
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    if (Regex.IsMatch(lines[i], @"\[[^\]]+\]\([^)]*\.md[^)]*\)"))
+                    {
+                        links.Add(relative + ":" + (i + 1));
+                    }
+                }
+            }
+
+            Assert.True(files > 200,
+                "only " + files + " source files were read, so this test is looking in the wrong"
+                + " place and would pass whatever the tree held");
+
+            links.Sort(StringComparer.Ordinal);
+            Assert.True(links.Count == 0,
+                "markdown links inside .cs files, which render nowhere and are checked by nothing"
+                + " (R16) — write the page's name as plain text instead:\n  "
+                + string.Join("\n  ", links.ToArray()));
+        }
+
+        private static string BacklogPage()
+        {
+            return File.ReadAllText(Path.Combine(RepoRoot(), "docs", "backlog.md"));
+        }
+
+        /// <summary>Every source file a citation could sit in: the mod, the tests, the tools.</summary>
+        private static IEnumerable<string> SourceFiles()
+        {
+            string[] patterns = { "*.cs", "*.py" };
+            foreach (string pattern in patterns)
+            {
+                foreach (string file in Directory.GetFiles(RepoRoot(), pattern, SearchOption.AllDirectories))
+                {
+                    string relative = Relative(file);
+                    if (relative.Contains("/bin/") || relative.Contains("/obj/")) continue;
+                    if (relative.StartsWith("out/", StringComparison.Ordinal)) continue;
+
+                    yield return file;
+                }
+            }
+        }
+
+        /// <summary>
         /// The rules page indexes every rule it states, and states every rule it indexes.
         ///
         /// <para>
@@ -998,7 +1286,7 @@ namespace Thermodynamics.Tests
             HashSet<string> indexed = new HashSet<string>(StringComparer.Ordinal);
             HashSet<string> lowValue = new HashSet<string>(StringComparer.Ordinal);
 
-            foreach (Match m in Regex.Matches(page, @"(?m)^\|\s*\*\*([EMDCROJ]\d{1,2})\*\*\s*\|([^|]*)\|([^|]*)\|"))
+            foreach (Match m in Regex.Matches(page, @"(?m)^\|\s*\*\*([EMDCROJW]\d{1,2})\*\*\s*\|([^|]*)\|([^|]*)\|"))
             {
                 indexed.Add(m.Groups[1].Value);
                 if (m.Groups[3].Value.IndexOf("low value", StringComparison.Ordinal) >= 0)
@@ -1029,7 +1317,7 @@ namespace Thermodynamics.Tests
             HashSet<string> underAPrinciple = new HashSet<string>(StringComparer.Ordinal);
             foreach (Match row in Regex.Matches(page, @"(?m)^\|\s*\*\*(P\d{1,2})\*\*\s*\|(.*)$"))
             {
-                foreach (Match cited in Regex.Matches(row.Groups[2].Value, @"`([EMDCROJ]\d{1,2})`"))
+                foreach (Match cited in Regex.Matches(row.Groups[2].Value, @"`([EMDCROJW]\d{1,2})`"))
                 {
                     underAPrinciple.Add(cited.Groups[1].Value);
                 }
@@ -1175,6 +1463,58 @@ namespace Thermodynamics.Tests
             Assert.True(unresolved.Count == 0,
                 "checks docs/rules.md cites that do not resolve to anything that runs (R11):\n  "
                 + string.Join("\n  ", unresolved.ToArray()));
+        }
+
+        /// <summary>
+        /// **Every class that walks the corpus declares that it runs alone** (`O4`).
+        ///
+        /// <para>
+        /// Four walks across thirty-one workers measured seventeen times slower than running them
+        /// one at a time, because each is already internally parallel over thousands of blueprints
+        /// and two of them at once are two thread pools thrashing one cache. The isolation used to
+        /// be `maxParallelThreads: 1` for the whole project, which charged every run three times
+        /// its duration for the sake of walks most runs never execute
+        /// (backlog.md `F8`).
+        /// </para>
+        ///
+        /// <para>
+        /// **The narrow form needs a check and the broad one did not**, which is the whole reason
+        /// this exists: a project-wide setting cannot be forgotten, and an attribute on a class can.
+        /// A new walk written without it does not fail — it runs, slowly, alongside another walk,
+        /// and takes the suite's duration with it. Reached through the one thing every walk has in
+        /// common: it asks `CorpusFixture` for its files.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void EveryCorpusWalkDeclaresThatItRunsAlone()
+        {
+            string tests = Path.Combine(RepoRoot(), "tests");
+            List<string> offenders = new List<string>();
+            int walks = 0;
+
+            foreach (string file in Directory.GetFiles(tests, "*.cs", SearchOption.AllDirectories))
+            {
+                string relative = Relative(file);
+                if (relative.Contains("/bin/") || relative.Contains("/obj/")) continue;
+
+                string text = File.ReadAllText(file);
+
+                // The fixture's own file, and the test of the opt-in gate, walk nothing.
+                if (Path.GetFileName(file) == "CorpusFixture.cs") continue;
+                if (!Regex.IsMatch(text, @"\bCorpusFixture\.(Files|Sweep|Walk)\b")) continue;
+
+                walks++;
+                if (!text.Contains("[Collection(\"alone\")]")) offenders.Add(relative);
+            }
+
+            Assert.True(walks >= 4,
+                "only " + walks + " corpus walks were found, so this test is not reading the suite"
+                + " and would pass on a walk that runs beside another");
+
+            offenders.Sort(StringComparer.Ordinal);
+            Assert.True(offenders.Count == 0,
+                "corpus walks that do not declare the collection that runs alone (O4):\n  "
+                + string.Join("\n  ", offenders.ToArray()));
         }
     }
 }

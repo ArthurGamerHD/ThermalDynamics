@@ -2,8 +2,9 @@ namespace Thermodynamics.Core
 {
     /// <summary>
     /// How full of air a room is, combined from the game's answers rather than decided by this model.
-    /// Each answer can veto air and none can require it, because the two errors are not the same
-    /// size. See thermal-model.md, Room air, and rules.md `C9`.
+    /// Each of the game's answers can veto air and none can require it, because the game owns
+    /// pressurisation and this model has no standing to overrule it. **Silence is not one of those
+    /// answers.** See thermal-model.md, Room air, and rules.md `C9`.
     /// </summary>
     public static class RoomPressure
     {
@@ -17,17 +18,49 @@ namespace Thermodynamics.Core
         /// disagree about sloped blocks, half blocks and anything whose shape is finer than a cell.
         /// </param>
         /// <param name="reportedLevel">
-        /// How full a vent in the room reports it to be, 0..1. Negative when no vent reported, which
-        /// is distinct from a vent reporting empty.
+        /// How full the room is reported to be, 0..1, from the gas system or from a vent. Negative
+        /// when nothing reported, which is distinct from something reporting empty — and was
+        /// treated identically to it until 2026-08-24 despite this line saying otherwise.
         /// </param>
+        /// <remarks>
+        /// **Silence is not a veto** (`C22`). The three answers that empty a room are the world's
+        /// settings, the game's own sealing test and a reported level, and each of them is somebody
+        /// *saying* no. Nothing reporting is not a fourth: it is a compartment the game calls
+        /// airtight, on a world where pressurisation is on, that no lookup found a level for —
+        /// which is a lookup that missed rather than an answer of empty. This model's rooms are
+        /// pieces of the game's and its cells are coarser than a sloped block, so a miss is exactly
+        /// what a mismatch between the two produces.
+        ///
+        /// <para>
+        /// The old behaviour was justified by the two errors being different sizes, and that was
+        /// measured false: a link's conductance carries no pressure term, so room air is a *mixer*
+        /// rather than a sink, and on a settled 2,000-block census hull the hottest block reads
+        /// 1,502.83 K at every pressure from 0.2 to 1.0 against 1,706.08 K with the air gone
+        /// (`F21`). The whole 203 K lands on the block overheat damage is taken off, in whichever
+        /// direction the mistake goes — the errors are the same size, and an asymmetric chain
+        /// cannot be justified by their sizes.
+        /// </para>
+        /// </remarks>
         public static float Level(bool worldPressurised, bool sealedByGame, float reportedLevel)
         {
             if (!worldPressurised) return 0f;
             if (!sealedByGame) return 0f;
+            if (reportedLevel < 0f) return AssumedWhenUnanswered;
             if (reportedLevel <= 0f) return 0f;
 
             return reportedLevel > 1f ? 1f : reportedLevel;
         }
+
+        /// <summary>
+        /// What a sealed compartment on a pressurised world is assumed to hold when nothing
+        /// answered for it.
+        ///
+        /// **Any positive value is the same decision.** `F21` measured the hottest block unmoved
+        /// across every pressure from 0.2 to 1.0, because a room's links carry no pressure term —
+        /// so what this constant chooses is whether the room mixes at all, not how hard. It is a
+        /// named constant rather than a literal so that the choice is visible.
+        /// </summary>
+        public const float AssumedWhenUnanswered = 1f;
 
         /// <summary>
         /// Whether a room's air level is still undecided after the gas system has answered, and so

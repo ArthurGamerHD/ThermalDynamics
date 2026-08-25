@@ -46,7 +46,7 @@ namespace Thermodynamics.Tests
         /// **The half of the direction nothing measured.** `WindField.Direction` has two
         /// components and every test in this class read only the first, which is how a meridional
         /// term that was poleward on both sides of the equator — where Earth's trades converge —
-        /// survived as long as it did. [backlog](../../docs/backlog.md) `B14`.
+        /// survived as long as it did. backlog.md `B14`.
         /// </summary>
         private static float Poleward(double latitude)
         {

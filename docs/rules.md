@@ -32,7 +32,9 @@ and four fields:
 
 * **Applies to** — the scope. A rule with no scope is a rule that will one day forbid something
   useful. Most errors found while assembling this page were rules stated more broadly than the
-  evidence behind them.
+  evidence behind them. **A scope does not make a rule conditional**: nearly every rule here names
+  a subject, and what puts one in the [conditional](#conditional) pile is that inside its subject
+  there are cases where the right thing to do is the other thing.
 * **Checked by** — the test, script or build setting that fails when the rule is broken. A dash
   means nothing checks it; that is not a defect in every case, but an unchecked rule is a hope,
   and marking it says so. *Reported by* is weaker than *checked by* and is written as such: a
@@ -44,55 +46,90 @@ and four fields:
 
 Rules are cited by identifier (`E3`, `M6`) in commit messages and in review. The letter is the
 subject — **E**vidence, **M**ethod, **D**efect, **C**ode, **R**epository, **O**perations,
-**J**udgement — and is historical: the classification below is orthogonal to it.
+**J**udgement, **W**orld-outside — and is historical: the classification below is orthogonal to it.
+
+> **The letters collide with [backlog.md](backlog.md)'s, and fifteen identifiers are currently both
+> a rule and an open item.** `C3` is *target `net48`, and never reference the native assembly* on
+> this page and *whether to ship `MaxSubstepsPerBlock 6`* on that one; `E2`, `E4`, `C7`, `C8` and
+> `D1`–`D6` are the same. A reader resolves it from context and a check cannot. Nothing is renamed
+> here, because the backlog's numbers are its rows' names and never move, and remapping this page's
+> three colliding letters would touch 362 citations in code alone — that is a decision, and it is
+> [backlog.md](backlog.md) `H8` rather than something taken in passing. **What is fixed is that it
+> stops growing**: `W` was chosen for the four rules added on 2026-08-25 precisely because it
+> collides with nothing, and any letter issued here from now on is checked against both pages
+> first.
 
 ## The three categories
 
 | Category | Test for membership |
 | --- | --- |
-| **Load-bearing** | Remove it and something breaks that cannot be seen breaking: a published claim becomes false, the mod fails in someone else's session, or a day's work is lost. Unconditional inside its scope. |
-| **Conditional** | It holds inside a stated scope and is silent outside it. Written as an absolute, each of these forbids ordinary correct work — the scope *is* the rule, and quoting the sentence without it is the failure mode. |
+| **Absolute** | It never stands down. Inside the subject it names there is no case where the right thing to do is the other thing, so a change that breaks it is wrong without further argument. |
+| **Conditional** | It stands down when a stated condition is false, and that condition genuinely varies. Written as an absolute, each of these forbids work that is ordinary and correct — the condition *is* the rule, and quoting the sentence without it is the failure mode. |
 | **Low value** | It is not earning its keep: it costs more than it prevents, it restates rules that already exist, or it works around a defect that is cheaper to fix than to obey. Each names its disposition. |
 
-A rule is not low value merely because nothing checks it. Seventeen of the fifty load-bearing
-rules are unchecked and stay load-bearing, because the failure they prevent is severe and silent —
-restructuring `Models/` is caught by nothing and costs a re-export of every block model. The
-category is about what the rule buys, not about who enforces it.
+**The first two are one question and the third is a different one**, which is worth saying because
+the categories did not read that way until 2026-08-25. *Absolute* against *conditional* asks
+whether the rule ever stands down. *Low value* asks whether it is worth having at all, and a rule
+that failed that test would be dropped whichever of the first two it belonged to.
+
+The first category was called **load-bearing** and its test was the consequence of breaking it —
+*remove it and something breaks that cannot be seen breaking*. That is true of nearly every rule
+here and it is the wrong axis to sort on: it made the boundary with *conditional*, which is about
+scope, a comparison between two different things. Re-audited under the sharper test, **not one rule
+changed category**, which is the useful result: the boundary was right and its stated reason was
+not. The consequence is still what makes a rule worth writing down — it is the
+[one observation](#the-one-observation) above — it is simply not what separates these two piles.
+
+**A rule is not low value merely because nothing checks it.** Twenty-one of the sixty-eight rules
+that are still rules are unchecked and say so, and two more are *reported* rather than checked,
+which is weaker and is written as such. Restructuring `Models/` is caught by nothing and costs a
+re-export of every block model; a promote-level check gated on a forgeable field is caught by
+nothing and is a privilege escalation. The category is about what the rule buys, not about who
+enforces it.
 
 ---
 
 ## The principles
 
-Fourteen principles account for every rule on this page. They are the reduction: if the rule list
+Fifteen principles account for every rule on this page. They are the reduction: if the rule list
 were lost, these are what would have to be re-derived, and each rule below is one of them applied
-to a specific artefact. Six rules have been added since the reduction and every one of them landed
-under a principle that already existed, which is the only evidence available that the fourteen are
-the right fourteen — see [testing the reduction](#testing-the-reduction).
+to a specific artefact.
+
+**Fourteen held for eleven rules and then one arrived that none of them generated.** Every rule
+added after the first reduction landed under a principle that already existed — six of them, which
+was the only evidence available that fourteen was the right number — until a sweep of the tree for
+unstated intent produced `W1` and `W2`: a save must load on the builds either side of the one
+that wrote it, and a name something outside this repository addresses may never be repurposed.
+Neither follows from *one definition and one consumer*, from *the repository is the publish*, or
+from *do not edit what you cannot regenerate*. What they have in common is `P15`, and stating it
+moved `R5` — the workshop identity files — out of `P12`, where it had been filed for the wrong
+reason. See [testing the reduction](#testing-the-reduction).
 
 | # | Principle | Rules |
 | --- | --- | --- |
 | **P1** | **A figure carries its scope.** A number without its population, its basis and its clock is not a number; a sample stands for a population only by a written rule. | `E2` `E3` `E6` `M10` `M11` `J3` |
-| **P2** | **What the instrument could not see is part of the result.** Censoring, the noise floor, an unfinished sweep and a check that judged nothing are all the same failure: reading a blind spot as a value. | `E4` `E8` `E9` `M4` `M5` |
+| **P2** | **What the instrument could not see is part of the result.** Censoring, the noise floor, an unfinished sweep, a check that judged nothing, a discarded exception and a place nobody looked are the same failure: reading a blind spot as a value. | `E4` `E8` `E9` `M4` `M5` `D4` `D9` |
 | **P3** | **The claim is fixed before the data and corrected in place after.** A criterion that can move once the numbers are in is not a criterion; a finding that is corrected somewhere other than where it was published is not corrected. | `E1` `E10` `E11` `M9` `D5` `R12` |
-| **P4** | **Nothing is its own oracle.** A test that asks the model the same question twice agrees with whatever the model does; a harness fault looks exactly like physics. | `E7` `D1` `D4` `D7` `D8` |
-| **P5** | **One definition, and at least one consumer.** Two definitions drift, and the drift is silent in both directions; zero consumers means the thing does not exist however well it is written and tested. | `E5` `D2` `D3` `M6` `R7` `R8` `R9` `R10` `R11` `R13` `R14` |
-| **P6** | **A comparison holds everything but the subject equal.** Two numbers are comparable only when the stop criterion, the machine, the key and the baseline were the same. | `M1` `M2` `M3` `M7` |
-| **P7** | **The game is the authority.** The local build and the suite are an approximation of a compiler and a whitelist neither of them can see, and where the game already answers a question — what is sealed, what is destroyed — the mod reads that answer instead of forming its own. | `C1` `C2` `C3` `C9` `C10` |
-| **P8** | **Off means off, and costs nothing.** A mechanism nobody is using must cost nothing, and the way to turn it off must be unambiguous. | `C4` `C7` `C8` |
-| **P9** | **The core is a library the game happens to call.** That is what makes it testable in seconds, profilable, drivable by other mods and portable to another engine. | `C5` `R9` |
+| **P4** | **Nothing is its own oracle.** A test that asks the model the same question twice agrees with whatever the model does; a harness fault looks exactly like physics. | `E7` `D1` `D7` `D8` |
+| **P5** | **One definition, and at least one consumer.** Two definitions drift, and the drift is silent in both directions; zero consumers means the thing does not exist however well it is written and tested. | `E5` `D2` `D3` `M6` `R7` `R8` `R9` `R10` `R11` `R13` `R14` `R15` `R16` |
+| **P6** | **A comparison holds everything but the subject equal.** Two numbers are comparable only when the stop criterion, the machine, the key and the baseline were the same. | `M1` `M2` `M3` `M7` `O4` |
+| **P7** | **The game is the authority.** The local build and the suite are an approximation of a compiler and a whitelist neither of them can see, and where the game already answers a question — what is sealed, what is destroyed, who sent this — the mod reads that answer instead of forming its own. | `C1` `C2` `C3` `C11` `C9` `C10` `W3` |
+| **P8** | **Off means off, and costs nothing.** A mechanism nobody is using must cost nothing, and the way to turn it off must be unambiguous. | `C4` `C7` `C8` `C15` |
+| **P9** | **The core is a library the game happens to call.** That is what makes it testable in seconds, profilable, drivable by other mods and portable to another engine — and a library is also something that must not throw into a caller who never knew it was there. | `C5` `R9` `W4` |
 | **P10** | **The solver's three invariants are the definition of correctness.** Order independence, energy conservation, boundedness — everything else is tuning. | `C6` |
 | **P11** | **The repository is the publish.** Everything committed here reaches the workshop, so what must not ship must not be here. | `R2` `R3` |
-| **P12** | **Do not edit what this repository cannot regenerate.** Model binaries, workshop identity and vendored code have their source of truth outside this tree. | `R4` `R5` `R6` |
+| **P12** | **Do not edit what this repository cannot regenerate.** Model binaries and vendored code have their source of truth outside this tree. | `R4` `R6` |
 | **P13** | **A long run is designed for its own death.** It will be killed — by the OOM killer, a timeout, a mistake or a power cut — so cap it, resume it, and never let a timer guess its duration. | `O1` `O2` `O3` `O5` |
-| **P14** | **Unobservable fidelity is cost.** Take the cheap form where the difference cannot be perceived, say what it gives up, and write the price down. | `D6` `M8` `O4` |
+| **P14** | **Unobservable fidelity is cost.** Take the cheap form where the difference cannot be perceived, say what it gives up, and write the price down. Where it *can* be perceived, the cheap form is a rung on the feature's own ladder rather than the default. | `D6` `M8` `O4` `C15` |
+| **P15** | **What is already in someone else's world is frozen.** A save, a setting name, a serialization number, a property name and a workshop id exist where this repository cannot reach them: add to them, never repurpose them. | `W1` `W2` `R5` |
 
 ### Testing the reduction
 
-Two questions decide whether fourteen is the reduction rather than a number that happened. Is each
+Two questions decide whether fifteen is the reduction rather than a number that happened. Is each
 principle **necessary** — does it generate a rule none of the others generates? And is the set
 **sufficient** — does every rule follow from one of them?
 
-Necessity was tested by attempting the two mergers that look available from the table.
+Necessity was tested by attempting every merger that looks available from the table.
 
 * **P1 with P2.** Both say a figure is incomplete without its extent, and a merged principle would
   read *a measurement carries what it covered and what it could not see*. Rejected: the failure
@@ -140,81 +177,149 @@ they stated a premise rather than something a change could violate. `R1` is P11,
 `J2` was a four-part slogan whose checkable halves are `C4`, `C5`, `C7` and `R9`. They are listed
 under [low value](#low-value) so a citation to them does not dangle.
 
+#### The 2026-08-25 pass, and what it found
+
+The set was re-tested from scratch: every merger the table offers at the principle level, and every
+pair of rules that looked like one act written twice.
+
+**Two more mergers attempted at the principle level, and both rejected.**
+
+* **P8 with P14.** Both are about cost — *a mechanism nobody uses must cost nothing* and
+  *unobservable fidelity is cost* — and a merged principle would read *cost is only justified by
+  something observable*. Rejected on the page's own test: the merged sentence generates neither
+  side's rules. P8's are about a **mechanism** and its switch, and produce `C4`, `C7` and `C8`;
+  P14's are about an **approximation** and its price, and produce `D6`, `M8`, `O4` and `C15`. The
+  merged form is a heading that has to be unpacked before it can be applied to either.
+* **P10 alone.** It generates exactly one rule, `C6`, which is the shape a principle takes when it
+  is really just a rule wearing a hat. Kept anyway, and the reason is the second half of its own
+  sentence: *the solver's three invariants are the definition of correctness, and everything else
+  is tuning*. That second clause is what makes every other argument on this page safe to have — a
+  change that holds the three is a tuning question and a change that breaks one is a defect whatever
+  it buys — and it is a statement no rule carries.
+
+**Four rule-level mergers attempted, and all four rejected**, which is the more useful half of the
+result: it says the rule list is already at its irreducible size rather than merely asserting it.
+
+| Attempted | Rejected because |
+| --- | --- |
+| `M4` + `M5` — the noise floor | One is how to measure and the other is how to read. *Keep the fastest of N and publish the spread* is an instruction to a runner; *a figure inside the floor has not moved* is an instruction to a reader, and the reader is usually not the runner. |
+| `E10` + `E11` — changing something published | One is about a finding that turned out **wrong** and one about a criterion that is **not wrong**. The second carries two obligations the first does not: keep the old value visible, and do not put the change in the commit that carries the run it would have failed. |
+| `C9` + `C10` + `W3` — an authority elsewhere | The shared idea is P7 and is already stated there. What is actionable is the difference: what is sealed, what is destroyed, who sent this. A rule that has to be unpacked into three before it can be applied is a principle, and this one already exists. |
+| The seven join rules under P5 — `R7` `R8` `R9` `R10` `R11` `R13` `R14` | These *are* one idea on seven artefacts, and that idea is P5. Merging them would collapse seven subjects and seven distinct checks into one rule whose *Checked by* field is a list, which is the structure the page uses principles to avoid. |
+
+**Two rules were re-filed, and one of those is what produced P15.**
+
+* **`R5` from P12 to P15.** The workshop identity files had been filed under *do not edit what this
+  repository cannot regenerate*, and a `modinfo.sbmi` is not hard to regenerate — it is impossible
+  to **un-publish**. The reason on the rule and the principle above it disagreed, and the rule was
+  right: regenerating it publishes the mod as a new item and every subscriber stays on the old one.
+* **`D4` from P4 to P2.** *Test the state before the first step, and the artefacts the mod writes*
+  had been filed under *nothing is its own oracle*, and its own argument is about neither oracles
+  nor duplication: **both are where a fault survives longest, because nobody looks there.** That is
+  a blind spot read as a value, which is P2. `D8` beside it is genuinely P4 and says so in its own
+  words — *the old code is the only oracle that answers the question actually being asked* — which
+  is what made the mis-filing visible.
+
+**Two rules gained a second principle**, on the precedent `R9` already set. `O4` — corpus walks run
+alone — is P14 for its corpus half, because four walks at once cost seventeen times and buy
+nothing, and P6 for its wall-clock half, because a duration measured on a contended machine is not
+comparable to one that was not. `C15` is P14 for *realistic is the default* and P8 for the ladder
+itself, being, in the words of the commit that added it, `C7` grown a dimension.
+
+**Sufficiency was re-tested against the material added since**, which was the intent sweep of
+2026-08-24. It produced five rules — `W1`, `W2`, `W3`, `W4`, `D9` — and the split of where they
+landed is the evidence: three under principles that already existed, and two under nothing, which
+is P15. **Four of the five were already enforced by tests that no rule cited**, and that is a gap in
+the *one place* claim running in the direction nothing checks. `R11` fails when a rule names a check
+that has stopped running; nothing fails when a live check enforces a rule nobody has written down.
+That asymmetry is not closed and is recorded here rather than left implicit.
+
 ---
 
 ## The index
 
 | # | Rule | Category | From | Checked by |
 | --- | --- | --- | --- | --- |
-| **E1** | Criteria before data | load-bearing | P3 | reported by `verdict.py` |
+| **E1** | Criteria before data | absolute | P3 | reported by `verdict.py` |
 | **E2** | Measure the population, not the specimen | conditional | P1 | `CensusFidelityTests` |
-| **E3** | Name the population and the basis of every figure | load-bearing | P1 | — |
-| **E4** | A partial sweep is not a result | load-bearing | P2 | — |
-| **E5** | Every figure on a page comes from the dataset the page is about | load-bearing | P5 | `EveryQuotedDatasetCountIsCurrent` |
+| **E3** | Name the population and the basis of every figure | absolute | P1 | — |
+| **E4** | A partial sweep is not a result | absolute | P2 | — |
+| **E5** | Every figure on a page comes from the dataset the page is about | absolute | P5 | `EveryQuotedDatasetCountIsCurrent` |
 | **E6** | Pair the terms before dividing | conditional | P1 | — |
-| **E7** | Check a claim against something that is not the model | load-bearing | P4 | `LegacyFormulas` `Reference` `DumpAuditTests` |
-| **E8** | A check that judged nothing has not passed | load-bearing | P2 | `CorpusSurvey` |
-| **E9** | Read a censored column as censored | load-bearing | P2 | reported by `verdict.py` |
-| **E10** | Correct a published finding in place | load-bearing | P3 | — |
-| **E11** | A criterion changes only in the open | load-bearing | P3 | — |
+| **E7** | Check a claim against something that is not the model | absolute | P4 | `LegacyFormulas` `Reference` `DumpAuditTests` |
+| **E8** | A check that judged nothing has not passed | absolute | P2 | `CorpusSurvey` |
+| **E9** | Read a censored column as censored | absolute | P2 | reported by `verdict.py` |
+| **E10** | Correct a published finding in place | absolute | P3 | — |
+| **E11** | A criterion changes only in the open | absolute | P3 | — |
 | **M1** | Compare only runs that were stopped the same way | conditional | P6 | `SunlightPanelWalk` |
-| **M2** | Parallel for values, linear for durations | load-bearing | P6 | `ParallelAndLinearProduceTheSameMatrix` |
+| **M2** | Parallel for values, linear for durations | absolute | P6 | `ParallelAndLinearProduceTheSameMatrix` |
 | **M3** | The run is the unit of parallelism | conditional | P6 | `ParallelAndLinearProduceTheSameMatrix` |
-| **M4** | Keep the fastest of N, and publish the noise floor | load-bearing | P2 | `PerformanceReportTests` |
-| **M5** | A figure inside the noise floor has not moved | load-bearing | P2 | `PerformanceReportTests` |
-| **M6** | The case key is the contract | load-bearing | P5 | `BenchmarkBaselineTests` |
-| **M7** | Measure a pass against its own start | load-bearing | P6 | — |
-| **M8** | A scenario earns its place by answering what nothing else answers | load-bearing | P14 | — |
-| **M9** | A scenario's conclusion is pinned so it cannot invert | load-bearing | P3 | `ScenarioClaimTests` |
-| **M10** | Specimens are chosen by coverage, and every pick names its rule | load-bearing | P1 | `panel.csv` carries the rule |
-| **M11** | The synthetic ship is refreshed against the field | load-bearing | P1 | `CensusFidelityTests` |
-| **D1** | Disbelieve a plausible number | load-bearing | P4 | `ScreeningTests` `LabInvariantTests` |
-| **D2** | Hunt for what is built, documented and reached by nothing | load-bearing | P5 | `SimCommandTests` `DocumentationTests` |
-| **D3** | Where one thing exists twice, a test compares the two | load-bearing | P5 | `BothParsersKnowTheSamePropertyNames` |
-| **D4** | Test the state before the first step, and the artefacts the mod writes | load-bearing | P4 | `DumpAuditTests` `FieldDumpTests` |
-| **D5** | A known defect is pinned by a test, not only described | load-bearing | P3 | `CorpusSurvey` |
-| **D6** | A deliberate simplification is recorded as a limit | load-bearing | P14 | — |
+| **M4** | Keep the fastest of N, and publish the noise floor | absolute | P2 | `PerformanceReportTests` |
+| **M5** | A figure inside the noise floor has not moved | absolute | P2 | `PerformanceReportTests` |
+| **M6** | The case key is the contract | absolute | P5 | `BenchmarkBaselineTests` |
+| **M7** | Measure a pass against its own start | absolute | P6 | — |
+| **M8** | A scenario earns its place by answering what nothing else answers | absolute | P14 | — |
+| **M9** | A scenario's conclusion is pinned so it cannot invert | absolute | P3 | `ScenarioClaimTests` |
+| **M10** | Specimens are chosen by coverage, and every pick names its rule | absolute | P1 | `panel.csv` carries the rule |
+| **M11** | The synthetic ship is refreshed against the field | absolute | P1 | `CensusFidelityTests` |
+| **D1** | Disbelieve a plausible number | absolute | P4 | `ScreeningTests` `LabInvariantTests` |
+| **D2** | Hunt for what is built, documented and reached by nothing | absolute | P5 | `SimCommandTests` `DocumentationTests` |
+| **D3** | Where one thing exists twice, a test compares the two | absolute | P5 | `BothParsersKnowTheSamePropertyNames` |
+| **D4** | Test the state before the first step, and the artefacts the mod writes | absolute | P2 | `DumpAuditTests` `FieldDumpTests` |
+| **D5** | A known defect is pinned by a test, not only described | absolute | P3 | `CorpusSurvey` |
+| **D6** | A deliberate simplification is recorded as a limit | absolute | P14 | — |
 | **D7** | Measure before replacing what the counts accuse | conditional | P4 | — |
-| **D8** | An optimisation is pinned against the code it replaced | load-bearing | P4 | `SolverAb` and the five bit-identity suites |
-| **C1** | C# 6 only | load-bearing | P7 | `LangVersion` on the core project |
-| **C2** | The whitelist covers types the local build accepts | load-bearing | P7 | — |
-| **C3** | Target `net48`, and never reference the native assembly | load-bearing | P7 | the build |
-| **C4** | Nothing allocates on the stepping path | load-bearing | P8 | `bench report` |
-| **C5** | The core speaks no game type | load-bearing | P9 | `CoreIsolationTests` |
-| **C6** | The solver's three invariants hold | load-bearing | P10 | `ConductionTests` `StabilityTests` `ConductionClampGateTests` |
-| **C7** | Every mechanism has a switch that removes its own cost | load-bearing | P8 | `FeatureToggleTests` |
-| **C8** | Absent and empty mean the same thing | load-bearing | P8 | — |
-| **C9** | The game's own answer is read, never overridden | load-bearing | P7 | `RoomPressureTests` |
-| **C10** | The server is authoritative over damage | load-bearing | P7 | — |
+| **D8** | An optimisation is pinned against the code it replaced | absolute | P4 | `SolverAb` and the five bit-identity suites |
+| **D9** | A fault is recorded whether or not collection is running | absolute | P2 | `AnomalyRegistryTests` |
+| **C1** | C# 6 only | absolute | P7 | `LangVersion` on the core project |
+| **C2** | The whitelist covers types the local build accepts | absolute | P7 | — |
+| **C3** | Target `net48`, and never reference the native assembly | absolute | P7 | the build |
+| **C11** | Every file the game compiles is compiled by the suite's own build | absolute | P7 | the build |
+| **C4** | Nothing allocates on the stepping path | absolute | P8 | `bench report` |
+| **C5** | The core speaks no game type | absolute | P9 | `CoreIsolationTests` |
+| **C6** | The solver's three invariants hold | absolute | P10 | `ConductionTests` `StabilityTests` `ConductionClampGateTests` |
+| **C7** | Every mechanism has a switch that removes its own cost | absolute | P8 | `FeatureToggleTests` |
+| **C15** | A feature's configuration runs from `off` to `realistic` | absolute | P8 P14 | `EveryCoreSettingIsReachableFromAWorldsConfiguration` |
+| **C8** | Absent and empty mean the same thing | absolute | P8 | — |
+| **C9** | The game's own answer is read, never overridden | absolute | P7 | `RoomPressureTests` |
+| **C10** | The server is authoritative over damage | absolute | P7 | — |
+| **W3** | An authority check reads what the engine supplies, never what the sender wrote | absolute | P7 | — |
+| **W4** | No call across the mod's API throws into its caller | absolute | P9 | — |
+| **W1** | A saved world loads on the build that wrote it, and on the ones either side | absolute | P15 | `StorageAndSettingsTests` |
+| **W2** | A name something outside this repository addresses is never repurposed | absolute | P15 | `TheRetiredPropertyNamesAreStillRead` `NoSettingReusesANumberThatWasDeliberatelyRetired` |
 | **R1** | *The repository is the mod folder* | low value | P11 | absorbed into P11 |
-| **R2** | Build output and the corpus live outside it | load-bearing | P11 | `Directory.Build.props` |
-| **R3** | No credential is written into the tree | load-bearing | P11 | `CredentialScanTests` |
-| **R4** | `Models/` is not restructured | load-bearing | P12 | — |
-| **R5** | The workshop identity files are not regenerated | load-bearing | P12 | — |
-| **R6** | Vendored code is replaced, never edited | load-bearing | P12 | — |
-| **R7** | Every document is indexed, and every link resolves | load-bearing | P5 | `DocumentationTests` |
-| **R8** | Every setting is documented, wired, and read by something | load-bearing | P5 | `ConfigurationDocTests` `SettingsWiringTests` |
-| **R9** | The API page is part of the contract | load-bearing | P5 P9 | `EveryModApiEntryIsDocumented` `ModApiShapeTests` |
-| **R10** | Every test class says what it is for | load-bearing | P5 | `EveryTestClassSaysWhatItIsFor` |
-| **R11** | A check is cited only if it runs | load-bearing | P5 | `EveryCheckCitedByTheRulesPageResolves` |
-| **R12** | A page states its scope, describes the present, and logs its changes | load-bearing | P3 | partly |
-| **R13** | A standing rule is stated here once, and argued elsewhere | load-bearing | P5 | `EveryRuleCitedByAPageExists` |
-| **R14** | A comment names something that is there | load-bearing | P5 | `NoDocCommentDescribesSomethingThatIsNotThere` |
-| **O1** | Every long run is capped | load-bearing | P13 | — |
+| **R2** | Build output and the corpus live outside it | absolute | P11 | `Directory.Build.props` |
+| **R3** | No credential is written into the tree | absolute | P11 | `CredentialScanTests` |
+| **R4** | `Models/` is not restructured | absolute | P12 | — |
+| **R5** | The workshop identity files are not regenerated | absolute | P15 | — |
+| **R6** | Vendored code is replaced, never edited | absolute | P12 | — |
+| **R7** | Every document is indexed, and every link resolves | absolute | P5 | `DocumentationTests` |
+| **R8** | Every setting is documented, wired, and read by something | absolute | P5 | `ConfigurationDocTests` `SettingsWiringTests` |
+| **R9** | The API page is part of the contract | absolute | P5 P9 | `EveryModApiEntryIsDocumented` `ModApiShapeTests` |
+| **R10** | Every test class says what it is for | absolute | P5 | `EveryTestClassSaysWhatItIsFor` |
+| **R11** | A check is cited only if it runs | absolute | P5 | `EveryCheckCitedByTheRulesPageResolves` |
+| **R15** | An identifier cited anywhere resolves to something that exists | absolute | P5 | `EveryCitedIdentifierResolves` |
+| **R16** | A pointer in code is plain text, never a link | absolute | P5 | `NoPointerInCodeIsWrittenAsALink` |
+| **R12** | A page states its scope, describes the present, and logs its changes | absolute | P3 | partly |
+| **R13** | A standing rule is stated here once, and argued elsewhere | absolute | P5 | `EveryRuleCitedByAPageExists` |
+| **R14** | A comment names something that is there | absolute | P5 | `NoDocCommentDescribesSomethingThatIsNotThere` |
+| **O1** | Every long run is capped | absolute | P13 | — |
 | **O2** | A run with no bounded duration gets no hang timeout | conditional | P13 | — |
-| **O3** | Long sweeps resume, and progress is measured in bytes | load-bearing | P13 | — |
-| **O4** | Corpus walks run alone | low value | P14 | `xunit.runner.json` |
-| **O5** | A lab streams, and counts what it did not measure | load-bearing | P13 | — |
+| **O3** | Long sweeps resume, and progress is measured in bytes | absolute | P13 | — |
+| **O4** | Corpus walks run alone | absolute | P6 P14 | `EveryCorpusWalkDeclaresThatItRunsAlone` |
+| **O5** | A lab streams, and counts what it did not measure | absolute | P13 | — |
 | **J1** | *Game mod first* | low value | P14 | absorbed into P14 |
 | **J2** | *Light, isolated, tested, open* | low value | — | absorbed into `C4` `C5` `C7` `R9` |
 | **J3** | The corpus filters are strict, and their cost is recorded | conditional | P1 | `BlueprintTests` |
 
-Fifty-one load-bearing, seven conditional, four low value. Sixteen of the load-bearing rules have
-no automated check, and say so.
+Seventy-one rows: **sixty-one absolute, seven conditional, three low value.** The last three are
+retired as rules and kept only so a citation to them does not dangle, so sixty-eight of these are
+rules a change can be measured against. Twenty-one of them are unchecked and say so, and two more are
+*reported* rather than checked, which is weaker and is written as such.
 
 ---
 
-## Load-bearing
+## Absolute
 
 ### P1 — A figure carries its scope
 
@@ -334,6 +439,38 @@ that had previously been unmeasurable.
 *Checked by:* `PerformanceReportTests` — the comparison declines to count them.
 *From:* [benchmarks.md](benchmarks.md#reading-a-comparison).
 
+#### D9 — A fault is recorded whether or not collection is running
+
+**A caught exception, and a grid that has gone numerically bad, are written down even when telemetry
+is off.**
+
+Everything else the mod observes costs something on every healthy frame and is rightly off unless
+somebody is reading it. A fault is not: it costs nothing until the mod has already failed, and by
+then it is the only evidence there will be. Gated together with observation, all twenty-two `catch`
+blocks in the adapter discarded their exception, wrote nothing to any file, and left the grid
+running in whatever state the throw abandoned it in — including the guard around `ThermalGrid.Tick`,
+whose own comment said an exception named there was worth more than a crash dump and which named it
+nowhere. Only the first occurrence of each kind is logged as it happens, because a throw inside a
+step runs once per grid per frame; the count keeps rising and reaches the closing summary.
+
+*Applies to:* every `catch` in the mod, and the NaN guard on a grid.
+*Checked by:* `AnomalyRegistryTests`.
+*From:* [telemetry.md](telemetry.md#faults-are-recorded-whether-or-not-collection-is-running).
+
+#### D4 — Test the state before the first step, and the artefacts the mod writes
+
+**Both are where a fault survives longest, because both look like output rather than behaviour
+and neither changes a temperature.**
+
+Three faults found in one pass over a field dump had exactly that shape: a grid's substep demand
+was conduction-only until it had stepped, a grid's one-off build was charged to no row in the
+cost table, and a block type's peak temperature could sit below its own maximum. Every test
+measures a grid *after* stepping it, and nothing read the report the mod writes about itself.
+
+*Applies to:* new instrumentation, new report rows, and anything read outside a step.
+*Checked by:* `DumpAuditTests`, `FieldDumpTests`.
+*From:* [tests/README.md](../tests/README.md).
+
 ### P3 — The claim is fixed before the data and corrected in place after
 
 #### E1 — Criteria before data
@@ -409,7 +546,29 @@ rather than in the standalone walk that used to carry it.
 #### R12 — A page states its scope, describes the present, and logs its changes
 
 **Every page opens by saying what it covers and what it does not, its body is in the present tense,
-and the only place a revision is recorded is a `## Change log` at the end.**
+and the only place a revision is recorded is a `## The identifier namespace this page shares with the backlog
+
+**Eleven identifiers mean one thing here and another in [backlog.md](backlog.md)** — `C3`, `C7`,
+`C8`, `D1` to `D6`, `E2` and `E4` — because the two pages were numbered independently and both use a
+letter and a number. `C3` is *target `net48`, and never reference the native assembly* here and
+*whether to ship `MaxSubstepsPerBlock 6`* there.
+
+**It is frozen rather than fixed, and that was costed.** The letters on this page are historical —
+the categorisation above is orthogonal to them — so remapping this side is the cheap direction. But
+the eleven are cited 215 times, 78 in code and 137 in prose, and every one has to be resolved to a
+page by hand before it can be renamed: a citation resolved wrongly reads exactly like one resolved
+rightly, so the diff's errors would be silent. Against an ambiguity a reader resolves from context
+and nothing is recorded as having got wrong, that is `P14`'s trade taken in the other direction.
+
+**What is checked is that it does not grow.**
+`TheTwoPagesShareNoIdentifierTheyDidNotAlreadyShare` lists the eleven and fails when a new rule or a
+new backlog row takes an identifier the other page already uses. `W` was chosen for the rules added
+on 2026-08-25 because it collides with nothing; that check is what makes it a rule rather than a
+habit. The set shrinks as backlog rows retire, and a shrink is not a failure.
+
+---
+
+## Change log` at the end.**
 
 A page that narrates what was tried reads as a description of the code long after it has stopped
 being one, and nothing about it looks wrong — the prose is accurate about a repository that no
@@ -459,20 +618,6 @@ symptom — that shape is a harness fault until proven otherwise.
 `AStoreIsNotBothChargingAndDischarging` — and `LabInvariantTests` holds the units guard, that no
 definition claims a preposterous amount of power.
 *From:* [balance-lab.md](balance-lab.md).
-
-#### D4 — Test the state before the first step, and the artefacts the mod writes
-
-**Both are where a fault survives longest, because both look like output rather than behaviour
-and neither changes a temperature.**
-
-Three faults found in one pass over a field dump had exactly that shape: a grid's substep demand
-was conduction-only until it had stepped, a grid's one-off build was charged to no row in the
-cost table, and a block type's peak temperature could sit below its own maximum. Every test
-measures a grid *after* stepping it, and nothing read the report the mod writes about itself.
-
-*Applies to:* new instrumentation, new report rows, and anything read outside a step.
-*Checked by:* `DumpAuditTests`, `FieldDumpTests`.
-*From:* [tests/README.md](../tests/README.md).
 
 #### D8 — An optimisation is pinned against the code it replaced
 
@@ -675,17 +820,67 @@ replaced — a coolant advection scheme that is now a rotation, a setting rename
 unit, a per-profile definition overlay that no longer exists. That is `D2`'s defect class in prose:
 written, accurate-looking, and attached to nothing.
 
-The length limit is the other half and it is what prevents the first. A comment that argues a topic
+**Not arguing is the other half, and it is what prevents the first.** A comment that argues a topic
 has to be maintained against a subject it does not sit next to, so it rots where a name does not —
 and the argument belongs on a page, where it can be found by somebody who is not already looking at
 that line.
 
+> **This said *the length limit* until 2026-08-25, and length is the proxy rather than the fault.**
+> [development.md](development.md#and-in-the-code)'s two-line limit is about a comment inside a
+> body, where 73 % of the tree's 2,347 already sit and where the code beside them moves. A *summary*
+> sits on a name, which does not move under it: 62 % of the 4,838 run longer than two lines, `R10`
+> makes a test class's the canonical statement of what that class is for, and the longest of them
+> carry an experiment's controls. Sorting summaries by length finds the careful ones.
+
 *Applies to:* every comment under `Data/Scripts` and `tests`, excluding vendored code.
-*Checked by:* `NoDocCommentDescribesSomethingThatIsNotThere`, which fails on two `<summary>` blocks
-in a row — the signature of an orphan, since C# allows one per member. It states rather than hides
-its limit: an orphan landing somewhere with no comment of its own is invisible to it. Nothing checks
-the length, which is judgement.
+*Checked by:* `NoDocCommentDescribesSomethingThatIsNotThere`, which fails on **two signatures, and
+they are different faults**. *Closed then reopened* — a summary closed on one line and another
+opened on the next — is a member that has gone, leaving its comment on the one below. *Opened
+twice* — a second summary opened before the first is closed — is a member **inserted into the middle
+of somebody else's comment**, which breaks two comments rather than one: the tail of the first now
+hangs under the newcomer and describes the member after it. Either way C# allows one summary per
+member, so neither shape can be innocent. It states rather than hides its limit: an orphan landing
+somewhere with no comment of its own is invisible to it. Nothing checks the length, which is
+judgement.
 *From:* [document-of-intent.md](document-of-intent.md#what-a-code-comment-is-for).
+
+#### R15 — An identifier cited anywhere resolves to something that exists
+
+**A rule or a backlog row cited in a comment, a test summary or a script is one that is still on the
+page it belongs to.**
+
+`R11` is this rule pointed the other way — it fails when a rule names a check that has stopped
+running — and between them there was a hole big enough to hide in. `EveryRuleCitedByAPageExists`
+reads documentation banners; **425 citations of the same shape live in `.cs` and `.py` files** and
+nothing read those at all. A backlog row is deleted when it closes, so every comment citing it
+becomes a dead reference that reads exactly like a live one, and the check found thirteen on its
+first run: `C20` in six files including three the game compiles, and `C13` in three more.
+
+*Applies to:* every `.cs` and `.py` file outside the vendored paths.
+*Checked by:* `EveryCitedIdentifierResolves`. It cannot say *which* page a citation means, because
+the two share a namespace — [backlog.md](backlog.md) carries that as H8 — and it says instead that
+the citation resolves to one of them, which is what stops a dropped identifier rotting in a comment.
+*From:* this page, and the pass that added it.
+
+#### R16 — A pointer in code is plain text, never a link
+
+**A comment that names a page writes the page's name — `See stiffness.md, A per-block substep
+cap.` — and never a relative markdown link.**
+
+A link inside a `.cs` file **renders nowhere**. Nobody clicks it, so nobody finds out it is wrong,
+and `EveryRelativeLinkResolves` reads markdown only — so the one form of cross-reference here that
+nothing checked was the one written in the syntax that looks checked. `Settings.cs` carried
+`[backlog.md](backlog.md)`, a relative path from `Data/Scripts/Thermodynamics` to a file four
+directories above it.
+
+The convention was written down in [development.md](development.md#and-in-the-code) after two such
+links were found rotted, one into a directory that does not exist. **155 more had accumulated since,
+across 91 files**, which is what an unchecked convention does. Flattening them cost nothing, because
+every link text was already the page's own name.
+
+*Applies to:* every `.cs` file outside the vendored paths.
+*Checked by:* `NoPointerInCodeIsWrittenAsALink`.
+*From:* [development.md](development.md#and-in-the-code).
 
 ### P6 — A comparison holds everything but the subject equal
 
@@ -755,19 +950,48 @@ fail to resolve at 4.7.2. `VRage.Native.dll` is unmanaged and produces `MSB3246`
 *Checked by:* the build.
 *From:* [development.md](development.md).
 
+#### C11 — Every file the game compiles is compiled by the suite's own build
+
+**`Data/Scripts/**/*.cs` is what the game compiles at world load, and the one command the workflow
+already runs — `dotnet build tests/Thermodynamics.slnx` — has to compile all of it.**
+
+The test projects link `Core/` in full, four files of `Game/` and six of `Telemetry/`, and nothing
+else. The rest of the adapter is every file that touches the game's own assemblies, and it was
+compiled by `Generic.csproj` alone, which was built by hand. So a rename in `Core` could pass the
+whole suite and leave the mod unable to load — and did: `C20` renamed `Conductivity` to
+`HeatTransferCoefficient`, left one copy of the old name in `ThermalBlockCatalog`, and the mod did
+not compile for two commits while the whole suite passed.
+
+**It is the rung below `C2`.** There, a green build is not the game's check; here, a green *suite*
+was not even the local build. Nothing about this rule reaches the whitelist, which stays unchecked.
+
+*Applies to:* everything under `Data/Scripts`.
+*Checked by:* the build — `Generic.csproj` is a member of `tests/Thermodynamics.slnx`, so the
+solution build fails on a break the suite cannot see.
+*From:* [development.md](development.md#building), and the commit that fixed the break above.
+
 #### C9 — The game's own answer is read, never overridden
 
 **Where the game already decides something — whether a room is sealed, how much oxygen it holds —
-this model reads that answer rather than forming its own, and every source may veto air while none
-may require it.**
+this model reads that answer rather than forming its own, and every source that *answers* may veto
+air while none may require it. Silence is not an answer.**
 
 Three things can empty a room: a world with oxygen or pressurisation off, the game's own sealing
-test, and the vents. Each is a veto and none is a requirement. The asymmetry is not tidiness. Air
-is heat capacity, so a room wrongly given air warms and cools as a mass of gas that every bounding
-surface exchanges with, while a room wrongly denied air loses only some interior inertia — the two
-errors are not the same size. The models disagree by construction, because this model's rooms are
-pieces of the game's and its cells are coarser than a sloped block, so what matters is the
-direction of a disagreement rather than its existence.
+test, and a reported level. Each is a veto and none is a requirement. **The asymmetry is because
+the game owns pressurisation and this model has no standing to overrule it** — every veto is
+somebody saying no, and there is nothing for a requirement to be built out of. The models disagree
+by construction, because this model's rooms are pieces of the game's and its cells are coarser than
+a sloped block, so what matters is the direction of a disagreement rather than its existence.
+
+> **This rule used to justify itself by the size of the two errors, and that was measured false**
+> (`P3`, `C22`, `F21`). It said air is heat capacity, so a room wrongly *given* air drags every
+> bounding surface along while a room wrongly *denied* it loses only some interior inertia. A
+> link's conductance carries no pressure term, so room air is a **mixer rather than a sink**: on a
+> settled 2,000-block census hull the hottest block reads 1,502.83 K at every pressure from 0.2 to
+> 1.0 and **1,706.08 K** with the air gone, while the hull *mean* moves 3.8 K. The two errors are
+> the same size — about 203 K, on the block overheat damage is taken off — and they differ only in
+> sign. The rule survives on its first reason; what did not survive was extending it to the case
+> where **nothing answered at all**, which was reading a lookup that missed as a fourth veto.
 
 *Applies to:* room pressure, air density, and anything else the game already answers.
 *Checked by:* `RoomPressureTests` — one case per veto — and `RoomAirPressureTests`, which reports
@@ -796,6 +1020,23 @@ undecided, and that question does not touch this rule.
 *From:* [document-of-intent.md](document-of-intent.md#what-the-mod-owes-a-multiplayer-client),
 [known-issues.md](known-issues.md).
 
+#### W3 — An authority check reads what the engine supplies, never what the sender wrote
+
+**Whether a message may do something is decided from a value the engine filled in, and never from
+one carried in the payload.**
+
+`SENetworkAPI`'s sender id is a field the sender writes, so a promote-level check gated on it is a
+check a client can pass by asserting that it should. The engine's own secure handler supplies the
+sender and a from-the-server flag that a client cannot set, which is why the settings-request path
+and the temperature channel are on it and the ordinary state channel is not. Same idea one step
+along: a client must not be able to write temperatures onto another client's simulation, and the
+from-the-server flag is the only thing that says a packet is the server's.
+
+*Applies to:* every check that decides whether a received message may change something.
+*Checked by:* — nothing; the paths it guards exist only in a session.
+*From:* [architecture.md](architecture.md#networking),
+[document-of-intent.md](document-of-intent.md#to-a-client-the-server-trusts-nothing-the-client-asserts-about-itself).
+
 ### P8 — Off means off, and costs nothing
 
 #### C4 — Nothing allocates on the stepping path
@@ -816,8 +1057,39 @@ A readout, diagnostic or overlay that is off costs nothing. This is what makes t
 in the benchmark report readable and what lets a server operator pay only for what they use.
 
 *Applies to:* every mechanism, readout and diagnostic.
-*Checked by:* `FeatureToggleTests`, and the benchmark feature table measures each cost.
+*Checked by:* `FeatureToggleTests` and the benchmark feature table for what a switch *costs*;
+`ConfigurationDocTests.EveryMechanismInTheLadderInventoryHasASwitchOrSaysItHasNoLadder` for whether
+one exists at all. The second is there because the first cannot find a mechanism that has no switch
+to test — wind had none for months, with a row in the inventory saying so, and every check passed.
 *From:* [README.md](../README.md), [configuration.md](configuration.md).
+
+#### C15 — A feature's configuration runs from `off` to `realistic`
+
+**A mechanism is configured as a list of options whose two ends are `off` and `realistic`;
+`realistic` is the most faithful thing the model can do and is the default, and every rung between
+them carries the price of what it gives up.**
+
+`C7` makes a feature's cost removable. This says removing it should not be the only alternative on
+offer: a player whose machine cannot afford the faithful model, given nothing but a boolean, turns
+the feature off — and a feature switched off is not in the game. A two-rung ladder is a complete
+ladder where no cheaper form is worth having; what the rule forbids is a cheaper form that exists in
+the model and is not on the list. `WellMixedCoolant` was one for as long as it existed: read by the
+solver, exercised by the suite, documented in two pages as a choice a world makes, and settable by
+nothing.
+
+It also fixes the *direction*, which is the half a boolean cannot get wrong and a dial can. Four
+integration dials currently run three ways — `MaxSubstepsPerBlock` 0 is the faithful end,
+`MaxSubsteps` up is the faithful end, `MaxElementVisitsPerStep` 0 means uncapped — so a reader has
+to be told, per setting, which way is which.
+
+*Applies to:* every mechanism a world can switch. Not to physical constants, balance dials or
+diagnostics: a diagnostic's ladder is `C7`'s off-unless-read.
+*Checked by:* `EveryCoreSettingIsReachableFromAWorldsConfiguration` holds the operative half — a
+rung the solver reads and no world can set fails it. `EveryMechanismSwitchIsClassifiedInTheLadderInventory`
+holds that every mechanism says what rungs it has. Whether a missing rung is worth building is
+judgement, and [configuration.md](configuration.md#every-mechanism-and-the-rungs-it-has) records the
+answer per feature.
+*From:* [document-of-intent.md](document-of-intent.md#a-switch-is-a-ladder-and-its-two-ends-are-off-and-realistic).
 
 #### C8 — Absent and empty mean the same thing
 
@@ -839,6 +1111,10 @@ than repeating it.
 
 ### P9 — The core is a library the game happens to call
 
+A library is used by code its author never sees, which is two obligations rather than one: it must
+be *reachable* without dragging the session in, and it must be *safe to call* — a library that
+throws into its caller has moved its own failure into somebody else's program.
+
 #### C5 — The core speaks no game type
 
 **The simulation references exactly one Space Engineers assembly, `VRage.Math`, and no public
@@ -850,6 +1126,22 @@ world, and it is the boundary an SE2 adapter would bind to.
 *Applies to:* `Data/Scripts/Thermodynamics/Core`.
 *Checked by:* `CoreIsolationTests`.
 *From:* [tests/README.md](../tests/README.md), [architecture.md](architecture.md).
+
+#### W4 — No call across the mod's API throws into its caller
+
+**A bad argument comes back as `false`, `0` or `NaN`, and a subscriber that throws is dropped rather
+than allowed to stop the simulation.**
+
+An exception crossing a mod boundary lands in somebody else's session with this mod's name on it,
+and the caller cannot catch what it did not know it was calling. The same reasoning runs the other
+way for the callbacks this mod invokes: one misbehaving consumer of a threshold must not stop heat
+moving for everything else in the world, so `RaiseThreshold` catches, records and unsubscribes.
+
+*Applies to:* every delegate in the table, and every callback the mod invokes.
+*Checked by:* — nothing. `ModApiShapeTests` pins the table's *shape*; that no entry throws is
+discipline, and the closest thing to a check is that every implementation null-guards its way to a
+return value.
+*From:* [api.md](api.md#guarantees).
 
 ### P10 — The solver's three invariants are the definition of correctness
 
@@ -913,15 +1205,6 @@ fix is re-exporting the models — which needs the source scene, not this reposi
 
 *Applies to:* `Models/` and everything under it.
 *Checked by:* — nothing; both `note.txt` files say so and that is all.
-*From:* [development.md](development.md).
-
-#### R5 — The workshop identity files are not regenerated
-
-**`modinfo.sbmi` holds the workshop id; regenerating it publishes the mod as a new item, and
-every subscriber stays on the old one.**
-
-*Applies to:* `modinfo.sbmi`, `metadata.mod`.
-*Checked by:* — judgement.
 *From:* [development.md](development.md).
 
 #### R6 — Vendored code is replaced, never edited
@@ -1018,6 +1301,88 @@ run for. A ship is not symmetric, so both thrust and travel expand to six direct
 *From:* [balance-lab.md](balance-lab.md).
 
 ---
+
+#### O4 — Corpus walks run alone
+
+**A test that walks the corpus, or that asserts on wall-clock time, declares the collection that
+disables parallelism; nothing else in the suite does.**
+
+Four walks across thirty-one workers on thirty-two cores measured seventeen times slower than
+running them one at a time, and it hid behind a 93 % CPU reading because the cores were busy
+thrashing each other's cache. Each walk is already internally parallel over thousands of
+blueprints, so two at once are two thread pools competing for one memory bus.
+
+**The rule was right and its implementation was three times too broad.** `xunit.runner.json` set
+`maxParallelThreads: 1` for the whole project, so every run of every test paid for the isolation of
+four opt-in walks that most runs never execute. Measured on 2026-08-24 over 1,825 cases: **1 m 41 s
+at one worker, 38 s at eight, 1 m 47 s at thirty-two** — one worker per core is no faster than
+serial, which is the same cache effect one rung up. The walks and the wall-clock tests now declare
+`[Collection("alone")]` and the project runs at eight.
+
+*Applies to:* the opt-in corpus walks, and any test whose assertion is about elapsed time.
+*Checked by:* `EveryCorpusWalkDeclaresThatItRunsAlone`, which finds a walk by the one thing every
+walk does — ask `CorpusFixture` for its files. The wall-clock half is judgement: `StaggerTests`
+compares two cache regimes a few per cent apart, and its own noise guard is what caught it.
+*Retires when:* the walks stop being internally parallel, or a machine stops having a shared cache.
+*From:* the operations record, and [backlog.md](backlog.md) `F8`.
+
+**Why absolute.** A project-wide setting cannot be forgotten and an attribute on a class can:
+a new walk written without it does not fail, it runs beside another walk and takes the suite's
+duration with it. That is a silent failure, which is what this page is for.
+
+### P15 — What is already in someone else's world is frozen
+
+A save file, a setting name, a definition property name, an API key and a workshop id all exist in
+worlds this repository will never see and cannot reach. They may be **added to**; they may not be
+repurposed or quietly dropped. That is a different idea from P12 — P12 says do not edit what you
+cannot rebuild, and this says do not break what you cannot recall — and it is why `R5` sits here
+rather than there: a workshop id is not hard to regenerate, it is impossible to un-publish.
+
+#### W1 — A saved world loads on the build that wrote it, and on the ones either side
+
+**The storage format grows by adding a section rather than by changing its marker, and every older
+format it has ever written is still read.**
+
+A save that fails to load is a world's heat lost; a save that loads *partially* is worse, because
+nothing says so. Version 2 grew a room-air section and a reader that predates it skips what it does
+not recognise, so a save written now still loads on an older build — and a version 1 payload still
+decodes on this one. The same shape holds for anything else written into world storage: append, and
+read what you used to write.
+
+*Applies to:* `ThermalStorageCodec` and anything written into `MyModStorageComponent`.
+*Checked by:* `LegacyPayloadsStillLoad`, `AReaderThatDoesNotKnowAboutRoomsStillReadsBlocksAndLoops`,
+`APayloadWithNoRoomSectionDecodesToNoRooms`, `EveryTruncationOfAValidPayloadIsRejected`.
+*From:* [architecture.md](architecture.md#persistence).
+
+#### W2 — A name something outside this repository addresses is never repurposed
+
+**A setting name, a serialization number, a definition property name and an API key are addresses
+held by worlds and mods that will never be re-read here. Alias them, add to them, and never point
+one at something else.**
+
+The failure is silent in the worst way available. Definition Extensions matches on the property
+name string, so dropping a retired spelling reverts every third-party definition written before the
+rename to the shipped defaults — no error, no log line, and a mod whose blocks have stopped being
+what they say they are. A reused `ProtoMember` number decodes an old save's value into the wrong
+field. A renamed setting breaks `/thermal set`, the API and the settings sync at once, for
+everybody who had tuned it.
+
+*Applies to:* setting names and their `ProtoMember` numbers, `<ModExtensions>` property names, and
+the mod API's keys and signatures.
+*Checked by:* `TheRetiredPropertyNamesAreStillRead` (the harness parser only, and it says so),
+`NoSettingReusesANumberThatWasDeliberatelyRetired`, `EveryNamedSettingCanBeReadAndWritten`,
+`EveryEntryHasTheSignatureTheApiPageGivesIt`.
+*From:* [definitions.md](definitions.md#retired-property-names),
+[document-of-intent.md](document-of-intent.md#to-an-existing-world-nothing-a-player-already-has-is-quietly-lost).
+
+#### R5 — The workshop identity files are not regenerated
+
+**`modinfo.sbmi` holds the workshop id; regenerating it publishes the mod as a new item, and
+every subscriber stays on the old one.**
+
+*Applies to:* `modinfo.sbmi`, `metadata.mod`.
+*Checked by:* — judgement.
+*From:* [development.md](development.md).
 
 ## Conditional
 
@@ -1166,33 +1531,12 @@ there, the filter would reject its own input.
 
 ## Low value
 
-Four entries: one rule that costs measurably more than it prevents, and three that turned out not
-to be rules at all. They are kept here, rather than deleted, so that a citation to one resolves to
-its disposition rather than to nothing — and so that the reasoning survives the next person who
-thinks of writing them again.
+Three entries, all of them rules that turned out not to be rules at all. They are kept here, rather
+than deleted, so that a citation to one resolves to its disposition rather than to nothing — and so
+that the reasoning survives the next person who thinks of writing them again.
 
-### O4 — Corpus walks run alone
-
-**Four walks across thirty-one workers on thirty-two cores measured seventeen times slower than
-running them one at a time, and it hid behind a 93 % CPU reading because the cores were busy
-thrashing cache.**
-
-The observation is sound. The rule as implemented is not: `xunit.runner.json` sets
-`maxParallelThreads: 1` for the whole test project, so every run of every test pays for the
-isolation of four opt-in walks that most runs never execute. Measured on 2026-08-22: 53.1 s
-serial against 16.7 s at eight threads, with the same passing count in every configuration and ten
-for ten in a parallel burn-in.
-
-*Applies to:* the opt-in corpus walks — but the mechanism applies to every test class in the
-project.
-*Checked by:* `xunit.runner.json`, more broadly than the rule needs.
-*Retires when:* the walks move into a collection that disables parallelism for itself and the
-project-wide setting comes off. The narrower form already exists in the suite: `LoadTests`
-declares its own collection with `DisableParallelization`. [backlog.md](backlog.md) F8.
-*From:* the operations record.
-
-**Why low value.** It buys correct isolation for four tests and charges every run three times its
-duration, when a mechanism that charges only the four is already in use ten lines away.
+`O4` was the fourth and is no longer here: it costed measurably more than it prevented *as
+implemented*, and narrowing the implementation to the four tests it was about made it a rule worth keeping.
 
 ### R1 — The repository is the mod folder
 
@@ -1232,9 +1576,19 @@ right and this page is stale**; say so and fix it here.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Said what this page's identifiers share with [backlog.md](backlog.md)'s and what was decided about it (`H8`): eleven collide, 215 citations would have to be resolved by hand to remap them, and the errors of that diff would be silent — so the set is frozen by a check rather than paid off. |
+| 2026-08-25 | **`R16`, and the 155 links it found.** *A pointer in code is plain text, never a markdown link* was written into [development.md](development.md#and-in-the-code) after two such links were found rotted, and nothing checked it — a link inside a `.cs` file renders nowhere, so nobody clicks it, nobody finds out it is wrong, and `EveryRelativeLinkResolves` reads markdown only. The one form of cross-reference here that nothing checked was the one written in the syntax that looks checked, and 155 had accumulated across 91 files. Flattening them cost nothing, because every link text was already the page's own name. `NoPointerInCodeIsWrittenAsALink` holds it, and it demonstrated that it works by failing on the first draft of its own summary, where the example was quoted verbatim. |
+| 2026-08-25 | **`R15`, and thirteen dead citations in shipped code on its first run.** `R11` fails when a rule names a check that has stopped running; nothing failed when a *citation* named a rule or a backlog row that had stopped existing, and `EveryRuleCitedByAPageExists` reads documentation banners while **425 citations of the same shape live in `.cs` and `.py` files**. A backlog row is deleted when it closes, so every comment citing it becomes a dead reference that reads exactly like a live one: `C20` in six files, three of them compiled by the game, and `C13` in three more. All thirteen now name the page that holds the argument, in plain text as the comment convention asks. |
+| 2026-08-25 | **The four rules added today are `W1`–`W4`, and the letter was chosen because everything else collides.** [backlog.md](backlog.md) and this page share a letter-and-number namespace and fifteen identifiers are currently both a rule and an open item — `C3` is *target `net48`* here and *whether to ship `MaxSubstepsPerBlock 6`* there. They were first issued as `C16`–`C19`, which are four live backlog rows, and moved before the commit landed. Nothing else is renamed: the backlog's numbers are its rows' names and never move, and remapping this page's three colliding letters would touch 362 citations in code alone. That is a decision and it is [backlog.md](backlog.md) H8. What is fixed is that it stops growing. |
+| 2026-08-25 | **The categories are absolute, conditional and low value, and the first two are now one question.** The first category was *load-bearing* and its test was the consequence of breaking it, which is true of nearly every rule here and is the wrong axis to sort on: it made the boundary with *conditional*, which is about scope, a comparison between two different things. Re-audited under *does it ever stand down*, **not one rule changed category** — the boundary was right and its stated reason was not. |
+| 2026-08-25 | **Re-tested the reduction from scratch, and the rejections are the result.** Two more principle-level mergers attempted and both rejected: `P8` with `P14` produces a heading that has to be unpacked before it applies to either side, and `P10` generates one rule but carries the clause that makes every other argument here safe — *everything else is tuning*. Four rule-level mergers attempted and all four rejected, which says the list is at its irreducible size rather than asserting it: `M4`+`M5` are an instruction to a runner and one to a reader, `E10`+`E11` differ by two obligations, `C9`+`C10`+`W3` share only their principle, and the seven join rules under `P5` *are* that principle applied to seven artefacts with seven checks. **Two rules were re-filed**: `R5` to `P15`, and `D4` from `P4` to `P2` — *both are where a fault survives longest, because nobody looks there* is a blind spot read as a value, not an oracle problem, and `D8` beside it is genuinely `P4` and says so in its own words. **Two gained a second principle** on the precedent `R9` set: `O4` is `P6` for its wall-clock half and `C15` is `P8` for the ladder itself. |
+| 2026-08-25 | **Five rules the repository already enforced and had never stated, and the fifteenth principle two of them needed.** A sweep of the tree for unstated intent found them; four were already held by tests that no rule cited, which is the *one place* claim failing in the direction nothing checks — `R11` catches a rule naming a dead check and nothing catches a live check enforcing an unstated rule. `W1` a saved world loads on the builds either side of the one that wrote it; `W2` a name something outside this repository addresses is never repurposed; `W3` an authority check reads what the engine supplies, never what the sender wrote; `W4` no call across the mod's API throws into its caller; `D9` a fault is recorded whether or not collection is running. `W3` landed under `P7` and `D9` under `P2`, which is more evidence for those two. `W4` widened `P9`: a library is not only reachable without the session, it is safe to call. `W1` and `W2` landed under nothing, and `P15` is what they needed — *what is already in someone else's world is frozen* — which also moved `R5` out of `P12`, where a workshop id had been filed as *hard to regenerate* when what it actually is, is impossible to un-publish. |
+| 2026-08-24 | Added `C15`, which is `C7` grown a dimension: a mechanism's configuration runs from `off` to `realistic` rather than being a boolean, and a cheaper form that exists in the model belongs on that list. Stated after the intent it comes from, and it found one violation on the day it was written — `WellMixedCoolant`, read by the solver and settable by nothing. |
+| 2026-08-24 | Added `C11`, after the mod failed to compile for two commits while the whole suite passed. Two thirds of the adapter under `Game/` was compiled by nothing the workflow runs, so a rename in `Core` was invisible until a world load. `Generic.csproj` is in the test solution now, and its twenty-seven hard-coded Steam paths resolve through `$(SEBinPath)` — being unbuildable anywhere but this machine was the reason it could not be in the build in the first place ([backlog.md](backlog.md) `F25`). |
 | 2026-08-22 | `R9` covers the signature as well as the name, and `ModApiShapeTests` checks it. A failed cast returns null rather than throwing, so a signature that moves on one side alone gives another mod a feature that silently does nothing ([backlog.md](backlog.md) `F1`). |
 | 2026-08-22 | `C9` now names air density among the things the game answers, which is what settles whether this mod should author its own against the engine's ([backlog.md](backlog.md) `B22`). |
 | 2026-08-22 | `R3` and `E5` are checked rather than judged ([backlog.md](backlog.md) `F9`). The tree is scanned for four credential shapes, and the scan is itself checked against a value of each shape and against the text this repository legitimately writes. Counts a page states about the panel, about `Cubes.xml` and about the suite's own classes are compared with those datasets; a change log is exempt, because `R12` makes it a record of what was true rather than a claim about now. It found two stale figures on its first run — 432 authored values against 654, and 135 test classes against 160. |
+| 2026-08-24 | **`R14`'s check learned the second signature, and it found a live orphan in shipped solver code.** It had only ever looked for a summary closed and immediately reopened — a member that has *gone*. The other shape is a member that has *arrived*: a second summary opened before the first is closed, which is what a newcomer pasted into the middle of an existing comment leaves behind. In `ThermalSolver`, `NodeConductanceTotal` had landed inside `NodeSubstepDemand`'s summary, so one comment was cut in half and the other half — *per-block-type telemetry can attribute a grid's substep count to specific definitions* — hung under `NodeConductanceTotal` describing a method it is not about. Both are put back. Run against a deliberate orphan in both spellings of the new signature before being believed, and it reports the line of the *first* summary, which is the one that lost its member. |
 | 2026-08-22 | Added `R14`, from the standard [document-of-intent.md](document-of-intent.md#what-a-code-comment-is-for) states and a pass that applied it: twenty-four comments were found describing a member that no longer exists, having come to rest on the one below. `NoDocCommentDescribesSomethingThatIsNotThere` catches the shape, and was run against a deliberate orphan in both spellings before being believed — the first version caught only one of the two and missed a real orphan in `CoolantLoopTests`. |
 | 2026-08-22 | Moved *What the extraction changed* into this log, where a record of a revision belongs (`R12`). It held four things, each still true and each now recorded once. **Three *Checked by* citations named something that does not run:** `C6` cited `PhysicsTests`, which is a file whose classes are `ConductionTests` and `StabilityTests`; `D1` attributed three invariants to `LabInvariantTests` that live in `ScreeningTests`; and `D5` cited `SealedBlocksAreRare`, which commit `991d4d9` demoted to an uncalled helper when `CorpusSurvey` absorbed the standalone walks. `R11` is the rule those three produced. **`E1` and `E8` overstated `verdict.py`**, which prints `HOLDS`, `FAILS` or `?` and exits zero either way — both fields now say reported rather than checked. **Two rules came out of the reduction rather than an incident:** `E11` closes `E1`'s hole, and `C8` generalises the gate whose off position cannot be spelled. **Three rules stopped being rules and one changed category** — `R1`, `J1` and `J2` are premises rather than things a change can violate, and `O4` was reclassified low value against a measurement taken the same day. All four dispositions are in [Low value](#low-value). |
 | 2026-08-22 | Put this page under the checks it asks of every other page. `EveryCheckCitedByTheRulesPageResolves` resolves every name in a *Checked by* field to something that runs, which retires `R11`'s unchecked state and closes [backlog](backlog.md) F10; `EveryRuleCitedByAPageExists` fails on a page citing a rule this one does not state; `TheRulesPageIndexesEveryRuleItStates` holds the index, the body and the principle table together. Each was run against a deliberate violation before being believed. |

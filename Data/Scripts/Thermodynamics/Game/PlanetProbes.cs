@@ -297,7 +297,10 @@ namespace Thermodynamics
                     Vector3D position = centre + (probe.Up * radius);
 
                     WindSolver.Inputs inputs = new WindSolver.Inputs();
-                    inputs.Ceiling = entity.GetWindSpeed(position);
+
+                    // The same gate the live path takes, so this reports the wind a world has
+                    // rather than the wind it would have had (`C7`).
+                    inputs.Ceiling = settings.EnableWind ? entity.GetWindSpeed(position) : 0f;
                     inputs.Up = up;
                     inputs.Axis = axis;
                     inputs.WeatherIntensity = intensity;

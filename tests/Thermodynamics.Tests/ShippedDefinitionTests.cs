@@ -270,9 +270,17 @@ namespace Thermodynamics.Tests
                 { "Reactor", new[] { 0.01f, 0.01f, 1f, 0.25f } },
                 { "HydrogenEngine", new[] { 0.60f, 0.05f, 1f, 0.5f } },
                 { "BatteryBlock", new[] { 0.03f, 0.03f, 1f, 1f } },
-                { "JumpDrive", new[] { 0f, 0.15f, 1f, 2f } },
+                // 0.2 is 1 - the PowerEfficiency 0.8 the game states for the vanilla drive; the
+                // prototech pair state 0.9 and get 0.1 from the per-block derivation, which a type
+                // entry cannot express. Was 0.15 by assertion and wrong for all four.
+                { "JumpDrive", new[] { 0f, 0.2f, 1f, 2f } },
                 { "Thrust", new[] { 0f, 0.25f, 1.5f, 1f } },
-                { "InteriorLight", new[] { 0f, 0.9f, 1f, 1f } },
+                // 1.0 since 2026-08-24: a lamp inside a hull heats it with everything it draws,
+                // because the light lands on the hull and is absorbed by it. It was 0.9, whose own
+                // note said the first law fixes this at 1.0 and called the tenth a balance choice
+                // (`C21`). ReflectorLight and Searchlight kept 0.9, and say why: they point out.
+                { "InteriorLight", new[] { 0f, 1f, 1f, 1f } },
+                { "ReflectorLight", new[] { 0f, 0.9f, 1f, 1f } },
                 { "Gyro", new[] { 0f, 0.15f, 1f, 1f } },
                 { "Warhead", new[] { 0f, 0.05f, 1f, 4f } },
                 { "HeatVentBlock", new[] { 0f, 0.3f, 3f, 1f } },

@@ -28,7 +28,29 @@ namespace Thermodynamics.Core
         /// because every add is behind a visited bitset. See memory.md, 4.
         /// </summary>
         private readonly List<List<Vector3I>> rooms = new List<List<Vector3I>>();
-        private readonly Dictionary<Vector3I, int> roomIndexByCell = new Dictionary<Vector3I, int>(Vector3I.Comparer);
+        private Dictionary<Vector3I, int> roomIndexByCell = new Dictionary<Vector3I, int>(Vector3I.Comparer);
+
+        /// <summary>
+        /// The same answer as <see cref="roomIndexByCell"/>, as two sorted arrays, once a pass has
+        /// completed. Null while one is running.
+        ///
+        /// <para>
+        /// **A map is written once and then read for the life of the grid**, and a dictionary keyed
+        /// on `Vector3I` costs about 31 bytes a cell to hold twelve bytes of answer — 8.7 MB at
+        /// 126,000 blocks and 47 at half a million, which is the row that still climbs with grid
+        /// size (backlog.md `E3`). Frozen into a sorted `long[]` of
+        /// cell keys and a parallel `int[]` of rooms, the same answer is twelve bytes a cell and a
+        /// binary search over contiguous memory rather than a hash and a bucket chase.
+        /// </para>
+        ///
+        /// <para>
+        /// The dictionary is still what a *running* pass writes into, because a flood adds cells
+        /// one at a time and a sorted array cannot. It is dropped when the pass completes.
+        /// </para>
+        /// </summary>
+        private long[] frozenKeys;
+        private int[] frozenRooms;
+        private int frozenCount;
 
         private readonly List<RoomPortal> portals = new List<RoomPortal>();
 
@@ -68,7 +90,7 @@ namespace Thermodynamics.Core
         /// <summary>Cells belonging to some enclosed room, across every room.</summary>
         public int RoomCellCount
         {
-            get { return roomIndexByCell.Count; }
+            get { return frozenKeys != null ? frozenCount : roomIndexByCell.Count; }
         }
 
         /// <summary>
@@ -78,7 +100,7 @@ namespace Thermodynamics.Core
         /// </summary>
         public bool IsEmpty
         {
-            get { return externalCount == 0 && solid.Count == 0 && roomIndexByCell.Count == 0; }
+            get { return externalCount == 0 && solid.Count == 0 && RoomCellCount == 0; }
         }
 
         /// <summary>The cells of each room. Read in order; never searched.</summary>
@@ -145,8 +167,65 @@ namespace Thermodynamics.Core
         /// </summary>
         public int RegionOf(Vector3I cell)
         {
-            int index;
-            return roomIndexByCell.TryGetValue(cell, out index) ? index : ExternalRegion;
+            int index = RoomAt(cell);
+            return index >= 0 ? index : ExternalRegion;
+        }
+
+        /// <summary>
+        /// The room a cell belongs to, or -1. The one place that knows whether this map is frozen.
+        /// </summary>
+        private int RoomAt(Vector3I cell)
+        {
+            if (frozenKeys == null)
+            {
+                int index;
+                return roomIndexByCell.TryGetValue(cell, out index) ? index : -1;
+            }
+
+            long key = GridMath.Key(cell);
+
+            int low = 0;
+            int high = frozenCount - 1;
+
+            while (low <= high)
+            {
+                int middle = low + ((high - low) >> 1);
+                long found = frozenKeys[middle];
+
+                if (found == key) return frozenRooms[middle];
+                if (found < key) low = middle + 1;
+                else high = middle - 1;
+            }
+
+            return -1;
+        }
+
+        /// <summary>
+        /// Replaces the dictionary with the sorted arrays that answer the same question. Called
+        /// once, when a pass completes and the map stops being written to.
+        /// </summary>
+        private void Freeze()
+        {
+            frozenCount = roomIndexByCell.Count;
+            frozenKeys = new long[frozenCount];
+            frozenRooms = new int[frozenCount];
+
+            int at = 0;
+            foreach (KeyValuePair<Vector3I, int> entry in roomIndexByCell)
+            {
+                frozenKeys[at] = GridMath.Key(entry.Key);
+                frozenRooms[at] = entry.Value;
+                at++;
+            }
+
+            // Sorted together: the keys are the search order and the rooms ride along with them.
+            Array.Sort(frozenKeys, frozenRooms);
+
+            // Replaced rather than cleared: `Clear` keeps a dictionary's buckets and entries, so
+            // freezing into arrays beside them would *add* twelve bytes a cell rather than trade
+            // thirty-one for them. `TrimExcess` would do it and does not exist on .NET Framework
+            // 4.8, which is what the game compiles against (`C3`).
+            roomIndexByCell = new Dictionary<Vector3I, int>(Vector3I.Comparer);
         }
 
         /// <summary>
@@ -158,8 +237,8 @@ namespace Thermodynamics.Core
         {
             if (solid.Contains(cell)) return false;
 
-            int room;
-            if (!roomIndexByCell.TryGetValue(cell, out room)) return true;
+            int room = RoomAt(cell);
+            if (room < 0) return true;
 
             // A room standing open through a door holds no air, so what faces it faces outdoors. The
             // room still exists: only its venting flag changed, not the map.
@@ -169,8 +248,7 @@ namespace Thermodynamics.Core
         /// <summary>Index into <see cref="Rooms"/>, or -1 when the cell is not in a room.</summary>
         public int RoomIndexOf(Vector3I cell)
         {
-            int index;
-            return roomIndexByCell.TryGetValue(cell, out index) ? index : -1;
+            return RoomAt(cell);
         }
 
         public bool IsSolid(Vector3I cell)
@@ -206,7 +284,7 @@ namespace Thermodynamics.Core
                     {
                         Vector3I cell = new Vector3I(x, y, z);
                         if (solid.Contains(cell)) continue;
-                        if (roomIndexByCell.ContainsKey(cell)) continue;
+                        if (RoomAt(cell) >= 0) continue;
                         yield return cell;
                     }
                 }
@@ -226,6 +304,12 @@ namespace Thermodynamics.Core
 
         internal void AddToRoom(int roomIndex, Vector3I cell)
         {
+            // A pass that resumed after a freeze would be writing into a dictionary nothing reads.
+            // It cannot happen — a map is filled once — and saying so is cheaper than finding out.
+            frozenKeys = null;
+            frozenRooms = null;
+            frozenCount = 0;
+
             rooms[roomIndex].Add(cell);
             roomIndexByCell[cell] = roomIndex;
         }
@@ -305,7 +389,7 @@ namespace Thermodynamics.Core
         /// </summary>
         internal bool IsKnown(Vector3I cell)
         {
-            if (solid.Contains(cell) || roomIndexByCell.ContainsKey(cell)) return true;
+            if (solid.Contains(cell) || RoomAt(cell) >= 0) return true;
             return GridMath.Contains(searchMin, searchMaxExclusive, cell);
         }
 
@@ -336,6 +420,10 @@ namespace Thermodynamics.Core
                     roomIndexByCell[affected[a]] = roomIndexByCell[affected[a]] - 1;
                 }
             }
+
+            // The map is written once and read for the life of the grid, so this is where the
+            // dictionary stops earning its bytes.
+            Freeze();
         }
     }
 }

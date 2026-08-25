@@ -218,7 +218,7 @@ namespace Thermodynamics.Tests
         /// **A clip has those too — what it does not have is the middle.** Every terrain factor here
         /// was a linear law followed by a clip, and SE's ground is steep enough that every site ran
         /// past the clip, so terrain read the same number everywhere and stopped telling one place
-        /// from another. [backlog](../../docs/backlog.md) `B19`.
+        /// from another. backlog.md `B19`.
         /// </summary>
         [Fact]
         public void SaturationKeepsTheGradientAndTheBound()
@@ -296,7 +296,7 @@ namespace Thermodynamics.Tests
         /// The shelter share saturates onto its bound instead of clipping to it, so a wall a
         /// hundred kilometres high gets arbitrarily close to the floor without a wall of a hundred
         /// metres reading the same number. See `WindTerrain.Saturate` and
-        /// [backlog](../../docs/backlog.md) `B19`.
+        /// backlog.md `B19`.
         /// </summary>
         [Fact]
         public void OpenGroundShelltersNothingAndTheFloorHolds()

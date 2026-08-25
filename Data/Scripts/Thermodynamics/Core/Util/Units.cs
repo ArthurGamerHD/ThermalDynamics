@@ -27,7 +27,7 @@ namespace Thermodynamics.Core
         /// whitelist, so a mod naming it does not compile in a session — and the mod project
         /// building against the installed assemblies does not catch that, because the whitelist is
         /// a Roslyn analyzer the game applies and not a property of the assemblies. See
-        /// [known-issues.md](../../../../../docs/known-issues.md), The whitelist is not the
+        /// known-issues.md, The whitelist is not the
         /// assemblies.
         /// </para>
         /// </param>

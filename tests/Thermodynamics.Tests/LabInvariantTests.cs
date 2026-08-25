@@ -33,6 +33,7 @@ namespace Thermodynamics.Tests
     /// checked and runs nowhere. They are gone; the claims are in the two classes named above.
     /// </para>
     /// </summary>
+    [Collection("alone")]
     public class LabInvariantTests
     {
         /// <summary>

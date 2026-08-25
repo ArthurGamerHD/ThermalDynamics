@@ -54,9 +54,8 @@ four folders.
 
 Sixty-eight settings on a single scroll is a list to be searched by eye, and an administrator
 usually arrives wanting one part of it. **One system to a page, with its own switch at the top.**
-Four switches used to share a "Mechanisms" page because they were all switches, which is filing by
-part of speech: switching convection off belongs above the convection dials, where you can see what
-it governs.
+Grouping the switches together would be filing by part of speech: switching convection off belongs
+above the convection dials, where a reader can see what it governs.
 
 A page whose system still keeps most of its numbers in a definition file says so, rather than
 looking broken with one switch on it. A setting named on no page still gets a control, on a final
@@ -76,7 +75,7 @@ at the menu in game rather than by reading the API:
 
 **Some settings are typed, not dragged.** A slider offers about two hundred distinguishable
 positions, which suits a fraction between 0 and 1 and suits nothing else this mod has. The step
-budget spans four million, so one position is ten thousand element visits; the friction scale spans
+budget spans eight million, so one position is forty thousand element visits; the friction scale spans
 a hundredth, so every position shows the same number. Seven settings therefore get a field to type
 a value into — the step budget, terrain range, solar energy, heat time scale, vacuum temperature,
 the friction threshold and the friction scale — and the rest keep their sliders.
@@ -120,6 +119,46 @@ On a multiplayer client the simulation controls are visible but disabled, for th
 `set` is refused there: the config is world state and belongs to the server. The four presentation
 switches stay editable, because they only change what that client draws.
 
+## Every mechanism, and the rungs it has
+
+**The intent is that a feature is configured as a list of options from `off` to `realistic`**, with
+`realistic` the default and every rung between them a cheaper approximation carrying its measured
+price — see
+[document-of-intent.md](document-of-intent.md#a-switch-is-a-ladder-and-its-two-ends-are-off-and-realistic).
+This is the inventory of how far the settings surface is from that, kept here because the gap is
+per-feature and the answer to *should this one have a middle rung* is not the same twice.
+
+A two-rung ladder is a complete ladder: some mechanisms have no cheaper form that is worth having,
+and for those `off` and `realistic` are the whole list. **The column that matters is the last one** —
+whether a cheaper rung is known to be possible and nobody has built it.
+
+| Mechanism | Configured by | Rungs today | A cheaper rung |
+| --- | --- | ---: | --- |
+| Solar gain and shadow | `EnableSolarHeat`, `SolarSelfShadowing`, `SolarGridShadows`, `SolarOcclusionSamples`, `SolarOcclusionInterval`, `SolarOcclusionPlanets`, `SolarOcclusionTerrain`, `SolarOcclusionVoxels` | many | **The one full ladder, and it is spread over eight settings.** `SolarGridShadows` alone runs `none` → `basic` → `full`, which is the shape this page is arguing for. The unbuilt rung is *above* the top one — planet shadow per face, priced at 0.0018 K a metre in [backlog.md](backlog.md) `A9`. |
+| Coolant transport | `EnableCoolantLoops`, `WellMixedCoolant` | 3 | off → well-mixed → parcels round a ring. Complete, and the middle rung reached no world until 2026-08-24. |
+| Wind | `EnableWind` + `WindTerrainInfluence`, `WindSlopeStrength`, `WindDiurnalAmplitude` | 2 + dials | Each influence runs 0 to 1, so the ladder above the switch is a dial rather than a list. **The switch was missing until 2026-08-24**, which made this the one mechanism a world could not turn off (`C7`): the nearest thing was zeroing those three and knowing which three, and that removes the modulations rather than the wind. Off is no wind anywhere — the game exposes a ceiling and not a wind, so every direction and speed is this model's — and it costs nothing, because it takes the same path a planet with no air over it already takes. |
+| Planet climate | `EnablePlanets`, `ClimateGroundInfluence`, `ClimateWeatherInfluence` | 2 + dials | Off means ambient is `VacuumTemperature` everywhere. The two influences are 0-to-1 dials on top of the switch rather than rungs under it. |
+| Integration fidelity | `Frequency`, `MaxSubsteps`, `MaxSubstepsPerBlock`, `MaxElementVisitsPerStep` | scalars | Not a feature and the exception that proves the point: **its four dials run in three different directions.** `MaxSubstepsPerBlock` 0 is the *faithful* end and a number is the cheap one; `MaxSubsteps` is the opposite; `MaxElementVisitsPerStep` 0 means uncapped; `Frequency` up is dearer and more faithful. Nothing tells a reader which way each points but this page. |
+| Conduction | `EnableConduction` | 2 | None known. Conduction between touching blocks is one multiply-add per link; there is no cheaper form of it that is still conduction. |
+| *(group switch)* | `EnableEnvironment` | — | Not a mechanism and not a rung: it turns radiation and convection off together. A switch that removes two mechanisms at once is a convenience over their own switches, and it is listed here so the inventory accounts for every `Enable*` there is. |
+| Radiation | `EnableRadiation` | 2 | None known, for the same reason. |
+| Convection | `EnableConvection` | 2 | None known. |
+| Waste heat | `EnableWasteHeat` | 2 | None known: it is a per-block fraction of a wattage the game already reports. |
+| Point heat sources | `EnableHeatSources` | 2 | The inverse square is already cut off by range. A rung that sampled the registry less often is possible and has never been wanted, because the registry is usually empty. |
+| Aerodynamic friction | `EnableFriction` | 2 + dials | `FrictionScale` and `FrictionAtSpeedsAbove` are balance dials rather than fidelity rungs — they change how much friction there is, not how well it is modelled. |
+| Room air | `EnableRoomAir` | 2 | **A cheaper rung is possible and unbuilt.** Room air is a well-mixed body already; what is expensive is the flood fill that finds the rooms, and a coarser or less frequent map is a rung. `D2` measures the fill at 7,207 ticks on a million blocks, so this is the mechanism where a middle rung would buy the most. |
+| Heat pumps | `EnableHeatPumps` | 2 | None known. Off makes them ordinary blocks. |
+| Overheat damage | `EnableDamage`, `DamageIsPerSecond` | 2 | `DamageIsPerSecond` is a correctness switch rather than a rung — off makes damage scale with `Frequency`, which is wrong rather than cheap. |
+| The suit | `EnableSuitDamage` | 2 | None known. One character, one pass. |
+| Temperature replication | `EnableTemperatureSync`, `TemperatureSyncInterval` | 2 + interval | The interval is a real rung and behaves like one: the cost is bandwidth and the price is measured in [Replicating temperatures](#replicating-temperatures). |
+| Unattended grids | — | 1 | **The rung that does not exist at all.** [document-of-intent.md](document-of-intent.md#what-an-unattended-grid-gets) says full simulation is the default and a per-grid rate tier is a switch; the switch is unbuilt, so today there is one rung and it is `realistic`. |
+
+**Read the count column with the last one.** Nine mechanisms have two rungs and only two of those are
+places a cheaper rung is known to be possible — room air's map, and the unattended-grid tier that was
+already intended. The rest have two rungs because two is all there is.
+
+The rows that are gaps are tracked as [backlog.md](backlog.md) `B31`.
+
 ## Mechanisms
 
 Each switch removes exactly its own mechanism and its own cost.
@@ -142,6 +181,7 @@ Each switch removes exactly its own mechanism and its own cost.
 | `EnableWasteHeat` | `true` | Heat from power production, power draw and thrust. |
 | `EnablePlanets` | `true` | Planetary climate. Off means ambient is always `VacuumTemperature`. |
 | `EnableFriction` | `true` | Aerodynamic heating at speed in atmosphere. |
+| `EnableWind` | `true` | The wind field and everything that shapes it: the boundary-layer profile, terrain speed-up and shelter, slope channelling, the diurnal cycle and burial. Off is no wind anywhere rather than the game's wind unmodelled, because the game exposes a ceiling rather than a wind. A grid still feels its own motion through the air. |
 | `EnableDamage` | `true` | Damage above a block's critical temperature. |
 | `EnableCoolantLoops` | `true` | Coolant loop heat transport. |
 | `EnableRoomAir` | `true` | Sealed rooms hold an air mass that couples their surfaces. |
@@ -265,7 +305,139 @@ Two things depend on it and move with it. Demand *per step* is proportional to s
 rig asks 3.3 substeps at `Frequency 4` and about 6.7 at `Frequency 2` — enough to clip a small
 `MaxSubsteps`, though not the shipped 64. And a step is spread across the frames of its own window,
 so **halving `Frequency` halves the per-frame cost of a given step budget**; that is why
-`MaxElementVisitsPerStep` is 2,000,000 rather than the 1,000,000 it carried at `Frequency` 8.
+`MaxElementVisitsPerStep` doubled when `Frequency` went from 8 to 4.
+
+### The approximation that shipped on, and no longer does
+
+The defaults are the most faithful configuration the model has, and
+`TheDefaultsAreTheMostFaithfulConfiguration` holds them to it. **`MaxSubsteps` was the one
+exception, and `C24` closed it** — the section is kept rather than deleted because the reasoning is
+what would be needed again if a future retune re-opened it.
+
+**What the breach was.** `MaxSubsteps` grants 64. In vacuum nothing was close to it: a 49-ship panel
+of real workshop hulls asked 7.1 substeps at p95. In thick air at 200 m/s the same panel's p99
+demand was **73.4 and 14 of 50 hulls were refused**, every one at 1.14–1.15× over-subscribed —
+a ceiling rather than a tail, because the stiffest block class is the same fitting on every ship and
+its demand in air is set by the convection coefficient. Refusing that cost **0.028 K** on the hottest
+block of a driven census hull over 600 simulated seconds, which is the trade `P14` exists to take.
+
+**What closed it.** `C24` divides every heat capacity by 0.4 and multiplies conduction by four, and
+the demand this criterion is decided by is convection-limited — so it came down with the clock. On
+the same 40-hull panel in the same four environments, at the pair that now ships: worst p99 **35.12
+of 64**, 55 % of the cap, **0 of 40 hulls refused in every environment**, and projected to the
+300 m/s that servers commonly run, p95 38.37 — 60 %.
+
+| environment | p50 | p95 | p99 | of cap | over cap |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| vacuum, shadow | 8.12 | 11.36 | 12.51 | 20 % | 0/40 |
+| planet surface, hot noon | 15.23 | 18.78 | 20.30 | 32 % | 0/40 |
+| storm, parked | 20.99 | 30.09 | 30.53 | 48 % | 0/40 |
+| re-entry, 200 m/s in thick air | 23.34 | 34.78 | 35.12 | 55 % | 0/40 |
+
+**Vacuum is where it went instead**, and it is the one row above that rose: 1.60× what the same
+hulls demanded before, because vacuum is all conduction. Nothing there is near the cap either — 20 %
+at p99 — but the element-visit allowance is a different bound and the retune does reach it. **`C27`
+measured that and found the premise the wrong way round**: the allowance binds in *air* first, at
+about a third the grid size, and vacuum is the generous column. See
+[What a shortened step costs](#what-a-shortened-step-costs).
+
+**`MaxSubstepsPerBlock` is still an approximation and still not a default**, and the number that
+made that an easy call has moved. It cost **0.607 K** on the worst-placed block, twenty times what
+the ceiling's breach cost, so
+[the fidelity rule](document-of-intent.md#fidelity-is-the-default-a-saving-is-a-switch) made it a
+switch and the ceiling the model. Re-measured on 2026-08-24 at the pair `C24` ships and the hull
+`C26` refreshed, a cap of 6 in thick air at 200 m/s costs **0.028 K** on the worst-placed block and
+0.017 K on the hottest — the same size as the breach that was called imperceptible. **The decision
+has not moved**, because moving a default is its own commit with its own reasoning (`E11`);
+[backlog.md](backlog.md) `C3` carries it and now carries a number that argues the other way.
+
+**And `G6` passes.** The criterion's marker is *p99 demand exceeds what the caps grant*, it was
+written before the data, and it was failing on the configuration that shipped — which
+[backlog.md](backlog.md) `C19` closed by keeping the cap and letting it fail. What moved is the
+configuration rather than the criterion (`E11`, `P3`). See
+[stiffness.md](stiffness.md#what-refusing-the-demand-costs) for what a refusal costs on each of the
+three paths that carry heat, which is the question that outlives this one.
+
+### What a shortened step costs
+
+`MaxSubsteps` refuses a demand and the overshoot clamps carry the difference, which is the
+approximation the section above is about. `MaxElementVisitsPerStep` does something else: it makes
+the step **shorter** rather than coarser, so every step is exactly as faithful as it was and there
+are fewer of them. Nothing is approximated. What is lost is *time* — the grid's thermal clock runs
+slow against the world's.
+
+**It is the largest thing the mod gives up**, and what it gives up is measured rather than argued:
+**1.19 K standing at a 5 % deficit, rising to 36.98 K at 60 %**, on a load that keeps moving. The
+ladder behind those two figures is
+[benchmarks.md](benchmarks.md#what-the-rate-it-trades-away-is-worth), which is where `bench
+allowance` runs and where the curve's convexity is the point; this page states what it costs and
+that page states how it was measured.
+
+Under a load that is *not* moving it is **0.00 K**, because two hulls heading to the same
+equilibrium at different speeds agree once they arrive — so this is what a burn or a charging drive
+costs and nothing at all is owed by a parked ship.
+
+**Where the bound is reached is air, not vacuum.** A settled, driven census hull keeps all of real
+time to about 32,000 blocks in vacuum, 16,000 on a planet surface and **9,000 in flight** at the
+2,000,000 this setting carried until `C27` — air puts a convection term on every exposed node, so
+the demand is three to four times the vacuum one and reaches the same ceiling at a third of the
+size.
+
+**So it moved to 4,000,000**, which is the whole of that trade and not a millisecond of anything
+else:
+
+* **What it buys.** A 32,800-block hull on a planet keeps 100 % of real time where it kept 52.7 %,
+  the same hull in flight 72.5 % against 36.2 %, and a 16,558-block hull in flight stops being
+  touched at all.
+* **What it costs.** A frame is bounded at 266,667 element visits instead of 133,333 — about
+  +0.12 ms a frame on the harness for a grid that is actually reaching the bound, and **nothing at
+  all for one that is not** (`P8`). On the 8,142-ship corpus, seven ships in eight are under 8,904
+  blocks and never reach it in any world.
+* **Why that is the right way round.** The mod refuses to ship `MaxSubstepsPerBlock 6` as a default
+  because it costs 0.607 K, and accepts the substep ceiling's breach because it costs 0.028 K. This
+  cost more than sixty times the first, as a default, and had never been put beside them.
+
+**What is not measured is the game-side figure**, and it matters (`P2`). The per-frame costs above
+are harness milliseconds; the runtime is 6–8× slower per element visit, which puts a throttled
+grid's frame at roughly 1.7–2.2 ms in game against 0.84–1.12 ms before. The only in-session
+measurement of this bound predates both the frame-spreading and the pass removal that made a visit
+nine times cheaper, so there is no current one. A world that cannot afford it lowers the setting,
+which is what it is for.
+
+### Solving a fleet in parallel
+
+`ParallelGrids` is off, and it is the one setting in this file whose default is a **gap rather than
+a choice**.
+
+**What it does.** A frame's grids are prepared on the game thread, solved on the engine's own
+worker threads, and applied on the game thread — solve in parallel, apply on the game thread, which
+is the shape `MyAPIGateway.Parallel` is built for and the one the solver's invariants allow: order
+independence is one of the three, so a fleet stepped one grid per work item lands on the same
+numbers as a fleet stepped in order. What may not move off the game thread is anything that reads
+or writes the game, and that is exactly what the two halves either side of the solve are: the world
+sample, the pump state, the damage, the block writes and every shared telemetry total.
+
+**What it is worth, measured before it was built.** A 242-grid fleet of 1,004-node grids:
+
+| threads | fleet | one grid | uneven fleet |
+| --- | ---: | ---: | ---: |
+| 32 | **10.17×** | 0.99× | 3.35× |
+| 8 | **7.09×** | — | — |
+
+The hand-off costs 1.6–6.8 µs against a grid's own 0.54 ms, so a single-grid world pays nothing
+measurable and a fleet is bounded by its largest grid — which is why an uneven fleet gives 3.35×
+and why splitting *one* grid is a separate question rather than a substitute.
+
+**What a session has to answer before it ships on**, none of which a harness can:
+
+* The engine's own scheduler is not the framework's. `MyAPIGateway.Parallel` hands work to the
+  game's pool, which is also running the game.
+* How many threads a mod may take on a machine it shares with the thing it is running inside.
+* Whether an exception on a worker reaches a log the way one on the game thread does. The mod holds
+  it and reports it on the game thread for that reason, and that path has never run in a session.
+
+Until then it is a switch a server operator can turn on, and
+[backlog.md](backlog.md) `D19` carries what closing it needs.
 
 ### `MaxSubstepsPerBlock`
 
@@ -303,7 +475,18 @@ Hence a rule worth remembering: **while `MaxSubstepsPerBlock <= MaxSubsteps` the
 never engage**, and every step is genuinely short enough for the grid it is integrating. Raising one
 without the other starts refusing steps instead.
 
-It is off by default because it is an approximation, and a mod that models heat should not make
+**It is off by default, and since 2026-08-25 that is a measurement rather than a principle.**
+`CorpusCapWalk` ran all 8,144 published blueprints through four scenarios twice, with the cap off
+and at 6, and the answer is in the shape of the trade rather than in the size of the error: a cap of
+6 costs a p99 of **0.2820 K** across the population — under the 0.607 K that had kept it out — but
+**stiffness is a property of a block and this allowance is a property of a grid**. A light fitting
+demands the same substeps on a fighter as on a dreadnought, so the cap re-masses **7.4 % of the
+blocks on hulls under a thousand and 3.1 % on hulls over sixty thousand**, while **no run under
+5,000 blocks is over `MaxElementVisitsPerStep` at all**. Four fifths of the ships people publish
+would pay the error and collect none of the throughput. See
+[balance-lab.md](balance-lab.md#the-judgement-argued-in-the-open).
+
+It is also an approximation, and a mod that models heat should not make
 one on a player's behalf without being asked. On a world with large ships in it, turning it on is
 the single largest thing that can be done for frame time — and unlike `MaxElementVisitsPerStep`, it
 buys the throughput back rather than trading it away: a ship that stops needing more substeps than
@@ -362,6 +545,56 @@ The four presentation switches — the debug text, the two raycast overlays and 
 are deliberately outside the digest. A client owns what is drawn on its own screen, so those are
 allowed to differ and a server does not overwrite them.
 
+## Replicating temperatures
+
+Settings replicate. **Temperatures now do too**, and until this existed they did not: a client
+re-simulated from its own inputs, and a client joining mid-session started from whatever the world
+was last *saved* at. The model is dissipative, so a client converges on its own — but it spends 150
+to 305 s on the wrong side of a block's critical temperature while it does, against a damage event
+that runs a median 37 s from the load to the first block lost. A client could show **safe** for the
+entire lifetime of the event that destroyed the block, several times over.
+
+**The protocol is the whole hull once, then the blocks near failing.** When a client has finished
+building a grid it asks the server to state it; the server answers with every block's temperature,
+in as many messages as the hull needs. After that the server states only the blocks inside the
+warning band — the same last 100 K the glow already draws — every `TemperatureSyncInterval`
+seconds, and says nothing at all about a hull with nothing near failing.
+
+Both halves are load-bearing, and that is measured rather than assumed. Correcting the band alone
+leaves a client misreading for 145 s of a 560 s run *whatever the interval*, because a corrected
+block conducts to neighbours that are still stale; the hull once and then the band takes it to
+nothing, for one packet — 94 KB on a 9,430-block hull — and 513 bytes a second after it. Replicating
+every block continuously does the same job for thirty times the bandwidth. The evidence is in
+[known-issues.md](known-issues.md#the-protocol-is-measured-and-the-near-critical-tail-alone-is-not-it).
+
+| Setting | Default | Effect |
+| --- | --- | --- |
+| `EnableTemperatureSync` | `true` | Whether the server states block temperatures to its clients at all. Off is what the mod did before this existed: every client guessing, and able to show a block safe for the whole time it is burning. |
+| `TemperatureSyncInterval` | 5 s | Seconds between band updates once a client has the hull. The whole hull is stated once whatever this says. Sixty is enough to keep a client right about a *stale join*, which decays; five is chosen for a client whose **inputs** are wrong, which does not decay and re-diverges between updates. |
+
+**The cost is the size of the emergency.** A quiet ship sends nothing — an empty band is not
+transmitted. A burning one sends ten bytes per block near failing per interval per client in range,
+which on the hottest hull in the corpus is about 6 KB/s while it burns. Blocks outside a client's
+sync distance are never sent, because there is no grid on that machine to correct.
+
+**It travels on its own secure channel**, two above the shared one, for the reason
+[Changing settings from a client](#changing-settings-from-a-client) gives: the engine's secure
+handler supplies a sender the transport verified and a from-the-server flag a client cannot forge.
+A client must not be able to write temperatures onto another client's simulation, and the server
+must not serve a hull to a player id somebody else named. A snapshot asked for twice inside five
+seconds is refused, so a client asking in a loop cannot make the server transmit a hull per frame.
+
+`/thermal sync` prints what this has sent, asked for and applied on the machine it is run on. Run it
+on both: registration and addressing cannot be tested outside a session, and the pair of counters is
+what says which half is not moving.
+
+**What is still wrong after it.** The correction overwrites this machine's guess with the server's
+answer, so it fixes a client that started from the wrong state. It does not fix a client whose
+*inputs* are wrong — block power arriving late, a dropped solver backlog, settings that never landed
+— because those re-diverge as soon as the packet is applied. Against the measured combined case the
+correction more than halves the standing error and does not remove it. Those are tracked separately;
+see [backlog.md](backlog.md) `F17` to `F23`.
+
 ## What the dials trade against each other
 
 There is one configuration and no presets, so tuning a world is moving individual settings — and two
@@ -378,8 +611,12 @@ ways to move more heat per second. The accurate one raises `HeatTimeScale` and g
 substeps its stiffness demands. The approximate one raises `HeatTimeScale` *and refuses* the substeps
 with `MaxSubsteps`, letting the overshoot clamps decide how much crosses — which is the most a
 substep can carry, by definition. Measured: the clamped route delivered 0.125 blocks/s per substep/s
-against 0.045 for the accurate one. **The shipped configuration takes the accurate route**, which is
-what `MaxSubsteps 64` is for.
+against 0.045 for the accurate one. **The shipped configuration takes the accurate route almost
+everywhere**, which is what `MaxSubsteps 64` is for — but not quite everywhere: in thick air at
+200 m/s about a fifth of a real population demands 73.4 and is refused. What that refusal costs has
+been measured and it is **0.028 K** on the hottest block over 600 simulated seconds, because 1.15×
+over-subscribed is the free end of that trade. See
+[stiffness.md](stiffness.md#what-refusing-the-demand-costs).
 
 **The far end is a wall, not a slope.** Past roughly `HeatTimeScale / Frequency = 4000` the clamps
 are carrying the entire step and blocks start being driven to the ambient floor. The shipped ratio is
@@ -429,6 +666,9 @@ What saving there is comes from somewhere else: **fewer, longer steps**, which a
 that run once per step whatever its length — mirroring node state, estimating the substep count,
 publishing the result. That is worth having, and there is a simpler way to ask for it.
 
+*Taken at the clock that shipped when the sweep was run, which was 225; it is 90 now, and what the
+table is about is the relationship between the three dials rather than the value of one of them.*
+
 | speed | heatScale | freq | steps | substeps | ms / real s | cooled |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | 1.00 | 225 | 4 | 80 | 240 | 75.6 | 46.37 K |
@@ -455,11 +695,12 @@ will not move it much.
 | --- | --- | --- |
 | `Frequency` | 4 | Solver steps per simulated second. The integration step is `1/Frequency`, so 4 is a quarter-second step — the basis every substep figure in this documentation is quoted on. Whether lowering it cuts cost depends on the grid — see below. |
 | `SimulationSpeed` | 1 | Simulated seconds per real second, applied by running more steps rather than longer ones. Linear in CPU. |
-| `HeatTimeScale` | 225 | How much faster than real physics heat moves. Divides every heat capacity. |
-| `MaxElementVisitsPerStep` | 2000000 | Most element visits one step may make — substeps times its links plus four times its nodes — before the step is shortened to fit. 0 removes the bound. **Moves with `Frequency`**: a step is spread across the frames of its window, so this figure and the step rate together set the per-frame cost. See below. |
+| `HeatTimeScale` | 90 | How much faster than real physics heat moves. Divides every heat capacity. It was 225 until `C24`, which moved it to put the most significant thermal event inside the 2–5 minute window `G8` asks for — see [balance.md](balance.md#the-route-is-chosen-and-it-is-the-one-the-cost-column-argued-against). |
+| `MaxElementVisitsPerStep` | 4000000 | Most element visits one step may make — substeps times its links plus four times its nodes — before the step is shortened to fit. 0 removes the bound. **Moves with `Frequency`**: a step is spread across the frames of its window, so this figure and the step rate together set the per-frame cost — at `Frequency` 4 it bounds a frame at 266,667 visits. It was 2,000,000 until `C27` priced what a shortened step costs; see [What a shortened step costs](#what-a-shortened-step-costs). |
 | `MaxSubstepsPerBlock` | 0 (off) | Most substeps any single block may demand of the whole grid before it is treated as heavier than it is. The cheapest large win there is on a real ship. See below. |
-| `MaxSubsteps` | 64 | Most substeps one step may be cut into, whatever the grid asks for. A grid refused here integrates a step too long for its stiffest block, and the overshoot clamps carry the difference. |
-| `ClampConductionOvershoot` | `true` | Caps each exchange at the energy that equalises the pair. Off reproduces the original unbounded solver. Skipped, at no change to the result, on any step short enough that no element can overshoot — see [benchmarks.md](benchmarks.md#the-overshoot-clamp-ab). |
+| `ParallelGrids` | `false` | Solve a frame's grids on the engine's worker threads rather than one after another on the game thread. Measured at **10.17×** on a 242-grid fleet and 0.99× on a single grid. **Ships off**, and what a session has to answer first is [Solving a fleet in parallel](#solving-a-fleet-in-parallel). |
+| `MaxSubsteps` | 64 | Most substeps one step may be cut into, whatever the grid asks for. A grid refused here integrates a step too long for its stiffest block, and the overshoot clamps carry the difference. **It bound in thick air at flying speed until `C24`, and no measured hull reaches it now** — see [The approximation that shipped on](#the-approximation-that-shipped-on-and-no-longer-does). |
+| `ClampConductionOvershoot` | `true` | Caps each exchange at the energy that equalises the pair, and every exchange arriving at one node, one parcel of coolant or one room's air at the energy that equalises that. Off reproduces the original unbounded solver. Skipped, at no change to the result, on any step short enough that no element can overshoot — see [benchmarks.md](benchmarks.md#the-overshoot-clamp-ab). |
 | `ClampEnvironmentOvershoot` | `true` | The same for radiation and convection: neither may carry a block past ambient in one substep. This is what bounds a step that is deliberately far too long. |
 | `DamageIsPerSecond` | `true` | Overheat damage per second of simulated time. Off applies it per step, which makes damage scale with `Frequency`. |
 
@@ -473,7 +714,7 @@ will not move it much.
 | `SolarEnergy` | 1000 W/m² | Solar irradiance above the atmosphere. |
 | `FrictionAtSpeedsAbove` | 50 m/s | Relative airspeed at which aerodynamic heating starts. |
 | `FrictionScale` | 0.001 | Coefficient on the v³ friction term. |
-| `RoomConvectionCoefficient` | 8 W/(m²·K) | Coupling between a room's air and the surfaces facing it. Lower than the planetary figure because room air is still. |
+| `RoomConvectionCoefficient` | 8 W/(m²·K) | Coupling between a room's air and the surfaces facing it. Lower than the planetary figure because room air is still. **It carries no pressure term**, so a compartment at a fiftieth of an atmosphere couples its walls as hard as a full one and pressure decides only whether the coupling exists — see [thermal-model.md](thermal-model.md#room-air). |
 | `RoomAirDensity` | 1.225 kg/m³ | Air density in a fully pressurised room. |
 | `SolarOcclusionInterval` | 12 | Solver steps between solar occlusion raycasts. The raycast is the most expensive thing a grid does and the sun moves slowly. |
 
@@ -490,12 +731,13 @@ Move one and it wins from then on, across every loop definition in the world.
 | --- | --- | --- |
 | `LoopCoolantMassPerPipe` | 50 kg | Coolant carried by one pipe block. More capacity for the same coupling: a heavier ring takes longer to saturate and longer to shed. |
 | `LoopSpecificHeat` | 3400 J/(kg·K) | The coolant's specific heat. Water-glycol is about 3,400. |
-| `LoopConductivity` | 1.0 | How well the fluid conducts into the pipe carrying it, 0..1. |
+| `LoopHeatTransferCoefficient` | 160 | How well heat crosses between the fluid and the wall it touches, W/(m²·K). Convective, so there is no thickness in it. A few hundred is a slow liquid flow and a few thousand a fast one. |
 | `LoopPipeContactMultiplier` | 1.0 | Scales the coupling between the fluid and its own pipe. |
 | `LoopSinkContactMultiplier` | 1.0 | Scales the coupling through a sink face into whatever is mounted against it. This is the dial that decides whether plumbing beats bolting. |
 | `LoopLargeGridFlowRate` | 10 m/s | How fast coolant moves on a large grid with one pump at full speed. Flow costs no substeps — carrying the fluid is a rotation of which parcel sits in which pipe, exact at any speed — so this is free to be set for feel. |
 | `LoopSmallGridFlowRate` | 10 m/s | The same for a small grid. Split from the large-grid figure because it is a balance dial rather than a constant. |
 | `LoopStagnantTransferFraction` | 1.0 | What a stopped ring still carries between neighbouring parcels, 0..1. 0 makes a pump failure total. |
+| `WellMixedCoolant` | `false` | The cheap rung of coolant transport. Off — the default — is the realistic form: the fluid is a ring of parcels, so a stopped pump leaves the coolant cold at the radiator and hot at the reactor, and where a sink sits round the loop matters. On collapses the ring to one temperature, which is cheaper and makes a loop's layout stop mattering. **It existed in the solver and reached no world until 2026-08-24**: the model read it, the tests exercised it, and nothing a player could touch set it. |
 
 ## Planet climate
 
@@ -537,7 +779,7 @@ predictable near equilibrium at the cost of making cheap, small-gap cooling less
 
 ## The suit
 
-A player in a burning compartment used to be the one place heat stopped being consequential. These
+A player in a burning compartment is the one place heat would otherwise stop being consequential. These
 settings are the suit that decides otherwise, and they describe a machine rather than a threshold:
 the occupant is held at body temperature by a cooler, so a hot room is survivable while the cooler
 keeps up and lethal past the point where it does not.
@@ -563,6 +805,19 @@ where breathing hot air stops being merely unpleasant.
 **Only room air is read.** A player outside a pressurised compartment the mod has mapped is not
 simulated — no planet surface, no vacuum, no open-frame ship. That is the scope of what room air
 already carries, and the rest is [backlog](backlog.md) `C17`.
+
+**Cold does not hurt, and that is a decision with a number behind it** (`C18`). The suit regulates
+both ways — a suit that could only cool would leave a player to freeze in shadow — so the cold side
+is simulated and only the consequence is missing. The two ends of its window are not symmetric. The
+suit holds its occupant while the leak fits inside one rating, `310 ± 500/conductance`, and an open
+helmet pulls **both** ends in tenfold: the hot end lands at 330 K, which a player only meets when
+something has gone wrong, and the cold end at **290 K — 17 °C**, which is an ordinary compartment. A
+floor at hypothermia would therefore fire in any room below about 15 °C, on this mod's accelerated
+clock, in ordinary play, where the ceiling never fires until a ship is already burning. `C16`
+reinforces it: the cooler cannot fail, so a player is never cold *because their suit ran out*, which
+is the situation freezing would be for. `TheColdEndOfTheSuitsWindowIsAnOrdinaryRoomAndTheHotEndIsNot`
+pins where the two ends land, and fails if a change to the rating or the conductance moves the cold
+one out of habitable range and with it the reason for having no floor.
 
 **The cooler is free**, which is a limit rather than a decision: `IMyCharacter` exposes
 `SuitEnergyLevel` to read and nothing to write, so no mod can charge a player for running it. What
@@ -598,6 +853,7 @@ indicator, which are what a player meets while playing rather than diagnostics f
 | `DebugWindOverlay` | 0 | Which view the wind map opens a session on: 0 off, 1 the lattice around you, 2 the whole planet. |
 | `DebugWindIndicator` | `true` | The wind needle and speed under the crosshair. |
 | `HeatGlow` | `true` | Blocks glow over the last 100 K before their own critical temperature, full at it and above. |
+| `HeatTerminalPanel` | `true` | The thermal readout in a block's terminal detail pane. Off draws no text and refreshes nothing; the block's own controls are untouched. |
 | `HeatWarningSound` | `true` | A cue in the cockpit as a block comes up on its own rating and as it crosses it. Heard only by the player at the controls. |
 | `RoomOverlayMinKelvin` | 253.15 K | Bottom of the room view's colour span, −20 °C. |
 | `RoomOverlayMaxKelvin` | 323.15 K | Top of the room view's colour span, 50 °C. |
@@ -607,6 +863,17 @@ indicator, which are what a player meets while playing rather than diagnostics f
 ### Natural feedback
 
 Two channels, and between them they say how close a block is to failing and how hot it got.
+
+**`HeatTerminalPanel` is the one output that had no switch until 2026-08-25.** Every other thing the
+mod draws was already behind something — the glow and the cue behind their own settings, the
+crosshair readout behind `DebugTextOnScreen`, the performance panel behind a chat toggle, the
+extinguisher's overlay behind holding the tool — and the terminal panel was on for everybody always.
+It has one now for two reasons that are each sufficient: `C7` says every mechanism has a switch that
+removes its own cost, and
+[document-of-intent.md](document-of-intent.md#to-another-mod-that-also-simulates-heat-nothing-and-the-switches-are-the-answer)
+answers a second heat mod in the world with *turn this one's outputs off and keep its API*, which
+until now left two panels on every terminal. **It gates the text and not the controls**: a coolant
+pump's throttle is something a player operates rather than something the mod says.
 
 **`HeatGlow` is the last hundred kelvin before a block's own critical temperature.** Nothing below
 that, a straight ramp through it, full at critical and above. It is a narrow window on purpose: a
@@ -620,6 +887,12 @@ block glowing at 500 K is deep red and one at 2,000 K is orange. Brightness says
 failing, colour says how hot it actually got. See
 [document-of-intent.md](document-of-intent.md#natural-feedback--built) for why the brightness is not
 incandescence.
+
+**And the colour is a between-blocks signal rather than a within-block one**, measured: across one
+block's hundred-kelvin band the colour moves less than a just-noticeable difference for 88 of the
+101 block types the game ships, while the coolest-rated block against the hottest is ΔE 13.72. So
+nothing a player has to act on is carried by hue — see
+[document-of-intent.md](document-of-intent.md#who-the-glow-is-for--brightness-and-colour-as-a-refinement).
 
 **`HeatWarningSound` is the same warning in sound**: a cue about three seconds before a block
 crosses its rating and a distinct one as it crosses, heard only by the player at the controls. It
@@ -805,6 +1078,31 @@ more fidelity than the sample count**. Neither default moves here, because both 
 never been measured in a session: `A9` needs `F5` first. What has changed is which dial the answer
 is expected to be.
 
+**And the rung above both is worth about a two-hundredth of a kelvin a metre of hull.** Neither dial
+reaches the error that comes from applying one answer to a whole ship — the leading end told it is
+lit while it is dark and the trailing end the reverse — and resolving the planet's shadow *per face*
+is the only thing that would. Read per block instead of per hull, tested every step so the cadence
+contributes nothing, that error is:
+
+| Hull | Worst block, geometry alone | at the shipped 12-step cadence |
+| --- | ---: | ---: |
+| 25 m | 0.07 K | 0.59 K |
+| 150 m | 0.29 K | 0.79 K |
+| 600 m | 1.11 K | 1.63 K |
+| 2,500 m | 4.53 K | 5.02 K |
+
+*One lit face of a 500 kg steel-plate block gains 0.36 K a second of sunlight at the shipped clock,
+which is the conversion every figure above rests on.* **The whole table moves with `HeatTimeScale`,
+and it has**: it read 0.905 K a second and 0.73 K at 150 m until `C24` took the clock from 225 to 90,
+which is 0.4 of the thermal ground covered in the seconds a hull is told the wrong thing about.
+`OcclusionLadderTests` prints these four rows, so the table has a source rather than a history.
+
+**It is linear in length and it is under a kelvin for anything under 550 m**, so on the ships people
+build it is a fraction of what the cadence already costs — below 300 m the cadence is the larger half
+of the error, and above it the geometry is. That is what decides the top rung: it is a change about
+how long ships are rather than about how good the model is, and nothing in the shipped configuration
+moves for it. `OcclusionLadderTests` pins the rate and the crossover.
+
 The three solar settings stack as a choice of cost. `EnableSolarHeat` off is free and models no
 sunlight at all. On with `SolarSelfShadowing` off is the cheap model: a face is lit whenever it
 points at the sun. On with both is the accurate one: the grid shadows itself, for one pass over its
@@ -873,8 +1171,12 @@ Capacity       = SpecificHeat × Mass / HeatTimeScale
   together, so equilibrium temperatures, the balance between mechanisms and the ratios between
   block types are all unchanged. Only the clock moves.
 
-Total acceleration over real physics is `SimulationSpeed × HeatTimeScale`. The shipped 225 is what
-makes steel's real 450 J/(kg·K) behave the way the old flat value of 2 did.
+Total acceleration over real physics is `SimulationSpeed × HeatTimeScale`. **The shipped value is
+90**, and 225 is what made steel's real 450 J/(kg·K) behave the way the old flat value of 2 did —
+the calibration the real-unit conversion was checked against, and two and a half times faster than
+what ships. `C24` slowed it, and multiplied the conduction pace by four at the same time, because
+`G8`'s window is not reachable by either dial alone: the clock that puts a block in the window puts
+the hull outside the session.
 
 `HeatTimeScale` costs stability margin rather than time: higher values make the system stiffer, so
 the solver takes more substeps. When a grid is stiff enough to hit the substep cap the telemetry
@@ -892,7 +1194,7 @@ code. Two of the three definition files are settings now — [the loop and plane
 — and what is left is the third, the config file's own shape, and a Status page worth opening.
 
 **Per-subtype block overrides.** `Cubes.xml` is 114 entries — 96 per-type defaults and 18 per-subtype
-— and it is different in kind from the other two: 654 authored values, whose interesting ones belong
+— and it is different in kind from the other two: 656 authored values, whose interesting ones belong
 to the block a player is looking at rather than to a list they scroll. Properties are cached per definition in `ThermalBlockCatalog`, so
 changing one at runtime needs the cache invalidated and every node of that type refreshed. A mod
 folder is read-only in a workshop install, so this writes a per-world override layer into world
@@ -946,6 +1248,20 @@ one with a migration risk — is late rather than first.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | `MaxSubstepsPerBlock` stays off by default, decided on all 8,144 published blueprints rather than on one hull ([backlog.md](backlog.md) `C3`). The population p99 is 0.2820 K, under the figure that had kept it out; what decides it is that the error is charged per block and the throughput is collected per grid, so four fifths of the ships people publish would pay and collect nothing. |
+| 2026-08-25 | Added `HeatTerminalPanel` ([backlog.md](backlog.md) `B40`), the switch for the one output of the mod a world could not turn off. Default `true`, so nothing a player has changes; client-owned, like the other two presentation switches. It gates the panel's text and its refresh and leaves the block's own controls alone. |
+| 2026-08-25 | Corrected the fourth site of `A9`'s per-metre figure, which the pass earlier the same day missed: the rungs inventory said 0.0045 K a metre where the lab says 0.0018. The check added that morning reads the per-face *table* and could not see a figure quoted in prose, which is the limit of that kind of check and is why the number is now stated in one place and pointed at from the other. |
+| 2026-08-25 | Said what the colour channel is a signal *about*, which [backlog.md](backlog.md) `B34` needed measured: within one block's glow band it moves less than a just-noticeable difference for 88 of 101 block types, and between the coolest and hottest rated blocks it is ΔE 13.72. It distinguishes blocks, not moments. |
+| 2026-08-25 | **`A9`'s per-face table had gone stale with the clock, on three pages, while the test that produces it printed the right figures throughout.** `C24` took `HeatTimeScale` from 225 to 90 and every kelvin in that table is seconds of sunlight times a rate that moves with the clock, so the rung is worth **0.0018 K a metre, not 0.0045** — 0.29 K on a 150 m hull against 0.73 K. The crossover is unmoved at about 300 m, because both halves scaled together. `OcclusionLadderTests` now reads this table out of this page and fails when it does not match the lab, so the next clock change is loud. |
+| 2026-08-25 | Three sentences in the body described a past layout rather than the present one (`R12`): the menu's grouping, the suit's opening, and the allowance's cost ladder. Each states what is now the case; the ladder's own table moved to [benchmarks.md](benchmarks.md#what-the-rate-it-trades-away-is-worth), which owns the measurement. |
+| 2026-08-25 | **The allowance's cost ladder existed here and in [benchmarks.md](benchmarks.md#what-the-rate-it-trades-away-is-worth), which is two copies of one measurement.** This page states what it costs — 1.19 K at a 5 % deficit rising to 36.98 K at 60 % — and that page owns the table, the rig it was taken on and the convexity that made a ladder necessary rather than one point and a slope. A measurement written down twice is two things that can drift (`D3`). |
+| 2026-08-24 | **`MaxElementVisitsPerStep` is 4,000,000, from 2,000,000, because what it gives up was priced for the first time.** The bound makes a step shorter rather than coarser, so nothing is approximated and the grid's thermal clock runs slow instead — worth 1.19 K standing at a 5 % deficit and 36.98 K at 60 % under a moving load, and 0.00 K under a steady one. It also binds in **air** rather than in vacuum, at about a third the grid size: at the old value a driven census hull kept all of real time to 32,000 blocks in vacuum, 16,000 on a planet and 9,000 in flight. Beside 0.028 K for the substep ceiling this world accepts and 0.607 K for the per-block cap it refuses to ship as a default, that made this the largest approximation shipped and the only one never measured. A frame is bounded at 266,667 element visits instead of 133,333. Old value kept visible here and in [What a shortened step costs](#what-a-shortened-step-costs) (`E11`), and [backlog.md](backlog.md) `C27` carries the reasoning. |
+| 2026-08-24 | **The approximation the defaults shipped on is gone, and `HeatTimeScale` is 90.** `C24` applied `C12`'s retune — `ConductionScale` 2.4 → 9.6 and the clock 225 → 90 — and the substep ceiling it was breaching is decided by a convection-limited demand, so that demand came down with the clock: the 40-hull panel's worst p99 is **35.12 of 64**, 55 % of the cap, with **0 of 40 hulls refused** in every environment measured, where 8 of 40 were refused in re-entry before. `G6` passes on the configuration that ships. Renamed the section to say so, kept the reasoning, and recorded the one row that went the other way: vacuum demands 1.6× what it did ([backlog.md](backlog.md) `C27`). |
+| 2026-08-24 | Corrected [The approximation that shipped on](#the-approximation-that-shipped-on-and-no-longer-does), which described what a refused step costs in terms that were true of blocks and not of a plumbed or pressurised ship, and `ClampConductionOvershoot`'s row, which described half of what the clamp now does. Both are the same fix: an exchange is bounded pairwise *and* every exchange arriving at one node, parcel or room is bounded together ([backlog.md](backlog.md) `A10`). |
+| 2026-08-24 | Added [Every mechanism, and the rungs it has](#every-mechanism-and-the-rungs-it-has), the inventory `C15` asks for: what each feature's ladder is today and whether a cheaper rung is known to be possible. Nine mechanisms have two rungs and only two of those are gaps. **Wired `WellMixedCoolant` into a world's configuration**, which it had never been: the solver read it, the suite exercised it and two pages called it a choice a world makes, with no field in `Settings.cs` and no line in `Apply`. |
+| 2026-08-24 | Added [The approximation that shipped on](#the-approximation-that-shipped-on-and-no-longer-does). The global substep ceiling binds on about a fifth of a real population in thick air at flying speed, which no page said out loud, and it stays at 64 because refusing 1.15× of the demand buys 1.15× of the step for 0.028 K — the trade `P14` exists to take. Recorded why the per-block cap is a switch and this one is not: 0.607 K against 0.028 K ([backlog.md](backlog.md) `C19`). |
+| 2026-08-24 | Recorded that `RoomConvectionCoefficient` carries no pressure term, so a room's pressure decides whether its walls are coupled and, above zero, nothing else ([backlog.md](backlog.md) `F21`). |
+| 2026-08-23 | **Priced `A9`'s unbuilt top rung**, which had been described and never measured: resolving the planet's shadow per face removes an error linear in hull length, about a two-hundredth of a kelvin a metre — 0.73 K on a 150 m hull against the 1.97 K the cadence already costs it, and 11.33 K on a 2,500 m one. Below 300 m the cadence is the larger half. Added the table to [External shadow](#external-shadow). |
 | 2026-08-23 | `HeatGlow` is the last 100 K before a block's own critical temperature, superseding the two entries below it. The colour is unchanged and still absolute. |
 | 2026-08-23 | `HeatGlow` is back to incandescence — brightness and colour both functions of temperature alone — and the rating-keyed form of the entry below is withdrawn. |
 | 2026-08-23 | `HeatGlow` is a block's distance from its own rating rather than an absolute temperature: nothing at comfortable temperatures, full at critical and above. The colour is unchanged and still absolute. |

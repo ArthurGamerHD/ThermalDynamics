@@ -22,8 +22,8 @@ dotnet run --project Thermodynamics.Sim -- features          # mechanism switche
 
 ## The four worlds
 
-The mod has no dial for how physically true it is, because `HeatTimeScale` makes it deliberately 225
-times faster than the world and nothing shipped turns that off. So the axis is built in the harness
+The mod has no dial for how physically true it is, because `HeatTimeScale` makes it deliberately 90
+times faster than the world — 225 until `C24` — and nothing shipped turns that off. So the axis is built in the harness
 instead, as [`BalanceProfile`](../tests/Thermodynamics.Harness/BalanceProfiles.cs): **it changes
 nothing that ships**, and it carries every knob that moves the balance rather than only the
 integration ones — both pace scales, the environment constants, which mechanisms run, how the
@@ -46,13 +46,14 @@ anchored to.
 
 ## Real time is the cheapest thing to integrate
 
-Stiffness is conductance over capacity, so dividing capacity by 225 multiplies substep demand by 225.
-Measured on a 150-block hull with a 200 kW reactor in it:
+Stiffness is conductance over capacity, so dividing capacity by the clock multiplies substep demand
+by it. Measured on a 150-block hull with a 200 kW reactor in it, at the clock that shipped when the
+table was taken:
 
 | `HeatTimeScale` | substeps demanded | hull after 5 simulated seconds |
 | ---: | ---: | ---: |
 | 1 | 0.00 | 293.3 K |
-| 225 | 0.90 | 319.8 K |
+| 225 *(then shipped; 90 now)* | 0.90 | 319.8 K |
 | 3,600 | 14.40 | 440.5 K |
 
 **Accuracy costs patience, not frames.** What costs frames is the pace — which is the whole reason
@@ -63,13 +64,18 @@ this page.
 
 **Realism is the cheapest thing here, not the most expensive.** `physical` asks 1.00 substeps
 against `shipped`'s 7.22 and costs 8,152 link visits a second against 97,308 — real heat capacities
-are 225 times larger, so the grid is 225 times softer. Every substep this mod spends exists because
-of `HeatTimeScale`. What realism costs is *responsiveness*: 0.11 K/s against 22.9 K/s, which is the
+are 225 times larger at the clock this comparison was run at, so the grid is 225 times softer.
+Every substep this mod spends exists because of `HeatTimeScale` and `ConductionScale`; the clock is
+90 now and the conduction pace is four times what it was, so a re-run would show `shipped` asking
+about 1.6 times the substeps for a conduction-limited grid and 0.4 times for a convection-limited
+one. What realism costs is *responsiveness*: 0.11 K/s against 22.9 K/s, which is the
 one number that makes the clock have to be a lie.
 
 **`HeatTimeScale` is equilibrium-neutral and `ConductionScale` is not.** A 225× clock change moves
 a settling point 0.7 K. A 2.4× conduction change moves it 128 K at the same clock, and thousands of
-kelvin across the scenario library. One is a pace dial; the other silently redistributes where heat
+kelvin across the scenario library. That asymmetry is what `C24` spent: it bought `G8`'s timing with
+the dial that is *not* equilibrium-neutral, which is why applying it moved temperatures all over
+this repository and why four of the mod's own stated behaviours moved with them. One is a pace dial; the other silently redistributes where heat
 sits. They have been treated as the same kind of thing and they are not.
 
 **The candidate is not a free win.** On one rig it looked like it beat `shipped` on every axis. Across
@@ -100,11 +106,14 @@ cleaner rather than weaker: `arcade / air-conditioning` reaches 21,900 K at **10
 is the signature the argument always rested on. The integrator is refused what it asks for by seven
 orders of magnitude, which is not the profile being approximate.
 
-**The other survivor is not starved at all.** `physical / x-overloaded` reaches 11,662 K with every
-substep granted — but `physical` runs `HeatTimeScale 1`, so a scenario clock cut for a world 225×
-faster ends while it is still climbing, and *everything* `physical` runs is marked not settled. It
-is the one cell where the divergence test cannot separate a failure from a run that was stopped too
-early, which is the limit recorded below and `M1` in practice.
+**The other survivor was not starved at all, and is not a divergence.** `physical / x-overloaded`
+reaches 11,662 K in the matrix with every substep granted — but `physical` runs `HeatTimeScale 1`,
+so a scenario clock cut for a world 225× faster ends while it is still climbing. **Asked at its own
+clock** — the same *physical* duration the shipped column gets, 225× the scenario's seconds and
+6.48 million steps — it settles at about **1,300 K**, converged, still unstarved. So the last
+divergence the matrix could not explain was a run stopped too early, and the profile has no
+instability in it. `ProfileClockTests` holds both halves: that the scaling reaches a run, and what
+the cell does once it does.
 
 **Starvation explains nothing anywhere else** — and the pair that established that turned out to be
 saying something larger. `candidate` was starved 49% on `x-burning-ship` and peaked at 11,280 K;
@@ -118,7 +127,7 @@ list of the sweep above, because neither of them fails any more.
 substeps were loop-bearing, and `loop-faults` got *worse* with more of them — 2.4×10¹⁵ K against
 7×10⁴. Something in the coolant path was genuinely unstable rather than merely starved.
 
-### The loop path has a stiffness ceiling, and the clamp was what set it
+### The loop path had a stiffness ceiling, and the clamp was what set it
 
 The question that found it was whether the coolant pipes could go back to copper. They cannot, and
 the reason is the same defect. `CoolantFlowTests.SpreadAcrossAHeatedRing` deliberately runs **one substep across a
@@ -157,6 +166,21 @@ turned out to have been converged answers misread by the divergence column; the 
 
 Guarded by `TheLoopPathSurvivesAVeryConductivePipe` at copper and at four times copper, and by
 `ArcadeNoLongerDivergesOnTheEverythingRig`.
+
+**And the ceiling has since gone entirely**, because the parcel's limit was only half of the bound
+this path needed. The block on the other end of a sink face is pulled on by the fluid *and* by
+everything it is bolted to, and neither the pairwise clamp nor the ring's own factor can see that —
+which is [backlog.md](backlog.md) `A10`, fixed on 2026-08-24 by applying the per-node relaxation to
+the coupled passes as well. The same deliberately-refused ring, run again across the same ladder and
+past the end of it:
+
+| pipe conductivity, effective W/(m·K) | 264 (brass) | 480 | 960 (copper) | 3,840 | 15,360 |
+| --- | --- | --- | --- | --- | --- |
+| ring spread, one substep of a whole second | 15.1 K | 14.7 K | 14.5 K | 14.6 K | 14.7 K |
+
+Sixteen times copper is as bounded as brass, and the row above it is flat: **the material no longer
+sets a limit on this path at all.** What decides the spread is the refusal rather than the
+conductance, which is the same shape the block path has always had.
 
 Two hypotheses were tested and both were wrong, which is recorded here so they are not tried again:
 
@@ -213,10 +237,18 @@ separately rather than reported as defects — otherwise four correct results bu
 
 ## Known limits of this suite
 
-* **Scenario run lengths are fixed to the shipped clock.** A world 225× slower is still climbing
-  when a run ends: 72 of 136 cells are untrustworthy, mostly `physical`'s. Run lengths would have to
-  scale with `HeatTimeScale` for that column to mean anything. The report marks them rather than
-  letting a transient read as an equilibrium.
+* **Scenario run lengths are fixed to the shipped clock, and now they can be asked not to be.** A
+  world the clock's whole factor slower is still climbing when a run ends: 72 of 136 cells are
+  transients, mostly `physical`'s, and the report marks them rather than letting one read as an
+  equilibrium. `ScenarioRunner.DurationScale` scales a run to a profile's own clock and
+  `ProfileSweep.MeasureAtItsOwnClock` sets it from the ratio, which is what settled the matrix's
+  last unexplained divergence above. **It is not the sweep's default because the sweep would stop
+  being runnable**: seven of the physical column's cells alone ran past twenty minutes before being
+  cut, against a whole sweep of minutes today — the cost is the factor itself, which was **225×**
+  when the cells above were measured and is **90×** since `C24`, and it lands on every cell of that
+  column. So a cell is asked at its own clock when a reading turns on it, and the column stays
+  marked otherwise. **The whole comparison is due a re-measurement at the pair that ships**, which
+  is [backlog.md](backlog.md) `C29`.
 * **The divergence flag is a 10,000 K threshold**, so it catches both genuine runaway and
   absurd-but-stable steady states. A buried 40 MW reactor really does reach tens of thousands of
   kelvin in this model, because conduction can only carry about 1.8 kW/K away from one cell.
@@ -233,6 +265,9 @@ separately rather than reported as defects — otherwise four correct results bu
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Scoped the run-length limit's cost to the clock it is a cost *of*: the factor was 225× when these cells were measured and is 90× since `C24`, so the sweep is about two and a half times cheaper to ask at its own clock than this page said. Pointed at `C29`, which is the re-measurement the whole comparison is due. |
+| 2026-08-24 | **The loop path's stiffness ceiling is gone rather than raised.** `A10` applied the per-node relaxation to the coupled passes, so the block on the other end of a sink face is bounded as well as the parcel. Re-run across the same ladder and past the end of it, the deliberately refused ring spreads 15.1 K at brass and 14.7 K at **sixteen times copper** — flat, so the material sets no limit on this path any more and what decides the spread is the refusal. |
+| 2026-08-23 | **The matrix's last unexplained divergence is not one.** `physical / x-overloaded` reads 11,662 K at a scenario clock cut for a world 225× faster; given the same physical duration the shipped column gets, it settles at about 1,300 K, converged and unstarved. So every divergence in the matrix is now starvation or the clock, and `physical` has no instability. `ScenarioRunner.DurationScale` is the mechanism ([backlog.md](backlog.md) `C8`) and is deliberately not the sweep's default: the 225× lands on every cell of that column and seven rigs alone ran past twenty minutes. |
 | 2026-08-22 | Re-measured the divergence counts under the corrected rule. Eight of the ten cells the column reported were converged answers: `candidate` and `shipped` have none at all, and `arcade` has one — `air-conditioning` at 21,900 K and 100% starved, which is the case the starvation argument always rested on. The other survivor, `physical / x-overloaded`, is the one cell where the test cannot separate a divergence from a run stopped too early, because a scenario clock cut for the shipped world ends while a 225×-slower one is still climbing. |
 | 2026-08-22 | Withdrew the burning-ship divergence and corrected it in place (`E10`). It settles: flat to the last digit over ten times the run, energy balanced to a part in ten thousand, and two integrators refused wildly different substep counts one kelvin apart. The 11,279 K is a conduction-limited interior temperature — the hottest block has no face to radiate from — and the peak among blocks that can is 2,822 K. The real defect was the divergence column: a threshold on a temperature, which cannot tell a converged extreme from a diverged integration. It now requires a failure to settle as well. |
 | 2026-08-22 | Re-measured every figure here against one sweep, after `shipped` began reading the real defaults. The correction that matters: the shipped default's divergence on `x-burning-ship` was published as starvation, and it is not — it diverges with 0% of its substeps refused, one kelvin from `candidate`, which is refused 49%. |

@@ -115,7 +115,7 @@ namespace Thermodynamics
         /// sink an entity carries and turns its draw into `PowerConsumedWatts`, which the waste-heat
         /// model converts through the block's own `ConsumerWasteEnergy` — so wiring the cost wires
         /// *a cooling system costs power and makes heat doing it* with no second path.
-        /// See backlog `C13`.
+        /// See document-of-intent.md, A cooling system costs power, and makes heat doing it.
         /// </summary>
         private void AttachSink()
         {

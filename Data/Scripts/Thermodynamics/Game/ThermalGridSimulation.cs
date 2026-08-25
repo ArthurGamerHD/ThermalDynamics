@@ -54,38 +54,143 @@ namespace Thermodynamics
         /// </summary>
         public void Tick(float frameSeconds)
         {
-            if (disabled || !started || Simulation == null) return;
+            if (!PrepareTick(frameSeconds)) return;
 
-            // Everything below the stepping call is guarded by UpdateInternal's own handler; this
-            // one covers the observation around it, which was not. A null out here reached the
-            // session and took the game down with it — a thermal mod should never be able to do
-            // that, and an exception named here is worth more than a crash dump.
+            SolveTick();
+            PublishTick();
+        }
+
+        /// <summary>
+        /// The half of a tick that has to run on the game thread *before* the step: the world
+        /// sample, which is a planet lookup and sometimes a raycast, and the switch and power state
+        /// of every pump. Returns false when this grid has nothing to do.
+        ///
+        /// <para>
+        /// **The split exists so a fleet can be stepped in parallel** — backlog.md
+        /// `D19`, measured at 10.17× on 32 threads — and it is the boundary rather than the
+        /// threading that matters: everything that touches the game happens here or in
+        /// <see cref="PublishTick"/>, and <see cref="SolveTick"/> touches nothing outside its own
+        /// grid. `ThermalGridScheduler` runs the three in order for one grid at a time, or all the
+        /// prepares, then the solves together, then all the publishes.
+        /// </para>
+        /// </summary>
+        public bool PrepareTick(float frameSeconds)
+        {
+            solveFailure = null;
+            steppedThisFrame = 0;
+
+            if (disabled || !started || Simulation == null) return false;
+
+            this.frameSeconds = frameSeconds;
+
+            // Everything below is guarded, because a null out of any of it reached the session and
+            // took the game down with it once — a thermal mod should never be able to do that, and
+            // an exception named here is worth more than a crash dump.
             try
             {
-                TickInternal(frameSeconds);
+                RefreshDiagnosticsFlag();
+
+                // A sample costs a planet lookup and sometimes a raycast, and is read once when a
+                // step begins rather than on every frame the step spans.
+                startingStep = Simulation.NeedsEnvironmentSample;
+                pendingSample = startingStep ? TimedSample() : default(EnvironmentSample);
+
+                // Pumps must know their switch and power state before the step that spends the
+                // power, not after it.
+                if (startingStep) PushHeatPumpState();
             }
             catch (Exception e)
             {
-                Telemetry.Exception("ThermalGrid.Tick", e);
+                Telemetry.Exception("ThermalGrid.PrepareTick", e);
+                return false;
+            }
+
+            stepsBefore = Simulation.Scheduler.StepsRun;
+
+            // Stats is null when telemetry is off, and when the grid record cap has been reached.
+            timeSimulation = Telemetry.Enabled && Stats != null;
+            if (timeSimulation)
+            {
+                SimulationWork work = Simulation.Work;
+                topologyVisitsBefore = work.TopologyNodeVisits;
+                exposureVisitsBefore = work.ExposureNodeVisits;
+                roomCellsBefore = work.RoomCellsVisited;
+
+                Stats.Profiler.InTick = true;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// The half of a tick that touches nothing but this grid, and so may run on any thread.
+        ///
+        /// **Nothing in here may reach the game.** An exception is caught and held rather than
+        /// raised, because a worker thread's stack is not a place the session can be told about
+        /// anything; <see cref="PublishTick"/> reports it on the game thread.
+        /// </summary>
+        public void SolveTick()
+        {
+            if (Simulation == null) return;
+
+            try
+            {
+                if (timeSimulation) Stats.SimulationTime.Begin();
+                Simulation.Update(frameSeconds, pendingSample);
+                if (timeSimulation) Stats.SimulationTime.End();
+
+                steppedThisFrame = Simulation.Scheduler.StepsRun - stepsBefore;
+            }
+            catch (Exception e)
+            {
+                solveFailure = e;
             }
         }
 
-        private void TickInternal(float frameSeconds)
+        /// <summary>
+        /// The half of a tick that has to run on the game thread *after* the step: overheat damage,
+        /// threshold events, pump demand, the mass and pressure sweeps, and every telemetry total,
+        /// which is a shared accumulator no worker may write to.
+        /// </summary>
+        public void PublishTick()
         {
-            this.frameSeconds = frameSeconds;
+            if (Simulation == null) return;
 
-            // Stats is null when telemetry is off, and when the grid record cap has been reached.
-            if (Telemetry.Enabled && Stats != null)
+            if (solveFailure != null)
+            {
+                Telemetry.Exception("ThermalGrid.SolveTick", solveFailure);
+                solveFailure = null;
+                return;
+            }
+
+            try
+            {
+                PublishInternal();
+            }
+            catch (Exception e)
+            {
+                Telemetry.Exception("ThermalGrid.PublishTick", e);
+            }
+        }
+
+        /// <summary>
+        /// What the publish half does once a solve has landed: the steps are counted, the grid's
+        /// own timings are handed to the frame's shared totals, and everything that reads the
+        /// simulation's output runs.
+        ///
+        /// **The shared accumulators are written here and nowhere else.** `Telemetry.FrameCost` is
+        /// one object for the whole session, so a worker adding to it while another worker does is
+        /// a lost frame's accounting at best; the numbers are gathered per grid during the solve
+        /// and added here, on the game thread, in the order the scheduler publishes.
+        /// </summary>
+        private void PublishInternal()
+        {
+            long stepped = steppedThisFrame;
+
+            if (timeSimulation)
             {
                 SimulationWork work = Simulation.Work;
-                long topologyBefore = work.TopologyNodeVisits;
-                long exposureBefore = work.ExposureNodeVisits;
-                long cellsBefore = work.RoomCellsVisited;
 
-                Stats.Profiler.InTick = true;
-                Stats.SimulationTime.Begin();
-                UpdateInternal();
-                Stats.SimulationTime.End();
                 Stats.Profiler.InTick = false;
                 Stats.NoteTick(Telemetry.FramesObserved);
 
@@ -95,18 +200,46 @@ namespace Thermodynamics
                     blocks.Count);
 
                 Telemetry.FrameCost.AddWork(
-                    work.TopologyNodeVisits - topologyBefore,
-                    work.ExposureNodeVisits - exposureBefore,
-                    work.RoomCellsVisited - cellsBefore);
-
-                return;
+                    work.TopologyNodeVisits - topologyVisitsBefore,
+                    work.ExposureNodeVisits - exposureVisitsBefore,
+                    work.RoomCellsVisited - roomCellsBefore);
             }
 
-            UpdateInternal();
+            if (stepped <= 0) return;
+
+            StepsRun += stepped;
+            TimedAfterSteps((int)stepped);
         }
 
         /// <summary>Length of the frame being served, set by the scheduler before each tick.</summary>
         private float frameSeconds = ThermalGridScheduler.FrameSeconds;
+
+        /// <summary>The world this grid's step was begun with, sampled on the game thread.</summary>
+        private EnvironmentSample pendingSample;
+
+        /// <summary>Whether the prepared tick begins a step, so the sample and the pumps are fresh.</summary>
+        private bool startingStep;
+
+        /// <summary>Steps the scheduler had run before this frame's solve, and what it added.</summary>
+        private long stepsBefore;
+        private long steppedThisFrame;
+
+        /// <summary>Whatever the solve threw, held for the game thread to report.</summary>
+        private Exception solveFailure;
+
+        /// <summary>Work counters read before the solve, so the publish can charge the difference.</summary>
+        private long topologyVisitsBefore;
+        private long exposureVisitsBefore;
+        private long roomCellsBefore;
+
+        /// <summary>
+        /// Whether this grid's stage timings are being collected this frame.
+        ///
+        /// `Stats` is null when telemetry is off and when the grid record cap has been reached, so
+        /// this is settled once in the prepare and read by both halves — a solve that timed itself
+        /// and a publish that did not would leave a stopwatch running across frames.
+        /// </summary>
+        private bool timeSimulation;
 
         /// <summary>
         /// Whether per-mechanism watt figures are collected. True only when something reads them:
@@ -122,36 +255,6 @@ namespace Thermodynamics
                 || (client && ThermalDebugView.NeedsWatts);
 
             Simulation.Solver.CollectDiagnostics = wanted;
-        }
-
-        private void UpdateInternal()
-        {
-            try
-            {
-                RefreshDiagnosticsFlag();
-
-                // A sample costs a planet lookup and sometimes a raycast, and is read once when a
-                // step begins rather than on every frame the step spans.
-                bool starting = Simulation.NeedsEnvironmentSample;
-                EnvironmentSample sample = starting ? TimedSample() : default(EnvironmentSample);
-
-                // Pumps must know their switch and power state before the step that spends the
-                // power, not after it.
-                if (starting) PushHeatPumpState();
-
-                long before = Simulation.Scheduler.StepsRun;
-                Simulation.Update(frameSeconds, sample);
-                long stepped = Simulation.Scheduler.StepsRun - before;
-
-                if (stepped <= 0) return;
-
-                StepsRun += stepped;
-                TimedAfterSteps((int)stepped);
-            }
-            catch (Exception e)
-            {
-                Telemetry.Exception("ThermalGrid.Update", e);
-            }
         }
 
         /// <summary>

@@ -10,9 +10,18 @@ namespace Thermodynamics.Harness
     /// <para>
     /// `Conductivity` used to be a 0…1 quality multiplied by a 200 W/(m·K) reference. It is now the
     /// figure a materials table gives, multiplied by
-    /// <see cref="ThermalConstants.ConductionScale"/> = 2.4, chosen so mild steel lands exactly
-    /// where it was: 0.6 × 200 = 120, and 50 × 2.4 = 120. Everything else moved, and what the moves
-    /// did to a player's ship was argued rather than measured — backlog `C2`.
+    /// <see cref="ThermalConstants.ConductionScale"/>, and the calibration that made the conversion
+    /// possible was that at a scale of 2.4 mild steel landed exactly where it had been: 0.6 × 200 =
+    /// 120, and 50 × 2.4 = 120. Everything else moved, and what the moves did to a player's ship was
+    /// argued rather than measured — backlog `C2`.
+    ///
+    /// <para>
+    /// **The pace has moved since, and the counterfactual moves with it** (`C24` took the scale to
+    /// 9.6). This retest is about *flat against differentiated*, not about how fast either of them
+    /// conducts, so both arms run at whatever pace ships and the flat world is pinned to mild
+    /// steel's own conductance rather than to the literal 120 the old file held. Holding the
+    /// counterfactual at 120 while the shipped world ran at four times that would make every arm
+    /// report the retune (`P6`).
     /// </para>
     ///
     /// <para>
@@ -52,11 +61,24 @@ namespace Thermodynamics.Harness
         /// <summary>The pre-conversion default quality, which every vanilla block fell through to.</summary>
         public const float OldDefaultQuality = 0.6f;
 
-        /// <summary>Effective conductance every vanilla block had before the conversion, W/(m·K).</summary>
-        public const float PreDefault = OldReference * OldDefaultQuality;
+        /// <summary>
+        /// Effective conductance every vanilla block had before the conversion, W/(m·K), at the
+        /// pace that ships now: mild steel's own, which is what the flat world was calibrated to.
+        /// At the 2.4 the conversion was made at this is the 120 the old file held literally.
+        /// </summary>
+        public static float PreDefault
+        {
+            get { return ReferenceMaterials.MildSteel.Conductivity * ThermalConstants.ConductionScale; }
+        }
 
-        /// <summary>Effective conductance the four quality-1 families had, W/(m·K).</summary>
-        public const float PreBest = OldReference;
+        /// <summary>
+        /// Effective conductance the four quality-1 families had, W/(m·K), at the pace that ships
+        /// now — the same 200/120 above the fall-through that quality 1 was.
+        /// </summary>
+        public static float PreBest
+        {
+            get { return PreDefault * (OldReference / (OldReference * OldDefaultQuality)); }
+        }
 
         /// <summary>
         /// Authored conductivity that yields <paramref name="effective"/> once the solver applies

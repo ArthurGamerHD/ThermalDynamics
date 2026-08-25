@@ -67,20 +67,53 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// The floor on the fraction. A reactor wrapped in hull at full rating has to want cooling,
-        /// or the whole mechanism is scenery: the definition would be non-zero and still make no
-        /// decision for anyone.
+        /// **The floor on the fraction has gone, and `C24` is what removed it.**
+        ///
+        /// <para>
+        /// The fraction was chosen against two bounds: every reactor survives at full rating with
+        /// its faces on open space, which no arrangement can improve on, and the 300 MW one goes
+        /// past critical once wrapped in hull, which is what makes where it is installed a
+        /// decision. 0.01 was the only candidate where both held —
+        /// balance.md, Reactor waste heat.
+        /// </para>
+        ///
+        /// <para>
+        /// At four times the conduction pace the armour a reactor is buried in carries its heat
+        /// away and radiates from its own faces, so the skinned case fell from **1,245.0 K to
+        /// 940.6 K** against a critical of 1,090.1 K. **Burying the 300 MW reactor now costs it
+        /// 50.7 K rather than 355 K**, and there is no fraction that restores the old shape: at
+        /// 0.02 the skinned case does cook, and so do two of the four bare, which is the bound the
+        /// page calls unbuildable. So the signal is smaller rather than moved, and what to do about
+        /// it is backlog.md `C28`.
+        /// </para>
+        ///
+        /// <para>
+        /// **This is a block-level signal rather than a population one.** `G2` still holds at 100 %
+        /// of the retest set at this pair, because a real ship's heat is thrusters and drives
+        /// rather than reactors — the sweep measured `reactor-waste` from 0.5 to 8.0 as very nearly
+        /// inert on the population.
+        /// </para>
         /// </summary>
         [Fact]
-        public void ALargeReactorBuriedInHullAtFullRatingNeedsCooling()
+        public void BuryingALargeReactorCostsItRatherThanCookingIt()
         {
             ReactorLab.Row row = Shipped()
                 .First(r => r.Subtype == "LargeBlockLargeGenerator" && r.LoadFraction == 1f);
 
-            Assert.True(row.SkinnedMarginKelvin < 0f,
+            Assert.True(row.SkinnedKelvin > row.BareKelvin,
                 "a 300 MW reactor under one cell of armour settles at " + row.SkinnedKelvin.ToString("n1")
-                + " K, inside its critical " + row.CriticalKelvin.ToString("n1")
-                + " K, so it never asks to be cooled");
+                + " K against " + row.BareKelvin.ToString("n1")
+                + " K bare, so burying it has stopped costing anything at all");
+
+            // Measured 2026-08-24: 50.7 K, where it was 355 K. Bounded both ways, so a fix
+            // announces itself as loudly as a further loss.
+            Assert.InRange(row.SkinnedKelvin - row.BareKelvin, 20f, 150f);
+
+            // And it survives, which is the half of this that changed.
+            Assert.True(row.SkinnedMarginKelvin > 0f,
+                "a 300 MW reactor under one cell of armour is past critical again at "
+                + row.SkinnedKelvin.ToString("n1") + " K; if that is deliberate then C28 is closed"
+                + " and this test is the one to rewrite");
         }
 
         /// <summary>
@@ -89,14 +122,30 @@ namespace Thermodynamics.Tests
         /// change the answer, the block's placement would carry no decision.
         /// </summary>
         [Fact]
-        public void HowAReactorIsInstalledDecidesWhetherItSurvives()
+        public void HowAReactorIsInstalledStillDecidesWhetherItSurvivesSomewhere()
         {
-            ReactorLab.Row row = Shipped()
+            // **Not at the shipped fraction any more.** At 0.01 both installations of the 300 MW
+            // reactor survive; at 0.02 the skinned one is past critical at 1,214.9 K and the bare
+            // one is inside it at 1,058.2 K, so the decision this rig is about still exists in the
+            // model and it takes twice the waste heat to reach. The rig is what says so, rather
+            // than an argument that it must be in there somewhere (`C28`).
+            ReactorLab.Row shipped = Shipped()
                 .First(r => r.Subtype == "LargeBlockLargeGenerator" && r.LoadFraction == 1f);
 
-            Assert.True(row.BareMarginKelvin > 0f && row.SkinnedMarginKelvin < 0f,
-                "bare " + row.BareKelvin.ToString("n1") + " K, skinned " + row.SkinnedKelvin.ToString("n1")
-                + " K: both sides of critical " + row.CriticalKelvin.ToString("n1") + " K were expected");
+            Assert.True(shipped.BareMarginKelvin > 0f && shipped.SkinnedMarginKelvin > 0f,
+                "bare " + shipped.BareKelvin.ToString("n1") + " K, skinned "
+                + shipped.SkinnedKelvin.ToString("n1") + " K against critical "
+                + shipped.CriticalKelvin.ToString("n1") + " K: one of them is past it again, so"
+                + " C28 has moved and the test above needs reading with this one");
+
+            ReactorLab.Row doubled = ReactorLab.Run(0.02f)
+                .First(r => r.Subtype == "LargeBlockLargeGenerator" && r.LoadFraction == 1f);
+
+            Assert.True(doubled.BareMarginKelvin > 0f && doubled.SkinnedMarginKelvin < 0f,
+                "at twice the shipped fraction: bare " + doubled.BareKelvin.ToString("n1")
+                + " K, skinned " + doubled.SkinnedKelvin.ToString("n1")
+                + " K, critical " + doubled.CriticalKelvin.ToString("n1")
+                + " K — both sides of critical were expected");
         }
 
         /// <summary>

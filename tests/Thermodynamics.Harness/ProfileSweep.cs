@@ -305,6 +305,31 @@ namespace Thermodynamics.Harness
             return cells;
         }
 
+        /// <summary>
+        /// One cell, at a run length scaled to a profile's own clock.
+        ///
+        /// **What `C8` is about.** A scenario's seconds are cut for the shipped world, and thermal
+        /// time runs at `HeatTimeScale` — so the `physical` column, at a clock 225× slower, is a
+        /// column of runs stopped while they were still climbing. Scaling the whole sweep costs the
+        /// same 225×, which is why it is not the default; this is here so one cell can be asked the
+        /// question at a price somebody can pay.
+        /// </summary>
+        public static Cell MeasureAtItsOwnClock(BalanceProfile profile, string rig, bool extra)
+        {
+            float shipped = BalanceProfile.Shipped().HeatTimeScale;
+            float scale = profile.HeatTimeScale <= 0f ? 1f : shipped / profile.HeatTimeScale;
+
+            ScenarioRunner.DurationScale = scale;
+            try
+            {
+                return Measure(profile, rig, extra);
+            }
+            finally
+            {
+                ScenarioRunner.DurationScale = 1f;
+            }
+        }
+
         private static Cell Measure(BalanceProfile profile, string rig, bool extra)
         {
             Cell cell = new Cell { Rig = rig, Profile = profile.Name };

@@ -14,6 +14,7 @@ namespace Thermodynamics.Tests
     /// expected shares are computed here by ray-versus-cube against the same geometry, and the
     /// scenario's own figures have to match them.
     /// </summary>
+    [Collection("alone")]
     public class SelfShadowScenarioTests
     {
         private static readonly Vector3 Sun = new Vector3(0.9004f, 0.1619f, -0.4038f);

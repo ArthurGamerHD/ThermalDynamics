@@ -43,6 +43,26 @@ namespace Thermodynamics.Harness
             public float Tools = 1f;
 
             /// <summary>
+            /// Share of each jump drive's charging draw, 0..1.
+            ///
+            /// <para>
+            /// **Separate from <see cref="Consumers"/> because a drive is not a consumer that runs
+            /// at a level — it is one that is either charging or full.** In game it draws its whole
+            /// requirement until it is charged and then draws essentially nothing, so a ship at a
+            /// steady cruise has drives at zero and a ship that has just jumped has them at one.
+            /// </para>
+            ///
+            /// <para>
+            /// **It is on its own dial because of how much of the answer it is.** Jump drives are
+            /// 71.3 % of the corpus's full-load waste heat, so whether they are charging is most of
+            /// the shape of every load result — which is why the two states are measured as a pair
+            /// of bounds rather than averaged into one number nobody's ship is at.
+            /// See balance.md, The confound this rests on.
+            /// </para>
+            /// </summary>
+            public float Drives = 1f;
+
+            /// <summary>
             /// Run every generator at its plate rating rather than at what the ship is asking for.
             ///
             /// Producers normally follow demand, which is the ordinary case and the one worth
@@ -56,7 +76,11 @@ namespace Thermodynamics.Harness
 
             public static State Idle
             {
-                get { return new State { Consumers = IdleFraction, Thrust = 0f, Tools = 0f }; }
+                get
+                {
+                    return new State
+                    { Consumers = IdleFraction, Thrust = 0f, Tools = 0f, Drives = 0f };
+                }
             }
 
             public static State Full
@@ -64,9 +88,32 @@ namespace Thermodynamics.Harness
                 get { return new State { Consumers = 1f, Thrust = 0f, Tools = 1f }; }
             }
 
+            /// <summary>
+            /// Everything drawing except the jump drives, which are charged.
+            ///
+            /// The other bound on a ship under sustained load. <see cref="Full"/> holds every drive
+            /// charging for as long as the run lasts, which no ship does — a drive charges once and
+            /// then holds — and drives carry most of the heat, so the two states bracket what a
+            /// loaded ship really makes rather than either one describing it.
+            /// </summary>
+            public static State Charged
+            {
+                get { return new State { Consumers = 1f, Thrust = 0f, Tools = 1f, Drives = 0f }; }
+            }
+
             public static State Burn(int direction)
             {
-                return new State { Consumers = 0.5f, Thrust = 1f, ThrustDirection = direction, Tools = 0f };
+                return new State
+                {
+                    Consumers = 0.5f,
+                    Thrust = 1f,
+                    ThrustDirection = direction,
+                    Tools = 0f,
+
+                    // Zero rather than the default, because a drive was a tool until this pass and
+                    // a burn has always had its tools off. A ship under thrust is not charging.
+                    Drives = 0f,
+                };
             }
 
             /// <summary>
@@ -151,7 +198,12 @@ namespace Thermodynamics.Harness
                     continue;
                 }
 
-                float share = IsTool(definition.TypeId) ? state.Tools : state.Consumers;
+                // Drives before tools, because a jump drive used to be filed as a tool and that
+                // is what made `Consumers` a dial that did not reach 71 % of a loaded ship's heat.
+                float share = state.Consumers;
+                if (IsDrive(definition.TypeId)) share = state.Drives;
+                else if (IsTool(definition.TypeId)) share = state.Tools;
+
                 block.PowerConsumedWatts = definition.PowerDrawWatts * share;
                 demand += block.PowerConsumedWatts;
             }
@@ -185,6 +237,46 @@ namespace Thermodynamics.Harness
             return watts;
         }
 
+        /// <summary>
+        /// How long this ship's jump drives take to fill from empty, in simulated seconds, or zero
+        /// where it carries none.
+        ///
+        /// <para>
+        /// **The length of the largest thermal event most ships have, and the game states it.** A
+        /// drive holds `PowerNeededForJump` megawatt-hours, draws `RequiredPowerInput` megawatts
+        /// while filling, and stores `PowerEfficiency` of what it draws — so the shipped large
+        /// drive holds 3 MWh, draws 32 MW, keeps 80 % of it, and fills in **421.9 s**. Nothing here
+        /// is chosen: every figure is read off the definition the game ships.
+        /// </para>
+        ///
+        /// <para>
+        /// **The longest drive on the ship sets it**, because the ship is charging until the last
+        /// one is done and that is when the load falls away.
+        /// </para>
+        /// </summary>
+        public static float ChargeSeconds(ShipAssembly assembly)
+        {
+            if (assembly == null) return 0f;
+
+            Dictionary<string, GameBlocks.Definition> definitions = GameBlocks.BySubtype();
+            float longest = 0f;
+
+            foreach (ThermalNode node in assembly.Nodes)
+            {
+                GameBlocks.Definition definition;
+                if (!definitions.TryGetValue(node.Block.Name, out definition)) continue;
+                if (!IsDrive(definition.TypeId)) continue;
+
+                float stored = definition.PowerDrawWatts * definition.PowerEfficiency;
+                if (stored <= 0f || definition.JumpEnergyJoules <= 0f) continue;
+
+                float seconds = definition.JumpEnergyJoules / stored;
+                if (seconds > longest) longest = seconds;
+            }
+
+            return longest;
+        }
+
         /// <summary>Spreads a supplied total over a set of producers in proportion to their rating.</summary>
         private static void Share(Dictionary<string, GameBlocks.Definition> definitions,
             List<BlockInstance> producers, float installed, float supplied)
@@ -208,8 +300,26 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
+        /// Blocks that draw to fill a reservoir and then stop, rather than drawing while they run.
+        ///
+        /// Only the jump drive today, and it is here rather than folded into the consumers because
+        /// it carries 71.3 % of the corpus's full-load waste heat on its own.
+        /// </summary>
+        public static bool IsDrive(string typeId)
+        {
+            return typeId == "JumpDrive";
+        }
+
+        /// <summary>
         /// Blocks that run only when the player is doing something with them, as against the ones
         /// that draw whenever the ship is powered.
+        ///
+        /// **The jump drive was on this list and is not one.** It is not used, it is *filled*: it
+        /// draws its whole requirement until it is charged and then draws nothing. Filing it here
+        /// meant <see cref="State.Tools"/> governed it, so <see cref="State.Consumers"/> — the dial
+        /// that reads as *the ship's electrical load* — never reached the block carrying 71.3 % of
+        /// the corpus's full-load waste heat. Every published figure is unaffected, because the two
+        /// shares agree in all four states that existed; what it cost was a dial nobody could use.
         /// </summary>
         private static bool IsTool(string typeId)
         {
@@ -226,7 +336,6 @@ namespace Thermodynamics.Harness
                 case "SmallMissileLauncher":
                 case "SmallMissileLauncherReload":
                 case "LargeMissileTurret":
-                case "JumpDrive":
                     return true;
                 default:
                     return false;

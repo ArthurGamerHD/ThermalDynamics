@@ -23,6 +23,7 @@ namespace Thermodynamics.Tests
     /// <b>bit-identical</b>, and anything less means a slice is reading state another slice has
     /// already moved.
     /// </summary>
+    [Trait("speed", "slow")]
     public class SpreadStepTests
     {
         /// <summary>A grid with everything in it that a substep touches.</summary>

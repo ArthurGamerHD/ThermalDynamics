@@ -154,6 +154,53 @@ namespace Thermodynamics.Harness
         public float SubstepsDemanded;
         public int SubstepsGranted;
 
+        /// <summary>
+        /// Thermal links across the whole assembly — block touching block.
+        ///
+        /// **The column `G6`'s cost half needed and did not have.** A substep runs a conduction
+        /// pass that is per link and an environment pass that is per node, and the allowance is
+        /// denominated in `links + 4 x nodes`; the corpus carried `Joints`, which is the mechanical
+        /// joints *between grids* and is nought on most blueprints, so every step-work figure this
+        /// repository published was the node half alone.
+        /// </summary>
+        public int Links;
+
+        /// <summary>
+        /// Simulated seconds the run actually advanced, which is not the scenario's clock: almost
+        /// every battery run stops at equilibrium first.
+        ///
+        /// **A comparison holds the stopping point equal** (`M1`), and until this column existed a
+        /// dataset could not say where a run stopped — so two runs of the same ship under two
+        /// configurations were comparable only by assumption. It is what a paired arm is handed
+        /// through <see cref="Battery.RunForSeconds"/>.
+        /// </summary>
+        public float RunSeconds;
+
+        /// <summary>
+        /// `MaxSubstepsPerBlock` in force for this run, and 0 for the off it ships as.
+        ///
+        /// **The column that makes a paired dataset readable.** Two arms of the same ship in the
+        /// same scenario are two rows that differ in nothing a reader can see without it, and a
+        /// dataset whose arms cannot be told apart is a dataset with twice as many rows and no
+        /// experiment in it.
+        /// </summary>
+        public int SubstepsPerBlockCap;
+
+        /// <summary>
+        /// Nodes the cap is holding above their real heat capacity at the end of the run — its
+        /// *reach*, which is the statistic a cap's value is chosen from rather than its error.
+        /// </summary>
+        public int FlooredNodes;
+
+        /// <summary>
+        /// What one substep costs the assembly's most expensive grid, in element visits — the unit
+        /// `MaxElementVisitsPerStep` is spent in, and per grid because the bound is per grid.
+        ///
+        /// Read from <see cref="ThermalSimulation.SubstepCost"/> rather than recomputed here, so
+        /// the corpus is scored in the mod's own arithmetic instead of in a copy of it (`P5`).
+        /// </summary>
+        public long SubstepCost;
+
         public override string ToString()
         {
             return Ship + " / " + Scenario + ": " + PeakKelvin.ToString("n0") + " K peak";
@@ -180,6 +227,9 @@ namespace Thermodynamics.Harness
                 VentedWatts = assembly.VentedWatts,
                 SubstepsDemanded = assembly.RequiredSubsteps,
                 SubstepsGranted = assembly.GrantedSubsteps,
+                Links = assembly.LinkCount,
+                SubstepCost = assembly.WorstGridSubstepCost,
+                FlooredNodes = assembly.FlooredNodes,
             };
 
             if (outcome.Blocks == 0) return outcome;

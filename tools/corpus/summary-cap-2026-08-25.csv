@@ -1,0 +1,40 @@
+statistic,value,unit
+dataset outcome rows,32576,
+dataset ships,8144,
+dataset ships.csv rows,0,
+dataset scenarios,4,
+provenance walk,cap started 2026-08-25 01:17:00,
+provenance commit,1ada0c2d48c14e7fb888665b3fd79434f326970f,
+provenance Cubes.xml,68b1e77101e9e9ce,
+provenance Loops.xml,046f8b8fc8181265,
+provenance Planets.xml,da93b8fdd826e7cf,
+G1 idle critical share,0.0246,%
+G1 verdict,holds,
+G2 verdict,unanswered,
+G5 verdict,unanswered,
+G6 demand p50,7.876,substeps
+G6 demand p95,30.195,substeps
+G6 demand p99,34.779,substeps
+G6 demand max,36.614,substeps
+G6 substep cap,64,substeps
+G6 work p50,60564,element visits
+G6 work p95,2034953,element visits
+G6 work p99,7293904,element visits
+G6 work max,122261839,element visits
+G6 visit allowance,4000000,element visits
+G6 runs over the allowance,733,
+G6 verdict,fails,
+G6 reentry demand p99,34.782,substeps
+G6 reentry work p99,10916631,element visits
+G6 reentry runs over the allowance,294,
+G6 storm-parked demand p99,30.309,substeps
+G6 storm-parked work p99,9547433,element visits
+G6 storm-parked runs over the allowance,241,
+G6 surface-hot-noon demand p99,19.234,substeps
+G6 surface-hot-noon work p99,6060511,element visits
+G6 surface-hot-noon runs over the allowance,146,
+G6 vacuum-shadow demand p99,11.405,substeps
+G6 vacuum-shadow work p99,3219372,element visits
+G6 vacuum-shadow runs over the allowance,52,
+G3 verdict,unanswered,
+G4 verdict,unanswered,

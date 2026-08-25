@@ -107,6 +107,35 @@ namespace Thermodynamics.Harness
             return this;
         }
 
+        /// <summary>
+        /// Drives the last placed block to put <paramref name="watts"/> of heat into the hull,
+        /// whatever fraction of its power that block wastes.
+        ///
+        /// <para>
+        /// **A rig that wants a heat source should say so in watts of heat.** Saying it in watts of
+        /// *output* couples the rig to a block's efficiency, which is how every scenario in this
+        /// repository came to be quoted off a reactor wasting a quarter of its output where the
+        /// shipped one wastes a hundredth (backlog.md `C4`). A rig that is
+        /// *about* a reactor still drives it at a real rating through <see cref="Producing"/>; this
+        /// is for the ones where the block is only a place to put watts.
+        /// </para>
+        /// </summary>
+        public GridBuilder Wasting(float watts)
+        {
+            if (Last == null) return this;
+
+            float fraction = Last.Model.Thermal.ProducerWasteEnergy;
+            if (fraction <= 0f)
+            {
+                throw new InvalidOperationException(
+                    Last.Model.Name + " wastes none of what it produces, so it cannot be a source"
+                    + " of " + watts.ToString("n0") + " W — place a block that does");
+            }
+
+            Last.PowerProducedWatts = watts / fraction;
+            return this;
+        }
+
         public GridBuilder Consuming(float watts)
         {
             if (Last != null) Last.PowerConsumedWatts = watts;
@@ -153,6 +182,48 @@ namespace Thermodynamics.Harness
         /// </remarks>
         [ThreadStatic]
         public static Func<ThermalSettings, ThermalSettings> SettingsOverride;
+
+        /// <summary>
+        /// Permutes the order the placed blocks will be handed to the simulation in, moving none of
+        /// them.
+        ///
+        /// <para>
+        /// **The same ship with a different index space.** A node's index comes from the order
+        /// blocks were added, and two machines do not build a grid in the same order — a client
+        /// receives blocks in whatever order the engine streams them, a server has them in the
+        /// order they were welded or pasted. Every block stays at the cell it was placed at and
+        /// keeps the model it was placed with, so the conduction graph, the surfaces, the rooms and
+        /// the physics are identical: only the indices differ. That is what makes it the clean test
+        /// of a correction that is keyed on position rather than on index
+        /// (backlog.md `F22`).
+        /// </para>
+        ///
+        /// <para>
+        /// Deterministic, so two runs at one seed build the same permutation; a seed of zero is a
+        /// no-op, which is what lets a caller pass the knob straight through.
+        /// </para>
+        /// </summary>
+        public GridBuilder ReorderPlacement(int seed)
+        {
+            if (seed == 0 || placed.Count < 2) return this;
+
+            uint state = (uint)seed;
+            if (state == 0u) state = 0x9E3779B9u;
+
+            for (int i = placed.Count - 1; i > 0; i--)
+            {
+                state ^= state << 13;
+                state ^= state >> 17;
+                state ^= state << 5;
+
+                int j = (int)(state % (uint)(i + 1));
+                BlockInstance swap = placed[i];
+                placed[i] = placed[j];
+                placed[j] = swap;
+            }
+
+            return this;
+        }
 
         public ThermalSimulation BuildSimulation(ThermalSettings settings = null, float initialTemperature = 293.15f)
         {

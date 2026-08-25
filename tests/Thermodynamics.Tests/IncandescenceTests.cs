@@ -242,7 +242,7 @@ namespace Thermodynamics.Tests
         /// would fail with no visual warning at all. The colour is where the physics is kept, and
         /// this is the measurement that says the brightness cannot be — quoted in
         /// <see cref="Incandescence"/>'s own summary and in
-        /// [document-of-intent.md](../../docs/document-of-intent.md), so it is measured here rather
+        /// document-of-intent.md, so it is measured here rather
         /// than asserted there. Measured over the installed game's block types, which is the
         /// population both of those sentences are about, so it stands down where the game is not
         /// installed rather than answering from a smaller set.

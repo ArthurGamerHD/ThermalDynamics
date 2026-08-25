@@ -116,8 +116,11 @@ start-of-step temperatures and applies them together, so the pass has no order d
 safe to split across threads. Reads must not race with the game mutating the grid, so the natural
 split is *solve in parallel, apply on the game thread* via `InvokeOnGameThread`.
 
-Worth measuring before adopting — 8 000 blocks currently solve in 0.128 ms/step, which may
-already be below the threshold where thread hand-off pays for itself.
+**Measured, and the hand-off is not the obstacle.** Fanning out over 242 work items and joining
+costs 1.6–6.8 µs a step against a 1,004-node grid's own 0.54 ms, so a single grid stepped through
+the fan-out comes back at 0.99× — and a 242-grid fleet at 10.17× on 32 threads, 7.09× on eight.
+The 0.128 ms figure is real and is still three hundred times a hand-off. See
+[scale-design.md](scale-design.md#one-grid-per-thread-measured-and-built).
 
 ## Planets already describe their own climate
 

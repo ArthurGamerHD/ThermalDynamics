@@ -273,14 +273,20 @@ namespace Thermodynamics.Harness
             // ---- the world dials ---------------------------------------------------------------
 
             // The largest departure from physics in the model and the one that makes it a game.
-            // Swept around the shipped 225 rather than multiplied, because the interesting question
-            // is which value to ship and not what a factor does.
+            // Swept around the shipped value rather than multiplied, because the interesting
+            // question is which value to ship and not what a factor does.
+            //
+            // **Re-centred on 90 when `C24` moved the default there from 225.** The ladder is
+            // doublings either side of what ships, and centred on 225 it had stopped containing
+            // the shipped value at all — 90 falls between its 56 and its 112, so every cell of the
+            // sweep was a value nobody runs and the column comparing them to *shipped* was
+            // comparing them to a level that is not.
             knobs.Add(new Knob
             {
                 Name = "heat-time-scale",
                 Intent = "seconds of physical time per second of play",
-                Multiplier = false, Shipped = 225f,
-                Levels = new[] { 25f, 56f, 112f, 225f, 450f, 900f }, Scenarios = Core,
+                Multiplier = false, Shipped = 90f,
+                Levels = new[] { 11f, 22f, 45f, 90f, 180f, 360f }, Scenarios = Core,
                 World = (s, x) => s.HeatTimeScale = x,
             });
 

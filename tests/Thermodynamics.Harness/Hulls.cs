@@ -57,10 +57,62 @@ namespace Thermodynamics.Harness
         /// of it agree perfectly, and agreement is the whole assertion those suites make — so the
         /// failure has to be raised where it happened, not left to a green test run.
         /// </summary>
-        public static ThermalSimulation Driven(ThermalSettings settings, int blocks = DefaultBlocks)
+        /// <param name="buildOrderSeed">
+        /// Permutes the order the same blocks are handed to the solver in, moving none of them.
+        /// Zero — the default — builds in placement order, which is what every other caller wants.
+        /// See <see cref="GridBuilder.ReorderPlacement"/>.
+        /// </param>
+        /// <summary>
+        /// **How much harder than the census share a hull has to be driven before its hot blocks
+        /// straddle their own ratings.**
+        ///
+        /// Measured 2026-08-24 on a 2,000-block hull in shadow: at the census share it settles at
+        /// **814.7 K with nothing over critical and 104 K to the nearest rating**, and at twice
+        /// that it crosses at about 300 s and holds 808 blocks over. One is a hull that never fails
+        /// and the other is a hull failing everywhere; what a near-critical rig needs is the
+        /// crossing between them, and two is where it is.
+        /// </summary>
+        public const float PastCriticalMultiple = 2f;
+
+        /// <summary>
+        /// The same hull, driven hard enough that blocks cross their ratings during the run.
+        ///
+        /// <para>
+        /// **For the rigs that are about the near-critical band** — what a joining client misreads,
+        /// what the hot-tail packet carries, what a degraded input is worth — and for nothing else.
+        /// Those rigs measure a disagreement *about whether a block has failed*, so a hull with no
+        /// block near its rating gives them nothing to disagree about, and they report a clean zero
+        /// in exactly the shape of a real null result (`E8`).
+        /// </para>
+        ///
+        /// <para>
+        /// At the pace the conversion calibrated to, the census share was enough. `C24` took
+        /// conduction to four times that, which spreads a hot spot across the hull it is in, and
+        /// the same watts now settle a hundred kelvin below the nearest rating. The load is a
+        /// property of the rig rather than a balance figure — what the population does under the
+        /// census share is measured on the population, not here.
+        /// </para>
+        /// </summary>
+        public static ThermalSimulation DrivenPastCritical(ThermalSettings settings,
+            int blocks = DefaultBlocks, int buildOrderSeed = 0)
+        {
+            return Driven(settings, blocks, buildOrderSeed,
+                Census.ProducerWatts * PastCriticalMultiple);
+        }
+
+        public static ThermalSimulation Driven(ThermalSettings settings, int blocks = DefaultBlocks,
+            int buildOrderSeed = 0)
+        {
+            return Driven(settings, blocks, buildOrderSeed, Census.ProducerWatts);
+        }
+
+        /// <summary>The same, at a stated load. See <see cref="DrivenPastCritical"/>.</summary>
+        public static ThermalSimulation Driven(ThermalSettings settings, int blocks,
+            int buildOrderSeed, float producerWatts)
         {
             GridBuilder builder = GridBuilder.Large();
             builder.PlaceCensus(LoadShapes.Build("ship", blocks));
+            builder.ReorderPlacement(buildOrderSeed);
 
             ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);
             simulation.RebuildAll();
@@ -72,7 +124,7 @@ namespace Thermodynamics.Harness
                     "the census hull built " + nodes + " nodes for " + blocks + " blocks asked for");
             }
 
-            if (Census.DriveCensus(simulation) <= 0)
+            if (Census.DriveCensus(simulation, producerWatts) <= 0)
             {
                 throw new InvalidOperationException(
                     "the census hull has no heat producer, so waste heat is not in play");

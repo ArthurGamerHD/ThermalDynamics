@@ -242,7 +242,7 @@ namespace Thermodynamics
 
                 for (int face = 0; face < Face.Count && quads < budget; face++)
                 {
-                    if (node.ExposedFaces[face] == 0) continue;
+                    if (node.GetExposedFaces(face) == 0) continue;
                     if (DrawFace(face, ref centre, ref half, ref gridMatrix, ref eye, ref colour))
                     {
                         quads++;

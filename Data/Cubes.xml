@@ -14,6 +14,12 @@
 	Units are real: SpecificHeat J/(kg K), Conductivity W/(m K), Emissivity 0..1. The HeatTimeScale
 	setting divides every capacity to reach a playable pace without moving any equilibrium.
 
+	Every figure states where it came from, in the comment immediately above it, and a check holds it
+	to what it says. A material figure names a material in ReferenceMaterials or says "invented"; a
+	waste fraction says "waste: <conversion>" for a class of machine in ReferenceEfficiencies,
+	"derived: <field>" for something the game's own definition states, "no producer:" where nothing
+	multiplies it, or "invented:". See docs/definitions.md, Where a block's properties come from.
+
 	Emissivity is what leaves; SolarAbsorptivity is what arrives. Declare only the first and the
 	second follows it, which is what every block did before the two were separated - so nothing
 	here needs an absorptivity, and a selective surface is the reason to write one.
@@ -34,7 +40,11 @@
 					<Decimal Name="SpecificHeat" Value="450" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<!--invented: the fallback for a block with no entry of its own; 5 % is a guess at a nondescript
+					    machine.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0.05" />
+					<!--invented: the fallback for a block with no entry of its own; 5 % is a guess at a nondescript
+					    machine.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
 					<Decimal Name="CriticalTemperature" Value="900" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
@@ -55,9 +65,12 @@
 			</Id>
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
-					<!--Measured: at 0.02 the two smaller reactors cook themselves bare in vacuum.-->
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--invented: a real thermal cycle rejects about two thirds of what it generates. 0.01 is measured
+					    gameplay instead - at 0.02 the two smaller reactors cook themselves bare in vacuum.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0.01" />
+					<!--invented: a reactor draws almost nothing; this follows its producer figure rather than any
+					    source.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.01" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="0.25" />
@@ -71,9 +84,10 @@
 			</Id>
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
-					<!--A combustion engine sheds most of what it burns as heat.-->
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--waste: combustion engine-->
 					<Decimal Name="ProducerWasteEnergy" Value="0.6" />
+					<!--invented: 5 % is the environment fallback for a block nothing else describes.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="0.5" />
@@ -87,9 +101,10 @@
 			</Id>
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
-					<!--A store is efficient; round-trip losses are a few per cent.-->
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--waste: lithium-ion store-->
 					<Decimal Name="ProducerWasteEnergy" Value="0.03" />
+					<!--waste: lithium-ion store-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.03" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -103,9 +118,11 @@
 			</Id>
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
-					<!--The solar path already put that energy in, so charging it again would double count.-->
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--invented: zero rather than a loss figure, because the solar path already put that energy in and
+					    charging it again would count it twice.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: 5 % is the environment fallback for a block nothing else describes.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -121,7 +138,10 @@
 				<Group Name="ThermalBlockProperties">
 					<!--An open frame carries more surface than the cell it occupies.-->
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--invented: a generator and its gearbox lose about a tenth of what they deliver, so zero is a
+					    choice and not a sourced one.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: 5 % is the environment fallback for a block nothing else describes.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1.5" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -137,9 +157,12 @@
 			</Id>
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
-					<!--Charged against thrust rather than draw, which is what makes a hydrogen thruster run hot.-->
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: gridded ion engines put 0.65-0.80 of their power into the beam, but this fraction is
+					    charged against thrust as a watt-equivalent for every thruster including chemical ones, so that
+					    band does not transfer.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.25" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1.5" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -155,14 +178,16 @@
 			</Id>
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
-					<!--Nearly all of a lamp's draw leaves as heat, not as light.-->
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--invented: a lamp is a plastic housing around a lens, and its build cost is mostly the plate it mounts on, so it is neither.-->
 					<Decimal Name="Conductivity" Value="2" />
 					<!--invented: as above.-->
 					<Decimal Name="SpecificHeat" Value="900" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A lamp inside a hull heats it with everything it draws: the light lands on
+					    the hull and is absorbed by it, so nothing leaves and the first law fixes this at 1.0.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -180,7 +205,11 @@
 					<Decimal Name="Conductivity" Value="2" />
 					<!--invented: as above.-->
 					<Decimal Name="SpecificHeat" Value="900" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: a lamp that points out of the hull loses whatever of its draw leaves as light the
+					    grid never absorbs, so this is under 1.0 for a physical reason. The tenth is not: no
+					    wall-plug efficiency for the game's lamps exists to take it from.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -199,8 +228,11 @@
 					<Decimal Name="Conductivity" Value="1" />
 					<!--J/(kg K), real units: glass-->
 					<Decimal Name="SpecificHeat" Value="840" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A lamp inside a hull heats it with everything it draws: the light lands on
+					    the hull and is absorbed by it, so nothing leaves and the first law fixes this at 1.0.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -214,7 +246,11 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: a lamp that points out of the hull loses whatever of its draw leaves as light the
+					    grid never absorbs, so this is under 1.0 for a physical reason. The tenth is not: no
+					    wall-plug efficiency for the game's lamps exists to take it from.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -231,8 +267,11 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -246,8 +285,11 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -261,8 +303,11 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -280,8 +325,11 @@
 					<Decimal Name="Conductivity" Value="5" />
 					<!--invented: as above.-->
 					<Decimal Name="SpecificHeat" Value="800" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -295,8 +343,11 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -310,8 +361,11 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -325,8 +379,11 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -340,8 +397,11 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -355,8 +415,11 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -370,8 +433,11 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -385,8 +451,11 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -400,8 +469,11 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -415,8 +487,11 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -430,8 +505,11 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -445,8 +523,11 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -460,8 +541,11 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -475,8 +559,11 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -490,8 +577,11 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -505,8 +595,11 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -520,8 +613,11 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -535,8 +631,11 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -550,8 +649,11 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -565,8 +667,11 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -580,8 +685,11 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -595,8 +703,11 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -610,7 +721,9 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--waste: radio transmitter-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.8" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -625,7 +738,9 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--waste: radio transmitter-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.8" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -640,7 +755,9 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--waste: radio transmitter-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.8" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -655,7 +772,9 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--waste: radio transmitter-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.8" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -669,9 +788,11 @@
 			</Id>
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
-					<!--A tight beam carries some of the energy away.-->
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--waste: solid-state laser. At the optimistic edge of the band - half the draw leaving as
+					    beam is the best industrial fibre laser, not a typical one.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.5" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -688,7 +809,9 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--waste: electric motor-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -703,7 +826,9 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--waste: electric motor-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -718,7 +843,9 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--waste: electric motor-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -733,7 +860,9 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--waste: electric motor-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -748,7 +877,9 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--waste: electric motor-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -764,7 +895,10 @@
 				<Group Name="ThermalBlockProperties">
 					<!--ForceMagnitude on a gyro is torque, not thrust, so heat is charged against its draw.-->
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: a reaction wheel does no net work on the ship, so everything it draws ends as heat;
+					    0.15 is its motor's loss alone.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.15" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -779,7 +913,10 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: comminution puts under a twentieth of its energy into new surface, so a drill is
+					    nearer 1.0; 0.2 has no source.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.2" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -794,7 +931,9 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: as the drill - grinding is nearly all heat, and 0.2 has no source.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.2" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -809,7 +948,9 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: nothing published says what a welder leaves behind; 0.2 matches the other tools.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.2" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -823,9 +964,11 @@
 			</Id>
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
-					<!--Smelting is mostly waste.-->
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: an electric arc furnace puts 0.55-0.65 into the melt and ore comminution under a
+					    twentieth into new surface. A refinery is both, so neither figure transfers.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.7" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -840,7 +983,10 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: nothing published covers a machine that turns ingots into parts; 0.6 sits under the
+					    refinery because it does less violence to what it is given.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.6" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -855,7 +1001,11 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: water electrolysis runs 0.60-0.80 efficient, so the sourced figure is 0.20-0.40 and
+					    this is over twice it. A balance choice, and the largest gap between an authored fraction and a
+					    real one.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.6" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -870,7 +1020,9 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: follows the refinery and the oxygen generator it contains.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.6" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -885,7 +1037,10 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: a fan loses what a motor loses and the rest heats the air it moves, which is inside
+					    the hull either way; 0.5 has no source.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.5" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -900,7 +1055,9 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: a tank compresses nothing itself; 0.1 is a guess at its valves and sensors.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -916,9 +1073,10 @@
 			</Id>
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
-					<!--A field does no work on anything that carries the energy away.-->
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: the device has no real analogue, so there is nothing to source it from.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.8" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -933,7 +1091,9 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: the device has no real analogue, so there is nothing to source it from.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.8" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -948,7 +1108,9 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: the device has no real analogue, so there is nothing to source it from.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.8" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -963,7 +1125,9 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: the device has no real analogue, so there is nothing to source it from.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.8" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -978,7 +1142,9 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: the device has no real analogue, so there is nothing to source it from.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.8" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -992,10 +1158,23 @@
 			</Id>
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
-					<!--Storage is efficient; the dump is not.-->
+					<!--
+						ConsumerWasteEnergy is not authored here. The jump drive is the one family in
+						the game whose definition states what it does with the power it draws:
+						PowerEfficiency is 0.8 on the vanilla drive and its reskin and 0.9 on the two
+						prototech ones, so a fifth and a tenth of what a charging drive draws never
+						reaches the store and is heat. Deriving it per block gets both right, and
+						gets a modded drive right too; the 0.15 that stood here was an assertion and
+						was wrong for all four. See definitions.md, Where a block's properties come from.
+					-->
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<Decimal Name="ConsumerWasteEnergy" Value="0.15" />
+					<!--derived: PowerEfficiency, the vanilla drive and its reskin, which state 0.8. Authored
+					    as well as derived so a reader that only has the type entry is on a sourced number
+					    rather than the environment fallback; the per-block derivation above overrides it
+					    for the prototech pair, which state 0.9.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="0.2" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="2" />
 				</Group>
@@ -1011,7 +1190,10 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: a gun's heat comes from propellant this model does not carry; 0.3 stands for its
+					    drives and electronics and has no source.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.3" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -1026,7 +1208,10 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: a gun's heat comes from propellant this model does not carry; 0.3 stands for its
+					    drives and electronics and has no source.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.3" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -1041,7 +1226,10 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: a gun's heat comes from propellant this model does not carry; 0.3 stands for its
+					    drives and electronics and has no source.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.3" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -1056,7 +1244,10 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: a gun's heat comes from propellant this model does not carry; 0.2 stands for its
+					    drives and electronics and has no source.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.2" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -1071,7 +1262,10 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: a gun's heat comes from propellant this model does not carry; 0.2 stands for its
+					    drives and electronics and has no source.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.2" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -1086,7 +1280,10 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: a gun's heat comes from propellant this model does not carry; 0.2 stands for its
+					    drives and electronics and has no source.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.2" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -1102,7 +1299,10 @@
 				<Group Name="ThermalBlockProperties">
 					<!--Reaching critical should be dramatic rather than gradual.-->
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: a warhead draws almost nothing until it detonates, and this model does not simulate
+					    that.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="4" />
@@ -1120,7 +1320,9 @@
 				<Group Name="ThermalBlockProperties">
 					<!--A vent is finned, so it radiates from far more than its cell.-->
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: nothing states what the block does with the power it draws.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.3" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="3" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -1135,7 +1337,10 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: 5 % follows the environment fallback. The block draws little and nothing states what
+					    becomes of it.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1.5" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -1150,7 +1355,10 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: 5 % follows the environment fallback. The block draws little and nothing states what
+					    becomes of it.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1.2" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -1165,7 +1373,9 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: nothing states what the block draws or what becomes of it.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.2" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="2" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -1181,7 +1391,10 @@
 				<Group Name="ThermalBlockProperties">
 					<!--A packed canopy is mostly hidden.-->
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: 5 % follows the environment fallback. The block draws little and nothing states what
+					    becomes of it.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="0.5" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -1196,7 +1409,10 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: a grow lamp's light is absorbed inside the block that emits it, so the first law says
+					    nearer 1.0; 0.3 has no source.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.3" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1.2" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -1211,7 +1427,9 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: no source; a tenth of a small draw.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1.2" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -1228,7 +1446,10 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: a refrigerator puts out more heat than it draws, because it rejects what it removed as
+					    well, so the honest figure is above 1.0. 0.6 is a balance choice.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.6" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -1243,7 +1464,9 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: as the cryo chamber, and with no more source than it has.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.6" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -1258,7 +1481,9 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: a cooker's heat all ends up in the room, so the first law says 1.0; 0.8 has no source.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.8" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -1275,7 +1500,10 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: 5 % follows the environment fallback. The block draws little and nothing states what
+					    becomes of it.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -1290,7 +1518,10 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: 5 % follows the environment fallback. The block draws little and nothing states what
+					    becomes of it.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -1305,7 +1536,10 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: 5 % follows the environment fallback. The block draws little and nothing states what
+					    becomes of it.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -1320,7 +1554,10 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: a motor and its electronics, but the work of moving an item dissipates inside the hull
+					    too, so 1.0 is the first-law figure and 0.1 is a balance choice.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -1335,7 +1572,9 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: as the sorter.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -1350,7 +1589,10 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: 5 % follows the environment fallback. The block draws little and nothing states what
+					    becomes of it.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -1365,7 +1607,10 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: 5 % follows the environment fallback. The block draws little and nothing states what
+					    becomes of it.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -1380,7 +1625,10 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: 5 % follows the environment fallback. The block draws little and nothing states what
+					    becomes of it.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -1395,7 +1643,10 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: 5 % follows the environment fallback. The block draws little and nothing states what
+					    becomes of it.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -1410,7 +1661,10 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: 5 % follows the environment fallback. The block draws little and nothing states what
+					    becomes of it.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -1425,7 +1679,10 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: 5 % follows the environment fallback. The block draws little and nothing states what
+					    becomes of it.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -1440,7 +1697,10 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: 5 % follows the environment fallback. The block draws little and nothing states what
+					    becomes of it.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -1455,7 +1715,10 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: 5 % follows the environment fallback. The block draws little and nothing states what
+					    becomes of it.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -1470,7 +1733,10 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: 5 % follows the environment fallback. The block draws little and nothing states what
+					    becomes of it.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -1485,7 +1751,10 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: 5 % follows the environment fallback. The block draws little and nothing states what
+					    becomes of it.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -1499,9 +1768,11 @@
 			</Id>
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
-					<!--Screens and life support, not structure.-->
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: a cockpit's displays and life support turn everything they draw into heat; 0.2 has no
+					    source.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.2" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -1516,7 +1787,10 @@
 			<ModExtensions>
 				<Group Name="ThermalBlockProperties">
 					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: 5 % follows the environment fallback. The block draws little and nothing states what
+					    becomes of it.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.05" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -1537,18 +1811,20 @@
 						W/(m K), real units: copper.
 
 						This was brass for a while, because copper made a 305 kg pipe stiff enough to
-						blow the loop integration up to 291,360 K. That turned out to be a defect in
-						the loop's clamp rather than a limit on the material: it bounded each link
-						against the parcel's whole heat capacity, so a parcel carrying two links got
-						twice the energy that equalising it takes. With the ring's own limit applied
-						the same case settles at 0.8 K and copper is back.
+						blow the loop integration up to 291,360 K. That was a defect in the loop's
+						clamp rather than a limit on the material, and both halves of it are fixed:
+						the ring's own limit, and then the node's (backlog A10). Sixteen times
+						copper is now as bounded as brass. See realism.md.
 					-->
 					<Decimal Name="Conductivity" Value="400" />
 					<!--J/(kg K), real units: copper-->
 					<Decimal Name="SpecificHeat" Value="385" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: a pipe draws no power and makes no heat of its own; what the loop carries is the
+					    loop's, not the pipe's.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
@@ -1567,18 +1843,20 @@
 						W/(m K), real units: copper.
 
 						This was brass for a while, because copper made a 305 kg pipe stiff enough to
-						blow the loop integration up to 291,360 K. That turned out to be a defect in
-						the loop's clamp rather than a limit on the material: it bounded each link
-						against the parcel's whole heat capacity, so a parcel carrying two links got
-						twice the energy that equalising it takes. With the ring's own limit applied
-						the same case settles at 0.8 K and copper is back.
+						blow the loop integration up to 291,360 K. That was a defect in the loop's
+						clamp rather than a limit on the material, and both halves of it are fixed:
+						the ring's own limit, and then the node's (backlog A10). Sixteen times
+						copper is now as bounded as brass. See realism.md.
 					-->
 					<Decimal Name="Conductivity" Value="400" />
 					<!--J/(kg K), real units: copper-->
 					<Decimal Name="SpecificHeat" Value="385" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: a pipe draws no power and makes no heat of its own; what the loop carries is the
+					    loop's, not the pipe's.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
@@ -1597,18 +1875,20 @@
 						W/(m K), real units: copper.
 
 						This was brass for a while, because copper made a 305 kg pipe stiff enough to
-						blow the loop integration up to 291,360 K. That turned out to be a defect in
-						the loop's clamp rather than a limit on the material: it bounded each link
-						against the parcel's whole heat capacity, so a parcel carrying two links got
-						twice the energy that equalising it takes. With the ring's own limit applied
-						the same case settles at 0.8 K and copper is back.
+						blow the loop integration up to 291,360 K. That was a defect in the loop's
+						clamp rather than a limit on the material, and both halves of it are fixed:
+						the ring's own limit, and then the node's (backlog A10). Sixteen times
+						copper is now as bounded as brass. See realism.md.
 					-->
 					<Decimal Name="Conductivity" Value="400" />
 					<!--J/(kg K), real units: copper-->
 					<Decimal Name="SpecificHeat" Value="385" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: a pipe draws no power and makes no heat of its own; what the loop carries is the
+					    loop's, not the pipe's.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
@@ -1627,18 +1907,20 @@
 						W/(m K), real units: copper.
 
 						This was brass for a while, because copper made a 305 kg pipe stiff enough to
-						blow the loop integration up to 291,360 K. That turned out to be a defect in
-						the loop's clamp rather than a limit on the material: it bounded each link
-						against the parcel's whole heat capacity, so a parcel carrying two links got
-						twice the energy that equalising it takes. With the ring's own limit applied
-						the same case settles at 0.8 K and copper is back.
+						blow the loop integration up to 291,360 K. That was a defect in the loop's
+						clamp rather than a limit on the material, and both halves of it are fixed:
+						the ring's own limit, and then the node's (backlog A10). Sixteen times
+						copper is now as bounded as brass. See realism.md.
 					-->
 					<Decimal Name="Conductivity" Value="400" />
 					<!--J/(kg K), real units: copper-->
 					<Decimal Name="SpecificHeat" Value="385" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: a pipe draws no power and makes no heat of its own; what the loop carries is the
+					    loop's, not the pipe's.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
@@ -1657,18 +1939,20 @@
 						W/(m K), real units: copper.
 
 						This was brass for a while, because copper made a 305 kg pipe stiff enough to
-						blow the loop integration up to 291,360 K. That turned out to be a defect in
-						the loop's clamp rather than a limit on the material: it bounded each link
-						against the parcel's whole heat capacity, so a parcel carrying two links got
-						twice the energy that equalising it takes. With the ring's own limit applied
-						the same case settles at 0.8 K and copper is back.
+						blow the loop integration up to 291,360 K. That was a defect in the loop's
+						clamp rather than a limit on the material, and both halves of it are fixed:
+						the ring's own limit, and then the node's (backlog A10). Sixteen times
+						copper is now as bounded as brass. See realism.md.
 					-->
 					<Decimal Name="Conductivity" Value="400" />
 					<!--J/(kg K), real units: copper-->
 					<Decimal Name="SpecificHeat" Value="385" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: a pipe draws no power and makes no heat of its own; what the loop carries is the
+					    loop's, not the pipe's.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
@@ -1687,18 +1971,20 @@
 						W/(m K), real units: copper.
 
 						This was brass for a while, because copper made a 305 kg pipe stiff enough to
-						blow the loop integration up to 291,360 K. That turned out to be a defect in
-						the loop's clamp rather than a limit on the material: it bounded each link
-						against the parcel's whole heat capacity, so a parcel carrying two links got
-						twice the energy that equalising it takes. With the ring's own limit applied
-						the same case settles at 0.8 K and copper is back.
+						blow the loop integration up to 291,360 K. That was a defect in the loop's
+						clamp rather than a limit on the material, and both halves of it are fixed:
+						the ring's own limit, and then the node's (backlog A10). Sixteen times
+						copper is now as bounded as brass. See realism.md.
 					-->
 					<Decimal Name="Conductivity" Value="400" />
 					<!--J/(kg K), real units: copper-->
 					<Decimal Name="SpecificHeat" Value="385" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: a pipe draws no power and makes no heat of its own; what the loop carries is the
+					    loop's, not the pipe's.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
@@ -1717,18 +2003,20 @@
 						W/(m K), real units: copper.
 
 						This was brass for a while, because copper made a 305 kg pipe stiff enough to
-						blow the loop integration up to 291,360 K. That turned out to be a defect in
-						the loop's clamp rather than a limit on the material: it bounded each link
-						against the parcel's whole heat capacity, so a parcel carrying two links got
-						twice the energy that equalising it takes. With the ring's own limit applied
-						the same case settles at 0.8 K and copper is back.
+						blow the loop integration up to 291,360 K. That was a defect in the loop's
+						clamp rather than a limit on the material, and both halves of it are fixed:
+						the ring's own limit, and then the node's (backlog A10). Sixteen times
+						copper is now as bounded as brass. See realism.md.
 					-->
 					<Decimal Name="Conductivity" Value="400" />
 					<!--J/(kg K), real units: copper-->
 					<Decimal Name="SpecificHeat" Value="385" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: a pipe draws no power and makes no heat of its own; what the loop carries is the
+					    loop's, not the pipe's.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
@@ -1747,18 +2035,20 @@
 						W/(m K), real units: copper.
 
 						This was brass for a while, because copper made a 305 kg pipe stiff enough to
-						blow the loop integration up to 291,360 K. That turned out to be a defect in
-						the loop's clamp rather than a limit on the material: it bounded each link
-						against the parcel's whole heat capacity, so a parcel carrying two links got
-						twice the energy that equalising it takes. With the ring's own limit applied
-						the same case settles at 0.8 K and copper is back.
+						blow the loop integration up to 291,360 K. That was a defect in the loop's
+						clamp rather than a limit on the material, and both halves of it are fixed:
+						the ring's own limit, and then the node's (backlog A10). Sixteen times
+						copper is now as bounded as brass. See realism.md.
 					-->
 					<Decimal Name="Conductivity" Value="400" />
 					<!--J/(kg K), real units: copper-->
 					<Decimal Name="SpecificHeat" Value="385" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: a pipe draws no power and makes no heat of its own; what the loop carries is the
+					    loop's, not the pipe's.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
@@ -1778,18 +2068,20 @@
 						W/(m K), real units: copper.
 
 						This was brass for a while, because copper made a 305 kg pipe stiff enough to
-						blow the loop integration up to 291,360 K. That turned out to be a defect in
-						the loop's clamp rather than a limit on the material: it bounded each link
-						against the parcel's whole heat capacity, so a parcel carrying two links got
-						twice the energy that equalising it takes. With the ring's own limit applied
-						the same case settles at 0.8 K and copper is back.
+						blow the loop integration up to 291,360 K. That was a defect in the loop's
+						clamp rather than a limit on the material, and both halves of it are fixed:
+						the ring's own limit, and then the node's (backlog A10). Sixteen times
+						copper is now as bounded as brass. See realism.md.
 					-->
 					<Decimal Name="Conductivity" Value="400" />
 					<!--J/(kg K), real units: copper-->
 					<Decimal Name="SpecificHeat" Value="385" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: a pipe draws no power and makes no heat of its own; what the loop carries is the
+					    loop's, not the pipe's.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
@@ -1808,18 +2100,20 @@
 						W/(m K), real units: copper.
 
 						This was brass for a while, because copper made a 305 kg pipe stiff enough to
-						blow the loop integration up to 291,360 K. That turned out to be a defect in
-						the loop's clamp rather than a limit on the material: it bounded each link
-						against the parcel's whole heat capacity, so a parcel carrying two links got
-						twice the energy that equalising it takes. With the ring's own limit applied
-						the same case settles at 0.8 K and copper is back.
+						blow the loop integration up to 291,360 K. That was a defect in the loop's
+						clamp rather than a limit on the material, and both halves of it are fixed:
+						the ring's own limit, and then the node's (backlog A10). Sixteen times
+						copper is now as bounded as brass. See realism.md.
 					-->
 					<Decimal Name="Conductivity" Value="400" />
 					<!--J/(kg K), real units: copper-->
 					<Decimal Name="SpecificHeat" Value="385" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: a pipe draws no power and makes no heat of its own; what the loop carries is the
+					    loop's, not the pipe's.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
@@ -1839,18 +2133,20 @@
 						W/(m K), real units: copper.
 
 						This was brass for a while, because copper made a 305 kg pipe stiff enough to
-						blow the loop integration up to 291,360 K. That turned out to be a defect in
-						the loop's clamp rather than a limit on the material: it bounded each link
-						against the parcel's whole heat capacity, so a parcel carrying two links got
-						twice the energy that equalising it takes. With the ring's own limit applied
-						the same case settles at 0.8 K and copper is back.
+						blow the loop integration up to 291,360 K. That was a defect in the loop's
+						clamp rather than a limit on the material, and both halves of it are fixed:
+						the ring's own limit, and then the node's (backlog A10). Sixteen times
+						copper is now as bounded as brass. See realism.md.
 					-->
 					<Decimal Name="Conductivity" Value="400" />
 					<!--J/(kg K), real units: copper-->
 					<Decimal Name="SpecificHeat" Value="385" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: a pipe draws no power and makes no heat of its own; what the loop carries is the
+					    loop's, not the pipe's.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
@@ -1869,18 +2165,20 @@
 						W/(m K), real units: copper.
 
 						This was brass for a while, because copper made a 305 kg pipe stiff enough to
-						blow the loop integration up to 291,360 K. That turned out to be a defect in
-						the loop's clamp rather than a limit on the material: it bounded each link
-						against the parcel's whole heat capacity, so a parcel carrying two links got
-						twice the energy that equalising it takes. With the ring's own limit applied
-						the same case settles at 0.8 K and copper is back.
+						blow the loop integration up to 291,360 K. That was a defect in the loop's
+						clamp rather than a limit on the material, and both halves of it are fixed:
+						the ring's own limit, and then the node's (backlog A10). Sixteen times
+						copper is now as bounded as brass. See realism.md.
 					-->
 					<Decimal Name="Conductivity" Value="400" />
 					<!--J/(kg K), real units: copper-->
 					<Decimal Name="SpecificHeat" Value="385" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: a pipe draws no power and makes no heat of its own; what the loop carries is the
+					    loop's, not the pipe's.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
@@ -1901,10 +2199,10 @@
 					<Decimal Name="SpecificHeat" Value="450" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<!--All of it. A circulator does no work that leaves the system: its shaft
-					power dissipates as friction in the coolant it is pushing, and its motor
-					losses stay in the block. Nothing to subtract.-->
+					<!--waste: all of it. A circulator does no work that leaves the system - its shaft power dissipates
+					    as friction in the coolant it is pushing, and its motor losses stay in the block.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
@@ -1925,10 +2223,10 @@
 					<Decimal Name="SpecificHeat" Value="450" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<!--All of it. A circulator does no work that leaves the system: its shaft
-					power dissipates as friction in the coolant it is pushing, and its motor
-					losses stay in the block. Nothing to subtract.-->
+					<!--waste: all of it. A circulator does no work that leaves the system - its shaft power dissipates
+					    as friction in the coolant it is pushing, and its motor losses stay in the block.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
@@ -1950,13 +2248,10 @@
 					<Decimal Name="SpecificHeat" Value="450" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
-					<!--
-						Zero, and deliberately so. Every watt this block draws is already accounted
-						for: the simulation puts the compressor's work into the hot side along with
-						the heat it lifted. Giving it a waste fraction as well would charge the
-						same energy to the grid twice.
-					-->
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: zero rather than a loss, because the pump model already puts every watt it draws into
+					    the hot side; a fraction here would charge that energy twice. See blocks.md, Heat pump.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
@@ -1977,8 +2272,10 @@
 					<Decimal Name="SpecificHeat" Value="450" />
 					<Decimal Name="Emissivity" Value="0.125" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
-					<!--Zero for the same reason as the large grid pump: the work is already counted.-->
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: zero rather than a loss, because the pump model already puts every watt it draws into
+					    the hot side; a fraction here would charge that energy twice. See blocks.md, Heat pump.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
@@ -1999,8 +2296,21 @@
 					<!--J/(kg K), real units: aluminium-->
 					<Decimal Name="SpecificHeat" Value="900" />
 					<Decimal Name="Emissivity" Value="0.35" />
+					<!--
+						The one selective surface the mod ships, and the reason the two numbers were
+						separated. A radiator's job is to emit in the infrared without collecting in
+						the visible: a second-surface mirror runs about 0.08 and white paint about
+						0.2, so 0.1 is the middle of what a real radiator is finished with. Emissivity
+						is untouched, so the block emits exactly what it emitted and stops absorbing
+						sunlight it physically would not. Measured worth 10.9 K to a sunlit stack and
+						nothing at all in shadow - see balance.md, What a selective surface is worth.
+					-->
+					<Decimal Name="SolarAbsorptivity" Value="0.1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value ="1.25" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: a pipe draws no power and makes no heat of its own; what the loop carries is the
+					    loop's, not the pipe's.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
@@ -2020,8 +2330,21 @@
 					<!--J/(kg K), real units: aluminium-->
 					<Decimal Name="SpecificHeat" Value="900" />
 					<Decimal Name="Emissivity" Value="0.35" />
+					<!--
+						The one selective surface the mod ships, and the reason the two numbers were
+						separated. A radiator's job is to emit in the infrared without collecting in
+						the visible: a second-surface mirror runs about 0.08 and white paint about
+						0.2, so 0.1 is the middle of what a real radiator is finished with. Emissivity
+						is untouched, so the block emits exactly what it emitted and stops absorbing
+						sunlight it physically would not. Measured worth 10.9 K to a sunlit stack and
+						nothing at all in shadow - see balance.md, What a selective surface is worth.
+					-->
+					<Decimal Name="SolarAbsorptivity" Value="0.1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value ="1.25" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--invented: a pipe draws no power and makes no heat of its own; what the loop carries is the
+					    loop's, not the pipe's.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0" />
 					<Decimal Name="CriticalTemperature" Value="1000" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>

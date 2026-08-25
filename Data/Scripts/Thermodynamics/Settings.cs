@@ -104,8 +104,51 @@ namespace Thermodynamics
         [ProtoMember(16)] public bool EnableWasteHeat = true;
         [ProtoMember(17)] public bool EnablePlanets = true;
         [ProtoMember(18)] public bool EnableFriction = true;
+
+        /// <summary>
+        /// The wind field: a direction and a speed for a point on a planet, and everything that
+        /// shapes them — the boundary-layer profile, terrain speed-up and shelter, slope
+        /// channelling, the diurnal cycle and burial.
+        ///
+        /// <para>
+        /// **Off is no wind at all, not the game's wind unmodelled**, because the game has no wind
+        /// vector to fall back to: what it exposes is `MaxWindSpeed × airDensity`, a ceiling
+        /// identical at pole and equator, which environment.md records as unusable as a wind. Every
+        /// direction and speed this model reports is its own, so removing the model removes the
+        /// wind. A grid still feels its own motion through the air.
+        /// </para>
+        ///
+        /// <para>
+        /// **Here rather than on `ThermalSettings`, like `EnableTemperatureSync`**, because the
+        /// wind field is produced by the host: `WindSolver` is core, but what drives it is a
+        /// planet, a position and the weather, and the core is never handed those. A harness
+        /// scenario states its own wind and needs no switch to omit one.
+        /// </para>
+        ///
+        /// <para>
+        /// It had no switch at all until 2026-08-24, which made it the one mechanism a world could
+        /// not turn off (`C7`) — the nearest thing was zeroing `WindTerrainInfluence`,
+        /// `WindSlopeStrength` and `WindDiurnalAmplitude`, which removes the modulations and leaves
+        /// the wind. See backlog.md `B31`.
+        /// </para>
+        /// </summary>
+        [ProtoMember(128)] public bool EnableWind = true;
         [ProtoMember(19)] public bool EnableDamage = true;
         [ProtoMember(20)] public bool EnableCoolantLoops = true;
+
+        /// <summary>
+        /// The cheap rung of coolant transport: one well-mixed body of fluid instead of parcels
+        /// carried round the ring.
+        ///
+        /// <para>
+        /// Off — the default — is the realistic form: the fluid is a ring of parcels, so a stopped
+        /// pump leaves the coolant at the radiator cold and the coolant at the reactor hot, and
+        /// where a sink sits round the loop matters. On collapses the ring to a single temperature,
+        /// which is cheaper and makes a loop's layout stop mattering.
+        /// See configuration.md, Coolant loops, and thermal-model.md.
+        /// </para>
+        /// </summary>
+        [ProtoMember(126)] public bool WellMixedCoolant = false;
         [ProtoMember(21)] public bool EnableRoomAir = true;
         [ProtoMember(22)] public bool EnableHeatPumps = true;
 
@@ -130,7 +173,7 @@ namespace Thermodynamics
         /// </summary>
         [ProtoMember(32)] public int Frequency = 4;
         [ProtoMember(33)] public float SimulationSpeed = 1f;
-        [ProtoMember(34)] public float HeatTimeScale = 225f;
+        [ProtoMember(34)] public float HeatTimeScale = 90f;
 
         /// <summary>
         /// Most element visits one solver step may make — substeps times its links plus its weighted
@@ -138,7 +181,7 @@ namespace Thermodynamics
         /// <c>MaxLinkVisitsPerStep</c> takes the default deliberately, since the old number was in a
         /// different unit. See configuration.md, Solver.
         /// </summary>
-        [ProtoMember(35)] public int MaxElementVisitsPerStep = 2000000;
+        [ProtoMember(35)] public int MaxElementVisitsPerStep = 4000000;
 
         /// <summary>
         /// Most substeps one solver step may divide itself into. See the core setting of the same
@@ -151,6 +194,22 @@ namespace Thermodynamics
         /// is floored. Zero leaves every block's real capacity in place. See stiffness.md.
         /// </summary>
         [ProtoMember(84)] public int MaxSubstepsPerBlock = 0;
+
+        /// <summary>
+        /// Whether a frame's grids are solved on the engine's worker threads rather than one after
+        /// another on the game thread.
+        ///
+        /// <para>
+        /// **Off, and it is the one setting here whose default is a gap rather than a choice.** The
+        /// mechanism is built and its shape is the one the solver's invariants allow — solve in
+        /// parallel, apply on the game thread — and it is measured at **10.17×** on a 242-grid fleet
+        /// with 32 threads, 7.09× on eight, 3.35× on an uneven fleet and 0.99× on a single grid. What
+        /// no harness can answer is what the engine's own scheduler does with a mod's work while it
+        /// is also running the game, so it ships off until a session says.
+        /// See configuration.md, Solving a fleet in parallel, and backlog.md `D19`.
+        /// </para>
+        /// </summary>
+        [ProtoMember(127)] public bool ParallelGrids = false;
 
         // ---- environment -------------------------------------------------------------------
 
@@ -188,8 +247,23 @@ namespace Thermodynamics
         /// <summary>Coolant carried by one pipe block, kg. More is more capacity for the same coupling.</summary>
         [ProtoMember(85)] public float LoopCoolantMassPerPipe = 50f;
 
-        /// <summary>Coolant's conduction quality into the pipe it sits in, 0..1.</summary>
-        [ProtoMember(86)] public float LoopConductivity = 1f;
+        /// <summary>
+        /// How well heat crosses between the coolant and the wall it touches, W/(m²·K).
+        ///
+        /// **Replaces `LoopConductivity`, which was a 0…1 quality against a reference conductivity**
+        /// and gave the game a second conduction pace. See configuration.md, Coolant loops.
+        /// A new member number rather than a reused one, so a world saved before this reads its old
+        /// quality out of 86 and is migrated rather than silently reinterpreted as a coefficient of
+        /// one.
+        /// </summary>
+        [ProtoMember(125)] public float LoopHeatTransferCoefficient = 160f;
+
+        /// <summary>
+        /// **Retired.** The 0…1 quality this used to be, kept so a world saved with it moved can be
+        /// migrated into <see cref="LoopHeatTransferCoefficient"/>. Negative means "not present",
+        /// which is what a world saved after the change writes.
+        /// </summary>
+        [ProtoMember(86)] public float LegacyLoopConductivity = -1f;
 
         /// <summary>Coolant's specific heat, J/(kg K). Water-glycol is about 3400.</summary>
         [ProtoMember(87)] public float LoopSpecificHeat = 3400f;
@@ -356,6 +430,28 @@ namespace Thermodynamics
         [ProtoMember(122)] public bool HeatWarningSound = true;
 
         /// <summary>
+        /// The thermal readout in a block's terminal detail panel. Client side, and on by default:
+        /// it is the mod's plainest answer to *what is this block doing*, and turning it off ships
+        /// a simulation a player cannot read.
+        ///
+        /// <para>
+        /// **It exists because a switch has two callers, and only the second one needed it.** `C7`
+        /// wants every mechanism to have a switch that removes its own cost, and this was the one
+        /// output of the mod a world could not turn off. The caller that made it worth building is
+        /// backlog.md `B38`: a world running a second heat mod turns this
+        /// one's consequences and readouts off and keeps its simulation and its API, and until this
+        /// existed that composition left two panels on every terminal.
+        /// </para>
+        ///
+        /// <para>
+        /// It gates the *text*, not the controls. A coolant pump's throttle is a thing a player
+        /// operates rather than a thing the mod says, and hiding it would take a working block
+        /// away.
+        /// </para>
+        /// </summary>
+        [ProtoMember(129)] public bool HeatTerminalPanel = true;
+
+        /// <summary>
         /// Bottom of the room overlay's colour span, K. Separate from the block ramp because room
         /// air spans a few tens of degrees, over which the block ramp gives one shade.
         /// </summary>
@@ -367,6 +463,25 @@ namespace Thermodynamics
         // Retired ProtoMember numbers, left unused so an older config file or peer message cannot
         // land on a different field: 72 and 76 were the switches SolarGridShadows replaced, 53-56
         // the block-colouring debug modes, and 60-70 the thermal vision overlay.
+
+        // ---- multiplayer -------------------------------------------------------------------
+
+        /// <summary>
+        /// Whether the server states block temperatures to its clients.
+        ///
+        /// Off leaves every client re-simulating from its own inputs, which is what the mod did
+        /// before this existed and is measurably wrong about which side of critical a block is on
+        /// for longer than the damage event lasts. It is a switch because the correction costs
+        /// bandwidth and a server operator is the one who pays it.
+        /// See configuration.md, Replicating temperatures.
+        /// </summary>
+        [ProtoMember(123)] public bool EnableTemperatureSync = true;
+
+        /// <summary>
+        /// Seconds between band updates, once a client has been told the whole hull.
+        /// See <see cref="Core.HotTailSchedule.DefaultIntervalSeconds"/> for why five.
+        /// </summary>
+        [ProtoMember(124)] public float TemperatureSyncInterval = 5f;
 
         // ---- telemetry ---------------------------------------------------------------------
 
@@ -393,9 +508,44 @@ namespace Thermodynamics
             return s;
         }
 
+        /// <summary>
+        /// Carries a world saved with the old fluid-coupling dial onto the new one.
+        ///
+        /// <para>
+        /// `LoopConductivity` was a 0…1 quality that the loop multiplied by 200 W/(m·K) and divided
+        /// by half a cell; on a large grid that came to 160 W/(m²·K), which is what
+        /// <see cref="LoopHeatTransferCoefficient"/> now holds directly
+        /// directly. A world that moved the old dial gets the
+        /// same *relative* change on the new one, and the legacy field is spent so a later load
+        /// does not apply it twice.
+        /// </para>
+        ///
+        /// <para>
+        /// A world saved after the change carries −1 there and is left alone, which is also what a
+        /// new world has.
+        /// </para>
+        /// </summary>
+        private void MigrateLoopCoupling()
+        {
+            if (LegacyLoopConductivity < 0f) return;
+
+            LoopHeatTransferCoefficient = LegacyLoopConductivity * ShippedLoopCoefficient;
+            LegacyLoopConductivity = -1f;
+        }
+
+        /// <summary>What the old quality of one came to on a large grid, W/(m²·K).</summary>
+        private const float ShippedLoopCoefficient = 160f;
+
         private void Clamp()
         {
+            MigrateLoopCoupling();
+
             if (Frequency < 1) Frequency = 1;
+
+            // A zero or negative interval would stop the band without stopping the join packet,
+            // which is a half-working protocol that reports as working. EnableTemperatureSync is
+            // the way to turn it off.
+            if (TemperatureSyncInterval < 0.5f) TemperatureSyncInterval = 0.5f;
             if (SimulationSpeed <= 0f) SimulationSpeed = 1f;
             if (HeatTimeScale <= 0f) HeatTimeScale = 1f;
             if (MaxElementVisitsPerStep < 0) MaxElementVisitsPerStep = 0;
@@ -570,6 +720,7 @@ namespace Thermodynamics
             core.EnableFriction = EnableFriction;
             core.EnableDamage = EnableDamage;
             core.EnableCoolantLoops = EnableCoolantLoops;
+            core.WellMixedCoolant = WellMixedCoolant;
             core.EnableRoomAir = EnableRoomAir;
             core.EnableHeatPumps = EnableHeatPumps;
 
@@ -633,7 +784,7 @@ namespace Thermodynamics
         {
             "DebugTextOnScreen", "DebugSolarRaycast", "DebugWindRaycast", "DebugBlockOverlay",
             "DebugWindOverlay", "DebugWindIndicator", "DebugOverlayMaxBoxes",
-            "HeatGlow", "HeatWarningSound",
+            "HeatGlow", "HeatWarningSound", "HeatTerminalPanel",
         };
 
         /// <summary>
@@ -650,7 +801,7 @@ namespace Thermodynamics
                 "SolarOcclusionVoxels", "SolarGridShadows",
                 "SolarOcclusionSamples",
                 "EnableHeatSources", "EnableWasteHeat", "EnablePlanets",
-                "EnableFriction", "EnableDamage", "EnableCoolantLoops", "EnableRoomAir",
+                "EnableFriction", "EnableWind", "EnableDamage", "EnableCoolantLoops", "EnableRoomAir",
                 "EnableHeatPumps",
                 "ClampConductionOvershoot", "ClampEnvironmentOvershoot", "DamageIsPerSecond",
                 "Frequency", "SimulationSpeed", "HeatTimeScale", "MaxElementVisitsPerStep",
@@ -667,12 +818,13 @@ namespace Thermodynamics
                 "DebugTextOnScreen", "DebugSolarRaycast", "DebugWindRaycast",
                 "DebugBlockOverlay", "DebugWindOverlay", "DebugWindIndicator",
                 "DebugOverlayMaxBoxes",
-                "HeatGlow", "HeatWarningSound",
+                "HeatGlow", "HeatWarningSound", "HeatTerminalPanel",
                 "RoomOverlayMinKelvin", "RoomOverlayMaxKelvin",
+                "EnableTemperatureSync", "TemperatureSyncInterval", "ParallelGrids",
                 "EnableTelemetry", "TelemetrySampleStride", "TelemetryPlanetProbes",
 
                 "LoopLargeGridFlowRate", "LoopSmallGridFlowRate", "LoopCoolantMassPerPipe",
-                "LoopSpecificHeat", "LoopConductivity", "LoopPipeContactMultiplier",
+                "LoopSpecificHeat", "LoopHeatTransferCoefficient", "LoopPipeContactMultiplier",
                 "LoopSinkContactMultiplier", "LoopStagnantTransferFraction",
 
                 "PlanetDayTemperature", "PlanetNightTemperature", "PlanetPoleTemperatureDrop",
@@ -705,6 +857,7 @@ namespace Thermodynamics
                 case "EnableWasteHeat": return Flag(EnableWasteHeat);
                 case "EnablePlanets": return Flag(EnablePlanets);
                 case "EnableFriction": return Flag(EnableFriction);
+                case "EnableWind": return Flag(EnableWind);
                 case "EnableDamage": return Flag(EnableDamage);
                 case "EnableCoolantLoops": return Flag(EnableCoolantLoops);
                 case "EnableRoomAir": return Flag(EnableRoomAir);
@@ -750,15 +903,19 @@ namespace Thermodynamics
                 case "DebugWindOverlay": return DebugWindOverlay;
                 case "DebugWindIndicator": return Flag(DebugWindIndicator);
                 case "HeatGlow": return Flag(HeatGlow);
+                case "HeatTerminalPanel": return Flag(HeatTerminalPanel);
                 case "HeatWarningSound": return Flag(HeatWarningSound);
                 case "RoomOverlayMinKelvin": return RoomOverlayMinKelvin;
                 case "RoomOverlayMaxKelvin": return RoomOverlayMaxKelvin;
+                case "EnableTemperatureSync": return Flag(EnableTemperatureSync);
+                case "ParallelGrids": return Flag(ParallelGrids);
+                case "TemperatureSyncInterval": return TemperatureSyncInterval;
                 case "EnableTelemetry": return Flag(EnableTelemetry);
                 case "TelemetrySampleStride": return TelemetrySampleStride;
                 case "TelemetryPlanetProbes": return TelemetryPlanetProbes;
 
                 case "LoopCoolantMassPerPipe": return LoopCoolantMassPerPipe;
-                case "LoopConductivity": return LoopConductivity;
+                case "LoopHeatTransferCoefficient": return LoopHeatTransferCoefficient;
                 case "LoopSpecificHeat": return LoopSpecificHeat;
                 case "LoopPipeContactMultiplier": return LoopPipeContactMultiplier;
                 case "LoopSinkContactMultiplier": return LoopSinkContactMultiplier;
@@ -806,6 +963,7 @@ namespace Thermodynamics
                 case "EnableWasteHeat": EnableWasteHeat = Flag(value); return true;
                 case "EnablePlanets": EnablePlanets = Flag(value); return true;
                 case "EnableFriction": EnableFriction = Flag(value); return true;
+                case "EnableWind": EnableWind = Flag(value); return true;
                 case "EnableDamage": EnableDamage = Flag(value); return true;
                 case "EnableCoolantLoops": EnableCoolantLoops = Flag(value); return true;
                 case "EnableRoomAir": EnableRoomAir = Flag(value); return true;
@@ -859,13 +1017,17 @@ namespace Thermodynamics
                 case "DebugOverlayMaxBoxes": DebugOverlayMaxBoxes = (int)value; return true;
                 case "DebugWindIndicator": DebugWindIndicator = Flag(value); return true;
                 case "HeatGlow": HeatGlow = Flag(value); return true;
+                case "HeatTerminalPanel": HeatTerminalPanel = Flag(value); return true;
                 case "HeatWarningSound": HeatWarningSound = Flag(value); return true;
+                case "EnableTemperatureSync": EnableTemperatureSync = Flag(value); return true;
+                case "ParallelGrids": ParallelGrids = Flag(value); return true;
+                case "TemperatureSyncInterval": TemperatureSyncInterval = value; return true;
                 case "EnableTelemetry": EnableTelemetry = Flag(value); Telemetry.SetEnabled(EnableTelemetry); return true;
                 case "TelemetrySampleStride": TelemetrySampleStride = (int)value; return true;
                 case "TelemetryPlanetProbes": TelemetryPlanetProbes = (int)value; return true;
 
                 case "LoopCoolantMassPerPipe": LoopCoolantMassPerPipe = value; return true;
-                case "LoopConductivity": LoopConductivity = value; return true;
+                case "LoopHeatTransferCoefficient": LoopHeatTransferCoefficient = value; return true;
                 case "LoopSpecificHeat": LoopSpecificHeat = value; return true;
                 case "LoopPipeContactMultiplier": LoopPipeContactMultiplier = value; return true;
                 case "LoopSinkContactMultiplier": LoopSinkContactMultiplier = value; return true;

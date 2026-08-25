@@ -7,9 +7,14 @@ namespace Thermodynamics.Harness
     /// <summary>
     /// Stand-in block definitions for scenarios and tests.
     ///
-    /// Masses are approximations of the real Space Engineers blocks and thermal properties mirror
-    /// Data/Cubes.xml. They exist so scenarios behave plausibly, not so results can be quoted as
-    /// exact in-game numbers.
+    /// **The six blocks that stand in for vanilla ones are derived from them**, through
+    /// <see cref="Vanilla"/>'s transcribed build costs and the shipped derivation: same size, same
+    /// mass, same thermal properties a player's block has. They were hand-typed approximations
+    /// until backlog.md `C4`, and four of the six were out by more than
+    /// five per cent — so a scenario temperature was quoted off a block nobody had compared with
+    /// the thing it mirrors.
+    ///
+    /// The rest — the mod's own hardware and the shaped rigs — are still written here, and say so.
     ///
     /// Specific heat is in real J/(kg K), as it is in the definitions: steel 450, copper 385,
     /// aluminium 900. The playable pace comes from <see cref="ThermalSettings.HeatTimeScale"/>,
@@ -72,6 +77,15 @@ namespace Thermodynamics.Harness
             };
         }
 
+        /// <summary>
+        /// A reactor-flavoured material preset: graphite-shielded steel, rated to 1,200 K.
+        ///
+        /// **Not what a scenario reactor is made of any more** — `Catalog.Reactor()` derives from
+        /// the block it stands in for (backlog.md `C4`). This is kept for
+        /// the rigs that want *a hot-rated block* rather than a reactor: a heater with a fraction
+        /// of one, a profile sweep's source, a block with no rating. Its waste fractions are the
+        /// preset's own and describe nothing that ships.
+        /// </summary>
         public static BlockThermalProperties ReactorThermal()
         {
             BlockThermalProperties t = RawDefault();
@@ -81,19 +95,6 @@ namespace Thermodynamics.Harness
             t.ProducerWasteEnergy = 0.25f;
             t.ConsumerWasteEnergy = 0.25f;
             t.CriticalTemperature = 1200f;
-            t.OverheatDamagePerKelvin = 0.25f;
-            return Apply(t);
-        }
-
-        public static BlockThermalProperties ThrusterThermal()
-        {
-            BlockThermalProperties t = RawDefault();
-            t.Conductivity = 50f;      // steel and nickel alloy
-            t.SpecificHeat = 450f;     // steel and nickel alloy
-            t.Emissivity = 0.15f;
-            t.ProducerWasteEnergy = 0f;
-            t.ConsumerWasteEnergy = 0.25f;
-            t.CriticalTemperature = 1050f;
             t.OverheatDamagePerKelvin = 0.25f;
             return Apply(t);
         }
@@ -124,9 +125,41 @@ namespace Thermodynamics.Harness
 
         // ---- blocks -----------------------------------------------------------------------
 
+        /// <summary>
+        /// A stand-in built from the block it stands in for: `Vanilla`'s transcribed size and mass,
+        /// and the thermal properties the shipped derivation gives that build cost.
+        ///
+        /// <para>
+        /// **This is what closed backlog.md `C4`.** The six stand-ins were
+        /// hand-typed approximations and four of them were out by more than five per cent — the
+        /// large thruster by 4.32x, the battery by 3.70x because it carried the *small-grid*
+        /// battery's mass under a large-grid name — while `Catalog.ReactorThermal` said a quarter
+        /// of a reactor's output becomes heat against the shipped hundredth. Every scenario in this
+        /// repository is built out of these, so every scenario temperature was quoted off numbers
+        /// nobody had compared with the blocks they mirror.
+        /// </para>
+        ///
+        /// <para>
+        /// The name is kept as the catalogue's rather than the game's, because scenarios, dumps and
+        /// pinned claims are keyed on it and a rename is a second change (`M6`).
+        /// </para>
+        /// </summary>
+        private static BlockModel From(string name, string subtype)
+        {
+            Vanilla.Block real = Vanilla.Find(subtype);
+            if (real == null)
+            {
+                throw new InvalidOperationException(
+                    "the catalogue stands in for " + subtype + ", which Vanilla.Reference does not"
+                    + " carry — add the row there rather than hand-typing a mass here");
+            }
+
+            return BlockModel.Solid(name, real.Size, real.Mass, Apply(real.Thermal));
+        }
+
         public static BlockModel LightArmor()
         {
-            return BlockModel.Solid("LightArmorBlock", Vector3I.One, 500f, DefaultThermal());
+            return From("LightArmorBlock", "LargeBlockArmorBlock");
         }
 
         /// <summary>
@@ -147,27 +180,27 @@ namespace Thermodynamics.Harness
 
         public static BlockModel HeavyArmor()
         {
-            return BlockModel.Solid("HeavyArmorBlock", Vector3I.One, 3300f, DefaultThermal());
+            return From("HeavyArmorBlock", "LargeHeavyBlockArmorBlock");
         }
 
         public static BlockModel Reactor()
         {
-            return BlockModel.Solid("SmallReactor", Vector3I.One, 3000f, ReactorThermal());
+            return From("SmallReactor", "LargeBlockSmallGenerator");
         }
 
         public static BlockModel LargeReactor()
         {
-            return BlockModel.Solid("LargeReactor", new Vector3I(3, 3, 3), 52000f, ReactorThermal());
+            return From("LargeReactor", "LargeBlockLargeGenerator");
         }
 
         public static BlockModel Battery()
         {
-            return BlockModel.Solid("Battery", Vector3I.One, 1040f, DefaultThermal());
+            return From("Battery", "LargeBlockBatteryBlock");
         }
 
         public static BlockModel Thruster()
         {
-            return BlockModel.Solid("LargeThruster", new Vector3I(3, 3, 4), 10000f, ThrusterThermal());
+            return From("LargeThruster", "LargeBlockLargeThrust");
         }
 
         /// <summary>The shipped radiator: 1x5x2, mounts only on top and bottom.</summary>

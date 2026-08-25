@@ -14,7 +14,7 @@ namespace Thermodynamics.Tests
     /// </para>
     ///
     /// <para>
-    /// The cap tables in [stiffness.md](../../docs/stiffness.md) were taken at <c>Frequency 4</c>
+    /// The cap tables in stiffness.md were taken at <c>Frequency 4</c>
     /// and read for a year as if they described the shipped default, which had moved to
     /// <c>Frequency 8</c>. Every speed-up on the page was therefore about twice what a default
     /// world would see, and the backlog item arguing for a shipped cap was reasoned from it. The
@@ -27,6 +27,7 @@ namespace Thermodynamics.Tests
     /// checked on every run.
     /// </para>
     /// </summary>
+    [Trait("speed", "slow")]
     public class SubstepScaleTests
     {
         private static ThermalSimulation Hull(int frequency, int cap = 0, int blocks = 4000)
@@ -91,9 +92,12 @@ namespace Thermodynamics.Tests
         /// which is exactly the alignment the two corrected tables in stiffness.md show, row for
         /// row, one cap apart. Reading either table without its rate slides the whole column.
         /// </summary>
+        // **Only the caps that still bind.** The pair is what the test is about, and a cap that
+        // raises nothing at both rates makes the two sides agree on zero — which `C26` did to the
+        // top of this ladder: the census hull's stiffest tier used to demand 18 substeps at
+        // `Frequency` 8 and demands 3.24 now that its light fittings mount on one face rather than
+        // six, like the block they stand for. Caps of 4 and 8 are inert on it.
         [Theory]
-        [InlineData(8, 16)]
-        [InlineData(4, 8)]
         [InlineData(2, 4)]
         [InlineData(1, 2)]
         public void ACapMeansTheSameFloorAtTwiceTheRateAndTwiceTheCap(int fastCap, int slowCap)
@@ -116,11 +120,19 @@ namespace Thermodynamics.Tests
         /// <summary>
         /// A cap only binds below what the grid would have asked for anyway, so the same cap is a
         /// different thing at different rates: at the shipped eighth-second step the census hull
-        /// asks for about eleven substeps, and a cap of sixteen is inert.
+        /// asks for 18.38 substeps, and a cap of thirty-two is inert.
         ///
+        /// <para>
         /// This is the one that would have caught the reading directly. The old page credited
-        /// `MaxSubstepsPerBlock 16` with removing 172 blocks' worth of stiffness; at the default
-        /// rate it removes none, because the hull never asks for sixteen.
+        /// `MaxSubstepsPerBlock 16` with removing 172 blocks' worth of stiffness; at the rate that
+        /// shipped then it removed none, because the hull asked for about eleven. **The hull has
+        /// been past sixteen and back**: `C24` took it there — four times the conduction pace
+        /// against two and a half times the capacity — and `C26` brought it to **3.24**, because
+        /// its light fittings now mount on one face like the block they stand for rather than on
+        /// six. The inert case is a cap of 4. The demand is asserted rather than assumed, so the
+        /// next time the hull crosses a cap this fails rather than passing on a cap that quietly
+        /// started working.
+        /// </para>
         /// </summary>
         [Fact]
         public void ACapAboveWhatTheHullAsksForDoesNothingAtTheShippedRate()
@@ -128,11 +140,9 @@ namespace Thermodynamics.Tests
             ThermalSimulation uncapped = Hull(8);
             float demand = Demand(uncapped);
 
-            Assert.True(demand < 16f, "the census hull asks for " + demand.ToString("n2")
-                + " substeps at the shipped Frequency 8, so a cap of 16 is not the inert case this"
-                + " test was written around and the reasoning below needs redoing");
+            Assert.InRange(demand, 2f, 4f);
 
-            ThermalSimulation capped = Hull(8, 16);
+            ThermalSimulation capped = Hull(8, 4);
 
             Assert.Equal(demand, Demand(capped), 3);
             Assert.Equal(0, capped.Solver.FlooredNodes);

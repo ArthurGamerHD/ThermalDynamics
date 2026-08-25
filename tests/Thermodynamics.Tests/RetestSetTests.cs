@@ -28,18 +28,17 @@ namespace Thermodynamics.Tests
         [Fact]
         public void TheRetestSetIsReadableAndCarriesAPathPerShip()
         {
-            List<string[]> rows = ConductanceRetestWalk.Rows();
+            List<ShipSet.Entry> rows = ShipSet.Read("THERMAL_RETEST", "tools/corpus/typical.csv");
             Assert.True(rows.Count > 0,
                 "tools/corpus/typical.csv is missing or empty; rebuild it with typical.py");
 
             Assert.Equal(40, rows.Count);
 
-            foreach (string[] fields in rows)
+            foreach (ShipSet.Entry entry in rows)
             {
-                Assert.True(fields.Length >= 3, "a retest row has no path column: " + fields[0]);
-                Assert.False(string.IsNullOrEmpty(fields[0]), "a retest row has no ship name");
-                Assert.False(string.IsNullOrEmpty(fields[2]),
-                    "retest ship '" + fields[0] + "' carries no blueprint path");
+                Assert.False(string.IsNullOrEmpty(entry.Name), "a retest row has no ship name");
+                Assert.False(string.IsNullOrEmpty(entry.Path),
+                    "retest ship '" + entry.Name + "' carries no blueprint path");
             }
         }
 
@@ -54,11 +53,12 @@ namespace Thermodynamics.Tests
             HashSet<string> large = new HashSet<string>(StringComparer.Ordinal);
             HashSet<string> bands = new HashSet<string>(StringComparer.Ordinal);
 
-            foreach (string[] fields in ConductanceRetestWalk.Rows())
+            foreach (ShipSet.Entry entry in
+                ShipSet.Read("THERMAL_RETEST", "tools/corpus/typical.csv"))
             {
-                if (fields.Length < 6) continue;
-                large.Add(fields[3]);
-                bands.Add(fields[3] + "/" + fields[4]);
+                if (entry.Fields.Length < 6) continue;
+                large.Add(entry.Fields[3]);
+                bands.Add(entry.Fields[3] + "/" + entry.Fields[4]);
             }
 
             Assert.Equal(2, large.Count);
@@ -90,19 +90,29 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// The pre-conversion table is the one the pre-conversion file held, and the calibration
-        /// point holds: mild steel comes out where it was, which is the whole reason the conversion
-        /// could be made without moving armour.
+        /// The pre-conversion table has the shape the pre-conversion file held — two conductances,
+        /// 200 over 120 apart — and the calibration point holds: mild steel comes out where the
+        /// flat world put every block, which is the whole reason the conversion could be made
+        /// without moving armour.
+        ///
+        /// **The pace is not part of the shape.** At the 2.4 the conversion was made at these read
+        /// 120 and 200 exactly; the shipped scale is 9.6 (`C24`) and both arms run at it, because
+        /// this retest is about flat against differentiated and a counterfactual left at the old
+        /// pace would report the retune instead (`P6`).
         /// </summary>
         [Fact]
-        public void ThePreConversionTableIsTheOneTheOldFileHeld()
+        public void ThePreConversionTableHasTheShapeTheOldFileHeld()
         {
-            Assert.Equal(120f, ConductanceRetest.PreDefault, 3);
-            Assert.Equal(200f, ConductanceRetest.PreBest, 3);
-
-            // Mild steel, the calibration point: 50 x 2.4 is exactly the old 0.6 x 200.
+            // Mild steel, the calibration point: the flat world is exactly where steel lands.
             Assert.Equal(ConductanceRetest.PreDefault,
                 ReferenceMaterials.MildSteel.Conductivity * ThermalConstants.ConductionScale, 3);
+
+            // And quality 1 is the same 200/120 above it that it always was.
+            Assert.Equal(200f / 120f, ConductanceRetest.PreBest / ConductanceRetest.PreDefault, 3);
+
+            // The figures the old file held, at the pace the conversion was calibrated at.
+            Assert.Equal(120f, ConductanceRetest.PreDefault * (2.4f / ThermalConstants.ConductionScale), 3);
+            Assert.Equal(200f, ConductanceRetest.PreBest * (2.4f / ThermalConstants.ConductionScale), 3);
 
             // The four families that were authored at quality 1, and nothing else.
             Assert.True(ConductanceRetest.WasBest("Thrust", "LargeBlockLargeThrust"));

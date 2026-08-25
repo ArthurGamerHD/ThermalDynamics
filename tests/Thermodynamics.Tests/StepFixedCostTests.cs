@@ -150,11 +150,17 @@ namespace Thermodynamics.Tests
             };
             settings.Derive();
 
-            // A three-hundred-kilogram fitting rather than armour, chosen so the floor is
-            // partial: heavier and nothing floors in either environment, lighter and everything
-            // floors in both, and a count that saturates cannot see which sample the floor read.
+            // A fitting rather than armour, at a mass chosen so the floor is partial: heavier and
+            // nothing floors in either environment, lighter and everything floors in both, and a
+            // count that saturates cannot see which sample the floor read.
+            //
+            // **It was 300 kg and `C24` saturated it.** Four times the conduction pace put every
+            // node of the rig over the floor's cap in vacuum as well as in air, so the count could
+            // not rise; 500 kg is where the window is now, and by 700 kg nothing floors in either.
+            // The mass is a property of the rig — what it has to be is between the two
+            // environments.
             BlockModel fitting = BlockModel.Solid(
-                "Fitting", Vector3I.One, 300f, Catalog.DefaultThermal());
+                "Fitting", Vector3I.One, 500f, Catalog.DefaultThermal());
 
             GridBuilder builder = GridBuilder.Large();
             builder.Fill(fitting, Vector3I.Zero, new Vector3I(6, 2, 2));

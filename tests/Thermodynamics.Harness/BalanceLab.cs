@@ -155,11 +155,11 @@ namespace Thermodynamics.Harness
         /// <summary>
         /// A one-cell block that turns every watt it draws into heat.
         ///
-        /// <see cref="Catalog.Reactor"/> carries the shipped reactor's 0.25 waste fraction, so
-        /// driving it with 200 kW puts 50 kW into the ship. That is correct for a scenario asking
-        /// what a reactor does, and quietly wrong for a table whose rows are labelled in watts:
-        /// every figure would be a quarter of its heading. This block has a fraction of one, so a
-        /// load of 200 kW is 200 kW of heat and the labels need no asterisk.
+        /// <see cref="Catalog.Reactor"/> wastes what the shipped reactor wastes — a hundredth of
+        /// what it makes — so driving it with 200 kW would put 2 kW into the ship. That is correct
+        /// for a scenario asking what a reactor does, and useless for a table whose rows are
+        /// labelled in watts: every figure would be a hundredth of its heading. This block has a
+        /// fraction of one, so a load of 200 kW is 200 kW of heat and the labels need no asterisk.
         /// </summary>
         public static BlockModel Heater()
         {

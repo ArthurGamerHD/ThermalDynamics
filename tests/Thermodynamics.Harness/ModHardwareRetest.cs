@@ -39,8 +39,17 @@ namespace Thermodynamics.Harness
         /// <summary>Simulated seconds each rig is run for. Long enough for a stack to saturate.</summary>
         private const float Seconds = 14400f;
 
-        /// <summary>Watts the source makes. A large reactor at plate rating.</summary>
-        public const float SourceWatts = 300000f;
+        /// <summary>
+        /// Watts of *heat* the source puts into the rig.
+        ///
+        /// Stated as heat rather than as a reactor's output, because the rig is about what the
+        /// cooling hardware does with a load and not about what a reactor wastes — and while it was
+        /// stated as output it was quietly a quarter of it, on a catalogue reactor that wasted
+        /// twenty-five times what the shipped one does (backlog.md `C4`).
+        /// 75 kW is what the old 300 kW at that fraction actually delivered, so the rigs carry the
+        /// same load they always did.
+        /// </summary>
+        public const float SourceWatts = 75000f;
 
         /// <summary>One rig in one world.</summary>
         public class Row
@@ -73,10 +82,21 @@ namespace Thermodynamics.Harness
         /// </summary>
         public static Row RadiatorStack(int count, bool preConversion)
         {
+            return RadiatorStack(count, preConversion, SourceWatts);
+        }
+
+        /// <summary>
+        /// The same rig at a stated load, so a test can run the control: in shadow with nothing
+        /// making heat the whole stack falls to the sky, which is what makes "the source settled
+        /// at 272 K" a statement about the load rather than about where it started (`E8`).
+        /// </summary>
+        public static Row RadiatorStack(int count, bool preConversion, float watts)
+        {
             BlockModel radiator = Cooler(Catalog.Radiator, preConversion);
 
             GridBuilder builder = GridBuilder.Large();
-            builder.Place(Catalog.LargeReactor(), Vector3I.Zero).Producing(SourceWatts);
+            builder.Place(Catalog.LargeReactor(), Vector3I.Zero);
+            if (watts > 0f) builder.Wasting(watts);
             BlockInstance source = builder.Last;
 
             int height = 3;
@@ -125,7 +145,7 @@ namespace Thermodynamics.Harness
             }
 
             builder.Place(Catalog.LargeReactor(), cells[2] + Vector3I.Down * 3)
-                .Producing(SourceWatts);
+                .Wasting(SourceWatts);
             BlockInstance source = builder.Last;
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);

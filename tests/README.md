@@ -40,12 +40,17 @@ debugged in seconds instead of by loading a world.
 | `Thermodynamics.Harness` | Synthetic block catalogue, grid builder, canned environments, scenario library. |
 | `Thermodynamics.Sim` | Command line front end for the scenarios. |
 | `Thermodynamics.Tests` | xUnit suite. |
+| `../Generic.csproj` | The mod's own compile check, and **not** part of the isolated environment. It is in the solution so that building the solution compiles every file the game compiles; see [rules.md](../docs/rules.md) `C11`. It runs nothing and `dotnet test` skips it. |
 
 ## What makes it isolated
 
-The core references exactly one Space Engineers assembly: `VRage.Math.dll`, for `Vector3I`,
-`Vector3`, `Matrix` and `Base6Directions`. That is pure managed maths and loads fine on .NET on
-Linux. There is no `Sandbox.*`, no `VRage.Game`, no `MyAPIGateway`, no session, no entity.
+The four projects above reference exactly one Space Engineers assembly: `VRage.Math.dll`, for
+`Vector3I`, `Vector3`, `Matrix` and `Base6Directions`. That is pure managed maths and loads fine on
+.NET on Linux. There is no `Sandbox.*`, no `VRage.Game`, no `MyAPIGateway`, no session, no entity.
+
+The mod project is the exception and is deliberately outside this: it references the whole engine,
+targets `net48`, and exists to fail when the adapter no longer compiles. Nothing links against it
+and no test loads it.
 
 Everything the game would supply crosses one of three boundaries:
 
@@ -91,27 +96,82 @@ sufficient. See [development.md](../docs/development.md#repo-conventions) for th
 ```bash
 cd tests
 
-dotnet test                                    # the whole suite, under a minute
-dotnet test --filter "speed!=slow"             # the fast lane, about fifteen seconds
+dotnet test                                    # the whole suite, two and a half minutes
+dotnet test --filter "speed!=slow"             # the fast lane, six seconds
 dotnet run --project Thermodynamics.Sim -- list
 dotnet run --project Thermodynamics.Sim -- run reactor
 dotnet run --project Thermodynamics.Sim -- run all --csv out/
 ```
 
-If `VRage.Math.dll` is not found, point at your install:
+If the game's assemblies are not found, point at your install:
 
 ```bash
 SE_BIN=/path/to/SpaceEngineers/Bin64 dotnet test
 ```
 
-The probe order is `$SE_BIN`, the default Steam path, then the mod's own
-`bin/Release/net472` output.
+The probe order is `$SE_BIN`, the default Steam path on Linux, then the one on Windows, and it is
+in the repository's root [Directory.Build.props](../Directory.Build.props) because the mod project
+needs it too. If none of them resolves, the build says so by name.
 
-The nine scenario batteries — each stepping whole ships for tens of seconds — carry
-`[Trait("speed", "slow")]`; the fast lane is everything else. The suite spent months at five
-minutes because one test read the whole blueprint corpus on every run despite its own class's
-opt-in rule — 4 m 57 s of a 5 m 4 s suite. It is behind `THERMAL_CORPUS_TESTS` now, where the rest
-of its class already was.
+### The two lanes, and the rule that sorts them
+
+**A class costing more than about two seconds of the suite carries `[Trait("speed", "slow")]`; the
+fast lane is everything else.** That is a cost rule rather than a subject rule, and it is the second
+attempt: the first said *the scenario batteries, each stepping whole ships for tens of seconds*, and
+a subject rule only sorts the classes whose subject somebody remembered to look at.
+
+**It had rotted by a factor of fifteen and nothing noticed.** Measured 2026-08-24 on this machine,
+the fast lane was **3 m 45 s** — against the fifteen seconds this page claimed — because the labs
+built for `C24`, `C26`, `C27` and `D19` step whole hulls and none of them was tagged. One class,
+`ClientInputTests`, was 143 s of it on its own: twenty-eight tests, each a 480-second run of a
+1,004-node hull, and `C26` doubled that clock from 240 s the same week. Nineteen classes are tagged
+now and the fast lane is **4 s over 1,585 of the 1,884 cases** — 6, 4, 5 across three runs, so the
+figure is the fastest of three and the spread is two seconds (`M4`). It was 6 s over 1,554 of 1,852
+when the lanes were re-sorted on 2026-08-24, so twenty cases have been added and nothing has slowed
+down.
+
+*Nothing checks it*, and that is why it rotted. The honest check would be a class's own measured
+cost, which a test inside that class cannot read; the naming rule that looks available — *a class
+that drives a harness `…Lab`* — sorts the tree worse than the cost rule does, selecting eleven
+classes that cost nothing and missing `ShapeTests` and `ProfileSuiteTests`, which are the second and
+third most expensive things in the suite. So the rule is stated, the measurement is above, and the
+refresh is: take the durations, tag what crossed two seconds (`R11` — an unchecked rule is a hope,
+and marking it says so).
+
+**The whole suite is 2 m 34 s**, and the fast lane is what a change is iterated against. It was
+published here as 5 m 23 s until 2026-08-25 and had not been that for some time — the first
+measurement of the day, before anything was changed, was 2 m 55 s over the same 1,864 cases. The suite
+also spent months at five minutes for a different reason — one test read the whole blueprint corpus
+on every run despite its own class's opt-in rule, 4 m 57 s of a 5 m 4 s suite. It is behind
+`THERMAL_CORPUS_TESTS` now, where the rest of its class already was.
+
+### The suite runs eight at a time, and a few classes run alone
+
+`xunit.runner.json` sets `maxParallelThreads: 8`, and the classes that must not share a machine
+declare `[Collection("alone")]`: the opt-in corpus walks, and every test whose assertion is about
+elapsed time.
+
+**Eight rather than one per core, measured.** On this repository's 32-core machine, over the 1,825
+cases the suite held on 2026-08-24, it is **1 m 41 s at one worker, 38 s at eight, and 1 m 47 s at
+thirty-two** — one per core is no faster than serial, because the tests are memory-bound and
+thirty-two of them thrash each other's cache. *(The suite is 2 m 34 s now at the same eight workers:
+what grew is the work, not the scheduling. It is 550 s of test time against 323 s of wall clock, and
+the ceiling is one class — xUnit parallelises collections, a class is a collection, and
+`ClientInputTests` is 143 s of serial work inside one of them.)*
+That is the same effect, one rung up, that made the corpus walks need isolation in the first place:
+four walks across thirty-one workers ran seventeen times slower than one at a time, behind a 93 %
+CPU reading.
+
+Two things go in the collection. A **corpus walk** is already internally parallel over thousands of
+blueprints, so two of them at once are two thread pools competing for one memory bus;
+`EveryCorpusWalkDeclaresThatItRunsAlone` finds them by the one thing they all do, which is ask
+`CorpusFixture` for its files. A **wall-clock assertion** on a contended machine is measuring the
+other tests — `StaggerTests` compares two cache regimes a few per cent apart and its own noise guard
+caught it on the first parallel burn-in. Everything else runs beside everything else: each test
+builds its own grid and shares no mutable state with another.
+
+The rule is `O4` in [rules.md](../docs/rules.md); the row that asked for the narrowing is
+[backlog.md](../docs/backlog.md) `F8`.
 
 ## Scenarios
 
@@ -191,14 +251,14 @@ is what to run and where to read the answer.
 | `coolers` | Which block in the whole game is the best cooling in it, stacked one to thirty-two against the largest reactor at plate rating, in shadow? | `CoolingLadderTests` | [balance.md](../docs/balance.md#the-same-question-asked-of-the-whole-game) |
 | `reactors` | What fraction of a reactor's output should become heat, across three orders of magnitude of rating? Every vanilla reactor at six fractions and three loads, in two rigs — **bare** in shadow on a 2.7 K sky, and **skinned** under one cell of light armour. | `ReactorWasteHeatTests` | [balance.md](../docs/balance.md#reactor-waste-heat) |
 | `retrofit --ships 500 [--csv out/]` | Can cooling be fitted to ships people actually built? A real hull is parsed, run under load to find where its heat is, and the mod's blocks go into the cells that hull left free — bolted and plumbed. | `RetrofitTests` | [balance-lab.md](../docs/balance-lab.md#0-define-good-balance-before-collecting-anything) |
-| `stiffness [--csv out/]` | What does a ship's stiffest block demand of a step, asked of 8,102 workshop hulls rather than one save? Nothing is stepped: stiffness is a property of a built grid and the world it is asked about. | `DecorativeStiffnessTests` | [stiffness.md](../docs/stiffness.md#the-same-question-asked-of-eight-thousand-real-ships) |
+| `stiffness [--csv out/]` | What does a ship's stiffest block demand of a step, asked of 8,105 workshop hulls rather than one save? **Three minutes, and it is what re-baselines `Census.Corpus` whenever a default moves** — the cheapest way to ask a population anything. Nothing is stepped: stiffness is a property of a built grid and the world it is asked about. | `DecorativeStiffnessTests` | [stiffness.md](../docs/stiffness.md#the-same-question-asked-of-eight-thousand-real-ships) |
 
 ```bash
 dotnet run --project Thermodynamics.Sim -- balance --csv out/
 dotnet run --project Thermodynamics.Sim -- coolers
 dotnet run --project Thermodynamics.Sim -- reactors
 dotnet run --project Thermodynamics.Sim -- retrofit --ships 500 --csv out/
-dotnet run --project Thermodynamics.Sim -- stiffness --csv out/     # ~4 min
+dotnet run --project Thermodynamics.Sim -- stiffness --csv out/     # ~3 min
 ```
 
 Two things about how these read the world are the harness's business rather than the finding's.
@@ -310,10 +370,17 @@ dotnet run --project Thermodynamics.Sim -- bench weld  --size 125000   # a block
 dotnet run --project Thermodynamics.Sim -- bench hitch --size 125000   # per-tick distribution
 dotnet run --project Thermodynamics.Sim -- bench load  --size 1000000  # world load, before the first tick
 dotnet run --project Thermodynamics.Sim -- bench floor --size 42000    # what a per-block substep cap buys, and costs
+dotnet run --project Thermodynamics.Sim -- bench ceiling --size 4000    # what refusing a substep demand costs, in air
+dotnet run --project Thermodynamics.Sim -- bench ceiling --fixture rings # the same, where the plumbing sets the demand
+dotnet run --project Thermodynamics.Sim -- bench parallel --size 600    # one grid per thread: does a fleet pay for it
+dotnet run --project Thermodynamics.Sim -- bench surface                # what a selective surface on the radiator is worth
+dotnet run --project Thermodynamics.Sim -- bench stagger --size 600     # whole steps against spread ones: what locality costs
 dotnet run --project Thermodynamics.Sim -- bench steppath              # a step at the solver, against a step through the host
 dotnet run --project Thermodynamics.Sim -- bench smallgrids            # what one grid costs before any of its blocks do
 dotnet run --project Thermodynamics.Sim -- bench wattsclear            # what zeroing the watts row costs, up a size ladder
 dotnet run --project Thermodynamics.Sim -- bench rowfill               # what the first substep of a step pays over a later one
+dotnet run --project Thermodynamics.Sim -- bench allowance             # what the element-visit allowance costs, and what it buys
+dotnet run --project Thermodynamics.Sim -- bench franken --size 1000000  # a million-block grid welded out of real workshop ships
 dotnet run --project Thermodynamics.Sim -- bench floor --frequency 4   # the substep cap swept; the rate is part of the answer
 dotnet run --project Thermodynamics.Sim -- bench report --csv benchmarks              # the full report
 dotnet run --project Thermodynamics.Sim -- bench report --baseline benchmarks/performance.csv   # and the diff
@@ -331,6 +398,8 @@ dotnet run --project Thermodynamics.Sim -- bench report --baseline benchmarks/pe
 | `coolant` | The segmented fluid model against the well-mixed one it replaced, on the same grid, at rising amounts of pipe. |
 | `steppath` | The same step driven straight at the solver and then through the host's entry point, at three substep caps. Everything else here drives the solver, so work the host does around a step is invisible to it — which is how a duplicate stability estimate survived a section written to attribute fixed cost. Both timed runs re-seed the temperature spread; conduction skips a link whose ends agree, so whichever runs second on a flatter grid reads cheaper for no reason but its order. |
 | `smallgrids` | A 200-grid fleet swept from one block a grid upwards, each row run whole, again paced the way the host drives it, and a third time on a zero-length frame to measure the per-grid visit on its own. The report's fleet rows stop at eight hundred blocks a grid because that is the smallest the ship generator builds; a real world is mostly smaller than that, and the per-grid fixed cost is what decides its price. Phases alternate order between repeats — whichever ran second inherited a settled grid and read five times faster than the phase it is a superset of. |
+| `franken` | A single grid of a target size welded out of real workshop ships — the corpus's largest, tiled on a lattice until they add up. **No published blueprint is a million blocks** (the largest of 8,132 is 641,711 and p99 is 70,141), so every figure this repository has at the scale bound was taken on census tiers dealt into a shape. This measures it on a real block mixture instead, which is the thing a synthetic ladder cannot invent. Not a population sample and not readable as one: it is the biggest ships there are, repeated. `--ships` points at a survey's `ships.csv`, which is where the paths come from. |
+| `allowance` | `MaxElementVisitsPerStep` swept across grid size and world, through the host's frame-paced entry point — the one path where the bound is in force, so it is the only benchmark that can see it at all. Reports what each allowance costs a frame beside the share of real time the grid keeps, and converts the second into kelvin off a ladder of clock errors run through `ClientInputLab`'s own slow-clock mechanism rather than extrapolated from `F23`'s single point. A deficit past the last measured rung is printed with a `>` rather than answered. |
 | `floor` | `MaxSubstepsPerBlock` swept: what each cap does to the substep count and the clock, how many blocks it moves, and how far it moves them. Builds from the block census, because the population's *shape* is what decides how far a cap reaches. |
 
 `--shape ship|cube|truss` picks the shape, `--max N` stops the ladder early, `--ticks N` sets the
@@ -427,7 +496,7 @@ PipeFitter.BuildRing(builder, ring);      // pump goes on the first straight run
 
 ## Test coverage
 
-1,560 tests. **What each class is for is stated in its own summary, not here** —
+1,829 tests. **What each class is for is stated in its own summary, not here** —
 the index below says where to look, and `EveryTestClassSaysWhatItIsFor` fails when a class arrives
 without saying. This table is checked by `EveryTestClassIsInTheIndex`, so a suite cannot be added
 and left off it.
@@ -435,22 +504,22 @@ and left off it.
 | Subject | Suites |
 | --- | --- |
 | **Block geometry and the grid model** | `FaceTests` `BoxGeometryTests` `GridMathTests` `CellBitsetTests` `BlockOrientationTests` `BlockInstanceTests` `GridModelTests` `BlockSurfaceBuilderTests` `Se2LatticeTests` `ShapeTests` |
-| **Surfaces, rooms and air** | `SurfaceMapTests` `RoomMapperTests` `DoorSealingTests` `RoomPortalTests` `IncrementalRoomTests` `RoomMapCompletionTests` `RoomCellStorageTests` `RoomAuditTests` `UnmappedRoomTests` `RoomAirTests` `RoomAirCouplingTests` `RoomPressureTests` `RoomAirPressureTests` `ExposureAuditTests` |
-| **Conduction and the integrator** | `ConductionTests` `StabilityTests` `ConductionClampGateTests` `CoupledConductanceCacheTests` `SubstepDemandTests` `SubstepFloorTests` `SubstepScaleTests` `HeatTimeScaleTests` |
+| **Surfaces, rooms and air** | `SurfaceMapTests` `RoomMapperTests` `DoorSealingTests` `RoomPortalTests` `IncrementalRoomTests` `RoomMapFreezeTests` `RoomMapCompletionTests` `RoomCellStorageTests` `RoomAuditTests` `UnmappedRoomTests` `RoomAirTests` `RoomAirCouplingTests` `RoomPressureTests` `RoomAirPressureTests` `ExposureAuditTests` |
+| **Conduction and the integrator** | `ConductionTests` `StabilityTests` `ConductionClampGateTests` `CoupledConductanceCacheTests` `NodeIndexTests` `FacePackingTests` `SubstepDemandTests` `SubstepFloorTests` `SubstepCeilingTests` `SubstepScaleTests` `HeatTimeScaleTests` |
 | **Environment: air, climate, weather** | `EnvironmentSolverTests` `RadiationTests` `ConvectionSolarFrictionTests` `FrictionIsolationTests` `ClimateModelTests` `GroundRoughnessTests` `DayLengthTests` `WeatherAndDepthTests` `UndergroundContactTests` `PlanetThermalTests` `PlanetReferenceTests` `PlanetPropertyMergeTests` `DescentTests` |
 | **Sun, shadow and occlusion** | `SunShadowMapTests` `SolarSelfShadowingTests` `SunLitSliceTests` `SolarOcclusionTests` `SolarOcclusionSamplerTests` `OcclusionLadderTests` `OcclusionMathTests` `SolarSymmetryTests` `GridShadowTests` `TerrainHorizonTests` `SelfShadowScenarioTests` `FaceWeightPairingTests` |
 | **Wind** | `WindFieldTests` `WindProfileTests` `GradientHeightTests` `WindSlopeTests` `WindTerrainTests` `WindCompassTests` `StormHeatingTests` `WindScenarioTests` `WindSolverContractTests` `WindLabTests` |
 | **Heat sources, damage and thresholds** | `HeatGenerationTests` `DamageTests` `CriticalTemperatureTests` `CriticalTemperatureMirrorTests` `OverheatEventTests` `SuitThermalTests` `IncandescenceTests` `HeatWarningTests` `HeatCueScanTests` `ThresholdTests` `HeatSourceTests` `HeatSourceMathTests` `HeatSourceCommandTests` `CustomHeatSourceTests` `MultiCellAndDamageTests` `ReactorWasteHeatTests` `GridHeatBalanceTests` `HottestNodeTests` `GlowGeometryTests` |
 | **Coolant loops and heat pumps** | `CoolantLoopTests` `PumpPowerTests` `CoolantFlowTests` `CoolantFaultTests` `PipeFitterTests` `HeatPumpTests` `CoolingScenarioClaimTests` |
-| **What a step costs, and what it must not change** | `LoadTests` `StepBudgetTests` `StepFixedCostTests` `StepPacingTests` `StepTermsTests` `SpreadStepTests` `PaceEquivalenceTests` `SweepSliceTests` `BufferGrowthTests` `IncrementalTopologyTests` `BlockRefreshTests` `CostRollupTests` `SolverReportingTests` `StressFindingsTests` |
+| **What a step costs, and what it must not change** | `LoadTests` `StepBudgetTests` `AllowanceTests` `StepWorkUnitTests` `PairedRunTests` `FrankenHullTests` `StepFixedCostTests` `StepPacingTests` `StepTermsTests` `SpreadStepTests` `StaggerTests` `PaceEquivalenceTests` `SweepSliceTests` `BufferGrowthTests` `IncrementalTopologyTests` `BlockRefreshTests` `CostRollupTests` `SolverReportingTests` `StressFindingsTests` |
 | **Bit-identity: an optimisation against what it replaced** | `PrecomputedEnvironmentTests` `FixedSourceRowTests` `WattsClearFusionTests` `ConductionClampGateTests` `DiagnosticBatchingTests` |
-| **Settings, storage and definitions** | `SettingsTests` `SettingsDefaultsTests` `SettingsWiringTests` `ValidationReportingTests` `StorageCodecTests` `SchedulerTests` `DefinitionTests` `DefinitionFileTests` `ShippedDefinitionTests` `AuthoredMaterialTests` `BlockDerivationTests` `SolarAbsorptivityTests` `MaterialOverrideTests` `FeatureToggleTests` `DefaultSettingsTests` `ProfileSuiteTests` `WorldSettingsTests` |
+| **Settings, storage and definitions** | `SettingsTests` `SettingsDefaultsTests` `SettingsWiringTests` `ValidationReportingTests` `StorageCodecTests` `SchedulerTests` `DefinitionTests` `DefinitionFileTests` `ShippedDefinitionTests` `AuthoredMaterialTests` `AuthoredWasteTests` `BlockDerivationTests` `SolarAbsorptivityTests` `SelectiveSurfaceTests` `MaterialOverrideTests` `FeatureToggleTests` `DefaultSettingsTests` `ProfileSuiteTests` `ProfileClockTests` `WorldSettingsTests` |
 | **Readouts a player sees** | `TemperatureScaleTests` `UnitsTests` |
 | **Telemetry, reports and overlays** | `RunningStatTests` `HistogramTests` `TimingStatTests` `TelemetryFormatTests` `TelemetryAnomalyTests` `SampleGateTests` `GridHealthTests` `AnomalyRegistryTests` `FrameCostTests` `ProfilerTests` `RescanGateTests` `OverlayBudgetTests` `PerformanceReportTests` `BenchmarkBaselineTests` |
 | **Field dumps: the mod checked against a world** | `DumpAuditTests` `FieldDumpTests` `CensusFidelityTests` |
-| **End to end, and the host boundary** | `SimulationIntegrationTests` `ScenarioTests` `ScenarioClaimTests` `HostAdapterTests` `CoreIsolationTests` |
-| **Balance, and the ships it is decided on** | `BalanceTests` `CoolingLadderTests` `RetrofitTests` `BlockHeatIndexTests` `TimeToLossTests` `CatalogDriftTests` `ModHardwareRetestTests` `RetestSetTests` `DecorativeStiffnessTests` `ElementCostFitTests` `ScreeningTests` `BlueprintTests` `SubgridBridgeTests` `PrefabWalk` `CorpusGuardTests` `CorpusArchiveTests` `ClientDriftTests` `WorstCaseTests` `LabRunTests` `LabInvariantTests` |
-| **Corpus walks** (opt-in, `THERMAL_CORPUS_TESTS`) | `CorpusSurvey` `CorpusCensus` `KnobSweep` `ConductanceRetestWalk` `SunlightPanelWalk` `BlockAccountingWalk` `DeterminismWalk` |
+| **End to end, and the host boundary** | `SimulationIntegrationTests` `ScenarioTests` `ScenarioClaimTests` `HostAdapterTests` `CoreIsolationTests` `FleetParallelTests` `ParallelTickTests` |
+| **Balance, and the ships it is decided on** | `BalanceTests` `CoolingLadderTests` `RetrofitTests` `BlockHeatIndexTests` `HandCoolingTests` `BuildCostTests` `GlowChannelTests` `SuspendedRulesTests` `KnobBaselineTests` `LocalisationSurfaceTests` `CorpusProvenanceTests` `TimeToLossTests` `CatalogDriftTests` `ModHardwareRetestTests` `RetestSetTests` `SettleReadingTests` `DecorativeStiffnessTests` `ElementCostFitTests` `ScreeningTests` `BlueprintTests` `SubgridBridgeTests` `PrefabWalk` `CorpusCapWalk` `CorpusGuardTests` `CorpusArchiveTests` `ClientDriftTests` `ClientInputTests` `HotTailTests` `HotTailSyncTests` `AirCostTests` `ConductionPaceTests` `LoadDialTests` `WorstCaseTests` `LabRunTests` `LabInvariantTests` |
+| **Corpus walks** (opt-in, `THERMAL_CORPUS_TESTS`) | `CorpusSurvey` `CorpusAirWalk` `CorpusCensus` `KnobSweep` `ConductanceRetestWalk` `PairSweep` `SunlightPanelWalk` `BlockAccountingWalk` `DeterminismWalk` |
 | **The documentation itself** | `DocumentationTests` `ModApiShapeTests` `ConfigurationDocTests` `SimCommandTests` `CredentialScanTests` `ScriptWhitelistTests` |
 
 > **The bit-identity suites share one fixture.** Five of them pin an optimisation against the
@@ -477,6 +546,16 @@ and left off it.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Re-measured both lanes on an idle machine, because the figures here had gone stale in the cheap direction: the whole suite is **2 m 34 s** over 1,884 cases where this page said 5 m 23 s, and the fast lane is **4 s** over 1,585 where it said 6 s over 1,554. Fastest of three with the spread quoted (`M4`). The stale figure was not caught by anything, which is the same reason the lane rule rotted: a suite's own cost is a number a test inside it cannot read. |
+| 2026-08-24 | The suite size on this page is 1,829 rather than 1,769. `EveryQuotedSuiteSizeIsCurrent` allows a page to fall a tenth behind and it had not, so this is bringing a figure current rather than fixing a break. |
+| 2026-08-24 | **The fast lane had stopped being fast, by a factor of fifteen, and the rule that sorts the two lanes is a cost rule now.** Measured: 3 m 45 s against the fifteen seconds this page claimed, because every lab built for `C24`, `C26`, `C27` and `D19` steps whole hulls and none of them carried the trait — `ClientInputTests` alone was 143 s of it, twenty-eight tests each running a 1,004-node hull for the 480 simulated seconds `C26` doubled it to. Nineteen classes tagged; the lane is **6 s over 1,554 cases** and the whole suite is 5 m 23 s. The old rule named a subject — *the scenario batteries* — and a subject rule only sorts what somebody remembered to look at. Nothing checks the new one either, and the section says so and says why. |
+| 2026-08-24 | The suite runs eight at a time. The isolation the corpus walks need is theirs now — `[Collection("alone")]`, with `EveryCorpusWalkDeclaresThatItRunsAlone` to keep it — rather than `maxParallelThreads: 1` for every class in the project: 1 m 41 s to 38 s over 1,825 cases. Eight rather than one per core, because thirty-two workers measured no faster than one ([backlog.md](../docs/backlog.md) `F8`). |
+| 2026-08-23 | Extended `LoadDialTests` to the charge duration, which is the number `G8` is now scored against: a drive holds 3 MWh, draws 32 MW and keeps 80 % of it, so it fills in 421.9 s. Every figure is read off the game's own definition, because a duration invented here would be the criterion being scored against an assumption. |
+| 2026-08-23 | Indexed `LoadDialTests`, which checks that the pair grid's third axis reaches the blocks and reaches nothing else — a sweep dial that reached nothing would report *no change* in exactly the shape of one that reached everything and changed nothing, which is the failure the retest set's `reach.csv` exists for. Conductivity above all: the whole point of that axis is that it is not transport. |
+| 2026-08-23 | Indexed `ConductionPaceTests`, which guards a ratio rather than a number: the game has two conduction paces — one for solids, one for the coolant loop's fluid coupling — and nothing made them agree. Moving one alone weakens every loop relative to the structure it competes with, and the only thing that said so when it happened was four balance tests failing for what read like unrelated reasons. |
+| 2026-08-23 | Indexed `AirCostTests`, which pins the arithmetic under `C19`: demand is a conductance times the step over a capacity, so it is exactly proportional to the step — which is why every atmospheric figure taken at `Frequency` 8 was half — and lowering the clock divides every stiffness term while raising conductivity restores only conduction. Two rigs, one conduction-limited and one convection-limited, because a hull mixes the two in proportions nobody chose. The population figures it stands beside cannot be pinned here and are not; they are scored by `tools/corpus/air.py`. |
+| 2026-08-23 | Indexed `HotTailSyncTests`, which covers the protocol around the packet rather than the packet: which grid a message is about, when a server sends one, when a client asks again, and what a ledger drops when a player leaves. It is here because a session is the one place none of it can be checked — registration and addressing are host code, the policy is not, and two of its cases are failures that are silent by construction (`P2`). |
+| 2026-08-23 | Indexed `HotTailTests` and `ClientInputTests`, which cover the two halves of `B4`'s fix: the packet a server sends a client about the blocks that are about to fail, and the claim that a degraded client *input* is a standing bias rather than a perturbation. Both carry their own rig guards as tests — an undegraded client must agree exactly, and a run where nothing on the server ever failed must say so rather than report that the readout agreed (`E8`). |
 | 2026-08-23 | Indexed `ScriptWhitelistTests`, which is the one class here that judges the mod against the *game* rather than against the model: it reads `Data/Scripts` for framework types the game's script whitelist refuses, which a green mod build cannot tell you. It is also why Roslyn is a package reference — syntax only, to tell a type from a field of the same name. |
 | 2026-08-23 | Indexed the three natural-feedback classes. `IncandescenceTests` is the unusual one: it carries a numerical integration of Planck's law against the CIE observer and re-derives every constant the shipped glow uses, so nothing in it compares the mod to a figure the mod produced (`E7`). |
 | 2026-08-22 | Condensed the five balance commands from a section each to one table. Each of them restated a conclusion argued in full on [balance.md](../docs/balance.md), [balance-lab.md](../docs/balance-lab.md) or [stiffness.md](../docs/stiffness.md), which is how the reactor fraction below came to be wrong here and right there. This page is now what to run and where the answer is argued, and keeps only what is the harness's own business rather than the finding's. |

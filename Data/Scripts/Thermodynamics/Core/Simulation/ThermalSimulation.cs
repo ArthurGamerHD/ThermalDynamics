@@ -941,5 +941,59 @@ namespace Thermodynamics.Core
 
             return restored;
         }
+
+        /// <summary>
+        /// Selects the blocks inside the warning band, for a server to send to its clients.
+        /// </summary>
+        /// <returns>
+        /// How many blocks were inside the band, which is more than <paramref name="results"/>
+        /// holds whenever the budget bit.
+        /// </returns>
+        public int ExportHotTail(float bandKelvin, int budget, List<StoredTemperature> results)
+        {
+            return HotTailCodec.Select(solver.Nodes, bandKelvin, budget, results);
+        }
+
+        /// <summary>
+        /// Writes received temperatures onto this simulation. Unknown positions are ignored, so a
+        /// client whose grid has lost a block since the packet was built still applies the rest.
+        ///
+        /// <para>
+        /// **This is the same write that loading a save makes**, and it is legal for the same
+        /// reason: a node's temperature is the one value a host may set from outside a step, and
+        /// the solver re-reads it. It is not a step, so it conserves nothing and is not asked to —
+        /// what it does is replace this machine's guess with the answer from the machine that
+        /// decides.
+        /// </para>
+        /// </summary>
+        /// <returns>How many blocks were found and written.</returns>
+        public int ImportHotTail(IList<StoredTemperature> tail)
+        {
+            if (tail == null) return 0;
+
+            int applied = 0;
+            for (int i = 0; i < tail.Count; i++)
+            {
+                ThermalNode node = solver.GetNodeAt(tail[i].Position);
+                if (node == null) continue;
+
+                float value = Math.Max(ThermalConstants.MinimumTemperature, tail[i].Temperature);
+
+                // **A block already agreeing to within the packet's own resolution is left alone,
+                // and this is a correction rather than an optimisation.** The wire carries tenths
+                // of a kelvin, so writing a received value onto a node that already matches it
+                // asserts a precision the packet does not have — and it moves the node by up to
+                // half a quantum, which is enough to flip a block sitting on its own critical
+                // temperature. Measured: a client that was *exactly* right, corrected every five
+                // seconds, went from agreeing about every block to misreading one for ten seconds
+                // of a ten-minute run. The correction has to be able to do nothing.
+                if (Math.Abs(node.Temperature - value) <= HotTailCodec.TemperatureStep) continue;
+
+                node.Temperature = value;
+                applied++;
+            }
+
+            return applied;
+        }
     }
 }

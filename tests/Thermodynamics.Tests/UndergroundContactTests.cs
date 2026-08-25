@@ -12,7 +12,7 @@ namespace Thermodynamics.Tests
     /// It used to be air. A grid under the surface took the planet's ambient from the rock — which
     /// is right — and exchanged with it at the planet's *convection* coefficient, which is the
     /// figure for moving air. Rock contact was not modelled, so 50 W/(m² K) was the nearest
-    /// available answer. [backlog](../../docs/backlog.md) `A16`.
+    /// available answer. backlog.md `A16`.
     /// </para>
     ///
     /// <para>
@@ -134,7 +134,7 @@ namespace Thermodynamics.Tests
             GridBuilder builder = GridBuilder.Large();
             builder.Fill(Catalog.LightArmor(), VRageMath.Vector3I.Zero, new VRageMath.Vector3I(4, 3, 6));
             builder.Remove(new VRageMath.Vector3I(1, 1, 1));
-            builder.Place(Catalog.Reactor(), new VRageMath.Vector3I(1, 1, 1)).Producing(500000f);
+            builder.Place(Catalog.Reactor(), new VRageMath.Vector3I(1, 1, 1)).Wasting(125000f);
 
             ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);
             simulation.RebuildAll();

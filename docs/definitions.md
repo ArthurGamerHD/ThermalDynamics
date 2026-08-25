@@ -53,7 +53,10 @@ it — which is why, while emissivity did both jobs, **a good radiator was force
 absorber** and improving one improved the other exactly as much.
 
 They are separate now, and the separation is what makes surface finish a design decision rather
-than a constant. The default is unchanged in both directions: an entry that does not mention
+than a constant. **One block takes it up**: the radiator declares `SolarAbsorptivity 0.1` against
+its emissivity of 0.35, which is worth 10.9 K to a sunlit stack and nothing in shadow — and the
+measurement beside it says why raising the emissivity instead would have bought 1.9 K in sun. See
+[balance.md](balance.md#what-a-selective-surface-is-worth). The default is unchanged in both directions: an entry that does not mention
 `SolarAbsorptivity` absorbs at its emissivity, and a block with no entry at all derives one number
 from its build components and uses it for both.
 
@@ -109,8 +112,11 @@ deliberately: fluid-to-wall transfer is convective, and the honest dial for it i
 coefficient in W/(m²·K), which is a change to the loop equations rather than to a number.
 
 **What that conversion moved**, because it is the substance of [backlog.md](backlog.md) `C2`.
-`ConductionScale` is 2.4 because mild steel's 50 lands on the 120 the old default's 0.6 gave it, so
-ordinary armour is exactly unmoved and everything else is not. **Before the conversion every block
+`ConductionScale` was 2.4 because mild steel's 50 lands on the 120 the old default's 0.6 gave it, so
+ordinary armour was exactly unmoved by the conversion and everything else was not. **It is 9.6
+now** — `C24` multiplied the pace by four for `G8`'s timing, which moves every block including
+armour and is a balance decision rather than a conversion; the calibration is what makes the
+conversion checkable, and the two are separate numbers on purpose. **Before the conversion every block
 in the game took one of exactly two conductances** — the file then held twenty-two definitions and
 derivation from build components arrived after it — which is what makes the old world recoverable
 and the change measurable.
@@ -183,8 +189,11 @@ the clock moves.
 That separation is the point. Tune *what a block is* here, in real units, and tune *how fast the
 game feels* there, in one place.
 
-The shipped default is 225, which is what makes steel's 450 J/(kg·K) behave the way the flat
-game value of `2` used to.
+The shipped default is **90**. It was 225 until `C24`, and 225 is the value that makes steel's real
+450 J/(kg·K) behave the way the flat game value of `2` used to — the calibration the conversion in
+this page was checked against, and two and a half times faster than what a world now runs. What
+moved it is `G8`'s significance window; see
+[balance.md](balance.md#the-route-is-chosen-and-it-is-the-one-the-cost-column-argued-against).
 
 ### Where a block's properties come from
 
@@ -201,6 +210,9 @@ of every other mod, which previously all fell through to one entry describing mi
 | --- | --- |
 | `Conductivity`, `SpecificHeat`, `Emissivity`, `CriticalTemperature` | `ProducerWasteEnergy`, `ConsumerWasteEnergy`, `ExposedSurfaceMultiplier`, `OverheatDamagePerKelvin` |
 
+…with one exception, below: where a block's own definition states a `PowerEfficiency`, its
+`ConsumerWasteEnergy` is derived from that rather than taken from its type.
+
 `SolarAbsorptivity` is in neither column: it follows the emissivity — derived or declared — until
 somebody writes one, because a build cost says what a surface is made of and nothing about how it
 was finished.
@@ -210,6 +222,86 @@ The split is not arbitrary. What a block is made of cannot say what it does with
 of identical construction, one a thruster and one a girder, differ entirely in what they put into
 the ship. The functional half is a table keyed by block type in `BlockThermalDerivation`, and it is
 the only place opinions are left.
+
+**One functional property is not an opinion, because the game publishes it.** A jump drive's
+definition carries `PowerEfficiency` — 0.8 on the vanilla drive and its reskin, 0.9 on the two
+prototech ones — and the power a charging block draws and does not store is heat. So
+`ConsumerWasteEnergy` for a drive is `1 − PowerEfficiency`, derived per block rather than authored
+per type, and `BlockThermalDerivation.WasteFromEfficiency` is the rule. It is the only family in the
+whole game that states an efficiency; twelve thruster definitions state `1.0`, which is about thrust
+rather than about heat and is not read.
+
+It sits **above the type entry and below a subtype entry**: a type entry describes a family and
+cannot say both 0.8 and 0.9, while a subtype entry describes one block and is a deliberate override.
+A zero is silence, not total loss — every other block in the game omits the field, and reading its
+absence as *stores none of what it draws* would make all of them heaters.
+
+**What it corrected.** The drive was authored at `0.15` with the note *"storage is efficient; the
+dump is not"* — an assertion, and wrong for all four drives in both directions. It is now 0.2 and
+0.1, which matters more than it sounds: `LargeJumpDrive` carries **71.3 %** of the corpus's
+full-load waste heat, so the one number in the file with the largest reach was the one with no
+source. A modded drive nobody has written an entry for is now right too.
+
+### Every waste fraction says where it came from, and most of them say "invented"
+
+The derivation above covers what a block is *made of*. What it *does with power* is the other half of
+a definition, and it is authored — which is why every fraction in `Cubes.xml` states where it came
+from and a check holds it to what it says. Nothing did before this, and that is how the jump drive
+came to sit at `0.15` under a note that read as an argument.
+
+Each fraction now claims one of four provenances, and `AuthoredWasteTests` holds it to the claim:
+
+| Claim | What it means | What checks it |
+| --- | --- | --- |
+| `waste: <conversion>` | A named class of machine in `ReferenceEfficiencies` | The value is inside that conversion's band |
+| `derived: <field>` | A field the game's own definitions state | Recomputed from every definition of the type |
+| `no producer: …` | Nothing multiplies this fraction | No definition of the type declares power output |
+| `invented: …` | An admitted opinion | Nothing, and saying so is the point |
+
+**Bands rather than point values, because that is what the literature gives.** A motor's efficiency
+is a range over frame sizes and duty points, so `ReferenceEfficiencies` carries the range and the
+check asks whether the authored value sits inside it. Six conversions have a source worth quoting:
+an electric motor at 0.05–0.15 waste, a lithium-ion store at 0.02–0.06 one way, a spark-ignition
+engine at 0.55–0.70, a radio transmitter at 0.60–0.85, a solid-state laser at 0.50–0.90, and *all of
+it* — the first law's bound on a device that does no work outside itself and radiates nothing away.
+
+**The counts are the finding.** Of the 228 waste fractions, **42** name a conversion, **1** is derived
+from the game, **108** are producer fractions on types that produce nothing, and **77** are
+inventions. Of the 120 that anything ever multiplies, **77 are opinions** — but counting fractions
+and weighting them by the heat they carry disagree about how much that matters:
+
+| | Share of the fractions | Share of the corpus's full-load waste heat |
+| --- | ---: | ---: |
+| derived from the game | 0.4 % | **76.3 %** |
+| sourced to a conversion | 18.4 % | 8.5 % |
+| invented | 33.8 % | 15.2 % |
+
+> **27 fractions moved from *invented* to *sourced* on 2026-08-24**, when `C21`'s
+> computer-and-screen third closed: the counts were 15 / 1 / 108 / 104 and the heat shares 8.4 % and
+> 15.3 %. Every one of them was a device that does no work outside itself, whose own note already
+> said *the first law says 1.0* and then set 0.9. They are 1.0 against the `all of it` conversion
+> now — a band with no width, because it is a bound rather than a measurement. The two lamps that
+> point out of the hull stayed invented and now say why they are under 1.0.
+
+*Population: the 8,142-ship census of 2026-08-21, 109,312 block rows. Basis: full electrical load
+with every jump drive charging, no thrust — a bound rather than a duty cycle (`E3`). The drives are
+restated at the fractions derived on 2026-08-23 rather than the 0.15 the census measured.
+`tools/corpus/provenance.py` computes it.*
+
+**So the file is mostly opinion and the heat mostly is not**, because one derived block carries three
+quarters of it. And the invented sixth is not spread over a hundred blocks either — four types carry
+almost all of it: artificial mass at 4.0 %, the reactor at 3.6 %, the refinery at 3.0 % and the
+assembler at 2.9 %. Everything else in the file, added together, is under two per cent of a loaded
+fleet's heat.
+
+**Three inventions have a real figure sitting beside them and do not use it**, and each is recorded
+in its own comment rather than here. The oxygen generator wastes 0.6 where water electrolysis runs
+0.60–0.80 efficient and the sourced figure is 0.20–0.40, which is the largest gap in the file. Every
+computer, screen and sensor wastes 0.9 where the first law says 1.0, since a device that does no
+work outside itself has nowhere else to put what it draws. And the reactor's 0.01 is a hundredth
+where a real thermal cycle rejects about two thirds — that one is deliberate and measured, because at
+0.02 the two smaller reactors cook themselves bare in vacuum. Moving any of them is a balance change
+and belongs in its own commit (`E11`), not in the pass that gave them provenance.
 
 Of the three derived blends, only specific heat is exact — heat capacity is additive, so the
 mass-weighted mean is the right answer rather than an approximation of one. Conductivity and
@@ -327,7 +419,7 @@ There is currently one loop definition and every loop uses it:
 | Property | Default | Clamp | Meaning |
 | --- | --- | --- | --- |
 | `CoolantMassPerPipe` | 50 | `≥ 1` | Coolant in each pipe block, kg, so a ring's charge scales with its length. |
-| `Conductivity` | 1 | `0 … 1` | Transfer scaling for both the pipe and the sink-face exchange. **Not** the real W/(m·K) that a block's `Conductivity` now takes — the fluid-to-wall path is convective, and its honest dial would be a heat transfer coefficient in W/(m²·K). Unchanged for now. |
+| `HeatTransferCoefficient` | 160 | `≥ 0` | How well heat crosses between the fluid and the wall it touches, **W/(m²·K)**, for both the pipe and the sink-face exchange. Convective, so there is no thickness in it — the resistance is the boundary layer against the wall. It was a 0…1 quality against a reference conductivity divided by half a cell, which gave the game a second conduction pace and made the coefficient it implied 160 on a large grid and 800 on a small one for the same fluid ([backlog.md](backlog.md) `C20`). |
 | `SpecificHeat` | 3400 | `≥ 0` | Coolant heat capacity in real J/(kg·K). Water-glycol is about 3400, which is why a loop carries so much more heat than the steel around it. Scaled by `HeatTimeScale` exactly as a block is. |
 | `PipeContactMultiplier` | 1 | `≥ 0` | Contact area between fluid and the pipe block it runs through. |
 | `SinkContactMultiplier` | 1 | `≥ 0` | Contact area between fluid and a block pressed against a sink face. |
@@ -385,6 +477,10 @@ Tuning guidance:
 
 | Date | Change |
 | --- | --- |
+| 2026-08-23 | **The coolant loop's fluid coupling is a heat transfer coefficient in W/(m²·K), and the game has one conduction pace again** ([backlog.md](backlog.md) `C20`). It was a 0…1 quality times a reference conductivity of 200, divided by half a cell — which made the coefficient it implied depend on grid size: 160 on a large grid and 800 on a small one, for the same fluid against the same wall. Convection has no length in it. 160 is what a large grid was already running at, so nothing there moves; a small-grid loop couples a fifth as hard as it did. |
+| 2026-08-23 | The radiator declares `SolarAbsorptivity 0.1`, which is the first shipped block to use the split at all ([backlog.md](backlog.md) `C15`). Worth 10.9 K to a sunlit stack, nothing in shadow, and emissivity untouched. |
+| 2026-08-23 | **Gave every waste fraction a provenance, and measured how much of a fleet's heat rests on the ones that have none** ([backlog.md](backlog.md) `C21`). All 228 `ProducerWasteEnergy` and `ConsumerWasteEnergy` values in `Cubes.xml` now claim a source, a derivation, a statement that nothing reads them, or an admitted invention, and `AuthoredWasteTests` holds each claim to its evidence — a band in `ReferenceEfficiencies`, the game's own `PowerEfficiency`, or the game declaring no output for the type. The counts are [the finding](#every-waste-fraction-says-where-it-came-from-and-most-of-them-say-invented): 15 sourced, 1 derived, 104 invented — and weighted by the heat they actually carry that is 8.4 %, 76.3 % and 15.3 %, so the file is mostly opinion and the heat mostly is not. No value moved; three inventions that have a real figure beside them are recorded rather than retuned (`E11`). |
+| 2026-08-23 | **Derived the jump drive's waste fraction from the efficiency the game states, instead of asserting it.** `PowerEfficiency` is 0.8 on the vanilla drive and its reskin and 0.9 on the two prototech ones, so their `ConsumerWasteEnergy` is 0.2 and 0.1; it was `0.15` for all four, by a comment rather than a source. It is the only family in the game that publishes an efficiency, and it is the block carrying **71.3 %** of the corpus's full-load waste heat — the number in the file with the largest reach was the one with no provenance. The rule is one function in `Core` with three readers, because a harness that disagreed with the mod about it would be measuring a mod nobody runs. |
 | 2026-08-23 | **Corrected [what the conversion moved](#conductivity-is-in-real-wmk).** The table stated *thruster … 0.60×*, which is true of the hydrogen thrusters and of nothing else — the large ion thruster is **0.23×** and the atmospheric **1.27×**, because a thruster's conductance is now derived from what it is built out of and the three families are built out of different things. The table also described only the four families this file authors and omitted every vanilla block, which is the larger half of the change and holds both of its extremes: the ion thruster's 0.23× and the jump drive's **3.51×**. Measured off the shipped definitions and pinned by `ModHardwareRetestTests` rather than stated. |
 | 2026-08-23 | Made every authored material figure say where it came from, and checked the ones that name a material. `AuthoredMaterialTests` holds all 46 `Conductivity` and `SpecificHeat` values in `Cubes.xml` against `ReferenceMaterials` or against an explicit `invented`; four had no provenance at all and now have it, one of which — the emissive block's 1 and 840 — turned out to be soda-lime glass exactly and never said so. Wrote down [what the conversion to real units actually moved](#conductivity-is-in-real-wmk), because [backlog.md](backlog.md) `C2` had the radiator backwards: it is 2.84× stiffer, not half, and the blocks that lost are the thruster and the two pumps at 0.60×. |
 | 2026-08-22 | Added `AmbientLagShareOfDay`. The climate's lag was 45 absolute seconds against a rotation a server sets to anything, so one authored figure meant a different climate on every world ([backlog.md](backlog.md) `C6`). |

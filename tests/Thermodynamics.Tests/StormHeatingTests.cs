@@ -14,7 +14,7 @@ namespace Thermodynamics.Tests
     /// ship in a permanent 80 m/s wind, over the friction threshold and at double the still-air
     /// convection. The composed model reopened it — a storm reached 187 m/s, 143 of that within a
     /// hundred metres of the ground — for two reasons that were faults rather than balance, and one
-    /// that is not. [backlog](../../docs/backlog.md) `B17`, `B18`.
+    /// that is not. backlog.md `B17`, `B18`.
     /// </para>
     ///
     /// <para>

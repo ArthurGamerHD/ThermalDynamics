@@ -23,14 +23,7 @@ namespace Thermodynamics.Core
         /// 2.4 puts mild steel exactly where the old 0..1 quality value put it.
         /// See definitions.md, Conductivity is in real W/(m·K).
         /// </summary>
-        public const float ConductionScale = 2.4f;
-
-        /// <summary>
-        /// Reference conductivity for the coolant loop's fluid coupling, W/(m K). Still a 0..1 quality
-        /// value times 200, because fluid-to-wall transfer is convective and its honest dial is a heat
-        /// transfer coefficient — a change to the loop equations rather than to a number.
-        /// </summary>
-        public const float ReferenceConductivity = 200f;
+        public const float ConductionScale = 9.6f;
 
         /// <summary>
         /// Specific heat of air at constant pressure, J/(kg K). Used for room air, which is the
