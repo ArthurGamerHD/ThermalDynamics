@@ -83,7 +83,22 @@ the solver's own unit, and compared against a bound the mod already ships.
   allowance is per grid, so this says a *ship* is affordable rather than that a *session* is —
   which is `D19`'s question and is measured on a fleet rather than on a population.
 
-**Scored, and it holds.** Over the 40,656 runs of the 2026-08-21 survey that carry all three
+**Scored in air, and the cost half fails.** Over the 32,575 runs of the 2026-08-24 air walk — the
+whole corpus, four scenarios, at the pair that ships: **demand p50 7.9, p95 30.2, p99 34.8** against
+64 granted, so the demand half passes with a wide margin; and **step work p50 45,323, p95 1,652,491,
+p99 5,812,731** against the 4,000,000 the allowance grants, which is **1.45× over and a failure**.
+**222 ships of 8,144 — 2.73 % — pass the allowance in at least one air scenario**, the smallest at
+28,781 blocks and the median at 55,631. Per scenario the work p99 is 8,451,031 in re-entry,
+7,321,903 parked in a storm, 4,663,327 at hot noon and 2,551,719 in the dark, so **the criterion
+fails in three of the four worlds and holds only in vacuum**. `C27`'s doubling of the allowance was
+necessary and not sufficient: at the 2,000,000 that shipped this morning the same p99 is 2.9× over.
+What to do about it is a decision and is deliberately not taken in the commit that carries the data
+(`E11`).
+
+**And `G1` holds in air**, which the corpus had never been asked: 0.02 % of runs have a block over
+critical against 0.22 % in vacuum, because air cools.
+
+**Previously, scored in vacuum, where it holds.** Over the 40,656 runs of the 2026-08-21 survey that carry all three
 columns: **p50 10,909 element visits, p95 269,153, p99 881,279** against the 4,000,000 the allowance
 grants — the ninety-ninth percentile is a little over a fifth of what a step may cost. **29 runs are
 past it, and they are 8 ships**, the smallest at 159,449 blocks and the largest at 628,524. So the
@@ -141,6 +156,17 @@ demand by about 1.6. Carried onto the survey's own figures:
 | --- | ---: | ---: | ---: |
 | demand p99 | 3.58 | ~5.7 | ~16 |
 | step work p99 | 881,279 | ~1.41 M | **~3.96 M** |
+
+> **Measured 2026-08-24, and the projection is falsified.** Re-entry work p99 is **8,451,031** and
+> the whole-dataset p99 **5,812,731**, against a stated falsifier of "below 3 M or above 5 M". **The
+> assumption named below as most likely to be wrong was not the one that broke**: the panel's
+> air-to-vacuum ratio transferred well, 3.05 measured on the corpus against 2.81 on the panel. What
+> did not transfer is the *retune* factor. The corpus's own vacuum demand p99 went 3.58 to **11.4**
+> between the two walks, a factor of **3.19**, where these pages projected 1.6 — and the 1.6 was the
+> panel's own figure, 12.51 over 8.20. So the panel's **air** ratio describes the population and its
+> **retune** ratio does not, by about two: `C24` hits the corpus's tail roughly twice as hard as it
+> hits forty typical hulls, which is what a tail made of conduction-limited hulls does when
+> conduction is multiplied by four. Every projection below is left as written (`P3`).
 
 **So the cost half is predicted to land within about 30 % of the 4,000,000 allowance, either side.**
 That is the whole point of writing it down: the projection cannot distinguish pass from fail, and
