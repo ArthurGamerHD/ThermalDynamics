@@ -825,6 +825,37 @@ so that the guard is not also a way of hiding the defect.
 
 ---
 
+## When the game's own rules are suspended
+
+**Heat runs unchanged, because creative suspends scarcity and heat is physics.** A ship spawned
+whole, a block placed instantly, a player in god mode, a world with no grinding and no components —
+the simulation behaves identically through all of it, and that is the decision rather than an
+accident of nothing having been branched.
+
+**The game itself draws the line in the same place.** In a creative world blocks still take damage,
+gravity still pulls, thrusters still push and collisions still happen; what stops is being charged
+for any of it. Heat is on the near side of that line. It is a property of a ship — its surfaces, its
+mass, what it is running — rather than of how the ship was paid for, and a hull that would cook in
+survival cooks in creative because it is the same hull.
+
+**The lever is a setting rather than a mode.** A builder who wants heat simulated and harmless has
+`EnableDamage`; one who wants a mechanism gone has its own switch, and off costs nothing
+([Isolated](#isolated--every-mechanism-has-its-own-switch), `P8`). Those are the right levers
+because they are the player's decision, made once and visible in the world's configuration, rather
+than something inferred from the world's mode and silently different from the world next door.
+
+**Two of the four sub-cases already have criteria and they agree.** A ship the game spawns is `G7` —
+705 prefabs, 461,428 blocks, arriving idle, not one crossing critical — and a world somebody adds
+the mod to is `G1`. The third, a block that appears whole, is the same rule in both modes: a welded
+block arrives at ambient, and creative changes when that happens rather than what happens. The
+fourth, god mode, has no thermal meaning: a player who cannot be hurt is not a heat sink.
+
+`SuspendedRulesTests` pins it, because a claim about what code does *not* do rots the moment
+somebody adds the line: nothing in `Data/Scripts` reads the game mode, the creative flags or the
+creative tools.
+
+---
+
 ## What language the mod speaks
 
 **The mod speaks the player's language where it sits inside the game's HUD, and English where it is
@@ -1039,25 +1070,16 @@ holds the things where the intent is stated and the route is not; here the inten
 None of them is a defect and most may want no more than a sentence — but the sentence is not there,
 and until it is, the answer is whatever the next change happens to imply.
 
-**Numbers 1, 2, 5 and 6 are settled and their numbers are not reused**, because the pages that cite
+**Numbers 1, 2, 3, 5 and 6 are settled and their numbers are not reused**, because the pages that cite
 these entries cite them by number. All three were answered on 2026-08-25: *what a player does with
 their hands* is [Acting on heat by hand](#acting-on-heat-by-hand--out-of-scope-and-priced), *what
 the mod's blocks cost to build* is
 [What a block costs to build](#what-a-block-costs-to-build--what-the-game-charges-and-nothing-invented),
 *the visual channel, and who can read it* is
-[Who the glow is for](#who-the-glow-is-for--brightness-and-colour-as-a-refinement), and *what
-language the mod speaks* is [What language the mod speaks](#what-language-the-mod-speaks).
-
-### 3. Creative mode, and the tools that skip the game
-
-Nothing anywhere states what heat should do when the game's own rules are suspended. A ship spawned
-whole, a block placed instantly, a player in god mode, a world with no grinding and no components —
-the simulation runs identically through all of it, because no code path knows the difference.
-
-That may well be right: heat is a property of a ship rather than of how it was paid for, and a
-creative builder who wants no heat has `EnableDamage`. But it has never been said, and the
-neighbouring cases have — a ship the game spawns is `G7`, and a world somebody adds the mod to is
-`G1`.
+[Who the glow is for](#who-the-glow-is-for--brightness-and-colour-as-a-refinement), *what
+language the mod speaks* is [What language the mod speaks](#what-language-the-mod-speaks), and
+*creative mode, and the tools that skip the game* is
+[When the game's own rules are suspended](#when-the-games-own-rules-are-suspended).
 
 ### 4. What a version boundary would be for
 
@@ -1171,6 +1193,7 @@ as a *second* change rather than as a substitute. [backlog](backlog.md) `D19`.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | **Took a position on what heat does when the game's own rules are suspended, which was the third void.** Creative suspends scarcity and heat is physics: the game keeps damaging, accelerating and colliding blocks in a creative world and only stops charging for them, so a hull that would cook in survival cooks in creative because it is the same hull. The lever is a setting rather than a mode. `SuspendedRulesTests` pins that nothing in `Data/Scripts` reads the game mode, the creative flags or the creative tools. |
 | 2026-08-25 | **Took a position on what language the mod speaks, which was the sixth void.** The boundary follows from a commitment already on this page rather than from a preference: the readouts are drawn through Rich HUD so that nothing mod-shaped announces itself, and the game's own HUD is localised. Counted, the surface inside the game's HUD is **47 distinct strings** — four per cent of what the mod writes — against 248 in the settings menu, 90 in chat replies, 113 in debug overlays and 604 in telemetry files, all of which are the mod talking about itself and stay English. The work is blocked on one thing only a session can answer, which is `B39`. |
 | 2026-08-25 | **Took a position on who the glow is for, which was the fifth void, and the measurement made it an easier question than it looked.** The colour channel moves less than a just-noticeable difference across their own glow band for **88 of the 101** block types in the installed catalogue — not only the 28 pinned under the Draper point — and the best any block manages is ΔE 4.76. So brightness is the channel and colour is a refinement, the warning is legible without colour, the sound cue is a redundant channel on purpose from here, and no fact may be carried by hue alone. |
 | 2026-08-25 | **Took a position on what a block costs to build, which was the second void.** There is no vanilla comparator for a block that moves heat, so the eighteen `Cubes.xml` definitions are placed inside the distribution the game prices its own 1,434 blocks over — kilograms a cubic metre, seconds of welding a kilogram, PCU a block — and all eighteen sit inside it. The position: the lever costs what the game charges for a block of that size and mass, and the mod does not invent an economy. The recipe is also not secretly a thermal dial: at four times a radiator stack's mass the source settles within a hundredth of a kelvin and only the transient moves, 24 to 112 s. |
