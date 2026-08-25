@@ -931,9 +931,10 @@ neighbouring cases have — a ship the game spawns is `G7`, and a world somebody
 ### 4. Where a version boundary is
 
 [api.md](api.md#guarantees) promises that **keys will not change meaning within a major version**,
-and nothing in this repository defines a version. `modinfo.sbmi` carries a workshop id and no
-number; no build is stamped; the save format has an internal marker that is deliberately *not* a
-version boundary, since v2 grew by adding a section rather than by changing it.
+and nothing in this repository defines a version. `modinfo.sbmi` carries a workshop id and no number;
+no build is stamped; the save format has an internal marker that is deliberately *not* a version
+boundary, since v2 grew by adding a section rather than by changing it. The one version string in
+the tree — `2.0.0` — belongs to the vendored `NetworkAPI` and is somebody else's.
 
 So the strongest compatibility promise the mod makes has no referent, and the honest reading today
 is *nothing has ever broken*. That is a fine position to hold and a poor one to hold accidentally:
