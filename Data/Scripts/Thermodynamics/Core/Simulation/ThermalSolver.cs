@@ -442,9 +442,6 @@ namespace Thermodynamics.Core
         public float LastRequiredSubsteps { get; private set; }
 
         /// <summary>
-        /// Substeps one node alone would need for a full step, from its real heat capacity.
-        /// <see cref="LastRequiredSubsteps"/> is the maximum of this over all nodes. Public so
-        /// <summary>
         /// W/K out of one node through every link it has — the conductive half of what a block can
         /// shed, and the only half a buried block has.
         /// </summary>
@@ -456,6 +453,9 @@ namespace Thermodynamics.Core
             return nodeConductanceTotal[index];
         }
 
+        /// <summary>
+        /// Substeps one node alone would need for a full step, from its real heat capacity.
+        /// <see cref="LastRequiredSubsteps"/> is the maximum of this over all nodes. Public so
         /// per-block-type telemetry can attribute a grid's substep count to specific definitions.
         /// </summary>
         public float NodeSubstepDemand(int index)

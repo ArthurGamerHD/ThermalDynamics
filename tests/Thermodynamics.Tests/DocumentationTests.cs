@@ -812,11 +812,22 @@ namespace Thermodynamics.Tests
         /// </para>
         ///
         /// <para>
-        /// Two <c>&lt;summary&gt;</c> blocks in a row is the signature, because C# allows only one per
-        /// member: the first belongs to something that is gone. It is a narrow test — an orphan that
-        /// lands somewhere with no comment of its own is invisible to it — and narrow and cheap beats
-        /// nothing, which is what checked this before. Run against a deliberate orphan in both
-        /// spellings before being believed; the first version caught only the multi-line one.
+        /// **Two signatures, and they are different faults.** *Closed then reopened* — a
+        /// <c>&lt;/summary&gt;</c> whose next line opens another — is a member that has gone, leaving its
+        /// comment resting on the one below. *Opened twice* — a second <c>&lt;summary&gt;</c> reached
+        /// before the first is closed — is a member that has been **inserted into the middle of
+        /// somebody else's comment**, which leaves two doc comments broken rather than one: the tail
+        /// of the first now hangs under the newcomer's body and describes the member after it. The
+        /// second signature was added after one was found in `ThermalSolver`, where
+        /// <c>NodeConductanceTotal</c> had landed inside <c>NodeSubstepDemand</c>'s summary and the
+        /// closed-then-reopened test could not see it.
+        /// </para>
+        ///
+        /// <para>
+        /// It is still a narrow test — an orphan that lands somewhere with no comment of its own is
+        /// invisible to it — and narrow and cheap beats nothing, which is what checked this before.
+        /// Run against a deliberate orphan in every spelling before being believed; the first
+        /// version caught only the multi-line one of the first signature.
         /// </para>
         /// </summary>
         [Fact]
@@ -854,7 +865,46 @@ namespace Thermodynamics.Tests
                         if (!current.EndsWith("</summary>", StringComparison.Ordinal)) continue;
                         if (!lines[i + 1].Trim().StartsWith("/// <summary>", StringComparison.Ordinal)) continue;
 
-                        orphans.Add(relative + ":" + (i + 1));
+                        orphans.Add(relative + ":" + (i + 1) + " — closed and reopened");
+                    }
+
+                    // The second signature: a summary opened while one is already open. A run of
+                    // `///` lines is one comment, and anything that is not a `///` line ends it —
+                    // so an unbalanced tag cannot leak into the next member's comment and report
+                    // there instead.
+                    int openedAt = -1;
+
+                    for (int i = 0; i < lines.Length; i++)
+                    {
+                        string current = lines[i].Trim();
+                        if (!current.StartsWith("///", StringComparison.Ordinal))
+                        {
+                            openedAt = -1;
+                            continue;
+                        }
+
+                        int at = 0;
+                        while (at < current.Length)
+                        {
+                            int open = current.IndexOf("<summary>", at, StringComparison.Ordinal);
+                            int close = current.IndexOf("</summary>", at, StringComparison.Ordinal);
+
+                            // `</summary>` contains no `<summary>`, so a close is never mistaken
+                            // for an open — but it does sit one character later, and taking the
+                            // earlier index without that guard would read every close as an open.
+                            if (close >= 0 && (open < 0 || close < open))
+                            {
+                                openedAt = -1;
+                                at = close + "</summary>".Length;
+                                continue;
+                            }
+
+                            if (open < 0) break;
+
+                            if (openedAt >= 0) orphans.Add(relative + ":" + (openedAt + 1) + " — opened twice");
+                            openedAt = i;
+                            at = open + "<summary>".Length;
+                        }
                     }
                 }
             }
