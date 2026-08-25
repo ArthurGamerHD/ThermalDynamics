@@ -975,8 +975,8 @@ and over the 8,142-ship census at full electrical load:
 | Where a loaded fleet's waste heat comes from | Share |
 | --- | ---: |
 | a fraction derived from the efficiency the game itself states | **76.3 %** |
-| a fraction sourced to a real conversion | 8.4 % |
-| a fraction somebody invented | 15.3 % |
+| a fraction sourced to a real conversion | 8.5 % |
+| a fraction somebody invented | 15.2 % |
 
 *Population: the census of 2026-08-21, 109,312 block rows, drives restated at their derived
 fractions. Basis: full electrical load with every drive charging, no thrust (`E3`).
@@ -986,8 +986,10 @@ fractions. Basis: full electrical load with every drive charging, no thrust (`E3
 is `1 − PowerEfficiency` on the jump drive, which the game publishes; the mod would be declaring that
 a charging drive is twice as efficient as its own definition says. That is a legitimate thing for a
 `ConductionScale`-shaped dial to do, and it has to be argued as one rather than as fixing a guess.
-The 15.3 % that *is* invented sits on four block types — artificial mass, the reactor, the refinery
-and the assembler — and retuning those four reaches a sixth of the load, not the window.
+The 15.2 % that *is* invented sits on four block types — artificial mass, the reactor, the refinery
+and the assembler — and retuning those four reaches a sixth of the load, not the window. (8.4 / 15.3
+until 2026-08-24, when 27 fractions the first law fixes at 1.0 moved from invented to sourced; the
+four types above are untouched by that and are still where the invented heat is.)
 
 #### The event has a length, and measured across it `G8` selects the same cells
 

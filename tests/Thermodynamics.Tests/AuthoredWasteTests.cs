@@ -301,10 +301,15 @@ namespace Thermodynamics.Tests
             Assert.Equal(228, authored.Count);
             Assert.Equal(sourced + derived + unreachable + invented, authored.Count);
 
-            Assert.Equal(15, sourced);
+            // 15 / 1 / 108 / 104 until 2026-08-24, when `C21`'s computer-and-screen third closed:
+            // 27 fractions the first law fixes at 1.0 moved from *invented* to *sourced* against
+            // the `all of it` conversion, which has no band width because it is a bound rather
+            // than a measurement. The two lamps that point out of the hull stayed invented, and
+            // now say why they are under 1.0.
+            Assert.Equal(42, sourced);
             Assert.Equal(1, derived);
             Assert.Equal(108, unreachable);
-            Assert.Equal(104, invented);
+            Assert.Equal(77, invented);
         }
 
         /// <summary>

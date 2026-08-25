@@ -185,9 +185,9 @@
 					<Decimal Name="SpecificHeat" Value="900" />
 					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<!--invented: a lamp inside a hull heats it with everything it draws, so the first law says 1.0; the
-					    tenth left over is a balance choice.-->
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A lamp inside a hull heats it with everything it draws: the light lands on
+					    the hull and is absorbed by it, so nothing leaves and the first law fixes this at 1.0.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -207,8 +207,9 @@
 					<Decimal Name="SpecificHeat" Value="900" />
 					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<!--invented: a lamp inside a hull heats it with everything it draws, so the first law says 1.0; the
-					    tenth left over is a balance choice.-->
+					<!--invented: a lamp that points out of the hull loses whatever of its draw leaves as light the
+					    grid never absorbs, so this is under 1.0 for a physical reason. The tenth is not: no
+					    wall-plug efficiency for the game's lamps exists to take it from.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -229,9 +230,9 @@
 					<Decimal Name="SpecificHeat" Value="840" />
 					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<!--invented: a lamp inside a hull heats it with everything it draws, so the first law says 1.0; the
-					    tenth left over is a balance choice.-->
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A lamp inside a hull heats it with everything it draws: the light lands on
+					    the hull and is absorbed by it, so nothing leaves and the first law fixes this at 1.0.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -247,8 +248,9 @@
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<!--invented: a lamp inside a hull heats it with everything it draws, so the first law says 1.0; the
-					    tenth left over is a balance choice.-->
+					<!--invented: a lamp that points out of the hull loses whatever of its draw leaves as light the
+					    grid never absorbs, so this is under 1.0 for a physical reason. The tenth is not: no
+					    wall-plug efficiency for the game's lamps exists to take it from.-->
 					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
@@ -267,9 +269,9 @@
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<!--invented: a device that does no work outside itself turns everything it draws into heat, so the
-					    first law says 1.0; the tenth left over is a balance choice.-->
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -285,9 +287,9 @@
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<!--invented: a device that does no work outside itself turns everything it draws into heat, so the
-					    first law says 1.0; the tenth left over is a balance choice.-->
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -303,9 +305,9 @@
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<!--invented: a device that does no work outside itself turns everything it draws into heat, so the
-					    first law says 1.0; the tenth left over is a balance choice.-->
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -325,9 +327,9 @@
 					<Decimal Name="SpecificHeat" Value="800" />
 					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<!--invented: a device that does no work outside itself turns everything it draws into heat, so the
-					    first law says 1.0; the tenth left over is a balance choice.-->
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -343,9 +345,9 @@
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<!--invented: a device that does no work outside itself turns everything it draws into heat, so the
-					    first law says 1.0; the tenth left over is a balance choice.-->
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -361,9 +363,9 @@
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<!--invented: a device that does no work outside itself turns everything it draws into heat, so the
-					    first law says 1.0; the tenth left over is a balance choice.-->
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -379,9 +381,9 @@
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<!--invented: a device that does no work outside itself turns everything it draws into heat, so the
-					    first law says 1.0; the tenth left over is a balance choice.-->
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -397,9 +399,9 @@
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<!--invented: a device that does no work outside itself turns everything it draws into heat, so the
-					    first law says 1.0; the tenth left over is a balance choice.-->
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -415,9 +417,9 @@
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<!--invented: a device that does no work outside itself turns everything it draws into heat, so the
-					    first law says 1.0; the tenth left over is a balance choice.-->
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -433,9 +435,9 @@
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<!--invented: a device that does no work outside itself turns everything it draws into heat, so the
-					    first law says 1.0; the tenth left over is a balance choice.-->
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -451,9 +453,9 @@
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<!--invented: a device that does no work outside itself turns everything it draws into heat, so the
-					    first law says 1.0; the tenth left over is a balance choice.-->
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -469,9 +471,9 @@
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<!--invented: a device that does no work outside itself turns everything it draws into heat, so the
-					    first law says 1.0; the tenth left over is a balance choice.-->
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -487,9 +489,9 @@
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<!--invented: a device that does no work outside itself turns everything it draws into heat, so the
-					    first law says 1.0; the tenth left over is a balance choice.-->
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -505,9 +507,9 @@
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<!--invented: a device that does no work outside itself turns everything it draws into heat, so the
-					    first law says 1.0; the tenth left over is a balance choice.-->
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -523,9 +525,9 @@
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<!--invented: a device that does no work outside itself turns everything it draws into heat, so the
-					    first law says 1.0; the tenth left over is a balance choice.-->
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -541,9 +543,9 @@
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<!--invented: a device that does no work outside itself turns everything it draws into heat, so the
-					    first law says 1.0; the tenth left over is a balance choice.-->
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -559,9 +561,9 @@
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<!--invented: a device that does no work outside itself turns everything it draws into heat, so the
-					    first law says 1.0; the tenth left over is a balance choice.-->
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -577,9 +579,9 @@
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<!--invented: a device that does no work outside itself turns everything it draws into heat, so the
-					    first law says 1.0; the tenth left over is a balance choice.-->
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -595,9 +597,9 @@
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<!--invented: a device that does no work outside itself turns everything it draws into heat, so the
-					    first law says 1.0; the tenth left over is a balance choice.-->
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -613,9 +615,9 @@
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<!--invented: a device that does no work outside itself turns everything it draws into heat, so the
-					    first law says 1.0; the tenth left over is a balance choice.-->
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -631,9 +633,9 @@
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<!--invented: a device that does no work outside itself turns everything it draws into heat, so the
-					    first law says 1.0; the tenth left over is a balance choice.-->
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -649,9 +651,9 @@
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<!--invented: a device that does no work outside itself turns everything it draws into heat, so the
-					    first law says 1.0; the tenth left over is a balance choice.-->
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -667,9 +669,9 @@
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<!--invented: a device that does no work outside itself turns everything it draws into heat, so the
-					    first law says 1.0; the tenth left over is a balance choice.-->
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -685,9 +687,9 @@
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<!--invented: a device that does no work outside itself turns everything it draws into heat, so the
-					    first law says 1.0; the tenth left over is a balance choice.-->
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -703,9 +705,9 @@
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<!--invented: a device that does no work outside itself turns everything it draws into heat, so the
-					    first law says 1.0; the tenth left over is a balance choice.-->
-					<Decimal Name="ConsumerWasteEnergy" Value="0.9" />
+					<!--waste: all of it. A device that does no work outside itself and radiates nothing away turns
+					    every watt it draws into heat where it stands.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>

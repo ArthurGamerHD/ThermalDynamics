@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import provenance
 
 # The same four numbers AuthoredWasteTests.TheProvenanceOfEveryFractionIsCounted asserts.
-PINNED = {"sourced": 15, "derived": 1, "unreachable": 108, "invented": 104}
+PINNED = {"sourced": 42, "derived": 1, "unreachable": 108, "invented": 77}
 
 
 class BothReadersOfTheGrammarCountTheSame(unittest.TestCase):

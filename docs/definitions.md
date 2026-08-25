@@ -265,16 +265,23 @@ an electric motor at 0.05–0.15 waste, a lithium-ion store at 0.02–0.06 one w
 engine at 0.55–0.70, a radio transmitter at 0.60–0.85, a solid-state laser at 0.50–0.90, and *all of
 it* — the first law's bound on a device that does no work outside itself and radiates nothing away.
 
-**The counts are the finding.** Of the 228 waste fractions, **15** name a conversion, **1** is derived
-from the game, **108** are producer fractions on types that produce nothing, and **104** are
-inventions. Of the 120 that anything ever multiplies, **104 are opinions** — but counting fractions
+**The counts are the finding.** Of the 228 waste fractions, **42** name a conversion, **1** is derived
+from the game, **108** are producer fractions on types that produce nothing, and **77** are
+inventions. Of the 120 that anything ever multiplies, **77 are opinions** — but counting fractions
 and weighting them by the heat they carry disagree about how much that matters:
 
 | | Share of the fractions | Share of the corpus's full-load waste heat |
 | --- | ---: | ---: |
 | derived from the game | 0.4 % | **76.3 %** |
-| sourced to a conversion | 6.6 % | 8.4 % |
-| invented | 45.6 % | 15.3 % |
+| sourced to a conversion | 18.4 % | 8.5 % |
+| invented | 33.8 % | 15.2 % |
+
+> **27 fractions moved from *invented* to *sourced* on 2026-08-24**, when `C21`'s
+> computer-and-screen third closed: the counts were 15 / 1 / 108 / 104 and the heat shares 8.4 % and
+> 15.3 %. Every one of them was a device that does no work outside itself, whose own note already
+> said *the first law says 1.0* and then set 0.9. They are 1.0 against the `all of it` conversion
+> now — a band with no width, because it is a bound rather than a measurement. The two lamps that
+> point out of the hull stayed invented and now say why they are under 1.0.
 
 *Population: the 8,142-ship census of 2026-08-21, 109,312 block rows. Basis: full electrical load
 with every jump drive charging, no thrust — a bound rather than a duty cycle (`E3`). The drives are
