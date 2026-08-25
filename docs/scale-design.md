@@ -1,7 +1,8 @@
 # Design: variable block sizes and grids to a million blocks
 
 Where the model is going, in two parts: the boundary-centric geometry that lets one simulation
-model serve both Space Engineers 1 and 2, and the machinery a single grid of **10⁶ blocks** needs to
+model serve both Space Engineers 1 and 2, and the machinery a single grid of **10⁶ blocks** — the
+stress bound, against a design target of 250,000 (`G5`) — needs to
 tick inside a frame budget. Portability here means *the model*, not a shared binary — the two games
 get separate builds and separate adapters.
 
@@ -476,8 +477,15 @@ modding does not exist yet and this should not become a bet on it.
 
 # Part 2 — Scale to a million blocks
 
-**Design only — nothing in this part is implemented.** The target is a single grid of **10⁶ blocks**
-that ticks inside a frame budget without stalling the game, in either SE1 or SE2.
+**Design only — nothing in this part is implemented.** The figure this part is designed around is a
+single grid of **10⁶ blocks** that ticks inside a frame budget without stalling the game, in either
+SE1 or SE2.
+
+> **It is a stress bound rather than the target, decided 2026-08-24 from the population** (`G5`,
+> [§9](#9-risks-and-open-questions)): not one of 8,132 published workshop blueprints reaches a
+> million blocks in a grid, and the ninety-ninth percentile is 70,141. The design target is
+> **250,000**. This part is kept as written, because a bound is what a scale design should be sized
+> against and because what the population cannot see is a station grown in one world over months.
 
 ---
 
@@ -781,9 +789,25 @@ Properties the design must preserve as it gets clever. These are the regression 
 
 ## 9. Risks and open questions
 
-* **Is a 10⁶-block grid a real target, or a stress bound?** The design differs: if real grids top
-  out at 10⁵, chunking plus activity tracking suffices and lumping is unnecessary complexity.
-  Worth deciding before building.
+* ~~**Is a 10⁶-block grid a real target, or a stress bound?**~~ **Answered 2026-08-24 by the
+  population: a stress bound.** The question was worth deciding before building and had no evidence
+  under it; the corpus is evidence. Over **8,132 published workshop blueprints, not one reaches a
+  million blocks in a grid.** The largest is 641,711, ten ships pass a quarter of a million, 49 pass
+  a hundred thousand, and the ninety-ninth percentile is **70,141**. So *if real grids top out at
+  10⁵* is very nearly the measured answer — p99 is 70k and p99.9 is 265k — and chunking plus
+  activity tracking is the design the population calls for, with lumping the complexity it does not.
+
+  **What blueprints cannot say, and it is the reason the bound stays uncapped**: a station grown in
+  one world over months is never published, so this population has a ceiling on ambition rather than
+  on possibility. The ladder therefore keeps running to a million and beyond as a stress bound —
+  which is what [document-of-intent.md](document-of-intent.md#the-scale-target) already said about
+  everything *above* the target — and what changes is which of the two numbers the design is for.
+
+  **A second measurement points the same way and bites much lower.** At the configuration that ships
+  after `C27`, a driven census hull in air stops keeping real time between 32,000 and 64,000 blocks
+  — the element-visit allowance shortens its step — so the tuning problem the 250k figure names is
+  already live an order of magnitude below it. See
+  [benchmarks.md](benchmarks.md#what-the-allowance-is-worth).
 * **Wake storms are the failure mode.** Environment transitions, a ship entering atmosphere, a
   large explosion, a blueprint paste. Each needs an explicit staggering strategy; without one, the
   worst case is *worse* than having no sleeping at all, because it pays wake bookkeeping on top of
@@ -849,6 +873,7 @@ sleeping and chunking are least effective.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-24 | **Answered §9's first open question from the population: 10⁶ is a stress bound, not the target.** Not one of 8,132 published workshop blueprints reaches a million blocks in a grid; the largest is 641,711, ten pass a quarter of a million, and p99 is 70,141. This page's own conditional — *if real grids top out at 10⁵* — is very nearly the measured answer, so chunking plus activity tracking is the design the population calls for and lumping is not. The design target on [document-of-intent.md](document-of-intent.md#the-scale-target) is 250,000 now; Part 2 is kept as written, because a bound is what a scale design should be sized against ([backlog.md](backlog.md) `G5`). |
 | 2026-08-23 | **Measured one grid per thread** ([backlog.md](backlog.md) `D19`), which the page listed as a route and nothing had priced. 10.17× on a 242-grid fleet at 32 threads, 7.09× at eight, 3.35× on an uneven fleet where the largest ship is the floor, and a hand-off of 1.6–6.8 µs against a grid's own 0.54 ms. `bench parallel` is the run and `FleetParallelTests` pins the bit-identity that makes it safe. |
 | 2026-08-22 | Corrected the substep cap in the integrator argument: it named 16, which was the default when the section was written and is now 64. The argument is unchanged — a 400× stiffness ratio exceeds any cap a grid can afford. |
 | 2026-08-22 | Merged `model-redesign.md` into this page as Part 1: both documents are design for the same model, and the data structures, room mapping and per-cell storage arguments were being made twice. Replaced the numbered section references with named links, so a cross-reference survives a section being added. Corrected three stale notes carried in from the older page — per-block self-shadowing is built and switchable rather than unimplemented, the sun raycast is on an interval, and specific heat is real J/(kg·K) rather than 250× below physical. Added the standard header and this log. |

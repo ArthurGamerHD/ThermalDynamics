@@ -514,13 +514,19 @@ resumable; a step is spread across the frames of its window rather than landing 
 
 ### The scale target
 
-**A single grid of 10⁶ blocks running at `SimulationSpeed` 1.0**, in either game. Stress bounds above
-that are uncapped — the ladder is allowed to go wherever it goes — but a million blocks at real pace
-is the figure the design is for.
+**A single grid of 250,000 blocks running at `SimulationSpeed` 1.0**, in either game. Stress bounds
+above that are uncapped — the ladder is allowed to go wherever it goes, and it goes to a million —
+but a quarter of a million at real pace is the figure the design is for.
 
-**The realistic figure is around 250,000.** Servers may reach a million; most will not. That matters
-because the two numbers are answered by different work: 250k is a tuning problem and a million is a
-structural one.
+> **This said 10⁶ until 2026-08-24, and the population is what moved it** (`G5`). The two numbers
+> were both on this page, one as the target and one as *the realistic figure*, and nothing decided
+> between them — which mattered, because they are answered by different work: 250k is a tuning
+> problem and a million is a structural one. **Over 8,132 published workshop blueprints, not one
+> reaches a million blocks in a grid**: the largest is 641,711, ten pass a quarter of a million, and
+> the ninety-ninth percentile is 70,141. What a blueprint population cannot see is a station grown
+> in one world over months, so this is a ceiling on ambition rather than on possibility — which is
+> exactly why a million stays as a stress bound and the ladder still runs there.
+> [backlog.md](backlog.md) `G5`, [scale-design.md](scale-design.md#9-risks-and-open-questions).
 
 Measured against the current ladder, on hulls built from the block census:
 
@@ -530,11 +536,15 @@ Measured against the current ladder, on hulls built from the block census:
 | 505,566 | 67.06 ms | **13.18 ms** | 1 | inside |
 | 1,000,294 | 118.20 ms | **25.87 ms** | 1 | **1.55× over** |
 
-**The realistic target is already met and the stated one is not, on two counts.** At a million blocks
-the tick is over a 60 fps frame, *and* the step is being shortened by `MaxElementVisitsPerStep` to
-1 substep against the 12 the grid's stiffness asks for — so simulated time is not advancing at 1.0
-either. Closing it means not touching every node every step: activity tracking, chunking and
-multirate stepping, all designed in [scale-design.md](scale-design.md) and none of it built.
+**The target is met on the ladder above and is not met in air**, which is the more useful reading of
+it since `C27` priced what the allowance gives up. At a million blocks — the stress bound now — the
+tick is over a 60 fps frame *and* the step is shortened by `MaxElementVisitsPerStep` to 1 substep
+against the 12 the grid's stiffness asks for, so simulated time is not advancing at 1.0 either.
+Closing that means not touching every node every step: activity tracking, chunking and multirate
+stepping, all designed in [scale-design.md](scale-design.md) and none of it built. **And the tuning
+problem bites an order of magnitude below the target**: a driven census hull in air stops keeping
+real time between 32,000 and 64,000 blocks at the configuration that ships, which is where the work
+actually is ([benchmarks.md](benchmarks.md#what-the-allowance-is-worth)).
 
 ### Use the machine, and stay off the game thread
 
