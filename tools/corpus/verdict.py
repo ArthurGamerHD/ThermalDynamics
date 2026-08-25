@@ -174,8 +174,12 @@ if demand:
     # balance-lab.md, G6's cost half, which was written down before this was scored (`E11`).
     work = []
     for row in outcomes:
-        cost = scoring.step_work(
-            number(row, "blocks"), number(row, "joints"), number(row, "substeps_granted"))
+        # Demanded rather than granted: the allowance decides by comparing the demand against what
+        # it can afford, so a granted count is the answer rather than the question.
+        substeps = number(row, "substeps_demanded")
+        if substeps is None:
+            substeps = number(row, "substeps_granted")
+        cost = scoring.step_work(number(row, "blocks"), number(row, "joints"), substeps)
         if cost is not None:
             work.append(cost)
 
@@ -194,13 +198,14 @@ if demand:
 
     if cost_p:
         print(f"        step work:  p50 {cost_p['p50']:,.0f}, p95 {cost_p['p95']:,.0f}, "
-              f"p99 {cost_p['p99']:,.0f}, max {cost_p['max']:,.0f} element visits against "
+              f"p99 {cost_p['p99']:,.0f}, max {cost_p['max']:,.0f} element visits "
+              f"(links + {scoring.NODE_COST_IN_LINKS:.0f} x nodes) against "
               f"{allowance:,.0f} granted"
               + (f"; {over:,} of {len(work):,} runs are past it — those grids run slower than "
                  f"real time" if over else "; every run fits"))
     else:
         print("        step work:  not derivable from this dataset — it needs blocks, joints and "
-              "substeps_granted, and one of them is missing")
+              "a substep column, and one of them is missing")
 
 # ---- G3 / G4: not answerable from this dataset -------------------------------------------
 verdict("G3", "Cooling works.", None,

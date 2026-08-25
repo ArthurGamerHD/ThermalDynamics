@@ -178,12 +178,18 @@ def within(bound):
 
 # ---- what a step costs, in the solver's own unit -------------------------------------------
 
-# Element visits a substep charges per node, from `ThermalSolverStep.SubstepWork`: the buffers
-# cleared (an eighth), the environment pass, the apply pass, and one more walk of the nodes. Links
-# are one visit each and are added separately. Heat sources multiply the node term and a corpus
-# ship has none registered, so they are absent here and the figure is a lower bound where a world
-# adds them.
-VISITS_PER_NODE = 2.125
+# Element visits a substep charges per node, from `ThermalSettings.NodeCostInLinks` — the weight
+# `MaxElementVisitsPerStep` is denominated in. Links are one visit each and are added separately.
+#
+# **This was 2.125 until 2026-08-24, and 2.125 is a real number about the solver that is the wrong
+# one here.** It is `ThermalSolverStep.SubstepWork`: the buffers cleared, the environment pass, the
+# apply pass and one more walk, which is how a step is cut into frame-sized slices. The *allowance*
+# is spent in a different currency — `ThermalSimulation.SubstepCost` is `links + 4 x nodes`, and
+# that is what a step's length is divided by when the bound decides whether to shorten it. Scoring
+# work in the pacing unit and comparing it against a bound denominated in the budget unit is a
+# comparison between two currencies, 1.45x apart on a census hull. See benchmarks.md, What a
+# substep costs, for where the 4 comes from, and What the allowance is worth for what it buys.
+NODE_COST_IN_LINKS = 4.0
 
 # What the shipped `MaxElementVisitsPerStep` grants one grid's step. Not a threshold invented for
 # this criterion: it is the mod's own statement of what a step may cost, and a step past it is
@@ -194,6 +200,11 @@ SHIPPED_VISIT_ALLOWANCE = 2000000.0
 
 def step_work(nodes, links, substeps):
     """Element visits one step of a grid charges, which is the cost half of `G6`.
+
+    `substeps` is the demand rather than what was granted wherever a walk records both: the
+    allowance shortens a step by comparing the *demand* against what it can afford, so a granted
+    count -- already clamped by `MaxSubsteps` and by the allowance itself -- understates a stiff
+    grid and is the wrong side of the very decision being scored.
 
     **A cost that is not a clock.** The corpus deliberately carries no timing column — a per-ship
     millisecond figure taken across thousands of hulls on a shared machine measures the machine —
@@ -208,7 +219,7 @@ def step_work(nodes, links, substeps):
     if nodes <= 0 or substeps <= 0:
         return None
 
-    return substeps * ((VISITS_PER_NODE * nodes) + links)
+    return substeps * ((NODE_COST_IN_LINKS * nodes) + links)
 
 
 def keeps_up(work, allowance=SHIPPED_VISIT_ALLOWANCE):

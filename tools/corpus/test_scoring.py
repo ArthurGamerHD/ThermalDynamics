@@ -213,11 +213,19 @@ class StepWork(unittest.TestCase):
     """`G6`'s cost half: work in the solver's own unit, against the allowance the mod ships."""
 
     def test_a_step_costs_its_substeps_times_its_elements(self):
-        # One substep over 1,000 nodes and 2,000 links: 2,125 node visits and 2,000 link visits.
-        self.assertAlmostEqual(4125.0, scoring.step_work(1000, 2000, 1), places=3)
+        # One substep over 1,000 nodes and 2,000 links: 4,000 node visits and 2,000 link visits.
+        self.assertAlmostEqual(6000.0, scoring.step_work(1000, 2000, 1), places=3)
 
         # And it is linear in the substeps, which is what makes it the cost the cap decides.
-        self.assertAlmostEqual(41250.0, scoring.step_work(1000, 2000, 10), places=3)
+        self.assertAlmostEqual(60000.0, scoring.step_work(1000, 2000, 10), places=3)
+
+    def test_the_unit_is_the_one_the_allowance_is_denominated_in(self):
+        # The weight is `ThermalSettings.NodeCostInLinks`, which is what
+        # `ThermalSimulation.SubstepCost` charges and therefore what the allowance is divided by.
+        # It was 2.125 until 2026-08-24 -- `ThermalSolverStep.SubstepWork`, the unit a step is
+        # *paced* in -- which scored the criterion in one currency against a bound stated in
+        # another, 1.45x apart on a census hull.
+        self.assertEqual(4.0, scoring.NODE_COST_IN_LINKS)
 
     def test_a_missing_column_reports_nothing_rather_than_a_figure_built_from_a_zero(self):
         self.assertIsNone(scoring.step_work(None, 2000, 4))

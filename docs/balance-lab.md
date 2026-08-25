@@ -59,11 +59,18 @@ corpus carries no timing column — deliberately, since a per-ship millisecond f
 thousands of hulls on a shared machine measures the machine. So the cost is stated as **work**, in
 the solver's own unit, and compared against a bound the mod already ships.
 
-* **The statistic.** A step's work in element visits, which is what the solver charges itself and
-  paces on: `substeps × (2.125 × nodes + links)`, where the 2.125 is the buffers cleared, the
-  environment pass, the apply pass and one more walk of the nodes, all of which `SubstepWork` sums
-  and none of which is a clock. The corpus records `blocks`, `joints` and `substeps_granted` per
-  ship, so it is derivable from every walk already taken.
+* **The statistic.** A step's work in element visits, in the unit the allowance is denominated in:
+  `substeps × (links + 4 × nodes)`, which is `ThermalSimulation.SubstepCost` and is what a step's
+  length is divided by when the bound decides whether to shorten it. None of it is a clock. The
+  corpus records `blocks`, `joints` and both substep columns per ship, so it is derivable from every
+  walk already taken.
+
+  > **The weight was 2.125 until 2026-08-24, and that is a real figure about the solver that is the
+  > wrong one here.** It is `ThermalSolverStep.SubstepWork` — the buffers cleared, the environment
+  > pass, the apply pass and one more walk — which is the unit a step is cut into *frame-sized
+  > slices* in. The allowance is spent in the other one. Scoring in the pacing unit against a bound
+  > stated in the budget unit compares two currencies 1.45× apart on a census hull, and it halved
+  > every figure below. Corrected in place (`P3`), with the old numbers kept visible.
 * **The bound.** `MaxElementVisitsPerStep`, which ships at **2,000,000**. It is not an invented
   threshold: it is the mod's own statement of what one grid's step may cost, and a step that
   exceeds it is not refused — it is spread over more frames, so the grid's simulated time runs
@@ -74,19 +81,29 @@ the solver's own unit, and compared against a bound the mod already ships.
   allowance is per grid, so this says a *ship* is affordable rather than that a *session* is —
   which is `D19`'s question and is measured on a fleet rather than on a population.
 
-**Scored, and it holds.** Over the 40,660 runs of the 2026-08-21 survey that carry all three
-columns: **p50 7,293 element visits, p95 174,996, p99 446,707** against the 2,000,000 the allowance
-grants — the ninety-ninth percentile is a fifth of what a step may cost. **Fifteen runs are past
-it, and they are three ships**: `Large Grid 2094` at 432,231 blocks, `WH40K SENIORIOUS VICTORY` at
-366,225 and an `Executor Class Super Star Destroyer` at 349,161, each in `vacuum-sunlit` at three
-substeps. So the allowance covers a ship of about three hundred thousand blocks, and the three that
-exceed it run their simulated time slower than real time rather than being refused anything.
+**Scored, and it holds.** Over the 40,656 runs of the 2026-08-21 survey that carry all three
+columns: **p50 10,911 element visits, p95 269,154, p99 883,675** against the 2,000,000 the allowance
+grants — the ninety-ninth percentile is a little under half of what a step may cost. **102 runs are
+past it, and they are 28 ships**, the smallest at 74,160 blocks and the largest at 641,711; the
+eighteen biggest are past it in all five scenarios. So the allowance covers a ship of about seventy
+thousand blocks in vacuum, and the ships that exceed it run their simulated time slower than real
+time rather than being refused anything.
+
+> Previously, and corrected on 2026-08-24 when the unit was: **p50 7,293, p95 174,996, p99 446,707,
+> fifteen runs past it and three ships**. What moved is the weight per node, from 2.125 to the 4 the
+> allowance is actually divided by, and the substep column, from granted to demanded — granted is
+> already clamped by `MaxSubsteps` and by the allowance itself, so it is the answer rather than the
+> question. The verdict is unchanged.
 
 > **The dataset is the survey as it was walked**, at `ConductionScale` 2.4 and `HeatTimeScale` 225
-> and in the five vacuum scenarios. `C24` multiplies a vacuum demand by about 1.6, which would put
-> p99 near 715,000 — still a third of the allowance — and re-walking the corpus to say that rather
-> than project it is eight hours (`P6`). What the scorer needs is any walk's `blocks`, `joints` and
-> `substeps_granted`, so it prices whichever run it is handed.
+> and in the five **vacuum** scenarios, which is the same restriction that let this criterion's
+> *demand* half read as passing for months (`C19`). `C24` multiplies a vacuum demand by about 1.6,
+> which would put p99 near 1,410,000 — still inside the allowance. **In air it is not**: the 40-hull
+> panel's p99 demand is 2.81× its vacuum one at the pair that ships, which projects a corpus p99
+> near **4.0 million**, twice the bound. Both are projections of a projection and neither is a
+> measurement; what would settle it is walking the corpus in air, which is `F11`, and eight hours
+> (`P6`). What the scorer needs is any walk's `blocks`, `joints` and a substep column, so it prices
+> whichever run it is handed.
 
 **G7 holds.** All 705 prefabs, 461,428 blocks, idle: not one crosses critical, let alone loses a
 block. The same 705 flown hard lose 616, which is the control rather than the criterion — see
