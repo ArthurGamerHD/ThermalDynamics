@@ -988,6 +988,38 @@ mod can both bind. And **keys do not change meaning within a major version**.
 Together they are what makes the table safe to publish at all — the *why* under
 [Open](#open--the-api-is-part-of-the-contract), which states the goal and the check.
 
+### To another mod that also simulates heat: nothing, and the switches are the answer
+
+**The mod behaves as though it is alone, because it cannot tell that it is not.** There is no
+registry of thermal mods, no engine mechanism for discovering one, and nothing to defer to if it
+found one. Guessing would be worse than not looking: a mod that stood down because it saw something
+it thought was a rival would take a working world's heat simulation away.
+
+**What cannot collide is everything the mod owns outright.** The API channel is a number this mod
+chose (`2985582372`), the block storage is a GUID (`f7cd64ae-…`), and the components it attaches are
+its own types. A second heat mod has its own of each and neither can reach the other's.
+
+**What collides is everything a block has only one of**, and it is four things:
+
+| | What a player sees |
+| --- | --- |
+| two block temperatures | two readouts disagreeing, with no way to say which is the block's |
+| two damage sources over one threshold | a block failing about twice as fast as either mod intends |
+| two glows on one emissive | flicker, or whichever mod wrote last |
+| two panels on one terminal | clutter — the only one of the four that is merely untidy |
+
+**The answer is the switches, and it makes coexistence a world's decision rather than a code path.**
+[Every mechanism has its own switch](#isolated--every-mechanism-has-its-own-switch) and off costs
+nothing, so a world running two heat mods turns this one's `EnableDamage`, `EnableSuitDamage`,
+`HeatGlow` and `HeatWarningSound` off and keeps its simulation and its API — which is the
+composition that actually works: one mod owns the consequences, the other is read through
+`ThermalApi`. **Two mods both applying consequences is unsupported**, and that is now a sentence
+rather than an unexamined case.
+
+**One switch is missing for that to be complete**: the terminal panel and the crosshair readout have
+no setting of their own, so the *clutter* row above cannot be turned off. That is
+[backlog.md](backlog.md) `B40`.
+
 ### To a client: the server trusts nothing the client asserts about itself
 
 The split of what is replicated is in [the section below](#what-the-mod-owes-a-multiplayer-client);
@@ -1092,41 +1124,41 @@ about intent rather than a decision on the developer's behalf.
 
 ## Where there is no intent at all
 
+**As of 2026-08-25 there is nowhere, and the list below is kept as the record of the eight that were
+here.**
+
 **An undeclared intent is decided by whoever touches the file next**, which is the reason this page
 exists, so the subjects nobody has stated a position on belong on it as plainly as the ones that are
-settled. Every entry below was found by reading the tree for what it *does* and asking what says
-why: each names something the mod already ships or already refuses, with no statement anywhere about
-whether that is right.
+settled. Eight were found, by reading the tree for what it *does* and asking what said why: each
+named something the mod already shipped or already refused, with no statement anywhere about whether
+that was right.
 
-**These are voids, not open questions.** The [section after this one](#open-questions-with-a-stated-intent)
-holds the things where the intent is stated and the route is not; here the intent itself is missing.
-None of them is a defect and most may want no more than a sentence — but the sentence is not there,
-and until it is, the answer is whatever the next change happens to imply.
+**All eight were answered on 2026-08-25, and six of them by measuring rather than by choosing.**
+That is the finding worth keeping: a void is usually a question nobody had put a number to, and the
+number decided it. Pricing a hand tool said there is no hand-sized version of it. Placing the mod's
+block prices inside the game's own distribution said the lever costs what the game charges. Reading
+the glow's colour channel in ΔE said it distinguishes blocks and not moments. Counting the strings
+said the translatable surface is forty-seven of about eleven hundred. Only two — what heat does when
+the game's rules are suspended, and what happens beside a second heat mod — were settled by argument
+alone, and both were settled by following where the *game* draws a line rather than by preference.
 
-**Numbers 1 to 6 are settled and their numbers are not reused**, because the pages that cite
-these entries cite them by number. All three were answered on 2026-08-25: *what a player does with
-their hands* is [Acting on heat by hand](#acting-on-heat-by-hand--out-of-scope-and-priced), *what
-the mod's blocks cost to build* is
-[What a block costs to build](#what-a-block-costs-to-build--what-the-game-charges-and-nothing-invented),
-*the visual channel, and who can read it* is
-[Who the glow is for](#who-the-glow-is-for--brightness-and-colour-as-a-refinement), *what
-language the mod speaks* is [What language the mod speaks](#what-language-the-mod-speaks), *creative mode, and the tools that skip the game* is
-[When the game's own rules are suspended](#when-the-games-own-rules-are-suspended), *what a
-version boundary would be for* is
-[What the version number governs](#what-the-version-number-governs-and-what-moves-it), and *heat
-that leaves the world* is recorded as a deliberate limit in
-[known-issues.md](known-issues.md#deliberate-limits).
+**Their numbers are not reused**, because other pages cite them by number:
 
-### 8. Another mod that also simulates heat
+| | Void | Where the position lives now |
+| --- | --- | --- |
+| 1 | What a player does with their hands | [Acting on heat by hand](#acting-on-heat-by-hand--out-of-scope-and-priced) |
+| 2 | What the mod's blocks cost to build | [What a block costs to build](#what-a-block-costs-to-build--what-the-game-charges-and-nothing-invented) |
+| 3 | Creative mode, and the tools that skip the game | [When the game's own rules are suspended](#when-the-games-own-rules-are-suspended) |
+| 4 | What a version boundary would be for | [What the version number governs](#what-the-version-number-governs-and-what-moves-it) |
+| 5 | The visual channel, and who can read it | [Who the glow is for](#who-the-glow-is-for--brightness-and-colour-as-a-refinement) |
+| 6 | What language the mod speaks | [What language the mod speaks](#what-language-the-mod-speaks) |
+| 7 | Heat that leaves the world | [known-issues.md](known-issues.md#deliberate-limits), as a deliberate limit |
+| 8 | Another mod that also simulates heat | [To another mod that also simulates heat](#to-another-mod-that-also-simulates-heat-nothing-and-the-switches-are-the-answer) |
 
-The mod publishes a delegate table, reads a shared definition mechanism, attaches components to
-blocks, and claims a mod-storage GUID. Nothing states what happens when a second mod in the same
-world does the same thing — two mods writing block temperatures, two damage sources over the same
-threshold, two readouts on the same terminal.
-
-It may be that nothing can be done about it, in which case that is the sentence. Today the position
-is unstated, and [the API's guarantees](#to-another-mod-the-api-is-a-contract-with-four-guarantees)
-describe the mod as something to build **on** without ever saying what it is to sit **beside**.
+**This section is not retired.** It is the shape of question this page is worst at noticing, and an
+empty list is a claim that wants re-testing rather than a job finished: the way all eight were found
+was to read the tree for what it does and ask what says why, and that reading is worth repeating
+whenever a mechanism is added.
 
 ---
 
@@ -1194,6 +1226,7 @@ as a *second* change rather than as a substitute. [backlog](backlog.md) `D19`.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | **Took a position on a second heat mod in the same world, which was the eighth and last void — and with it this page has none.** The mod behaves as though it is alone because it cannot tell that it is not, and guessing would be worse: everything it owns outright cannot collide, and the four things a block has only one of can. The answer is the switches — a world running two turns this one's consequences off and keeps its simulation and its API — so two mods both applying consequences is unsupported and said so. One switch is missing for that to be complete, which is `B40`. |
 | 2026-08-25 | **Wrote the seventh void down where it belongs, which was the whole of what it asked for.** Heat leaves the world with a block that leaves it and arrives at ambient with one that is built; energy conservation is an invariant about a step and says nothing across a change in the population. It is a deliberate limit — the alternative is a grinder that heats the ship around it — and it now sits in [known-issues.md](known-issues.md#deliberate-limits) with a test pinning both halves. |
 | 2026-08-25 | **Said what the version number governs and what moves it, which was the fourth void.** `ThermalApi.Version` governs the delegate table and nothing else, and the major moves when a caller written against the previous major could still bind and then be wrong — which decides a removed key, a reshaped signature and a changed meaning alike, and leaves an added key alone. Two of the three are now checked against a recorded surface; the third is written where the rule lives. The other three promises sit under no number because they are *never* rather than *not within a major*. |
 | 2026-08-25 | **Took a position on what heat does when the game's own rules are suspended, which was the third void.** Creative suspends scarcity and heat is physics: the game keeps damaging, accelerating and colliding blocks in a creative world and only stops charging for them, so a hull that would cook in survival cooks in creative because it is the same hull. The lever is a setting rather than a mode. `SuspendedRulesTests` pins that nothing in `Data/Scripts` reads the game mode, the creative flags or the creative tools. |
