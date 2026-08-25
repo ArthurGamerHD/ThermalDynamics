@@ -227,12 +227,12 @@ whichever it is, it is a finding rather than a confirmation.
 
 ### What a per-block cap does to the population, written before it is measured
 
-`CorpusCapWalk` is running as of 2026-08-25 and **has produced nothing yet**: it was launched on
-2026-08-24, ran 69 of 8,144 blueprints, was stopped on an estimate that turned out not to be one,
-and is walking the population again from the start. The question, the statistic, the decision rule
-and the numbers that would falsify each prediction go here first (`E1`, `E11`), because a saving
+`CorpusCapWalk` **finished on 2026-08-25 at 05:08**, all 8,144 blueprints in 3 h 51 m, after being
+launched on 2026-08-24, stopped at 69 blueprints on an estimate that turned out not to be one, and
+restarted from the beginning. The question, the statistic, the decision rule and the numbers that
+would falsify each prediction were written here **before** it ran (`E1`, `E11`), because a saving
 measured after the decision to ship it has been taken is a saving that will be found to be cheap.
-Nothing below is scored against anything.
+They are left exactly as written and the result is [below](#what-it-did-the-walk-finished-and-three-of-the-four-predictions-hold).
 
 > **What stopping it measured was the estimator, and the estimator was wrong.** The walk was
 > abandoned at 45 minutes on a projection of *past ten hours*, taken from the share of the
@@ -359,6 +359,50 @@ out of the defaults today. So:
 * **between them** — a judgement, argued when the number is in, and argued in the open (`E11`).
   Nothing about that band is decided here except that it will not be decided by whether the cap
   happens to rescue a criterion.
+
+### What it did: the walk finished, and three of the four predictions hold
+
+**8,144 blueprints, four scenarios, two arms, 3 h 51 m** — `out/cap-2026-08-25`, summarised in
+[`summary-cap-2026-08-25.csv`](../tools/corpus/summary-cap-2026-08-25.csv). The walk's own
+assertions passed, which is the identity, the clock, the reach and the control.
+
+| | prediction | measured | |
+| --- | --- | --- | --- |
+| the identity | capped demand is `min(uncapped, 6)` | **0 of 32,576 pairs** differ by more than 1 %; the worst is 0.0000 substeps | **holds** |
+| the benefit | work p99 1.7–2.9 M, `G6`'s cost half passes | **2,180,352** against the 4,000,000 granted, from 7,293,904 uncapped | **holds** |
+| the cost | Δpeak p99 under 1 K, max under 10 K | p99 **0.2820 K**, max **48.2190 K** | **fails on the max** |
+| the reach | 3–10 % of blocks in air | **5.83 %** | **holds** |
+
+**The benefit prediction was arithmetic and it was right.** 2.5 M was projected by substituting
+`min(demand, 6)` into the air walk's rows and multiplying by a hull's link-to-node ratio; the walk
+measured 2.18 M. Uncapped, the same population is 7.29 M — **1.82× the allowance**, with 733 of
+32,575 runs past it; capped, 131. So the cap does what it was proposed for.
+
+**The cost prediction fails on its second half, and the tail is not censored.** Ten pairs are more
+than 14 K apart and the control is past nothing on any of them: `NX-01 (Vanila)` reads 484 K
+uncapped and 533 K capped at hot noon. What they have in common is size — every one of the ten is
+between 79,460 and 155,010 blocks.
+
+### And the trade is the wrong way round: the cost is per block, the benefit is per grid
+
+This is the finding, and it is not one the pre-registration anticipated.
+
+| blocks | ships | runs | over the allowance uncapped | capped | Δpeak p99 | blocks floored |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| under 1,000 | 3,830 | 15,360 | **0.00 %** | 0.00 % | 0.1230 K | **7.44 %** |
+| 1,000–5,000 | 2,718 | 10,872 | **0.00 %** | 0.00 % | 0.2790 K | 7.52 % |
+| 5,000–20,000 | 1,115 | 4,468 | 0.07 % | 0.00 % | 0.5610 K | 5.79 % |
+| 20,000–60,000 | 354 | 1,416 | **28.04 %** | **0.00 %** | 0.8160 K | 5.12 % |
+| 60,000+ | 115 | 460 | **72.39 %** | **28.48 %** | 26.9770 K | **3.14 %** |
+
+**Stiffness is a property of a block and the allowance is a property of a grid.** A light fitting
+demands the same substeps on a fighter as on a dreadnought, so the cap *binds* on 86–98 % of runs at
+every size and re-masses **7.4 % of the blocks on the smallest hulls against 3.1 % on the largest**.
+The allowance only binds on hulls with enough blocks to spend it: **no run under 5,000 blocks is
+over it, capped or not**.
+
+So **6,548 of 8,144 ships — 80 % of the corpus — are charged the cap's error in full and can collect
+none of its benefit.** The 469 ships over 20,000 blocks collect all of it.
 
 **And the walk rescores `G6` itself.** Its uncapped arm is the first corpus dataset to carry
 `substep_cost`, so it replaces the withdrawn figures above rather than merely being compared with
@@ -821,6 +865,7 @@ is an enclosing hull, and the corpus has hulls.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | **`CorpusCapWalk` finished: 8,144 blueprints, four scenarios, two arms, 3 h 51 m, and three of its four registered predictions hold.** The identity is exact on all 32,576 pairs, the benefit lands at **2,180,352** inside the 1.7–2.9 M projected and takes `G6`'s cost half from 1.82× the allowance to 0.55×, and the reach is **5.83 %** inside the 3–10 % band. The cost prediction fails on its second half: p99 **0.2820 K** as predicted, max **48.22 K** against the 10 predicted, on giants and not on censored runs. **The finding nobody predicted is the shape of the trade**: stiffness is per block and the allowance is per grid, so the cap re-masses 7.4 % of the blocks on the smallest hulls and 3.1 % on the largest while no hull under 5,000 blocks is over the allowance at all — 80 % of the corpus pays in full and collects nothing. |
 | 2026-08-25 | **Recorded a limit of the paired design while the walk was still running and the verdict was not known.** Both arms run to the same clock, which stops the stopping rule being part of the difference and does not make that clock an equilibrium: the settle test tolerates 0.25 K a minute, which over an 1,800 s scenario is 7.5 K, and a cap changes the *rate* a hull approaches its answer at. On the walk's first 360 ships the pairs more than a kelvin apart have a control still moving at a median 0.03 K/s against a population median of 0.001. `cap.py` prints the deltas split on whether the control had stopped moving, **beside** the registered statistic and not instead of it — the decision rule is scored on what it was written against (`E11`). |
 | 2026-08-25 | **The 2026-08-24 air walk predates `C21`'s waste correction by one minute, and `reproduce.py` found it by comparing the walk with the cap walk's control arm.** `f91e5dc` took twenty-seven `ConsumerWasteEnergy` fractions from 0.9 to 1.0 at 21:06; the walk finished at 21:07 and had loaded the old ones. Over 1,236 shared runs the **substep demand is identical to the last bit** — demand is conductance over capacity and has no waste term — while generation moved +0.60 % at the median and +11.0 % at worst, and peaks 0 % at the median and 2.1 % at worst. The demand figures stand; the watt and peak ones are low by that much and are marked rather than withdrawn (`E10`). |
 | 2026-08-25 | **The cap walk's restart reproduced the abandoned run exactly**, which is the return on having restarted rather than resumed: 552 shared rows, 22 columns, worst relative difference zero. Three commits had touched the solver and the harness in between and none had been checked for behaviour; they were inert, and that is now measured rather than assumed (`E7`). [reproduce.py](../tools/corpus/reproduce.py) is the check, with `test_reproduce.py` pinning that a comparison with nothing in common is not a reproduction. |
