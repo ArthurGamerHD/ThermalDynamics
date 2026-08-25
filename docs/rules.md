@@ -798,10 +798,17 @@ replaced — a coolant advection scheme that is now a rotation, a setting rename
 unit, a per-profile definition overlay that no longer exists. That is `D2`'s defect class in prose:
 written, accurate-looking, and attached to nothing.
 
-The length limit is the other half and it is what prevents the first. A comment that argues a topic
+**Not arguing is the other half, and it is what prevents the first.** A comment that argues a topic
 has to be maintained against a subject it does not sit next to, so it rots where a name does not —
 and the argument belongs on a page, where it can be found by somebody who is not already looking at
 that line.
+
+> **This said *the length limit* until 2026-08-25, and length is the proxy rather than the fault.**
+> [development.md](development.md#and-in-the-code)'s two-line limit is about a comment inside a
+> body, where 73 % of the tree's 2,347 already sit and where the code beside them moves. A *summary*
+> sits on a name, which does not move under it: 62 % of the 4,838 run longer than two lines, `R10`
+> makes a test class's the canonical statement of what that class is for, and the longest of them
+> carry an experiment's controls. Sorting summaries by length finds the careful ones.
 
 *Applies to:* every comment under `Data/Scripts` and `tests`, excluding vendored code.
 *Checked by:* `NoDocCommentDescribesSomethingThatIsNotThere`, which fails on **two signatures, and

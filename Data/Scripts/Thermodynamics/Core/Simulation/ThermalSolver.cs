@@ -1911,18 +1911,8 @@ namespace Thermodynamics.Core
                             + (f4 * windWeights[4]) + (f5 * windWeights[5]);
                     }
 
-                    // A face in the airflow sheds more heat, and one in the lee sheds what it would
-                    // have shed in still air — **never less**. Forced convection adds to natural
-                    // convection rather than replacing it, so the factor spans 1..2 rather than
-                    // 0.5..1, and the contrast between a windward face and a lee one is the same
-                    // two-to-one it always was.
-                    //
-                    // Spanning 0.5..1 made wind a net *warmer* below about 50 m/s: most of a closed
-                    // hull's exposed faces do not point into the wind, so the geometric term lost
-                    // more than the speed term gained, and a hull making 2 MW settled 0.9 K hotter
-                    // in a 40 m/s wind than in still air. See backlog B29.
-                    //
-                    // It depends on geometry and wind, not temperature.
+                    // Spans 1..2, so a lee face sheds what still air sheds and never less.
+                    // Geometry and wind, not temperature. See thermal-model.md, Convection.
                     float windFactor = windy ? 1f + wind : 1f;
 
                     nodeConvectionRow[i] = convecting

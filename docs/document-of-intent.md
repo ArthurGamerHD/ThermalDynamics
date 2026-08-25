@@ -110,11 +110,23 @@ Three tests, in the developer's words:
 * **It must stand on its own.** A comment that expects the reader to hold context living in another
   file is a bad comment. Either it says enough to be understood where it sits, or it should be a
   pointer to the page that does.
-* **Two lines is the limit.** A comment longer than that is a documentation entry that ended up in
-  the wrong file. Move the explanation to the page it belongs on and leave the definition with the
-  one line that names it.
+* **Two lines is the limit** — *for a comment inside a body.* A running comment longer than that is
+  a documentation entry that ended up in the wrong file, and it sits beside code that moves, which
+  is what makes it rot.
 * **It describes, it does not lecture.** Detail is what the documentation files are for; this page
   and the ones it sits among exist so that no comment has to carry an argument.
+
+**The limit had no scope on it until 2026-08-25, and measuring the tree is what put one there.**
+Stated flatly it is a rule two thirds of the repository breaks. Counted: **2,347 running `//`
+comments, 73 % of them one or two lines and 72 over five** — the limit describes those accurately
+and they are the ones that rot. **4,838 `///` summaries over 24,380 lines, 62 % of them longer than
+two lines** — and those are not the same object. A summary sits on a *name*, which does not move
+under it; `R10` already makes a test class's summary the canonical statement of what that class is
+for, with nowhere else to put it; and the summaries that run longest are carrying an experiment's
+controls, where a reader who does not have them cannot trust the code. So the test on a summary is
+not its length. It is the third bullet: **does it state what this thing is, or argue what a page
+argues?** Where it would argue, it names the page — which is `R14`, and is the half a length limit
+was standing in for.
 
 ---
 

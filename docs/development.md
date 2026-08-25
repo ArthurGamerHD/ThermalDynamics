@@ -177,6 +177,13 @@ The exception is a **test class summary**, which `R10` makes the canonical state
 class is for — "in its own summary, not in an index". There is no page to move it to, so it stays
 where it is.
 
+**And the two-line limit is about a comment inside a body, not about a summary.** Measured over the
+tree: 2,347 running `//` comments, 73 % of them one or two lines and 72 over five — the limit
+describes those, and they are the ones that rot, because they sit beside code that moves. The 4,838
+`///` summaries run to 24,380 lines and 62 % are longer than two lines; a summary sits on a name,
+which does not move under it, and the longest of them carry an experiment's controls. The test on a
+summary is `R14`'s: does it state what the thing is, or argue what a page argues?
+
 ## Do not restructure `Models/`
 
 Both [note.txt](../note.txt) and [Models/note.txt](../Models/note.txt) say the same thing:

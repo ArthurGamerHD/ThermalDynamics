@@ -155,10 +155,11 @@ windFactor = 1 + faceWeight(wind)                (1.0 in still air)
 faces, so a face turned into the airflow sheds twice what one in the lee does.
 
 **A wind never sheds less than still air.** Forced convection adds to natural convection rather
-than replacing it, so the factor runs from 1 upward and a lee face keeps exactly what it had. The
-factor used to run 0.5 to 1, which had the same two-to-one contrast and the wrong floor: most of a
-closed hull's exposed faces do not point into the wind, so the geometric term lost more than the
-speed term gained and a wind under about 50 m/s came out a net *warmer*.
+than replacing it, so the factor runs from 1 upward and a lee face keeps what it has. A floor of
+0.5 gives the same two-to-one contrast and the wrong answer: most of a closed hull's exposed faces
+do not point into the wind, the geometric term then loses more than the speed term gains, and a wind
+under about 50 m/s is a net **warmer** — a hull making 2 MW settles 0.9 K hotter in a 40 m/s wind
+than in still air.
 
 Radiation and convection are blended by how fluid the atmosphere is:
 
@@ -708,6 +709,7 @@ several tests compare against it so the differences stay pinned rather than reme
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Stated the wind factor's floor as present-tense evidence rather than as what it *used to be* (`R12`), and absorbed the measured consequence — a 2 MW hull settling 0.9 K hotter in a 40 m/s wind — from the twelve-line comment in `ThermalSolver` that had been carrying it. The comment names this section now. |
 | 2026-08-24 | **Silence stopped being a veto** (`C22`). `RoomPressure.Level` treated *nothing reported* and *reported empty* identically, though the parameter's own documentation said they were distinct. The three vetoes are each the game or the world answering; a compartment the game calls airtight, on a pressurised world, that no lookup found a level for is a lookup that missed — which is what two models with different room shapes produce — and it now takes `AssumedWhenUnanswered`. Also corrected the error-size claim above: the two mistakes are the *same* size, about 203 K, and differ in sign; what is asymmetric is that too hot destroys a block which should have survived. |
 | 2026-08-24 | Corrected the reason given for the pressure veto chain. It was justified by air being heat capacity, so that denying air wrongly cost only a little inertia; measured, the link conductance carries no pressure term, so denying air removes the whole coupling and costs 203 K on the hottest block while every pressure above zero is identical to two decimals. The chain stays — `C9` justifies it — and whether the fallback should deny on uncertainty is now [backlog.md](backlog.md) `C22` ([backlog.md](backlog.md) `F21`). |
 | 2026-08-22 | Wrote down what a coolant pump costs, now that it costs anything: 50 kW on a large grid, derived from the loop's own mass flow against two bar of head, all of it becoming heat because a circulator does no work that leaves the system ([backlog.md](backlog.md) `C13`). |
