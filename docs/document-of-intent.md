@@ -162,6 +162,29 @@ was standing in for.
 Legibility is the first of the three commitments above, and it has three layers. **The first two are
 built; the third is not.**
 
+### Clear indicators, and the player figures it out
+
+**Decided 2026-08-25, and it is the strongest statement on this page about what the readouts are
+for.** The mod's job is to show clearly what is happening. It is *not* to diagnose, to advise, or to
+name the fix. A player who sees a block glowing and hears a cockpit warning has enough to know their
+grid is overheating; working out why, and what to change, is the part they came for. **That is the
+Engineering in Space Engineers**, and a mod that hands over the answer has taken the game away.
+
+Two things follow that are otherwise easy to get wrong.
+
+**The mod has to announce that it is there.** A player who adds it to a healthy world should be able
+to tell, without waiting for something to go wrong. Today they cannot: the glow starts a hundred
+kelvin below a block's rating, the cue fires as a block approaches its own, the terminal panel needs
+a terminal opened, the extinguisher's readout needs the tool in hand, and the one always-available
+figure — ambient temperature — lives on a performance panel behind a chat command that ships off. So
+the mod is invisible until something is already wrong, which is the opposite of the intent. **Basic
+environmental information should be on screen as a matter of course** ([backlog.md](backlog.md)
+`B41`).
+
+**And "clear" is a higher bar than "present".** An indicator a player has to be taught is a
+diagnosis in disguise. The test is whether somebody who has never read this repository can look at
+the screen and tell that their ship is getting hotter — not whether the number is correct.
+
 ### Instruments — built
 
 The terminal panel per block, the cockpit summary, the crosshair readout, the x-ray block overlay
@@ -622,6 +645,14 @@ all trades, because who runs it and in what situation is unknowable: the intent 
 potential to blow up in a player's face while not being a drag on performance**, and those two
 together are the whole balance problem.
 
+**The population it is balanced against is the workshop corpus, decided 2026-08-25.** 8,144
+published blueprints is the best real-world dataset available and it carries both the general case
+and the edge cases; every population figure in this repository is over it. **Its skew is known and
+accepted rather than corrected**: published hulls are finished, large and often combat-oriented,
+where a single-player world is mostly a starter ship, some welding and a base that grew over months.
+So the corpus is the hardest honest proxy for what people build, not a census of what worlds
+contain — which is why the scale target is a ceiling on ambition rather than on possibility.
+
 The long-run intent is regimented tests covering every scenario a grid can find itself in, collecting
 every figure that could bear on balance. That is what the lab and the corpus are for, and it is why
 `G6` — a cost criterion — sits on a list of balance criteria.
@@ -839,6 +870,13 @@ behind real time — measured at 36 % of real on a 64,000-block hull in flight a
 allowance. The alternative was built the same day and ships **off**: flooring the stiffest blocks to
 what the budget grants keeps the clock whole for about 0.024 K.
 
+**And the mod does not apologise for its cost.** There is no guided troubleshooting, no *what should
+I change* readout, and no intention to build one: the dials are documented, the status page says what
+is happening, and a player who dislikes the trade can turn mechanisms off or remove the mod. That is
+a legitimate outcome rather than a failure. **The performance criterion is the author's own play** —
+this mod is used heavily by the person writing it and development continues until it meets that bar,
+which is a harder and more honest test than a support surface.
+
 **The reason for choosing the slow clock is that the player has the dials and the mod does not have
 their intent.** An approximation applied on their behalf is the mod deciding that a number they
 cannot see matters less than a frame rate they can, and this page refuses that elsewhere. **What
@@ -1045,13 +1083,18 @@ capped, not vetted and not refused for being unbalanced**: a player chooses thei
 mod that ruins their game is a choice they made. The intent is that an add-on has *as much* control
 over this system's inputs and as much visibility of its outputs as can be given.
 
-**What follows from that is a duty to attribute rather than to bound.** If the mod will not refuse a
+**And the mod is judged on its own.** It has to be self-contained and to give a good experience with
+nothing else installed; what an add-on does to balance or to frame time is the player's business and
+not a constraint on this design. So every criterion here is a claim about this mod alone, by
+intention rather than by caveat.
+
+**What follows from that is a smaller duty than it first looked.** If the mod will not refuse a
 registration, it has to be able to say what registrations are doing — otherwise every handling
 complaint, every frame-time complaint and every "my ship exploded" arrives as this mod's bug. So the
-diagnostics owe a reader the count and the contribution of what other mods have registered
-([backlog.md](backlog.md) `K21`). **And the criteria stop being claims about a modded world**: every
-balance and affordability figure this repository publishes is measured on this mod alone, and none
-of them survives contact with an add-on that registers a megawatt.
+diagnostics would be easier to read if they could attribute a registration to the mod that made it
+([backlog.md](backlog.md) `K21`) — but that is a convenience for whoever is debugging rather than a
+requirement, because the balance question it would have answered is one this page has just declined
+to ask.
 
 [api.md](api.md#guarantees) states them and this is what they are for. **No call throws into the
 caller** — bad arguments come back as `false`, `0` or `NaN`, because an exception crossing a mod
@@ -1329,6 +1372,7 @@ as a *second* change rather than as a substitute. [backlog](backlog.md) `D19`.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | **Three more decisions.** The readouts exist to *show*, not to diagnose — a player who sees a glow and hears a warning has enough, and working out the fix is the Engineering in Space Engineers. Two consequences: the mod has to announce it is there, which today it does not (`B41`), and *clear* is a higher bar than *present*. The workshop corpus is the population the mod is balanced against, its skew known and accepted. And the mod does not apologise for its cost: no guided troubleshooting, and the performance criterion is the author's own play. Also narrowed the open-API position — the mod is judged self-contained, so what an add-on does to balance is the player's business. |
 | 2026-08-25 | **Three more intent decisions, and one retraction.** Single player is the design centre and multiplayer is a low priority that still has to work, with the server stress case written as a number rather than a mood. The two-to-five-minute window keeps a floor under it: **nothing may be destroyed in the first minute of a world**. The API is open and unbounded — any mod may register anything, because a player chooses their mod list — which converts the mod's duty from *bounding* add-ons to *attributing* them, and means every published balance figure is a claim about this mod alone. Retracted: the claim that heat could be switched off entirely, because it would have unpicked the shared surface walk that is the reason force belongs in this mod at all. |
 | 2026-08-25 | Recorded the answer to a neighbouring mod that is better than detecting it: an interface. [backlog.md](backlog.md) `K17` has one mod own the force on a constraint group while others contribute to its inputs, which is what a control-surface or jet-engine mod needs anyway — and a stronger coupling than the heat API has asked for, because a registered surface changes how a ship flies rather than what temperature it reaches. |
 | 2026-08-25 | Named the one neighbouring mod that *can* be detected, which is the exception that makes the rule above readable: [RelativeTopSpeed](https://github.com/Gauge/RelativeTopSpeed) publishes an API and speaks the same network layer this repository vendors. Today it and this model do not collide — it applies a force and no heat, this applies heat and no force — and [backlog.md](backlog.md) `K1` would end that. |
