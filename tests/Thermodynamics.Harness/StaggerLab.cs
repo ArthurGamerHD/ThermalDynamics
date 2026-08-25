@@ -31,8 +31,39 @@ namespace Thermodynamics.Harness
         /// <summary>Repeats per figure; the fastest is kept and the spread reported (`M4`).</summary>
         public const int Repeats = 5;
 
-        /// <summary>Full steps each grid takes per timed repeat.</summary>
-        public const int RoundsPerRepeat = 8;
+        /// <summary>
+        /// Grid-steps inside one timed repeat, held **equal across fleet sizes**.
+        ///
+        /// <para>
+        /// **This used to be eight rounds whatever the fleet, and that is a comparison of two
+        /// instruments rather than of two fleets** (`P6`). A round advances every grid once, so
+        /// eight rounds is 32 grid-steps at four grids and 512 at sixty-four — one timed window of
+        /// about four milliseconds and one of about seventy. Best-of-five over four milliseconds is
+        /// a reading a single scheduler hiccup lands inside all five times, and the two rungs were
+        /// then divided by each other as though they had been measured the same way. That is what
+        /// made the lump read 0.75 ms at four grids against 0.13 ms at sixty-four whenever the
+        /// machine was busy ([backlog.md](../../docs/backlog.md) `A11`).
+        /// </para>
+        ///
+        /// <para>
+        /// Five hundred and twelve keeps the largest rung's window exactly as it was and lengthens
+        /// the smaller ones to match, so no figure this lab has ever published moves and every rung
+        /// is now read through the same instrument.
+        /// </para>
+        /// </summary>
+        public const int GridStepsPerRepeat = 512;
+
+        /// <summary>
+        /// Rounds a fleet of this size needs to make one timed repeat
+        /// <see cref="GridStepsPerRepeat"/> grid-steps long. At least one, so a fleet larger than
+        /// the window still measures something.
+        /// </summary>
+        public static int RoundsFor(int grids)
+        {
+            if (grids <= 0) return 1;
+            int rounds = GridStepsPerRepeat / grids;
+            return rounds < 1 ? 1 : rounds;
+        }
 
         public class Row
         {
@@ -41,6 +72,12 @@ namespace Thermodynamics.Harness
 
             /// <summary>Frames one step is spread over, which is what the host's budget decides.</summary>
             public int Slices;
+
+            /// <summary>
+            /// Rounds inside one timed repeat. Printed because it is what makes two rungs
+            /// comparable: it varies with the fleet so that `Grids * Rounds` does not.
+            /// </summary>
+            public int Rounds;
 
             /// <summary>Milliseconds for one round — every grid advanced one full step.</summary>
             public double StaggeredMs;
@@ -86,18 +123,21 @@ namespace Thermodynamics.Harness
                 row.NodesEach = fleet[0].Solver.Nodes.Count;
                 row.Slices = slices;
 
+                int rounds = RoundsFor(grids);
+                row.Rounds = rounds;
+
                 Staggered(fleet, settings, state, 2);
                 Spread(fleet, settings, state, 2, slices);
 
                 double fastest, slowest;
-                Time(delegate { Staggered(fleet, settings, state, RoundsPerRepeat); },
+                Time(delegate { Staggered(fleet, settings, state, rounds); },
                     out fastest, out slowest);
-                row.StaggeredMs = fastest / RoundsPerRepeat;
+                row.StaggeredMs = fastest / rounds;
                 row.StaggeredSpread = fastest <= 0d ? 0d : slowest / fastest;
 
-                Time(delegate { Spread(fleet, settings, state, RoundsPerRepeat, slices); },
+                Time(delegate { Spread(fleet, settings, state, rounds, slices); },
                     out fastest, out slowest);
-                row.SpreadMs = fastest / RoundsPerRepeat;
+                row.SpreadMs = fastest / rounds;
                 row.SpreadSpread = fastest <= 0d ? 0d : slowest / fastest;
 
                 rows.Add(row);
@@ -178,6 +218,7 @@ namespace Thermodynamics.Harness
             sb.Append("grids".PadLeft(7))
               .Append("nodes ea".PadLeft(10))
               .Append("slices".PadLeft(8))
+              .Append("rounds".PadLeft(8))
               .Append("staggered".PadLeft(11))
               .Append("spread".PadLeft(10))
               .Append("spreading costs".PadLeft(17))
@@ -192,6 +233,7 @@ namespace Thermodynamics.Harness
                 sb.Append(row.Grids.ToString("n0").PadLeft(7))
                   .Append(row.NodesEach.ToString("n0").PadLeft(10))
                   .Append(row.Slices.ToString("n0").PadLeft(8))
+                  .Append(row.Rounds.ToString("n0").PadLeft(8))
                   .Append((row.StaggeredMs.ToString("n3") + " ms").PadLeft(11))
                   .Append((row.SpreadMs.ToString("n3") + " ms").PadLeft(10))
                   .Append(((row.Penalty - 1d) * 100d).ToString("n1").PadLeft(16))

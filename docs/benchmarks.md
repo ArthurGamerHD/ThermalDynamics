@@ -654,6 +654,24 @@ So the shape the measurement points at is not one schedule or the other but a th
 the grids that fit, spread the ones that do not. `StaggerTests` pins that the penalty grows with the
 fleet and that the lump does not. [backlog.md](backlog.md) `D14`.
 
+**Every rung is timed over the same number of grid-steps, and that is a correction rather than a
+detail.** The lab ran a fixed eight *rounds* at every fleet size until 2026-08-24, and a round
+advances every grid once — so a timed repeat was 32 grid-steps at four grids and 512 at sixty-four,
+one window of about four milliseconds and one of about seventy. Best-of-five over four milliseconds
+is a reading a single scheduler hiccup lands inside all five times, and the two rungs were then
+divided by each other as though the same instrument had taken both (`P6`). That is what made the
+lump read 0.75 ms at four grids against 0.13 ms at sixty-four whenever something else was compiling.
+The window is 512 grid-steps at every rung now, which leaves the largest one exactly as it was and
+lengthens the rest to match, so no figure on this page moves.
+
+**And the two claims refuse a reading they cannot resolve rather than failing** (`M5`). The floor
+is measured from the repeats themselves; past 30 % — several times the largest locality effect
+either claim is looking for, and the same figure the tests already asserted on — they print
+`REFUSED` with the floor and assert nothing about the ordering. A regression larger than the floor
+still fails. At load average 37, with a corpus walk on every core, the spread reaches 500 % and both
+refuse; the alternative was a suite that is red whenever the machine is busy, which is the failure
+mode that teaches people to ignore a red suite. [backlog.md](backlog.md) `A11`.
+
 **The eight-block row is not a stable figure.** It has swung from +48 % to +74 % across repeats of
 an unchanged tree, on a whole cost of a tenth of a millisecond for two hundred grids; its share
 column swings with it. Read the rows at 32 blocks and above, and the visit column, which do not
@@ -1090,6 +1108,7 @@ several times its neighbours' should be re-taken rather than explained.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-24 | **Closed `A11`: the two wall-clock claims are read through one instrument, and refuse a reading they cannot resolve.** `bench stagger` timed a fixed eight rounds at every fleet size, which is 32 grid-steps at four grids and 512 at sixty-four — two windows an order of magnitude apart, then divided by each other (`P6`). The window is 512 grid-steps at every rung now; the largest is unchanged, so no published figure moves. Past a 30 % noise floor — the same figure the tests already asserted on — both claims print `REFUSED` with the floor and assert nothing about the ordering, which is `M5` applied to the test rather than to the report. A regression larger than the floor still fails. |
 | 2026-08-24 | **Priced the element-visit allowance, in its own unit and in kelvin, and both halves were new.** `bench allowance` sweeps grid size, world and allowance through the host's frame-paced entry point — the one path where the bound is in force — and reports what a grid keeps of real time beside what a frame costs. **Two findings.** No published *ns per element visit* figure in this repository is in the unit the budget counts in: the ladder and the telemetry dump both divide by `nodes + links` where the budget counts `links + 4 × nodes`, about 2× apart, so the allowance had never been convertible into milliseconds at all. And it binds in **air**, not vacuum — a hull keeps 100 % of real time to 32,000 blocks in vacuum, 16,000 in atmosphere and 9,000 in flight — where [backlog.md](backlog.md) `C27` had measured only the vacuum column. What the lost rate costs is measured up a ladder rather than read off `F23`'s one point, because the curve is convex: 1.19 K standing at a 5 % deficit and 36.98 K at 60 %, the 10 % row reproducing the degraded-input sweep exactly. |
 | 2026-08-24 | **Re-ran the ladder and the environments at `C24`'s pair on the hull `C26` refreshed.** A hull carries about a tenth fewer links, because each census band now mounts the way the block it stands for does; the vacuum demand halved and the flight demand barely moved, which is the retune's shape — a convection-limited demand falls with the clock and a conduction-limited one rises with the pace. Cost per element visit is unmoved at 1.73–1.86 ns, which is what says the step got smaller rather than slower. Figures elsewhere on this page that are quoted from a particular run and not re-taken carry the date they were measured. |
 | 2026-08-23 | **Asked `D14`'s question of a fleet instead of a grid.** Spreading a step costs 12.2 % on 242 grids of 1,004 nodes and nothing at all on four — the penalty is the fleet's working set rather than any grid's size, which is why the single-grid ladder never saw it. The lump staggering would put on a frame is 0.53 ms for such a grid and flat in fleet size, and a frame carries the same total work either way, so what staggering really gives up is the ability to split a grid too big for the budget. `bench stagger`, `StaggerTests`. |
