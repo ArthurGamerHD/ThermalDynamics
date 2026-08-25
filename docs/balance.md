@@ -16,6 +16,8 @@ population of 8,132 real ships says about whether the balance targets hold.
 cd tests
 dotnet run --project Thermodynamics.Sim -- balance             # the per-block report
 dotnet run --project Thermodynamics.Sim -- balance --csv out/  # also a diffable table
+dotnet run --project Thermodynamics.Sim -- reactors            # the reactor waste fraction sweep
+dotnet run --project Thermodynamics.Sim -- oxygen              # the same, for the oxygen generator
 dotnet run --project Thermodynamics.Sim -- coolers             # the whole-game cooling ladder
 python3 tools/corpus/verdict.py out/corpus-2026-08-21          # the population criteria
 ```
@@ -48,9 +50,12 @@ Nothing here is transcribed except the vanilla figures, and those are checked.
 | [`ShippedBlocks`](../tests/Thermodynamics.Harness/ShippedBlocks.cs) | The mod's own blocks, read from `Data/CubeBlocks/*.sbc` and `Data/Cubes.xml` at run time — size, mount faces, components, thermal properties |
 | [`Vanilla`](../tests/Thermodynamics.Harness/Vanilla.cs) | Component masses and the comparison blocks, transcribed from Space Engineers' own `Content/Data` |
 | [`BalanceLab`](../tests/Thermodynamics.Harness/BalanceLab.cs) | The measurements |
+| [`SoloBlockRig`](../tests/Thermodynamics.Harness/SoloBlockRig.cs) | One block alone in shadow, bare or under one cell of armour — the two bounds both fraction sweeps are decided on |
 | [`ReactorLab`](../tests/Thermodynamics.Harness/ReactorLab.cs) | The reactor waste fraction sweep |
+| [`OxygenGeneratorLab`](../tests/Thermodynamics.Harness/OxygenGeneratorLab.cs) | The same, for a consumer: the oxygen generator's fraction |
 | [`BalanceTests`](../tests/Thermodynamics.Tests/BalanceTests.cs) | The conclusions, pinned |
 | [`ReactorWasteHeatTests`](../tests/Thermodynamics.Tests/ReactorWasteHeatTests.cs) | The reactor conclusions, pinned |
+| [`OxygenGeneratorWasteHeatTests`](../tests/Thermodynamics.Tests/OxygenGeneratorWasteHeatTests.cs) | The oxygen generator conclusions, pinned |
 
 **A block's mass is the sum of its components**, priced through `Vanilla.ComponentMasses`. That
 matters more than it looks: heat capacity is `mass × specific heat`, so a wrong mass scales every
@@ -386,6 +391,14 @@ chosen against a 33 MW draw, so it is measured in two rigs that bracket the answ
   fraction the skinned rig survives at full rating is a fraction nobody ever has to cool. **This
   sets the floor.**
 
+> **Ceiling and floor are true of a reactor and not of the rig** (corrected 2026-08-25, `E10`). At
+> a 300 MW reactor's watts the conductance out of the block is the bottleneck, so one cell of armour
+> traps more than it sheds and skinned is the hotter of the two. Three orders of magnitude down, it
+> is not: an oxygen generator at rated draw settles **267 K cooler** skinned than bare, because the
+> shell is a radiator several times the block's own area and conduction into it is nowhere near
+> binding. The rigs are *no hull* and *one cell of hull*; which is hotter is a property of the block
+> under test. See [Oxygen generator waste heat](#what-it-did-the-invention-was-the-value-that-could-not-be-built-and-two-of-four-predictions-fail).
+
 Both rigs at four candidate fractions, at full rating, against a 1,200 K critical temperature. Bold
 is past critical:
 
@@ -516,6 +529,85 @@ census's alone. Neither half is a corpus walk, and no corpus walk is being run f
 a loaded fleet's waste, and the oxygen generator carries **0.38 %** with a change of half of that, so
 a walk would be spending hours to measure a number smaller than the one already measured as very
 nearly inert (`P2` — this is what the instrument was not asked, stated rather than hidden).
+
+### What it did: the invention was the value that could not be built, and two of four predictions fail
+
+**The fraction is 0.40 and the provenance is `waste: water electrolysis`.** The rule's first clause
+fired, and it fired on something nobody was looking for: **at 0.6, two of the six vanilla oxygen
+generators are past their own critical temperature bare, at the draw their own definition rates
+them at.** `OxygenGeneratorSmall` and `SmallBlockOxygenGeneratorLab` settle at **905.3 K** against
+criticals of 862.8 K and 848.6 K, alone in shadow with every face on a 2.7 K sky. There is no
+cooler arrangement, so no build improves on it and no plumbing reaches it. That is the *unbuildable*
+bound `C28` named for the reactor, arrived at from the other side: there the sourced figure was the
+one that cooked and the invention was kept; here the invention was the one that cooked.
+
+0.40 rather than the midpoint because the rule says the **highest** value in the band that survives
+both rigs, and 0.40 does — with 30.5 K and 44.8 K on the two small-grid blocks and 99.9 K on the
+vanilla large one. Those margins are inside the hundred kelvin `ThermalGlow` starts at, so a
+generator run flat out glows. That is the outcome to want: the block tells the player it is working
+hard, and does not then destroy itself.
+
+At the shipped 0.40, one generator at its own rated draw, four hours to steady state:
+
+| Block | cells | rated | bare K | margin | skinned K | margin |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `OxygenGenerator` (no subtype) | 2 | 0.50 MW | 783.2 | 99.9 | 533.8 | 349.3 |
+| `IrrigationSystem` | 2 | 0.25 MW | 658.6 | 215.9 | 441.1 | 433.3 |
+| `LargeBlockOxygenGeneratorLab` | 4 | 0.50 MW | 696.4 | 178.7 | 504.6 | 370.5 |
+| `LargeBlockPrototechOxygenGenerator` | 6 | 1.00 MW | 643.1 | 722.1 | 577.6 | 787.6 |
+| `OxygenGeneratorSmall` | 18 | 0.10 MW | 818.1 | 44.8 | 653.6 | 209.2 |
+| `SmallBlockOxygenGeneratorLab` | 18 | 0.10 MW | 818.1 | 30.5 | 654.3 | 194.3 |
+
+**Two of the four predictions hold and the two that fail are the interesting ones.**
+
+| | prediction | outcome |
+| --- | --- | --- |
+| the ceiling | within 100 K of critical bare at 0.6 | **holds**, at **16.4 K** — and the prediction was aimed at the wrong block: two others were already past it |
+| the install | past critical *skinned* at 0.6 | **falsified**, and inverted: skinned is **267 K cooler** than bare, not hotter |
+| the relief | clears critical skinned by more than 100 K at 0.30 | **holds** at 390.4 K, trivially, once the install prediction inverted |
+| the population | under 5 % of its ship's full-load waste at the median | **falsified by an order of magnitude**: the median is **48.1 %** |
+
+**A skin cools a small heat source and cooks a large one, and this page said otherwise.** *Reactor
+waste heat* above calls bare the ceiling and skinned the floor, and that reading is true of the
+block it was measured on and not of the rig. At a 300 MW reactor's watts the block-to-block
+conductance out of the block is the bottleneck, so one cell of armour traps more than it sheds. An
+oxygen generator wastes three orders of magnitude less, conduction into the shell is nowhere near
+binding, and the shell is a radiator with several times the block's own area — so it sheds. **The
+two rigs are *no hull* and *one cell of hull*; which of them is hotter is a property of the block
+under test.** `SkinningASmallHeatSourceCoolsItWhereSkinningAReactorDoesNot` pins it, because a
+falsification that lives only in prose is one the next reader repeats.
+
+**The population prediction failed because it was asked of the fleet and answered by the ship.** The
+oxygen generator is **0.38 %** of a loaded fleet's full-load waste — the figure
+[definitions.md](definitions.md#every-waste-fraction-says-where-it-came-from-and-most-of-them-say-invented)
+quotes, and the reason this looked like a rounding error worth correcting rather than a balance
+move. Asked of the 2,277 census ships that actually carry one, it is a **median 48.1 %** of that
+ship's own full-load waste, 82.5 % at p75 and 93.5 % at p90. Both are arithmetically right over the
+population each is taken on: the first is a ratio of aggregates and a charging jump drive is three
+quarters of its denominator, the second is an aggregate of ratios over carriers only (`E6`). The
+split is the whole finding — **the 274 carriers that also have a jump drive sit at a median 0.9 %,
+and the 2,003 that do not sit at 60.0 %.** On an ordinary ship with no drive, an oxygen generator is
+most of the heat there is.
+
+So this is a balance change and not the correction the row was filed as, and it goes the direction a
+player feels: **a third off the largest heat source on half the ships that carry one**, at full
+electrical load. `python3 tools/corpus/provenance.py <composition.csv> --type OxygenGenerator`
+recomputes it.
+
+**The registration's reason for not running a walk was wrong, and it is left standing above.** It
+argued that a type carrying 0.38 % of a fleet's waste cannot be worth hours of the machine when a
+type carrying 3.65 % was measured as very nearly inert — and that is the fleet statistic this
+section has just shown is the wrong one to reason from. The paragraph is not edited, because a
+criterion and its reasoning are what a run is judged against and rewriting them afterwards is how
+`E1` is defeated slowly (`E11`). **The walk is now an open row rather than a refused one**:
+[backlog.md](backlog.md) `C31`, which also records that the standing panel cannot answer it —
+6 of its 50 ships carry a generator and one hull would carry the whole result.
+
+**What this did not measure.** No corpus walk was run, and
+the census figures above are a *composition* rather than a simulation — they say what a ship's
+blocks would waste at full electrical load, not what any hull settles at. The peaks are the rig's
+six blocks alone in shadow and nothing else. Whether a third off a median 48 % moves `G2` on the
+population is unmeasured and is the one question a walk would answer.
 
 ---
 
@@ -1574,6 +1666,7 @@ five ways a full sweep dies, and [backlog.md](backlog.md) for what is still open
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | **Decided `C21`'s last open invention on the rig, and it went the opposite way to `C28`: the oxygen generator's fraction is 0.40, sourced.** The registered rule's first clause fired on a finding nobody was looking for — at the 0.6 that shipped, two of the six vanilla generators are past their own critical temperature *bare* at the draw their own definition rates, which is a block that cannot be built rather than a balance choice. 0.40 is the top of the band electrolysis sources and the highest value where all six survive both rigs. **Two of four predictions fail.** A skin *cools* a small heat source where it cooks a reactor, so this page's *ceiling and floor* is corrected in place (`E10`); and the population half was asked of the fleet and answered by the ship — 0.38 % of a loaded fleet's waste, a **median 48.1 %** of the waste of the 2,277 ships that carry one, and 60.0 % of the 2,003 carriers with no jump drive (`E6`). So it is a balance change and not the correction the row was filed as. |
 | 2026-08-25 | **Registered the criterion for `C21`'s last open invention before measuring it**, in [Oxygen generator waste heat](#oxygen-generator-waste-heat-written-before-it-is-measured) (`E1`, `E11`). An oxygen generator wastes 0.6 of what it draws where electrolysis sources 0.20-0.40, which is the largest gap in `Cubes.xml`. The rule settles both halves — whether to move and where to — against the two precedents that point opposite ways, `C21`'s computer third that moved and `C28`'s reactor that did not, and four predictions carry the numbers that falsify them. Nothing has been run. |
 | 2026-08-25 | `G6`'s cost half was rescored on a walk that carries the link count rather than the joint count, over all 8,144 blueprints: step work p99 **7,293,904** against the 4,000,000 granted, **1.82× over**, with 733 of 32,575 runs past it. The demand half passes at p99 34.8 of 64 and reproduces `F11` exactly. A per-block cap of 6 would take the cost half to 0.55× and is not being shipped, for the reason in [backlog.md](backlog.md) `C3`. |
 | 2026-08-25 | Added [What the mod's blocks cost to build](#what-the-mods-blocks-cost-to-build), closing [backlog.md](backlog.md) `B33`. All eighteen `Cubes.xml` definitions sit inside the range the game prices its own 1,434 blocks over, on three shape-free ratios; PCU per cubic metre was a fourth and is now reported rather than judged, because it flagged only the large radiator and the vanilla blocks beneath it are vivariums and platforms. And a recipe reaches the transient and not the steady state: four times a radiator stack's mass moves the settled source by a hundredth of a kelvin and its settling time from 24 s to 112 s. |

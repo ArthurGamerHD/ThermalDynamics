@@ -275,8 +275,17 @@ namespace Thermodynamics.Tests
         /// no count is written into prose by hand when the data behind it can be read. The balance
         /// bench said 36 panel ships for as long as the panel had 50, because the header had been
         /// typed rather than generated — and a reader who catches one wrong count stops believing
-        /// the right ones. This pass found two more: 432 authored values against 654, and 135 test
-        /// classes against a suite that had grown past 160.
+        /// the right ones. The pass that added this found two more of the same shape, a count of the
+        /// authored values and a count of the suite's own classes, both stated at roughly two
+        /// thirds of the truth.
+        ///
+        /// <para>
+        /// **The figures they were wrong by are deliberately not repeated here.** Once this check
+        /// reads comments as well as pages, a comment quoting a stale count to illustrate stale
+        /// counts is indistinguishable from one making the claim — and the sentence splitter cannot
+        /// see a correction three sentences away. A history that has to be quoted belongs in a
+        /// change log, which is what `R12` gives pages and comments do not have.
+        /// </para>
         /// </summary>
         private class QuotedCount
         {
@@ -385,6 +394,22 @@ namespace Thermodynamics.Tests
         /// 50" — and a page that names the right number beside the wrong one is not making the
         /// claim, it is recording it.
         /// </para>
+        ///
+        /// <para>
+        /// **It reads source comments as well as pages, and it did not until 2026-08-25.** The
+        /// panel grew from 36 ships to 50, every page was corrected, and `KnobSweep`'s own summary
+        /// went on saying 36 for a day — in the file a reader opens to find out what the sweep
+        /// does. A comment is documentation with no reader watching it, which makes it the more
+        /// likely of the two to drift, not the less.
+        /// </para>
+        ///
+        /// <para>
+        /// **It still checks one phrasing, and that is a limit rather than an oversight.** Matching
+        /// `36-ship panel` too was tried and withdrawn: the tree writes that form to *scope a past
+        /// measurement* — "measured on the same 49-ship panel" — which is `P1` being obeyed, not a
+        /// claim about the file as it stands. A check cannot tell the two apart from the phrasing,
+        /// and one that guessed would fail every correctly-scoped figure in the repository.
+        /// </para>
         /// </summary>
         [Fact]
         public void EveryQuotedDatasetCountIsCurrent()
@@ -402,7 +427,7 @@ namespace Thermodynamics.Tests
                 int slack = (int)(actual * quoted.Tolerance);
                 Regex pattern = new Regex(@"([\d][\d,]*)\s+" + Regex.Escape(quoted.Noun));
 
-                foreach (string file in MarkdownFiles())
+                foreach (string file in Documented())
                 {
                     foreach (string sentence in Sentences(PresentTense(File.ReadAllText(file))))
                     {
@@ -432,6 +457,23 @@ namespace Thermodynamics.Tests
             Assert.True(wrong.Count == 0,
                 "counts that no longer match what they describe:\n  "
                 + string.Join("\n  ", wrong.ToArray()));
+        }
+
+        /// <summary>
+        /// Every file in the tree that carries prose a reader relies on: the pages, and the source
+        /// comments. A comment is documentation nobody is watching, which is why it drifts first.
+        /// </summary>
+        private static IEnumerable<string> Documented()
+        {
+            foreach (string file in MarkdownFiles()) yield return file;
+            foreach (string file in SourceFiles())
+            {
+                string relative = Relative(file);
+                if (relative.Contains("RichHudFramework")) continue;
+                if (relative.Contains("NetworkAPI")) continue;
+
+                yield return file;
+            }
         }
 
         /// <summary>

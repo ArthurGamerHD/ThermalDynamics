@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import provenance
 
 # The same four numbers AuthoredWasteTests.TheProvenanceOfEveryFractionIsCounted asserts.
-PINNED = {"sourced": 42, "derived": 1, "unreachable": 108, "invented": 77}
+PINNED = {"sourced": 43, "derived": 1, "unreachable": 108, "invented": 76}
 
 
 class BothReadersOfTheGrammarCountTheSame(unittest.TestCase):
@@ -49,6 +49,46 @@ class BothReadersOfTheGrammarCountTheSame(unittest.TestCase):
         self.assertEqual("invented", by_type["Reactor"])
         self.assertEqual("derived", by_type["JumpDrive"])
         self.assertEqual("sourced", by_type["MotorSuspension"])
+
+        # The generator produces nothing, so its type resolves through the consumer side — which
+        # is the side the last unsourced fraction moved on 2026-08-25.
+        self.assertEqual("sourced", by_type["OxygenGenerator"])
+
+    def test_one_type_s_share_of_its_own_ships_is_not_its_share_of_the_fleet(self):
+        """The two questions provenance.py answers, on a composition it builds itself.
+
+        Two ships: one carries a generator and little else, one carries a drive an order of
+        magnitude larger and no generator. The fleet share is a tenth; the median share of the
+        ships that carry one is nine tenths. Both are right and they are not the same statistic.
+        """
+        import csv
+        import tempfile
+
+        rows = [
+            {"ship": "a", "workshop_id": "1", "subtype": "x", "type_id": "OxygenGenerator",
+             "count": "1", "waste_full_w": "90", "share_of_waste": "0.9"},
+            {"ship": "a", "workshop_id": "1", "subtype": "y", "type_id": "Reactor",
+             "count": "1", "waste_full_w": "10", "share_of_waste": "0.1"},
+            {"ship": "b", "workshop_id": "2", "subtype": "z", "type_id": "JumpDrive",
+             "count": "1", "waste_full_w": "900", "share_of_waste": "1"},
+        ]
+
+        with tempfile.NamedTemporaryFile("w", suffix=".csv", newline="", delete=False) as handle:
+            writer = csv.DictWriter(handle, fieldnames=list(rows[0].keys()))
+            writer.writeheader()
+            for row in rows:
+                writer.writerow(row)
+            path = handle.name
+
+        try:
+            ships, instances, shares = provenance.per_ship(path, "OxygenGenerator")
+        finally:
+            os.unlink(path)
+
+        self.assertEqual(2, ships)
+        self.assertEqual(1, instances)
+        self.assertEqual([0.9], shares)
+        self.assertAlmostEqual(0.09, 90 / 1000.0)
 
 
 if __name__ == "__main__":

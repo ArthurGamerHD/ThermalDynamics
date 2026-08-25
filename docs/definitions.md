@@ -15,7 +15,7 @@ Planets.xml
 Loops.xml
 ```
 
-> The rules argued here are stated canonically in [rules.md](rules.md): `D3` `R8`.
+> The rules argued here are stated canonically in [rules.md](rules.md): `D3` `E3` `E6` `E11` `R8`.
 
 | Looking for | Go to |
 | --- | --- |
@@ -265,16 +265,16 @@ an electric motor at 0.05–0.15 waste, a lithium-ion store at 0.02–0.06 one w
 engine at 0.55–0.70, a radio transmitter at 0.60–0.85, a solid-state laser at 0.50–0.90, and *all of
 it* — the first law's bound on a device that does no work outside itself and radiates nothing away.
 
-**The counts are the finding.** Of the 228 waste fractions, **42** name a conversion, **1** is derived
-from the game, **108** are producer fractions on types that produce nothing, and **77** are
-inventions. Of the 120 that anything ever multiplies, **77 are opinions** — but counting fractions
+**The counts are the finding.** Of the 228 waste fractions, **43** name a conversion, **1** is derived
+from the game, **108** are producer fractions on types that produce nothing, and **76** are
+inventions. Of the 120 that anything ever multiplies, **76 are opinions** — but counting fractions
 and weighting them by the heat they carry disagree about how much that matters:
 
 | | Share of the fractions | Share of the corpus's full-load waste heat |
 | --- | ---: | ---: |
-| derived from the game | 0.4 % | **76.3 %** |
-| sourced to a conversion | 18.4 % | 8.5 % |
-| invented | 33.8 % | 15.2 % |
+| derived from the game | 0.4 % | **76.4 %** |
+| sourced to a conversion | 18.9 % | 8.8 % |
+| invented | 33.3 % | 14.8 % |
 
 > **27 fractions moved from *invented* to *sourced* on 2026-08-24**, when `C21`'s
 > computer-and-screen third closed: the counts were 15 / 1 / 108 / 104 and the heat shares 8.4 % and
@@ -282,11 +282,28 @@ and weighting them by the heat they carry disagree about how much that matters:
 > said *the first law says 1.0* and then set 0.9. They are 1.0 against the `all of it` conversion
 > now — a band with no width, because it is a bound rather than a measurement. The two lamps that
 > point out of the hull stayed invented and now say why they are under 1.0.
+>
+> **The oxygen generator followed on 2026-08-25**, when the last of the three closed: the counts
+> were 42 / 1 / 108 / 77 and the heat shares 8.5 % and 15.2 %. It is `waste: water electrolysis` at
+> 0.40 now, and it moved because 0.6 put two of the six vanilla generators past critical in open
+> space rather than because the gap was the file's largest. **It is also the one restatement in this
+> table that is a balance change**: 0.6 to 0.40 is a third off, where the twenty-seven before it
+> were worth 0.025 % of a fleet's waste between them.
 
 *Population: the 8,142-ship census of 2026-08-21, 109,312 block rows. Basis: full electrical load
 with every jump drive charging, no thrust — a bound rather than a duty cycle (`E3`). The drives are
-restated at the fractions derived on 2026-08-23 rather than the 0.15 the census measured.
+restated at the fractions derived on 2026-08-23 rather than the 0.15 the census measured, and the
+oxygen generator at the 0.40 decided on 2026-08-25 rather than the 0.6 it measured.
 `tools/corpus/provenance.py` computes it.*
+
+> **A fleet share is not a ship's share, and for this type they differ by two orders of magnitude.**
+> Every figure in the table above is a ratio of aggregates over the whole census, so a charging jump
+> drive is three quarters of its denominator and a type carrying 0.38 % of it looks like a rounding
+> error. Asked only of the **2,277 ships that carry one**, the oxygen generator is a median **48.1 %**
+> of that ship's own full-load waste — 60.0 % on the 2,003 carriers with no jump drive, 0.9 % on the
+> 274 that have one. Both statistics are right and they answer different questions; the second is the
+> one about the player who built the block (`E6`). `provenance.py <composition.csv> --type
+> OxygenGenerator` computes it.
 
 **So the file is mostly opinion and the heat mostly is not**, because one derived block carries three
 quarters of it. And the invented sixth is not spread over a hundred blocks either — four types carry
@@ -294,14 +311,20 @@ almost all of it: artificial mass at 4.0 %, the reactor at 3.6 %, the refinery a
 assembler at 2.9 %. Everything else in the file, added together, is under two per cent of a loaded
 fleet's heat.
 
-**Three inventions have a real figure sitting beside them and do not use it**, and each is recorded
-in its own comment rather than here. The oxygen generator wastes 0.6 where water electrolysis runs
-0.60–0.80 efficient and the sourced figure is 0.20–0.40, which is the largest gap in the file. Every
-computer, screen and sensor wastes 0.9 where the first law says 1.0, since a device that does no
-work outside itself has nowhere else to put what it draws. And the reactor's 0.01 is a hundredth
-where a real thermal cycle rejects about two thirds — that one is deliberate and measured, because at
-0.02 the two smaller reactors cook themselves bare in vacuum. Moving any of them is a balance change
-and belongs in its own commit (`E11`), not in the pass that gave them provenance.
+**Three inventions had a real figure sitting beside them and did not use it, and all three are now
+closed** — two of them by moving and one by staying. Every computer, screen and sensor wasted 0.9
+where the first law says 1.0, since a device that does no work outside itself has nowhere else to
+put what it draws; they are 1.0 now. The oxygen generator wasted 0.6 where water electrolysis
+sources 0.20–0.40, which was the largest gap in the file; **it is 0.40 now, and what moved it was
+not the gap.** At 0.6, two of the six vanilla generators sit past their own critical temperature
+alone in open space at the draw their own definition rates them at, which is a block that cannot be
+built rather than a balance choice — see
+[balance.md](balance.md#oxygen-generator-waste-heat-written-before-it-is-measured), where the rule
+was registered before the rig ran. And the reactor's 0.01 is a hundredth where a real thermal cycle
+rejects about two thirds; that one is deliberate and measured, because at 0.02 the two smaller
+reactors cook themselves bare in vacuum, and `C28` decided to keep it. Moving any of them is a
+balance change and belongs in its own commit (`E11`), not in the pass that gave them provenance —
+which is how both of the two that moved were done.
 
 Of the three derived blends, only specific heat is exact — heat capacity is additive, so the
 mass-weighted mean is the right answer rather than an approximation of one. Conductivity and
@@ -477,6 +500,7 @@ Tuning guidance:
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | **`C21`'s last open invention closed: the oxygen generator is `waste: water electrolysis` at 0.40, and the counts are 43 / 1 / 108 / 76.** It moved because 0.6 put two of the six vanilla generators past their own critical temperature *bare* at their rated draw — a block that cannot be built — and not because the gap between 0.6 and the sourced band was the largest in the file. `water electrolysis` is a new conversion in `ReferenceEfficiencies`, banded 0.20-0.40 against alkaline and PEM electrolysers. The heat-share table moved with it, and it carries the one restatement in this page that is a balance change rather than a correction. **And this page's fleet share of 0.38 % was answering a different question from the one a player asks**: on the 2,277 ships that carry a generator it is a median 48.1 % of their own waste, which is now stated beside it (`E6`). The rule that decided it was registered before the run, in [balance.md](balance.md#oxygen-generator-waste-heat-written-before-it-is-measured). |
 | 2026-08-23 | **The coolant loop's fluid coupling is a heat transfer coefficient in W/(m²·K), and the game has one conduction pace again** ([backlog.md](backlog.md) `C20`). It was a 0…1 quality times a reference conductivity of 200, divided by half a cell — which made the coefficient it implied depend on grid size: 160 on a large grid and 800 on a small one, for the same fluid against the same wall. Convection has no length in it. 160 is what a large grid was already running at, so nothing there moves; a small-grid loop couples a fifth as hard as it did. |
 | 2026-08-23 | The radiator declares `SolarAbsorptivity 0.1`, which is the first shipped block to use the split at all ([backlog.md](backlog.md) `C15`). Worth 10.9 K to a sunlit stack, nothing in shadow, and emissivity untouched. |
 | 2026-08-23 | **Gave every waste fraction a provenance, and measured how much of a fleet's heat rests on the ones that have none** ([backlog.md](backlog.md) `C21`). All 228 `ProducerWasteEnergy` and `ConsumerWasteEnergy` values in `Cubes.xml` now claim a source, a derivation, a statement that nothing reads them, or an admitted invention, and `AuthoredWasteTests` holds each claim to its evidence — a band in `ReferenceEfficiencies`, the game's own `PowerEfficiency`, or the game declaring no output for the type. The counts are [the finding](#every-waste-fraction-says-where-it-came-from-and-most-of-them-say-invented): 15 sourced, 1 derived, 104 invented — and weighted by the heat they actually carry that is 8.4 %, 76.3 % and 15.3 %, so the file is mostly opinion and the heat mostly is not. No value moved; three inventions that have a real figure beside them are recorded rather than retuned (`E11`). |

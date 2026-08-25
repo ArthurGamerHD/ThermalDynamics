@@ -67,6 +67,12 @@ namespace Thermodynamics.Tests
                     entry.Key + " mass is " + actual + " in game, " + entry.Value + " in Vanilla.cs");
             }
 
+            // **Keyed on type and subtype together, because a subtype is not a name.** Thirteen
+            // of the game's definitions carry no `SubtypeId` at all — the vanilla oxygen generator
+            // among them — so a dictionary keyed on subtype alone gives every one of them the same
+            // key, and the first file read wins. This test resolved that block to a door and
+            // checked the door's mass against the generator's, which is the shape of failure the
+            // whole page exists to make loud rather than quiet.
             Dictionary<string, XElement> blocks = new Dictionary<string, XElement>();
             foreach (string file in Directory.GetFiles(Path.Combine(content, "CubeBlocks"), "*.sbc"))
             {
@@ -77,16 +83,22 @@ namespace Thermodynamics.Tests
                 foreach (XElement definition in document.Descendants("Definition"))
                 {
                     XElement id = definition.Element("Id");
-                    string subtype = id == null ? null : (string)id.Element("SubtypeId");
-                    if (subtype != null && !blocks.ContainsKey(subtype)) blocks[subtype] = definition;
+                    if (id == null) continue;
+
+                    string subtype = (string)id.Element("SubtypeId");
+                    string type = (string)id.Element("TypeId");
+                    if (subtype == null || type == null) continue;
+
+                    string key = Key(type, subtype);
+                    if (!blocks.ContainsKey(key)) blocks[key] = definition;
                 }
             }
 
             foreach (Vanilla.Block block in Vanilla.Reference)
             {
                 XElement definition;
-                Assert.True(blocks.TryGetValue(block.Subtype, out definition),
-                    block.Subtype + " is no longer a block in the installed game");
+                Assert.True(blocks.TryGetValue(Key(block.TypeId, block.Subtype), out definition),
+                    Name(block) + " is no longer a block in the installed game");
 
                 float mass = 0f;
                 foreach (XElement component in definition.Descendants("Component"))
@@ -101,8 +113,26 @@ namespace Thermodynamics.Tests
                 }
 
                 Assert.True(Math.Abs(mass - block.Mass) < 1f,
-                    block.Subtype + " weighs " + mass + " kg in game, " + block.Mass + " kg in Vanilla.cs");
+                    Name(block) + " weighs " + mass + " kg in game, " + block.Mass + " kg in Vanilla.cs");
             }
+        }
+
+        /// <summary>
+        /// The identity of a definition, as the pair the game actually keys on. `MyObjectBuilder_`
+        /// is stripped so a `TypeId` read from a definition file and one transcribed into
+        /// <see cref="Vanilla"/> compare equal.
+        /// </summary>
+        private static string Key(string typeId, string subtypeId)
+        {
+            string type = typeId ?? "";
+            if (type.StartsWith("MyObjectBuilder_")) type = type.Substring("MyObjectBuilder_".Length);
+            return type + "/" + (subtypeId ?? "");
+        }
+
+        /// <summary>What to call a reference row in a failure message, since a subtype can be empty.</summary>
+        private static string Name(Vanilla.Block block)
+        {
+            return block.Subtype.Length > 0 ? block.Subtype : block.TypeId + " (no subtype)";
         }
 
         /// <summary>
@@ -150,15 +180,21 @@ namespace Thermodynamics.Tests
 
             foreach (Vanilla.Block reference in Vanilla.Reference)
             {
+                // Type and subtype together, for the reason the test above states: an empty
+                // subtype is thirteen different blocks.
                 GameBlocks.Definition installed = null;
                 foreach (GameBlocks.Definition block in GameBlocks.All())
                 {
-                    if (block.SubtypeId == reference.Subtype) { installed = block; break; }
+                    if (Key(block.TypeId, block.SubtypeId) == Key(reference.TypeId, reference.Subtype))
+                    {
+                        installed = block;
+                        break;
+                    }
                 }
 
                 if (installed == null)
                 {
-                    wrong.Add(reference.Subtype + " is no longer a block in the installed game");
+                    wrong.Add(Name(reference) + " is no longer a block in the installed game");
                     continue;
                 }
 
@@ -167,7 +203,7 @@ namespace Thermodynamics.Tests
 
                 if (Math.Abs(transcribed - installed.Mass) > 0.5f)
                 {
-                    wrong.Add(reference.Subtype + " components weigh " + transcribed
+                    wrong.Add(Name(reference) + " components weigh " + transcribed
                         + " in Vanilla.cs and " + installed.Mass + " in game");
                 }
             }

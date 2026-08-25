@@ -682,9 +682,13 @@ ones.
 suite.
 *Checked by:* `EveryQuotedSuiteSizeIsCurrent` for a stale suite size and
 `EveryQuotedDatasetCountIsCurrent` for a count of the panel, of the values authored in `Cubes.xml`
-or of the suite's classes; the pack scripts generate the figures the report pages carry. A count of
-a dataset that is not in this repository — the corpus, the game's own definitions — is still caught
-by nobody.
+or of the suite's classes; the pack scripts generate the figures the report pages carry. **It reads
+source comments as well as pages since 2026-08-25**, which is where the same drift had been sitting
+unwatched — `KnobSweep`'s summary went on describing a panel of 36 for a day after every page had
+been corrected to 50, and two more stale counts came out of the extension. A count of a dataset that is not in this repository
+— the corpus, the game's own definitions — is still caught by nobody, and neither is a count written
+in a form other than *`N` `<noun>`*: `a 49-ship panel` is how the tree scopes a past measurement to
+the dataset it was taken on (`P1`), and no check can tell that apart from a stale claim.
 *From:* [tools/corpus/README.md](../tools/corpus/README.md).
 
 #### D2 — Hunt for what is built, documented and reached by nothing
@@ -1603,6 +1607,8 @@ right and this page is stale**; say so and fix it here.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | `E5`'s check reads source comments as well as pages. The gap was demonstrated rather than argued: the panel grew from 36 ships to 50, every page was corrected, and `KnobSweep`'s own summary — the file a reader opens to find out what the sweep does — went on saying 36. Extending it found two more stale counts in comments. What it still cannot do is now written into the rule: it matches one phrasing, because the other phrasing in the tree is how a figure is correctly scoped to the run it came from. |
+
 | 2026-08-25 | Added `W5` — a measurement holds the machine. This machine is shared with three other projects and nothing in the repository said so, which is how two suite passes came to report `LoadTests` failures that were about the machine rather than about the code. It is `P1` from the other side: a duration taken next to somebody else's compile is a figure whose stated scope is untrue. |
 | 2026-08-25 | Said what this page's identifiers share with [backlog.md](backlog.md)'s and what was decided about it (`H8`): eleven collide, 215 citations would have to be resolved by hand to remap them, and the errors of that diff would be silent — so the set is frozen by a check rather than paid off. |
 | 2026-08-25 | **`R16`, and the 155 links it found.** *A pointer in code is plain text, never a markdown link* was written into [development.md](development.md#and-in-the-code) after two such links were found rotted, and nothing checked it — a link inside a `.cs` file renders nowhere, so nobody clicks it, nobody finds out it is wrong, and `EveryRelativeLinkResolves` reads markdown only. The one form of cross-reference here that nothing checked was the one written in the syntax that looks checked, and 155 had accumulated across 91 files. Flattening them cost nothing, because every link text was already the page's own name. `NoPointerInCodeIsWrittenAsALink` holds it, and it demonstrated that it works by failing on the first draft of its own summary, where the example was quoted verbatim. |

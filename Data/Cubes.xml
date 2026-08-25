@@ -1003,10 +1003,13 @@
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<!--invented: water electrolysis runs 0.60-0.80 efficient, so the sourced figure is 0.20-0.40 and
-					    this is over twice it. A balance choice, and the largest gap between an authored fraction and a
-					    real one.-->
-					<Decimal Name="ConsumerWasteEnergy" Value="0.6" />
+					<!--waste: water electrolysis. 0.60-0.80 efficient, so 0.20-0.40 of the draw stays as heat and
+					    the rest leaves as chemical energy in the gas. It was 0.6 and invented until 2026-08-25, when
+					    the rig measured what that does: at their own rated draw, 0.6 puts two of the game's six
+					    oxygen generators past their own critical temperature alone in open space, and nothing a
+					    player builds is cooler than that. 0.40 is the top of the band and the highest value where
+					    all six survive both rigs. See balance.md, Oxygen generator waste heat.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="0.4" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>

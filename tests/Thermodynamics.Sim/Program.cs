@@ -78,6 +78,10 @@ namespace Thermodynamics.Sim
                     Console.Write(ReactorLab.Report());
                     return 0;
 
+                case "oxygen":
+                    Console.Write(OxygenGeneratorLab.Report());
+                    return 0;
+
                 case "coolers":
                     Console.Write(CoolingLadder.Report());
                     return 0;
@@ -1437,6 +1441,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  features                mechanism switches in combination, per profile");
             Console.WriteLine("  frequency               where substep cost bottoms out against Frequency");
             Console.WriteLine("  reactors                where a vanilla reactor settles, against its waste fraction");
+            Console.WriteLine("  oxygen                  where a vanilla oxygen generator settles, against its waste fraction");
             Console.WriteLine("  coolers                 every block that could cool a reactor, stacked against one");
             Console.WriteLine("  conductance             what real units did to the mod's own pipes and radiators");
             Console.WriteLine("  blocks                  every block in the game, derived from its build components");
@@ -1462,6 +1467,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  drift                   how long a client that joined stale stays wrong");
             Console.WriteLine("  inputs                  each input a client drives its sim from, degraded");
             Console.WriteLine("  occlusion               what a terminator crossing costs at each rung of the shadow ladder");
+            Console.WriteLine("  roomsweep               what the room pressure sweep costs as a grid gains compartments");
             Console.WriteLine("    --scenario shadow|sunlit|planet  --watch <s> --size N --csv <dir>");
             Console.WriteLine("  planets                 every shipped world's climate, and where each figure came from");
             Console.WriteLine("    --xml | --write <path>    the generated Planets.xml");

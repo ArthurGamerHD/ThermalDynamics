@@ -19,7 +19,7 @@ namespace Thermodynamics.Tests
     ///
     /// <para>
     /// The compatibility constraint is the point of most of this class: **an authored file that
-    /// says nothing about absorptivity must behave exactly as it did**, and 654 authored values plus
+    /// says nothing about absorptivity must behave exactly as it did**, and 656 authored values plus
     /// every third-party definition say nothing about it.
     /// </para>
     /// </summary>

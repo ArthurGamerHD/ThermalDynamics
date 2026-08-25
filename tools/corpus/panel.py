@@ -21,10 +21,10 @@ OUTCOMES = sys.argv[2] if len(sys.argv) > 2 else "out/corpus-2026-08-21/outcomes
 TARGET = sys.argv[3] if len(sys.argv) > 3 else "tools/corpus/panel.csv"
 
 # ships.csv is the only file carrying each blueprint's path, and the sweep needs it: without a
-# path it has to walk and fully parse all 9,981 corpus blueprints to find 36 ships, with 31
+# path it has to walk and fully parse every corpus blueprint to find the panel's ships, with 31
 # workers opening quarter-gigabyte files at once. That is the exact shape CorpusFixture documents
-# as how earlier runs died, and it wedged the first smoke test. With paths the sweep opens 36
-# files. Falls back to the survey's own directory when not given one.
+# as how earlier runs died, and it wedged the first smoke test. With paths the sweep opens one file
+# per panel ship. Falls back to the survey's own directory when not given one.
 SHIPS = os.path.join(os.path.dirname(OUTCOMES), "ships.csv")
 
 # The per-type dials need hulls that actually mount the type, or they measure nothing at all.

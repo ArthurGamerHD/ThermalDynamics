@@ -18,7 +18,7 @@ namespace Thermodynamics.Tests
     /// a `ConsumerWasteEnergy` claimed nothing, which is how the jump drive came to sit at `0.15`
     /// under the note *"storage is efficient; the dump is not"* while its own definition stated
     /// `PowerEfficiency 0.8` — on the block carrying most of the corpus's full-load waste heat. See
-    /// backlog.md `C21`.
+    /// definitions.md, *Every waste fraction says where it came from*, which owns the counts.
     /// </para>
     ///
     /// <para>
@@ -301,15 +301,20 @@ namespace Thermodynamics.Tests
             Assert.Equal(228, authored.Count);
             Assert.Equal(sourced + derived + unreachable + invented, authored.Count);
 
-            // 15 / 1 / 108 / 104 until 2026-08-24, when `C21`'s computer-and-screen third closed:
+            // 15 / 1 / 108 / 104 until 2026-08-24, when the computer-and-screen third closed:
             // 27 fractions the first law fixes at 1.0 moved from *invented* to *sourced* against
             // the `all of it` conversion, which has no band width because it is a bound rather
             // than a measurement. The two lamps that point out of the hull stayed invented, and
             // now say why they are under 1.0.
-            Assert.Equal(42, sourced);
+            //
+            // 42 / 1 / 108 / 77 until 2026-08-25, when the last of the three inventions with a real
+            // figure beside it closed the other way round from the reactor's: the oxygen
+            // generator's 0.6 put two of six vanilla blocks past critical in open space, and it is
+            // 0.40 against `water electrolysis` now.
+            Assert.Equal(43, sourced);
             Assert.Equal(1, derived);
             Assert.Equal(108, unreachable);
-            Assert.Equal(77, invented);
+            Assert.Equal(76, invented);
         }
 
         /// <summary>
