@@ -184,6 +184,14 @@ One caveat, and it is the reason this is a recovery rather than the normal path:
 several ships that was interrupted part way through appears in `ships.csv` and would be skipped with
 ships still to do. That is one file of nine thousand, against a whole run.
 
+**And one that costs a session rather than a run: do not read the suite while a walk is running.** The tests that assert an elapsed time are
+measuring a machine a walk is using every core of, and they fail on it: on 2026-08-25 the full suite
+was green before a cap walk started (1,864 of 1,864) and `LoadTests.SolverCostPerLinkStaysProportional`
+failed during it at **3.14×** its own limit, reporting 17.63 ns a link visit against 5.62. Nothing is
+wrong with the mod when that happens. `[Collection("alone")]` keeps those tests from colliding with
+the rest of the suite and can do nothing about a walk in another process, which is the same
+observation as `O4` one process up. The fast lane is fine to run; a full pass waits for the walk.
+
 **Read progress in bytes, not files.** The corpus is sorted largest-first, so file 500 of 9,981 is
 5 % of the files and 50 % of the work. `THERMAL_CORPUS_PROGRESS` reports both.
 
@@ -371,6 +379,7 @@ limit in [known-issues.md](../../docs/known-issues.md).
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Added the one way a sweep costs a session rather than a run: a walk in progress fails the suite's wall-clock tests, because they are measuring a machine the walk is using every core of. Measured — the suite was green before the cap walk and `SolverCostPerLinkStaysProportional` was 3.14× its limit during it. |
 | 2026-08-25 | Added [`pace.py`](pace.py): what a running walk will cost, and the check that says whether the estimate means anything. The block-share rate that abandoned the first cap walk is reported as the spread it has and then run over the finished air walk, where the answer is known. |
 | 2026-08-25 | Added the *Looking for* table. A reader arriving here often wants the criteria these scripts score rather than the scripts. |
 | 2026-08-24 | **`cap.py` scores the paired walk against the four predictions registered before it ran**, and the decision rule itself is in `scoring.cap_decision` rather than in prose — the two thresholds it compares against are the ones this repository already set for other reasons, 0.03 K accepted by `C19` and 0.6 K refused by `C3`, and having them under test is what stops a threshold being chosen once the data is in (`E1`, `E11`). Four sections: the identity the predicted benefit rests on, the work percentiles per arm against the shipped allowance, the peak deltas per scenario, and the cap's reach with the control's floored count printed beside it as the check that a control is a control. A row with no partner is counted and dropped rather than compared against a default. |
