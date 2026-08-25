@@ -85,6 +85,29 @@ The trade the old breach represented is kept in
 [configuration.md](configuration.md#the-approximation-that-shipped-on-and-no-longer-does), because
 it is the reasoning a future retune would need again rather than a fact about what ships.
 
+**A grid the element-visit allowance binds runs its thermal clock slow, and that is the largest
+approximation this mod ships.** `MaxElementVisitsPerStep` grants 4,000,000 element visits to one
+grid's step, and a step that costs more is spread over more frames rather than being refused
+anything — so nothing is *coarsened*, no exchange is clamped, and every substep is exactly as
+faithful as it would have been. What is lost is time: the grid's heat advances slower than the
+world's.
+
+**It sat outside this list until 2026-08-24 because "no accuracy is lost" reads as "nothing is
+lost", and `C27` priced the difference.** A slow clock is worth **0.00 K on a parked ship** — two
+hulls heading for the same equilibrium agree once they arrive — and under a load that is *moving*
+it is **1.19 K standing at a 5 % deficit and 36.98 K at 60 %**. Beside 0.028 K for the substep
+ceiling this world accepts and 0.607 K for the per-block cap it refuses to ship, that makes this the
+biggest thing the mod gives up by default and the last of the three to be measured.
+
+**Where it binds is air, not vacuum, and at about a third the grid size.** A settled, driven census
+hull kept all of real time to about 32,000 blocks in vacuum, 16,000 on a planet surface and 9,000 in
+flight at the 2,000,000 this setting carried before `C27`; seven ships in eight in the corpus are
+under 8,904 blocks and never reach it in any world. `0` removes the bound and is the faithful end of
+the ladder — the shipped default is deliberately not that end, which is the one place the defaults
+are not the most faithful configuration the model has, and
+[document-of-intent.md](document-of-intent.md#where-the-goals-and-the-code-disagree) carries why.
+See [configuration.md](configuration.md#what-a-shortened-step-costs).
+
 **Planet and asteroid shadow is per grid; only other grids shade individual faces.** A grid's own
 shadow is per face (`SolarSelfShadowing`) and so is another grid's (`SolarGridShadows = full`), but a
 planet's or an asteroid's dims the whole grid by the share of sampled rays that were blocked
@@ -1032,6 +1055,7 @@ counters rather than milliseconds so it holds on any machine.
 | 2026-08-22 | Reopened the per-grid shadow limit as designed work. It was recorded as a simplification taken on purpose, which `D6` is satisfied by, but the cost argument behind it treated three occluders as one: the planet's test is analytic and costs no ray, so the per-block objection was never true of the one occluder a player notices. Now [backlog](backlog.md) `A9`. |
 | 2026-08-22 | Filed the burning-ship divergence as an open defect. It had been carried on [realism.md](realism.md) as a starved-integrator finding; re-measuring it showed 0% starved, so the explanation is withdrawn and the defect stands with its cause unknown. |
 | 2026-08-22 | Repointed the step-budget paragraph at the renamed test and at the shipped rate, which moved from eight steps a second to four when the settings profiles were removed. |
+| 2026-08-24 | **Added the element-visit allowance to the deliberate limits, which is where the mod's largest shipped approximation should have been all along** (`D6`). It was missing because *the budget costs no accuracy* is true — a bounded step is shortened rather than coarsened — and reads as *nothing is lost*. What is lost is time, and `C27` priced it: 0.00 K on a parked ship, 1.19 K standing at a 5 % deficit and 36.98 K at 60 % under a moving load, against 0.028 K for the substep ceiling this world accepts and 0.607 K for the per-block cap it refuses. A limit nobody wrote down is the defect this section exists to prevent, and this one had been described three times elsewhere as a defect history and never once as a limit. |
 | 2026-08-22 | Moved the thermal view out of the deliberate limits. It was filed there on the grounds that mods get no shader — which is a statement about difficulty, not a simplification taken on purpose, and a limit is only a limit when it is chosen (`D6`). It is an open problem, and the intent to have one is stated in [document-of-intent.md](document-of-intent.md#thermal-vision--wanted-method-unknown). Recorded the absence of any non-instrument feedback beside it. |
 | 2026-08-22 | Absorbed `bugs-and-performance.md`, the record of the first extraction pass. Every one of its thirty-two findings is resolved in the current code — including the eleven whose headings carried no *fixed* marker, each re-verified against the source during this pass — so the page survives as the dated entries below and the patterns above rather than as a defect list. Restructured around the shape of each failure rather than its subsystem; promoted the deliberate limits to the top; moved the corpus balance findings to [balance.md](balance.md), which is where the dataset they come from is described. Removed two limits that the per-room gas-system read had already retired ("a room with no air vent holds no air" and "pressurisation is only known through air vents") and corrected a third: block `Conductivity` is real W/(m·K), and it is the *coolant loop's* that is still a 0…1 quality. Merged the two sections both titled "Fixed, worth remembering". |
 | 2026-08-21 | Recorded the buffer-growth NaN, the unguarded shape caches on the block-placement path, and the substep mass floor computing from its own previous answer. Recorded the censoring limit that makes every peak above critical a statement about the harness. |
