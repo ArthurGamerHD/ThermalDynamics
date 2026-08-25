@@ -49,9 +49,30 @@ is a finding rather than an excuse to move a threshold.
 | **G3** | **Cooling works.** Fitting radiators or a loop moves the outcome. | median Δpeak from a standard cooling fit is small | If the answer does not respond to the one lever the player has, the mechanic is decoration. |
 | **G4** | **Design decides, not size.** Outcome correlates with things a builder controls — exposed area per watt, radiator count, how buried the reactor is — more than with block count or grid size. | rank correlation with block count exceeds that with exposure | Otherwise the mod taxes big ships rather than rewarding good ones. |
 | **G5** | **No death spiral.** A ship past critical that throttles to idle returns below critical in bounded time. | recovery time unbounded, or damage continues after the load stops | A player must be able to react to a warning. |
-| **G6** | **Affordable across the population.** Substep demand and step cost at p95/p99 of the corpus, not at the mean. | p99 substep demand exceeds what the shipped caps grant | The census hull is one point; the tail is what stutters. **Two notes it has earned.** Its marker is a *fidelity* marker, not a cost one — a demand above the cap is the cap doing its job, and the step gets cheaper rather than dearer; what the excess buys is approximation, which the verdict prices beside the failure. And the *step cost* half of its own sentence has never been produced: the corpus carries `substeps_demanded` and no timing column, so `G6` is scored on half of what it says (`C23`). |
+| **G6** | **Affordable across the population.** Substep demand and step cost at p95/p99 of the corpus, not at the mean. | p99 substep demand exceeds what the shipped caps grant, **or p99 step work exceeds what the shipped element-visit allowance can do in real time** | The census hull is one point; the tail is what stutters. **Two notes it has earned.** Its marker is a *fidelity* marker, not a cost one — a demand above the cap is the cap doing its job, and the step gets cheaper rather than dearer; what the excess buys is approximation, which the verdict prices beside the failure. And the *step cost* half of its own sentence is now written down, above and below, having never been produced before (`C23`). |
 | **G7** | **A ship the game spawns survives arrival.** Every vanilla prefab, idle, in the environment its category spawns into, for five simulated minutes, loses no block. | any prefab loses a block | The stated compatibility floor. A mod that destroys the game's own cargo ships as they arrive is broken however good its physics is, and this is the one criterion measured on ships nobody chose to put in a corpus. |
 | **G8** | **The significant event lands in the window, and the ship is usable again inside a session.** Under sustained full electrical load, the median time from load to the first block crossing critical falls in 120–300 simulated seconds — and from a full burn throttled to idle, the median hull finishes cooling within an hour. | the crossing median falls outside 120–300 s, or the recovery median exceeds 3,600 s | The mod's own stated balance target, which had never been a scored criterion. Both halves are one criterion because one clock governs both: the dial that puts the block in the window pushes the hull out of the session, and a route that satisfies either half alone is not a route. |
+
+**`G6`'s cost half, written down before it is scored** (`E11`, `E1`). The criterion has always
+said *substep demand **and step cost***, and only the demand has ever been produced, because the
+corpus carries no timing column — deliberately, since a per-ship millisecond figure taken across
+thousands of hulls on a shared machine measures the machine. So the cost is stated as **work**, in
+the solver's own unit, and compared against a bound the mod already ships.
+
+* **The statistic.** A step's work in element visits, which is what the solver charges itself and
+  paces on: `substeps × (2.125 × nodes + links)`, where the 2.125 is the buffers cleared, the
+  environment pass, the apply pass and one more walk of the nodes, all of which `SubstepWork` sums
+  and none of which is a clock. The corpus records `blocks`, `joints` and `substeps_granted` per
+  ship, so it is derivable from every walk already taken.
+* **The bound.** `MaxElementVisitsPerStep`, which ships at **2,000,000**. It is not an invented
+  threshold: it is the mod's own statement of what one grid's step may cost, and a step that
+  exceeds it is not refused — it is spread over more frames, so the grid's simulated time runs
+  slower than real time. A ship that cannot keep up is the definition of unaffordable.
+* **The marker.** `G6`'s cost half fails when **p99 step work over the corpus exceeds the
+  allowance**, which is the same shape as its demand half and the same percentile.
+* **What it does not cover.** One grid at a time. A fleet's cost is the sum over grids and the
+  allowance is per grid, so this says a *ship* is affordable rather than that a *session* is —
+  which is `D19`'s question and is measured on a fleet rather than on a population.
 
 **G7 holds.** All 705 prefabs, 461,428 blocks, idle: not one crosses critical, let alone loses a
 block. The same 705 flown hard lose 616, which is the control rather than the criterion — see
@@ -481,6 +502,7 @@ hold the suite hostage.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-24 | **Wrote down `G6`'s cost half, before scoring anything against it** (`E11`). The criterion has always said *substep demand and step cost* and only the demand had ever been produced. The cost is stated as **work** rather than as time — `substeps × (2.125 × nodes + links)`, the solver's own charge, derivable from every corpus walk already taken — and the bound is `MaxElementVisitsPerStep` at 2,000,000, which is the mod's own statement of what a grid's step may cost and the point past which a grid's simulated time runs slower than real time. It fails at p99, the same percentile and shape as the demand half. [backlog.md](backlog.md) `C23`. |
 | 2026-08-24 | Two notes on `G6`, neither of which moves it (`P3`). Its marker is a fidelity marker rather than a cost one — a demand above the cap is the cap bounding cost, and the shipped breach *buys* 1.15× of the step for 0.028 K. And the step-cost half of its own sentence has never been produced, because the corpus carries no timing column; that gap is now `C23` ([backlog.md](backlog.md) `C19`). |
 | 2026-08-22 | Removed *subgrids are read as separate ships* from the open questions. It was not true and had not been for as long as `ShipAssembly` existed: a blueprint's grids are built as one machine and bridged at their mechanical joints. 747 of the first 1,002 ships of the 2026-08-22 sweep hold more than one grid and 695 resolved joints, 29,604 of them. What was genuinely missing is that nothing checked a bridge *moves heat* — `CorpusSurvey` counted them — and `SubgridBridgeTests` does. |
 | 2026-08-23 | **`G8` is measured and it holds**, at conductivity ×4 with `HeatTimeScale` 80–120 — four of twenty-five cells, `G1`, `G2` and `G5` all kept, 1.36–2.04× the shipped substep demand. **The criterion caught a defect in its own scorer first**: the crossing median was taken over the hulls that crossed rather than over the hulls that were loaded, which reported two conductivity ×8 cells as satisfying `G8` on a population where 27 of 40 hulls never reach critical. Censored above as `E9` requires, ×8 has no median at any clock. Nothing in `G8` moved. |
