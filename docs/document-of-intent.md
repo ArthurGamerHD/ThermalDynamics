@@ -878,14 +878,16 @@ Counted over `Data/Scripts`, the distinct strings the mod puts in front of a per
 | --- | ---: | --- |
 | Block names and descriptions | 30 | **localised**, and already done |
 | The crosshair readout, cockpit summary, terminal panel and cues | **47** | **localised** — inside the game's HUD |
-| The settings menu | 248 | English |
+| The settings menu | 250 | English |
 | Chat replies | 90 | English |
 | Debug overlays | 113 | English |
 | Telemetry files | 604 | English, and not on screen at all |
 
-**So the surface that has to be translatable is forty-seven strings**, about four per cent of what
-the mod writes, and the mechanism is already proven by the thirty block names in
-[MyTexts.resx](../Data/Localization/MyTexts.resx).
+**So the surface that has to be translatable is forty-seven strings**, **4.3 %** of what the mod
+writes, and the mechanism is already proven by the thirty block names in
+[MyTexts.resx](../Data/Localization/MyTexts.resx). `LocalisationSurfaceTests` counts the table above
+and holds the claim as a band, because telling a sentence from an identifier without a compiler is
+approximate and pinning the exact count would pin the heuristic rather than the finding.
 
 **And the rest is English on purpose rather than by neglect.** A settings label is the name of a
 value that appears in the world's configuration file, in [configuration.md](configuration.md) and in
@@ -1236,6 +1238,7 @@ as a *second* change rather than as a substitute. [backlog](backlog.md) `D19`.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Gave the language table a source. `LocalisationSurfaceTests` counts the five surfaces and holds the claim the decision rests on — that the surface inside the game's HUD is a small fraction of what the mod writes — as a band rather than as a number, because the count is heuristic (`E5`). |
 | 2026-08-25 | Recorded the one cooler *a cooling system costs power* does not reach and why ([backlog.md](backlog.md) `C16`): the suit regulates for free because `IMyCharacter` exposes `SuitEnergyLevel` to read and nothing to write. An engine limit rather than an inconsistency, and now stated beside the goal it qualifies. |
 | 2026-08-25 | Made the position on a second heat mod deliverable rather than nearly: `HeatTerminalPanel` is the switch the terminal panel never had, so a world running two can turn every output of this one off and keep the simulation and the API. |
 | 2026-08-25 | **Took a position on a second heat mod in the same world, which was the eighth and last void — and with it this page has none.** The mod behaves as though it is alone because it cannot tell that it is not, and guessing would be worse: everything it owns outright cannot collide, and the four things a block has only one of can. The answer is the switches — a world running two turns this one's consequences off and keeps its simulation and its API — so two mods both applying consequences is unsupported and said so. One switch is missing for that to be complete, which is `B40`. |
