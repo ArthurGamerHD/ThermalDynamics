@@ -748,6 +748,62 @@ block**, because total hull area is irrelevant when the heat cannot travel: bloc
 conductance is about 112 W/K, so moving megawatts even one block needs thousands of kelvin. **Area
 has to be *near* the source to count.**
 
+### What the mod's blocks cost to build
+
+[backlog.md](backlog.md) `B33`: eighteen definitions in `Cubes.xml` carry components, build times
+and PCU, and none of the three had been derived or defended. **There is no comparator to derive them
+from** — the game ships no block whose job is to move heat, so pricing a radiator against the block
+it competes with is not available, and choosing one anyway would be choosing it to reach a number
+(`M10`).
+
+**What is available is the population.** The game prices 1,434 of its own blocks with all four of
+mass, volume, PCU and build time declared, and how it prices matter and volume is a distribution a
+new block can be placed inside. The three ratios are deliberately shape-free — they say nothing
+about what a block does and everything about how much of a ship it is:
+
+| | p01 | p50 | p99 |
+| --- | ---: | ---: | ---: |
+| kilograms a cubic metre | 2.07 | 46.21 | 2,112 |
+| seconds of welding a kilogram | 0.003 | 0.042 | 0.316 |
+| PCU a block | 1 | **1** | 190 |
+
+**All eighteen sit inside the game's own range on all three**, between the 6th and 91st percentile on
+mass, the 19th and 89th on welding, and at the 53rd or 95th on PCU — the two pumps at 100 PCU and
+everything else at 1, which is the game's own median. So the answer to *what is this lever meant to
+cost* is: **what the game charges for a block of that size and mass**, which is `game mod first`
+applied to the economy rather than to the physics. The mod does not invent one.
+`BuildCostTests` holds it.
+
+**One ratio was checked and is now reported instead, and the change is here rather than quiet**
+(`E11`). PCU *per cubic metre* was the third check and it flagged exactly one block, the large
+radiator, at 1 PCU over 156 m³. Two things say the ratio is wrong rather than the price: PCU is a
+per-entity budget, spent by the block and not by the space it occupies, and the game's own median
+block is 1 PCU; and the vanilla blocks at the bottom of that ratio are vivariums, platforms and
+support beams — 1 PCU over three to four hundred cubic metres each — which is the company a large
+hollow panel belongs in. Dividing by volume prices the radiator's mechanism as though it were a cost.
+
+**And the component list is not in conflict with itself.** `B33`'s sharpest point is that a recipe is
+already a thermal dial: mass is the sum of the components and capacity is mass times specific heat.
+Measured on the biggest reactor the game ships under eight of the mod's large radiators, in shadow,
+with only the radiators' mass multiplied:
+
+| radiator mass | source settles | far radiator settles | and reaches it in |
+| --- | ---: | ---: | ---: |
+| ×1 — 4,800 kg | 864.32 K | 219.08 K | 24 s |
+| ×2 — 9,600 kg | 864.32 K | 219.08 K | 50 s |
+| ×4 — 19,200 kg | 864.32 K | 219.07 K | 112 s |
+
+**A recipe moves when a block gets there, not where it ends up**, and that is arithmetic rather than
+a result: radiation is `εσA(T⁴ − T⁴)` and conduction is `kA/d × ΔT`, and mass is in neither. Every
+figure this page prices a block on is a steady-state figure, so a recipe can be set for cost reasons
+without moving any of them.
+
+**The nineteenth block is the one nothing checks.** The decorative `Extinguisher` wall block lives in
+[Data/Extinguisher/Extinguisher.sbc](../Data/Extinguisher/Extinguisher.sbc) rather than in
+`Cubes.xml`, carries ten steel plates, and declares **neither `PCU` nor `BuildTimeSeconds`** — so two
+of the three costs are the engine's defaults rather than anything authored. It is not simulated and
+not priced here; naming it is the whole of what this measurement can say about it.
+
 ### What a hand tool would have to be worth
 
 The same index answers a question that is not about balance at all:
@@ -1453,6 +1509,7 @@ five ways a full sweep dies, and [backlog.md](backlog.md) for what is still open
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Added [What the mod's blocks cost to build](#what-the-mods-blocks-cost-to-build), closing [backlog.md](backlog.md) `B33`. All eighteen `Cubes.xml` definitions sit inside the range the game prices its own 1,434 blocks over, on three shape-free ratios; PCU per cubic metre was a fourth and is now reported rather than judged, because it flagged only the large radiator and the vanilla blocks beneath it are vivariums and platforms. And a recipe reaches the transient and not the steady state: four times a radiator stack's mass moves the settled source by a hundredth of a kelvin and its settling time from 24 s to 112 s. |
 | 2026-08-25 | Added [What a hand tool would have to be worth](#what-a-hand-tool-would-have-to-be-worth), which the block index could answer all along and nobody had asked: 26 five-kilogram CO2 bottles to return the median cooking block to ambient, 20 at once to do it inside its own window, and 71 of 72 with no surplus at all in the best case. It closes [backlog.md](backlog.md) `B32`, and the comparison is in watts and joules so that `HeatTimeScale` cannot move it. |
 | 2026-08-25 | Scoped the 2026-08-21 vacuum survey's tables to the pair they were taken at. *The shape, in one table* said **shipped settings, `HeatTimeScale` 225** and *How fast a ship crosses critical* said `HeatTimeScale` **is** 225; `C24` moved the pair to 9.6 and 90 on 2026-08-24, so both read as current and were not (`P1`). Nothing was re-measured — no walk has re-read the population in vacuum at the pair that ships — so the figures stand with their scope on them rather than being withdrawn. |
 | 2026-08-24 | **Decided `C28`: the reactor fraction stays at 0.01, and the claim it supported comes down.** Re-measured at the pair that ships, 0.02 still cooks two of the four reactors *bare*, which is the bound this page calls unbuildable — so `C24` did not move which fraction is the only one where both bounds hold, and 0.01 is kept because the alternative was measured rather than for want of one. What did move is what it buys: burying a 300 MW reactor costs **50.7 K** rather than 355 K, about five per cent of the block's headroom, so *where a reactor is installed is a decision rather than a detail, and the first thing that makes a player want a coolant loop* is corrected in place. The population had already said the same and nobody had read it against the claim — `reactor-waste` swept sixteen-fold moves the corpus peak p50 by 3 %. The bite is thrusters and drives. |

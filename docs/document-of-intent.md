@@ -582,6 +582,29 @@ different, and that could not be said while one of them was free.
 An under-supplied pump circulates proportionally slower rather than stopping, so a ship whose
 reactors are failing loses its cooling gradually rather than all at once.
 
+### What a block costs to build — what the game charges, and nothing invented
+
+**The lever costs what the game charges for a block of that size and mass.** There is no comparator
+to derive it from — the game ships nothing whose job is to move heat — so the mod's eighteen
+`Cubes.xml` definitions are placed inside the distribution the game prices its own 1,434 blocks over,
+on three ratios that say nothing about what a block does: kilograms a cubic metre, seconds of welding
+a kilogram, and PCU a block. **All eighteen sit inside it**, and the two pumps at 100 PCU against
+everything else at 1 is the only place the mod charges above the game's own median. See
+[balance.md](balance.md#what-the-mods-blocks-cost-to-build); `BuildCostTests` holds it.
+
+That is [game mod first](#the-governing-prior-game-mod-first) applied to the economy rather than to
+the physics: **the mod does not invent one.** A recipe is a balance lever the game already has, and
+using it would mean charging differently from every comparable block a player already knows the
+price of.
+
+**And the recipe is not secretly a thermal dial as well.** A block's mass is the sum of its
+components and capacity is `mass × specific heat`, so the same number does serve both purposes — but
+it reaches only half the behaviour. Measured with a radiator stack's mass multiplied by four, the
+source settles within a hundredth of a kelvin of where it settled at ×1 and the stack takes 24, 50
+and 112 seconds to get there. Radiation and conduction have no mass term; **a recipe moves when a
+block gets there, not where it ends up**, and every figure the mod is balanced on is a steady-state
+figure. So a component list can be set for what it should cost.
+
 ### Every thermal property is a dial
 
 **A dial is anything that changes how heat moves through the system**, and a block's thermal
@@ -938,26 +961,11 @@ holds the things where the intent is stated and the route is not; here the inten
 None of them is a defect and most may want no more than a sentence — but the sentence is not there,
 and until it is, the answer is whatever the next change happens to imply.
 
-**Number 1 is settled and its number is not reused**, because the pages that cite these entries cite
-them by number: *what a player does with their hands* was answered on 2026-08-25 and the position is
-[Acting on heat by hand](#acting-on-heat-by-hand--out-of-scope-and-priced).
-
-### 2. What the mod's blocks cost to build
-
-**Nineteen block definitions carry component lists, build times and PCU, and none of the three is
-derived, defended or measured anywhere.** A large radiator is thirty steel plates and 1 PCU; a
-coolant pipe is one large tube, ten construction components and ten steel plates; a pump and a heat
-pump are 100 PCU each. [balance.md](balance.md) prices every block *thermally* against the vanilla
-blocks it competes with and says nothing about what any of them costs to build.
-
-**And the build cost is already a thermal dial, set for a different reason.** A block's mass is the
-sum of its components, heat capacity is `mass × specific heat`, so the component list decides how
-much heat the block swallows before it warms. The two purposes are the same number and only one of
-them has been thought about.
-
-The mod's central balance claim is that cooling is designed in and there must be a lever. A lever
-that costs thirty steel plates is a different balance from one that costs a refinery run, and
-nothing says which this is meant to be.
+**Numbers 1 and 2 are settled and their numbers are not reused**, because the pages that cite these
+entries cite them by number. *What a player does with their hands* was answered on 2026-08-25 and
+the position is [Acting on heat by hand](#acting-on-heat-by-hand--out-of-scope-and-priced); *what
+the mod's blocks cost to build* was answered the same day and the position is
+[What a block costs to build](#what-a-block-costs-to-build--what-the-game-charges-and-nothing-invented).
 
 ### 3. Creative mode, and the tools that skip the game
 
@@ -1121,6 +1129,7 @@ as a *second* change rather than as a substitute. [backlog](backlog.md) `D19`.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | **Took a position on what a block costs to build, which was the second void.** There is no vanilla comparator for a block that moves heat, so the eighteen `Cubes.xml` definitions are placed inside the distribution the game prices its own 1,434 blocks over — kilograms a cubic metre, seconds of welding a kilogram, PCU a block — and all eighteen sit inside it. The position: the lever costs what the game charges for a block of that size and mass, and the mod does not invent an economy. The recipe is also not secretly a thermal dial: at four times a radiator stack's mass the source settles within a hundredth of a kelvin and only the transient moves, 24 to 112 s. |
 | 2026-08-25 | **Took a position on what a player does with their hands, which was the first of the voids and had no number under it.** `HandCoolingLab` prices the tool against a real five-kilogram CO2 bottle: undoing one crossing is 26 bottles at the median of the 72 vanilla types that cook themselves and 20 discharging at once to beat the block's own 32 s window, which is 3.3 MW — a large radiator with a trigger. And 71 of the 72 shed everything they make in their own best case, so the block is not where the problem is. The position: a player perceives heat and does not act on it by hand, the extinguisher is the instrument that names the block to change, and what would reopen it is a block-scale intervention rather than a bigger bottle. |
 | 2026-08-24 | **A full sweep of the tree for intent, and it found four subjects the code had always followed and no page had ever stated.** Added [what the mod promises the things around it](#what-the-mod-promises-the-things-around-it) — to an existing world, to a block it has never heard of, to another mod, and to a client — which gathers the save format's forward compatibility, the retired definition names, a setting's name as an address, the derive-don't-guess rule for third-party blocks, the API's four guarantees, and the two trust boundaries that decide which network channel a message takes. Added [what the mod does when it cannot afford itself](#what-the-mod-does-when-it-cannot-afford-itself): it slows down rather than stuttering, determinism is chosen rather than assumed, and a fault records itself whether or not anyone asked. Added [where something is modelled, it is modelled as a mechanism rather than as a threshold](#where-something-is-modelled-it-is-modelled-as-a-mechanism-rather-than-as-a-threshold), which is the most consistent habit in the code and had been written down nowhere. |
 | 2026-08-24 | **Checked every claim in the new voids section against the code rather than the documentation, and two of them changed.** The version void was overstated and is corrected in the row below. The visual-channel void was *understated*: `Incandescence`'s colour table starts at 800 K with a pure-red first entry and clamps below it, and the 26 % of block types rated under the Draper point at 798 K are exactly the blocks whose colour therefore never moves through their whole glow band. So the two-channel design is a one-channel design on a quarter of the game **for every player**, by construction — which the code says where `DraperKelvin` is defined and no page had carried. The rest verified as written: no code path in the mod knows what creative mode is, `RemoveBlock` drops a node with no redistribution of its energy, the extinguisher's ammo does zero damage, zero trajectory and zero impulse, and the settings menu's labels and descriptions are English string literals. |

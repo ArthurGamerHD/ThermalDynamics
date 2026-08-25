@@ -114,6 +114,38 @@ namespace Thermodynamics.Harness
             /// </summary>
             public float Integrity;
 
+            /// <summary>
+            /// Declared PCU, or zero where the definition does not say — which is most of the
+            /// game, since the engine defaults an absent `PCU` to 1.
+            ///
+            /// **Read as declared rather than defaulted**, because zero and one are different
+            /// claims: one is a block the author priced and zero is a block nobody did, and
+            /// substituting the engine's default here would erase which of the two a figure is
+            /// over (`C8`).
+            /// </summary>
+            public int Pcu;
+
+            /// <summary>Seconds to weld the block at the game's base speed, from `BuildTimeSeconds`.</summary>
+            public float BuildSeconds;
+
+            /// <summary>Cells the block occupies.</summary>
+            public int CellCount
+            {
+                get { return Math.Abs(Size.X * Size.Y * Size.Z); }
+            }
+
+            /// <summary>Metres a cell of this block's grid size measures, the game's own two values.</summary>
+            public float GridSize
+            {
+                get { return Large ? 2.5f : 0.5f; }
+            }
+
+            /// <summary>Cubic metres the block's cells enclose.</summary>
+            public float VolumeCubicMetres
+            {
+                get { return CellCount * GridSize * GridSize * GridSize; }
+            }
+
             /// <summary>Kilograms, summed from the components.</summary>
             public float Mass
             {
@@ -377,6 +409,15 @@ namespace Thermodynamics.Harness
                     block.HasDeclaredMounts = true;
                 }
             }
+
+            int pcu;
+            if (int.TryParse((string)definition.Element("PCU"), NumberStyles.Integer,
+                    CultureInfo.InvariantCulture, out pcu))
+            {
+                block.Pcu = pcu;
+            }
+
+            block.BuildSeconds = Number(definition, "BuildTimeSeconds");
 
             XElement components = definition.Element("Components");
             if (components != null)
