@@ -339,11 +339,15 @@ hulls demanded before, because vacuum is all conduction. Nothing there is near t
 at p99 — but the element-visit allowance is a different bound and the retune does reach it, which is
 [backlog.md](backlog.md) `C27`.
 
-**`MaxSubstepsPerBlock` is still an approximation and still not a default**, which was always the
-sharper half of this section: it costs **0.607 K** on the worst-placed block, twenty times what the
-ceiling's breach cost, so
-[the fidelity rule](document-of-intent.md#fidelity-is-the-default-a-saving-is-a-switch) makes it a
-switch. The boundary between the two is the number, not the mechanism.
+**`MaxSubstepsPerBlock` is still an approximation and still not a default**, and the number that
+made that an easy call has moved. It cost **0.607 K** on the worst-placed block, twenty times what
+the ceiling's breach cost, so
+[the fidelity rule](document-of-intent.md#fidelity-is-the-default-a-saving-is-a-switch) made it a
+switch and the ceiling the model. Re-measured on 2026-08-24 at the pair `C24` ships and the hull
+`C26` refreshed, a cap of 6 in thick air at 200 m/s costs **0.028 K** on the worst-placed block and
+0.017 K on the hottest — the same size as the breach that was called imperceptible. **The decision
+has not moved**, because moving a default is its own commit with its own reasoning (`E11`);
+[backlog.md](backlog.md) `C3` carries it and now carries a number that argues the other way.
 
 **And `G6` passes.** The criterion's marker is *p99 demand exceeds what the caps grant*, it was
 written before the data, and it was failing on the configuration that shipped — which

@@ -126,10 +126,17 @@ block capital ship.** Removing the top 225 nodes of 42,051 — half a percent �
 ### Reproducing it synthetically
 
 `bench floor` builds its hull from the measured block [`Census`](../tests/Thermodynamics.Harness/Census.cs)
-— the eight-band population of a real ship, read out of a dump's block-type table — and it lands
+— the eight-band population of a real ship, read out of a dump's block-type table — and it landed
 on **22.97 substeps** in vacuum and 43.9 in flight, against a field range of 21 to 31. Close
-enough that the synthetic ship can now be used to answer questions about the real one, which it
-could not before. `CensusFidelityTests` holds it there.
+enough that the synthetic ship could be used to answer questions about the real one, which it
+could not before.
+
+**Both ends of that comparison have since moved and the hull is still inside the population.** The
+field range is two ships measured at a pair that no longer ships and cannot be re-taken; the hull
+asks **7.35 substeps in vacuum and 24.97 in thick air at 200 m/s** at the pair that does, on tiers
+that now carry the mount points of the blocks they stand for (`C26`). What holds it in place is the
+corpus rather than the dump: 12.71 substeps in still sea-level air against a population running 6.20
+to 22.41, which `CensusFidelityTests` asserts.
 
 > The first version of this reproduced the field by adding a single 16 kg fitting at one in a
 > thousand. That got the substep count right and the *distribution* wrong — every cap touched the
@@ -350,18 +357,33 @@ At **Frequency 8**, an eighth-second step:
 | 2 | 2.00 | 235 | 3.0x | 3,648 (8.4 %) | 0.606 K | 0.152 K |
 | 1 | 1.00 | 191 | 3.6x | 9,283 (21.5 %) | 1.887 K | 0.449 K |
 
-At the shipped **Frequency 4**, a quarter-second step, which asks twice as much of the integrator:
+At the shipped **Frequency 4**, a quarter-second step, which asks twice as much of the integrator.
+**Re-measured 2026-08-24** at `C24`'s pair on the census hull `C26` refreshed — 41,119 nodes, and
+the table it replaces is below it:
+
+| cap | substeps | ms | speed | blocks raised of 41,119 | worst error | rms error |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| off | 7.35 | 386 | 1.0x | 0 | — | — |
+| 32 | 7.35 | 406 | 1.0x | 0 | 0 | 0 |
+| 16 | 7.35 | 390 | 1.0x | 0 | 0 | 0 |
+| 8 | 7.35 | 392 | 1.0x | 0 | 0 | 0 |
+| **6** | 6.00 | 369 | 1.0x | 1,422 (3.5 %) | 0.030 K | 0.010 K |
+| 4 | 4.00 | 290 | 1.3x | 4,818 (11.7 %) | 1.375 K | 0.048 K |
+| 3 | 3.00 | 244 | 1.6x | 9,046 (22.0 %) | 4.276 K | 0.140 K |
+| 2 | 2.00 | 203 | 1.9x | 12,055 (29.3 %) | 13.034 K | 0.451 K |
+| 1 | 1.00 | 173 | 2.2x | 22,791 (55.4 %) | 43.798 K | 1.763 K |
+
+**A cap of 8 is inert in vacuum now, where it bought 2.3× before.** The hull demands 7.35 substeps
+where it demanded 22.97 — `C26` took the six joints off its light fittings and `C24` put 1.6× back
+— so nothing above six binds at all, and what a cap buys in vacuum has collapsed with it. The
+figures at the pair and hull that produced the original table:
 
 | cap | substeps | ms | speed | blocks raised of 43,232 | worst error | rms error |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | off | 22.97 | 627 | 1.0x | 0 | — | — |
-| 32 | 22.97 | 613 | 1.0x | 0 | 0 | 0 |
 | 16 | 16.00 | 452 | 1.4x | 172 (0.4 %) | 0.052 K | 0.015 K |
 | 8 | 8.00 | 269 | **2.3x** | 461 (1.1 %) | 0.221 K | 0.066 K |
 | **6** | 6.00 | 223 | **2.8x** | 1,450 (3.4 %) | 0.341 K | 0.094 K |
-| 4 | 4.00 | 180 | 3.5x | 3,648 (8.4 %) | 0.601 K | 0.150 K |
-| 3 | 3.00 | 162 | 3.9x | 5,219 (12.1 %) | 0.887 K | 0.218 K |
-| 2 | 2.00 | 139 | 4.5x | 9,283 (21.5 %) | 1.898 K | 0.450 K |
 | 1 | 1.00 | 108 | 5.8x | 14,138 (32.7 %) | 5.915 K | 1.518 K |
 
 **And in air, which is where a floor has most to reach and where the tables above do not look.**
@@ -371,16 +393,24 @@ and what it buys. The same 20,916-node hull, driven, in thick air at 200 m/s —
 
 | cap | substeps | speed | blocks raised of 20,916 | peak error | worst error | rms |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| off | 34.44 | 1.0x | 0 | — | — | — |
-| 16 | 16.00 | 2.0x | 173 (0.8 %) | 0.012 K | 0.015 K | 0.004 K |
-| 8 | 8.00 | 3.4x | 1,032 (4.9 %) | 0.001 K | 0.351 K | 0.021 K |
-| **6** | **6.00** | **4.2x** | **1,378 (6.6 %)** | **−0.007 K** | **0.607 K** | 0.036 K |
-| 4 | 4.00 | 5.4x | 3,597 (17.2 %) | −0.467 K | 1.432 K | 0.143 K |
-| 1 | 1.00 | 9.0x | 11,113 (53.1 %) | −14.173 K | 21.381 K | 4.296 K |
+| off | 24.97 | 1.0x | 0 | — | — | — |
+| 16 | 16.00 | 1.5x | 21 (0.1 %) | 0.004 K | 0.005 K | 0.002 K |
+| 8 | 8.00 | 2.5x | 232 (1.1 %) | 0.012 K | 0.019 K | 0.005 K |
+| **6** | **6.00** | **3.1x** | **708 (3.4 %)** | **0.017 K** | **0.028 K** | 0.006 K |
+| 4 | 4.00 | 3.9x | 3,584 (17.1 %) | 0.014 K | 0.143 K | 0.007 K |
+| 1 | 1.00 | 6.7x | 11,571 (55.3 %) | −7.043 K | 10.503 K | 2.276 K |
 
-**The demand is 34.44 in air against 22.97 in vacuum, and a cap of 6 reaches twice as many blocks
-there** — 6.6 % against 3.4 % — because a block bolted to nothing much is still exchanging with the
-air around it. What that buys is larger too: 4.2× against 2.8×.
+**The demand is 24.97 in air against 7.35 in vacuum, and a cap of 6 reaches thirty-four times as
+many blocks there** — 3.4 % against 0.1 % at a cap of 16, and in vacuum nothing above six binds at
+all — because a block bolted to nothing much is still exchanging with the air around it. What that
+buys is the whole of what the mechanism is worth: 3.1× in air against nothing in vacuum.
+
+> **Re-measured 2026-08-24** at `C24`'s pair on the hull `C26` refreshed, and the shape of the
+> answer moved with them. The demand was 34.44 in air against 22.97 in vacuum; the retune divides
+> every capacity by 0.4 and the refresh takes six joints off a light fitting, so air came down by a
+> quarter and vacuum by two thirds. **What a cap of 6 costs fell by twenty times** — 0.028 K on the
+> worst-placed block against 0.607 K — which is the figure [backlog.md](backlog.md) `C3` is decided
+> on, and it is now the same size as the ceiling breach `C19` was closed over.
 
 **The peak barely moves, and the peak is the number damage is taken off.** At a cap of 6 the hottest
 block on the hull is seven thousandths of a kelvin from where an uncapped run leaves it, while the
@@ -670,7 +700,7 @@ pressure explains none of that; it is .NET Framework 4.8 against .NET 9. See
 
 **Stiffness: the harness had none, and this was the important one.** The synthetic block
 catalogue's lightest block was a 200 kg grating, so the benchmark ship asked for 2.25 substeps
-where a real ship asks for 21 to 31. Every scale figure in this repository was measured on a hull
+where a real ship asked for 21 to 31 at the pair that shipped then. Every scale figure in this repository was measured on a hull
 an order of magnitude softer than the ships it was meant to describe — the scale ladder's full
 step at a million blocks was six times cheaper than it should have been. Closed by the census.
 See [load-and-hitching.md](load-and-hitching.md#the-ladder-is-measured-on-a-census-hull-not-an-armour-cube).
@@ -681,12 +711,16 @@ panels between 120 and 240 J/K. That gap mattered because it is what decides how
 reaches: cap 2 raised 2.3 % of the old benchmark hull and 23.7 % of a field ship.
 
 Every benchmark hull is now built from [`Census`](../tests/Thermodynamics.Harness/Census.cs), the
-eight-band block population of a real 1,381-block ship read out of a dump's block-type table. The
-census hull asks for 23 substeps against a field range of 21 to 31, and its cap curve tracks the
-field's closely — cap 8 reaches 1.2 % against the field's 1.2 %, cap 2 reaches 24 % against 23.7 %,
-cap 1 reaches 38 % against 39.1 %. `CensusFidelityTests` holds it there: it asserts the substep
-demand and the cap curve against constants recorded in `Census.Field`, so the harness cannot drift
-away from the reports again without a test saying so.
+eight-band block population of a real 1,381-block ship read out of a dump's block-type table, with
+each band carrying the mount points its own block declares (`C26`). The census hull asks for **12.71
+substeps in still sea-level air against a population running 6.20 to 22.41**, and its cap curve
+tracks that population's — 15.3 % against 23.2 % at a cap of 4, 29.0 % against 40.3 % at 2, 57.3 %
+against 75.9 % at 1. `CensusFidelityTests` holds it there.
+
+**The reference moved from the dump to the corpus, and it had to.** The constants in `Census.Field`
+are two ships from two vanished sessions, measured at a pair the mod no longer runs; the corpus is
+8,105 blueprints and can be walked again in three minutes whenever a default changes. Where a test
+still reads the dump it says which pace each side was taken at (`P6`).
 
 **Shape and the adapter, both already known.** Bounding-box fill, exposed fraction and diameter
 all vary by an order of magnitude with hull shape
@@ -944,6 +978,7 @@ conductivity 50 is conduction-stiff, and a material definition would fix them ou
 
 | Date | Change |
 | --- | --- |
+| 2026-08-24 | **Re-ran both per-block cap sweeps at the pair and hull that now ship, and what the cap is worth inverted.** In vacuum the hull demands 7.35 substeps rather than 22.97, so no cap above six binds and a cap of 6 buys nothing; in thick air at 200 m/s it demands 24.97 rather than 34.44 and a cap of 6 buys 3.1× for **0.028 K** on the worst-placed block against the 0.607 K that made it a switch. That is the same size as the ceiling breach `C19` accepted, so the number separating the two mechanisms is gone — [backlog.md](backlog.md) `C3`. |
 | 2026-08-24 | **Refreshed the census tiers against the blocks they were measured from, which closes [backlog.md](backlog.md) `C26`.** Every tier was a solid cube mounting on all six faces, and `SmallLight` declares one mount point while the three shaped-armour bands declare three, four and five — so the hull's lightest band carried six joints where the block it stands for carries one. The hull demanded 36.75 substeps in air against a population running 6.20 to 22.41 and now demands **12.71**, its stiffest block has four exposed faces against a real 3.46, and its air ratio is 1.97 against a population median of 1.07. Blocks are also laid out the way the game makes a player lay them out: every one bolted to something, and the lightest band on the surface. |
 | 2026-08-24 | **Walked the corpus again at `C24`'s pair, and the population changed shape rather than scale.** 8,105 ships in 190 s: the two modes closed from 5.9× apart to 2.3×, half the population now sits between them where six per cent did, and air has stopped making much difference to *stiffness* anywhere — the median hull's stiffest block is 1.07 times stiffer in air where it was 2.34. The census hull went the other way and is now stiffer than every ship in the corpus, flooring 6.91 % of its own blocks at the shipped cap against a real 0.92 % ([backlog.md](backlog.md) `C26`). The two field observations cannot be placed against any of it: they were taken in sessions at the pair before. |
 | 2026-08-24 | **Bounded the coupled paths and measured their ladders**, which closes [backlog.md](backlog.md) `A10`. The pairwise clamp is half the bound a lumped mass needs — a parcel carries a link to every pipe on it, a room's air one to every surface, and the node on the other end of a sink face is pulled on by both the fluid and its neighbours. The per-node relaxation now applies to both coupled passes, which makes a substep a convex combination of the temperatures around a node. On the fixture where the plumbing sets the demand, 9.7× over-subscribed: **1.3e25 K before, 1,799 K after**; a thin room refused one substep of thirty went from 3,839 K of spread to inside the 300 K it started at. The block ladder is unmoved to three decimals. `bench ceiling` grew `--fixture census|plumbed|pressurised|rings`, because the ladder had been a block ladder for as long as it had existed and said so nowhere. |

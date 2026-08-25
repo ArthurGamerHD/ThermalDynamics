@@ -954,12 +954,17 @@ the sizes where the bound binds at all.
 
 What this retires is the claim that only grids past a hundred thousand blocks reach the default. A
 step's cost is size times stiffness, and `TheShippedAllowanceFitsAGridAndAHalvedOneDoesNot` pins
-both halves on one 8,904-node rig: counting links alone, its 20,779 links bought 48 substeps against
-a demand of 23, so the budget did nothing at all; counting nodes as well, one substep over that rig
-costs 56,395 element visits. **Whether the allowance binds is a question about the step rate rather
-than about block count** — the same rig asks 23 substeps at the shipped quarter-second step and about
-12 at an eighth-second one, which is why the allowance moved with `Frequency` and why halving it now
-throttles this grid. A world whose config predates the rename takes the new default rather than
+both halves: counting links alone a rig's links buy more substeps than it asks for, so the budget
+does nothing at all; counting nodes as well, a substep over a 32,000-block hull costs about 188,000
+element visits and the shipped allowance of two million covers it while half of it does not.
+**Whether the allowance binds is a question about the step rate rather than about block count** —
+a hull asks twice as many substeps of a quarter-second step as of an eighth-second one, which is
+why the allowance moved with `Frequency`.
+
+> The figures here were 8,904 nodes, 20,779 links and a demand of 23 at the shipped rate. Both
+> defaults moved on 2026-08-24 (`C24`) and the census hull with them (`C26`), so the rig that
+> demonstrates the point is a 32,000-block hull now rather than an 8,000-block one: the same hull
+> demands 6.67 substeps in vacuum where it demanded 23. A world whose config predates the rename takes the new default rather than
 importing its old number, which would be a value in the wrong unit; the load path logs when it drops
 one.
 
