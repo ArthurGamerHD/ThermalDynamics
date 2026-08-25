@@ -179,6 +179,67 @@ namespace Thermodynamics.Tests
             Assert.Equal(1f, after / before, 3);
         }
 
+        /// <summary>
+        /// **A block that leaves takes its heat with it, and a block that arrives brings ambient —
+        /// so energy is conserved across a step and not across a change in the population.**
+        ///
+        /// <para>
+        /// This is a deliberate limit rather than a defect (backlog.md `F26`,
+        /// known-issues.md). The alternative is a grinder that heats the ship
+        /// around it and a welder that chills it, and `P14` refuses to build a mechanism nobody
+        /// can perceive for what it costs. It is pinned here because a limit that is only
+        /// described gets rediscovered as a bug (`D5`, `D6`), and because the conservation test
+        /// directly above it is the one that would be read as promising otherwise.
+        /// </para>
+        ///
+        /// <para>
+        /// **Exactly, rather than approximately.** The claim is not that the loss is small — it is
+        /// that nothing is redistributed: the total falls by precisely the departing node's own
+        /// energy and every other node is untouched.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void EnergyIsNotConservedWhenTheBlockPopulationChanges()
+        {
+            GridBuilder builder = GridBuilder.Large();
+            builder.Fill(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(4, 4, 4));
+
+            ThermalSimulation simulation = builder.BuildSimulation(Fixture.ConductionOnly());
+
+            // A hot corner, spread a little, so the population is not uniform and a redistribution
+            // would show up as something other than zero.
+            simulation.Solver.GetNodeAt(Vector3I.Zero).Temperature = 900f;
+            simulation.StepExact(40, Worlds.Shadow());
+
+            ThermalNode leaving = simulation.Solver.GetNodeAt(Vector3I.Zero);
+            ThermalNode neighbour = simulation.Solver.GetNodeAt(new Vector3I(1, 0, 0));
+
+            float before = simulation.Solver.TotalEnergy;
+            float carriedOff = leaving.Energy;
+            float neighbourBefore = neighbour.Temperature;
+
+            Assert.True(carriedOff > 0f, "the departing block holds no energy, so this proves nothing");
+
+            simulation.RemoveBlock(leaving.Block);
+
+            Assert.Equal(before - carriedOff, simulation.Solver.TotalEnergy, 0);
+
+            // **Nothing was handed to the neighbours**: the heat left the world rather than being
+            // shared out, which is the half of the limit a total on its own cannot show.
+            Assert.Equal(neighbourBefore,
+                simulation.Solver.GetNodeAt(new Vector3I(1, 0, 0)).Temperature, 4);
+
+            // And the other direction. A block welded into place arrives at the world's ambient
+            // whatever it is bolted to, so energy enters with no source.
+            float beforeWeld = simulation.Solver.TotalEnergy;
+            BlockInstance welded = new BlockInstance(
+                Catalog.LightArmor(), Vector3I.Zero, BlockOrientation.Identity);
+            ThermalNode arriving = simulation.AddBlock(welded);
+
+            Assert.Equal(simulation.DefaultTemperature, arriving.Temperature, 4);
+            Assert.Equal(beforeWeld + arriving.Energy, simulation.Solver.TotalEnergy, 0);
+        }
+
         [Fact]
         public void ConductionResultDoesNotDependOnBlockOrder()
         {

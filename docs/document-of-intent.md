@@ -1103,7 +1103,7 @@ holds the things where the intent is stated and the route is not; here the inten
 None of them is a defect and most may want no more than a sentence — but the sentence is not there,
 and until it is, the answer is whatever the next change happens to imply.
 
-**Numbers 1, 2, 3, 4, 5 and 6 are settled and their numbers are not reused**, because the pages that cite
+**Numbers 1 to 6 are settled and their numbers are not reused**, because the pages that cite
 these entries cite them by number. All three were answered on 2026-08-25: *what a player does with
 their hands* is [Acting on heat by hand](#acting-on-heat-by-hand--out-of-scope-and-priced), *what
 the mod's blocks cost to build* is
@@ -1111,22 +1111,11 @@ the mod's blocks cost to build* is
 *the visual channel, and who can read it* is
 [Who the glow is for](#who-the-glow-is-for--brightness-and-colour-as-a-refinement), *what
 language the mod speaks* is [What language the mod speaks](#what-language-the-mod-speaks), *creative mode, and the tools that skip the game* is
-[When the game's own rules are suspended](#when-the-games-own-rules-are-suspended), and *what a
+[When the game's own rules are suspended](#when-the-games-own-rules-are-suspended), *what a
 version boundary would be for* is
-[What the version number governs](#what-the-version-number-governs-and-what-moves-it).
-
-### 7. Heat that leaves the world
-
-A block that is destroyed takes its heat with it. A block ground down takes its heat with it. A
-block welded into place arrives at ambient. Energy conservation is one of the three invariants and
-it is a statement about a *step*: the moment the block population changes, energy enters or leaves
-the world with no accounting at all.
-
-**This is almost certainly right** — the alternative is a grinder that heats the ship around it, and
-`P14` would refuse to build that for what it costs. What is missing is that it is not written down
-anywhere, including in the [deliberate limits](known-issues.md#deliberate-limits) that exist to stop
-exactly this being rediscovered as a bug (`D6`). The lab's censoring limit covers the
-*measurement* side of destruction and says nothing about the energy.
+[What the version number governs](#what-the-version-number-governs-and-what-moves-it), and *heat
+that leaves the world* is recorded as a deliberate limit in
+[known-issues.md](known-issues.md#deliberate-limits).
 
 ### 8. Another mod that also simulates heat
 
@@ -1205,6 +1194,7 @@ as a *second* change rather than as a substitute. [backlog](backlog.md) `D19`.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | **Wrote the seventh void down where it belongs, which was the whole of what it asked for.** Heat leaves the world with a block that leaves it and arrives at ambient with one that is built; energy conservation is an invariant about a step and says nothing across a change in the population. It is a deliberate limit — the alternative is a grinder that heats the ship around it — and it now sits in [known-issues.md](known-issues.md#deliberate-limits) with a test pinning both halves. |
 | 2026-08-25 | **Said what the version number governs and what moves it, which was the fourth void.** `ThermalApi.Version` governs the delegate table and nothing else, and the major moves when a caller written against the previous major could still bind and then be wrong — which decides a removed key, a reshaped signature and a changed meaning alike, and leaves an added key alone. Two of the three are now checked against a recorded surface; the third is written where the rule lives. The other three promises sit under no number because they are *never* rather than *not within a major*. |
 | 2026-08-25 | **Took a position on what heat does when the game's own rules are suspended, which was the third void.** Creative suspends scarcity and heat is physics: the game keeps damaging, accelerating and colliding blocks in a creative world and only stops charging for them, so a hull that would cook in survival cooks in creative because it is the same hull. The lever is a setting rather than a mode. `SuspendedRulesTests` pins that nothing in `Data/Scripts` reads the game mode, the creative flags or the creative tools. |
 | 2026-08-25 | **Took a position on what language the mod speaks, which was the sixth void.** The boundary follows from a commitment already on this page rather than from a preference: the readouts are drawn through Rich HUD so that nothing mod-shaped announces itself, and the game's own HUD is localised. Counted, the surface inside the game's HUD is **47 distinct strings** — four per cent of what the mod writes — against 248 in the settings menu, 90 in chat replies, 113 in debug overlays and 604 in telemetry files, all of which are the mod talking about itself and stay English. The work is blocked on one thing only a session can answer, which is `B39`. |

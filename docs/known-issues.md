@@ -21,6 +21,23 @@ the argument behind each entry.
 Each of these is a simplification taken on purpose, with the price written down. A limit is not a
 defect; a limit nobody wrote down is.
 
+**Heat leaves the world with a block that leaves it, and arrives at ambient with one that is
+built.** Energy conservation is one of the three solver invariants and it is a statement about a
+*step*: within a step nothing is created or lost, to the last bit. The moment the block population
+changes it is not a statement about anything. A destroyed block takes its energy with it, a block
+ground down takes its energy with it, and a welded block arrives at the world's ambient temperature
+whatever it is bolted to — so energy leaves and enters with no accounting at all.
+
+**This is on purpose and the alternative is worse.** Conserving it means a grinder that heats the
+ship around it and a welder that chills it, which is a mechanism a player would never connect to a
+cause, at the cost of a redistribution pass on every block change (`P14`). What it costs as it
+stands is that a hull losing blocks in a fire cools slightly faster than the physics says, in the
+one situation where nobody is reading a number.
+
+`EnergyIsNotConservedWhenTheBlockPopulationChanges` pins both halves — the total falls by exactly
+the departing node's energy, no neighbour moves, and a welded block arrives at ambient — because a
+limit that is only described is a limit somebody rediscovers as a bug (`D5`).
+
 **The lab never destroys a block, so a peak temperature above critical is not a prediction.** The
 solver raises an `OverheatEvent` when a node passes its critical temperature, but applying that
 damage is `bound.Block.DoDamage` in `ThermalGridSimulation` — the game layer, which no harness runs.
@@ -1048,6 +1065,7 @@ counters rather than milliseconds so it holds on any machine.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Wrote down the limit that had never been written down anywhere ([backlog.md](backlog.md) `F26`): heat leaves the world with a block that leaves it and arrives at ambient with one that is built. Energy conservation is an invariant about a step and says nothing across a change in the population. Pinned by a test, so it is not rediscovered as a bug. |
 | 2026-08-25 | Refreshed the per-face shadow figures, which had been quoted from a page rather than from the lab and had gone stale when `C24` moved the clock: 0.0018 K a metre against a cadence of about half a kelvin, where this page said 0.0045 against 1.47. The table they come from is now pinned to `OcclusionLadderTests`. |
 | 2026-08-24 | **Bounded the two coupled paths, which closes `A10`.** The pairwise overshoot clamp is the whole bound a block needs and half the bound a lumped mass needs: a parcel carries a link to every pipe on it and a room's air one to every surface bounding it, and the node on the other end of a sink face is pulled on by the fluid and by everything it is bolted to. Each bound held and the node went past both. The per-node relaxation the conduction pass already used now applies to the coupled passes too, which makes every substep a convex combination of the temperatures around a node. Measured where the plumbing sets the demand: **1.3e25 K before, 1,799 K after** at 9.7× over-subscribed, and a thin room refused one substep of thirty went from 3,839 K of spread to inside the 300 K it started at. Inert while the demand is granted — the block ladder is unchanged to three decimals — and `bench ceiling --fixture rings|pressurised` is what draws the other two ladders. |
 | 2026-08-24 | **The coolant path has no overshoot clamp** ([backlog.md](backlog.md) `A10`), so a refused substep demand approximates on a block and diverges on a loop — and on a hull carrying nothing stiffer the loop is what sets the demand, nine substeps where the same nine blocks unplumbed ask for one. Orderly to 4.5× over-subscribed, 1.7e11 K at 9×, and nothing shipped reaches it. Found by attempting `C24`, whose clock change put a test fixture's deliberately-refused ring past the cliff. |
