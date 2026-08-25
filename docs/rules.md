@@ -546,7 +546,29 @@ rather than in the standalone walk that used to carry it.
 #### R12 — A page states its scope, describes the present, and logs its changes
 
 **Every page opens by saying what it covers and what it does not, its body is in the present tense,
-and the only place a revision is recorded is a `## Change log` at the end.**
+and the only place a revision is recorded is a `## The identifier namespace this page shares with the backlog
+
+**Eleven identifiers mean one thing here and another in [backlog.md](backlog.md)** — `C3`, `C7`,
+`C8`, `D1` to `D6`, `E2` and `E4` — because the two pages were numbered independently and both use a
+letter and a number. `C3` is *target `net48`, and never reference the native assembly* here and
+*whether to ship `MaxSubstepsPerBlock 6`* there.
+
+**It is frozen rather than fixed, and that was costed.** The letters on this page are historical —
+the categorisation above is orthogonal to them — so remapping this side is the cheap direction. But
+the eleven are cited 215 times, 78 in code and 137 in prose, and every one has to be resolved to a
+page by hand before it can be renamed: a citation resolved wrongly reads exactly like one resolved
+rightly, so the diff's errors would be silent. Against an ambiguity a reader resolves from context
+and nothing is recorded as having got wrong, that is `P14`'s trade taken in the other direction.
+
+**What is checked is that it does not grow.**
+`TheTwoPagesShareNoIdentifierTheyDidNotAlreadyShare` lists the eleven and fails when a new rule or a
+new backlog row takes an identifier the other page already uses. `W` was chosen for the rules added
+on 2026-08-25 because it collides with nothing; that check is what makes it a rule rather than a
+habit. The set shrinks as backlog rows retire, and a shrink is not a failure.
+
+---
+
+## Change log` at the end.**
 
 A page that narrates what was tried reads as a description of the code long after it has stopped
 being one, and nothing about it looks wrong — the prose is accurate about a repository that no
@@ -1554,6 +1576,7 @@ right and this page is stale**; say so and fix it here.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Said what this page's identifiers share with [backlog.md](backlog.md)'s and what was decided about it (`H8`): eleven collide, 215 citations would have to be resolved by hand to remap them, and the errors of that diff would be silent — so the set is frozen by a check rather than paid off. |
 | 2026-08-25 | **`R16`, and the 155 links it found.** *A pointer in code is plain text, never a markdown link* was written into [development.md](development.md#and-in-the-code) after two such links were found rotted, and nothing checked it — a link inside a `.cs` file renders nowhere, so nobody clicks it, nobody finds out it is wrong, and `EveryRelativeLinkResolves` reads markdown only. The one form of cross-reference here that nothing checked was the one written in the syntax that looks checked, and 155 had accumulated across 91 files. Flattening them cost nothing, because every link text was already the page's own name. `NoPointerInCodeIsWrittenAsALink` holds it, and it demonstrated that it works by failing on the first draft of its own summary, where the example was quoted verbatim. |
 | 2026-08-25 | **`R15`, and thirteen dead citations in shipped code on its first run.** `R11` fails when a rule names a check that has stopped running; nothing failed when a *citation* named a rule or a backlog row that had stopped existing, and `EveryRuleCitedByAPageExists` reads documentation banners while **425 citations of the same shape live in `.cs` and `.py` files**. A backlog row is deleted when it closes, so every comment citing it becomes a dead reference that reads exactly like a live one: `C20` in six files, three of them compiled by the game, and `C13` in three more. All thirteen now name the page that holds the argument, in plain text as the comment convention asks. |
 | 2026-08-25 | **The four rules added today are `W1`–`W4`, and the letter was chosen because everything else collides.** [backlog.md](backlog.md) and this page share a letter-and-number namespace and fifteen identifiers are currently both a rule and an open item — `C3` is *target `net48`* here and *whether to ship `MaxSubstepsPerBlock 6`* there. They were first issued as `C16`–`C19`, which are four live backlog rows, and moved before the commit landed. Nothing else is renamed: the backlog's numbers are its rows' names and never move, and remapping this page's three colliding letters would touch 362 citations in code alone. That is a decision and it is [backlog.md](backlog.md) H8. What is fixed is that it stops growing. |

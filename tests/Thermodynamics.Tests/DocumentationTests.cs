@@ -1115,6 +1115,78 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// **The two pages' shared identifiers are these eleven and no more.**
+        ///
+        /// <para>
+        /// backlog.md `H8`: rules.md and that page share a
+        /// letter-and-number namespace, so `C3` is *target `net48`* on one and *whether to ship
+        /// `MaxSubstepsPerBlock 6`* on the other, and a commit message citing it means one of two
+        /// unrelated things. `EveryCitedIdentifierResolves` above accepts either page and cannot
+        /// say which was meant — that is deliberate, and it leaves the ambiguity itself unchecked.
+        /// </para>
+        ///
+        /// <para>
+        /// **The remap was costed and refused.** The rules page's letters are historical and its
+        /// own text says the classification is orthogonal to them, so remapping its side is the
+        /// cheap direction — but every one of the 215 citations of the eleven would have to be
+        /// resolved to a page by hand first, and a citation resolved wrongly reads exactly like one
+        /// resolved rightly. That is a large diff whose errors are silent, paid to remove an
+        /// ambiguity no reader has been recorded as tripping over.
+        /// </para>
+        ///
+        /// <para>
+        /// **So the decision is to freeze it rather than pay it.** The set is listed below and this
+        /// fails if it grows: a new rule or a new backlog row may not take an identifier the other
+        /// page already uses. `W` was chosen for the four rules added on 2026-08-25 for exactly that
+        /// reason, and this is what makes that a rule rather than a habit (`R11`). The set shrinks
+        /// on its own as rows are retired, and a shrink is not a failure.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheTwoPagesShareNoIdentifierTheyDidNotAlreadyShare()
+        {
+            // Frozen 2026-08-25 at eleven. Remove an entry when the backlog row that caused it is
+            // retired; never add one.
+            HashSet<string> allowed = new HashSet<string>(new[]
+            {
+                "C3", "C7", "C8", "D1", "D2", "D3", "D4", "D5", "D6", "E2", "E4",
+            }, StringComparer.Ordinal);
+
+            HashSet<string> rules = new HashSet<string>(StatedRules(), StringComparer.Ordinal);
+
+            HashSet<string> rows = new HashSet<string>(StringComparer.Ordinal);
+            foreach (Match m in Regex.Matches(BacklogPage(), @"(?m)^\|\s*([A-Z]\d{1,2})\s*\|"))
+            {
+                rows.Add(m.Groups[1].Value);
+            }
+
+            // **A check that read one of the pages wrongly would report success**, because an empty
+            // set collides with everything and nothing (`E8`).
+            Assert.True(rules.Count > 50,
+                "only " + rules.Count + " rules were read out of docs/rules.md");
+            Assert.True(rows.Count > 40,
+                "only " + rows.Count + " rows were read out of docs/backlog.md");
+
+            List<string> shared = new List<string>();
+            foreach (string identifier in rules)
+            {
+                if (rows.Contains(identifier)) shared.Add(identifier);
+            }
+
+            List<string> added = new List<string>();
+            foreach (string identifier in shared)
+            {
+                if (!allowed.Contains(identifier)) added.Add(identifier);
+            }
+
+            added.Sort(StringComparer.Ordinal);
+            Assert.True(added.Count == 0,
+                added.Count + " identifier(s) now mean one thing in docs/rules.md and another in"
+                + " docs/backlog.md that did not before. Pick a letter the other page does not use:"
+                + "\n  " + string.Join("\n  ", added.ToArray()));
+        }
+
+        /// <summary>
         /// A pointer in code is plain text, never a markdown link.
         ///
         /// <para>
