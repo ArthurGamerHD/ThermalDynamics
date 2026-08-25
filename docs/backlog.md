@@ -24,16 +24,17 @@ one of them, and this one had drifted.
 Ranked by what a player would feel, not by what is cheapest or most interesting. Every row is one of
 the mod's own stated goals failing to reach the player.
 
-**Three of the four rows this list carried on 2026-08-24 are closed, and none of them by a balance
-decision.** `C24`'s retune took the top of the list; `D19` built the parallel path and shipped it
-off; `C27` priced the element-visit allowance and doubled it. What is left is the two rows that were
-always blocked on something a lab cannot reach — a session and a raycast — and one new row that
-`C27` produced rather than answered.
+**`F11` closed and handed this list a decision rather than a task.** The corpus has been walked in
+air, `G6`'s cost half fails there, and what to do about it is `C3` — whether `MaxSubstepsPerBlock 6`
+ships as a default — because the cap is the only lever that lowers a step's *work* rather than
+moving it into the frame. That is being measured on the whole population now, paired, with its
+predictions and its decision rule written down first. Under it are the two rows that were always
+blocked on something a lab cannot reach, a session and a raycast.
 
 | | Item | Why it is here |
 | --- | --- | --- |
-| 1 | **B30** — the temperature replication has never run in a session | `B4`'s transport is built, and the half of it a test can reach is the half that was never in doubt. Registration, addressing, the sync-distance gate and the send are host code; what stands in for a test is a pair of counters, and nobody has read them yet. |
-| 2 | **F11** — the corpus has never seen air, and both halves of `G6` are decided there | Every one of the 40,656 runs behind `G6` is a vacuum scenario. Its *demand* half read as passing for months on that dataset and failed the moment air was measured (`C19`), and its *cost* half is in exactly the same position now: projected through the 40-hull panel's own air-to-vacuum ratio the corpus p99 is near 4 million against the 4,000,000 the allowance grants. A projection of a projection is not a measurement, and eight hours of walking would replace it with one. |
+| 1 | **C3** — `G6`'s cost half fails in air, and a per-block cap is the only lever that answers it | `F11` walked the corpus in air and the cost half failed: step work p99 over the allowance, in three of four worlds, on 2.73 % of published hulls. Raising the allowance moves the work into the frame rather than making a ship affordable, so the question is the cap — and the cap is undecided only because what it costs has been measured on **one hull**. `CorpusCapWalk` is measuring it on eight thousand, paired arm against arm on one clock, with [the predictions and the decision rule written down first](balance-lab.md#what-a-per-block-cap-does-to-the-population-written-before-it-is-measured). |
+| 2 | **B30** — the temperature replication has never run in a session | `B4`'s transport is built, and the half of it a test can reach is the half that was never in doubt. Registration, addressing, the sync-distance gate and the send are host code; what stands in for a test is a pair of counters, and nobody has read them yet. |
 | 3 | **A9** — occlusion ships its cheapest rung as the default, and the rung above it is worth 0.0018 K a metre | **Measured and demoted twice**: the sample count changes the energy absorbed by nothing, the interval is the dial that does, and resolving the planet per face — the unbuilt top rung — removes 0.29 K on a 150 m hull against the 0.79 K its cadence already costs at the clock that ships. Blocked on `F5`, and no longer competing with anything on this list. |
 
 ---
