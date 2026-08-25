@@ -104,6 +104,13 @@ namespace Thermodynamics
         [ProtoMember(16)] public bool EnableWasteHeat = true;
         [ProtoMember(17)] public bool EnablePlanets = true;
         [ProtoMember(18)] public bool EnableFriction = true;
+
+        /// <summary>
+        /// The wind field and everything that shapes it. Off is no wind at all — the game exposes a
+        /// ceiling rather than a wind, so every direction and speed here is this model's. See
+        /// <see cref="ThermalSettings.EnableWind"/>.
+        /// </summary>
+        [ProtoMember(128)] public bool EnableWind = true;
         [ProtoMember(19)] public bool EnableDamage = true;
         [ProtoMember(20)] public bool EnableCoolantLoops = true;
 
@@ -667,6 +674,7 @@ namespace Thermodynamics
             core.EnableWasteHeat = EnableWasteHeat;
             core.EnablePlanets = EnablePlanets;
             core.EnableFriction = EnableFriction;
+            core.EnableWind = EnableWind;
             core.EnableDamage = EnableDamage;
             core.EnableCoolantLoops = EnableCoolantLoops;
             core.WellMixedCoolant = WellMixedCoolant;
@@ -750,7 +758,7 @@ namespace Thermodynamics
                 "SolarOcclusionVoxels", "SolarGridShadows",
                 "SolarOcclusionSamples",
                 "EnableHeatSources", "EnableWasteHeat", "EnablePlanets",
-                "EnableFriction", "EnableDamage", "EnableCoolantLoops", "EnableRoomAir",
+                "EnableFriction", "EnableWind", "EnableDamage", "EnableCoolantLoops", "EnableRoomAir",
                 "EnableHeatPumps",
                 "ClampConductionOvershoot", "ClampEnvironmentOvershoot", "DamageIsPerSecond",
                 "Frequency", "SimulationSpeed", "HeatTimeScale", "MaxElementVisitsPerStep",
@@ -806,6 +814,7 @@ namespace Thermodynamics
                 case "EnableWasteHeat": return Flag(EnableWasteHeat);
                 case "EnablePlanets": return Flag(EnablePlanets);
                 case "EnableFriction": return Flag(EnableFriction);
+                case "EnableWind": return Flag(EnableWind);
                 case "EnableDamage": return Flag(EnableDamage);
                 case "EnableCoolantLoops": return Flag(EnableCoolantLoops);
                 case "EnableRoomAir": return Flag(EnableRoomAir);
@@ -910,6 +919,7 @@ namespace Thermodynamics
                 case "EnableWasteHeat": EnableWasteHeat = Flag(value); return true;
                 case "EnablePlanets": EnablePlanets = Flag(value); return true;
                 case "EnableFriction": EnableFriction = Flag(value); return true;
+                case "EnableWind": EnableWind = Flag(value); return true;
                 case "EnableDamage": EnableDamage = Flag(value); return true;
                 case "EnableCoolantLoops": EnableCoolantLoops = Flag(value); return true;
                 case "EnableRoomAir": EnableRoomAir = Flag(value); return true;

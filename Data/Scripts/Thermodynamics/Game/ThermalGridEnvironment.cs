@@ -510,7 +510,14 @@ namespace Thermodynamics
             Settings settings = Settings.Instance;
 
             WindSolver.Inputs inputs = new WindSolver.Inputs();
-            inputs.Ceiling = ceiling;
+
+            // **Off means off, and costs nothing** (`C7`). A zero ceiling is a state the model
+            // already has and already returns a still, directionless result for — a planet with no
+            // atmosphere over it reaches the same place — so switching the wind off takes the path
+            // that is already there rather than adding a second one beside it. The terrain read
+            // below is gated on the same flag, since it is sixteen surface lookups for a field
+            // nothing will ask about.
+            inputs.Ceiling = settings.EnableWind ? ceiling : 0f;
             inputs.Up = up;
             inputs.Axis = axis;
             inputs.WeatherIntensity = weather;
@@ -547,7 +554,8 @@ namespace Thermodynamics
 
             // Read only when the ground gets a say at all, since it is sixteen surface lookups.
             inputs.Terrain =
-                settings.WindTerrainInfluence > 0f && settings.WindTerrainRadius > 0f
+                settings.EnableWind
+                    && settings.WindTerrainInfluence > 0f && settings.WindTerrainRadius > 0f
                     && height < settings.WindGradientHeight * TerrainFadesBy
                     && ReadTerrain(planet, ref position, up, axis, settings.WindTerrainRadius)
                 ? windTerrain : null;

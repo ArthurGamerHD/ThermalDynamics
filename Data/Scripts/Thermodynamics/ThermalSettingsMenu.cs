@@ -78,6 +78,7 @@ namespace Thermodynamics
             { "EnableWasteHeat", new Entry(Systems, "Waste heat", "Power producers, consumers and thrusters turning throughput into heat.", 0, 1) },
             { "EnablePlanets", new Entry(Systems, "Planets", "Per-planet ambient, air and ground temperatures.", 0, 1) },
             { "EnableFriction", new Entry(Systems, "Friction", "Atmospheric heating above the speed threshold.", 0, 1) },
+            { "EnableWind", new Entry(Environment, "Wind", "The wind field and everything that shapes it. Off is no wind anywhere: the game gives a ceiling rather than a wind, so every direction and speed here is this mod's. A grid still feels its own motion through the air.", 0, 1) },
             { "EnableDamage", new Entry(Systems, "Overheat damage", "Blocks above their critical temperature take damage.", 0, 1) },
             { "EnableCoolantLoops", new Entry(Systems, "Coolant loops", "Closed pipe rings acting as one fluid mass.", 0, 1) },
             { "EnableRoomAir", new Entry(Systems, "Room air", "Sealed rooms hold an air mass that carries heat.", 0, 1) },
@@ -355,7 +356,15 @@ namespace Thermodynamics
                     "PlanetConvectionCoefficient", "PlanetSolarDecay"),
                 new Leaf("Underground",
                     "PlanetUndergroundTemperature", "PlanetUndergroundDampingDepth",
-                    "PlanetCoreTemperature", "PlanetSealevelDeadzone")),
+                    "PlanetCoreTemperature", "PlanetSealevelDeadzone"),
+
+                // Its own switch at the top of it, like every other system's page. The wind dials
+                // used to fall through to the leftovers page, which is where a mechanism with no
+                // switch ends up (`C7`).
+                new Leaf("Wind",
+                    "EnableWind", "WindRoughnessLength", "WindGradientHeight",
+                    "WindDiurnalAmplitude", "WindDiurnalCrossover",
+                    "WindTerrainInfluence", "WindTerrainRadius", "WindSlopeStrength")),
         };
 
         /// <summary>
