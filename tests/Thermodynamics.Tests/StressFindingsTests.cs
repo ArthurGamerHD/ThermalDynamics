@@ -14,6 +14,7 @@ namespace Thermodynamics.Tests
     /// Each test here pins one thing that report got wrong or nearly got wrong. The report itself
     /// is the specification — where a number is quoted in a comment, it came out of that run.
     /// </summary>
+    [Trait("speed", "slow")]
     public class StressFindingsTests
     {
         // ---- cold start --------------------------------------------------------------------

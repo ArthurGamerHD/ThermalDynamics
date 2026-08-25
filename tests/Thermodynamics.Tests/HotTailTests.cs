@@ -26,6 +26,7 @@ namespace Thermodynamics.Tests
     /// (`E7`). See [backlog.md](../../docs/backlog.md) `B4`.
     /// </para>
     /// </summary>
+    [Trait("speed", "slow")]
     public class HotTailTests
     {
         /// <summary>A hull warmed until some of it is inside the band.</summary>

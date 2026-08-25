@@ -28,6 +28,7 @@ namespace Thermodynamics.Tests
     /// See [backlog.md](../../docs/backlog.md) `B4`.
     /// </para>
     /// </summary>
+    [Trait("speed", "slow")]
     public class ClientInputTests
     {
         private readonly ITestOutputHelper output;

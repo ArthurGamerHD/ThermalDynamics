@@ -24,6 +24,7 @@ namespace Thermodynamics.Tests
     /// claim they mean.
     /// </para>
     /// </summary>
+    [Trait("speed", "slow")]
     public class CoolingLadderTests
     {
         private static readonly object Gate = new object();

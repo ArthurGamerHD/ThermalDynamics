@@ -23,6 +23,7 @@ namespace Thermodynamics.Tests
     /// also a performance report. See load-and-hitching.md, Catching it again.
     /// </summary>
     [Collection("load")]
+    [Trait("speed", "slow")]
     public class LoadTests
     {
         /// <summary>Grid sizes the suite can afford. The benchmarks go to a million.</summary>

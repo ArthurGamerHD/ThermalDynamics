@@ -11,6 +11,7 @@ namespace Thermodynamics.Tests
     /// than the numbers: a scenario whose headline claim can quietly invert is worse than no
     /// scenario, because it reads like evidence.
     /// </summary>
+    [Trait("speed", "slow")]
     public class ScenarioClaimTests
     {
         [Fact]

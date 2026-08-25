@@ -20,6 +20,7 @@ namespace Thermodynamics.Tests
     /// </para>
     /// </summary>
     [Collection("load")]
+    [Trait("speed", "slow")]
     public class AllowanceTests
     {
         private readonly ITestOutputHelper output;

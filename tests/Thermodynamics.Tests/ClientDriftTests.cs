@@ -24,6 +24,7 @@ namespace Thermodynamics.Tests
     /// suite has no business running.
     /// </para>
     /// </summary>
+    [Trait("speed", "slow")]
     public class ClientDriftTests
     {
         /// <summary>

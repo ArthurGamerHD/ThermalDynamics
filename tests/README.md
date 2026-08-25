@@ -96,8 +96,8 @@ sufficient. See [development.md](../docs/development.md#repo-conventions) for th
 ```bash
 cd tests
 
-dotnet test                                    # the whole suite, under a minute
-dotnet test --filter "speed!=slow"             # the fast lane, about fifteen seconds
+dotnet test                                    # the whole suite, five and a half minutes
+dotnet test --filter "speed!=slow"             # the fast lane, six seconds
 dotnet run --project Thermodynamics.Sim -- list
 dotnet run --project Thermodynamics.Sim -- run reactor
 dotnet run --project Thermodynamics.Sim -- run all --csv out/
@@ -113,11 +113,33 @@ The probe order is `$SE_BIN`, the default Steam path on Linux, then the one on W
 in the repository's root [Directory.Build.props](../Directory.Build.props) because the mod project
 needs it too. If none of them resolves, the build says so by name.
 
-The nine scenario batteries — each stepping whole ships for tens of seconds — carry
-`[Trait("speed", "slow")]`; the fast lane is everything else. The suite spent months at five
-minutes because one test read the whole blueprint corpus on every run despite its own class's
-opt-in rule — 4 m 57 s of a 5 m 4 s suite. It is behind `THERMAL_CORPUS_TESTS` now, where the rest
-of its class already was.
+### The two lanes, and the rule that sorts them
+
+**A class costing more than about two seconds of the suite carries `[Trait("speed", "slow")]`; the
+fast lane is everything else.** That is a cost rule rather than a subject rule, and it is the second
+attempt: the first said *the scenario batteries, each stepping whole ships for tens of seconds*, and
+a subject rule only sorts the classes whose subject somebody remembered to look at.
+
+**It had rotted by a factor of fifteen and nothing noticed.** Measured 2026-08-24 on this machine,
+the fast lane was **3 m 45 s** — against the fifteen seconds this page claimed — because the labs
+built for `C24`, `C26`, `C27` and `D19` step whole hulls and none of them was tagged. One class,
+`ClientInputTests`, was 143 s of it on its own: twenty-eight tests, each a 480-second run of a
+1,004-node hull, and `C26` doubled that clock from 240 s the same week. Nineteen classes are tagged
+now and the fast lane is **6 s over 1,554 of the 1,852 cases** — 7, 6, 7 across three runs, so the
+figure is the fastest of three and the spread is a second (`M4`).
+
+*Nothing checks it*, and that is why it rotted. The honest check would be a class's own measured
+cost, which a test inside that class cannot read; the naming rule that looks available — *a class
+that drives a harness `…Lab`* — sorts the tree worse than the cost rule does, selecting eleven
+classes that cost nothing and missing `ShapeTests` and `ProfileSuiteTests`, which are the second and
+third most expensive things in the suite. So the rule is stated, the measurement is above, and the
+refresh is: take the durations, tag what crossed two seconds (`R11` — an unchecked rule is a hope,
+and marking it says so).
+
+**The whole suite is 5 m 23 s**, and the fast lane is what a change is iterated against. The suite
+also spent months at five minutes for a different reason — one test read the whole blueprint corpus
+on every run despite its own class's opt-in rule, 4 m 57 s of a 5 m 4 s suite. It is behind
+`THERMAL_CORPUS_TESTS` now, where the rest of its class already was.
 
 ### The suite runs eight at a time, and a few classes run alone
 
@@ -125,9 +147,13 @@ of its class already was.
 declare `[Collection("alone")]`: the opt-in corpus walks, and every test whose assertion is about
 elapsed time.
 
-**Eight rather than one per core, measured.** On this repository's 32-core machine the suite is
-**1 m 41 s at one worker, 38 s at eight, and 1 m 47 s at thirty-two** — one per core is no faster
-than serial, because the tests are memory-bound and thirty-two of them thrash each other's cache.
+**Eight rather than one per core, measured.** On this repository's 32-core machine, over the 1,825
+cases the suite held on 2026-08-24, it is **1 m 41 s at one worker, 38 s at eight, and 1 m 47 s at
+thirty-two** — one per core is no faster than serial, because the tests are memory-bound and
+thirty-two of them thrash each other's cache. *(The suite is 5 m 23 s now at the same eight workers:
+what grew is the work, not the scheduling. It is 550 s of test time against 323 s of wall clock, and
+the ceiling is one class — xUnit parallelises collections, a class is a collection, and
+`ClientInputTests` is 143 s of serial work inside one of them.)*
 That is the same effect, one rung up, that made the corpus walks need isolation in the first place:
 four walks across thirty-one workers ran seventeen times slower than one at a time, behind a 93 %
 CPU reading.
@@ -517,6 +543,7 @@ and left off it.
 | Date | Change |
 | --- | --- |
 | 2026-08-24 | The suite size on this page is 1,829 rather than 1,769. `EveryQuotedSuiteSizeIsCurrent` allows a page to fall a tenth behind and it had not, so this is bringing a figure current rather than fixing a break. |
+| 2026-08-24 | **The fast lane had stopped being fast, by a factor of fifteen, and the rule that sorts the two lanes is a cost rule now.** Measured: 3 m 45 s against the fifteen seconds this page claimed, because every lab built for `C24`, `C26`, `C27` and `D19` steps whole hulls and none of them carried the trait — `ClientInputTests` alone was 143 s of it, twenty-eight tests each running a 1,004-node hull for the 480 simulated seconds `C26` doubled it to. Nineteen classes tagged; the lane is **6 s over 1,554 cases** and the whole suite is 5 m 23 s. The old rule named a subject — *the scenario batteries* — and a subject rule only sorts what somebody remembered to look at. Nothing checks the new one either, and the section says so and says why. |
 | 2026-08-24 | The suite runs eight at a time. The isolation the corpus walks need is theirs now — `[Collection("alone")]`, with `EveryCorpusWalkDeclaresThatItRunsAlone` to keep it — rather than `maxParallelThreads: 1` for every class in the project: 1 m 41 s to 38 s over 1,825 cases. Eight rather than one per core, because thirty-two workers measured no faster than one ([backlog.md](../docs/backlog.md) `F8`). |
 | 2026-08-23 | Extended `LoadDialTests` to the charge duration, which is the number `G8` is now scored against: a drive holds 3 MWh, draws 32 MW and keeps 80 % of it, so it fills in 421.9 s. Every figure is read off the game's own definition, because a duration invented here would be the criterion being scored against an assumption. |
 | 2026-08-23 | Indexed `LoadDialTests`, which checks that the pair grid's third axis reaches the blocks and reaches nothing else — a sweep dial that reached nothing would report *no change* in exactly the shape of one that reached everything and changed nothing, which is the failure the retest set's `reach.csv` exists for. Conductivity above all: the whole point of that axis is that it is not transport. |

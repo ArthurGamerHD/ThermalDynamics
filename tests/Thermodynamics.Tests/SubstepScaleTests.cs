@@ -27,6 +27,7 @@ namespace Thermodynamics.Tests
     /// checked on every run.
     /// </para>
     /// </summary>
+    [Trait("speed", "slow")]
     public class SubstepScaleTests
     {
         private static ThermalSimulation Hull(int frequency, int cap = 0, int blocks = 4000)

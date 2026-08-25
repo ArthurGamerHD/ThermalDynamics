@@ -25,6 +25,7 @@ namespace Thermodynamics.Tests
     /// weeks later in the middle of a measurement.
     /// </para>
     /// </summary>
+    [Trait("speed", "slow")]
     public class BenchmarkBaselineTests
     {
         private static string RepoRoot()

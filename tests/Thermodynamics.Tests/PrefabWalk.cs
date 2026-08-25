@@ -28,6 +28,7 @@ namespace Thermodynamics.Tests
     /// install.
     /// </para>
     /// </summary>
+    [Trait("speed", "slow")]
     public class PrefabWalk
     {
         /// <summary>

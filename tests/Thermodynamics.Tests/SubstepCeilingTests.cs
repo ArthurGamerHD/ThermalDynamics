@@ -24,6 +24,7 @@ namespace Thermodynamics.Tests
     /// the figures are in [stiffness.md](../../docs/stiffness.md#what-refusing-the-demand-costs).
     /// </para>
     /// </summary>
+    [Trait("speed", "slow")]
     public class SubstepCeilingTests
     {
         /// <summary>Small enough for the fast lane, large enough to carry the census block mix.</summary>
