@@ -865,6 +865,12 @@ failing, colour says how hot it actually got. See
 [document-of-intent.md](document-of-intent.md#natural-feedback--built) for why the brightness is not
 incandescence.
 
+**And the colour is a between-blocks signal rather than a within-block one**, measured: across one
+block's hundred-kelvin band the colour moves less than a just-noticeable difference for 88 of the
+101 block types the game ships, while the coolest-rated block against the hottest is ΔE 13.72. So
+nothing a player has to act on is carried by hue — see
+[document-of-intent.md](document-of-intent.md#who-the-glow-is-for--brightness-and-colour-as-a-refinement).
+
 **`HeatWarningSound` is the same warning in sound**: a cue about three seconds before a block
 crosses its rating and a distinct one as it crosses, heard only by the player at the controls. It
 reaches what the glow cannot — a block with no emissive material in its model cannot glow whatever
@@ -1219,6 +1225,7 @@ one with a migration risk — is late rather than first.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Said what the colour channel is a signal *about*, which [backlog.md](backlog.md) `B34` needed measured: within one block's glow band it moves less than a just-noticeable difference for 88 of 101 block types, and between the coolest and hottest rated blocks it is ΔE 13.72. It distinguishes blocks, not moments. |
 | 2026-08-25 | **`A9`'s per-face table had gone stale with the clock, on three pages, while the test that produces it printed the right figures throughout.** `C24` took `HeatTimeScale` from 225 to 90 and every kelvin in that table is seconds of sunlight times a rate that moves with the clock, so the rung is worth **0.0018 K a metre, not 0.0045** — 0.29 K on a 150 m hull against 0.73 K. The crossover is unmoved at about 300 m, because both halves scaled together. `OcclusionLadderTests` now reads this table out of this page and fails when it does not match the lab, so the next clock change is loud. |
 | 2026-08-25 | Three sentences in the body described a past layout rather than the present one (`R12`): the menu's grouping, the suit's opening, and the allowance's cost ladder. Each states what is now the case; the ladder's own table moved to [benchmarks.md](benchmarks.md#what-the-rate-it-trades-away-is-worth), which owns the measurement. |
 | 2026-08-25 | **The allowance's cost ladder existed here and in [benchmarks.md](benchmarks.md#what-the-rate-it-trades-away-is-worth), which is two copies of one measurement.** This page states what it costs — 1.19 K at a 5 % deficit rising to 36.98 K at 60 % — and that page owns the table, the rig it was taken on and the convexity that made a ladder necessary rather than one point and a slope. A measurement written down twice is two things that can drift (`D3`). |

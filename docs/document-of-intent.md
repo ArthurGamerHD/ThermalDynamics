@@ -209,6 +209,47 @@ block, which the observation pass already caches, against the lower of where the
 start glowing and where it would start being watched. Both come off that block's own rating, so the
 floor follows what the ship is made of.
 
+### Who the glow is for — brightness, and colour as a refinement
+
+**The warning is legible without colour, and that is now a property rather than an accident.** The
+glow carries two facts in two channels — brightness says how close to failing, colour says how hot —
+and the question `B34` asked was who can read both. Measured, almost nobody can read the second one,
+including a player with ordinary colour vision.
+
+**The colour channel says nothing about one block over time, and something about one block against
+another.** The two had never been told apart, and they answer differently:
+
+* **Within a block, it is invisible.** A block glows across the hundred kelvin below its own rating,
+  and the colour at the bottom of that band differs from the colour at the top by less than a
+  just-noticeable difference — ΔE76 2.3, on flat patches side by side, which a glowing block on a
+  hull is not — for **88 of the 101** types in the installed catalogue. The best any block manages
+  is a gyro at **ΔE 4.76**, and the best hundred kelvin anywhere in the locus is **5.16**, from
+  about 1,100 K. Twenty-eight are pinned under the Draper point by construction; the finding is that
+  the other seventy-three are barely better off.
+* **Between blocks, it is plain.** The coolest-rated block in the game at 583 K against the
+  hottest at 1,159 K is **ΔE 13.72**, about six just-noticeable differences. *A decorative block
+  dying dull red beside a thruster dying orange* is true, and it is a statement about which block
+  this is rather than about how it is doing.
+
+`GlowChannelTests` holds both, and the sRGB-to-L\*a\*b\* conversion is checked against known
+values first.
+
+**So the position is: brightness carries the fact and colour carries the flavour.** Everything the
+glow has to say that a player must act on — *this block is close to failing* — is a monotone ramp
+that reaches full at the rating and says the same thing in any colour. What colour adds is that two
+blocks failing side by side do not look identical, which is verisimilitude and not information. Red
+against orange is the distinction a common form of colour blindness does not make; it is exactly the
+distinction this channel carries, and it is exactly the one that carries nothing actionable.
+
+**The sound cue is a redundant channel and is now meant to be one.** It was added to reach a block
+behind another, a block off screen, and a player looking the other way; that it also covers a player
+who reads no colour was an accident, and it is a commitment from here.
+
+**What this forbids.** No fact a player must act on may be carried by hue alone. If the colour channel is ever made to
+say something brightness does not — a different failure mode, a different mechanism — it needs a
+redundant non-colour encoding shipped with it, and the measurement above is the reason: a channel
+worth two just-noticeable differences at its very best cannot be the only carrier of anything.
+
 ### Thermal vision — wanted, method unknown
 
 **A thermal camera view is an aspiration, not a rejected idea.** An earlier heat overlay was built
@@ -961,11 +1002,13 @@ holds the things where the intent is stated and the route is not; here the inten
 None of them is a defect and most may want no more than a sentence — but the sentence is not there,
 and until it is, the answer is whatever the next change happens to imply.
 
-**Numbers 1 and 2 are settled and their numbers are not reused**, because the pages that cite these
-entries cite them by number. *What a player does with their hands* was answered on 2026-08-25 and
-the position is [Acting on heat by hand](#acting-on-heat-by-hand--out-of-scope-and-priced); *what
-the mod's blocks cost to build* was answered the same day and the position is
-[What a block costs to build](#what-a-block-costs-to-build--what-the-game-charges-and-nothing-invented).
+**Numbers 1, 2 and 5 are settled and their numbers are not reused**, because the pages that cite
+these entries cite them by number. All three were answered on 2026-08-25: *what a player does with
+their hands* is [Acting on heat by hand](#acting-on-heat-by-hand--out-of-scope-and-priced), *what
+the mod's blocks cost to build* is
+[What a block costs to build](#what-a-block-costs-to-build--what-the-game-charges-and-nothing-invented),
+and *the visual channel, and who can read it* is
+[Who the glow is for](#who-the-glow-is-for--brightness-and-colour-as-a-refinement).
 
 ### 3. Creative mode, and the tools that skip the game
 
@@ -999,33 +1042,6 @@ as anyone is reading, and a setting's name has no stated boundary of any kind.
 The honest reading today is *nothing has ever broken*, which is a fine position to hold and a poor
 one to hold accidentally. **Nothing checks it either** — `ModApiShapeTests` pins the shape of the
 table, and no test relates a change in that shape to the number a caller is told to trust.
-
-### 5. The visual channel, and who can read it
-
-The glow carries two facts in two channels: **brightness says how close to failing, colour says how
-hot.** The split is deliberate, both halves are measured, and it is good design for a player who can
-read both. What is unstated is who that is.
-
-**The colour channel is already flat on a quarter of the game, for everybody.** `Incandescence`'s
-locus table starts at **800 K** and its first entry is pure red — `1.0, 0.0, 0.0`, no green at all —
-and it is clamped below that, because a real solid has no visible colour to report under the Draper
-point at 798 K. The brightness band is deliberately *not* keyed to that line, precisely because
-**26 % of block types are rated below it** (`AQuarterOfBlockTypesWouldNeverGlowIfTheBrightnessWerePhysical`,
-measured against the installed game). Those are the same blocks: a block rated under 800 K spends
-its whole hundred-kelvin glow band beneath the table's floor, so its colour never moves and
-brightness is the only channel it has. The code says this where the constant is defined; no page has
-ever carried it.
-
-**So the question is two questions and neither is asked.** For a quarter of the game the two-channel
-design is a one-channel design *by construction*, which may well be fine — brightness is the channel
-that carries the urgent fact. For the rest, red against orange is the one distinction a common form
-of colour blindness does not make, and it is exactly the distinction the colour channel carries.
-
-The sound cue covers part of both gaps and covers it **by accident**: it was added to reach a block
-behind another, a block off screen, and a player looking the other way — not to be the redundant
-channel for a player who cannot separate the colours. Whether the readouts, the overlay and the glow
-are meant to be usable without colour is unstated, and it is the kind of thing that is cheap to
-decide now and expensive to retrofit.
 
 ### 6. What language the mod speaks
 
@@ -1129,6 +1145,7 @@ as a *second* change rather than as a substitute. [backlog](backlog.md) `D19`.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | **Took a position on who the glow is for, which was the fifth void, and the measurement made it an easier question than it looked.** The colour channel moves less than a just-noticeable difference across their own glow band for **88 of the 101** block types in the installed catalogue — not only the 28 pinned under the Draper point — and the best any block manages is ΔE 4.76. So brightness is the channel and colour is a refinement, the warning is legible without colour, the sound cue is a redundant channel on purpose from here, and no fact may be carried by hue alone. |
 | 2026-08-25 | **Took a position on what a block costs to build, which was the second void.** There is no vanilla comparator for a block that moves heat, so the eighteen `Cubes.xml` definitions are placed inside the distribution the game prices its own 1,434 blocks over — kilograms a cubic metre, seconds of welding a kilogram, PCU a block — and all eighteen sit inside it. The position: the lever costs what the game charges for a block of that size and mass, and the mod does not invent an economy. The recipe is also not secretly a thermal dial: at four times a radiator stack's mass the source settles within a hundredth of a kelvin and only the transient moves, 24 to 112 s. |
 | 2026-08-25 | **Took a position on what a player does with their hands, which was the first of the voids and had no number under it.** `HandCoolingLab` prices the tool against a real five-kilogram CO2 bottle: undoing one crossing is 26 bottles at the median of the 72 vanilla types that cook themselves and 20 discharging at once to beat the block's own 32 s window, which is 3.3 MW — a large radiator with a trigger. And 71 of the 72 shed everything they make in their own best case, so the block is not where the problem is. The position: a player perceives heat and does not act on it by hand, the extinguisher is the instrument that names the block to change, and what would reopen it is a block-scale intervention rather than a bigger bottle. |
 | 2026-08-24 | **A full sweep of the tree for intent, and it found four subjects the code had always followed and no page had ever stated.** Added [what the mod promises the things around it](#what-the-mod-promises-the-things-around-it) — to an existing world, to a block it has never heard of, to another mod, and to a client — which gathers the save format's forward compatibility, the retired definition names, a setting's name as an address, the derive-don't-guess rule for third-party blocks, the API's four guarantees, and the two trust boundaries that decide which network channel a message takes. Added [what the mod does when it cannot afford itself](#what-the-mod-does-when-it-cannot-afford-itself): it slows down rather than stuttering, determinism is chosen rather than assumed, and a fault records itself whether or not anyone asked. Added [where something is modelled, it is modelled as a mechanism rather than as a threshold](#where-something-is-modelled-it-is-modelled-as-a-mechanism-rather-than-as-a-threshold), which is the most consistent habit in the code and had been written down nowhere. |
