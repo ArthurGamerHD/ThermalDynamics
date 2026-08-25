@@ -147,6 +147,7 @@ namespace Thermodynamics
 
             { "HeatGlow", new Entry(Display, "Blocks glow when hot", "A block glows over the last 100 K before its own critical temperature, full at it and above, so a glow means it is about to go rather than that it is warm. The colour is what a body that hot really looks like: deep red low down, orange high up.", 0, 1) },
             { "HeatWarningSound", new Entry(Display, "Overheat cue", "A cue in the cockpit as a block comes up on its own rating and as it passes it. Heard only by the player at the controls.", 0, 1) },
+            { "HeatTerminalPanel", new Entry(Display, "Terminal readout", "The thermal panel in a block's terminal detail pane. Off leaves the block's own controls alone and draws no text, which is what a world running a second heat mod wants.", 0, 1) },
 
             { "DebugTextOnScreen", new Entry(Display, "Crosshair readout", "Everything the simulation knows about the block being looked at. Also makes the solver record per-mechanism watts, which is not free.", 0, 1) },
             { "DebugSolarRaycast", new Entry(Display, "Draw sun ray", "The sun ray from each grid, white when lit and red when occluded.", 0, 1) },
@@ -391,7 +392,7 @@ namespace Thermodynamics
         /// server says; the telemetry pair belongs to the world.
         /// </summary>
         private static readonly Leaf DebugPage = new Leaf("Debug",
-            "HeatGlow", "HeatWarningSound",
+            "HeatGlow", "HeatWarningSound", "HeatTerminalPanel",
             "DebugTextOnScreen", "DebugBlockOverlay", "DebugSolarRaycast", "DebugWindRaycast",
             "DebugWindOverlay", "DebugWindIndicator",
             "RoomOverlayMinKelvin", "RoomOverlayMaxKelvin",

@@ -1016,9 +1016,11 @@ composition that actually works: one mod owns the consequences, the other is rea
 `ThermalApi`. **Two mods both applying consequences is unsupported**, and that is now a sentence
 rather than an unexamined case.
 
-**One switch is missing for that to be complete**: the terminal panel and the crosshair readout have
-no setting of their own, so the *clutter* row above cannot be turned off. That is
-[backlog.md](backlog.md) `B40`.
+**Every output can be turned off, and the last one that could not was fixed for this.** The
+terminal panel had no setting of its own until 2026-08-25 — every other thing the mod draws was
+already behind something — so `HeatTerminalPanel` exists and the *clutter* row above can be turned
+off with the rest ([backlog.md](backlog.md) `B40`). It gates the panel's text and not the block's
+own controls.
 
 ### To a client: the server trusts nothing the client asserts about itself
 
@@ -1226,6 +1228,7 @@ as a *second* change rather than as a substitute. [backlog](backlog.md) `D19`.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Made the position on a second heat mod deliverable rather than nearly: `HeatTerminalPanel` is the switch the terminal panel never had, so a world running two can turn every output of this one off and keep the simulation and the API. |
 | 2026-08-25 | **Took a position on a second heat mod in the same world, which was the eighth and last void — and with it this page has none.** The mod behaves as though it is alone because it cannot tell that it is not, and guessing would be worse: everything it owns outright cannot collide, and the four things a block has only one of can. The answer is the switches — a world running two turns this one's consequences off and keeps its simulation and its API — so two mods both applying consequences is unsupported and said so. One switch is missing for that to be complete, which is `B40`. |
 | 2026-08-25 | **Wrote the seventh void down where it belongs, which was the whole of what it asked for.** Heat leaves the world with a block that leaves it and arrives at ambient with one that is built; energy conservation is an invariant about a step and says nothing across a change in the population. It is a deliberate limit — the alternative is a grinder that heats the ship around it — and it now sits in [known-issues.md](known-issues.md#deliberate-limits) with a test pinning both halves. |
 | 2026-08-25 | **Said what the version number governs and what moves it, which was the fourth void.** `ThermalApi.Version` governs the delegate table and nothing else, and the major moves when a caller written against the previous major could still bind and then be wrong — which decides a removed key, a reshaped signature and a changed meaning alike, and leaves an added key alone. Two of the three are now checked against a recorded surface; the third is written where the rule lives. The other three promises sit under no number because they are *never* rather than *not within a major*. |

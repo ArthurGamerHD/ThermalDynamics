@@ -842,6 +842,7 @@ indicator, which are what a player meets while playing rather than diagnostics f
 | `DebugWindOverlay` | 0 | Which view the wind map opens a session on: 0 off, 1 the lattice around you, 2 the whole planet. |
 | `DebugWindIndicator` | `true` | The wind needle and speed under the crosshair. |
 | `HeatGlow` | `true` | Blocks glow over the last 100 K before their own critical temperature, full at it and above. |
+| `HeatTerminalPanel` | `true` | The thermal readout in a block's terminal detail pane. Off draws no text and refreshes nothing; the block's own controls are untouched. |
 | `HeatWarningSound` | `true` | A cue in the cockpit as a block comes up on its own rating and as it crosses it. Heard only by the player at the controls. |
 | `RoomOverlayMinKelvin` | 253.15 K | Bottom of the room view's colour span, −20 °C. |
 | `RoomOverlayMaxKelvin` | 323.15 K | Top of the room view's colour span, 50 °C. |
@@ -851,6 +852,17 @@ indicator, which are what a player meets while playing rather than diagnostics f
 ### Natural feedback
 
 Two channels, and between them they say how close a block is to failing and how hot it got.
+
+**`HeatTerminalPanel` is the one output that had no switch until 2026-08-25.** Every other thing the
+mod draws was already behind something — the glow and the cue behind their own settings, the
+crosshair readout behind `DebugTextOnScreen`, the performance panel behind a chat toggle, the
+extinguisher's overlay behind holding the tool — and the terminal panel was on for everybody always.
+It has one now for two reasons that are each sufficient: `C7` says every mechanism has a switch that
+removes its own cost, and
+[document-of-intent.md](document-of-intent.md#to-another-mod-that-also-simulates-heat-nothing-and-the-switches-are-the-answer)
+answers a second heat mod in the world with *turn this one's outputs off and keep its API*, which
+until now left two panels on every terminal. **It gates the text and not the controls**: a coolant
+pump's throttle is something a player operates rather than something the mod says.
 
 **`HeatGlow` is the last hundred kelvin before a block's own critical temperature.** Nothing below
 that, a straight ramp through it, full at critical and above. It is a narrow window on purpose: a
@@ -1225,6 +1237,7 @@ one with a migration risk — is late rather than first.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Added `HeatTerminalPanel` ([backlog.md](backlog.md) `B40`), the switch for the one output of the mod a world could not turn off. Default `true`, so nothing a player has changes; client-owned, like the other two presentation switches. It gates the panel's text and its refresh and leaves the block's own controls alone. |
 | 2026-08-25 | Corrected the fourth site of `A9`'s per-metre figure, which the pass earlier the same day missed: the rungs inventory said 0.0045 K a metre where the lab says 0.0018. The check added that morning reads the per-face *table* and could not see a figure quoted in prose, which is the limit of that kind of check and is why the number is now stated in one place and pointed at from the other. |
 | 2026-08-25 | Said what the colour channel is a signal *about*, which [backlog.md](backlog.md) `B34` needed measured: within one block's glow band it moves less than a just-noticeable difference for 88 of 101 block types, and between the coolest and hottest rated blocks it is ΔE 13.72. It distinguishes blocks, not moments. |
 | 2026-08-25 | **`A9`'s per-face table had gone stale with the clock, on three pages, while the test that produces it printed the right figures throughout.** `C24` took `HeatTimeScale` from 225 to 90 and every kelvin in that table is seconds of sunlight times a rate that moves with the clock, so the rung is worth **0.0018 K a metre, not 0.0045** — 0.29 K on a 150 m hull against 0.73 K. The crossover is unmoved at about 300 m, because both halves scaled together. `OcclusionLadderTests` now reads this table out of this page and fails when it does not match the lab, so the next clock change is loud. |

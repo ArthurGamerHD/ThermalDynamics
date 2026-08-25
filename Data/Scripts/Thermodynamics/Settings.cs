@@ -430,6 +430,28 @@ namespace Thermodynamics
         [ProtoMember(122)] public bool HeatWarningSound = true;
 
         /// <summary>
+        /// The thermal readout in a block's terminal detail panel. Client side, and on by default:
+        /// it is the mod's plainest answer to *what is this block doing*, and turning it off ships
+        /// a simulation a player cannot read.
+        ///
+        /// <para>
+        /// **It exists because a switch has two callers, and only the second one needed it.** `C7`
+        /// wants every mechanism to have a switch that removes its own cost, and this was the one
+        /// output of the mod a world could not turn off. The caller that made it worth building is
+        /// backlog.md `B38`: a world running a second heat mod turns this
+        /// one's consequences and readouts off and keeps its simulation and its API, and until this
+        /// existed that composition left two panels on every terminal.
+        /// </para>
+        ///
+        /// <para>
+        /// It gates the *text*, not the controls. A coolant pump's throttle is a thing a player
+        /// operates rather than a thing the mod says, and hiding it would take a working block
+        /// away.
+        /// </para>
+        /// </summary>
+        [ProtoMember(129)] public bool HeatTerminalPanel = true;
+
+        /// <summary>
         /// Bottom of the room overlay's colour span, K. Separate from the block ramp because room
         /// air spans a few tens of degrees, over which the block ramp gives one shade.
         /// </summary>
@@ -762,7 +784,7 @@ namespace Thermodynamics
         {
             "DebugTextOnScreen", "DebugSolarRaycast", "DebugWindRaycast", "DebugBlockOverlay",
             "DebugWindOverlay", "DebugWindIndicator", "DebugOverlayMaxBoxes",
-            "HeatGlow", "HeatWarningSound",
+            "HeatGlow", "HeatWarningSound", "HeatTerminalPanel",
         };
 
         /// <summary>
@@ -796,7 +818,7 @@ namespace Thermodynamics
                 "DebugTextOnScreen", "DebugSolarRaycast", "DebugWindRaycast",
                 "DebugBlockOverlay", "DebugWindOverlay", "DebugWindIndicator",
                 "DebugOverlayMaxBoxes",
-                "HeatGlow", "HeatWarningSound",
+                "HeatGlow", "HeatWarningSound", "HeatTerminalPanel",
                 "RoomOverlayMinKelvin", "RoomOverlayMaxKelvin",
                 "EnableTemperatureSync", "TemperatureSyncInterval", "ParallelGrids",
                 "EnableTelemetry", "TelemetrySampleStride", "TelemetryPlanetProbes",
@@ -881,6 +903,7 @@ namespace Thermodynamics
                 case "DebugWindOverlay": return DebugWindOverlay;
                 case "DebugWindIndicator": return Flag(DebugWindIndicator);
                 case "HeatGlow": return Flag(HeatGlow);
+                case "HeatTerminalPanel": return Flag(HeatTerminalPanel);
                 case "HeatWarningSound": return Flag(HeatWarningSound);
                 case "RoomOverlayMinKelvin": return RoomOverlayMinKelvin;
                 case "RoomOverlayMaxKelvin": return RoomOverlayMaxKelvin;
@@ -994,6 +1017,7 @@ namespace Thermodynamics
                 case "DebugOverlayMaxBoxes": DebugOverlayMaxBoxes = (int)value; return true;
                 case "DebugWindIndicator": DebugWindIndicator = Flag(value); return true;
                 case "HeatGlow": HeatGlow = Flag(value); return true;
+                case "HeatTerminalPanel": HeatTerminalPanel = Flag(value); return true;
                 case "HeatWarningSound": HeatWarningSound = Flag(value); return true;
                 case "EnableTemperatureSync": EnableTemperatureSync = Flag(value); return true;
                 case "ParallelGrids": ParallelGrids = Flag(value); return true;

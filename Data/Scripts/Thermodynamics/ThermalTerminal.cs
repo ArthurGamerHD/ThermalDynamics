@@ -175,6 +175,9 @@ namespace Thermodynamics
         {
             if (shown == null) return;
 
+            // Nothing to refresh into, and the refresh is the per-frame cost of the panel.
+            if (Settings.Instance != null && !Settings.Instance.HeatTerminalPanel) return;
+
             if (shown.Closed || MyAPIGateway.Gui.GetCurrentScreen != MyTerminalPageEnum.ControlPanel)
             {
                 shown = null;
@@ -198,6 +201,11 @@ namespace Thermodynamics
         private static void AppendCustomInfo(IMyTerminalBlock block, StringBuilder info)
         {
             if (!refreshing) shown = block;
+
+            // **Off means off** (`P8`): a world that has turned the panel off gets no text and no
+            // `Describe` call, so the readout costs what it says it costs. The handler stays
+            // attached, because the setting is client side and changes mid-session.
+            if (Settings.Instance != null && !Settings.Instance.HeatTerminalPanel) return;
 
             info.Append(Describe(block));
         }
