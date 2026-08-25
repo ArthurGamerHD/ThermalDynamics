@@ -80,6 +80,29 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
+        /// Nodes across every grid whose mirrored heat capacity `MaxSubstepsPerBlock` is holding
+        /// above its real one, on the last step. Nought when the cap is off.
+        ///
+        /// **The reach of a cap, which is how a cap's value is chosen.** The error a cap costs
+        /// barely moves between 16 and 2; what moves, and moves suddenly, is how much of a hull it
+        /// re-masses, and there is a cliff in that curve where ordinary armour begins. See
+        /// stiffness.md, The value is chosen by population, not by error.
+        /// </summary>
+        public int FlooredNodes
+        {
+            get
+            {
+                int total = 0;
+                for (int i = 0; i < Simulations.Count; i++)
+                {
+                    total += Simulations[i].Solver.FlooredNodes;
+                }
+
+                return total;
+            }
+        }
+
+        /// <summary>
         /// What one substep costs the grid that costs the most, in the unit
         /// <c>MaxElementVisitsPerStep</c> is spent in.
         ///

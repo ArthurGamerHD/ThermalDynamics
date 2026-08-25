@@ -210,6 +210,14 @@ namespace Thermodynamics.Tests
 
             Assert.Equal(Math.Min(uncapped.SubstepsDemanded, cap), capped.SubstepsDemanded, 2);
 
+            // **The reach, which is a different question from the demand.** A cap that binds one
+            // element moves the demand and re-masses almost nothing; a cap below the cliff where
+            // ordinary armour begins re-masses the hull. Only this column tells them apart, and
+            // the control must report nought or it is not a control.
+            Assert.Equal(0, uncapped.FlooredNodes);
+            Assert.True(capped.FlooredNodes > 0,
+                "the cap moved the demand and floored no node, which cannot both be true");
+
             // And a cap above the demand binds nothing at all, which is the other half of `min`.
             ScenarioOutcome loose = Battery.RunForSeconds(Ship(), scenario, uncapped.RunSeconds,
                 Settings((int)Math.Ceiling(uncapped.SubstepsDemanded) + 8));
@@ -236,6 +244,7 @@ namespace Thermodynamics.Tests
             List<string> header = new List<string>(CorpusRecord.OutcomeHeader.Split(','));
             Assert.Contains("cap", header);
             Assert.Contains("run_seconds", header);
+            Assert.Contains("floored", header);
 
             ScenarioOutcome outcome = new ScenarioOutcome
             {
@@ -243,12 +252,15 @@ namespace Thermodynamics.Tests
                 Scenario = "vacuum-shadow",
                 SubstepsPerBlockCap = 6,
                 RunSeconds = 120f,
+                FlooredNodes = 37,
             };
 
             string[] cells = CorpusRecord.Row("cap", outcome).Split(',');
 
+            Assert.Equal(header.Count, cells.Length);
             Assert.Equal("6", cells[header.IndexOf("cap")]);
             Assert.Equal("120", cells[header.IndexOf("run_seconds")]);
+            Assert.Equal("37", cells[header.IndexOf("floored")]);
         }
     }
 }

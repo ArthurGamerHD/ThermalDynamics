@@ -249,7 +249,18 @@ namespace Thermodynamics.Tests
                     + uncapped.SubstepsDemanded.ToString("n3") + ", " + Cap + ")");
             }
 
-            if (capped.SubstepsDemanded + Slack < uncapped.SubstepsDemanded) walked.Floored = true;
+            // **The reach, read off the solver rather than inferred from the demand.** A cap that
+            // binds only the one stiffest element moves the demand and reaches almost nothing;
+            // which of those two it is decides the value a cap should take, and only this column
+            // says. The control must report nought, or the cap is on in the arm that is meant to
+            // be without it — which would make every delta here a comparison of two capped runs.
+            if (capped.FlooredNodes > 0) walked.Floored = true;
+
+            if (uncapped.FlooredNodes != 0)
+            {
+                walked.Violations.Add("control-capped: " + where + " floored "
+                    + uncapped.FlooredNodes + " nodes with the cap off");
+            }
 
             if (float.IsNaN(capped.PeakKelvin) || float.IsInfinity(capped.PeakKelvin))
             {

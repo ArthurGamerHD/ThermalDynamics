@@ -187,6 +187,12 @@ namespace Thermodynamics.Harness
         public int SubstepsPerBlockCap;
 
         /// <summary>
+        /// Nodes the cap is holding above their real heat capacity at the end of the run — its
+        /// *reach*, which is the statistic a cap's value is chosen from rather than its error.
+        /// </summary>
+        public int FlooredNodes;
+
+        /// <summary>
         /// What one substep costs the assembly's most expensive grid, in element visits — the unit
         /// `MaxElementVisitsPerStep` is spent in, and per grid because the bound is per grid.
         ///
@@ -223,6 +229,7 @@ namespace Thermodynamics.Harness
                 SubstepsGranted = assembly.GrantedSubsteps,
                 Links = assembly.LinkCount,
                 SubstepCost = assembly.WorstGridSubstepCost,
+                FlooredNodes = assembly.FlooredNodes,
             };
 
             if (outcome.Blocks == 0) return outcome;
