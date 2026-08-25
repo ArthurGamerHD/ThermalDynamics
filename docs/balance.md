@@ -400,9 +400,27 @@ is past critical:
 
 0.05 and above put a reactor past critical *bare*, which is unbuildable — there is no arrangement
 cooler than open space. **0.01 is the fraction where both bounds hold**: every reactor survives at
-full rating with its faces on open space, and the 300 MW one goes past critical once wrapped in
-hull. That makes where a reactor is installed a decision rather than a detail, and it is the first
-thing in the mod that makes a player want a coolant loop for a reason other than curiosity.
+full rating with its faces on open space, and — at the pace this table was taken on — the 300 MW one
+went past critical once wrapped in hull.
+
+**The fraction stays at 0.01 and what it buys has shrunk** (`C28`, decided 2026-08-24). Those are
+two separate findings and the second is the interesting one.
+
+*The fraction stays* because it is still the only value where both bounds hold, and `C24` did not
+move which value that is: re-measured at the pair that ships, 0.02 cooks two of the four reactors
+**bare** — 1,114.2 K and 940.9 K against their own derived ratings — which is the bound this section
+calls unbuildable, and lowering it only makes a small signal smaller. It is kept because the
+alternative was measured, not for want of one.
+
+*What it buys has shrunk.* This paragraph used to end: **"That makes where a reactor is installed a
+decision rather than a detail, and it is the first thing in the mod that makes a player want a
+coolant loop for a reason other than curiosity."** At `ConductionScale` 9.6 burying a 300 MW reactor
+costs **50.7 K** rather than 355 K and both installations survive — about five per cent of the
+block's headroom. Where a reactor goes is still a decision; it is no longer one that endangers
+anything, and nothing about a reactor now makes a player want a loop. **The population had already
+said so and nobody had read it against this claim**: `reactor-waste` swept sixteen-fold, from 0.50
+to 8.00, moves the corpus peak p50 by 3 %. The bite is thrusters and drives — a charging jump drive
+is 71.3 % of a loaded fleet's heat — and that is where the install decision and the loop both live.
 
 > **The floor has gone, and `C24` is what removed it.** The table above was taken at
 > `ConductionScale` 2.4; at the 9.6 that now ships, the armour a reactor is buried in carries its
@@ -413,7 +431,7 @@ thing in the mod that makes a player want a coolant loop for a reason other than
 > 940.9 K against their own derived ratings — which is the bound this section calls unbuildable. So
 > the signal is smaller rather than moved. It is a block-level signal either way: `reactor-waste`
 > from 0.5 to 8.0 moves the corpus peak p50 by 3 %, and `G2` holds at 100 % of the retest set at the
-> pair that ships. [backlog.md](backlog.md) `C28`.
+> pair that ships. `C28` is decided on that evidence, above.
 
 An idling ship is deliberately not a cooling problem: at 10% of rating every reactor stays clear of
 critical in both rigs. **Heat arrives when power is drawn.**
@@ -1397,6 +1415,7 @@ five ways a full sweep dies, and [backlog.md](backlog.md) for what is still open
 
 | Date | Change |
 | --- | --- |
+| 2026-08-24 | **Decided `C28`: the reactor fraction stays at 0.01, and the claim it supported comes down.** Re-measured at the pair that ships, 0.02 still cooks two of the four reactors *bare*, which is the bound this page calls unbuildable — so `C24` did not move which fraction is the only one where both bounds hold, and 0.01 is kept because the alternative was measured rather than for want of one. What did move is what it buys: burying a 300 MW reactor costs **50.7 K** rather than 355 K, about five per cent of the block's headroom, so *where a reactor is installed is a decision rather than a detail, and the first thing that makes a player want a coolant loop* is corrected in place. The population had already said the same and nobody had read it against the claim — `reactor-waste` swept sixteen-fold moves the corpus peak p50 by 3 %. The bite is thrusters and drives. |
 | 2026-08-24 | Corrected this page's own account of `C12`'s choice, from the attempt at shipping it. The conduction route's *three levers* are four named behaviours — a coolant sink stops out-performing surface dials, bolting starts working, the stiffest fitting stops responding to air, and the cooling ladder's control stops losing — so the route is a trade taken deliberately rather than the easy choice the previous entry implied. |
 | 2026-08-24 | **Shipped it, and read what it cost.** `ConductionScale` 9.6 and `HeatTimeScale` 90 are the defaults; `G7` was re-scored first — 0 of 705 prefabs crossing critical at idle, 481 of them still losing a block flown hard — and `G6` passes on the shipped configuration for the first time, at 55 % of the substep cap in the worst environment against 115 %. Reading the 47 tests the pair moved found four rows rather than four figures: a bolt joint conducts as hard as a coolant sink face (`C25`), the census hull has left the population at the shipped cap (`C26`), solver cost moved from air to vacuum (`C27`), and the reactor's fraction was chosen against a bound this removes (`C28`). Three blocks came off the known-impossible list and the population's two stiffness modes closed to 2.3× apart. |
 | 2026-08-24 | **Chose `C12`'s route, and the choice inverted on evidence the cost column could not carry.** Both routes reach `G8`'s window; resampled from the same population, conduction ×4 holds it on 76 % of fleets and waste ×0.5 on 33–37 %, because the censored median has a cliff at half the hulls crossing and the waste route sits two hulls from it. Priced the waste route in air for the first time — the two routes had been compared on a cost measured for one and projected for the other — and both take `G6` from 115 % of the cap to 41–73 %, so the cost decides nothing. The route is conduction ×4 with `HeatTimeScale` 90; shipping it is `C24`. |
