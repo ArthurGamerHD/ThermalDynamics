@@ -82,6 +82,20 @@ namespace Thermodynamics.Sim
                     Console.Write(OxygenGeneratorLab.Report());
                     return 0;
 
+                case "basevariants":
+                {
+                    int take;
+                    int.TryParse(ValueAfter(args, "--ships") ?? "500", out take);
+                    System.Collections.Generic.List<string> sample =
+                        BaseVariantLab.Sample(ValueAfter(args, "--path"), take);
+
+                    string ofType = ValueAfter(args, "--type");
+                    Console.Write(ofType != null
+                        ? BaseVariantLab.ShareReport(sample, ofType)
+                        : BaseVariantLab.Report(sample));
+                    return 0;
+                }
+
                 case "coolers":
                     Console.Write(CoolingLadder.Report());
                     return 0;
@@ -1442,6 +1456,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  frequency               where substep cost bottoms out against Frequency");
             Console.WriteLine("  reactors                where a vanilla reactor settles, against its waste fraction");
             Console.WriteLine("  oxygen                  where a vanilla oxygen generator settles, against its waste fraction");
+            Console.WriteLine("  basevariants [--ships N]  what the blocks a blueprint spells with no subtype are worth");
             Console.WriteLine("  coolers                 every block that could cool a reactor, stacked against one");
             Console.WriteLine("  conductance             what real units did to the mod's own pipes and radiators");
             Console.WriteLine("  blocks                  every block in the game, derived from its build components");

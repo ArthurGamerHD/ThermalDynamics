@@ -516,6 +516,103 @@ namespace Thermodynamics.Harness
 
         private static Dictionary<string, Definition> _bySubtype;
 
+        /// <summary>
+        /// The definitions that carry no <c>SubtypeId</c> at all, keyed by type and grid size.
+        ///
+        /// <para>
+        /// **Thirteen of the game's blocks are in this state and they are not armour**: the vanilla
+        /// oxygen generator, air vent, oxygen tank, both gravity generators, the door, the airtight
+        /// hangar door, the passage, the ladder, both large turrets and the two small-grid guns. A
+        /// blueprint spells them the way the game does, with an empty <c>SubtypeName</c>, and
+        /// <see cref="BySubtype"/> cannot tell them apart because they all key on the same empty
+        /// string — the first file read wins, and it is a door.
+        /// </para>
+        ///
+        /// <para>
+        /// So the identity has to come from the type, which the blueprint always states. Grid size
+        /// is in the key because two of the thirteen are small-grid and eleven are large, and a
+        /// small-grid ship built out of large-grid blocks is the failure
+        /// <see cref="Blueprints"/> already guards the named case against.
+        /// </para>
+        /// </summary>
+        public static Dictionary<string, Definition> BaseVariants()
+        {
+            lock (CacheLock)
+            {
+                if (_baseVariants != null) return _baseVariants;
+
+                Dictionary<string, Definition> map =
+                    new Dictionary<string, Definition>(StringComparer.Ordinal);
+
+                foreach (Definition block in All())
+                {
+                    if (block.SubtypeId.Length > 0) continue;
+
+                    string key = BaseVariantKey(block.TypeId, block.Large);
+                    if (!map.ContainsKey(key)) map[key] = block;
+                }
+
+                _baseVariants = map;
+                return map;
+            }
+        }
+
+        /// <summary>The key <see cref="BaseVariants"/> is read with.</summary>
+        public static string BaseVariantKey(string typeId, bool large)
+        {
+            return (typeId ?? "") + (large ? "/large" : "/small");
+        }
+
+        private static Dictionary<string, Definition> _baseVariants;
+
+        /// <summary>
+        /// What a <see cref="BlockModel"/> built from <paramref name="definition"/> is called: its
+        /// subtype, or its type where the game states no subtype.
+        ///
+        /// <para>
+        /// **A placed block is identified by this name in a dozen places** — what power it draws,
+        /// what it weighs in a census row, what a hot-spot report prints — and for the thirteen
+        /// definitions with an empty subtype the name was the empty string, which resolves to
+        /// whichever of the thirteen a dictionary happened to keep. Naming them by type makes each
+        /// one distinct and makes a census row say `OxygenGenerator` rather than nothing.
+        /// </para>
+        /// </summary>
+        public static string ModelName(Definition definition)
+        {
+            if (definition == null) return null;
+            return definition.SubtypeId.Length > 0 ? definition.SubtypeId : definition.TypeId;
+        }
+
+        /// <summary>
+        /// Definitions keyed by <see cref="ModelName"/>, which is what a placed block carries.
+        ///
+        /// <see cref="BySubtype"/> is the right index for *a subtype named in a blueprint*; this is
+        /// the right one for *a block already built*, and the two differ only on the base variants.
+        /// A real subtype always wins a collision, so adding a type id to the table can never take
+        /// a name away from the block that had it.
+        /// </summary>
+        public static Dictionary<string, Definition> ByModelName()
+        {
+            lock (CacheLock)
+            {
+                if (_byModelName != null) return _byModelName;
+
+                Dictionary<string, Definition> map =
+                    new Dictionary<string, Definition>(BySubtype(), StringComparer.Ordinal);
+                map.Remove("");
+
+                foreach (Definition block in BaseVariants().Values)
+                {
+                    if (!map.ContainsKey(block.TypeId)) map[block.TypeId] = block;
+                }
+
+                _byModelName = map;
+                return map;
+            }
+        }
+
+        private static Dictionary<string, Definition> _byModelName;
+
         /// <summary>Definitions grouped by type id, in the order the files list them.</summary>
         public static Dictionary<string, List<Definition>> ByType()
         {

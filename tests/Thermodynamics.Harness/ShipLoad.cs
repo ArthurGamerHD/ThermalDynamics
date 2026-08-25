@@ -147,7 +147,9 @@ namespace Thermodynamics.Harness
         /// </summary>
         public static float Apply(ShipAssembly assembly, State state)
         {
-            Dictionary<string, GameBlocks.Definition> definitions = GameBlocks.BySubtype();
+            // Keyed on what a placed block is called, which is its type where the game states no
+            // subtype — otherwise every base variant draws whatever the first of the thirteen did.
+            Dictionary<string, GameBlocks.Definition> definitions = GameBlocks.ByModelName();
 
             List<BlockInstance> generators = new List<BlockInstance>();
             List<BlockInstance> stores = new List<BlockInstance>();
@@ -258,7 +260,7 @@ namespace Thermodynamics.Harness
         {
             if (assembly == null) return 0f;
 
-            Dictionary<string, GameBlocks.Definition> definitions = GameBlocks.BySubtype();
+            Dictionary<string, GameBlocks.Definition> definitions = GameBlocks.ByModelName();
             float longest = 0f;
 
             foreach (ThermalNode node in assembly.Nodes)

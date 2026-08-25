@@ -313,8 +313,10 @@ namespace Thermodynamics.Harness
         private static void Rate(ShipProfile profile, BlockInstance block, float[] thrustByDirection,
             ref float draw, ref float installed)
         {
+            // By model name, not by subtype: a base variant carries its type id as its name and
+            // the empty-subtype entry resolves to whichever of the thirteen a dictionary kept.
             GameBlocks.Definition definition;
-            if (!GameBlocks.BySubtype().TryGetValue(block.Name, out definition)) return;
+            if (!GameBlocks.ByModelName().TryGetValue(block.Name, out definition)) return;
 
             ShippedBlocks.Function function =
                 ShippedBlocks.FunctionOf(definition.TypeId);

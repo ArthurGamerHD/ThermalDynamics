@@ -296,14 +296,20 @@ restated at the fractions derived on 2026-08-23 rather than the 0.15 the census 
 oxygen generator at the 0.40 decided on 2026-08-25 rather than the 0.6 it measured.
 `tools/corpus/provenance.py` computes it.*
 
-> **A fleet share is not a ship's share, and for this type they differ by two orders of magnitude.**
-> Every figure in the table above is a ratio of aggregates over the whole census, so a charging jump
-> drive is three quarters of its denominator and a type carrying 0.38 % of it looks like a rounding
-> error. Asked only of the **2,277 ships that carry one**, the oxygen generator is a median **48.1 %**
-> of that ship's own full-load waste — 60.0 % on the 2,003 carriers with no jump drive, 0.9 % on the
-> 274 that have one. Both statistics are right and they answer different questions; the second is the
-> one about the player who built the block (`E6`). `provenance.py <composition.csv> --type
-> OxygenGenerator` computes it.
+> **A fleet share is not a ship's share.** Every figure in the table above is a ratio of aggregates
+> over the whole census, so a charging jump drive is three quarters of its denominator and a type
+> carrying 0.38 % of it looks like a rounding error. Asked only of the ships that carry one, the
+> oxygen generator is a median **10.4 %** of that ship's own full-load waste, with p90 at 61.4 %, and
+> **64.5 %** of ships carry one. Both statistics are right and they answer different questions; the
+> second is the one about the player who built the block (`E6`). `provenance.py <composition.csv>
+> --type OxygenGenerator` computes the census's version and
+> `Thermodynamics.Sim -- basevariants --ships 400 --type OxygenGenerator` the corrected one.
+>
+> **The census's own version of that figure is wrong and stays quotable only as what it is**
+> (corrected 2026-08-25, `E10`): it said 2,277 carriers and a median 48.1 %, measured through a
+> blueprint reader that built every empty-`SubtypeName` block as armour — and the vanilla large
+> oxygen generator is one of the thirteen definitions the game gives no subtype, so the census holds
+> none of them. The reader is fixed (`A13`) and no dataset on disk has been re-taken.
 
 **So the file is mostly opinion and the heat mostly is not**, because one derived block carries three
 quarters of it. And the invented sixth is not spread over a hundred blocks either — four types carry
@@ -500,6 +506,7 @@ Tuning guidance:
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | **Corrected the ship's-share figure beside the heat table, because the census cannot see the block it is about** (`E10`). It said 2,277 carriers and a median 48.1 %; the blueprint reader built every empty-`SubtypeName` block as armour, and the vanilla large oxygen generator is one of thirteen definitions the game gives no subtype. Through the fixed reader, on a 400-ship stride sample, **64.5 % of ships carry one and their median share is 10.4 %**. The reader is fixed and no dataset on disk has been re-taken, which is `A13`. |
 | 2026-08-25 | **`C21`'s last open invention closed: the oxygen generator is `waste: water electrolysis` at 0.40, and the counts are 43 / 1 / 108 / 76.** It moved because 0.6 put two of the six vanilla generators past their own critical temperature *bare* at their rated draw — a block that cannot be built — and not because the gap between 0.6 and the sourced band was the largest in the file. `water electrolysis` is a new conversion in `ReferenceEfficiencies`, banded 0.20-0.40 against alkaline and PEM electrolysers. The heat-share table moved with it, and it carries the one restatement in this page that is a balance change rather than a correction. **And this page's fleet share of 0.38 % was answering a different question from the one a player asks**: on the 2,277 ships that carry a generator it is a median 48.1 % of their own waste, which is now stated beside it (`E6`). The rule that decided it was registered before the run, in [balance.md](balance.md#oxygen-generator-waste-heat-written-before-it-is-measured). |
 | 2026-08-23 | **The coolant loop's fluid coupling is a heat transfer coefficient in W/(m²·K), and the game has one conduction pace again** ([backlog.md](backlog.md) `C20`). It was a 0…1 quality times a reference conductivity of 200, divided by half a cell — which made the coefficient it implied depend on grid size: 160 on a large grid and 800 on a small one, for the same fluid against the same wall. Convection has no length in it. 160 is what a large grid was already running at, so nothing there moves; a small-grid loop couples a fifth as hard as it did. |
 | 2026-08-23 | The radiator declares `SolarAbsorptivity 0.1`, which is the first shipped block to use the split at all ([backlog.md](backlog.md) `C15`). Worth 10.9 K to a sunlit stack, nothing in shadow, and emissivity untouched. |

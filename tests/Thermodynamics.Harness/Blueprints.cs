@@ -442,23 +442,44 @@ namespace Thermodynamics.Harness
             foreach (XElement block in blocks.Elements())
             {
                 string subtype = (string)block.Element("SubtypeName");
+                GameBlocks.Definition definition = null;
+                string named = subtype;
 
-                // An empty SubtypeName is how the game spells the base variant of a type — armour
-                // blocks are the common case — so the type carries the identity instead.
-                if (string.IsNullOrEmpty(subtype)) subtype = BaseSubtypeOf(block, large);
+                if (string.IsNullOrEmpty(subtype))
+                {
+                    // An empty SubtypeName is how the game spells the base variant of a type, and
+                    // the type is what identifies it. Armour is the common case and was for a long
+                    // time the *only* case this handled — see BaseVariantOf.
+                    named = TypeOf(block);
+                    definition = BaseVariantOf(named, large);
 
-                GameBlocks.Definition definition;
+                    // **`CubeBlock` is the one type the game resolves by convention rather than by
+                    // a definition.** Armour cubes all carry subtypes, so there is no empty-subtype
+                    // `CubeBlock` for `BaseVariants` to find, and a blueprint spelling one with an
+                    // empty `SubtypeName` means the plain cube of its grid's size. It is written as
+                    // its own case rather than as a fallback so that a type nobody has thought
+                    // about resolves to *nothing* and is counted, instead of quietly becoming
+                    // armour — which is exactly how eleven types came to be armour for a year.
+                    if (definition == null && named == "CubeBlock")
+                    {
+                        named = large ? "LargeBlockArmorBlock" : "SmallBlockArmorBlock";
+                        definitions.TryGetValue(named, out definition);
+                    }
+                }
+                else if (!definitions.TryGetValue(subtype, out definition))
+                {
+                    definition = null;
+                }
 
                 // A blueprint's grid size and a definition's must agree, or a small-grid ship would
                 // be built out of large-grid blocks that happen to share a subtype name.
-                if (subtype == null || !definitions.TryGetValue(subtype, out definition)
-                    || definition.Large != large)
+                if (definition == null || definition.Large != large)
                 {
                     ship.UnknownBlocks++;
-                    if (ship.UnknownSubtypes.Count < 4 && subtype != null
-                        && !ship.UnknownSubtypes.Contains(subtype))
+                    if (ship.UnknownSubtypes.Count < 4 && named != null
+                        && !ship.UnknownSubtypes.Contains(named))
                     {
-                        ship.UnknownSubtypes.Add(subtype);
+                        ship.UnknownSubtypes.Add(named);
                     }
                     continue;
                 }
@@ -537,16 +558,47 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
-        /// The subtype an armour block carries when the blueprint leaves <c>SubtypeName</c> empty.
+        /// The definition a block with an empty <c>SubtypeName</c> is, resolved from its type.
         ///
-        /// Every such block is a cube of the grid's own size, so the fallback only has to be a
-        /// block that exists and weighs the right thing. Guessing wrong here would silently make a
-        /// hull out of something else, so it is deliberately narrow: the plain armour cube, and
-        /// nothing clever.
+        /// <para>
+        /// **This returned the plain armour cube until 2026-08-25, and the comment that said so
+        /// described the bug as the design**: *every such block is a cube of the grid's own size,
+        /// so the fallback only has to be a block that exists and weighs the right thing*. It is
+        /// not — the game leaves <c>SubtypeId</c> empty on **thirteen** definitions, and eleven of
+        /// them are not armour. Every vanilla oxygen generator, air vent, oxygen tank, gravity
+        /// generator, door, hangar door, passage, ladder and large turret in the corpus was built
+        /// as a 500 kg armour cube: wrong mass, wrong material, and **no power draw at all**, so it
+        /// made no heat. Measured over a sixty-blueprint sample, 4,094 blocks of 406,361 — one per
+        /// cent — were mis-built this way.
+        /// </para>
+        ///
+        /// <para>
+        /// It is the exact failure the old comment worried about — *guessing wrong here would
+        /// silently make a hull out of something else* — reached by guessing narrowly rather than
+        /// by guessing cleverly. Nothing guesses now: the type is what the blueprint states and
+        /// <see cref="GameBlocks.BaseVariants"/> is keyed on it.
+        /// </para>
         /// </summary>
-        private static string BaseSubtypeOf(XElement block, bool large)
+        private static GameBlocks.Definition BaseVariantOf(string typeId, bool large)
         {
-            return large ? "LargeBlockArmorBlock" : "SmallBlockArmorBlock";
+            GameBlocks.Definition definition;
+            return GameBlocks.BaseVariants().TryGetValue(
+                GameBlocks.BaseVariantKey(typeId, large), out definition) ? definition : null;
+        }
+
+        /// <summary>
+        /// The block's type, from the <c>xsi:type</c> its element carries, with the object-builder
+        /// prefix stripped so it matches what <see cref="GameBlocks"/> keys on.
+        /// </summary>
+        private static string TypeOf(XElement block)
+        {
+            XAttribute type = block.Attribute(
+                XName.Get("type", "http://www.w3.org/2001/XMLSchema-instance"));
+            if (type == null) return null;
+
+            string value = type.Value ?? "";
+            return value.StartsWith("MyObjectBuilder_")
+                ? value.Substring("MyObjectBuilder_".Length) : value;
         }
 
         /// <summary>
@@ -591,8 +643,13 @@ namespace Thermodynamics.Harness
 
         public static BlockModel Model(GameBlocks.Definition definition)
         {
+            // **Keyed on the model name rather than the subtype**, because thirteen definitions
+            // share the empty subtype and a cache keyed on it hands an air vent whichever of the
+            // thirteen was built first.
+            string name = GameBlocks.ModelName(definition);
+
             BlockModel model;
-            if (Models.TryGetValue(definition.SubtypeId, out model)) return model;
+            if (Models.TryGetValue(name, out model)) return model;
 
             BlockThermalProperties thermal = ShippedBlocks.DeriveWithFunction(
                 definition.Components, definition.TypeId, definition.PowerEfficiency);
@@ -604,7 +661,7 @@ namespace Thermodynamics.Harness
             Func<string, string, BlockThermalProperties, BlockThermalProperties> material = materialOverride;
             if (material != null) thermal = material(definition.TypeId, definition.SubtypeId, thermal);
 
-            model = BlockModel.Solid(definition.SubtypeId, definition.Size, definition.Mass, thermal);
+            model = BlockModel.Solid(name, definition.Size, definition.Mass, thermal);
 
             // A definition that declares no mount points has them generated from its model, which
             // is geometry this harness cannot read. Treating that silence as "mounts nowhere" is
@@ -642,7 +699,7 @@ namespace Thermodynamics.Harness
                 }
             }
 
-            return Models.GetOrAdd(definition.SubtypeId, model);
+            return Models.GetOrAdd(name, model);
         }
 
         private static Vector3I ParseCell(XElement element)

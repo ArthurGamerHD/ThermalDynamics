@@ -79,9 +79,82 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// A blueprint spells the base variant of a type with an empty <c>SubtypeName</c>, and
-        /// armour cubes are the common case — so a parser that skips them drops most of the hull
-        /// of most ships and reports a plausible-looking remainder.
+        /// One block element with a stated <c>xsi:type</c>, which is how a blueprint spells
+        /// anything that is not a plain cube.
+        /// </summary>
+        private static string Typed(string typeId, string subtype, int x, int y, int z)
+        {
+            return "<MyObjectBuilder_CubeBlock xsi:type=\"MyObjectBuilder_" + typeId + "\">" +
+                (subtype == null ? "<SubtypeName />" : "<SubtypeName>" + subtype + "</SubtypeName>") +
+                "<Min x=\"" + x + "\" y=\"" + y + "\" z=\"" + z + "\" />" +
+                "</MyObjectBuilder_CubeBlock>";
+        }
+
+        /// <summary>
+        /// **An empty <c>SubtypeName</c> on something that is not armour is that type's base
+        /// variant, not an armour cube.** This is the defect the whole corpus was measured under
+        /// until 2026-08-25.
+        ///
+        /// <para>
+        /// The game leaves <c>SubtypeId</c> empty on thirteen definitions and eleven of them are
+        /// not armour — the vanilla oxygen generator, air vent, oxygen tank, both gravity
+        /// generators, the door, the hangar door, the passage, the ladder and the two large
+        /// turrets. Every one of them in every corpus blueprint was built as a 500 kg armour cube
+        /// with no power draw, so it made no heat, and nothing about the result looked wrong: the
+        /// ship parsed, the block count was right, and `IsVanilla` stayed true.
+        /// </para>
+        ///
+        /// <para>
+        /// The check is mass rather than a name, because mass is what the wrong answer got wrong:
+        /// a large-grid oxygen generator weighs 2,587 kg against light armour's 500.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void ABlockWithNoSubtypeNameIsItsOwnTypesBaseVariantRatherThanArmour()
+        {
+            if (!GameBlocks.IsInstalled) return;
+
+            string file = WriteBlueprint(Typed("OxygenGenerator", null, 0, 0, 0));
+            Blueprints.Ship ship = Blueprints.Read(file)[0];
+
+            Assert.Equal(1, ship.Blocks);
+            Assert.Equal(0, ship.UnknownBlocks);
+
+            BlockInstance placed = ship.Grids[0].Builder.Placed[0];
+            Assert.True(placed.Model.Mass > 2000f,
+                "a vanilla oxygen generator was built weighing " + placed.Model.Mass
+                + " kg; light armour is 500 and the generator is 2,587, so an empty SubtypeName is"
+                + " resolving to armour again");
+        }
+
+        /// <summary>
+        /// The small-grid half of the same rule. Two of the thirteen base variants are small-grid
+        /// blocks, so a resolver keyed on type alone would build a small-grid gun onto a large
+        /// hull — which is the failure the named-subtype path already refuses.
+        /// </summary>
+        [Fact]
+        public void ABaseVariantOfTheWrongGridSizeIsNotBuilt()
+        {
+            if (!GameBlocks.IsInstalled) return;
+
+            // SmallGatlingGun is small-grid only, so a large-grid blueprint naming it resolves to
+            // nothing rather than to whatever else shares its type.
+            string file = WriteBlueprint(
+                Block("LargeBlockArmorBlock", 0, 0, 0) + Typed("SmallGatlingGun", null, 1, 0, 0));
+            Blueprints.Ship ship = Blueprints.Read(file)[0];
+
+            Assert.Equal(1, ship.Blocks);
+            Assert.Equal(1, ship.UnknownBlocks);
+            Assert.False(ship.IsVanilla);
+        }
+
+        /// <summary>
+        /// The other half of the rule, and the reason the wrong version of it survived so long:
+        /// **for a `CubeBlock` an empty <c>SubtypeName</c> really is the plain armour cube**, and
+        /// armour is most of most hulls, so the guess looked right everywhere anyone checked.
+        ///
+        /// It is resolved as its own case rather than as a fallback, so that a type nobody has
+        /// thought about resolves to nothing and is counted instead of quietly becoming armour.
         /// </summary>
         [Fact]
         public void ABlockWithNoSubtypeNameIsTheBaseArmourCube()
