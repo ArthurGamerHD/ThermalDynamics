@@ -801,6 +801,19 @@ where breathing hot air stops being merely unpleasant.
 simulated — no planet surface, no vacuum, no open-frame ship. That is the scope of what room air
 already carries, and the rest is [backlog](backlog.md) `C17`.
 
+**Cold does not hurt, and that is a decision with a number behind it** (`C18`). The suit regulates
+both ways — a suit that could only cool would leave a player to freeze in shadow — so the cold side
+is simulated and only the consequence is missing. The two ends of its window are not symmetric. The
+suit holds its occupant while the leak fits inside one rating, `310 ± 500/conductance`, and an open
+helmet pulls **both** ends in tenfold: the hot end lands at 330 K, which a player only meets when
+something has gone wrong, and the cold end at **290 K — 17 °C**, which is an ordinary compartment. A
+floor at hypothermia would therefore fire in any room below about 15 °C, on this mod's accelerated
+clock, in ordinary play, where the ceiling never fires until a ship is already burning. `C16`
+reinforces it: the cooler cannot fail, so a player is never cold *because their suit ran out*, which
+is the situation freezing would be for. `TheColdEndOfTheSuitsWindowIsAnOrdinaryRoomAndTheHotEndIsNot`
+pins where the two ends land, and fails if a change to the rating or the conductance moves the cold
+one out of habitable range and with it the reason for having no floor.
+
 **The cooler is free**, which is a limit rather than a decision: `IMyCharacter` exposes
 `SuitEnergyLevel` to read and nothing to write, so no mod can charge a player for running it. What
 the mod can see is a flat suit, and a flat suit does not regulate.

@@ -192,6 +192,60 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// **Why there is a `SuitCriticalTemperature` and no floor beside it** (`C18`, decided
+        /// 2026-08-24). The suit regulates both ways and reports the watts it puts back in, so the
+        /// cold side is simulated and only the *consequence* is missing — which reads as an
+        /// oversight until the two thresholds are put side by side.
+        ///
+        /// <para>
+        /// They are not symmetric, and this measures where each lands. The suit holds its occupant
+        /// while the leak fits inside one rating, so the window is `comfort ± rating / conductance`
+        /// — and with an open helmet the conductance is ten times higher, which pulls **both** ends
+        /// in tenfold. The hot end lands at 330 K, a temperature a player only meets when something
+        /// has gone wrong. The cold end lands at **290 K, which is 17 °C**: an ordinary compartment.
+        /// </para>
+        ///
+        /// <para>
+        /// So a floor at hypothermia would fire in any room below about 15 °C, on the mod's
+        /// accelerated clock, in ordinary play — where the ceiling never fires until a ship is
+        /// already burning. A rule that is symmetric in form is nothing like symmetric in effect,
+        /// and that is the whole of the decision. `C16` reinforces it: the cooler is free and
+        /// cannot fail, so a player can never be cold *because their suit ran out*, which is the
+        /// situation freezing to death would be for — and a suit with no energy is a problem the
+        /// game already answers. Revisit if a setter for suit charge ever appears.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheColdEndOfTheSuitsWindowIsAnOrdinaryRoomAndTheHotEndIsNot()
+        {
+            ThermalSettings settings = Shipped();
+
+            float sealed_ = settings.SuitCoolingWatts / settings.SuitConductance;
+            float open = sealed_ / SuitThermal.OpenHelmetConductanceFactor;
+
+            // The hot end is the one the model computes for itself, and the cold end is its mirror.
+            Assert.Equal(SuitThermal.ComfortKelvin + sealed_,
+                SuitThermal.SurvivableKelvin(settings), 2);
+            Assert.Equal(SuitThermal.ComfortKelvin + open,
+                SuitThermal.SurvivableKelvin(settings, true), 2);
+
+            float coldOpen = SuitThermal.ComfortKelvin - open;
+
+            // 290.15 K is 17 °C. A ship compartment sits here.
+            Assert.InRange(coldOpen, 283.15f, 296.15f);
+
+            // And the hot end with the helmet open is 330 K, 57 °C, which one does not.
+            Assert.True(SuitThermal.SurvivableKelvin(settings, true) > 323.15f);
+
+            // The asymmetry itself, which is the reason for the decision: the cold end sits inside
+            // a habitable range and the hot end sits well outside it.
+            Assert.True(coldOpen < SuitThermal.ComfortKelvin);
+            Assert.True(coldOpen > 273.15f,
+                "the cold end has moved below freezing, so it is no longer an ordinary room and"
+                + " `C18`'s reason for having no floor no longer holds");
+        }
+
+        /// <summary>
         /// Off is off (`C7`): with the switch down the pass is not run at all, and the model itself
         /// still answers rather than throwing, because the settings it is handed can be anything.
         /// </summary>
