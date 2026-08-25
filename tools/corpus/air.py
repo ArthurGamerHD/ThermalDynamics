@@ -15,6 +15,11 @@ dearer by conductivity x clock / 225. A hull in air is convection-limited, that 
 restored, and the same cell gets cheaper. Both are printed per cell so the claim is a pair of
 measured columns rather than an argument.
 
+**The ratio is against this sweep's own control, which is no longer what ships.** The control cell
+is conductivity x1 at a clock of 225; `C24` shipped x4 at 90 on 2026-08-24, which is a row of this
+same table. The column is named `vs baseline` for that reason and the shipped cell is printed under
+the table.
+
 **Read against the cap, not against the control.** `G6` is satisfied when p99 demand is inside what
 the shipped caps grant, and a cell can be dearer than the shipped world and still fit. The ratio is
 printed because it says which way a cell moved; the cap is what decides it.
@@ -32,7 +37,17 @@ import scoring
 
 DATA = sys.argv[1] if len(sys.argv) > 1 else "out/air-2026-08-23"
 
-SHIPPED_CLOCK = 225.0
+# The cell every other one is measured against: conductivity x1 at the clock of 225, which is what
+# shipped when this sweep was designed and is the sweep's own control.
+#
+# **It is the baseline and no longer the shipped configuration.** `C24` shipped `ConductionScale` 9.6
+# and `HeatTimeScale` 90 on 2026-08-24, which is this table's `x4 / 90` row — so the ratio column
+# says how a cell moved against the sweep's control, not against what a player has. Renaming it was
+# the whole of the fix: the arithmetic was never wrong, the word was.
+BASELINE_CLOCK = 225.0
+
+# What ships now, printed under the table so the two are never confused again.
+SHIPPED_CELL = "x4 / 90"
 
 # What MaxSubsteps grants at the shipped defaults. A demand above this is a step integrated at the
 # ceiling with both overshoot clamps live: an approximation rather than a slow step, and one whose
@@ -89,7 +104,7 @@ def main():
         demand.setdefault((cell, row["scenario"]), {})[row["ship"]] = value
 
     cells = sorted({cell for cell, _ in demand}, key=lambda c: (c[0], -c[1]))
-    shipped = (1.0, SHIPPED_CLOCK)
+    baseline = (1.0, BASELINE_CLOCK)
     scenarios = [s for s in ORDER if any(sc == s for _, sc in demand)]
 
     ships = max((len(v) for v in demand.values()), default=0)
@@ -99,7 +114,7 @@ def main():
 
     # ---- the two directions, side by side ----------------------------------------------------
     print(f"{'cell':>12} {'scenario':>18} {'p50':>8} {'p95':>8} {'p99':>8} {'max':>8}"
-          f" {'vs shipped':>11} {'of cap':>8} {'over cap':>9}")
+          f" {'vs baseline':>11} {'of cap':>8} {'over cap':>9}")
 
     worst = {}
     for cell in cells:
@@ -108,7 +123,7 @@ def main():
             if not mine:
                 continue
 
-            base = demand.get((shipped, scenario), {})
+            base = demand.get((baseline, scenario), {})
             paired = [mine[s] / base[s] for s in mine if base.get(s)]
 
             values = list(mine.values())
@@ -126,6 +141,10 @@ def main():
                   + f" {100.0 * p99 / GRANTED:7.0f}%"
                   + f" {over:4d}/{len(values):<4d}")
         print()
+
+    print(f"the ratio is against x1 / {BASELINE_CLOCK:g}, this sweep's own control. "
+          f"What ships since 2026-08-24 is {SHIPPED_CELL}, which is a row above.")
+    print()
 
     # ---- G6, per cell ------------------------------------------------------------------------
     print(f"G6: p99 substep demand inside the {GRANTED:.0f} the shipped caps grant, "

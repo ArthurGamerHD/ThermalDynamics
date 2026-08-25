@@ -396,6 +396,7 @@ limit in [known-issues.md](../../docs/known-issues.md).
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Renamed `air.py`'s ratio column from *vs shipped* to *vs baseline*, and made it print which cell ships. The column compares every cell with the sweep's own control, conductivity x1 at a clock of 225 — which stopped being the shipped configuration when `C24` shipped x4 at 90, a row of the same table. The arithmetic was never wrong; the word was. |
 | 2026-08-25 | Fixed `verdict.py` reading a paired walk's second arm as duplicate rows. It keyed a row by ship and scenario, so `CorpusCapWalk`'s capped arm looked like the same run written twice: half the dataset was dropped, under a note blaming a resume that had not happened, and the arm it kept was the right one by accident. The arm is part of a row's identity now, and a paired dataset is scored on the one that ships with both named on the first line (`M1`, `P6`). |
 | 2026-08-25 | Added [`reproduce.py`](reproduce.py): whether two walks that overlap wrote the same numbers on the ships they share. Its first use was the cap walk's restart, whose 552 shared rows matched the abandoned partial exactly on all 22 compared columns. |
 | 2026-08-25 | Added the one way a sweep costs a session rather than a run: a walk in progress fails the suite's wall-clock tests, because they are measuring a machine the walk is using every core of. Measured — the suite was green before the cap walk and `SolverCostPerLinkStaysProportional` was 3.14× its limit during it. |
