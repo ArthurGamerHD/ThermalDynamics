@@ -3,7 +3,7 @@
 What every block this mod ships is worth against the vanilla blocks it competes with, and what a
 population of 8,132 real ships says about whether the balance targets hold.
 
-> The rules argued here are stated canonically in [rules.md](rules.md): `E3` `E4` `E5` `E9` `M10`.
+> The rules argued here are stated canonically in [rules.md](rules.md): `E1` `E3` `E4` `E5` `E9` `E11` `M10` `P1` `P2`.
 
 | Looking for | Go to |
 | --- | --- |
@@ -451,6 +451,71 @@ they should, which is the honest way round when one of the two inputs is already
 > a round number — and at 0.02 the two smaller reactors then cook themselves bare in vacuum, which
 > is a state no build can improve on. A balance figure resting on a number nobody had checked is not
 > a balance figure.
+
+### Oxygen generator waste heat, written before it is measured
+
+`C21` gave every waste fraction in `Cubes.xml` a provenance and left three inventions with a real
+figure sitting beside them. One of the three closed on 2026-08-24 and one — the reactor's — was
+decided and kept by `C28`. **The third is the largest gap in the file and is open**: an oxygen
+generator wastes **0.6** of what it draws where water electrolysis runs 0.60–0.80 efficient and the
+sourced figure is **0.20–0.40**. The question, the instrument, the decision rule and the numbers
+that would falsify each prediction go here before the run (`E1`, `E11`).
+
+**The question.** Should `OxygenGenerator.ConsumerWasteEnergy` move from the invented 0.6 into the
+sourced band, and if so to which value in it?
+
+**The instrument is the reactor rig pointed at a consumer.** `OxygenGeneratorLab` runs the same two
+bounds — **bare**, one generator alone in shadow with every face radiating to a 2.7 K sky, and
+**skinned**, the same block under one cell of light armour — because the same two bounds are what
+decide it: a fraction that cooks bare cooks in every build, and a fraction the skinned rig survives
+at full draw is one nobody ever has to cool. What changes is where the watts come from. A reactor's
+heat is a fraction of what it *produces*; a generator's is a fraction of what it *draws*, and the
+game states that draw per definition as `OperationalPowerConsumption` — 0.5 MW for the large-grid
+block, into two cells.
+
+**Three draws, and only one of them is invented.** `standby` and `operational` are both figures the
+game's own definition states, so they bracket the block without an authored duty cycle in between.
+The third is `observed` — the mean draw across 346 large oxygen generators in the 2026-08-21 field
+dump, **31.5 kW of a 500 kW rating, a duty of 6.3 %** — which is one sample of what players
+actually run and is labelled as one sample wherever it is quoted.
+
+**Four predictions, each with what would falsify it.**
+
+| | prediction | falsified by |
+| --- | --- | --- |
+| the ceiling | at 0.6 and operational draw the large-grid generator sits **within 100 K of its own critical temperature bare** | a bare margin over 100 K |
+| the install | at 0.6 the same block is **past critical skinned** | a skinned margin at or above 0 K |
+| the relief | at 0.30 it clears critical **skinned by more than 100 K** | a skinned margin under 100 K |
+| the population | on the census ships that carry one, the generator is **under 5 % of that ship's full-load waste** at the median | a median at or above 5 % |
+
+100 K is not a round number chosen here: it is where `ThermalGlow` starts, so it is the temperature
+at which a block stops being a detail and starts telling the player about itself. A margin inside it
+is a block a player watches.
+
+**The decision rule, fixed now.** It has to settle both halves — whether to move, and where to — and
+the two precedents in this repository point opposite ways. `C21`'s computer third **moved** because
+the sourced value changed nothing a player could see: 0.9 to 1.0 over twenty-seven types was worth
+0.025 % of a loaded fleet's waste. `C28` **kept** an unsourced 0.01 because the sourced figure made
+every large reactor destroy itself in a build no player could improve.
+
+1. **Unbuildable beats sourced and beats balance.** If 0.6 puts the block past critical *bare* at
+   operational draw, it is not a balance choice but a block that cannot be built, and it moves
+   whatever else holds — to the **highest** value in the sourced band that survives both rigs.
+2. **Otherwise, provenance wins unless the move removes a decision.** It moves to **0.30**, the
+   band's midpoint, chosen as the centre because the source gives a range and nothing distinguishes
+   a point inside it.
+3. **The move removes a decision** — and 0.6 is kept, with the reason recorded here as `C28`'s was —
+   if at operational draw 0.6 is within 100 K of critical *skinned* and 0.30 is not. That is the
+   case where where a generator is installed decides whether it survives at 0.6 and stops deciding
+   anything at 0.30.
+
+**What this rig cannot say.** It is four blocks in two synthetic arrangements: it says what a
+generator does to itself, not what the population does with it, and the population half is the
+census's alone. Neither half is a corpus walk, and no corpus walk is being run for this row —
+`reactor-waste` swept sixteen-fold moved the corpus peak p50 by 3 % on a type carrying **3.65 %** of
+a loaded fleet's waste, and the oxygen generator carries **0.38 %** with a change of half of that, so
+a walk would be spending hours to measure a number smaller than the one already measured as very
+nearly inert (`P2` — this is what the instrument was not asked, stated rather than hidden).
 
 ---
 
@@ -1509,6 +1574,7 @@ five ways a full sweep dies, and [backlog.md](backlog.md) for what is still open
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | **Registered the criterion for `C21`'s last open invention before measuring it**, in [Oxygen generator waste heat](#oxygen-generator-waste-heat-written-before-it-is-measured) (`E1`, `E11`). An oxygen generator wastes 0.6 of what it draws where electrolysis sources 0.20-0.40, which is the largest gap in `Cubes.xml`. The rule settles both halves — whether to move and where to — against the two precedents that point opposite ways, `C21`'s computer third that moved and `C28`'s reactor that did not, and four predictions carry the numbers that falsify them. Nothing has been run. |
 | 2026-08-25 | `G6`'s cost half was rescored on a walk that carries the link count rather than the joint count, over all 8,144 blueprints: step work p99 **7,293,904** against the 4,000,000 granted, **1.82× over**, with 733 of 32,575 runs past it. The demand half passes at p99 34.8 of 64 and reproduces `F11` exactly. A per-block cap of 6 would take the cost half to 0.55× and is not being shipped, for the reason in [backlog.md](backlog.md) `C3`. |
 | 2026-08-25 | Added [What the mod's blocks cost to build](#what-the-mods-blocks-cost-to-build), closing [backlog.md](backlog.md) `B33`. All eighteen `Cubes.xml` definitions sit inside the range the game prices its own 1,434 blocks over, on three shape-free ratios; PCU per cubic metre was a fourth and is now reported rather than judged, because it flagged only the large radiator and the vanilla blocks beneath it are vivariums and platforms. And a recipe reaches the transient and not the steady state: four times a radiator stack's mass moves the settled source by a hundredth of a kelvin and its settling time from 24 s to 112 s. |
 | 2026-08-25 | Added [What a hand tool would have to be worth](#what-a-hand-tool-would-have-to-be-worth), which the block index could answer all along and nobody had asked: 26 five-kilogram CO2 bottles to return the median cooking block to ambient, 20 at once to do it inside its own window, and 71 of 72 with no surplus at all in the best case. It closes [backlog.md](backlog.md) `B32`, and the comparison is in watts and joules so that `HeatTimeScale` cannot move it. |
