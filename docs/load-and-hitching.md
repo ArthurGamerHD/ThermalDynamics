@@ -579,10 +579,11 @@ anything written down.
 **What it is actually worth is now measured in its own unit**, along with what the simulated time it
 trades away costs in kelvin — see [benchmarks.md](benchmarks.md#what-the-allowance-is-worth) and
 `bench allowance`. The short form: the allowance is a **per-frame** budget, `V × Frequency / 60`
-element visits, so the shipped 2,000,000 grants 133,333 visits a frame; it binds in **air** rather
-than in vacuum, at about 9,000 blocks in flight against 32,000 in vacuum; and what a shortened step
-costs is a slow thermal clock, worth 1.19 K standing at a 5 % deficit and 36.98 K at 60 % under a
-moving load.
+element visits, so the 2,000,000 that shipped until `C27` granted 133,333 visits a frame; it binds
+in **air** rather than in vacuum, at about 9,000 blocks in flight against 32,000 in vacuum; and what
+a shortened step costs is a slow thermal clock, worth 1.19 K standing at a 5 % deficit and 36.98 K
+at 60 % under a moving load. **The default is 4,000,000 since**, which is that trade and nothing
+else — see [configuration.md](configuration.md#what-a-shortened-step-costs).
 
 ## What is still open
 

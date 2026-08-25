@@ -159,8 +159,8 @@ namespace Thermodynamics.Harness
                 {
                     // One hull per (world, size), reused across every allowance on it. Rebuilding
                     // would put a differently-laid-out grid under each row and turn the comparison
-                    // into one about hulls (`P6`); the run resets the spread and the counters
-                    // instead.
+                    // into one about hulls (`P6`); each row re-seeds the spread and reads the rate
+                    // as a delta instead.
                     ThermalSimulation simulation = LoadBenchmarks.BuildSettled(shape, sizes[s]);
                     Census.DriveCensus(simulation);
 
@@ -260,10 +260,10 @@ namespace Thermodynamics.Harness
                 double owed = ran + skipped;
                 double repeatRate = owed <= 0d ? 1d : ran / owed;
 
-                double ms_per_frame = watch.Elapsed.TotalMilliseconds / frames;
-                if (ms_per_frame < best)
+                double msPerFrame = watch.Elapsed.TotalMilliseconds / frames;
+                if (msPerFrame < best)
                 {
-                    best = ms_per_frame;
+                    best = msPerFrame;
                     worst = repeatWorst;
                     rate = repeatRate;
                     visits = steps <= 0

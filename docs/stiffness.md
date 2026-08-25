@@ -62,7 +62,10 @@ Both settings that look like they control cost cancel out of that:
   exactly the same proportion. No change.
 * **`MaxElementVisitsPerStep`** shortens the step when it will not fit, which is what these ships are
   living on. It buys smoothness, not throughput: the same work per unit of heat time, delivered
-  more evenly and therefore more slowly.
+  more evenly and therefore more slowly. **What *more slowly* costs is measured**: the 35 %
+  simulation rate above is a thermal clock 65 % slow, past the end of the ladder that priced it,
+  whose last point is **36.98 K** standing at 60 % under a moving load — and 0.00 K under a steady
+  one ([benchmarks.md](benchmarks.md#what-the-allowance-is-worth)).
 
 That is not a defect in the settings. It is what an explicit integrator is: **you pay for the
 stiffest node, on every node, for as long as you want heat to move.** The only ways down are to

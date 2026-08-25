@@ -77,7 +77,9 @@ At the pair that now ships the same 40-hull panel's worst p99 is **35.12 of 64**
 criterion is decided by is convection-limited, so it came down with the clock, and `G6` passes on
 the shipped configuration. What went the other way is vacuum, where the same hulls demand 1.6× what
 they did: nothing near the cap, but the element-visit allowance is a different bound and the retune
-does reach it ([backlog.md](backlog.md) `C27`).
+does reach it. **`C27` measured that and found the premise the wrong way round** — the allowance
+binds in *air*, at about a third the grid size vacuum needs, and what it costs was priced and the
+default doubled. See [configuration.md](configuration.md#what-a-shortened-step-costs).
 
 The trade the old breach represented is kept in
 [configuration.md](configuration.md#the-approximation-that-shipped-on-and-no-longer-does), because
@@ -955,11 +957,12 @@ the sizes where the bound binds at all.
 What this retires is the claim that only grids past a hundred thousand blocks reach the default. A
 step's cost is size times stiffness, and `TheShippedAllowanceFitsAGridAndAHalvedOneDoesNot` pins
 both halves: counting links alone a rig's links buy more substeps than it asks for, so the budget
-does nothing at all; counting nodes as well, a substep over a 32,000-block hull costs about 188,000
-element visits and the shipped allowance of two million covers it while half of it does not.
-**Whether the allowance binds is a question about the step rate rather than about block count** —
-a hull asks twice as many substeps of a quarter-second step as of an eighth-second one, which is
-why the allowance moved with `Frequency`.
+does nothing at all; counting nodes as well, a substep over a 64,000-block hull costs about 383,000
+element visits and the shipped allowance of four million covers it while half of it does not.
+**Whether the allowance binds is a question about the step rate and the world rather than about
+block count** — a hull asks twice as many substeps of a quarter-second step as of an eighth-second
+one, which is why the allowance moved with `Frequency`, and three to four times as many in air as in
+vacuum, which is what `C27` found and what doubled it.
 
 > The figures here were 8,904 nodes, 20,779 links and a demand of 23 at the shipped rate. Both
 > defaults moved on 2026-08-24 (`C24`) and the census hull with them (`C26`), so the rig that

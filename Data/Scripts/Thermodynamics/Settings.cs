@@ -152,7 +152,7 @@ namespace Thermodynamics
         /// <c>MaxLinkVisitsPerStep</c> takes the default deliberately, since the old number was in a
         /// different unit. See configuration.md, Solver.
         /// </summary>
-        [ProtoMember(35)] public int MaxElementVisitsPerStep = 2000000;
+        [ProtoMember(35)] public int MaxElementVisitsPerStep = 4000000;
 
         /// <summary>
         /// Most substeps one solver step may divide itself into. See the core setting of the same

@@ -71,10 +71,12 @@ the solver's own unit, and compared against a bound the mod already ships.
   > slices* in. The allowance is spent in the other one. Scoring in the pacing unit against a bound
   > stated in the budget unit compares two currencies 1.45× apart on a census hull, and it halved
   > every figure below. Corrected in place (`P3`), with the old numbers kept visible.
-* **The bound.** `MaxElementVisitsPerStep`, which ships at **2,000,000**. It is not an invented
-  threshold: it is the mod's own statement of what one grid's step may cost, and a step that
-  exceeds it is not refused — it is spread over more frames, so the grid's simulated time runs
-  slower than real time. A ship that cannot keep up is the definition of unaffordable.
+* **The bound.** `MaxElementVisitsPerStep`, which ships at **4,000,000** (2,000,000 until `C27`).
+  It is not an invented threshold: it is the mod's own statement of what one grid's step may cost,
+  and a step that exceeds it is not refused — it is spread over more frames, so the grid's simulated
+  time runs slower than real time. A ship that cannot keep up is the definition of unaffordable. The
+  bound follows the default rather than being pinned here, so this criterion scores the
+  configuration that ships.
 * **The marker.** `G6`'s cost half fails when **p99 step work over the corpus exceeds the
   allowance**, which is the same shape as its demand half and the same percentile.
 * **What it does not cover.** One grid at a time. A fleet's cost is the sum over grids and the
@@ -82,12 +84,15 @@ the solver's own unit, and compared against a bound the mod already ships.
   which is `D19`'s question and is measured on a fleet rather than on a population.
 
 **Scored, and it holds.** Over the 40,656 runs of the 2026-08-21 survey that carry all three
-columns: **p50 10,911 element visits, p95 269,154, p99 883,675** against the 2,000,000 the allowance
-grants — the ninety-ninth percentile is a little under half of what a step may cost. **102 runs are
-past it, and they are 28 ships**, the smallest at 74,160 blocks and the largest at 641,711; the
-eighteen biggest are past it in all five scenarios. So the allowance covers a ship of about seventy
-thousand blocks in vacuum, and the ships that exceed it run their simulated time slower than real
-time rather than being refused anything.
+columns: **p50 10,911 element visits, p95 269,154, p99 883,675** against the 4,000,000 the allowance
+grants — the ninety-ninth percentile is a little over a fifth of what a step may cost. **29 runs are
+past it, and they are 8 ships**, the smallest at 159,449 blocks and the largest at 628,524. So the
+allowance covers a ship of about a hundred and sixty thousand blocks in vacuum, and the ships that
+exceed it run their simulated time slower than real time rather than being refused anything.
+
+> At the 2,000,000 that shipped until `C27`, the same runs read **102 past it across 28 ships from
+> 74,160 blocks up**. The work figures are unchanged; what moved is the bound, and it moved because
+> the simulated time a shortened step gives up was priced for the first time (`E11`).
 
 > Previously, and corrected on 2026-08-24 when the unit was: **p50 7,293, p95 174,996, p99 446,707,
 > fifteen runs past it and three ships**. What moved is the weight per node, from 2.125 to the 4 the
@@ -98,9 +103,10 @@ time rather than being refused anything.
 > **The dataset is the survey as it was walked**, at `ConductionScale` 2.4 and `HeatTimeScale` 225
 > and in the five **vacuum** scenarios, which is the same restriction that let this criterion's
 > *demand* half read as passing for months (`C19`). `C24` multiplies a vacuum demand by about 1.6,
-> which would put p99 near 1,410,000 — still inside the allowance. **In air it is not**: the 40-hull
-> panel's p99 demand is 2.81× its vacuum one at the pair that ships, which projects a corpus p99
-> near **4.0 million**, twice the bound. Both are projections of a projection and neither is a
+> which would put p99 near 1,410,000 — still inside the allowance. **In air it is level with it**:
+> the 40-hull panel's p99 demand is 2.81× its vacuum one at the pair that ships, which projects a
+> corpus p99 near **4.0 million**, against the 4,000,000 the allowance grants since `C27` and twice
+> the 2,000,000 it granted before. Both are projections of a projection and neither is a
 > measurement; what would settle it is walking the corpus in air, which is `F11`, and eight hours
 > (`P6`). What the scorer needs is any walk's `blocks`, `joints` and a substep column, so it prices
 > whichever run it is handed.
@@ -533,7 +539,8 @@ hold the suite hostage.
 
 | Date | Change |
 | --- | --- |
-| 2026-08-24 | **Wrote down `G6`'s cost half, before scoring anything against it** (`E11`). The criterion has always said *substep demand and step cost* and only the demand had ever been produced. The cost is stated as **work** rather than as time — `substeps × (2.125 × nodes + links)`, the solver's own charge, derivable from every corpus walk already taken — and the bound is `MaxElementVisitsPerStep` at 2,000,000, which is the mod's own statement of what a grid's step may cost and the point past which a grid's simulated time runs slower than real time. It fails at p99, the same percentile and shape as the demand half. [backlog.md](backlog.md) `C23`. |
+| 2026-08-24 | **Re-scored `G6`'s cost half in the currency the allowance is spent in, and against the bound that ships after `C27`.** The work was measured with `2.125 × nodes + links`, which is `SubstepWork` — the unit a step is cut into frame-sized *slices* in — and compared against a bound denominated in `links + 4 × nodes`, which is what a step's length is divided by when the allowance decides whether to shorten it. Two currencies, 1.45× apart on a census hull, either side of one comparison; and the substep column was granted where the allowance reads demanded. Re-scored: p50 10,911, p95 269,154, **p99 883,675**, 29 runs past the 4,000,000 across 8 ships from 159,449 blocks up, where it read p99 446,707 and fifteen runs across three ships against 2,000,000. **The verdict is unchanged and the restriction under it is now stated where the figure is**: five vacuum scenarios, which is exactly what let this criterion's *demand* half read as passing for months, and projecting into air puts the corpus p99 level with the bound. |
+| 2026-08-24 | **Wrote down `G6`'s cost half, before scoring anything against it** (`E11`). The criterion has always said *substep demand and step cost* and only the demand had ever been produced. The cost is stated as **work** rather than as time — `substeps × (2.125 × nodes + links)`, the solver's own charge, derivable from every corpus walk already taken — and the bound is `MaxElementVisitsPerStep` at 2,000,000, which is the mod's own statement of what a grid's step may cost and the point past which a grid's simulated time runs slower than real time. *(Both figures moved later the same day: the unit to `links + 4 × nodes`, which is the one the allowance is spent in, and the bound to 4,000,000 — see the rows below.)* It fails at p99, the same percentile and shape as the demand half. [backlog.md](backlog.md) `C23`. |
 | 2026-08-24 | Two notes on `G6`, neither of which moves it (`P3`). Its marker is a fidelity marker rather than a cost one — a demand above the cap is the cap bounding cost, and the shipped breach *buys* 1.15× of the step for 0.028 K. And the step-cost half of its own sentence has never been produced, because the corpus carries no timing column; that gap is now `C23` ([backlog.md](backlog.md) `C19`). |
 | 2026-08-22 | Removed *subgrids are read as separate ships* from the open questions. It was not true and had not been for as long as `ShipAssembly` existed: a blueprint's grids are built as one machine and bridged at their mechanical joints. 747 of the first 1,002 ships of the 2026-08-22 sweep hold more than one grid and 695 resolved joints, 29,604 of them. What was genuinely missing is that nothing checked a bridge *moves heat* — `CorpusSurvey` counted them — and `SubgridBridgeTests` does. |
 | 2026-08-23 | **`G8` is measured and it holds**, at conductivity ×4 with `HeatTimeScale` 80–120 — four of twenty-five cells, `G1`, `G2` and `G5` all kept, 1.36–2.04× the shipped substep demand. **The criterion caught a defect in its own scorer first**: the crossing median was taken over the hulls that crossed rather than over the hulls that were loaded, which reported two conductivity ×8 cells as satisfying `G8` on a population where 27 of 40 hulls never reach critical. Censored above as `E9` requires, ×8 has no median at any clock. Nothing in `G8` moved. |

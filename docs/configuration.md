@@ -76,7 +76,7 @@ at the menu in game rather than by reading the API:
 
 **Some settings are typed, not dragged.** A slider offers about two hundred distinguishable
 positions, which suits a fraction between 0 and 1 and suits nothing else this mod has. The step
-budget spans four million, so one position is ten thousand element visits; the friction scale spans
+budget spans eight million, so one position is forty thousand element visits; the friction scale spans
 a hundredth, so every position shows the same number. Seven settings therefore get a field to type
 a value into — the step budget, terrain range, solar energy, heat time scale, vacuum temperature,
 the friction threshold and the friction scale — and the rest keep their sliders.
@@ -305,7 +305,7 @@ Two things depend on it and move with it. Demand *per step* is proportional to s
 rig asks 3.3 substeps at `Frequency 4` and about 6.7 at `Frequency 2` — enough to clip a small
 `MaxSubsteps`, though not the shipped 64. And a step is spread across the frames of its own window,
 so **halving `Frequency` halves the per-frame cost of a given step budget**; that is why
-`MaxElementVisitsPerStep` is 2,000,000 rather than the 1,000,000 it carried at `Frequency` 8.
+`MaxElementVisitsPerStep` doubled when `Frequency` went from 8 to 4.
 
 ### The approximation that shipped on, and no longer does
 
@@ -336,8 +336,10 @@ of 64**, 55 % of the cap, **0 of 40 hulls refused in every environment**, and pr
 
 **Vacuum is where it went instead**, and it is the one row above that rose: 1.60× what the same
 hulls demanded before, because vacuum is all conduction. Nothing there is near the cap either — 20 %
-at p99 — but the element-visit allowance is a different bound and the retune does reach it, which is
-[backlog.md](backlog.md) `C27`.
+at p99 — but the element-visit allowance is a different bound and the retune does reach it. **`C27`
+measured that and found the premise the wrong way round**: the allowance binds in *air* first, at
+about a third the grid size, and vacuum is the generous column. See
+[What a shortened step costs](#what-a-shortened-step-costs).
 
 **`MaxSubstepsPerBlock` is still an approximation and still not a default**, and the number that
 made that an easy call has moved. It cost **0.607 K** on the worst-placed block, twenty times what
@@ -355,6 +357,57 @@ written before the data, and it was failing on the configuration that shipped �
 configuration rather than the criterion (`E11`, `P3`). See
 [stiffness.md](stiffness.md#what-refusing-the-demand-costs) for what a refusal costs on each of the
 three paths that carry heat, which is the question that outlives this one.
+
+### What a shortened step costs
+
+`MaxSubsteps` refuses a demand and the overshoot clamps carry the difference, which is the
+approximation the section above is about. `MaxElementVisitsPerStep` does something else: it makes
+the step **shorter** rather than coarser, so every step is exactly as faithful as it was and there
+are fewer of them. Nothing is approximated. What is lost is *time* — the grid's thermal clock runs
+slow against the world's.
+
+**That had never been priced, and it is the largest thing the mod gives up.** Measured 2026-08-24
+with `bench allowance`, on the sweep's own 2,000-block rig under a load that keeps moving:
+
+| the grid keeps | its clock is | standing error |
+| ---: | ---: | ---: |
+| 95 % of real time | 5 % slow | 1.19 K |
+| 90 % | 10 % | 2.52 K |
+| 80 % | 20 % | 5.79 K |
+| 70 % | 30 % | 10.16 K |
+| 55 % | 45 % | 20.01 K |
+| 40 % | 60 % | 36.98 K |
+
+Under a load that is *not* moving it is **0.00 K**, because two hulls heading to the same
+equilibrium at different speeds agree once they arrive — so this is what a burn or a charging drive
+costs and nothing at all is owed by a parked ship.
+
+**Where the bound is reached is air, not vacuum.** A settled, driven census hull keeps all of real
+time to about 32,000 blocks in vacuum, 16,000 on a planet surface and **9,000 in flight** at the
+2,000,000 this setting carried until `C27` — air puts a convection term on every exposed node, so
+the demand is three to four times the vacuum one and reaches the same ceiling at a third of the
+size.
+
+**So it moved to 4,000,000**, which is the whole of that trade and not a millisecond of anything
+else:
+
+* **What it buys.** A 32,800-block hull on a planet keeps 100 % of real time where it kept 52.7 %,
+  the same hull in flight 72.5 % against 36.2 %, and a 16,558-block hull in flight stops being
+  touched at all.
+* **What it costs.** A frame is bounded at 266,667 element visits instead of 133,333 — about
+  +0.12 ms a frame on the harness for a grid that is actually reaching the bound, and **nothing at
+  all for one that is not** (`P8`). On the 8,142-ship corpus, seven ships in eight are under 8,904
+  blocks and never reach it in any world.
+* **Why that is the right way round.** The mod refuses to ship `MaxSubstepsPerBlock 6` as a default
+  because it costs 0.607 K, and accepts the substep ceiling's breach because it costs 0.028 K. This
+  cost more than sixty times the first, as a default, and had never been put beside them.
+
+**What is not measured is the game-side figure**, and it matters (`P2`). The per-frame costs above
+are harness milliseconds; the runtime is 6–8× slower per element visit, which puts a throttled
+grid's frame at roughly 1.7–2.2 ms in game against 0.84–1.12 ms before. The only in-session
+measurement of this bound predates both the frame-spreading and the pass removal that made a visit
+nine times cheaper, so there is no current one. A world that cannot afford it lowers the setting,
+which is what it is for.
 
 ### Solving a fleet in parallel
 
@@ -637,7 +690,7 @@ will not move it much.
 | `Frequency` | 4 | Solver steps per simulated second. The integration step is `1/Frequency`, so 4 is a quarter-second step — the basis every substep figure in this documentation is quoted on. Whether lowering it cuts cost depends on the grid — see below. |
 | `SimulationSpeed` | 1 | Simulated seconds per real second, applied by running more steps rather than longer ones. Linear in CPU. |
 | `HeatTimeScale` | 90 | How much faster than real physics heat moves. Divides every heat capacity. It was 225 until `C24`, which moved it to put the most significant thermal event inside the 2–5 minute window `G8` asks for — see [balance.md](balance.md#the-route-is-chosen-and-it-is-the-one-the-cost-column-argued-against). |
-| `MaxElementVisitsPerStep` | 2000000 | Most element visits one step may make — substeps times its links plus four times its nodes — before the step is shortened to fit. 0 removes the bound. **Moves with `Frequency`**: a step is spread across the frames of its window, so this figure and the step rate together set the per-frame cost. See below. |
+| `MaxElementVisitsPerStep` | 4000000 | Most element visits one step may make — substeps times its links plus four times its nodes — before the step is shortened to fit. 0 removes the bound. **Moves with `Frequency`**: a step is spread across the frames of its window, so this figure and the step rate together set the per-frame cost — at `Frequency` 4 it bounds a frame at 266,667 visits. It was 2,000,000 until `C27` priced what a shortened step costs; see [What a shortened step costs](#what-a-shortened-step-costs). |
 | `MaxSubstepsPerBlock` | 0 (off) | Most substeps any single block may demand of the whole grid before it is treated as heavier than it is. The cheapest large win there is on a real ship. See below. |
 | `ParallelGrids` | `false` | Solve a frame's grids on the engine's worker threads rather than one after another on the game thread. Measured at **10.17×** on a 242-grid fleet and 0.99× on a single grid. **Ships off**, and what a session has to answer first is [Solving a fleet in parallel](#solving-a-fleet-in-parallel). |
 | `MaxSubsteps` | 64 | Most substeps one step may be cut into, whatever the grid asks for. A grid refused here integrates a step too long for its stiffest block, and the overshoot clamps carry the difference. **It bound in thick air at flying speed until `C24`, and no measured hull reaches it now** — see [The approximation that shipped on](#the-approximation-that-shipped-on-and-no-longer-does). |
@@ -1155,6 +1208,7 @@ one with a migration risk — is late rather than first.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-24 | **`MaxElementVisitsPerStep` is 4,000,000, from 2,000,000, because what it gives up was priced for the first time.** The bound makes a step shorter rather than coarser, so nothing is approximated and the grid's thermal clock runs slow instead — worth 1.19 K standing at a 5 % deficit and 36.98 K at 60 % under a moving load, and 0.00 K under a steady one. It also binds in **air** rather than in vacuum, at about a third the grid size: at the old value a driven census hull kept all of real time to 32,000 blocks in vacuum, 16,000 on a planet and 9,000 in flight. Beside 0.028 K for the substep ceiling this world accepts and 0.607 K for the per-block cap it refuses to ship as a default, that made this the largest approximation shipped and the only one never measured. A frame is bounded at 266,667 element visits instead of 133,333. Old value kept visible here and in [What a shortened step costs](#what-a-shortened-step-costs) (`E11`), and [backlog.md](backlog.md) `C27` carries the reasoning. |
 | 2026-08-24 | **The approximation the defaults shipped on is gone, and `HeatTimeScale` is 90.** `C24` applied `C12`'s retune — `ConductionScale` 2.4 → 9.6 and the clock 225 → 90 — and the substep ceiling it was breaching is decided by a convection-limited demand, so that demand came down with the clock: the 40-hull panel's worst p99 is **35.12 of 64**, 55 % of the cap, with **0 of 40 hulls refused** in every environment measured, where 8 of 40 were refused in re-entry before. `G6` passes on the configuration that ships. Renamed the section to say so, kept the reasoning, and recorded the one row that went the other way: vacuum demands 1.6× what it did ([backlog.md](backlog.md) `C27`). |
 | 2026-08-24 | Corrected [The approximation that shipped on](#the-approximation-that-shipped-on-and-no-longer-does), which described what a refused step costs in terms that were true of blocks and not of a plumbed or pressurised ship, and `ClampConductionOvershoot`'s row, which described half of what the clamp now does. Both are the same fix: an exchange is bounded pairwise *and* every exchange arriving at one node, parcel or room is bounded together ([backlog.md](backlog.md) `A10`). |
 | 2026-08-24 | Added [Every mechanism, and the rungs it has](#every-mechanism-and-the-rungs-it-has), the inventory `C15` asks for: what each feature's ladder is today and whether a cheaper rung is known to be possible. Nine mechanisms have two rungs and only two of those are gaps. **Wired `WellMixedCoolant` into a world's configuration**, which it had never been: the solver read it, the suite exercised it and two pages called it a choice a world makes, with no field in `Settings.cs` and no line in `Apply`. |

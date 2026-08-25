@@ -194,8 +194,10 @@ NODE_COST_IN_LINKS = 4.0
 # What the shipped `MaxElementVisitsPerStep` grants one grid's step. Not a threshold invented for
 # this criterion: it is the mod's own statement of what a step may cost, and a step past it is
 # spread over more frames rather than refused — so the grid's simulated time runs slower than real
-# time. See configuration.md, and balance-lab.md for G6's cost half.
-SHIPPED_VISIT_ALLOWANCE = 2000000.0
+# time. It moves when the default does, deliberately, so this criterion scores the configuration
+# that ships rather than one nobody runs; it was 2,000,000 until `C27` priced what a shortened step
+# costs. See configuration.md, What a shortened step costs, and balance-lab.md for G6's cost half.
+SHIPPED_VISIT_ALLOWANCE = 4000000.0
 
 
 def step_work(nodes, links, substeps):

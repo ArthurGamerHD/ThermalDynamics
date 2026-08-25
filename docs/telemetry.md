@@ -293,7 +293,16 @@ keeping up with, and the simulated seconds it chose not to advance. The `Cost` s
 how many grids are below real time and which is slowest, with a line saying what that means, so
 nobody reads a slow-cooling ship as a physics bug.
 
-A grid at 100 % has never hit the budget, which below roughly a hundred thousand blocks is always.
+A grid at 100 % has never hit the budget. **This paragraph used to say that was always true below
+roughly a hundred thousand blocks, and it is not** — that reading came from vacuum, and air puts a
+convection term on every exposed node. At the shipped 4,000,000 a driven census hull keeps all of
+real time to about 64,000 blocks in vacuum, 32,000 on a planet surface and 16,000 in flight
+([benchmarks.md](benchmarks.md#what-the-allowance-is-worth)).
+
+**What a rate below 100 % is worth is measured now**, and it is what the load is doing rather than
+what the grid is: a clock 10 % slow stands 2.52 K out under a moving load and 0.00 K under a steady
+one, rising to 36.98 K at 60 % slow. So this figure matters most on the ship a player is actually
+flying, which is the one it is hardest to notice on.
 
 ## Substeps
 

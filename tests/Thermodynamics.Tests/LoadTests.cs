@@ -31,17 +31,18 @@ namespace Thermodynamics.Tests
 
         /// <summary>
         /// A grid the shipped element-visit allowance covers in vacuum and half of it does not,
-        /// measured 2026-08-24 on the refreshed census hull: 32,000 blocks run at **100 %** of real
-        /// time on the shipped allowance and **73.0 %** on half of it.
+        /// measured 2026-08-24 on the refreshed census hull: 64,000 blocks run at **100 %** of real
+        /// time on the shipped 4,000,000 and **68.9 %** on half of it.
         ///
         /// <para>
-        /// **This was 6,000 for an afternoon**, on a hull whose light fittings mounted on six faces
-        /// where the block they stand for declares one — `C26`. That hull demanded 37.13 substeps
-        /// in vacuum where the corrected one demands 6.67, so the allowance appeared to stop
-        /// covering at a twentieth of the size it does.
+        /// **It has been three sizes in a day, and each move was somebody else's finding.** 6,000
+        /// on the hull whose light fittings mounted on six faces where the block they stand for
+        /// declares one (`C26`) — that hull demanded 37.13 substeps in vacuum where the corrected
+        /// one demands 6.67. Then 32,000 on the corrected hull. Then 64,000, because `C27` doubled
+        /// the allowance once the simulated time a shortened step gives up was priced.
         /// </para>
         /// </summary>
-        private const int Covered = Large;
+        private const int Covered = 64000;
 
         private readonly ITestOutputHelper output;
 
@@ -733,11 +734,12 @@ namespace Thermodynamics.Tests
         /// </para>
         ///
         /// <para>
-        /// **The rig is 32,000 blocks, which is where halving the allowance starts to bind.**
-        /// `C24` raised a conduction-limited demand by 1.6× and vacuum is all conduction, so the
-        /// size at which the shipped allowance itself stops covering came down with it — measured,
-        /// a 64,000-block grid runs at 73.3 % where it ran at 98.6 % before the retune.
-        /// [backlog.md](../../docs/backlog.md) `C27` carries that.
+        /// **The rig is 64,000 blocks, which is where halving the allowance starts to bind — in
+        /// vacuum.** `C24` raised a conduction-limited demand by 1.6× and vacuum is all conduction,
+        /// so the size at which an allowance stops covering came down with it. Vacuum is also the
+        /// generous end: the same hull in flight demands three to four times the substeps and
+        /// reaches the same ceiling at a third of the size, which is what `C27` found and what
+        /// doubled the allowance. [backlog.md](../../docs/backlog.md) `C27` carries both.
         /// </para>
         /// </summary>
         [Fact]

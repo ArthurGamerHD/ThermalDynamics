@@ -250,7 +250,7 @@ class StepWork(unittest.TestCase):
         # Pinned against the default in ThermalSettings rather than left as a number here: the
         # bound is the mod's own statement of what a step may cost, and if that moves this
         # criterion moves with it rather than describing a configuration nobody runs.
-        self.assertEqual(2000000.0, scoring.SHIPPED_VISIT_ALLOWANCE)
+        self.assertEqual(4000000.0, scoring.SHIPPED_VISIT_ALLOWANCE)
 
 
 if __name__ == "__main__":

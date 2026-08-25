@@ -832,8 +832,8 @@ dotnet run --project Thermodynamics.Sim -- bench allowance --max 32000
 A step is spread across the frames of its own window — `ThermalSimulation.Update` banks
 `StepWorkUnits × frameSeconds × StepsPerSecond` of credit a frame — so an allowance of `V` at
 `Frequency f` bounds a frame at **`V × f / 60`** element visits, whatever the grid. At the shipped
-2,000,000 and `Frequency` 4 that is **133,333 visits a frame**, and it is the only quantity the
-setting controls. `AnAllowanceIsAPerFrameBudgetScaledByTheStepRate` measures the ceiling off a
+4,000,000 and `Frequency` 4 that is **266,667 visits a frame** — it was 133,333 at the 2,000,000
+that shipped until `C27` — and it is the only quantity the setting controls. `AnAllowanceIsAPerFrameBudgetScaledByTheStepRate` measures the ceiling off a
 throttled grid rather than deriving it, and lands within one substep of it.
 
 That is also why the setting moved with `Frequency` in 2026-08-22 instead of staying put, and why a
@@ -880,9 +880,10 @@ never reached**, and a bound that is not reached costs nothing at all (`P8`).
 
 **The demand is three to four times larger in flight than in vacuum** — 23.6 to 27.5 substeps
 against 6.8 to 7.3 — because air puts a convection term on every exposed node, and three times the
-demand reaches the same ceiling at a third of the size. So the size at which the shipped allowance
-stops covering a hull is about 32,000 blocks in vacuum, 16,000 in atmosphere and **9,000 in
-flight**.
+demand reaches the same ceiling at a third of the size. So at 2,000,000 the size where a hull stops
+being covered is about 32,000 blocks in vacuum, 16,000 in atmosphere and **9,000 in flight**; at the
+4,000,000 that ships since `C27`, 64,000, 32,000 and 16,000 — every one a rung of the sweep
+rather than an interpolation between two.
 
 [backlog.md](backlog.md) `C27` measured this in vacuum, which is the cheapest of the nine worlds on
 the axis that matters and the same reading [the environments](#the-environments) exists to stop
@@ -927,11 +928,15 @@ agree once they arrive.
 | --- | --- | --- |
 | the substep ceiling `C19` accepted | 0.028 K on the hottest block | shipped, and recorded as a limit |
 | `MaxSubstepsPerBlock 6` (`C3`) | 0.607 K on the worst-placed block | **not** a default — a switch, on that figure |
-| the element-visit allowance | 4.4 K at 16,558 blocks in flight, >37 K at 32,800 | shipped as a default |
+| the allowance at 2,000,000 | 4.4 K at 16,558 blocks in flight, >37 K at 32,800 | was the shipped default |
+| the allowance at 4,000,000 | nothing to 16,558, 9.1 K at 32,800 in flight | the shipped default since `C27` |
 
-Same hull family, same rules, three orders of magnitude apart. The allowance is by a wide margin the
-largest approximation the mod ships and was the only one never priced — not because anyone chose
+Same hull family, same rules, three orders of magnitude apart. The allowance was by a wide margin
+the largest approximation the mod shipped and the only one never priced — not because anyone chose
 that, but because a millisecond and a kelvin had never been put in the same sentence for it.
+Doubling it does not remove the trade, it moves it onto the top 3 % of the corpus by size: see
+[configuration.md](configuration.md#what-a-shortened-step-costs) for what was bought and what it
+cost.
 
 ---
 

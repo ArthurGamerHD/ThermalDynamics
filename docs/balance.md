@@ -1280,8 +1280,10 @@ joint now conducts as hard as a coolant sink face — 1,168 W/K against 1,000, w
 statement the guidance rests on had it six to one the other way (`C25`). The census hull has left
 the population it stands in for at the one cap that ships, flooring 6.91 % of its own blocks against
 a real population's 0.92 % (`C26`). Solver cost moved from air to vacuum: a settled grid there
-demands 1.6x what it did, so the shipped element-visit allowance covers about 6,000 blocks where it
-covered 12,000 (`C27`). And the reactor's waste fraction was chosen against a bound this retune
+demands 1.6x what it did, so the shipped element-visit allowance covers a smaller grid than it did
+there. Measured since, and the interesting half is the other one: the allowance binds in *air*
+first, at a third the size, and what a shortened step costs was priced and the default doubled
+(`C27`). And the reactor's waste fraction was chosen against a bound this retune
 removes, which no fraction restores (`C28`).
 
 **Two things got better.** Three blocks came off the known-impossible list — a hydrogen engine that
